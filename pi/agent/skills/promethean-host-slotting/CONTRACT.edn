@@ -1,0 +1,29 @@
+(skill-contract
+  (name "promethean-host-slotting")
+  (v "ημ.skill/promethean-host-slotting@0.1.0")
+
+  (intent
+    "Choose staging and production Promethean host slots, subdomains, runtime paths, and compose-project names from the allowed base-host pool.")
+
+  (activation
+    (priority 74)
+    (explicit ["skill:promethean-host-slotting"])
+    (triggers ["host slotting" "choose promethean host" "staging host" "production host" "base hosts"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes false)
+    (network true)
+    (commits false))
+
+  (protocol
+    (workflow
+      ["Normalize the service slug and derive staging.<slug>.promethean.rest and <slug>.promethean.rest."
+       "Limit placement to ussy, ussy2, ussy3, or big.ussy."
+       "Probe DNS and SSH reachability; preserve existing live placement when present."
+       "Prefer separate staging and production hosts when a safe reachable pair exists; otherwise isolate with distinct paths and compose-project names."
+       "Emit deterministic GitHub environment-variable values for transport host, public host, runtime path, compose project, and optional verify-resolve address."])))

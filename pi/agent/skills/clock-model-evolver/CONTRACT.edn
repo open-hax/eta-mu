@@ -1,0 +1,16 @@
+(skill-contract
+  (name "clock-model-evolver")
+  (v "ημ.skill/clock-model-evolver@0.1.0")
+
+  (intent "Improve the Hormuz clock model through new signal classes, schema changes, and better rendering or branch logic")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:clock-model-evolver"])
+    (triggers ["clock model evolver"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

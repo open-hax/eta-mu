@@ -1,0 +1,53 @@
+(skill-contract
+  (name "work-cycle")
+  (v "ημ.skill/work-cycle@0.1.0")
+
+  (intent
+    "Foundational cognitive loop: observe → model → plan → execute → verify → record. Defines how the agent approaches any task.")
+
+  (activation
+    (priority 100)
+    (explicit ["skill:work-cycle"])
+    (triggers ["agent loop" "work cycle" "cognitive loop" "PRNPA" "P→R→N→Π→A"])
+    (autoload true))
+
+  (governance
+    (touch-layer :semi-stable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes false)
+    (network false)
+    (commits false))
+
+  (protocol
+    (agent-loop
+      (cycle
+        (observe "Collect state from repository, spec files, open todos, current task request, system environment.")
+        (model "Construct internal representation of system architecture, dependencies, current phase.")
+        (plan "Generate step-by-step plan; break into phases.")
+        (execute "Perform one safe unit of work at a time.")
+        (verify "Ensure code compiles, tests pass, specs remain valid.")
+        (record "Update specs and commit changes."))
+      (loop-rule "Never execute code modifications without passing through Observe → Model → Plan first."))
+
+    (prnpa-loop
+      (notation "P→R→N→Π→A→(feedback)→P")
+      (P "Perception / problem-framing: restate the ask, surface constraints, separate Facts vs Interpretations vs Narratives.")
+      (R "Research / reality-check: consult repo, tests, docs, web sources. Prefer evidence-on-fresh.")
+      (N "Narrative / naming the frames: synthesize findings, plan.")
+      (Π "Persistence: when needed, pay fork tax so work survives session.")
+      (A "Action / artifact: produce deliverable, run smallest verification.")
+      (feedback "Incorporate results, update perception, loop.")))
+
+    (methodology
+      (principle "All work begins with planning and investigation before execution.")
+      (workflow
+        "Break features into small steps."
+        "Group steps into phases."
+        "After each phase: code MUST compile/build, all tests MUST pass."
+        "Prefer incremental progress with verification.")))
+
+  (output
+    (must-include ["any work done via this loop follows the phase-model pattern"])))

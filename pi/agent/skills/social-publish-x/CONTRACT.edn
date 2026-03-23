@@ -1,0 +1,16 @@
+(skill-contract
+  (name "social-publish-x")
+  (v "ημ.skill/social-publish-x@0.1.0")
+
+  (intent "Publish Hormuz clock updates to X as a short post or thread with explicit uncertainty and dry-run-first behavior")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:social-publish-x"])
+    (triggers ["social publish x"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

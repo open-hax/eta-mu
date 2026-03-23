@@ -1,0 +1,37 @@
+(skill-contract
+  (name "atproto-auth-standardization")
+  (v "ημ.skill/atproto-auth-standardization@0.1.0")
+
+  (intent
+    "Standardize human login, service identity, and inter-service auth around AT Protocol DIDs and Bluesky-backed one-time sign-in, while retiring host-local static secrets and bespoke per-service auth silos.")
+
+  (activation
+    (priority 72)
+    (explicit ["skill:atproto-auth-standardization"])
+    (triggers ["at protocol auth" "atproto auth" "bluesky login once"
+               "single sign on with bluesky" "did:plc" "did:web"
+               "standardize auth around at protocol" "retire host local auth tokens"
+               "central auth broker with bluesky" "atproto did identity"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network true)
+    (commits false))
+
+  (protocol
+    (workflow
+      ["Inventory current auth methods, secret locations, and service-to-service trust edges before proposing changes."
+       "Standardize human identity on AT Protocol DIDs, not mutable handles, emails, or local usernames."
+       "Define a central auth broker that performs ATProto OAuth once, stores refresh capability centrally, and issues short-lived sessions/tokens to local services."
+       "Standardize service trust on broker-validated issuer/audience/signature rules and DID-based subject claims."
+       "Prefer orchestration-layer workload identity and runtime credential minting over copied host-local bearer tokens."
+       "Produce a migration plan that removes static host secrets only after the brokered path is verified."]))
+
+  (output
+    (must-include ["identity-model" "broker-contract" "service-trust-contract" "secret-retirement-plan"]))
+)

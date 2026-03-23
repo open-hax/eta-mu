@@ -1,0 +1,16 @@
+(skill-contract
+  (name "opencode-models-providers")
+  (v "ημ.skill/opencode-models-providers@0.1.0")
+
+  (intent "Skill: OpenCode Models & Providers")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:opencode-models-providers"])
+    (triggers ["opencode models providers"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

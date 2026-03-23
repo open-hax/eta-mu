@@ -1,0 +1,91 @@
+(skill-contract
+  (name "contract-governance")
+  (v "ημ.skill/contract-governance@0.1.0")
+
+  (intent
+    "Meta-governance for contract amendments: constitutional layers, amendment proposals, versioning, rollbacks, and validation. Rarely invoked but essential for contract evolution.")
+
+  (activation
+    (priority 30)
+    (explicit ["skill:contract-governance"])
+    (triggers ["amendment" "contract change" "propose amendment" "constitutional" "contract version" "rollback contract"])
+    (autoload false))
+
+  (governance
+    (touch-layer :immutable)
+    (non-override [:mission :directives :safety :license])
+    (requires-user-approval true))
+
+  (effects
+    (writes true)
+    (network false)
+    (commits true))
+
+  (protocol
+    (constitutional-layers
+      (immutable ["mission" "directives" "safety" "license"])
+      (semi-stable ["operators" "fork-tax" "output-shape"])
+      (mutable ["methodology" "planning" "execution" "scheduler" "research" "tools"])
+      (rule "Immutable sections cannot be modified. Semi-stable require user approval. Mutable may be amended."))
+
+    (amendments
+      (proposal-location "specs/amendments/")
+      (proposal-format
+        (required ["title" "rationale" "affected-sections" "proposed-change" "expected-effects" "risk-analysis"]))
+      (rule "Agent may propose amendments but cannot apply them automatically."))
+
+    (amendment-workflow
+      (states
+        (draft "Initial proposal written by agent.")
+        (review "Awaiting human approval.")
+        (approved "User accepted the amendment.")
+        (rejected "User declined the amendment.")
+        (implemented "Contract updated and committed.")))
+
+    (amendment-application
+      (conditions ["proposal state = approved" "no conflicting amendment in progress"])
+      (steps
+        "apply change to contract"
+        "update contract version"
+        "commit change"
+        "record amendment in registry"))
+
+    (contract-versioning
+      (format "ημΠ.dev.<major>.<minor>")
+      (rules
+        "Minor version increments for procedural changes."
+        "Major version increments for structural changes.")
+      (record-location ".ημ/contract_version"))
+
+    (amendment-registry
+      (location ".ημ/amendments.jsonl")
+      (fields ["timestamp" "proposal-id" "section" "change-summary" "commit-hash"]))
+
+    (contract-diff
+      (rule "All amendments must produce a readable diff.")
+      (artifact ".ημ/contract_changes.md"))
+
+    (rollback
+      (trigger ["user request" "contract regression detected"])
+      (method "git revert to previous contract version"))
+
+    (governance-constraints
+      (rules
+        "Agent cannot weaken safety constraints."
+        "Agent cannot change license."
+        "Agent cannot modify immutable sections."))
+
+    (contract-validation
+      (checks
+        "syntax validity"
+        "section references valid"
+        "version increment correct"))
+
+    (meta-loop
+      (observe "Monitor contract effectiveness.")
+      (analyze "Detect friction points in workflow.")
+      (propose "Generate amendment proposal.")
+      (await-review "Pause until user decision.")))
+
+  (output
+    (must-include ["proposal if created" "affected sections" "risk analysis"])))

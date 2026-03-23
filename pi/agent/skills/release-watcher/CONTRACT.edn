@@ -1,0 +1,16 @@
+(skill-contract
+  (name "release-watcher")
+  (v "ημ.skill/release-watcher@0.1.0")
+
+  (intent "Skill: Release Watcher")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:release-watcher"])
+    (triggers ["release watcher"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

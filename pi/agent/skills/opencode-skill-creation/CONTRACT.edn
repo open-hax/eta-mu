@@ -1,0 +1,16 @@
+(skill-contract
+  (name "opencode-skill-creation")
+  (v "ημ.skill/opencode-skill-creation@0.1.0")
+
+  (intent "Create OpenCode skills that validate and load correctly.")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:opencode-skill-creation"])
+    (triggers ["opencode skill creation"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

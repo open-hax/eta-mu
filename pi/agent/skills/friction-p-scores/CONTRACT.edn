@@ -1,0 +1,28 @@
+(skill-contract
+  (name "friction-p-scores")
+  (v "ημ.skill/friction-p-scores@0.1.0")
+
+  (intent
+    "Translate turn difficulty into explicit p-scores for efficiency, friction, and skill-candidate potential.")
+
+  (activation
+    (priority 57)
+    (explicit ["skill:friction-p-scores"])
+    (triggers ["p score" "friction score" "efficiency score" "skill candidate score"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes false)
+    (network false)
+    (commits false))
+
+  (thresholds
+    (low 0.35)
+    (medium 0.58)
+    (spore 0.72)
+    (strong 0.84))
+)
