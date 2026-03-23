@@ -1,0 +1,16 @@
+(skill-contract
+  (name "github-integration")
+  (v "ημ.skill/github-integration@0.1.0")
+
+  (intent "Skill: GitHub Integration")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:github-integration"])
+    (triggers ["github integration"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

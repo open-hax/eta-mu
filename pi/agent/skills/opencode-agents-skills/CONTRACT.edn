@@ -1,0 +1,16 @@
+(skill-contract
+  (name "opencode-agents-skills")
+  (v "ημ.skill/opencode-agents-skills@0.1.0")
+
+  (intent "Skill: OpenCode Agents & Skills")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:opencode-agents-skills"])
+    (triggers ["opencode agents skills"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

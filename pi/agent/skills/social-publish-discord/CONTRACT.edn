@@ -1,0 +1,16 @@
+(skill-contract
+  (name "social-publish-discord")
+  (v "ημ.skill/social-publish-discord@0.1.0")
+
+  (intent "Publish Hormuz clock updates into Discord channels with sanitized mentions, optional images, and dry-run-first behavior")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:social-publish-discord"])
+    (triggers ["social publish discord"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

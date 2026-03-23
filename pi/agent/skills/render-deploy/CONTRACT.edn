@@ -1,0 +1,16 @@
+(skill-contract
+  (name "render-deploy")
+  (v "ημ.skill/render-deploy@0.1.0")
+
+  (intent "Deploy applications to Render by analyzing codebases, generating render.yaml Blueprints, and providing Dashboard deeplinks. Use when the user wants to deploy, host, publish, or set up their application on Render's cloud platform.")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:render-deploy"])
+    (triggers ["render deploy"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

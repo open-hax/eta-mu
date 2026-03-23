@@ -1,0 +1,16 @@
+(skill-contract
+  (name "hormuz-risk-clock")
+  (v "ημ.skill/hormuz-risk-clock@0.1.0")
+
+  (intent "Maintain and evolve the Hormuz public-signal risk clock by ingesting signals, updating state, and rendering reports")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:hormuz-risk-clock"])
+    (triggers ["hormuz risk clock"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

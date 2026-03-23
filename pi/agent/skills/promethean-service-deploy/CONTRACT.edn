@@ -1,0 +1,39 @@
+(skill-contract
+  (name "promethean-service-deploy")
+  (v "ημ.skill/promethean-service-deploy@0.1.0")
+
+  (intent
+    "Interpret 'Deploy X' as bootstrapping or repairing a full Promethean local -> PR -> staging -> PR -> prod deployment flow with DNS, host placement, GitHub automation, and live validation.")
+
+  (activation
+    (priority 76)
+    (explicit ["skill:promethean-service-deploy"])
+    (triggers ["Deploy X" "deploy x" "deploy service" "staging and prod deploy" "staging.<service-name>.promethean.rest"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network true)
+    (commits false))
+
+  (protocol
+    (workflow
+      ["Inventory the repo and determine whether a real local -> PR -> staging -> PR -> prod flow already exists."
+       "Normalize the service slug and derive staging.<slug>.promethean.rest and <slug>.promethean.rest."
+       "Choose allowed base hosts, runtime paths, and compose-project names before writing workflows."
+       "Create or repair GitHub workflows, environment vars/secrets, and branch protection with honest gate tiers."
+       "Verify locally, then verify live staging and live production; do not stop at YAML-only edits."]))
+
+  (exposes
+    (skill-registry
+      (entry (name "promethean-host-slotting") (contract "~/.pi/agent/skills/promethean-host-slotting/CONTRACT.edn") (priority 78))
+      (entry (name "promethean-rest-dns") (contract "~/.pi/agent/skills/promethean-rest-dns/CONTRACT.edn") (priority 74))
+      (entry (name "pr-promotion-workflows") (contract "~/.pi/agent/skills/pr-promotion-workflows/CONTRACT.edn") (priority 74))
+      (entry (name "github-integration") (contract "~/.pi/agent/skills/github-integration/CONTRACT.edn") (priority 68))
+      (entry (name "submodule-ops") (contract "~/.pi/agent/skills/submodule-ops/CONTRACT.edn") (priority 64))
+      (entry (name "receipt-river") (contract "~/.pi/agent/skills/receipt-river/CONTRACT.edn") (priority 62))
+      (entry (name "spec-driven-dev") (contract "~/.pi/agent/skills/spec-driven-dev/CONTRACT.edn") (priority 70)))))

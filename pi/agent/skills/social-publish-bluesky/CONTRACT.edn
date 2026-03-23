@@ -1,0 +1,16 @@
+(skill-contract
+  (name "social-publish-bluesky")
+  (v "ημ.skill/social-publish-bluesky@0.1.0")
+
+  (intent "Turn the latest Hormuz clock snapshot into a concise Bluesky post or thread with dry-run-first behavior")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:social-publish-bluesky"])
+    (triggers ["social publish bluesky"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

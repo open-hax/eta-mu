@@ -1,0 +1,35 @@
+(skill-contract
+  (name "passwords-csv-browser-auth")
+  (v "ημ.skill/passwords-csv-browser-auth@0.1.0")
+
+  (intent
+    "Safely source website credentials from the local ignored passwords.csv export for browser automation tasks without printing or committing secrets.")
+
+  (activation
+    (priority 58)
+    (explicit ["skill:passwords-csv-browser-auth"])
+    (triggers ["passwords.csv" "use passwords csv" "browser login from csv"
+               "login using local password export" "website credential csv"
+               "create github oauth app" "browser auth with saved passwords"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network true)
+    (commits false))
+
+  (protocol
+    (workflow
+      ["Locate passwords.csv via explicit path, ./passwords.csv, or ~/Documents/passwords.csv; confirm it is ignored/untracked before use."
+       "Match credentials by exact formActionOrigin/origin first, then exact hostname, using masked evidence only if ambiguity remains."
+       "Extract secrets via local command substitution or equivalent non-echoing flow so username/password do not appear in logs or chat output."
+       "Use the browser automation workflow to login, re-snapshot after navigation, and unset transient variables after use."
+       "Never print or persist raw credentials in tracked files, receipts, screenshots, or final responses."]))
+
+  (output
+    (must-include ["target-host" "masked-match-evidence" "post-login-status"]))
+)

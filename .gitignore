@@ -1,0 +1,37 @@
+# Build artifacts
+dist/
+build/
+lib/
+*.tsbuildinfo
+
+# Dependencies 
+node_modules/
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Shadow-CLJS build caches
+.shadow-cljs/
+packages/opencode-reactant/.shadow-cljs/
+
+# Clj-kondo cache
+.clj-kondo/.cache/
+.clj-kondo/.cache/
+.lsp/
+packages/opencode-reactant/.clj-kondo/.cache/
+packages/opencode-reactant/.lsp/

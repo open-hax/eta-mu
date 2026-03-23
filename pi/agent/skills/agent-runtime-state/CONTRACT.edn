@@ -1,0 +1,90 @@
+(skill-contract
+  (name "agent-runtime-state")
+  (v "ημ.skill/agent-runtime-state@0.1.0")
+
+  (intent
+    "Manage runtime state registers, startup procedure, drift detection, and session continuity. Defines how agent state persists across sessions and ticks.")
+
+  (activation
+    (priority 85)
+    (explicit ["skill:agent-runtime-state"])
+    (triggers ["runtime state" "session continuity" "repo state hash" "drift detection" "startup procedure"])
+    (autoload true))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network false)
+    (commits false))
+
+  (protocol
+    (runtime-state
+      (registers
+        (repo-root)
+        (current-branch)
+        (head-sha)
+        (active-spec)
+        (active-phase)
+        (todo-queue)
+        (repo-hash)
+        (agent-mode)
+        (last-commit)
+        (last-fork-tax))
+      (rule "Registers represent minimal state needed to resume execution."))
+
+    (system-files
+      (required
+        [".ημ/registry.jsonl"
+         ".ημ/Π_STATE.sexp"
+         ".ημ/Π_LAST.md"
+         "specs/"
+         "specs/drafts/"])
+      (rule "Agent must not operate if required directories are missing."))
+
+    (startup
+      (steps
+        "Locate repository root."
+        "Load runtime-state registers."
+        "Compute repository state hash."
+        "Load spec drafts."
+        "Load todos."
+        "Determine active feature.")
+      (fallback "If no spec is active, enter investigation mode."))
+
+    (investigation-mode
+      (purpose "Used when no active implementation spec exists.")
+      (behavior
+        "Search codebase."
+        "Search existing specs."
+        "Generate draft spec."))
+
+    (drift-detection
+      (method "Compare repo hash with stored hash.")
+      (action "If drift detected: pause execution, investigate change source."))
+
+    (repo-integrity
+      (checks
+        "git status clean"
+        "build succeeds"
+        "tests pass")
+      (rule "Integrity checks must pass before advancing phases."))
+
+    (session-continuity
+      (principle "Agent memory is ephemeral. Repository is persistent state.")
+      (restoration
+        "On startup: read specs, todos, compute repo hash, reconstruct phase."))
+
+    (tick-model
+      (cycle ["observe" "update-state" "plan" "execute" "verify" "record"])
+      (rule "Each tick performs only one safe operation."))
+
+    (termination
+      (conditions ["user ends session" "fatal error" "fork tax completion"])
+      (exit-steps ["persist state" "final commit" "report status"])))
+
+  (output
+    (must-include ["repo state hash when computed" "drift detected/no-drift" "active phase if any"])))

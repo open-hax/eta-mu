@@ -1,0 +1,26 @@
+(skill-contract
+  (name "resume-ml-eval-research")
+  (v "ημ.skill/resume-ml-eval-research@0.1.0")
+
+  (intent
+    "Research and synthesize credible ML techniques for resume/JD evaluation and improvement, favoring explainable, local, reproducible methods over hype.")
+
+  (activation
+    (priority 56)
+    (explicit ["skill:resume-ml-eval-research"])
+    (triggers ["resume ml research" "resume embeddings" "resume ranking model"
+               "job matching ml" "resume evaluation techniques"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network true)
+    (commits false))
+
+  (output
+    (must-include ["research-summary" "recommended-stack" "implementation-plan" "limits-and-risks"]))
+)

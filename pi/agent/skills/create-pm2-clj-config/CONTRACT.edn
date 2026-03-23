@@ -1,0 +1,16 @@
+(skill-contract
+  (name "create-pm2-clj-config")
+  (v "ημ.skill/create-pm2-clj-config@0.1.0")
+
+  (intent "Skill: Create PM2 Configs")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:create-pm2-clj-config"])
+    (triggers ["create pm2 clj config"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

@@ -1,0 +1,45 @@
+{
+  "version": 3,
+  "skills": {
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel-labs/skills.git",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "skillFolderHash": "c2f31172b6f256272305a5e6e7228b258446899f",
+      "installedAt": "2026-02-01T22:25:55.381Z",
+      "updatedAt": "2026-02-01T22:25:55.381Z"
+    },
+    "pm2-server-control": {
+      "source": "viteinfinite/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/viteinfinite/skills.git",
+      "skillPath": "skills/pm2-server-control/SKILL.md",
+      "skillFolderHash": "d9f1dc82145eaff136f1c95f7d497527f722037e",
+      "installedAt": "2026-02-02T20:01:30.019Z",
+      "updatedAt": "2026-02-02T20:01:30.019Z"
+    },
+    "agent-browser": {
+      "source": "vercel-labs/agent-browser",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel-labs/agent-browser.git",
+      "skillPath": "skills/agent-browser/SKILL.md",
+      "skillFolderHash": "fe7cba547a645dd6a21d56680db033f2d82dff3a",
+      "installedAt": "2026-02-03T20:19:08.614Z",
+      "updatedAt": "2026-02-03T20:19:08.614Z"
+    },
+    "render-deploy": {
+      "source": "openai/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/openai/skills.git",
+      "skillPath": "skills/.curated/render-deploy/SKILL.md",
+      "skillFolderHash": "f14885c4c082870b8b77791eb4eebe59fed2f33e",
+      "installedAt": "2026-03-10T20:33:34.920Z",
+      "updatedAt": "2026-03-10T20:33:34.920Z"
+    }
+  },
+  "dismissed": {
+    "findSkillsPrompt": true
+  },
+  "lastSelectedAgents": []
+}

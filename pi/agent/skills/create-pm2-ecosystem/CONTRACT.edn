@@ -1,0 +1,16 @@
+(skill-contract
+  (name "create-pm2-ecosystem")
+  (v "ημ.skill/create-pm2-ecosystem@0.1.0")
+
+  (intent "Skill: Create PM2 Ecosystem")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:create-pm2-ecosystem"])
+    (triggers ["create pm2 ecosystem"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)
