@@ -1,0 +1,16 @@
+(skill-contract
+  (name "webring-site")
+  (v "ημ.skill/webring-site@0.1.0")
+
+  (intent "Build a themed single-page website and register it in the ussyco.de webring. Covers site creation, local hosting, webring API registration, theme configuration, and end-to-end verification.")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:webring-site"])
+    (triggers ["webring site"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

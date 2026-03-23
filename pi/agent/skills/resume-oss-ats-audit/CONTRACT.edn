@@ -1,0 +1,36 @@
+(skill-contract
+  (name "resume-oss-ats-audit")
+  (v "ημ.skill/resume-oss-ats-audit@0.1.0")
+
+  (intent
+    "Audit resume PDFs with practical open-source ATS/parsing/optimization tools, distinguish runnable tools from broken demos, and write a reproducible findings report.")
+
+  (activation
+    (priority 57)
+    (explicit ["skill:resume-oss-ats-audit"])
+    (triggers ["ats audit" "resume audit" "open-source resume tools" "resume parser audit"
+               "exhaustive resume analysis" "oss ats scan"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network true)
+    (commits false))
+
+  (protocol
+    (workflow
+      ["Inventory the resume PDFs and establish the audit set."
+       "Install or clone only reproducible OSS tools; record tool failures explicitly."
+       "Run baseline PDF extraction and structure checks before higher-level scoring."
+       "Compare at least two independent parsers when possible to avoid over-trusting a single tool."
+       "For target-specific resumes, run JD overlap analysis with explicit keyword sets or parsed JDs."
+       "If special footer/metadata/layout features exist, generate temporary shadow copies to measure their impact."
+       "Write a report that separates structural truths, parser artifacts, and target-role gaps."]))
+
+  (output
+    (must-include ["audit-report-path" "runnable-tools" "broken-tools" "top-findings" "ranked-recommendations"]))
+)

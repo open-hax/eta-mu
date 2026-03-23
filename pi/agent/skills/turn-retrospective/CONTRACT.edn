@@ -1,0 +1,22 @@
+(skill-contract
+  (name "turn-retrospective")
+  (v "ημ.skill/turn-retrospective@0.1.0")
+
+  (intent
+    "Run a compact retrospective on a completed turn so the agent can remember one useful lesson.")
+
+  (activation
+    (priority 55)
+    (explicit ["skill:turn-retrospective"])
+    (triggers ["retrospective" "reflect on this turn" "what made this hard" "better path"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes false)
+    (network false)
+    (commits false))
+)

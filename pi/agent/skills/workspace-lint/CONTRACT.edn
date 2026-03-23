@@ -1,0 +1,16 @@
+(skill-contract
+  (name "workspace-lint")
+  (v "ημ.skill/workspace-lint@0.1.0")
+
+  (intent "Skill: Workspace Lint")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:workspace-lint"])
+    (triggers ["workspace lint"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

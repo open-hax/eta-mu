@@ -1,0 +1,16 @@
+(skill-contract
+  (name "opencode-session-search")
+  (v "ημ.skill/opencode-session-search@0.1.0")
+
+  (intent "Skill: OpenCode Session Search")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:opencode-session-search"])
+    (triggers ["opencode session search"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

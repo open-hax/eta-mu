@@ -1,0 +1,16 @@
+(skill-contract
+  (name "pm2-server-control")
+  (v "ημ.skill/pm2-server-control@0.1.0")
+
+  (intent "Start and stop a server with pm2 using `pm2 start ./my-server --name <name> --no-autorestart`, plus common supporting commands for status, logs, restart, and cleanup.")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:pm2-server-control"])
+    (triggers ["pm2 server control"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

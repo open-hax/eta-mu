@@ -1,0 +1,44 @@
+(skill-contract
+  (name "local-container-registry")
+  (v "ημ.skill/local-container-registry@0.2.1")
+
+  (intent
+    "Run a local Docker registry, publish reusable CUDA-capable ML base images, and resolve ML container/runtime issues or local ML service setup tasks.")
+
+  (activation
+    (priority 76)
+    (explicit ["skill:local-container-registry"])
+    (triggers ["local registry"
+               "docker registry"
+               "baked image"
+               "base image"
+               "ml base image"
+               "torch in docker"
+               "cuda in docker"
+               "libcusparseLt"
+               "container ML issue"
+               "ml local service"
+               "open-hax docker"
+               "open-hax proxy container"
+               "embeddings docker"
+               "local ML service"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network true)
+    (commits false))
+
+  (protocol
+    (workflow
+      ["Start and validate a local registry (default localhost:5000)."
+       "Prefer official CUDA-capable upstream images over rebuilding the full CUDA stack by hand."
+       "Build/tag/push reusable ML base images with stable version tags."
+       "Update downstream Dockerfiles/compose to consume the baked base."
+       "When the task is a local ML service rather than a general toolbox image, prefer dedicated service images (e.g. Open Hax proxy stack or embeddings inference)."
+       "Record registry/image/service decisions clearly so other repos can reuse them."]))
+)

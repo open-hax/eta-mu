@@ -1,0 +1,16 @@
+(skill-contract
+  (name "workspace-typecheck")
+  (v "ημ.skill/workspace-typecheck@0.1.0")
+
+  (intent "Skill: Workspace Typecheck")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:workspace-typecheck"])
+    (triggers ["workspace typecheck"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

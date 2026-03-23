@@ -1,0 +1,91 @@
+{
+  "$schema": "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
+  "name": "monokai",
+  "vars": {
+    "bg": "#272822",
+    "fg": "#F8F8F2",
+    "muted": "#BBB6A5",
+    "dim": "#999482",
+    "thinking": "#BBB6A5",
+    "border": "#49483E",
+    "borderMuted": "#3E3D32",
+
+    "cyan": "#66D9EF",
+    "green": "#A6E22E",
+    "pink": "#F92672",
+    "orange": "#FD971F",
+    "purple": "#AE81FF",
+    "yellow": "#E6DB74",
+
+    "selectedBg": "#3E3D32",
+    "userMsgBg": "#2D2E27",
+    "toolPendingBg": "#1E1F1C",
+    "toolSuccessBg": "#22301A",
+    "toolErrorBg": "#3A1F24",
+    "customMsgBg": "#2E2F29"
+  },
+  "colors": {
+    "accent": "cyan",
+    "border": "border",
+    "borderAccent": "cyan",
+    "borderMuted": "borderMuted",
+    "success": "green",
+    "error": "pink",
+    "warning": "orange",
+    "muted": "muted",
+    "dim": "dim",
+    "text": "fg",
+    "thinkingText": "thinking",
+
+    "selectedBg": "selectedBg",
+    "userMessageBg": "userMsgBg",
+    "userMessageText": "fg",
+    "customMessageBg": "customMsgBg",
+    "customMessageText": "fg",
+    "customMessageLabel": "purple",
+    "toolPendingBg": "toolPendingBg",
+    "toolSuccessBg": "toolSuccessBg",
+    "toolErrorBg": "toolErrorBg",
+    "toolTitle": "fg",
+    "toolOutput": "muted",
+
+    "mdHeading": "yellow",
+    "mdLink": "cyan",
+    "mdLinkUrl": "muted",
+    "mdCode": "green",
+    "mdCodeBlock": "fg",
+    "mdCodeBlockBorder": "border",
+    "mdQuote": "muted",
+    "mdQuoteBorder": "border",
+    "mdHr": "border",
+    "mdListBullet": "cyan",
+
+    "toolDiffAdded": "green",
+    "toolDiffRemoved": "pink",
+    "toolDiffContext": "muted",
+
+    "syntaxComment": "muted",
+    "syntaxKeyword": "pink",
+    "syntaxFunction": "green",
+    "syntaxVariable": "fg",
+    "syntaxString": "yellow",
+    "syntaxNumber": "purple",
+    "syntaxType": "cyan",
+    "syntaxOperator": "pink",
+    "syntaxPunctuation": "fg",
+
+    "thinkingOff": "borderMuted",
+    "thinkingMinimal": "border",
+    "thinkingLow": "muted",
+    "thinkingMedium": "cyan",
+    "thinkingHigh": "purple",
+    "thinkingXhigh": "pink",
+
+    "bashMode": "green"
+  },
+  "export": {
+    "pageBg": "#272822",
+    "cardBg": "#2D2E27",
+    "infoBg": "#3E3D32"
+  }
+}

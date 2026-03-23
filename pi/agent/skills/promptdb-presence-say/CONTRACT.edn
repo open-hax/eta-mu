@@ -1,0 +1,38 @@
+(skill-contract
+  (name "promptdb-presence-say")
+  (v "ημ.skill/promptdb-presence-say@0.1.0")
+
+  (intent
+    "Operationalize the PromptDB presence-say contract: compile presence-state+nexus into bounded say-intent; LLM renders only; no new facts.")
+
+  (activation
+    (priority 55)
+    (explicit ["skill:promptdb-presence-say"])
+    (triggers ["presence say" "promethean.presence-say" "say-intent" "no-new-facts" "cite-refs" "max-lines 8"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes false)
+    (network false)
+    (commits false))
+)
+
+(promptdb-contract
+  (id "promethean.presence-say/v1")
+  (source "vaults/fork_tales/.opencode/promptdb/contracts/presence-say.contract.lisp")
+  (compile-in [:presence-state :nexus-slice])
+  (compile-out :say-intent)
+  (render-in [:say-intent])
+  (render-out :text)
+  (say-intent
+    (facts :vector)
+    (asks :vector)
+    (repairs :vector)
+    (constraints
+      (no-new-facts true)
+      (cite-refs true)
+      (max-lines 8))))

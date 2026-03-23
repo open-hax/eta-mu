@@ -1,0 +1,16 @@
+(skill-contract
+  (name "skill-authoring")
+  (v "ημ.skill/skill-authoring@0.1.0")
+
+  (intent "Create or revise skills that load correctly in OpenCode and Codex.")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:skill-authoring"])
+    (triggers ["skill authoring"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

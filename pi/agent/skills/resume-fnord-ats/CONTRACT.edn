@@ -1,0 +1,35 @@
+(skill-contract
+  (name "resume-fnord-ats")
+  (v "ημ.skill/resume-fnord-ats@0.1.0")
+
+  (intent
+    "Maintain dual resume/cover-letter variants: ATS-clean for portals and fnord for AI-first review. Enforce deterministic naming, minimal diffs, and a non-deceptive capability footer (facts only, no hidden prompts).")
+
+  (activation
+    (priority 55)
+    (explicit ["skill:resume-fnord-ats"])
+    (triggers ["ats version" "ats-clean" "fnord" "resume footer" "capability footer"
+               "resume variants" "dual resume" "ats + fnord" "cover letter footer"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network false)
+    (commits false))
+
+  (protocol
+    (workflow
+      ["Identify the canonical base document (<base>) and do not overwrite legacy unsuffixed files."
+       "Produce ATS-clean variants (<base>-ats.*) with no fnord footer; keep structure simple for ATS parsing."
+       "Produce fnord variants (<base>-fnord.*) by copying ATS-clean content and appending a visible, factual-only footer (no hidden text; no imperatives)."
+       "Validate that ATS vs fnord differ only by the footer; verify contact info/timeline unchanged."
+       "If producing PDFs, compile and confirm page count/layout remains acceptable; adjust spacing only if necessary."
+       "Append a receipt to receipts.log describing outputs and refs; never log secrets."]))
+
+  (output
+    (must-include ["ats-variant-paths" "fnord-variant-paths" "diff-scope" "pdf-page-count"]))
+)

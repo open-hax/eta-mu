@@ -1,0 +1,40 @@
+(skill-contract
+  (name "promethean-host-runtime-inventory")
+  (v "ημ.skill/promethean-host-runtime-inventory@0.1.0")
+
+  (intent
+    "SSH into Promethean hosts, inventory active Docker/Podman/systemd/Proxmox runtimes, map public subdomains to live services, and write JSON plus markdown inventory artifacts.")
+
+  (activation
+    (priority 75)
+    (explicit ["skill:promethean-host-runtime-inventory"])
+    (triggers ["inventory promethean hosts"
+               "promethean host inventory"
+               "ussy host inventory"
+               "inventory containers and subdomains"
+               "what is running on ussy"
+               "host runtime inventory"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network true)
+    (commits false))
+
+  (protocol
+    (workflow
+      ["Search local specs, receipts, and deploy notes first so SSH usernames and runtime roots come from evidence before probing."
+       "Probe each requested Promethean host over SSH and inventory Docker first, then Podman/systemd/Proxmox when containers are absent."
+       "Read the live proxy config on the host and classify routes as container-backed, host-process-backed, or references-only."
+       "Write a JSON inventory artifact and a markdown report with deterministic filenames under docs/reports/inventory/."
+       "Report unreachable or ambiguous hosts honestly rather than inferring missing facts."]))
+
+  (exposes
+    (skill-registry
+      (entry (name "receipt-river") (contract "~/.pi/agent/skills/receipt-river/CONTRACT.edn") (priority 62))
+      (entry (name "spec-driven-dev") (contract "~/.pi/agent/skills/spec-driven-dev/CONTRACT.edn") (priority 70))
+      (entry (name "submodule-ops") (contract "~/.pi/agent/skills/submodule-ops/CONTRACT.edn") (priority 64)))))
