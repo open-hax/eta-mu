@@ -1,0 +1,30 @@
+(skill-contract
+  (name "promptdb-contracts")
+  (v "ημ.skill/promptdb-contracts@0.1.0")
+
+  (intent
+    "Index and operationalize PromptDB contract Lisp files (eta-layer, truth-binding, UI panels, presence-say, receipts, embedding-cost) as Pi skill-graph nodes.")
+
+  (activation
+    (priority 58)
+    (explicit ["skill:promptdb-contracts"])
+    (triggers ["promptdb contract" "promptdb/contracts" ".contract.lisp" "契" "receipt river" "receipts.log"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes false)
+    (network false)
+    (commits false))
+
+  (exposes
+    (skill-registry
+      (entry (name "receipt-river") (contract "~/.pi/agent/skills/receipt-river/CONTRACT.edn") (priority 62))
+      (entry (name "promptdb-eta-layer") (contract "~/.pi/agent/skills/promptdb-eta-layer/CONTRACT.edn") (priority 60))
+      (entry (name "promptdb-truth-binding") (contract "~/.pi/agent/skills/promptdb-truth-binding/CONTRACT.edn") (priority 60))
+      (entry (name "promptdb-ui-panels") (contract "~/.pi/agent/skills/promptdb-ui-panels/CONTRACT.edn") (priority 55))
+      (entry (name "promptdb-presence-say") (contract "~/.pi/agent/skills/promptdb-presence-say/CONTRACT.edn") (priority 55))
+      (entry (name "promptdb-ollama-embeddings-cost") (contract "~/.pi/agent/skills/promptdb-ollama-embeddings-cost/CONTRACT.edn") (priority 55)))))

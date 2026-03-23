@@ -1,0 +1,35 @@
+(skill-contract
+  (name "promptdb-ui-panels")
+  (v "ημ.skill/promptdb-ui-panels@0.1.0")
+
+  (intent
+    "Operationalize the PromptDB UI panels contract: define canonical panels and the HTTP/WS API surface that feeds them.")
+
+  (activation
+    (priority 55)
+    (explicit ["skill:promptdb-ui-panels"])
+    (triggers ["ui panels contract" "promethean.ui-panels" "/api/catalog" "/ws" "presence-say" "drift scan" "push-truth"] ))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes false)
+    (network false)
+    (commits false))
+)
+
+(promptdb-contract
+  (id "promethean.ui-panels/v1")
+  (source "vaults/fork_tales/.opencode/promptdb/contracts/ui.contract.lisp")
+  (panels [:catalog :ledger :presences :drift :truth])
+  (http ["GET /api/catalog"
+         "POST /api/eta-mu-ledger"
+         "POST /api/presence/say"
+         "POST /api/drift/scan"
+         "POST /api/push-truth/dry-run"
+         "POST /api/push-truth/apply"])
+  (ws
+    (connect "/ws" (events [catalog ledger-row presence-say drift truth diagnostic]))))

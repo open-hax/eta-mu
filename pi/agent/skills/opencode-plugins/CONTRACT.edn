@@ -1,0 +1,16 @@
+(skill-contract
+  (name "opencode-plugins")
+  (v "ημ.skill/opencode-plugins@0.1.0")
+
+  (intent "Skill: OpenCode Plugins")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:opencode-plugins"])
+    (triggers ["opencode plugins"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

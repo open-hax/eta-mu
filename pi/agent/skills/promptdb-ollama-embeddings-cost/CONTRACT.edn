@@ -1,0 +1,44 @@
+(skill-contract
+  (name "promptdb-ollama-embeddings-cost")
+  (v "ημ.skill/promptdb-ollama-embeddings-cost@0.1.0")
+
+  (intent
+    "Operationalize the PromptDB Ollama embeddings cost/admission contract (契): idempotency, budgets, endpoint fallback, receipts, fail-closed behavior.")
+
+  (activation
+    (priority 55)
+    (explicit ["skill:promptdb-ollama-embeddings-cost"])
+    (triggers ["ollama embeddings cost" "契:ollama-embeddings-cost" "/api/embeddings" "/api/embed" "idempotency-key" "CU" "cost budget"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes false)
+    (network false)
+    (commits false))
+)
+
+(promptdb-contract
+  (id "契:ollama-embeddings-cost:127.0.0.1:11434:v1")
+  (source "vaults/fork_tales/.opencode/promptdb/contracts/ollama-embeddings-cost.contract.lisp")
+  (endpoints ["/api/embeddings" "/api/embed"])
+  (model "nomic-embed-text")
+  (limits
+    (max-input-bytes 32768)
+    (max-inflight 2)
+    (max-rpm 60)
+    (request-timeout-ms 8000)
+    (max-queue-wait-ms 1000))
+  (cost
+    (unit "CU")
+    (cu-formula "cu = 10 + ceil(input.bytes/1024)")
+    (max-cu-per-request 42)
+    (max-cu-per-minute 2048))
+  (requires
+    (idempotency-key "sha256(input)")
+    (receipt-kind "cost.ollama.embedding")
+    (receipts-contract "promethean.receipts/v2")
+    (fail-closed true)))

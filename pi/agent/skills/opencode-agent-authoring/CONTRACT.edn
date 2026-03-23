@@ -1,0 +1,16 @@
+(skill-contract
+  (name "opencode-agent-authoring")
+  (v "ημ.skill/opencode-agent-authoring@0.1.0")
+
+  (intent "Skill: OpenCode Agent Authoring")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:opencode-agent-authoring"])
+    (triggers ["opencode agent authoring"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

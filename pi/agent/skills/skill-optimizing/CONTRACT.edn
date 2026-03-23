@@ -1,0 +1,16 @@
+(skill-contract
+  (name "skill-optimizing")
+  (v "ημ.skill/skill-optimizing@0.1.0")
+
+  (intent "Skill: Skill Optimizing")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:skill-optimizing"])
+    (triggers ["skill optimizing"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

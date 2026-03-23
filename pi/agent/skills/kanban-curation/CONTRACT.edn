@@ -1,0 +1,22 @@
+(skill-contract
+  (name "kanban-curation")
+  (v "ημ.skill/kanban-curation@0.1.0")
+
+  (intent
+    "Normalize task/spec frontmatter: canonical status tokens, tags vs labels, and priority/urgency fields.")
+
+  (activation
+    (priority 60)
+    (explicit ["skill:kanban-curation"])
+    (triggers ["normalize kanban" "frontmatter" "status tokens" "labels to tags"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network false)
+    (commits false))
+)

@@ -1,0 +1,16 @@
+(skill-contract
+  (name "workspace-navigation")
+  (v "ημ.skill/workspace-navigation@0.1.0")
+
+  (intent "Skill: Workspace Navigation")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:workspace-navigation"])
+    (triggers ["workspace navigation"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

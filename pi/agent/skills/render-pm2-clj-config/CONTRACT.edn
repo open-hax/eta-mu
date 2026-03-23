@@ -1,0 +1,16 @@
+(skill-contract
+  (name "render-pm2-clj-config")
+  (v "ημ.skill/render-pm2-clj-config@0.1.0")
+
+  (intent "Skill: PM2 Config Rendering")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:render-pm2-clj-config"])
+    (triggers ["render pm2 clj config"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

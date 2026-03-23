@@ -1,0 +1,16 @@
+(skill-contract
+  (name "opencode-tools-mcp")
+  (v "ημ.skill/opencode-tools-mcp@0.1.0")
+
+  (intent "Skill: OpenCode Tools, MCP, and ACP")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:opencode-tools-mcp"])
+    (triggers ["opencode tools mcp"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

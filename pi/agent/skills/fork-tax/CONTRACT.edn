@@ -1,0 +1,35 @@
+(skill-contract
+  (name "fork-tax")
+  (v "ημ.skill/fork-tax@0.1.0")
+
+  (intent
+    "Persist the full working state into git as a deterministic handoff snapshot (commit + tag + push + manifest artifacts).")
+
+  (activation
+    (priority 90)
+    (explicit ["skill:fork-tax" "Π"])
+    (triggers ["pay the fork tax" "fork tax" "full dump" "handoff packet" "snapshot tag"]))
+
+  (governance
+    (touch-layer :semi-stable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval true))
+
+  (effects
+    (writes true)
+    (network true)
+    (commits true))
+
+  (protocol
+    (workflow
+      ["Confirm repo root/branch/head and that the working tree reflects reality."
+       "Do not commit secrets. If secrets suspected: stop, redact, then continue."
+       "Run quick verification if available (or record why skipped)."
+       "Update in-repo Π artifacts (.ημ/Π_STATE.sexp, .ημ/Π_LAST.md, .ημ/Π_MANIFEST.sha256)."
+       "Commit all repo-relevant changes."
+       "Create annotated tag Π/<yyyy-mm-dd>/<hhmmss>-<short-head>."
+       "Push branch and tag; if blocked, record exact error output in Π note and stop."]))
+
+  (output
+    (must-include ["commit" "tag" "push-status" "handoff-artifacts"]))
+)

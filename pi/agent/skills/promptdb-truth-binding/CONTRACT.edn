@@ -1,0 +1,35 @@
+(skill-contract
+  (name "promptdb-truth-binding")
+  (v "ημ.skill/promptdb-truth-binding@0.1.0")
+
+  (intent
+    "Operationalize the PromptDB truth-binding contract: world-scoped judged claims with proof-chain + receipts gating push-truth/publish/release.")
+
+  (activation
+    (priority 60)
+    (explicit ["skill:promptdb-truth-binding"])
+    (triggers ["truth binding" "promethean.truth-binding" "push truth" "truth/mint" "truth/guard" "proof chain" "κ" "omega world"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes false)
+    (network false)
+    (commits false))
+)
+
+(promptdb-contract
+  (id "promethean.truth-binding/v1")
+  (source "vaults/fork_tales/.opencode/promptdb/contracts/truth-layer.contract.lisp")
+  (gates-targets [:push-truth :publish :release])
+  (requires
+    (world-scope-key :ctx/ω-world)
+    (proof-required true)
+    (receipts-file "receipts.log"))
+  (must-not
+    (mint-from-embedding-only true)
+    (mint-without-receipts true)
+    (promote-sim-beads-to-truth true)))

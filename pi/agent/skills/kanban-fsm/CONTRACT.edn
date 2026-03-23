@@ -1,0 +1,43 @@
+(skill-contract
+  (name "kanban-fsm")
+  (v "ημ.skill/kanban-fsm@0.1.0")
+
+  (intent
+    "Define the canonical Kanban FSM as data (states, transitions, gates, invariants, normalization).")
+
+  (activation
+    (priority 65)
+    (explicit ["skill:kanban-fsm"])
+    (triggers ["kanban fsm" "status transition" "ready to todo" "in-review" "normalize status"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes false)
+    (network false)
+    (commits false))
+)
+
+;; The FSM itself (data-only). v0.1 is intentionally partial and will be evolved.
+(kanban-fsm
+  (v "ημ.kanban/fsm@0.1.0")
+
+  (normalization
+    (token-aliases
+      (alias "in_progress" "in-progress")
+      (alias "in_review"   "in-review")
+      (alias "review"      "in-review")
+      (alias "backlog"     "ready")
+      (alias "triage"      "breakdown"))
+    (frontmatter-aliases
+      (alias "urgency_reason" "urgency-reason")))
+
+  (invariants
+    (must "If state==todo then frontmatter.priority exists")
+    (must "If state==todo then 0 <= priority <= 4")
+    (must "If state==todo and priority==0 then urgency-reason required")
+    (must "If priority==5 then state==icebox (deferred)"))
+)

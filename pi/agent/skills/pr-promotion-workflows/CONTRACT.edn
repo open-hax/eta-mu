@@ -1,0 +1,17 @@
+(skill-contract
+  (name "pr-promotion-workflows")
+  (v "ημ.skill/pr-promotion-workflows@0.1.0")
+
+  (intent
+    "Set up PR-based branch promotion workflows with tiered CI gates, staging/main deploy hooks, and explicit GitHub branch-protection follow-through.")
+
+  (activation
+    (priority 68)
+    (explicit ["skill:pr-promotion-workflows"])
+    (triggers ["pr promotion workflow" "staging and main workflow" "branch promotion" "deploy on push to staging" "deploy on push to main"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)
