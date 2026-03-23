@@ -1,0 +1,52 @@
+(skill-contract
+  (name "session-mycology")
+  (v "ημ.skill/session-mycology@0.1.0")
+
+  (intent
+    "Meta-skill for harvesting lessons from each session through per-turn retrospection, p-score friction tracking, and incubation of reusable skill spores.")
+
+  (activation
+    (priority 64)
+    (explicit ["skill:session-mycology"])
+    (triggers ["learn from sessions" "session lessons" "per-turn reflection"
+               "meta skill" "session mycology" "learn a new skill" "skill spore"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network false)
+    (commits false))
+
+  (flow
+    (stage :sense "Retrospect on the completed turn and identify avoidable friction.")
+    (stage :score "Assign p-efficiency, p-friction, and p-skill-candidate as scalar confidence values.")
+    (stage :spore "Incubate a draft skill spore when the pattern appears reusable.")
+    (stage :promote "Promote spores into full skills only after recurrence or explicit user demand."))
+
+  (scoring
+    (p-scores
+      (entry (name "p-efficiency")      (meaning "confidence the chosen path was near-minimal"))
+      (entry (name "p-friction")        (meaning "confidence the work was harder than it should have been"))
+      (entry (name "p-skill-candidate") (meaning "confidence a reusable skill or protocol would compress future effort")))
+    (thresholds
+      (spore 0.72)
+      (promotion-hint 0.84)))
+
+  (protocol
+    (workflow
+      ["Run a silent retrospective at the end of each substantive turn."
+       "Prefer explicit p-score judgments over vague self-evaluation."
+       "Incubate candidate skills as spores before promoting them into active skills."
+       "Use prior spores as hints, not as mandates; ignore stale or irrelevant spores."]))
+
+  (exposes
+    (skill-registry
+      (entry (name "turn-retrospective")   (contract "~/.pi/agent/skills/turn-retrospective/CONTRACT.edn")   (priority 67))
+      (entry (name "friction-p-scores")    (contract "~/.pi/agent/skills/friction-p-scores/CONTRACT.edn")    (priority 65))
+      (entry (name "skill-spore-incubator") (contract "~/.pi/agent/skills/skill-spore-incubator/CONTRACT.edn") (priority 66))
+      (entry (name "receipt-river")        (contract "~/.pi/agent/skills/receipt-river/CONTRACT.edn")        (priority 60))
+      (entry (name "skill-authoring")      (contract "~/.pi/agent/skills/skill-authoring/CONTRACT.edn")      (priority 58)))))

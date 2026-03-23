@@ -1,0 +1,16 @@
+(skill-contract
+  (name "opencode-tool-authoring")
+  (v "ημ.skill/opencode-tool-authoring@0.1.0")
+
+  (intent "Skill: OpenCode Tool Authoring")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:opencode-tool-authoring"])
+    (triggers ["opencode tool authoring"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

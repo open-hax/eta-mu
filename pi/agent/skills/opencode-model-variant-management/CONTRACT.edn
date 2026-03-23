@@ -1,0 +1,16 @@
+(skill-contract
+  (name "opencode-model-variant-management")
+  (v "ημ.skill/opencode-model-variant-management@0.1.0")
+
+  (intent "Skill: OpenCode Model Variant Management")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:opencode-model-variant-management"])
+    (triggers ["opencode model variant management"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

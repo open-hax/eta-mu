@@ -1,0 +1,44 @@
+(skill-contract
+  (name "promptdb-eta-layer")
+  (v "ημ.skill/promptdb-eta-layer@0.1.0")
+
+  (intent
+    "Operationalize the PromptDB eta-layer contract: keep eta as raw observational substrate with strict folder invariants and eta→mu→pi flow.")
+
+  (activation
+    (priority 60)
+    (explicit ["skill:promptdb-eta-layer"])
+    (triggers ["eta layer" "promethean.eta-layer" ".η/stream" ".η/raw" "eta mu pi" "observational layer"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes false)
+    (network false)
+    (commits false))
+)
+
+(promptdb-contract
+  (id "promethean.eta-layer/v1")
+  (source "vaults/fork_tales/.opencode/promptdb/contracts/eta-layer.contract.lisp")
+  (folders
+    (eta ".η")
+    (stream ".η/stream")
+    (raw ".η/raw")
+    (live ".η/live"))
+  (invariants
+    (append-only [".η/stream"])
+    (immutable [".η/raw"])
+    (snapshot-log [".η/live"])
+    (mu-reads-eta true)
+    (mu-mutates-eta false)
+    (pi-package-from-eta-direct false))
+  (proof
+    (receipts-file "receipts.log")
+    (required-refs
+      [".opencode/protocol/eta.v1.lisp"
+       ".opencode/promptdb/02_eta_layer.intent.lisp"
+       ".η/README.md"])))

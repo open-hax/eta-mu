@@ -1,0 +1,16 @@
+(skill-contract
+  (name "lsp-server-integration")
+  (v "ημ.skill/lsp-server-integration@0.1.0")
+
+  (intent "Skill: LSP Server Integration")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:lsp-server-integration"])
+    (triggers ["lsp server integration"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

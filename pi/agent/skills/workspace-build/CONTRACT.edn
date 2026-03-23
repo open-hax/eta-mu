@@ -1,0 +1,16 @@
+(skill-contract
+  (name "workspace-build")
+  (v "ημ.skill/workspace-build@0.1.0")
+
+  (intent "Skill: Workspace Build")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:workspace-build"])
+    (triggers ["workspace build"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

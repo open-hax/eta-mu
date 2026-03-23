@@ -1,0 +1,16 @@
+(skill-contract
+  (name "opencode-configs")
+  (v "ημ.skill/opencode-configs@0.1.0")
+
+  (intent "Skill: OpenCode Configs & Rules")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:opencode-configs"])
+    (triggers ["opencode configs"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

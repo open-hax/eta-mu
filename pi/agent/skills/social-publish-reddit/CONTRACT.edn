@@ -1,0 +1,16 @@
+(skill-contract
+  (name "social-publish-reddit")
+  (v "ημ.skill/social-publish-reddit@0.1.0")
+
+  (intent "Publish longer-form Hormuz clock updates to Reddit while preserving nuance, methodology, and subreddit-specific constraints")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:social-publish-reddit"])
+    (triggers ["social publish reddit"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

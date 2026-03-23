@@ -1,0 +1,36 @@
+{
+  "defaultProvider": "open-hax",
+  "defaultModel": "gpt-5.4",
+  "defaultThinkingLevel": "xhigh",
+  "theme": "monokai",
+  "quietStartup": false,
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 16384,
+    "keepRecentTokens": 20000
+  },
+  "retry": {
+    "enabled": true,
+    "maxRetries": 3
+  },
+  "enabledModels": [
+    "mistral/*",
+    "github-copilot/*",
+    "open-hax/*",
+    "open-hax-completions/*",
+    "open-hax-compat/*"
+  ],
+  "skills": [
+    "~/.pi/agent/skills/"
+  ],
+  "extensions": [
+    "~/.pi/agent/extensions/custom-providers.ts",
+    "~/.pi/agent/extensions/opencode-global-instructions.ts",
+    "~/.pi/agent/extensions/opmf-contract-runtime.ts",
+    "~/.pi/agent/extensions/task-timing.ts",
+    "~/.pi/agent/extensions/websearch-open-hax.ts"
+  ],
+  "enableSkillCommands": true,
+  "lastChangelogVersion": "0.58.0",
+  "hideThinkingBlock": false
+}

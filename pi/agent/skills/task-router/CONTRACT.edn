@@ -1,0 +1,22 @@
+(skill-contract
+  (name "task-router")
+  (v "ημ.skill/task-router@0.1.0")
+
+  (intent
+    "Given a task file, normalize metadata, compute valid next states from kanban-fsm, and recommend best transition.")
+
+  (activation
+    (priority 66)
+    (explicit ["skill:task-router"])
+    (triggers ["update task status" "what state is this" "next state" "transition"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network false)
+    (commits false))
+)
