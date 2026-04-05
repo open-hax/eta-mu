@@ -41,33 +41,32 @@ For fork PRs, eta-mu currently comments with a skip reason instead of pushing in
 Each target repository keeps a tiny local wrapper workflow that:
 
 1. checks out the target repo
-2. checks out `open-hax/eta-mu-github`
-3. installs eta-mu dependencies
+2. checks out `open-hax/eta-mu`
+3. installs `packages/eta-mu-github` dependencies from the monorepo
 4. runs either `review-gate` or `run-event`
 
-This preserves stable, repo-local triggers while keeping the logic centralized in this repo.
+This preserves stable, repo-local triggers while keeping the logic centralized in the eta-mu monorepo.
 
 ## Promotion model
 
-`eta-mu-github` itself should move through the same branch contract as other long-lived automation surfaces:
+The eta-mu monorepo itself should move through the same branch contract as other long-lived automation surfaces:
 
 - feature branch -> PR into `staging`
 - push to `staging` runs post-merge CI
 - PR from `staging` into `main`
 - push to `main` is the production logic ref consumed by target repositories
 
-Repo-local wrapper workflows can choose a staged eta-mu logic ref for staging-bound events via:
+Repo-local wrapper workflows can choose a staged eta-mu ref for staging-bound events via:
 
-- `ETA_MU_GITHUB_REF_STAGING`
-- `ETA_MU_GITHUB_REF_MAIN`
-- `ETA_MU_PI_REF_STAGING`
-- `ETA_MU_PI_REF_MAIN`
+- `ETA_MU_REF_STAGING`
+- `ETA_MU_REF_MAIN`
+
+For compatibility during migration, the wrappers still accept the legacy `ETA_MU_GITHUB_REF_*` variables as fallbacks.
 
 Default behavior is:
 
-- staging-bound events -> `eta-mu-github@staging`
-- main/other events -> `eta-mu-github@main`
-- eta-mu-pi defaults to `main` unless an explicit staging ref is configured
+- staging-bound events -> `eta-mu@staging`
+- main/other events -> `eta-mu@main`
 
 ## Verification
 
