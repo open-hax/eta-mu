@@ -29,9 +29,15 @@ node_modules/
 .shadow-cljs/
 packages/opencode-reactant/.shadow-cljs/
 
-# Clj-kondo cache
-.clj-kondo/.cache/
+# Local tool state
+.cpcache/
+.serena/
 .clj-kondo/.cache/
 .lsp/
 packages/opencode-reactant/.clj-kondo/.cache/
 packages/opencode-reactant/.lsp/
+packages/opencode-reactant/resources/public/js/main.js.map
+
+# Playwright artifacts
+packages/kanban/test-results/
+packages/kanban/playwright-report/
