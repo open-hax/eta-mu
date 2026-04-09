@@ -83,6 +83,13 @@ const validateAllowedNodeTypes = (
     if (!expectedSection) continue;
     for (const node of section.nodes) {
       if (!expectedSection.allowedNodeTypes.includes(node.type)) {
+        // Detect heading nodes (h3/h4/etc) inside sections — these are almost
+        // always agents using sub-headings when they should be using flat content.
+        const isSubheading = node.type === 'heading' && (node as { depth?: number }).depth !== undefined && (node as { depth: number }).depth > 2;
+        const message = isSubheading
+          ? `Section \`${section.heading}\` contains a sub-heading (h${(node as { depth: number }).depth}). Flatten the sub-heading content into paragraphs, lists, or blockquotes. Do not use \`###\` or deeper headings inside sections.`
+          : `Section \`${section.heading}\` contains disallowed node type \`${node.type}\``;
+
         failures.push(
           buildFailure(contract, {
             ruleId: 'rule/allowed-node-types',
@@ -90,7 +97,7 @@ const validateAllowedNodeTypes = (
             heading: section.heading,
             expected: { allowedNodeTypes: expectedSection.allowedNodeTypes },
             actual: { nodeType: node.type },
-            message: `Section \`${section.heading}\` contains disallowed node type \`${node.type}\``,
+            message,
           }),
         );
       }

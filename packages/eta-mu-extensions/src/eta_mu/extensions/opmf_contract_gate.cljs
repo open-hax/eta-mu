@@ -8,13 +8,23 @@
             ["@open-hax/output-contract-gate" :as gate]))
 
 (def HOME (.homedir os))
-(def STATE-DIR (path/join HOME ".pi" "agent" "state" "output-contract-gate"))
+(def ETA-MU-STATE-ROOT (path/join HOME ".ημ" "state"))
+(def LEGACY-STATE-ROOT (path/join HOME ".pi" "agent" "state"))
+(defn resolve-state-dir [name]
+  (let [eta-mu-dir (path/join ETA-MU-STATE-ROOT name)
+        legacy-dir (path/join LEGACY-STATE-ROOT name)]
+    (if (.existsSync fs eta-mu-dir)
+      eta-mu-dir
+      (if (.existsSync fs legacy-dir)
+        legacy-dir
+        eta-mu-dir))))
+(def STATE-DIR (resolve-state-dir "output-contract-gate"))
 (def RUNS-DIR (path/join STATE-DIR "runs"))
 (def VALIDATIONS-FILE (path/join STATE-DIR "validations.jsonl"))
 (def CONFIG-FILE (path/join STATE-DIR "config.json"))
 (def STATUS-KEY "output-gate")
 (def GLOBAL-KEY "__eta_mu_output_contract_gate_state__")
-(def REPAIR-SENTINEL "[[output-contract-gate repair ")
+(def REPAIR-SENTINEL "[[eta-mu-opmf-contract-gate repair ")
 (def CONTRACT-MARKER "## Active Output Contract")
 (def DEFAULT-CONTRACT
   (or (gobj/get js/process.env "PI_OUTPUT_CONTRACT_FILE")
@@ -113,17 +123,22 @@
             (js/Promise.resolve fresh)))))))
 
 (defn parse-repair-attempt [text]
-  (when (and (string? text) (.startsWith text REPAIR-SENTINEL))
-    (let [match (re-find #"^\[\[output-contract-gate repair (\d+)/(\d+)\]\]" text)]
+  (when (and (string? text) (or (.startsWith text REPAIR-SENTINEL)
+                                  (.startsWith text "[[output-contract-gate repair ")))
+    (let [match (re-find #"^\[\[(?:eta-mu-opmf-)?output-contract-gate repair (\d+)/(\d+)\]\]" text)]
       (when match
         {:attempt (js/parseInt (nth match 1))
          :max (js/parseInt (nth match 2))}))))
 
-(defn build-repair-turn-message [repair-prompt attempt max-retries]
-  (str "[[output-contract-gate repair " attempt "/" max-retries "]]\n"
-       "Repair your last response to satisfy the active output contract.\n"
-       "Preserve all passing content and return the full corrected Markdown response only.\n\n"
-       repair-prompt))
+(defn build-repair-turn-message [repair-prompt attempt max-retries original-user-prompt]
+  (str "[[eta-mu-opmf-contract-gate repair " attempt "/" max-retries "]]\n"
+       "Your work is not complete — the output contract was not satisfied.\n"
+       "Continue your work, ensuring the response uses `## Section` level-2 markdown headers (not bold or emphasis).\n"
+       (when-not (str/blank? original-user-prompt)
+         (str "\nOriginal task: " original-user-prompt "\n"))
+       "\nContract violations to fix:\n"
+       repair-prompt "\n\n"
+       "Return the full corrected Markdown response with `## Signal`, `## Evidence`, `## Frames`, `## Countermoves`, `## Next` as level-2 headers."))
 
 (defn build-prompt-append [contract]
   (let [headings (->> (js/Array.from (aget contract "sections"))
@@ -134,11 +149,12 @@
         frames-rule (first (filter #(= "rule/frames-cardinality" (aget % "id")) rules))]
     (->> [(str "## Active Output Contract")
           (str "- Return Markdown with these exact level-2 headings in order: " headings)
+          "- Use `## Heading` level-2 markdown headers for each section. Do NOT use bold (`**Heading**`), emphasis, or deeper headings (`###`, `####`) in place of section headers."
           (when (some? (aget next-rule "exactly"))
             (str "- Next must contain exactly " (aget next-rule "exactly") " concrete next action."))
           (when (and (some? (aget frames-rule "min")) (some? (aget frames-rule "max")))
             (str "- Frames must contain " (aget frames-rule "min") "-" (aget frames-rule "max") " plausible interpretations."))
-          "- If your response fails the structure gate, you will be asked to repair it."]
+          "- If your response fails the structure gate, you will be asked to continue your work until it passes."]
          (filter some?)
          (str/join "\n"))))
 
@@ -236,34 +252,55 @@
                                  :contract (aget cached "contract")
                                  :bundle bundle})))))))))))))
 
+(defn extract-original-user-prompt [ctx]
+  (try
+    (let [messages (extract-messages ctx)
+          user-msgs (filter #(= "user" (aget % "role")) messages)]
+      ;; Get the first substantive user message (skip repair injections)
+      (reduce (fn [_ msg]
+                (let [text (extract-text (aget msg "content"))]
+                  (when (and (not (str/blank? text))
+                             (not (.startsWith text REPAIR-SENTINEL))
+                             (not (.includes text "eta-mu-opmf-contract-gate repair")))
+                    (reduced (subs text 0 (min 500 (.-length text)))))))
+              nil
+              (reverse user-msgs)))
+    (catch :default _ nil)))
+
 (defn handle-validation-result [pi ctx state result]
   (set-status ctx state)
   (if (aget result "ok")
     (when-let [attempt (:attempt (js->clj (aget result "repairInfo") :keywordize-keys true))]
       (notify ctx
-              (str "output-contract-gate repaired output in " attempt " attempt" (when (not= attempt 1) "s"))
+              (str "eta-mu-opmf-contract-gate repaired output in " attempt " attempt" (when (not= attempt 1) "s"))
               "success"))
     (let [repair-info (js->clj (aget result "repairInfo") :keywordize-keys true)
           current-attempt (or (:attempt repair-info) 0)
-          max-retries (or (aget (aget result "contract") "repairMaxRetries") 0)]
-      (if (and (aget (aget state "config") "autoRepair")
-               (aget result "repairPrompt")
-               (< current-attempt max-retries))
-        (let [next-attempt (inc current-attempt)
-              msg (build-repair-turn-message (aget result "repairPrompt") next-attempt max-retries)
-              sender (sender-for pi ctx state)]
-          (if sender
-            (-> (.call (aget sender "sendUserMessage") sender msg)
-                (.then (fn [_]
-                         (notify ctx
-                                 (str "output-contract-gate queued repair " next-attempt "/" max-retries)
-                                 "warn"))))
-            (notify ctx "output-contract-gate repair sender unavailable" "warn")))
-        (notify ctx
-                (str "output-contract-gate failed ("
-                     (.-length (or (some-> result (aget "report") (aget "failures")) #js []))
-                     " structural violations)")
-                "warn")))))
+          max-retries (or (aget (aget result "contract") "repairMaxRetries") 0)
+          ;; Skip repair if there's no assistant message (user-initiated stop)
+          assistant-msg (aget result "assistant")
+          assistant-id (when assistant-msg (aget assistant-msg "id"))]
+      (if (nil? assistant-msg)
+        (notify ctx "eta-mu-opmf-contract-gate: skipping repair (no complete assistant message — likely user-initiated stop)" "info")
+        (if (and (aget (aget state "config") "autoRepair")
+                 (aget result "repairPrompt")
+                 (< current-attempt max-retries))
+          (let [next-attempt (inc current-attempt)
+                original-prompt (extract-original-user-prompt ctx)
+                msg (build-repair-turn-message (aget result "repairPrompt") next-attempt max-retries original-prompt)
+                sender (sender-for pi ctx state)]
+            (if sender
+              (-> (.call (aget sender "sendUserMessage") sender msg)
+                  (.then (fn [_]
+                           (notify ctx
+                                   (str "eta-mu-opmf-contract-gate queued repair " next-attempt "/" max-retries)
+                                   "warn"))))
+              (notify ctx "eta-mu-opmf-contract-gate repair sender unavailable" "warn")))
+          (notify ctx
+                  (str "eta-mu-opmf-contract-gate failed ("
+                       (.-length (or (some-> result (aget "report") (aget "failures")) #js []))
+                       " structural violations)")
+                  "warn"))))))
 
 (defn handle-agent-end-error [ctx state error]
   (aset state "contractError" (or (aget error "message") (str error)))

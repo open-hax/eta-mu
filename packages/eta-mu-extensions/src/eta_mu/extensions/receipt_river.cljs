@@ -9,8 +9,18 @@
             [clojure.string :as str]))
 
 (def ^:const HOME (.homedir os))
-(def ^:const STATE-DIR (str HOME "/.pi/agent/state/receipt-river"))
-(def ^:const EVENTS-FILE (str STATE-DIR "/events.jsonl"))
+(def ^:const ETA-MU-STATE-ROOT (path/join HOME ".ημ" "state"))
+(def ^:const LEGACY-STATE-ROOT (str HOME "/.pi/agent/state"))
+(defn resolve-state-dir [name]
+  (let [eta-mu-dir (path/join ETA-MU-STATE-ROOT name)
+        legacy-dir (path/join LEGACY-STATE-ROOT name)]
+    (if (.existsSync fs eta-mu-dir)
+      eta-mu-dir
+      (if (.existsSync fs legacy-dir)
+        legacy-dir
+        eta-mu-dir))))
+(def ^:const STATE-DIR (resolve-state-dir "receipt-river"))
+(def ^:const EVENTS-FILE (path/join STATE-DIR "events.jsonl"))
 (def ^:const STATUS-KEY "receipt-river")
 (def ^:const GLOBAL-KEY "__pi_receipt_river_state__")
 (def ^:const DELIMITER " | ")

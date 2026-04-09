@@ -9,12 +9,22 @@
             [clojure.string :as str]))
 
 (def ^:const HOME (.homedir os))
-(def ^:const STATE-DIR (str HOME "/.pi/agent/state/session-mycology"))
-(def ^:const REFLECTIONS-FILE (str STATE-DIR "/turn-reflections.jsonl"))
-(def ^:const SPORES-FILE (str STATE-DIR "/skill-spores.jsonl"))
-(def ^:const PROMOTIONS-FILE (str STATE-DIR "/skill-promotions.jsonl"))
-(def ^:const SPORE-DRAFTS-DIR (str STATE-DIR "/spores"))
-(def ^:const LIVE-SKILLS-DIR (str HOME "/.pi/agent/skills"))
+(def ^:const ETA-MU-STATE-ROOT (path/join HOME ".ημ" "state"))
+(def ^:const LEGACY-STATE-ROOT (str HOME "/.pi/agent/state"))
+(defn resolve-state-dir [name]
+  (let [eta-mu-dir (path/join ETA-MU-STATE-ROOT name)
+        legacy-dir (path/join LEGACY-STATE-ROOT name)]
+    (if (.existsSync fs eta-mu-dir)
+      eta-mu-dir
+      (if (.existsSync fs legacy-dir)
+        legacy-dir
+        eta-mu-dir))))
+(def ^:const STATE-DIR (resolve-state-dir "session-mycology"))
+(def ^:const REFLECTIONS-FILE (path/join STATE-DIR "turn-reflections.jsonl"))
+(def ^:const SPORES-FILE (path/join STATE-DIR "skill-spores.jsonl"))
+(def ^:const PROMOTIONS-FILE (path/join STATE-DIR "skill-promotions.jsonl"))
+(def ^:const SPORE-DRAFTS-DIR (path/join STATE-DIR "spores"))
+(def ^:const LIVE-SKILLS-DIR (str HOME "/.pi/agent/skills")) ;; stays under pi — skills are pi's config
 (def ^:const STATUS-KEY "session-mycology")
 (def ^:const GLOBAL-KEY "__pi_session_mycology_state__")
 (def ^:const SPORE-THRESHOLD 0.72)

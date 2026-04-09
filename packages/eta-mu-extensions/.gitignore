@@ -1,0 +1,4 @@
+.build/
+state/
+node_modules/
+shadow-cljs.edn
