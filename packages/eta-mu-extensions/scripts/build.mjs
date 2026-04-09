@@ -249,6 +249,19 @@ function deployPiRuntimes(entries) {
     if (!existsSync(entry.runtimeOutputFile)) continue;
     mkdirSync(entry.piOutputDir, { recursive: true });
     writeFileSync(path.join(entry.piOutputDir, "runtime.js"), readFileSync(entry.runtimeOutputFile, "utf8"), "utf8");
+    
+    // Create symlinks for workspace dependencies that shadow-cljs requires at runtime
+    // These are packages that extensions depend on but aren't bundled into runtime.js
+    if (entry.outputName === "opmf-contract-gate") {
+      const nodeModulesDir = path.join(entry.piOutputDir, "node_modules", "@open-hax");
+      mkdirSync(nodeModulesDir, { recursive: true });
+      const symlinkTarget = path.join(nodeModulesDir, "output-contract-gate");
+      const sourcePackage = path.join(HOME, "devel", "orgs", "open-hax", "eta-mu", "packages", "output-contract-gate");
+      if (existsSync(sourcePackage) && !existsSync(symlinkTarget)) {
+        symlinkSync(sourcePackage, symlinkTarget);
+        console.log(`    linked @open-hax/output-contract-gate for ${entry.outputName}`);
+      }
+    }
   }
 }
 

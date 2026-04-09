@@ -5,7 +5,7 @@
             ["node:fs" :as fs]
             ["node:os" :as os]
             ["node:path" :as path]
-            ["@workspace/output-contract-gate" :as gate]))
+            ["@open-hax/output-contract-gate" :as gate]))
 
 (def HOME (.homedir os))
 (def STATE-DIR (path/join HOME ".pi" "agent" "state" "output-contract-gate"))
@@ -367,5 +367,5 @@
 
 (em/defextension opmf-contract-gate
   :name "opmf-contract-gate"
-  :description "Canonical output contract gate backed by @workspace/output-contract-gate"
+  :description "Canonical output contract gate backed by @open-hax/output-contract-gate"
   :init register-output-contract-gate!)

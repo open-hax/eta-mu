@@ -8,6 +8,9 @@
     "watch": "node scripts/build.mjs watch",
     "clean": "node scripts/build.mjs clean"
   },
+  "dependencies": {
+    "@open-hax/output-contract-gate": "workspace:*"
+  },
   "devDependencies": {
     "shadow-cljs": "^3.3.5"
   },
