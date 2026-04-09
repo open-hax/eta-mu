@@ -24,12 +24,31 @@ This package is the canonical source for all eta-mu (ημ) contract runtimes use
 - **task-timing** - Task timing and performance tracking
 - **websearch-open-hax** - Web search via OpenHax proxy
 
+### New Extensions (P1 - Image Processing)
+
+- **analyze-image** - Contract-based image analysis with vision models
+- **manipulate-image** - Image operations (crop, resize, pad, grayscale, blur)
+
+### Macro Library
+
+Located in `lib/eta_mu/macros/`:
+- `state.cljc` - State management macros (defstate, with-state-dir)
+- `event.cljc` - Event handler macros (defevents, on-session-lifecycle)
+- `tool.cljc` - Tool definition macros (deftool, def-tool-schema)
+
 ## Architecture
 
 ```
 eta-mu-extensions/
 ├── src/eta_mu/extensions/   # ClojureScript extension sources
 ├── lib/eta_mu/              # Core DSL macros and target generators
+│   ├── core.cljc           # Extension DSL macros
+│   ├── pi_target.cljs      # Pi code generation
+│   ├── opencode_target.cljs # OpenCode code generation
+│   └── macros/             # Utility macros
+│       ├── state.cljc       # State management
+│       ├── event.cljc       # Event handlers
+│       └── tool.cljc        # Tool schemas
 ├── scripts/build.mjs        # Build orchestrator
 ├── externs/                 # Closure compiler externs
 └── .build/                  # Compiled output (generated)
@@ -57,6 +76,24 @@ npm run watch
 # Clean build artifacts
 npm run clean
 ```
+
+## Integration Plan
+
+See `spec/extension-integration-plan.md` for details on porting remaining TypeScript extensions.
+
+### Migration Status
+
+| Extension | Language | Lines | Status |
+|-----------|----------|-------|--------|
+| receipt-river | CLJS | 23,868 | ✅ Ported |
+| session-mycology | CLJS | 30,152 | ✅ Ported |
+| contract-runtime | CLJS | 18,197 | ✅ Ported |
+| analyze-image | CLJS | ~350 | ✅ Ported (P1) |
+| manipulate-image | CLJS | ~300 | ✅ Ported (P1) |
+| apply-patch | TS | 799 | 📋 P2 - Spec ready |
+| desktop-ops | TS | 705 | 📋 P2 - Spec ready |
+| webpage-markdown | TS | 758 | 📋 P3 - Spec ready |
+| skill-graph-aco | TS | 1,400 | 📋 P3 - Spec ready |
 
 ## The ημ Layer
 
