@@ -65,7 +65,7 @@ jobs:
           git push
 
       - name: Post to Discord
-        if: ${{ secrets.DISCORD_BOT_TOKEN != '' && github.event.inputs.dry_run != 'true' }}
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
