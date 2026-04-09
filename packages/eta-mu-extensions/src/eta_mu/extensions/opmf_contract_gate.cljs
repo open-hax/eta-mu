@@ -41,6 +41,15 @@
   (ensure-dir (.dirname path file-path))
   (.appendFileSync fs file-path (str (.stringify js/JSON (clj->js value)) "\n") "utf8"))
 
+(defn looks-like-agent-error? [text]
+  "Returns true if the text appears to be an error message from the
+   upstream provider or runtime rather than a real agent response."
+  (and (string? text)
+       (or (str/blank? text)
+           (re-find #"^(Error|ERR)\s*:" text)
+           (re-find #"^\d{3}\s" text)
+           (re-find #"(?i)rate.?limit|quota.?exhaust|no upstream account|outstanding balance" text))))
+
 (defn write-config [config]
   (ensure-dir STATE-DIR)
   (.writeFileSync fs CONFIG-FILE (str (.stringify js/JSON config nil 2) "\n") "utf8"))
@@ -195,62 +204,62 @@
       (when (aget pi "sendUserMessage") pi)))
 
 (defn validate-latest-assistant [ctx state]
-  (-> (load-contract state)
-      (.then
-       (fn [cached]
-         (let [assistant (last-message-by-role ctx "assistant")
-               user (last-message-by-role ctx "user")]
-           (if-not assistant
-             (js/Promise.resolve #js {:ok false :error "no assistant message found"})
-             (let [assistant-text (extract-text (aget assistant "content"))]
-               (if (str/blank? assistant-text)
-                 (js/Promise.resolve #js {:ok false :error "assistant message has no text content"})
-                 (let [document (gate/extractMarkdownSections assistant-text)
-                       validation (gate/validateMarkdownResponse (aget cached "contract") assistant-text)
-                       report (gate/toFailureReport (aget cached "contract") validation)
-                       repair-prompt (when-not (aget validation "ok") (gate/compileRepairPrompt (aget cached "contract") validation))]
-                   (-> (gate/writeRunArtifacts
-                        #js {:artifactsRoot RUNS-DIR
-                             :contractPath (aget cached "path")
-                             :responsePath (str "session:"
-                                                (or (when-let [sm (aget ctx "sessionManager")]
-                                                      (let [getter (aget sm "getSessionFile")]
-                                                        (when getter
-                                                          (.call getter sm))))
-                                                    "ephemeral")
-                                                ":assistant:"
-                                                (or (aget assistant "id") "unknown"))
-                             :contractSource (aget cached "source")
-                             :responseMarkdown assistant-text
-                             :contract (aget cached "contract")
-                             :document document
+  (.then (load-contract state)
+    (fn [cached]
+      (let [assistant (last-message-by-role ctx "assistant")
+            user (last-message-by-role ctx "user")]
+        (if-not assistant
+          (js/Promise.resolve #js {:ok true :skip true :reason "no assistant message — agent likely ended with error"})
+          (let [assistant-text (extract-text (aget assistant "content"))]
+            (if (str/blank? assistant-text)
+              (js/Promise.resolve #js {:ok true :skip true :reason "assistant message has no text content"})
+              (if (looks-like-agent-error? assistant-text)
+                (js/Promise.resolve #js {:ok true :skip true :reason "assistant message is an error, not a real response"})
+                (let [document (gate/extractMarkdownSections assistant-text)
+                      validation (gate/validateMarkdownResponse (aget cached "contract") assistant-text)
+                      report (gate/toFailureReport (aget cached "contract") validation)
+                      repair-prompt (when-not (aget validation "ok") (gate/compileRepairPrompt (aget cached "contract") validation))]
+                  (.then (gate/writeRunArtifacts
+                           #js {:artifactsRoot RUNS-DIR
+                                :contractPath (aget cached "path")
+                                :responsePath (str "session:"
+                                                   (or (when-let [sm (aget ctx "sessionManager")]
+                                                         (let [getter (aget sm "getSessionFile")]
+                                                           (when getter
+                                                             (.call getter sm))))
+                                                       "ephemeral")
+                                                   ":assistant:"
+                                                   (or (aget assistant "id") "unknown"))
+                                :contractSource (aget cached "source")
+                                :responseMarkdown assistant-text
+                                :contract (aget cached "contract")
+                                :document document
+                                :report report
+                                :repairPrompt repair-prompt
+                                :exitCode (if (aget validation "ok") 0 1)})
+                    (fn [bundle]
+                      (let [repair-info (parse-repair-attempt (extract-text (aget user "content")))
+                            summary #js {:ts (.toISOString (js/Date.))
+                                         :ok (aget validation "ok")
+                                         :failureCount (.-length (or (aget report "failures") #js []))
+                                         :assistantMessageId (aget assistant "id")
+                                         :userMessageId (aget user "id")
+                                         :repairAttempt (or (:attempt repair-info) 0)
+                                         :bundleDir (aget bundle "dir")
+                                         :contract #js {:name (aget (aget cached "contract") "name")
+                                                        :version (aget (aget cached "contract") "version")
+                                                        :path (aget cached "path")}}]
+                        (append-jsonl VALIDATIONS-FILE (js->clj summary :keywordize-keys true))
+                        (aset state "lastResult" summary)
+                        (aset state "contractError" nil)
+                        #js {:ok (aget validation "ok")
                              :report report
                              :repairPrompt repair-prompt
-                             :exitCode (if (aget validation "ok") 0 1)})
-                       (.then
-                        (fn [bundle]
-                          (let [repair-info (parse-repair-attempt (extract-text (aget user "content")))
-                                summary #js {:ts (.toISOString (js/Date.))
-                                             :ok (aget validation "ok")
-                                             :failureCount (.-length (or (aget report "failures") #js []))
-                                             :assistantMessageId (aget assistant "id")
-                                             :userMessageId (aget user "id")
-                                             :repairAttempt (or (:attempt repair-info) 0)
-                                             :bundleDir (aget bundle "dir")
-                                             :contract #js {:name (aget (aget cached "contract") "name")
-                                                            :version (aget (aget cached "contract") "version")
-                                                            :path (aget cached "path")}}]
-                            (append-jsonl VALIDATIONS-FILE (js->clj summary :keywordize-keys true))
-                            (aset state "lastResult" summary)
-                            (aset state "contractError" nil)
-                            #js {:ok (aget validation "ok")
-                                 :report report
-                                 :repairPrompt repair-prompt
-                                 :repairInfo (clj->js repair-info)
-                                 :assistant assistant
-                                 :user user
-                                 :contract (aget cached "contract")
-                                 :bundle bundle})))))))))))))
+                             :repairInfo (clj->js repair-info)
+                             :assistant assistant
+                             :user user
+                             :contract (aget cached "contract")
+                             :bundle bundle}))))))))))))
 
 (defn extract-original-user-prompt [ctx]
   (try
@@ -269,14 +278,26 @@
 
 (defn handle-validation-result [pi ctx state result]
   (set-status ctx state)
-  (if (aget result "ok")
+  (cond
+    ;; Agent ended with error/no output — skip gate entirely
+    (aget result "skip")
+    (notify ctx
+            (str "output-contract-gate: skipped — "
+                 (or (aget result "reason") "agent error or no response"))
+            "info")
+
+    ;; Validation passed
+    (aget result "ok")
     (when-let [attempt (:attempt (js->clj (aget result "repairInfo") :keywordize-keys true))]
       (notify ctx
               (str "eta-mu-opmf-contract-gate repaired output in " attempt " attempt" (when (not= attempt 1) "s"))
               "success"))
+
+    ;; Validation failed — attempt repair
+    :else
     (let [repair-info (js->clj (aget result "repairInfo") :keywordize-keys true)
           current-attempt (or (:attempt repair-info) 0)
-          max-retries (or (aget (aget result "contract") "repairMaxRetries") 0)
+          max-retries (or (some-> result (aget "contract") (aget "repairMaxRetries")) 0)
           ;; Skip repair if there's no assistant message (user-initiated stop)
           assistant-msg (aget result "assistant")
           assistant-id (when assistant-msg (aget assistant-msg "id"))]
