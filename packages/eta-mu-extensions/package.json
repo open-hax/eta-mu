@@ -1,0 +1,31 @@
+{
+  "name": "@open-hax/eta-mu-extensions",
+  "version": "0.2.0",
+  "description": "Constitutional layer runtime extensions for cybernetic governance. Source of receipt-river, session-mycology, contract-runtime, fork-tax, and other eta-mu primitives.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs release",
+    "watch": "node scripts/build.mjs watch",
+    "clean": "node scripts/build.mjs clean"
+  },
+  "devDependencies": {
+    "shadow-cljs": "^3.3.5"
+  },
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/open-hax/eta-mu.git",
+    "directory": "packages/eta-mu-extensions"
+  },
+  "keywords": [
+    "eta-mu",
+    "pi",
+    "opencode",
+    "extensions",
+    "receipt-river",
+    "session-mycology",
+    "contract-runtime",
+    "fork-tax",
+    "cybernetic-governance"
+  ]
+}
