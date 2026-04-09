@@ -518,9 +518,49 @@ const buildPromotionPrBody = (vault, state) => {
   ].join('\n');
 };
 
+const isValidActionBatch = (batch) => {
+  if (!batch || typeof batch !== 'object') {
+    return false;
+  }
+
+  if (batch.kind !== 'eta-mu-action-batch.v1') {
+    return false;
+  }
+
+  if (typeof batch.repo !== 'string' || typeof batch.trigger !== 'string' || typeof batch.summary !== 'string') {
+    return false;
+  }
+
+  if (!Array.isArray(batch.panels) || !Array.isArray(batch.actions)) {
+    return false;
+  }
+
+  return Boolean(batch.breath && typeof batch.breath.reason === 'string');
+};
+
+const normalizeActionBatchRecord = (payload) => {
+  const batch = payload?.batch ?? payload;
+  if (!isValidActionBatch(batch)) {
+    const error = new Error('invalid eta-mu action batch payload');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return {
+    record: 'eta-mu-action-batch.v1',
+    time: new Date().toISOString(),
+    source: typeof payload?.source === 'string' ? payload.source : 'unknown',
+    repo: batch.repo,
+    issue_number: Number.isInteger(payload?.issue_number) ? payload.issue_number : null,
+    pull_request_number: Number.isInteger(payload?.pull_request_number) ? payload.pull_request_number : null,
+    batch,
+  };
+};
+
 export const createControlPlaneService = ({
   githubToken,
   receiptsPath,
+  actionBatchesPath,
   automationEnabled = true,
   automationIntervalMs = 300_000,
   automationVaults = ['proxx'],
@@ -528,6 +568,7 @@ export const createControlPlaneService = ({
 }) => {
   const github = createGitHubClient({ token: githubToken, ttlMs: 60_000 });
   const resolvedReceiptsPath = receiptsPath ? path.resolve(receiptsPath) : null;
+  const resolvedActionBatchesPath = actionBatchesPath ? path.resolve(actionBatchesPath) : null;
   let automationTimer = null;
   let automationInFlight = false;
 
@@ -547,10 +588,27 @@ export const createControlPlaneService = ({
     if (!vault) {
       return null;
     }
-    return resolveVaultState(vault, github);
+    const state = await resolveVaultState(vault, github);
+    const recentActionBatch = await getLatestActionBatchForRepo(vault.repo);
+    return recentActionBatch
+      ? {
+          ...state,
+          recommended_panels: recentActionBatch.batch.panels,
+          recent_action_batch: {
+            recorded_at: recentActionBatch.time,
+            source: recentActionBatch.source,
+            issue_number: recentActionBatch.issue_number,
+            pull_request_number: recentActionBatch.pull_request_number,
+            summary: recentActionBatch.batch.summary,
+            panels: recentActionBatch.batch.panels,
+            primary_action: recentActionBatch.batch.actions.find((action) => action.kind !== 'noop') ?? recentActionBatch.batch.actions[0] ?? null,
+            breath: recentActionBatch.batch.breath,
+          },
+        }
+      : state;
   };
 
-  const listVaultStates = async () => Promise.all(listVaults().map((vault) => resolveVaultState(vault, github)));
+  const listVaultStates = async () => Promise.all(listVaults().map((vault) => getVaultState(vault.id)));
 
   const listReceipts = async (limit = 50) => {
     if (!resolvedReceiptsPath) {
@@ -558,6 +616,35 @@ export const createControlPlaneService = ({
     }
     const rows = await readJsonlFile(resolvedReceiptsPath);
     return rows.slice(-Math.max(1, Math.min(500, Number(limit ?? 50)))).reverse();
+  };
+
+  const listActionBatches = async (limit = 20, repo) => {
+    if (!resolvedActionBatchesPath) {
+      return [];
+    }
+    const rows = await readJsonlFile(resolvedActionBatchesPath);
+    const normalizedRepo = typeof repo === 'string' ? repo.trim() : '';
+    const filtered = normalizedRepo
+      ? rows.filter((row) => row?.repo === normalizedRepo || row?.batch?.repo === normalizedRepo)
+      : rows;
+    return filtered.slice(-Math.max(1, Math.min(500, Number(limit ?? 20)))).reverse();
+  };
+
+  const getLatestActionBatchForRepo = async (repo) => {
+    const [latest] = await listActionBatches(1, repo);
+    return latest ?? null;
+  };
+
+  const recordActionBatch = async (payload) => {
+    if (!resolvedActionBatchesPath) {
+      return { ok: false, reason: 'action-batch path is not configured' };
+    }
+    const record = normalizeActionBatchRecord(payload);
+    await appendJsonlRecord(resolvedActionBatchesPath, record);
+    return {
+      ok: true,
+      record,
+    };
   };
 
   const ensureMainPromotionPr = async (vaultId, trigger = 'manual') => {
@@ -694,6 +781,8 @@ export const createControlPlaneService = ({
     getVaultState,
     listVaultStates,
     listReceipts,
+    listActionBatches,
+    recordActionBatch,
     ensureMainPromotionPr,
     startAutomationLoop,
   };

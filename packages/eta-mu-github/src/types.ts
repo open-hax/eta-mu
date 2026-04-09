@@ -11,6 +11,7 @@ export interface EtaMuConfig {
   readonly reviewCheckName: string;
   readonly stateCommentMarker: string;
   readonly autofixCommentMarker: string;
+  readonly controlPlaneUrl?: string;
   readonly commitAuthorName: string;
   readonly commitAuthorEmail: string;
   readonly modelProvider?: string;
@@ -81,6 +82,13 @@ export interface EtaMuAgentDecision {
   readonly shouldRespond: boolean;
   readonly mode: "reply" | "upsert-state" | "autofix" | "noop";
   readonly body: string;
+}
+
+export interface EtaMuActionBatchRecord {
+  readonly source?: string;
+  readonly issue_number?: number;
+  readonly pull_request_number?: number;
+  readonly batch: Record<string, unknown>;
 }
 
 export interface AutofixResult {
