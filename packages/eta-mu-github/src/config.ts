@@ -16,6 +16,7 @@ export const loadConfig = (): EtaMuConfig => ({
   reviewCheckName: process.env.ETA_MU_REVIEW_CHECK_NAME ?? "eta-mu-review-gate",
   stateCommentMarker: process.env.ETA_MU_STATE_COMMENT_MARKER ?? "<!-- eta-mu:state -->",
   autofixCommentMarker: process.env.ETA_MU_AUTOFIX_COMMENT_MARKER ?? "<!-- eta-mu:autofix -->",
+  controlPlaneUrl: process.env.ETA_MU_CONTROL_PLANE_URL || undefined,
   commitAuthorName: process.env.ETA_MU_COMMIT_AUTHOR_NAME ?? "eta-mu[bot]",
   commitAuthorEmail: process.env.ETA_MU_COMMIT_AUTHOR_EMAIL ?? "eta-mu[bot]@users.noreply.github.com",
   modelProvider: process.env.ETA_MU_MODEL_PROVIDER || undefined,

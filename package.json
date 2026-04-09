@@ -12,9 +12,9 @@
   ],
   "scripts": {
     "dev": "concurrently \"pnpm --filter @openhax/agentd dev\" \"pnpm --filter @openhax/opencode-reactant dev\"",
-    "build": "pnpm --filter @openhax/opencode-reactant build && pnpm --filter @openhax/agentd build && pnpm --dir packages/eta-mu-github build && pnpm --dir packages/presence-core build && pnpm --dir packages/kanban build",
-    "test": "pnpm --dir packages/eta-mu-github test && node --test packages/eta-mu-docs/tests/*.test.cjs && node --test packages/eta-mu-truth/tests/*.test.cjs && pnpm --dir packages/presence-core test && pnpm --dir packages/kanban test && node --test packages/signal-contracts/tests/*.test.cjs && node --test packages/signal-radar-core/tests/*.test.cjs && node --test packages/signal-source-utils/tests/*.test.cjs && node --test packages/signal-watchlists/tests/*.test.cjs",
-    "typecheck": "pnpm --dir packages/eta-mu-github typecheck && pnpm --dir packages/presence-core typecheck && pnpm --dir packages/kanban exec tsc -p tsconfig.json --noEmit",
+    "build": "pnpm --filter @openhax/opencode-reactant build && pnpm --filter @openhax/agentd build && pnpm --dir packages/eta-mu-runtime build && pnpm --dir packages/eta-mu-github build && pnpm --dir packages/presence-core build && pnpm --dir packages/kanban build",
+    "test": "pnpm --dir packages/eta-mu-runtime test && pnpm --dir packages/eta-mu-github test && node --test packages/eta-mu-docs/tests/*.test.cjs && node --test packages/eta-mu-truth/tests/*.test.cjs && pnpm --dir packages/presence-core test && pnpm --dir packages/kanban test && node --test packages/signal-contracts/tests/*.test.cjs && node --test packages/signal-radar-core/tests/*.test.cjs && node --test packages/signal-source-utils/tests/*.test.cjs && node --test packages/signal-watchlists/tests/*.test.cjs",
+    "typecheck": "pnpm --dir packages/eta-mu-runtime typecheck && pnpm --dir packages/eta-mu-github typecheck && pnpm --dir packages/presence-core typecheck && pnpm --dir packages/kanban exec tsc -p tsconfig.json --noEmit",
     "docs:ts": "pnpm --filter @openhax/agentd doc",
     "docs:cljs": "clojure -X:codox",
     "docs": "pnpm docs:ts && pnpm docs:cljs",

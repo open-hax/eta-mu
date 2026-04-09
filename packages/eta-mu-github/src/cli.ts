@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import "dotenv/config";
+import { etaMuActionBatchSchema } from "@eta-mu/runtime";
 import { loadConfig } from "./config.js";
 import { classifyGithubEvent } from "./event-classifier.js";
 import {
@@ -13,6 +14,13 @@ import {
 } from "./github.js";
 import { runAutofixForEvent } from "./autofix.js";
 import { runEtaMuPrompt } from "./pi-agent.js";
+import {
+  buildDraftActionBatch,
+  buildPlanningContext,
+  mapActionBatchToDecision,
+  parseActionBatch,
+  publishActionBatch,
+} from "./runtime-batch.js";
 import { findTrackedUnresolvedThreads } from "./review-gate.js";
 import type { AutofixResult, EtaMuAgentDecision } from "./types.js";
 import { readFile } from "node:fs/promises";
@@ -36,27 +44,18 @@ const hasFlag = (args: readonly string[], flag: string): boolean => args.include
 
 const readJson = async (path: string): Promise<Record<string, unknown>> => JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>;
 
-const parseDecision = (value: string): EtaMuAgentDecision => {
-  const parsed = JSON.parse(value) as Partial<EtaMuAgentDecision>;
-  if (parsed.shouldRespond !== true) {
-    return { shouldRespond: false, mode: "noop", body: "" };
-  }
-  if ((parsed.mode !== "reply" && parsed.mode !== "upsert-state" && parsed.mode !== "autofix") || typeof parsed.body !== "string") {
-    throw new Error(`Invalid eta-mu response payload: ${value}`);
-  }
-  return { shouldRespond: true, mode: parsed.mode, body: parsed.body };
-};
-
 const buildSystemPrompt = (): string => [
   "You are eta-mu, an elite GitHub coordination bot built on pi.",
   "You collaborate with humans, CodeRabbit, Codex-like review agents, and other automated reviewers.",
   "Never invent repository facts.",
-  "Prefer concise markdown when speaking to humans.",
-  "Return JSON only with shape {\"shouldRespond\":boolean,\"mode\":\"reply\"|\"upsert-state\"|\"autofix\"|\"noop\",\"body\":string}.",
-  "Use mode=reply for a direct human-facing comment.",
-  "Use mode=upsert-state for a sticky status comment that should replace eta-mu's prior state note.",
-  "Use mode=autofix only when the current PR should be changed automatically; in that mode body must be a terse implementation brief for the fixer, not a user-facing comment.",
-  "Use mode=noop when eta-mu should remain silent.",
+  "Prefer concise markdown and typed movement.",
+  "Return JSON only with exact shape eta-mu-action-batch.v1.",
+  "Keep kind fixed to eta-mu-action-batch.v1.",
+  "Do not invent files, checks, users, or repository state that are not present in the prompt.",
+  "Actions must use only these kinds: comment, summary, label, issue, patch-plan, patch, reroute, defer, request-evidence, request-human-attention, noop.",
+  "Use patch only when the current PR should be autofixed automatically.",
+  "Use summary when the main output should become a sticky state comment.",
+  "If the deterministic draft is already correct, return it unchanged.",
 ].join("\n");
 
 const buildPrompt = (context: string): string => `${context}\n\nReturn JSON only.`;
@@ -137,15 +136,55 @@ const main = async (): Promise<void> => {
     if (!token) throw new Error("GITHUB_TOKEN or GH_TOKEN is required");
     const octokit = createGitHubClient(token);
     const context = await fetchEventContext(octokit, repo, classification, payload);
-    const decisionJson = await runEtaMuPrompt(
-      cwd,
-      buildSystemPrompt(),
-      buildPrompt(JSON.stringify({ classification, context }, null, 2)),
-      config.modelProvider,
-      config.modelId,
-    );
-    const decision = parseDecision(decisionJson);
-    console.log(JSON.stringify({ phase: "decide", decision }, null, 2));
+    const planningContext = buildPlanningContext(classification, context);
+    const draftBatch = buildDraftActionBatch(classification, context);
+    let actionBatch = draftBatch;
+
+    try {
+      const decisionJson = await runEtaMuPrompt(
+        cwd,
+        buildSystemPrompt(),
+        buildPrompt(
+          JSON.stringify(
+            {
+              classification,
+              context,
+              planningContext,
+              draftActionBatch: draftBatch,
+              schemaHint: etaMuActionBatchSchema.shape.kind.value,
+            },
+            null,
+            2,
+          ),
+        ),
+        config.modelProvider,
+        config.modelId,
+      );
+      actionBatch = parseActionBatch(decisionJson, draftBatch);
+    } catch (error) {
+      console.warn(
+        `eta-mu action-batch fallback: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
+    const decision: EtaMuAgentDecision = mapActionBatchToDecision(actionBatch);
+    console.log(JSON.stringify({ phase: "decide", actionBatch, decision }, null, 2));
+
+    if (!hasFlag(args, "--dry-run")) {
+      try {
+        await publishActionBatch(config.controlPlaneUrl, {
+          source: "eta-mu-github",
+          issue_number: context.issueNumber,
+          pull_request_number: context.pullRequestNumber,
+          batch: actionBatch as unknown as Record<string, unknown>,
+        });
+      } catch (error) {
+        console.warn(
+          `eta-mu action-batch publish skipped: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
     if (!decision.shouldRespond || hasFlag(args, "--dry-run")) return;
     const targetIssue = context.issueNumber ?? context.pullRequestNumber;
     if (!targetIssue) {

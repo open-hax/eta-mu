@@ -14,6 +14,7 @@ export const createApp = async (config) => {
   const controlPlane = createControlPlaneService({
     githubToken: config.githubToken,
     receiptsPath: config.controlPlaneReceiptsPath,
+    actionBatchesPath: config.actionBatchesPath,
     automationEnabled: config.automationEnabled,
     automationIntervalMs: config.automationIntervalMs,
     automationVaults: config.automationVaults,
@@ -95,6 +96,19 @@ export const createApp = async (config) => {
   app.get('/api/control-plane/receipts', async (request) => ({
     receipts: await controlPlane.listReceipts(request.query?.limit),
   }));
+
+  app.get('/api/control-plane/action-batches', async (request) => ({
+    action_batches: await controlPlane.listActionBatches(request.query?.limit, request.query?.repo),
+  }));
+
+  app.post('/api/control-plane/action-batches', async (request, reply) => {
+    try {
+      return await controlPlane.recordActionBatch(request.body ?? {});
+    } catch (error) {
+      const statusCode = error?.statusCode ?? 400;
+      reply.code(statusCode).send({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
 
   app.get('/api/control-plane/:vaultId', async (request, reply) => {
     const state = await controlPlane.getVaultState(request.params?.vaultId);
