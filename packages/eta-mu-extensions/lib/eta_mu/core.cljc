@@ -52,6 +52,20 @@
       :handler ~(:handler opts)}))
 
 (defmacro tool
+  "Define a tool extension.
+
+  The :execute function receives exactly 5 arguments in this order:
+    _tcid   - Tool call ID (string, e.g. 'websearch_123')
+    params  - Tool parameters as a JS object (use aget/aset for access)
+    sig     - AbortSignal for cancellation
+    onupd   - onUpdate callback for progress updates (may be nil)
+    ctx     - Extension context object
+
+  Example:
+    (em/tool \"my-tool\"
+      :execute (fn [_tcid params signal onUpdate ctx]
+                 (let [value (aget params \"key\")]
+                   ...)))"
   [tool-name & body]
   (let [[opts _] (parse-kw-opts body)
         execute-fn (:execute opts)]

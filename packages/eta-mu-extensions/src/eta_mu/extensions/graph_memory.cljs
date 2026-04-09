@@ -73,12 +73,16 @@
   (let [url (str (graph-weaver-url) "/graphql")
         token (admin-token)
         headers (cond-> #js {"Content-Type" "application/json"}
-                  token (aset "Authorization" (str "Bearer " token)))]
+                  token (aset "Authorization" (str "Bearer " token)))
+        ;; Convert CLJS map to JS object with string keys
+        vars-js (clj->js variables)
+        body #js {"query" query "variables" vars-js}
+        body-str (js/JSON.stringify body)]
+    (js/console.log "[graph-memory] GraphQL request:" body-str)
     (-> (js/fetch url
                   #js {:method "POST"
                        :headers headers
-                       :body (js/JSON.stringify #js {:query query
-                                                     :variables variables})
+                       :body body-str
                        :signal signal})
         (.then (fn [resp]
                  (-> (.text resp)
@@ -172,7 +176,7 @@
         dataJson
       }
     }"]
-    (-> (graphql-request gql-query #js {:query query :limit max-nodes} signal)
+    (-> (graphql-request gql-query {:query query :limit max-nodes} signal)
         (.then (fn [data]
                  (when-let [nodes (aget data "searchNodes")]
                    (format-context-for-injection nodes 4000))))
@@ -196,7 +200,7 @@
     :description "Search the knowledge graph for relevant nodes by label, content, or metadata."
     :parameters {:query {:type "string" :description "Search query"}
                  :limit {:type "integer" :minimum 1 :maximum 200 :description "Maximum results (default: 20)" :optional true}}
-    :execute (fn [params ctx signal onUpdate]
+    :execute (fn [_tcid params signal onUpdate ctx]
                (let [query (aget params "query")
                      limit (or (aget params "limit") 20)
                      gql-query "
@@ -213,7 +217,7 @@
                        }"]
                  (when onUpdate
                    (onUpdate #js {:content #js [#js {:type "text" :text (str "Searching graph: " query "...")}]}))
-                 (-> (graphql-request gql-query #js {:query query :limit limit} signal)
+                 (-> (graphql-request gql-query {:query query :limit limit} signal)
                      (.then (fn [data]
                               (if-let [nodes (aget data "searchNodes")]
                                 (let [formatted (->> (js/Array.from nodes)
@@ -237,7 +241,7 @@
                  :kind {:type "string" :description "Filter by edge kind" :optional true}
                  :limit {:type "integer" :minimum 1 :maximum 200 :description "Maximum neighbors (default: 50)" :optional true}
                  :include-preview {:type "boolean" :description "Include node preview content (default: false)" :optional true}}
-    :execute (fn [params ctx signal onUpdate]
+    :execute (fn [_tcid params signal onUpdate ctx]
                (let [node-id (aget params "id")
                      direction (or (aget params "direction") "both")
                      kind (aget params "kind")
@@ -276,11 +280,11 @@
                  (when onUpdate
                    (onUpdate #js {:content #js [#js {:type "text" :text (str "Recalling context for: " node-id "...")}]}))
                  (-> (graphql-request gql-query
-                                      #js {:id node-id
-                                           :direction direction
-                                           :kind kind
-                                           :limit limit
-                                           :includePreview (boolean include-preview)}
+                                      {:id node-id
+                                       :direction direction
+                                       :kind kind
+                                       :limit limit
+                                       :includePreview (boolean include-preview)}
                                       signal)
                      (.then (fn [data]
                               (let [node (aget data "node")
@@ -330,7 +334,7 @@
                                               :data {:type "object"}}
                                  :required ["id" "source" "target"]}
                          :description "Edges to upsert"}}
-    :execute (fn [params ctx signal onUpdate]
+    :execute (fn [_tcid params signal onUpdate ctx]
                (when onUpdate
                  (onUpdate #js {:content #js [#js {:type "text" :text "Ingesting into graph memory..."}]}))
 
@@ -351,12 +355,12 @@
                                                            }
                                                          }"]
                                                    (graphql-request gql-mutation
-                                                                    #js {:input #js {:id node-id
-                                                                                     :kind (aget node "kind")
-                                                                                     :label (aget node "label")
-                                                                                     :external (aget node "external")
-                                                                                     :dataJson (when-let [d (aget node "data")]
-                                                                                                 (js/JSON.stringify d))}}
+                                                                    {:input {:id node-id
+                                                                            :kind (aget node "kind")
+                                                                            :label (aget node "label")
+                                                                            :external (aget node "external")
+                                                                            :dataJson (when-let [d (aget node "data")]
+                                                                                        (js/JSON.stringify d))}}
                                                                     signal))))))
                      edge-promises (when (and edges (pos? (alength edges)))
                                      (->> (js/Array.from edges)
@@ -372,12 +376,12 @@
                                                            }
                                                          }"]
                                                    (graphql-request gql-mutation
-                                                                    #js {:input #js {:id edge-id
-                                                                                     :source (aget edge "source")
-                                                                                     :target (aget edge "target")
-                                                                                     :kind (aget edge "kind")
-                                                                                     :dataJson (when-let [d (aget edge "data")]
-                                                                                                 (js/JSON.stringify d))}}
+                                                                    {:input {:id edge-id
+                                                                            :source (aget edge "source")
+                                                                            :target (aget edge "target")
+                                                                            :kind (aget edge "kind")
+                                                                            :dataJson (when-let [d (aget edge "data")]
+                                                                                        (js/JSON.stringify d))}}
                                                                     signal))))))]
                  (-> (js/Promise.all (clj->js (concat node-promises edge-promises)))
                      (.then (fn [_results]
@@ -398,7 +402,7 @@
     :description "Passive context hydration: search the graph for relevant context and return it for injection into the conversation. Use this before complex operations to surface related knowledge."
     :parameters {:query {:type "string" :description "Query to find relevant context"}
                  :maxNodes {:type "integer" :minimum 1 :maximum 50 :description "Maximum context nodes (default: 10)" :optional true}}
-    :execute (fn [params ctx signal onUpdate]
+    :execute (fn [_tcid params signal onUpdate ctx]
                (let [query (aget params "query")
                      max-nodes (or (aget params "maxNodes") 10)]
                  (when onUpdate
@@ -422,7 +426,7 @@
     :label "Graph Memory Status"
     :description "Get status of the graph memory service (node count, edge count, weaver status)."
     :parameters {}
-    :execute (fn [params ctx signal onUpdate]
+    :execute (fn [_tcid params signal onUpdate ctx]
                (let [gql-query "
                  query Status {
                    status {
@@ -435,7 +439,7 @@
                      }
                    }
                  }"]
-                 (-> (graphql-request gql-query #js {} signal)
+                 (-> (graphql-request gql-query {} signal)
                      (.then (fn [data]
                               (if-let [status (aget data "status")]
                                 (let [nodes (aget status "nodes")

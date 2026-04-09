@@ -157,7 +157,7 @@ Actions:
                  :limit {:type "number" :description "Number of sessions to list" :optional true}
                  :client {:type "string" :description "Client name" :optional true}
                  :hourly_rate {:type "number" :description "Hourly rate" :optional true}}
-    :execute (fn [params ctx]
+    :execute (fn [_tcid params _signal _onUpdate ctx]
                (let [action (aget params "action")]
                  (condp = action
                    "status" (handle-status)

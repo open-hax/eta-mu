@@ -50,7 +50,7 @@
                  :searchContextSize {:type "string" :enum ["low" "medium" "high"] :description "Search context size (default: medium)" :optional true}
                  :allowedDomains {:type "array" :items {:type "string"} :description "Optional allow-list of domains" :optional true}
                  :model {:type "string" :description "Model ID to use" :optional true}}
-    :execute (fn [params ctx signal onUpdate]
+    :execute (fn [_tcid params signal onUpdate ctx]
                (let [token (proxy-token)]
                  (if-not token
                    (js/Promise.reject (js/Error. "Missing auth token for Open Hax proxy. Set OPEN_HAX_OPENAI_PROXY_AUTH_TOKEN (or PROXY_AUTH_TOKEN)."))
