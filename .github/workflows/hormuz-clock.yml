@@ -32,7 +32,7 @@ jobs:
       - name: Run Hormuz signal agent
         id: signal
         env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          OPENCODE_API_KEY: public
           OPENCODE_MODEL: opencode/big-pickle
         run: |
           PROMPT=$(cat agents/hormuz-clock/prompt.md)
@@ -65,9 +65,10 @@ jobs:
           git push
 
       - name: Post to Discord
-        if: ${{ secrets.DISCORD_HORMUZ_WEBHOOK != '' && github.event.inputs.dry_run != 'true' }}
+        if: ${{ secrets.DISCORD_BOT_TOKEN != '' && github.event.inputs.dry_run != 'true' }}
         env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_HORMUZ_WEBHOOK }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
         run: |
           RECEIPT=$(cat "${{ steps.signal.outputs.receipt_path }}")
           SUMMARY=$(echo $RECEIPT | jq -r '.summary // .raw // "signal unavailable"' 2>/dev/null || echo "signal parse error")
@@ -88,6 +89,7 @@ jobs:
               }]
             }')
 
-          curl -s -X POST "$DISCORD_WEBHOOK" \
+          curl -s -X POST "https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/messages" \
+            -H "Authorization: Bot ${DISCORD_BOT_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
