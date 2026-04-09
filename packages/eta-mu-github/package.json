@@ -9,12 +9,16 @@
     "eta-mu": "dist/cli.js"
   },
   "scripts": {
+    "prebuild": "pnpm --dir ../eta-mu-runtime build",
+    "pretest": "pnpm --dir ../eta-mu-runtime build",
+    "pretypecheck": "pnpm --dir ../eta-mu-runtime build",
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "tsx src/cli.ts"
   },
   "dependencies": {
+    "@eta-mu/runtime": "workspace:*",
     "@mariozechner/pi-ai": "^0.58.0",
     "@mariozechner/pi-coding-agent": "^0.58.0",
     "@octokit/rest": "^22.0.1",

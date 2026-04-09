@@ -20,5 +20,6 @@ export const loadConfig = () => ({
     .map((value) => value.trim())
     .filter(Boolean),
   controlPlaneReceiptsPath: process.env.ETA_MU_CONTROL_PLANE_RECEIPTS_PATH ?? '.Π/eta_mu_control_plane_receipts.v1.jsonl',
+  actionBatchesPath: process.env.ETA_MU_ACTION_BATCHES_PATH ?? '.Π/eta_mu_action_batches.v1.jsonl',
   uiDir: path.resolve(__dirname, '..', 'ui'),
 });
