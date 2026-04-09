@@ -21,9 +21,19 @@
 
 (def HOME (.homedir os))
 (def PI-AGENT-DIR (path/join HOME ".pi" "agent"))
+(def ETA-MU-STATE-ROOT (path/join HOME ".ημ" "state"))
+(def LEGACY-STATE-ROOT (path/join PI-AGENT-DIR "state"))
 (def SETTINGS-FILE (path/join PI-AGENT-DIR "settings.json"))
 (def PRIMARY-SKILL-ROOT (path/join PI-AGENT-DIR "skills"))
-(def STATE-DIR (path/join PI-AGENT-DIR "state" "cljs-contract-runtime"))
+(defn resolve-state-dir [name]
+  (let [eta-mu-dir (path/join ETA-MU-STATE-ROOT name)
+        legacy-dir (path/join LEGACY-STATE-ROOT name)]
+    (if (.existsSync fs eta-mu-dir)
+      eta-mu-dir
+      (if (.existsSync fs legacy-dir)
+        legacy-dir
+        eta-mu-dir))))
+(def STATE-DIR (resolve-state-dir "cljs-contract-runtime"))
 (def SCORES-FILE (path/join STATE-DIR "fulfillment-scores.jsonl"))
 (def STATUS-KEY "cljs-contract-runtime")
 (def GLOBAL-KEY "__eta_mu_cljs_contract_runtime__")
@@ -245,16 +255,16 @@
 (defn get-session-context [ctx]
   (let [ctx-session (session-file ctx)
         ctx-cwd (ctx-cwd ctx)
-        reflections (->> (parse-jsonl (path/join PI-AGENT-DIR "state" "session-mycology" "turn-reflections.jsonl"))
+        reflections (->> (parse-jsonl (path/join (resolve-state-dir "session-mycology") "turn-reflections.jsonl"))
                          (filter #(row-matches-context? % ctx))
                          vec)
-        spores (->> (parse-jsonl (path/join PI-AGENT-DIR "state" "session-mycology" "skill-spores.jsonl"))
+        spores (->> (parse-jsonl (path/join (resolve-state-dir "session-mycology") "skill-spores.jsonl"))
                     (filter #(row-matches-context? % ctx))
                     vec)
-        skill-events (->> (parse-jsonl (path/join PI-AGENT-DIR "state" "skill-graph-aco" "skill-call-events.jsonl"))
+        skill-events (->> (parse-jsonl (path/join (resolve-state-dir "skill-graph-aco") "skill-call-events.jsonl"))
                           (filter #(row-matches-context? % ctx))
                           vec)
-        receipt-events (->> (parse-jsonl (path/join PI-AGENT-DIR "state" "receipt-river" "events.jsonl"))
+        receipt-events (->> (parse-jsonl (path/join (resolve-state-dir "receipt-river") "events.jsonl"))
                             (filter #(row-matches-context? % ctx))
                             vec)
         receipts (if ctx-cwd (read-receipts-for-cwd ctx-cwd) [])]

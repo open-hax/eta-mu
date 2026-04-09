@@ -40,6 +40,7 @@ Located in `lib/eta_mu/macros/`:
 
 ```
 eta-mu-extensions/
+├── manifest.edn             # Extension manifest (provenance + deps)
 ├── src/eta_mu/extensions/   # ClojureScript extension sources
 ├── lib/eta_mu/              # Core DSL macros and target generators
 │   ├── core.cljc           # Extension DSL macros
@@ -49,20 +50,35 @@ eta-mu-extensions/
 │       ├── state.cljc       # State management
 │       ├── event.cljc       # Event handlers
 │       └── tool.cljc        # Tool schemas
-├── scripts/build.mjs        # Build orchestrator
+├── scripts/build.mjs        # Manifest-driven build orchestrator
 ├── externs/                 # Closure compiler externs
 └── .build/                  # Compiled output (generated)
 ```
 
+### Manifest
+
+The `manifest.edn` file is the single source of truth for what extensions
+are installed and where they come from. Each extension declares a source type:
+
+- `:local` — a file on the local filesystem (git-tracked sources)
+- `:github` — a file in a GitHub repository (fetched via `git archive`)
+- `:npm` — a file inside an npm package (installed via `pnpm add`)
+
+The build script reads the manifest, resolves all sources into `~/.ημ/src/`,
+then compiles and deploys. Extensions with `:tracked true` are version-controlled
+in this git repo.
+
 ### Build System
 
 The build system:
-1. Discovers `.cljs` extension sources
-2. Generates wrapper files with `(defn init [pi] ...)`
-3. Compiles via shadow-cljs to Node.js libraries
-4. Deploys to:
+1. Reads `manifest.edn` to discover extensions and their provenance
+2. Resolves sources from local paths, GitHub repos, or npm packages
+3. Generates wrapper files with `(defn init [pi] ...)`
+4. Compiles via shadow-cljs to Node.js libraries
+5. Deploys to:
    - `~/.pi/agent/extensions/cljs-<name>/` for pi
    - `~/.config/opencode/plugins/<name>/` for OpenCode
+6. Creates runtime state directories under `~/.ημ/state/`
 
 ## Usage
 
