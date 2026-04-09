@@ -8,9 +8,23 @@ This repo absorbs the active eta-mu surfaces that were previously scattered acro
 
 - `spec/eta-mu-charter-v1.md` - active working definition of eta-mu core, satellites, and the first living vault
 
+## Constitutional Layer
+
+The **eta-mu-extensions** package (`packages/eta-mu-extensions`) is the source of the constitutional layer for cybernetic governance:
+
+- **receipt-river** - Append-only audit ledger for agent decisions
+- **session-mycology** - Per-turn retrospection with skill spore incubation
+- **contract-runtime** - Operational contract fulfillment evaluation
+- **fork-tax** - Deterministic handoff snapshots for git-based state persistence
+
+This is the source of truth for all `.ημ` contract runtimes used by pi, opencode, and other agent frameworks. The `~/.ημ` symlink points to this package.
+
+Build: `cd ~/.ημ && node scripts/build.mjs release`
+
 ## Layout
 
 ### Eta-Mu Core
+- `packages/eta-mu-extensions` - **Constitutional layer runtimes** (receipt-river, session-mycology, contract-runtime, fork-tax)
 - `packages/eta-mu-github` - GitHub automation bot, review gate, and workflow templates
 - `packages/eta-mu-docs` - docs indexing primitives
 - `packages/eta-mu-truth` - truth/log/view helpers
