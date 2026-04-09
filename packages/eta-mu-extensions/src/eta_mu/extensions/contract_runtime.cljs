@@ -491,7 +491,7 @@
                  :name {:type "string"
                         :description "Contract/skill name for action=check"
                         :optional true}}
-    :execute (fn [params ctx]
+    :execute (fn [_tcid params _signal _onUpdate ctx]
                (let [action (or (aget params "action") "list")
                      state (get-state)]
                  (try
