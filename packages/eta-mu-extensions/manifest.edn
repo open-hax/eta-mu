@@ -93,6 +93,13 @@
    :tracked true
    :description "Web search via OpenHax proxy"}
 
+  ;; Graph memory integration (OpenPlanner/Graph-Weaver)
+  {:name    "graph-memory"
+   :source  :local
+   :path    "src/eta_mu/extensions/graph_memory.cljs"
+   :tracked true
+   :description "Graph memory tools for OpenPlanner/Graph-Weaver integration"}
+
   ;; Example: extension from npm
   ;; {:name    "example-npm-ext"
   ;;  :source  :npm
