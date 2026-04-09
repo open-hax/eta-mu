@@ -87,6 +87,16 @@ const renderVaultCards = (vaults) => {
     const reviewDebt = reviewSignals?.exact
       ? `${reviewSignals.tracked_unresolved_threads}/${reviewSignals.tracked_total_threads} tracked unresolved/total threads`
       : reviewSignals?.note ?? 'not available';
+    const actionBatch = state.recent_action_batch ?? null;
+    const panels = Array.isArray(actionBatch?.panels) && actionBatch.panels.length > 0
+      ? actionBatch.panels.join(', ')
+      : 'not yet emitted';
+    const plannedMu = actionBatch?.primary_action
+      ? `${actionBatch.primary_action.kind}: ${actionBatch.primary_action.reason}`
+      : 'not yet emitted';
+    const breath = actionBatch?.breath
+      ? `${actionBatch.breath.shouldCommit ? 'commit' : 'continue'} (${actionBatch.breath.reason})`
+      : 'not yet emitted';
 
     card.innerHTML = `
       <div class="label">Live vault state · ${state.vault?.display_name ?? state.vault?.id ?? 'vault'}</div>
@@ -96,6 +106,9 @@ const renderVaultCards = (vaults) => {
       <p><strong>Promotion PR:</strong> ${pr ? `#${pr.number} ${pr.title}` : 'none open'}</p>
       <p><strong>Staging / pipeline:</strong> ${prettyState(stagingDeploy)} &nbsp;·&nbsp; <strong>E2E:</strong> ${prettyState(stagingE2e)}</p>
       <p><strong>Review debt:</strong> ${reviewDebt}</p>
+      <p><strong>Panels:</strong> ${panels}</p>
+      <p><strong>Planned μ:</strong> ${plannedMu}</p>
+      <p><strong>Breath:</strong> ${breath}</p>
       <p><strong>Blocking reasons:</strong> ${blockers}</p>
       <p><strong>Next μ:</strong> ${state.next_action ?? 'wait for the next seed'}</p>
     `;

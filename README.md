@@ -4,12 +4,17 @@ Canonical eta-mu monorepo.
 
 This repo absorbs the active eta-mu surfaces that were previously scattered across multiple repos and workspace paths, including the former `open-hax/openhax` monorepo.
 
+## Charter
+
+- `spec/eta-mu-charter-v1.md` - active working definition of eta-mu core, satellites, and the first living vault
+
 ## Layout
 
 ### Eta-Mu Core
 - `packages/eta-mu-github` - GitHub automation bot, review gate, and workflow templates
 - `packages/eta-mu-docs` - docs indexing primitives
 - `packages/eta-mu-truth` - truth/log/view helpers
+- `packages/eta-mu-runtime` - typed movement kernel for belief state, panel selection, and auditable action envelopes
 - `packages/presence-core` - presence substrate types
 - `services/eta-mu` - runtime and deploy home
 - `services/eta-mu-truth-workbench` - HTTP/UI workbench
@@ -46,6 +51,7 @@ For targeted package work:
 
 ```bash
 pnpm --dir packages/eta-mu-github test
+pnpm --dir packages/eta-mu-runtime test
 pnpm --dir packages/kanban test
 pnpm --dir packages/opencode-reactant build
 docker compose -f services/eta-mu/compose.yaml config
