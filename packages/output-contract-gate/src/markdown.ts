@@ -61,13 +61,14 @@ const normalizeBoldHeadings = (ast: MarkdownRoot): void => {
       headingText = headingText.slice(0, -1).trim();
     }
 
-    // Convert to h2 heading if the text matches a known section name
-    // or looks like a heading (short, title-case-ish)
+    // Convert to h2 heading ONLY if the text matches a known contract section name.
+    // We do NOT use a generic "looks like heading" heuristic because it causes
+    // false positives: bold subheadings like **Core Architecture:** inside sections
+    // would be misinterpreted as section headers, breaking section order validation.
     const lowerText = headingText.toLowerCase();
     const isKnownSection = KNOWN_SECTION_NAMES.has(lowerText);
-    const looksLikeHeading = headingText.length > 0 && headingText.length < 60 && !headingText.includes('.');
 
-    if (isKnownSection || looksLikeHeading) {
+    if (isKnownSection) {
       children[i] = {
         type: 'heading',
         depth: 2,
