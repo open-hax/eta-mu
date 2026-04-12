@@ -492,9 +492,11 @@
 
 (defn set-status [ctx state]
   (when (has-ui? ctx)
-    (.call (gobj/get (ctx-ui ctx) "setStatus") (ctx-ui ctx) STATUS-KEY
-           (str "contracts:" (aget state "contractCount")
-                " skills:" (.-length (aget state "skillGraph.nodes"))))))
+    (let [skill-graph (aget state "skillGraph")
+          nodes (when skill-graph (aget skill-graph "nodes"))]
+      (.call (gobj/get (ctx-ui ctx) "setStatus") (ctx-ui ctx) STATUS-KEY
+             (str "contracts:" (aget state "contractCount")
+                  " skills:" (or (when nodes (.-length nodes)) 0))))))
 
 ;; ── Event handlers ─────────────────────────────────────────
 
