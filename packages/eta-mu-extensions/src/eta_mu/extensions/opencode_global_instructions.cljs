@@ -496,16 +496,18 @@
       (aset state "contractCount" (count (:contracts data)))
       (aset state "lastError" nil)
       ;; Inject parsed contract summary + prose into system prompt
-      (aset event "systemPrompt"
-            (inject-contract-prompt (aget event "systemPrompt") state))
-      ;; Lint warnings
-      (when (seq (:errors data))
-        (let [errs (:errors data)]
-          ;; Store but don't block — contract files with parse errors
-          ;; still contribute prose sections
-          (aset state "lastError" (str (count errs) " contract parse errors")))))
+      ;; Return the modified prompt so pi sees the changes
+      (let [modified-prompt (inject-contract-prompt (aget event "systemPrompt") state)]
+        ;; Lint warnings
+        (when (seq (:errors data))
+          (let [errs (:errors data)]
+            ;; Store but don't block — contract files with parse errors
+            ;; still contribute prose sections
+            (aset state "lastError" (str (count errs) " contract parse errors"))))
+        #js {:systemPrompt modified-prompt}))
     (catch :default e
-      (aset state "lastError" (.-message e)))))
+      (aset state "lastError" (.-message e))
+      nil)))
 
 (defn handle-session-start [ctx state]
   (ensure-dir STATE-DIR)
