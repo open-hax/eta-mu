@@ -49,31 +49,64 @@
        :compat (when compat (clj->js compat))})
 
 (def gpt-models
-  #js [(model "gpt-5.4" "GPT 5.4" :reasoning true :input ["text" "image"] :context-window 272000 :max-tokens 128000)
-       (model "gpt-5.2" "GPT 5.2" :reasoning true :input ["text" "image"] :context-window 272000 :max-tokens 128000)
-       (model "gpt-5.2-codex" "GPT 5.2 codex" :reasoning true :input ["text" "image"] :context-window 272000 :max-tokens 128000)])
+  #js [(model "gpt-5.4" "GPT 5.4"
+              :reasoning true :input ["text" "image"]
+              :context-window 1000000 :max-tokens 128000)
+       (model "gpt-5.2" "GPT 5.2"
+              :reasoning true
+              :input ["text" "image"] :context-window 272000 :max-tokens 128000)
+       (model "gpt-5.2-codex" "GPT 5.2 codex"
+              :reasoning true
+              :input ["text" "image"]
+              :context-window 272000 :max-tokens 128000)])
 
 (def factory-models
-  #js [(model "claude-haiku-4-5-20251001" "Claude Haiku 4.5 (Factory)" :input ["text" "image"] :context-window 200000 :max-tokens 8192)
-       (model "claude-sonnet-4-5-20250929" "Claude Sonnet 4.5 (Factory)" :reasoning true :input ["text" "image"] :context-window 200000 :max-tokens 16384)
-       (model "claude-sonnet-4-6" "Claude Sonnet 4.6 (Factory)" :reasoning true :input ["text" "image"] :context-window 200000 :max-tokens 16384)
-       (model "claude-opus-4-5-20251101" "Claude Opus 4.5 (Factory)" :reasoning true :input ["text" "image"] :context-window 200000 :max-tokens 32000)
-       (model "factory/claude-opus-4-6" "Claude Opus 4.6 (Factory)" :reasoning true :input ["text" "image"] :context-window 200000 :max-tokens 32000)
-       (model "factory/claude-opus-4-6-fast" "Claude Opus 4.6 Fast (Factory)" :reasoning true :input ["text" "image"] :context-window 200000 :max-tokens 32000)])
+  #js [(model "claude-haiku-4-5-20251001" "Claude Haiku 4.5 (Factory)"
+              :input ["text" "image"] :context-window 200000 :max-tokens 8192)
+       (model "claude-sonnet-4-5-20250929" "Claude Sonnet 4.5 (Factory)"
+              :reasoning true :input ["text" "image"]
+              :context-window 200000 :max-tokens 16384)
+       (model "claude-sonnet-4-6" "Claude Sonnet 4.6 (Factory)"
+              :reasoning true :input ["text" "image"]
+              :context-window 200000 :max-tokens 16384)
+       (model "claude-opus-4-5-20251101" "Claude Opus 4.5 (Factory)"
+              :reasoning true :input ["text" "image"]
+              :context-window 200000 :max-tokens 32000)
+       (model "factory/claude-opus-4-6" "Claude Opus 4.6 (Factory)"
+              :reasoning true :input ["text" "image"]
+              :context-window 200000 :max-tokens 32000)
+       (model "factory/claude-opus-4-6-fast" "Claude Opus 4.6 Fast (Factory)"
+              :reasoning true :input ["text" "image"]
+              :context-window 200000 :max-tokens 32000)])
 
 (def compat-models
-  #js [(model "gemini-3-flash-preview" "Gemini 3 Flash Preview" :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
-       (model "gemini-3-pro-preview" "Gemini 3 Pro Preview" :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
-       (model "gemini-2.5-flash" "Gemini 2.5 Flash" :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
-       (model "gemini-2.5-pro" "Gemini 2.5 Pro" :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
-       (model "gemini-3.1-pro-preview" "Gemini 3.1 Pro Preview" :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
-       (model "DeepSeek-V3.2" "DeepSeek V3.2" :input ["text"] :context-window 64000 :max-tokens 8192)
-       (model "glm-5v-turbo" "GLM 5V Turbo" :reasoning true :input ["text" "image"] :context-window 200000 :max-tokens 131072)
-       (model "glm-5" "GLM 5" :reasoning true :input ["text"] :context-window 256000 :max-tokens 64000 :compat {:thinkingFormat "zai"})
-       (model "glm-5" "GLM 5" :reasoning true :input ["text"] :context-window 256000 :max-tokens 128000 :compat {:thinkingFormat "zai"})
-       (model "glm-5.1" "GLM 5.1" :reasoning true :input ["text"] :context-window 256000 :max-tokens 32000 :compat {:thinkingFormat "zai"})
+  #js [(model "gemini-3-flash-preview" "Gemini 3 Flash Preview"
+              :input ["text" "image"]
+              :context-window 1048576 :max-tokens 65536)
+       (model "gemini-3-pro-preview" "Gemini 3 Pro Preview"
+              :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
+       (model "gemini-2.5-flash" "Gemini 2.5 Flash" :input ["text" "image"]
+              :context-window 1048576 :max-tokens 65536)
+       (model "gemini-2.5-pro" "Gemini 2.5 Pro"
+              :input ["text" "image"]
+              :context-window 1048576 :max-tokens 65536)
+       (model "gemini-3.1-pro-preview" "Gemini 3.1 Pro Preview"
+              :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
+       (model "DeepSeek-V3.2" "DeepSeek V3.2"
+              :input ["text"] :context-window 64000 :max-tokens 8192)
+       (model "glm-5v-turbo" "GLM 5V Turbo"
+              :reasoning true :input ["text" "image"] :context-window 100000 :max-tokens 131072)
+       (model "glm-5-turbo" "GLM 5V Turbo"
+              :reasoning true :input ["text" "image"] :context-window 100000 :max-tokens 131072)
+       (model "glm-5" "GLM 5" :reasoning true
+              :input ["text"] :context-window 100000 :max-tokens 128000 ;;:compat {:thinkingFormat "zai"}
+              )
+       (model "glm-5.1" "GLM 5.1" :reasoning true :input ["text"]
+              :context-window 100000 :max-tokens 128000 ;; :compat {:thinkingFormat "zai"}
+              )
 
-       (model "Kimi-K2.5" "Kimi K2.5" :input ["text" "image"] :context-window 262144 :max-tokens 262144)])
+       (model "Kimi-K2.5" "Kimi K2.5" :input ["text" "image"]
+              :context-window 262144 :max-tokens 262144)])
 
 (defn concat-model-arrays [& arrays]
   (apply #(.concat %1 %2) (js/Array.from (first arrays)) (map js/Array.from (rest arrays))))
@@ -120,15 +153,39 @@
            :apiKey open-hax-local-token
            :api "openai-completions"
            :models (js/Array.
-                     (model "gemini-3-flash-preview" "Gemini 3 Flash Preview" :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
-                     (model "gemini-3-pro-preview" "Gemini 3 Pro Preview" :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
-                     (model "gemini-2.5-flash" "Gemini 2.5 Flash" :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
-                     (model "gemini-2.5-pro" "Gemini 2.5 Pro" :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
-                     (model "gemini-3.1-pro-preview" "Gemini 3.1 Pro Preview" :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
-                     (model "DeepSeek-V3.2" "DeepSeek V3.2" :input ["text"] :context-window 64000 :max-tokens 8192)
-                     (model "glm-5" "GLM 5" :reasoning true :input ["text"] :context-window 131072 :max-tokens 16384 :compat {:thinkingFormat "zai"})
-                     (model "glm-5.1" "GLM 5.1" :reasoning true :input ["text"] :context-window 204800 :max-tokens 131072 :compat {:thinkingFormat "zai"})
-                     (model "Kimi-K2.5" "Kimi K2.5" :input ["text" "image"] :context-window 262144 :max-tokens 262144))})))
+                     (model "gemini-3-flash-preview" "Gemini 3 Flash Preview"
+                            :input ["text" "image"]
+                            :context-window 1048576
+                            :max-tokens 65536)
+                     (model "gemini-3-pro-preview" "Gemini 3 Pro Preview"
+                            :input ["text" "image"]
+                            :context-window 1048576
+                            :max-tokens 65536)
+                     (model "gemini-2.5-flash" "Gemini 2.5 Flash"
+                            :input ["text" "image"]
+                            :context-window 1048576
+                            :max-tokens 65536)
+                     (model "gemini-2.5-pro" "Gemini 2.5 Pro"
+                            :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
+                     (model "gemini-3.1-pro-preview" "Gemini 3.1 Pro Preview"
+                            :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
+                     (model "DeepSeek-V3.2" "DeepSeek V3.2"
+                            :input ["text"] :context-window 64000 :max-tokens 8192)
+                     (model "glm-5" "GLM 5"
+                            :reasoning true
+                            :input ["text"]
+                            :context-window 131072
+                            :max-tokens 16384
+                            :compat {:thinkingFormat "zai"})
+                     (model "glm-5.1" "GLM 5.1"
+                            :reasoning true
+                            :input ["text"]
+                            :context-window 204800
+                            :max-tokens 131072
+                            :compat {:thinkingFormat "zai"})
+                     (model "Kimi-K2.5" "Kimi K2.5"
+                            :input ["text" "image"]
+                            :context-window 262144 :max-tokens 262144))})))
 
 (em/defextension custom-providers
   :name "custom-providers"
