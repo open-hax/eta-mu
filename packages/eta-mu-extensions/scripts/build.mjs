@@ -787,6 +787,126 @@ function generateOpenCodePlugins(entries) {
 }
 
 // ============================================================
+// Pi settings.json sync
+// ============================================================
+
+const PI_SETTINGS_FILE = path.join(HOME, ".pi", "agent", "settings.json");
+
+function syncPiSettings(entries) {
+  if (!existsSync(PI_SETTINGS_FILE)) {
+    console.log("  skipping settings.json sync (file not found)");
+    return;
+  }
+
+  const settings = JSON.parse(readFileSync(PI_SETTINGS_FILE, "utf8"));
+  const currentExtensions = settings.extensions || [];
+
+  // Build map of expected cljs-* paths
+  const expectedPaths = new Map();
+  for (const entry of entries.filter((e) => e.piEnabled)) {
+    const expectedPath = `~/.pi/agent/extensions/cljs-${entry.outputName}/index.ts`;
+    expectedPaths.set(entry.outputName, expectedPath);
+  }
+
+  // Build new extensions array
+  const newExtensions = [];
+  const migrated = [];
+  const added = [];
+  const removed = [];
+
+  for (const extPath of currentExtensions) {
+    const expandedPath = expandPath(HOME, extPath);
+
+    // Check if this is a stale .ts file that should be cljs-*/index.ts
+    const match = extPath.match(/\/([^/]+)\.ts$/);
+    if (match && !extPath.includes("/cljs-")) {
+      const name = match[1];
+      // Check if we have a cljs-* version for this
+      const cljsPath = expectedPaths.get(name);
+      if (cljsPath) {
+        const cljsExpanded = expandPath(HOME, cljsPath);
+        if (existsSync(cljsExpanded)) {
+          newExtensions.push(cljsPath);
+          migrated.push({ from: extPath, to: cljsPath });
+          continue;
+        }
+      }
+      // No cljs-* version, check if old path still exists
+      if (!existsSync(expandedPath)) {
+        removed.push(extPath);
+        continue;
+      }
+    }
+
+    // Check if this is a cljs-* path that needs updating
+    const cljsMatch = extPath.match(/\/cljs-([^/]+)\/index\.ts$/);
+    if (cljsMatch) {
+      const name = cljsMatch[1];
+      const expected = expectedPaths.get(name);
+
+      // Check if this extension still exists on disk
+      if (!existsSync(expandedPath)) {
+        removed.push(extPath);
+        continue;
+      }
+
+      if (expected && expected !== extPath) {
+        // Path differs, use expected
+        newExtensions.push(expected);
+        migrated.push({ from: extPath, to: expected });
+        continue;
+      }
+      // Path is correct, keep it
+      newExtensions.push(extPath);
+      expectedPaths.delete(name);
+      continue;
+    }
+
+    // Keep non-cljs extensions as-is (if they exist)
+    if (existsSync(expandedPath)) {
+      newExtensions.push(extPath);
+    } else {
+      removed.push(extPath);
+    }
+  }
+
+  // Add any new extensions not yet in settings
+  for (const [name, expectedPath] of expectedPaths) {
+    if (!newExtensions.includes(expectedPath) && existsSync(expandPath(HOME, expectedPath))) {
+      newExtensions.push(expectedPath);
+      added.push(expectedPath);
+    }
+  }
+
+  // Only write if changed
+  if (migrated.length > 0 || added.length > 0 || removed.length > 0) {
+    settings.extensions = newExtensions;
+    writeFileSync(PI_SETTINGS_FILE, JSON.stringify(settings, null, 2) + "\n", "utf8");
+
+    if (migrated.length > 0) {
+      console.log("  migrated stale extension paths in settings.json:");
+      for (const { from, to } of migrated) {
+        console.log(`    ${from} → ${to}`);
+      }
+    }
+    if (added.length > 0) {
+      console.log("  added new extension paths to settings.json:");
+      for (const p of added) {
+        console.log(`    + ${p}`);
+      }
+    }
+    if (removed.length > 0) {
+      console.log("  removed non-existent extension paths from settings.json:");
+      for (const p of removed) {
+        console.log(`    - ${p}`);
+      }
+    }
+  } else {
+    console.log("  settings.json extensions already up-to-date");
+  }
+}
+
+// ============================================================
 // Shadow CLJS execution
 // ============================================================
 
@@ -933,6 +1053,9 @@ function main() {
   deployPiRuntimes(entries);
   cleanStaleOutputs(entries);
   generateOpenCodePlugins(entries);
+
+  // Sync settings.json with deployed extensions
+  syncPiSettings(entries);
 
   console.log("\neta-mu build report:");
   console.log(`  extensions: ${entries.length}`);
