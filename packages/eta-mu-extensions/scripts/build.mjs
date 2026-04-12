@@ -226,6 +226,7 @@ function resolveManifest(manifest, manifestDir) {
 // ============================================================
 
 function hasLegacyPiExtension(outputName) {
+  if (outputName === "opencode-global-instructions") return false;
   return existsSync(path.join(HOME, ".pi", "agent", "extensions", `${outputName}.ts`));
 }
 
