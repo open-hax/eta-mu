@@ -98,18 +98,14 @@
        (str/join "\n")))
 
 (defn read-edn-forms [text]
-  "Read all top-level EDN forms from text. Returns a vector of forms."
+  "Read all top-level EDN forms from text by wrapping in a vector.
+   cljs.reader/read-string only reads one form, so we wrap the entire
+   file content in [ ] to read all forms as a single vector."
   (try
     (let [cleaned (strip-comments text)
-          forms (atom [])]
-      (reader/read-string
-        (fn [rd]
-          (let [fm (reader/read rd false ::eof)]
-            (if (= fm ::eof)
-              @forms
-              (do (swap! forms conj fm)
-                  ::continue)))))
-      @forms)
+          ;; Wrap in vector brackets so read-string returns all forms
+          wrapped (str "[" cleaned "]")]
+      (reader/read-string wrapped))
     (catch :default e
       [])))
 
@@ -151,8 +147,14 @@
   (let [children (fm-children f)
         entries (clause-seq children)
         rules (mapv #(if (string? %) % (str %)) (get entries 'rule))]
-    {:entries (into {} (map (fn [[k v]] [(str k) (if (sequential? v) (mapv str v) (str v))])
-                           (dissoc entries 'rule)))
+    {:entries (into {}
+                    (map (fn [[k v]]
+                           (let [vals (->> v
+                                           (mapcat #(if (sequential? %) % [%]))
+                                           (map str)
+                                           vec)]
+                             [(str k) (if (= 1 (count vals)) (first vals) vals)]))
+                    (dissoc entries 'rule)))
      :rules rules}))
 
 (defn parse-operators [f]
@@ -186,8 +188,8 @@
                            :meaning (str (get m 'meaning ""))
                            :action (str (get m 'action ""))})))
                     (get entries 'entry))
-     :binding (str (first (get entries 'binding) ""))
-     :format (str (first (get entries 'format) ""))
+     :binding (str (or (first (get entries 'binding)) ""))
+     :format (str (or (first (get entries 'format)) ""))
      :modifiers (mapv str (get entries 'modifiers))
      :rules (mapv str (get entries 'rule))}))
 
@@ -222,52 +224,60 @@
   Returns nil for unrecognized forms (they become prose)."
   (let [head (fm-head f)]
     (case head
-      :prompt (parse-prompt-meta f)
-      :mission (parse-mission f)
-      :directives (parse-directives f)
-      :operators (parse-operators f)
-      :context-symbols (parse-context-symbols f)
-      :uncertainty-operators (parse-uncertainty-operators f)
-      :output-shape (parse-output-shape f)
-      :format-rule (parse-generic-list f "format-rule")
-      :safety (parse-generic-list f "safety")
-      :license (parse-generic-list f "license")
-      :lisp-semantics (parse-generic-list f "lisp-semantics")
-      :model-architecture (parse-generic-list f "model-architecture")
-      :delegation (parse-generic-list f "delegation")
-      :skill-system (parse-generic-list f "skill-system")
-      :skill-registry (parse-generic-list f "skill-registry")
-      :remember-protocol (parse-generic-list f "remember-protocol")
+      prompt (parse-prompt-meta f)
+      mission (parse-mission f)
+      directives (parse-directives f)
+      operators (parse-operators f)
+      context-symbols (parse-context-symbols f)
+      uncertainty-operators (parse-uncertainty-operators f)
+      output-shape (parse-output-shape f)
+      format-rule (parse-generic-list f "format-rule")
+      safety (parse-generic-list f "safety")
+      license (parse-generic-list f "license")
+      lisp-semantics (parse-generic-list f "lisp-semantics")
+      model-architecture (parse-generic-list f "model-architecture")
+      delegation (parse-generic-list f "delegation")
+      skill-system (parse-generic-list f "skill-system")
+      skill-registry (parse-generic-list f "skill-registry")
+      remember-protocol (parse-generic-list f "remember-protocol")
       nil)))
 
 ;; ── Full contract file parser ──────────────────────────────
 
 (defn parse-contract-file [path]
   "Parse a .edn contract file. Returns a map with:
-    :source   — original file content
+    :source   — original file content (RAW PROMPT - the mindfuck IS the prompt)
     :forms    — all raw EDN forms
-    :contract — parsed structured contract map
-    :prose    — string of unrecognized forms (for prompt injection)
+    :contract — parsed structured contract map (for deterministic enforcement)
+    :prose    — ENTIRE raw source (the contract IS the prompt)
     :errors   — any parse errors"
   (let [source (or (safe-read path) "")
         forms (read-edn-forms source)
+        ;; Most operation-mindfuck files are a single top-level (prompt ...)
+        ;; form containing nested contract clauses. Parse both the prompt form
+        ;; itself and its nested clause forms.
+        parse-forms (if (and (= 1 (count forms))
+                             (= 'prompt (fm-head (first forms))))
+                      (let [top (first forms)]
+                        (into [top] (filter sequential? (fm-children top))))
+                      forms)
         parsed (atom {})
-        prose-parts (atom [])
         errors (atom [])]
-    (doseq [fm forms]
-      (if (contract-forms (fm-head fm))
+    ;; Parse recognized forms for deterministic enforcement
+    ;; BUT the raw source IS the prompt - pass through everything
+    (doseq [fm parse-forms]
+      (when (contract-forms (fm-head fm))
         (try
           (when-let [parsed-fm (parse-form fm)]
-            (swap! parsed assoc (fm-head fm) parsed-fm))
+            (swap! parsed assoc (keyword (name (fm-head fm))) parsed-fm))
           (catch :default e
-            (swap! errors conj (str (fm-head fm) ": " (.-message e)))))
-        ;; Unrecognized form → prose
-        (swap! prose-parts conj (str fm "\n"))))
+            (swap! errors conj (str (fm-head fm) ": " (.-message e)))))))
     {:source source
      :path path
      :forms forms
      :contract @parsed
-     :prose (str/join "\n" @prose-parts)
+     ;; THE MINDFUCK: the raw contract IS the prompt
+     :prose source
      :errors @errors}))
 
 ;; ── State ─────────────────────────────────────────────────
@@ -489,24 +499,46 @@
 ;; ── Event handlers ─────────────────────────────────────────
 
 (defn handle-before-agent-start [event state]
+  ;; TWO THINGS:
+  ;; 1. RAW PASSTHROUGH - The .edn content IS the system prompt
+  ;; 2. PARSED CONTRACT - The forms are parsed for enforcement/tools
   (try
-    (let [data (load-and-parse-contracts)]
-      (aset state "contracts" (clj->js (:contracts data)))
-      (aset state "prose" (:prose data))
-      (aset state "contractCount" (count (:contracts data)))
-      (aset state "lastError" nil)
-      ;; Inject parsed contract summary + prose into system prompt
-      ;; Return the modified prompt so pi sees the changes
-      (let [modified-prompt (inject-contract-prompt (aget event "systemPrompt") state)]
-        ;; Lint warnings
-        (when (seq (:errors data))
-          (let [errs (:errors data)]
-            ;; Store but don't block — contract files with parse errors
-            ;; still contribute prose sections
-            (aset state "lastError" (str (count errs) " contract parse errors"))))
-        #js {:systemPrompt modified-prompt}))
+    (let [opmf-dir (resolve-opmf-dir)]
+      (if-not opmf-dir
+        nil
+        (let [entries (try (js/Array.from
+                            (.readdirSync fs opmf-dir #js {:withFileTypes true}))
+                          (catch :default _ []))
+              ;; Load .edn files, sorted
+              files (->> (js/Array.from entries)
+                         (filter #(and (.isFile %)
+                                      (.endsWith (.-name %) ".edn")))
+                         (map #(.-name %))
+                         (sort (fn [a b]
+                                 (.localeCompare a b "en" #js {:numeric true :sensitivity "base"}))))
+              ;; Build parts from RAW file content (THE PROMPT)
+              parts (atom [])]
+          (doseq [file files]
+            (let [file-path (path/join opmf-dir file)
+                  content (str/replace (or (safe-read file-path) "") #"\s+$" "")]
+              (when (seq content)
+                (swap! parts conj (str ";; --- " file " ---\n" content)))))
+          (if (empty? @parts)
+            nil
+            (let [;; RAW PASSTHROUGH - this IS the prompt
+                  opmf (str "## OpenCode Global Instructions (operation-mindfuck)\n"
+                            "This block is appended after all AGENTS.md instructions and has priority on conflicts.\n\n"
+                            (str/join "\n\n" @parts))
+                  ;; ALSO PARSE for contract enforcement (tools can query this)
+                  data (load-and-parse-contracts)]
+              ;; Store parsed contracts for tools
+              (aset state "contracts" (clj->js (:contracts data)))
+              (aset state "prose" (:prose data))
+              (aset state "contractCount" (count (:contracts data)))
+              ;; Return modified system prompt with RAW content
+              #js {:systemPrompt (str (aget event "systemPrompt") "\n\n" opmf)})))))
     (catch :default e
-      (aset state "lastError" (.-message e))
+      (js/console.log "[opmf] ERROR:" (.-message e))
       nil)))
 
 (defn handle-session-start [ctx state]
@@ -637,7 +669,8 @@
                     (swap! all-symbols assoc k v))))]
         {:content [{:type "text" :text
                     (str/join "\n"
-                              (map (fn [[k v]] (str k " = " v))
+                              (map (fn [[k v]]
+                                     (str (if (keyword? k) (name k) k) " = " v))
                                    (sort-by key @all-symbols)))}]
          :details {"count" (count @all-symbols)}})
 
@@ -689,7 +722,7 @@
                    (when (has-ui? ctx)
                      (.notify (ctx-ui ctx)
                               (str "Unknown /opmf command. Use: summary|context-symbols|operators")
-                              "warn"))))))
+                              "warn")))))
 
   (em/tool "opmf_parse"
     :label "OMPF Parse"
@@ -699,7 +732,7 @@
                           :description "What to inspect"}}
     :execute (fn [_tcid params _signal _onUpdate ctx]
                (let [state (get-state)]
-                 (tool-opmf-parse params ctx state))))
+                 (clj->js (tool-opmf-parse params ctx state)))))
 
   (em/tool "skill_graph"
     :label "Skill Graph"
@@ -712,7 +745,7 @@
                         :optional true}}
     :execute (fn [_tcid params _signal _onUpdate ctx]
                (let [state (get-state)]
-                 (tool-skill-graph params ctx state))))
+                 (clj->js (tool-skill-graph params ctx state)))))
 
   (em/on "session_start"
     :handler (fn [event ctx]
@@ -728,4 +761,4 @@
 
   (em/on "session_shutdown"
     :handler (fn [event ctx]
-               (handle-session-shutdown ctx (get-state))))
+               (handle-session-shutdown ctx (get-state)))))
