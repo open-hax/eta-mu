@@ -10,6 +10,8 @@
 
 (def DEFAULT-PROXY-URL "http://127.0.0.1:8789")
 (def DEFAULT-MODEL "openai/gpt-5.3-codex")
+(def DEFAULT-MAX-BYTES 524288)
+(def DEFAULT-MAX-LINES 2000)
 
 (defn proxy-url []
   (or (aget js/process.env "OPEN_HAX_OPENAI_PROXY_URL")
@@ -18,7 +20,14 @@
 
 (defn proxy-token []
   (or (aget js/process.env "OPEN_HAX_OPENAI_PROXY_AUTH_TOKEN")
+      (aget js/process.env "OPEN_HAX_PROXY_AUTH_TOKEN")
       (aget js/process.env "PROXY_AUTH_TOKEN")))
+
+(defn format-size [bytes]
+  (cond
+    (< bytes 1024) (str bytes " B")
+    (< bytes 1048576) (str (.toFixed (/ bytes 1024) 1) " KB")
+    :else (str (.toFixed (/ bytes 1048576) 2) " MB")))
 
 (defn write-temp [text]
   (let [dir (path/join (os/tmpdir) "pi-websearch")]
@@ -37,6 +46,65 @@
                       (str "- [" title "](" (aget % "url") ")")
                       (str "- " (aget % "url"))))
               (str/join "\n")))))
+
+(defn truncate-head [text max-bytes max-lines]
+  (let [lines (.split text "\n")
+        total-lines (alength lines)
+        total-bytes (.-length (js/Buffer.from text "utf-8"))]
+    (if (and (<= total-bytes max-bytes) (<= total-lines max-lines))
+      {:content text
+       :truncated false
+       :total-lines total-lines
+       :output-lines total-lines
+       :total-bytes total-bytes
+       :output-bytes total-bytes}
+      (let [output-lines (min max-lines total-lines)
+            sliced (.slice lines (- total-lines output-lines))
+            content (.join sliced "\n")]
+        (if (<= (.-length (js/Buffer.from content "utf-8")) max-bytes)
+          {:content content
+           :truncated true
+           :total-lines total-lines
+           :output-lines output-lines
+           :total-bytes total-bytes
+           :output-bytes (.-length (js/Buffer.from content "utf-8"))}
+          (let [buf (js/Buffer.from content "utf-8")
+                sliced-buf (.slice buf (- (.-length buf) max-bytes))]
+            {:content (.toString sliced-buf "utf-8")
+             :truncated true
+             :total-lines total-lines
+             :output-lines output-lines
+             :total-bytes total-bytes
+             :output-bytes max-bytes}))))))
+
+(defn handle-success [json endpoint model]
+  (let [text (if (string? (aget json "output")) (aget json "output") "")
+        sources (if (array? (aget json "sources")) (aget json "sources") #js [])
+        response-id (aget json "responseId")
+        backend (or (aget json "backend") "openai")
+        combined (str text (or (format-sources sources) ""))
+        trunc (truncate-head combined DEFAULT-MAX-BYTES DEFAULT-MAX-LINES)]
+    (if-not (:truncated trunc)
+      #js {:content #js [#js {:type "text" :text (:content trunc)}]
+           :details #js {:backend backend
+                         :endpoint endpoint
+                         :model model
+                         :responseId response-id
+                         :sourcesCount (alength sources)
+                         :truncated false}}
+      (-> (write-temp combined)
+          (.then (fn [output-path]
+                   (let [trunc-msg (str "\n\n[Output truncated: " (:output-lines trunc) " of " (:total-lines trunc)
+                                        " lines (" (format-size (:output-bytes trunc)) " of " (format-size (:total-bytes trunc))
+                                        "). Full output saved to: " output-path "]")]
+                     #js {:content #js [#js {:type "text" :text (str (:content trunc) trunc-msg)}]
+                          :details #js {:backend backend
+                                        :endpoint endpoint
+                                        :model model
+                                        :responseId response-id
+                                        :sourcesCount (alength sources)
+                                        :truncated true
+                                        :outputPath output-path}})))))))
 
 (em/defextension websearch-open-hax
   :name "websearch-open-hax"
@@ -59,7 +127,8 @@
                                    (aget js/process.env "OPEN_HAX_WEBSEARCH_MODEL")
                                    DEFAULT-MODEL)]
                      (when onUpdate
-                       (onUpdate #js {:content #js [#js {:type "text" :text (str "Calling Open Hax websearch... (" endpoint ")")}]}))
+                       (onUpdate #js {:content #js [#js {:type "text" :text (str "Calling Open Hax websearch... (" endpoint ")")}]
+                                      :details #js {:status "starting" :endpoint endpoint :model model}}))
                      (-> (js/fetch endpoint
                                    #js {:method "POST"
                                         :headers #js {"Authorization" (str "Bearer " token)
@@ -73,19 +142,17 @@
                          (.then (fn [resp]
                                   (-> (.text resp)
                                       (.then (fn [raw]
-                                               (let [json (js/JSON.parse raw)
-                                                     text (if (string? (aget json "output")) (aget json "output") "")
-                                                     sources (if (array? (aget json "sources")) (aget json "sources") #js [])
-                                                     combined (str text (or (format-sources sources) ""))]
-                                                 (if (.-ok resp)
-                                                   (let [truncated (if (> (count combined) 32000)
-                                                                     (subs combined 0 32000)
-                                                                     combined)]
-                                                     #js {:content #js [#js {:type "text" :text truncated}]
-                                                          :details #js {:backend "open-hax-openai-proxy"
-                                                                        :endpoint endpoint
-                                                                        :model model
-                                                                        :sourcesCount (alength sources)}})
+                                               (let [json (try
+                                                            (js/JSON.parse raw)
+                                                            (catch :default _ nil))]
+                                                 (cond
+                                                   (not json)
                                                    (js/Promise.reject
-                                                     (js/Error. (str "Open Hax websearch error (" (.-status resp) "): " (subs raw 0 2000))))))))))))))))
-  ))
+                                                     (js/Error. (str "Open Hax websearch returned non-JSON: " (subs raw 0 2000))))
+
+                                                   (not (.-ok resp))
+                                                   (js/Promise.reject
+                                                     (js/Error. (str "Open Hax websearch error (" (.-status resp) " " (.-statusText resp) "): " (subs raw 0 2000))))
+
+                                                   :else
+                                                   (handle-success json endpoint model)))))))))))))))
