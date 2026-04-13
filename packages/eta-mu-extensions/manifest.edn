@@ -47,8 +47,7 @@
    :source  :local
    :path    "src/eta_mu/extensions/opmf_contract_gate.cljs"
    :tracked true
-   :npm-deps ["@open-hax/output-contract-gate"]
-   :description "Output contract gate enforcement with auto-repair"}
+   :description "Output contract gate enforcement with auto-repair (pure CLJS)"}
 
   ;; Supporting extensions (tracked in git)
   {:name    "bootstrap"
