@@ -109,10 +109,10 @@
         repair-templates (->> (list-children repair-form)
                               (filter #(= (first %) 'template))
                               (mapv compile-repair-template))
-        review-criteria (some-> (find-child review-form 'criteria)
-                                list-children
-                                (->> (filter #(= (first %) 'criterion)))
-                                (mapv compile-review-criterion))
+        review-criteria (when-let [criteria-form (find-child review-form 'criteria)]
+                          (->> (list-children criteria-form)
+                               (filter #(= (first %) 'criterion))
+                               (mapv compile-review-criterion)))
         review-policy {:enabled (if-let [en (some-> (find-child review-form 'enabled) second)]
                                   (boolean en) true)
                        :reviewer-family (some-> (find-child review-form 'reviewer-family) second keyword->id)
@@ -135,30 +135,46 @@
      :review review-policy}))
 
 ;; ============================================================
-;; Markdown Extraction (simple regex-based for now)
+;; Markdown Extraction (functional, no atoms)
 ;; ============================================================
 
+(defn- accumulate-section
+  "Reducer fn: accumulates sections from lines.
+   State is {:current {:heading, :lines} :completed [...]}."
+  [{:keys [current completed] :as state} line]
+  (if-let [heading-match (re-matches #"^##\s+(.+)$" line)]
+    ;; New section header found
+    (let [new-heading (str/trim (second heading-match))]
+      (if current
+        ;; Push current section to completed, start new one
+        {:current {:heading new-heading :lines []}
+         :completed (conj completed current)}
+        ;; No current section, start first one
+        {:current {:heading new-heading :lines []}
+         :completed completed}))
+    ;; Not a header line
+    (if current
+      ;; Append to current section
+      (assoc state :current (update current :lines conj line))
+      ;; No current section, ignore line
+      state)))
+
 (defn extract-markdown-sections
-  "Extract sections from markdown using regex.
+  "Extract sections from markdown using reduce.
    Returns {:sections [{:heading, :content}]}."
   [markdown]
   (let [lines (str/split-lines markdown)
-        sections (atom [])
-        current-section (atom nil)]
-    (doseq [line lines]
-      (if-let [heading-match (re-matches #"^##\s+(.+)$" line)]
-        (do
-          (when @current-section
-            (swap! sections conj @current-section))
-          (reset! current-section {:heading (str/trim (second heading-match))
-                                   :content (atom [])}))
-        (when @current-section
-          (swap! (:content @current-section) conj line))))
-    (when @current-section
-      (swap! sections conj @current-section))
-    {:sections (mapv (fn [s] {:heading (:heading s)
-                             :content (str/join "\n" @(:content s))})
-                     @sections)}))
+        {:keys [current completed]} (reduce accumulate-section
+                                           {:current nil :completed []}
+                                           lines)
+        ;; Add final section if exists
+        all-sections (if current
+                       (conj completed current)
+                       completed)]
+    {:sections (mapv (fn [s]
+                       {:heading (:heading s)
+                        :content (str/join "\n" (:lines s))})
+                     all-sections)}))
 
 (defn count-semantic-items
   "Count semantic items in section content (paragraphs, list items)."
@@ -173,7 +189,7 @@
     (max 1 (max list-items (int (/ non-empty-lines 3))))))
 
 ;; ============================================================
-;; Validation
+;; Validation (functional, no atoms)
 ;; ============================================================
 
 (defn build-failure
@@ -185,63 +201,81 @@
          (when expected {:expected expected})
          (when actual {:actual actual})))
 
-(defn validate-markdown-response
-  [contract markdown]
-  (let [{:keys [sections]} (extract-markdown-sections markdown)
-        headings (map :heading sections)
-        expected-headings (map :heading (:sections contract))
-        failures (atom [])]
-    ;; Check required sections
-    (doseq [section-def (:sections contract)]
-      (when (:required section-def)
-        (when-not (some #(= (:heading section-def) %) headings)
-          (swap! failures conj
+(defn- check-required-sections
+  "Returns failures for missing required sections."
+  [contract headings]
+  (into []
+        (comp
+          (filter :required)
+          (filter (fn [section-def]
+                    (not (some #(= (:heading section-def) %) headings))))
+          (map (fn [section-def]
                  (build-failure contract
                    {:rule-id "rule/required-section"
                     :section-id (:id section-def)
                     :heading (:heading section-def)
-                    :message (str "Missing required section `" (:heading section-def) "`")})))))
-    ;; Check section order
-    (when-not (= headings (take (count headings) expected-headings))
-      (swap! failures conj
-             (build-failure contract
-               {:rule-id "rule/section-order"
-                :expected {:headings expected-headings}
-                :actual {:headings headings}
-                :message (str "Section order mismatch")})))
-    ;; Check count rules
-    (doseq [rule (:rules contract)]
-      (when-let [section-id (:section-id rule)]
-        (when-let [section-def (get (:sections-by-id contract) section-id)]
-          (when-let [section (first (filter #(= (:heading section-def) (:heading %)) sections))]
-            (let [count (count-semantic-items section)]
-              (cond
-                (and (:exactly rule) (not= count (:exactly rule)))
-                (swap! failures conj
-                       (build-failure contract
-                         {:rule-id (:id rule)
-                          :section-id section-id
-                          :heading (:heading section-def)
-                          :message (str "Section `" (:heading section-def) "` must have exactly " (:exactly rule) " items")}))
+                    :message (str "Missing required section `" (:heading section-def) "`")}))))
+        (:sections contract)))
 
-                (and (:min rule) (< count (:min rule)))
-                (swap! failures conj
-                       (build-failure contract
-                         {:rule-id (:id rule)
-                          :section-id section-id
-                          :heading (:heading section-def)
-                          :message (str "Section `" (:heading section-def) "` must have at least " (:min rule) " items")}))
+(defn- check-section-order
+  "Returns failure if section order is wrong."
+  [contract headings]
+  (let [expected-headings (map :heading (:sections contract))]
+    (if (= headings (take (count headings) expected-headings))
+      []
+      [(build-failure contract
+         {:rule-id "rule/section-order"
+          :expected {:headings expected-headings}
+          :actual {:headings headings}
+          :message "Section order mismatch"})])))
 
-                (and (:max rule) (> count (:max rule)))
-                (swap! failures conj
-                       (build-failure contract
+(defn- check-count-rules
+  "Returns failures for count rule violations."
+  [contract sections]
+  (mapcat (fn [rule]
+            (if-let [section-id (:section-id rule)]
+              (if-let [section-def (get (:sections-by-id contract) section-id)]
+                (if-let [section (first (filter #(= (:heading section-def) (:heading %)) sections))]
+                  (let [count (count-semantic-items section)]
+                    (cond
+                      (and (:exactly rule) (not= count (:exactly rule)))
+                      [(build-failure contract
                          {:rule-id (:id rule)
                           :section-id section-id
                           :heading (:heading section-def)
-                          :message (str "Section `" (:heading section-def) "` must have at most " (:max rule) " items")}))))))))
-    {:ok (empty? @failures)
+                          :message (str "Section `" (:heading section-def) "` must have exactly " (:exactly rule) " items")})]
+
+                      (and (:min rule) (< count (:min rule)))
+                      [(build-failure contract
+                         {:rule-id (:id rule)
+                          :section-id section-id
+                          :heading (:heading section-def)
+                          :message (str "Section `" (:heading section-def) "` must have at least " (:min rule) " items")})]
+
+                      (and (:max rule) (> count (:max rule)))
+                      [(build-failure contract
+                         {:rule-id (:id rule)
+                          :section-id section-id
+                          :heading (:heading section-def)
+                          :message (str "Section `" (:heading section-def) "` must have at most " (:max rule) " items")})]
+
+                      :else []))
+                  [])
+                [])
+              []))
+          (:rules contract)))
+
+(defn validate-markdown-response
+  [contract markdown]
+  (let [{:keys [sections]} (extract-markdown-sections markdown)
+        headings (map :heading sections)
+        required-failures (check-required-sections contract headings)
+        order-failures (check-section-order contract headings)
+        count-failures (check-count-rules contract sections)
+        all-failures (concat required-failures order-failures count-failures)]
+    {:ok (empty? all-failures)
      :sections sections
-     :failures @failures}))
+     :failures (vec all-failures)}))
 
 (defn to-failure-report
   [contract result]
