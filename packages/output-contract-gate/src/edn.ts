@@ -1,4 +1,4 @@
-import jsedn from 'jsedn';
+import { parseEDNString } from 'edn-data';
 
 import type {
   ArbitrationForm,
@@ -116,7 +116,57 @@ const groupTemplates = (templates: readonly RepairTemplate[]): Readonly<Record<s
   return Object.fromEntries(grouped.entries());
 };
 
-export const parseEdnForm = (source: string): EdnValue => jsedn.toJS(jsedn.parse(source)) as EdnValue;
+/**
+ * Normalize edn-data output to our internal EdnValue format.
+ * edn-data wraps results: {list: [...]} or {map: [[k,v], ...]}.
+ * Keywords are {key: 'name'}, symbols are {sym: 'name'}.
+ */
+const normalizeEdnValue = (value: unknown): EdnValue => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  if (typeof value !== 'object') return null;
+
+  const obj = value as Record<string, unknown>;
+
+  // Handle top-level list wrapper: {list: [...]}
+  if ('list' in obj && Array.isArray(obj.list)) {
+    return obj.list.map(normalizeEdnValue) as EdnValue[];
+  }
+
+  // Handle top-level map wrapper: {map: [[k,v], ...]}
+  if ('map' in obj && Array.isArray(obj.map)) {
+    // Convert map pairs to object-like representation
+    // For our contracts, we treat maps similarly to lists of pairs
+    return obj.map.map((pair: unknown) => {
+      if (Array.isArray(pair) && pair.length === 2) {
+        return [normalizeEdnValue(pair[0]), normalizeEdnValue(pair[1])];
+      }
+      return normalizeEdnValue(pair);
+    }) as EdnValue[];
+  }
+
+  // Handle keyword: {key: 'name'} -> ':name'
+  if ('key' in obj && typeof obj.key === 'string') {
+    return `:${obj.key}`;
+  }
+
+  // Handle symbol: {sym: 'name'} -> 'name'
+  if ('sym' in obj && typeof obj.sym === 'string') {
+    return obj.sym;
+  }
+
+  // Handle arrays (already unwrapped)
+  if (Array.isArray(obj)) {
+    return obj.map(normalizeEdnValue) as EdnValue[];
+  }
+
+  return null;
+};
+
+export const parseEdnForm = (source: string): EdnValue => {
+  const parsed = parseEDNString(source);
+  return normalizeEdnValue(parsed);
+};
 
 export const compileAgentOutputContract = (source: string): NormalizedContract => {
   const form = expectList(parseEdnForm(source), 'Contract root must be a list');
