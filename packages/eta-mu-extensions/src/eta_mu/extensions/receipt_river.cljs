@@ -139,7 +139,7 @@
            :file file-path
            :count (.-length rows)
            :failures failures
-           :last (.at rows -1)})))
+            :last (or (.at rows -1) nil)})))
 
 (defn serialize-receipt [record]
   (let [ordered #js []]
