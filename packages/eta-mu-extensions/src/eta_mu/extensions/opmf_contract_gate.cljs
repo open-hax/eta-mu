@@ -1,15 +1,18 @@
 (ns eta-mu.extensions.opmf-contract-gate
+  "Output contract gate enforcement with auto-repair.
+   Pure CLJS implementation - no TypeScript dependencies."
   (:require-macros [eta-mu.core :as em])
   (:require [clojure.string :as str]
             [goog.object :as gobj]
+            [eta-mu.contracts.core :as contracts]
             ["node:fs" :as fs]
             ["node:os" :as os]
-            ["node:path" :as path]
-            ["@open-hax/output-contract-gate" :as gate]))
+            ["node:path" :as path]))
 
 (def HOME (.homedir os))
 (def ETA-MU-STATE-ROOT (path/join HOME ".ημ" "state"))
 (def LEGACY-STATE-ROOT (path/join HOME ".pi" "agent" "state"))
+
 (defn resolve-state-dir [name]
   (let [eta-mu-dir (path/join ETA-MU-STATE-ROOT name)
         legacy-dir (path/join LEGACY-STATE-ROOT name)]
@@ -18,6 +21,7 @@
       (if (.existsSync fs legacy-dir)
         legacy-dir
         eta-mu-dir))))
+
 (def STATE-DIR (resolve-state-dir "output-contract-gate"))
 (def RUNS-DIR (path/join STATE-DIR "runs"))
 (def VALIDATIONS-FILE (path/join STATE-DIR "validations.jsonl"))
@@ -26,6 +30,7 @@
 (def GLOBAL-KEY "__eta_mu_output_contract_gate_state__")
 (def REPAIR-SENTINEL "[[eta-mu-opmf-contract-gate repair ")
 (def CONTRACT-MARKER "## Active Output Contract")
+
 (def DEFAULT-CONTRACT
   (or (gobj/get js/process.env "PI_OUTPUT_CONTRACT_FILE")
       (path/join HOME
@@ -123,7 +128,7 @@
                  (= (aget stat "mtimeMs") (aget cache "mtimeMs")))
           (js/Promise.resolve cache)
           (let [source (.readFileSync fs contract-path "utf8")
-                contract (gate/compileAgentOutputContract source)
+                contract (contracts/compile-contract source)
                 fresh #js {:path contract-path
                            :mtimeMs (aget stat "mtimeMs")
                            :source source
@@ -150,19 +155,18 @@
        "Return the full corrected Markdown response with `## Signal`, `## Evidence`, `## Frames`, `## Countermoves`, `## Next` as level-2 headers."))
 
 (defn build-prompt-append [contract]
-  (let [headings (->> (js/Array.from (aget contract "sections"))
-                      (map #(aget % "heading"))
+  (let [headings (->> (:sections contract)
+                      (map :heading)
                       (str/join ", "))
-        rules (js/Array.from (aget contract "rules"))
-        next-rule (first (filter #(= "rule/next-exactly-one-action" (aget % "id")) rules))
-        frames-rule (first (filter #(= "rule/frames-cardinality" (aget % "id")) rules))]
+        next-rule (first (filter #(= "rule/next-exactly-one-action" (:id %)) (:rules contract)))
+        frames-rule (first (filter #(= "rule/frames-cardinality" (:id %)) (:rules contract)))]
     (->> [(str "## Active Output Contract")
           (str "- Return Markdown with these exact level-2 headings in order: " headings)
           "- Use `## Heading` level-2 markdown headers for each section. Do NOT use bold (`**Heading**`), emphasis, or deeper headings (`###`, `####`) in place of section headers."
-          (when (some? (aget next-rule "exactly"))
-            (str "- Next must contain exactly " (aget next-rule "exactly") " concrete next action."))
-          (when (and (some? (aget frames-rule "min")) (some? (aget frames-rule "max")))
-            (str "- Frames must contain " (aget frames-rule "min") "-" (aget frames-rule "max") " plausible interpretations."))
+          (when (some? (:exactly next-rule))
+            (str "- Next must contain exactly " (:exactly next-rule) " concrete next action."))
+          (when (and (some? (:min frames-rule)) (some? (:max frames-rule)))
+            (str "- Frames must contain " (:min frames-rule) "-" (:max frames-rule) " plausible interpretations."))
           "- If your response fails the structure gate, you will be asked to continue your work until it passes."]
          (filter some?)
          (str/join "\n"))))
@@ -203,6 +207,34 @@
       (aget state "pi")
       (when (aget pi "sendUserMessage") pi)))
 
+(defn write-run-artifacts
+  "Write validation artifacts to disk."
+  [opts]
+  (let [artifacts-root (aget opts "artifactsRoot")
+        contract-path (aget opts "contractPath")
+        response-path (aget opts "responsePath")
+        contract-source (aget opts "contractSource")
+        response-markdown (aget opts "responseMarkdown")
+        report (aget opts "report")
+        repair-prompt (aget opts "repairPrompt")
+        exit-code (aget opts "exitCode")
+        ts (.toISOString (js/Date.))
+        run-id (str ts "_" (subs (.toString (js/Math.random) 2 8)))
+        run-dir (path/join artifacts-root run-id)]
+    (ensure-dir run-dir)
+    (.writeFileSync fs (path/join run-dir "contract.edn") contract-source "utf8")
+    (.writeFileSync fs (path/join run-dir "response.md") response-markdown "utf8")
+    (.writeFileSync fs (path/join run-dir "report.json") (.stringify js/JSON (clj->js report) nil 2) "utf8")
+    (when repair-prompt
+      (.writeFileSync fs (path/join run-dir "repair.txt") repair-prompt "utf8"))
+    (.writeFileSync fs (path/join run-dir "meta.json")
+                    (.stringify js/JSON #js {:ts ts
+                                              :contractPath contract-path
+                                              :responsePath response-path
+                                              :exitCode exit-code} nil 2)
+                    "utf8")
+    #js {:dir run-dir :runId run-id}))
+
 (defn validate-latest-assistant [ctx state]
   (.then (load-contract state)
     (fn [cached]
@@ -215,57 +247,53 @@
               (js/Promise.resolve #js {:ok true :skip true :reason "assistant message has no text content"})
               (if (looks-like-agent-error? assistant-text)
                 (js/Promise.resolve #js {:ok true :skip true :reason "assistant message is an error, not a real response"})
-                (let [document (gate/extractMarkdownSections assistant-text)
-                      validation (gate/validateMarkdownResponse (aget cached "contract") assistant-text)
-                      report (gate/toFailureReport (aget cached "contract") validation)
-                      repair-prompt (when-not (aget validation "ok") (gate/compileRepairPrompt (aget cached "contract") validation))]
-                  (.then (gate/writeRunArtifacts
-                           #js {:artifactsRoot RUNS-DIR
-                                :contractPath (aget cached "path")
-                                :responsePath (str "session:"
-                                                   (or (when-let [sm (aget ctx "sessionManager")]
-                                                         (let [getter (aget sm "getSessionFile")]
-                                                           (when getter
-                                                             (.call getter sm))))
-                                                       "ephemeral")
-                                                   ":assistant:"
-                                                   (or (aget assistant "id") "unknown"))
-                                :contractSource (aget cached "source")
-                                :responseMarkdown assistant-text
-                                :contract (aget cached "contract")
-                                :document document
-                                :report report
-                                :repairPrompt repair-prompt
-                                :exitCode (if (aget validation "ok") 0 1)})
-                    (fn [bundle]
-                      (let [repair-info (parse-repair-attempt (extract-text (aget user "content")))
-                            summary #js {:ts (.toISOString (js/Date.))
-                                         :ok (aget validation "ok")
-                                         :failureCount (.-length (or (aget report "failures") #js []))
-                                         :assistantMessageId (aget assistant "id")
-                                         :userMessageId (aget user "id")
-                                         :repairAttempt (or (:attempt repair-info) 0)
-                                         :bundleDir (aget bundle "dir")
-                                         :contract #js {:name (aget (aget cached "contract") "name")
-                                                        :version (aget (aget cached "contract") "version")
-                                                        :path (aget cached "path")}}]
-                        (append-jsonl VALIDATIONS-FILE (js->clj summary :keywordize-keys true))
-                        (aset state "lastResult" summary)
-                        (aset state "contractError" nil)
-                        #js {:ok (aget validation "ok")
-                             :report report
-                             :repairPrompt repair-prompt
-                             :repairInfo (clj->js repair-info)
-                             :assistant assistant
-                             :user user
-                             :contract (aget cached "contract")
-                             :bundle bundle}))))))))))))
+                (let [contract (aget cached "contract")
+                      validation (contracts/validate-markdown-response contract assistant-text)
+                      report (contracts/to-failure-report contract validation)
+                      repair-prompt (when-not (:ok validation) (contracts/compile-repair-prompt contract validation))]
+                  (let [bundle (write-run-artifacts
+                                 #js {:artifactsRoot RUNS-DIR
+                                      :contractPath (aget cached "path")
+                                      :responsePath (str "session:"
+                                                         (or (when-let [sm (aget ctx "sessionManager")]
+                                                               (let [getter (aget sm "getSessionFile")]
+                                                                 (when getter
+                                                                   (.call getter sm))))
+                                                             "ephemeral")
+                                                         ":assistant:"
+                                                         (or (aget assistant "id") "unknown"))
+                                      :contractSource (aget cached "source")
+                                      :responseMarkdown assistant-text
+                                      :report report
+                                      :repairPrompt repair-prompt
+                                      :exitCode (if (:ok validation) 0 1)})]
+                    (let [repair-info (parse-repair-attempt (extract-text (aget user "content")))
+                          summary #js {:ts (.toISOString (js/Date.))
+                                       :ok (:ok validation)
+                                       :failureCount (count (:failures validation))
+                                       :assistantMessageId (aget assistant "id")
+                                       :userMessageId (aget user "id")
+                                       :repairAttempt (or (:attempt repair-info) 0)
+                                       :bundleDir (aget bundle "dir")
+                                       :contract #js {:name (:name contract)
+                                                      :version (:version contract)
+                                                      :path (aget cached "path")}}]
+                      (append-jsonl VALIDATIONS-FILE (js->clj summary :keywordize-keys true))
+                      (aset state "lastResult" summary)
+                      (aset state "contractError" nil)
+                      #js {:ok (:ok validation)
+                           :report report
+                           :repairPrompt repair-prompt
+                           :repairInfo (clj->js repair-info)
+                           :assistant assistant
+                           :user user
+                           :contract contract
+                           :bundle bundle})))))))))))
 
 (defn extract-original-user-prompt [ctx]
   (try
     (let [messages (extract-messages ctx)
           user-msgs (filter #(= "user" (aget % "role")) messages)]
-      ;; Get the first substantive user message (skip repair injections)
       (reduce (fn [_ msg]
                 (let [text (extract-text (aget msg "content"))]
                   (when (and (not (str/blank? text))
@@ -279,26 +307,22 @@
 (defn handle-validation-result [pi ctx state result]
   (set-status ctx state)
   (cond
-    ;; Agent ended with error/no output — skip gate entirely
     (aget result "skip")
     (notify ctx
             (str "output-contract-gate: skipped — "
                  (or (aget result "reason") "agent error or no response"))
             "info")
 
-    ;; Validation passed
     (aget result "ok")
     (when-let [attempt (:attempt (js->clj (aget result "repairInfo") :keywordize-keys true))]
       (notify ctx
               (str "eta-mu-opmf-contract-gate repaired output in " attempt " attempt" (when (not= attempt 1) "s"))
               "success"))
 
-    ;; Validation failed — attempt repair
     :else
     (let [repair-info (js->clj (aget result "repairInfo") :keywordize-keys true)
           current-attempt (or (:attempt repair-info) 0)
-          max-retries (or (some-> result (aget "contract") (aget "repairMaxRetries")) 0)
-          ;; Skip repair if there's no assistant message (user-initiated stop)
+          max-retries (or (some-> result (aget "contract") :repair-max-retries) 0)
           assistant-msg (aget result "assistant")
           assistant-id (when assistant-msg (aget assistant-msg "id"))]
       (if (nil? assistant-msg)
@@ -319,7 +343,7 @@
               (notify ctx "eta-mu-opmf-contract-gate repair sender unavailable" "warn")))
           (notify ctx
                   (str "eta-mu-opmf-contract-gate failed ("
-                       (.-length (or (some-> result (aget "report") (aget "failures")) #js []))
+                       (count (or (some-> result (aget "report") :failures) []))
                        " structural violations)")
                   "warn"))))))
 
@@ -425,5 +449,5 @@
 
 (em/defextension opmf-contract-gate
   :name "opmf-contract-gate"
-  :description "Canonical output contract gate backed by @open-hax/output-contract-gate"
+  :description "Canonical output contract gate - pure CLJS implementation"
   :init register-output-contract-gate!)
