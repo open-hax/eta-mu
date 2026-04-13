@@ -125,7 +125,7 @@
                       (fn [row]
                         (and (= (aget row "slug") slug)
                              (or (not cwd) (same-cwd (aget row "cwd") cwd)))))]
-    (.at rows -1)))
+    (or (.at rows -1) nil)))
 
 (defn summarize-spores [spores]
   (if (zero? (.-length spores))
