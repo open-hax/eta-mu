@@ -78,7 +78,7 @@
   (when (.-hasUI (aget state "ctx"))
     (let [ctx (aget state "ctx")]
       (if (not (aget state "enabled"))
-        (.setStatus (.-ui ctx) STATUS-KEY nil)
+        (.setStatus (.-ui ctx) STATUS-KEY js/undefined)
         (when (aget state "running")
           (.setStatus (.-ui ctx) STATUS-KEY (render-status state (js/performance.now))))))))
 
@@ -106,7 +106,7 @@
                  (if (not (aget state "enabled"))
                    (do
                      (clear-interval-safe state)
-                     (.setStatus (.-ui ctx) STATUS-KEY nil)
+                     (.setStatus (.-ui ctx) STATUS-KEY js/undefined)
                      (.notify (.-ui ctx) "Task timing: disabled" "info"))
                    (do
                      (.notify (.-ui ctx) "Task timing: enabled" "info")
@@ -127,7 +127,7 @@
                  (aset state "toolWaitTotalMs" 0)
                  (if (not (aget state "enabled"))
                    (when (.-hasUI ctx)
-                     (.setStatus (.-ui ctx) STATUS-KEY nil))
+                     (.setStatus (.-ui ctx) STATUS-KEY js/undefined))
                    (when (.-hasUI ctx)
                      (.setStatus (.-ui ctx) STATUS-KEY (render-status state (js/performance.now)))
                      (start-ticker state))))))
@@ -179,4 +179,4 @@
                  (aset state "toolSegmentStartMs" nil)
                  (aset state "toolWaitTotalMs" 0)
                  (when (.-hasUI ctx)
-                   (.setStatus (.-ui ctx) STATUS-KEY nil))))))
+                   (.setStatus (.-ui ctx) STATUS-KEY js/undefined))))))

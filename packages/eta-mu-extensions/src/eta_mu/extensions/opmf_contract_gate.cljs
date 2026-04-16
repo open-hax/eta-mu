@@ -219,7 +219,8 @@
         repair-prompt (aget opts "repairPrompt")
         exit-code (aget opts "exitCode")
         ts (.toISOString (js/Date.))
-        run-id (str ts "_" (subs (.toString (js/Math.random) 2 8)))
+        rand-str (.toString (js/Math.random))
+        run-id (str ts "_" (subs rand-str 2 (min 8 (.-length rand-str))))
         run-dir (path/join artifacts-root run-id)]
     (ensure-dir run-dir)
     (.writeFileSync fs (path/join run-dir "contract.edn") contract-source "utf8")

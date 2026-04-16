@@ -542,4 +542,4 @@
   (em/on "session_shutdown"
     :handler (fn [event ctx]
                (when (has-ui? ctx)
-                 (.setStatus (ctx-ui ctx) STATUS-KEY nil)))))
+                 (.setStatus (ctx-ui ctx) STATUS-KEY js/undefined)))))
