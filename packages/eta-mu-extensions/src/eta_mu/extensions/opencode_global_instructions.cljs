@@ -586,7 +586,7 @@
 
 (defn handle-session-shutdown [ctx state]
   (when (has-ui? ctx)
-    (.call (gobj/get (ctx-ui ctx) "setStatus") (ctx-ui ctx) STATUS-KEY nil)))
+    (.call (gobj/get (ctx-ui ctx) "setStatus") (ctx-ui ctx) STATUS-KEY js/undefined)))
 
 ;; ── Tools ──────────────────────────────────────────────────
 

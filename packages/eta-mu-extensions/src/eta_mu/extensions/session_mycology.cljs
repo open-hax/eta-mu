@@ -628,4 +628,4 @@
 
   (em/on "session_shutdown"
     :handler (fn [_event ctx]
-               (set-status ctx nil))))
+               (set-status ctx js/undefined))))
