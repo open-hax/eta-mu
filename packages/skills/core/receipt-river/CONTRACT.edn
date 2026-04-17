@@ -1,4 +1,4 @@
-;; ημΠ.skill/receipt-river@0.2.0
+;; ημ.skill/receipt-river@0.2.0
 ;; Migrated from pi/agent/skills/receipt-river/CONTRACT.edn
 ;; Harness-agnostic. Driver-abstracted.
 ;; Adapter stubs in packages/skills/harness/*/receipt-river/
@@ -26,7 +26,7 @@
 
   (effects
     (writes true)
-    (network false) ;; :http driver sets this true at runtime
+    (network :driver-dependent) ;; false for :fs/:db/:s3; true for :http
     (commits false))
 
   ;; Driver dispatch — what the agent sees is always the same tool surface.
@@ -35,18 +35,20 @@
     (default :fs)
     (options
       (:fs    "Local filesystem receipts.log — canonical for personal/pi installs.
-               Discoverable by ingestion engine scanning ~/.ημ/state/ directories.")
+               Discoverable by ingestion engine scanning ~/.ημ/state/ directories."
+               (network false))
       (:db    "Database row in EventRecord table (Knoxx/cephalon cloud deploy).
-               actor_id = agent user row. Queryable by tenant org_id.")
+               actor_id = agent user row. Queryable by tenant org_id."
+               (network false))
       (:s3    "S3-compatible blob append. Key: receipts/{workspace-id}/receipts.log.
-               Works with Dropbox, GDrive via mounted FUSE or adapter service.")
+               Works with Dropbox, GDrive via mounted FUSE or adapter service."
+               (network false))
       (:http  "Remote receipt-river API endpoint. Used when agent has no direct
-               filesystem or DB access. POST /receipts, GET /receipts/tail."))
-    (rule
-      "Driver selection MUST NOT change the tool parameter surface the agent sees."
-      "Driver selection MUST NOT change the receipt field schema."
-      "Switching drivers mid-session is permitted; append-only constraint is
-       enforced by the driver, not the agent."))
+               filesystem or DB access. POST /receipts, GET /receipts/tail."
+               (network true)))
+    (rule "Driver selection MUST NOT change the tool parameter surface the agent sees.")
+    (rule "Driver selection MUST NOT change the receipt field schema.")
+    (rule "Switching drivers mid-session is permitted; append-only constraint is enforced by the driver, not the agent."))
 
   (protocol
     (workflow
@@ -69,8 +71,8 @@
   (id "promethean.receipts/v2")
   (append-only true)
   (delimiter " | ")
-  (required-keys [ts kind origin owner dod pi host manifest refs])
-  (optional-keys [note tests decisions drift])
+  (required-keys [:ts :kind :origin :owner :dod :pi :host :manifest :refs])
+  (optional-keys [:note :tests :decisions :drift])
   (kinds
     [:push-truth :artifact-hash :test-run :build :decision :drift :catalog
      :observation :field-impact :truth :refutation :adjudication])
