@@ -1,0 +1,19 @@
+;; Harness adapter: opencode
+;; Core skill: ημ.skill/receipt-river@0.2.0
+
+(harness-adapter
+  (harness :opencode)
+  (skill "receipt-river")
+  (core-ref "packages/skills/core/receipt-river/CONTRACT.edn")
+  (install-path ".opencode/skills/receipt-river/CONTRACT.edn")
+  (driver :fs)
+  (driver-config
+    ;; opencode runs in workspace CWD; receipts.log lives in workspace root
+    (receipts-file "receipts.log")
+    (state-root ".opencode/state/receipt-river/"))
+  (hooks
+    (before-agent-start "inject [RECEIPT RIVER MEMORY] with last 3 receipts")
+    (agent-end "warn if substantive turn ended without receipt_river call"))
+  (notes
+    "opencode plugin: packages/eta-mu-extensions implements em/defextension receipt-river.
+     This adapter is the config layer on top of that implementation."))
