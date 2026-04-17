@@ -7,12 +7,12 @@
   (skill "work-cycle")
   (core-ref "packages/skills/core/work-cycle/CONTRACT.edn")
   (install-path ".claude/skills/work-cycle/CONTRACT.edn")
-  (overrides none)
+  (overrides nil)
   (hooks
     ;; claude-code hook events (experimental API):
     ;; PreToolUse, PostToolUse, Stop, SubagentStop, Notification
     (pre-tool-use "check loop phase before any write-class tool call")
-    (stop "verify phase completion; emit receipt if substantive work done"))
+    (stop         "verify phase completion; emit receipt if substantive work done"))
   (delivery
     ;; Skills surface as CLAUDE.md injections until native skill loader exists
     (method :claude-md-injection)

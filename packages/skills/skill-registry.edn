@@ -2,12 +2,12 @@
 ;; Replaces pi/agent/skills/.skill-lock.json pattern.
 ;; Each entry is harness-agnostic; harness adapters live in harness/<target>/<skill>/ADAPTER.edn
 ;;
-;; Fields:
-;;   :v       — semver of the core CONTRACT.edn
-;;   :path    — canonical path in this monorepo
-;;   :group   — :core | :harness | :domain | :infra | :social | :meta
-;;   :autoload — load in every session regardless of trigger
-;;   :priority — higher = loaded/applied first; core skills cluster 80–100
+;; Fields (bare symbols — this is not a map):
+;;   v        — semver of the core CONTRACT.edn
+;;   path     — canonical path in this monorepo
+;;   group    — :core | :harness | :domain | :infra | :social | :meta
+;;   autoload — load in every session regardless of trigger
+;;   priority — higher = loaded/applied first; core skills cluster 80–100
 
 (skill-registry
   (v "ημΠ.skill-registry@0.1.0")
@@ -97,29 +97,106 @@
     (description "Amendments, versioning, rollback, constitutional layers."))
 
   ;; ============================================================
-  ;; HARNESS-SPECIFIC — opencode cluster (not yet restructured)
-  ;; These will become harness/opencode/*/ADAPTER.edn referencing core skills
+  ;; HARNESS-SPECIFIC — opencode cluster
+  ;; These will become harness/opencode/*/ADAPTER.edn in PR #4
+  ;; All entries listed explicitly so the loader sees them.
   ;; ============================================================
 
   (entry
     (name "opencode-agent-authoring")
-    (path "pi/agent/skills/opencode-agent-authoring/CONTRACT.edn") ;; TODO restructure
+    (v "ημ.skill/opencode-agent-authoring@0.1.0")
+    (path "pi/agent/skills/opencode-agent-authoring/CONTRACT.edn") ;; TODO restructure → PR #4
     (group :harness)
     (harness :opencode)
     (priority 60))
 
   (entry
     (name "opencode-plugin-authoring")
-    (path "pi/agent/skills/opencode-plugin-authoring/CONTRACT.edn") ;; TODO restructure
+    (v "ημ.skill/opencode-plugin-authoring@0.1.0")
+    (path "pi/agent/skills/opencode-plugin-authoring/CONTRACT.edn") ;; TODO restructure → PR #4
     (group :harness)
     (harness :opencode)
     (priority 60))
 
-  ;; ... remaining opencode-* skills follow same pattern, omitted for brevity
-  ;; Full list: opencode-agents-skills, opencode-command-authoring, opencode-configs,
-  ;;            opencode-model-variant-management, opencode-models-providers,
-  ;;            opencode-sdk, opencode-session-search, opencode-skill-creation,
-  ;;            opencode-tool-authoring, opencode-tools-mcp
+  (entry
+    (name "opencode-agents-skills")
+    (v "ημ.skill/opencode-agents-skills@0.1.0")
+    (path "pi/agent/skills/opencode-agents-skills/CONTRACT.edn") ;; TODO restructure → PR #4
+    (group :harness)
+    (harness :opencode)
+    (priority 58))
+
+  (entry
+    (name "opencode-command-authoring")
+    (v "ημ.skill/opencode-command-authoring@0.1.0")
+    (path "pi/agent/skills/opencode-command-authoring/CONTRACT.edn") ;; TODO restructure → PR #4
+    (group :harness)
+    (harness :opencode)
+    (priority 56))
+
+  (entry
+    (name "opencode-configs")
+    (v "ημ.skill/opencode-configs@0.1.0")
+    (path "pi/agent/skills/opencode-configs/CONTRACT.edn") ;; TODO restructure → PR #4
+    (group :harness)
+    (harness :opencode)
+    (priority 58))
+
+  (entry
+    (name "opencode-model-variant-management")
+    (v "ημ.skill/opencode-model-variant-management@0.1.0")
+    (path "pi/agent/skills/opencode-model-variant-management/CONTRACT.edn") ;; TODO restructure → PR #4
+    (group :harness)
+    (harness :opencode)
+    (priority 54))
+
+  (entry
+    (name "opencode-models-providers")
+    (v "ημ.skill/opencode-models-providers@0.1.0")
+    (path "pi/agent/skills/opencode-models-providers/CONTRACT.edn") ;; TODO restructure → PR #4
+    (group :harness)
+    (harness :opencode)
+    (priority 55))
+
+  (entry
+    (name "opencode-sdk")
+    (v "ημ.skill/opencode-sdk@0.1.0")
+    (path "pi/agent/skills/opencode-sdk/CONTRACT.edn") ;; TODO restructure → PR #4
+    (group :harness)
+    (harness :opencode)
+    (priority 60))
+
+  (entry
+    (name "opencode-session-search")
+    (v "ημ.skill/opencode-session-search@0.1.0")
+    (path "pi/agent/skills/opencode-session-search/CONTRACT.edn") ;; TODO restructure → PR #4
+    (group :harness)
+    (harness :opencode)
+    (priority 52))
+
+  (entry
+    (name "opencode-skill-creation")
+    (v "ημ.skill/opencode-skill-creation@0.1.0")
+    (path "pi/agent/skills/opencode-skill-creation/CONTRACT.edn") ;; TODO restructure → PR #4
+    (group :harness)
+    (harness :opencode)
+    (priority 50))
+
+  (entry
+    (name "opencode-tool-authoring")
+    (v "ημ.skill/opencode-tool-authoring@0.1.0")
+    (path "pi/agent/skills/opencode-tool-authoring/CONTRACT.edn") ;; TODO restructure → PR #4
+    (group :harness)
+    (harness :opencode)
+    (priority 54))
+
+  (entry
+    (name "opencode-tools-mcp")
+    (v "ημ.skill/opencode-tools-mcp@0.1.0")
+    (path "pi/agent/skills/opencode-tools-mcp/CONTRACT.edn") ;; TODO restructure → PR #4
+    (group :harness)
+    (harness :opencode)
+    (priority 54))
 
   ;; ============================================================
   ;; DOMAIN — not migrated yet, paths stay as-is
