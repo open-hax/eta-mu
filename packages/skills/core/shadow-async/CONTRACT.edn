@@ -1,0 +1,154 @@
+;; ημ.skill/shadow-async@0.1.0
+;; Harness-agnostic skill: async/await macro semantics for shadow-cljs CLJS.
+
+(skill-contract
+  (name "shadow-async")
+  (v "ημ.skill/shadow-async@0.1.0")
+
+  (intent
+    "Provide async/await macro semantics for shadow-cljs ClojureScript projects.
+     Defines defn-async (macro) and await (form inside it) as a thin layer over
+     shadow.cljs.modern/js-await. Functions produced always return a JS Promise.
+     Harness-agnostic; no runtime deps beyond shadow-cljs itself.")
+
+  (activation
+    (priority 68)
+    (explicit ["skill:shadow-async"])
+    (triggers ["defn-async" "await" "shadow-cljs async" "js-await" "promise cljs" "async macro cljs"])
+    (autoload false))
+
+  (governance
+    (touch-layer :stable)
+    (non-override [:safety :license])
+    (requires-user-approval false))
+
+  (effects
+    (writes false)
+    (network false)
+    (commits false))
+
+  (contact
+    {:repo   "open-hax/eta-mu"
+     :path   "packages/skills/core/shadow-async"
+     :skill  "ημ.skill/shadow-async@0.1.0"})
+
+  (protocol
+
+    ;; ── Core primitives ──────────────────────────────────────────────────────
+
+    (macro-api
+      (defn-async
+        "Defines a function that always returns a JS Promise.
+         The body may contain (await <expr>) forms in let-binding position
+         or at top-level body forms. Each await expands to js-await.
+         Compile-time error if await appears outside defn-async.
+         
+         Signature: (defn-async name [args] body...)
+         Namespace:  place macro in a .clj file; expose via :require-macros.")
+
+      (await
+        "Only valid inside defn-async body or an explicit (async ...) form.
+         (await <promise-expr>) suspends continuation until promise resolves.
+         Expands to shadow.cljs.modern/js-await internally."))
+
+    ;; ── Canonical implementation ──────────────────────────────────────────
+
+    (implementation
+      (macro-ns "my.async"  ;; adjust to project ns
+        (clj-file "src/my/async.clj")
+        (cljs-file "src/my/async.cljs")
+
+        (clj-source
+          "(ns my.async)
+
+(defn await-form? [x]
+  (and (seq? x) (= 'await (first x)) (= 2 (count x))))
+
+(defn lower-awaits [body]
+  (letfn [(step [forms]
+            (if (empty? forms)
+              nil
+              (let [f (first forms)
+                    more (next forms)]
+                (cond
+                  (and (seq? f) (= 'let (first f)))
+                  (let [[_ bindings & let-body] f
+                        pairs (partition 2 bindings)]
+                    (reduce
+                     (fn [acc [sym expr]]
+                       (if (await-form? expr)
+                         `(shadow.cljs.modern/js-await [~sym ~(second expr)]
+                            ~(or acc `(do ~@let-body ~@more)))
+                         `(let [~sym ~expr]
+                            ~(or acc `(do ~@let-body ~@more)))))
+                     nil
+                     (reverse pairs)))
+
+                  (await-form? f)
+                  `(shadow.cljs.modern/js-await [_# ~(second f)]
+                     ~(or (step more) '_#))
+
+                  :else
+                  (if more
+                    `(do ~f ~(step more))
+                    f))))]
+    (step body)))
+
+(defmacro defn-async [name args & body]
+  `(defn ~name ~args
+     ~(lower-awaits body)))")
+
+        (cljs-source
+          "(ns my.async
+  (:require [shadow.cljs.modern])
+  (:require-macros [my.async :refer [defn-async]]))")))
+
+    ;; ── Usage examples ────────────────────────────────────────────────────
+
+    (examples
+      (fetch-json
+        "(defn-async load-json [url]
+  (let [resp (await (js/fetch url))
+        json (await (.json resp))]
+    json))")
+
+      (post-with-error-handling
+        "(defn-async save-user [payload]
+  (let [resp (await
+               (js/fetch \"/api/user\"
+                 #js {:method \"POST\"
+                      :headers #js {\"content-type\" \"application/json\"}
+                      :body (js/JSON.stringify (clj->js payload))}))]
+    (if (.-ok resp)
+      (await (.json resp))
+      (throw (js/Error. \"Save failed\")))))")
+
+      (sequential-effects
+        "(defn-async bootstrap! []
+  (await (init-db!))
+  (await (seed-config!))
+  (start-server!))"))
+
+    ;; ── Known caveats (ლა soft uncertainty) ─────────────────────────────
+
+    (caveats
+      (await-scope
+        "This implementation handles await in let-binding positions and top-level
+         body forms only. Deeply nested await (inside cond branches, map calls, etc.)
+         is not automatically lowered — use explicit js-await there.")
+
+      (try-catch
+        "Error handling must use js-await with a trailing (catch ...) clause or
+         wrap the defn-async call with .catch on the returned Promise.")
+
+      (alternatives
+        "For production use with richer semantics (try/catch lowering, nested await),
+         consider promesa (funcool/promesa). js-await is the shadow-cljs primitive
+         this macro wraps.")))
+
+  (output
+    (must-include
+      ["defn-async macro placed in .clj file"
+       "CLJS ns uses :require-macros to expose it"
+       "each await in let-binding position expands to js-await"
+       "return value is always a JS Promise"])))
