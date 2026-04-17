@@ -509,6 +509,8 @@
                              #js {:reflection reflection}))
             (let [slug (slugify name)
                   prior (find-latest-spore slug (aget ctx "cwd"))
+                  prior-recurrence (js/Number (or (when prior (aget prior "recurrence")) 0))
+                  prior-draft-path (when prior (aget prior "draftPath"))
                   spore #js {:ts (now-iso)
                              :name name
                              :slug slug
@@ -519,12 +521,12 @@
                              :model (model-label ctx)
                              :reflectionTs (aget reflection "ts")
                              :reflectionKind (reflection-kind reflection)
-                             :recurrence (js/Math.max 1 (inc (js/Number (or (aget prior "recurrence") 0))))
+                             :recurrence (js/Math.max 1 (inc prior-recurrence))
                              :efficiencyP (aget reflection "efficiencyP")
                              :frictionP (aget reflection "frictionP")
                              :skillCandidateP (aget reflection "skillCandidateP")}]
               (aset spore "draftPath"
-                    (or (aget prior "draftPath")
+                    (or prior-draft-path
                         (path/join SPORE-DRAFTS-DIR (str slug ".md"))))
               (write-spore-draft reflection spore)
               (append-jsonl SPORES-FILE spore)
