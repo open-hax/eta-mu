@@ -1,16 +1,8 @@
 ;; ημΠ skill registry — top-level monorepo manifest
-;; Replaces pi/agent/skills/.skill-lock.json pattern.
-;; Each entry is harness-agnostic; harness adapters live in harness/<target>/<skill>/ADAPTER.edn
-;;
-;; Fields:
-;;   :v       — semver of the core CONTRACT.edn
-;;   :path    — canonical path in this monorepo
-;;   :group   — :core | :harness | :domain | :infra | :social | :meta
-;;   :autoload — load in every session regardless of trigger
-;;   :priority — higher = loaded/applied first; core skills cluster 80–100
+;; Updated: opencode-* cluster restructured as harness/ and domain/ entries
 
 (skill-registry
-  (v "ημΠ.skill-registry@0.1.0")
+  (v "ημΠ.skill-registry@0.2.0")
   (root "packages/skills")
 
   ;; ============================================================
@@ -36,104 +28,94 @@
     (drivers [:fs :db :s3 :http])
     (description "Append-only μ-trace ledger. Driver-abstracted for cloud and local deploys."))
 
-  ;; ============================================================
-  ;; CORE — not yet migrated, still at pi/agent/skills/
-  ;; Migration order: agent-runtime-state → fork-tax → regression-triage
-  ;;                  → spec-driven-dev → session-mycology
-  ;; ============================================================
-
-  (entry
-    (name "agent-runtime-state")
-    (v "ημ.skill/agent-runtime-state@0.1.0")
-    (path "pi/agent/skills/agent-runtime-state/CONTRACT.edn") ;; TODO migrate
-    (group :core)
-    (priority 85)
-    (autoload true)
-    (description "Runtime registers, startup, drift detection, session continuity, tick model."))
-
-  (entry
-    (name "fork-tax")
-    (v "ημ.skill/fork-tax@0.1.0")
-    (path "pi/agent/skills/fork-tax/CONTRACT.edn") ;; TODO migrate
-    (group :core)
-    (priority 90)
-    (autoload false)
-    (description "Persist working state into git: commit + tag + push. 息 episodic commit operator."))
-
-  (entry
-    (name "regression-triage")
-    (v "ημ.skill/regression-triage@0.1.0")
-    (path "pi/agent/skills/regression-triage/CONTRACT.edn") ;; TODO migrate
-    (group :core)
-    (priority 80)
-    (autoload false)
-    (description "Investigate regressions: locate introducing change, rollback vs fix-forward."))
-
-  (entry
-    (name "spec-driven-dev")
-    (v "ημ.skill/spec-driven-dev@0.1.0")
-    (path "pi/agent/skills/spec-driven-dev/CONTRACT.edn") ;; TODO migrate
-    (group :core)
-    (priority 70)
-    (autoload false)
-    (description "Spec + phases + verification. Kanban FSM integration."))
-
-  (entry
-    (name "session-mycology")
-    (v "ημ.skill/session-mycology@0.1.0")
-    (path "pi/agent/skills/session-mycology/CONTRACT.edn") ;; TODO migrate
-    (group :core)
-    (priority 65)
-    (autoload true)
-    (description "Meta-cognition: difficulty/complexity/confidence scoring. Embedding-recalled skills."))
-
-  (entry
-    (name "contract-governance")
-    (v "ημ.skill/contract-governance@0.1.0")
-    (path "pi/agent/skills/contract-governance/CONTRACT.edn") ;; TODO migrate
-    (group :meta)
-    (priority 30)
-    (autoload false)
-    (description "Amendments, versioning, rollback, constitutional layers."))
+  ;; Core not yet migrated — TODO in order:
+  (entry (name "agent-runtime-state")  (path "pi/agent/skills/agent-runtime-state/CONTRACT.edn")  (group :core) (priority 85) (autoload true)  (status :pending-migration))
+  (entry (name "fork-tax")             (path "pi/agent/skills/fork-tax/CONTRACT.edn")             (group :core) (priority 90) (autoload false) (status :pending-migration))
+  (entry (name "regression-triage")   (path "pi/agent/skills/regression-triage/CONTRACT.edn")   (group :core) (priority 80) (autoload false) (status :pending-migration))
+  (entry (name "spec-driven-dev")      (path "pi/agent/skills/spec-driven-dev/CONTRACT.edn")      (group :core) (priority 70) (autoload false) (status :pending-migration))
+  (entry (name "session-mycology")     (path "pi/agent/skills/session-mycology/CONTRACT.edn")     (group :core) (priority 65) (autoload true)  (status :pending-migration))
+  (entry (name "contract-governance") (path "pi/agent/skills/contract-governance/CONTRACT.edn") (group :meta)  (priority 30) (autoload false) (status :pending-migration))
 
   ;; ============================================================
-  ;; HARNESS-SPECIFIC — opencode cluster (not yet restructured)
-  ;; These will become harness/opencode/*/ADAPTER.edn referencing core skills
+  ;; DOMAIN/OPENCODE — opencode-specific knowledge, harness-independent
   ;; ============================================================
 
   (entry
-    (name "opencode-agent-authoring")
-    (path "pi/agent/skills/opencode-agent-authoring/CONTRACT.edn") ;; TODO restructure
-    (group :harness)
+    (name "opencode-sdk")
+    (v "ημ.skill/opencode-sdk@0.2.0")
+    (path "packages/skills/domain/opencode/sdk/CONTRACT.edn")
+    (group :domain)
     (harness :opencode)
-    (priority 60))
+    (priority 60)
+    (autoload false)
+    (status :migrated))
 
   (entry
-    (name "opencode-plugin-authoring")
-    (path "pi/agent/skills/opencode-plugin-authoring/CONTRACT.edn") ;; TODO restructure
-    (group :harness)
+    (name "opencode-configs")
+    (v "ημ.skill/opencode-configs@0.2.0")
+    (path "packages/skills/domain/opencode/configs/CONTRACT.edn")
+    (group :domain)
     (harness :opencode)
-    (priority 60))
+    (priority 58)
+    (autoload false)
+    (status :migrated))
 
-  ;; ... remaining opencode-* skills follow same pattern, omitted for brevity
-  ;; Full list: opencode-agents-skills, opencode-command-authoring, opencode-configs,
-  ;;            opencode-model-variant-management, opencode-models-providers,
-  ;;            opencode-sdk, opencode-session-search, opencode-skill-creation,
-  ;;            opencode-tool-authoring, opencode-tools-mcp
+  (entry
+    (name "opencode-models-providers")
+    (v "ημ.skill/opencode-models-providers@0.2.0")
+    (path "packages/skills/domain/opencode/models-providers/CONTRACT.edn")
+    (group :domain)
+    (harness :opencode)
+    (priority 55)
+    (autoload false)
+    (status :migrated))
+
+  (entry
+    (name "opencode-model-variant-management")
+    (v "ημ.skill/opencode-model-variant-management@0.2.0")
+    (path "packages/skills/domain/opencode/model-variant-management/CONTRACT.edn")
+    (group :domain)
+    (harness :opencode)
+    (priority 54)
+    (autoload false)
+    (status :migrated))
+
+  (entry
+    (name "opencode-session-search")
+    (v "ημ.skill/opencode-session-search@0.2.0")
+    (path "packages/skills/domain/opencode/session-search/CONTRACT.edn")
+    (group :domain)
+    (harness :opencode)
+    (priority 52)
+    (autoload false)
+    (status :migrated))
 
   ;; ============================================================
-  ;; DOMAIN — not migrated yet, paths stay as-is
+  ;; HARNESS/OPENCODE — adapter layer (authoring + extension surfaces)
   ;; ============================================================
 
-  (entry (name "submodule-ops")        (path "pi/agent/skills/submodule-ops/CONTRACT.edn")        (group :domain) (priority 75))
-  (entry (name "kanban-fsm")           (path "pi/agent/skills/kanban-fsm/CONTRACT.edn")           (group :domain) (priority 70))
-  (entry (name "kanban-curation")      (path "pi/agent/skills/kanban-curation/CONTRACT.edn")      (group :domain) (priority 65))
-  (entry (name "task-router")          (path "pi/agent/skills/task-router/CONTRACT.edn")          (group :domain) (priority 72))
-  (entry (name "github-integration")   (path "pi/agent/skills/github-integration/CONTRACT.edn")   (group :domain) (priority 75))
-  (entry (name "mcp-server-integration") (path "pi/agent/skills/mcp-server-integration/CONTRACT.edn") (group :domain) (priority 68))
-  (entry (name "workspace-build")      (path "pi/agent/skills/workspace-build/CONTRACT.edn")      (group :domain) (priority 70))
-  (entry (name "workspace-lint")       (path "pi/agent/skills/workspace-lint/CONTRACT.edn")       (group :domain) (priority 68))
-  (entry (name "workspace-typecheck")  (path "pi/agent/skills/workspace-typecheck/CONTRACT.edn")  (group :domain) (priority 68))
-  (entry (name "workspace-navigation") (path "pi/agent/skills/workspace-navigation/CONTRACT.edn") (group :domain) (priority 66))
-  (entry (name "turn-retrospective")   (path "pi/agent/skills/turn-retrospective/CONTRACT.edn")   (group :domain) (priority 60))
-  (entry (name "skill-spore-incubator") (path "pi/agent/skills/skill-spore-incubator/CONTRACT.edn") (group :meta) (priority 55)))
+  (entry (name "opencode-agent-authoring")    (path "packages/skills/harness/opencode/agent-authoring/ADAPTER.edn")    (group :harness) (harness :opencode) (priority 60) (status :migrated))
+  (entry (name "opencode-agents-skills")      (path "packages/skills/harness/opencode/agents-skills/ADAPTER.edn")      (group :harness) (harness :opencode) (priority 58) (status :migrated))
+  (entry (name "opencode-command-authoring")  (path "packages/skills/harness/opencode/command-authoring/ADAPTER.edn")  (group :harness) (harness :opencode) (priority 56) (status :migrated))
+  (entry (name "opencode-plugin-authoring")   (path "packages/skills/harness/opencode/plugin-authoring/ADAPTER.edn")   (group :harness) (harness :opencode) (priority 56) (status :migrated))
+  (entry (name "opencode-plugins")            (path "packages/skills/harness/opencode/plugins/ADAPTER.edn")            (group :harness) (harness :opencode) (priority 55) (status :migrated))
+  (entry (name "opencode-tool-authoring")     (path "packages/skills/harness/opencode/tool-authoring/ADAPTER.edn")     (group :harness) (harness :opencode) (priority 54) (status :migrated))
+  (entry (name "opencode-tools-mcp")          (path "packages/skills/harness/opencode/tools-mcp/ADAPTER.edn")          (group :harness) (harness :opencode) (priority 54) (status :migrated))
+  (entry (name "opencode-skill-creation")     (path "packages/skills/harness/opencode/skill-creation/ADAPTER.edn")     (group :harness) (harness :opencode) (priority 50) (status :migrated))
+
+  ;; ============================================================
+  ;; DOMAIN — not yet migrated
+  ;; ============================================================
+
+  (entry (name "submodule-ops")        (path "pi/agent/skills/submodule-ops/CONTRACT.edn")        (group :domain) (priority 75) (status :pending-migration))
+  (entry (name "kanban-fsm")           (path "pi/agent/skills/kanban-fsm/CONTRACT.edn")           (group :domain) (priority 70) (status :pending-migration))
+  (entry (name "kanban-curation")      (path "pi/agent/skills/kanban-curation/CONTRACT.edn")      (group :domain) (priority 65) (status :pending-migration))
+  (entry (name "task-router")          (path "pi/agent/skills/task-router/CONTRACT.edn")          (group :domain) (priority 72) (status :pending-migration))
+  (entry (name "github-integration")   (path "pi/agent/skills/github-integration/CONTRACT.edn")   (group :domain) (priority 75) (status :pending-migration))
+  (entry (name "mcp-server-integration") (path "pi/agent/skills/mcp-server-integration/CONTRACT.edn") (group :domain) (priority 68) (status :pending-migration))
+  (entry (name "workspace-build")      (path "pi/agent/skills/workspace-build/CONTRACT.edn")      (group :domain) (priority 70) (status :pending-migration))
+  (entry (name "workspace-lint")       (path "pi/agent/skills/workspace-lint/CONTRACT.edn")       (group :domain) (priority 68) (status :pending-migration))
+  (entry (name "workspace-typecheck")  (path "pi/agent/skills/workspace-typecheck/CONTRACT.edn")  (group :domain) (priority 68) (status :pending-migration))
+  (entry (name "workspace-navigation") (path "pi/agent/skills/workspace-navigation/CONTRACT.edn") (group :domain) (priority 66) (status :pending-migration))
+  (entry (name "turn-retrospective")   (path "pi/agent/skills/turn-retrospective/CONTRACT.edn")   (group :domain) (priority 60) (status :pending-migration))
+  (entry (name "skill-spore-incubator") (path "pi/agent/skills/skill-spore-incubator/CONTRACT.edn") (group :meta) (priority 55) (status :pending-migration)))
