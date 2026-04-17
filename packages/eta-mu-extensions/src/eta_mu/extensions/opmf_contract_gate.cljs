@@ -435,7 +435,7 @@
     (.call (aget (aget ctx "ui") "setStatus")
            (aget ctx "ui")
            STATUS-KEY
-           nil)))
+           "")))
 
 (defn register-output-contract-gate! [pi]
   (.call (aget pi "registerCommand")
