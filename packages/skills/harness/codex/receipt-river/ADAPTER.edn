@@ -17,4 +17,6 @@
     (section "## receipt-river skill"))
   (notes
     "MCP tool `receipt_river` must be available in codex MCP config.
-     See packages/eta-mu-extensions for the MCP tool implementation."))
+     See packages/eta-mu-extensions for the MCP tool implementation.
+     CWD invariant: install-path and driver-config.state-root are workspace-relative.
+     Codex MUST be invoked from the workspace root for these paths to resolve correctly."))

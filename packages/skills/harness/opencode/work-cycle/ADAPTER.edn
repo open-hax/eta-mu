@@ -6,11 +6,12 @@
   (skill "work-cycle")
   (core-ref "packages/skills/core/work-cycle/CONTRACT.edn")
   (install-path ".opencode/skills/work-cycle/CONTRACT.edn")
-  (overrides none)
+  (registry-ref "packages/skills/skill-registry.edn")
+  (overrides nil)
   (hooks
     ;; opencode exposes session/turn hooks via opencode.json agents config
-    (session-start "load skill-registry.edn, inject autoload skills as system context")
-    (turn-start "inject prnpa-loop reminder if >3 turns without a P-phase restatement"))
+    (session_start "load packages/skills/skill-registry.edn, inject autoload skills as system context")
+    (turn_start    "inject prnpa-loop reminder if >3 turns without a P-phase restatement"))
   (notes
     "opencode loads skills via .opencode/agents/*.md or system prompt injection.
      This adapter assumes CONTRACT.edn is read by an eta-mu skill loader plugin
