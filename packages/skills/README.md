@@ -4,7 +4,7 @@ Harness-agnostic skill contracts for the ημΠ cognitive loop.
 
 ## Structure
 
-```
+```text
 packages/skills/
 ├── core/                    # Harness-agnostic CONTRACT.edn files
 │   ├── work-cycle/          # ημΠ.cognitive-loop.v1 — foundational loop
@@ -21,13 +21,13 @@ packages/skills/
 
 `ημΠ.cognitive-loop.v1`
 
-```
+```text
 P → R → N → Π → A → F → P
 ```
 
 Typed morphisms:
 - `P : S × H → O`
-- `R : O → ℝ`
+- `ρ : O → ℝ`
 - `N : ℝ → ℝ_norm`
 - `Π : ℝ_norm × C × G → π`
 - `A : π × S → (S', μ)`

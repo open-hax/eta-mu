@@ -1,4 +1,4 @@
-;; ημΠ.skill/work-cycle@0.2.0
+;; ημ.skill/work-cycle@0.2.0
 ;; Migrated from pi/agent/skills/work-cycle/CONTRACT.edn
 ;; Harness-agnostic. Adapter stubs in packages/skills/harness/*/work-cycle/
 
@@ -29,13 +29,13 @@
 
   ;; Canonical typed morphisms (ημΠ.cognitive-loop.v1)
   ;; P : S × H → O
-  ;; R : O → R
-  ;; N : R → R_norm
-  ;; Π : R_norm × C × G → π
+  ;; ρ : O → ℝ          ;; renamed from R to avoid shadowing the codomain ℝ
+  ;; N : ℝ → ℝ_norm
+  ;; Π : ℝ_norm × C × G → π
   ;; A : π × S → (S', μ)
   ;; F : (μ, S', O) → fb
   ;;
-  ;; Closed step: ⟨s_{t+1}, μ_t⟩ = A(Π(N(R(P(s_t, η_t))), C, G), s_t)
+  ;; Closed step: ⟨s_{t+1}, μ_t⟩ = A(Π(N(ρ(P(s_t, η_t))), C, G), s_t)
   ;;
   ;; η–μ coupling: η is only knowable via μ under feedback.
   ;; 息 (breath boundary): episodic commit operator — silence > τ triggers Commit(E_k).
