@@ -173,7 +173,7 @@
 
                      :else
                      (str "{" k "}")))))
-  ))
+  )
 
 (defn evaluate-fulfillments
   "Pure reducer. Given a seq of fulfillment maps and a tool-result map,
