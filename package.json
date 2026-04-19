@@ -5,11 +5,6 @@
   "private": true,
   "license": "GPL-3.0-only",
   "type": "module",
-  "workspaces": [
-    "packages/*",
-    "services/*",
-    "shared/*"
-  ],
   "scripts": {
     "dev": "concurrently \"pnpm --filter @openhax/agentd dev\" \"pnpm --filter @openhax/opencode-reactant dev\"",
     "build": "pnpm --filter @openhax/opencode-reactant build && pnpm --filter @openhax/agentd build && pnpm --dir packages/eta-mu-runtime build && pnpm --dir packages/eta-mu-github build && pnpm --dir packages/presence-core build && pnpm --dir packages/kanban build",
