@@ -1,4 +1,4 @@
 (ns eta-mu.build.contract-runtime-v2
   (:require [eta-mu.extensions.contract-runtime-v2]))
 
-(def init eta-mu.extensions.contract-runtime-v2/init)
+(def ^:export default eta-mu.extensions.contract-runtime-v2/contract-runtime-v2)
