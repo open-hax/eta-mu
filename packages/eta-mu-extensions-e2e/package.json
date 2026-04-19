@@ -7,12 +7,10 @@
     "test": "shadow-cljs compile e2e-test && node out/node-tests.js",
     "test:watch": "shadow-cljs watch e2e-test"
   },
-  "dependencies": {
+  "devDependencies": {
     "@badlogic/pi-core": "0.67.1",
     "@badlogic/pi-coding-agent": "0.67.1",
-    "express": "^4.21.2"
-  },
-  "devDependencies": {
+    "express": "^4.21.2",
     "shadow-cljs": "^2.28.20"
   }
 }
