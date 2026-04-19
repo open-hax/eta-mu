@@ -30,13 +30,13 @@
 
 (defn contract-kind [m]
   (or (:contract/kind m)
-      (when (:actor/id m) :actor)
+      (when (:actor/id m) :agent)
       nil))
 
 (defn prompt-block-for-map [m raw-text]
   (let [kind (contract-kind m)]
     (cond
-      (= kind :actor)
+      (= kind :agent)
       (let [sys (:system m)]
         (cond
           (string? sys) sys
@@ -49,7 +49,7 @@
   (let [kind   (contract-kind m)
         prompt (prompt-block-for-map m raw-text)]
     (cond-> acc
-      (= kind :actor)       (update :actors      (fnil conj []) m)
+      (= kind :agent)       (update :actors      (fnil conj []) m)
       (= kind :policy)      (update :policies    (fnil conj []) m)
       (= kind :fulfillment) (update :fulfills    (fnil conj []) m)
       (= kind :capability)  (assoc-in [:caps  (str (:capability/id m))] m)
@@ -81,6 +81,30 @@
       (if (or (= cur stop-dir) (= cur parent))
         (vec (reverse acc*))
         (recur parent acc*)))))
+
+(defn contract-id [m]
+  (:contract/id m))
+
+(defn parse-principle-components [text]
+  (->> (normalize-contract-forms text)
+       (filter map?)
+       (filter contract-id)
+       vec))
+
+(defn append-missing-principle-components-text [dest-text source-text]
+  (let [dest-components   (parse-principle-components dest-text)
+        source-components (parse-principle-components source-text)
+        dest-ids          (into #{} (keep contract-id) dest-components)
+        missing           (->> source-components
+                               (filter (fn [m] (not (contains? dest-ids (contract-id m)))))
+                               vec)]
+    {:added-ids (mapv contract-id missing)
+     :text      (if (seq missing)
+                  (str (str/trimr (or dest-text ""))
+                       "\n\n;; [bootstrapped append-only merge]\n"
+                       (str/join "\n\n" (map pr-str missing))
+                       "\n")
+                  dest-text)}))
 
 ;; ── Policy evaluation ─────────────────────────────────────────
 

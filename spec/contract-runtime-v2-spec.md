@@ -21,7 +21,7 @@ v2 replaces this with:
 - **`.ημ/` directory** per working directory: SHA cache, TTL state, PRINCIPLE.edn
 - **PRINCIPLE.edn bootstrap** generated from `agents/mindfuck/CONTRACT.edn` on session start
 - **Before/after hooks on path-bearing tool calls** for policy and fulfillment dispatch
-- **Dispatch table**: `:actor` | `:policy` | `:fulfillment` | `:capability` | `:role` | unknown→system-prompt verbatim
+- **Dispatch table**: `:agent` | `:policy` | `:fulfillment` | `:capability` | `:role` | unknown→system-prompt verbatim
 
 The existing `opmf_contract_gate.cljs` remains active. The new runtime
 detects its presence at session start and skips re-registering the
@@ -57,7 +57,7 @@ Contents:
    - `~/.pi/agent/skills/mindfuck/CONTRACT.edn` (global fallback)
 4. Generate / update `<cwd>/.ημ/PRINCIPLE.edn`:
    - If absent → write from mindfuck `CONTRACT.edn`
-   - If present → compare SHA; if source changed, append new sections only — never reorder or remove existing
+   - If present → compare component ids; append new sections only — never reorder, remove, or overwrite existing
 5. Load `PRINCIPLE.edn` into session as the constitutional base system prompt
 6. Initialise session atom (see **State** section)
 
@@ -112,7 +112,7 @@ After loading, each top-level map in the EDN file is dispatched by `:contract/ki
 
 | `:contract/kind` | Action |
 |------------------|--------|
-| `:actor` | Merge actor `:system` prompt + `:capabilities` into session context. Register roles. |
+| `:agent` | Merge actor `:system` prompt + `:capabilities` into session context. Register roles. |
 | `:policy` | Register pre-tool check. Runs before next tool call in scope. `:block` severity halts the call. |
 | `:fulfillment` | Register post-tool check. Runs after tool call returns result. Emits `:verdict-record`. |
 | `:capability` | Register into session `:caps` registry. Actors reference by `:namespaced` id. |
@@ -138,7 +138,7 @@ on every `session_start`.
 - The runtime MAY append new sections (with new `:contract/id` values) as the source
   CONTRACT.edn evolves
 - The runtime MUST NOT remove, reorder, or modify existing sections
-- SHA of source is checked on every `session_start`; changed source → append-only merge
+- Source updates are merged append-only by `:contract/id`
 
 **Immutable sections** (from `agents/mindfuck/CONTRACT.edn`):
 - `:mission`
@@ -231,7 +231,7 @@ Session atom shape (in-memory only, not persisted between sessions):
               {:contract  <parsed-map>
                :sha       "<hex>"
                :loaded-at <epoch-ms>}}
- :actors    [<actor-map> ...]
+ :actors    [<agent-map> ...]
  :policies  [<policy-map> ...]
  :fulfills  [<fulfillment-map> ...]
  :caps      {:cap/web-search <cap-map> ...}
@@ -261,6 +261,6 @@ Session atom shape (in-memory only, not persisted between sessions):
 4. EDN map parser + schema dispatch
 5. Policy before-hook (`:block` first, then `:warn`/`:note`)
 6. Fulfillment after-hook (`:deterministic/*` first, `:judge` after)
-7. Actor system-prompt merge
+7. Agent system-prompt merge
 8. Unknown-block→system-prompt fallthrough
 9. Retire `opmf_contract_gate.cljs` guard

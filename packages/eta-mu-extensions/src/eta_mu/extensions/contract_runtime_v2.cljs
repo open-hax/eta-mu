@@ -5,7 +5,7 @@
   - .ημ/ directory creation + CONTRACT.sha cache
   - PRINCIPLE.edn bootstrap from agents/mindfuck/CONTRACT.edn
   - Upward-walk CONTRACT.edn discovery on path-bearing tool calls
-  - EDN map dispatch: actor | policy | fulfillment | capability | role | unknown->system-prompt
+  - EDN map dispatch: agent | policy | fulfillment | capability | role | unknown->system-prompt
   - before_agent_start system prompt injection from PRINCIPLE.edn + actors + unknown blocks
   - Policy gate: evaluate-policies on every before_tool_call; :block halts, :warn/:note logs
   - Fulfillment notify/audit: evaluate-fulfillments on every after_tool_call
@@ -115,14 +115,12 @@
 
       :else
       (let [src-text  (safe-read-text source)
-            dest-text (safe-read-text dest)]
-        (if (= (contract-sha src-text) (contract-sha dest-text))
-          {:ok true :action :unchanged}
-          (if (str/includes? dest-text ":disabled true")
-            {:ok false :action :skipped
-             :reason "PRINCIPLE.edn has :disabled sections — manual merge required"}
-            (do (write-text! dest src-text)
-                {:ok true :action :updated :source source})))))))
+            dest-text (safe-read-text dest)
+            {:keys [added-ids text]} (core/append-missing-principle-components-text dest-text src-text)]
+        (if (seq added-ids)
+          (do (write-text! dest text)
+              {:ok true :action :appended :source source :added added-ids})
+          {:ok true :action :unchanged})))))
 
 ;; ── Dispatch ──────────────────────────────────────────────
 
@@ -143,7 +141,7 @@
         prompt       (core/prompt-block-for-map m nil)
         opmf-active? (gobj/get js/globalThis "__eta_mu_opmf_gate_active__")
         state*       (cond
-                       (= kind :actor)       (update state :actors conj tagged)
+                       (= kind :agent)       (update state :actors conj tagged)
                        (= kind :policy)      (update state :policies conj tagged)
                        (= kind :fulfillment) (if (and (= (:contract/id m) OPMF-OUTPUT-GATE-ID) opmf-active?)
                                                state
