@@ -63,4 +63,8 @@
    :output-to "/home/err/.ημ/.build/runtime/graph-memory/runtime.js"
    :exports {:default eta-mu.build.graph-memory/init}
    :compiler-options {:externs ["/home/err/.ημ/externs/promise.js"]}}
- }}
+  :node-test
+  {:target :node-test
+   :output-to "target/test.js"
+   :ns-regexp "-test$"
+   :autorun true}}}
