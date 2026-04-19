@@ -313,9 +313,9 @@
                 :host (clean-field (aget params "host") "local")
                 :manifest (clean-field (aget params "manifest") "none")
                 :refs (clean-field (aget params "refs") "none")}
-        record (reduce (fn [acc key]
-                         (let [value (clean-field (aget params key) "")]
-                           (if (str/blank? value) acc (assoc acc (keyword key) value))))
+        record (reduce (fn [acc k]
+                         (let [value (clean-field (aget params k) "")]
+                           (if (str/blank? value) acc (assoc acc (keyword k) value))))
                        record
                        (js->clj OPTIONAL-KEYS))]
     record))
@@ -408,9 +408,9 @@
       (let [lines (clamp-int (aget params "lines") 20 1 2000)
             tail (tail-lines file-path lines)]
         (log-event ctx state "tail" #js {:repo repo-root
-                                          :file file-path
-                                          :lines lines
-                                          :returned (.-length tail)})
+                                         :file file-path
+                                         :lines lines
+                                         :returned (.-length tail)})
         (make-result (if (pos? (.-length tail))
                        (.join tail "\n")
                        "- no receipts yet")
@@ -474,7 +474,7 @@
   :description "Append-only per-repo receipts.edn ledger for multi-step work."
 
   (em/command "receipt-river"
-    :description "Show, toggle, tail, or validate Receipt River state (/receipt-river, /receipt-river on, /receipt-river off, /receipt-river tail [n], /receipt-river validate [n])"
+    :description "Show, toggle, tail, or validate Receipt River state"
     :handler handle-receipt-river-command)
 
   (em/tool "receipt_river"
@@ -563,8 +563,9 @@
     :handler (fn [_event ctx]
                (let [state (get-state)]
                  (when (aget state "enabled")
-                   (let [violations (rr-repo/contract-violations (touched-repo-counts state)
-                                                                (set (receipts-this-turn state)))]
+                   (let [violations (rr-repo/contract-violations
+                                      (touched-repo-counts state)
+                                      (set (receipts-this-turn state)))]
                      (when (seq violations)
                        (aset state "pendingReminder" true)
                        (ui-notify ctx
@@ -574,7 +575,7 @@
                                        (str/join ", " violations))
                                   "warn"))
                      (when (and (aget state "turnHadSubstantiveWork")
-                                (not (aget state "turnHadReceipt")
+                                (not (aget state "turnHadReceipt"))
                                 (empty? violations))
                        (aset state "pendingReminder" true)
                        (ui-notify ctx
