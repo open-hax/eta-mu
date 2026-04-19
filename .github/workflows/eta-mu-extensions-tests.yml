@@ -57,7 +57,7 @@ jobs:
 
       - name: Run tests
         working-directory: packages/eta-mu-extensions
-        run: node target/test.js
+        run: node target/test.cjs
 
       - name: Upload Clojure error reports
         if: failure()
