@@ -73,8 +73,6 @@
     (< (- now-ms (get entry "loaded-at" 0)) ttl-ms)))
 
 (defn walk-up-paths
-  "Pure upward walk over path strings. Returns CONTRACT.edn candidate paths root->leaf.
-   `join-path` and `dirname` are injected for testability."
   [join-path dirname start-dir stop-dir existing?]
   (loop [cur start-dir acc []]
     (let [candidate (join-path cur "CONTRACT.edn")
@@ -85,36 +83,14 @@
         (recur parent acc*)))))
 
 ;; ── Policy evaluation ─────────────────────────────────────────
-;;
-;; Policy shape (EDN):
-;;
-;;   {:contract/kind   :policy
-;;    :contract/id     "some.unique.id"
-;;    :policy/on       :before-tool-call          ; required - when this fires
-;;    :policy/match    {:tool/name "write_file"}  ; required - what it matches against
-;;    :policy/action   :block | :warn | :note      ; required - what to do on match
-;;    :policy/reason   "Human-readable explanation" ; optional
-;;    :policy/ttl-ms   60000}                      ; optional - overrides global TTL
-;;
-;; Tool-call shape passed to evaluate-policies:
-;;
-;;   {:tool/name   "write_file"
-;;    :tool/params {:path "/etc/passwd" ...}}
-;;
-;; Result shape:
-;;
-;;   {:action  :block | :warn | :note | :allow
-;;    :reason  str | nil
-;;    :policy  map | nil    ; the matching policy, if any
-;;    :matches [map ...]    ; all matching policies
-;;   }
 
-(defn policy-matches?
-  "True if policy fires for the given tool-call.
-  Matching rules (AND across all keys present in :policy/match):
-  - :tool/name  - exact string match
-  - :tool/param - {param-key pred-or-val}: val = exact, fn = predicate"
-  [policy tool-call]
+(def action-severity {:block 3 :warn 2 :note 1 :allow 0})
+
+(defn strongest-action [actions]
+  (let [n (apply max 0 (map #(get action-severity % 0) actions))]
+    (some (fn [[k v]] (when (= v n) k)) action-severity)))
+
+(defn policy-matches? [policy tool-call]
   (let [match (get policy :policy/match {})]
     (every? (fn [[k v]]
               (cond
@@ -127,27 +103,10 @@
                             (if (fn? pv) (pv actual) (= pv actual))))
                         v)
 
-                ;; unknown match key -> conservative: does not match
                 :else false))
             match)))
 
-(def action-severity
-  "Higher number = more severe. Used to pick the strongest action."
-  {:block 3 :warn 2 :note 1 :allow 0})
-
-(defn strongest-action [actions]
-  (->> actions
-       (map #(get action-severity % 0))
-       (apply max 0)
-       (fn [n] (some (fn [[k v]] (when (= v n) k)) action-severity))))
-
 (defn evaluate-policies
-  "Pure reducer. Given a seq of policy maps and a tool-call map, returns a
-  result map describing the strongest matching policy action.
-
-  Nearest-wins TTL: policies with :policy/ttl-ms are considered time-sensitive;
-  pass `now-ms` and `loaded-at` (ms) to enable TTL filtering.
-  If ttl-ms is omitted, the policy is always active."
   ([policies tool-call]
    (evaluate-policies policies tool-call nil nil))
   ([policies tool-call now-ms loaded-at]
