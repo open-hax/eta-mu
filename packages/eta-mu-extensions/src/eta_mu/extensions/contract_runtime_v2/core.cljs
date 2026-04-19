@@ -127,36 +127,6 @@
           :matches (vec matches)})))))
 
 ;; ── Fulfillment evaluation ─────────────────────────────────────
-;;
-;; Fulfillment shape (EDN):
-;;
-;;   {:contract/kind        :fulfillment
-;;    :contract/id          "log-writes"
-;;    :fulfillment/on       :after-tool-call       ; required
-;;    :fulfillment/match    {:tool/name "write_file"} ; required
-;;    :fulfillment/mode     :notify | :audit        ; required
-;;    :fulfillment/message  "wrote {path}"          ; optional template
-;;    :fulfillment/level    :info | :warn | :error   ; optional, default :info
-;;   }
-;;
-;; Tool-result shape passed to evaluate-fulfillments:
-;;
-;;   {:tool/name   "write_file"
-;;    :tool/params {:path "/tmp/x"}
-;;    :tool/output any    ; raw tool output, may be nil
-;;    :tool/error  any}   ; set if tool errored
-;;
-;; Result shape:
-;;
-;;   [{:mode     :notify | :audit
-;;     :message  str
-;;     :level    :info | :warn | :error
-;;     :fulfill  map    ; the matching fulfillment contract
-;;    }]
-;;
-;; Returns a seq of actions — all matching fulfillments fire (unlike policies
-;; which reduce to the strongest). Multiple fulfillments can match the same
-;; tool call and all produce output.
 
 (defn fulfillment-matches? [fulfill tool-result]
   (let [match (get fulfill :fulfillment/match {})]
@@ -175,23 +145,34 @@
                 (if (fn? v) (v (:tool/output tool-result)) (= v (:tool/output tool-result)))
 
                 (= k :tool/error?)
-                (= v (some? (:tool/error tool-result)))
+                (= v (boolean (:tool/error tool-result)))
 
                 :else false))
             match)))
 
 (defn interpolate-message
   "Replace {key} tokens in template with values from tool-result.
-  Looks in :tool/params first, then top-level tool-result keys."
+  Looks in :tool/params first, then top-level tool-result keys, preserving explicit falsey values."
   [template tool-result]
   (if (str/blank? template)
     template
-    (str/replace template #"\{(\w+)\}"
+    (str/replace template #"\{([^{}]+)\}"
                  (fn [[_ k]]
-                   (str (or (get-in tool-result [:tool/params (keyword k)])
-                            (get-in tool-result [:tool/params k])
-                            (get tool-result (keyword k))
-                            (str "{" k "}")))))))
+                   (cond
+                     (contains? (:tool/params tool-result) (keyword k))
+                     (str (get-in tool-result [:tool/params (keyword k)]))
+
+                     (contains? (:tool/params tool-result) k)
+                     (str (get-in tool-result [:tool/params k]))
+
+                     (contains? tool-result (keyword k))
+                     (str (get tool-result (keyword k)))
+
+                     (contains? tool-result k)
+                     (str (get tool-result k))
+
+                     :else
+                     (str "{" k "}")))))))
 
 (defn evaluate-fulfillments
   "Pure reducer. Given a seq of fulfillment maps and a tool-result map,

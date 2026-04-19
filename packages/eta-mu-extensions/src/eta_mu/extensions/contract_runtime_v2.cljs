@@ -43,7 +43,7 @@
    :roles            {}
    :ttl-ms           DEFAULT-TTL-MS
    :policy-log       []   ; [{:tool tool-call :result eval-result :at ms}]
-   :fulfillment-log  []   ; [{:tool tool-result :actions [action ...] :at ms}]
+   :fulfillment-log  []   ; slim entries only, suitable for /crv2 fulfills-log
    :prompt-blocks    []
    :principle-ready  false
    :last-error       nil})
@@ -235,12 +235,41 @@
 
 (def level->notify-type {:info "info" :warn "warn" :error "error"})
 
+(defn truncate-message [s limit]
+  (let [s (str (or s ""))]
+    (if (> (count s) limit)
+      (str (subs s 0 limit) "…")
+      s)))
+
+(defn slim-fulfillment-log-entry [tool-result action at]
+  {:tool/name      (:tool/name tool-result)
+   :tool/status    (or (:tool/status tool-result)
+                       (:status tool-result)
+                       (:tool/code tool-result)
+                       (:code tool-result))
+   :tool/error?    (boolean (:tool/error tool-result))
+   :tool/message   (truncate-message (or (:tool/message tool-result)
+                                         (:message tool-result)
+                                         (:tool/output tool-result)
+                                         (:tool/error tool-result))
+                                     240)
+   :action/id      (or (:action/id action)
+                       (:contract/id (:fulfill action)))
+   :action/type    (or (:action/type action)
+                       (:mode action))
+   :action/level   (:level action)
+   :action/message (truncate-message (:message action) 240)
+   :at             at})
+
 (defn run-fulfillments! [sa tool-result ctx]
   (let [actions (core/evaluate-fulfillments (:fulfills @sa) tool-result)]
     (when (seq actions)
-      ;; append all to fulfillment-log (cap at 200)
       (swap! sa update :fulfillment-log
-             #(vec (take-last 200 (into % (map (fn [a] {:tool tool-result :action a :at (now-ms)}) actions)))))
+             #(vec (take-last 200
+                              (into % (map (fn [a]
+                                             (let [at (now-ms)]
+                                               (slim-fulfillment-log-entry tool-result a at)))
+                                           actions)))))
       (doseq [{:keys [mode message level]} actions]
         (case mode
           :notify
@@ -326,7 +355,10 @@
                      tool-result {:tool/name   (gobj/get event "toolName")
                                   :tool/params (js->clj (gobj/get event "params") :keywordize-keys true)
                                   :tool/output (gobj/get event "output")
-                                  :tool/error  (gobj/get event "error")}]
+                                  :tool/error  (gobj/get event "error")
+                                  :tool/status (gobj/get event "status")
+                                  :tool/code   (gobj/get event "code")
+                                  :tool/message (gobj/get event "message")}]
                  (run-fulfillments! sa tool-result ctx)
                  nil)))
 
@@ -397,11 +429,17 @@
                        (= cmd "fulfills-log")
                        (.setWidget ui STATUS-KEY
                                    (clj->js
-                                     (map (fn [{:keys [tool action at]}]
-                                            (str (:tool/name tool)
-                                                 " [" (:mode action) "/" (name (:level action)) "]"
-                                                 " " (:message action)
-                                                 " @" at))
+                                     (map (fn [entry]
+                                            (str (:tool/name entry)
+                                                 " [" (:action/type entry) "/" (name (:action/level entry)) "]"
+                                                 " " (:action/message entry)
+                                                 (when-let [status (:tool/status entry)]
+                                                   (str " status:" status))
+                                                 (when (:tool/error? entry)
+                                                   " error:true")
+                                                 (when-let [msg (:tool/message entry)]
+                                                   (str " | " msg))
+                                                 " @" (:at entry)))
                                           (take-last 20 (:fulfillment-log s)))))
 
                        (= cmd "reload")

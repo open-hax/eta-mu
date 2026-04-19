@@ -85,8 +85,6 @@
         out (core/walk-up-paths join-path dirname "/repo/a/b" "/repo" #(contains? existing %))]
     (is (= ["/repo/CONTRACT.edn" "/repo/a/b/CONTRACT.edn"] out))))
 
-;; ── Policy evaluation tests ──────────────────────────────────────
-
 (def p-block
   {:contract/kind :policy
    :contract/id   "block-write"
@@ -184,8 +182,6 @@
 (deftest policy-empty-test
   (is (= :allow (:action (core/evaluate-policies [] {:tool/name "anything"})))))
 
-;; ── Fulfillment evaluation tests ────────────────────────────────
-
 (def f-notify
   {:contract/kind       :fulfillment
    :contract/id         "notify-writes"
@@ -256,6 +252,11 @@
     (let [res (core/evaluate-fulfillments
                 [f-error]
                 {:tool/name "write_file"})]
+      (is (empty? res))))
+  (testing "error? true does not match explicit false"
+    (let [res (core/evaluate-fulfillments
+                [f-error]
+                {:tool/name "write_file" :tool/error false})]
       (is (empty? res)))))
 
 (deftest fulfillment-interpolation-test
@@ -264,6 +265,21 @@
                 [f-notify]
                 {:tool/name "write_file" :tool/params {:path "/etc/hosts"}})]
       (is (= "wrote /etc/hosts" (:message (first res))))))
+  (testing "supports non-word token names like dash and slash"
+    (let [f   (assoc f-notify :fulfillment/message "flags {dry-run} via {tool/name}")
+          res (core/evaluate-fulfillments
+                [f]
+                {:tool/name "write_file"
+                 :tool/params {:dry-run false}})]
+      (is (= "flags false via write_file" (:message (first res))))))
+  (testing "preserves explicit falsey top-level values"
+    (let [f   (assoc f-notify :fulfillment/message "error? {tool/error}")
+          res (core/evaluate-fulfillments [f] {:tool/name "write_file" :tool/error false})]
+      (is (= "error? false" (:message (first res))))))
+  (testing "preserves explicit falsey string-key param values"
+    (let [f   (assoc f-notify :fulfillment/message "dry-run={dry-run}")
+          res (core/evaluate-fulfillments [f] {:tool/name "write_file" :tool/params {"dry-run" false}})]
+      (is (= "dry-run=false" (:message (first res))))))
   (testing "unresolved tokens remain as-is"
     (let [f   (assoc f-notify :fulfillment/message "touched {nonexistent}")
           res (core/evaluate-fulfillments [f] {:tool/name "write_file"})]
