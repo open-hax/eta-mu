@@ -27,7 +27,7 @@
       (is (= :unknown (:contract/kind (first res)))))))
 
 (deftest contract-kind-test
-  (is (= :actor (core/contract-kind {:actor/id :mindfuck})))
+  (is (= :agent (core/contract-kind {:actor/id :mindfuck})))
   (is (= :policy (core/contract-kind {:contract/kind :policy})))
   (is (nil? (core/contract-kind {:x 1}))))
 
