@@ -1,11 +1,10 @@
 (ns eta-mu-extensions-e2e.mock-openai)
 
 (defn scripted-response
-  [{:keys [messages tools state]}]
-  (let [step (or (:step state) 0)
+  [{:keys [_messages _tools state]}]
+  (let [step   (or (:step state) 0)
         script (:script state)
-        response (nth script step {:type :message
-                                   :content "done"})]
+        response (nth script step {:type :message :content "done"})]
     (case (:type response)
       :tool-call
       {:model "gpt-4.1"
@@ -15,7 +14,8 @@
                             :tool_calls [{:id (str "call-" step)
                                           :type "function"
                                           :function {:name (:tool-name response)
-                                                     :arguments (js/JSON.stringify (clj->js (:arguments response)))}]}
+                                                     :arguments (js/JSON.stringify
+                                                                  (clj->js (:arguments response)))}}]}
                   :finish_reason "tool_calls"}]
        :state {:step (inc step) :script script}}
 
