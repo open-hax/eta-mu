@@ -65,7 +65,7 @@
       (is (keyword? (:kind back))))))
 
 (deftest parse-edn-event-returns-nil-on-garbage
-  (is (nil? (rr-edn/parse-edn-event "not edn at all {{{"))))
+  (is (nil? (rr-edn/parse-edn-event "not edn at all {{{"  )))
   (is (nil? (rr-edn/parse-edn-event "")))
   (is (nil? (rr-edn/parse-edn-event nil))))
 
@@ -229,8 +229,6 @@
     (let [touched  {"/mono/packages/alpha" 1 "/mono/packages/beta" 4}
           receipts #{}
           result   (rr-repo/contract-violations touched receipts)]
-      ;; alpha only had 1 call — exempt
-      ;; beta had 4 calls — violation
       (is (= 1 (count result)))
       (is (= "/mono/packages/beta" (first result))))))
 
