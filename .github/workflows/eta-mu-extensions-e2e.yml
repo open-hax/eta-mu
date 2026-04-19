@@ -37,7 +37,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Get pnpm store path
         id: pnpm-cache
@@ -59,14 +59,14 @@ jobs:
 
       - name: Run E2E tests
         working-directory: packages/eta-mu-extensions-e2e
-        run: node out/node-tests.js
+        run: node out/node-tests.cjs
 
       - name: Test summary
         if: always()
         working-directory: packages/eta-mu-extensions-e2e
         run: |
           echo '## E2E Test Results' >> $GITHUB_STEP_SUMMARY
-          node out/node-tests.js 2>&1 | tee /tmp/e2e-output.txt || true
+          node out/node-tests.cjs 2>&1 | tee /tmp/e2e-output.txt || true
           echo '```' >> $GITHUB_STEP_SUMMARY
           cat /tmp/e2e-output.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
