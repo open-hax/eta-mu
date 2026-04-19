@@ -7,9 +7,11 @@
   - Upward-walk CONTRACT.edn discovery on path-bearing tool calls
   - EDN map dispatch: actor | policy | fulfillment | capability | role | unknown->system-prompt
   - before_agent_start system prompt injection from PRINCIPLE.edn + actors + unknown blocks
-  - Policy gate: evaluate-policies runs on every before_tool_call; :block halts, :warn logs
+  - Policy gate: evaluate-policies on every before_tool_call; :block halts, :warn/:note logs
+  - Fulfillment notify/audit: evaluate-fulfillments on every after_tool_call
   - /crv2 reload: force state reset + re-walk for current cwd
-  - Fulfillment after-hook (stub)
+  - /crv2 log: recent policy evaluations
+  - /crv2 fulfills-log: recent fulfillment firings
 
   State is a CLJS atom per cwd, stored in a map-of-atoms under a single globalThis key.
 
@@ -30,20 +32,21 @@
 (def DEFAULT-TTL-MS 300000)
 (def OPMF-OUTPUT-GATE-ID "fulfillment.mindfuck.output-gate")
 
-;; ── State ─────────────────────────────────────────────────
+;; ── State ────────────────────────────────────────────────
 
 (defn fresh-state []
-  {:loaded          {}
-   :actors          []
-   :policies        []
-   :fulfills        []
-   :caps            {}
-   :roles           {}
-   :ttl-ms          DEFAULT-TTL-MS
-   :policy-log      []   ; [{:tool tool-call :result eval-result :at ms}]
-   :prompt-blocks   []
-   :principle-ready false
-   :last-error      nil})
+  {:loaded           {}
+   :actors           []
+   :policies         []
+   :fulfills         []
+   :caps             {}
+   :roles            {}
+   :ttl-ms           DEFAULT-TTL-MS
+   :policy-log       []   ; [{:tool tool-call :result eval-result :at ms}]
+   :fulfillment-log  []   ; [{:tool tool-result :actions [action ...] :at ms}]
+   :prompt-blocks    []
+   :principle-ready  false
+   :last-error       nil})
 
 (defn registry []
   (let [g js/globalThis]
@@ -62,7 +65,7 @@
 (defn reset-state! [cwd]
   (reset! (get-state-atom cwd) (fresh-state)))
 
-;; ── FS helpers ──────────────────────────────────────────────
+;; ── FS helpers ─────────────────────────────────────────────
 
 (defn file-exists? [p] (.existsSync fs p))
 (defn ensure-dir! [dir] (.mkdirSync fs dir #js {:recursive true}))
@@ -89,7 +92,7 @@
 (defn write-sha-cache! [cwd cache]
   (write-text! (sha-cache-path cwd) (js/JSON.stringify (clj->js cache) nil 2)))
 
-;; ── PRINCIPLE.edn bootstrap ─────────────────────────────────
+;; ── PRINCIPLE.edn bootstrap ────────────────────────────────
 
 (defn locate-mindfuck-contract [cwd]
   (let [candidates [(path/join cwd "agents" "mindfuck" "CONTRACT.edn")
@@ -121,7 +124,7 @@
             (do (write-text! dest src-text)
                 {:ok true :action :updated :source source})))))))
 
-;; ── Dispatch ────────────────────────────────────────────────
+;; ── Dispatch ──────────────────────────────────────────────
 
 (defn remove-entries-for-path [state contract-path]
   (let [evict     (fn [coll] (vec (remove #(= contract-path (:source %)) coll)))
@@ -140,23 +143,13 @@
         prompt       (core/prompt-block-for-map m nil)
         opmf-active? (gobj/get js/globalThis "__eta_mu_opmf_gate_active__")
         state*       (cond
-                       (= kind :actor)
-                       (update state :actors conj tagged)
-
-                       (= kind :policy)
-                       (update state :policies conj tagged)
-
-                       (= kind :fulfillment)
-                       (if (and (= (:contract/id m) OPMF-OUTPUT-GATE-ID) opmf-active?)
-                         state
-                         (update state :fulfills conj tagged))
-
-                       (= kind :capability)
-                       (assoc-in state [:caps (str (:capability/id m))] tagged)
-
-                       (= kind :role)
-                       (assoc-in state [:roles (str (:role/id m))] tagged)
-
+                       (= kind :actor)       (update state :actors conj tagged)
+                       (= kind :policy)      (update state :policies conj tagged)
+                       (= kind :fulfillment) (if (and (= (:contract/id m) OPMF-OUTPUT-GATE-ID) opmf-active?)
+                                               state
+                                               (update state :fulfills conj tagged))
+                       (= kind :capability)  (assoc-in state [:caps (str (:capability/id m))] tagged)
+                       (= kind :role)        (assoc-in state [:roles (str (:role/id m))] tagged)
                        :else state)]
     (if (and (string? prompt) (not (str/blank? prompt)))
       (update state* :prompt-blocks conj prompt)
@@ -187,60 +180,81 @@
           (assoc cache contract-path {"sha" sha "loaded-at" now}))
         :loaded))))
 
-;; ── Contract reload ──────────────────────────────────────────
+;; ── Contract reload ────────────────────────────────────────
 
 (defn reload-contracts! [cwd]
   (let [sa (get-state-atom cwd)]
     (reset! sa (fresh-state))
     (ensure-hm-dir! cwd)
     (bootstrap-principle! cwd)
-    ;; re-walk from cwd itself
     (let [files (core/walk-up-paths
                   #(path/join %1 %2) #(path/dirname %)
                   cwd cwd file-exists?)]
-      (doseq [f files]
-        (dispatch-contract-file! sa cwd f))
+      (doseq [f files] (dispatch-contract-file! sa cwd f))
       (count files))))
 
-;; ── Policy gate ────────────────────────────────────────────
+;; ── UI helpers ───────────────────────────────────────────
+
+(defn has-ui? [ctx] (boolean (gobj/get ctx "hasUI")))
+(defn ctx-ui  [ctx] (gobj/get ctx "ui"))
+
+(defn set-status! [ctx cwd]
+  (when (has-ui? ctx)
+    (let [s @(get-state-atom cwd)]
+      (.setStatus (ctx-ui ctx) STATUS-KEY
+                  (str "crv2 loaded:" (count (:loaded s))
+                       " pol:"       (count (:policies s))
+                       " ful:"       (count (:fulfills s)))))))
+
+;; ── Policy gate ──────────────────────────────────────────
 
 (defn run-policy-gate! [sa tool-call ctx]
-  (let [s        @sa
-        policies (:policies s)
+  (let [s         @sa
         loaded-at (get-in s [:loaded (first (keys (:loaded s))) :loaded-at])
-        result   (core/evaluate-policies policies tool-call (now-ms) loaded-at)]
-    ;; append to policy-log (cap at 200 entries)
+        result    (core/evaluate-policies (:policies s) tool-call (now-ms) loaded-at)]
     (swap! sa update :policy-log
-           (fn [log]
-             (let [entry {:tool tool-call :result result :at (now-ms)}]
-               (vec (take-last 200 (conj log entry))))))
+           #(vec (take-last 200 (conj % {:tool tool-call :result result :at (now-ms)}))))
     (case (:action result)
-      :block
-      (do
-        (when (has-ui? ctx)
-          (.notify (ctx-ui ctx)
-                   (str "⛔ blocked: " (:tool/name tool-call) " — " (:reason result))
-                   "error"))
-        (js/console.warn (str "[crv2:block] " (:tool/name tool-call) " | " (:reason result)))
-        #js {:block true :reason (:reason result)})
+      :block (do (when (has-ui? ctx)
+                   (.notify (ctx-ui ctx)
+                            (str "⛔ blocked: " (:tool/name tool-call) " — " (:reason result))
+                            "error"))
+                 (js/console.warn (str "[crv2:block] " (:tool/name tool-call) " | " (:reason result)))
+                 #js {:block true :reason (:reason result)})
+      :warn  (do (when (has-ui? ctx)
+                   (.notify (ctx-ui ctx)
+                            (str "⚠️ policy warning: " (:tool/name tool-call) " — " (:reason result))
+                            "warn"))
+                 (js/console.warn (str "[crv2:warn] " (:tool/name tool-call) " | " (:reason result)))
+                 nil)
+      :note  (do (js/console.info (str "[crv2:note] " (:tool/name tool-call) " | " (:reason result)))
+                 nil)
+      nil)))
 
-      :warn
-      (do
-        (when (has-ui? ctx)
-          (.notify (ctx-ui ctx)
-                   (str "⚠️ policy warning: " (:tool/name tool-call) " — " (:reason result))
-                   "warn"))
-        (js/console.warn (str "[crv2:warn] " (:tool/name tool-call) " | " (:reason result)))
-        nil)
+;; ── Fulfillment runner ────────────────────────────────────────
 
-      :note
-      (do
-        (js/console.info (str "[crv2:note] " (:tool/name tool-call) " | " (:reason result)))
-        nil)
+(def level->notify-type {:info "info" :warn "warn" :error "error"})
 
-      nil))  ; :allow — pass through
+(defn run-fulfillments! [sa tool-result ctx]
+  (let [actions (core/evaluate-fulfillments (:fulfills @sa) tool-result)]
+    (when (seq actions)
+      ;; append all to fulfillment-log (cap at 200)
+      (swap! sa update :fulfillment-log
+             #(vec (take-last 200 (into % (map (fn [a] {:tool tool-result :action a :at (now-ms)}) actions)))))
+      (doseq [{:keys [mode message level]} actions]
+        (case mode
+          :notify
+          (do
+            (when (has-ui? ctx)
+              (.notify (ctx-ui ctx) message (get level->notify-type level "info")))
+            (js/console.info (str "[crv2:fulfill:notify] " message)))
 
-;; ── Path-bearing tool call hook ─────────────────────────────
+          :audit
+          (js/console.info (str "[crv2:fulfill:audit] " message))
+
+          nil)))))
+
+;; ── Path-bearing tool call hook ───────────────────────────
 
 (defn on-path-bearing-tool-call! [params-js ctx]
   (when-let [raw-path (core/path-param-from-tool-call
@@ -256,35 +270,20 @@
                    #(path/join %1 %2) #(path/dirname %)
                    target cwd file-exists?)]
       (ensure-hm-dir! cwd)
-      (doseq [contract-path files]
-        (dispatch-contract-file! sa cwd contract-path)))))
+      (doseq [f files] (dispatch-contract-file! sa cwd f)))))
 
-;; ── Prompt assembly ─────────────────────────────────────────
+;; ── Prompt assembly ───────────────────────────────────────
 
 (defn build-prompt-append [cwd state-atom]
   (core/build-prompt-append
     (safe-read-text (principle-path cwd))
     (:prompt-blocks @state-atom)))
 
-;; ── UI helpers ─────────────────────────────────────────────
-
-(defn has-ui? [ctx] (boolean (gobj/get ctx "hasUI")))
-(defn ctx-ui  [ctx] (gobj/get ctx "ui"))
-
-(defn set-status! [ctx cwd]
-  (when (has-ui? ctx)
-    (let [s @(get-state-atom cwd)]
-      (.setStatus (ctx-ui ctx) STATUS-KEY
-                  (str "crv2 loaded:" (count (:loaded s))
-                       " actors:"    (count (:actors s))
-                       " pol:"       (count (:policies s))
-                       " ful:"       (count (:fulfills s)))))))
-
-;; ── Extension ──────────────────────────────────────────────
+;; ── Extension ────────────────────────────────────────────
 
 (em/defextension contract-runtime-v2
   :name "contract-runtime-v2"
-  :description "Contract Runtime v2: cwd-walk discovery, EDN map dispatch, PRINCIPLE.edn bootstrap, policy gate."
+  :description "Contract Runtime v2: cwd-walk, EDN dispatch, policy gate, fulfillment notify/audit."
 
   (em/on "session_start"
     :handler (fn [_event ctx]
@@ -294,7 +293,7 @@
                  (ensure-hm-dir! cwd)
                  (let [result (bootstrap-principle! cwd)]
                    (when-not (:ok result)
-                     (js/console.warn (str "[contract-runtime-v2] PRINCIPLE.edn: " (:reason result))))
+                     (js/console.warn (str "[crv2] PRINCIPLE.edn: " (:reason result))))
                    (swap! sa assoc :principle-ready (:ok result)))
                  (set-status! ctx cwd)
                  nil)))
@@ -305,8 +304,8 @@
                      sa  (get-state-atom cwd)]
                  (reset! sa (fresh-state))
                  (ensure-hm-dir! cwd)
-                 (let [result (bootstrap-principle! cwd)]
-                   (swap! sa assoc :principle-ready (:ok result)))
+                 (swap! sa assoc :principle-ready
+                        (:ok (bootstrap-principle! cwd)))
                  (set-status! ctx cwd)
                  nil)))
 
@@ -315,13 +314,21 @@
                (let [cwd       (or (gobj/get ctx "cwd") HOME)
                      sa        (get-state-atom cwd)
                      params-js (gobj/get event "params")
-                     tool-name (gobj/get event "toolName")
-                     tool-call {:tool/name   tool-name
+                     tool-call {:tool/name   (gobj/get event "toolName")
                                 :tool/params (js->clj params-js :keywordize-keys true)}]
-                 ;; 1. load any new contracts from path params
                  (on-path-bearing-tool-call! params-js ctx)
-                 ;; 2. evaluate policies — returns block result or nil
                  (run-policy-gate! sa tool-call ctx))))
+
+  (em/on "after_tool_call"
+    :handler (fn [event ctx]
+               (let [cwd         (or (gobj/get ctx "cwd") HOME)
+                     sa          (get-state-atom cwd)
+                     tool-result {:tool/name   (gobj/get event "toolName")
+                                  :tool/params (js->clj (gobj/get event "params") :keywordize-keys true)
+                                  :tool/output (gobj/get event "output")
+                                  :tool/error  (gobj/get event "error")}]
+                 (run-fulfillments! sa tool-result ctx)
+                 nil)))
 
   (em/on "before_agent_start"
     :handler (fn [event ctx]
@@ -337,7 +344,7 @@
                  (.setStatus (ctx-ui ctx) STATUS-KEY js/undefined))))
 
   (em/command "crv2"
-    :description "Inspect/control crv2 state: /crv2 status|loaded|actors|policies|fulfills|prompt|log|reload"
+    :description "Inspect/control crv2: /crv2 status|loaded|actors|policies|fulfills|prompt|log|fulfills-log|reload"
     :handler (fn [args ctx]
                (let [cwd    (or (gobj/get ctx "cwd") HOME)
                      tokens (if (str/blank? args) [] (str/split (str/trim args) #"\s+"))
@@ -355,6 +362,7 @@
                                       (str "policies: "        (count (:policies s)))
                                       (str "fulfills: "        (count (:fulfills s)))
                                       (str "policy-log: "      (count (:policy-log s)))
+                                      (str "fulfillment-log: " (count (:fulfillment-log s)))
                                       (str "ttl-ms: "          (:ttl-ms s))]))
 
                        (= cmd "loaded")
@@ -386,10 +394,20 @@
                                                  " @" at))
                                           (take-last 20 (:policy-log s)))))
 
+                       (= cmd "fulfills-log")
+                       (.setWidget ui STATUS-KEY
+                                   (clj->js
+                                     (map (fn [{:keys [tool action at]}]
+                                            (str (:tool/name tool)
+                                                 " [" (:mode action) "/" (name (:level action)) "]"
+                                                 " " (:message action)
+                                                 " @" at))
+                                          (take-last 20 (:fulfillment-log s)))))
+
                        (= cmd "reload")
                        (let [n (reload-contracts! cwd)]
                          (set-status! ctx cwd)
                          (.notify ui (str "[crv2] reloaded " n " contract(s) from " cwd) "info"))
 
                        :else
-                       (.notify ui "Usage: /crv2 status|loaded|actors|policies|fulfills|prompt|log|reload" "warn"))))))))))
+                       (.notify ui "Usage: /crv2 status|loaded|actors|policies|fulfills|prompt|log|fulfills-log|reload" "warn"))))))))))
