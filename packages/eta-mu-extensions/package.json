@@ -7,7 +7,7 @@
     "build": "node scripts/build.mjs release",
     "watch": "node scripts/build.mjs watch",
     "clean": "node scripts/build.mjs clean",
-    "test": "shadow-cljs compile node-test && node target/test.js"
+    "test": "shadow-cljs compile node-test && node target/test.cjs"
   },
   "dependencies": {
     "@open-hax/output-contract-gate": "workspace:*"

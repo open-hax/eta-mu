@@ -64,7 +64,7 @@
    :exports {:default eta-mu.build.graph-memory/init}
    :compiler-options {:externs ["/home/err/.ημ/externs/promise.js"]}}
   :node-test
-  {:target :node-test
-   :output-to "target/test.js"
+  {:target    :node-test
+   :output-to "target/test.cjs"
    :ns-regexp "-test$"
-   :autorun true}}}
+   :autorun   true}}}
