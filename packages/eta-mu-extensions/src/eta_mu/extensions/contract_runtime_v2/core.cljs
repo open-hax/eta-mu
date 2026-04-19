@@ -125,3 +125,87 @@
           :reason  (:policy/reason winner)
           :policy  winner
           :matches (vec matches)})))))
+
+;; ── Fulfillment evaluation ─────────────────────────────────────
+;;
+;; Fulfillment shape (EDN):
+;;
+;;   {:contract/kind        :fulfillment
+;;    :contract/id          "log-writes"
+;;    :fulfillment/on       :after-tool-call       ; required
+;;    :fulfillment/match    {:tool/name "write_file"} ; required
+;;    :fulfillment/mode     :notify | :audit        ; required
+;;    :fulfillment/message  "wrote {path}"          ; optional template
+;;    :fulfillment/level    :info | :warn | :error   ; optional, default :info
+;;   }
+;;
+;; Tool-result shape passed to evaluate-fulfillments:
+;;
+;;   {:tool/name   "write_file"
+;;    :tool/params {:path "/tmp/x"}
+;;    :tool/output any    ; raw tool output, may be nil
+;;    :tool/error  any}   ; set if tool errored
+;;
+;; Result shape:
+;;
+;;   [{:mode     :notify | :audit
+;;     :message  str
+;;     :level    :info | :warn | :error
+;;     :fulfill  map    ; the matching fulfillment contract
+;;    }]
+;;
+;; Returns a seq of actions — all matching fulfillments fire (unlike policies
+;; which reduce to the strongest). Multiple fulfillments can match the same
+;; tool call and all produce output.
+
+(defn fulfillment-matches? [fulfill tool-result]
+  (let [match (get fulfill :fulfillment/match {})]
+    (every? (fn [[k v]]
+              (cond
+                (= k :tool/name)
+                (= v (:tool/name tool-result))
+
+                (= k :tool/params)
+                (every? (fn [[pk pv]]
+                          (let [actual (get-in tool-result [:tool/params pk])]
+                            (if (fn? pv) (pv actual) (= pv actual))))
+                        v)
+
+                (= k :tool/output)
+                (if (fn? v) (v (:tool/output tool-result)) (= v (:tool/output tool-result)))
+
+                (= k :tool/error?)
+                (= v (some? (:tool/error tool-result)))
+
+                :else false))
+            match)))
+
+(defn interpolate-message
+  "Replace {key} tokens in template with values from tool-result.
+  Looks in :tool/params first, then top-level tool-result keys."
+  [template tool-result]
+  (if (str/blank? template)
+    template
+    (str/replace template #"\{(\w+)\}"
+                 (fn [[_ k]]
+                   (str (or (get-in tool-result [:tool/params (keyword k)])
+                            (get-in tool-result [:tool/params k])
+                            (get tool-result (keyword k))
+                            (str "{" k "}")))))))
+
+(defn evaluate-fulfillments
+  "Pure reducer. Given a seq of fulfillment maps and a tool-result map,
+  returns a seq of fulfillment action maps for all matching fulfillments.
+  All matches fire — there is no strongest-wins reduction."
+  [fulfills tool-result]
+  (->> fulfills
+       (filter #(fulfillment-matches? % tool-result))
+       (map (fn [f]
+              (let [template (or (:fulfillment/message f)
+                                 (str (:tool/name tool-result) " completed"))
+                    message  (interpolate-message template tool-result)]
+                {:mode    (or (:fulfillment/mode f) :notify)
+                 :message message
+                 :level   (or (:fulfillment/level f) :info)
+                 :fulfill f})))
+       vec))
