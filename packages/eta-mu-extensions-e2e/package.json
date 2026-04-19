@@ -8,9 +8,11 @@
     "test:watch": "shadow-cljs watch e2e-test"
   },
   "devDependencies": {
-    "@badlogic/pi-core": "0.67.1",
-    "@badlogic/pi-coding-agent": "0.67.1",
     "express": "^4.21.2",
     "shadow-cljs": "^2.28.20"
+  },
+  "dependencies": {
+    "@mariozechner/pi-coding-agent": "0.67.1",
+    "mariozechner": "link:/pi-core0.67.1"
   }
 }
