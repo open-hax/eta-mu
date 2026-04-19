@@ -4,7 +4,7 @@ build/
 lib/
 *.tsbuildinfo
 
-# Dependencies 
+# Dependencies
 node_modules/
 *.log
 *.pid
@@ -26,22 +26,18 @@ node_modules/
 *~
 
 # Shadow-CLJS build caches
-.shadow-cljs/
-packages/opencode-reactant/.shadow-cljs/
+**/.shadow-cljs/
 
 # Local tool state
-.cpcache/
-.serena/
-.clj-kondo/.cache/
-.lsp/
-packages/opencode-reactant/.clj-kondo/.cache/
-packages/opencode-reactant/.lsp/
+**/.cpcache/
+**/.serena/
+**/.clj-kondo/.cache/
+**/.lsp/
 packages/opencode-reactant/resources/public/js/main.js.map
 
 # Playwright artifacts
 packages/kanban/test-results/
 packages/kanban/playwright-report/
 
-packages/opencode-reactant/target/build-report.html
 
-packages/eta-mu-extensions/target/test.cjs
+**/target/
