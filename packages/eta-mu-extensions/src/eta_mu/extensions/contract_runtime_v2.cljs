@@ -42,8 +42,8 @@
    :caps             {}
    :roles            {}
    :ttl-ms           DEFAULT-TTL-MS
-   :policy-log       []   ; [{:tool tool-call :result eval-result :at ms}]
-   :fulfillment-log  []   ; slim entries only, suitable for /crv2 fulfills-log
+   :policy-log       []
+   :fulfillment-log  []
    :prompt-blocks    []
    :principle-ready  false
    :last-error       nil})
@@ -203,8 +203,8 @@
     (let [s @(get-state-atom cwd)]
       (.setStatus (ctx-ui ctx) STATUS-KEY
                   (str "crv2 loaded:" (count (:loaded s))
-                       " pol:"       (count (:policies s))
-                       " ful:"       (count (:fulfills s)))))))
+                       " pol:"        (count (:policies s))
+                       " ful:"        (count (:fulfills s)))))))
 
 ;; ── Policy gate ──────────────────────────────────────────
 
@@ -267,9 +267,8 @@
       (swap! sa update :fulfillment-log
              #(vec (take-last 200
                               (into % (map (fn [a]
-                                             (let [at (now-ms)]
-                                               (slim-fulfillment-log-entry tool-result a at)))
-                                           actions)))))
+                                            (slim-fulfillment-log-entry tool-result a (now-ms)))
+                                          actions)))))
       (doseq [{:keys [mode message level]} actions]
         (case mode
           :notify
@@ -277,10 +276,8 @@
             (when (has-ui? ctx)
               (.notify (ctx-ui ctx) message (get level->notify-type level "info")))
             (js/console.info (str "[crv2:fulfill:notify] " message)))
-
           :audit
           (js/console.info (str "[crv2:fulfill:audit] " message))
-
           nil)))))
 
 ;; ── Path-bearing tool call hook ───────────────────────────
@@ -352,12 +349,12 @@
     :handler (fn [event ctx]
                (let [cwd         (or (gobj/get ctx "cwd") HOME)
                      sa          (get-state-atom cwd)
-                     tool-result {:tool/name   (gobj/get event "toolName")
-                                  :tool/params (js->clj (gobj/get event "params") :keywordize-keys true)
-                                  :tool/output (gobj/get event "output")
-                                  :tool/error  (gobj/get event "error")
-                                  :tool/status (gobj/get event "status")
-                                  :tool/code   (gobj/get event "code")
+                     tool-result {:tool/name    (gobj/get event "toolName")
+                                  :tool/params  (js->clj (gobj/get event "params") :keywordize-keys true)
+                                  :tool/output  (gobj/get event "output")
+                                  :tool/error   (gobj/get event "error")
+                                  :tool/status  (gobj/get event "status")
+                                  :tool/code    (gobj/get event "code")
                                   :tool/message (gobj/get event "message")}]
                  (run-fulfillments! sa tool-result ctx)
                  nil)))
@@ -435,8 +432,7 @@
                                                  " " (:action/message entry)
                                                  (when-let [status (:tool/status entry)]
                                                    (str " status:" status))
-                                                 (when (:tool/error? entry)
-                                                   " error:true")
+                                                 (when (:tool/error? entry) " error:true")
                                                  (when-let [msg (:tool/message entry)]
                                                    (str " | " msg))
                                                  " @" (:at entry)))
@@ -448,4 +444,4 @@
                          (.notify ui (str "[crv2] reloaded " n " contract(s) from " cwd) "info"))
 
                        :else
-                       (.notify ui "Usage: /crv2 status|loaded|actors|policies|fulfills|prompt|log|fulfills-log|reload" "warn"))))))))))
+                       (.notify ui "Usage: /crv2 status|loaded|actors|policies|fulfills|prompt|log|fulfills-log|reload" "warn"))))))))

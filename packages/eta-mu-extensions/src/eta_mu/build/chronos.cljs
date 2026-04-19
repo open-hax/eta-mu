@@ -1,4 +1,4 @@
 (ns eta-mu.build.chronos
   (:require [eta-mu.extensions.chronos]))
 
-(def init eta-mu.extensions.chronos/init)
+(def ^:export default eta-mu.extensions.chronos/chronos)
