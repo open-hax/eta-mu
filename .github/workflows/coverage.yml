@@ -65,15 +65,9 @@ jobs:
       - name: signal-watchlists
         run: node --test packages/signal-watchlists/tests/*.test.cjs
 
-      - name: Test summary
-        if: always()
-        run: |
-          echo '## TS Package Test Results' >> $GITHUB_STEP_SUMMARY
-          echo 'All steps above report individually.' >> $GITHUB_STEP_SUMMARY
-
-  # ── ClojureScript extensions ─────────────────────────────────────────────
+  # ── ClojureScript extensions + coverage ─────────────────────────────
   cljs-extensions:
-    name: CLJS extension tests + pi smoke
+    name: CLJS extension tests + coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -129,9 +123,33 @@ jobs:
         working-directory: packages/eta-mu-extensions
         run: pnpm exec shadow-cljs compile node-test
 
-      - name: Run CLJS unit tests
+      - name: Run tests with coverage
         working-directory: packages/eta-mu-extensions
-        run: node target/test.cjs
+        run: pnpm run test:coverage
+
+      - name: Post coverage summary
+        if: always()
+        working-directory: packages/eta-mu-extensions
+        run: |
+          echo '## CLJS Extension Coverage' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat coverage/coverage-summary.json | node -e "
+            const s = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).total;
+            const fmt = (x) => (x.pct + '%').padStart(7);
+            console.log('Statements : ' + fmt(s.statements) + '  (' + s.covered + '/' + s.total + ')');
+            console.log('Branches   : ' + fmt(s.branches)   + '  (' + s.covered + '/' + s.total + ')');
+            console.log('Functions  : ' + fmt(s.functions)  + '  (' + s.covered + '/' + s.total + ')');
+            console.log('Lines      : ' + fmt(s.lines)      + '  (' + s.covered + '/' + s.total + ')');
+          " >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cljs-coverage
+          path: packages/eta-mu-extensions/coverage/
+          if-no-files-found: ignore
 
       - name: Upload shadow-cljs logs
         if: failure()
