@@ -183,3 +183,91 @@
 
 (deftest policy-empty-test
   (is (= :allow (:action (core/evaluate-policies [] {:tool/name "anything"})))))
+
+;; ── Fulfillment evaluation tests ────────────────────────────────
+
+(def f-notify
+  {:contract/kind       :fulfillment
+   :contract/id         "notify-writes"
+   :fulfillment/on      :after-tool-call
+   :fulfillment/match   {:tool/name "write_file"}
+   :fulfillment/mode    :notify
+   :fulfillment/message "wrote {path}"
+   :fulfillment/level   :info})
+
+(def f-audit
+  {:contract/kind       :fulfillment
+   :contract/id         "audit-deletes"
+   :fulfillment/on      :after-tool-call
+   :fulfillment/match   {:tool/name "delete_file"}
+   :fulfillment/mode    :audit
+   :fulfillment/level   :warn})
+
+(def f-error
+  {:contract/kind       :fulfillment
+   :contract/id         "alert-errors"
+   :fulfillment/on      :after-tool-call
+   :fulfillment/match   {:tool/name "write_file"
+                         :tool/error? true}
+   :fulfillment/mode    :notify
+   :fulfillment/message "write failed"
+   :fulfillment/level   :error})
+
+(deftest fulfillment-no-match-test
+  (let [res (core/evaluate-fulfillments [f-notify] {:tool/name "read_file"})]
+    (is (empty? res))))
+
+(deftest fulfillment-notify-test
+  (let [res (core/evaluate-fulfillments
+              [f-notify]
+              {:tool/name "write_file" :tool/params {:path "/tmp/x"}})]
+    (is (= 1 (count res)))
+    (is (= :notify (:mode (first res))))
+    (is (= :info   (:level (first res))))
+    (is (= "wrote /tmp/x" (:message (first res))))))
+
+(deftest fulfillment-default-message-test
+  (testing "default message when :fulfillment/message omitted"
+    (let [f   (dissoc f-notify :fulfillment/message)
+          res (core/evaluate-fulfillments [f] {:tool/name "write_file"})]
+      (is (= "write_file completed" (:message (first res)))))))
+
+(deftest fulfillment-audit-test
+  (let [res (core/evaluate-fulfillments [f-audit] {:tool/name "delete_file"})]
+    (is (= :audit (:mode (first res))))
+    (is (= :warn  (:level (first res))))))
+
+(deftest fulfillment-all-match-test
+  (testing "all matching fulfillments fire"
+    (let [f2  (assoc f-notify :contract/id "also-notify")
+          res (core/evaluate-fulfillments
+                [f-notify f2]
+                {:tool/name "write_file" :tool/params {:path "/tmp/y"}})]
+      (is (= 2 (count res))))))
+
+(deftest fulfillment-error-match-test
+  (testing "error? true matches when tool errored"
+    (let [res (core/evaluate-fulfillments
+                [f-error]
+                {:tool/name "write_file" :tool/error "ENOENT"})]
+      (is (= 1 (count res)))
+      (is (= :error (:level (first res))))))
+  (testing "error? true does not match when tool succeeded"
+    (let [res (core/evaluate-fulfillments
+                [f-error]
+                {:tool/name "write_file"})]
+      (is (empty? res)))))
+
+(deftest fulfillment-interpolation-test
+  (testing "interpolates keyword params"
+    (let [res (core/evaluate-fulfillments
+                [f-notify]
+                {:tool/name "write_file" :tool/params {:path "/etc/hosts"}})]
+      (is (= "wrote /etc/hosts" (:message (first res))))))
+  (testing "unresolved tokens remain as-is"
+    (let [f   (assoc f-notify :fulfillment/message "touched {nonexistent}")
+          res (core/evaluate-fulfillments [f] {:tool/name "write_file"})]
+      (is (= "touched {nonexistent}" (:message (first res)))))))
+
+(deftest fulfillment-empty-test
+  (is (empty? (core/evaluate-fulfillments [] {:tool/name "anything"}))))
