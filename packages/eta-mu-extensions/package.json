@@ -7,12 +7,14 @@
     "build": "node scripts/build.mjs release",
     "watch": "node scripts/build.mjs watch",
     "clean": "node scripts/build.mjs clean",
-    "test": "shadow-cljs compile node-test && node target/test.cjs"
+    "test": "shadow-cljs compile node-test && node target/test.cjs",
+    "test:coverage": "shadow-cljs compile node-test && c8 --reporter=text --reporter=lcov --reporter=json-summary --all --src-dir=src node target/test.cjs"
   },
   "dependencies": {
     "@open-hax/output-contract-gate": "workspace:*"
   },
   "devDependencies": {
+    "c8": "^10.1.2",
     "shadow-cljs": "^3.3.5",
     "source-map-support": "^0.5.21"
   },
