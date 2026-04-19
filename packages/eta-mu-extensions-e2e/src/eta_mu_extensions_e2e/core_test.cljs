@@ -1,6 +1,6 @@
 (ns eta-mu-extensions-e2e.core-test
   (:require [cljs.test :refer [deftest is async use-fixtures]]
-            [eta-mu-extensions.contract-runtime-v2 :as crv2]
+            [eta-mu.extensions.contract-runtime-v2 :as crv2]
             [eta-mu-extensions-e2e.fixture-contracts :as fixtures]))
 
 (defn tool-call-event [tool-name input]
