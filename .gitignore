@@ -41,3 +41,5 @@ packages/opencode-reactant/resources/public/js/main.js.map
 # Playwright artifacts
 packages/kanban/test-results/
 packages/kanban/playwright-report/
+
+packages/opencode-reactant/target/build-report.html
