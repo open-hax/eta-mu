@@ -28,14 +28,10 @@ importers:
         version: 0.5.21
 
   packages/eta-mu-extensions-e2e:
-    dependencies:
+    devDependencies:
       '@mariozechner/pi-coding-agent':
         specifier: 0.67.1
         version: 0.67.1(ws@8.20.0)(zod@3.25.76)
-      mariozechner:
-        specifier: link:/pi-core0.67.1
-        version: link:../../../../../../../../pi-core0.67.1
-    devDependencies:
       express:
         specifier: ^4.21.2
         version: 4.22.1
