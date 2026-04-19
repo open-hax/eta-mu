@@ -1,7 +1,10 @@
-{:deps true
+{:source-paths ["src"
+                "../eta-mu-extensions/src"
+                "../eta-mu-extensions/lib"]
+
  :builds
  {:e2e-test
-  {:target :node-test
+  {:target    :node-test
    :output-to "out/node-tests.js"
    :ns-regexp "-test$"
-   :autorun true}}}
+   :autorun   true}}}
