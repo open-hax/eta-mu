@@ -23,6 +23,9 @@ importers:
       shadow-cljs:
         specifier: ^3.3.5
         version: 3.3.8
+      source-map-support:
+        specifier: ^0.5.21
+        version: 0.5.21
 
   packages/eta-mu-github:
     dependencies:
