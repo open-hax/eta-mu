@@ -8,7 +8,7 @@
            (core/path-param-from-tool-call {"foo" 1 "path" "/tmp/x"})))
     (is (= "/tmp/y"
            (core/path-param-from-tool-call {"dest" "/tmp/y"})))
-    (is (nil? (core/path-param-from-tool-call {"name" "nope"})))) )
+    (is (nil? (core/path-param-from-tool-call {"name" "nope"})))))
 
 (deftest comment-stripping-test
   (is (= "{:a 1}\n{:b 2}"
@@ -32,22 +32,42 @@
   (is (nil? (core/contract-kind {:x 1}))))
 
 (deftest dispatch-test
-  (let [raw "{:contract/kind :unknown}"
-        acc (-> {:actors [] :policies [] :fulfills [] :caps {} :roles {} :prompt-blocks []}
-                (core/apply-map-dispatch {:actor/id :mindfuck :system "hello"} raw)
-                (core/apply-map-dispatch {:contract/kind :policy :contract/id "p1"} raw)
-                (core/apply-map-dispatch {:contract/kind :fulfillment :contract/id "f1"} raw)
-                (core/apply-map-dispatch {:contract/kind :capability :capability/id :cap/x} raw)
-                (core/apply-map-dispatch {:contract/kind :role :role/id :role/x} raw)
-                (core/apply-map-dispatch {:contract/kind :unknown :raw "raw-block"} raw))]
-    (is (= 1 (count (:actors acc))))
-    (is (= 1 (count (:policies acc))))
-    (is (= 1 (count (:fulfills acc))))
-    (is (= {:contract/kind :capability :capability/id :cap/x}
-           (get-in acc [:caps ":cap/x"])))
-    (is (= {:contract/kind :role :role/id :role/x}
-           (get-in acc [:roles ":role/x"])))
-    (is (= ["hello" "raw-block"] (:prompt-blocks acc)))))
+  (testing "known structured kinds dispatch to their collections"
+    (let [raw "{:contract/kind :policy :contract/id \"p1\"}"
+          acc (-> {:actors [] :policies [] :fulfills [] :caps {} :roles {} :prompt-blocks []}
+                  (core/apply-map-dispatch {:actor/id :mindfuck :system "hello"} raw)
+                  (core/apply-map-dispatch {:contract/kind :policy :contract/id "p1"} raw)
+                  (core/apply-map-dispatch {:contract/kind :fulfillment :contract/id "f1"} raw)
+                  (core/apply-map-dispatch {:contract/kind :capability :capability/id :cap/x} raw)
+                  (core/apply-map-dispatch {:contract/kind :role :role/id :role/x} raw)
+                  (core/apply-map-dispatch {:contract/kind :unknown :raw "raw-block"} raw))]
+      (is (= 1 (count (:actors acc))))
+      (is (= 1 (count (:policies acc))))
+      (is (= 1 (count (:fulfills acc))))
+      (is (= {:contract/kind :capability :capability/id :cap/x}
+             (get-in acc [:caps ":cap/x"])))
+      (is (= {:contract/kind :role :role/id :role/x}
+             (get-in acc [:roles ":role/x"]))))))
+
+(deftest prompt-blocks-fallthrough-test
+  (testing "actor emits :system as prompt block"
+    (let [acc (core/apply-map-dispatch {} {:actor/id :x :system "sys-text"} "raw")]
+      (is (some #{"sys-text"} (:prompt-blocks acc)))))
+
+  (testing "unknown block emits :raw as prompt block"
+    (let [acc (core/apply-map-dispatch {} {:contract/kind :unknown :raw "raw-block"} "fallback")]
+      (is (some #{"raw-block"} (:prompt-blocks acc)))))
+
+  (testing "structured kind with no :raw falls through to raw-text arg"
+    ;; policy/fulfillment/capability/role with schema issues become prompt material —
+    ;; intent is preserved even when validation would fail
+    (let [raw-text "{:contract/kind :policy :contract/id \"p1\"}"
+          acc (core/apply-map-dispatch {} {:contract/kind :policy :contract/id "p1"} raw-text)]
+      (is (some #{raw-text} (:prompt-blocks acc)))))
+
+  (testing "structured kind with blank raw-text emits no prompt block"
+    (let [acc (core/apply-map-dispatch {} {:contract/kind :policy :contract/id "p1"} "")]
+      (is (empty? (:prompt-blocks acc))))))
 
 (deftest prompt-build-test
   (let [out (core/build-prompt-append "{:mission \"x\"}" ["actor text" "unknown text"])]
