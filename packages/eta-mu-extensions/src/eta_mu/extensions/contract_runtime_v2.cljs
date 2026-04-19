@@ -14,8 +14,8 @@
   Schema: spec/contracts-v1.edn"
   (:require-macros [eta-mu.core :as em])
   (:require [clojure.string :as str]
-            [cljs.reader :as reader]
             [goog.object :as gobj]
+            [eta-mu.extensions.contract-runtime-v2.core :as core]
             ["node:fs" :as fs]
             ["node:os" :as os]
             ["node:path" :as path]
@@ -25,7 +25,6 @@
 (def GLOBAL-KEY "__eta_mu_contract_runtime_v2__")
 (def STATUS-KEY "contract-runtime-v2")
 (def DEFAULT-TTL-MS 300000)
-(def PATH-PARAM-KEYS #{"path" "file" "dir" "root" "cwd" "target" "source" "dest"})
 (def OPMF-OUTPUT-GATE-ID "fulfillment.mindfuck.output-gate")
 
 (defn get-state []
@@ -59,8 +58,7 @@
   (let [h (.createHash crypto "sha256")]
     (.update h s)
     (.digest h "hex")))
-(defn strip-whitespace [s] (str/replace s #"\s+" ""))
-(defn contract-sha [text] (sha256 (strip-whitespace text)))
+(defn contract-sha [text] (sha256 (core/strip-whitespace text)))
 (defn read-sha-cache [cwd]
   (let [p (sha-cache-path cwd)]
     (if (file-exists? p)
@@ -69,8 +67,6 @@
       {})))
 (defn write-sha-cache! [cwd cache]
   (write-text! (sha-cache-path cwd) (js/JSON.stringify (clj->js cache) nil 2)))
-(defn cache-entry-fresh? [entry ttl-ms]
-  (when entry (< (- (now-ms) (get entry "loaded-at" 0)) ttl-ms)))
 
 (defn locate-mindfuck-contract [cwd]
   (let [candidates [(path/join cwd "agents" "mindfuck" "CONTRACT.edn")
@@ -98,58 +94,12 @@
             {:ok false :action :skipped :reason "PRINCIPLE.edn has :disabled sections — manual merge required"}
             (do (write-text! dest src-text) {:ok true :action :updated :source source})))))))
 
-(defn walk-up-collect [start-dir stop-dir]
-  (let [start (path/resolve start-dir)
-        stop  (path/resolve stop-dir)]
-    (loop [cur start acc []]
-      (let [candidate (path/join cur "CONTRACT.edn")
-            acc*      (if (file-exists? candidate) (conj acc candidate) acc)
-            parent    (path/dirname cur)]
-        (if (or (= cur stop) (= cur parent))
-          (vec (reverse acc*))
-          (recur parent acc*))))))
-
-(defn path-param-from-tool-call [params-js]
-  (when params-js
-    (let [params (js->clj params-js :keywordize-keys false)]
-      (some (fn [k] (get params k)) PATH-PARAM-KEYS))))
-
-(defn strip-comment-lines [text]
-  (->> (str/split (or text "") #"\r?\n")
-       (remove #(str/starts-with? (str/trim %) ";;"))
-       (str/join "\n")))
-
-(defn parse-contract-file [file-path]
-  (try
-    (let [text    (safe-read-text file-path)
-          cleaned (strip-comment-lines text)
-          form    (reader/read-string cleaned)]
-      (cond
-        (map? form)    [form]
-        (vector? form) form
-        :else          [{:contract/kind :unknown :raw cleaned}]))
-    (catch :default _
-      [{:contract/kind :unknown :raw (or (safe-read-text file-path) "")}]))))
-
-(defn contract-kind [m]
-  (or (:contract/kind m)
-      (when (:actor/id m) :actor)
-      nil))
-
-(defn push-prompt-block! [state text]
-  (when (and (string? text) (not (str/blank? text)))
-    (.push (gobj/get state "promptBlocks") text)))
-
 (defn dispatch-map! [state m raw-text]
-  (let [kind (contract-kind m)]
+  (let [kind (core/contract-kind m)
+        prompt (core/prompt-block-for-map m raw-text)]
     (cond
       (= kind :actor)
-      (do
-        (.push (gobj/get state "actors") (clj->js m))
-        (let [sys (:system m)]
-          (cond
-            (string? sys) (push-prompt-block! state sys)
-            (map? sys)    (push-prompt-block! state (str "[fn-ref: " (:fn-ref sys) "]")))))
+      (.push (gobj/get state "actors") (clj->js m))
 
       (= kind :policy)
       (.push (gobj/get state "policies") (clj->js m))
@@ -164,11 +114,10 @@
       (gobj/set (gobj/get state "caps") (str (:capability/id m)) (clj->js m))
 
       (= kind :role)
-      (gobj/set (gobj/get state "roles") (str (:role/id m)) (clj->js m))
-
-      :else
-      (push-prompt-block! state (or (:raw m) raw-text))))
-  nil)
+      (gobj/set (gobj/get state "roles") (str (:role/id m)) (clj->js m)))
+    (when (and (string? prompt) (not (str/blank? prompt)))
+      (.push (gobj/get state "promptBlocks") prompt))
+    nil)
 
 (defn dispatch-contract-file! [state cwd contract-path]
   (let [text   (safe-read-text contract-path)
@@ -177,10 +126,10 @@
         cache  (read-sha-cache cwd)
         entry  (get cache contract-path)]
     (if (and (= sha (get entry "sha"))
-             (cache-entry-fresh? entry ttl-ms))
+             (core/cache-entry-fresh? (now-ms) entry ttl-ms))
       :cached
       (do
-        (doseq [m (parse-contract-file contract-path)]
+        (doseq [m (core/normalize-contract-forms text)]
           (dispatch-map! state m text))
         (write-sha-cache! cwd
           (assoc cache contract-path {"sha" sha "loaded-at" (now-ms)}))
@@ -188,30 +137,23 @@
         :loaded))))
 
 (defn on-path-bearing-tool-call! [params-js ctx]
-  (when-let [raw-path (path-param-from-tool-call params-js)]
+  (when-let [raw-path (core/path-param-from-tool-call (js->clj params-js :keywordize-keys false))]
     (let [state  (get-state)
           cwd    (or (gobj/get ctx "cwd") HOME)
           abs    (path/resolve raw-path)
-          target (if (try (.statSync fs abs) (catch :default _ nil))
-                   (if (.isDirectory (.statSync fs abs)) abs (path/dirname abs))
+          stat   (try (.statSync fs abs) (catch :default _ nil))
+          target (if stat
+                   (if (.isDirectory stat) abs (path/dirname abs))
                    (path/dirname abs))
-          files  (walk-up-collect target cwd)]
+          files  (core/walk-up-paths #(path/join %1 %2) #(path/dirname %) target cwd file-exists?)]
       (ensure-hm-dir! cwd)
       (doseq [contract-path files]
         (dispatch-contract-file! state cwd contract-path)))))
 
 (defn build-prompt-append [cwd state]
-  (let [principle (safe-read-text (principle-path cwd))
-        prompt-blocks (js->clj (gobj/get state "promptBlocks"))
-        blocks (filter #(and (string? %) (not (str/blank? %)))
-                       (concat [(when (and principle (not (str/blank? principle)))
-                                  (str "## PRINCIPLE.edn\n\n" principle))]
-                               prompt-blocks))]
-    (when (seq blocks)
-      (str "## Eta Mu Contract Runtime v2\n\n"
-           "The following blocks were loaded from PRINCIPLE.edn and cwd-relative CONTRACT.edn files.\n"
-           "Use them as active contract material. Unknown blocks are preserved as prompt text.\n\n"
-           (str/join "\n\n" blocks)))))
+  (core/build-prompt-append
+    (safe-read-text (principle-path cwd))
+    (js->clj (gobj/get state "promptBlocks"))))
 
 (defn has-ui? [ctx] (boolean (gobj/get ctx "hasUI")))
 (defn ctx-ui  [ctx] (gobj/get ctx "ui"))
@@ -257,7 +199,6 @@
     :handler (fn [event ctx]
                (let [params (gobj/get event "params")]
                  (on-path-bearing-tool-call! params ctx)
-                 ;; policy execution stub lives here next
                  nil)))
 
   (em/on "before_agent_start"

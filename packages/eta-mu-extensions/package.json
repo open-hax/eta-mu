@@ -6,7 +6,8 @@
   "scripts": {
     "build": "node scripts/build.mjs release",
     "watch": "node scripts/build.mjs watch",
-    "clean": "node scripts/build.mjs clean"
+    "clean": "node scripts/build.mjs clean",
+    "test": "shadow-cljs compile node-test && node target/test.js"
   },
   "dependencies": {
     "@open-hax/output-contract-gate": "workspace:*"
