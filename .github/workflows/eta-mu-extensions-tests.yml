@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - 'packages/eta-mu-extensions/**'
+      - 'packages/eta-mu-extensions-e2e/**'
       - '.github/workflows/eta-mu-extensions-tests.yml'
   push:
     branches:
       - main
     paths:
       - 'packages/eta-mu-extensions/**'
+      - 'packages/eta-mu-extensions-e2e/**'
       - '.github/workflows/eta-mu-extensions-tests.yml'
 
 jobs:
@@ -49,9 +51,28 @@ jobs:
           restore-keys: ${{ runner.os }}-pnpm-
 
       - name: Install workspace deps
-        # TODO: switch back to --frozen-lockfile after running pnpm install locally
-        # and committing the updated pnpm-lock.yaml
         run: pnpm install --no-frozen-lockfile
+
+      - name: Build extensions
+        working-directory: packages/eta-mu-extensions
+        run: pnpm build
+
+      - name: Deploy runtimes to e2e extensions dir
+        working-directory: packages/eta-mu-extensions
+        run: |
+          node scripts/deploy-ci.mjs
+
+      - name: Smoke test — pi loads all extensions
+        working-directory: packages/eta-mu-extensions-e2e
+        run: |
+          output=$(pnpm exec pi -p "smoke" 2>&1 || true)
+          echo "$output"
+          if echo "$output" | grep -q "Failed to load extension"; then
+            echo "FAIL: one or more extensions failed to load"
+            echo "$output" | grep "Failed to load extension"
+            exit 1
+          fi
+          echo "OK: all extensions loaded cleanly"
 
       - name: Compile ClojureScript tests
         working-directory: packages/eta-mu-extensions
