@@ -6,13 +6,15 @@
   "scripts": {
     "build": "node scripts/build.mjs release",
     "watch": "node scripts/build.mjs watch",
-    "clean": "node scripts/build.mjs clean"
+    "clean": "node scripts/build.mjs clean",
+    "test": "shadow-cljs compile node-test && node target/test.cjs"
   },
   "dependencies": {
     "@open-hax/output-contract-gate": "workspace:*"
   },
   "devDependencies": {
-    "shadow-cljs": "^3.3.5"
+    "shadow-cljs": "^3.3.5",
+    "source-map-support": "^0.5.21"
   },
   "license": "GPL-3.0-or-later",
   "repository": {
