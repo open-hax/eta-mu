@@ -53,18 +53,13 @@
   (testing "actor emits :system as prompt block"
     (let [acc (core/apply-map-dispatch {} {:actor/id :x :system "sys-text"} "raw")]
       (is (some #{"sys-text"} (:prompt-blocks acc)))))
-
   (testing "unknown block emits :raw as prompt block"
     (let [acc (core/apply-map-dispatch {} {:contract/kind :unknown :raw "raw-block"} "fallback")]
       (is (some #{"raw-block"} (:prompt-blocks acc)))))
-
   (testing "structured kind with no :raw falls through to raw-text arg"
-    ;; policy/fulfillment/capability/role with schema issues become prompt material —
-    ;; intent is preserved even when validation would fail
     (let [raw-text "{:contract/kind :policy :contract/id \"p1\"}"
-          acc (core/apply-map-dispatch {} {:contract/kind :policy :contract/id "p1"} raw-text)]
+          acc      (core/apply-map-dispatch {} {:contract/kind :policy :contract/id "p1"} raw-text)]
       (is (some #{raw-text} (:prompt-blocks acc)))))
-
   (testing "structured kind with blank raw-text emits no prompt block"
     (let [acc (core/apply-map-dispatch {} {:contract/kind :policy :contract/id "p1"} "")]
       (is (empty? (:prompt-blocks acc))))))
@@ -77,15 +72,114 @@
     (is (.includes out "unknown text"))))
 
 (deftest cache-freshness-test
-  (is (true? (core/cache-entry-fresh? 1000 {"loaded-at" 900} 200)))
+  (is (true?  (core/cache-entry-fresh? 1000 {"loaded-at" 900} 200)))
   (is (false? (core/cache-entry-fresh? 1000 {"loaded-at" 500} 200)))
-  (is (nil? (core/cache-entry-fresh? 1000 nil 200))))
+  (is (nil?   (core/cache-entry-fresh? 1000 nil 200))))
 
 (deftest walk-up-paths-test
-  (let [existing #{"/repo/CONTRACT.edn" "/repo/a/b/CONTRACT.edn"}
-        join-path (fn [a b] (str a "/" b))
-        dirname (fn [p]
-                  (let [idx (.lastIndexOf p "/")]
-                    (if (pos? idx) (subs p 0 idx) p)))
+  (let [existing   #{"/repo/CONTRACT.edn" "/repo/a/b/CONTRACT.edn"}
+        join-path  (fn [a b] (str a "/" b))
+        dirname    (fn [p]
+                     (let [idx (.lastIndexOf p "/")]
+                       (if (pos? idx) (subs p 0 idx) p)))
         out (core/walk-up-paths join-path dirname "/repo/a/b" "/repo" #(contains? existing %))]
     (is (= ["/repo/CONTRACT.edn" "/repo/a/b/CONTRACT.edn"] out))))
+
+;; ── Policy evaluation tests ──────────────────────────────────────
+
+(def p-block
+  {:contract/kind :policy
+   :contract/id   "block-write"
+   :policy/on     :before-tool-call
+   :policy/match  {:tool/name "write_file"}
+   :policy/action :block
+   :policy/reason "write_file is restricted"})
+
+(def p-warn
+  {:contract/kind :policy
+   :contract/id   "warn-read"
+   :policy/on     :before-tool-call
+   :policy/match  {:tool/name "read_file"}
+   :policy/action :warn
+   :policy/reason "read_file should be reviewed"})
+
+(def p-note
+  {:contract/kind :policy
+   :contract/id   "note-search"
+   :policy/on     :before-tool-call
+   :policy/match  {:tool/name "web_search"}
+   :policy/action :note
+   :policy/reason "web_search noted"})
+
+(def p-param
+  {:contract/kind :policy
+   :contract/id   "block-etc"
+   :policy/on     :before-tool-call
+   :policy/match  {:tool/name "write_file"
+                   :tool/params {:path "/etc/passwd"}}
+   :policy/action :block
+   :policy/reason "writing /etc/passwd is forbidden"})
+
+(def p-ttl
+  {:contract/kind  :policy
+   :contract/id    "ttl-warn"
+   :policy/on      :before-tool-call
+   :policy/match   {:tool/name "write_file"}
+   :policy/action  :warn
+   :policy/reason  "transient warning"
+   :policy/ttl-ms  1000})
+
+(deftest policy-no-match-test
+  (let [res (core/evaluate-policies [p-block] {:tool/name "read_file"})]
+    (is (= :allow (:action res)))
+    (is (nil? (:policy res)))
+    (is (empty? (:matches res)))))
+
+(deftest policy-block-test
+  (let [res (core/evaluate-policies [p-block] {:tool/name "write_file"})]
+    (is (= :block (:action res)))
+    (is (= "write_file is restricted" (:reason res)))
+    (is (= p-block (:policy res)))))
+
+(deftest policy-warn-test
+  (let [res (core/evaluate-policies [p-warn] {:tool/name "read_file"})]
+    (is (= :warn (:action res)))
+    (is (= "read_file should be reviewed" (:reason res)))))
+
+(deftest policy-note-test
+  (let [res (core/evaluate-policies [p-note] {:tool/name "web_search"})]
+    (is (= :note (:action res)))))
+
+(deftest policy-strongest-action-test
+  (testing "block beats warn when both match"
+    (let [p-warn2 (assoc p-warn :policy/match {:tool/name "write_file"}
+                               :policy/reason "also warns")
+          res     (core/evaluate-policies [p-warn2 p-block] {:tool/name "write_file"})]
+      (is (= :block (:action res)))
+      (is (= 2 (count (:matches res)))))))
+
+(deftest policy-param-match-test
+  (testing "matches on exact param value"
+    (let [res (core/evaluate-policies
+                [p-param]
+                {:tool/name "write_file" :tool/params {:path "/etc/passwd"}})]
+      (is (= :block (:action res)))))
+  (testing "does not match on different param value"
+    (let [res (core/evaluate-policies
+                [p-param]
+                {:tool/name "write_file" :tool/params {:path "/tmp/safe"}})]
+      (is (= :allow (:action res))))))
+
+(deftest policy-ttl-test
+  (testing "policy active within TTL"
+    (let [res (core/evaluate-policies [p-ttl] {:tool/name "write_file"} 500 0)]
+      (is (= :warn (:action res)))))
+  (testing "policy expired outside TTL"
+    (let [res (core/evaluate-policies [p-ttl] {:tool/name "write_file"} 2000 0)]
+      (is (= :allow (:action res)))))
+  (testing "policy with no TTL always active"
+    (let [res (core/evaluate-policies [p-block] {:tool/name "write_file"} 99999 0)]
+      (is (= :block (:action res))))))
+
+(deftest policy-empty-test
+  (is (= :allow (:action (core/evaluate-policies [] {:tool/name "anything"})))))
