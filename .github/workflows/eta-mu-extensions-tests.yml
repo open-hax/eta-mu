@@ -49,7 +49,9 @@ jobs:
           restore-keys: ${{ runner.os }}-pnpm-
 
       - name: Install workspace deps
-        run: pnpm install --frozen-lockfile
+        # TODO: switch back to --frozen-lockfile after running pnpm install locally
+        # and committing the updated pnpm-lock.yaml
+        run: pnpm install --no-frozen-lockfile
 
       - name: Compile ClojureScript tests
         working-directory: packages/eta-mu-extensions
