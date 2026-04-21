@@ -128,6 +128,9 @@
        (remove #(str/starts-with? (str/trim %) ";;"))
        (str/join "\n")))
 
+;; CLJS analyzer warns on forward refs unless declared before first use.
+(declare safe-read-text)
+
 (defn read-contract-forms [file]
   (reader/read-string (str "[" (strip-comment-lines (safe-read-text file)) "]")))
 
