@@ -30,6 +30,7 @@
   {:name "custom-providers"  :source :local :path "src/eta_mu/extensions/custom_providers.cljs"           :tracked true :description "Provider configuration extensions"}
   {:name "graph-memory"      :source :local :path "src/eta_mu/extensions/graph_memory.cljs"               :tracked true :description "Graph memory tools for OpenPlanner/Graph-Weaver"}
   {:name "image-render"      :source :local :path "src/eta_mu/extensions/image_render.cljs"               :tracked true :description "Image rendering for TUI"}
+  {:name "lisp-decomp-nudge" :source :local :path "src/eta_mu/extensions/lisp_decomp_nudge.cljs"         :tracked true :description "Nudge agent to decompose large Lisp fns when paren mismatch is detected"}
   {:name "opencode-global-instructions" :source :local :path "src/eta_mu/extensions/opencode_global_instructions.cljs" :tracked true :description "Global instruction injection for OpenCode"}
   {:name "opmf-contract-gate" :source :local :path "src/eta_mu/extensions/opmf_contract_gate.cljs"       :tracked true :description "Output contract gate enforcement with auto-repair"}
   {:name "receipt-river"     :source :local :path "src/eta_mu/extensions/receipt_river.cljs"              :tracked true :description "Append-only receipts.log ledger for multi-step work"}

@@ -51,6 +51,12 @@
    :exports {:default eta-mu.build.image-render/init}
    :compiler-options {:externs ["externs/promise.js"]}}
 
+  :lisp-decomp-nudge
+  {:target :node-library
+   :output-to "target/runtime/lisp-decomp-nudge/runtime.js"
+   :exports {:default eta-mu.build.lisp-decomp-nudge/init}
+   :compiler-options {:externs ["externs/promise.js"]}}
+
   :opencode-global-instructions
   {:target :node-library
    :output-to "target/runtime/opencode-global-instructions/runtime.js"
