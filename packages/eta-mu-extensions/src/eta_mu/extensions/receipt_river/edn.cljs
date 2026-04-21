@@ -1,7 +1,8 @@
 (ns eta-mu.extensions.receipt-river.edn
   "Pure EDN serialization for receipt-river events.
   No I/O. No side effects. Inject everywhere."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [cljs.reader :as reader]))
 
 (def ^:private required-keys
   [:ts :kind :repo :origin :owner :dod :pi :host :manifest :refs])
@@ -32,6 +33,6 @@
   [line]
   (when (and line (not (str/blank? (str line))))
     (try
-      (let [result (cljs.reader/read-string (str line))]
+      (let [result (reader/read-string (str line))]
         (when (map? result) result))
       (catch :default _ nil))))

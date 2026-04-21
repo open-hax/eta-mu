@@ -49,10 +49,13 @@
                              (conj parts "No active sessions.\n"))
                      parts (conj parts "")
                      parts (if (pos? (count recent))
-                             (into parts (cons "### Recent Sessions"
-                                               (map (fn [s]
-                                                      (str "- " (aget s "project") ": " (or (aget s "task") "No task") " (" (fmt-duration (or (aget s "duration_seconds") 0)) ")")))
-                                                    (take 5 recent)))
+                             (into parts
+                                   (concat
+                                     ["### Recent Sessions"]
+                                     (map (fn [s]
+                                            (str "- " (aget s "project") ": " (or (aget s "task") "No task")
+                                                 " (" (fmt-duration (or (aget s "duration_seconds") 0)) ")"))
+                                          (take 5 recent))))
                              parts)
                      parts (conj parts "\n### Projects")
                      parts (into parts (map (fn [p]
@@ -60,7 +63,7 @@
                                                    (if-let [c (aget p "client")] (str " (" c ")") "")))
                                             projects))
                      text (str/join "\n" parts)]
-                 (make-result text #js {:status status})))))
+                 (make-result text #js {:status status}))))))
 
 (defn handle-start [params]
   (if-not (aget params "project")
@@ -166,4 +169,4 @@ Actions:
                    "list" (handle-list params)
                    "project_create" (handle-project-create params)
                    "project_list" (handle-project-list)
-                   (make-text-result (str "Unknown action: " action))))))))
+                   (make-text-result (str "Unknown action: " action)))))))
