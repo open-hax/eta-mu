@@ -611,11 +611,12 @@
                          system-prompt (str (aget event "systemPrompt")
                                             repo-blocks
                                             (or reminder ""))]
-                     (cond-> #js {:systemPrompt system-prompt}
-                       (not (str/blank? memory-messages))
-                       (assoc :message #js {:customType "receipt-river-context"
-                                            :content memory-messages
-                                            :display false})))))))
+                     (if (str/blank? memory-messages)
+                       #js {:systemPrompt system-prompt}
+                       #js {:systemPrompt system-prompt
+                            :message #js {:customType "receipt-river-context"
+                                          :content memory-messages
+                                          :display false}}))))))
 
   (em/on "session_shutdown"
     :handler (fn [_event ctx]
