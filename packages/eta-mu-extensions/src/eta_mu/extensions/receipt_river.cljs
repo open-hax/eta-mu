@@ -7,6 +7,7 @@
             ["fs" :as fs]
             ["path" :as path]
             [clojure.string :as str]
+            [eta-mu.extensions.prompt-section :as prompt-section]
             [eta-mu.extensions.receipt-river.edn :as rr-edn]
             [eta-mu.extensions.receipt-river.repo :as rr-repo]))
 
@@ -25,6 +26,8 @@
 (def ^:const EVENTS-FILE (path/join STATE-DIR "events.jsonl"))
 (def ^:const STATUS-KEY "receipt-river")
 (def ^:const GLOBAL-KEY "__pi_receipt_river_state__")
+(def ^:const PROMPT-SECTION-START "<!-- eta-mu:receipt-river:start -->")
+(def ^:const PROMPT-SECTION-END "<!-- eta-mu:receipt-river:end -->")
 (def ^:const PI-VERSION "0.63.1")
 (def ^:const RECEIPT-FILE-NAME "receipts.edn")
 (def ^:const ACTIVATION-THRESHOLD 3)
@@ -255,6 +258,25 @@
                          false
                          (do (vreset! kept-one true) true))))))
         (.reverse))))
+
+(defn inject-ledger-prompt [system-prompt repos pending-reminder?]
+  (let [reminder (when pending-reminder?
+                   "Previous turn ended with missing repo receipts. Compensate early in this turn if the work continues.")
+        repo-blocks (->> repos
+                         (map (fn [repo-root]
+                                (str "[RECEIPT LEDGER ACTIVE]\nRepo: " repo-root
+                                     "\n- Maintain append-only receipts.edn in this repo root."
+                                     "\n- If you touch this repo substantively during the turn, ensure a receipt_river call records it in this repo."
+                                     "\n- The implicit fulfillment contract fails if a touched repo ends the turn without a receipt."
+                                     "\n- Never edit past events. Never log secrets.")))
+                         (str/join "\n\n"))
+        body (->> [repo-blocks reminder]
+                  (filter #(and (string? %) (not (str/blank? %))))
+                  (str/join "\n\n"))]
+    (prompt-section/upsert-section system-prompt
+                                   PROMPT-SECTION-START
+                                   PROMPT-SECTION-END
+                                   body)))
 
 (defn maybe-activate-ledger! [state repo-root]
   (when repo-root
@@ -594,23 +616,13 @@
                (let [state (get-state)]
                  (when (aget state "enabled")
                    (let [repos (active-ledger-repos state)
-                         reminder (when (aget state "pendingReminder")
-                                    "\nPrevious turn ended with missing repo receipts. Compensate early in this turn if the work continues.")
-                         repo-blocks (->> repos
-                                          (map (fn [repo-root]
-                                                 (str "\n[RECEIPT LEDGER ACTIVE]\nRepo: " repo-root
-                                                      "\n- Maintain append-only receipts.edn in this repo root."
-                                                      "\n- If you touch this repo substantively during the turn, ensure a receipt_river call records it in this repo."
-                                                      "\n- The implicit fulfillment contract fails if a touched repo ends the turn without a receipt."
-                                                      "\n- Never edit past events. Never log secrets.")))
-                                          (str/join "\n"))
                          memory-messages (->> repos
                                               (map build-memory-message)
                                               (filter some?)
                                               (str/join "\n\n"))
-                         system-prompt (str (aget event "systemPrompt")
-                                            repo-blocks
-                                            (or reminder ""))]
+                         system-prompt (inject-ledger-prompt (aget event "systemPrompt")
+                                                             repos
+                                                             (aget state "pendingReminder"))]
                      (if (str/blank? memory-messages)
                        #js {:systemPrompt system-prompt}
                        #js {:systemPrompt system-prompt
