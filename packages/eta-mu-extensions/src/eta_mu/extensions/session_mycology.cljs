@@ -6,7 +6,8 @@
   (:require ["os" :as os]
             ["fs" :as fs]
             ["path" :as path]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [eta-mu.extensions.prompt-section :as prompt-section]))
 
 (def ^:const HOME (.homedir os))
 (def ^:const ETA-MU-STATE-ROOT (path/join HOME ".ημ" "state"))
@@ -27,6 +28,8 @@
 (def ^:const LIVE-SKILLS-DIR (str HOME "/.pi/agent/skills")) ;; stays under pi — skills are pi's config
 (def ^:const STATUS-KEY "session-mycology")
 (def ^:const GLOBAL-KEY "__pi_session_mycology_state__")
+(def ^:const PROMPT-SECTION-START "<!-- eta-mu:session-mycology:start -->")
+(def ^:const PROMPT-SECTION-END "<!-- eta-mu:session-mycology:end -->")
 (def ^:const SPORE-THRESHOLD 0.72)
 (def ^:const PROMOTION-MIN-RECURRENCE
   (js/Math.max 2 (js/Number (or (aget js/process.env "PI_MYCOLOGY_PROMOTION_MIN_RECURRENCE") 2))))
@@ -382,6 +385,21 @@
                          (do (vreset! kept-one true) true))))))
         (.reverse))))
 
+(defn inject-mycology-prompt [system-prompt]
+  (prompt-section/upsert-section
+    system-prompt
+    PROMPT-SECTION-START
+    PROMPT-SECTION-END
+    (str "[SESSION MYCOLOGY ACTIVE]\n"
+         "At the end of each substantive turn, silently run a tiny retrospective.\n"
+         "- p-efficiency = confidence the path was near-minimal.\n"
+         "- p-friction = confidence the work felt harder than it should have.\n"
+         "- p-skill-candidate = confidence a reusable skill or protocol would compress future effort.\n"
+         "If you have enough evidence, call the session_mycology tool once near the end of the turn with action=\"reflect\".\n"
+         "If p-skill-candidate >= " (.toFixed SPORE-THRESHOLD 2) " and the pattern seems reusable beyond the immediate task, include candidateName and candidateDescription so a draft skill spore can be incubated.\n"
+         "Keep this loop quiet unless the user explicitly asks about it.\n"
+         "Skip the tool for tiny conversational turns or when evidence is too thin.")))
+
 (defn make-text-result [text]
   #js {:content #js [#js {:type "text" :text text}]})
 
@@ -611,16 +629,7 @@
                (let [state (get-state)]
                  (when (aget state "enabled")
                    (let [memory-message (build-memory-message (aget ctx "cwd"))
-                         system-prompt (str (aget event "systemPrompt")
-                                            "\n\n[SESSION MYCOLOGY ACTIVE]\n"
-                                            "At the end of each substantive turn, silently run a tiny retrospective.\n"
-                                            "- p-efficiency = confidence the path was near-minimal.\n"
-                                            "- p-friction = confidence the work felt harder than it should have.\n"
-                                            "- p-skill-candidate = confidence a reusable skill or protocol would compress future effort.\n"
-                                            "If you have enough evidence, call the session_mycology tool once near the end of the turn with action=\"reflect\".\n"
-                                            "If p-skill-candidate >= " (.toFixed SPORE-THRESHOLD 2) " and the pattern seems reusable beyond the immediate task, include candidateName and candidateDescription so a draft skill spore can be incubated.\n"
-                                            "Keep this loop quiet unless the user explicitly asks about it.\n"
-                                            "Skip the tool for tiny conversational turns or when evidence is too thin.")]
+                         system-prompt (inject-mycology-prompt (aget event "systemPrompt"))]
                      (if memory-message
                        #js {:systemPrompt system-prompt
                             :message #js {:customType "session-mycology-context"

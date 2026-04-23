@@ -21,6 +21,7 @@
   (:require [clojure.string :as str]
             [goog.object :as gobj]
             [eta-mu.extensions.contract-runtime-v2.core :as core]
+            [eta-mu.extensions.prompt-section :as prompt-section]
             ["node:fs" :as fs]
             ["node:os" :as os]
             ["node:path" :as path]
@@ -29,6 +30,8 @@
 (def HOME (.homedir os))
 (def GLOBAL-KEY "__eta_mu_contract_runtime_v2__")
 (def STATUS-KEY "contract-runtime-v2")
+(def PROMPT-SECTION-START "<!-- eta-mu:contract-runtime-v2:start -->")
+(def PROMPT-SECTION-END "<!-- eta-mu:contract-runtime-v2:end -->")
 (def DEFAULT-TTL-MS 300000)
 (def OPMF-OUTPUT-GATE-ID "fulfillment.mindfuck.output-gate")
 
@@ -305,6 +308,12 @@
     (safe-read-text (principle-path cwd))
     (:prompt-blocks @state-atom)))
 
+(defn inject-runtime-prompt [system-prompt append]
+  (prompt-section/upsert-section system-prompt
+                                 PROMPT-SECTION-START
+                                 PROMPT-SECTION-END
+                                 append))
+
 ;; ── Extension ────────────────────────────────────────────
 
 (em/defextension contract-runtime-v2
@@ -365,7 +374,7 @@
                      sa     (get-state-atom cwd)
                      append (build-prompt-append cwd sa)]
                  (when (and (string? append) (not (str/blank? append)))
-                   #js {:systemPrompt (str (gobj/get event "systemPrompt") "\n\n" append)}))))
+                   #js {:systemPrompt (inject-runtime-prompt (gobj/get event "systemPrompt") append)}))))
 
   (em/on "session_shutdown"
     :handler (fn [_event ctx]

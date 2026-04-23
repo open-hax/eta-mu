@@ -31,6 +31,7 @@
   (:require [clojure.string :as str]
             [cljs.reader :as reader]
             [goog.object :as gobj]
+            [eta-mu.extensions.prompt-section :as prompt-section]
             ["node:fs" :as fs]
             ["node:os" :as os]
             ["node:path" :as path]))
@@ -38,6 +39,8 @@
 ;; ── Paths ──────────────────────────────────────────────────
 
 (def HOME (.homedir os))
+(def PROMPT-SECTION-START "<!-- eta-mu:opmf:start -->")
+(def PROMPT-SECTION-END "<!-- eta-mu:opmf:end -->")
 (def PI-AGENT-DIR (path/join HOME ".pi" "agent"))
 (def OPMF-DIR (path/join PI-AGENT-DIR "operation-mindfuck"))
 (def LEGACY-OPMF-DIR (path/join HOME ".config" "opencode" "operation-mindfuck"))
@@ -478,6 +481,12 @@
         (str system-prompt "\n\n" append))
       system-prompt)))
 
+(defn inject-opmf-section [system-prompt body]
+  (prompt-section/upsert-section system-prompt
+                                 PROMPT-SECTION-START
+                                 PROMPT-SECTION-END
+                                 body))
+
 ;; ── UI helpers ─────────────────────────────────────────────
 
 (defn has-ui? [ctx]
@@ -538,7 +547,7 @@
               (aset state "prose" (:prose data))
               (aset state "contractCount" (count (:contracts data)))
               ;; Return modified system prompt with RAW content
-              #js {:systemPrompt (str (aget event "systemPrompt") "\n\n" opmf)})))))
+              #js {:systemPrompt (inject-opmf-section (aget event "systemPrompt") opmf)})))))
     (catch :default e
       (js/console.log "[opmf] ERROR:" (.-message e))
       nil)))
