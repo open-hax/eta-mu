@@ -43,6 +43,9 @@
 
 (def DEFAULT-GRAPH-WEAVER-URL "http://127.0.0.1:8796")
 (def DEFAULT-OPENPLANNER-URL "http://127.0.0.1:7777")
+(def DEFAULT-OPENPLANNER-PROJECT "devel")
+(def DEFAULT-OPENPLANNER-SESSION-PROJECT "knoxx-session")
+(def DEFAULT-OPENPLANNER-SOURCE "knoxx")
 (def DEFAULT-ADMIN-TOKEN nil)  ; Set via GRAPH_WEAVER_ADMIN_TOKEN env
 
 (defn graph-weaver-url []
@@ -59,8 +62,69 @@
   (or (aget js/process.env "OPENPLANNER_API_KEY")
       (aget js/process.env "KNOXX_OPENPLANNER_API_KEY")))
 
+(defn openplanner-project []
+  (or (aget js/process.env "OPENPLANNER_PROJECT")
+      (aget js/process.env "KNOXX_OPENPLANNER_PROJECT")
+      DEFAULT-OPENPLANNER-PROJECT))
+
+(defn openplanner-session-project []
+  (or (aget js/process.env "OPENPLANNER_SESSION_PROJECT")
+      (aget js/process.env "KNOXX_OPENPLANNER_SESSION_PROJECT")
+      DEFAULT-OPENPLANNER-SESSION-PROJECT))
+
+(defn openplanner-source []
+  (or (aget js/process.env "OPENPLANNER_SOURCE")
+      (aget js/process.env "KNOXX_OPENPLANNER_SOURCE")
+      DEFAULT-OPENPLANNER-SOURCE))
+
 (defn admin-token []
   (aget js/process.env "GRAPH_WEAVER_ADMIN_TOKEN"))
+
+(defn trim-trailing-slashes [value]
+  (str/replace (str (or value "")) #"/+$" ""))
+
+(defn openplanner-enabled? []
+  (and (not (str/blank? (openplanner-url)))
+       (not (str/blank? (str (or (openplanner-api-key) ""))))))
+
+(defn openplanner-headers []
+  #js {"Content-Type" "application/json"
+       "Authorization" (str "Bearer " (openplanner-api-key))})
+
+(defn openplanner-request
+  "Execute an HTTP request against OpenPlanner's REST API.
+   Returns a Promise resolving to keywordized CLJS data."
+  ([method suffix signal]
+   (openplanner-request method suffix nil signal))
+  ([method suffix body signal]
+   (if-not (openplanner-enabled?)
+     (js/Promise.reject (js/Error. "OpenPlanner is not configured"))
+     (let [opts #js {:method method
+                     :headers (openplanner-headers)
+                     :signal signal}
+           url (str (trim-trailing-slashes (openplanner-url)) suffix)]
+       (when body
+         (aset opts "body" (js/JSON.stringify (clj->js body))))
+       (-> (js/fetch url opts)
+           (.then (fn [resp]
+                    (-> (.text resp)
+                        (.then (fn [raw]
+                                 (let [text (str (or raw ""))
+                                       parsed (if (str/blank? text)
+                                                #js {}
+                                                (try
+                                                  (js/JSON.parse text)
+                                                  (catch :default _
+                                                    #js {"raw" text})))
+                                       preview (if (> (count text) 1000)
+                                                 (subs text 0 1000)
+                                                 text)]
+                                   (if (.-ok resp)
+                                     (js->clj parsed :keywordize-keys true)
+                                     (js/Promise.reject
+                                      (js/Error. (str "OpenPlanner request failed ("
+                                                      (.-status resp) "): "
+                                                      preview)))))))))))))))
 
 ;; =============================================================================
 ;; GraphQL Client
@@ -118,6 +182,48 @@
       (js/JSON.parse data-json)
       (catch :default _ nil))))
 
+(defn first-result-array [value]
+  (let [items (or value [])
+        first-item (first items)]
+    (if (sequential? first-item)
+      (vec first-item)
+      [])))
+
+(defn vector-result-hits [result]
+  (let [ids (first-result-array (:ids result))
+        docs (first-result-array (:documents result))
+        metas (first-result-array (:metadatas result))
+        distances (first-result-array (:distances result))]
+    (mapv (fn [idx id]
+            {:id id
+             :document (nth docs idx "")
+             :metadata (nth metas idx {})
+             :distance (nth distances idx nil)})
+          (range (count ids))
+          ids)))
+
+(defn preview-text [value max-chars]
+  (let [s (-> (str (or value ""))
+              (str/replace #"\s+" " ")
+              str/trim)]
+    (when (pos? (count s))
+      (if (> (count s) max-chars)
+        (str (subs s 0 max-chars) "…")
+        s))))
+
+(defn format-number [value digits]
+  (when (some? value)
+    (.toFixed (js/Number. value) digits)))
+
+(defn promise-settle [key promise]
+  (-> promise
+      (.then (fn [value]
+               {:key key :ok true :value value}))
+      (.catch (fn [err]
+                {:key key
+                 :ok false
+                 :error (or (.-message err) (str err))}))))
+
 (defn format-node [node]
   (let [id (aget node "id")
         kind (aget node "kind")
@@ -139,6 +245,92 @@
     (cond-> {:source source :target target :kind kind}
       layer (assoc :layer layer)
       data (assoc :data data))))
+
+(defn openplanner-semantic-search
+  [query limit signal]
+  (let [q (str/trim (str (or query "")))
+        k (max 1 (min 20 (or limit 6)))]
+    (if (str/blank? q)
+      (js/Promise.resolve {:query "" :mode :none :hits []})
+      (-> (openplanner-request "POST" "/v1/search/vector"
+                               {:q q
+                                :k k
+                                :project (openplanner-project)}
+                               signal)
+          (.then (fn [body]
+                   {:query q
+                    :mode :vector
+                    :hits (vector-result-hits (:result body))}))
+          (.catch (fn [_]
+                    (-> (openplanner-request "POST" "/v1/search/fts"
+                                             {:q q
+                                              :limit k
+                                              :project (openplanner-project)}
+                                             signal)
+                        (.then (fn [body]
+                                 {:query q
+                                  :mode :fts
+                                  :hits (vec (or (:rows body) []))})))))))))
+
+(defn openplanner-memory-search
+  [query limit signal]
+  (let [q (str/trim (str (or query "")))
+        k (max 1 (min 8 (or limit 4)))]
+    (if (str/blank? q)
+      (js/Promise.resolve {:query "" :mode :none :hits []})
+      (-> (openplanner-request "POST" "/v1/search/vector"
+                               {:q q
+                                :k k
+                                :source (openplanner-source)
+                                :project (openplanner-session-project)}
+                               signal)
+          (.then (fn [body]
+                   {:query q
+                    :mode :vector
+                    :hits (vector-result-hits (:result body))}))
+          (.catch (fn [_]
+                    (-> (openplanner-request "POST" "/v1/search/fts"
+                                             {:q q
+                                              :limit k
+                                              :source (openplanner-source)
+                                              :project (openplanner-session-project)}
+                                             signal)
+                        (.then (fn [body]
+                                 {:query q
+                                  :mode :fts
+                                  :hits (vec (or (:rows body) []))})))))))))
+
+(defn openplanner-graph-query
+  [query limit signal]
+  (let [q (str/trim (str (or query "")))
+        k (max 1 (min 20 (or limit 8)))]
+    (if (str/blank? q)
+      (js/Promise.resolve {:query "" :nodes [] :edges [] :clusters []})
+      (openplanner-request "POST" "/v1/graph/memory"
+                           {:q q
+                            :k k
+                            :includeText true}
+                           signal))))
+
+(defn graph-workbench-search
+  [query limit signal]
+  (let [q (str/trim (str (or query "")))]
+    (if (str/blank? q)
+      (js/Promise.resolve #js [])
+      (-> (graphql-request "
+        query SearchNodes($query: String!, $limit: Int!) {
+          searchNodes(query: $query, limit: $limit) {
+            id
+            kind
+            label
+            layer
+            dataJson
+          }
+        }"
+                           {:query q :limit limit}
+                           signal)
+          (.then (fn [data]
+                   (or (aget data "searchNodes") #js [])))))))
 
 ;; =============================================================================
 ;; Context Hydration
@@ -162,24 +354,140 @@
         (subs full-text 0 max-length)
         full-text))))
 
+(defn format-semantic-context [result]
+  (when-let [hits (seq (:hits result))]
+    (str "Semantic corpus matches:\n"
+         (str/join
+          "\n\n"
+          (map-indexed
+           (fn [idx hit]
+             (let [metadata (or (:metadata hit) {})
+                   path (or (:path hit)
+                            (:sourcePath hit)
+                            (:source_path hit)
+                            (:sourcePath metadata)
+                            (:source_path metadata)
+                            (:path metadata))
+                   title (or (:title hit) (:title metadata) (:id hit) "semantic-hit")
+                   distance (format-number (:distance hit) 3)
+                   snippet (or (preview-text (:snippet hit) 260)
+                               (preview-text (:document hit) 260)
+                               (preview-text (:text hit) 260)
+                               (preview-text (:text metadata) 260))]
+               (str (inc idx) ". " title
+                    (when distance
+                      (str " (distance=" distance ")"))
+                    (when path
+                      (str "\n   path: " path))
+                    (when snippet
+                      (str "\n   snippet: " snippet)))))
+           hits)))))
+
+(defn format-memory-context [result]
+  (when-let [hits (seq (:hits result))]
+    (str "Session memory matches:\n"
+         (str/join
+          "\n\n"
+          (map-indexed
+           (fn [idx hit]
+             (let [metadata (or (:metadata hit) {})
+                   session (or (:session hit)
+                               (:session metadata)
+                               (:conversation_id metadata)
+                               "unknown-session")
+                   role (or (:role hit) (:role metadata) "memory")
+                   snippet (or (preview-text (:snippet hit) 260)
+                               (preview-text (:document hit) 260)
+                               (preview-text (:text hit) 260)
+                               (preview-text (:text metadata) 260))]
+               (str (inc idx) ". session=" session ", role=" role
+                    (when snippet
+                      (str "\n   snippet: " snippet)))))
+           hits)))))
+
+(defn format-graph-query-context [result]
+  (when-let [nodes (seq (:nodes result))]
+    (str "Graph memory matches:\n"
+         (str/join
+          "\n\n"
+          (map-indexed
+           (fn [idx node]
+             (let [data (or (:data node) {})
+                   label (or (:label node) (:id node) "graph-node")
+                   lake (or (:lake node) "graph")
+                   node-type (or (:nodeType node) (:node_type node) (:kind node) "node")
+                   score (or (:score node) (:similarity node))
+                   score-text (format-number score 3)
+                   path (or (:path node) (:path data))
+                   url (:url data)
+                   text (or (preview-text (:text node) 240)
+                            (preview-text (:preview data) 240))]
+               (str (inc idx) ". [" lake "/" node-type "] " label
+                    (when score-text
+                      (str " (score=" score-text ")"))
+                    (str "\n   id: " (:id node))
+                    (when path
+                      (str "\n   path: " path))
+                    (when url
+                      (str "\n   url: " url))
+                    (when text
+                      (str "\n   text: " text)))))
+           nodes)))))
+
+(defn format-workbench-context [results]
+  (when (and results (pos? (alength results)))
+    (str "Graph workbench matches:\n"
+         (str/join
+          "\n"
+          (map-indexed
+           (fn [idx node]
+             (let [id (aget node "id")
+                   label (or (aget node "label") id)
+                   kind (aget node "kind")
+                   layer (aget node "layer")]
+               (str (inc idx) ". [" kind "/" layer "] " label "\n   id: " id)))
+           (js/Array.from results))))))
+
+(defn format-hydrated-context [sources max-length]
+  (let [sections (->> [(format-semantic-context (:semantic sources))
+                       (format-memory-context (:memory sources))
+                       (format-graph-query-context (:graph sources))
+                       (format-workbench-context (:workbench sources))]
+                      (remove str/blank?))]
+    (when (seq sections)
+      (let [full-text (str "Related context from OpenPlanner and graph memory:\n\n"
+                           (str/join "\n\n" sections))]
+        (if (> (count full-text) max-length)
+          (str (subs full-text 0 (max 0 (dec max-length))) "…")
+          full-text)))))
+
 (defn hydrate-context
-  "Search the graph for context related to a query and return formatted context.
-   This is used for passive context injection before tool calls."
+  "Hydrate context from the same families Knoxx uses: semantic corpus search,
+   session memory search, OpenPlanner graph memory, and Graph-Weaver search."
   [query max-nodes signal]
-  (let [gql-query "
-    query SearchNodes($query: String!, $limit: Int!) {
-      searchNodes(query: $query, limit: $limit) {
-        id
-        kind
-        label
-        layer
-        dataJson
-      }
-    }"]
-    (-> (graphql-request gql-query {:query query :limit max-nodes} signal)
-        (.then (fn [data]
-                 (when-let [nodes (aget data "searchNodes")]
-                   (format-context-for-injection nodes 4000))))
+  (let [semantic-promise (if (openplanner-enabled?)
+                           (openplanner-semantic-search query max-nodes signal)
+                           (js/Promise.resolve nil))
+        memory-promise (if (openplanner-enabled?)
+                         (openplanner-memory-search query (min max-nodes 4) signal)
+                         (js/Promise.resolve nil))
+        graph-promise (if (openplanner-enabled?)
+                        (openplanner-graph-query query max-nodes signal)
+                        (js/Promise.resolve nil))
+        workbench-promise (graph-workbench-search query max-nodes signal)]
+    (-> (js/Promise.all
+         (clj->js [(promise-settle :semantic semantic-promise)
+                   (promise-settle :memory memory-promise)
+                   (promise-settle :graph graph-promise)
+                   (promise-settle :workbench workbench-promise)]))
+        (.then (fn [results]
+                 (let [resolved (reduce (fn [acc item]
+                                          (if (:ok item)
+                                            (assoc acc (:key item) (:value item))
+                                            acc))
+                                        {}
+                                        (array-seq results))]
+                   (format-hydrated-context resolved 4000))))
         (.catch (fn [_err]
                   ;; Silently fail - context hydration is best-effort
                   nil)))))
@@ -214,21 +522,42 @@
                            layer
                            dataJson
                          }
-                       }"]
+                       }"
+                     fallback-search (fn [err-message]
+                                       (if (openplanner-enabled?)
+                                         (-> (openplanner-graph-query query limit signal)
+                                             (.then (fn [result]
+                                                      (if (seq (:nodes result))
+                                                        #js {:content #js [#js {:type "text" :text (format-graph-query-context result)}]
+                                                             :details #js {:count (count (:nodes result))
+                                                                           :query query
+                                                                           :source "openplanner-graph-memory"}}
+                                                        (if err-message
+                                                          (js/Promise.reject
+                                                           (js/Error. (str "Graph search failed: " err-message)))
+                                                          #js {:content #js [#js {:type "text" :text "No results found"}]
+                                                               :details #js {:count 0 :query query}})))))
+                                         (if err-message
+                                           (js/Promise.reject
+                                            (js/Error. (str "Graph search failed: " err-message)))
+                                           #js {:content #js [#js {:type "text" :text "No results found"}]
+                                                :details #js {:count 0 :query query}})))]
                  (when onUpdate
                    (onUpdate #js {:content #js [#js {:type "text" :text (str "Searching graph: " query "...")}]}))
                  (-> (graphql-request gql-query {:query query :limit limit} signal)
                      (.then (fn [data]
-                              (if-let [nodes (aget data "searchNodes")]
-                                (let [formatted (->> (js/Array.from nodes)
-                                                     (map format-node)
-                                                     (js/JSON.stringify nil 2))]
-                                  #js {:content #js [#js {:type "text" :text (str "Found " (alength nodes) " nodes:\n\n" formatted)}]
-                                       :details #js {:count (alength nodes) :query query}})
-                                #js {:content #js [#js {:type "text" :text "No results found"}]})))
+                              (let [nodes (or (aget data "searchNodes") #js [])]
+                                (if (pos? (alength nodes))
+                                  (let [formatted (->> (js/Array.from nodes)
+                                                       (map format-node)
+                                                       (js/JSON.stringify nil 2))]
+                                    #js {:content #js [#js {:type "text" :text (str "Found " (alength nodes) " graph workbench nodes:\n\n" formatted)}]
+                                         :details #js {:count (alength nodes)
+                                                       :query query
+                                                       :source "graph-weaver"}})
+                                  (fallback-search nil)))))
                      (.catch (fn [err]
-                               (js/Promise.reject
-                                 (js/Error. (str "Graph search failed: " (.-message err))))))))))
+                               (fallback-search (.-message err))))))))
 
   ;; ---------------------------------------------------------------------------
   ;; graph-memory-recall
