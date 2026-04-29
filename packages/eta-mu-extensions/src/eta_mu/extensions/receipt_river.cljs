@@ -259,7 +259,10 @@
                          (do (vreset! kept-one true) true))))))
         (.reverse))))
 
-(defn inject-ledger-prompt [system-prompt repos pending-reminder?]
+(defn inject-ledger-prompt
+  ([system-prompt repos pending-reminder?]
+   (inject-ledger-prompt system-prompt repos pending-reminder? nil))
+  ([system-prompt repos pending-reminder? memory-messages]
   (let [reminder (when pending-reminder?
                    "Previous turn ended with missing repo receipts. Compensate early in this turn if the work continues.")
         repo-blocks (->> repos
@@ -270,13 +273,13 @@
                                      "\n- The implicit fulfillment contract fails if a touched repo ends the turn without a receipt."
                                      "\n- Never edit past events. Never log secrets.")))
                          (str/join "\n\n"))
-        body (->> [repo-blocks reminder]
+        body (->> [repo-blocks memory-messages reminder]
                   (filter #(and (string? %) (not (str/blank? %))))
                   (str/join "\n\n"))]
     (prompt-section/upsert-section system-prompt
                                    PROMPT-SECTION-START
                                    PROMPT-SECTION-END
-                                   body)))
+                                   body))))
 
 (defn maybe-activate-ledger! [state repo-root]
   (when repo-root
@@ -622,13 +625,13 @@
                                               (str/join "\n\n"))
                          system-prompt (inject-ledger-prompt (aget event "systemPrompt")
                                                              repos
-                                                             (aget state "pendingReminder"))]
-                     (if (str/blank? memory-messages)
-                       #js {:systemPrompt system-prompt}
-                       #js {:systemPrompt system-prompt
-                            :message #js {:customType "receipt-river-context"
-                                          :content memory-messages
-                                          :display false}}))))))
+                                                             (aget state "pendingReminder")
+                                                             memory-messages)]
+                     ;; Keep recall in the idempotent system-prompt section instead of
+                     ;; adding hidden context messages every turn. Long sessions retain
+                     ;; message history, so injected messages can accumulate into
+                     ;; multi-GB branches even when later context hooks prune prompts.
+                     #js {:systemPrompt system-prompt})))))
 
   (em/on "session_shutdown"
     :handler (fn [_event ctx]
