@@ -83,7 +83,10 @@ The build system:
 6. Registers those package-root targets in host config:
    - `~/.pi/agent/settings.json` → `extensions`
    - `~/.config/opencode/opencode.jsonc` → `plugin`
-7. Creates runtime state directories under `~/.ημ/state/`
+7. Removes stale managed host copies from the old copy-deploy layout:
+   - `~/.pi/agent/extensions/cljs-<name>/`
+   - `~/.config/opencode/plugins/<name>/`
+8. Creates runtime state directories under `~/.ημ/state/`
 
 ## Usage
 

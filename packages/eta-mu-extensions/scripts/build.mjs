@@ -205,6 +205,21 @@ function cleanExt(ext) {
   rmSync(path.dirname(ext.runtimeFile), { recursive: true, force: true });
 }
 
+// ── Legacy host install cleanup ─────────────────────────────────────────────
+
+function removeLegacyHostCopies(exts) {
+  for (const ext of exts) {
+    const legacyPiDir = path.join(HOME, ".pi", "agent", "extensions", `cljs-${ext.name}`);
+    const legacyOpenCodeDir = path.join(HOME, ".config", "opencode", "plugins", ext.name);
+    for (const dir of [legacyPiDir, legacyOpenCodeDir]) {
+      if (existsSync(dir)) {
+        rmSync(dir, { recursive: true, force: true });
+        console.log(`  removed legacy host copy ${dir}`);
+      }
+    }
+  }
+}
+
 // ── Pi settings.json ───────────────────────────────────────────────────────
 
 const PI_SETTINGS = path.join(HOME, ".pi", "agent", "settings.json");
@@ -336,9 +351,12 @@ function main() {
 
   if (mode === "watch") { console.log("  watching..."); return; }
 
-  // Materialize package-root targets and register them in host configs.
+  // Materialize package-root targets, remove stale managed host copies, and
+  // register package-root wrappers in host configs.
   console.log("  materializing package-root targets...");
   for (const ext of exts) materializeExt(ext);
+  console.log("  removing legacy managed host copies...");
+  removeLegacyHostCopies(exts);
   syncPiSettings(exts);
   syncOpenCodeConfig(exts);
 
