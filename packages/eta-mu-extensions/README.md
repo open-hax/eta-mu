@@ -50,7 +50,7 @@ eta-mu-extensions/
 │       ├── state.cljc       # State management
 │       ├── event.cljc       # Event handlers
 │       └── tool.cljc        # Tool schemas
-├── scripts/build.mjs        # Manifest-driven build orchestrator
+├── scripts/build.mjs        # Manifest-driven build + host-config registration
 ├── externs/                 # Closure compiler externs
 └── .build/                  # Compiled output (generated)
 ```
@@ -64,9 +64,10 @@ are installed and where they come from. Each extension declares a source type:
 - `:github` — a file in a GitHub repository (fetched via `git archive`)
 - `:npm` — a file inside an npm package (installed via `pnpm add`)
 
-The build script reads the manifest, resolves all sources into `~/.ημ/src/`,
-then compiles and deploys. Extensions with `:tracked true` are version-controlled
-in this git repo.
+The build script reads the manifest, compiles platform-neutral extension specs,
+materializes platform wrappers under this package's `dist/` directory, then
+registers those files in host config. Extensions with `:tracked true` are
+version-controlled in this git repo.
 
 ### Build System
 
@@ -75,10 +76,14 @@ The build system:
 2. Resolves sources from local paths, GitHub repos, or npm packages
 3. Generates wrapper files with `(defn init [pi] ...)`
 4. Compiles via shadow-cljs to Node.js libraries
-5. Deploys to:
-   - `~/.pi/agent/extensions/cljs-<name>/` for pi
-   - `~/.config/opencode/plugins/<name>/` for OpenCode
-6. Creates runtime state directories under `~/.ημ/state/`
+5. Materializes package-root targets:
+   - `dist/runtime/<name>.cjs` — shared compiled runtime bundle
+   - `dist/pi/cljs-<name>/index.ts` — Pi wrapper
+   - `dist/opencode/<name>.mjs` — OpenCode wrapper
+6. Registers those package-root targets in host config:
+   - `~/.pi/agent/settings.json` → `extensions`
+   - `~/.config/opencode/opencode.jsonc` → `plugin`
+7. Creates runtime state directories under `~/.ημ/state/`
 
 ## Usage
 
