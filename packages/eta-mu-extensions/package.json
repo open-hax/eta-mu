@@ -34,5 +34,22 @@
     "contract-runtime",
     "fork-tax",
     "cybernetic-governance"
-  ]
+  ],
+  "pi": {
+    "extensions": [
+      "dist/pi/cljs-receipt-river/index.ts",
+      "dist/pi/cljs-session-mycology/index.ts",
+      "dist/pi/cljs-contract-runtime/index.ts",
+      "dist/pi/cljs-contract-runtime-v2/index.ts",
+      "dist/pi/cljs-opmf-contract-gate/index.ts",
+      "dist/pi/cljs-opencode-global-instructions/index.ts",
+      "dist/pi/cljs-bootstrap/index.ts",
+      "dist/pi/cljs-task-timing/index.ts",
+      "dist/pi/cljs-graph-memory/index.ts",
+      "dist/pi/cljs-websearch-open-hax/index.ts",
+      "dist/pi/cljs-image-render/index.ts",
+      "dist/pi/cljs-chronos/index.ts",
+      "dist/pi/cljs-custom-providers/index.ts"
+    ]
+  }
 }

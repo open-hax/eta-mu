@@ -19,7 +19,12 @@
     "install:all": "pnpm install && pnpm --recursive install"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@biomejs/biome": "2.3.5",
+    "@typescript/native-preview": "7.0.0-dev.20260120.1",
+    "concurrently": "^8.2.2",
+    "shx": "^0.4.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   },
   "packageManager": "pnpm@10.14.0"
 }
