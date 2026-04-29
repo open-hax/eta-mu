@@ -385,20 +385,25 @@
                          (do (vreset! kept-one true) true))))))
         (.reverse))))
 
-(defn inject-mycology-prompt [system-prompt]
-  (prompt-section/upsert-section
-    system-prompt
-    PROMPT-SECTION-START
-    PROMPT-SECTION-END
-    (str "[SESSION MYCOLOGY ACTIVE]\n"
-         "At the end of each substantive turn, silently run a tiny retrospective.\n"
-         "- p-efficiency = confidence the path was near-minimal.\n"
-         "- p-friction = confidence the work felt harder than it should have.\n"
-         "- p-skill-candidate = confidence a reusable skill or protocol would compress future effort.\n"
-         "If you have enough evidence, call the session_mycology tool once near the end of the turn with action=\"reflect\".\n"
-         "If p-skill-candidate >= " (.toFixed SPORE-THRESHOLD 2) " and the pattern seems reusable beyond the immediate task, include candidateName and candidateDescription so a draft skill spore can be incubated.\n"
-         "Keep this loop quiet unless the user explicitly asks about it.\n"
-         "Skip the tool for tiny conversational turns or when evidence is too thin.")))
+(defn inject-mycology-prompt
+  ([system-prompt]
+   (inject-mycology-prompt system-prompt nil))
+  ([system-prompt memory-message]
+   (prompt-section/upsert-section
+     system-prompt
+     PROMPT-SECTION-START
+     PROMPT-SECTION-END
+     (str "[SESSION MYCOLOGY ACTIVE]\n"
+          "At the end of each substantive turn, silently run a tiny retrospective.\n"
+          "- p-efficiency = confidence the path was near-minimal.\n"
+          "- p-friction = confidence the work felt harder than it should have.\n"
+          "- p-skill-candidate = confidence a reusable skill or protocol would compress future effort.\n"
+          "If you have enough evidence, call the session_mycology tool once near the end of the turn with action=\"reflect\".\n"
+          "If p-skill-candidate >= " (.toFixed SPORE-THRESHOLD 2) " and the pattern seems reusable beyond the immediate task, include candidateName and candidateDescription so a draft skill spore can be incubated.\n"
+          "Keep this loop quiet unless the user explicitly asks about it.\n"
+          "Skip the tool for tiny conversational turns or when evidence is too thin."
+          (when (and (string? memory-message) (not (str/blank? memory-message)))
+            (str "\n\n" memory-message))))))
 
 (defn make-text-result [text]
   #js {:content #js [#js {:type "text" :text text}]})
@@ -629,13 +634,11 @@
                (let [state (get-state)]
                  (when (aget state "enabled")
                    (let [memory-message (build-memory-message (aget ctx "cwd"))
-                         system-prompt (inject-mycology-prompt (aget event "systemPrompt"))]
-                     (if memory-message
-                       #js {:systemPrompt system-prompt
-                            :message #js {:customType "session-mycology-context"
-                                          :content memory-message
-                                          :display false}}
-                       #js {:systemPrompt system-prompt}))))))
+                         system-prompt (inject-mycology-prompt (aget event "systemPrompt")
+                                                               memory-message)]
+                     ;; Keep recall in the idempotent system-prompt section instead of
+                     ;; appending hidden messages to the durable branch on every turn.
+                     #js {:systemPrompt system-prompt})))))
 
   (em/on "session_shutdown"
     :handler (fn [_event ctx]
