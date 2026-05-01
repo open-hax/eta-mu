@@ -75,8 +75,25 @@
        (filter #(and (= "message" (aget % "type")) (aget % "message")))
        (map #(aget % "message"))))
 
-(defn last-message-by-role [ctx role]
-  (last (filter #(= role (aget % "role")) (extract-messages ctx))))
+(defn last-message-by-role-in-array [messages role]
+  (loop [idx (dec (.-length messages))]
+    (when (>= idx 0)
+      (let [message (aget messages idx)]
+        (if (= role (aget message "role"))
+          message
+          (recur (dec idx)))))))
+
+(defn messages-source [ctx messages]
+  (cond
+    (array? messages) messages
+    (some? messages) (clj->js messages)
+    :else (clj->js (extract-messages ctx))))
+
+(defn last-message-by-role
+  ([ctx role]
+   (last-message-by-role ctx role nil))
+  ([ctx role messages]
+   (last-message-by-role-in-array (messages-source ctx messages) role)))
 
 (defn read-config []
   (try
@@ -236,11 +253,14 @@
                     "utf8")
     #js {:dir run-dir :runId run-id}))
 
-(defn validate-latest-assistant [ctx state]
+(defn validate-latest-assistant
+  ([ctx state]
+   (validate-latest-assistant ctx state nil))
+  ([ctx state messages]
   (.then (load-contract state)
     (fn [cached]
-      (let [assistant (last-message-by-role ctx "assistant")
-            user (last-message-by-role ctx "user")]
+      (let [assistant (last-message-by-role ctx "assistant" messages)
+            user (last-message-by-role ctx "user" messages)]
         (if-not assistant
           (js/Promise.resolve #js {:ok true :skip true :reason "no assistant message — agent likely ended with error"})
           (let [assistant-text (extract-text (aget assistant "content"))]
@@ -273,7 +293,7 @@
                                        :ok (:ok validation)
                                        :failureCount (count (:failures validation))
                                        :assistantMessageId (aget assistant "id")
-                                       :userMessageId (aget user "id")
+                                       :userMessageId (when user (aget user "id"))
                                        :repairAttempt (or (:attempt repair-info) 0)
                                        :bundleDir (aget bundle "dir")
                                        :contract #js {:name (:name contract)
@@ -289,11 +309,14 @@
                            :assistant assistant
                            :user user
                            :contract contract
-                           :bundle bundle})))))))))))
+                           :bundle bundle}))))))))))))
 
-(defn extract-original-user-prompt [ctx]
+(defn extract-original-user-prompt
+  ([ctx]
+   (extract-original-user-prompt ctx nil))
+  ([ctx messages]
   (try
-    (let [messages (extract-messages ctx)
+    (let [messages (js/Array.from (messages-source ctx messages))
           user-msgs (filter #(= "user" (aget % "role")) messages)]
       (reduce (fn [_ msg]
                 (let [text (extract-text (aget msg "content"))]
@@ -303,9 +326,9 @@
                     (reduced (subs text 0 (min 500 (.-length text)))))))
               nil
               (reverse user-msgs)))
-    (catch :default _ nil)))
+    (catch :default _ nil))))
 
-(defn handle-validation-result [pi ctx state result]
+(defn handle-validation-result [pi ctx state result messages]
   (set-status ctx state)
   (cond
     (aget result "skip")
@@ -332,7 +355,7 @@
                  (aget result "repairPrompt")
                  (< current-attempt max-retries))
           (let [next-attempt (inc current-attempt)
-                original-prompt (extract-original-user-prompt ctx)
+                original-prompt (extract-original-user-prompt ctx messages)
                 msg (build-repair-turn-message (aget result "repairPrompt") next-attempt max-retries original-prompt)
                 sender (sender-for pi ctx state)]
             (if sender
@@ -355,13 +378,13 @@
           (str "output-contract-gate error: " (aget state "contractError"))
           "warn"))
 
-(defn handle-agent-end [pi ctx]
+(defn handle-agent-end [pi ctx event]
   (let [state (get-state)]
     (if-not (aget (aget state "config") "enabled")
       (set-status ctx state)
-      (-> (validate-latest-assistant ctx state)
+      (-> (validate-latest-assistant ctx state (aget event "messages"))
           (.then (fn [result]
-                   (handle-validation-result pi ctx state result)))
+                   (handle-validation-result pi ctx state result (aget event "messages"))))
           (.catch (fn [error]
                     (handle-agent-end-error ctx state error)))))))
 
@@ -445,7 +468,7 @@
               :handler handle-command})
   (.call (aget pi "on") pi "session_start" (fn [_event ctx] (handle-session-start pi ctx)))
   (.call (aget pi "on") pi "before_agent_start" (fn [event _ctx] (handle-before-agent-start event)))
-  (.call (aget pi "on") pi "agent_end" (fn [_event ctx] (handle-agent-end pi ctx)))
+  (.call (aget pi "on") pi "agent_end" (fn [event ctx] (handle-agent-end pi ctx event)))
   (.call (aget pi "on") pi "session_shutdown" (fn [_event ctx] (handle-session-shutdown ctx))))
 
 (em/defextension opmf-contract-gate
