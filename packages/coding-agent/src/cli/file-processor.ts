@@ -3,8 +3,8 @@
  */
 
 import { access, readFile, stat } from "node:fs/promises";
-import type { AttachmentContent, AudioContent, ImageContent } from "@mariozechner/pi-ai";
-import { audioFormatFromMimeType } from "@mariozechner/pi-ai";
+import type { AttachmentContent, AudioContent, ImageContent } from "@open-hax/eta-mu-ai";
+import { audioFormatFromMimeType } from "@open-hax/eta-mu-ai";
 import chalk from "chalk";
 import { resolve } from "path";
 import { resolveReadPath } from "../core/tools/path-utils.js";

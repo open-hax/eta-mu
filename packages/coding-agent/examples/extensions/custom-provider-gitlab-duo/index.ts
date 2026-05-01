@@ -20,8 +20,8 @@ import {
 	type SimpleStreamOptions,
 	streamSimpleAnthropic,
 	streamSimpleOpenAIResponses,
-} from "@mariozechner/pi-ai";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+} from "@open-hax/eta-mu-ai";
+import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
 
 // =============================================================================
 // Constants

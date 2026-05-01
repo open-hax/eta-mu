@@ -3,6 +3,11 @@
   "version": "0.2.0",
   "description": "Constitutional layer runtime extensions for cybernetic governance. Source of receipt-river, session-mycology, contract-runtime, fork-tax, and other eta-mu primitives.",
   "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "manifest.edn"
+  ],
   "scripts": {
     "build": "node scripts/build.mjs release",
     "watch": "node scripts/build.mjs watch",

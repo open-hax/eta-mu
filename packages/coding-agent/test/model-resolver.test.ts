@@ -1,4 +1,4 @@
-import type { Model } from "@mariozechner/pi-ai";
+import type { Model } from "@open-hax/eta-mu-ai";
 import { describe, expect, test } from "vitest";
 import {
 	defaultModelPerProvider,

@@ -17,9 +17,9 @@
  * separate variables. Only the agent cursor is ever exposed to the agent.
  */
 
-import { StringEnum } from "@mariozechner/pi-ai";
-import type { ExtensionAPI, ExtensionContext, Theme, ToolExecutionMode } from "@mariozechner/pi-coding-agent";
-import { type Component, matchesKey, Text, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import { StringEnum } from "@open-hax/eta-mu-ai";
+import type { ExtensionAPI, ExtensionContext, Theme, ToolExecutionMode } from "@open-hax/eta-mu-coding-agent";
+import { type Component, matchesKey, Text, truncateToWidth, visibleWidth } from "@open-hax/eta-mu-tui";
 import { Type } from "typebox";
 
 // Thrown from the tool on illegal actions. The agent runtime surfaces thrown

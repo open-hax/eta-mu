@@ -1,5 +1,5 @@
-import type { AgentMessage, ThinkingLevel } from "@mariozechner/pi-agent-core";
-import type { Model } from "@mariozechner/pi-ai";
+import type { AgentMessage, ThinkingLevel } from "@open-hax/eta-mu-agent-core";
+import type { Model } from "@open-hax/eta-mu-ai";
 
 /**
  * Transaction interface for atomic operations across stores.

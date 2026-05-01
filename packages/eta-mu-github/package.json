@@ -19,8 +19,8 @@
   },
   "dependencies": {
     "@eta-mu/runtime": "workspace:*",
-    "@mariozechner/pi-ai": "^0.58.0",
-    "@mariozechner/pi-coding-agent": "^0.58.0",
+    "@open-hax/eta-mu-ai": "workspace:*",
+    "@open-hax/eta-mu-coding-agent": "workspace:*",
     "@octokit/rest": "^22.0.1",
     "dotenv": "^17.2.3"
   },

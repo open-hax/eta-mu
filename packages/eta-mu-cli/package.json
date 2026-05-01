@@ -16,7 +16,7 @@
     "build": "tsc -p tsconfig.json && shx chmod +x dist/cli.js"
   },
   "dependencies": {
-    "@mariozechner/pi-coding-agent": "workspace:*",
+    "@open-hax/eta-mu-coding-agent": "workspace:*",
     "@open-hax/eta-mu-extensions": "workspace:*"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
-import type { TextContent } from "@mariozechner/pi-ai";
-import type { Component } from "@mariozechner/pi-tui";
-import { Box, Container, Markdown, type MarkdownTheme, Spacer, Text } from "@mariozechner/pi-tui";
+import type { TextContent } from "@open-hax/eta-mu-ai";
+import type { Component } from "@open-hax/eta-mu-tui";
+import { Box, Container, Markdown, type MarkdownTheme, Spacer, Text } from "@open-hax/eta-mu-tui";
 import type { MessageRenderer } from "../../../core/extensions/types.js";
 import type { CustomMessage } from "../../../core/messages.js";
 import { getMarkdownTheme, theme } from "../theme/theme.js";

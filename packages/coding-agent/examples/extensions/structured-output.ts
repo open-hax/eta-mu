@@ -5,8 +5,8 @@
  * without paying for an extra follow-up LLM turn.
  */
 
-import { defineTool, type ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
+import { defineTool, type ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
+import { Text } from "@open-hax/eta-mu-tui";
 import { Type } from "typebox";
 
 interface StructuredOutputDetails {

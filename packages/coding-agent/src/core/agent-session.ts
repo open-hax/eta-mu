@@ -22,9 +22,9 @@ import type {
 	AgentState,
 	AgentTool,
 	ThinkingLevel,
-} from "@mariozechner/pi-agent-core";
-import type { AssistantMessage, AttachmentContent, ImageContent, InputContent, Message, Model, TextContent } from "@mariozechner/pi-ai";
-import { isContextOverflow, modelsAreEqual, resetApiProviders, supportsXhigh } from "@mariozechner/pi-ai";
+} from "@open-hax/eta-mu-agent-core";
+import type { AssistantMessage, AttachmentContent, ImageContent, InputContent, Message, Model, TextContent } from "@open-hax/eta-mu-ai";
+import { isContextOverflow, modelsAreEqual, resetApiProviders, supportsXhigh } from "@open-hax/eta-mu-ai";
 import { theme } from "../modes/interactive/theme/theme.js";
 import { stripFrontmatter } from "../utils/frontmatter.js";
 import { sleep } from "../utils/sleep.js";
