@@ -1,7 +1,7 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { renderDiff } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
+import { renderDiff } from "@open-hax/eta-mu-coding-agent";
 import { Type } from "@sinclair/typebox";
-import { Text } from "@mariozechner/pi-tui";
+import { Text } from "@open-hax/eta-mu-tui";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import * as Diff from "diff";

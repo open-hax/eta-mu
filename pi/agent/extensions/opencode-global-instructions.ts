@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
 
 const PI_OPMF_DIR = path.join(os.homedir(), ".pi", "agent", "operation-mindfuck");
 const LEGACY_OPMF_DIR = path.join(os.homedir(), ".config", "opencode", "operation-mindfuck");
