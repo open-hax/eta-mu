@@ -154,9 +154,11 @@
             (js/Promise.resolve fresh)))))))
 
 (defn parse-repair-attempt [text]
-  (when (and (string? text) (or (.startsWith text REPAIR-SENTINEL)
-                                  (.startsWith text "[[output-contract-gate repair ")))
-    (let [match (re-find #"^\[\[(?:eta-mu-opmf-)?output-contract-gate repair (\d+)/(\d+)\]\]" text)]
+  (when (and (string? text)
+             (or (.startsWith text REPAIR-SENTINEL)
+                 (.startsWith text "[[output-contract-gate repair ")
+                 (.startsWith text "[[eta-mu-opmf-output-contract-gate repair ")))
+    (let [match (re-find #"^\[\[(?:eta-mu-opmf-contract-gate|output-contract-gate|eta-mu-opmf-output-contract-gate) repair (\d+)/(\d+)\]\]" text)]
       (when match
         {:attempt (js/parseInt (nth match 1))
          :max (js/parseInt (nth match 2))}))))
