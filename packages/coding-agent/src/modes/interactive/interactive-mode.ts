@@ -3422,7 +3422,7 @@ export class InteractiveMode {
 		}
 
 		const currentText = this.editor.getExpandedText?.() ?? this.editor.getText();
-		const tmpFile = path.join(os.tmpdir(), `pi-editor-${Date.now()}.pi.md`);
+		const tmpFile = path.join(os.tmpdir(), `eta-mu-editor-${Date.now()}.eta-mu.md`);
 
 		try {
 			// Write current content to temp file
