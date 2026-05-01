@@ -1,3 +1,5 @@
+27f1d02af61d057d1c6ee28ced6444412e54e3d528abb928c3db42a2511f71ee  packages/agent/src/agent.ts
+629719c2f56c2e0dc1963bbd7c2220c6dd318902090d04e6024c4ade0d655a22  packages/agent/test/agent.test.ts
 8796ccc8753e9a9dd902de3530955f132ea629042f03249112c1120ded265b05  packages/ai/src/utils/oauth/google-gemini-cli.ts
 3479efb812c14f63819afb8b83308954c06cb9f37b297c363de7961086d3d72d  packages/ai/src/utils/oauth/google-antigravity.ts
 58603d5f20977ea89cb05ae740617e9dad978e9de5657964dc1ee825c2068740  packages/coding-agent/docs/extensions.md
@@ -7,4 +9,4 @@
 f2c7b52c0bfdb23b9dbe95eb31216fce9a527dddc6260a23af9fde93262b5efa  packages/eta-mu-extensions/src/eta_mu/contracts/core.cljs
 7f2b99257c059701a8ecf503e21d3d9678b09dfd7cea7dd060f2ae5346495735  packages/eta-mu-extensions/src/eta_mu/extensions/opmf_contract_gate.cljs
 441ba73707a8a2cb7590e248f12b0ce291a9e7b8b1bf375bbf7ca788b39d0bff  packages/eta-mu-extensions/src/eta_mu/extensions/opmf_contract_gate_test.cljs
-0f2ce213c57c08a1821728b0da8a33c2ca0951bb9a31b28b510914bc78ec60c3  receipts.edn
+d33ba84d6be866439e91d76a0eb0877efa1ff3f22062562e31fb3c80758f4c6a  receipts.edn
