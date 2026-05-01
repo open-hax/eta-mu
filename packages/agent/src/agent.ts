@@ -463,9 +463,10 @@ export class Agent {
 	}
 
 	private async handleRunFailure(error: unknown, aborted: boolean): Promise<void> {
+		const activeAssistant = this._state.streamingMessage?.role === "assistant" ? this._state.streamingMessage : undefined;
 		const failureMessage = {
 			role: "assistant",
-			content: [{ type: "text", text: "" }],
+			content: activeAssistant?.content ?? [{ type: "text", text: "" }],
 			api: this._state.model.api,
 			provider: this._state.model.provider,
 			model: this._state.model.id,
@@ -474,8 +475,12 @@ export class Agent {
 			errorMessage: error instanceof Error ? error.message : String(error),
 			timestamp: Date.now(),
 		} satisfies AgentMessage;
-		this._state.messages.push(failureMessage);
-		this._state.errorMessage = failureMessage.errorMessage;
+
+		if (!activeAssistant) {
+			await this.processEvents({ type: "message_start", message: failureMessage });
+		}
+		await this.processEvents({ type: "message_end", message: failureMessage });
+		await this.processEvents({ type: "turn_end", message: failureMessage, toolResults: [] });
 		await this.processEvents({ type: "agent_end", messages: [failureMessage] });
 	}
 
