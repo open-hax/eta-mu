@@ -55,6 +55,8 @@ import {
 	getDebugLogPath,
 	getDocsPath,
 	getShareViewerUrl,
+	getUpdateInstruction,
+	PACKAGE_NAME,
 	VERSION,
 } from "../../config.js";
 import { type AgentSession, type AgentSessionEvent, parseSkillBlock } from "../../core/agent-session.js";
@@ -3481,11 +3483,12 @@ export class InteractiveMode {
 	}
 
 	showNewVersionNotification(newVersion: string): void {
-		const action = theme.fg("accent", `${APP_NAME} update`);
-		const updateInstruction = theme.fg("muted", `New version ${newVersion} is available. Run `) + action;
+		const updateCommand = getUpdateInstruction(PACKAGE_NAME).replace(/^Run:\s*/, "");
+		const updateInstruction =
+			theme.fg("muted", `New version ${newVersion} is available. Run `) + theme.fg("accent", updateCommand);
 		const changelogUrl = theme.fg(
 			"accent",
-			"https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/CHANGELOG.md",
+			"https://github.com/open-hax/eta-mu/blob/main/packages/coding-agent/CHANGELOG.md",
 		);
 		const changelogLine = theme.fg("muted", "Changelog: ") + changelogUrl;
 
