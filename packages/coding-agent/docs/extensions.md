@@ -298,7 +298,8 @@ user sends prompt ────────────────────�
   │   │                                            │       │
   │   └─► turn_end                                 │       │
   │                                                        │
-  └─► agent_end                                            │
+  ├─► agent_end                                            │
+  └─► agent_idle                                           │
                                                            │
 user sends another prompt ◄────────────────────────────────┘
 
@@ -495,15 +496,21 @@ The `systemPromptOptions` field gives extensions access to the same structured d
 
 Inside `before_agent_start`, `event.systemPrompt` and `ctx.getSystemPrompt()` both reflect the chained system prompt as of the current handler. Later `before_agent_start` handlers can still modify it again.
 
-#### agent_start / agent_end
+#### agent_start / agent_end / agent_idle
 
-Fired once per user prompt.
+`agent_start` fires once per user prompt. `agent_end` fires when the loop has emitted its final event, but the core agent may still be settling event listeners. `agent_idle` fires after `agent_end` once the core agent is idle; use it when an extension needs to start a fresh user turn, such as an output-contract repair prompt.
 
 ```typescript
 pi.on("agent_start", async (_event, ctx) => {});
 
 pi.on("agent_end", async (event, ctx) => {
   // event.messages - messages from this prompt
+  // Do not start a new turn here; use agent_idle for that.
+});
+
+pi.on("agent_idle", async (event, ctx) => {
+  // ctx.isIdle() is true here, so a new extension-origin user turn is safe.
+  pi.sendUserMessage("Repair the previous response");
 });
 ```
 

@@ -580,6 +580,11 @@ export class AgentSession {
 			this._resolveRetry();
 			await this._checkCompaction(msg);
 		}
+
+		if (event.type === "agent_end") {
+			await this.agent.waitForIdle();
+			await this._extensionRunner.emit({ type: "agent_idle", messages: event.messages });
+		}
 	}
 
 	/** Resolve the pending retry promise */

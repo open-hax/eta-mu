@@ -636,9 +636,15 @@ export interface AgentStartEvent {
 	type: "agent_start";
 }
 
-/** Fired when an agent loop ends */
+/** Fired when an agent loop ends. The agent may not be idle until after this event settles. */
 export interface AgentEndEvent {
 	type: "agent_end";
+	messages: AgentMessage[];
+}
+
+/** Fired after an agent loop has ended and the core agent is idle. Safe for extensions to start a new user turn. */
+export interface AgentIdleEvent {
+	type: "agent_idle";
 	messages: AgentMessage[];
 }
 
@@ -947,6 +953,7 @@ export type ExtensionEvent =
 	| BeforeAgentStartEvent
 	| AgentStartEvent
 	| AgentEndEvent
+	| AgentIdleEvent
 	| TurnStartEvent
 	| TurnEndEvent
 	| MessageStartEvent
@@ -1095,6 +1102,7 @@ export interface ExtensionAPI {
 	on(event: "before_agent_start", handler: ExtensionHandler<BeforeAgentStartEvent, BeforeAgentStartEventResult>): void;
 	on(event: "agent_start", handler: ExtensionHandler<AgentStartEvent>): void;
 	on(event: "agent_end", handler: ExtensionHandler<AgentEndEvent>): void;
+	on(event: "agent_idle", handler: ExtensionHandler<AgentIdleEvent>): void;
 	on(event: "turn_start", handler: ExtensionHandler<TurnStartEvent>): void;
 	on(event: "turn_end", handler: ExtensionHandler<TurnEndEvent>): void;
 	on(event: "message_start", handler: ExtensionHandler<MessageStartEvent>): void;

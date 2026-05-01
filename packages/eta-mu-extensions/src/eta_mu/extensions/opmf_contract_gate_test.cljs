@@ -1,5 +1,6 @@
 (ns eta-mu.extensions.opmf-contract-gate-test
-  (:require [cljs.test :refer [async deftest is testing]]
+  (:require [cljs.test :refer [deftest is testing]]
+            [eta-mu.contracts.core :as contracts]
             [eta-mu.extensions.opmf-contract-gate :as gate]))
 
 (deftest parse-repair-attempt-test
@@ -50,27 +51,42 @@
                :level "warn"}]
              @notices)))))
 
+(deftest markdown-section-extraction-test
+  (testing "accepts CommonMark h2 closing hashes and ignores fenced headings"
+    (let [doc (contracts/extract-markdown-sections
+               "  ## Signal ##\nOne\n\n```markdown\n## Not a real section\n```\n\n## Evidence\nTwo")]
+      (is (= ["Signal" "Evidence"] (mapv :heading (:sections doc))))))
+  (testing "counts multiline list items semantically"
+    (is (= 3 (contracts/count-semantic-items
+              {:heading "Frames"
+               :content "- one\n- two\n- three"}))))
+  (testing "does not treat h3 headings as contract sections"
+    (let [doc (contracts/extract-markdown-sections
+               "## Signal\nText\n\n### Detail\nStill signal\n\n## Evidence\nText")]
+      (is (= ["Signal" "Evidence"] (mapv :heading (:sections doc)))))))
+
 (deftest auto-repair-delivery-mode-test
-  (testing "auto-repair is directly injected after agent_end instead of queued as steering"
-    (async done
-      (let [sent (atom [])
-            pi #js {:sendUserMessage (fn [message options]
-                                       (swap! sent conj {:message message
-                                                         :deliver-as (when options (aget options "deliverAs"))}))}
-            ctx #js {:hasUI false}
-            state #js {:config #js {:autoRepair true
-                                    :repairDelayMs 0}}
-            result #js {:ok false
-                        :repairInfo #js {:attempt 0}
-                        :repairPrompt "Repair this response"
-                        :assistant #js {:id "assistant-1"}
-                        :contract {:repair-max-retries 2}}]
-        (gate/handle-validation-result pi ctx state result #js [])
-        (js/setTimeout
-          (fn []
-            (is (= 1 (count @sent)))
-            (is (nil? (:deliver-as (first @sent))))
-            (is (re-find #"^\[\[eta-mu-opmf-contract-gate repair 1/2\]\]"
-                         (:message (first @sent))))
-            (done))
-          10)))))
+  (testing "auto-repair is queued for the agent_idle hook instead of injected as steering from agent_end"
+    (let [sent (atom [])
+          pi #js {:sendUserMessage (fn [message options]
+                                     (swap! sent conj {:message message
+                                                       :deliver-as (when options (aget options "deliverAs"))}))}
+          ctx #js {:hasUI false}
+          state (gate/get-state)
+          _ (aset state "config" #js {:autoRepair true
+                                      :repairDelayMs 0})
+          _ (aset state "pendingRepair" nil)
+          result #js {:ok false
+                      :repairInfo #js {:attempt 0}
+                      :repairPrompt "Repair this response"
+                      :assistant #js {:id "assistant-1"}
+                      :contract {:repair-max-retries 2}}]
+      (gate/handle-validation-result pi ctx state result #js [])
+      (is (= 0 (count @sent)))
+      (is (some? (aget state "pendingRepair")))
+      (gate/handle-agent-idle pi ctx #js {})
+      (is (= 1 (count @sent)))
+      (is (nil? (:deliver-as (first @sent))))
+      (is (nil? (aget state "pendingRepair")))
+      (is (re-find #"^\[\[eta-mu-opmf-contract-gate repair 1/2\]\]"
+                   (:message (first @sent)))))))

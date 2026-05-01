@@ -138,26 +138,32 @@
 ;; Markdown Extraction (functional, no atoms)
 ;; ============================================================
 
+(defn- fence-line? [line]
+  (boolean (re-matches #"^ {0,3}(```+|~~~+).*$" line)))
+
+(defn- h2-heading [line]
+  (when-let [match (re-matches #"^ {0,3}##(?:[ \t]+|$)(.*?)(?:[ \t]+#+[ \t]*)?$" line)]
+    (let [heading (str/trim (second match))]
+      (when-not (str/blank? heading)
+        heading))))
+
 (defn- accumulate-section
   "Reducer fn: accumulates sections from lines.
-   State is {:current {:heading, :lines} :completed [...]}."
-  [{:keys [current completed] :as state} line]
-  (if-let [heading-match (re-matches #"^##\s+(.+)$" line)]
-    ;; New section header found
-    (let [new-heading (str/trim (second heading-match))]
-      (if current
-        ;; Push current section to completed, start new one
-        {:current {:heading new-heading :lines []}
-         :completed (conj completed current)}
-        ;; No current section, start first one
-        {:current {:heading new-heading :lines []}
-         :completed completed}))
-    ;; Not a header line
-    (if current
-      ;; Append to current section
-      (assoc state :current (update current :lines conj line))
-      ;; No current section, ignore line
-      state)))
+   State is {:current {:heading, :lines} :completed [...] :in-code? bool}."
+  [{:keys [current completed in-code?] :as state} line]
+  (let [next-code? (if (fence-line? line) (not in-code?) in-code?)]
+    (if-let [new-heading (when-not in-code? (h2-heading line))]
+      ;; New section header found
+      (merge {:current {:heading new-heading :lines []}
+              :completed (if current (conj completed current) completed)}
+             (when next-code? {:in-code? next-code?}))
+      ;; Not a header line
+      (let [state' (assoc state :in-code? next-code?)]
+        (if current
+          ;; Append to current section
+          (assoc state' :current (update current :lines conj line))
+          ;; No current section, ignore line
+          state')))))
 
 (defn extract-markdown-sections
   "Extract sections from markdown using reduce.
@@ -165,7 +171,7 @@
   [markdown]
   (let [lines (str/split-lines markdown)
         {:keys [current completed]} (reduce accumulate-section
-                                           {:current nil :completed []}
+                                           {:current nil :completed [] :in-code? false}
                                            lines)
         ;; Add final section if exists
         all-sections (if current
@@ -179,14 +185,16 @@
 (defn count-semantic-items
   "Count semantic items in section content (paragraphs, list items)."
   [section]
-  (let [content (:content section "")
-        ;; Count bullet points and numbered items
-        list-items (count (re-seq #"^\s*[-*+]|\d+\." content))
-        ;; Count non-empty, non-heading lines
-        non-empty-lines (count (filter #(and (not (str/blank? %))
-                                             (not (re-matches #"^#" %)))
-                                       (str/split-lines content)))]
-    (max 1 (max list-items (int (/ non-empty-lines 3))))))
+  (let [content (:content section "")]
+    (if (str/blank? content)
+      0
+      (let [;; Count bullet points and numbered items across all lines
+            list-items (count (re-seq #"(?m)^\s*(?:[-*+]\s+|\d+\.\s+)" content))
+            ;; Count non-empty, non-heading lines
+            non-empty-lines (count (filter #(and (not (str/blank? %))
+                                                 (not (re-matches #"^#" %)))
+                                           (str/split-lines content)))]
+        (max 1 (max list-items (int (/ non-empty-lines 3))))))))
 
 ;; ============================================================
 ;; Validation (functional, no atoms)
