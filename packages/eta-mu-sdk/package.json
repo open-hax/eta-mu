@@ -1,6 +1,6 @@
 {
   "name": "@open-hax/eta-mu",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Eta-mu SDK barrel for the absorbed agent runtime packages.",
   "type": "module",
   "license": "GPL-3.0-or-later",
