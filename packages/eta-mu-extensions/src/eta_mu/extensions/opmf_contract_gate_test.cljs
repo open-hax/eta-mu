@@ -51,6 +51,22 @@
                :level "warn"}]
              @notices)))))
 
+(def minimal-contract
+  {:name "test-five-section-response"
+   :version "test"
+   :sections [{:id "signal" :heading "Signal" :required true :order 1}
+              {:id "evidence" :heading "Evidence" :required true :order 2}
+              {:id "frames" :heading "Frames" :required true :order 3}
+              {:id "countermoves" :heading "Countermoves" :required true :order 4}
+              {:id "next" :heading "Next" :required true :order 5}]
+   :sections-by-id {"signal" {:id "signal" :heading "Signal"}
+                    "evidence" {:id "evidence" :heading "Evidence"}
+                    "frames" {:id "frames" :heading "Frames"}
+                    "countermoves" {:id "countermoves" :heading "Countermoves"}
+                    "next" {:id "next" :heading "Next"}}
+   :rules [{:id "rule/frames-cardinality" :section-id "frames" :min 2 :max 3}
+           {:id "rule/next-exactly-one-action" :section-id "next" :exactly 1}]})
+
 (deftest markdown-section-extraction-test
   (testing "accepts CommonMark h2 closing hashes and ignores fenced headings"
     (let [doc (contracts/extract-markdown-sections
@@ -64,6 +80,20 @@
     (let [doc (contracts/extract-markdown-sections
                "## Signal\nText\n\n### Detail\nStill signal\n\n## Evidence\nText")]
       (is (= ["Signal" "Evidence"] (mapv :heading (:sections doc)))))))
+
+(deftest validation-guidance-test
+  (testing "two explicit frame bullets satisfy the deterministic checker"
+    (is (true? (:ok (contracts/validate-markdown-response
+                     minimal-contract
+                     "## Signal\nOne\n\n## Evidence\n- A\n\n## Frames\n- Frame 1: local snapshot complete.\n- Frame 2: remote push blocked.\n\n## Countermoves\n- Do not rewrite history.\n\n## Next\n- Resolve push protection.")))))
+  (testing "frame cardinality repair explains the deterministic list-item format"
+    (let [result (contracts/validate-markdown-response
+                  minimal-contract
+                  "## Signal\nOne\n\n## Evidence\n- A\n\n## Frames\nOne prose line only.\n\n## Countermoves\n- Do not rewrite history.\n\n## Next\n- Resolve push protection.")
+          prompt (contracts/compile-repair-prompt minimal-contract result)]
+      (is (false? (:ok result)))
+      (is (re-find #"checker counted 1" prompt))
+      (is (re-find #"use 2–3 markdown bullet items" prompt)))))
 
 (deftest auto-repair-delivery-mode-test
   (testing "auto-repair is queued for the agent_idle hook instead of injected as steering from agent_end"

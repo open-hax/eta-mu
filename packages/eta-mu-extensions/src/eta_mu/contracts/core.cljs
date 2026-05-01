@@ -251,21 +251,27 @@
                          {:rule-id (:id rule)
                           :section-id section-id
                           :heading (:heading section-def)
-                          :message (str "Section `" (:heading section-def) "` must have exactly " (:exactly rule) " items")})]
+                          :expected {:exactly (:exactly rule)}
+                          :actual {:count count}
+                          :message (str "Section `" (:heading section-def) "` must have exactly " (:exactly rule) " semantic item(s); checker counted " count)})]
 
                       (and (:min rule) (< count (:min rule)))
                       [(build-failure contract
                          {:rule-id (:id rule)
                           :section-id section-id
                           :heading (:heading section-def)
-                          :message (str "Section `" (:heading section-def) "` must have at least " (:min rule) " items")})]
+                          :expected {:min (:min rule) :max (:max rule)}
+                          :actual {:count count}
+                          :message (str "Section `" (:heading section-def) "` must have at least " (:min rule) " semantic item(s); checker counted " count)})]
 
                       (and (:max rule) (> count (:max rule)))
                       [(build-failure contract
                          {:rule-id (:id rule)
                           :section-id section-id
                           :heading (:heading section-def)
-                          :message (str "Section `" (:heading section-def) "` must have at most " (:max rule) " items")})]
+                          :expected {:min (:min rule) :max (:max rule)}
+                          :actual {:count count}
+                          :message (str "Section `" (:heading section-def) "` must have at most " (:max rule) " semantic item(s); checker counted " count)})]
 
                       :else []))
                   [])
@@ -293,9 +299,27 @@
    :ok (:ok result)
    :failures (:failures result)})
 
+(defn- deterministic-repair-guidance [failure]
+  (case (:rule-id failure)
+    "rule/frames-cardinality"
+    "Deterministic format: under `## Frames`, use 2–3 markdown bullet items (`- ...`) or numbered items, one frame per item. Do not use prose-only inline sentences if you need the checker to count multiple frames."
+
+    "rule/next-exactly-one-action"
+    "Deterministic format: under `## Next`, use exactly one paragraph or exactly one bullet item containing one concrete next action."
+
+    "rule/section-order"
+    "Deterministic format: use exactly these level-2 headings in order: `## Signal`, `## Evidence`, `## Frames`, `## Countermoves`, `## Next`."
+
+    "rule/required-section"
+    "Deterministic format: every required section must be present as a level-2 markdown heading, e.g. `## Signal`."
+
+    nil))
+
 (defn compile-repair-prompt
   [contract result]
   (when-not (:ok result)
     (str/join "\n\n"
       (for [failure (:failures result)]
-        (or (:message failure) (str "Violation: " (:rule-id failure)))))))
+        (str (or (:message failure) (str "Violation: " (:rule-id failure)))
+             (when-let [guidance (deterministic-repair-guidance failure)]
+               (str "\n" guidance)))))))
