@@ -1,4 +1,4 @@
-# Π Fork Tax Handoff — 2026-05-01T16:32:48Z
+# Π Fork Tax Handoff — 2026-05-01T16:40:16Z
 
 ## Scope
 - Added a core `agent_idle` extension lifecycle event after `agent_end` and core idle settlement.
@@ -7,14 +7,18 @@
 - Clarified deterministic repair prompts so counted sections prefer explicit markdown list items.
 - Rewrote local `main` history to remove hardcoded Google OAuth client constants from pushed refs.
 - Current OAuth source requires env-provided Google client credentials instead of embedded constants.
+- Fixed a silent-stop path where thrown pre-stream/provider errors emitted only `agent_end`; failures now emit assistant `message_start`/`message_end` plus `turn_end` so UI/session listeners see the error.
 
 ## Current commit
-- f2936b5fbc0b8a495c366ac0d22d6ae5df7e5e8c
+- 74cb33a7231bade29489286fa5adffd9b2a7fe74
 
 ## Verification
 - `pnpm --dir packages/eta-mu-extensions test` — passed, 65 tests / 156 assertions.
 - `pnpm --dir packages/coding-agent exec vitest --run test/suite/agent-session-queue.test.ts` — passed, 14 tests.
 - `pnpm --dir packages/ai exec tsgo -p tsconfig.build.json --noEmit` — passed.
+- `pnpm --dir packages/agent test -- --run test/agent.test.ts` — passed, 43 tests across the agent package suite.
+- `pnpm --dir packages/agent exec tsc -p tsconfig.build.json --noEmit` — passed.
+- `pnpm --dir packages/coding-agent exec vitest --run test/suite/agent-session-prompt.test.ts` — passed, 11 tests.
 - Earlier: `pnpm --dir packages/coding-agent build` — passed.
 - Earlier: `pnpm --dir packages/eta-mu-extensions build` — passed with pre-existing `task_timing.cljs` infer warnings.
 

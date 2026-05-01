@@ -1,10 +1,12 @@
 (π-state
-  (timestamp "2026-05-01T16:32:48Z")
+  (timestamp "2026-05-01T16:40:16Z")
   (repo "/home/err/devel/orgs/open-hax/eta-mu")
   (branch "main")
-  (head "f2936b5fbc0b8a495c366ac0d22d6ae5df7e5e8c")
+  (head "74cb33a7231bade29489286fa5adffd9b2a7fe74")
   (remote "origin git@github.com:open-hax/eta-mu.git")
   (owned-paths
+    "packages/agent/src/agent.ts"
+    "packages/agent/test/agent.test.ts"
     "packages/ai/src/utils/oauth/google-gemini-cli.ts"
     "packages/ai/src/utils/oauth/google-antigravity.ts"
     "packages/coding-agent/docs/extensions.md"
@@ -23,6 +25,9 @@
     (pass "pnpm --dir packages/eta-mu-extensions test" "65 tests / 156 assertions")
     (pass "pnpm --dir packages/coding-agent exec vitest --run test/suite/agent-session-queue.test.ts" "14 tests")
     (pass "pnpm --dir packages/ai exec tsgo -p tsconfig.build.json --noEmit" "typecheck passed")
+    (pass "pnpm --dir packages/agent test -- --run test/agent.test.ts" "43 tests across agent package suite")
+    (pass "pnpm --dir packages/agent exec tsc -p tsconfig.build.json --noEmit" "typecheck passed")
+    (pass "pnpm --dir packages/coding-agent exec vitest --run test/suite/agent-session-prompt.test.ts" "11 tests")
     (pass "pnpm --dir packages/coding-agent build" "earlier in turn")
     (pass "pnpm --dir packages/eta-mu-extensions build" "earlier in turn; pre-existing task_timing.cljs infer warnings"))
   (secret-remediation
@@ -30,6 +35,8 @@
     (backup-ref "backup/main-before-oauth-redaction-20260501T162901Z")
     (rewrite "git filter-repo --refs main --replace-text <tempfile>")
     (current-source "env-provided Google OAuth client credentials"))
+  (runtime-fix
+    (silent-stop "pre-stream/provider exceptions now emit assistant message lifecycle events with errorMessage"))
   (concurrent-dirt none)
   (push-status pending)
   (blockers none))
