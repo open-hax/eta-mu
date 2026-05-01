@@ -221,9 +221,11 @@
            message
            level)))
 
-(defn sender-for [pi ctx state]
+(defn sender-for [pi ctx]
+  ;; Do not cache pi/sender across session replacement or extension reload.
+  ;; eta-mu marks old extension/session contexts stale; holding one in state can
+  ;; turn a normal auto-repair into a noisy stale-context warning after reload.
   (or (aget ctx "pi")
-      (aget state "pi")
       (when (aget pi "sendUserMessage") pi)))
 
 (defn write-run-artifacts
@@ -359,7 +361,7 @@
           (let [next-attempt (inc current-attempt)
                 original-prompt (extract-original-user-prompt ctx messages)
                 msg (build-repair-turn-message (aget result "repairPrompt") next-attempt max-retries original-prompt)
-                sender (sender-for pi ctx state)]
+                sender (sender-for pi ctx)]
             (if sender
               (try
                 (let [result (.call (aget sender "sendUserMessage")
@@ -376,10 +378,12 @@
                             (str "eta-mu-opmf-contract-gate queued repair " next-attempt "/" max-retries)
                             "warn")))
                 (catch :default error
-                  (notify ctx
-                          (str "eta-mu-opmf-contract-gate repair queue failed: "
-                               (or (aget error "message") (str error)))
-                          "warn")))
+                  (let [message (or (aget error "message") (str error))]
+                    (notify ctx
+                            (if (.includes message "ctx is stale")
+                              "eta-mu-opmf-contract-gate skipped auto-repair because the session was replaced or extensions reloaded"
+                              (str "eta-mu-opmf-contract-gate repair queue failed: " message))
+                            "warn"))))
               (notify ctx "eta-mu-opmf-contract-gate repair sender unavailable" "warn")))
           (notify ctx
                   (str "eta-mu-opmf-contract-gate failed ("
@@ -447,7 +451,6 @@
 (defn handle-session-start [pi ctx]
   (let [state (get-state)]
     (aset state "config" (read-config))
-    (aset state "pi" (sender-for pi ctx state))
     (-> (load-contract state)
         (.then (fn [_]
                  (aset state "contractError" nil)
