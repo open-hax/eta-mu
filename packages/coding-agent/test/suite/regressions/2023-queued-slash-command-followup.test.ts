@@ -1,6 +1,6 @@
 import type { AgentTool } from "@open-hax/eta-mu-agent-core";
 import { fauxAssistantMessage, fauxToolCall } from "@open-hax/eta-mu-ai";
-import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-cli";
 import { Type } from "typebox";
 import { afterEach, describe, expect, it } from "vitest";
 import { createHarness, getAssistantTexts, getUserTexts, type Harness } from "../harness.js";

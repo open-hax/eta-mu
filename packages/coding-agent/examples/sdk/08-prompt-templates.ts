@@ -11,7 +11,7 @@ import {
 	getAgentDir,
 	type PromptTemplate,
 	SessionManager,
-} from "@open-hax/eta-mu-coding-agent";
+} from "@open-hax/eta-mu-cli";
 
 // Define custom templates
 const deployTemplate: PromptTemplate = {

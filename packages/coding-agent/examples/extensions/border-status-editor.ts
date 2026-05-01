@@ -3,7 +3,7 @@ import {
 	type ExtensionAPI,
 	type ExtensionContext,
 	type KeybindingsManager,
-} from "@open-hax/eta-mu-coding-agent";
+} from "@open-hax/eta-mu-cli";
 import type { Component, EditorTheme, TUI } from "@open-hax/eta-mu-tui";
 import { truncateToWidth, visibleWidth } from "@open-hax/eta-mu-tui";
 

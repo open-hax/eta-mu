@@ -9,8 +9,8 @@
  * 2. Use /tools to open the tool selector
  */
 
-import type { ExtensionAPI, ExtensionContext, ToolInfo } from "@open-hax/eta-mu-coding-agent";
-import { getSettingsListTheme } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI, ExtensionContext, ToolInfo } from "@open-hax/eta-mu-cli";
+import { getSettingsListTheme } from "@open-hax/eta-mu-cli";
 import { Container, type SettingItem, SettingsList } from "@open-hax/eta-mu-tui";
 
 // State persisted to session

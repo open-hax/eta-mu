@@ -19,7 +19,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-cli";
 
 /**
  * Recursively find all .md files in a directory

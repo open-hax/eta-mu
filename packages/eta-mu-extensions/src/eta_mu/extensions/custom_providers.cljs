@@ -1,7 +1,7 @@
 (ns eta-mu.extensions.custom-providers
   "Registers LLM provider configurations for Open Hax remote and local proxies.
 
-  Migrated from: ~/.pi/agent/extensions/custom-providers.ts"
+  Migrated from: ~/.ημ/agent/extensions/custom-providers.ts"
   (:require-macros [eta-mu.core :as em]))
 
 (defn env-or
@@ -11,7 +11,7 @@
 
 (def open-hax-base-url
   (-> (env-or "OPEN_HAX_OPENAI_PROXY_URL"
-       (env-or "OPEN_HAX_PROXY_URL" "https://proxx.big.ussy.promethean.rest"))
+              (env-or "OPEN_HAX_PROXY_URL" "http://127.0.0.1:8789"))
       (.replace #"/+$/u" "")))
 
 (def open-hax-api-base-url
@@ -21,21 +21,24 @@
 
 (def open-hax-token
   (env-or "OPEN_HAX_OPENAI_PROXY_AUTH_TOKEN"
-   (env-or "PROXY_AUTH_TOKEN"
-    (env-or "OPEN_HAX_AUTH_TOKEN" "change-me-open-hax-proxy-token"))))
+          (env-or "PROXY_AUTH_TOKEN"
+                  (env-or "PROXX_AUTH_TOKEN"
+                          (env-or "PROXX_API_KEY"
+                                  (env-or "OPEN_HAX_AUTH_TOKEN"
+                                          "change-me-open-hax-proxy-token"))))))
 
-(def open-hax-local-base-url
-  (-> (env-or "OPEN_HAX_LOCAL_PROXY_URL" "http://127.0.0.1:8789")
-      (.replace #"/+$/u" "")))
+;; (def open-hax-local-base-url
+;;   (-> (env-or "OPEN_HAX_LOCAL_PROXY_URL" "http://127.0.0.1:8789")
+;;       (.replace #"/+$/u" "")))
 
-(def open-hax-local-api-base-url
-  (if (.endsWith open-hax-local-base-url "/v1")
-    open-hax-local-base-url
-    (str open-hax-local-base-url "/v1")))
+;; (def open-hax-local-api-base-url
+;;   (if (.endsWith open-hax-local-base-url "/v1")
+;;     open-hax-local-base-url
+;;     (str open-hax-local-base-url "/v1")))
 
-(def open-hax-local-token
-  (env-or "OPEN_HAX_LOCAL_PROXY_AUTH_TOKEN"
-   (env-or "PROXY_AUTH_TOKEN" "change-me-open-hax-proxy-token")))
+;; (def open-hax-local-token
+;;   (env-or "OPEN_HAX_LOCAL_PROXY_AUTH_TOKEN"
+;;    (env-or "PROXY_AUTH_TOKEN" "change-me-open-hax-proxy-token")))
 
 (defn model [id name & {:keys [reasoning input output context-window max-tokens compat]}]
   #js {:id id
@@ -49,7 +52,10 @@
        :compat (when compat (clj->js compat))})
 
 (def gpt-models
-  #js [(model "gpt-5.4" "GPT 5.4"
+  #js [(model "gpt-5.5" "GPT 5.5"
+              :reasoning true :input ["text" "image"]
+              :context-window 1000000 :max-tokens 128000)
+       (model "gpt-5.4" "GPT 5.4"
               :reasoning true :input ["text" "image"]
               :context-window 1000000 :max-tokens 128000)
        (model "gpt-5.2" "GPT 5.2"
@@ -133,59 +139,60 @@
            :apiKey open-hax-token
            :api "openai-completions"
            :models compat-models})
-    (.call register-provider pi "open-hax-local"
-      #js {:baseUrl open-hax-local-api-base-url
-           :apiKey open-hax-local-token
-           :api "openai-responses"
-           :models gpt-models})
-    (.call register-provider pi "open-hax-local-responses"
-      #js {:baseUrl open-hax-local-api-base-url
-           :apiKey open-hax-local-token
-           :api "openai-responses"
-           :models gpt-models})
-    (.call register-provider pi "open-hax-local-completions"
-      #js {:baseUrl open-hax-local-api-base-url
-           :apiKey open-hax-local-token
-           :api "openai-completions"
-           :models (concat-model-arrays gpt-models factory-models)})
-    (.call register-provider pi "open-hax-local-compat"
-      #js {:baseUrl open-hax-local-api-base-url
-           :apiKey open-hax-local-token
-           :api "openai-completions"
-           :models (js/Array.
-                     (model "gemini-3-flash-preview" "Gemini 3 Flash Preview"
-                            :input ["text" "image"]
-                            :context-window 1048576
-                            :max-tokens 65536)
-                     (model "gemini-3-pro-preview" "Gemini 3 Pro Preview"
-                            :input ["text" "image"]
-                            :context-window 1048576
-                            :max-tokens 65536)
-                     (model "gemini-2.5-flash" "Gemini 2.5 Flash"
-                            :input ["text" "image"]
-                            :context-window 1048576
-                            :max-tokens 65536)
-                     (model "gemini-2.5-pro" "Gemini 2.5 Pro"
-                            :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
-                     (model "gemini-3.1-pro-preview" "Gemini 3.1 Pro Preview"
-                            :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
-                     (model "DeepSeek-V3.2" "DeepSeek V3.2"
-                            :input ["text"] :context-window 64000 :max-tokens 8192)
-                     (model "glm-5" "GLM 5"
-                            :reasoning true
-                            :input ["text"]
-                            :context-window 131072
-                            :max-tokens 16384
-                            :compat {:thinkingFormat "zai"})
-                     (model "glm-5.1" "GLM 5.1"
-                            :reasoning true
-                            :input ["text"]
-                            :context-window 204800
-                            :max-tokens 131072
-                            :compat {:thinkingFormat "zai"})
-                     (model "Kimi-K2.5" "Kimi K2.5"
-                            :input ["text" "image"]
-                            :context-window 262144 :max-tokens 262144))})))
+    ;; (.call register-provider pi "open-hax-local"
+    ;;   #js {:baseUrl open-hax-local-api-base-url
+    ;;        :apiKey open-hax-local-token
+    ;;        :api "openai-responses"
+    ;;        :models gpt-models})
+    ;; (.call register-provider pi "open-hax-local-responses"
+    ;;   #js {:baseUrl open-hax-local-api-base-url
+    ;;        :apiKey open-hax-local-token
+    ;;        :api "openai-responses"
+    ;;        :models gpt-models})
+    ;; (.call register-provider pi "open-hax-local-completions"
+    ;;   #js {:baseUrl open-hax-local-api-base-url
+    ;;        :apiKey open-hax-local-token
+    ;;        :api "openai-completions"
+    ;;        :models (concat-model-arrays gpt-models factory-models)})
+    ;; (.call register-provider pi "open-hax-local-compat"
+    ;;   #js {:baseUrl open-hax-local-api-base-url
+    ;;        :apiKey open-hax-local-token
+    ;;        :api "openai-completions"
+    ;;        :models (js/Array.
+    ;;                  (model "gemini-3-flash-preview" "Gemini 3 Flash Preview"
+    ;;                         :input ["text" "image"]
+    ;;                         :context-window 1048576
+    ;;                         :max-tokens 65536)
+    ;;                  (model "gemini-3-pro-preview" "Gemini 3 Pro Preview"
+    ;;                         :input ["text" "image"]
+    ;;                         :context-window 1048576
+    ;;                         :max-tokens 65536)
+    ;;                  (model "gemini-2.5-flash" "Gemini 2.5 Flash"
+    ;;                         :input ["text" "image"]
+    ;;                         :context-window 1048576
+    ;;                         :max-tokens 65536)
+    ;;                  (model "gemini-2.5-pro" "Gemini 2.5 Pro"
+    ;;                         :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
+    ;;                  (model "gemini-3.1-pro-preview" "Gemini 3.1 Pro Preview"
+    ;;                         :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
+    ;;                  (model "DeepSeek-V3.2" "DeepSeek V3.2"
+    ;;                         :input ["text"] :context-window 64000 :max-tokens 8192)
+    ;;                  (model "glm-5" "GLM 5"
+    ;;                         :reasoning true
+    ;;                         :input ["text"]
+    ;;                         :context-window 131072
+    ;;                         :max-tokens 16384
+    ;;                         :compat {:thinkingFormat "zai"})
+    ;;                  (model "glm-5.1" "GLM 5.1"
+    ;;                         :reasoning true
+    ;;                         :input ["text"]
+    ;;                         :context-window 204800
+    ;;                         :max-tokens 131072
+    ;;                         :compat {:thinkingFormat "zai"})
+    ;;                  (model "Kimi-K2.5" "Kimi K2.5"
+    ;;                         :input ["text" "image"]
+    ;;                         :context-window 262144 :max-tokens 262144))})
+    ))
 
 (em/defextension custom-providers
   :name "custom-providers"

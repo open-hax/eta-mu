@@ -5,7 +5,7 @@
  * Useful to ensure work is committed before switching context.
  */
 
-import type { ExtensionAPI, ExtensionContext } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@open-hax/eta-mu-cli";
 
 async function checkDirtyRepo(
 	pi: ExtensionAPI,

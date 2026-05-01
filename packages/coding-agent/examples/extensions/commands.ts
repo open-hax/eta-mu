@@ -10,7 +10,7 @@
  * 3. Use /commands extensions to filter by source
  */
 
-import type { ExtensionAPI, SlashCommandInfo } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI, SlashCommandInfo } from "@open-hax/eta-mu-cli";
 
 export default function commandsExtension(pi: ExtensionAPI) {
 	pi.registerCommand("commands", {

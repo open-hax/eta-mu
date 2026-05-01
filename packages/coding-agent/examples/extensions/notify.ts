@@ -8,7 +8,7 @@
  * - Windows toast: Windows Terminal (WSL)
  */
 
-import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-cli";
 
 function windowsToastScript(title: string, body: string): string {
 	const type = "Windows.UI.Notifications";

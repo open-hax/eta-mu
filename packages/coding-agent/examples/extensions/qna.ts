@@ -8,8 +8,8 @@
  */
 
 import { complete, type UserMessage } from "@open-hax/eta-mu-ai";
-import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
-import { BorderedLoader } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-cli";
+import { BorderedLoader } from "@open-hax/eta-mu-cli";
 
 const SYSTEM_PROMPT = `You are a question extractor. Given text from a conversation, extract any questions that need answering and format them for the user to fill in.
 

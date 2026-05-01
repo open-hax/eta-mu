@@ -4,7 +4,7 @@
  * Override settings using SettingsManager.
  */
 
-import { createAgentSession, SessionManager, SettingsManager } from "@open-hax/eta-mu-coding-agent";
+import { createAgentSession, SessionManager, SettingsManager } from "@open-hax/eta-mu-cli";
 
 const cwd = process.cwd();
 

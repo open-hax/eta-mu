@@ -18,7 +18,7 @@
  */
 
 import { StringEnum } from "@open-hax/eta-mu-ai";
-import type { ExtensionAPI, ExtensionContext, Theme, ToolExecutionMode } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI, ExtensionContext, Theme, ToolExecutionMode } from "@open-hax/eta-mu-cli";
 import { type Component, matchesKey, Text, truncateToWidth, visibleWidth } from "@open-hax/eta-mu-tui";
 import { Type } from "typebox";
 

@@ -2,7 +2,7 @@
  * Snake game extension - play snake with /snake command
  */
 
-import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-cli";
 import { matchesKey, visibleWidth } from "@open-hax/eta-mu-tui";
 
 const GAME_WIDTH = 40;

@@ -14,8 +14,8 @@
  */
 
 import { complete } from "@open-hax/eta-mu-ai";
-import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
-import { convertToLlm, serializeConversation } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-cli";
+import { convertToLlm, serializeConversation } from "@open-hax/eta-mu-cli";
 
 export default function (pi: ExtensionAPI) {
 	pi.on("session_before_compact", async (event, ctx) => {

@@ -45,8 +45,8 @@ import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { SandboxManager, type SandboxRuntimeConfig } from "@anthropic-ai/sandbox-runtime";
-import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
-import { type BashOperations, createBashTool, getAgentDir } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-cli";
+import { type BashOperations, createBashTool, getAgentDir } from "@open-hax/eta-mu-cli";
 
 interface SandboxConfig extends SandboxRuntimeConfig {
 	enabled?: boolean;

@@ -4,7 +4,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getAgentDir, parseFrontmatter } from "@open-hax/eta-mu-coding-agent";
+import { getAgentDir, parseFrontmatter } from "@open-hax/eta-mu-cli";
 
 export type AgentScope = "user" | "project" | "both";
 

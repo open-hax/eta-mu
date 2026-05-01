@@ -3,7 +3,7 @@
  * Uses Kitty keyboard protocol for smooth movement (press/release detection)
  */
 
-import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-cli";
 import { isKeyRelease, Key, matchesKey, visibleWidth } from "@open-hax/eta-mu-tui";
 
 const GAME_WIDTH = 60;

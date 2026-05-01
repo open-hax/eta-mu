@@ -65,9 +65,10 @@ are installed and where they come from. Each extension declares a source type:
 - `:npm` — a file inside an npm package (installed via `pnpm add`)
 
 The build script reads the manifest, compiles platform-neutral extension specs,
-materializes platform wrappers under this package's `dist/` directory, then
-registers those files in host config. Extensions with `:tracked true` are
-version-controlled in this git repo.
+and materializes platform wrappers under this package's `dist/` directory. Pi
+loads those wrappers from eta-mu's built-in package metadata; only OpenCode
+plugin targets are synchronized into host config. Extensions with `:tracked true`
+are version-controlled in this git repo.
 
 ### Build System
 
@@ -80,13 +81,13 @@ The build system:
    - `dist/runtime/<name>.cjs` — shared compiled runtime bundle
    - `dist/pi/cljs-<name>/index.ts` — Pi wrapper
    - `dist/opencode/<name>.mjs` — OpenCode wrapper
-6. Registers those package-root targets in host config:
-   - `~/.pi/agent/settings.json` → `extensions`
+6. Leaves Pi registration to eta-mu's built-in extension metadata (`package.json` → `pi.extensions`); the build does not mutate `~/.pi/agent/settings.json` or `~/.ημ/agent/settings.json`.
+7. Registers OpenCode package-root targets in host config:
    - `~/.config/opencode/opencode.jsonc` → `plugin`
-7. Removes stale managed host copies from the old copy-deploy layout:
+8. Removes stale managed host copies from the old copy-deploy layout:
    - `~/.pi/agent/extensions/cljs-<name>/`
    - `~/.config/opencode/plugins/<name>/`
-8. Creates runtime state directories under `~/.ημ/state/`
+9. Creates runtime state directories under `~/.ημ/state/`
 
 ## Usage
 
@@ -114,10 +115,8 @@ See `spec/extension-integration-plan.md` for details on porting remaining TypeSc
 | contract-runtime | CLJS | 18,197 | ✅ Ported |
 | analyze-image | CLJS | ~350 | ✅ Ported (P1) |
 | manipulate-image | CLJS | ~300 | ✅ Ported (P1) |
-| apply-patch | TS | 799 | 📋 P2 - Spec ready |
-| desktop-ops | TS | 705 | 📋 P2 - Spec ready |
-| webpage-markdown | TS | 758 | 📋 P3 - Spec ready |
-| skill-graph-aco | TS | 1,400 | 📋 P3 - Spec ready |
+| apply-patch | CLJS | ~420 | ✅ Ported |
+| skill-graph-aco | retired TS | 1,400 | Removed from `pi/agent/extensions`; static `skill_graph`/graph-memory tools are canonical until an ACO CLJS rewrite is needed |
 
 ## The ημ Layer
 

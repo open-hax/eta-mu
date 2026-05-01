@@ -3,7 +3,7 @@
  */
 
 import { Type } from "@open-hax/eta-mu-ai";
-import { defineTool, type ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
+import { defineTool, type ExtensionAPI } from "@open-hax/eta-mu-cli";
 
 const helloTool = defineTool({
 	name: "hello",

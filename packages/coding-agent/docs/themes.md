@@ -18,12 +18,14 @@ Themes are JSON files that define colors for the TUI.
 
 Pi loads themes from:
 
-- Built-in: `dark`, `light`
+- Built-in: `dark` (Monokai by default), `light`
 - Global: `~/.pi/agent/themes/*.json`
 - Project: `.pi/themes/*.json`
 - Packages: `themes/` directories or `pi.themes` entries in `package.json`
 - Settings: `themes` array with files or directories
 - CLI: `--theme <path>` (repeatable)
+
+The built-in dark theme uses the same Monokai palette shipped by `@open-hax/uxx`. The `@open-hax/uxx` package also publishes reusable palette themes through `pi.themes`; once installed as a Pi package, its terminal themes are available as `uxx-monokai`, `uxx-night-owl`, and `uxx-proxy-console`.
 
 Disable discovery with `--no-themes`.
 

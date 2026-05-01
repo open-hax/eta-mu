@@ -44,9 +44,9 @@ describe("version checks", () => {
 		const fetchMock = vi.fn(async () => Response.json({ version: "1.2.4" }));
 		vi.stubGlobal("fetch", fetchMock);
 
-		await expect(getLatestEtaMuVersion("1.2.3", { packageName: "@open-hax/eta-mu-coding-agent" })).resolves.toBe("1.2.4");
+		await expect(getLatestEtaMuVersion("1.2.3", { packageName: "@open-hax/eta-mu-cli" })).resolves.toBe("1.2.4");
 		expect(fetchMock).toHaveBeenCalledWith(
-			"https://registry.npmjs.org/@open-hax%2feta-mu-coding-agent/latest",
+			"https://registry.npmjs.org/@open-hax%2feta-mu-cli/latest",
 			expect.objectContaining({
 				headers: { accept: "application/json" },
 			}),

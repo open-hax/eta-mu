@@ -4,9 +4,16 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@open-hax/eta-mu-monorepo': 'link:'
+
 importers:
 
   .:
+    dependencies:
+      '@open-hax/eta-mu-monorepo':
+        specifier: 'link:'
+        version: 'link:'
     devDependencies:
       '@biomejs/biome':
         specifier: 2.3.5
@@ -109,6 +116,9 @@ importers:
       '@open-hax/eta-mu-ai':
         specifier: workspace:*
         version: link:../ai
+      '@open-hax/eta-mu-extensions':
+        specifier: workspace:*
+        version: link:../eta-mu-extensions
       '@open-hax/eta-mu-tui':
         specifier: workspace:*
         version: link:../tui
@@ -193,25 +203,6 @@ importers:
         specifier: ^0.3.3
         version: 0.3.3
 
-  packages/eta-mu-cli:
-    dependencies:
-      '@open-hax/eta-mu-coding-agent':
-        specifier: workspace:*
-        version: link:../coding-agent
-      '@open-hax/eta-mu-extensions':
-        specifier: workspace:*
-        version: link:../eta-mu-extensions
-    devDependencies:
-      '@types/node':
-        specifier: ^24.3.0
-        version: 24.12.2
-      shx:
-        specifier: ^0.4.0
-        version: 0.4.0
-      typescript:
-        specifier: ^5.7.3
-        version: 5.9.3
-
   packages/eta-mu-docs: {}
 
   packages/eta-mu-extensions:
@@ -232,7 +223,7 @@ importers:
 
   packages/eta-mu-extensions-e2e:
     devDependencies:
-      '@open-hax/eta-mu-coding-agent':
+      '@open-hax/eta-mu-cli':
         specifier: workspace:*
         version: link:../coding-agent
       express:
@@ -253,7 +244,7 @@ importers:
       '@open-hax/eta-mu-ai':
         specifier: workspace:*
         version: link:../ai
-      '@open-hax/eta-mu-coding-agent':
+      '@open-hax/eta-mu-cli':
         specifier: workspace:*
         version: link:../coding-agent
       dotenv:
@@ -285,28 +276,6 @@ importers:
       vitest:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@24.12.2)(lightningcss@1.32.0)
-
-  packages/eta-mu-sdk:
-    dependencies:
-      '@open-hax/eta-mu-agent-core':
-        specifier: workspace:*
-        version: link:../agent
-      '@open-hax/eta-mu-ai':
-        specifier: workspace:*
-        version: link:../ai
-      '@open-hax/eta-mu-coding-agent':
-        specifier: workspace:*
-        version: link:../coding-agent
-      '@open-hax/eta-mu-tui':
-        specifier: workspace:*
-        version: link:../tui
-    devDependencies:
-      shx:
-        specifier: ^0.4.0
-        version: 0.4.0
-      typescript:
-        specifier: ^5.7.3
-        version: 5.9.3
 
   packages/eta-mu-truth:
     dependencies:
@@ -350,7 +319,7 @@ importers:
       '@open-hax/eta-mu-ai':
         specifier: workspace:*
         version: link:../ai
-      '@open-hax/eta-mu-coding-agent':
+      '@open-hax/eta-mu-cli':
         specifier: workspace:*
         version: link:../coding-agent
       '@slack/socket-mode':

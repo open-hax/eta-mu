@@ -26,5 +26,8 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
-  "packageManager": "pnpm@10.14.0"
+  "packageManager": "pnpm@10.14.0",
+  "dependencies": {
+    "@open-hax/eta-mu-monorepo": "link:"
+  }
 }

@@ -10,7 +10,7 @@
  */
 
 import type { OAuthCredentials, OAuthLoginCallbacks } from "@open-hax/eta-mu-ai";
-import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-cli";
 
 // =============================================================================
 // Constants

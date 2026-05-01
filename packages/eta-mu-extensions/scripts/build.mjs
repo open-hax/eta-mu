@@ -4,8 +4,9 @@
  * eta-mu local build + registration script
  *
  * Compiles extensions via shadow-cljs (using the committed shadow-cljs.edn)
- * then materializes eta-mu/OpenCode target wrappers under this package's dist/ dir
- * and registers those package-root artifacts in each host config.
+ * then materializes eta-mu/OpenCode target wrappers under this package's dist/ dir.
+ * Pi consumes these from the package metadata/built-in extension list; this script
+ * must not mutate host settings.json files.
  *
  * shadow-cljs.edn is source-controlled and is NOT rewritten by this script.
  * To add an extension: add .cljs + build entry in shadow-cljs.edn + entry in manifest.edn.
@@ -17,13 +18,11 @@
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
-  lstatSync,
   mkdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
   symlinkSync,
-  unlinkSync,
 } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -145,12 +144,6 @@ function jsString(value) {
   return JSON.stringify(value);
 }
 
-function homeRelative(p) {
-  const rel = path.relative(HOME, p);
-  if (!rel.startsWith("..") && !path.isAbsolute(rel)) return `~/${rel}`;
-  return p;
-}
-
 function materializeExt(ext) {
   if (!existsSync(ext.runtimeFile)) {
     console.warn(`  warn: runtime not found for ${ext.name}, skipping target materialization`);
@@ -160,8 +153,8 @@ function materializeExt(ext) {
   mkdirSync(path.dirname(ext.runtimeCjs), { recursive: true });
   writeFileSync(ext.runtimeCjs, readFileSync(ext.runtimeFile, "utf8"), "utf8");
 
-  // eta-mu target: a tiny TypeScript wrapper. The host config points here directly;
-  // nothing is copied into a host-owned extensions directory.
+  // eta-mu target: a tiny TypeScript wrapper consumed through built-in package
+  // metadata; nothing is copied into a host-owned extensions directory.
   mkdirSync(ext.piDir, { recursive: true });
   const piRuntimeRel = path.relative(ext.piDir, ext.runtimeCjs).replaceAll(path.sep, "/");
   writeFileSync(
@@ -216,60 +209,6 @@ function removeLegacyHostCopies(exts) {
       rmSync(legacyOpenCodeDir, { recursive: true, force: true });
       console.log(`  removed legacy host copy ${legacyOpenCodeDir}`);
     }
-  }
-}
-
-// ── eta-mu settings.json ───────────────────────────────────────────────────
-
-const ETA_MU_ROOT = path.join(HOME, ".ημ");
-const ETA_MU_SETTINGS = path.join(ETA_MU_ROOT, "agent", "settings.json");
-const ETA_MU_CONVENIENCE_LINK = path.join(HOME, ".eta-mu");
-
-function ensureEtaMuRoot() {
-  if (existsSync(ETA_MU_ROOT) && lstatSync(ETA_MU_ROOT).isSymbolicLink()) {
-    unlinkSync(ETA_MU_ROOT);
-  }
-  mkdirSync(path.dirname(ETA_MU_SETTINGS), { recursive: true });
-  try {
-    if (!existsSync(ETA_MU_CONVENIENCE_LINK)) {
-      symlinkSync(path.relative(HOME, ETA_MU_ROOT), ETA_MU_CONVENIENCE_LINK, "junction");
-      console.log(`  linked ${ETA_MU_CONVENIENCE_LINK} -> ${ETA_MU_ROOT}`);
-    }
-  } catch {
-    // Convenience symlink only; never fail the build over it.
-  }
-}
-
-function syncEtaMuSettings(exts) {
-  ensureEtaMuRoot();
-  const settings = existsSync(ETA_MU_SETTINGS) ? JSON.parse(readFileSync(ETA_MU_SETTINGS, "utf8")) : {};
-  const current  = new Set(settings.extensions || []);
-  const managedNames = new Set(exts.map((ext) => ext.name));
-  let changed = false;
-  for (const ext of exts) {
-    const p = homeRelative(ext.piIndex);
-    const abs = ext.piIndex;
-    if (existsSync(abs) && !current.has(p)) {
-      current.add(p); changed = true;
-      console.log(`  registered ${p} in settings.json`);
-    }
-  }
-  // prune dead or legacy managed cljs-* entries. Unmanaged extensions are left alone.
-  for (const p of [...current]) {
-    const m = p.match(/\/cljs-([^/]+)\/index\.ts$/);
-    if (m && managedNames.has(m[1])) {
-      const expanded = expandPath(p);
-      const isPackageTarget = path.resolve(expanded).startsWith(path.join(DIST_ROOT, "pi") + path.sep);
-      if (!isPackageTarget || !existsSync(expanded)) {
-        current.delete(p); changed = true; console.log(`  pruned ${p}`);
-      }
-    }
-  }
-  if (changed) {
-    settings.extensions = [...current];
-    writeFileSync(ETA_MU_SETTINGS, JSON.stringify(settings, null, 2) + "\n", "utf8");
-  } else {
-    console.log("  settings.json up-to-date");
   }
 }
 
@@ -367,13 +306,13 @@ function main() {
 
   if (mode === "watch") { console.log("  watching..."); return; }
 
-  // Materialize package-root targets, remove stale managed host copies, and
-  // register package-root wrappers in host configs.
+  // Materialize package-root targets and remove stale managed host copies.
+  // Pi registration is intentionally omitted: eta-mu ships these as built-ins
+  // via package metadata, so build must not edit host settings.json files.
   console.log("  materializing package-root targets...");
   for (const ext of exts) materializeExt(ext);
   console.log("  removing legacy managed host copies...");
   removeLegacyHostCopies(exts);
-  syncEtaMuSettings(exts);
   syncOpenCodeConfig(exts);
 
   console.log("\neta-mu build complete:");

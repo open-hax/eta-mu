@@ -7,7 +7,7 @@
  * Usage: /status [message] - sends a status message with custom rendering
  */
 
-import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-cli";
 import { Box, Text } from "@open-hax/eta-mu-tui";
 
 export default function (pi: ExtensionAPI) {

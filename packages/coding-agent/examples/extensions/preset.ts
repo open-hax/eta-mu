@@ -41,8 +41,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Api, Model } from "@open-hax/eta-mu-ai";
-import type { ExtensionAPI, ExtensionContext } from "@open-hax/eta-mu-coding-agent";
-import { DynamicBorder, getAgentDir } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@open-hax/eta-mu-cli";
+import { DynamicBorder, getAgentDir } from "@open-hax/eta-mu-cli";
 import { Container, Key, type SelectItem, SelectList, Text } from "@open-hax/eta-mu-tui";
 
 // Preset configuration

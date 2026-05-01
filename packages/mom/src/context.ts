@@ -11,7 +11,7 @@
  */
 
 import type { UserMessage } from "@open-hax/eta-mu-ai";
-import { type SessionManager, type SessionMessageEntry, SettingsManager } from "@open-hax/eta-mu-coding-agent";
+import { type SessionManager, type SessionMessageEntry, SettingsManager } from "@open-hax/eta-mu-cli";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 

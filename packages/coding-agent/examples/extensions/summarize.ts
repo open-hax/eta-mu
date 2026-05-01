@@ -1,6 +1,6 @@
 import { complete, getModel } from "@open-hax/eta-mu-ai";
-import type { ExtensionAPI, ExtensionCommandContext } from "@open-hax/eta-mu-coding-agent";
-import { DynamicBorder, getMarkdownTheme } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext } from "@open-hax/eta-mu-cli";
+import { DynamicBorder, getMarkdownTheme } from "@open-hax/eta-mu-cli";
 import { Container, Markdown, matchesKey, Text } from "@open-hax/eta-mu-tui";
 
 type ContentBlock = {

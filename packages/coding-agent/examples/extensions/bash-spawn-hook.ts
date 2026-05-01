@@ -7,8 +7,8 @@
  *   pi -e ./bash-spawn-hook.ts
  */
 
-import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
-import { createBashTool } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-cli";
+import { createBashTool } from "@open-hax/eta-mu-cli";
 
 export default function (pi: ExtensionAPI) {
 	const cwd = process.cwd();

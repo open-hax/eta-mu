@@ -1,6 +1,6 @@
 {
   "name": "@open-hax/eta-mu-extensions",
-  "version": "0.2.2",
+  "version": "0.2.5",
   "description": "Constitutional layer runtime extensions for cybernetic governance. Source of receipt-river, session-mycology, contract-runtime, fork-tax, and other eta-mu primitives.",
   "type": "module",
   "files": [
@@ -42,6 +42,7 @@
   ],
   "pi": {
     "extensions": [
+      "dist/pi/cljs-apply-patch/index.ts",
       "dist/pi/cljs-receipt-river/index.ts",
       "dist/pi/cljs-session-mycology/index.ts",
       "dist/pi/cljs-contract-runtime/index.ts",

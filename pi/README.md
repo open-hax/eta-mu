@@ -5,7 +5,7 @@ Canonical self-contained home for the local pi agent setup.
 ## What lives here
 
 - `agent/skills/` — canonical runtime skills migrated from `~/.agents/skills`
-- `agent/extensions/` — local pi extensions
+- `agent/extensions/` — retired legacy TypeScript extension location; built-ins now live in `packages/eta-mu-extensions/src/eta_mu/extensions/*.cljs`
 - `agent/themes/` — local TUI themes
 - `agent/operation-mindfuck/` — canonical global instruction / contract files
 - `collections/opencode-skills/` — absorbed legacy `open-hax/opencode-skills` repo contents
@@ -16,7 +16,7 @@ Canonical self-contained home for the local pi agent setup.
 
 - Skills: `~/.pi/agent/skills`
 - Global instructions: `~/.pi/agent/operation-mindfuck/*.lisp`
-- Extensions: `~/.pi/agent/extensions/*.ts`
+- Built-in tools/extensions: `packages/eta-mu-extensions/src/eta_mu/extensions/*.cljs` and generated package metadata
 
 ## Legacy paths
 
@@ -29,7 +29,7 @@ These may still exist locally, but are no longer the intended source of truth:
 ## Git policy
 
 Tracked:
-- config, skills, extensions, themes, contracts, docs
+- config, skills, themes, contracts, docs
 
 Ignored:
 - auth/session data

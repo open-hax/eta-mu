@@ -103,7 +103,8 @@
            :contractPath DEFAULT-CONTRACT
            :enableGptReview false
            :gptReviewModel "gpt-5.4"
-           :maxSessionTurns 10}
+           :maxSessionTurns 10
+           :repairDelayMs 75}
       (let [parsed (.parse js/JSON (.readFileSync fs CONFIG-FILE "utf8"))]
         #js {:enabled (not= false (aget parsed "enabled"))
              :autoRepair (not= false (aget parsed "autoRepair"))
@@ -114,14 +115,16 @@
              :gptReviewModel (or (aget parsed "gptReviewModel") "gpt-5.4")
              :gptReviewBaseUrl (aget parsed "gptReviewBaseUrl")
              :gptReviewApiKey (aget parsed "gptReviewApiKey")
-             :maxSessionTurns (or (aget parsed "maxSessionTurns") 10)}))
+             :maxSessionTurns (or (aget parsed "maxSessionTurns") 10)
+             :repairDelayMs (or (aget parsed "repairDelayMs") 75)}))
     (catch :default _
       #js {:enabled true
            :autoRepair true
            :contractPath DEFAULT-CONTRACT
            :enableGptReview false
            :gptReviewModel "gpt-5.4"
-           :maxSessionTurns 10})))
+           :maxSessionTurns 10
+           :repairDelayMs 75})))
 
 (defn get-state []
   (let [g js/globalThis]
@@ -220,6 +223,11 @@
            (aget ctx "ui")
            message
            level)))
+
+(defn safe-notify [ctx message level]
+  (try
+    (notify ctx message level)
+    (catch :default _ nil)))
 
 (defn sender-for [pi ctx]
   ;; Do not cache pi/sender across session replacement or extension reload.
@@ -332,6 +340,74 @@
               (reverse user-msgs)))
     (catch :default _ nil))))
 
+(defn stale-context-message? [message]
+  (and message
+       (or (.includes message "ctx is stale")
+           (.includes message "stale after session replacement")
+           (.includes message "Do not use a captured pi or command ctx"))))
+
+(defn notify-repair-queue-error [ctx error]
+  (let [message (or (aget error "message") (str error))]
+    (safe-notify ctx
+                 (if (stale-context-message? message)
+                   "eta-mu-opmf-contract-gate skipped auto-repair because the session was replaced or extensions reloaded"
+                   (str "eta-mu-opmf-contract-gate repair queue failed: " message))
+                 "warn")))
+
+(defn agent-busy-error? [message]
+  (and (string? message)
+       (or (.includes message "already processing")
+           (.includes message "Agent is already processing")
+           (.includes message "Specify streamingBehavior"))))
+
+(declare schedule-direct-repair!)
+
+(defn handle-direct-repair-error [pi ctx state msg next-attempt max-retries retry-index error]
+  (let [message (or (aget error "message") (str error))]
+    (cond
+      (stale-context-message? message)
+      (safe-notify ctx
+                   "eta-mu-opmf-contract-gate skipped auto-repair because the session was replaced or extensions reloaded"
+                   "warn")
+
+      (and (agent-busy-error? message) (< retry-index 5))
+      (schedule-direct-repair! pi ctx state msg next-attempt max-retries (inc retry-index))
+
+      :else
+      (safe-notify ctx
+                   (str "eta-mu-opmf-contract-gate direct repair injection failed: " message)
+                   "warn"))))
+
+(defn schedule-direct-repair! [pi ctx state msg next-attempt max-retries retry-index]
+  ;; The agent core emits agent_end before the run is idle. If we call
+  ;; sendUserMessage synchronously inside the agent_end extension callback, Pi
+  ;; still considers the run active and routes the repair as a steering event.
+  ;; Defer to the next macrotask (plus a small configurable delay), then inject
+  ;; a normal user message with no deliverAs option so it starts a fresh turn.
+  (let [base-delay (or (aget (aget state "config") "repairDelayMs") 75)
+        delay (* base-delay (inc retry-index))]
+    (js/setTimeout
+      (fn []
+        (let [sender (sender-for pi ctx)]
+          (if sender
+            (try
+              (let [send-result (.call (aget sender "sendUserMessage") sender msg)]
+                (if (and send-result (aget send-result "then"))
+                  (-> send-result
+                      (.then (fn [_]
+                               (safe-notify ctx
+                                            (str "eta-mu-opmf-contract-gate injected repair " next-attempt "/" max-retries)
+                                            "warn")))
+                      (.catch (fn [error]
+                                (handle-direct-repair-error pi ctx state msg next-attempt max-retries retry-index error))))
+                  (safe-notify ctx
+                               (str "eta-mu-opmf-contract-gate injected repair " next-attempt "/" max-retries)
+                               "warn")))
+              (catch :default error
+                (handle-direct-repair-error pi ctx state msg next-attempt max-retries retry-index error)))
+            (safe-notify ctx "eta-mu-opmf-contract-gate repair sender unavailable" "warn"))))
+      delay)))
+
 (defn handle-validation-result [pi ctx state result messages]
   (set-status ctx state)
   (cond
@@ -360,31 +436,8 @@
                  (< current-attempt max-retries))
           (let [next-attempt (inc current-attempt)
                 original-prompt (extract-original-user-prompt ctx messages)
-                msg (build-repair-turn-message (aget result "repairPrompt") next-attempt max-retries original-prompt)
-                sender (sender-for pi ctx)]
-            (if sender
-              (try
-                (let [result (.call (aget sender "sendUserMessage")
-                                    sender
-                                    msg
-                                    #js {:deliverAs "followUp"})]
-                  (if (and result (aget result "then"))
-                    (.then result
-                           (fn [_]
-                             (notify ctx
-                                     (str "eta-mu-opmf-contract-gate queued repair " next-attempt "/" max-retries)
-                                     "warn")))
-                    (notify ctx
-                            (str "eta-mu-opmf-contract-gate queued repair " next-attempt "/" max-retries)
-                            "warn")))
-                (catch :default error
-                  (let [message (or (aget error "message") (str error))]
-                    (notify ctx
-                            (if (.includes message "ctx is stale")
-                              "eta-mu-opmf-contract-gate skipped auto-repair because the session was replaced or extensions reloaded"
-                              (str "eta-mu-opmf-contract-gate repair queue failed: " message))
-                            "warn"))))
-              (notify ctx "eta-mu-opmf-contract-gate repair sender unavailable" "warn")))
+                msg (build-repair-turn-message (aget result "repairPrompt") next-attempt max-retries original-prompt)]
+            (schedule-direct-repair! pi ctx state msg next-attempt max-retries 0))
           (notify ctx
                   (str "eta-mu-opmf-contract-gate failed ("
                        (count (or (some-> result (aget "report") :failures) []))

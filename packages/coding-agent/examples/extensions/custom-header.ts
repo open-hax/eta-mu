@@ -5,8 +5,8 @@
  * (logo + keybinding hints) with a custom component showing the pi mascot.
  */
 
-import type { ExtensionAPI, Theme } from "@open-hax/eta-mu-coding-agent";
-import { VERSION } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI, Theme } from "@open-hax/eta-mu-cli";
+import { VERSION } from "@open-hax/eta-mu-cli";
 
 // --- PI MASCOT ---
 // Based on pi_mascot.ts - the pi agent character

@@ -134,13 +134,15 @@ const ProviderCompatSchema = Type.Union([
 
 // Schema for custom model definition
 // Most fields are optional with sensible defaults for local models (Ollama, LM Studio, etc.)
+const ModelInputKindSchema = Type.Union([Type.Literal("text"), Type.Literal("image"), Type.Literal("audio")]);
+
 const ModelDefinitionSchema = Type.Object({
 	id: Type.String({ minLength: 1 }),
 	name: Type.Optional(Type.String({ minLength: 1 })),
 	api: Type.Optional(Type.String({ minLength: 1 })),
 	baseUrl: Type.Optional(Type.String({ minLength: 1 })),
 	reasoning: Type.Optional(Type.Boolean()),
-	input: Type.Optional(Type.Array(Type.Union([Type.Literal("text"), Type.Literal("image")]))),
+	input: Type.Optional(Type.Array(ModelInputKindSchema)),
 	cost: Type.Optional(
 		Type.Object({
 			input: Type.Number(),
@@ -159,7 +161,7 @@ const ModelDefinitionSchema = Type.Object({
 const ModelOverrideSchema = Type.Object({
 	name: Type.Optional(Type.String({ minLength: 1 })),
 	reasoning: Type.Optional(Type.Boolean()),
-	input: Type.Optional(Type.Array(Type.Union([Type.Literal("text"), Type.Literal("image")]))),
+	input: Type.Optional(Type.Array(ModelInputKindSchema)),
 	cost: Type.Optional(
 		Type.Object({
 			input: Type.Optional(Type.Number()),
