@@ -7,7 +7,7 @@
 
 import { resolve } from "node:path";
 import { createInterface } from "node:readline";
-import { type ImageContent, modelsAreEqual, supportsXhigh } from "@mariozechner/pi-ai";
+import { type AttachmentContent, type ImageContent, modelsAreEqual, supportsXhigh } from "@mariozechner/pi-ai";
 import { ProcessTerminal, setKeybindings, TUI } from "@mariozechner/pi-tui";
 import chalk from "chalk";
 import { type Args, type Mode, parseArgs, printHelp } from "./cli/args.js";
@@ -119,16 +119,18 @@ async function prepareInitialMessage(
 ): Promise<{
 	initialMessage?: string;
 	initialImages?: ImageContent[];
+	initialAttachments?: AttachmentContent[];
 }> {
 	if (parsed.fileArgs.length === 0) {
 		return buildInitialMessage({ parsed, stdinContent });
 	}
 
-	const { text, images } = await processFileArguments(parsed.fileArgs, { autoResizeImages });
+	const { text, images, attachments } = await processFileArguments(parsed.fileArgs, { autoResizeImages });
 	return buildInitialMessage({
 		parsed,
 		fileText: text,
 		fileImages: images,
+		fileAttachments: attachments,
 		stdinContent,
 	});
 }
@@ -641,7 +643,7 @@ export async function main(args: string[], options?: MainOptions) {
 	}
 	time("readPipedStdin");
 
-	const { initialMessage, initialImages } = await prepareInitialMessage(
+	const { initialMessage, initialImages, initialAttachments } = await prepareInitialMessage(
 		parsed,
 		settingsManager.getImageAutoResize(),
 		stdinContent,
@@ -693,6 +695,7 @@ export async function main(args: string[], options?: MainOptions) {
 			modelFallbackMessage,
 			initialMessage,
 			initialImages,
+			initialAttachments,
 			initialMessages: parsed.messages,
 			verbose: parsed.verbose,
 		});
@@ -720,6 +723,7 @@ export async function main(args: string[], options?: MainOptions) {
 			messages: parsed.messages,
 			initialMessage,
 			initialImages,
+			initialAttachments,
 		});
 		stopThemeWatcher();
 		restoreStdout();

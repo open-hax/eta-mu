@@ -3,7 +3,7 @@
  */
 
 import { type Content, FinishReason, FunctionCallingConfigMode, type Part } from "@google/genai";
-import type { Context, ImageContent, Model, StopReason, TextContent, Tool } from "../types.js";
+import type { AudioContent, Context, ImageContent, Model, StopReason, TextContent, Tool } from "../types.js";
 import { sanitizeSurrogates } from "../utils/sanitize-unicode.js";
 import { transformMessages } from "./transform-messages.js";
 
@@ -95,6 +95,12 @@ export function convertMessages<T extends GoogleApiType>(model: Model<T>, contex
 	};
 
 	const transformedMessages = transformMessages(context.messages, model, normalizeToolCallId);
+	const mediaToInlinePart = (mediaBlock: ImageContent | AudioContent): Part => ({
+		inlineData: {
+			mimeType: mediaBlock.mimeType,
+			data: mediaBlock.data,
+		},
+	});
 
 	for (const msg of transformedMessages) {
 		if (msg.role === "user") {
@@ -178,15 +184,19 @@ export function convertMessages<T extends GoogleApiType>(model: Model<T>, contex
 				parts,
 			});
 		} else if (msg.role === "toolResult") {
-			// Extract text and image content
+			// Extract text and multimodal content
 			const textContent = msg.content.filter((c): c is TextContent => c.type === "text");
 			const textResult = textContent.map((c) => c.text).join("\n");
 			const imageContent = model.input.includes("image")
 				? msg.content.filter((c): c is ImageContent => c.type === "image")
 				: [];
+			const audioContent = model.input.includes("audio")
+				? msg.content.filter((c): c is AudioContent => c.type === "audio")
+				: [];
+			const mediaContent = [...imageContent, ...audioContent];
 
 			const hasText = textResult.length > 0;
-			const hasImages = imageContent.length > 0;
+			const hasMedia = mediaContent.length > 0;
 
 			// Gemini 3+ models support multimodal function responses with images nested inside
 			// functionResponse.parts. Claude and other non-Gemini models behind Cloud Code Assist /
@@ -194,21 +204,16 @@ export function convertMessages<T extends GoogleApiType>(model: Model<T>, contex
 			const modelSupportsMultimodalFunctionResponse = supportsMultimodalFunctionResponse(model.id);
 
 			// Use "output" key for success, "error" key for errors as per SDK documentation
-			const responseValue = hasText ? sanitizeSurrogates(textResult) : hasImages ? "(see attached image)" : "";
+			const responseValue = hasText ? sanitizeSurrogates(textResult) : hasMedia ? "(see attached media)" : "";
 
-			const imageParts: Part[] = imageContent.map((imageBlock) => ({
-				inlineData: {
-					mimeType: imageBlock.mimeType,
-					data: imageBlock.data,
-				},
-			}));
+			const mediaParts: Part[] = mediaContent.map(mediaToInlinePart);
 
 			const includeId = requiresToolCallId(model.id);
 			const functionResponsePart: Part = {
 				functionResponse: {
 					name: msg.toolName,
 					response: msg.isError ? { error: responseValue } : { output: responseValue },
-					...(hasImages && modelSupportsMultimodalFunctionResponse && { parts: imageParts }),
+					...(hasMedia && modelSupportsMultimodalFunctionResponse && { parts: mediaParts }),
 					...(includeId ? { id: msg.toolCallId } : {}),
 				},
 			};
@@ -225,11 +230,11 @@ export function convertMessages<T extends GoogleApiType>(model: Model<T>, contex
 				});
 			}
 
-			// For Gemini < 3, add images in a separate user message
-			if (hasImages && !modelSupportsMultimodalFunctionResponse) {
+			// For Gemini < 3, add multimodal tool output in a separate user message
+			if (hasMedia && !modelSupportsMultimodalFunctionResponse) {
 				contents.push({
 					role: "user",
-					parts: [{ text: "Tool result image:" }, ...imageParts],
+					parts: [{ text: "Tool result media:" }, ...mediaParts],
 				});
 			}
 		}

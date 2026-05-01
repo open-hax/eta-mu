@@ -23,7 +23,7 @@ import type {
 	AgentTool,
 	ThinkingLevel,
 } from "@mariozechner/pi-agent-core";
-import type { AssistantMessage, ImageContent, Message, Model, TextContent } from "@mariozechner/pi-ai";
+import type { AssistantMessage, AttachmentContent, ImageContent, InputContent, Message, Model, TextContent } from "@mariozechner/pi-ai";
 import { isContextOverflow, modelsAreEqual, resetApiProviders, supportsXhigh } from "@mariozechner/pi-ai";
 import { theme } from "../modes/interactive/theme/theme.js";
 import { stripFrontmatter } from "../utils/frontmatter.js";
@@ -181,6 +181,8 @@ export interface PromptOptions {
 	expandPromptTemplates?: boolean;
 	/** Image attachments */
 	images?: ImageContent[];
+	/** Multimodal attachments (images and audio). Supersedes images when supplied. */
+	attachments?: AttachmentContent[];
 	/** When streaming, how to queue the message: "steer" (interrupt) or "followUp" (wait). Required if streaming. */
 	streamingBehavior?: "steer" | "followUp";
 	/** Source of input for extension input event handlers. Defaults to "interactive". */
@@ -958,7 +960,9 @@ export class AgentSession {
 
 			// Emit input event for extension interception (before skill/template expansion)
 			let currentText = text;
-			let currentImages = options?.images;
+			let currentAttachments = options?.attachments ?? options?.images;
+			let currentImages = currentAttachments?.filter((part): part is ImageContent => part.type === "image");
+			const currentAudio = currentAttachments?.filter((part) => part.type === "audio") ?? [];
 			if (this._extensionRunner.hasHandlers("input")) {
 				const inputResult = await this._extensionRunner.emitInput(
 					currentText,
@@ -972,6 +976,8 @@ export class AgentSession {
 				if (inputResult.action === "transform") {
 					currentText = inputResult.text;
 					currentImages = inputResult.images ?? currentImages;
+					currentAttachments = [...(currentImages ?? []), ...currentAudio];
+					if (currentAttachments.length === 0) currentAttachments = undefined;
 				}
 			}
 
@@ -1028,9 +1034,9 @@ export class AgentSession {
 			messages = [];
 
 			// Add user message
-			const userContent: (TextContent | ImageContent)[] = [{ type: "text", text: expandedText }];
-			if (currentImages) {
-				userContent.push(...currentImages);
+			const userContent: InputContent[] = [{ type: "text", text: expandedText }];
+			if (currentAttachments) {
+				userContent.push(...currentAttachments);
 			}
 			messages.push({
 				role: "user",
@@ -1192,7 +1198,7 @@ export class AgentSession {
 	private async _queueSteer(text: string, images?: ImageContent[]): Promise<void> {
 		this._steeringMessages.push(text);
 		this._emitQueueUpdate();
-		const content: (TextContent | ImageContent)[] = [{ type: "text", text }];
+		const content: InputContent[] = [{ type: "text", text }];
 		if (images) {
 			content.push(...images);
 		}
@@ -1209,7 +1215,7 @@ export class AgentSession {
 	private async _queueFollowUp(text: string, images?: ImageContent[]): Promise<void> {
 		this._followUpMessages.push(text);
 		this._emitQueueUpdate();
-		const content: (TextContent | ImageContent)[] = [{ type: "text", text }];
+		const content: InputContent[] = [{ type: "text", text }];
 		if (images) {
 			content.push(...images);
 		}
@@ -1290,34 +1296,34 @@ export class AgentSession {
 	 * @param options.deliverAs Delivery mode when streaming: "steer" or "followUp"
 	 */
 	async sendUserMessage(
-		content: string | (TextContent | ImageContent)[],
+		content: string | InputContent[],
 		options?: { deliverAs?: "steer" | "followUp" },
 	): Promise<void> {
 		// Normalize content to text string + optional images
 		let text: string;
-		let images: ImageContent[] | undefined;
+		let attachments: AttachmentContent[] | undefined;
 
 		if (typeof content === "string") {
 			text = content;
 		} else {
 			const textParts: string[] = [];
-			images = [];
+			attachments = [];
 			for (const part of content) {
 				if (part.type === "text") {
 					textParts.push(part.text);
 				} else {
-					images.push(part);
+					attachments.push(part);
 				}
 			}
 			text = textParts.join("\n");
-			if (images.length === 0) images = undefined;
+			if (attachments.length === 0) attachments = undefined;
 		}
 
 		// Use prompt() with expandPromptTemplates: false to skip command handling and template expansion
 		await this.prompt(text, {
 			expandPromptTemplates: false,
 			streamingBehavior: options?.deliverAs,
-			images,
+			attachments,
 			source: "extension",
 		});
 	}

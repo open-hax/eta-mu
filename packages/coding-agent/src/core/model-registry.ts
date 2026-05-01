@@ -286,7 +286,7 @@ function applyModelOverride(model: Model<Api>, override: ModelOverride): Model<A
 	// Simple field overrides
 	if (override.name !== undefined) result.name = override.name;
 	if (override.reasoning !== undefined) result.reasoning = override.reasoning;
-	if (override.input !== undefined) result.input = override.input as ("text" | "image")[];
+	if (override.input !== undefined) result.input = override.input as ("text" | "image" | "audio")[];
 	if (override.contextWindow !== undefined) result.contextWindow = override.contextWindow;
 	if (override.maxTokens !== undefined) result.maxTokens = override.maxTokens;
 
@@ -579,7 +579,7 @@ export class ModelRegistry {
 					provider: providerName,
 					baseUrl,
 					reasoning: modelDef.reasoning ?? false,
-					input: (modelDef.input ?? ["text"]) as ("text" | "image")[],
+					input: (modelDef.input ?? ["text"]) as ("text" | "image" | "audio")[],
 					cost: modelDef.cost ?? defaultCost,
 					contextWindow: modelDef.contextWindow ?? 128000,
 					maxTokens: modelDef.maxTokens ?? 16384,
@@ -860,7 +860,7 @@ export class ModelRegistry {
 					provider: providerName,
 					baseUrl: config.baseUrl!,
 					reasoning: modelDef.reasoning,
-					input: modelDef.input as ("text" | "image")[],
+					input: modelDef.input as ("text" | "image" | "audio")[],
 					cost: modelDef.cost,
 					contextWindow: modelDef.contextWindow,
 					maxTokens: modelDef.maxTokens,
@@ -907,7 +907,7 @@ export interface ProviderConfigInput {
 		api?: Api;
 		baseUrl?: string;
 		reasoning: boolean;
-		input: ("text" | "image")[];
+		input: ("text" | "image" | "audio")[];
 		cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
 		contextWindow: number;
 		maxTokens: number;

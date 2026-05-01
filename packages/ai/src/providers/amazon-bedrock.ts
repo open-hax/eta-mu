@@ -724,7 +724,7 @@ function convertMessages(
 						content: m.content.map((c) =>
 							c.type === "image"
 								? { image: createImageBlock(c.mimeType, c.data) }
-								: { text: sanitizeSurrogates(c.text) },
+								: { text: sanitizeSurrogates(c.type === "text" ? c.text : "(tool audio omitted: Bedrock adapter does not support audio tool results)") },
 						),
 						status: m.isError ? ToolResultStatus.ERROR : ToolResultStatus.SUCCESS,
 					},
@@ -740,7 +740,7 @@ function convertMessages(
 							content: nextMsg.content.map((c) =>
 								c.type === "image"
 									? { image: createImageBlock(c.mimeType, c.data) }
-									: { text: sanitizeSurrogates(c.text) },
+									: { text: sanitizeSurrogates(c.type === "text" ? c.text : "(tool audio omitted: Bedrock adapter does not support audio tool results)") },
 							),
 							status: nextMsg.isError ? ToolResultStatus.ERROR : ToolResultStatus.SUCCESS,
 						},

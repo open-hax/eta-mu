@@ -1,7 +1,9 @@
 import type {
 	Api,
 	AssistantMessage,
+	AudioContent,
 	ImageContent,
+	InputContent,
 	Message,
 	Model,
 	TextContent,
@@ -11,13 +13,19 @@ import type {
 
 const NON_VISION_USER_IMAGE_PLACEHOLDER = "(image omitted: model does not support images)";
 const NON_VISION_TOOL_IMAGE_PLACEHOLDER = "(tool image omitted: model does not support images)";
+const NON_AUDIO_USER_PLACEHOLDER = "(audio omitted: model does not support audio)";
+const NON_AUDIO_TOOL_PLACEHOLDER = "(tool audio omitted: model does not support audio)";
 
-function replaceImagesWithPlaceholder(content: (TextContent | ImageContent)[], placeholder: string): TextContent[] {
-	const result: TextContent[] = [];
+function replaceMediaWithPlaceholder(
+	content: InputContent[],
+	mediaType: ImageContent["type"] | AudioContent["type"],
+	placeholder: string,
+): InputContent[] {
+	const result: InputContent[] = [];
 	let previousWasPlaceholder = false;
 
 	for (const block of content) {
-		if (block.type === "image") {
+		if (block.type === mediaType) {
 			if (!previousWasPlaceholder) {
 				result.push({ type: "text", text: placeholder });
 			}
@@ -26,29 +34,41 @@ function replaceImagesWithPlaceholder(content: (TextContent | ImageContent)[], p
 		}
 
 		result.push(block);
-		previousWasPlaceholder = block.text === placeholder;
+		previousWasPlaceholder = block.type === "text" && block.text === placeholder;
 	}
 
 	return result;
 }
 
-function downgradeUnsupportedImages<TApi extends Api>(messages: Message[], model: Model<TApi>): Message[] {
-	if (model.input.includes("image")) {
-		return messages;
-	}
-
+function downgradeUnsupportedMedia<TApi extends Api>(messages: Message[], model: Model<TApi>): Message[] {
+	const supportsImages = model.input.includes("image");
+	const supportsAudio = model.input.includes("audio");
 	return messages.map((msg) => {
 		if (msg.role === "user" && Array.isArray(msg.content)) {
+			let content = msg.content;
+			if (!supportsImages) {
+				content = replaceMediaWithPlaceholder(content, "image", NON_VISION_USER_IMAGE_PLACEHOLDER);
+			}
+			if (!supportsAudio) {
+				content = replaceMediaWithPlaceholder(content, "audio", NON_AUDIO_USER_PLACEHOLDER);
+			}
 			return {
 				...msg,
-				content: replaceImagesWithPlaceholder(msg.content, NON_VISION_USER_IMAGE_PLACEHOLDER),
+				content,
 			};
 		}
 
 		if (msg.role === "toolResult") {
+			let content = msg.content;
+			if (!supportsImages) {
+				content = replaceMediaWithPlaceholder(content, "image", NON_VISION_TOOL_IMAGE_PLACEHOLDER);
+			}
+			if (!supportsAudio) {
+				content = replaceMediaWithPlaceholder(content, "audio", NON_AUDIO_TOOL_PLACEHOLDER);
+			}
 			return {
 				...msg,
-				content: replaceImagesWithPlaceholder(msg.content, NON_VISION_TOOL_IMAGE_PLACEHOLDER),
+				content,
 			};
 		}
 
@@ -68,10 +88,10 @@ export function transformMessages<TApi extends Api>(
 ): Message[] {
 	// Build a map of original tool call IDs to normalized IDs
 	const toolCallIdMap = new Map<string, string>();
-	const imageAwareMessages = downgradeUnsupportedImages(messages, model);
+	const mediaAwareMessages = downgradeUnsupportedMedia(messages, model);
 
 	// First pass: transform messages (unsupported image downgrade, thinking blocks, tool call ID normalization)
-	const transformed = imageAwareMessages.map((msg) => {
+	const transformed = mediaAwareMessages.map((msg) => {
 		// User messages pass through unchanged
 		if (msg.role === "user") {
 			return msg;

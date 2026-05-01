@@ -21,11 +21,11 @@ import type {
 	AssistantMessageEventStream,
 	Context,
 	ImageContent,
+	InputContent,
 	Model,
 	OAuthCredentials,
 	OAuthLoginCallbacks,
 	SimpleStreamOptions,
-	TextContent,
 	ToolResultMessage,
 } from "@mariozechner/pi-ai";
 import type {
@@ -373,7 +373,7 @@ export interface ReplacedSessionContext extends ExtensionCommandContext {
 	): Promise<void>;
 
 	sendUserMessage(
-		content: string | (TextContent | ImageContent)[],
+		content: string | InputContent[],
 		options?: { deliverAs?: "steer" | "followUp" },
 	): Promise<void>;
 }
@@ -824,7 +824,7 @@ interface ToolResultEventBase {
 	type: "tool_result";
 	toolCallId: string;
 	input: Record<string, unknown>;
-	content: (TextContent | ImageContent)[];
+	content: InputContent[];
 	isError: boolean;
 }
 
@@ -986,7 +986,7 @@ export interface UserBashEventResult {
 }
 
 export interface ToolResultEventResult {
-	content?: (TextContent | ImageContent)[];
+	content?: InputContent[];
 	details?: unknown;
 	isError?: boolean;
 }
@@ -1169,7 +1169,7 @@ export interface ExtensionAPI {
 	 * When the agent is streaming, use deliverAs to specify how to queue the message.
 	 */
 	sendUserMessage(
-		content: string | (TextContent | ImageContent)[],
+		content: string | InputContent[],
 		options?: { deliverAs?: "steer" | "followUp" },
 	): void;
 
@@ -1340,7 +1340,7 @@ export interface ProviderModelConfig {
 	/** Whether the model supports extended thinking. */
 	reasoning: boolean;
 	/** Supported input types. */
-	input: ("text" | "image")[];
+	input: ("text" | "image" | "audio")[];
 	/** Cost per token (for tracking, can be 0). */
 	cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
 	/** Maximum context window size in tokens. */
@@ -1388,7 +1388,7 @@ export type SendMessageHandler = <T = unknown>(
 ) => void;
 
 export type SendUserMessageHandler = (
-	content: string | (TextContent | ImageContent)[],
+	content: string | InputContent[],
 	options?: { deliverAs?: "steer" | "followUp" },
 ) => void;
 

@@ -10,6 +10,7 @@ import * as path from "node:path";
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import {
 	type AssistantMessage,
+	type AttachmentContent,
 	getProviders,
 	type ImageContent,
 	type Message,
@@ -237,6 +238,8 @@ export interface InteractiveModeOptions {
 	initialMessage?: string;
 	/** Images to attach to the initial message */
 	initialImages?: ImageContent[];
+	/** Multimodal attachments to attach to the initial message */
+	initialAttachments?: AttachmentContent[];
 	/** Additional messages to send after the initial message */
 	initialMessages?: string[];
 	/** Force verbose startup (overrides quietStartup setting) */
@@ -731,7 +734,7 @@ export class InteractiveMode {
 		});
 
 		// Show startup warnings
-		const { migratedProviders, modelFallbackMessage, initialMessage, initialImages, initialMessages } = this.options;
+		const { migratedProviders, modelFallbackMessage, initialMessage, initialImages, initialAttachments, initialMessages } = this.options;
 
 		if (migratedProviders && migratedProviders.length > 0) {
 			this.showWarning(`Migrated credentials to auth.json: ${migratedProviders.join(", ")}`);
@@ -751,7 +754,7 @@ export class InteractiveMode {
 		// Process initial messages
 		if (initialMessage) {
 			try {
-				await this.session.prompt(initialMessage, { images: initialImages });
+				await this.session.prompt(initialMessage, { images: initialImages, attachments: initialAttachments });
 			} catch (error: unknown) {
 				const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
 				this.showError(errorMessage);

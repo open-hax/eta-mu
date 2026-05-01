@@ -179,6 +179,19 @@ export interface ImageContent {
 	mimeType: string; // e.g., "image/jpeg", "image/png"
 }
 
+export type AudioFormat = "wav" | "mp3" | "flac" | "ogg" | "webm" | "m4a" | "aac";
+
+export interface AudioContent {
+	type: "audio";
+	data: string; // base64 encoded audio data
+	mimeType: string; // e.g., "audio/wav", "audio/mpeg"
+	/** Container/codec hint for providers that require a narrow format enum. */
+	format?: AudioFormat;
+}
+
+export type InputContent = TextContent | ImageContent | AudioContent;
+export type AttachmentContent = ImageContent | AudioContent;
+
 export interface ToolCall {
 	type: "toolCall";
 	id: string;
@@ -206,7 +219,7 @@ export type StopReason = "stop" | "length" | "toolUse" | "error" | "aborted";
 
 export interface UserMessage {
 	role: "user";
-	content: string | (TextContent | ImageContent)[];
+	content: string | InputContent[];
 	timestamp: number; // Unix timestamp in milliseconds
 }
 
@@ -227,7 +240,7 @@ export interface ToolResultMessage<TDetails = any> {
 	role: "toolResult";
 	toolCallId: string;
 	toolName: string;
-	content: (TextContent | ImageContent)[]; // Supports text and images
+	content: InputContent[]; // Supports text, images, and audio
 	details?: TDetails;
 	isError: boolean;
 	timestamp: number; // Unix timestamp in milliseconds
@@ -431,7 +444,7 @@ export interface Model<TApi extends Api> {
 	provider: Provider;
 	baseUrl: string;
 	reasoning: boolean;
-	input: ("text" | "image")[];
+	input: ("text" | "image" | "audio")[];
 	cost: {
 		input: number; // $/million tokens
 		output: number; // $/million tokens
