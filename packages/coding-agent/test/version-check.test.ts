@@ -1,25 +1,25 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-	checkForNewPiVersion,
+	checkForNewEtaMuVersion,
 	comparePackageVersions,
-	getLatestPiVersion,
+	getLatestEtaMuVersion,
 	isNewerPackageVersion,
 } from "../src/utils/version-check.js";
 
-const originalSkipVersionCheck = process.env.PI_SKIP_VERSION_CHECK;
-const originalOffline = process.env.PI_OFFLINE;
+const originalSkipVersionCheck = process.env.ETA_MU_SKIP_VERSION_CHECK;
+const originalOffline = process.env.ETA_MU_OFFLINE;
 
 afterEach(() => {
 	vi.unstubAllGlobals();
 	if (originalSkipVersionCheck === undefined) {
-		delete process.env.PI_SKIP_VERSION_CHECK;
+		delete process.env.ETA_MU_SKIP_VERSION_CHECK;
 	} else {
-		process.env.PI_SKIP_VERSION_CHECK = originalSkipVersionCheck;
+		process.env.ETA_MU_SKIP_VERSION_CHECK = originalSkipVersionCheck;
 	}
 	if (originalOffline === undefined) {
-		delete process.env.PI_OFFLINE;
+		delete process.env.ETA_MU_OFFLINE;
 	} else {
-		process.env.PI_OFFLINE = originalOffline;
+		process.env.ETA_MU_OFFLINE = originalOffline;
 	}
 });
 
@@ -36,32 +36,29 @@ describe("version checks", () => {
 		const fetchMock = vi.fn(async () => Response.json({ version: "1.2.3" }));
 		vi.stubGlobal("fetch", fetchMock);
 
-		await expect(checkForNewPiVersion("1.2.3")).resolves.toBeUndefined();
-		await expect(checkForNewPiVersion("1.2.2")).resolves.toBe("1.2.3");
+		await expect(checkForNewEtaMuVersion("1.2.3")).resolves.toBeUndefined();
+		await expect(checkForNewEtaMuVersion("1.2.2")).resolves.toBe("1.2.3");
 	});
 
-	it("uses the pi.dev version check api with a pi user agent", async () => {
+	it("uses the npm registry latest endpoint without attribution headers", async () => {
 		const fetchMock = vi.fn(async () => Response.json({ version: "1.2.4" }));
 		vi.stubGlobal("fetch", fetchMock);
 
-		await expect(getLatestPiVersion("1.2.3")).resolves.toBe("1.2.4");
+		await expect(getLatestEtaMuVersion("1.2.3", { packageName: "@open-hax/eta-mu-coding-agent" })).resolves.toBe("1.2.4");
 		expect(fetchMock).toHaveBeenCalledWith(
-			"https://pi.dev/api/latest-version",
+			"https://registry.npmjs.org/@open-hax%2feta-mu-coding-agent/latest",
 			expect.objectContaining({
-				headers: expect.objectContaining({
-					"User-Agent": expect.stringMatching(/^pi\/1\.2\.3 /),
-					accept: "application/json",
-				}),
+				headers: { accept: "application/json" },
 			}),
 		);
 	});
 
 	it("skips api calls when version checks are disabled", async () => {
-		process.env.PI_SKIP_VERSION_CHECK = "1";
+		process.env.ETA_MU_SKIP_VERSION_CHECK = "1";
 		const fetchMock = vi.fn();
 		vi.stubGlobal("fetch", fetchMock);
 
-		await expect(getLatestPiVersion("1.2.3")).resolves.toBeUndefined();
+		await expect(getLatestEtaMuVersion("1.2.3")).resolves.toBeUndefined();
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 });

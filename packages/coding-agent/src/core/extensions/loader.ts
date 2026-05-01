@@ -42,6 +42,14 @@ import type {
 } from "./types.js";
 
 /** Modules available to extensions via virtualModules (for compiled Bun binary) */
+const LEGACY_EXTENSION_IMPORTS: Record<string, string> = {
+	"@mariozechner/pi-agent-core": "@open-hax/eta-mu-agent-core",
+	"@mariozechner/pi-tui": "@open-hax/eta-mu-tui",
+	"@mariozechner/pi-ai": "@open-hax/eta-mu-ai",
+	"@mariozechner/pi-ai/oauth": "@open-hax/eta-mu-ai/oauth",
+	"@mariozechner/pi-coding-agent": "@open-hax/eta-mu-coding-agent",
+};
+
 const VIRTUAL_MODULES: Record<string, unknown> = {
 	typebox: _bundledTypebox,
 	"typebox/compile": _bundledTypeboxCompile,
@@ -54,6 +62,11 @@ const VIRTUAL_MODULES: Record<string, unknown> = {
 	"@open-hax/eta-mu-ai": _bundledPiAi,
 	"@open-hax/eta-mu-ai/oauth": _bundledPiAiOauth,
 	"@open-hax/eta-mu-coding-agent": _bundledPiCodingAgent,
+	"@mariozechner/pi-agent-core": _bundledPiAgentCore,
+	"@mariozechner/pi-tui": _bundledPiTui,
+	"@mariozechner/pi-ai": _bundledPiAi,
+	"@mariozechner/pi-ai/oauth": _bundledPiAiOauth,
+	"@mariozechner/pi-coding-agent": _bundledPiCodingAgent,
 };
 
 const require = createRequire(import.meta.url);
@@ -83,12 +96,22 @@ function getAliases(): Record<string, string> {
 		return fileURLToPath(import.meta.resolve(specifier));
 	};
 
+	const etaMuAgentCore = resolveWorkspaceOrImport("agent/dist/index.js", "@open-hax/eta-mu-agent-core");
+	const etaMuTui = resolveWorkspaceOrImport("tui/dist/index.js", "@open-hax/eta-mu-tui");
+	const etaMuAi = resolveWorkspaceOrImport("ai/dist/index.js", "@open-hax/eta-mu-ai");
+	const etaMuAiOauth = resolveWorkspaceOrImport("ai/dist/oauth.js", "@open-hax/eta-mu-ai/oauth");
+
 	_aliases = {
 		"@open-hax/eta-mu-coding-agent": packageIndex,
-		"@open-hax/eta-mu-agent-core": resolveWorkspaceOrImport("agent/dist/index.js", "@open-hax/eta-mu-agent-core"),
-		"@open-hax/eta-mu-tui": resolveWorkspaceOrImport("tui/dist/index.js", "@open-hax/eta-mu-tui"),
-		"@open-hax/eta-mu-ai": resolveWorkspaceOrImport("ai/dist/index.js", "@open-hax/eta-mu-ai"),
-		"@open-hax/eta-mu-ai/oauth": resolveWorkspaceOrImport("ai/dist/oauth.js", "@open-hax/eta-mu-ai/oauth"),
+		"@open-hax/eta-mu-agent-core": etaMuAgentCore,
+		"@open-hax/eta-mu-tui": etaMuTui,
+		"@open-hax/eta-mu-ai": etaMuAi,
+		"@open-hax/eta-mu-ai/oauth": etaMuAiOauth,
+		"@mariozechner/pi-coding-agent": packageIndex,
+		"@mariozechner/pi-agent-core": etaMuAgentCore,
+		"@mariozechner/pi-tui": etaMuTui,
+		"@mariozechner/pi-ai": etaMuAi,
+		"@mariozechner/pi-ai/oauth": etaMuAiOauth,
 		typebox: typeboxEntry,
 		"typebox/compile": typeboxCompileEntry,
 		"typebox/value": typeboxValueEntry,
@@ -338,7 +361,28 @@ function createExtensionAPI(
 	return api;
 }
 
+const warnedLegacyExtensionImports = new Set<string>();
+
+function warnLegacyExtensionImports(extensionPath: string): void {
+	try {
+		const source = fs.readFileSync(extensionPath, "utf-8");
+		for (const [legacySpecifier, etaMuSpecifier] of Object.entries(LEGACY_EXTENSION_IMPORTS)) {
+			if (!source.includes(legacySpecifier)) continue;
+			const key = `${extensionPath}:${legacySpecifier}`;
+			if (warnedLegacyExtensionImports.has(key)) continue;
+			warnedLegacyExtensionImports.add(key);
+			console.warn(
+				`eta-mu compatibility: extension ${extensionPath} imports ${legacySpecifier}; ` +
+					`loading ${etaMuSpecifier} instead. Please migrate the import.`,
+			);
+		}
+	} catch {
+		// Best-effort migration warning only; loading should continue.
+	}
+}
+
 async function loadExtensionModule(extensionPath: string) {
+	warnLegacyExtensionImports(extensionPath);
 	const jiti = createJiti(import.meta.url, {
 		moduleCache: false,
 		// In Bun binary: use virtualModules for bundled packages (no filesystem resolution)

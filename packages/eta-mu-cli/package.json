@@ -1,6 +1,6 @@
 {
   "name": "@open-hax/eta-mu-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Opinionated eta-mu CLI distribution for the absorbed Pi coding agent runtime.",
   "type": "module",
   "license": "GPL-3.0-or-later",
