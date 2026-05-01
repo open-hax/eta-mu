@@ -1,6 +1,6 @@
-import { getPiUserAgent } from "./pi-user-agent.js";
+import { PACKAGE_NAME } from "../config.js";
 
-const LATEST_VERSION_URL = "https://pi.dev/api/latest-version";
+const NPM_REGISTRY_URL = "https://registry.npmjs.org";
 const DEFAULT_VERSION_CHECK_TIMEOUT_MS = 10000;
 
 interface ParsedVersion {
@@ -47,15 +47,16 @@ export function isNewerPackageVersion(candidateVersion: string, currentVersion: 
 	return candidateVersion.trim() !== currentVersion.trim();
 }
 
-export async function getLatestPiVersion(
+export async function getLatestEtaMuVersion(
 	currentVersion: string,
-	options: { timeoutMs?: number } = {},
+	options: { packageName?: string; timeoutMs?: number } = {},
 ): Promise<string | undefined> {
-	if (process.env.PI_SKIP_VERSION_CHECK || process.env.PI_OFFLINE) return undefined;
+	if (process.env.ETA_MU_SKIP_VERSION_CHECK || process.env.PI_SKIP_VERSION_CHECK || process.env.ETA_MU_OFFLINE || process.env.PI_OFFLINE) return undefined;
 
-	const response = await fetch(LATEST_VERSION_URL, {
+	const packageName = options.packageName ?? PACKAGE_NAME;
+	const encodedPackageName = packageName.startsWith("@") ? packageName.replace("/", "%2f") : packageName;
+	const response = await fetch(`${NPM_REGISTRY_URL}/${encodedPackageName}/latest`, {
 		headers: {
-			"User-Agent": getPiUserAgent(currentVersion),
 			accept: "application/json",
 		},
 		signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_VERSION_CHECK_TIMEOUT_MS),
@@ -66,9 +67,11 @@ export async function getLatestPiVersion(
 	return typeof data.version === "string" && data.version.trim() ? data.version.trim() : undefined;
 }
 
-export async function checkForNewPiVersion(currentVersion: string): Promise<string | undefined> {
+export const getLatestPiVersion = getLatestEtaMuVersion;
+
+export async function checkForNewEtaMuVersion(currentVersion: string): Promise<string | undefined> {
 	try {
-		const latestVersion = await getLatestPiVersion(currentVersion);
+		const latestVersion = await getLatestEtaMuVersion(currentVersion);
 		if (latestVersion && isNewerPackageVersion(latestVersion, currentVersion)) {
 			return latestVersion;
 		}
@@ -77,3 +80,5 @@ export async function checkForNewPiVersion(currentVersion: string): Promise<stri
 		return undefined;
 	}
 }
+
+export const checkForNewPiVersion = checkForNewEtaMuVersion;

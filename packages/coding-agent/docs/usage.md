@@ -262,7 +262,6 @@ pi --tools read,grep,find,ls -p "Review the code"
 | `PI_CODING_AGENT_DIR` | Override config directory; default is `~/.pi/agent` |
 | `PI_PACKAGE_DIR` | Override package directory, useful for Nix/Guix store paths |
 | `PI_SKIP_VERSION_CHECK` | Skip version check at startup |
-| `PI_TELEMETRY` | Override install telemetry: `1`/`true`/`yes` or `0`/`false`/`no` |
 | `PI_CACHE_RETENTION` | Set to `long` for extended prompt cache where supported |
 | `VISUAL`, `EDITOR` | External editor for Ctrl+G |
 

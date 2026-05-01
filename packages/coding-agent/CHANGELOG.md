@@ -9,7 +9,6 @@
 ### Fixed
 
 - Fixed `pi update` to skip self-update reinstalls when the installed version is already current ([#3853](https://github.com/badlogic/pi-mono/issues/3853)).
-- Fixed Cloudflare Workers AI attribution headers to honor the install telemetry setting.
 - Fixed `pi update --self` detection and execution for Windows package-manager shim installs, including symlinked global package roots, and print the manual fallback command when self-update fails. ([#3857](https://github.com/badlogic/pi-mono/issues/3857))
 
 ## [0.70.5] - 2026-04-27
@@ -243,7 +242,6 @@
 - Fixed shared/exported plain-text tool output to preserve indentation instead of collapsing leading whitespace in the web share page ([#3440](https://github.com/badlogic/pi-mono/issues/3440))
 - Fixed exported share pages to use browser-safe `T` and `O` shortcuts with clickable header toggles for thinking and tool visibility instead of browser-reserved `Ctrl+T` / `Ctrl+O` bindings ([#3374](https://github.com/badlogic/pi-mono/pull/3374) by [@vekexasia](https://github.com/vekexasia))
 - Fixed skill resolution to dedupe symlinked aliases by canonical path, so `pi config` no longer shows duplicate skill entries when `~/.pi/agent/skills` points to `~/.agents/skills` ([#3417](https://github.com/badlogic/pi-mono/pull/3417) by [@rwachtler](https://github.com/rwachtler))
-- Fixed OpenRouter request attribution to include Pi app headers (`HTTP-Referer: https://pi.dev`, `X-OpenRouter-Title: pi`, `X-OpenRouter-Categories: cli-agent`) when sessions are created through the coding-agent SDK and install telemetry is enabled ([#3414](https://github.com/badlogic/pi-mono/issues/3414))
 - Fixed custom-model `compat` schema/docs to support `cacheControlFormat: "anthropic"` for OpenAI-compatible providers that expose Anthropic-style prompt caching via `cache_control` markers ([#3392](https://github.com/badlogic/pi-mono/issues/3392))
 - Fixed Cloud Code Assist tool schemas to strip JSON Schema meta-declaration keys before provider translation, avoiding validation failures for tool-enabled sessions that use `$schema`, `$defs`, and related metadata ([#3412](https://github.com/badlogic/pi-mono/pull/3412) by [@vladlearns](https://github.com/vladlearns))
 - Fixed direct Bedrock sessions to honor `model.baseUrl` as the runtime client endpoint, restoring support for custom Bedrock VPC or proxy routes ([#3402](https://github.com/badlogic/pi-mono/pull/3402) by [@wirjo](https://github.com/wirjo))
@@ -393,9 +391,7 @@
 
 ## [0.67.1] - 2026-04-13
 
-### Telemetry
 
-Interactive mode now sends a lightweight anonymous install/update telemetry ping to `https://pi.dev/install?version=x.y.z` after it writes `lastChangelogVersion` in `settings.json`.
 
 Why this exists:
 - Pi needs a reliable per-version usage signal to understand whether releases are being adopted and to help justify funding continued development.
@@ -414,10 +410,7 @@ What data is collected:
 - It does not store IP addresses, client identifiers, prompts, paths, models, auth state, or any other per-user data. It literally only increments a counter for that version.
 
 How to disable it:
-- `/settings` → disable `Install telemetry`
-- `settings.json` → set `enableInstallTelemetry` to `false`
 - `PI_OFFLINE=1`
-- `PI_TELEMETRY=0`
 
 ### New Features
 
@@ -433,7 +426,6 @@ How to disable it:
 
 ### Fixed
 
-- Fixed interactive changelog rendering for the telemetry notes by moving the section under a `### Telemetry` heading, so startup shows the full release notes instead of only the version header.
 - Updated `antigravity-image-gen.ts` example extension to use User-Agent version `1.21.9` ([#2901](https://github.com/badlogic/pi-mono/pull/2901) by [@aadishv](https://github.com/aadishv))
 - Bumped default Antigravity User-Agent version to `1.21.9` ([#2901](https://github.com/badlogic/pi-mono/pull/2901) by [@aadishv](https://github.com/aadishv))
 - Fixed Gemma 4 thinking level mapping to route between `MINIMAL` and `HIGH`, and map Pi reasoning levels to the model's supported thinking levels ([#2903](https://github.com/badlogic/pi-mono/pull/2903) by [@aadishv](https://github.com/aadishv))
