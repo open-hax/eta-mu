@@ -1,5 +1,5 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
-import type { ImageContent, Message, TextContent } from "@mariozechner/pi-ai";
+import type { InputContent, Message } from "@mariozechner/pi-ai";
 import { randomUUID } from "crypto";
 import {
 	appendFileSync,
@@ -129,7 +129,7 @@ export interface SessionInfoEntry extends SessionEntryBase {
 export interface CustomMessageEntry<T = unknown> extends SessionEntryBase {
 	type: "custom_message";
 	customType: string;
-	content: string | (TextContent | ImageContent)[];
+	content: string | InputContent[];
 	details?: T;
 	display: boolean;
 }
@@ -503,7 +503,7 @@ function extractTextContent(message: Message): string {
 		return content;
 	}
 	return content
-		.filter((block): block is TextContent => block.type === "text")
+		.filter((block) => block.type === "text")
 		.map((block) => block.text)
 		.join(" ");
 }
@@ -937,14 +937,14 @@ export class SessionManager {
 	/**
 	 * Append a custom message entry (for extensions) that participates in LLM context.
 	 * @param customType Extension identifier for filtering on reload
-	 * @param content Message content (string or TextContent/ImageContent array)
+	 * @param content Message content (string or multimodal content array)
 	 * @param display Whether to show in TUI (true = styled display, false = hidden)
 	 * @param details Optional extension-specific metadata (not sent to LLM)
 	 * @returns Entry id
 	 */
 	appendCustomMessageEntry<T = unknown>(
 		customType: string,
-		content: string | (TextContent | ImageContent)[],
+		content: string | InputContent[],
 		display: boolean,
 		details?: T,
 	): string {

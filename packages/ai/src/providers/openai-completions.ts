@@ -3,6 +3,7 @@ import type {
 	ChatCompletionAssistantMessageParam,
 	ChatCompletionChunk,
 	ChatCompletionContentPart,
+	ChatCompletionContentPartInputAudio,
 	ChatCompletionContentPartImage,
 	ChatCompletionContentPartText,
 	ChatCompletionDeveloperMessageParam,
@@ -14,6 +15,7 @@ import { getEnvApiKey } from "../env-api-keys.js";
 import { calculateCost, supportsXhigh } from "../models.js";
 import type {
 	AssistantMessage,
+	AudioContent,
 	CacheRetention,
 	Context,
 	ImageContent,
@@ -30,6 +32,7 @@ import type {
 	ToolCall,
 	ToolResultMessage,
 } from "../types.js";
+import { resolveOpenAIAudioFormat } from "../utils/audio.js";
 import { AssistantMessageEventStream } from "../utils/event-stream.js";
 import { headersToRecord } from "../utils/headers.js";
 import { parseStreamingJson } from "../utils/json-parse.js";
@@ -72,6 +75,10 @@ function isToolCallBlock(block: { type: string }): block is ToolCall {
 
 function isImageContentBlock(block: { type: string }): block is ImageContent {
 	return block.type === "image";
+}
+
+function isAudioContentBlock(block: { type: string }): block is AudioContent {
+	return block.type === "audio";
 }
 
 export interface OpenAICompletionsOptions extends StreamOptions {
@@ -749,7 +756,8 @@ export function convertMessages(
 							type: "text",
 							text: sanitizeSurrogates(item.text),
 						} satisfies ChatCompletionContentPartText;
-					} else {
+					}
+					if (item.type === "image") {
 						return {
 							type: "image_url",
 							image_url: {
@@ -757,6 +765,13 @@ export function convertMessages(
 							},
 						} satisfies ChatCompletionContentPartImage;
 					}
+					return {
+						type: "input_audio",
+						input_audio: {
+							data: item.data,
+							format: resolveOpenAIAudioFormat(item),
+						},
+					} satisfies ChatCompletionContentPartInputAudio;
 				});
 				if (content.length === 0) continue;
 				params.push({
@@ -864,24 +879,26 @@ export function convertMessages(
 			params.push(assistantMsg);
 		} else if (msg.role === "toolResult") {
 			const imageBlocks: Array<{ type: "image_url"; image_url: { url: string } }> = [];
+			const audioBlocks: ChatCompletionContentPartInputAudio[] = [];
 			let j = i;
 
 			for (; j < transformedMessages.length && transformedMessages[j].role === "toolResult"; j++) {
 				const toolMsg = transformedMessages[j] as ToolResultMessage;
 
-				// Extract text and image content
+				// Extract text and multimodal content
 				const textResult = toolMsg.content
 					.filter(isTextContentBlock)
 					.map((block) => block.text)
 					.join("\n");
 				const hasImages = toolMsg.content.some((c) => c.type === "image");
+				const hasAudio = toolMsg.content.some((c) => c.type === "audio");
 
-				// Always send tool result with text (or placeholder if only images)
+				// Always send tool result with text (or placeholder if only media)
 				const hasText = textResult.length > 0;
 				// Some providers require the 'name' field in tool results
 				const toolResultMsg: ChatCompletionToolMessageParam = {
 					role: "tool",
-					content: sanitizeSurrogates(hasText ? textResult : "(see attached image)"),
+					content: sanitizeSurrogates(hasText ? textResult : hasImages || hasAudio ? "(see attached media)" : ""),
 					tool_call_id: toolMsg.toolCallId,
 				};
 				if (compat.requiresToolResultName && toolMsg.toolName) {
@@ -901,11 +918,25 @@ export function convertMessages(
 						}
 					}
 				}
+
+				if (hasAudio && model.input.includes("audio")) {
+					for (const block of toolMsg.content) {
+						if (isAudioContentBlock(block)) {
+							audioBlocks.push({
+								type: "input_audio",
+								input_audio: {
+									data: block.data,
+									format: resolveOpenAIAudioFormat(block),
+								},
+							});
+						}
+					}
+				}
 			}
 
 			i = j - 1;
 
-			if (imageBlocks.length > 0) {
+			if (imageBlocks.length > 0 || audioBlocks.length > 0) {
 				if (compat.requiresAssistantAfterToolResult) {
 					params.push({
 						role: "assistant",
@@ -918,9 +949,10 @@ export function convertMessages(
 					content: [
 						{
 							type: "text",
-							text: "Attached image(s) from tool result:",
+							text: "Attached media from tool result:",
 						},
 						...imageBlocks,
+						...audioBlocks,
 					],
 				});
 				lastRole = "user";

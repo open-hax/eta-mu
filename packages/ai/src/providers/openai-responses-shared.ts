@@ -5,6 +5,7 @@ import type {
 	ResponseFunctionCallOutputItemList,
 	ResponseFunctionToolCall,
 	ResponseInput,
+	ResponseInputAudio,
 	ResponseInputContent,
 	ResponseInputImage,
 	ResponseInputText,
@@ -16,6 +17,7 @@ import { calculateCost } from "../models.js";
 import type {
 	Api,
 	AssistantMessage,
+	AudioContent,
 	Context,
 	ImageContent,
 	Model,
@@ -27,6 +29,7 @@ import type {
 	ToolCall,
 	Usage,
 } from "../types.js";
+import { resolveOpenAIAudioFormat } from "../utils/audio.js";
 import type { AssistantMessageEventStream } from "../utils/event-stream.js";
 import { shortHash } from "../utils/hash.js";
 import { parseStreamingJson } from "../utils/json-parse.js";
@@ -140,23 +143,32 @@ export function convertResponsesMessages<TApi extends Api>(
 					content: [{ type: "input_text", text: sanitizeSurrogates(msg.content) }],
 				});
 			} else {
-				const content: ResponseInputContent[] = msg.content.map((item): ResponseInputContent => {
+				const content = msg.content.map((item): ResponseInputContent | ResponseInputAudio => {
 					if (item.type === "text") {
 						return {
 							type: "input_text",
 							text: sanitizeSurrogates(item.text),
 						} satisfies ResponseInputText;
 					}
+					if (item.type === "image") {
+						return {
+							type: "input_image",
+							detail: "auto",
+							image_url: `data:${item.mimeType};base64,${item.data}`,
+						} satisfies ResponseInputImage;
+					}
 					return {
-						type: "input_image",
-						detail: "auto",
-						image_url: `data:${item.mimeType};base64,${item.data}`,
-					} satisfies ResponseInputImage;
+						type: "input_audio",
+						input_audio: {
+							data: item.data,
+							format: resolveOpenAIAudioFormat(item),
+						},
+					} satisfies ResponseInputAudio;
 				});
 				if (content.length === 0) continue;
 				messages.push({
 					role: "user",
-					content,
+					content: content as ResponseInputContent[],
 				});
 			}
 		} else if (msg.role === "assistant") {
@@ -220,12 +232,13 @@ export function convertResponsesMessages<TApi extends Api>(
 				.map((c) => c.text)
 				.join("\n");
 			const hasImages = msg.content.some((c): c is ImageContent => c.type === "image");
+			const hasAudio = msg.content.some((c): c is AudioContent => c.type === "audio");
 			const hasText = textResult.length > 0;
 			const [callId] = msg.toolCallId.split("|");
 
 			let output: string | ResponseFunctionCallOutputItemList;
-			if (hasImages && model.input.includes("image")) {
-				const contentParts: ResponseFunctionCallOutputItemList = [];
+			if ((hasImages && model.input.includes("image")) || (hasAudio && model.input.includes("audio"))) {
+				const contentParts: Array<ResponseInputContent | ResponseInputAudio> = [];
 
 				if (hasText) {
 					contentParts.push({
@@ -235,18 +248,26 @@ export function convertResponsesMessages<TApi extends Api>(
 				}
 
 				for (const block of msg.content) {
-					if (block.type === "image") {
+					if (block.type === "image" && model.input.includes("image")) {
 						contentParts.push({
 							type: "input_image",
 							detail: "auto",
 							image_url: `data:${block.mimeType};base64,${block.data}`,
 						});
+					} else if (block.type === "audio" && model.input.includes("audio")) {
+						contentParts.push({
+							type: "input_audio",
+							input_audio: {
+								data: block.data,
+								format: resolveOpenAIAudioFormat(block),
+							},
+						});
 					}
 				}
 
-				output = contentParts;
+				output = contentParts as ResponseFunctionCallOutputItemList;
 			} else {
-				output = sanitizeSurrogates(hasText ? textResult : "(see attached image)");
+				output = sanitizeSurrogates(hasText ? textResult : hasImages || hasAudio ? "(see attached media)" : "");
 			}
 
 			messages.push({

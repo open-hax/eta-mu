@@ -1,10 +1,11 @@
 import {
+	type AttachmentContent,
 	type ImageContent,
+	type InputContent,
 	type Message,
 	type Model,
 	type SimpleStreamOptions,
 	streamSimple,
-	type TextContent,
 	type ThinkingBudgets,
 	type Transport,
 } from "@mariozechner/pi-ai";
@@ -312,13 +313,14 @@ export class Agent {
 	/** Start a new prompt from text, a single message, or a batch of messages. */
 	async prompt(message: AgentMessage | AgentMessage[]): Promise<void>;
 	async prompt(input: string, images?: ImageContent[]): Promise<void>;
-	async prompt(input: string | AgentMessage | AgentMessage[], images?: ImageContent[]): Promise<void> {
+	async prompt(input: string, attachments?: AttachmentContent[]): Promise<void>;
+	async prompt(input: string | AgentMessage | AgentMessage[], attachments?: AttachmentContent[]): Promise<void> {
 		if (this.activeRun) {
 			throw new Error(
 				"Agent is already processing a prompt. Use steer() or followUp() to queue messages, or wait for completion.",
 			);
 		}
-		const messages = this.normalizePromptInput(input, images);
+		const messages = this.normalizePromptInput(input, attachments);
 		await this.runPromptMessages(messages);
 	}
 
@@ -354,7 +356,7 @@ export class Agent {
 
 	private normalizePromptInput(
 		input: string | AgentMessage | AgentMessage[],
-		images?: ImageContent[],
+		attachments?: AttachmentContent[],
 	): AgentMessage[] {
 		if (Array.isArray(input)) {
 			return input;
@@ -364,9 +366,9 @@ export class Agent {
 			return [input];
 		}
 
-		const content: Array<TextContent | ImageContent> = [{ type: "text", text: input }];
-		if (images && images.length > 0) {
-			content.push(...images);
+		const content: InputContent[] = [{ type: "text", text: input }];
+		if (attachments && attachments.length > 0) {
+			content.push(...attachments);
 		}
 		return [{ role: "user", content, timestamp: Date.now() }];
 	}

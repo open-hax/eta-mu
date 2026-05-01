@@ -1,18 +1,20 @@
 /**
- * Process @file CLI arguments into text content and image attachments
+ * Process @file CLI arguments into text content and media attachments
  */
 
 import { access, readFile, stat } from "node:fs/promises";
-import type { ImageContent } from "@mariozechner/pi-ai";
+import type { AttachmentContent, AudioContent, ImageContent } from "@mariozechner/pi-ai";
+import { audioFormatFromMimeType } from "@mariozechner/pi-ai";
 import chalk from "chalk";
 import { resolve } from "path";
 import { resolveReadPath } from "../core/tools/path-utils.js";
 import { formatDimensionNote, resizeImage } from "../utils/image-resize.js";
-import { detectSupportedImageMimeTypeFromFile } from "../utils/mime.js";
+import { detectSupportedAudioMimeTypeFromFile, detectSupportedImageMimeTypeFromFile } from "../utils/mime.js";
 
 export interface ProcessedFiles {
 	text: string;
 	images: ImageContent[];
+	attachments: AttachmentContent[];
 }
 
 export interface ProcessFileOptions {
@@ -25,6 +27,7 @@ export async function processFileArguments(fileArgs: string[], options?: Process
 	const autoResizeImages = options?.autoResizeImages ?? true;
 	let text = "";
 	const images: ImageContent[] = [];
+	const attachments: AttachmentContent[] = [];
 
 	for (const fileArg of fileArgs) {
 		// Expand and resolve path (handles ~ expansion and macOS screenshot Unicode spaces)
@@ -46,6 +49,7 @@ export async function processFileArguments(fileArgs: string[], options?: Process
 		}
 
 		const mimeType = await detectSupportedImageMimeTypeFromFile(absolutePath);
+		const audioMimeType = mimeType ? null : await detectSupportedAudioMimeTypeFromFile(absolutePath);
 
 		if (mimeType) {
 			// Handle image file
@@ -76,6 +80,7 @@ export async function processFileArguments(fileArgs: string[], options?: Process
 			}
 
 			images.push(attachment);
+			attachments.push(attachment);
 
 			// Add text reference to image with optional dimension note
 			if (dimensionNote) {
@@ -83,6 +88,16 @@ export async function processFileArguments(fileArgs: string[], options?: Process
 			} else {
 				text += `<file name="${absolutePath}"></file>\n`;
 			}
+		} else if (audioMimeType) {
+			const content = await readFile(absolutePath);
+			const attachment: AudioContent = {
+				type: "audio",
+				mimeType: audioMimeType,
+				data: content.toString("base64"),
+				format: audioFormatFromMimeType(audioMimeType),
+			};
+			attachments.push(attachment);
+			text += `<file name="${absolutePath}">[Audio attached: ${audioMimeType}, ${stats.size} bytes.]</file>\n`;
 		} else {
 			// Handle text file
 			try {
@@ -96,5 +111,5 @@ export async function processFileArguments(fileArgs: string[], options?: Process
 		}
 	}
 
-	return { text, images };
+	return { text, images, attachments };
 }

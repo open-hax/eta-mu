@@ -73,6 +73,20 @@ const EAGER_TOOL_INPUT_STREAMING_UNSUPPORTED_ANTHROPIC_MODELS = new Set([
 	"github-copilot:claude-sonnet-4.5",
 ]);
 
+function buildInputModalities(
+	modalities: string[] | undefined,
+	options?: { includeAudio?: boolean },
+): ("text" | "image" | "audio")[] {
+	const input: ("text" | "image" | "audio")[] = ["text"];
+	if (modalities?.includes("image")) {
+		input.push("image");
+	}
+	if (options?.includeAudio === true && modalities?.includes("audio")) {
+		input.push("audio");
+	}
+	return input;
+}
+
 function getAnthropicMessagesCompat(provider: string, modelId: string): AnthropicMessagesCompat | undefined {
 	return EAGER_TOOL_INPUT_STREAMING_UNSUPPORTED_ANTHROPIC_MODELS.has(`${provider}:${modelId}`)
 		? { supportsEagerToolInputStreaming: false }
@@ -104,9 +118,12 @@ async function fetchOpenRouterModels(): Promise<Model<any>[]> {
 			modelKey = model.id; // Keep full ID for OpenRouter
 
 			// Parse input modalities
-			const input: ("text" | "image")[] = ["text"];
+			const input: ("text" | "image" | "audio")[] = ["text"];
 			if (model.architecture?.modality?.includes("image")) {
 				input.push("image");
+			}
+			if (model.architecture?.modality?.includes("audio")) {
+				input.push("audio");
 			}
 
 			// Convert pricing from $/token to $/million tokens
@@ -164,9 +181,12 @@ async function fetchAiGatewayModels(): Promise<Model<any>[]> {
 			// Only include models that support tools
 			if (!tags.includes("tool-use")) continue;
 
-			const input: ("text" | "image")[] = ["text"];
+			const input: ("text" | "image" | "audio")[] = ["text"];
 			if (tags.includes("vision")) {
 				input.push("image");
+			}
+			if (tags.includes("audio")) {
+				input.push("audio");
 			}
 
 			const inputCost = toNumber(model.pricing?.input) * 1_000_000;
@@ -234,7 +254,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					provider: "amazon-bedrock" as const,
 					baseUrl: getBedrockBaseUrl(id),
 					reasoning: m.reasoning === true,
-					input: (m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"]) as ("text" | "image")[],
+					input: buildInputModalities(m.modalities?.input),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,
@@ -260,7 +280,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					provider: "anthropic",
 					baseUrl: "https://api.anthropic.com",
 					reasoning: m.reasoning === true,
-					input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+					input: buildInputModalities(m.modalities?.input),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,
@@ -286,7 +306,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					provider: "google",
 					baseUrl: "https://generativelanguage.googleapis.com/v1beta",
 					reasoning: m.reasoning === true,
-					input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+					input: buildInputModalities(m.modalities?.input, { includeAudio: true }),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,
@@ -312,7 +332,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					provider: "openai",
 					baseUrl: "https://api.openai.com/v1",
 					reasoning: m.reasoning === true,
-					input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+					input: buildInputModalities(m.modalities?.input, { includeAudio: true }),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,
@@ -338,7 +358,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					provider: "groq",
 					baseUrl: "https://api.groq.com/openai/v1",
 					reasoning: m.reasoning === true,
-					input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+					input: buildInputModalities(m.modalities?.input),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,
@@ -364,7 +384,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					provider: "cerebras",
 					baseUrl: "https://api.cerebras.ai/v1",
 					reasoning: m.reasoning === true,
-					input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+					input: buildInputModalities(m.modalities?.input),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,
@@ -390,7 +410,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					provider: "cloudflare-workers-ai",
 					baseUrl: CLOUDFLARE_WORKERS_AI_BASE_URL,
 					reasoning: m.reasoning === true,
-					input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+					input: buildInputModalities(m.modalities?.input),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,
@@ -417,7 +437,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					provider: "xai",
 					baseUrl: "https://api.x.ai/v1",
 					reasoning: m.reasoning === true,
-					input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+					input: buildInputModalities(m.modalities?.input),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,
@@ -435,8 +455,6 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 			for (const [modelId, model] of Object.entries(data["zai-coding-plan"].models)) {
 				const m = model as ModelsDevModel;
 				if (m.tool_call !== true) continue;
-				const supportsImage = m.modalities?.input?.includes("image");
-
 				models.push({
 					id: modelId,
 					name: m.name || modelId,
@@ -444,7 +462,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					provider: "zai",
 					baseUrl: "https://api.z.ai/api/coding/paas/v4",
 					reasoning: m.reasoning === true,
-					input: supportsImage ? ["text", "image"] : ["text"],
+					input: buildInputModalities(m.modalities?.input),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,
@@ -475,7 +493,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					provider: "mistral",
 					baseUrl: "https://api.mistral.ai",
 					reasoning: m.reasoning === true,
-					input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+					input: buildInputModalities(m.modalities?.input),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,
@@ -501,7 +519,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					provider: "huggingface",
 					baseUrl: "https://router.huggingface.co/v1",
 					reasoning: m.reasoning === true,
-					input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+					input: buildInputModalities(m.modalities?.input),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,
@@ -531,7 +549,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					// Fireworks Anthropic-compatible API - SDK appends /v1/messages
 					baseUrl: "https://api.fireworks.ai/inference",
 					reasoning: m.reasoning === true,
-					input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+					input: buildInputModalities(m.modalities?.input),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,
@@ -595,7 +613,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					provider: variant.provider,
 					baseUrl,
 					reasoning: m.reasoning === true,
-					input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+					input: buildInputModalities(m.modalities?.input),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,
@@ -637,7 +655,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					provider: "github-copilot",
 					baseUrl: "https://api.individual.githubcopilot.com",
 					reasoning: m.reasoning === true,
-					input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+					input: buildInputModalities(m.modalities?.input),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,
@@ -682,7 +700,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 						// MiniMax's Anthropic-compatible API - SDK appends /v1/messages
 						baseUrl,
 						reasoning: m.reasoning === true,
-						input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+						input: buildInputModalities(m.modalities?.input),
 						cost: {
 							input: m.cost?.input || 0,
 							output: m.cost?.output || 0,
@@ -720,7 +738,7 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					baseUrl: "https://api.kimi.com/coding",
 					headers: { ...KIMI_STATIC_HEADERS },
 					reasoning: m.reasoning === true,
-					input: m.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+					input: buildInputModalities(m.modalities?.input),
 					cost: {
 						input: m.cost?.input || 0,
 						output: m.cost?.output || 0,

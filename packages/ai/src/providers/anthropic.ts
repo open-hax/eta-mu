@@ -15,6 +15,7 @@ import type {
 	CacheRetention,
 	Context,
 	ImageContent,
+	InputContent,
 	Message,
 	Model,
 	SimpleStreamOptions,
@@ -107,7 +108,7 @@ const fromClaudeCodeName = (name: string, tools?: Tool[]) => {
 /**
  * Convert content blocks to Anthropic API format
  */
-function convertContentBlocks(content: (TextContent | ImageContent)[]):
+function convertContentBlocks(content: InputContent[]):
 	| string
 	| Array<
 			| { type: "text"; text: string }
@@ -123,7 +124,7 @@ function convertContentBlocks(content: (TextContent | ImageContent)[]):
 	// If only text blocks, return as concatenated string for simplicity
 	const hasImages = content.some((c) => c.type === "image");
 	if (!hasImages) {
-		return sanitizeSurrogates(content.map((c) => (c as TextContent).text).join("\n"));
+		return sanitizeSurrogates(content.map((c) => (c.type === "text" ? c.text : "(audio omitted: Anthropic adapter does not support audio)")).join("\n"));
 	}
 
 	// If we have images, convert to content block array
@@ -132,6 +133,12 @@ function convertContentBlocks(content: (TextContent | ImageContent)[]):
 			return {
 				type: "text" as const,
 				text: sanitizeSurrogates(block.text),
+			};
+		}
+		if (block.type === "audio") {
+			return {
+				type: "text" as const,
+				text: "(audio omitted: Anthropic adapter does not support audio)",
 			};
 		}
 		return {
