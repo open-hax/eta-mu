@@ -2,7 +2,7 @@ import type {
   ExtensionAPI,
   ExtensionContext,
   ExtensionCommandContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@open-hax/eta-mu-coding-agent";
 
 import { performance } from "node:perf_hooks";
 

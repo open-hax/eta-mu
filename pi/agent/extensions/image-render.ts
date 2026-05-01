@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { extname, resolve } from "node:path";
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
 import { type Static, Type } from "@sinclair/typebox";
 
 const DEFAULT_MAX_BYTES = 8 * 1024 * 1024;

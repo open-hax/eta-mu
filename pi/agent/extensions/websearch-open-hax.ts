@@ -1,11 +1,11 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
 import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
   formatSize,
   truncateHead,
-} from "@mariozechner/pi-coding-agent";
-import { StringEnum } from "@mariozechner/pi-ai";
+} from "@open-hax/eta-mu-coding-agent";
+import { StringEnum } from "@open-hax/eta-mu-ai";
 import { Type, type Static } from "@sinclair/typebox";
 import fs from "node:fs/promises";
 import os from "node:os";
