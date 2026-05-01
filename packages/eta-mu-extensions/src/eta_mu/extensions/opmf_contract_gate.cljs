@@ -171,6 +171,7 @@
   (str "[[eta-mu-opmf-contract-gate repair " attempt "/" max-retries "]]\n"
        "Your work is not complete — the output contract was not satisfied.\n"
        "Continue your work, ensuring the response uses `## Section` level-2 markdown headers (not bold or emphasis).\n"
+       "For counted sections, prefer explicit markdown list items because the deterministic checker counts list items reliably.\n"
        (when-not (str/blank? original-user-prompt)
          (str "\nOriginal task: " original-user-prompt "\n"))
        "\nContract violations to fix:\n"
