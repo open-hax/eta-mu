@@ -133,7 +133,8 @@
       (let [fresh #js {:config (read-config)
                        :contractCache nil
                        :lastResult nil
-                       :contractError nil}]
+                       :contractError nil
+                       :pendingRepair nil}]
         (aset g GLOBAL-KEY fresh)
         fresh))))
 
@@ -437,7 +438,12 @@
           (let [next-attempt (inc current-attempt)
                 original-prompt (extract-original-user-prompt ctx messages)
                 msg (build-repair-turn-message (aget result "repairPrompt") next-attempt max-retries original-prompt)]
-            (schedule-direct-repair! pi ctx state msg next-attempt max-retries 0))
+            (aset state "pendingRepair" #js {:message msg
+                                             :attempt next-attempt
+                                             :max max-retries})
+            (safe-notify ctx
+                         (str "eta-mu-opmf-contract-gate queued repair " next-attempt "/" max-retries)
+                         "warn"))
           (notify ctx
                   (str "eta-mu-opmf-contract-gate failed ("
                        (count (or (some-> result (aget "report") :failures) []))
@@ -460,6 +466,29 @@
                    (handle-validation-result pi ctx state result (aget event "messages"))))
           (.catch (fn [error]
                     (handle-agent-end-error ctx state error)))))))
+
+(defn handle-agent-idle [pi ctx _event]
+  ;; `agent_end` is emitted before the core agent is guaranteed idle. Injecting
+  ;; a repair turn there either becomes an undeliverable steering message or is
+  ;; rejected as "already processing". The core `agent_idle` hook is the safe
+  ;; boundary for starting a fresh extension-origin user turn.
+  (let [state (get-state)
+        pending (aget state "pendingRepair")]
+    (when pending
+      (aset state "pendingRepair" nil)
+      (let [sender (sender-for pi ctx)
+            msg (aget pending "message")
+            attempt (aget pending "attempt")
+            max-retries (aget pending "max")]
+        (if (and sender (aget sender "sendUserMessage"))
+          (try
+            (.call (aget sender "sendUserMessage") sender msg)
+            (safe-notify ctx
+                         (str "eta-mu-opmf-contract-gate injected repair " attempt "/" max-retries)
+                         "warn")
+            (catch :default error
+              (handle-direct-repair-error pi ctx state msg attempt max-retries 0 error)))
+          (safe-notify ctx "eta-mu-opmf-contract-gate repair sender unavailable" "warn"))))))
 
 (defn handle-command [args ctx]
   (let [state (get-state)
@@ -541,6 +570,7 @@
   (.call (aget pi "on") pi "session_start" (fn [_event ctx] (handle-session-start pi ctx)))
   (.call (aget pi "on") pi "before_agent_start" (fn [event _ctx] (handle-before-agent-start event)))
   (.call (aget pi "on") pi "agent_end" (fn [event ctx] (handle-agent-end pi ctx event)))
+  (.call (aget pi "on") pi "agent_idle" (fn [event ctx] (handle-agent-idle pi ctx event)))
   (.call (aget pi "on") pi "session_shutdown" (fn [_event ctx] (handle-session-shutdown ctx))))
 
 (em/defextension opmf-contract-gate

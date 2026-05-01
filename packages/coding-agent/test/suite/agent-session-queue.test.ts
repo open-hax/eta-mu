@@ -5,6 +5,14 @@ import { Type } from "typebox";
 import { afterEach, describe, expect, it } from "vitest";
 import { createHarness, getAssistantTexts, getMessageText, getUserTexts, type Harness } from "./harness.js";
 
+async function waitFor(predicate: () => boolean, timeoutMs = 1000): Promise<void> {
+	const deadline = Date.now() + timeoutMs;
+	while (!predicate()) {
+		if (Date.now() > deadline) throw new Error("Timed out waiting for condition");
+		await new Promise((resolve) => setTimeout(resolve, 5));
+	}
+}
+
 async function createWaitingHarness(
 	options: {
 		tools?: AgentTool[];
@@ -120,6 +128,33 @@ describe("AgentSession queue characterization", () => {
 
 		expect(getUserTexts(harness)).toEqual(["start", "steer now"]);
 		expect(getAssistantTexts(harness)).toContain("saw steer");
+	});
+
+	it("lets extensions start a repair turn from agent_idle after agent_end", async () => {
+		let idleCtxWasIdle = false;
+		let injected = false;
+		const harness = await createHarness({
+			extensionFactories: [
+				(pi) => {
+					pi.on("agent_idle", (_event, ctx) => {
+						idleCtxWasIdle = ctx.isIdle();
+						if (injected) return;
+						injected = true;
+						pi.sendUserMessage("repair now");
+					});
+				},
+			],
+		});
+		harnesses.push(harness);
+
+		harness.setResponses([fauxAssistantMessage("bad markdown"), fauxAssistantMessage("fixed markdown")]);
+
+		await harness.session.prompt("start");
+		await waitFor(() => getAssistantTexts(harness).length === 2);
+
+		expect(idleCtxWasIdle).toBe(true);
+		expect(getUserTexts(harness)).toEqual(["start", "repair now"]);
+		expect(getAssistantTexts(harness)).toEqual(["bad markdown", "fixed markdown"]);
 	});
 
 	it("delivers follow-up messages only after the current run finishes", async () => {
