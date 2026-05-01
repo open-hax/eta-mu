@@ -25,12 +25,19 @@ if (typeof process !== "undefined" && (process.versions?.node || process.version
 	});
 }
 
-// Antigravity OAuth credentials (different from Gemini CLI)
-const decode = (s: string) => atob(s);
-const CLIENT_ID = decode(
-	"UkVEQUNURURfR09PR0xFX09BVVRIX0NMSUVOVF9JRA==",
-);
-const CLIENT_SECRET = decode("UkVEQUNURURfR09PR0xFX09BVVRIX0NMSUVOVF9TRUNSRVQ==");
+const ANTIGRAVITY_CLIENT_ID_ENV = "ETA_MU_GOOGLE_ANTIGRAVITY_OAUTH_CLIENT_ID";
+const ANTIGRAVITY_CLIENT_SECRET_ENV = "ETA_MU_GOOGLE_ANTIGRAVITY_OAUTH_CLIENT_SECRET";
+
+function getAntigravityOAuthClientCredentials(): { clientId: string; clientSecret: string } {
+	const clientId = process.env[ANTIGRAVITY_CLIENT_ID_ENV];
+	const clientSecret = process.env[ANTIGRAVITY_CLIENT_SECRET_ENV];
+	if (!clientId || !clientSecret) {
+		throw new Error(
+			`Google Antigravity OAuth requires ${ANTIGRAVITY_CLIENT_ID_ENV} and ${ANTIGRAVITY_CLIENT_SECRET_ENV} to be set.`,
+		);
+	}
+	return { clientId, clientSecret };
+}
 const REDIRECT_URI = "http://localhost:51121/oauth-callback";
 
 // Antigravity requires additional scopes
@@ -234,12 +241,13 @@ async function getUserEmail(accessToken: string): Promise<string | undefined> {
  * Refresh Antigravity token
  */
 export async function refreshAntigravityToken(refreshToken: string, projectId: string): Promise<OAuthCredentials> {
+	const { clientId, clientSecret } = getAntigravityOAuthClientCredentials();
 	const response = await fetch(TOKEN_URL, {
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body: new URLSearchParams({
-			client_id: CLIENT_ID,
-			client_secret: CLIENT_SECRET,
+			client_id: clientId,
+			client_secret: clientSecret,
 			refresh_token: refreshToken,
 			grant_type: "refresh_token",
 		}),
@@ -277,6 +285,7 @@ export async function loginAntigravity(
 	onProgress?: (message: string) => void,
 	onManualCodeInput?: () => Promise<string>,
 ): Promise<OAuthCredentials> {
+	const { clientId, clientSecret } = getAntigravityOAuthClientCredentials();
 	const { verifier, challenge } = await generatePKCE();
 
 	// Start local server for callback
@@ -288,7 +297,7 @@ export async function loginAntigravity(
 	try {
 		// Build authorization URL
 		const authParams = new URLSearchParams({
-			client_id: CLIENT_ID,
+			client_id: clientId,
 			response_type: "code",
 			redirect_uri: REDIRECT_URI,
 			scope: SCOPES.join(" "),
@@ -383,8 +392,8 @@ export async function loginAntigravity(
 				"Content-Type": "application/x-www-form-urlencoded",
 			},
 			body: new URLSearchParams({
-				client_id: CLIENT_ID,
-				client_secret: CLIENT_SECRET,
+				client_id: clientId,
+				client_secret: clientSecret,
 				code,
 				grant_type: "authorization_code",
 				redirect_uri: REDIRECT_URI,
