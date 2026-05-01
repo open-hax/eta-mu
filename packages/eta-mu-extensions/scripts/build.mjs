@@ -4,7 +4,7 @@
  * eta-mu local build + registration script
  *
  * Compiles extensions via shadow-cljs (using the committed shadow-cljs.edn)
- * then materializes Pi/OpenCode target wrappers under this package's dist/ dir
+ * then materializes eta-mu/OpenCode target wrappers under this package's dist/ dir
  * and registers those package-root artifacts in each host config.
  *
  * shadow-cljs.edn is source-controlled and is NOT rewritten by this script.
@@ -17,11 +17,13 @@
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
   symlinkSync,
+  unlinkSync,
 } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -158,8 +160,8 @@ function materializeExt(ext) {
   mkdirSync(path.dirname(ext.runtimeCjs), { recursive: true });
   writeFileSync(ext.runtimeCjs, readFileSync(ext.runtimeFile, "utf8"), "utf8");
 
-  // Pi target: a tiny TypeScript wrapper. The host config points here directly;
-  // nothing is copied into ~/.pi/agent/extensions.
+  // eta-mu target: a tiny TypeScript wrapper. The host config points here directly;
+  // nothing is copied into a host-owned extensions directory.
   mkdirSync(ext.piDir, { recursive: true });
   const piRuntimeRel = path.relative(ext.piDir, ext.runtimeCjs).replaceAll(path.sep, "/");
   writeFileSync(
@@ -209,24 +211,38 @@ function cleanExt(ext) {
 
 function removeLegacyHostCopies(exts) {
   for (const ext of exts) {
-    const legacyPiDir = path.join(HOME, ".pi", "agent", "extensions", `cljs-${ext.name}`);
     const legacyOpenCodeDir = path.join(HOME, ".config", "opencode", "plugins", ext.name);
-    for (const dir of [legacyPiDir, legacyOpenCodeDir]) {
-      if (existsSync(dir)) {
-        rmSync(dir, { recursive: true, force: true });
-        console.log(`  removed legacy host copy ${dir}`);
-      }
+    if (existsSync(legacyOpenCodeDir)) {
+      rmSync(legacyOpenCodeDir, { recursive: true, force: true });
+      console.log(`  removed legacy host copy ${legacyOpenCodeDir}`);
     }
   }
 }
 
-// ── Pi settings.json ───────────────────────────────────────────────────────
+// ── eta-mu settings.json ───────────────────────────────────────────────────
 
-const PI_SETTINGS = path.join(HOME, ".pi", "agent", "settings.json");
+const ETA_MU_ROOT = path.join(HOME, ".ημ");
+const ETA_MU_SETTINGS = path.join(ETA_MU_ROOT, "agent", "settings.json");
+const ETA_MU_CONVENIENCE_LINK = path.join(HOME, ".eta-mu");
 
-function syncPiSettings(exts) {
-  if (!existsSync(PI_SETTINGS)) return;
-  const settings = JSON.parse(readFileSync(PI_SETTINGS, "utf8"));
+function ensureEtaMuRoot() {
+  if (existsSync(ETA_MU_ROOT) && lstatSync(ETA_MU_ROOT).isSymbolicLink()) {
+    unlinkSync(ETA_MU_ROOT);
+  }
+  mkdirSync(path.dirname(ETA_MU_SETTINGS), { recursive: true });
+  try {
+    if (!existsSync(ETA_MU_CONVENIENCE_LINK)) {
+      symlinkSync(path.relative(HOME, ETA_MU_ROOT), ETA_MU_CONVENIENCE_LINK, "junction");
+      console.log(`  linked ${ETA_MU_CONVENIENCE_LINK} -> ${ETA_MU_ROOT}`);
+    }
+  } catch {
+    // Convenience symlink only; never fail the build over it.
+  }
+}
+
+function syncEtaMuSettings(exts) {
+  ensureEtaMuRoot();
+  const settings = existsSync(ETA_MU_SETTINGS) ? JSON.parse(readFileSync(ETA_MU_SETTINGS, "utf8")) : {};
   const current  = new Set(settings.extensions || []);
   const managedNames = new Set(exts.map((ext) => ext.name));
   let changed = false;
@@ -251,7 +267,7 @@ function syncPiSettings(exts) {
   }
   if (changed) {
     settings.extensions = [...current];
-    writeFileSync(PI_SETTINGS, JSON.stringify(settings, null, 2) + "\n", "utf8");
+    writeFileSync(ETA_MU_SETTINGS, JSON.stringify(settings, null, 2) + "\n", "utf8");
   } else {
     console.log("  settings.json up-to-date");
   }
@@ -357,7 +373,7 @@ function main() {
   for (const ext of exts) materializeExt(ext);
   console.log("  removing legacy managed host copies...");
   removeLegacyHostCopies(exts);
-  syncPiSettings(exts);
+  syncEtaMuSettings(exts);
   syncOpenCodeConfig(exts);
 
   console.log("\neta-mu build complete:");

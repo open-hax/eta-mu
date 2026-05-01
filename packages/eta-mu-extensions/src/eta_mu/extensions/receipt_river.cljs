@@ -1,7 +1,7 @@
 (ns eta-mu.extensions.receipt-river
   "Append-only per-repo receipts.edn ledger for multi-step work.
 
-  Migrated from: ~/.pi/agent/extensions/receipt-river.ts"
+  Migrated from: ~/.ημ/agent/extensions/receipt-river.ts"
   (:require-macros [eta-mu.core :as em])
   (:require ["os" :as os]
             ["fs" :as fs]
@@ -13,7 +13,7 @@
 
 (def ^:const HOME (.homedir os))
 (def ^:const ETA-MU-STATE-ROOT (path/join HOME ".ημ" "state"))
-(def ^:const LEGACY-STATE-ROOT (str HOME "/.pi/agent/state"))
+(def ^:const LEGACY-STATE-ROOT (str HOME "/.ημ/agent/state"))
 (defn resolve-state-dir [name]
   (let [eta-mu-dir (path/join ETA-MU-STATE-ROOT name)
         legacy-dir (path/join LEGACY-STATE-ROOT name)]

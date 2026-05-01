@@ -102,7 +102,7 @@
                     (path/join cwd ".." "agents" "mindfuck" "CONTRACT.edn")
                     (path/join cwd ".." ".." "agents" "mindfuck" "CONTRACT.edn")
                     (path/join cwd ".." ".." ".." "agents" "mindfuck" "CONTRACT.edn")
-                    (path/join HOME ".pi" "agent" "skills" "mindfuck" "CONTRACT.edn")]]
+                    (path/join HOME ".ημ" "agent" "skills" "mindfuck" "CONTRACT.edn")]]
     (first (filter file-exists? (map path/resolve candidates)))))
 
 (defn bootstrap-principle! [cwd]

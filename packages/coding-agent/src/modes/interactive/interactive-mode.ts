@@ -56,7 +56,7 @@ import {
 	getDocsPath,
 	getShareViewerUrl,
 	getUpdateInstruction,
-	PACKAGE_NAME,
+	UPDATE_PACKAGE_NAME,
 	VERSION,
 } from "../../config.js";
 import { type AgentSession, type AgentSessionEvent, parseSkillBlock } from "../../core/agent-session.js";
@@ -785,7 +785,7 @@ export class InteractiveMode {
 	}
 
 	private async checkForPackageUpdates(): Promise<string[]> {
-		if (process.env.PI_OFFLINE) {
+		if (process.env.ETA_MU_OFFLINE) {
 			return [];
 		}
 
@@ -3483,7 +3483,7 @@ export class InteractiveMode {
 	}
 
 	showNewVersionNotification(newVersion: string): void {
-		const updateCommand = getUpdateInstruction(PACKAGE_NAME).replace(/^Run:\s*/, "");
+		const updateCommand = getUpdateInstruction(UPDATE_PACKAGE_NAME).replace(/^Run:\s*/, "");
 		const updateInstruction =
 			theme.fg("muted", `New version ${newVersion} is available. Run `) + theme.fg("accent", updateCommand);
 		const changelogUrl = theme.fg(

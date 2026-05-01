@@ -11,7 +11,7 @@
 
 (def HOME (.homedir os))
 (def ETA-MU-STATE-ROOT (path/join HOME ".ημ" "state"))
-(def LEGACY-STATE-ROOT (path/join HOME ".pi" "agent" "state"))
+(def LEGACY-STATE-ROOT (path/join HOME ".ημ" "agent" "state"))
 
 (defn resolve-state-dir [name]
   (let [eta-mu-dir (path/join ETA-MU-STATE-ROOT name)

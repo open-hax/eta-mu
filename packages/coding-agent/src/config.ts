@@ -1,7 +1,7 @@
 import { spawnSync } from "child_process";
-import { existsSync, readFileSync, realpathSync } from "fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, symlinkSync, unlinkSync } from "fs";
 import { homedir } from "os";
-import { dirname, join, resolve, sep } from "path";
+import { dirname, join, relative, resolve, sep } from "path";
 import { fileURLToPath } from "url";
 
 // =============================================================================
@@ -204,11 +204,9 @@ export function getUpdateInstruction(packageName: string): string {
  */
 export function getPackageDir(): string {
 	// Allow override via environment variable (useful for Nix/Guix where store paths tokenize poorly)
-	const envDir = process.env.PI_PACKAGE_DIR;
+	const envDir = process.env.ETA_MU_PACKAGE_DIR;
 	if (envDir) {
-		if (envDir === "~") return homedir();
-		if (envDir.startsWith("~/")) return homedir() + envDir.slice(1);
-		return envDir;
+		return expandHomePath(envDir);
 	}
 
 	if (isBunBinary) {
@@ -320,14 +318,14 @@ const pkg = JSON.parse(readFileSync(getPackageJsonPath(), "utf-8")) as PackageJs
 
 const piConfigName: string | undefined = pkg.piConfig?.name;
 export const PACKAGE_NAME: string = pkg.name || "@open-hax/eta-mu-coding-agent";
+export const UPDATE_PACKAGE_NAME = "@open-hax/eta-mu-coding-agent";
 export const APP_NAME: string = piConfigName || "eta-mu";
-export const APP_TITLE: string = piConfigName ? APP_NAME : "ημ";
-export const CONFIG_DIR_NAME: string = pkg.piConfig?.configDir || ".eta-mu";
-export const LEGACY_CONFIG_DIR_NAME = ".pi";
+export const APP_TITLE = "ημ";
+export const CONFIG_DIR_NAME: string = pkg.piConfig?.configDir || ".ημ";
+export const CONVENIENCE_CONFIG_DIR_NAME = ".eta-mu";
 export const VERSION: string = pkg.version || "0.0.0";
 
-// e.g., PI_CODING_AGENT_DIR or TAU_CODING_AGENT_DIR
-export const ENV_AGENT_DIR = `${APP_NAME.toUpperCase()}_CODING_AGENT_DIR`;
+export const ENV_AGENT_DIR = "ETA_MU_CODING_AGENT_DIR";
 
 const DEFAULT_SHARE_VIEWER_URL = "https://eta-mu.openhax.ai/session/";
 
@@ -338,23 +336,60 @@ export function getShareViewerUrl(gistId: string): string {
 }
 
 // =============================================================================
-// User Config Paths (~/.pi/agent/*)
+// User Config Paths (~/.ημ/agent/*)
 // =============================================================================
 
-/** Get the agent config directory (e.g., ~/.pi/agent/) */
+function expandHomePath(value: string): string {
+	if (value === "~") return homedir();
+	if (value.startsWith("~/")) return homedir() + value.slice(1);
+	return value;
+}
+
+function ensureRealDirectory(dirPath: string): void {
+	try {
+		if (existsSync(dirPath) && lstatSync(dirPath).isSymbolicLink()) {
+			unlinkSync(dirPath);
+		}
+		mkdirSync(dirPath, { recursive: true });
+	} catch {
+		mkdirSync(dirPath, { recursive: true });
+	}
+}
+
+function ensureDirectorySymlink(linkPath: string, targetPath: string): void {
+	try {
+		if (existsSync(linkPath)) {
+			const stat = lstatSync(linkPath);
+			if (stat.isSymbolicLink()) return;
+			return;
+		}
+		const targetParent = dirname(linkPath);
+		mkdirSync(targetParent, { recursive: true });
+		const linkTarget = relative(targetParent, targetPath) || targetPath;
+		symlinkSync(linkTarget, linkPath, "junction");
+	} catch {
+		// Symlink creation is best-effort convenience only.
+	}
+}
+
+export function ensureProjectConfigDir(cwd: string): string {
+	const projectConfigDir = join(cwd, CONFIG_DIR_NAME);
+	ensureRealDirectory(projectConfigDir);
+	ensureDirectorySymlink(join(cwd, CONVENIENCE_CONFIG_DIR_NAME), projectConfigDir);
+	return projectConfigDir;
+}
+
+/** Get the agent config directory (e.g., ~/.ημ/agent/) */
 export function getAgentDir(): string {
 	const envDir = process.env[ENV_AGENT_DIR];
 	if (envDir) {
-		// Expand tilde to home directory
-		if (envDir === "~") return homedir();
-		if (envDir.startsWith("~/")) return homedir() + envDir.slice(1);
-		return envDir;
+		return expandHomePath(envDir);
 	}
-	const etaMuAgentDir = join(homedir(), CONFIG_DIR_NAME, "agent");
-	const legacyPiAgentDir = join(homedir(), LEGACY_CONFIG_DIR_NAME, "agent");
-	if (!existsSync(etaMuAgentDir) && existsSync(legacyPiAgentDir)) {
-		return legacyPiAgentDir;
-	}
+	const etaMuRootDir = join(homedir(), CONFIG_DIR_NAME);
+	ensureRealDirectory(etaMuRootDir);
+	ensureDirectorySymlink(join(homedir(), CONVENIENCE_CONFIG_DIR_NAME), etaMuRootDir);
+	const etaMuAgentDir = join(etaMuRootDir, "agent");
+	ensureRealDirectory(etaMuAgentDir);
 	return etaMuAgentDir;
 }
 

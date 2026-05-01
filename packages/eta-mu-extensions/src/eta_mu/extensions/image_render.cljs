@@ -1,6 +1,6 @@
 (ns eta-mu.extensions.image-render
   "Render images (local files, URLs, data URLs) inline in the TUI.
-  Migrated from: ~/.pi/agent/extensions/image-render.ts"
+  Migrated from: ~/.ημ/agent/extensions/image-render.ts"
   (:require-macros [eta-mu.core :as em])
   (:require ["node:fs/promises" :as fs]
             ["node:os" :as os]

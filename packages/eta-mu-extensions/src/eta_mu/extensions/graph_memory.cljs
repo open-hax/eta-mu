@@ -23,7 +23,7 @@
 
 (def ^:const HOME (.homedir os))
 (def ^:const ETA-MU-STATE-ROOT (path/join HOME ".ημ" "state"))
-(def ^:const LEGACY-STATE-ROOT (str HOME "/.pi/agent/state"))
+(def ^:const LEGACY-STATE-ROOT (str HOME "/.ημ/agent/state"))
 
 (defn resolve-state-dir [name]
   (let [eta-mu-dir (path/join ETA-MU-STATE-ROOT name)

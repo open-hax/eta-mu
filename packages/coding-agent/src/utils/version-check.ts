@@ -1,4 +1,4 @@
-import { PACKAGE_NAME } from "../config.js";
+import { UPDATE_PACKAGE_NAME } from "../config.js";
 
 const NPM_REGISTRY_URL = "https://registry.npmjs.org";
 const DEFAULT_VERSION_CHECK_TIMEOUT_MS = 10000;
@@ -51,9 +51,9 @@ export async function getLatestEtaMuVersion(
 	currentVersion: string,
 	options: { packageName?: string; timeoutMs?: number } = {},
 ): Promise<string | undefined> {
-	if (process.env.ETA_MU_SKIP_VERSION_CHECK || process.env.PI_SKIP_VERSION_CHECK || process.env.ETA_MU_OFFLINE || process.env.PI_OFFLINE) return undefined;
+	if (process.env.ETA_MU_SKIP_VERSION_CHECK || process.env.ETA_MU_OFFLINE) return undefined;
 
-	const packageName = options.packageName ?? PACKAGE_NAME;
+	const packageName = options.packageName ?? UPDATE_PACKAGE_NAME;
 	const encodedPackageName = packageName.startsWith("@") ? packageName.replace("/", "%2f") : packageName;
 	const response = await fetch(`${NPM_REGISTRY_URL}/${encodedPackageName}/latest`, {
 		headers: {

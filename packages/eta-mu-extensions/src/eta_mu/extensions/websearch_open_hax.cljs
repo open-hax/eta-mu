@@ -1,7 +1,7 @@
 (ns eta-mu.extensions.websearch-open-hax
   "Web search via Open Hax proxy service.
 
-  Migrated from: ~/.pi/agent/extensions/websearch-open-hax.ts"
+  Migrated from: ~/.ημ/agent/extensions/websearch-open-hax.ts"
   (:require-macros [eta-mu.core :as em])
   (:require [clojure.string :as str]
             ["node:fs/promises" :as fs]
