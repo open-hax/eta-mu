@@ -1,7 +1,7 @@
 (ns eta-mu.extensions.chronos
   "Time tracking tool for contracting work via local Chronos API.
 
-  Migrated from: ~/.pi/agent/extensions/chronos.ts"
+  Migrated from: ~/.ημ/agent/extensions/chronos.ts"
   (:require-macros [eta-mu.core :as em])
   (:require [clojure.string :as str]))
 

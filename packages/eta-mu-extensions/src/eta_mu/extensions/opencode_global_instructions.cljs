@@ -41,7 +41,7 @@
 (def HOME (.homedir os))
 (def PROMPT-SECTION-START "<!-- eta-mu:opmf:start -->")
 (def PROMPT-SECTION-END "<!-- eta-mu:opmf:end -->")
-(def PI-AGENT-DIR (path/join HOME ".pi" "agent"))
+(def PI-AGENT-DIR (path/join HOME ".ημ" "agent"))
 (def OPMF-DIR (path/join PI-AGENT-DIR "operation-mindfuck"))
 (def LEGACY-OPMF-DIR (path/join HOME ".config" "opencode" "operation-mindfuck"))
 (def PI-SETTINGS (path/join PI-AGENT-DIR "settings.json"))

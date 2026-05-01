@@ -1,11 +1,11 @@
 {
   "name": "@open-hax/eta-mu-coding-agent",
-  "version": "0.70.8",
+  "version": "0.70.9",
   "description": "Coding agent CLI with read, bash, edit, write tools and session management",
   "type": "module",
   "piConfig": {
     "name": "eta-mu",
-    "configDir": ".eta-mu"
+    "configDir": ".ημ"
   },
   "bin": {
     "eta-mu": "dist/cli.js",

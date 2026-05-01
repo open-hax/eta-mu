@@ -1,7 +1,7 @@
 (ns eta-mu.extensions.session-mycology
   "Per-turn retrospection with p-scores and skill spore incubation.
 
-  Migrated from: ~/.pi/agent/extensions/session-mycology.ts"
+  Migrated from: ~/.ημ/agent/extensions/session-mycology.ts"
   (:require-macros [eta-mu.core :as em])
   (:require ["os" :as os]
             ["fs" :as fs]
@@ -11,7 +11,7 @@
 
 (def ^:const HOME (.homedir os))
 (def ^:const ETA-MU-STATE-ROOT (path/join HOME ".ημ" "state"))
-(def ^:const LEGACY-STATE-ROOT (str HOME "/.pi/agent/state"))
+(def ^:const LEGACY-STATE-ROOT (str HOME "/.ημ/agent/state"))
 (defn resolve-state-dir [name]
   (let [eta-mu-dir (path/join ETA-MU-STATE-ROOT name)
         legacy-dir (path/join LEGACY-STATE-ROOT name)]
@@ -25,7 +25,7 @@
 (def ^:const SPORES-FILE (path/join STATE-DIR "skill-spores.jsonl"))
 (def ^:const PROMOTIONS-FILE (path/join STATE-DIR "skill-promotions.jsonl"))
 (def ^:const SPORE-DRAFTS-DIR (path/join STATE-DIR "spores"))
-(def ^:const LIVE-SKILLS-DIR (str HOME "/.pi/agent/skills")) ;; stays under pi — skills are pi's config
+(def ^:const LIVE-SKILLS-DIR (str HOME "/.ημ/agent/skills")) ;; stays under pi — skills are pi's config
 (def ^:const STATUS-KEY "session-mycology")
 (def ^:const GLOBAL-KEY "__pi_session_mycology_state__")
 (def ^:const PROMPT-SECTION-START "<!-- eta-mu:session-mycology:start -->")
@@ -346,8 +346,8 @@
                      contract-draft
                      "~~~\n\n"
                      "## Suggested live-skill path\n\n"
-                     "- " (path/join HOME ".pi" "agent" "skills" (aget spore "slug") "SKILL.md") "\n"
-                     "- " (path/join HOME ".pi" "agent" "skills" (aget spore "slug") "CONTRACT.edn") "\n")]
+                     "- " (path/join HOME ".ημ" "agent" "skills" (aget spore "slug") "SKILL.md") "\n"
+                     "- " (path/join HOME ".ημ" "agent" "skills" (aget spore "slug") "CONTRACT.edn") "\n")]
     (.writeFileSync fs file-path content "utf8")
     file-path))
 
