@@ -316,10 +316,10 @@ interface PackageJson {
 
 const pkg = JSON.parse(readFileSync(getPackageJsonPath(), "utf-8")) as PackageJson;
 
-const piConfigName: string | undefined = pkg.piConfig?.name;
+const etaMuConfigName: string | undefined = pkg.piConfig?.name;
 export const PACKAGE_NAME: string = pkg.name || "@open-hax/eta-mu-coding-agent";
 export const UPDATE_PACKAGE_NAME = "@open-hax/eta-mu-coding-agent";
-export const APP_NAME: string = piConfigName || "eta-mu";
+export const APP_NAME: string = etaMuConfigName || "eta-mu";
 export const APP_TITLE = "ημ";
 export const CONFIG_DIR_NAME: string = pkg.piConfig?.configDir || ".ημ";
 export const CONVENIENCE_CONFIG_DIR_NAME = ".eta-mu";
@@ -331,7 +331,7 @@ const DEFAULT_SHARE_VIEWER_URL = "https://eta-mu.openhax.ai/session/";
 
 /** Get the share viewer URL for a gist ID */
 export function getShareViewerUrl(gistId: string): string {
-	const baseUrl = process.env.ETA_MU_SHARE_VIEWER_URL || process.env.PI_SHARE_VIEWER_URL || DEFAULT_SHARE_VIEWER_URL;
+	const baseUrl = process.env.ETA_MU_SHARE_VIEWER_URL || DEFAULT_SHARE_VIEWER_URL;
 	return `${baseUrl}#${gistId}`;
 }
 
