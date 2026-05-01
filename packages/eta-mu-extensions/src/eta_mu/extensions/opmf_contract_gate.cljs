@@ -361,11 +361,25 @@
                 msg (build-repair-turn-message (aget result "repairPrompt") next-attempt max-retries original-prompt)
                 sender (sender-for pi ctx state)]
             (if sender
-              (-> (.call (aget sender "sendUserMessage") sender msg)
-                  (.then (fn [_]
-                           (notify ctx
-                                   (str "eta-mu-opmf-contract-gate queued repair " next-attempt "/" max-retries)
-                                   "warn"))))
+              (try
+                (let [result (.call (aget sender "sendUserMessage")
+                                    sender
+                                    msg
+                                    #js {:deliverAs "followUp"})]
+                  (if (and result (aget result "then"))
+                    (.then result
+                           (fn [_]
+                             (notify ctx
+                                     (str "eta-mu-opmf-contract-gate queued repair " next-attempt "/" max-retries)
+                                     "warn")))
+                    (notify ctx
+                            (str "eta-mu-opmf-contract-gate queued repair " next-attempt "/" max-retries)
+                            "warn")))
+                (catch :default error
+                  (notify ctx
+                          (str "eta-mu-opmf-contract-gate repair queue failed: "
+                               (or (aget error "message") (str error)))
+                          "warn")))
               (notify ctx "eta-mu-opmf-contract-gate repair sender unavailable" "warn")))
           (notify ctx
                   (str "eta-mu-opmf-contract-gate failed ("
