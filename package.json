@@ -2,7 +2,7 @@
   "name": "@open-hax/eta-mu-monorepo",
   "version": "0.1.0",
   "description": "Canonical eta-mu monorepo spanning GitHub automation, truth/docs kernels, Promethean runtime, and absorbed OpenHax surfaces",
-  "private": true,
+  "private": false,
   "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
