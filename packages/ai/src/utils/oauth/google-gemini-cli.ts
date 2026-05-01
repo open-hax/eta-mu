@@ -25,11 +25,19 @@ if (typeof process !== "undefined" && (process.versions?.node || process.version
 	});
 }
 
-const decode = (s: string) => atob(s);
-const CLIENT_ID = decode(
-	"UkVEQUNURURfR09PR0xFX09BVVRIX0NMSUVOVF9JRA==",
-);
-const CLIENT_SECRET = decode("UkVEQUNURURfR09PR0xFX09BVVRIX0NMSUVOVF9TRUNSRVQ==");
+const GEMINI_CLI_CLIENT_ID_ENV = "ETA_MU_GOOGLE_GEMINI_CLI_OAUTH_CLIENT_ID";
+const GEMINI_CLI_CLIENT_SECRET_ENV = "ETA_MU_GOOGLE_GEMINI_CLI_OAUTH_CLIENT_SECRET";
+
+function getGeminiCliOAuthClientCredentials(): { clientId: string; clientSecret: string } {
+	const clientId = process.env[GEMINI_CLI_CLIENT_ID_ENV];
+	const clientSecret = process.env[GEMINI_CLI_CLIENT_SECRET_ENV];
+	if (!clientId || !clientSecret) {
+		throw new Error(
+			`Google Gemini CLI OAuth requires ${GEMINI_CLI_CLIENT_ID_ENV} and ${GEMINI_CLI_CLIENT_SECRET_ENV} to be set.`,
+		);
+	}
+	return { clientId, clientSecret };
+}
 const REDIRECT_URI = "http://localhost:8085/oauth2callback";
 const SCOPES = [
 	"https://www.googleapis.com/auth/cloud-platform",
@@ -376,12 +384,13 @@ async function getUserEmail(accessToken: string): Promise<string | undefined> {
  * Refresh Google Cloud Code Assist token
  */
 export async function refreshGoogleCloudToken(refreshToken: string, projectId: string): Promise<OAuthCredentials> {
+	const { clientId, clientSecret } = getGeminiCliOAuthClientCredentials();
 	const response = await fetch(TOKEN_URL, {
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body: new URLSearchParams({
-			client_id: CLIENT_ID,
-			client_secret: CLIENT_SECRET,
+			client_id: clientId,
+			client_secret: clientSecret,
 			refresh_token: refreshToken,
 			grant_type: "refresh_token",
 		}),
@@ -419,6 +428,7 @@ export async function loginGeminiCli(
 	onProgress?: (message: string) => void,
 	onManualCodeInput?: () => Promise<string>,
 ): Promise<OAuthCredentials> {
+	const { clientId, clientSecret } = getGeminiCliOAuthClientCredentials();
 	const { verifier, challenge } = await generatePKCE();
 
 	// Start local server for callback
@@ -430,7 +440,7 @@ export async function loginGeminiCli(
 	try {
 		// Build authorization URL
 		const authParams = new URLSearchParams({
-			client_id: CLIENT_ID,
+			client_id: clientId,
 			response_type: "code",
 			redirect_uri: REDIRECT_URI,
 			scope: SCOPES.join(" "),
@@ -525,8 +535,8 @@ export async function loginGeminiCli(
 				"Content-Type": "application/x-www-form-urlencoded",
 			},
 			body: new URLSearchParams({
-				client_id: CLIENT_ID,
-				client_secret: CLIENT_SECRET,
+				client_id: clientId,
+				client_secret: clientSecret,
 				code,
 				grant_type: "authorization_code",
 				redirect_uri: REDIRECT_URI,
