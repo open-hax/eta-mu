@@ -18,7 +18,7 @@
  *   /thinking-label          Reset to the default label
  */
 
-import type { ExtensionAPI, ExtensionContext } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@open-hax/eta-mu-cli";
 
 const DEFAULT_LABEL = "Pondering...";
 

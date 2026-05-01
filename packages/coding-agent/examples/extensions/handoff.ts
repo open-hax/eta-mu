@@ -13,8 +13,8 @@
  */
 
 import { complete, type Message } from "@open-hax/eta-mu-ai";
-import type { ExtensionAPI, SessionEntry } from "@open-hax/eta-mu-coding-agent";
-import { BorderedLoader, convertToLlm, serializeConversation } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI, SessionEntry } from "@open-hax/eta-mu-cli";
+import { BorderedLoader, convertToLlm, serializeConversation } from "@open-hax/eta-mu-cli";
 
 const SYSTEM_PROMPT = `You are a context transfer assistant. Given a conversation history and the user's goal for a new thread, generate a focused prompt that:
 

@@ -9,6 +9,12 @@
  {
   ;; ── Extensions ───────────────────────────────────────────────────────
 
+  :apply-patch
+  {:target :node-library
+   :output-to "target/runtime/apply-patch/runtime.js"
+   :exports {:default eta-mu.build.apply-patch/init}
+   :compiler-options {:externs ["externs/promise.js"]}}
+
   :bootstrap
   {:target :node-library
    :output-to "target/runtime/bootstrap/runtime.js"

@@ -1,4 +1,4 @@
-import type { ExtensionAPI, ExtensionContext } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@open-hax/eta-mu-cli";
 
 const COMPACT_THRESHOLD_TOKENS = 100_000;
 

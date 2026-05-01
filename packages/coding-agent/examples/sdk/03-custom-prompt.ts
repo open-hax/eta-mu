@@ -4,7 +4,7 @@
  * Shows how to replace or modify the default system prompt.
  */
 
-import { createAgentSession, DefaultResourceLoader, getAgentDir, SessionManager } from "@open-hax/eta-mu-coding-agent";
+import { createAgentSession, DefaultResourceLoader, getAgentDir, SessionManager } from "@open-hax/eta-mu-cli";
 
 const cwd = process.cwd();
 const agentDir = getAgentDir();

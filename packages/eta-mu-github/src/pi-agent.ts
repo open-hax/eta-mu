@@ -11,7 +11,7 @@ import {
   type ResourceLoader,
   SessionManager,
   SettingsManager,
-} from "@open-hax/eta-mu-coding-agent";
+} from "@open-hax/eta-mu-cli";
 import path from "node:path";
 import fs from "node:fs";
 

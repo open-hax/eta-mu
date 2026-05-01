@@ -7,7 +7,7 @@ This page gets you from install to a useful first pi session.
 Pi is distributed as an npm package:
 
 ```bash
-npm install -g @open-hax/eta-mu-coding-agent
+npm install -g @open-hax/eta-mu-cli
 ```
 
 Then start pi in the project directory you want it to work on:

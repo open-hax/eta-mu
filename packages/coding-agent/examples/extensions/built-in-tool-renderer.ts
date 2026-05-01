@@ -25,8 +25,8 @@
  *   pi -e ./built-in-tool-renderer.ts
  */
 
-import type { BashToolDetails, EditToolDetails, ExtensionAPI, ReadToolDetails } from "@open-hax/eta-mu-coding-agent";
-import { createBashTool, createEditTool, createReadTool, createWriteTool } from "@open-hax/eta-mu-coding-agent";
+import type { BashToolDetails, EditToolDetails, ExtensionAPI, ReadToolDetails } from "@open-hax/eta-mu-cli";
+import { createBashTool, createEditTool, createReadTool, createWriteTool } from "@open-hax/eta-mu-cli";
 import { Text } from "@open-hax/eta-mu-tui";
 
 export default function (pi: ExtensionAPI) {

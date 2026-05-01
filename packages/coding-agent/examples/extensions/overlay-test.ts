@@ -8,7 +8,7 @@
  * - Edge case tests (wide chars, styled text, emoji)
  */
 
-import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@open-hax/eta-mu-cli";
 import { CURSOR_MARKER, type Focusable, matchesKey, visibleWidth } from "@open-hax/eta-mu-tui";
 
 export default function (pi: ExtensionAPI) {

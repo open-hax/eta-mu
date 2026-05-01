@@ -176,7 +176,7 @@ interface UserInfo {
 MomAgent wraps `AgentSession` from coding-agent. Agent is platform-agnostic; it just forwards events to the adapter.
 
 ```typescript
-import { type AgentSessionEvent } from "@open-hax/eta-mu-coding-agent";
+import { type AgentSessionEvent } from "@open-hax/eta-mu-cli";
 
 interface MomAgent {
   /**

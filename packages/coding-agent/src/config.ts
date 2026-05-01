@@ -317,8 +317,9 @@ interface PackageJson {
 const pkg = JSON.parse(readFileSync(getPackageJsonPath(), "utf-8")) as PackageJson;
 
 const etaMuConfigName: string | undefined = pkg.piConfig?.name;
-export const PACKAGE_NAME: string = pkg.name || "@open-hax/eta-mu-coding-agent";
-export const UPDATE_PACKAGE_NAME = "@open-hax/eta-mu-coding-agent";
+export const PACKAGE_NAME: string = pkg.name || "@open-hax/eta-mu-cli";
+export const VERSION_CHECK_PACKAGE_NAME = "@open-hax/eta-mu-cli";
+export const UPDATE_PACKAGE_NAME = PACKAGE_NAME;
 export const APP_NAME: string = etaMuConfigName || "eta-mu";
 export const APP_TITLE = "ημ";
 export const CONFIG_DIR_NAME: string = pkg.piConfig?.configDir || ".ημ";

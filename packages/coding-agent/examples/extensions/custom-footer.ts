@@ -9,7 +9,7 @@
  */
 
 import type { AssistantMessage } from "@open-hax/eta-mu-ai";
-import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-cli";
 import { truncateToWidth, visibleWidth } from "@open-hax/eta-mu-tui";
 
 export default function (pi: ExtensionAPI) {

@@ -15,7 +15,7 @@ Absorbed packages:
 
 - `packages/agent` → `@open-hax/eta-mu-agent-core`
 - `packages/ai` → `@open-hax/eta-mu-ai`
-- `packages/coding-agent` → `@open-hax/eta-mu-coding-agent`
+- `packages/coding-agent` → `@open-hax/eta-mu-cli`
 - `packages/mom` → `@mariozechner/pi-mom`
 - `packages/pods` → `@mariozechner/pi`
 - `packages/tui` → `@open-hax/eta-mu-tui`
@@ -23,14 +23,15 @@ Absorbed packages:
 
 Internal dependencies between absorbed packages use `workspace:*`.
 
-## Phase 2: Eta-mu distro layer
+## Phase 2: Eta-mu runtime package
 
-Added initial eta-mu-branded packages:
+Eta-mu intentionally ships one user-facing runtime package:
 
-- `@open-hax/eta-mu-sdk`: barrel exports the absorbed Pi SDK/runtime packages.
-- `@open-hax/eta-mu-cli`: provides the `eta-mu` binary as a thin wrapper over the absorbed `@open-hax/eta-mu-coding-agent` CLI.
+- `packages/coding-agent` → `@open-hax/eta-mu-cli`, owning the `eta-mu` and `pi` binaries plus SDK/runtime exports.
 
-`@open-hax/eta-mu-extensions` declares a Pi package manifest for eta-mu runtime extensions, including Receipt River, Session Mycology, contract runtime, OPMF contract gate, global instructions, graph memory, image render, web search, Chronos, and custom providers.
+Removed the separate SDK barrel and thin CLI wrapper packages so a runtime change cannot be published without the built-in tools that eta-mu needs by default.
+
+`@open-hax/eta-mu-extensions` declares the built-in tool manifest consumed by `@open-hax/eta-mu-cli`, including Receipt River, Session Mycology, contract runtime, OPMF contract gate, global instructions, graph memory, image render, web search, Chronos, and custom providers.
 
 ## Next functional divergence
 

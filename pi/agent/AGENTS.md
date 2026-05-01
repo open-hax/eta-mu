@@ -7,10 +7,10 @@ The full agent contract/instructions live in:
 
 - `~/.pi/agent/operation-mindfuck/*.lisp`
 
-They are automatically appended to the system prompt by:
+They are automatically appended to the system prompt by the built-in CLJS runtime tool:
 
-- `~/.pi/agent/extensions/opencode-global-instructions.ts`
-  (configured in `~/.pi/agent/settings.json`)
+- `packages/eta-mu-extensions/src/eta_mu/extensions/opencode_global_instructions.cljs`
+  (declared in `packages/eta-mu-extensions/manifest.edn` and package metadata)
 
 ## Local addenda
 - Canonical runtime skills live in `~/.pi/agent/skills`.

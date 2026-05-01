@@ -490,6 +490,48 @@ describe("ModelRegistry", () => {
 			expect(compat?.supportsLongCacheRetention).toBe(false);
 		});
 
+		test("custom models.json schema accepts audio inputs", () => {
+			writeRawModelsJson({
+				proxx: {
+					baseUrl: "https://proxy.example.com/v1",
+					apiKey: "PROXX_KEY",
+					api: "openai-completions",
+					models: [
+						{
+							id: "gpt-audio-test",
+							reasoning: true,
+							input: ["text", "image", "audio"],
+							cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+							contextWindow: 1000,
+							maxTokens: 100,
+						},
+					],
+				},
+			});
+
+			const registry = ModelRegistry.create(authStorage, modelsJsonPath);
+			const model = registry.find("proxx", "gpt-audio-test");
+
+			expect(registry.getError()).toBeUndefined();
+			expect(model?.input).toEqual(["text", "image", "audio"]);
+		});
+
+		test("modelOverrides schema accepts audio inputs", () => {
+			writeRawModelsJson({
+				openai: {
+					modelOverrides: {
+						"gpt-4o-audio-preview": {
+							input: ["text", "audio"],
+						},
+					},
+				},
+			});
+
+			const registry = ModelRegistry.create(authStorage, modelsJsonPath);
+
+			expect(registry.getError()).toBeUndefined();
+		});
+
 		test("model-level baseUrl overrides provider-level baseUrl for custom models", () => {
 			writeRawModelsJson({
 				"opencode-go": {

@@ -225,12 +225,12 @@ export interface ExtensionUIContext {
 	 * - `keybindings`: KeybindingsManager for app-level keybindings
 	 *
 	 * For full app keybinding support (escape, ctrl+d, model switching, etc.),
-	 * extend `CustomEditor` from `@open-hax/eta-mu-coding-agent` and call
+	 * extend `CustomEditor` from `@open-hax/eta-mu-cli` and call
 	 * `super.handleInput(data)` for keys you don't handle.
 	 *
 	 * @example
 	 * ```ts
-	 * import { CustomEditor } from "@open-hax/eta-mu-coding-agent";
+	 * import { CustomEditor } from "@open-hax/eta-mu-cli";
 	 *
 	 * class VimEditor extends CustomEditor {
 	 *   private mode: "normal" | "insert" = "insert";

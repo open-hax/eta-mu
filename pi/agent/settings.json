@@ -23,13 +23,7 @@
   "skills": [
     "~/.pi/agent/skills/"
   ],
-  "extensions": [
-    "~/.pi/agent/extensions/custom-providers.ts",
-    "~/.pi/agent/extensions/opencode-global-instructions.ts",
-    "~/.pi/agent/extensions/opmf-contract-runtime.ts",
-    "~/.pi/agent/extensions/task-timing.ts",
-    "~/.pi/agent/extensions/websearch-open-hax.ts"
-  ],
+  "extensions": [],
   "enableSkillCommands": true,
   "lastChangelogVersion": "0.58.0",
   "hideThinkingBlock": false

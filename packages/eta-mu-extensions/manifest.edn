@@ -24,7 +24,8 @@
   :runtime  "dist/runtime/<name>.cjs"}
 
  :extensions
- [{:name "bootstrap"         :source :local :path "src/eta_mu/extensions/bootstrap.cljs"                  :tracked true :description "Session initialization and state recovery"}
+ [{:name "apply-patch"       :source :local :path "src/eta_mu/extensions/apply_patch.cljs"                :tracked true :description "Codex-style multi-file patch tool"}
+  {:name "bootstrap"         :source :local :path "src/eta_mu/extensions/bootstrap.cljs"                  :tracked true :description "Session initialization and state recovery"}
   {:name "chronos"           :source :local :path "src/eta_mu/extensions/chronos.cljs"                    :tracked true :description "Time tracking for contracting work"}
   {:name "contract-runtime"  :source :local :path "src/eta_mu/extensions/contract_runtime.cljs"           :tracked true :description "Operational contract runtime v1"}
   {:name "contract-runtime-v2" :source :local :path "src/eta_mu/extensions/contract_runtime_v2.cljs"     :tracked true :description "Contract runtime v2: cwd-walk, policy gate, fulfillment notify/audit"}

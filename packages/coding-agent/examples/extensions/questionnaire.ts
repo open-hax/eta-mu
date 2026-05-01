@@ -5,7 +5,7 @@
  * Multiple questions: tab bar navigation between questions
  */
 
-import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-cli";
 import { Editor, type EditorTheme, Key, matchesKey, Text, truncateToWidth } from "@open-hax/eta-mu-tui";
 import { Type } from "typebox";
 

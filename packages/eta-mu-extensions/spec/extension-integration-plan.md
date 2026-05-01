@@ -26,16 +26,9 @@ This document specifies the integration plan for remaining pi/opencode extension
 | `task_timing.cljs` | 7,425 | ✅ Active | None |
 | `websearch_open_hax.cljs` | 5,599 | ✅ Active | None |
 
-### Unported Extensions (TypeScript - 7 total)
+### Legacy TypeScript extensions
 
-| Extension | TS Lines | Priority | Dependencies | Port Complexity |
-|-----------|----------|----------|--------------|-----------------|
-| `analyze-image.ts` | 338 | **P1** | Vision API | Low - uses fetch API |
-| `manipulate-image.ts` | 338 | **P1** | Sharp/jimp | Low - simple file ops |
-| `apply-patch.ts` | 799 | **P2** | None | Medium - parsing logic |
-| `desktop-ops.ts` | 705 | **P2** | KDE/Spectacle | Medium - desktop integration |
-| `webpage-markdown.ts` | 758 | **P3** | Fetch, pandoc | Medium - web fetching |
-| `skill-graph-aco.ts` | 1,400 | **P3** | Ollama API | High - complex state |
+The `pi/agent/extensions` TypeScript source directory has been retired to avoid runtime drift. `apply-patch` is now CLJS (`src/eta_mu/extensions/apply_patch.cljs`). `skill-graph-aco` was removed from the active runtime; static `skill_graph`/graph-memory tooling is canonical until an ACO CLJS rewrite is justified.
 
 ## Identified Patterns for Macroization
 
@@ -87,18 +80,15 @@ Repetitive parameter definitions with:
 - [ ] Create integration tests
 - [ ] Update build system
 
-### Week 3: Desktop Extensions (P2)
+### Week 3: Drift removal
 
-- [ ] Port `apply-patch.ts`
-- [ ] Port `desktop-ops.ts`
-- [ ] Test with KDE environment
+- [x] Port `apply-patch` to CLJS
+- [x] Remove `pi/agent/extensions` TypeScript runtime copies
+- [x] Keep built-ins registered through `manifest.edn` and package metadata
 
 ### Week 4: Advanced Extensions (P3)
 
-- [ ] Evaluate `skill-graph-aco.ts` complexity
-- [ ] Consider splitting into modules
-- [ ] Port with macro support
-- [ ] Merge `webpage-markdown.ts` with `websearch_open_hax.cljs`
+- [ ] Re-evaluate `skill-graph-aco` only if adaptive ACO behavior is needed beyond the canonical static skill graph / graph-memory tools
 
 ## Testing Requirements
 

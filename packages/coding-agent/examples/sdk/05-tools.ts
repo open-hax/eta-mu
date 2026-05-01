@@ -10,7 +10,7 @@
  * extensions system using pi.registerTool().
  */
 
-import { createAgentSession, SessionManager } from "@open-hax/eta-mu-coding-agent";
+import { createAgentSession, SessionManager } from "@open-hax/eta-mu-cli";
 
 // Read-only mode (no edit/write)
 await createAgentSession({

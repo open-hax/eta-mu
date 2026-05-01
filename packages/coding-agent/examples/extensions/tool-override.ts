@@ -21,7 +21,7 @@
  */
 
 import type { TextContent } from "@open-hax/eta-mu-ai";
-import { type ExtensionAPI, getAgentDir, withFileMutationQueue } from "@open-hax/eta-mu-coding-agent";
+import { type ExtensionAPI, getAgentDir, withFileMutationQueue } from "@open-hax/eta-mu-cli";
 import { constants, readFileSync } from "fs";
 import { access, appendFile, readFile } from "fs/promises";
 import { join, resolve } from "path";

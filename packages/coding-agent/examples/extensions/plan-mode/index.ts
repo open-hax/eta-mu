@@ -14,7 +14,7 @@
 
 import type { AgentMessage } from "@open-hax/eta-mu-agent-core";
 import type { AssistantMessage, TextContent } from "@open-hax/eta-mu-ai";
-import type { ExtensionAPI, ExtensionContext } from "@open-hax/eta-mu-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@open-hax/eta-mu-cli";
 import { Key } from "@open-hax/eta-mu-tui";
 import { extractTodoItems, isSafeCommand, markCompletedSteps, type TodoItem } from "./utils.js";
 

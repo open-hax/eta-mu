@@ -19,7 +19,7 @@ import * as path from "node:path";
 import type { AgentToolResult } from "@open-hax/eta-mu-agent-core";
 import type { Message } from "@open-hax/eta-mu-ai";
 import { StringEnum } from "@open-hax/eta-mu-ai";
-import { type ExtensionAPI, getMarkdownTheme, withFileMutationQueue } from "@open-hax/eta-mu-coding-agent";
+import { type ExtensionAPI, getMarkdownTheme, withFileMutationQueue } from "@open-hax/eta-mu-cli";
 import { Container, Markdown, Spacer, Text } from "@open-hax/eta-mu-tui";
 import { Type } from "typebox";
 import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.js";

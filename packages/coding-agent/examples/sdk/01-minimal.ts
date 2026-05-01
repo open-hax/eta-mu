@@ -5,7 +5,7 @@
  * from cwd and ~/.pi/agent. Model chosen from settings or first available.
  */
 
-import { createAgentSession } from "@open-hax/eta-mu-coding-agent";
+import { createAgentSession } from "@open-hax/eta-mu-cli";
 
 const { session } = await createAgentSession();
 

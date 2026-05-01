@@ -11,7 +11,7 @@ importers:
       '@open-hax/eta-mu-ai':
         specifier: ^0.58.0
         version: 0.58.4(ws@8.20.0)(zod@4.3.6)
-      '@open-hax/eta-mu-coding-agent':
+      '@open-hax/eta-mu-cli':
         specifier: ^0.58.0
         version: 0.58.4(ws@8.20.0)(zod@4.3.6)
       '@octokit/rest':
@@ -571,7 +571,7 @@ packages:
     engines: {node: '>=20.0.0'}
     hasBin: true
 
-  '@open-hax/eta-mu-coding-agent@0.58.4':
+  '@open-hax/eta-mu-cli@0.58.4':
     resolution: {integrity: sha512-hMU/LX9lFPoCpLYnL3yjWU4t26wkPIlDIlMRyjMihxKNqqEtW9slAc520OdARkAU3wmGgvA1sMVFER1ff+fuAA==}
     engines: {node: '>=20.6.0'}
     hasBin: true
@@ -2520,7 +2520,7 @@ snapshots:
       - ws
       - zod
 
-  '@open-hax/eta-mu-coding-agent@0.58.4(ws@8.20.0)(zod@4.3.6)':
+  '@open-hax/eta-mu-cli@0.58.4(ws@8.20.0)(zod@4.3.6)':
     dependencies:
       '@mariozechner/jiti': 2.6.5
       '@open-hax/eta-mu-agent-core': 0.58.4(ws@8.20.0)(zod@4.3.6)

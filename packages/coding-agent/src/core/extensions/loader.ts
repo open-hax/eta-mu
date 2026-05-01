@@ -23,7 +23,7 @@ import * as _bundledTypeboxCompile from "typebox/compile";
 import * as _bundledTypeboxValue from "typebox/value";
 import { CONFIG_DIR_NAME, getAgentDir, isBunBinary } from "../../config.js";
 // NOTE: This import works because loader.ts exports are NOT re-exported from index.ts,
-// avoiding a circular dependency. Extensions can import from @open-hax/eta-mu-coding-agent.
+// avoiding a circular dependency. Extensions can import from @open-hax/eta-mu-cli.
 import * as _bundledPiCodingAgent from "../../index.js";
 import { createEventBus, type EventBus } from "../event-bus.js";
 import type { ExecOptions } from "../exec.js";
@@ -47,7 +47,7 @@ const LEGACY_EXTENSION_IMPORTS: Record<string, string> = {
 	"@mariozechner/pi-tui": "@open-hax/eta-mu-tui",
 	"@mariozechner/pi-ai": "@open-hax/eta-mu-ai",
 	"@mariozechner/pi-ai/oauth": "@open-hax/eta-mu-ai/oauth",
-	"@mariozechner/pi-coding-agent": "@open-hax/eta-mu-coding-agent",
+	"@mariozechner/pi-coding-agent": "@open-hax/eta-mu-cli",
 };
 
 const VIRTUAL_MODULES: Record<string, unknown> = {
@@ -61,7 +61,7 @@ const VIRTUAL_MODULES: Record<string, unknown> = {
 	"@open-hax/eta-mu-tui": _bundledPiTui,
 	"@open-hax/eta-mu-ai": _bundledPiAi,
 	"@open-hax/eta-mu-ai/oauth": _bundledPiAiOauth,
-	"@open-hax/eta-mu-coding-agent": _bundledPiCodingAgent,
+	"@open-hax/eta-mu-cli": _bundledPiCodingAgent,
 	"@mariozechner/pi-agent-core": _bundledPiAgentCore,
 	"@mariozechner/pi-tui": _bundledPiTui,
 	"@mariozechner/pi-ai": _bundledPiAi,
@@ -102,7 +102,7 @@ function getAliases(): Record<string, string> {
 	const etaMuAiOauth = resolveWorkspaceOrImport("ai/dist/oauth.js", "@open-hax/eta-mu-ai/oauth");
 
 	_aliases = {
-		"@open-hax/eta-mu-coding-agent": packageIndex,
+		"@open-hax/eta-mu-cli": packageIndex,
 		"@open-hax/eta-mu-agent-core": etaMuAgentCore,
 		"@open-hax/eta-mu-tui": etaMuTui,
 		"@open-hax/eta-mu-ai": etaMuAi,

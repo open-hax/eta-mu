@@ -34,7 +34,7 @@ Source on GitHub ([pi-mono](https://github.com/badlogic/pi-mono)):
 - [`packages/ai/src/types.ts`](https://github.com/badlogic/pi-mono/blob/main/packages/ai/src/types.ts) - Base message types (UserMessage, AssistantMessage, ToolResultMessage)
 - [`packages/agent/src/types.ts`](https://github.com/badlogic/pi-mono/blob/main/packages/agent/src/types.ts) - AgentMessage union type
 
-For TypeScript definitions in your project, inspect `node_modules/@open-hax/eta-mu-coding-agent/dist/` and `node_modules/@open-hax/eta-mu-ai/dist/`.
+For TypeScript definitions in your project, inspect `node_modules/@open-hax/eta-mu-cli/dist/` and `node_modules/@open-hax/eta-mu-ai/dist/`.
 
 ## Message Types
 

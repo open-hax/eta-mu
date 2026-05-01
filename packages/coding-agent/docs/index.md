@@ -7,7 +7,7 @@ Pi is a minimal terminal coding harness. It is designed to stay small at the cor
 Install pi with npm:
 
 ```bash
-npm install -g @open-hax/eta-mu-coding-agent
+npm install -g @open-hax/eta-mu-cli
 ```
 
 Then run it in a project directory:

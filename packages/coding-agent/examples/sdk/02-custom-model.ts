@@ -5,7 +5,7 @@
  */
 
 import { getModel } from "@open-hax/eta-mu-ai";
-import { AuthStorage, createAgentSession, ModelRegistry } from "@open-hax/eta-mu-coding-agent";
+import { AuthStorage, createAgentSession, ModelRegistry } from "@open-hax/eta-mu-cli";
 
 // Set up auth storage and model registry
 const authStorage = AuthStorage.create();

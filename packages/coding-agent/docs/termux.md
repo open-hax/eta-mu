@@ -17,7 +17,7 @@ pkg update && pkg upgrade
 pkg install nodejs termux-api git
 
 # Install pi
-npm install -g @open-hax/eta-mu-coding-agent
+npm install -g @open-hax/eta-mu-cli
 
 # Create config directory
 mkdir -p ~/.pi/agent
