@@ -173,6 +173,45 @@ describe("Agent", () => {
 		expect(agent.state.isStreaming).toBe(false);
 	});
 
+	it("should emit assistant message events when the stream function throws", async () => {
+		const agent = new Agent({
+			streamFn: () => {
+				throw new Error("provider vanished");
+			},
+		});
+
+		const events: string[] = [];
+		let assistantErrorEnd: AssistantMessage | undefined;
+		agent.subscribe((event) => {
+			events.push(event.type);
+			if (event.type === "message_end" && event.message.role === "assistant") {
+				assistantErrorEnd = event.message;
+			}
+		});
+
+		await agent.prompt("hello");
+
+		expect(events).toEqual([
+			"agent_start",
+			"turn_start",
+			"message_start",
+			"message_end",
+			"message_start",
+			"message_end",
+			"turn_end",
+			"agent_end",
+		]);
+		expect(assistantErrorEnd?.stopReason).toBe("error");
+		expect(assistantErrorEnd?.errorMessage).toBe("provider vanished");
+		expect(agent.state.messages.at(-1)).toMatchObject({
+			role: "assistant",
+			stopReason: "error",
+			errorMessage: "provider vanished",
+		});
+		expect(agent.state.errorMessage).toBe("provider vanished");
+		expect(agent.state.isStreaming).toBe(false);
+	});
+
 	it("should pass the active abort signal to subscribers", async () => {
 		let receivedSignal: AbortSignal | undefined;
 		const agent = new Agent({
