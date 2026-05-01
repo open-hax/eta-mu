@@ -11,7 +11,7 @@ import {
   type ResourceLoader,
   SessionManager,
   SettingsManager,
-} from "@mariozechner/pi-coding-agent";
+} from "@open-hax/eta-mu-coding-agent";
 import path from "node:path";
 import fs from "node:fs";
 

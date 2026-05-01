@@ -1,5 +1,5 @@
-import { Agent } from "@mariozechner/pi-agent-core";
-import { type AssistantMessage, getModel, type Usage } from "@mariozechner/pi-ai";
+import { Agent } from "@open-hax/eta-mu-agent-core";
+import { type AssistantMessage, getModel, type Usage } from "@open-hax/eta-mu-ai";
 import { describe, expect, it } from "vitest";
 import { AgentSession } from "../src/core/agent-session.js";
 import { AuthStorage } from "../src/core/auth-storage.js";

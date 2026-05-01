@@ -1,4 +1,4 @@
-import type { AttachmentContent, ImageContent } from "@mariozechner/pi-ai";
+import type { AttachmentContent, ImageContent } from "@open-hax/eta-mu-ai";
 import type { Args } from "./args.js";
 
 export interface InitialMessageInput {

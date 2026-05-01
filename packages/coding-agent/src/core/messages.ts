@@ -5,8 +5,8 @@
  * and provides a transformer to convert them to LLM-compatible messages.
  */
 
-import type { AgentMessage } from "@mariozechner/pi-agent-core";
-import type { InputContent, Message } from "@mariozechner/pi-ai";
+import type { AgentMessage } from "@open-hax/eta-mu-agent-core";
+import type { InputContent, Message } from "@open-hax/eta-mu-ai";
 
 export const COMPACTION_SUMMARY_PREFIX = `The conversation history before this point was compacted into the following summary:
 
@@ -67,7 +67,7 @@ export interface CompactionSummaryMessage {
 }
 
 // Extend CustomAgentMessages via declaration merging
-declare module "@mariozechner/pi-agent-core" {
+declare module "@open-hax/eta-mu-agent-core" {
 	interface CustomAgentMessages {
 		bashExecution: BashExecutionMessage;
 		custom: CustomMessage;

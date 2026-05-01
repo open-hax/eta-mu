@@ -17,7 +17,7 @@
  * - setEditorText() - via /rpc-prefill command
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@open-hax/eta-mu-coding-agent";
 
 export default function (pi: ExtensionAPI) {
 	let turnCount = 0;

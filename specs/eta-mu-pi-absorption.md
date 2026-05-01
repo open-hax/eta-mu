@@ -13,12 +13,12 @@ Destination: `/home/err/devel/orgs/open-hax/eta-mu/packages/`
 
 Absorbed packages:
 
-- `packages/agent` → `@mariozechner/pi-agent-core`
-- `packages/ai` → `@mariozechner/pi-ai`
-- `packages/coding-agent` → `@mariozechner/pi-coding-agent`
+- `packages/agent` → `@open-hax/eta-mu-agent-core`
+- `packages/ai` → `@open-hax/eta-mu-ai`
+- `packages/coding-agent` → `@open-hax/eta-mu-coding-agent`
 - `packages/mom` → `@mariozechner/pi-mom`
 - `packages/pods` → `@mariozechner/pi`
-- `packages/tui` → `@mariozechner/pi-tui`
+- `packages/tui` → `@open-hax/eta-mu-tui`
 - `packages/web-ui` → `@mariozechner/pi-web-ui`
 
 Internal dependencies between absorbed packages use `workspace:*`.
@@ -28,7 +28,7 @@ Internal dependencies between absorbed packages use `workspace:*`.
 Added initial eta-mu-branded packages:
 
 - `@open-hax/eta-mu-sdk`: barrel exports the absorbed Pi SDK/runtime packages.
-- `@open-hax/eta-mu-cli`: provides the `eta-mu` binary as a thin wrapper over the absorbed `@mariozechner/pi-coding-agent` CLI.
+- `@open-hax/eta-mu-cli`: provides the `eta-mu` binary as a thin wrapper over the absorbed `@open-hax/eta-mu-coding-agent` CLI.
 
 `@open-hax/eta-mu-extensions` declares a Pi package manifest for eta-mu runtime extensions, including Receipt River, Session Mycology, contract runtime, OPMF contract gate, global instructions, graph memory, image render, web search, Chronos, and custom providers.
 

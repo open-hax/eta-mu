@@ -35,7 +35,7 @@ function injectDefaultEtaMuExtensions() {
 
 injectDefaultEtaMuExtensions();
 
-const codingAgentIndex = fileURLToPath(await import.meta.resolve("@mariozechner/pi-coding-agent"));
+const codingAgentIndex = fileURLToPath(await import.meta.resolve("@open-hax/eta-mu-coding-agent"));
 const codingAgentCli = join(dirname(codingAgentIndex), "cli.js");
 
 await import(pathToFileURL(codingAgentCli).href);

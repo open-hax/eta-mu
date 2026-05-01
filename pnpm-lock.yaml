@@ -29,7 +29,7 @@ importers:
 
   packages/agent:
     dependencies:
-      '@mariozechner/pi-ai':
+      '@open-hax/eta-mu-ai':
         specifier: workspace:*
         version: link:../ai
       typebox:
@@ -103,13 +103,13 @@ importers:
       '@mariozechner/jiti':
         specifier: ^2.6.2
         version: 2.6.5
-      '@mariozechner/pi-agent-core':
+      '@open-hax/eta-mu-agent-core':
         specifier: workspace:*
         version: link:../agent
-      '@mariozechner/pi-ai':
+      '@open-hax/eta-mu-ai':
         specifier: workspace:*
         version: link:../ai
-      '@mariozechner/pi-tui':
+      '@open-hax/eta-mu-tui':
         specifier: workspace:*
         version: link:../tui
       '@silvia-odwyer/photon-node':
@@ -195,7 +195,7 @@ importers:
 
   packages/eta-mu-cli:
     dependencies:
-      '@mariozechner/pi-coding-agent':
+      '@open-hax/eta-mu-coding-agent':
         specifier: workspace:*
         version: link:../coding-agent
       '@open-hax/eta-mu-extensions':
@@ -232,9 +232,9 @@ importers:
 
   packages/eta-mu-extensions-e2e:
     devDependencies:
-      '@mariozechner/pi-coding-agent':
-        specifier: 0.67.1
-        version: 0.67.1(ws@8.20.0)(zod@3.25.76)
+      '@open-hax/eta-mu-coding-agent':
+        specifier: workspace:*
+        version: link:../coding-agent
       express:
         specifier: ^4.21.2
         version: 4.22.1
@@ -247,15 +247,15 @@ importers:
       '@eta-mu/runtime':
         specifier: workspace:*
         version: link:../eta-mu-runtime
-      '@mariozechner/pi-ai':
-        specifier: ^0.58.0
-        version: 0.58.4(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-coding-agent':
-        specifier: ^0.58.0
-        version: 0.58.4(ws@8.20.0)(zod@3.25.76)
       '@octokit/rest':
         specifier: ^22.0.1
         version: 22.0.1
+      '@open-hax/eta-mu-ai':
+        specifier: workspace:*
+        version: link:../ai
+      '@open-hax/eta-mu-coding-agent':
+        specifier: workspace:*
+        version: link:../coding-agent
       dotenv:
         specifier: ^17.2.3
         version: 17.4.1
@@ -288,16 +288,16 @@ importers:
 
   packages/eta-mu-sdk:
     dependencies:
-      '@mariozechner/pi-agent-core':
+      '@open-hax/eta-mu-agent-core':
         specifier: workspace:*
         version: link:../agent
-      '@mariozechner/pi-ai':
+      '@open-hax/eta-mu-ai':
         specifier: workspace:*
         version: link:../ai
-      '@mariozechner/pi-coding-agent':
+      '@open-hax/eta-mu-coding-agent':
         specifier: workspace:*
         version: link:../coding-agent
-      '@mariozechner/pi-tui':
+      '@open-hax/eta-mu-tui':
         specifier: workspace:*
         version: link:../tui
     devDependencies:
@@ -344,13 +344,13 @@ importers:
       '@anthropic-ai/sandbox-runtime':
         specifier: ^0.0.16
         version: 0.0.16
-      '@mariozechner/pi-agent-core':
+      '@open-hax/eta-mu-agent-core':
         specifier: workspace:*
         version: link:../agent
-      '@mariozechner/pi-ai':
+      '@open-hax/eta-mu-ai':
         specifier: workspace:*
         version: link:../ai
-      '@mariozechner/pi-coding-agent':
+      '@open-hax/eta-mu-coding-agent':
         specifier: workspace:*
         version: link:../coding-agent
       '@slack/socket-mode':
@@ -431,7 +431,7 @@ importers:
 
   packages/pods:
     dependencies:
-      '@mariozechner/pi-agent-core':
+      '@open-hax/eta-mu-agent-core':
         specifier: workspace:*
         version: link:../agent
       chalk:
@@ -493,13 +493,13 @@ importers:
       '@lmstudio/sdk':
         specifier: ^1.5.0
         version: 1.5.0
-      '@mariozechner/pi-agent-core':
+      '@open-hax/eta-mu-agent-core':
         specifier: workspace:*
         version: link:../agent
-      '@mariozechner/pi-ai':
+      '@open-hax/eta-mu-ai':
         specifier: workspace:*
         version: link:../ai
-      '@mariozechner/pi-tui':
+      '@open-hax/eta-mu-tui':
         specifier: workspace:*
         version: link:../tui
       docx-preview:
@@ -608,15 +608,6 @@ packages:
     resolution: {integrity: sha512-I2Us7dRvwCJkqcImrqP7NWrV5kHmKX7AumFDnznCjMd0hB5ZUzg9Is9SlxrMzHiUY2RndEaRLXCOJrUt8JnE4w==}
     engines: {node: '>=18.0.0'}
     hasBin: true
-
-  '@anthropic-ai/sdk@0.73.0':
-    resolution: {integrity: sha512-URURVzhxXGJDGUGFunIOtBlSl7KWvZiAAKY/ttTkZAkXT9bTPqdk2eK0b8qqSxXpikh3QKPnPYpiyX98zf5ebw==}
-    hasBin: true
-    peerDependencies:
-      zod: ^3.25.0 || ^4.0.0
-    peerDependenciesMeta:
-      zod:
-        optional: true
 
   '@anthropic-ai/sdk@0.90.0':
     resolution: {integrity: sha512-MzZtPabJF1b0FTDl6Z6H5ljphPwACLGP13lu8MTiB8jXaW/YXlpOp+Po2cVou3MPM5+f5toyLnul9whKCy7fBg==}
@@ -1304,45 +1295,6 @@ packages:
     peerDependencies:
       lit: ^3.3.1
 
-  '@mariozechner/pi-agent-core@0.58.4':
-    resolution: {integrity: sha512-I2tVUcFzxGAS7dRpmZHKqetIAAz4Q/loupgUBQ9RxOMldUsBoQf5Pj9WWu7cGrGEFztPQ27QKPKbU1jSd2scjw==}
-    engines: {node: '>=20.0.0'}
-
-  '@mariozechner/pi-agent-core@0.67.68':
-    resolution: {integrity: sha512-anwFuzeUL7Qjbyih4DWY7w1zrOTrBxaz1L6+duLUuuzpHOun0EiP4KWIGTXPT5oJA7ZaeRNTyXJ7PlWfGQG33g==}
-    engines: {node: '>=20.0.0'}
-
-  '@mariozechner/pi-ai@0.58.4':
-    resolution: {integrity: sha512-yQT8H3nTHHw925DDLatQ/F5xx0ThK9wF+JTUHlzfXvrfclKDBp1+e8bvxdGK3AbbWuvWNlwZ3qbWgsZQ8/YZtQ==}
-    engines: {node: '>=20.0.0'}
-    hasBin: true
-
-  '@mariozechner/pi-ai@0.67.68':
-    resolution: {integrity: sha512-DWWQmcb3IV3mbGXmzYBScfKA6kA52n/stY029eiBikrIxVT7DGLG6n7KSvTA2R4qBSgi1iFL3nGHtwxmtIn6Lg==}
-    engines: {node: '>=20.0.0'}
-    hasBin: true
-
-  '@mariozechner/pi-coding-agent@0.58.4':
-    resolution: {integrity: sha512-hMU/LX9lFPoCpLYnL3yjWU4t26wkPIlDIlMRyjMihxKNqqEtW9slAc520OdARkAU3wmGgvA1sMVFER1ff+fuAA==}
-    engines: {node: '>=20.6.0'}
-    hasBin: true
-
-  '@mariozechner/pi-coding-agent@0.67.1':
-    resolution: {integrity: sha512-vmH100rR341C2Bv/SAtNPBUddBCilHUgGthLWSt7aED+sO2VhVMVd/XbOcwzN7oL1ZTYqC9QgKS0bew5+DPY7w==}
-    engines: {node: '>=20.6.0'}
-    hasBin: true
-
-  '@mariozechner/pi-tui@0.58.4':
-    resolution: {integrity: sha512-EVju7Baj8H7F8dOx3pTKHvQ7i1FW2cR8v9DhSfOdELrdDepkl7v20ufO5lBkuJm+nkRJHbplN861lAI7cwM7gw==}
-    engines: {node: '>=20.0.0'}
-
-  '@mariozechner/pi-tui@0.67.68':
-    resolution: {integrity: sha512-RhcMaGz88lNOm5+9yx+YCIfXZALLbMxB2cwsoHzyOzs+OZAItw8tz6xJZPAnX0RHY+ENQEGMMDY9TF6pxxnkbA==}
-    engines: {node: '>=20.0.0'}
-
-  '@mistralai/mistralai@1.14.1':
-    resolution: {integrity: sha512-IiLmmZFCCTReQgPAT33r7KQ1nYo5JPdvGkrkZqA8qQ2qB1GHgs5LoP5K2ICyrjnpw2n8oSxMM/VP+liiKcGNlQ==}
-
   '@mistralai/mistralai@2.2.0':
     resolution: {integrity: sha512-JQUGIXjFWnw/J9LpTSf/ZXwVW3Sh8FBAcfTo5QvAHqkl4CfSiIwnjRJhMoAFcP6ncCe84YPU1ncDGX+p3OXnfg==}
 
@@ -1813,9 +1765,6 @@ packages:
 
   '@sinclair/typebox@0.27.10':
     resolution: {integrity: sha512-MTBk/3jGLNB2tVxv6uLlFh1iu64iYOQ2PbdOSK3NW8JZsmlaOh2q6sdtKowBhfw8QFLmYNzTW4/oK4uATIi6ZA==}
-
-  '@sinclair/typebox@0.34.49':
-    resolution: {integrity: sha512-brySQQs7Jtn0joV8Xh9ZV/hZb9Ozb0pmazDIASBkYKCjXrXU3mpcFahmK/z4YDhGkQvP9mWJbVyahdtU5wQA+A==}
 
   '@slack/logger@4.0.1':
     resolution: {integrity: sha512-6cmdPrV/RYfd2U0mDGiMK8S7OJqpCTm7enMLRR3edccsPX8j7zXTLnaEF4fhxxJJTAIOil6+qZrnUPTuaLvwrQ==}
@@ -5098,12 +5047,6 @@ snapshots:
       shell-quote: 1.8.3
       zod: 3.25.76
 
-  '@anthropic-ai/sdk@0.73.0(zod@3.25.76)':
-    dependencies:
-      json-schema-to-ts: 3.1.1
-    optionalDependencies:
-      zod: 3.25.76
-
   '@anthropic-ai/sdk@0.90.0(zod@3.25.76)':
     dependencies:
       json-schema-to-ts: 3.1.1
@@ -5893,172 +5836,6 @@ snapshots:
     transitivePeerDependencies:
       - tailwindcss
 
-  '@mariozechner/pi-agent-core@0.58.4(ws@8.20.0)(zod@3.25.76)':
-    dependencies:
-      '@mariozechner/pi-ai': 0.58.4(ws@8.20.0)(zod@3.25.76)
-    transitivePeerDependencies:
-      - '@modelcontextprotocol/sdk'
-      - aws-crt
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-      - ws
-      - zod
-
-  '@mariozechner/pi-agent-core@0.67.68(ws@8.20.0)(zod@3.25.76)':
-    dependencies:
-      '@mariozechner/pi-ai': 0.67.68(ws@8.20.0)(zod@3.25.76)
-    transitivePeerDependencies:
-      - '@modelcontextprotocol/sdk'
-      - aws-crt
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-      - ws
-      - zod
-
-  '@mariozechner/pi-ai@0.58.4(ws@8.20.0)(zod@3.25.76)':
-    dependencies:
-      '@anthropic-ai/sdk': 0.73.0(zod@3.25.76)
-      '@aws-sdk/client-bedrock-runtime': 3.1032.0
-      '@google/genai': 1.48.0
-      '@mistralai/mistralai': 1.14.1
-      '@sinclair/typebox': 0.34.49
-      ajv: 8.18.0
-      ajv-formats: 3.0.1(ajv@8.18.0)
-      chalk: 5.6.2
-      openai: 6.26.0(ws@8.20.0)(zod@3.25.76)
-      partial-json: 0.1.7
-      proxy-agent: 6.5.0
-      undici: 7.24.7
-      zod-to-json-schema: 3.25.2(zod@3.25.76)
-    transitivePeerDependencies:
-      - '@modelcontextprotocol/sdk'
-      - aws-crt
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-      - ws
-      - zod
-
-  '@mariozechner/pi-ai@0.67.68(ws@8.20.0)(zod@3.25.76)':
-    dependencies:
-      '@anthropic-ai/sdk': 0.90.0(zod@3.25.76)
-      '@aws-sdk/client-bedrock-runtime': 3.1032.0
-      '@google/genai': 1.48.0
-      '@mistralai/mistralai': 2.2.0
-      '@sinclair/typebox': 0.34.49
-      ajv: 8.18.0
-      ajv-formats: 3.0.1(ajv@8.18.0)
-      chalk: 5.6.2
-      openai: 6.26.0(ws@8.20.0)(zod@3.25.76)
-      partial-json: 0.1.7
-      proxy-agent: 6.5.0
-      undici: 7.24.7
-      zod-to-json-schema: 3.25.2(zod@3.25.76)
-    transitivePeerDependencies:
-      - '@modelcontextprotocol/sdk'
-      - aws-crt
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-      - ws
-      - zod
-
-  '@mariozechner/pi-coding-agent@0.58.4(ws@8.20.0)(zod@3.25.76)':
-    dependencies:
-      '@mariozechner/jiti': 2.6.5
-      '@mariozechner/pi-agent-core': 0.58.4(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-ai': 0.58.4(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-tui': 0.58.4
-      '@silvia-odwyer/photon-node': 0.3.4
-      chalk: 5.6.2
-      cli-highlight: 2.1.11
-      diff: 8.0.4
-      extract-zip: 2.0.1
-      file-type: 21.3.4
-      glob: 13.0.6
-      hosted-git-info: 9.0.2
-      ignore: 7.0.5
-      marked: 15.0.12
-      minimatch: 10.2.5
-      proper-lockfile: 4.1.2
-      strip-ansi: 7.2.0
-      undici: 7.24.7
-      yaml: 2.8.3
-    optionalDependencies:
-      '@mariozechner/clipboard': 0.3.3
-    transitivePeerDependencies:
-      - '@modelcontextprotocol/sdk'
-      - aws-crt
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-      - ws
-      - zod
-
-  '@mariozechner/pi-coding-agent@0.67.1(ws@8.20.0)(zod@3.25.76)':
-    dependencies:
-      '@mariozechner/jiti': 2.6.5
-      '@mariozechner/pi-agent-core': 0.67.68(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-ai': 0.67.68(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-tui': 0.67.68
-      '@silvia-odwyer/photon-node': 0.3.4
-      ajv: 8.18.0
-      chalk: 5.6.2
-      cli-highlight: 2.1.11
-      diff: 8.0.4
-      extract-zip: 2.0.1
-      file-type: 21.3.4
-      glob: 13.0.6
-      hosted-git-info: 9.0.2
-      ignore: 7.0.5
-      marked: 15.0.12
-      minimatch: 10.2.5
-      proper-lockfile: 4.1.2
-      strip-ansi: 7.2.0
-      undici: 7.24.7
-      yaml: 2.8.3
-    optionalDependencies:
-      '@mariozechner/clipboard': 0.3.3
-    transitivePeerDependencies:
-      - '@modelcontextprotocol/sdk'
-      - aws-crt
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-      - ws
-      - zod
-
-  '@mariozechner/pi-tui@0.58.4':
-    dependencies:
-      '@types/mime-types': 2.1.4
-      chalk: 5.6.2
-      get-east-asian-width: 1.5.0
-      marked: 15.0.12
-      mime-types: 3.0.2
-    optionalDependencies:
-      koffi: 2.15.5
-
-  '@mariozechner/pi-tui@0.67.68':
-    dependencies:
-      '@types/mime-types': 2.1.4
-      chalk: 5.6.2
-      get-east-asian-width: 1.5.0
-      marked: 15.0.12
-      mime-types: 3.0.2
-    optionalDependencies:
-      koffi: 2.15.5
-
-  '@mistralai/mistralai@1.14.1':
-    dependencies:
-      ws: 8.20.0
-      zod: 3.25.76
-      zod-to-json-schema: 3.25.2(zod@3.25.76)
-    transitivePeerDependencies:
-      - bufferutil
-      - utf-8-validate
-
   '@mistralai/mistralai@2.2.0':
     dependencies:
       ws: 8.20.0
@@ -6453,8 +6230,6 @@ snapshots:
   '@silvia-odwyer/photon-node@0.3.4': {}
 
   '@sinclair/typebox@0.27.10': {}
-
-  '@sinclair/typebox@0.34.49': {}
 
   '@slack/logger@4.0.1':
     dependencies:

@@ -1,6 +1,6 @@
-import type { AgentTool } from "@mariozechner/pi-agent-core";
-import type { Api, ImageContent, Model, TextContent } from "@mariozechner/pi-ai";
-import { Text } from "@mariozechner/pi-tui";
+import type { AgentTool } from "@open-hax/eta-mu-agent-core";
+import type { Api, ImageContent, Model, TextContent } from "@open-hax/eta-mu-ai";
+import { Text } from "@open-hax/eta-mu-tui";
 import { constants } from "fs";
 import { access as fsAccess, readFile as fsReadFile } from "fs/promises";
 import { type Static, Type } from "typebox";

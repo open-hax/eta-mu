@@ -2,8 +2,8 @@
  * List available models with optional fuzzy search
  */
 
-import type { Api, Model } from "@mariozechner/pi-ai";
-import { fuzzyFilter } from "@mariozechner/pi-tui";
+import type { Api, Model } from "@open-hax/eta-mu-ai";
+import { fuzzyFilter } from "@open-hax/eta-mu-tui";
 import chalk from "chalk";
 import { formatNoModelsAvailableMessage } from "../core/auth-guidance.js";
 import type { ModelRegistry } from "../core/model-registry.js";

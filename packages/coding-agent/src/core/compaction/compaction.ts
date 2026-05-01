@@ -5,9 +5,9 @@
  * and after compaction the session is reloaded.
  */
 
-import type { AgentMessage, ThinkingLevel } from "@mariozechner/pi-agent-core";
-import type { AssistantMessage, Model, Usage } from "@mariozechner/pi-ai";
-import { completeSimple } from "@mariozechner/pi-ai";
+import type { AgentMessage, ThinkingLevel } from "@open-hax/eta-mu-agent-core";
+import type { AssistantMessage, Model, Usage } from "@open-hax/eta-mu-ai";
+import { completeSimple } from "@open-hax/eta-mu-ai";
 import {
 	convertToLlm,
 	createBranchSummaryMessage,

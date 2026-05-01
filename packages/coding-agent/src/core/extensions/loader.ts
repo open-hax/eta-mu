@@ -10,11 +10,11 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createJiti } from "@mariozechner/jiti";
-import * as _bundledPiAgentCore from "@mariozechner/pi-agent-core";
-import * as _bundledPiAi from "@mariozechner/pi-ai";
-import * as _bundledPiAiOauth from "@mariozechner/pi-ai/oauth";
-import type { KeyId } from "@mariozechner/pi-tui";
-import * as _bundledPiTui from "@mariozechner/pi-tui";
+import * as _bundledPiAgentCore from "@open-hax/eta-mu-agent-core";
+import * as _bundledPiAi from "@open-hax/eta-mu-ai";
+import * as _bundledPiAiOauth from "@open-hax/eta-mu-ai/oauth";
+import type { KeyId } from "@open-hax/eta-mu-tui";
+import * as _bundledPiTui from "@open-hax/eta-mu-tui";
 // Static imports of packages that extensions may use.
 // These MUST be static so Bun bundles them into the compiled binary.
 // The virtualModules option then makes them available to extensions.
@@ -23,7 +23,7 @@ import * as _bundledTypeboxCompile from "typebox/compile";
 import * as _bundledTypeboxValue from "typebox/value";
 import { CONFIG_DIR_NAME, getAgentDir, isBunBinary } from "../../config.js";
 // NOTE: This import works because loader.ts exports are NOT re-exported from index.ts,
-// avoiding a circular dependency. Extensions can import from @mariozechner/pi-coding-agent.
+// avoiding a circular dependency. Extensions can import from @open-hax/eta-mu-coding-agent.
 import * as _bundledPiCodingAgent from "../../index.js";
 import { createEventBus, type EventBus } from "../event-bus.js";
 import type { ExecOptions } from "../exec.js";
@@ -49,11 +49,11 @@ const VIRTUAL_MODULES: Record<string, unknown> = {
 	"@sinclair/typebox": _bundledTypebox,
 	"@sinclair/typebox/compile": _bundledTypeboxCompile,
 	"@sinclair/typebox/value": _bundledTypeboxValue,
-	"@mariozechner/pi-agent-core": _bundledPiAgentCore,
-	"@mariozechner/pi-tui": _bundledPiTui,
-	"@mariozechner/pi-ai": _bundledPiAi,
-	"@mariozechner/pi-ai/oauth": _bundledPiAiOauth,
-	"@mariozechner/pi-coding-agent": _bundledPiCodingAgent,
+	"@open-hax/eta-mu-agent-core": _bundledPiAgentCore,
+	"@open-hax/eta-mu-tui": _bundledPiTui,
+	"@open-hax/eta-mu-ai": _bundledPiAi,
+	"@open-hax/eta-mu-ai/oauth": _bundledPiAiOauth,
+	"@open-hax/eta-mu-coding-agent": _bundledPiCodingAgent,
 };
 
 const require = createRequire(import.meta.url);
@@ -84,11 +84,11 @@ function getAliases(): Record<string, string> {
 	};
 
 	_aliases = {
-		"@mariozechner/pi-coding-agent": packageIndex,
-		"@mariozechner/pi-agent-core": resolveWorkspaceOrImport("agent/dist/index.js", "@mariozechner/pi-agent-core"),
-		"@mariozechner/pi-tui": resolveWorkspaceOrImport("tui/dist/index.js", "@mariozechner/pi-tui"),
-		"@mariozechner/pi-ai": resolveWorkspaceOrImport("ai/dist/index.js", "@mariozechner/pi-ai"),
-		"@mariozechner/pi-ai/oauth": resolveWorkspaceOrImport("ai/dist/oauth.js", "@mariozechner/pi-ai/oauth"),
+		"@open-hax/eta-mu-coding-agent": packageIndex,
+		"@open-hax/eta-mu-agent-core": resolveWorkspaceOrImport("agent/dist/index.js", "@open-hax/eta-mu-agent-core"),
+		"@open-hax/eta-mu-tui": resolveWorkspaceOrImport("tui/dist/index.js", "@open-hax/eta-mu-tui"),
+		"@open-hax/eta-mu-ai": resolveWorkspaceOrImport("ai/dist/index.js", "@open-hax/eta-mu-ai"),
+		"@open-hax/eta-mu-ai/oauth": resolveWorkspaceOrImport("ai/dist/oauth.js", "@open-hax/eta-mu-ai/oauth"),
 		typebox: typeboxEntry,
 		"typebox/compile": typeboxCompileEntry,
 		"typebox/value": typeboxValueEntry,

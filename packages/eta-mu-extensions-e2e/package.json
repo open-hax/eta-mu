@@ -7,7 +7,7 @@
     "test:watch": "shadow-cljs watch e2e-test"
   },
   "devDependencies": {
-    "@mariozechner/pi-coding-agent": "0.67.1",
+    "@open-hax/eta-mu-coding-agent": "workspace:*",
     "express": "^4.21.2",
     "shadow-cljs": "^2.28.20"
   }

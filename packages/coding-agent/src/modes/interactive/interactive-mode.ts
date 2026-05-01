@@ -7,7 +7,7 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentMessage } from "@mariozechner/pi-agent-core";
+import type { AgentMessage } from "@open-hax/eta-mu-agent-core";
 import {
 	type AssistantMessage,
 	type AttachmentContent,
@@ -16,7 +16,7 @@ import {
 	type Message,
 	type Model,
 	type OAuthProviderId,
-} from "@mariozechner/pi-ai";
+} from "@open-hax/eta-mu-ai";
 import type {
 	AutocompleteItem,
 	AutocompleteProvider,
@@ -28,7 +28,7 @@ import type {
 	OverlayHandle,
 	OverlayOptions,
 	SlashCommand,
-} from "@mariozechner/pi-tui";
+} from "@open-hax/eta-mu-tui";
 import {
 	CombinedAutocompleteProvider,
 	type Component,
@@ -45,7 +45,7 @@ import {
 	TruncatedText,
 	TUI,
 	visibleWidth,
-} from "@mariozechner/pi-tui";
+} from "@open-hax/eta-mu-tui";
 import { spawn, spawnSync } from "child_process";
 import {
 	APP_NAME,

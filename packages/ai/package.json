@@ -1,5 +1,5 @@
 {
-	"name": "@mariozechner/pi-ai",
+	"name": "@open-hax/eta-mu-ai",
 	"version": "0.70.5",
 	"description": "Unified LLM API with automatic model discovery and provider configuration",
 	"type": "module",

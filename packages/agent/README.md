@@ -1,18 +1,18 @@
-# @mariozechner/pi-agent-core
+# @open-hax/eta-mu-agent-core
 
-Stateful agent with tool execution and event streaming. Built on `@mariozechner/pi-ai`.
+Stateful agent with tool execution and event streaming. Built on `@open-hax/eta-mu-ai`.
 
 ## Installation
 
 ```bash
-npm install @mariozechner/pi-agent-core
+npm install @open-hax/eta-mu-agent-core
 ```
 
 ## Quick Start
 
 ```typescript
-import { Agent } from "@mariozechner/pi-agent-core";
-import { getModel } from "@mariozechner/pi-ai";
+import { Agent } from "@open-hax/eta-mu-agent-core";
+import { getModel } from "@open-hax/eta-mu-ai";
 
 const agent = new Agent({
   initialState: {
@@ -341,7 +341,7 @@ Follow-up messages are checked only when there are no more tool calls and no ste
 Extend `AgentMessage` via declaration merging:
 
 ```typescript
-declare module "@mariozechner/pi-agent-core" {
+declare module "@open-hax/eta-mu-agent-core" {
   interface CustomAgentMessages {
     notification: { role: "notification"; text: string; timestamp: number };
   }
@@ -422,7 +422,7 @@ Return `terminate: true` from `execute()` or `afterToolCall` to hint that the ag
 For browser apps that proxy through a backend:
 
 ```typescript
-import { Agent, streamProxy } from "@mariozechner/pi-agent-core";
+import { Agent, streamProxy } from "@open-hax/eta-mu-agent-core";
 
 const agent = new Agent({
   streamFn: (model, context, options) =>
@@ -439,7 +439,7 @@ const agent = new Agent({
 For direct control without the Agent class:
 
 ```typescript
-import { agentLoop, agentLoopContinue } from "@mariozechner/pi-agent-core";
+import { agentLoop, agentLoopContinue } from "@open-hax/eta-mu-agent-core";
 
 const context: AgentContext = {
   systemPrompt: "You are helpful.",

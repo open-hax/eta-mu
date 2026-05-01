@@ -17,10 +17,10 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@mariozechner/pi-agent-core": "workspace:*",
-    "@mariozechner/pi-ai": "workspace:*",
-    "@mariozechner/pi-coding-agent": "workspace:*",
-    "@mariozechner/pi-tui": "workspace:*"
+    "@open-hax/eta-mu-agent-core": "workspace:*",
+    "@open-hax/eta-mu-ai": "workspace:*",
+    "@open-hax/eta-mu-coding-agent": "workspace:*",
+    "@open-hax/eta-mu-tui": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

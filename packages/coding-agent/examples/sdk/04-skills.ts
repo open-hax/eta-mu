@@ -12,7 +12,7 @@ import {
 	getAgentDir,
 	SessionManager,
 	type Skill,
-} from "@mariozechner/pi-coding-agent";
+} from "@open-hax/eta-mu-coding-agent";
 
 // Or define custom skills inline
 const customSkill: Skill = {

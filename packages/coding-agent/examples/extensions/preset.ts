@@ -40,10 +40,10 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Api, Model } from "@mariozechner/pi-ai";
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { DynamicBorder, getAgentDir } from "@mariozechner/pi-coding-agent";
-import { Container, Key, type SelectItem, SelectList, Text } from "@mariozechner/pi-tui";
+import type { Api, Model } from "@open-hax/eta-mu-ai";
+import type { ExtensionAPI, ExtensionContext } from "@open-hax/eta-mu-coding-agent";
+import { DynamicBorder, getAgentDir } from "@open-hax/eta-mu-coding-agent";
+import { Container, Key, type SelectItem, SelectList, Text } from "@open-hax/eta-mu-tui";
 
 // Preset configuration
 interface Preset {

@@ -20,9 +20,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sandbox-runtime": "^0.0.16",
-    "@mariozechner/pi-agent-core": "workspace:*",
-    "@mariozechner/pi-ai": "workspace:*",
-    "@mariozechner/pi-coding-agent": "workspace:*",
+    "@open-hax/eta-mu-agent-core": "workspace:*",
+    "@open-hax/eta-mu-ai": "workspace:*",
+    "@open-hax/eta-mu-coding-agent": "workspace:*",
     "typebox": "^1.1.24",
     "@slack/socket-mode": "^2.0.0",
     "@slack/web-api": "^7.0.0",

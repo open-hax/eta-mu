@@ -23,8 +23,8 @@ describe("detectInstallMethod", () => {
 		);
 
 		expect(detectInstallMethod()).toBe("pnpm");
-		expect(getUpdateInstruction("@mariozechner/pi-coding-agent")).toBe(
-			"Run: pnpm install -g @mariozechner/pi-coding-agent",
+		expect(getUpdateInstruction("@open-hax/eta-mu-coding-agent")).toBe(
+			"Run: pnpm install -g @open-hax/eta-mu-coding-agent",
 		);
 	});
 
@@ -32,9 +32,9 @@ describe("detectInstallMethod", () => {
 		setExecPath("/usr/local/bin/node");
 
 		expect(detectInstallMethod()).toBe("unknown");
-		expect(getSelfUpdateCommand("@mariozechner/pi-coding-agent")).toBeUndefined();
-		expect(getUpdateInstruction("@mariozechner/pi-coding-agent")).toBe(
-			"Update @mariozechner/pi-coding-agent using the package manager, wrapper, or source checkout that provides this installation.",
+		expect(getSelfUpdateCommand("@open-hax/eta-mu-coding-agent")).toBeUndefined();
+		expect(getUpdateInstruction("@open-hax/eta-mu-coding-agent")).toBe(
+			"Update @open-hax/eta-mu-coding-agent using the package manager, wrapper, or source checkout that provides this installation.",
 		);
 	});
 });
