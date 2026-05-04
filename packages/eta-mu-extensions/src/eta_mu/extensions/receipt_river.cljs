@@ -30,7 +30,7 @@
 (def ^:const PROMPT-SECTION-END "<!-- eta-mu:receipt-river:end -->")
 (def ^:const PI-VERSION "0.63.1")
 (def ^:const RECEIPT-FILE-NAME "receipts.edn")
-(def ^:const ACTIVATION-THRESHOLD 3)
+(def ^:const ACTIVATION-THRESHOLD 1)
 
 (def ^:const OPTIONAL-KEYS
   #js ["note" "tests" "decisions" "drift"])
@@ -292,7 +292,21 @@
 
 (defn mark-tool-usage [state tool-name args ctx]
   (.push (aget state "turnToolNames") tool-name)
-  (let [repo-root (repo-root-from-path (aget ctx "cwd") (param-path args))]
+  (let [cwd (aget ctx "cwd")
+        ;; Primary attribution: path-like param on the tool call.
+        repo-root-from-args (repo-root-from-path cwd (param-path args))
+        ;; Fallback attribution: if the tool call is clearly substantive but doesn't
+        ;; carry a structured path param (common for apply_patch + many bash calls),
+        ;; attribute it to the git root of the current working directory.
+        cwd-repo-root (find-git-root cwd)
+        ;; Treat any bash as meaningful work for activation purposes.
+        ;; (Rationale: many real workflows live in bash, and parsing commands
+        ;; reliably across shells/aliases is brittle.)
+        bash-substantive? (= tool-name "bash")
+        repo-root (or repo-root-from-args
+                      (when (or bash-substantive?
+                                (not (neg? (.indexOf SUBSTANTIVE-TOOLS tool-name))))
+                        cwd-repo-root))]
     (when repo-root
       (let [counts (touched-repo-counts state)
             next-counts (update counts repo-root (fnil inc 0))]
@@ -308,9 +322,7 @@
       (not (neg? (.indexOf SUBSTANTIVE-TOOLS tool-name)))
       (aset state "turnHadSubstantiveWork" true)
 
-      (and (= tool-name "bash")
-           (let [cmd (str (or (aget args "command") ""))]
-             (re-find #"(?:git\s+(?:commit|push|merge|rebase|cherry-pick)|\b(?:test|pytest|jest|vitest|cargo test|cargo build|go test|npm test|pnpm test|pnpm build|yarn test|yarn build|make\b|just\b|docker build|docker compose up)\b)" cmd)))
+      bash-substantive?
       (aset state "turnHadSubstantiveWork" true)
 
       :else nil)))
@@ -555,7 +567,9 @@
   (em/on "turn_start"
     :handler (fn [event ctx]
                (let [state (get-state)
-                     turn-index (aget event "turnIndex")]
+                     turn-index (aget event "turnIndex")
+                     cwd (aget ctx "cwd")
+                     cwd-repo-root (find-git-root cwd)]
                  (aset state "currentTurn"
                        (if (number? turn-index)
                          turn-index
@@ -565,6 +579,11 @@
                  (aset state "turnHadReceipt" false)
                  (aset state "turnTouchedRepos" #js {})
                  (aset state "turnReceiptRepos" #js [])
+                 ;; Always treat the cwd git root as an active ledger repo when enabled.
+                 ;; This makes the reminder/injection available even for "observation-only"
+                 ;; turns that don't include path-bearing tool calls.
+                 (when (and (aget state "enabled") cwd-repo-root)
+                   (add-active-ledger-repo! state cwd-repo-root))
                  (set-status ctx state))))
 
   (em/on "message_end"
