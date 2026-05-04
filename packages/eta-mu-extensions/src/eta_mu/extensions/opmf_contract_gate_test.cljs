@@ -64,6 +64,11 @@
                     "frames" {:id "frames" :heading "Frames"}
                     "countermoves" {:id "countermoves" :heading "Countermoves"}
                     "next" {:id "next" :heading "Next"}}
+   :sections-by-heading {"Signal" {:id "signal" :heading "Signal"}
+                         "Evidence" {:id "evidence" :heading "Evidence"}
+                         "Frames" {:id "frames" :heading "Frames"}
+                         "Countermoves" {:id "countermoves" :heading "Countermoves"}
+                         "Next" {:id "next" :heading "Next"}}
    :rules [{:id "rule/frames-cardinality" :section-id "frames" :min 2 :max 3}
            {:id "rule/next-exactly-one-action" :section-id "next" :exactly 1}]})
 
@@ -76,6 +81,14 @@
     (is (= 3 (contracts/count-semantic-items
               {:heading "Frames"
                :content "- one\n- two\n- three"}))))
+  (testing "does not count fenced code lines as additional Next actions"
+    (is (= 1 (contracts/count-semantic-items
+              {:heading "Next"
+               :content "- Patch the config:\n\n```yaml\nFASTER_WHISPER_DEVICE: cpu\nVOICE_GATEWAY_TTS_DEVICE: cpu\n```"}))))
+  (testing "counts separated prose blocks as separate semantic items"
+    (is (= 2 (contracts/count-semantic-items
+              {:heading "Next"
+               :content "Patch the config.\n\nThen restart the service."}))))
   (testing "does not treat h3 headings as contract sections"
     (let [doc (contracts/extract-markdown-sections
                "## Signal\nText\n\n### Detail\nStill signal\n\n## Evidence\nText")]
@@ -95,6 +108,16 @@
       (is (re-find #"checker counted 1" prompt))
       (is (re-find #"use 2–3 markdown bullet items" prompt)))))
 
+(deftest huge-counted-section-preflight-test
+  (testing "detects giant counted lists before full validation or repair-prompt compilation"
+    (let [huge-next (str "## Signal\nS\n\n## Evidence\nE\n\n## Frames\n- A\n- B\n\n## Countermoves\nC\n\n## Next\n"
+                         (apply str (map #(str "- item " % "\n") (range 100))))
+          result (gate/preflight-huge-counted-section minimal-contract huge-next)]
+      (is (some? result))
+      (is (= "preflight" (get-in result [:report :stage])))
+      (is (= "rule/next-exactly-one-action" (get-in result [:report :failures 0 :rule-id])))
+      (is (= 26 (get-in result [:report :failures 0 :actual :count]))))))
+
 (deftest auto-repair-delivery-mode-test
   (testing "auto-repair is queued for the agent_idle hook instead of injected as steering from agent_end"
     (let [sent (atom [])
@@ -104,8 +127,11 @@
           ctx #js {:hasUI false}
           state (gate/get-state)
           _ (aset state "config" #js {:autoRepair true
-                                      :repairDelayMs 0})
+                                      :repairDelayMs 0
+                                      :maxSessionTurns 10})
           _ (aset state "pendingRepair" nil)
+          _ (aset state "repairCounts" #js {})
+          _ (aset state "sessionRepairCount" 0)
           result #js {:ok false
                       :repairInfo #js {:attempt 0}
                       :repairPrompt "Repair this response"
@@ -120,3 +146,71 @@
       (is (nil? (aget state "pendingRepair")))
       (is (re-find #"^\[\[eta-mu-opmf-contract-gate repair 1/2\]\]"
                    (:message (first @sent)))))))
+
+(deftest auto-repair-loop-guard-test
+  (testing "same failed assistant cannot be repaired indefinitely when repair sentinel parsing is unavailable"
+    (let [notices (atom [])
+          pi #js {:sendUserMessage (fn [_message])}
+          ctx #js {:hasUI true
+                   :ui #js {:notify (fn [message level]
+                                      (swap! notices conj {:message message :level level}))
+                            :setStatus (fn [& _args])}}
+          state (gate/get-state)
+          assistant #js {:id "assistant-loop"
+                         :content "## Signal\nS\n\n## Evidence\nE\n\n## Frames\n- A\n- B\n\n## Countermoves\nC\n\n## Next\n- one\n- two\n- three"}
+          result #js {:ok false
+                      :repairInfo nil
+                      :repairPrompt "Section `Next` must have exactly 1 semantic item(s); checker counted 3"
+                      :assistant assistant
+                      :report {:failures [{:rule-id "rule/next-exactly-one-action"}]}
+                      :contract {:repair-max-retries 2}}]
+      (aset state "config" #js {:autoRepair true :maxSessionTurns 10})
+      (aset state "pendingRepair" nil)
+      (aset state "repairCounts" #js {})
+      (aset state "sessionRepairCount" 0)
+
+      (gate/handle-validation-result pi ctx state result #js [])
+      (is (= 1 (aget (aget state "pendingRepair") "attempt")))
+
+      ;; Duplicate agent_end/handler delivery for the same assistant should not
+      ;; advance the repair counter while a repair is already queued.
+      (gate/handle-validation-result pi ctx state result #js [])
+      (is (= 1 (aget (aget state "pendingRepair") "attempt")))
+
+      ;; If the queued repair disappears or fails to enter history, repeated
+      ;; validation is still capped by the out-of-band per-assistant counter.
+      (aset state "pendingRepair" nil)
+      (gate/handle-validation-result pi ctx state result #js [])
+      (is (= 2 (aget (aget state "pendingRepair") "attempt")))
+
+      (aset state "pendingRepair" nil)
+      (gate/handle-validation-result pi ctx state result #js [])
+      (is (nil? (aget state "pendingRepair")))
+      (is (some #(re-find #"eta-mu-opmf-contract-gate failed" (:message %)) @notices)))))
+
+(deftest huge-list-auto-repair-skip-test
+  (testing "pathologically large counted sections fail closed instead of starting repair loops"
+    (let [notices (atom [])
+          pi #js {:sendUserMessage (fn [_message])}
+          ctx #js {:hasUI true
+                   :ui #js {:notify (fn [message level]
+                                      (swap! notices conj {:message message :level level}))
+                            :setStatus (fn [& _args])}}
+          state (gate/get-state)
+          result #js {:ok false
+                      :repairInfo nil
+                      :repairPrompt nil
+                      :assistant #js {:id "assistant-huge"
+                                      :content "## Next\n- many items"}
+                      :report {:failures [{:rule-id "rule/next-exactly-one-action"
+                                           :actual {:count 200}}]}
+                      :contract {:repair-max-retries 2}}]
+      (aset state "config" #js {:autoRepair true :maxSessionTurns 10})
+      (aset state "pendingRepair" nil)
+      (aset state "repairCounts" #js {})
+      (aset state "sessionRepairCount" 0)
+
+      (gate/handle-validation-result pi ctx state result #js [])
+      (is (nil? (aget state "pendingRepair")))
+      (is (= 0 (aget state "sessionRepairCount")))
+      (is (some #(re-find #"full validation/auto-repair skipped" (:message %)) @notices)))))
