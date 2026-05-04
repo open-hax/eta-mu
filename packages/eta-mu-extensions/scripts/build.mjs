@@ -215,6 +215,7 @@ function removeLegacyHostCopies(exts) {
 // ── OpenCode opencode.jsonc ─────────────────────────────────────────────────
 
 const OPENCODE_CONFIG = path.join(HOME, ".config", "opencode", "opencode.jsonc");
+const PKG_OPENCODE_CONFIG = path.join(PKG_ROOT, "opencode.jsonc");
 
 function stripJsonComments(text) {
   let out = "";
@@ -238,33 +239,64 @@ function stripJsonComments(text) {
   return out.replace(/,\s*([}\]])/g, "$1");
 }
 
+function loadPkgOpenCodeConfig() {
+  if (!existsSync(PKG_OPENCODE_CONFIG)) return null;
+  return JSON.parse(stripJsonComments(readFileSync(PKG_OPENCODE_CONFIG, "utf8")));
+}
+
+/**
+ * Sync the global ~/.config/opencode/opencode.jsonc so its plugin entries
+ * point directly at the package dist/opencode/*.mjs wrappers.
+ * Reads the canonical plugin list from the package-level opencode.jsonc;
+ * falls back to manifest-derived exts if the package config is absent.
+ */
 function syncOpenCodeConfig(exts) {
   if (!existsSync(OPENCODE_CONFIG)) return;
   const config = JSON.parse(stripJsonComments(readFileSync(OPENCODE_CONFIG, "utf8")));
   const current = new Set(config.plugin || []);
-  const managedNames = new Set(exts.map((ext) => ext.name));
   let changed = false;
 
-  for (const ext of exts) {
-    const p = pathToFileURL(ext.opencodeFile).href;
-    if (existsSync(ext.opencodeFile) && !current.has(p)) {
-      current.add(p); changed = true;
-      console.log(`  registered ${p} in opencode.jsonc`);
+  // Source of truth: package-level opencode.jsonc plugin list
+  const pkgConfig = loadPkgOpenCodeConfig();
+  const pkgPlugins = pkgConfig?.plugin || [];
+
+  // Build the set of file:// URIs this package owns
+  const managedUris = new Set();
+
+  if (pkgPlugins.length > 0) {
+    // Resolve relative paths from package opencode.jsonc to absolute file:// URIs
+    for (const rel of pkgPlugins) {
+      const abs = path.resolve(PKG_ROOT, rel);
+      const uri = pathToFileURL(abs).href;
+      managedUris.add(uri);
+      if (existsSync(abs) && !current.has(uri)) {
+        current.add(uri); changed = true;
+        console.log(`  registered ${uri}`);
+      }
+    }
+  } else {
+    // Fallback: derive from manifest
+    for (const ext of exts) {
+      const uri = pathToFileURL(ext.opencodeFile).href;
+      managedUris.add(uri);
+      if (existsSync(ext.opencodeFile) && !current.has(uri)) {
+        current.add(uri); changed = true;
+        console.log(`  registered ${uri}`);
+      }
     }
   }
 
+  // Prune stale entries this package used to own
   for (const p of [...current]) {
     let pathname = "";
     try { pathname = p.startsWith("file://") ? fileURLToPath(p) : p; }
     catch { pathname = p; }
+    // Remove legacy plugin-dir copies
     const legacy = pathname.match(/\.config\/opencode\/plugins\/([^/]+)\/runtime\.cjs$/);
-    const target = pathname.match(/\/dist\/opencode\/([^/]+)\.mjs$/);
-    const name = legacy?.[1] || target?.[1];
-    if (name && managedNames.has(name)) {
-      const isPackageTarget = Boolean(target) && path.resolve(pathname).startsWith(path.join(DIST_ROOT, "opencode") + path.sep);
-      if (!isPackageTarget || !existsSync(pathname)) {
-        current.delete(p); changed = true; console.log(`  pruned ${p}`);
-      }
+    if (legacy) { current.delete(p); changed = true; console.log(`  pruned legacy ${p}`); continue; }
+    // Remove stale dist/opencode entries that no longer exist on disk
+    if (managedUris.has(p) && !existsSync(pathname)) {
+      current.delete(p); changed = true; console.log(`  pruned missing ${p}`);
     }
   }
 

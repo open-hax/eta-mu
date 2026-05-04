@@ -57,7 +57,8 @@
               :context-window 1000000 :max-tokens 128000)
        (model "gpt-5.4" "GPT 5.4"
               :reasoning true :input ["text" "image"]
-              :context-window 1000000 :max-tokens 128000)
+              :context-window 1000000 :max-tokens 128000
+              )
        (model "gpt-5.2" "GPT 5.2"
               :reasoning true
               :input ["text" "image"] :context-window 272000 :max-tokens 128000)
@@ -71,7 +72,8 @@
               :input ["text" "image"] :context-window 200000 :max-tokens 8192)
        (model "claude-sonnet-4-5-20250929" "Claude Sonnet 4.5 (Factory)"
               :reasoning true :input ["text" "image"]
-              :context-window 200000 :max-tokens 16384)
+              :context-window 200000 :max-tokens 16384
+              )
        (model "claude-sonnet-4-6" "Claude Sonnet 4.6 (Factory)"
               :reasoning true :input ["text" "image"]
               :context-window 200000 :max-tokens 16384)
@@ -100,8 +102,19 @@
               :input ["text" "image"] :context-window 1048576 :max-tokens 65536)
        (model "DeepSeek-V3.2" "DeepSeek V3.2"
               :input ["text"] :context-window 64000 :max-tokens 8192)
+       ;; (model "mimo v2.5 Pro" ""
+
+       ;;        :reasoning true :input ["text" "image"]
+       ;;        :context-window 1000000 :max-tokens 128000
+       ;;        )
+       (model "mimo-v2.5-pro" "Mimo v2.5 Pro (Extended context)"
+
+              :reasoning true :input ["text" "image"]
+              :context-window 1000000 :max-tokens 128000
+              )
        (model "glm-5v-turbo" "GLM 5V Turbo"
-              :reasoning true :input ["text" "image"] :context-window 100000 :max-tokens 131072)
+              :reasoning true :input ["text" "image"] :context-window 100000 :max-tokens 131072
+              )
        (model "glm-5-turbo" "GLM 5V Turbo"
               :reasoning true :input ["text" "image"] :context-window 100000 :max-tokens 131072)
        (model "glm-5" "GLM 5" :reasoning true
@@ -111,8 +124,12 @@
               :context-window 100000 :max-tokens 128000 ;; :compat {:thinkingFormat "zai"}
               )
 
-       (model "Kimi-K2.5" "Kimi K2.5" :input ["text" "image"]
-              :context-window 262144 :max-tokens 262144)])
+       (model "kimi-k2.5" "Kimi K2.5" :input ["text" "image"]
+              :context-window 262144 :max-tokens 262144)
+       (model "kimi-k2.6" "Kimi K2.6" :input ["text" "image"]
+              :reasoning true
+              :context-window 262144 :max-tokens 262144)
+       ])
 
 (defn concat-model-arrays [& arrays]
   (apply #(.concat %1 %2) (js/Array.from (first arrays)) (map js/Array.from (rest arrays))))

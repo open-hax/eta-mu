@@ -30,6 +30,7 @@
 (def GLOBAL-KEY "__eta_mu_output_contract_gate_state__")
 (def REPAIR-SENTINEL "[[eta-mu-opmf-contract-gate repair ")
 (def CONTRACT-MARKER "## Active Output Contract")
+(def MAX-AUTO-REPAIR-SEMANTIC-COUNT 25)
 
 (def DEFAULT-CONTRACT
   (or (gobj/get js/process.env "PI_OUTPUT_CONTRACT_FILE")
@@ -134,7 +135,9 @@
                        :contractCache nil
                        :lastResult nil
                        :contractError nil
-                       :pendingRepair nil}]
+                       :pendingRepair nil
+                       :repairCounts #js {}
+                       :sessionRepairCount 0}]
         (aset g GLOBAL-KEY fresh)
         fresh))))
 
@@ -238,6 +241,139 @@
   (or (aget ctx "pi")
       (when (aget pi "sendUserMessage") pi)))
 
+(defn- text-fingerprint [text]
+  (let [s (or text "")]
+    (loop [idx 0
+           hash 2166136261]
+      (if (< idx (.-length s))
+        (recur (inc idx)
+               (js/Math.imul (bit-xor hash (.charCodeAt s idx)) 16777619))
+        (str (.-length s) ":" hash)))))
+
+(defn- assistant-repair-key [assistant]
+  (when assistant
+    (let [id (or (aget assistant "id") "unknown")
+          text (extract-text (aget assistant "content"))]
+      (str id ":" (text-fingerprint text)))))
+
+(defn- repair-count [state repair-key]
+  (or (when repair-key
+        (aget (or (aget state "repairCounts") #js {}) repair-key))
+      0))
+
+(defn- set-repair-count! [state repair-key count]
+  (when repair-key
+    (let [counts (or (aget state "repairCounts") #js {})]
+      (aset state "repairCounts" counts)
+      (aset counts repair-key count))))
+
+(defn- inc-session-repair-count! [state]
+  (let [next-count (inc (or (aget state "sessionRepairCount") 0))]
+    (aset state "sessionRepairCount" next-count)
+    next-count))
+
+(defn- result-failures [result]
+  (let [report (aget result "report")
+        failures (or (:failures report)
+                     (when report (aget report "failures"))
+                     [])]
+    (if (array? failures)
+      (js/Array.from failures)
+      failures)))
+
+(defn- failure-actual-count [failure]
+  (let [actual (or (:actual failure)
+                   (when failure (aget failure "actual")))]
+    (or (:count actual)
+        (when actual (aget actual "count")))))
+
+(defn- excessive-semantic-count? [result]
+  (boolean
+   (some (fn [failure]
+           (when-let [actual-count (failure-actual-count failure)]
+             (> actual-count MAX-AUTO-REPAIR-SEMANTIC-COUNT)))
+         (result-failures result))))
+
+(defn counted-section-rule [contract heading]
+  (when-let [section (get (:sections-by-heading contract) heading)]
+    (first (filter #(= (:section-id %) (:id section)) (:rules contract)))))
+
+(defn- counted-section-failure [contract heading actual-count]
+  (let [section (get (:sections-by-heading contract) heading)
+        rule (counted-section-rule contract heading)
+        expected (cond
+                   (:exactly rule) {:exactly (:exactly rule)}
+                   (or (:min rule) (:max rule)) {:min (:min rule) :max (:max rule)}
+                   :else {})]
+    {:rule-id (or (:id rule) "rule/count-preflight")
+     :section-id (:id section)
+     :heading heading
+     :expected expected
+     :actual {:count actual-count}
+     :message (str "Section `" heading "` has more than " MAX-AUTO-REPAIR-SEMANTIC-COUNT
+                   " counted list item(s); preflight skipped full validation to avoid blocking the turn end")}))
+
+(defn- gate-h2-heading [line]
+  (when-let [match (re-matches #"^ {0,3}##(?:[ \t]+|$)(.*?)(?:[ \t]+#+[ \t]*)?$" line)]
+    (let [heading (str/trim (second match))]
+      (when-not (str/blank? heading)
+        heading))))
+
+(defn- gate-fence-line? [line]
+  (boolean (re-matches #"^ {0,3}(```+|~~~+).*$" line)))
+
+(defn- counted-list-line? [line]
+  (boolean (re-find #"^\s*(?:[-*+]\s+|\d+\.\s+)" line)))
+
+(defn preflight-huge-counted-section
+  "Fast, bounded scan for pathological counted sections before full validation.
+   This runs before repair prompt compilation/artifact writes, so a giant final
+   `## Next` list cannot block agent_end long enough to look like a crash.
+   It intentionally scans by string index instead of `split-lines` so it does
+   not allocate the whole response as a line vector before it can bail out."
+  [contract markdown]
+  (let [counted-headings (->> (:rules contract)
+                              (filter #(or (:exactly %) (:min %) (:max %)))
+                              (map (fn [rule]
+                                     (:heading (get (:sections-by-id contract) (:section-id rule)))))
+                              (remove nil?)
+                              set)
+        length (.-length markdown)]
+    (loop [start 0
+           in-code? false
+           current-heading nil
+           item-count 0]
+      (when (<= start length)
+        (let [newline-index (.indexOf markdown "\n" start)
+              end (if (= -1 newline-index) length newline-index)
+              raw-line (subs markdown start end)
+              line (if (and (pos? (.-length raw-line))
+                            (= "\r" (.charAt raw-line (dec (.-length raw-line)))))
+                     (subs raw-line 0 (dec (.-length raw-line)))
+                     raw-line)
+              next-start (if (= -1 newline-index) (inc length) (inc newline-index))
+              next-code? (if (gate-fence-line? line) (not in-code?) in-code?)
+              heading (when-not in-code? (gate-h2-heading line))
+              next-heading (or heading current-heading)
+              reset-count? (some? heading)
+              countable? (and (not next-code?)
+                              (contains? counted-headings next-heading)
+                              (counted-list-line? line))
+              next-count (cond
+                           reset-count? 0
+                           countable? (inc item-count)
+                           :else item-count)]
+          (if (> next-count MAX-AUTO-REPAIR-SEMANTIC-COUNT)
+            {:ok false
+             :preflight true
+             :report {:contract (:name contract)
+                      :version (:version contract)
+                      :stage "preflight"
+                      :ok false
+                      :failures [(counted-section-failure contract next-heading next-count)]}}
+            (when (< next-start (inc length))
+              (recur next-start next-code? next-heading next-count))))))))
+
 (defn write-run-artifacts
   "Write validation artifacts to disk."
   [opts]
@@ -271,59 +407,87 @@
   ([ctx state]
    (validate-latest-assistant ctx state nil))
   ([ctx state messages]
-  (.then (load-contract state)
-    (fn [cached]
-      (let [assistant (last-message-by-role ctx "assistant" messages)
-            user (last-message-by-role ctx "user" messages)]
-        (if-not assistant
-          (js/Promise.resolve #js {:ok true :skip true :reason "no assistant message — agent likely ended with error"})
-          (let [assistant-text (extract-text (aget assistant "content"))]
-            (if (str/blank? assistant-text)
-              (js/Promise.resolve #js {:ok true :skip true :reason "assistant message has no text content"})
-              (if (looks-like-agent-error? assistant-text)
-                (js/Promise.resolve #js {:ok true :skip true :reason "assistant message is an error, not a real response"})
-                (let [contract (aget cached "contract")
-                      validation (contracts/validate-markdown-response contract assistant-text)
-                      report (contracts/to-failure-report contract validation)
-                      repair-prompt (when-not (:ok validation) (contracts/compile-repair-prompt contract validation))]
-                  (let [bundle (write-run-artifacts
-                                 #js {:artifactsRoot RUNS-DIR
-                                      :contractPath (aget cached "path")
-                                      :responsePath (str "session:"
-                                                         (or (when-let [sm (aget ctx "sessionManager")]
-                                                               (let [getter (aget sm "getSessionFile")]
-                                                                 (when getter
-                                                                   (.call getter sm))))
-                                                             "ephemeral")
-                                                         ":assistant:"
-                                                         (or (aget assistant "id") "unknown"))
-                                      :contractSource (aget cached "source")
-                                      :responseMarkdown assistant-text
-                                      :report report
-                                      :repairPrompt repair-prompt
-                                      :exitCode (if (:ok validation) 0 1)})]
-                    (let [repair-info (parse-repair-attempt (extract-text (aget user "content")))
-                          summary #js {:ts (.toISOString (js/Date.))
-                                       :ok (:ok validation)
-                                       :failureCount (count (:failures validation))
-                                       :assistantMessageId (aget assistant "id")
-                                       :userMessageId (when user (aget user "id"))
-                                       :repairAttempt (or (:attempt repair-info) 0)
-                                       :bundleDir (aget bundle "dir")
-                                       :contract #js {:name (:name contract)
-                                                      :version (:version contract)
-                                                      :path (aget cached "path")}}]
-                      (append-jsonl VALIDATIONS-FILE (js->clj summary :keywordize-keys true))
-                      (aset state "lastResult" summary)
-                      (aset state "contractError" nil)
-                      #js {:ok (:ok validation)
-                           :report report
-                           :repairPrompt repair-prompt
-                           :repairInfo (clj->js repair-info)
-                           :assistant assistant
-                           :user user
-                           :contract contract
-                           :bundle bundle}))))))))))))
+   (.then (load-contract state)
+          (fn [cached]
+            (let [assistant (last-message-by-role ctx "assistant" messages)
+                  user (last-message-by-role ctx "user" messages)]
+              (if-not assistant
+                (js/Promise.resolve #js {:ok true :skip true :reason "no assistant message — agent likely ended with error"})
+                (let [assistant-text (extract-text (aget assistant "content"))]
+                  (cond
+                    (str/blank? assistant-text)
+                    (js/Promise.resolve #js {:ok true :skip true :reason "assistant message has no text content"})
+
+                    (looks-like-agent-error? assistant-text)
+                    (js/Promise.resolve #js {:ok true :skip true :reason "assistant message is an error, not a real response"})
+
+                    :else
+                    (let [contract (aget cached "contract")]
+                      (if-let [preflight (preflight-huge-counted-section contract assistant-text)]
+                        (let [summary #js {:ts (.toISOString (js/Date.))
+                                           :ok false
+                                           :failureCount (count (get-in preflight [:report :failures]))
+                                           :assistantMessageId (aget assistant "id")
+                                           :userMessageId (when user (aget user "id"))
+                                           :repairAttempt 0
+                                           :bundleDir nil
+                                           :preflight true
+                                           :contract #js {:name (:name contract)
+                                                          :version (:version contract)
+                                                          :path (aget cached "path")}}]
+                          (append-jsonl VALIDATIONS-FILE (js->clj summary :keywordize-keys true))
+                          (aset state "lastResult" summary)
+                          (aset state "contractError" nil)
+                          #js {:ok false
+                               :report (:report preflight)
+                               :repairPrompt nil
+                               :repairInfo nil
+                               :assistant assistant
+                               :user user
+                               :contract contract
+                               :preflight true})
+                        (let [validation (contracts/validate-markdown-response contract assistant-text)
+                              report (contracts/to-failure-report contract validation)
+                              repair-prompt (when-not (:ok validation)
+                                              (contracts/compile-repair-prompt contract validation))
+                              bundle (write-run-artifacts
+                                      #js {:artifactsRoot RUNS-DIR
+                                           :contractPath (aget cached "path")
+                                           :responsePath (str "session:"
+                                                              (or (when-let [sm (aget ctx "sessionManager")]
+                                                                    (let [getter (aget sm "getSessionFile")]
+                                                                      (when getter
+                                                                        (.call getter sm))))
+                                                                  "ephemeral")
+                                                              ":assistant:"
+                                                              (or (aget assistant "id") "unknown"))
+                                           :contractSource (aget cached "source")
+                                           :responseMarkdown assistant-text
+                                           :report report
+                                           :repairPrompt repair-prompt
+                                           :exitCode (if (:ok validation) 0 1)})
+                              repair-info (parse-repair-attempt (extract-text (aget user "content")))
+                              summary #js {:ts (.toISOString (js/Date.))
+                                           :ok (:ok validation)
+                                           :failureCount (count (:failures validation))
+                                           :assistantMessageId (aget assistant "id")
+                                           :userMessageId (when user (aget user "id"))
+                                           :repairAttempt (or (:attempt repair-info) 0)
+                                           :bundleDir (aget bundle "dir")
+                                           :contract #js {:name (:name contract)
+                                                          :version (:version contract)
+                                                          :path (aget cached "path")}}]
+                          (append-jsonl VALIDATIONS-FILE (js->clj summary :keywordize-keys true))
+                          (aset state "lastResult" summary)
+                          (aset state "contractError" nil)
+                          #js {:ok (:ok validation)
+                               :report report
+                               :repairPrompt repair-prompt
+                               :repairInfo (clj->js repair-info)
+                               :assistant assistant
+                               :user user
+                               :contract contract
+                               :bundle bundle})))))))))))
 
 (defn extract-original-user-prompt
   ([ctx]
@@ -427,29 +591,68 @@
 
     :else
     (let [repair-info (js->clj (aget result "repairInfo") :keywordize-keys true)
-          current-attempt (or (:attempt repair-info) 0)
+          parsed-attempt (or (:attempt repair-info) 0)
           max-retries (or (some-> result (aget "contract") :repair-max-retries) 0)
           assistant-msg (aget result "assistant")
-          assistant-id (when assistant-msg (aget assistant-msg "id"))]
-      (if (nil? assistant-msg)
+          repair-key (assistant-repair-key assistant-msg)
+          stored-attempt (repair-count state repair-key)
+          current-attempt (max parsed-attempt stored-attempt)
+          session-repairs (or (aget state "sessionRepairCount") 0)
+          session-repair-limit (or (aget (aget state "config") "maxSessionTurns") 10)
+          pending (aget state "pendingRepair")]
+      (cond
+        (nil? assistant-msg)
         (notify ctx "eta-mu-opmf-contract-gate: skipping repair (no complete assistant message — likely user-initiated stop)" "info")
-        (if (and (aget (aget state "config") "autoRepair")
-                 (aget result "repairPrompt")
-                 (< current-attempt max-retries))
-          (let [next-attempt (inc current-attempt)
-                original-prompt (extract-original-user-prompt ctx messages)
-                msg (build-repair-turn-message (aget result "repairPrompt") next-attempt max-retries original-prompt)]
-            (aset state "pendingRepair" #js {:message msg
-                                             :attempt next-attempt
-                                             :max max-retries})
-            (safe-notify ctx
-                         (str "eta-mu-opmf-contract-gate queued repair " next-attempt "/" max-retries)
-                         "warn"))
-          (notify ctx
-                  (str "eta-mu-opmf-contract-gate failed ("
-                       (count (or (some-> result (aget "report") :failures) []))
-                       " structural violations)")
-                  "warn"))))))
+
+        (and pending (= repair-key (aget pending "key")))
+        (safe-notify ctx
+                     "eta-mu-opmf-contract-gate repair already queued for this assistant message"
+                     "warn")
+
+        (not (aget (aget state "config") "autoRepair"))
+        (notify ctx
+                (str "eta-mu-opmf-contract-gate failed ("
+                     (count (or (some-> result (aget "report") :failures) []))
+                     " structural violations)")
+                "warn")
+
+        (excessive-semantic-count? result)
+        (notify ctx
+                (str "eta-mu-opmf-contract-gate failed with a very large counted section (>"
+                     MAX-AUTO-REPAIR-SEMANTIC-COUNT
+                     " items); full validation/auto-repair skipped to avoid blocking turn end")
+                "warn")
+
+        (nil? (aget result "repairPrompt"))
+        (notify ctx "eta-mu-opmf-contract-gate failed and no repair prompt was available" "warn")
+
+        (>= session-repairs session-repair-limit)
+        (notify ctx
+                (str "eta-mu-opmf-contract-gate auto-repair budget exhausted ("
+                     session-repairs "/" session-repair-limit
+                     "); leaving failed output in place")
+                "warn")
+
+        (< current-attempt max-retries)
+        (let [next-attempt (inc current-attempt)
+              original-prompt (extract-original-user-prompt ctx messages)
+              msg (build-repair-turn-message (aget result "repairPrompt") next-attempt max-retries original-prompt)]
+          (set-repair-count! state repair-key next-attempt)
+          (inc-session-repair-count! state)
+          (aset state "pendingRepair" #js {:message msg
+                                           :attempt next-attempt
+                                           :max max-retries
+                                           :key repair-key})
+          (safe-notify ctx
+                       (str "eta-mu-opmf-contract-gate queued repair " next-attempt "/" max-retries)
+                       "warn"))
+
+        :else
+        (notify ctx
+                (str "eta-mu-opmf-contract-gate failed ("
+                     (count (or (some-> result (aget "report") :failures) []))
+                     " structural violations)")
+                "warn")))))
 
 (defn handle-agent-end-error [ctx state error]
   (aset state "contractError" (or (aget error "message") (str error)))
@@ -534,6 +737,9 @@
 (defn handle-session-start [pi ctx]
   (let [state (get-state)]
     (aset state "config" (read-config))
+    (aset state "pendingRepair" nil)
+    (aset state "repairCounts" #js {})
+    (aset state "sessionRepairCount" 0)
     (-> (load-contract state)
         (.then (fn [_]
                  (aset state "contractError" nil)

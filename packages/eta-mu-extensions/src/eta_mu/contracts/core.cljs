@@ -182,19 +182,52 @@
                         :content (str/join "\n" (:lines s))})
                      all-sections)}))
 
+(defn- strip-fenced-code-lines
+  "Remove fenced code blocks before semantic counting.
+   Code snippets are supporting material for an action/frame, not additional
+   actions just because they contain several non-empty lines."
+  [content]
+  (:lines
+   (reduce (fn [{:keys [in-code?] :as state} line]
+             (if (fence-line? line)
+               (assoc state :in-code? (not in-code?))
+               (if in-code?
+                 state
+                 (update state :lines conj line))))
+           {:in-code? false :lines []}
+           (str/split-lines content))))
+
+(defn- semantic-line? [line]
+  (and (not (str/blank? line))
+       (not (re-matches #"^\s*#" line))))
+
+(defn- count-paragraph-blocks [lines]
+  (:count
+   (reduce (fn [{:keys [in-block?] :as state} line]
+             (if (semantic-line? line)
+               (if in-block?
+                 state
+                 (-> state
+                     (assoc :in-block? true)
+                     (update :count inc)))
+               (assoc state :in-block? false)))
+           {:count 0 :in-block? false}
+           lines)))
+
 (defn count-semantic-items
-  "Count semantic items in section content (paragraphs, list items)."
+  "Count semantic items in section content (paragraphs, list items).
+   Fenced code contents are ignored for the count so code examples under
+   `## Next` do not inflate one concrete action into many actions."
   [section]
   (let [content (:content section "")]
     (if (str/blank? content)
       0
-      (let [;; Count bullet points and numbered items across all lines
-            list-items (count (re-seq #"(?m)^\s*(?:[-*+]\s+|\d+\.\s+)" content))
-            ;; Count non-empty, non-heading lines
-            non-empty-lines (count (filter #(and (not (str/blank? %))
-                                                 (not (re-matches #"^#" %)))
-                                           (str/split-lines content)))]
-        (max 1 (max list-items (int (/ non-empty-lines 3))))))))
+      (let [semantic-lines (strip-fenced-code-lines content)
+            semantic-content (str/join "\n" semantic-lines)
+            list-items (count (re-seq #"(?m)^\s*(?:[-*+]\s+|\d+\.\s+)" semantic-content))
+            paragraph-blocks (count-paragraph-blocks semantic-lines)
+            count (max list-items paragraph-blocks)]
+        (if (zero? count) 1 count)))))
 
 ;; ============================================================
 ;; Validation (functional, no atoms)
