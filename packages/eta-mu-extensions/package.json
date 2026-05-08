@@ -16,7 +16,9 @@
     "test:coverage": "shadow-cljs compile node-test && c8 --reporter=text --reporter=lcov --reporter=json-summary node target/test.cjs"
   },
   "dependencies": {
-    "@open-hax/output-contract-gate": "workspace:*"
+    "@open-hax/output-contract-gate": "workspace:*",
+    "@opencode-ai/plugin": "^1.14.41",
+    "markdown-it": "^14.1.0"
   },
   "devDependencies": {
     "c8": "^10.1.2",

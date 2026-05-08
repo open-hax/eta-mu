@@ -28,22 +28,25 @@
 
 (deftest contract-kind-test
   (is (= :actor (core/contract-kind {:actor/id :mindfuck})))
+  (is (= :runtime-feature (core/contract-kind {:runtime-feature/id "eta-mu.opmf-contract-gate"})))
   (is (= :policy (core/contract-kind {:contract/kind :policy})))
   (is (nil? (core/contract-kind {:x 1}))))
 
 (deftest dispatch-test
   (testing "known structured kinds dispatch to their collections"
     (let [raw "{:contract/kind :policy :contract/id \"p1\"}"
-          acc (-> {:actors [] :policies [] :fulfills [] :caps {} :roles {} :prompt-blocks []}
+          acc (-> {:actors [] :policies [] :fulfills [] :runtime-features [] :caps {} :roles {} :prompt-blocks []}
                   (core/apply-map-dispatch {:actor/id :mindfuck :system "hello"} raw)
                   (core/apply-map-dispatch {:contract/kind :policy :contract/id "p1"} raw)
                   (core/apply-map-dispatch {:contract/kind :fulfillment :contract/id "f1"} raw)
+                  (core/apply-map-dispatch {:contract/kind :runtime-feature :contract/id "eta-mu.opmf-contract-gate"} raw)
                   (core/apply-map-dispatch {:contract/kind :capability :capability/id :cap/x} raw)
                   (core/apply-map-dispatch {:contract/kind :role :role/id :role/x} raw)
                   (core/apply-map-dispatch {:contract/kind :unknown :raw "raw-block"} raw))]
       (is (= 1 (count (:actors acc))))
       (is (= 1 (count (:policies acc))))
       (is (= 1 (count (:fulfills acc))))
+      (is (= 1 (count (:runtime-features acc))))
       (is (= {:contract/kind :capability :capability/id :cap/x}
              (get-in acc [:caps ":cap/x"])))
       (is (= {:contract/kind :role :role/id :role/x}

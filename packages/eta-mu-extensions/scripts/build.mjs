@@ -107,13 +107,16 @@ function resolvedExtensions(manifest) {
     const source = ext[":source"];
     const relPath = ext[":path"];
     const absolutePath = expandPath(relPath);
-    // Where shadow-cljs writes the compiled output (relative to PKG_ROOT)
+    // Pi target: shadow-cljs writes to target/runtime/<name>/runtime.js
     const runtimeFile = path.join(PKG_ROOT, "target", "runtime", name, "runtime.js");
     const runtimeCjs  = path.join(DIST_ROOT, "runtime", `${name}.cjs`);
     const piDir       = path.join(DIST_ROOT, "pi", `cljs-${name}`);
     const piIndex     = path.join(piDir, "index.ts");
+    // Opencode target: shadow-cljs :esm writes to target/opencode/<name>/plugin.js
+    const opencodeRuntimeFile = path.join(PKG_ROOT, "target", "opencode", name, "plugin.js");
     const opencodeFile = path.join(DIST_ROOT, "opencode", `${name}.mjs`);
-    return { name, source, absolutePath, runtimeFile, runtimeCjs, piDir, piIndex, opencodeFile, npmDeps: ext[":npm-deps"] || [] };
+    const hasOpencodeBuild = true;
+    return { name, source, absolutePath, runtimeFile, runtimeCjs, piDir, piIndex, opencodeRuntimeFile, opencodeFile, hasOpencodeBuild, npmDeps: ext[":npm-deps"] || [] };
   });
 }
 
@@ -180,24 +183,55 @@ function materializeExt(ext) {
     }
   }
 
-  // OpenCode target: ESM wrapper exporting a function, because dynamic import of
-  // a raw shadow-cljs UMD/CJS bundle yields an object wrapper rather than the
-  // plugin initializer function OpenCode expects.
-  mkdirSync(path.dirname(ext.opencodeFile), { recursive: true });
-  const ocRuntimeRel = path.relative(path.dirname(ext.opencodeFile), ext.runtimeCjs).replaceAll(path.sep, "/");
-  writeFileSync(
-    ext.opencodeFile,
-    `import runtimeModule from ${jsString(`./${ocRuntimeRel}`)};\n` +
-      `const runtime = runtimeModule.default ?? runtimeModule;\n` +
-      `export default runtime;\n`,
-    "utf8",
-  );
+  // OpenCode target: only create thin wrapper for extensions without
+  // dedicated opencode builds. Extensions with opencode builds get their
+  // .mjs file from materializeOpencodeExt.
+  if (!ext.hasOpencodeBuild) {
+    mkdirSync(path.dirname(ext.opencodeFile), { recursive: true });
+    const ocRuntimeRel = path.relative(path.dirname(ext.opencodeFile), ext.runtimeCjs).replaceAll(path.sep, "/");
+    writeFileSync(
+      ext.opencodeFile,
+      `import runtimeModule from ${jsString(`./${ocRuntimeRel}`)};\n` +
+        `const runtime = runtimeModule.default ?? runtimeModule;\n` +
+        `export default runtime;\n`,
+      "utf8",
+    );
+  }
 
   console.log(`  built targets for ${ext.name}`);
 }
 
 function cleanExt(ext) {
   rmSync(path.dirname(ext.runtimeFile), { recursive: true, force: true });
+  if (ext.hasOpencodeBuild) {
+    rmSync(path.dirname(ext.opencodeRuntimeFile), { recursive: true, force: true });
+  }
+}
+
+// ── Opencode target materialization ────────────────────────────────────────
+
+function materializeOpencodeExt(ext) {
+  if (!existsSync(ext.opencodeRuntimeFile)) {
+    console.warn(`  warn: opencode ESM not found for ${ext.name}, skipping`);
+    return;
+  }
+
+  // shadow-cljs :esm emits helper exports ($APP, shadow$provide, etc.). OpenCode
+  // currently tries every module export as a plugin, so expose a default-only
+  // wrapper and keep the raw compiled module one level down.
+  const runtimeOut = path.join(path.dirname(ext.opencodeFile), "runtime", `${ext.name}.mjs`);
+  mkdirSync(path.dirname(runtimeOut), { recursive: true });
+  writeFileSync(runtimeOut, readFileSync(ext.opencodeRuntimeFile, "utf8"), "utf8");
+
+  mkdirSync(path.dirname(ext.opencodeFile), { recursive: true });
+  const runtimeRel = path.relative(path.dirname(ext.opencodeFile), runtimeOut).replaceAll(path.sep, "/");
+  writeFileSync(
+    ext.opencodeFile,
+    `import plugin from ${jsString(`./${runtimeRel}`)};\nexport default plugin;\n`,
+    "utf8",
+  );
+
+  console.log(`  built opencode target for ${ext.name}`);
 }
 
 // ── Legacy host install cleanup ─────────────────────────────────────────────
@@ -313,9 +347,11 @@ function syncOpenCodeConfig(exts) {
 function main() {
   const manifest = loadManifest();
   const exts     = resolvedExtensions(manifest);
-  const buildIds = exts.map((e) => e.name);
+  const piBuildIds = exts.map((e) => e.name);
+  const opencodeBuildIds = exts.filter((e) => e.hasOpencodeBuild).map((e) => `opencode-${e.name}`);
 
   console.log(`eta-mu: ${exts.length} extension(s) in manifest`);
+  console.log(`         ${opencodeBuildIds.length} opencode target(s)`);
 
   if (mode === "clean") {
     console.log("  cleaning...");
@@ -332,17 +368,29 @@ function main() {
     process.exit(1);
   }
 
-  // Compile
-  const status = runShadow(mode, buildIds);
-  if (status !== 0) { console.error("error: build failed"); process.exit(status); }
+  // Compile pi targets
+  console.log("  compiling pi targets...");
+  const piStatus = runShadow(mode, piBuildIds);
+  if (piStatus !== 0) { console.error("error: pi build failed"); process.exit(piStatus); }
+
+  // Compile opencode targets
+  if (opencodeBuildIds.length > 0) {
+    console.log("  compiling opencode targets...");
+    const ocStatus = runShadow(mode, opencodeBuildIds);
+    if (ocStatus !== 0) { console.error("error: opencode build failed"); process.exit(ocStatus); }
+  }
 
   if (mode === "watch") { console.log("  watching..."); return; }
 
   // Materialize package-root targets and remove stale managed host copies.
-  // Pi registration is intentionally omitted: eta-mu ships these as built-ins
-  // via package metadata, so build must not edit host settings.json files.
-  console.log("  materializing package-root targets...");
+  console.log("  materializing pi targets...");
   for (const ext of exts) materializeExt(ext);
+
+  console.log("  materializing opencode targets...");
+  for (const ext of exts) {
+    if (ext.hasOpencodeBuild) materializeOpencodeExt(ext);
+  }
+
   console.log("  removing legacy managed host copies...");
   removeLegacyHostCopies(exts);
   syncOpenCodeConfig(exts);

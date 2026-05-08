@@ -78,11 +78,22 @@
 (defn safe-read [p]
   (try (.readFileSync fs p "utf8") (catch :default _ nil)))
 
+(defn- cwd []
+  (try (js/process.cwd) (catch :default _ HOME)))
+
+(defn- candidate-opmf-dirs []
+  (let [c (cwd)]
+    [(path/join c "operation-mindfuck")
+     (path/join c ".." "operation-mindfuck")
+     (path/join c ".." "eta-mu" "operation-mindfuck")
+     (path/join c ".." ".." "eta-mu" "operation-mindfuck")
+     (path/join c ".." ".." ".." "eta-mu" "operation-mindfuck")
+     (path/join HOME "devel" "orgs" "open-hax" "eta-mu" "operation-mindfuck")
+     OPMF-DIR
+     LEGACY-OPMF-DIR]))
+
 (defn resolve-opmf-dir []
-  (cond
-    (file-exists? OPMF-DIR) OPMF-DIR
-    (file-exists? LEGACY-OPMF-DIR) LEGACY-OPMF-DIR
-    :else nil))
+  (first (filter file-exists? (map path/resolve (candidate-opmf-dirs)))))
 
 (defn expand-tilde [p]
   (if (and (string? p) (str/starts-with? p "~/"))
