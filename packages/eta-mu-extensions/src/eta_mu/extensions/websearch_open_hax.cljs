@@ -21,7 +21,10 @@
 (defn proxy-token []
   (or (aget js/process.env "OPEN_HAX_OPENAI_PROXY_AUTH_TOKEN")
       (aget js/process.env "OPEN_HAX_PROXY_AUTH_TOKEN")
-      (aget js/process.env "PROXY_AUTH_TOKEN")))
+      (aget js/process.env "PROXY_AUTH_TOKEN")
+      (aget js/process.env "PROXX_AUTH_TOKEN")
+      )
+  )
 
 (defn format-size [bytes]
   (cond

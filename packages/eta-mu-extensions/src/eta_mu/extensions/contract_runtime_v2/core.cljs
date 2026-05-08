@@ -31,6 +31,7 @@
 (defn contract-kind [m]
   (or (:contract/kind m)
       (when (:actor/id m) :actor)
+      (when (:runtime-feature/id m) :runtime-feature)
       nil))
 
 (defn prompt-block-for-map [m raw-text]
@@ -52,6 +53,7 @@
       (= kind :actor)       (update :actors      (fnil conj []) m)
       (= kind :policy)      (update :policies    (fnil conj []) m)
       (= kind :fulfillment) (update :fulfills    (fnil conj []) m)
+      (= kind :runtime-feature) (update :runtime-features (fnil conj []) m)
       (= kind :capability)  (assoc-in [:caps  (str (:capability/id m))] m)
       (= kind :role)        (assoc-in [:roles (str (:role/id m))]        m)
       (and (string? prompt) (not (str/blank? prompt)))

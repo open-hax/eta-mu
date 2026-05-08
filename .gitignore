@@ -2,6 +2,10 @@
 dist/
 build/
 lib/
+!packages/eta-mu-extensions/lib/
+!packages/eta-mu-extensions/lib/**
+!packages/eta-mu-extensions/src/eta_mu/build/
+!packages/eta-mu-extensions/src/eta_mu/build/**
 *.tsbuildinfo
 
 # Dependencies

@@ -2,9 +2,11 @@
   "Output contract gate enforcement with auto-repair.
    Pure CLJS implementation - no TypeScript dependencies."
   (:require-macros [eta-mu.core :as em])
-  (:require [clojure.string :as str]
+  (:require [cljs.reader :as reader]
+            [clojure.string :as str]
             [goog.object :as gobj]
             [eta-mu.contracts.core :as contracts]
+            ["markdown-it" :as MarkdownIt]
             ["node:fs" :as fs]
             ["node:os" :as os]
             ["node:path" :as path]))
@@ -30,7 +32,24 @@
 (def GLOBAL-KEY "__eta_mu_output_contract_gate_state__")
 (def REPAIR-SENTINEL "[[eta-mu-opmf-contract-gate repair ")
 (def CONTRACT-MARKER "## Active Output Contract")
+(def KNOXX-BACKEND-PATH (path/join HOME "devel" "orgs" "open-hax" "openplanner" "packages" "agents" "knoxx" "backend"))
+(def KNOXX-CONTRACTS-PATH (path/join HOME "devel" "orgs" "open-hax" "openplanner" "packages" "agents" "knoxx" "contracts"))
+(def RUNTIME-CONTRACT-ID "eta-mu.opmf-contract-gate")
+(def RUNTIME-CONTRACT-FILE "opmf_contract_gate.edn")
 (def MAX-AUTO-REPAIR-SEMANTIC-COUNT 25)
+(def MAX-FULL-VALIDATION-CHARS 120000)
+(def MAX-FULL-VALIDATION-LINES 5000)
+(def MAX-FULL-VALIDATION-LIST-LINES 500)
+(def MAX-FULL-VALIDATION-LIST-INDENT 24)
+(def MAX-HEADER-SKELETON-LINES 1000)
+(def MAX-HEADER-SKELETON-CHARS 64000)
+
+(defonce ^:private header-markdown-parser
+  ;; Keep the emergency/large-output path on the same CommonMark parser family
+  ;; as eta-mu.contracts.core, but parse only a heading/fence skeleton so giant
+  ;; nested lists cannot explode token count or memory at turn end.
+  (js/Reflect.construct (or (aget MarkdownIt "default") MarkdownIt)
+                        #js ["commonmark" #js {:html false :maxNesting 16}]))
 
 (def DEFAULT-CONTRACT
   (or (gobj/get js/process.env "PI_OUTPUT_CONTRACT_FILE")
@@ -39,6 +58,144 @@
                  "specs"
                  "drafts"
                  "contract-enforced-agent-output-pipeline.example.edn")))
+
+(defn- truthy? [value]
+  (or (true? value)
+      (= value "true")
+      (= value "1")
+      (= value "yes")
+      (= value "on")))
+
+(defn- falsey? [value]
+  (or (false? value)
+      (= value "false")
+      (= value "0")
+      (= value "no")
+      (= value "off")))
+
+(defn- parse-bool [value fallback]
+  (cond
+    (truthy? value) true
+    (falsey? value) false
+    :else fallback))
+
+(defn- keyword-name [value]
+  (cond
+    (keyword? value) (name value)
+    (symbol? value) (name value)
+    (string? value) value
+    (some? value) (str value)
+    :else nil))
+
+(defn- path-inside? [parent child]
+  (let [parent* (path/resolve parent)
+        child* (path/resolve child)
+        rel (.relative path parent* child*)]
+    (or (= "" rel)
+        (and (not (.startsWith rel ".."))
+             (not (.isAbsolute path rel))))))
+
+(defn knoxx-backend-cwd? [cwd]
+  (path-inside? KNOXX-BACKEND-PATH (or cwd (.cwd js/process))))
+
+(defn- parent-dirs [start]
+  (loop [cur (path/resolve start)
+         acc []]
+    (let [parent (path/dirname cur)
+          acc* (conj acc cur)]
+      (if (= parent cur)
+        acc*
+        (recur parent acc*)))))
+
+(defn runtime-contract-candidates [cwd]
+  (let [dirs (parent-dirs (or cwd (.cwd js/process)))]
+    (->> (concat
+          (mapcat (fn [dir]
+                    [(path/join dir "contracts" "runtime_features" RUNTIME-CONTRACT-FILE)
+                     (path/join dir "runtime_features" RUNTIME-CONTRACT-FILE)
+                     (path/join dir "CONTRACT.edn")])
+                  dirs)
+          (when (knoxx-backend-cwd? cwd)
+            [(path/join KNOXX-CONTRACTS-PATH "runtime_features" RUNTIME-CONTRACT-FILE)]))
+         distinct
+         vec)))
+
+(defn- opmf-runtime-contract? [m]
+  (let [feature (or (keyword-name (:runtime/feature m))
+                    (keyword-name (:eta-mu/extension m))
+                    (keyword-name (:extension/name m))
+                    (keyword-name (:contract/id m)))]
+    (and (map? m)
+         (or (= :runtime-feature (:contract/kind m))
+             (= "runtime-feature" (keyword-name (:contract/kind m)))
+             (= RUNTIME-CONTRACT-ID (:contract/id m)))
+         (#{"opmf-contract-gate" "eta-mu.opmf-contract-gate"} feature))))
+
+(defn- extract-runtime-contract [form]
+  (cond
+    (opmf-runtime-contract? form) form
+    (sequential? form) (some extract-runtime-contract form)
+    :else nil))
+
+(defn read-runtime-contract [cwd]
+  (some (fn [candidate]
+          (when (.existsSync fs candidate)
+            (try
+              (when-let [contract (extract-runtime-contract
+                                   (reader/read-string (.readFileSync fs candidate "utf8")))]
+                (assoc contract :runtime/source candidate))
+              (catch :default _ nil))))
+        (runtime-contract-candidates cwd)))
+
+(defn- runtime-contract-default-enabled [contract fallback]
+  (if contract
+    (parse-bool (:runtime/default-enabled contract)
+                fallback)
+    fallback))
+
+(defn- runtime-contract-forced-enabled [contract]
+  (when contract
+    (let [value (or (:runtime/enabled contract) (:enabled contract))]
+      (when (or (truthy? value) (falsey? value))
+        (parse-bool value true)))))
+
+(defn- runtime-contract-config [contract]
+  (let [config (:runtime/config contract)]
+    (if (map? config) config {})))
+
+(defn- default-enabled-for-cwd [cwd]
+  (not (knoxx-backend-cwd? cwd)))
+
+(defn- env-enabled-override []
+  (let [value (gobj/get js/process.env "ETA_MU_OPMF_CONTRACT_GATE_ENABLED")]
+    (when (or (truthy? value) (falsey? value))
+      (parse-bool value true))))
+
+(defn- js-read-config-file []
+  (when (.existsSync fs CONFIG-FILE)
+    (try
+      (.parse js/JSON (.readFileSync fs CONFIG-FILE "utf8"))
+      (catch :default _ nil))))
+
+(defn- config-bool [parsed key fallback]
+  (if (and parsed (not (nil? (aget parsed key))))
+    (parse-bool (aget parsed key) fallback)
+    fallback))
+
+(defn- config-value [parsed key fallback]
+  (if (and parsed (not (nil? (aget parsed key))))
+    (aget parsed key)
+    fallback))
+
+(defn- runtime-config-bool [runtime-config key fallback]
+  (if (contains? runtime-config key)
+    (parse-bool (get runtime-config key) fallback)
+    fallback))
+
+(defn- runtime-config-value [runtime-config key fallback]
+  (if (contains? runtime-config key)
+    (get runtime-config key)
+    fallback))
 
 (defn ensure-dir [dir]
   (.mkdirSync fs dir #js {:recursive true}))
@@ -96,36 +253,59 @@
   ([ctx role messages]
    (last-message-by-role-in-array (messages-source ctx messages) role)))
 
-(defn read-config []
-  (try
-    (if-not (.existsSync fs CONFIG-FILE)
-      #js {:enabled true
-           :autoRepair true
-           :contractPath DEFAULT-CONTRACT
-           :enableGptReview false
-           :gptReviewModel "gpt-5.4"
-           :maxSessionTurns 10
-           :repairDelayMs 75}
-      (let [parsed (.parse js/JSON (.readFileSync fs CONFIG-FILE "utf8"))]
-        #js {:enabled (not= false (aget parsed "enabled"))
-             :autoRepair (not= false (aget parsed "autoRepair"))
-             :contractPath (if (and (string? (aget parsed "contractPath")) (not (str/blank? (aget parsed "contractPath"))))
-                             (aget parsed "contractPath")
-                             DEFAULT-CONTRACT)
-             :enableGptReview (not= false (aget parsed "enableGptReview"))
-             :gptReviewModel (or (aget parsed "gptReviewModel") "gpt-5.4")
-             :gptReviewBaseUrl (aget parsed "gptReviewBaseUrl")
-             :gptReviewApiKey (aget parsed "gptReviewApiKey")
-             :maxSessionTurns (or (aget parsed "maxSessionTurns") 10)
-             :repairDelayMs (or (aget parsed "repairDelayMs") 75)}))
-    (catch :default _
-      #js {:enabled true
-           :autoRepair true
-           :contractPath DEFAULT-CONTRACT
-           :enableGptReview false
-           :gptReviewModel "gpt-5.4"
-           :maxSessionTurns 10
-           :repairDelayMs 75})))
+(defn read-config
+  ([]
+   (read-config (.cwd js/process)))
+  ([cwd]
+   (let [runtime-contract (read-runtime-contract cwd)
+         runtime-config (runtime-contract-config runtime-contract)
+         built-in-enabled (default-enabled-for-cwd cwd)
+         contract-default-enabled (runtime-contract-default-enabled runtime-contract built-in-enabled)
+         parsed (js-read-config-file)
+         local-enabled (config-bool parsed "enabled" contract-default-enabled)
+         contract-forced-enabled (runtime-contract-forced-enabled runtime-contract)
+         env-override (env-enabled-override)
+         enabled (cond
+                   (some? env-override) env-override
+                   (some? contract-forced-enabled) contract-forced-enabled
+                   :else local-enabled)
+         auto-repair (config-bool parsed
+                                  "autoRepair"
+                                  (runtime-config-bool runtime-config :autoRepair true))
+         contract-path (config-value parsed
+                                     "contractPath"
+                                     (runtime-config-value runtime-config :contractPath DEFAULT-CONTRACT))
+         contract-path* (if (and (string? contract-path) (not (str/blank? contract-path)))
+                          contract-path
+                          DEFAULT-CONTRACT)]
+     #js {:enabled enabled
+          :autoRepair auto-repair
+          :contractPath contract-path*
+          :enableGptReview (config-bool parsed
+                                       "enableGptReview"
+                                       (runtime-config-bool runtime-config :enableGptReview false))
+          :gptReviewModel (config-value parsed
+                                        "gptReviewModel"
+                                        (runtime-config-value runtime-config :gptReviewModel "gpt-5.4"))
+          :gptReviewBaseUrl (config-value parsed
+                                          "gptReviewBaseUrl"
+                                          (runtime-config-value runtime-config :gptReviewBaseUrl nil))
+          :gptReviewApiKey (config-value parsed
+                                         "gptReviewApiKey"
+                                         (runtime-config-value runtime-config :gptReviewApiKey nil))
+          :maxSessionTurns (config-value parsed
+                                         "maxSessionTurns"
+                                         (runtime-config-value runtime-config :maxSessionTurns 10))
+          :repairDelayMs (config-value parsed
+                                       "repairDelayMs"
+                                       (runtime-config-value runtime-config :repairDelayMs 75))
+          :configSource (cond
+                          (some? env-override) "env+local+contract"
+                          runtime-contract "local+contract"
+                          parsed "local"
+                          (knoxx-backend-cwd? cwd) "built-in:knoxx-backend"
+                          :else "built-in:cli")
+          :runtimeContractPath (:runtime/source runtime-contract)})))
 
 (defn get-state []
   (let [g js/globalThis]
@@ -323,7 +503,186 @@
   (boolean (re-matches #"^ {0,3}(```+|~~~+).*$" line)))
 
 (defn- counted-list-line? [line]
-  (boolean (re-find #"^\s*(?:[-*+]\s+|\d+\.\s+)" line)))
+  ;; Count both CommonMark ordered lists (`1. item`) and the common shorthand
+  ;; (`1) item`) that agents often produce.
+  (boolean (re-find #"^\s*(?:[-*+]\s+|\d+(?:[.)])\s+)" line)))
+
+(defn- atx-heading-candidate-line? [line]
+  ;; Candidate filter only. The actual h2 decision is made by markdown-it after
+  ;; skeletonization so we do not accidentally accept bold/prose faux headers.
+  (boolean (re-find #"^ {0,3}#{1,6}(?:[ \t]+|$)" line)))
+
+(defn- list-line-indent [line]
+  (when (counted-list-line? line)
+    (let [match (re-find #"^(\s*)" line)]
+      (.-length (or (second match) "")))))
+
+(defn- skeleton-line [line]
+  (if (> (.-length line) 512)
+    (subs line 0 512)
+    line))
+
+(defn- markdown-complexity-scan
+  "Single bounded pass over markdown. Builds a tiny CommonMark skeleton made of
+   only fence lines and ATX heading candidates; all list/prose payload is
+   discarded before parser invocation."
+  [markdown]
+  (let [text (or markdown "")
+        length (.-length text)
+        skeleton (array)]
+    (loop [start 0
+           line-count 0
+           list-lines 0
+           max-list-indent 0
+           skeleton-lines 0
+           skeleton-chars 0
+           skeleton-truncated? false]
+      (if (> start length)
+        {:char-count length
+         :line-count line-count
+         :list-lines list-lines
+         :max-list-indent max-list-indent
+         :skeleton (str/join "\n" (js/Array.from skeleton))
+         :skeleton-truncated? skeleton-truncated?}
+        (let [newline-index (.indexOf text "\n" start)
+              end (if (= -1 newline-index) length newline-index)
+              raw-line (subs text start end)
+              line (if (and (pos? (.-length raw-line))
+                            (= "\r" (.charAt raw-line (dec (.-length raw-line)))))
+                     (subs raw-line 0 (dec (.-length raw-line)))
+                     raw-line)
+              next-start (if (= -1 newline-index) (inc length) (inc newline-index))
+              indent (or (list-line-indent line) 0)
+              include-in-skeleton? (or (gate-fence-line? line)
+                                       (atx-heading-candidate-line? line))
+              skel-line (when include-in-skeleton? (skeleton-line line))
+              next-skeleton-lines (if skel-line (inc skeleton-lines) skeleton-lines)
+              next-skeleton-chars (if skel-line
+                                    (+ skeleton-chars (.-length skel-line) 1)
+                                    skeleton-chars)
+              can-append-skeleton? (and skel-line
+                                        (<= next-skeleton-lines MAX-HEADER-SKELETON-LINES)
+                                        (<= next-skeleton-chars MAX-HEADER-SKELETON-CHARS))]
+          (when can-append-skeleton?
+            (.push skeleton skel-line))
+          (recur next-start
+                 (inc line-count)
+                 (if (counted-list-line? line) (inc list-lines) list-lines)
+                 (max max-list-indent indent)
+                 (if skel-line next-skeleton-lines skeleton-lines)
+                 (if skel-line next-skeleton-chars skeleton-chars)
+                 (or skeleton-truncated?
+                     (and skel-line (not can-append-skeleton?)))))))))
+
+(defn- needs-header-only-validation? [{:keys [char-count line-count list-lines max-list-indent]}]
+  (or (> char-count MAX-FULL-VALIDATION-CHARS)
+      (> line-count MAX-FULL-VALIDATION-LINES)
+      (> list-lines MAX-FULL-VALIDATION-LIST-LINES)
+      (> max-list-indent MAX-FULL-VALIDATION-LIST-INDENT)))
+
+(defn- header-token-type [token]
+  (aget token "type"))
+
+(defn- header-token-tag [token]
+  (aget token "tag"))
+
+(defn- header-h2-token? [token]
+  (and (= "heading_open" (header-token-type token))
+       (= "h2" (header-token-tag token))))
+
+(defn- header-inline-content [tokens idx]
+  (let [token (aget tokens (inc idx))]
+    (when (= "inline" (header-token-type token))
+      (some-> (aget token "content") str/trim not-empty))))
+
+(defn- skeleton-h2-headings [skeleton]
+  (let [tokens (js/Array.from (.parse header-markdown-parser skeleton #js {}))]
+    (->> (range (.-length tokens))
+         (keep (fn [idx]
+                 (let [token (aget tokens idx)]
+                   (when (header-h2-token? token)
+                     (header-inline-content tokens idx)))))
+         vec)))
+
+(defn- header-only-failure [contract {:keys [rule-id section-id heading expected actual message]}]
+  (merge {:rule-id (or rule-id "unknown")
+          :message (or message (str "Violation of " rule-id))}
+         (when section-id {:section-id section-id})
+         (when heading {:heading heading})
+         (when expected {:expected expected})
+         (when actual {:actual actual})))
+
+(defn- header-required-failures [contract headings]
+  (into []
+        (comp
+         (filter :required)
+         (filter (fn [section-def]
+                   (not (some #(= (:heading section-def) %) headings))))
+         (map (fn [section-def]
+                (header-only-failure contract
+                                     {:rule-id "rule/required-section"
+                                      :section-id (:id section-def)
+                                      :heading (:heading section-def)
+                                      :message (str "Missing required section `" (:heading section-def) "`")}))))
+        (:sections contract)))
+
+(defn- header-order-failures [contract headings]
+  (let [expected-headings (map :heading (:sections contract))]
+    (if (= headings (take (count headings) expected-headings))
+      []
+      [(header-only-failure contract
+                            {:rule-id "rule/section-order"
+                             :expected {:headings expected-headings}
+                             :actual {:headings headings}
+                             :message "Section order mismatch"})])))
+
+(defn- header-only-repair-prompt [failures]
+  (when (seq failures)
+    (str/join "\n\n"
+              (map (fn [failure]
+                     (str (:message failure)
+                          "\nLarge/complex markdown response: semantic list counting was skipped to protect the runtime; preserve the answer but fix the required `##` headings."))
+                   failures))))
+
+(defn header-only-validation
+  "Validate only the required h2 headings for a response that is too large or
+   structurally complex for full semantic counting. Uses markdown-it on a bounded
+   heading/fence skeleton, not regex heading extraction."
+  ([contract markdown]
+   (header-only-validation contract markdown (markdown-complexity-scan markdown)))
+  ([contract _markdown scan]
+   (let [headings (if (:skeleton-truncated? scan)
+                    []
+                    (skeleton-h2-headings (:skeleton scan)))
+         truncation-failures (when (:skeleton-truncated? scan)
+                               [(header-only-failure contract
+                                                    {:rule-id "rule/header-skeleton-budget"
+                                                     :expected {:max-lines MAX-HEADER-SKELETON-LINES
+                                                                :max-chars MAX-HEADER-SKELETON-CHARS}
+                                                     :actual {:line-count (:line-count scan)
+                                                              :char-count (:char-count scan)}
+                                                     :message "Too many markdown heading/fence candidates for bounded header validation"})])
+         failures (vec (concat truncation-failures
+                               (when-not (:skeleton-truncated? scan)
+                                 (header-required-failures contract headings))
+                               (when-not (:skeleton-truncated? scan)
+                                 (header-order-failures contract headings))))]
+     {:ok (empty? failures)
+      :preflight true
+      :header-only true
+      :scan scan
+      :headings headings
+      :repair-prompt (header-only-repair-prompt failures)
+      :report {:contract (:name contract)
+               :version (:version contract)
+               :stage "header-only"
+               :ok (empty? failures)
+               :failures failures}})))
+
+(defn preflight-large-or-complex-response [contract markdown]
+  (let [scan (markdown-complexity-scan markdown)]
+    (when (needs-header-only-validation? scan)
+      (header-only-validation contract markdown scan))))
 
 (defn preflight-huge-counted-section
   "Fast, bounded scan for pathological counted sections before full validation.
@@ -403,6 +762,79 @@
                     "utf8")
     #js {:dir run-dir :runId run-id}))
 
+(defn- validation-result-from-preflight! [state cached assistant user contract preflight]
+  (let [report (:report preflight)
+        ok? (boolean (:ok preflight))
+        repair-info (parse-repair-attempt (extract-text (when user (aget user "content"))))
+        summary #js {:ts (.toISOString (js/Date.))
+                     :ok ok?
+                     :failureCount (count (:failures report))
+                     :assistantMessageId (aget assistant "id")
+                     :userMessageId (when user (aget user "id"))
+                     :repairAttempt (or (:attempt repair-info) 0)
+                     :bundleDir nil
+                     :preflight true
+                     :headerOnly (boolean (:header-only preflight))
+                     :contract #js {:name (:name contract)
+                                    :version (:version contract)
+                                    :path (aget cached "path")}}]
+    (append-jsonl VALIDATIONS-FILE (js->clj summary :keywordize-keys true))
+    (aset state "lastResult" summary)
+    (aset state "contractError" nil)
+    #js {:ok ok?
+         :report report
+         :repairPrompt (:repair-prompt preflight)
+         :repairInfo (clj->js repair-info)
+         :assistant assistant
+         :user user
+         :contract contract
+         :preflight true
+         :headerOnly (boolean (:header-only preflight))}))
+
+(defn- validation-result-from-full-check! [ctx state cached assistant user contract assistant-text]
+  (let [validation (contracts/validate-markdown-response contract assistant-text)
+        report (contracts/to-failure-report contract validation)
+        repair-prompt (when-not (:ok validation)
+                        (contracts/compile-repair-prompt contract validation))
+        bundle (write-run-artifacts
+                #js {:artifactsRoot RUNS-DIR
+                     :contractPath (aget cached "path")
+                     :responsePath (str "session:"
+                                        (or (when-let [sm (aget ctx "sessionManager")]
+                                              (let [getter (aget sm "getSessionFile")]
+                                                (when getter
+                                                  (.call getter sm))))
+                                            "ephemeral")
+                                        ":assistant:"
+                                        (or (aget assistant "id") "unknown"))
+                     :contractSource (aget cached "source")
+                     :responseMarkdown assistant-text
+                     :report report
+                     :repairPrompt repair-prompt
+                     :exitCode (if (:ok validation) 0 1)})
+        repair-info (parse-repair-attempt (extract-text (when user (aget user "content"))))
+        summary #js {:ts (.toISOString (js/Date.))
+                     :ok (:ok validation)
+                     :failureCount (count (:failures validation))
+                     :assistantMessageId (aget assistant "id")
+                     :userMessageId (when user (aget user "id"))
+                     :repairAttempt (or (:attempt repair-info) 0)
+                     :bundleDir (aget bundle "dir")
+                     :contract #js {:name (:name contract)
+                                    :version (:version contract)
+                                    :path (aget cached "path")}}]
+    (append-jsonl VALIDATIONS-FILE (js->clj summary :keywordize-keys true))
+    (aset state "lastResult" summary)
+    (aset state "contractError" nil)
+    #js {:ok (:ok validation)
+         :report report
+         :repairPrompt repair-prompt
+         :repairInfo (clj->js repair-info)
+         :assistant assistant
+         :user user
+         :contract contract
+         :bundle bundle}))
+
 (defn validate-latest-assistant
   ([ctx state]
    (validate-latest-assistant ctx state nil))
@@ -423,71 +855,12 @@
 
                     :else
                     (let [contract (aget cached "contract")]
-                      (if-let [preflight (preflight-huge-counted-section contract assistant-text)]
-                        (let [summary #js {:ts (.toISOString (js/Date.))
-                                           :ok false
-                                           :failureCount (count (get-in preflight [:report :failures]))
-                                           :assistantMessageId (aget assistant "id")
-                                           :userMessageId (when user (aget user "id"))
-                                           :repairAttempt 0
-                                           :bundleDir nil
-                                           :preflight true
-                                           :contract #js {:name (:name contract)
-                                                          :version (:version contract)
-                                                          :path (aget cached "path")}}]
-                          (append-jsonl VALIDATIONS-FILE (js->clj summary :keywordize-keys true))
-                          (aset state "lastResult" summary)
-                          (aset state "contractError" nil)
-                          #js {:ok false
-                               :report (:report preflight)
-                               :repairPrompt nil
-                               :repairInfo nil
-                               :assistant assistant
-                               :user user
-                               :contract contract
-                               :preflight true})
-                        (let [validation (contracts/validate-markdown-response contract assistant-text)
-                              report (contracts/to-failure-report contract validation)
-                              repair-prompt (when-not (:ok validation)
-                                              (contracts/compile-repair-prompt contract validation))
-                              bundle (write-run-artifacts
-                                      #js {:artifactsRoot RUNS-DIR
-                                           :contractPath (aget cached "path")
-                                           :responsePath (str "session:"
-                                                              (or (when-let [sm (aget ctx "sessionManager")]
-                                                                    (let [getter (aget sm "getSessionFile")]
-                                                                      (when getter
-                                                                        (.call getter sm))))
-                                                                  "ephemeral")
-                                                              ":assistant:"
-                                                              (or (aget assistant "id") "unknown"))
-                                           :contractSource (aget cached "source")
-                                           :responseMarkdown assistant-text
-                                           :report report
-                                           :repairPrompt repair-prompt
-                                           :exitCode (if (:ok validation) 0 1)})
-                              repair-info (parse-repair-attempt (extract-text (aget user "content")))
-                              summary #js {:ts (.toISOString (js/Date.))
-                                           :ok (:ok validation)
-                                           :failureCount (count (:failures validation))
-                                           :assistantMessageId (aget assistant "id")
-                                           :userMessageId (when user (aget user "id"))
-                                           :repairAttempt (or (:attempt repair-info) 0)
-                                           :bundleDir (aget bundle "dir")
-                                           :contract #js {:name (:name contract)
-                                                          :version (:version contract)
-                                                          :path (aget cached "path")}}]
-                          (append-jsonl VALIDATIONS-FILE (js->clj summary :keywordize-keys true))
-                          (aset state "lastResult" summary)
-                          (aset state "contractError" nil)
-                          #js {:ok (:ok validation)
-                               :report report
-                               :repairPrompt repair-prompt
-                               :repairInfo (clj->js repair-info)
-                               :assistant assistant
-                               :user user
-                               :contract contract
-                               :bundle bundle})))))))))))
+                      (if-let [preflight (or (preflight-large-or-complex-response contract assistant-text)
+                                             (preflight-huge-counted-section contract assistant-text))]
+                        (validation-result-from-preflight!
+                         state cached assistant user contract preflight)
+                        (validation-result-from-full-check!
+                         ctx state cached assistant user contract assistant-text)))))))))))
 
 (defn extract-original-user-prompt
   ([ctx]
@@ -672,27 +1045,23 @@
                     (handle-agent-end-error ctx state error)))))))
 
 (defn handle-agent-idle [pi ctx _event]
-  ;; `agent_end` is emitted before the core agent is guaranteed idle. Injecting
-  ;; a repair turn there either becomes an undeliverable steering message or is
-  ;; rejected as "already processing". The core `agent_idle` hook is the safe
-  ;; boundary for starting a fresh extension-origin user turn.
+  ;; `agent_idle` is the first point where Pi reports the agent as idle, but the
+  ;; hook itself still runs inside AgentSession's serialized event-drain promise.
+  ;; Starting a fresh prompt synchronously from that callback can recursively
+  ;; append more agent events before the previous drain unwinds. Bounce the repair
+  ;; injection to the timer queue so the agent_end/agent_idle pipeline finishes
+  ;; before the extension-origin user turn starts.
   (let [state (get-state)
         pending (aget state "pendingRepair")]
     (when pending
       (aset state "pendingRepair" nil)
-      (let [sender (sender-for pi ctx)
-            msg (aget pending "message")
-            attempt (aget pending "attempt")
-            max-retries (aget pending "max")]
-        (if (and sender (aget sender "sendUserMessage"))
-          (try
-            (.call (aget sender "sendUserMessage") sender msg)
-            (safe-notify ctx
-                         (str "eta-mu-opmf-contract-gate injected repair " attempt "/" max-retries)
-                         "warn")
-            (catch :default error
-              (handle-direct-repair-error pi ctx state msg attempt max-retries 0 error)))
-          (safe-notify ctx "eta-mu-opmf-contract-gate repair sender unavailable" "warn"))))))
+      (schedule-direct-repair! pi
+                               ctx
+                               state
+                               (aget pending "message")
+                               (aget pending "attempt")
+                               (aget pending "max")
+                               0))))
 
 (defn handle-command [args ctx]
   (let [state (get-state)
@@ -707,6 +1076,8 @@
                #js [(str "enabled: " (aget (aget state "config") "enabled"))
                     (str "autoRepair: " (aget (aget state "config") "autoRepair"))
                     (str "contract: " (aget (aget state "config") "contractPath"))
+                    (str "configSource: " (or (aget (aget state "config") "configSource") "unknown"))
+                    (str "runtimeContract: " (or (aget (aget state "config") "runtimeContractPath") "n/a"))
                     (str "last ok: " (or (some-> (aget state "lastResult") (aget "ok")) "n/a"))]))
 
       (#{"on" "enable"} cmd)
@@ -736,7 +1107,7 @@
 
 (defn handle-session-start [pi ctx]
   (let [state (get-state)]
-    (aset state "config" (read-config))
+    (aset state "config" (read-config (or (aget ctx "cwd") (.cwd js/process))))
     (aset state "pendingRepair" nil)
     (aset state "repairCounts" #js {})
     (aset state "sessionRepairCount" 0)
@@ -749,8 +1120,9 @@
                   (notify ctx (str "output-contract-gate: " (aget state "contractError")) "warn")
                   (set-status ctx state))))))
 
-(defn handle-before-agent-start [event]
+(defn handle-before-agent-start [event ctx]
   (let [state (get-state)]
+    (aset state "config" (read-config (or (aget ctx "cwd") (.cwd js/process))))
     (when (aget (aget state "config") "enabled")
       (-> (load-contract state)
           (.then (fn [cached]
@@ -775,7 +1147,7 @@
          #js {:description "Manage the output contract gate (status|on|off|validate-last)"
               :handler handle-command})
   (.call (aget pi "on") pi "session_start" (fn [_event ctx] (handle-session-start pi ctx)))
-  (.call (aget pi "on") pi "before_agent_start" (fn [event _ctx] (handle-before-agent-start event)))
+  (.call (aget pi "on") pi "before_agent_start" (fn [event ctx] (handle-before-agent-start event ctx)))
   (.call (aget pi "on") pi "agent_end" (fn [event ctx] (handle-agent-end pi ctx event)))
   (.call (aget pi "on") pi "agent_idle" (fn [event ctx] (handle-agent-idle pi ctx event)))
   (.call (aget pi "on") pi "session_shutdown" (fn [_event ctx] (handle-session-shutdown ctx))))

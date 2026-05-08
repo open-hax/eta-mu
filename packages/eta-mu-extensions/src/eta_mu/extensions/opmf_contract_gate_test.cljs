@@ -1,5 +1,5 @@
 (ns eta-mu.extensions.opmf-contract-gate-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [async deftest is testing]]
             [eta-mu.contracts.core :as contracts]
             [eta-mu.extensions.opmf-contract-gate :as gate]))
 
@@ -18,6 +18,27 @@
             "[[eta-mu-opmf-output-contract-gate repair 3/5]]\nrepair prompt"))))
   (testing "rejects non-repair user content"
     (is (nil? (gate/parse-repair-attempt "normal prompt")))))
+
+(deftest runtime-contract-default-test
+  (let [knoxx-backend "/home/err/devel/orgs/open-hax/openplanner/packages/agents/knoxx/backend"
+        outside "/tmp/eta-mu-opmf-contract-gate-test-outside"]
+    (testing "detects the Knoxx backend cwd boundary"
+      (is (true? (gate/knoxx-backend-cwd? knoxx-backend)))
+      (is (false? (gate/knoxx-backend-cwd? outside))))
+    (testing "finds the Knoxx runtime-feature contract only for Knoxx backend cwd"
+      (is (= "eta-mu.opmf-contract-gate"
+             (:contract/id (gate/read-runtime-contract knoxx-backend))))
+      (is (nil? (gate/read-runtime-contract outside))))
+    (testing "the Knoxx runtime-feature contract forces the gate off by default"
+      (let [env js/process.env
+            old (aget env "ETA_MU_OPMF_CONTRACT_GATE_ENABLED")]
+        (try
+          (js-delete env "ETA_MU_OPMF_CONTRACT_GATE_ENABLED")
+          (is (false? (aget (gate/read-config knoxx-backend) "enabled")))
+          (finally
+            (if (some? old)
+              (aset env "ETA_MU_OPMF_CONTRACT_GATE_ENABLED" old)
+              (js-delete env "ETA_MU_OPMF_CONTRACT_GATE_ENABLED"))))))))
 
 (deftest stale-context-message-test
   (testing "detects eta-mu stale context guard messages"
@@ -81,6 +102,10 @@
     (is (= 3 (contracts/count-semantic-items
               {:heading "Frames"
                :content "- one\n- two\n- three"}))))
+  (testing "counts ordered list shorthand (1) items semantically"
+    (is (= 2 (contracts/count-semantic-items
+              {:heading "Frames"
+               :content "1) frame one\n2) frame two"}))))
   (testing "does not count fenced code lines as additional Next actions"
     (is (= 1 (contracts/count-semantic-items
               {:heading "Next"
@@ -108,6 +133,52 @@
       (is (re-find #"checker counted 1" prompt))
       (is (re-find #"use 2–3 markdown bullet items" prompt)))))
 
+(deftest compile-contract-program-modes-test
+  (let [source "(agent-output-contracts
+  (name \"eta-mu-response-modes\")
+  (v \"ημ.output/response-modes@0.1.0\")
+  (default-mode :response/brief)
+  (target
+    (format :markdown)
+    (ast :mdast)
+    (root :document))
+  (modes
+    (mode
+      (id :response/brief)
+      (structure
+        (section (id :section/signal) (heading \"Signal\") (required true) (order 1))
+        (section (id :section/next) (heading \"Next\") (required true) (order 2) (local-rules [:rule/next-one])))
+      (rules
+        (rule (id :rule/next-one) (section :section/next) (exactly 1)))
+      (repair
+        (max-retries 1)
+        (template (id :repair/next-one) (when :rule/next-one) (text \"Fix Next\")))
+      (review (enabled true) (threshold 0.5)))
+    (mode
+      (id :response/full)
+      (structure
+        (section (id :section/signal) (heading \"Signal\") (required true) (order 1))
+        (section (id :section/evidence) (heading \"Evidence\") (required true) (order 2))
+        (section (id :section/next) (heading \"Next\") (required true) (order 3) (local-rules [:rule/next-one])))
+      (rules
+        (rule (id :rule/next-one) (section :section/next) (exactly 1)))
+      (repair
+        (max-retries 2)
+        (template (id :repair/next-one) (when :rule/next-one) (text \"Fix Next\")))
+      (review (enabled true) (threshold 0.8)))))"
+        program (contracts/compile-contract-program source)
+        brief (contracts/select-contract-mode program "response/brief")
+        full (contracts/compile-contract source "response/full")]
+    (testing "compiles a multi-mode contract program and selects the default mode"
+      (is (= "response/brief" (:default-mode-id program)))
+      (is (= ["response/brief" "response/full"] (:mode-order program)))
+      (is (= "response/brief" (:mode-id brief)))
+      (is (= 2 (count (:sections brief)))))
+    (testing "compile-contract remains backward compatible by selecting a concrete mode"
+      (is (= "response/full" (:mode-id full)))
+      (is (= ["Signal" "Evidence" "Next"] (mapv :heading (:sections full))))
+      (is (= 2 (:repair-max-retries full))))))
+
 (deftest huge-counted-section-preflight-test
   (testing "detects giant counted lists before full validation or repair-prompt compilation"
     (let [huge-next (str "## Signal\nS\n\n## Evidence\nE\n\n## Frames\n- A\n- B\n\n## Countermoves\nC\n\n## Next\n"
@@ -118,34 +189,59 @@
       (is (= "rule/next-exactly-one-action" (get-in result [:report :failures 0 :rule-id])))
       (is (= 26 (get-in result [:report :failures 0 :actual :count]))))))
 
+(deftest large-complex-header-only-validation-test
+  (testing "very large nested-list responses only validate h2 headers with markdown-it"
+    (let [deep-list (apply str (map #(str "                            - nested item " % "\n") (range 600)))
+          huge (str "## Signal ##\nS\n\n```markdown\n## Evidence\n````\n\n## Evidence\n" deep-list
+                    "\n## Frames\n- A\n- B\n\n## Countermoves\nC\n\n## Next\n- one\n- two\n- three\n")
+          result (gate/preflight-large-or-complex-response minimal-contract huge)]
+      (is (some? result))
+      (is (true? (:header-only result)))
+      (is (= "header-only" (get-in result [:report :stage])))
+      (is (true? (:ok result)))
+      (is (= ["Signal" "Evidence" "Frames" "Countermoves" "Next"] (:headings result)))))
+  (testing "header-only mode still rejects missing real h2 contract headers"
+    (let [deep-list (apply str (map #(str "                            - nested item " % "\n") (range 600)))
+          huge (str "**Signal**\nS\n\n**Evidence**\n" deep-list "\n**Frames**\nF\n\n**Countermoves**\nC\n\n**Next**\nN")
+          result (gate/preflight-large-or-complex-response minimal-contract huge)]
+      (is (some? result))
+      (is (false? (:ok result)))
+      (is (= "rule/required-section" (get-in result [:report :failures 0 :rule-id]))))))
+
 (deftest auto-repair-delivery-mode-test
-  (testing "auto-repair is queued for the agent_idle hook instead of injected as steering from agent_end"
-    (let [sent (atom [])
-          pi #js {:sendUserMessage (fn [message options]
-                                     (swap! sent conj {:message message
-                                                       :deliver-as (when options (aget options "deliverAs"))}))}
-          ctx #js {:hasUI false}
-          state (gate/get-state)
-          _ (aset state "config" #js {:autoRepair true
-                                      :repairDelayMs 0
-                                      :maxSessionTurns 10})
-          _ (aset state "pendingRepair" nil)
-          _ (aset state "repairCounts" #js {})
-          _ (aset state "sessionRepairCount" 0)
-          result #js {:ok false
-                      :repairInfo #js {:attempt 0}
-                      :repairPrompt "Repair this response"
-                      :assistant #js {:id "assistant-1"}
-                      :contract {:repair-max-retries 2}}]
-      (gate/handle-validation-result pi ctx state result #js [])
-      (is (= 0 (count @sent)))
-      (is (some? (aget state "pendingRepair")))
-      (gate/handle-agent-idle pi ctx #js {})
-      (is (= 1 (count @sent)))
-      (is (nil? (:deliver-as (first @sent))))
-      (is (nil? (aget state "pendingRepair")))
-      (is (re-find #"^\[\[eta-mu-opmf-contract-gate repair 1/2\]\]"
-                   (:message (first @sent)))))))
+  (async done
+    (testing "auto-repair is queued for agent_idle and injected after the event drain unwinds"
+      (let [sent (atom [])
+            pi #js {:sendUserMessage (fn [message options]
+                                       (swap! sent conj {:message message
+                                                         :deliver-as (when options (aget options "deliverAs"))}))}
+            ctx #js {:hasUI false}
+            state (gate/get-state)
+            _ (aset state "config" #js {:autoRepair true
+                                        :repairDelayMs 0
+                                        :maxSessionTurns 10})
+            _ (aset state "pendingRepair" nil)
+            _ (aset state "repairCounts" #js {})
+            _ (aset state "sessionRepairCount" 0)
+            result #js {:ok false
+                        :repairInfo #js {:attempt 0}
+                        :repairPrompt "Repair this response"
+                        :assistant #js {:id "assistant-1"}
+                        :contract {:repair-max-retries 2}}]
+        (gate/handle-validation-result pi ctx state result #js [])
+        (is (= 0 (count @sent)))
+        (is (some? (aget state "pendingRepair")))
+        (gate/handle-agent-idle pi ctx #js {})
+        (is (= 0 (count @sent)))
+        (is (nil? (aget state "pendingRepair")))
+        (js/setTimeout
+         (fn []
+           (is (= 1 (count @sent)))
+           (is (nil? (:deliver-as (first @sent))))
+           (is (re-find #"^\[\[eta-mu-opmf-contract-gate repair 1/2\]\]"
+                        (:message (first @sent))))
+           (done))
+         5)))))
 
 (deftest auto-repair-loop-guard-test
   (testing "same failed assistant cannot be repaired indefinitely when repair sentinel parsing is unavailable"
