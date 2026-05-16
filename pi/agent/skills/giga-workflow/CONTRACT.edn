@@ -1,0 +1,16 @@
+(skill-contract
+  (name "giga-workflow")
+  (v "ημ.skill/giga-workflow@0.1.0")
+
+  (intent "Skill: Giga Workflow")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:giga-workflow"])
+    (triggers ["giga workflow"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

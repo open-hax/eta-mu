@@ -1,0 +1,35 @@
+(skill-contract
+  (name "resume-ats-optimize")
+  (v "ημ.skill/resume-ats-optimize@0.1.0")
+
+  (intent
+    "Create ATS-clean resume variants from existing sources using audit-backed fixes: remove parser-hostile noise, standardize headings, preserve truthfulness, and keep page count/layout acceptable.")
+
+  (activation
+    (priority 58)
+    (explicit ["skill:resume-ats-optimize"])
+    (triggers ["resume optimize" "ats clean" "resume ats" "resume parser issues"
+               "make it ats friendly" "optimize resume based on audit"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network false)
+    (commits false))
+
+  (protocol
+    (workflow
+      ["Start from the existing source of truth and prior audit findings."
+       "Create new -ats variants; do not overwrite legacy unsuffixed files."
+       "Remove fnord/AI-signal footers from ATS variants."
+       "Apply parser-friendly heading/structure changes and only verified quantification."
+       "Compile PDFs and keep the layout within acceptable page-count bounds."
+       "Optionally rerun parser sanity checks to verify that the fix reduced contamination or improved extraction."]))
+
+  (output
+    (must-include ["ats-paths" "changes-made" "parser-check-summary" "page-count"]))
+)

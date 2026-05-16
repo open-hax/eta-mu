@@ -1,0 +1,27 @@
+(skill-contract
+  (name "skill-spore-incubator")
+  (v "ημ.skill/skill-spore-incubator@0.1.0")
+
+  (intent
+    "Incubate candidate skills as draft spores with names, scope, and promotion gates before promoting them into active skills.")
+
+  (activation
+    (priority 59)
+    (explicit ["skill:skill-spore-incubator"])
+    (triggers ["skill spore" "incubate a skill" "draft skill" "promote a spore"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network false)
+    (commits false))
+
+  (promotion
+    (gate "recurrence-or-request")
+    (default-threshold 0.72)
+    (strong-threshold 0.84))
+)

@@ -1,12 +1,16 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "promethean-github":{
-      "type":"remote",
-      "url":"http://localhost:4320/github",
+    "promethean-github": {
+      "type": "remote",
+      "url": "http://localhost:4320/github",
       "enabled": true
     },
-    
+    "knoxx": {
+      "type": "remote",
+      "url": "http://127.0.0.1:8000/mcp",
+      "enabled": true
+    }
   },
   "lsp": {
     "clojure": {

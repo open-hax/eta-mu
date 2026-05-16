@@ -1,6 +1,6 @@
 {
   "name": "@eta-mu/presence-core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Presence identity and field assignment for the eta-mu substrate",
   "private": true,
   "type": "module",

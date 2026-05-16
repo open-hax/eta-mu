@@ -1,0 +1,18 @@
+# Runtime and sensitive data
+agent/auth.json
+agent/sessions/
+agent/state/
+agent/bin/
+
+# Local environment / tooling noise
+.DS_Store
+Thumbs.db
+.#*
+*.swp
+*.swo
+node_modules/
+.pnpm-store/
+.serena/
+
+# Absorbed collection runtime noise
+collections/opencode-skills/.opencode/sessions/

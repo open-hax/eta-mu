@@ -249,6 +249,7 @@ export class AgentSession {
 	private _unsubscribeAgent?: () => void;
 	private _eventListeners: AgentSessionEventListener[] = [];
 	private _agentEventQueue: Promise<void> = Promise.resolve();
+	private _agentRunToken = 0;
 
 	/** Tracks pending steering messages for UI display. Removed when delivered. */
 	private _steeringMessages: string[] = [];
@@ -455,10 +456,21 @@ export class AgentSession {
 		// and waitForRetry() can miss the in-flight retry.
 		this._createRetryPromiseForAgentEnd(event);
 
-		this._agentEventQueue = this._agentEventQueue.then(
+		const processing = this._agentEventQueue.then(
 			() => this._processAgentEvent(event),
 			() => this._processAgentEvent(event),
 		);
+		this._agentEventQueue = processing.then(() => undefined);
+
+		if (event.type === "agent_end") {
+			processing
+				.then((shouldEmitIdle) => {
+					if (shouldEmitIdle) {
+						this._scheduleAgentIdle(event.messages, this._agentRunToken);
+					}
+				})
+				.catch(() => {});
+		}
 
 		// Keep queue alive if an event handler fails
 		this._agentEventQueue.catch(() => {});
@@ -494,7 +506,11 @@ export class AgentSession {
 		return undefined;
 	}
 
-	private async _processAgentEvent(event: AgentEvent): Promise<void> {
+	private async _processAgentEvent(event: AgentEvent): Promise<boolean> {
+		if (event.type === "agent_start") {
+			this._agentRunToken++;
+		}
+
 		// When a user message starts, check if it's from either queue and remove it BEFORE emitting
 		// This ensures the UI sees the updated queue state
 		if (event.type === "message_start" && event.message.role === "user") {
@@ -574,16 +590,35 @@ export class AgentSession {
 			// Check for retryable errors first (overloaded, rate limit, server errors)
 			if (this._isRetryableError(msg)) {
 				const didRetry = await this._handleRetryableError(msg);
-				if (didRetry) return; // Retry was initiated, don't proceed to compaction
+				if (didRetry) return false; // Retry was initiated, don't proceed to compaction or idle
 			}
 
 			this._resolveRetry();
 			await this._checkCompaction(msg);
 		}
 
-		if (event.type === "agent_end") {
+		return event.type === "agent_end";
+	}
+
+	private _scheduleAgentIdle(messages: AgentMessage[], runToken: number): void {
+		void this._emitAgentIdleAfterDrain(messages, runToken);
+	}
+
+	private async _emitAgentIdleAfterDrain(messages: AgentMessage[], runToken: number): Promise<void> {
+		try {
+			await this._agentEventQueue.catch(() => undefined);
 			await this.agent.waitForIdle();
-			await this._extensionRunner.emit({ type: "agent_idle", messages: event.messages });
+			if (runToken !== this._agentRunToken || this.isStreaming) {
+				return;
+			}
+			await this._extensionRunner.emit({ type: "agent_idle", messages });
+		} catch (err) {
+			this._extensionRunner.emitError({
+				extensionPath: "<runtime>",
+				event: "agent_idle",
+				error: err instanceof Error ? err.message : String(err),
+				stack: err instanceof Error ? err.stack : undefined,
+			});
 		}
 	}
 
@@ -1094,6 +1129,21 @@ export class AgentSession {
 		preflightResult?.(true);
 		await this.agent.prompt(messages);
 		await this.waitForRetry();
+		await this.waitForIdle();
+	}
+
+	/**
+	 * Wait until the core agent and the AgentSession event queue have settled.
+	 *
+	 * The lower-level Agent.waitForIdle() only observes the model/tool run. This
+	 * SDK-level helper also waits for queued session/runtime events such as
+	 * agent_end handlers, so extension commands can safely wait before starting a
+	 * follow-up turn. Do not call this from inside AgentSession event handlers;
+	 * those handlers are part of the queue this method waits for.
+	 */
+	async waitForIdle(): Promise<void> {
+		await this.agent.waitForIdle();
+		await this._agentEventQueue.catch(() => undefined);
 	}
 
 	/**

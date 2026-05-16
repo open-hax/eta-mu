@@ -1,0 +1,16 @@
+(skill-contract
+  (name "submodule-ops")
+  (v "ημ.skill/submodule-ops@0.1.0")
+
+  (intent "Skill: Submodule Operations")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:submodule-ops"])
+    (triggers ["submodule ops"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

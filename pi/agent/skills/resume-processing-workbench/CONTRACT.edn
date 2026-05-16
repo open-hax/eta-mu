@@ -1,0 +1,26 @@
+(skill-contract
+  (name "resume-processing-workbench")
+  (v "ημ.skill/resume-processing-workbench@0.1.0")
+
+  (intent
+    "Build or operate a local resume-processing workbench that ingests resume/JD inputs, runs parser and scoring pipelines, and emits reproducible reports.")
+
+  (activation
+    (priority 59)
+    (explicit ["skill:resume-processing-workbench"])
+    (triggers ["resume processing pipeline" "resume workbench" "resume jd cli"
+               "build resume analyzer" "resume report generator"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+
+  (effects
+    (writes true)
+    (network false)
+    (commits false))
+
+  (output
+    (must-include ["cli-paths" "report-paths" "input-modes" "scoring-signals"]))
+)

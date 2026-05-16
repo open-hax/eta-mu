@@ -1,0 +1,16 @@
+(skill-contract
+  (name "agent-browser")
+  (v "ημ.skill/agent-browser@0.1.0")
+
+  (intent "Browser automation CLI for AI agents. Use when the user needs to interact with websites, including navigating pages, filling forms, clicking buttons, taking screenshots, extracting data, testing web apps, or automating any browser task. Triggers include requests to \"open a website\", \"fill out a form\", \"click a button\", \"take a screenshot\", \"scrape data from a page\", \"test this web app\", \"login to a site\", \"automate browser actions\", or any task requiring programmatic web interaction.")
+
+  (activation
+    (priority 50)
+    (explicit ["skill:agent-browser"])
+    (triggers ["agent browser" "click a button" "fill out a form" "open a website" "scrape data from a page" "take a screenshot" "test this web app"]))
+
+  (governance
+    (touch-layer :mutable)
+    (non-override [:mission :directives :safety :license :output-shape])
+    (requires-user-approval false))
+)

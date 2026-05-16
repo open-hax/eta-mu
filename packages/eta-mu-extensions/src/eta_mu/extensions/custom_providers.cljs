@@ -57,11 +57,19 @@
               :context-window 1000000 :max-tokens 128000)
        (model "gpt-5.4" "GPT 5.4"
               :reasoning true :input ["text" "image"]
-              :context-window 1000000 :max-tokens 128000
-              )
+              :context-window 1000000 :max-tokens 128000)
        (model "gpt-5.2" "GPT 5.2"
               :reasoning true
               :input ["text" "image"] :context-window 272000 :max-tokens 128000)
+       (model "gpt-5.3-codex" "GPT 5.3 codex"
+              :reasoning true
+              :input ["text" "image"]
+              :context-window 272000 :max-tokens 128000)
+       (model "gpt-5.4-mini" "GPT 5.4 Mini"
+              :reasoning true
+              :input ["text" "image"]
+              :context-window 272000 :max-tokens 128000)
+
        (model "gpt-5.2-codex" "GPT 5.2 codex"
               :reasoning true
               :input ["text" "image"]
