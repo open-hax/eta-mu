@@ -132,7 +132,7 @@ export type AgentSessionEvent =
 	| { type: "auto_retry_end"; success: boolean; attempt: number; finalError?: string };
 
 /** Listener function for agent session events */
-export type AgentSessionEventListener = (event: AgentSessionEvent) => void;
+export type AgentSessionEventListener = (event: AgentSessionEvent) => void | Promise<void>;
 
 // ============================================================================
 // Types
@@ -431,8 +431,33 @@ export class AgentSession {
 
 	/** Emit an event to all listeners */
 	private _emit(event: AgentSessionEvent): void {
-		for (const l of this._eventListeners) {
-			l(event);
+		for (const listener of [...this._eventListeners]) {
+			try {
+				const result = listener(event);
+				if (result && typeof result.then === "function") {
+					result.catch((err: unknown) => this._handleEventListenerError(event, err));
+				}
+			} catch (err) {
+				this._handleEventListenerError(event, err);
+			}
+		}
+	}
+
+	private _handleEventListenerError(event: AgentSessionEvent, err: unknown): void {
+		const message = err instanceof Error ? err.message : String(err);
+		const stack = err instanceof Error ? err.stack : undefined;
+		try {
+			this._extensionRunner.emitError({
+				extensionPath: "<session-listener>",
+				event: event.type,
+				error: message,
+				stack,
+			});
+		} catch {
+			console.error(`Agent session listener error during ${event.type}: ${message}`);
+			if (stack) {
+				console.error(stack);
+			}
 		}
 	}
 
