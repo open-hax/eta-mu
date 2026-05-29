@@ -235,6 +235,9 @@ importers:
       express:
         specifier: ^4.21.2
         version: 4.22.1
+      markdown-it:
+        specifier: ^14.1.0
+        version: 14.1.1
       shadow-cljs:
         specifier: ^2.28.20
         version: 2.28.23
