@@ -1,3 +1,17 @@
+---
+uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-signal-extraction-foundation-md"
+title: "Signal Extraction Foundation"
+status: incoming
+priority: P3
+labels: ["specs", "migrated-spec"]
+created_at: "2026-05-29T04:29:39.348Z"
+source: "orgs/open-hax/eta-mu/specs/signal-extraction-foundation.md"
+category: "specs"
+---
+
+> Source: `orgs/open-hax/eta-mu/specs/signal-extraction-foundation.md`
+> Migrated-to-kanban: `orgs/open-hax/eta-mu/kanban/signal-extraction-foundation.md`
+
 # Signal Extraction Foundation
 
 This document defines the first extraction pass for moving stable signal-system

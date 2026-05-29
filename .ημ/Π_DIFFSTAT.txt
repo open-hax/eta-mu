@@ -1,5 +1,25 @@
- ".\316\267\316\274/\316\240_DIFFSTAT.txt"    |  6 ------
- ".\316\267\316\274/\316\240_LAST.md"         |  8 ++++++--
- ".\316\267\316\274/\316\240_MANIFEST.sha256" |  4 +++-
- ".\316\267\316\274/\316\240_STATE.sexp"      | 11 +++++++++--
- 4 files changed, 18 insertions(+), 11 deletions(-)
+ ".\316\267\316\274/\316\240_LAST.md"               |  36 +--
+ ".\316\267\316\274/\316\240_STATE.sexp"            |  17 +-
+ packages/coding-agent/src/main.ts                  |  14 +-
+ .../spec/extension-integration-plan.md             | 111 --------
+ packages/kanban/README.md                          |  45 ++-
+ packages/kanban/src/cli.ts                         |  19 +-
+ packages/kanban/src/config.ts                      |  70 ++++-
+ packages/kanban/src/server.ts                      | 180 ++++++++++--
+ packages/kanban/src/types.ts                       |  14 +
+ packages/kanban/web/src/App.tsx                    |  72 +++--
+ specs/agentd-tests.md                              |  37 ---
+ specs/contract-runtime-v2-spec.md                  | 266 ------------------
+ specs/contracts-v1.edn                             | 115 --------
+ specs/coverage-workflow.md                         |  21 --
+ specs/doc-generation.md                            |  23 --
+ specs/eta-mu-charter-v1.md                         | 244 -----------------
+ specs/eta-mu-extensions-integration.md             | 304 ---------------------
+ specs/eta-mu-pi-absorption.md                      |  49 ----
+ specs/extension-integration-plan.md                | 264 ------------------
+ specs/frontend-devtools-guidance.md                |  21 --
+ specs/kanban-rewrite.md                            |  32 ---
+ specs/pm2-ecosystem.md                             |  32 ---
+ specs/run-readiness.md                             |  33 ---
+ specs/signal-extraction-foundation.md              |  47 ----
+ 24 files changed, 368 insertions(+), 1698 deletions(-)

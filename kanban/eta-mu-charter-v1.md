@@ -1,3 +1,17 @@
+---
+uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-eta-mu-charter-v1-md"
+title: "eta-mu charter v1"
+status: incoming
+priority: P3
+labels: ["specs", "migrated-spec"]
+created_at: "2026-05-29T04:29:39.349Z"
+source: "orgs/open-hax/eta-mu/specs/eta-mu-charter-v1.md"
+category: "specs"
+---
+
+> Source: `orgs/open-hax/eta-mu/specs/eta-mu-charter-v1.md`
+> Migrated-to-kanban: `orgs/open-hax/eta-mu/kanban/eta-mu-charter-v1.md`
+
 # eta-mu charter v1
 
 Status: active working charter

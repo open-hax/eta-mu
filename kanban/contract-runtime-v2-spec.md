@@ -1,3 +1,17 @@
+---
+uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-contract-runtime-v2-spec-md"
+title: "Contract Runtime v2 Spec"
+status: incoming
+priority: P3
+labels: ["specs", "migrated-spec"]
+created_at: "2026-05-29T04:29:39.347Z"
+source: "orgs/open-hax/eta-mu/specs/contract-runtime-v2-spec.md"
+category: "specs"
+---
+
+> Source: `orgs/open-hax/eta-mu/specs/contract-runtime-v2-spec.md`
+> Migrated-to-kanban: `orgs/open-hax/eta-mu/kanban/contract-runtime-v2-spec.md`
+
 # Contract Runtime v2 Spec
 
 Status: active  

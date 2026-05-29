@@ -1,3 +1,17 @@
+---
+uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-frontend-devtools-guidance-md"
+title: "Frontend DevTools Guidance Update"
+status: incoming
+priority: P3
+labels: ["specs", "migrated-spec"]
+created_at: "2026-05-29T04:29:39.347Z"
+source: "orgs/open-hax/eta-mu/specs/frontend-devtools-guidance.md"
+category: "specs"
+---
+
+> Source: `orgs/open-hax/eta-mu/specs/frontend-devtools-guidance.md`
+> Migrated-to-kanban: `orgs/open-hax/eta-mu/kanban/frontend-devtools-guidance.md`
+
 # Frontend DevTools Guidance Update
 
 ## Context

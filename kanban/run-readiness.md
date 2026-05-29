@@ -1,3 +1,17 @@
+---
+uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-run-readiness-md"
+title: "Run Readiness - Opencode Reactant"
+status: incoming
+priority: P3
+labels: ["specs", "migrated-spec"]
+created_at: "2026-05-29T04:29:39.350Z"
+source: "orgs/open-hax/eta-mu/specs/run-readiness.md"
+category: "specs"
+---
+
+> Source: `orgs/open-hax/eta-mu/specs/run-readiness.md`
+> Migrated-to-kanban: `orgs/open-hax/eta-mu/kanban/run-readiness.md`
+
 # Run Readiness - Opencode Reactant
 
 ## Context

@@ -48,7 +48,9 @@ interface KanbanTask {
   sourcePath: string;
 }
 interface KanbanCol { status: string; title: string; tasks: KanbanTask[]; }
-interface Board { totalTasks: number; columns: KanbanCol[]; }
+interface KanbanProject { id: string; title: string; tasksDir: string; }
+interface Board { totalTasks: number; columns: KanbanCol[]; project?: KanbanProject; }
+interface ProjectsPayload { defaultProjectId: string; projects: KanbanProject[]; }
 
 interface Section { type: "body" | "comment"; content: string; }
 interface TaskContent {
@@ -107,6 +109,8 @@ const labelStyle: React.CSSProperties = {
 
 /* ── app ── */
 export function App() {
+  const [projects, setProjects] = useState<KanbanProject[]>([]);
+  const [projectId, setProjectId] = useState("");
   const [board, setBoard] = useState<Board | null>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<KanbanTask | null>(null);
@@ -121,17 +125,44 @@ export function App() {
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const flash = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3500); }, []);
+  const projectParam = projectId ? `?project=${encodeURIComponent(projectId)}` : "";
 
-  const loadBoard = useCallback(async () => {
-    const r = await fetch("/api/board", { cache: "no-store" });
+  const loadProjects = useCallback(async () => {
+    const r = await fetch("/api/projects", { cache: "no-store" });
     if (!r.ok) throw new Error(`${r.status}`);
-    setBoard(await r.json());
+    const payload = (await r.json()) as ProjectsPayload;
+    setProjects(payload.projects);
+    setProjectId((current) => current || payload.defaultProjectId || payload.projects[0]?.id || "");
   }, []);
 
+  const loadBoard = useCallback(async () => {
+    if (!projectId) return;
+    const r = await fetch(`/api/board${projectParam}`, { cache: "no-store" });
+    if (!r.ok) throw new Error(`${r.status}`);
+    setBoard(await r.json());
+  }, [projectId, projectParam]);
+
+  useEffect(() => { loadProjects().catch((e) => flash(String(e))); }, [loadProjects, flash]);
   useEffect(() => { loadBoard().catch((e) => flash(String(e))); }, [loadBoard, flash]);
+  useEffect(() => {
+    setBoard(null);
+    setSelected(null);
+    setDetail(null);
+    setCommentDraft("");
+    setEditingField(null);
+  }, [projectId]);
+
+  const loadDetail = useCallback(async (task: KanbanTask) => {
+    setLoadingDetail(true);
+    try {
+      const r = await fetch(`/api/task/${encodeURIComponent(task.uuid)}/content${projectParam}`);
+      if (r.ok) setDetail(await r.json());
+    } catch { /* ignore */ }
+    finally { setLoadingDetail(false); }
+  }, [projectParam]);
 
   const move = useCallback(async (uuid: string, status: string) => {
-    const r = await fetch(`/api/task/${encodeURIComponent(uuid)}/status`, {
+    const r = await fetch(`/api/task/${encodeURIComponent(uuid)}/status${projectParam}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -140,32 +171,23 @@ export function App() {
     await loadBoard();
     // Refresh detail if viewing same task
     if (selected?.uuid === uuid) {
-      const t = (await (await fetch("/api/board")).json()).columns.flatMap((c: KanbanCol) => c.tasks).find((t: KanbanTask) => t.uuid === uuid);
+      const t = (await (await fetch(`/api/board${projectParam}`)).json()).columns.flatMap((c: KanbanCol) => c.tasks).find((t: KanbanTask) => t.uuid === uuid);
       if (t) { setSelected(t); loadDetail(t); }
     }
-  }, [loadBoard, flash, selected]);
-
-  const loadDetail = useCallback(async (task: KanbanTask) => {
-    setLoadingDetail(true);
-    try {
-      const r = await fetch(`/api/task/${encodeURIComponent(task.uuid)}/content`);
-      if (r.ok) setDetail(await r.json());
-    } catch { /* ignore */ }
-    finally { setLoadingDetail(false); }
-  }, []);
+  }, [loadBoard, flash, selected, loadDetail, projectParam]);
 
   const openDetail = useCallback((task: KanbanTask) => { setSelected(task); loadDetail(task); }, [loadDetail]);
 
   const closeDetail = useCallback(() => { setSelected(null); setDetail(null); setCommentDraft(""); setEditingField(null); }, []);
 
   const openEditor = useCallback(async (task: KanbanTask) => {
-    const r = await fetch(`/api/task/${encodeURIComponent(task.uuid)}/open-editor`, { method: "POST" });
+    const r = await fetch(`/api/task/${encodeURIComponent(task.uuid)}/open-editor${projectParam}`, { method: "POST" });
     flash(r.ok ? `Opened ${task.sourcePath}` : await r.text());
-  }, [flash]);
+  }, [flash, projectParam]);
 
   const saveField = useCallback(async (key: string, value: unknown) => {
     if (!selected) return;
-    const r = await fetch(`/api/task/${encodeURIComponent(selected.uuid)}/frontmatter`, {
+    const r = await fetch(`/api/task/${encodeURIComponent(selected.uuid)}/frontmatter${projectParam}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key, value }),
@@ -178,11 +200,11 @@ export function App() {
       flash(await r.text());
     }
     setEditingField(null);
-  }, [selected, loadBoard, flash]);
+  }, [selected, loadBoard, flash, projectParam]);
 
   const addComment = useCallback(async () => {
     if (!selected || !commentDraft.trim()) return;
-    const r = await fetch(`/api/task/${encodeURIComponent(selected.uuid)}/comment`, {
+    const r = await fetch(`/api/task/${encodeURIComponent(selected.uuid)}/comment${projectParam}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: commentDraft.trim() }),
@@ -194,7 +216,7 @@ export function App() {
     } else {
       flash(await r.text());
     }
-  }, [selected, commentDraft, flash]);
+  }, [selected, commentDraft, flash, projectParam]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === "Escape") closeDetail(); };
@@ -203,6 +225,8 @@ export function App() {
   }, [closeDetail]);
 
   if (!board) return <div style={{ display: "grid", placeItems: "center", height: "100vh", color: c.tx }}>Loading…</div>;
+
+  const currentProject = board.project ?? projects.find((project) => project.id === projectId);
 
   const filtered = board.columns
     .map((col) => ({
@@ -289,8 +313,12 @@ export function App() {
             padding: "10px 16px", borderBottom: `1px solid ${c.bd}`,
             background: `${c.bg0}d9`, backdropFilter: "blur(10px)",
           }}>
-            <h1 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Kanban — {board.totalTasks} tasks</h1>
+            <h1 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Kanban — {currentProject?.title ?? projectId} — {board.totalTasks} tasks</h1>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <select value={projectId} onChange={(e) => setProjectId(e.target.value)}
+                style={{ width: "min(260px,28vw)", padding: "7px 10px", borderRadius: 8, border: `1px solid ${c.bd}`, background: c.bg1, color: c.tx, outline: "none", fontSize: 13 }}>
+                {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
+              </select>
               <input type="search" placeholder="filter…" value={query} onChange={(e) => setQuery(e.target.value)}
                 style={{ width: "min(320px,40vw)", padding: "7px 10px", borderRadius: 8, border: `1px solid ${c.bd}`, background: c.bg1, color: c.tx, outline: "none", fontSize: 13 }} />
               <button onClick={() => loadBoard().catch((e) => flash(String(e)))}

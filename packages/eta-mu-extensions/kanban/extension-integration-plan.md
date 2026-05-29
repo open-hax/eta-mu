@@ -1,3 +1,17 @@
+---
+uuid: "orgs-open-hax-eta-mu-packages-eta-mu-extensions-kanban-orgs-open-hax-eta-mu-packages-eta-mu-extensions-spec-extension-integration-plan-md"
+title: "Extension Integration Plan for eta-mu"
+status: incoming
+priority: P3
+labels: ["specs", "migrated-spec"]
+created_at: "2026-05-29T04:29:38.093Z"
+source: "orgs/open-hax/eta-mu/packages/eta-mu-extensions/spec/extension-integration-plan.md"
+category: "specs"
+---
+
+> Source: `orgs/open-hax/eta-mu/packages/eta-mu-extensions/spec/extension-integration-plan.md`
+> Migrated-to-kanban: `orgs/open-hax/eta-mu/packages/eta-mu-extensions/kanban/extension-integration-plan.md`
+
 # Extension Integration Plan for eta-mu
 
 **Status:** Active

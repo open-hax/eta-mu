@@ -1,3 +1,17 @@
+---
+uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-extension-integration-plan-md"
+title: "Extension Integration Plan foreta/mu"
+status: incoming
+priority: P3
+labels: ["specs", "migrated-spec"]
+created_at: "2026-05-29T04:29:39.346Z"
+source: "orgs/open-hax/eta-mu/specs/extension-integration-plan.md"
+category: "specs"
+---
+
+> Source: `orgs/open-hax/eta-mu/specs/extension-integration-plan.md`
+> Migrated-to-kanban: `orgs/open-hax/eta-mu/kanban/extension-integration-plan.md`
+
 # Extension Integration Plan foreta/mu
 
 **Status:** Draft

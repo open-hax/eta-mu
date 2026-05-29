@@ -756,7 +756,7 @@ export async function main(args: string[], options?: MainOptions) {
 }
 
 /**
- * Handle `eta-mu kanban <subcommand>` by delegating to the @openhax/kanban-legacy CLI.
+ * Handle `eta-mu kanban <subcommand>` by delegating to the @open-hax/kanban-legacy CLI.
  *
  * Supports:
  *   eta-mu kanban serve [--tasks-dir <path>] [--port <port>] [--config <path>]
@@ -786,7 +786,7 @@ async function handleKanbanCommand(args: string[]): Promise<void> {
 	let kanbanCli: string;
 	try {
 		const require = createRequire(import.meta.url);
-		const kanbanPkgJson = require.resolve("@openhax/kanban-legacy/package.json");
+		const kanbanPkgJson = require.resolve("@open-hax/kanban-legacy/package.json");
 		kanbanCli = join(dirname(kanbanPkgJson), "dist", "cli.js");
 	} catch {
 		// Fallback: try relative path from coding-agent to kanban
@@ -794,7 +794,7 @@ async function handleKanbanCommand(args: string[]): Promise<void> {
 		if (existsSync(fallback)) {
 			kanbanCli = fallback;
 		} else {
-			console.error(chalk.red("Could not find @openhax/kanban-legacy. Ensure it is installed."));
+			console.error(chalk.red("Could not find @open-hax/kanban-legacy. Ensure it is installed."));
 			process.exitCode = 1;
 			return;
 		}
@@ -902,7 +902,13 @@ async function handleKanbanCommand(args: string[]): Promise<void> {
 		const uuid = args[1];
 		const status = args[2];
 		if (!uuid || !status) { console.error(chalk.red("Usage: eta-mu kanban update-status <uuid> <status>")); process.exitCode = 1; return; }
-		await runKanbanCli(kanbanCli, ["board", "snapshot", ...cliArgs]);
+		const tasks = await load();
+		if (!tasks) return;
+		const task = tasks.find((t) => t.uuid === uuid || t.slug === uuid);
+		if (!task) { console.error(chalk.red(`Not found: ${uuid}`)); process.exitCode = 1; return; }
+		const { writeTaskStatus } = await import("../../kanban/dist/task-writeback.js");
+		const updated = await writeTaskStatus(task, resolvedTasksDir, status);
+		console.log(`${updated.uuid}  ${task.status} -> ${updated.status}`);
 		return;
 	}
 

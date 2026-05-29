@@ -7,11 +7,13 @@ import { fileURLToPath } from "node:url";
 import { buildBoardSnapshot } from "./board.js";
 import { parseTaskContent, updateFrontmatterField, appendComment } from "./content-parser.js";
 import { loadTasks } from "./tasks.js";
-import type { KanbanBoardSnapshot, KanbanTask } from "./types.js";
+import type { KanbanBoardSnapshot, KanbanProject, KanbanTask } from "./types.js";
 import { writeTaskStatus } from "./task-writeback.js";
 
 export interface KanbanServerOptions {
-  tasksDir: string;
+  tasksDir?: string;
+  projects?: KanbanProject[];
+  defaultProjectId?: string;
   host?: string;
   port: number;
 }
@@ -97,7 +99,7 @@ const indexHtml = html`<!doctype html>
         gap: 8px;
         align-items: center;
       }
-      input[type="search"] {
+      input[type="search"], select {
         width: min(420px, 54vw);
         padding: 8px 10px;
         border-radius: 10px;
@@ -106,6 +108,7 @@ const indexHtml = html`<!doctype html>
         color: var(--text);
         outline: none;
       }
+      select { width: min(240px, 32vw); }
       button {
         padding: 8px 10px;
         border-radius: 10px;
@@ -232,8 +235,9 @@ const indexHtml = html`<!doctype html>
   </head>
   <body>
     <header>
-      <h1>OpenHax Kanban (local) — drag cards to change status</h1>
+      <h1 id="title">OpenHax Kanban (local) — drag cards to change status</h1>
       <div class="controls">
+        <select id="project"></select>
         <input id="q" type="search" placeholder="filter… (title/labels/path)" />
         <button id="reload">reload</button>
       </div>
@@ -258,16 +262,37 @@ const indexHtml = html`<!doctype html>
       const escapeHtml = (s) => (s ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 
       let snapshot = null;
+      let projects = [];
+      let currentProjectId = "";
+
+      const projectQuery = () => currentProjectId ? "?project=" + encodeURIComponent(currentProjectId) : "";
+
+      const fetchProjects = async () => {
+        const res = await fetch("/api/projects", { cache: "no-store" });
+        if (!res.ok) throw new Error("failed to load projects: " + res.status);
+        const payload = await res.json();
+        projects = payload.projects || [];
+        currentProjectId = currentProjectId || payload.defaultProjectId || projects[0]?.id || "";
+        const select = $("#project");
+        select.innerHTML = "";
+        for (const project of projects) {
+          const opt = document.createElement("option");
+          opt.value = project.id;
+          opt.textContent = project.title || project.id;
+          opt.selected = project.id === currentProjectId;
+          select.appendChild(opt);
+        }
+      };
 
       const fetchBoard = async () => {
-        const res = await fetch("/api/board", { cache: "no-store" });
+        const res = await fetch("/api/board" + projectQuery(), { cache: "no-store" });
         if (!res.ok) throw new Error("failed to load board: " + res.status);
         snapshot = await res.json();
         return snapshot;
       };
 
       const moveTask = async (uuid, status) => {
-        const res = await fetch("/api/task/" + encodeURIComponent(uuid) + "/status", {
+        const res = await fetch("/api/task/" + encodeURIComponent(uuid) + "/status" + projectQuery(), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status }),
@@ -289,6 +314,9 @@ const indexHtml = html`<!doctype html>
         const q = $("#q").value.trim();
         const boardEl = $("#board");
         boardEl.innerHTML = "";
+
+        const project = snapshot.project || projects.find((candidate) => candidate.id === currentProjectId);
+        $("#title").textContent = "OpenHax Kanban — " + (project?.title || currentProjectId || "local") + " — " + snapshot.totalTasks + " tasks";
 
         for (const col of snapshot.columns) {
           const colEl = document.createElement("section");
@@ -367,6 +395,7 @@ const indexHtml = html`<!doctype html>
 
       const refresh = async () => {
         try {
+          if (projects.length === 0) await fetchProjects();
           await fetchBoard();
           render();
         } catch (err) {
@@ -376,6 +405,11 @@ const indexHtml = html`<!doctype html>
 
       $("#reload").addEventListener("click", refresh);
       $("#q").addEventListener("input", () => snapshot && render());
+      $("#project").addEventListener("change", async (event) => {
+        currentProjectId = event.target.value;
+        snapshot = null;
+        await refresh();
+      });
 
       refresh();
     </script>
@@ -424,39 +458,125 @@ const stripBase = (baseDir: string, value: string): string => {
   return relative.startsWith("..") ? value : relative;
 };
 
+const normalizeProjectId = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, "-")
+    .replace(/^-+|-+$/gu, "") || "kanban";
+
+const normalizeProjects = ({ tasksDir, projects, defaultProjectId }: KanbanServerOptions): {
+  projects: KanbanProject[];
+  defaultProjectId: string;
+} => {
+  const rawProjects = projects && projects.length > 0
+    ? projects
+    : tasksDir
+      ? [{ id: normalizeProjectId(path.basename(tasksDir)), title: path.basename(tasksDir), tasksDir }]
+      : [];
+
+  if (rawProjects.length === 0) {
+    throw new Error("Kanban server requires at least one tasksDir or project.");
+  }
+
+  const seen = new Set<string>();
+  const normalized = rawProjects.map((project, index) => {
+    const baseId = normalizeProjectId(project.id || project.title || path.basename(project.tasksDir) || `project-${index + 1}`);
+    let id = baseId;
+    let suffix = 2;
+    while (seen.has(id)) {
+      id = `${baseId}-${suffix}`;
+      suffix += 1;
+    }
+    seen.add(id);
+
+    return {
+      id,
+      title: project.title || id,
+      tasksDir: path.resolve(project.tasksDir)
+    } satisfies KanbanProject;
+  });
+
+  const fallbackProjectId = normalized[0]?.id;
+  if (!fallbackProjectId) {
+    throw new Error("Kanban server requires at least one project.");
+  }
+
+  const resolvedDefaultProjectId =
+    defaultProjectId && normalized.some((project) => project.id === defaultProjectId)
+      ? defaultProjectId
+      : fallbackProjectId;
+
+  return { projects: normalized, defaultProjectId: resolvedDefaultProjectId };
+};
+
 export type StartedKanbanServer = Readonly<{
   server: http.Server;
   host: string;
   port: number;
   url: string;
   tasksDir: string;
+  projects: KanbanProject[];
+  defaultProjectId: string;
 }>;
 
-export const startKanbanServer = async ({ tasksDir, host, port }: KanbanServerOptions): Promise<StartedKanbanServer> => {
+export const startKanbanServer = async (options: KanbanServerOptions): Promise<StartedKanbanServer> => {
+  const { host, port } = options;
   const resolvedHost = host ?? "127.0.0.1";
+  const projectState = normalizeProjects(options);
+  const projectsById = new Map(projectState.projects.map((project) => [project.id, project]));
 
-  const serializeTask = (task: KanbanTask): KanbanTask => ({
+  const pickProject = (url: URL): KanbanProject | undefined => {
+    const requestedProjectId = url.searchParams.get("project")?.trim() || projectState.defaultProjectId;
+    return projectsById.get(requestedProjectId);
+  };
+
+  const serializeTask = (project: KanbanProject, task: KanbanTask): KanbanTask => ({
     ...task,
-    sourcePath: stripBase(tasksDir, task.sourcePath)
+    sourcePath: stripBase(project.tasksDir, task.sourcePath)
   });
 
-  const serializeBoard = (snapshot: KanbanBoardSnapshot): KanbanBoardSnapshot => ({
+  const serializeBoard = (project: KanbanProject, snapshot: KanbanBoardSnapshot): KanbanBoardSnapshot & { project: KanbanProject } => ({
     ...snapshot,
+    project,
     columns: snapshot.columns.map((col) => ({
       ...col,
-      tasks: col.tasks.map(serializeTask)
+      tasks: col.tasks.map((task) => serializeTask(project, task))
     }))
   });
+
+  const requireProject = (url: URL, res: ServerResponse): KanbanProject | undefined => {
+    const project = pickProject(url);
+    if (!project) {
+      sendJson(res, 404, {
+        error: "unknown project",
+        project: url.searchParams.get("project") ?? projectState.defaultProjectId,
+        knownProjects: projectState.projects.map((candidate) => candidate.id)
+      });
+      return undefined;
+    }
+    return project;
+  };
 
   const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
 
       // API routes first
+      if (req.method === "GET" && url.pathname === "/api/projects") {
+        sendJson(res, 200, {
+          defaultProjectId: projectState.defaultProjectId,
+          projects: projectState.projects
+        });
+        return;
+      }
+
       if (req.method === "GET" && url.pathname === "/api/board") {
-        const tasks = await loadTasks(tasksDir);
+        const project = requireProject(url, res);
+        if (!project) return;
+        const tasks = await loadTasks(project.tasksDir);
         const snapshot = buildBoardSnapshot(tasks);
-        sendJson(res, 200, serializeBoard(snapshot));
+        sendJson(res, 200, serializeBoard(project, snapshot));
         return;
       }
 
@@ -467,6 +587,8 @@ export const startKanbanServer = async ({ tasksDir, host, port }: KanbanServerOp
           return;
         }
 
+        const project = requireProject(url, res);
+        if (!project) return;
         const uuid = decodeURIComponent(moveMatch[1] ?? "");
         const body = (await readJsonBody(req)) as { status?: unknown } | undefined;
         const nextStatus = typeof body?.status === "string" ? body.status.trim() : "";
@@ -475,22 +597,24 @@ export const startKanbanServer = async ({ tasksDir, host, port }: KanbanServerOp
           return;
         }
 
-        const tasks = await loadTasks(tasksDir);
+        const tasks = await loadTasks(project.tasksDir);
         const task = tasks.find((candidate) => candidate.uuid === uuid);
         if (!task) {
           sendText(res, 404, `unknown uuid: ${uuid}\n`);
           return;
         }
 
-        const updated = await writeTaskStatus(task, tasksDir, nextStatus);
-        sendJson(res, 200, serializeTask(updated));
+        const updated = await writeTaskStatus(task, project.tasksDir, nextStatus);
+        sendJson(res, 200, serializeTask(project, updated));
         return;
       }
 
       const contentMatch = url.pathname.match(/^\/api\/task\/([^/]+)\/content$/u);
       if (contentMatch && req.method === "GET") {
+        const project = requireProject(url, res);
+        if (!project) return;
         const uuid = decodeURIComponent(contentMatch[1] ?? "");
-        const tasks = await loadTasks(tasksDir);
+        const tasks = await loadTasks(project.tasksDir);
         const task = tasks.find((candidate) => candidate.uuid === uuid);
         if (!task) {
           sendText(res, 404, `unknown uuid: ${uuid}\n`);
@@ -500,7 +624,7 @@ export const startKanbanServer = async ({ tasksDir, host, port }: KanbanServerOp
         const parsed = parseTaskContent(rawContent);
         sendJson(res, 200, {
           ...parsed,
-          sourcePath: stripBase(tasksDir, task.sourcePath),
+          sourcePath: stripBase(project.tasksDir, task.sourcePath),
           absolutePath: task.sourcePath,
         });
         return;
@@ -508,8 +632,10 @@ export const startKanbanServer = async ({ tasksDir, host, port }: KanbanServerOp
 
       const frontmatterMatch = url.pathname.match(/^\/api\/task\/([^/]+)\/frontmatter$/u);
       if (frontmatterMatch && req.method === "PATCH") {
+        const project = requireProject(url, res);
+        if (!project) return;
         const uuid = decodeURIComponent(frontmatterMatch[1] ?? "");
-        const tasks = await loadTasks(tasksDir);
+        const tasks = await loadTasks(project.tasksDir);
         const task = tasks.find((candidate) => candidate.uuid === uuid);
         if (!task) {
           sendText(res, 404, `unknown uuid: ${uuid}\n`);
@@ -527,8 +653,10 @@ export const startKanbanServer = async ({ tasksDir, host, port }: KanbanServerOp
 
       const commentMatch = url.pathname.match(/^\/api\/task\/([^/]+)\/comment$/u);
       if (commentMatch && req.method === "POST") {
+        const project = requireProject(url, res);
+        if (!project) return;
         const uuid = decodeURIComponent(commentMatch[1] ?? "");
-        const tasks = await loadTasks(tasksDir);
+        const tasks = await loadTasks(project.tasksDir);
         const task = tasks.find((candidate) => candidate.uuid === uuid);
         if (!task) {
           sendText(res, 404, `unknown uuid: ${uuid}\n`);
@@ -546,8 +674,10 @@ export const startKanbanServer = async ({ tasksDir, host, port }: KanbanServerOp
 
       const openEditorMatch = url.pathname.match(/^\/api\/task\/([^/]+)\/open-editor$/u);
       if (openEditorMatch && req.method === "POST") {
+        const project = requireProject(url, res);
+        if (!project) return;
         const uuid = decodeURIComponent(openEditorMatch[1] ?? "");
-        const tasks = await loadTasks(tasksDir);
+        const tasks = await loadTasks(project.tasksDir);
         const task = tasks.find((candidate) => candidate.uuid === uuid);
         if (!task) {
           sendText(res, 404, `unknown uuid: ${uuid}\n`);
@@ -560,7 +690,7 @@ export const startKanbanServer = async ({ tasksDir, host, port }: KanbanServerOp
           }
         });
         child.unref();
-        sendJson(res, 200, { ok: true, file: stripBase(tasksDir, task.sourcePath), editor });
+        sendJson(res, 200, { ok: true, file: stripBase(project.tasksDir, task.sourcePath), editor });
         return;
       }
 
@@ -594,13 +724,15 @@ export const startKanbanServer = async ({ tasksDir, host, port }: KanbanServerOp
   const url = `http://${resolvedHost}:${resolvedPort}`;
 
   console.log(`Kanban UI running at ${url}`);
-  console.log(`Tasks: ${tasksDir}`);
+  console.log(`Projects: ${projectState.projects.map((project) => `${project.id}=${project.tasksDir}`).join(", ")}`);
 
   return {
     server,
     host: resolvedHost,
     port: resolvedPort,
     url,
-    tasksDir
+    tasksDir: projectsById.get(projectState.defaultProjectId)?.tasksDir ?? projectState.projects[0]?.tasksDir ?? "",
+    projects: projectState.projects,
+    defaultProjectId: projectState.defaultProjectId
   };
 };

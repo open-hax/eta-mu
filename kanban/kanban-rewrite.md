@@ -1,3 +1,17 @@
+---
+uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-kanban-rewrite-md"
+title: "Standalone Kanban Rewrite"
+status: incoming
+priority: P3
+labels: ["specs", "migrated-spec"]
+created_at: "2026-05-29T04:29:39.348Z"
+source: "orgs/open-hax/eta-mu/specs/kanban-rewrite.md"
+category: "specs"
+---
+
+> Source: `orgs/open-hax/eta-mu/specs/kanban-rewrite.md`
+> Migrated-to-kanban: `orgs/open-hax/eta-mu/kanban/kanban-rewrite.md`
+
 # Standalone Kanban Rewrite
 
 ## Context

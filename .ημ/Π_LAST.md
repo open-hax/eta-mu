@@ -1,24 +1,12 @@
-# Π Fork Tax Snapshot — eta-mu
+# Π Last Handoff — eta-mu kanban multi-project support
 
-- Timestamp: 20260516T185547Z
-- Branch: pi/fork-tax/20260516-eta-mu-recursive
-- Base: 927b4321bf4e
-- Scope: model/package metadata, coding-agent runtime events, OPMF contract gate, and self-contained pi snapshot.
-
-## Included work
-
-- Preserved package/model metadata updates across Eta Mu packages.
-- Preserved coding-agent runtime event/doc changes and related test file.
-- Preserved OPMF contract gate/custom provider changes and tests.
-- Added self-contained `pi/` snapshot files for agent skills/config/theme/docs.
-- Recorded recursive fork-tax handoff artifacts.
-
-## Verification
-
-- `git diff --cached --check` passed after whitespace-normalizing staged imported skill/docs snapshot files.
-- `pnpm --dir packages/eta-mu-extensions test` passed.
-- `pnpm --dir packages/coding-agent test test/agent-session-runtime-events.test.ts` passed.
-
-## Residual dirt
-
-- None in this selected repo scope after commit.
+- timestamp: 20260529T043532Z
+- branch: pi/fork-tax/20260529T022118Z-main-softreset-all-dirt-eta-mu
+- scope: packages/kanban multi-project server/UI, eta-mu-beta kanban update-status fix, eta-mu specs-to-kanban migration
+- verification:
+  - pnpm -C packages/kanban test
+  - pnpm -C packages/kanban build
+  - pnpm -C packages/coding-agent build
+  - eta-mu-beta kanban count --tasks-dir orgs/open-hax/eta-mu/kanban
+  - eta-mu-beta kanban count --tasks-dir orgs/open-hax/eta-mu/packages/eta-mu-extensions/kanban
+- concurrent dirt: unrelated package/version/docs/runtime files remain unstaged in this repo.

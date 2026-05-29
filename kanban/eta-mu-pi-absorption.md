@@ -1,3 +1,17 @@
+---
+uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-eta-mu-pi-absorption-md"
+title: "Eta-mu Pi Absorption"
+status: incoming
+priority: P3
+labels: ["specs", "migrated-spec"]
+created_at: "2026-05-29T04:29:39.346Z"
+source: "orgs/open-hax/eta-mu/specs/eta-mu-pi-absorption.md"
+category: "specs"
+---
+
+> Source: `orgs/open-hax/eta-mu/specs/eta-mu-pi-absorption.md`
+> Migrated-to-kanban: `orgs/open-hax/eta-mu/kanban/eta-mu-pi-absorption.md`
+
 # Eta-mu Pi Absorption
 
 ## Intent
