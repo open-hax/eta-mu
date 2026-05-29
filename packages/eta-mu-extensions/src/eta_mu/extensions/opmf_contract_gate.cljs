@@ -34,6 +34,14 @@
 (def CONTRACT-MARKER "## Active Output Contract")
 (def KNOXX-BACKEND-PATH (path/join HOME "devel" "orgs" "open-hax" "openplanner" "packages" "agents" "knoxx" "backend"))
 (def KNOXX-CONTRACTS-PATH (path/join HOME "devel" "orgs" "open-hax" "openplanner" "packages" "agents" "knoxx" "contracts"))
+
+(defn knoxx-backend-path []
+  (or (gobj/get js/process.env "ETA_MU_KNOXX_BACKEND_PATH")
+      KNOXX-BACKEND-PATH))
+
+(defn knoxx-contracts-path []
+  (or (gobj/get js/process.env "ETA_MU_KNOXX_CONTRACTS_PATH")
+      KNOXX-CONTRACTS-PATH))
 (def RUNTIME-CONTRACT-ID "eta-mu.opmf-contract-gate")
 (def RUNTIME-CONTRACT-FILE "opmf_contract_gate.edn")
 (def MAX-AUTO-REPAIR-SEMANTIC-COUNT 25)
@@ -96,7 +104,7 @@
              (not (.isAbsolute path rel))))))
 
 (defn knoxx-backend-cwd? [cwd]
-  (path-inside? KNOXX-BACKEND-PATH (or cwd (.cwd js/process))))
+  (path-inside? (knoxx-backend-path) (or cwd (.cwd js/process))))
 
 (defn- parent-dirs [start]
   (loop [cur (path/resolve start)
@@ -116,7 +124,7 @@
                      (path/join dir "CONTRACT.edn")])
                   dirs)
           (when (knoxx-backend-cwd? cwd)
-            [(path/join KNOXX-CONTRACTS-PATH "runtime_features" RUNTIME-CONTRACT-FILE)]))
+            [(path/join (knoxx-contracts-path) "runtime_features" RUNTIME-CONTRACT-FILE)]))
          distinct
          vec)))
 

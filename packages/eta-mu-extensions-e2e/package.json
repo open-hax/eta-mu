@@ -9,6 +9,7 @@
   "devDependencies": {
     "@open-hax/eta-mu-cli": "workspace:*",
     "express": "^4.21.2",
-    "shadow-cljs": "^2.28.20"
+    "shadow-cljs": "^2.28.20",
+    "markdown-it": "^14.1.0"
   }
 }

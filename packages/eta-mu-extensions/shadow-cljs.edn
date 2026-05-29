@@ -57,6 +57,12 @@
    :exports {:default eta-mu.build.image-render/init}
    :compiler-options {:externs ["externs/promise.js"]}}
 
+  :lisp-decomp-nudge
+  {:target :node-library
+   :output-to "target/runtime/lisp-decomp-nudge/runtime.js"
+   :exports {:default eta-mu.build.lisp-decomp-nudge/init}
+   :compiler-options {:externs ["externs/promise.js"]}}
+
   :opencode-global-instructions
   {:target :node-library
    :output-to "target/runtime/opencode-global-instructions/runtime.js"
@@ -148,6 +154,13 @@
    {:target :esm
     :output-dir "target/opencode/image-render"
     :modules {:plugin {:exports {:default eta-mu.build.opencode.image-render/init}}}
+    :js-options {:js-provider :import}
+    :compiler-options {:optimizations :simple}}
+
+   :opencode-lisp-decomp-nudge
+   {:target :esm
+    :output-dir "target/opencode/lisp-decomp-nudge"
+    :modules {:plugin {:exports {:default eta-mu.build.opencode.lisp-decomp-nudge/init}}}
     :js-options {:js-provider :import}
     :compiler-options {:optimizations :simple}}
 
