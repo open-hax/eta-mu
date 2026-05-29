@@ -1,5 +1,5 @@
 {
-  "name": "eta-mu-extensions-e2e",
+  "name": "@open-hax/eta-mu-extensions-e2e",
   "private": true,
   "version": "0.1.1",
   "scripts": {

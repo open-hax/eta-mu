@@ -1,7 +1,7 @@
 import { Alert } from "@mariozechner/mini-lit/dist/Alert.js";
 import type { Message } from "@open-hax/eta-mu-ai";
-import type { AgentMessage, MessageRenderer } from "@mariozechner/pi-web-ui";
-import { defaultConvertToLlm, registerMessageRenderer } from "@mariozechner/pi-web-ui";
+import type { AgentMessage, MessageRenderer } from "@open-hax/pi-web-ui";
+import { defaultConvertToLlm, registerMessageRenderer } from "@open-hax/pi-web-ui";
 import { html } from "lit";
 
 // ============================================================================

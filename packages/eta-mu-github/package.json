@@ -1,6 +1,6 @@
 {
   "name": "@open-hax/eta-mu-github",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": false,
   "description": "Pi-based GitHub automation bot and review gate for PRs, issues, and mentions.",
   "license": "GPL-3.0-only",
@@ -18,7 +18,7 @@
     "dev": "tsx src/cli.ts"
   },
   "dependencies": {
-    "@eta-mu/runtime": "workspace:*",
+    "@open-hax/eta-mu-runtime": "workspace:*",
     "@open-hax/eta-mu-ai": "workspace:*",
     "@open-hax/eta-mu-cli": "workspace:*",
     "@octokit/rest": "^22.0.1",

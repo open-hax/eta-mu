@@ -122,6 +122,9 @@ importers:
       '@open-hax/eta-mu-tui':
         specifier: workspace:*
         version: link:../tui
+      '@open-hax/kanban-legacy':
+        specifier: workspace:*
+        version: link:../kanban
       '@silvia-odwyer/photon-node':
         specifier: ^0.3.4
         version: 0.3.4
@@ -241,9 +244,6 @@ importers:
 
   packages/eta-mu-github:
     dependencies:
-      '@eta-mu/runtime':
-        specifier: workspace:*
-        version: link:../eta-mu-runtime
       '@octokit/rest':
         specifier: ^22.0.1
         version: 22.0.1
@@ -253,6 +253,9 @@ importers:
       '@open-hax/eta-mu-cli':
         specifier: workspace:*
         version: link:../coding-agent
+      '@open-hax/eta-mu-runtime':
+        specifier: workspace:*
+        version: link:../eta-mu-runtime
       dotenv:
         specifier: ^17.2.3
         version: 17.4.1
@@ -276,6 +279,12 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
+      shadow-cljs:
+        specifier: ^3.3.5
+        version: 3.3.8
+      source-map-support:
+        specifier: ^0.5.21
+        version: 0.5.21
       typescript:
         specifier: ^5.6.3
         version: 5.9.3

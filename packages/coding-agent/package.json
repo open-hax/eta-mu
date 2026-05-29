@@ -1,6 +1,6 @@
 {
   "name": "@open-hax/eta-mu-cli",
-  "version": "0.70.14",
+  "version": "0.70.15",
   "description": "Coding agent CLI with read, bash, edit, write tools and session management",
   "type": "module",
   "piConfig": {
@@ -61,7 +61,8 @@
     "typebox": "^1.1.24",
     "undici": "^7.19.1",
     "uuid": "^14.0.0",
-    "yaml": "^2.8.2"
+    "yaml": "^2.8.2",
+    "@open-hax/kanban-legacy": "workspace:*"
   },
   "overrides": {
     "rimraf": "6.1.2",

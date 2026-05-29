@@ -6,7 +6,7 @@ import {
   type EtaMuPlanningContextInput,
   type MuCandidate,
   type PanelName,
-} from "@eta-mu/runtime";
+} from "@open-hax/eta-mu-runtime";
 
 import type {
   EtaMuAgentDecision,

@@ -629,5 +629,5 @@ MIT
 ## See Also
 
 - [@open-hax/eta-mu-ai](https://www.npmjs.com/package/@open-hax/eta-mu-ai): Core LLM toolkit
-- [@mariozechner/pi-agent](https://www.npmjs.com/package/@mariozechner/pi-agent): Agent framework
+- [@open-hax/pi-agent](https://www.npmjs.com/package/@open-hax/pi-agent): Agent framework
 - [@open-hax/eta-mu-tui](https://www.npmjs.com/package/@open-hax/eta-mu-tui): Terminal UI components

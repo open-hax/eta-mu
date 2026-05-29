@@ -1,7 +1,7 @@
 {
-  "name": "@openhax/kanban-legacy",
-  "version": "0.1.1",
-  "private": true,
+  "name": "@open-hax/kanban-legacy",
+  "version": "0.1.2",
+  "private": false,
   "license": "GPL-3.0-only",
   "type": "module",
   "main": "dist/index.js",
@@ -10,6 +10,26 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./board.js": {
+      "types": "./dist/board.d.ts",
+      "import": "./dist/board.js"
+    },
+    "./config.js": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js"
+    },
+    "./content-parser.js": {
+      "types": "./dist/content-parser.d.ts",
+      "import": "./dist/content-parser.js"
+    },
+    "./tasks.js": {
+      "types": "./dist/tasks.d.ts",
+      "import": "./dist/tasks.js"
+    },
+    "./task-writeback.js": {
+      "types": "./dist/task-writeback.d.ts",
+      "import": "./dist/task-writeback.js"
     }
   },
   "bin": {

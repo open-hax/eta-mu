@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import "dotenv/config";
-import { etaMuActionBatchSchema } from "@eta-mu/runtime";
+import { etaMuActionBatchSchema } from "@open-hax/eta-mu-runtime";
 import { loadConfig } from "./config.js";
 import { classifyGithubEvent } from "./event-classifier.js";
 import {

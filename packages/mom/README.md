@@ -23,7 +23,7 @@ A Slack bot powered by an LLM that can execute bash commands, read/write files, 
 ## Installation
 
 ```bash
-npm install @mariozechner/pi-mom
+npm install @open-hax/pi-mom
 ```
 
 ### Slack App Setup
@@ -364,7 +364,7 @@ You can write event files directly to `data/events/` on the host machine. This l
 
 ### Updating Mom
 
-Update mom anytime with `npm install -g @mariozechner/pi-mom`. This only updates the Node.js app on your host. Anything mom installed inside the Docker container remains unchanged.
+Update mom anytime with `npm install -g @open-hax/pi-mom`. This only updates the Node.js app on your host. Anything mom installed inside the Docker container remains unchanged.
 
 ## Message History
 

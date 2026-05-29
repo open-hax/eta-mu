@@ -645,7 +645,7 @@ Mom runs bash commands inside a sandbox (Docker container), but sometimes you ne
 
 ```typescript
 // data/tools/gmail/index.ts
-import type { MomCustomTool, ToolAPI } from "@mariozechner/pi-mom";
+import type { MomCustomTool, ToolAPI } from "@open-hax/pi-mom";
 import { Type } from "typebox";
 import { StringEnum } from "@open-hax/eta-mu-ai";
 
@@ -888,7 +888,7 @@ function schemaToSimpleJson(schema: TSchema): object {
 
 ```typescript
 // data/tools/gmail/index.ts
-import type { MomCustomTool, ToolAPI } from "@mariozechner/pi-mom";
+import type { MomCustomTool, ToolAPI } from "@open-hax/pi-mom";
 import { Type } from "typebox";
 import { StringEnum } from "@open-hax/eta-mu-ai";
 import Imap from "imap";
@@ -922,7 +922,7 @@ export default async function(api: ToolAPI): Promise<MomCustomTool> {
 
 ### Loading
 
-Tools are loaded via jiti. They can import any 3rd party dependencies (install in the tool directory). Imports of `@open-hax/eta-mu-ai` and `@mariozechner/pi-mom` are aliased to the running mom bundle.
+Tools are loaded via jiti. They can import any 3rd party dependencies (install in the tool directory). Imports of `@open-hax/eta-mu-ai` and `@open-hax/pi-mom` are aliased to the running mom bundle.
 
 **Live reload**: In dev mode, tools are watched and reloaded on change. No restart needed.
 
