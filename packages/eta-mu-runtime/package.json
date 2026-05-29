@@ -14,17 +14,24 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist dist-cljs target",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --config vitest.config.ts",
-    "test:watch": "vitest --config vitest.config.ts"
+    "test:watch": "vitest --config vitest.config.ts",
+    "cljs:compile": "shadow-cljs compile runtime",
+    "cljs:test": "shadow-cljs compile test && node target/cljs-test.cjs",
+    "cljs:smoke": "node scripts/smoke-cljs-runtime.mjs",
+    "cljs:boundary": "node scripts/check-cljs-boundaries.mjs",
+    "cljs:verify": "pnpm cljs:compile && pnpm cljs:test && pnpm cljs:smoke && pnpm cljs:boundary"
   },
   "dependencies": {
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
-    "vitest": "^2.1.0"
+    "vitest": "^2.1.0",
+    "shadow-cljs": "^3.3.5",
+    "source-map-support": "^0.5.21"
   },
   "keywords": [
     "eta-mu",
