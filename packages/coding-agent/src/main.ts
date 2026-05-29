@@ -786,7 +786,17 @@ async function handleKanbanCommand(args: string[]): Promise<void> {
 	let kanbanCli: string;
 	try {
 		const require = createRequire(import.meta.url);
-		const kanbanPkgJson = require.resolve("@open-hax/kanban-legacy/package.json");
+		const packageNames = ["@open-hax/kanban-legacy", "@openhax/kanban-legacy"];
+		const kanbanPkgJson = packageNames
+			.map((packageName) => {
+				try {
+					return require.resolve(`${packageName}/package.json`);
+				} catch {
+					return undefined;
+				}
+			})
+			.find((candidate): candidate is string => typeof candidate === "string");
+		if (!kanbanPkgJson) throw new Error("kanban package not found");
 		kanbanCli = join(dirname(kanbanPkgJson), "dist", "cli.js");
 	} catch {
 		// Fallback: try relative path from coding-agent to kanban
@@ -794,7 +804,7 @@ async function handleKanbanCommand(args: string[]): Promise<void> {
 		if (existsSync(fallback)) {
 			kanbanCli = fallback;
 		} else {
-			console.error(chalk.red("Could not find @open-hax/kanban-legacy. Ensure it is installed."));
+			console.error(chalk.red("Could not find @open-hax/kanban-legacy or @openhax/kanban-legacy. Ensure it is installed."));
 			process.exitCode = 1;
 			return;
 		}
