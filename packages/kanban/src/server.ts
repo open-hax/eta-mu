@@ -1,7 +1,11 @@
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
+import { exec } from "node:child_process";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { buildBoardSnapshot } from "./board.js";
+import { parseTaskContent, updateFrontmatterField, appendComment } from "./content-parser.js";
 import { loadTasks } from "./tasks.js";
 import type { KanbanBoardSnapshot, KanbanTask } from "./types.js";
 import { writeTaskStatus } from "./task-writeback.js";
@@ -378,6 +382,35 @@ const indexHtml = html`<!doctype html>
   </body>
 </html>`;
 
+const mimeTypes: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".ico": "image/x-icon",
+};
+
+const sendFile = async (res: ServerResponse, filePath: string): Promise<boolean> => {
+  try {
+    const fileStat = await stat(filePath);
+    if (!fileStat.isFile()) return false;
+    const ext = path.extname(filePath);
+    const contentType = mimeTypes[ext] ?? "application/octet-stream";
+    const body = await readFile(filePath);
+    res.statusCode = 200;
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Cache-Control", "no-store");
+    res.end(body);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const webDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist/web");
+
 const resolveNotFound = (res: ServerResponse): void => {
   sendText(res, 404, "not found\n");
 };
@@ -419,11 +452,7 @@ export const startKanbanServer = async ({ tasksDir, host, port }: KanbanServerOp
     try {
       const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
 
-      if (req.method === "GET" && url.pathname === "/") {
-        sendText(res, 200, indexHtml, "text/html; charset=utf-8");
-        return;
-      }
-
+      // API routes first
       if (req.method === "GET" && url.pathname === "/api/board") {
         const tasks = await loadTasks(tasksDir);
         const snapshot = buildBoardSnapshot(tasks);
@@ -455,6 +484,97 @@ export const startKanbanServer = async ({ tasksDir, host, port }: KanbanServerOp
 
         const updated = await writeTaskStatus(task, tasksDir, nextStatus);
         sendJson(res, 200, serializeTask(updated));
+        return;
+      }
+
+      const contentMatch = url.pathname.match(/^\/api\/task\/([^/]+)\/content$/u);
+      if (contentMatch && req.method === "GET") {
+        const uuid = decodeURIComponent(contentMatch[1] ?? "");
+        const tasks = await loadTasks(tasksDir);
+        const task = tasks.find((candidate) => candidate.uuid === uuid);
+        if (!task) {
+          sendText(res, 404, `unknown uuid: ${uuid}\n`);
+          return;
+        }
+        const rawContent = await readFile(task.sourcePath, "utf8");
+        const parsed = parseTaskContent(rawContent);
+        sendJson(res, 200, {
+          ...parsed,
+          sourcePath: stripBase(tasksDir, task.sourcePath),
+          absolutePath: task.sourcePath,
+        });
+        return;
+      }
+
+      const frontmatterMatch = url.pathname.match(/^\/api\/task\/([^/]+)\/frontmatter$/u);
+      if (frontmatterMatch && req.method === "PATCH") {
+        const uuid = decodeURIComponent(frontmatterMatch[1] ?? "");
+        const tasks = await loadTasks(tasksDir);
+        const task = tasks.find((candidate) => candidate.uuid === uuid);
+        if (!task) {
+          sendText(res, 404, `unknown uuid: ${uuid}\n`);
+          return;
+        }
+        const body = (await readJsonBody(req)) as { key?: string; value?: unknown } | undefined;
+        if (!body?.key) {
+          sendText(res, 400, "missing key\n");
+          return;
+        }
+        const updated = await updateFrontmatterField(task.sourcePath, body.key, body.value);
+        sendJson(res, 200, updated);
+        return;
+      }
+
+      const commentMatch = url.pathname.match(/^\/api\/task\/([^/]+)\/comment$/u);
+      if (commentMatch && req.method === "POST") {
+        const uuid = decodeURIComponent(commentMatch[1] ?? "");
+        const tasks = await loadTasks(tasksDir);
+        const task = tasks.find((candidate) => candidate.uuid === uuid);
+        if (!task) {
+          sendText(res, 404, `unknown uuid: ${uuid}\n`);
+          return;
+        }
+        const body = (await readJsonBody(req)) as { text?: string } | undefined;
+        if (!body?.text?.trim()) {
+          sendText(res, 400, "missing text\n");
+          return;
+        }
+        const updated = await appendComment(task.sourcePath, body.text.trim());
+        sendJson(res, 200, updated);
+        return;
+      }
+
+      const openEditorMatch = url.pathname.match(/^\/api\/task\/([^/]+)\/open-editor$/u);
+      if (openEditorMatch && req.method === "POST") {
+        const uuid = decodeURIComponent(openEditorMatch[1] ?? "");
+        const tasks = await loadTasks(tasksDir);
+        const task = tasks.find((candidate) => candidate.uuid === uuid);
+        if (!task) {
+          sendText(res, 404, `unknown uuid: ${uuid}\n`);
+          return;
+        }
+        const editor = process.env.EDITOR || process.env.VISUAL || "xdg-open";
+        const child = exec(`${editor} "${task.sourcePath}"`, (error) => {
+          if (error) {
+            console.error(`Failed to open editor: ${error.message}`);
+          }
+        });
+        child.unref();
+        sendJson(res, 200, { ok: true, file: stripBase(tasksDir, task.sourcePath), editor });
+        return;
+      }
+
+      // Serve built web frontend (after API routes)
+      if (req.method === "GET") {
+        const staticPath = path.join(webDir, url.pathname);
+        if (url.pathname !== "/" && await sendFile(res, staticPath)) {
+          return;
+        }
+        const indexPath = path.join(webDir, "index.html");
+        if (await sendFile(res, indexPath)) {
+          return;
+        }
+        sendText(res, 200, indexHtml, "text/html; charset=utf-8");
         return;
       }
 

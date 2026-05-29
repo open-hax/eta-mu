@@ -498,7 +498,7 @@ Inside `before_agent_start`, `event.systemPrompt` and `ctx.getSystemPrompt()` bo
 
 #### agent_start / agent_end / agent_idle
 
-`agent_start` fires once per user prompt. `agent_end` fires when the loop has emitted its final event, but the core agent may still be settling event listeners. `agent_idle` fires after `agent_end` once the core agent is idle; use it when an extension needs to start a fresh user turn, such as an output-contract repair prompt.
+`agent_start` fires once per user prompt. `agent_end` fires when the loop has emitted its final event, but the AgentSession event queue may still be settling. `agent_idle` fires after `agent_end` once the queue has drained and the core agent is idle; use it when an extension needs to start a fresh user turn, such as an output-contract repair prompt.
 
 ```typescript
 pi.on("agent_start", async (_event, ctx) => {});
@@ -950,13 +950,13 @@ Command handlers receive `ExtensionCommandContext`, which extends `ExtensionCont
 
 ### ctx.waitForIdle()
 
-Wait for the agent to finish streaming:
+Wait for the agent and queued AgentSession runtime events to settle:
 
 ```typescript
 pi.registerCommand("my-cmd", {
   handler: async (args, ctx) => {
     await ctx.waitForIdle();
-    // Agent is now idle, safe to modify session
+    // AgentSession runtime events have settled; safe to modify session
   },
 });
 ```

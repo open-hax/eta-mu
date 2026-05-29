@@ -259,7 +259,10 @@ session.agent.state.messages = messages; // copies the top-level array
 // Replace tools
 session.agent.state.tools = tools; // copies the top-level array
 
-// Wait for agent to finish processing
+// Wait for the agent and queued AgentSession runtime events to settle
+await session.waitForIdle();
+
+// Lower-level agent-only wait, if you explicitly do not need session events
 await session.agent.waitForIdle();
 ```
 

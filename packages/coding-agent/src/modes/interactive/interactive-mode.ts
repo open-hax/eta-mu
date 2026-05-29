@@ -1466,7 +1466,7 @@ export class InteractiveMode {
 		await this.session.bindExtensions({
 			uiContext,
 			commandContextActions: {
-				waitForIdle: () => this.session.agent.waitForIdle(),
+				waitForIdle: () => this.session.waitForIdle(),
 				newSession: async (options) => {
 					if (this.loadingAnimation) {
 						this.loadingAnimation.stop();

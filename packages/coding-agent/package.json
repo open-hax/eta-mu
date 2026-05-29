@@ -1,6 +1,6 @@
 {
   "name": "@open-hax/eta-mu-cli",
-  "version": "0.70.13",
+  "version": "0.70.14",
   "description": "Coding agent CLI with read, bash, edit, write tools and session management",
   "type": "module",
   "piConfig": {
@@ -45,7 +45,6 @@
     "@open-hax/eta-mu-ai": "workspace:*",
     "@open-hax/eta-mu-extensions": "workspace:*",
     "@open-hax/eta-mu-tui": "workspace:*",
-
     "@silvia-odwyer/photon-node": "^0.3.4",
     "chalk": "^5.5.0",
     "cli-highlight": "^2.1.11",

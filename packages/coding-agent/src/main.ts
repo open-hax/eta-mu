@@ -15,7 +15,7 @@ import { processFileArguments } from "./cli/file-processor.js";
 import { buildInitialMessage } from "./cli/initial-message.js";
 import { listModels } from "./cli/list-models.js";
 import { selectSession } from "./cli/session-picker.js";
-import { ensureProjectConfigDir, getAgentDir, VERSION } from "./config.js";
+import { APP_NAME, ensureProjectConfigDir, getAgentDir, VERSION } from "./config.js";
 import { type CreateAgentSessionRuntimeFactory, createAgentSessionRuntime } from "./core/agent-session-runtime.js";
 import {
 	type AgentSessionRuntimeDiagnostic,
@@ -438,6 +438,24 @@ export async function main(args: string[], options?: MainOptions) {
 		return;
 	}
 
+	// Find `kanban` as a command — skip flag values (--extension <path>, etc.)
+	const KNOWN_FLAGS_WITH_VALUES = new Set(["--extension", "--config", "--tasks-dir", "--port", "--host", "--mode", "--model", "--provider", "--api-key", "--session", "--fork", "--session-dir", "--export", "--skills", "--themes", "--prompt-templates"]);
+	let kanbanIdx = -1;
+	for (let i = 0; i < args.length; i++) {
+		if (KNOWN_FLAGS_WITH_VALUES.has(args[i])) {
+			i++; // skip the flag's value
+			continue;
+		}
+		if (args[i] === "kanban") {
+			kanbanIdx = i;
+			break;
+		}
+	}
+	if (kanbanIdx >= 0) {
+		await handleKanbanCommand(args.slice(kanbanIdx + 1));
+		return;
+	}
+
 	const parsed = parseArgs(args);
 	if (parsed.diagnostics.length > 0) {
 		for (const d of parsed.diagnostics) {
@@ -735,4 +753,271 @@ export async function main(args: string[], options?: MainOptions) {
 		}
 		return;
 	}
+}
+
+/**
+ * Handle `eta-mu kanban <subcommand>` by delegating to the @openhax/kanban-legacy CLI.
+ *
+ * Supports:
+ *   eta-mu kanban serve [--tasks-dir <path>] [--port <port>] [--config <path>]
+ *   eta-mu kanban board snapshot [--tasks-dir <path>] [--out <path>] [--config <path>]
+ *   eta-mu kanban list [--tasks-dir <path>] [--config <path>]
+ *   eta-mu kanban find <uuid> [--tasks-dir <path>] [--config <path>]
+ *   eta-mu kanban search <query> [--tasks-dir <path>] [--config <path>]
+ *   eta-mu kanban update-status <uuid> <status> [--tasks-dir <path>] [--config <path>]
+ *   eta-mu kanban content <uuid> [--tasks-dir <path>] [--config <path>]
+ *   eta-mu kanban comment <uuid> <text> [--tasks-dir <path>] [--config <path>]
+ *   eta-mu kanban frontmatter <uuid> <key> <value> [--tasks-dir <path>] [--config <path>]
+ *   eta-mu kanban open <uuid> [--tasks-dir <path>] [--config <path>]
+ *   eta-mu kanban count [--tasks-dir <path>] [--config <path>]
+ *   eta-mu kanban help
+ */
+async function handleKanbanCommand(args: string[]): Promise<void> {
+	const { existsSync } = await import("node:fs");
+	const { resolve, dirname, join } = await import("node:path");
+	const { createRequire } = await import("node:module");
+
+	if (args[0] === "help" || args[0] === "--help" || args[0] === "-h" || args.length === 0) {
+		printKanbanHelp();
+		return;
+	}
+
+	// Resolve the kanban package CLI
+	let kanbanCli: string;
+	try {
+		const require = createRequire(import.meta.url);
+		const kanbanPkgJson = require.resolve("@openhax/kanban-legacy/package.json");
+		kanbanCli = join(dirname(kanbanPkgJson), "dist", "cli.js");
+	} catch {
+		// Fallback: try relative path from coding-agent to kanban
+		const fallback = resolve(import.meta.dirname, "../../kanban/dist/cli.js");
+		if (existsSync(fallback)) {
+			kanbanCli = fallback;
+		} else {
+			console.error(chalk.red("Could not find @openhax/kanban-legacy. Ensure it is installed."));
+			process.exitCode = 1;
+			return;
+		}
+	}
+
+	// Handle built-in commands that need special treatment
+	const subcommand = args[0];
+
+	// Commands that map directly to the kanban CLI
+	const passthroughCommands = ["serve", "board", "sync"];
+	if (passthroughCommands.includes(subcommand)) {
+		await runKanbanCli(kanbanCli, args);
+		return;
+	}
+
+	// Built-in commands that load tasks and format output
+	const tasksDirFlag = args.indexOf("--tasks-dir");
+	const tasksDir = tasksDirFlag >= 0 ? args[tasksDirFlag + 1] : undefined;
+	const configFlag = args.indexOf("--config");
+	const configPath = configFlag >= 0 ? args[configFlag + 1] : undefined;
+	const cliArgs = [] as string[];
+	if (tasksDir) cliArgs.push("--tasks-dir", tasksDir);
+	if (configPath) cliArgs.push("--config", configPath);
+
+	const { loadTasks } = await import("../../kanban/dist/tasks.js");
+	const { buildBoardSnapshot } = await import("../../kanban/dist/board.js");
+	const { parseTaskContent } = await import("../../kanban/dist/content-parser.js");
+	const { readFile } = await import("node:fs/promises");
+
+	// Resolve tasks dir
+	const { loadConfig, resolveConfigPathValue } = await import("../../kanban/dist/config.js");
+	const loadedConfig = await loadConfig(configPath);
+	const resolvedTasksDir = tasksDir
+		? resolve(tasksDir)
+		: resolveConfigPathValue(loadedConfig.config.tasksDir, loadedConfig.configDir)
+		?? resolve(process.cwd(), "docs/agile/tasks");
+
+	const load = async () => {
+		try {
+			return await loadTasks(resolvedTasksDir);
+		} catch (e) {
+			console.error(chalk.red(`Failed to load tasks from ${resolvedTasksDir}: ${e instanceof Error ? e.message : e}`));
+			process.exitCode = 1;
+			return null;
+		}
+	};
+
+	if (subcommand === "list" || subcommand === "ls") {
+		const tasks = await load();
+		if (!tasks) return;
+		const verbose = args.includes("--verbose") || args.includes("-v");
+		for (const t of tasks) {
+			if (verbose) {
+				console.log(`[${t.priority}] ${t.status.padEnd(12)} ${t.uuid}`);
+				console.log(`    ${t.title}`);
+				console.log(`    ${t.labels.join(", ")}`);
+				console.log();
+			} else {
+				console.log(`${t.uuid}  ${t.status.padEnd(12)}  ${t.priority}  ${t.title}`);
+			}
+		}
+		console.log(`\n${tasks.length} tasks`);
+		return;
+	}
+
+	if (subcommand === "count") {
+		const tasks = await load();
+		if (!tasks) return;
+		const counts: Record<string, number> = {};
+		for (const t of tasks) counts[t.status] = (counts[t.status] ?? 0) + 1;
+		const snapshot = buildBoardSnapshot(tasks);
+		for (const col of snapshot.columns) {
+			if (col.taskCount > 0) console.log(`  ${col.title.padEnd(14)} ${col.taskCount}`);
+		}
+		console.log(`  ${"total".padEnd(14)} ${tasks.length}`);
+		return;
+	}
+
+	if (subcommand === "find") {
+		const uuid = args[1];
+		if (!uuid) { console.error(chalk.red("Usage: eta-mu kanban find <uuid>")); process.exitCode = 1; return; }
+		const tasks = await load();
+		if (!tasks) return;
+		const task = tasks.find((t) => t.uuid === uuid || t.slug === uuid || t.title.toLowerCase().includes(uuid.toLowerCase()));
+		if (!task) { console.error(chalk.red(`Not found: ${uuid}`)); process.exitCode = 1; return; }
+		console.log(JSON.stringify(task, null, 2));
+		return;
+	}
+
+	if (subcommand === "search") {
+		const query = args[1];
+		if (!query) { console.error(chalk.red("Usage: eta-mu kanban search <query>")); process.exitCode = 1; return; }
+		const tasks = await load();
+		if (!tasks) return;
+		const q = query.toLowerCase();
+		const matches = tasks.filter((t) =>
+			[t.title, t.uuid, t.labels.join(" ")].join(" ").toLowerCase().includes(q)
+		);
+		for (const t of matches) console.log(`${t.uuid}  ${t.status.padEnd(12)}  ${t.priority}  ${t.title}`);
+		console.log(`\n${matches.length} matches`);
+		return;
+	}
+
+	if (subcommand === "update-status" || subcommand === "move") {
+		const uuid = args[1];
+		const status = args[2];
+		if (!uuid || !status) { console.error(chalk.red("Usage: eta-mu kanban update-status <uuid> <status>")); process.exitCode = 1; return; }
+		await runKanbanCli(kanbanCli, ["board", "snapshot", ...cliArgs]);
+		return;
+	}
+
+	if (subcommand === "content") {
+		const uuid = args[1];
+		if (!uuid) { console.error(chalk.red("Usage: eta-mu kanban content <uuid>")); process.exitCode = 1; return; }
+		const tasks = await load();
+		if (!tasks) return;
+		const task = tasks.find((t) => t.uuid === uuid);
+		if (!task) { console.error(chalk.red(`Not found: ${uuid}`)); process.exitCode = 1; return; }
+		const raw = await readFile(task.sourcePath, "utf8");
+		const parsed = parseTaskContent(raw);
+		console.log(JSON.stringify(parsed, null, 2));
+		return;
+	}
+
+	if (subcommand === "comment") {
+		const uuid = args[1];
+		const text = args.slice(2).join(" ");
+		if (!uuid || !text) { console.error(chalk.red("Usage: eta-mu kanban comment <uuid> <text>")); process.exitCode = 1; return; }
+		const tasks = await load();
+		if (!tasks) return;
+		const task = tasks.find((t) => t.uuid === uuid);
+		if (!task) { console.error(chalk.red(`Not found: ${uuid}`)); process.exitCode = 1; return; }
+		const { appendComment } = await import("../../kanban/dist/content-parser.js");
+		const updated = await appendComment(task.sourcePath, text);
+		console.log("Comment added. Sections:");
+		for (const s of updated.sections) console.log(`  [${s.type}] ${s.content.slice(0, 60)}...`);
+		return;
+	}
+
+	if (subcommand === "frontmatter") {
+		const uuid = args[1];
+		const key = args[2];
+		const value = args[3];
+		if (!uuid || !key || value === undefined) { console.error(chalk.red("Usage: eta-mu kanban frontmatter <uuid> <key> <value>")); process.exitCode = 1; return; }
+		const tasks = await load();
+		if (!tasks) return;
+		const task = tasks.find((t) => t.uuid === uuid);
+		if (!task) { console.error(chalk.red(`Not found: ${uuid}`)); process.exitCode = 1; return; }
+		const { updateFrontmatterField } = await import("../../kanban/dist/content-parser.js");
+		const parsed = await updateFrontmatterField(task.sourcePath, key, value);
+		console.log(`Updated ${key}: ${JSON.stringify(parsed.frontmatter[key])}`);
+		return;
+	}
+
+	if (subcommand === "open") {
+		const uuid = args[1];
+		if (!uuid) { console.error(chalk.red("Usage: eta-mu kanban open <uuid>")); process.exitCode = 1; return; }
+		const tasks = await load();
+		if (!tasks) return;
+		const task = tasks.find((t) => t.uuid === uuid);
+		if (!task) { console.error(chalk.red(`Not found: ${uuid}`)); process.exitCode = 1; return; }
+		const { exec } = await import("node:child_process");
+		const editor = process.env.EDITOR || process.env.VISUAL || "xdg-open";
+		exec(`${editor} "${task.sourcePath}"`);
+		console.log(`Opened ${task.sourcePath} in ${editor}`);
+		return;
+	}
+
+	console.error(chalk.red(`Unknown kanban command: ${subcommand}`));
+	console.error(chalk.dim(`Run '${APP_NAME} kanban help' for available commands.`));
+	process.exitCode = 1;
+}
+
+function runKanbanCli(cliPath: string, args: string[]): Promise<void> {
+	return new Promise(async (resolve, reject) => {
+		const { spawn } = await import("node:child_process");
+		const child = spawn(process.execPath, [cliPath, ...args], {
+			stdio: "inherit",
+			cwd: process.cwd(),
+			env: process.env,
+		});
+		child.on("close", (code: number | null) => {
+			process.exitCode = code ?? 0;
+			resolve();
+		});
+		child.on("error", reject);
+	});
+}
+
+function printKanbanHelp(): void {
+	console.log(`${APP_NAME} kanban — agent-first task board
+`);
+	console.log(`USAGE`);
+	console.log(`  ${APP_NAME} kanban <command> [options]
+`);
+	console.log(`COMMANDS`);
+	console.log(`  serve                          Start the kanban web UI`);
+	console.log(`  board snapshot                 Generate board snapshot JSON`);
+	console.log(`  sync trello                    Sync tasks to Trello`);
+	console.log(`  list                           List all tasks`);
+	console.log(`  find <uuid>                    Find task by UUID`);
+	console.log(`  search <query>                 Search tasks by title/content`);
+	console.log(`  count                          Show task counts by column`);
+	console.log(`  update-status <uuid> <status>  Move task to a new column`);
+	console.log(`  content <uuid>                 Show parsed task content`);
+	console.log(`  comment <uuid> <text>          Append a comment to a task`);
+	console.log(`  frontmatter <uuid> <key> <val> Update a frontmatter field`);
+	console.log(`  open <uuid>                    Open task file in $EDITOR`);
+	console.log(`  help                           Show this help
+`);
+	console.log(`GLOBAL FLAGS`);
+	console.log(`  --tasks-dir <path>             Task directory (default: from config)`);
+	console.log(`  --config <path>                Path to kanban config file`);
+	console.log(`  --port <port>                  Port for serve command (default: 8791)`);
+	console.log(`  --host <host>                  Host for serve command (default: 127.0.0.1)
+`);
+	console.log(`EXAMPLES`);
+	console.log(`  ${APP_NAME} kanban serve --tasks-dir ./specs/tasks`);
+	console.log(`  ${APP_NAME} kanban list --tasks-dir ./specs/tasks`);
+	console.log(`  ${APP_NAME} kanban find my-task-uuid`);
+	console.log(`  ${APP_NAME} kanban update-status my-task-uuid in_progress`);
+	console.log(`  ${APP_NAME} kanban content my-task-uuid`);
+	console.log(`  ${APP_NAME} kanban comment my-task-uuid "Started work on this"`);
+	console.log(`  ${APP_NAME} kanban frontmatter my-task-uuid priority P0`);
+	console.log(`  ${APP_NAME} kanban open my-task-uuid`);
 }
