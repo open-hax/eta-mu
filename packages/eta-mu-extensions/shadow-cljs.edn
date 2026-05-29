@@ -157,6 +157,13 @@
     :js-options {:js-provider :import}
     :compiler-options {:optimizations :simple}}
 
+   :opencode-lisp-decomp-nudge
+   {:target :esm
+    :output-dir "target/opencode/lisp-decomp-nudge"
+    :modules {:plugin {:exports {:default eta-mu.build.opencode.lisp-decomp-nudge/init}}}
+    :js-options {:js-provider :import}
+    :compiler-options {:optimizations :simple}}
+
    :opencode-opencode-global-instructions
    {:target :esm
     :output-dir "target/opencode/opencode-global-instructions"

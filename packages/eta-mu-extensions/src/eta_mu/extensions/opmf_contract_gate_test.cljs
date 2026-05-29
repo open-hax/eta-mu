@@ -1,7 +1,10 @@
 (ns eta-mu.extensions.opmf-contract-gate-test
   (:require [cljs.test :refer [async deftest is testing]]
             [eta-mu.contracts.core :as contracts]
-            [eta-mu.extensions.opmf-contract-gate :as gate]))
+            [eta-mu.extensions.opmf-contract-gate :as gate]
+            ["node:fs" :as fs]
+            ["node:os" :as os]
+            ["node:path" :as path]))
 
 (deftest parse-repair-attempt-test
   (testing "parses the current eta-mu repair sentinel"
@@ -19,26 +22,51 @@
   (testing "rejects non-repair user content"
     (is (nil? (gate/parse-repair-attempt "normal prompt")))))
 
+(def runtime-contract-fixture
+  "{:contract/id \"eta-mu.opmf-contract-gate\"
+    :contract/kind :runtime-feature
+    :runtime/feature :opmf-contract-gate
+    :runtime/default-enabled false}")
+
 (deftest runtime-contract-default-test
-  (let [knoxx-backend "/home/err/devel/orgs/open-hax/openplanner/packages/agents/knoxx/backend"
-        outside "/tmp/eta-mu-opmf-contract-gate-test-outside"]
-    (testing "detects the Knoxx backend cwd boundary"
-      (is (true? (gate/knoxx-backend-cwd? knoxx-backend)))
-      (is (false? (gate/knoxx-backend-cwd? outside))))
-    (testing "finds the Knoxx runtime-feature contract only for Knoxx backend cwd"
-      (is (= "eta-mu.opmf-contract-gate"
-             (:contract/id (gate/read-runtime-contract knoxx-backend))))
-      (is (nil? (gate/read-runtime-contract outside))))
-    (testing "the Knoxx runtime-feature contract forces the gate off by default"
-      (let [env js/process.env
-            old (aget env "ETA_MU_OPMF_CONTRACT_GATE_ENABLED")]
-        (try
-          (js-delete env "ETA_MU_OPMF_CONTRACT_GATE_ENABLED")
-          (is (false? (aget (gate/read-config knoxx-backend) "enabled")))
-          (finally
-            (if (some? old)
-              (aset env "ETA_MU_OPMF_CONTRACT_GATE_ENABLED" old)
-              (js-delete env "ETA_MU_OPMF_CONTRACT_GATE_ENABLED"))))))))
+  (let [root (.mkdtempSync fs (path/join (.tmpdir os) "eta-mu-opmf-contract-gate-"))
+        knoxx-backend (path/join root "openplanner" "packages" "agents" "knoxx" "backend")
+        knoxx-contracts (path/join root "openplanner" "packages" "agents" "knoxx" "contracts")
+        contract-dir (path/join knoxx-contracts "runtime_features")
+        contract-file (path/join contract-dir "opmf_contract_gate.edn")
+        outside (path/join root "outside")
+        env js/process.env
+        old-backend (aget env "ETA_MU_KNOXX_BACKEND_PATH")
+        old-contracts (aget env "ETA_MU_KNOXX_CONTRACTS_PATH")
+        old-enabled (aget env "ETA_MU_OPMF_CONTRACT_GATE_ENABLED")]
+    (try
+      (.mkdirSync fs knoxx-backend #js {:recursive true})
+      (.mkdirSync fs contract-dir #js {:recursive true})
+      (.mkdirSync fs outside #js {:recursive true})
+      (.writeFileSync fs contract-file runtime-contract-fixture "utf8")
+      (aset env "ETA_MU_KNOXX_BACKEND_PATH" knoxx-backend)
+      (aset env "ETA_MU_KNOXX_CONTRACTS_PATH" knoxx-contracts)
+      (testing "detects the Knoxx backend cwd boundary"
+        (is (true? (gate/knoxx-backend-cwd? knoxx-backend)))
+        (is (false? (gate/knoxx-backend-cwd? outside))))
+      (testing "finds the Knoxx runtime-feature contract only for Knoxx backend cwd"
+        (is (= "eta-mu.opmf-contract-gate"
+               (:contract/id (gate/read-runtime-contract knoxx-backend))))
+        (is (nil? (gate/read-runtime-contract outside))))
+      (testing "the Knoxx runtime-feature contract forces the gate off by default"
+        (js-delete env "ETA_MU_OPMF_CONTRACT_GATE_ENABLED")
+        (is (false? (aget (gate/read-config knoxx-backend) "enabled"))))
+      (finally
+        (if (some? old-backend)
+          (aset env "ETA_MU_KNOXX_BACKEND_PATH" old-backend)
+          (js-delete env "ETA_MU_KNOXX_BACKEND_PATH"))
+        (if (some? old-contracts)
+          (aset env "ETA_MU_KNOXX_CONTRACTS_PATH" old-contracts)
+          (js-delete env "ETA_MU_KNOXX_CONTRACTS_PATH"))
+        (if (some? old-enabled)
+          (aset env "ETA_MU_OPMF_CONTRACT_GATE_ENABLED" old-enabled)
+          (js-delete env "ETA_MU_OPMF_CONTRACT_GATE_ENABLED"))
+        (.rmSync fs root #js {:recursive true :force true})))))
 
 (deftest stale-context-message-test
   (testing "detects eta-mu stale context guard messages"
