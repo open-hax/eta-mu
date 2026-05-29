@@ -21,6 +21,7 @@
   (:require [clojure.string :as str]
             [goog.object :as gobj]
             [eta-mu.extensions.contract-runtime-v2.core :as core]
+            [eta-mu.extensions.prompt-section :as prompt-section]
             ["node:fs" :as fs]
             ["node:os" :as os]
             ["node:path" :as path]
@@ -29,6 +30,8 @@
 (def HOME (.homedir os))
 (def GLOBAL-KEY "__eta_mu_contract_runtime_v2__")
 (def STATUS-KEY "contract-runtime-v2")
+(def PROMPT-SECTION-START "<!-- eta-mu:contract-runtime-v2:start -->")
+(def PROMPT-SECTION-END "<!-- eta-mu:contract-runtime-v2:end -->")
 (def DEFAULT-TTL-MS 300000)
 (def OPMF-OUTPUT-GATE-ID "fulfillment.mindfuck.output-gate")
 
@@ -39,6 +42,7 @@
    :actors           []
    :policies         []
    :fulfills         []
+   :runtime-features []
    :caps             {}
    :roles            {}
    :ttl-ms           DEFAULT-TTL-MS
@@ -82,6 +86,25 @@
     (.update h s) (.digest h "hex")))
 (defn contract-sha [text] (sha256 (core/strip-whitespace text)))
 
+(defn- opmf-dir-files [dir]
+  (when (file-exists? dir)
+    (->> (try (js/Array.from (.readdirSync fs dir #js {:withFileTypes true}))
+              (catch :default _ []))
+         (filter #(and (.isFile %) (.endsWith (.-name %) ".edn")))
+         (map #(path/join dir (.-name %)))
+         (sort (fn [a b]
+                 (.localeCompare (path/basename a) (path/basename b)
+                                 "en" #js {:numeric true :sensitivity "base"}))))))
+
+(defn- read-opmf-dir-text [dir]
+  (let [files (opmf-dir-files dir)]
+    (when (seq files)
+      (str/join "\n\n"
+                (map (fn [f]
+                       (str ";; --- " (path/basename f) " ---\n"
+                            (str/replace (or (safe-read-text f) "") #"\s+$" "")))
+                     files)))))
+
 (defn read-sha-cache [cwd]
   (let [p (sha-cache-path cwd)]
     (if (file-exists? p)
@@ -95,27 +118,43 @@
 ;; ── PRINCIPLE.edn bootstrap ────────────────────────────────
 
 (defn locate-mindfuck-contract [cwd]
-  (let [candidates [(path/join cwd "agents" "mindfuck" "CONTRACT.edn")
+  (let [candidates [(path/join cwd "operation-mindfuck")
+                    (path/join cwd ".." "operation-mindfuck")
+                    (path/join cwd ".." "eta-mu" "operation-mindfuck")
+                    (path/join cwd ".." ".." "eta-mu" "operation-mindfuck")
+                    (path/join cwd ".." ".." ".." "eta-mu" "operation-mindfuck")
+                    (path/join HOME "devel" "orgs" "open-hax" "eta-mu" "operation-mindfuck")
+                    (path/join cwd "agents" "mindfuck" "CONTRACT.edn")
                     (path/join cwd ".." "agents" "mindfuck" "CONTRACT.edn")
                     (path/join cwd ".." ".." "agents" "mindfuck" "CONTRACT.edn")
                     (path/join cwd ".." ".." ".." "agents" "mindfuck" "CONTRACT.edn")
-                    (path/join HOME ".pi" "agent" "skills" "mindfuck" "CONTRACT.edn")]]
+                    (path/join HOME ".ημ" "agent" "skills" "mindfuck" "CONTRACT.edn")]]
     (first (filter file-exists? (map path/resolve candidates)))))
+
+(defn read-mindfuck-source-text [source]
+  (when source
+    (let [stat (try (.statSync fs source) (catch :default _ nil))]
+      (if (and stat (.isDirectory stat))
+        (read-opmf-dir-text source)
+        (safe-read-text source)))))
 
 (defn bootstrap-principle! [cwd]
   (let [source (locate-mindfuck-contract cwd)
-        dest   (principle-path cwd)]
+        dest   (principle-path cwd)
+        src-text (read-mindfuck-source-text source)]
     (cond
       (nil? source)
-      {:ok false :reason "agents/mindfuck/CONTRACT.edn not found"}
+      {:ok false :reason "operation-mindfuck/ or agents/mindfuck/CONTRACT.edn not found"}
+
+      (str/blank? src-text)
+      {:ok false :reason (str "mindfuck contract source is empty: " source)}
 
       (not (file-exists? dest))
-      (do (write-text! dest (safe-read-text source))
+      (do (write-text! dest src-text)
           {:ok true :action :created :source source})
 
       :else
-      (let [src-text  (safe-read-text source)
-            dest-text (safe-read-text dest)]
+      (let [dest-text (safe-read-text dest)]
         (if (= (contract-sha src-text) (contract-sha dest-text))
           {:ok true :action :unchanged}
           (if (str/includes? dest-text ":disabled true")
@@ -133,6 +172,7 @@
         (update :actors        evict)
         (update :policies      evict)
         (update :fulfills      evict)
+        (update :runtime-features evict)
         (update :caps          evict-map)
         (update :roles         evict-map)
         (update :prompt-blocks evict))))
@@ -145,6 +185,7 @@
         state*       (cond
                        (= kind :actor)       (update state :actors conj tagged)
                        (= kind :policy)      (update state :policies conj tagged)
+                       (= kind :runtime-feature) (update state :runtime-features conj tagged)
                        (= kind :fulfillment) (if (and (= (:contract/id m) OPMF-OUTPUT-GATE-ID) opmf-active?)
                                                state
                                                (update state :fulfills conj tagged))
@@ -204,7 +245,8 @@
       (.setStatus (ctx-ui ctx) STATUS-KEY
                   (str "crv2 loaded:" (count (:loaded s))
                        " pol:"        (count (:policies s))
-                       " ful:"        (count (:fulfills s)))))))
+                       " ful:"        (count (:fulfills s))
+                       " run:"        (count (:runtime-features s)))))))
 
 ;; ── Policy gate ──────────────────────────────────────────
 
@@ -305,6 +347,12 @@
     (safe-read-text (principle-path cwd))
     (:prompt-blocks @state-atom)))
 
+(defn inject-runtime-prompt [system-prompt append]
+  (prompt-section/upsert-section system-prompt
+                                 PROMPT-SECTION-START
+                                 PROMPT-SECTION-END
+                                 append))
+
 ;; ── Extension ────────────────────────────────────────────
 
 (em/defextension contract-runtime-v2
@@ -363,9 +411,15 @@
     :handler (fn [event ctx]
                (let [cwd    (or (gobj/get ctx "cwd") HOME)
                      sa     (get-state-atom cwd)
+                     _      (when-not (:principle-ready @sa)
+                              (ensure-hm-dir! cwd)
+                              (let [result (bootstrap-principle! cwd)]
+                                (when-not (:ok result)
+                                  (js/console.warn (str "[crv2] PRINCIPLE.edn: " (:reason result))))
+                                (swap! sa assoc :principle-ready (:ok result))))
                      append (build-prompt-append cwd sa)]
                  (when (and (string? append) (not (str/blank? append)))
-                   #js {:systemPrompt (str (gobj/get event "systemPrompt") "\n\n" append)}))))
+                   #js {:systemPrompt (inject-runtime-prompt (gobj/get event "systemPrompt") append)}))))
 
   (em/on "session_shutdown"
     :handler (fn [_event ctx]
@@ -373,7 +427,7 @@
                  (.setStatus (ctx-ui ctx) STATUS-KEY js/undefined))))
 
   (em/command "crv2"
-    :description "Inspect/control crv2: /crv2 status|loaded|actors|policies|fulfills|prompt|log|fulfills-log|reload"
+    :description "Inspect/control crv2: /crv2 status|loaded|actors|policies|fulfills|runtime-features|prompt|log|fulfills-log|reload"
     :handler (fn [args ctx]
                (let [cwd    (or (gobj/get ctx "cwd") HOME)
                      tokens (if (str/blank? args) [] (str/split (str/trim args) #"\s+"))
@@ -390,6 +444,7 @@
                                       (str "actors: "          (count (:actors s)))
                                       (str "policies: "        (count (:policies s)))
                                       (str "fulfills: "        (count (:fulfills s)))
+                                      (str "runtime-features: " (count (:runtime-features s)))
                                       (str "policy-log: "      (count (:policy-log s)))
                                       (str "fulfillment-log: " (count (:fulfillment-log s)))
                                       (str "ttl-ms: "          (:ttl-ms s))]))
@@ -408,6 +463,11 @@
                        (= cmd "fulfills")
                        (.setWidget ui STATUS-KEY
                                    (clj->js (map #(str (:contract/id %) " mode:" (:fulfillment/mode %)) (:fulfills s))))
+
+                       (= cmd "runtime-features")
+                       (.setWidget ui STATUS-KEY
+                                   (clj->js (map #(str (:contract/id %) " enabled:" (or (:runtime/enabled %) (:enabled %) (:runtime/default-enabled %)))
+                                                 (:runtime-features s))))
 
                        (= cmd "prompt")
                        (.setWidget ui STATUS-KEY
@@ -444,4 +504,4 @@
                          (.notify ui (str "[crv2] reloaded " n " contract(s) from " cwd) "info"))
 
                        :else
-                       (.notify ui "Usage: /crv2 status|loaded|actors|policies|fulfills|prompt|log|fulfills-log|reload" "warn"))))))))
+                       (.notify ui "Usage: /crv2 status|loaded|actors|policies|fulfills|runtime-features|prompt|log|fulfills-log|reload" "warn"))))))))

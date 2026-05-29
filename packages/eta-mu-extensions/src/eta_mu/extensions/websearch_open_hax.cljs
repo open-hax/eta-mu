@@ -1,7 +1,7 @@
 (ns eta-mu.extensions.websearch-open-hax
   "Web search via Open Hax proxy service.
 
-  Migrated from: ~/.pi/agent/extensions/websearch-open-hax.ts"
+  Migrated from: ~/.ημ/agent/extensions/websearch-open-hax.ts"
   (:require-macros [eta-mu.core :as em])
   (:require [clojure.string :as str]
             ["node:fs/promises" :as fs]
@@ -21,7 +21,10 @@
 (defn proxy-token []
   (or (aget js/process.env "OPEN_HAX_OPENAI_PROXY_AUTH_TOKEN")
       (aget js/process.env "OPEN_HAX_PROXY_AUTH_TOKEN")
-      (aget js/process.env "PROXY_AUTH_TOKEN")))
+      (aget js/process.env "PROXY_AUTH_TOKEN")
+      (aget js/process.env "PROXX_AUTH_TOKEN")
+      )
+  )
 
 (defn format-size [bytes]
   (cond

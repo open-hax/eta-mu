@@ -6,7 +6,7 @@
   "license": "GPL-3.0-only",
   "type": "module",
   "bin": {
-    "eta-mu": "dist/cli.js"
+    "eta-mu-github": "dist/cli.js"
   },
   "scripts": {
     "prebuild": "pnpm --dir ../eta-mu-runtime build",
@@ -19,8 +19,8 @@
   },
   "dependencies": {
     "@eta-mu/runtime": "workspace:*",
-    "@mariozechner/pi-ai": "^0.58.0",
-    "@mariozechner/pi-coding-agent": "^0.58.0",
+    "@open-hax/eta-mu-ai": "workspace:*",
+    "@open-hax/eta-mu-cli": "workspace:*",
     "@octokit/rest": "^22.0.1",
     "dotenv": "^17.2.3"
   },

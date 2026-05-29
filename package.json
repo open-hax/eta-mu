@@ -2,7 +2,7 @@
   "name": "@open-hax/eta-mu-monorepo",
   "version": "0.1.0",
   "description": "Canonical eta-mu monorepo spanning GitHub automation, truth/docs kernels, Promethean runtime, and absorbed OpenHax surfaces",
-  "private": true,
+  "private": false,
   "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
@@ -19,7 +19,15 @@
     "install:all": "pnpm install && pnpm --recursive install"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@biomejs/biome": "2.3.5",
+    "@typescript/native-preview": "7.0.0-dev.20260120.1",
+    "concurrently": "^8.2.2",
+    "shx": "^0.4.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   },
-  "packageManager": "pnpm@10.14.0"
+  "packageManager": "pnpm@10.14.0",
+  "dependencies": {
+    "@open-hax/eta-mu-monorepo": "link:"
+  }
 }

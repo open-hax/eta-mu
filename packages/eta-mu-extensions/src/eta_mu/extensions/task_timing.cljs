@@ -6,7 +6,7 @@
   - Approximate inference time (total - tool wait)
   - Tool wait time (time waiting for tool execution)
 
-  Migrated from: ~/.pi/agent/extensions/task-timing.ts"
+  Migrated from: ~/.ημ/agent/extensions/task-timing.ts"
   (:require-macros [eta-mu.core :as em]))
 
 (def GLOBAL-KEY "__pi_task_timing_state__")

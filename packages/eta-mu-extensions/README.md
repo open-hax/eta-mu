@@ -50,7 +50,7 @@ eta-mu-extensions/
 │       ├── state.cljc       # State management
 │       ├── event.cljc       # Event handlers
 │       └── tool.cljc        # Tool schemas
-├── scripts/build.mjs        # Manifest-driven build orchestrator
+├── scripts/build.mjs        # Manifest-driven build + host-config registration
 ├── externs/                 # Closure compiler externs
 └── .build/                  # Compiled output (generated)
 ```
@@ -64,9 +64,11 @@ are installed and where they come from. Each extension declares a source type:
 - `:github` — a file in a GitHub repository (fetched via `git archive`)
 - `:npm` — a file inside an npm package (installed via `pnpm add`)
 
-The build script reads the manifest, resolves all sources into `~/.ημ/src/`,
-then compiles and deploys. Extensions with `:tracked true` are version-controlled
-in this git repo.
+The build script reads the manifest, compiles platform-neutral extension specs,
+and materializes platform wrappers under this package's `dist/` directory. Pi
+loads those wrappers from eta-mu's built-in package metadata; only OpenCode
+plugin targets are synchronized into host config. Extensions with `:tracked true`
+are version-controlled in this git repo.
 
 ### Build System
 
@@ -75,10 +77,17 @@ The build system:
 2. Resolves sources from local paths, GitHub repos, or npm packages
 3. Generates wrapper files with `(defn init [pi] ...)`
 4. Compiles via shadow-cljs to Node.js libraries
-5. Deploys to:
-   - `~/.pi/agent/extensions/cljs-<name>/` for pi
-   - `~/.config/opencode/plugins/<name>/` for OpenCode
-6. Creates runtime state directories under `~/.ημ/state/`
+5. Materializes package-root targets:
+   - `dist/runtime/<name>.cjs` — shared compiled runtime bundle
+   - `dist/pi/cljs-<name>/index.ts` — Pi wrapper
+   - `dist/opencode/<name>.mjs` — OpenCode wrapper
+6. Leaves Pi registration to eta-mu's built-in extension metadata (`package.json` → `pi.extensions`); the build does not mutate `~/.pi/agent/settings.json` or `~/.ημ/agent/settings.json`.
+7. Registers OpenCode package-root targets in host config:
+   - `~/.config/opencode/opencode.jsonc` → `plugin`
+8. Removes stale managed host copies from the old copy-deploy layout:
+   - `~/.pi/agent/extensions/cljs-<name>/`
+   - `~/.config/opencode/plugins/<name>/`
+9. Creates runtime state directories under `~/.ημ/state/`
 
 ## Usage
 
@@ -106,10 +115,8 @@ See `spec/extension-integration-plan.md` for details on porting remaining TypeSc
 | contract-runtime | CLJS | 18,197 | ✅ Ported |
 | analyze-image | CLJS | ~350 | ✅ Ported (P1) |
 | manipulate-image | CLJS | ~300 | ✅ Ported (P1) |
-| apply-patch | TS | 799 | 📋 P2 - Spec ready |
-| desktop-ops | TS | 705 | 📋 P2 - Spec ready |
-| webpage-markdown | TS | 758 | 📋 P3 - Spec ready |
-| skill-graph-aco | TS | 1,400 | 📋 P3 - Spec ready |
+| apply-patch | CLJS | ~420 | ✅ Ported |
+| skill-graph-aco | retired TS | 1,400 | Removed from `pi/agent/extensions`; static `skill_graph`/graph-memory tools are canonical until an ACO CLJS rewrite is needed |
 
 ## The ημ Layer
 

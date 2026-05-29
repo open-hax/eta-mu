@@ -73,7 +73,8 @@
                 [:id        :id]
                 [:severity  [:enum :block :warn :note]]
                 [:message   :string]
-                [:check     :any]]
+                [:check     {:expr :maybe ;; an expression that evaluates to a boolean
+                             :rule :named-rule}]]
 
  :policy-contract [:map {:closed false}
                    [:contract/id       :id]

@@ -1,16 +1,17 @@
 (ns eta-mu.extensions.session-mycology
   "Per-turn retrospection with p-scores and skill spore incubation.
 
-  Migrated from: ~/.pi/agent/extensions/session-mycology.ts"
+  Migrated from: ~/.ημ/agent/extensions/session-mycology.ts"
   (:require-macros [eta-mu.core :as em])
   (:require ["os" :as os]
             ["fs" :as fs]
             ["path" :as path]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [eta-mu.extensions.prompt-section :as prompt-section]))
 
 (def ^:const HOME (.homedir os))
 (def ^:const ETA-MU-STATE-ROOT (path/join HOME ".ημ" "state"))
-(def ^:const LEGACY-STATE-ROOT (str HOME "/.pi/agent/state"))
+(def ^:const LEGACY-STATE-ROOT (str HOME "/.ημ/agent/state"))
 (defn resolve-state-dir [name]
   (let [eta-mu-dir (path/join ETA-MU-STATE-ROOT name)
         legacy-dir (path/join LEGACY-STATE-ROOT name)]
@@ -24,9 +25,11 @@
 (def ^:const SPORES-FILE (path/join STATE-DIR "skill-spores.jsonl"))
 (def ^:const PROMOTIONS-FILE (path/join STATE-DIR "skill-promotions.jsonl"))
 (def ^:const SPORE-DRAFTS-DIR (path/join STATE-DIR "spores"))
-(def ^:const LIVE-SKILLS-DIR (str HOME "/.pi/agent/skills")) ;; stays under pi — skills are pi's config
+(def ^:const LIVE-SKILLS-DIR (str HOME "/.ημ/agent/skills")) ;; stays under pi — skills are pi's config
 (def ^:const STATUS-KEY "session-mycology")
 (def ^:const GLOBAL-KEY "__pi_session_mycology_state__")
+(def ^:const PROMPT-SECTION-START "<!-- eta-mu:session-mycology:start -->")
+(def ^:const PROMPT-SECTION-END "<!-- eta-mu:session-mycology:end -->")
 (def ^:const SPORE-THRESHOLD 0.72)
 (def ^:const PROMOTION-MIN-RECURRENCE
   (js/Math.max 2 (js/Number (or (aget js/process.env "PI_MYCOLOGY_PROMOTION_MIN_RECURRENCE") 2))))
@@ -343,8 +346,8 @@
                      contract-draft
                      "~~~\n\n"
                      "## Suggested live-skill path\n\n"
-                     "- " (path/join HOME ".pi" "agent" "skills" (aget spore "slug") "SKILL.md") "\n"
-                     "- " (path/join HOME ".pi" "agent" "skills" (aget spore "slug") "CONTRACT.edn") "\n")]
+                     "- " (path/join HOME ".ημ" "agent" "skills" (aget spore "slug") "SKILL.md") "\n"
+                     "- " (path/join HOME ".ημ" "agent" "skills" (aget spore "slug") "CONTRACT.edn") "\n")]
     (.writeFileSync fs file-path content "utf8")
     file-path))
 
@@ -381,6 +384,26 @@
                          false
                          (do (vreset! kept-one true) true))))))
         (.reverse))))
+
+(defn inject-mycology-prompt
+  ([system-prompt]
+   (inject-mycology-prompt system-prompt nil))
+  ([system-prompt memory-message]
+   (prompt-section/upsert-section
+     system-prompt
+     PROMPT-SECTION-START
+     PROMPT-SECTION-END
+     (str "[SESSION MYCOLOGY ACTIVE]\n"
+          "At the end of each substantive turn, silently run a tiny retrospective.\n"
+          "- p-efficiency = confidence the path was near-minimal.\n"
+          "- p-friction = confidence the work felt harder than it should have.\n"
+          "- p-skill-candidate = confidence a reusable skill or protocol would compress future effort.\n"
+          "If you have enough evidence, call the session_mycology tool once near the end of the turn with action=\"reflect\".\n"
+          "If p-skill-candidate >= " (.toFixed SPORE-THRESHOLD 2) " and the pattern seems reusable beyond the immediate task, include candidateName and candidateDescription so a draft skill spore can be incubated.\n"
+          "Keep this loop quiet unless the user explicitly asks about it.\n"
+          "Skip the tool for tiny conversational turns or when evidence is too thin."
+          (when (and (string? memory-message) (not (str/blank? memory-message)))
+            (str "\n\n" memory-message))))))
 
 (defn make-text-result [text]
   #js {:content #js [#js {:type "text" :text text}]})
@@ -611,22 +634,11 @@
                (let [state (get-state)]
                  (when (aget state "enabled")
                    (let [memory-message (build-memory-message (aget ctx "cwd"))
-                         system-prompt (str (aget event "systemPrompt")
-                                            "\n\n[SESSION MYCOLOGY ACTIVE]\n"
-                                            "At the end of each substantive turn, silently run a tiny retrospective.\n"
-                                            "- p-efficiency = confidence the path was near-minimal.\n"
-                                            "- p-friction = confidence the work felt harder than it should have.\n"
-                                            "- p-skill-candidate = confidence a reusable skill or protocol would compress future effort.\n"
-                                            "If you have enough evidence, call the session_mycology tool once near the end of the turn with action=\"reflect\".\n"
-                                            "If p-skill-candidate >= " (.toFixed SPORE-THRESHOLD 2) " and the pattern seems reusable beyond the immediate task, include candidateName and candidateDescription so a draft skill spore can be incubated.\n"
-                                            "Keep this loop quiet unless the user explicitly asks about it.\n"
-                                            "Skip the tool for tiny conversational turns or when evidence is too thin.")]
-                     (if memory-message
-                       #js {:systemPrompt system-prompt
-                            :message #js {:customType "session-mycology-context"
-                                          :content memory-message
-                                          :display false}}
-                       #js {:systemPrompt system-prompt}))))))
+                         system-prompt (inject-mycology-prompt (aget event "systemPrompt")
+                                                               memory-message)]
+                     ;; Keep recall in the idempotent system-prompt section instead of
+                     ;; appending hidden messages to the durable branch on every turn.
+                     #js {:systemPrompt system-prompt})))))
 
   (em/on "session_shutdown"
     :handler (fn [_event ctx]

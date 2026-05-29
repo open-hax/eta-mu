@@ -20,7 +20,7 @@
             ["node:path" :as path]))
 
 (def HOME (.homedir os))
-(def PI-AGENT-DIR (path/join HOME ".pi" "agent"))
+(def PI-AGENT-DIR (path/join HOME ".ημ" "agent"))
 (def ETA-MU-STATE-ROOT (path/join HOME ".ημ" "state"))
 (def LEGACY-STATE-ROOT (path/join PI-AGENT-DIR "state"))
 (def SETTINGS-FILE (path/join PI-AGENT-DIR "settings.json"))
@@ -127,6 +127,9 @@
   (->> (str/split (or text "") #"\r?\n")
        (remove #(str/starts-with? (str/trim %) ";;"))
        (str/join "\n")))
+
+;; CLJS analyzer warns on forward refs unless declared before first use.
+(declare safe-read-text)
 
 (defn read-contract-forms [file]
   (reader/read-string (str "[" (strip-comment-lines (safe-read-text file)) "]")))

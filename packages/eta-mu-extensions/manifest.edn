@@ -1,6 +1,6 @@
 ;; eta-mu extension manifest
 ;; Declares all extensions in this eta-mu runtime.
-;; The build script reads this to drive local deployment only.
+;; The build script reads this to drive local target materialization.
 ;; Compilation is driven by shadow-cljs.edn — not this file.
 ;;
 ;; Source types:
@@ -11,19 +11,21 @@
 ;; To add an extension:
 ;;   1. Add src/eta_mu/extensions/<name>.cljs
 ;;   2. Add a :node-library build entry to shadow-cljs.edn
-;;   3. Add an entry here so build.mjs knows where to deploy the output
+;;   3. Add an entry here so build.mjs knows which platform targets to materialize
 
 {:version 1
 
  :build-dir "target"
  :state-dir "state"
 
- :deploy
- {:pi       "~/.pi/agent/extensions/cljs-<name>/"
-  :opencode "~/.config/opencode/plugins/<name>/"}
+ :targets
+ {:pi       "dist/pi/cljs-<name>/index.ts"
+  :opencode "dist/opencode/<name>.mjs"
+  :runtime  "dist/runtime/<name>.cjs"}
 
  :extensions
- [{:name "bootstrap"         :source :local :path "src/eta_mu/extensions/bootstrap.cljs"                  :tracked true :description "Session initialization and state recovery"}
+ [{:name "apply-patch"       :source :local :path "src/eta_mu/extensions/apply_patch.cljs"                :tracked true :description "Codex-style multi-file patch tool"}
+  {:name "bootstrap"         :source :local :path "src/eta_mu/extensions/bootstrap.cljs"                  :tracked true :description "Session initialization and state recovery"}
   {:name "chronos"           :source :local :path "src/eta_mu/extensions/chronos.cljs"                    :tracked true :description "Time tracking for contracting work"}
   {:name "contract-runtime"  :source :local :path "src/eta_mu/extensions/contract_runtime.cljs"           :tracked true :description "Operational contract runtime v1"}
   {:name "contract-runtime-v2" :source :local :path "src/eta_mu/extensions/contract_runtime_v2.cljs"     :tracked true :description "Contract runtime v2: cwd-walk, policy gate, fulfillment notify/audit"}

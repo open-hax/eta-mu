@@ -1,18 +1,19 @@
 (ns eta-mu.extensions.receipt-river
   "Append-only per-repo receipts.edn ledger for multi-step work.
 
-  Migrated from: ~/.pi/agent/extensions/receipt-river.ts"
+  Migrated from: ~/.ημ/agent/extensions/receipt-river.ts"
   (:require-macros [eta-mu.core :as em])
   (:require ["os" :as os]
             ["fs" :as fs]
             ["path" :as path]
             [clojure.string :as str]
+            [eta-mu.extensions.prompt-section :as prompt-section]
             [eta-mu.extensions.receipt-river.edn :as rr-edn]
             [eta-mu.extensions.receipt-river.repo :as rr-repo]))
 
 (def ^:const HOME (.homedir os))
 (def ^:const ETA-MU-STATE-ROOT (path/join HOME ".ημ" "state"))
-(def ^:const LEGACY-STATE-ROOT (str HOME "/.pi/agent/state"))
+(def ^:const LEGACY-STATE-ROOT (str HOME "/.ημ/agent/state"))
 (defn resolve-state-dir [name]
   (let [eta-mu-dir (path/join ETA-MU-STATE-ROOT name)
         legacy-dir (path/join LEGACY-STATE-ROOT name)]
@@ -25,9 +26,11 @@
 (def ^:const EVENTS-FILE (path/join STATE-DIR "events.jsonl"))
 (def ^:const STATUS-KEY "receipt-river")
 (def ^:const GLOBAL-KEY "__pi_receipt_river_state__")
+(def ^:const PROMPT-SECTION-START "<!-- eta-mu:receipt-river:start -->")
+(def ^:const PROMPT-SECTION-END "<!-- eta-mu:receipt-river:end -->")
 (def ^:const PI-VERSION "0.63.1")
 (def ^:const RECEIPT-FILE-NAME "receipts.edn")
-(def ^:const ACTIVATION-THRESHOLD 3)
+(def ^:const ACTIVATION-THRESHOLD 1)
 
 (def ^:const OPTIONAL-KEYS
   #js ["note" "tests" "decisions" "drift"])
@@ -256,6 +259,28 @@
                          (do (vreset! kept-one true) true))))))
         (.reverse))))
 
+(defn inject-ledger-prompt
+  ([system-prompt repos pending-reminder?]
+   (inject-ledger-prompt system-prompt repos pending-reminder? nil))
+  ([system-prompt repos pending-reminder? memory-messages]
+  (let [reminder (when pending-reminder?
+                   "Previous turn ended with missing repo receipts. Compensate early in this turn if the work continues.")
+        repo-blocks (->> repos
+                         (map (fn [repo-root]
+                                (str "[RECEIPT LEDGER ACTIVE]\nRepo: " repo-root
+                                     "\n- Maintain append-only receipts.edn in this repo root."
+                                     "\n- If you touch this repo substantively during the turn, ensure a receipt_river call records it in this repo."
+                                     "\n- The implicit fulfillment contract fails if a touched repo ends the turn without a receipt."
+                                     "\n- Never edit past events. Never log secrets.")))
+                         (str/join "\n\n"))
+        body (->> [repo-blocks memory-messages reminder]
+                  (filter #(and (string? %) (not (str/blank? %))))
+                  (str/join "\n\n"))]
+    (prompt-section/upsert-section system-prompt
+                                   PROMPT-SECTION-START
+                                   PROMPT-SECTION-END
+                                   body))))
+
 (defn maybe-activate-ledger! [state repo-root]
   (when repo-root
     (let [counts (touched-repo-counts state)
@@ -267,7 +292,21 @@
 
 (defn mark-tool-usage [state tool-name args ctx]
   (.push (aget state "turnToolNames") tool-name)
-  (let [repo-root (repo-root-from-path (aget ctx "cwd") (param-path args))]
+  (let [cwd (aget ctx "cwd")
+        ;; Primary attribution: path-like param on the tool call.
+        repo-root-from-args (repo-root-from-path cwd (param-path args))
+        ;; Fallback attribution: if the tool call is clearly substantive but doesn't
+        ;; carry a structured path param (common for apply_patch + many bash calls),
+        ;; attribute it to the git root of the current working directory.
+        cwd-repo-root (find-git-root cwd)
+        ;; Treat any bash as meaningful work for activation purposes.
+        ;; (Rationale: many real workflows live in bash, and parsing commands
+        ;; reliably across shells/aliases is brittle.)
+        bash-substantive? (= tool-name "bash")
+        repo-root (or repo-root-from-args
+                      (when (or bash-substantive?
+                                (not (neg? (.indexOf SUBSTANTIVE-TOOLS tool-name))))
+                        cwd-repo-root))]
     (when repo-root
       (let [counts (touched-repo-counts state)
             next-counts (update counts repo-root (fnil inc 0))]
@@ -283,9 +322,7 @@
       (not (neg? (.indexOf SUBSTANTIVE-TOOLS tool-name)))
       (aset state "turnHadSubstantiveWork" true)
 
-      (and (= tool-name "bash")
-           (let [cmd (str (or (aget args "command") ""))]
-             (re-find #"(?:git\s+(?:commit|push|merge|rebase|cherry-pick)|\b(?:test|pytest|jest|vitest|cargo test|cargo build|go test|npm test|pnpm test|pnpm build|yarn test|yarn build|make\b|just\b|docker build|docker compose up)\b)" cmd)))
+      bash-substantive?
       (aset state "turnHadSubstantiveWork" true)
 
       :else nil)))
@@ -530,7 +567,9 @@
   (em/on "turn_start"
     :handler (fn [event ctx]
                (let [state (get-state)
-                     turn-index (aget event "turnIndex")]
+                     turn-index (aget event "turnIndex")
+                     cwd (aget ctx "cwd")
+                     cwd-repo-root (find-git-root cwd)]
                  (aset state "currentTurn"
                        (if (number? turn-index)
                          turn-index
@@ -540,6 +579,11 @@
                  (aset state "turnHadReceipt" false)
                  (aset state "turnTouchedRepos" #js {})
                  (aset state "turnReceiptRepos" #js [])
+                 ;; Always treat the cwd git root as an active ledger repo when enabled.
+                 ;; This makes the reminder/injection available even for "observation-only"
+                 ;; turns that don't include path-bearing tool calls.
+                 (when (and (aget state "enabled") cwd-repo-root)
+                   (add-active-ledger-repo! state cwd-repo-root))
                  (set-status ctx state))))
 
   (em/on "message_end"
@@ -594,28 +638,19 @@
                (let [state (get-state)]
                  (when (aget state "enabled")
                    (let [repos (active-ledger-repos state)
-                         reminder (when (aget state "pendingReminder")
-                                    "\nPrevious turn ended with missing repo receipts. Compensate early in this turn if the work continues.")
-                         repo-blocks (->> repos
-                                          (map (fn [repo-root]
-                                                 (str "\n[RECEIPT LEDGER ACTIVE]\nRepo: " repo-root
-                                                      "\n- Maintain append-only receipts.edn in this repo root."
-                                                      "\n- If you touch this repo substantively during the turn, ensure a receipt_river call records it in this repo."
-                                                      "\n- The implicit fulfillment contract fails if a touched repo ends the turn without a receipt."
-                                                      "\n- Never edit past events. Never log secrets.")))
-                                          (str/join "\n"))
                          memory-messages (->> repos
                                               (map build-memory-message)
                                               (filter some?)
                                               (str/join "\n\n"))
-                         system-prompt (str (aget event "systemPrompt")
-                                            repo-blocks
-                                            (or reminder ""))]
-                     (cond-> #js {:systemPrompt system-prompt}
-                       (not (str/blank? memory-messages))
-                       (assoc :message #js {:customType "receipt-river-context"
-                                            :content memory-messages
-                                            :display false})))))))
+                         system-prompt (inject-ledger-prompt (aget event "systemPrompt")
+                                                             repos
+                                                             (aget state "pendingReminder")
+                                                             memory-messages)]
+                     ;; Keep recall in the idempotent system-prompt section instead of
+                     ;; adding hidden context messages every turn. Long sessions retain
+                     ;; message history, so injected messages can accumulate into
+                     ;; multi-GB branches even when later context hooks prune prompts.
+                     #js {:systemPrompt system-prompt})))))
 
   (em/on "session_shutdown"
     :handler (fn [_event ctx]

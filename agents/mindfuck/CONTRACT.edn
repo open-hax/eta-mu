@@ -123,7 +123,7 @@
                      (when-not (has-section? "Frames")    "Frames"))
                    (when-not (mode-active? :η)
                      (when-not (has-section? "Countermoves") "Countermoves"))
-                   (when-not (has-section? "Next")        "Next")]))))}}
+                   (when-not (has-section? "Next")        "Next")])))))}}
 
   ;; --- judge: review gate (inject feedback on next turn if enabled) ---
   {:contract/id      "fulfillment.mindfuck.review-gate"
