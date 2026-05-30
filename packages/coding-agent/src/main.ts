@@ -8,6 +8,7 @@
 import { resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { type AttachmentContent, type ImageContent, modelsAreEqual, supportsXhigh } from "@open-hax/eta-mu-ai";
+import { createSurfaceCommandResult } from "@open-hax/eta-mu-runtime/cljs";
 import { ProcessTerminal, setKeybindings, TUI } from "@open-hax/eta-mu-tui";
 import chalk from "chalk";
 import { type Args, type Mode, parseArgs, printHelp } from "./cli/args.js";
@@ -474,8 +475,9 @@ export async function main(args: string[], options?: MainOptions) {
 	}
 
 	if (parsed.version) {
-		console.log(VERSION);
-		process.exit(0);
+		const versionResult = createSurfaceCommandResult({ command: "version", value: VERSION });
+		console.log(versionResult.stdout);
+		process.exit(versionResult.exitCode);
 	}
 
 	if (parsed.export) {

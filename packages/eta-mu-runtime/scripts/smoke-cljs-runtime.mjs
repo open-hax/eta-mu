@@ -20,6 +20,7 @@ const expected = [
   "composeToolDescriptors",
   "selectCompatibleModels",
   "createSessionContext",
+  "createSurfaceCommandResult",
 ];
 
 for (const key of expected) {
@@ -64,6 +65,11 @@ const tools = mod.composeToolDescriptors([
 ]);
 if (tools.length !== 1 || tools[0].name !== "read") {
   throw new Error(`composeToolDescriptors smoke failed: ${JSON.stringify(tools)}`);
+}
+
+const versionResult = mod.createSurfaceCommandResult({ command: "version", value: "0.70.15" });
+if (versionResult.stdout !== "0.70.15" || versionResult.exitCode !== 0) {
+  throw new Error(`createSurfaceCommandResult smoke failed: ${JSON.stringify(versionResult)}`);
 }
 
 console.log(JSON.stringify({ ok: true, exports: expected, batchKind: batch.kind, llmMessages: llmMessages.length }));
