@@ -17,8 +17,9 @@ The goal is not to ban interop. The goal is to make every interop boundary named
 Raw host objects and JS interop may be born only in:
 
 - `eta_mu.runtime.extern.*`
-- tiny JS/CLJS facades whose only job is API compatibility
 - test doubles under `test/cljs/**` where explicitly allowed
+
+Tiny JS/CLJS facades must call named `extern.*` adapters for API compatibility conversion instead of owning raw interop directly.
 
 Disallowed in ordinary runtime namespaces:
 
@@ -106,8 +107,7 @@ Inputs:
 Allowed file patterns:
 
 - `src/cljs/**/extern/**/*.cljs`
-- `src/cljs/**/facade.cljs`
-- explicit allowlist comments for rare one-line facade conversions
+- explicit allowlist comments for rare one-line facade conversions, only after review
 
 Disallowed tokens:
 
@@ -258,7 +258,6 @@ Do not migrate all providers in one slice.
 For the first package:
 
 ```bash
-cd orgs/open-hax/eta-mu
 pnpm --dir packages/eta-mu-runtime cljs:boundary
 pnpm --dir packages/eta-mu-runtime cljs:verify
 ```
@@ -266,7 +265,6 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 For later extension/tool slices:
 
 ```bash
-cd orgs/open-hax/eta-mu
 pnpm -C packages/eta-mu-extensions test
 pnpm -C packages/eta-mu-extensions build
 ```
@@ -274,19 +272,22 @@ pnpm -C packages/eta-mu-extensions build
 For coding-agent runtime slices:
 
 ```bash
-cd orgs/open-hax/eta-mu
 pnpm --filter @open-hax/eta-mu-cli test
 ```
 
 ## Acceptance checklist
 
-- [ ] Boundary scanner exists and is wired into CLJS verification.
-- [ ] Raw interop in new runtime CLJS appears only in `extern.*` or facade namespaces.
-- [ ] Each added adapter has at least one conversion/regression test.
-- [ ] Adapter public APIs use CLJS maps/vectors/scalars or opaque handles.
-- [ ] Domain/law/shape namespaces do not import provider SDKs, Node modules, browser globals, or OpenCode/pi host objects.
-- [ ] No new `utils` namespace is introduced.
+- [x] Boundary scanner exists and is wired into CLJS verification.
+- [x] Raw interop in new runtime CLJS appears only in `extern.*` namespaces.
+- [x] Each added adapter has at least one conversion/regression test.
+- [x] Adapter public APIs use CLJS maps/vectors/scalars or opaque handles.
+- [x] Domain/law/shape namespaces do not import provider SDKs, Node modules, browser globals, or OpenCode/pi host objects.
+- [x] No new `utils` namespace is introduced.
+
+## Implementation note
+
+The boundary-adapter PR moved facade JS conversion and timestamp defaults through `eta-mu.runtime.extern.js` and `eta-mu.runtime.extern.time`, added JSON/HTTP/process adapters, and added `eta-mu.runtime.infra.boundary` inventory data. The scanner now treats `extern.*` as the only raw-interop allow zone; facade code must call named adapters.
 
 ## Recommended next planning handoff
 
-Use this plan during the shadow-spine implementation to add the scanner early. The scanner should start strict and local to `packages/eta-mu-runtime`; broaden it only as new CLJS packages join the rewrite.
+Use this plan during the next surface-parity implementation to broaden adapter coverage only where a migrated runtime path actually touches the world. Keep the scanner strict and local to `packages/eta-mu-runtime` until additional CLJS packages join the rewrite.

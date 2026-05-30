@@ -22,7 +22,7 @@ const disallowedTokens = [
 
 function isAllowedInteropFile(filePath) {
   const normalized = filePath.split(path.sep).join("/");
-  return normalized.includes("/extern/") || normalized.endsWith("/facade.cljs");
+  return normalized.includes("/extern/");
 }
 
 function hasForbiddenUtilsSegment(filePath) {
@@ -47,15 +47,18 @@ async function walk(dir) {
 const violations = [];
 const files = await walk(sourceRoot);
 
+let externCount = 0;
+
 for (const file of files) {
   const relative = path.relative(root, file);
 
-  if (isAllowedInteropFile(file)) {
-    continue;
-  }
-
   if (hasForbiddenUtilsSegment(file)) {
     violations.push(`${relative}: forbidden utils namespace/path segment`);
+  }
+
+  if (isAllowedInteropFile(file)) {
+    externCount += 1;
+    continue;
   }
 
   const text = await readFile(file, "utf8");
@@ -65,7 +68,7 @@ for (const file of files) {
       // Intentional first-pass scanner: this flags mentions in comments/docstrings too.
       // Prefer occasional false positives over silently allowing raw interop to leak.
       if (line.includes(token)) {
-        violations.push(`${relative}:${index + 1}: raw interop token outside extern/facade: ${token}`);
+        violations.push(`${relative}:${index + 1}: raw interop token outside extern: ${token}`);
       }
     }
   });
@@ -76,4 +79,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log(JSON.stringify({ ok: true, checked: files.length }));
+console.log(JSON.stringify({ ok: true, checked: files.length, extern: externCount }));
