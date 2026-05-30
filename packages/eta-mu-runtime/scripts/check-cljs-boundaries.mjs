@@ -61,6 +61,8 @@ for (const file of files) {
   const lines = text.split(/\r?\n/);
   lines.forEach((line, index) => {
     for (const token of disallowedTokens) {
+      // Intentional first-pass scanner: this flags mentions in comments/docstrings too.
+      // Prefer occasional false positives over silently allowing raw interop to leak.
       if (line.includes(token)) {
         violations.push(`${relative}:${index + 1}: raw interop token outside extern/facade: ${token}`);
       }
