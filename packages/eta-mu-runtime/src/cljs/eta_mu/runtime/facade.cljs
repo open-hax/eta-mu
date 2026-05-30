@@ -7,6 +7,8 @@
             [eta-mu.runtime.domain.session :as session]
             [eta-mu.runtime.domain.state :as state]
             [eta-mu.runtime.domain.tool :as tool]
+            [eta-mu.runtime.extern.js :as host]
+            [eta-mu.runtime.extern.time :as extern-time]
             [eta-mu.runtime.shape.compat :as compat]
             [eta-mu.runtime.shape.message :as message-shape]
             [eta-mu.runtime.shape.model :as model-shape]
@@ -15,39 +17,23 @@
 
 (defn- now-iso
   []
-  (.toISOString (js/Date.)))
+  (extern-time/now-iso))
 
 (defn- js-value
   [value]
-  (js->clj value :keywordize-keys true))
+  (host/value->clj value))
 
 (defn- js-map
   [value]
-  (js->clj (or value #js {}) :keywordize-keys true))
-
-(defn- finite-number!
-  [value label]
-  (if (and (number? value) (js/Number.isFinite value))
-    value
-    (throw (ex-info (str "Invalid eta-mu runtime " label)
-                    {:label label
-                     :value value}))))
+  (host/object->clj value))
 
 (defn- timestamp-ms
   [value]
-  (cond
-    (number? value)
-    (finite-number! value "timestamp")
-
-    (string? value)
-    (finite-number! (.getTime (js/Date. value)) "timestamp")
-
-    :else
-    (finite-number! (.getTime (js/Date.)) "timestamp")))
+  (extern-time/timestamp-ms value))
 
 (defn- ->js
   [value]
-  (clj->js value))
+  (host/clj->value value))
 
 (defn create-eta-belief
   "JS facade for createEtaBelief."
@@ -112,7 +98,7 @@
   ([context actions]
    (let [context (-> context js-map compat/planning-context-from-external)
          actions (when actions
-                   (mapv compat/candidate-from-external (js->clj actions :keywordize-keys true)))]
+                   (mapv compat/candidate-from-external (host/value->clj actions)))]
      (-> context
          (breath/recommend actions)
          compat/breath-recommendation->external
