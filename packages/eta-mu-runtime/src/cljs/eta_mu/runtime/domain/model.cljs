@@ -9,11 +9,11 @@
 
 (defn- estimated-output-cost
   [model]
-  (get-in model [:cost :output] 0))
+  (get-in model [:cost :output] ##Inf))
 
 (defn- estimated-input-cost
   [model]
-  (get-in model [:cost :input] 0))
+  (get-in model [:cost :input] ##Inf))
 
 (defn select-compatible-models
   [models requirements]

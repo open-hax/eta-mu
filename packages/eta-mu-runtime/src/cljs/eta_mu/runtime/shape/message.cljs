@@ -61,6 +61,11 @@
     (string? value) (keyword value)
     :else value))
 
+(defn- first-present
+  [m keys]
+  (when-let [key (first (filter #(contains? m %) keys))]
+    (get m key)))
+
 (defn content-from-external
   [content]
   (let [content-type (get content-type->internal (:type content))]
@@ -207,20 +212,22 @@
       (cond-> {:role :bash-execution
                :command (:command message)
                :output (or (:output message) "")
-               :exit-code (or (:exitCode message) (:exit-code message))
-               :cancelled (boolean (:cancelled message))
-               :truncated (boolean (:truncated message))
+               :exit-code (first-present message [:exitCode :exit-code])
+               :cancelled (if (contains? message :cancelled) (:cancelled message) false)
+               :truncated (if (contains? message :truncated) (:truncated message) false)
                :timestamp (:timestamp message)}
-        (or (:fullOutputPath message) (:full-output-path message))
-        (assoc :full-output-path (or (:fullOutputPath message) (:full-output-path message)))
-        (or (:excludeFromContext message) (:exclude-from-context message))
-        (assoc :exclude-from-context (boolean (or (:excludeFromContext message) (:exclude-from-context message)))))
+        (some? (first-present message [:fullOutputPath :full-output-path]))
+        (assoc :full-output-path (first-present message [:fullOutputPath :full-output-path]))
+        (contains? message :excludeFromContext)
+        (assoc :exclude-from-context (:excludeFromContext message))
+        (contains? message :exclude-from-context)
+        (assoc :exclude-from-context (:exclude-from-context message)))
 
       :custom
       (cond-> {:role :custom
                :custom-type (or (:customType message) (:custom-type message))
                :content (content-list-from-external (:content message))
-               :display (boolean (:display message))
+               :display (:display message)
                :timestamp (:timestamp message)}
         (contains? message :details) (assoc :details (:details message)))
 
@@ -276,7 +283,7 @@
              :truncated (:truncated message)
              :timestamp (:timestamp message)}
       (:full-output-path message) (assoc :fullOutputPath (:full-output-path message))
-      (:exclude-from-context message) (assoc :excludeFromContext (:exclude-from-context message)))
+      (contains? message :exclude-from-context) (assoc :excludeFromContext (:exclude-from-context message)))
 
     :custom
     (cond-> {:role :custom

@@ -68,4 +68,10 @@
       (is (= "s1" (:session-id ctx)))
       (is (= 2 (count (:messages updated))))
       (is (thrown? js/Error
-                   (session/append-message ctx {:role :user :content [] :timestamp -1}))))))
+                   (session/append-message ctx {:role :user
+                                                :content []
+                                                :timestamp timestamp})))
+      (is (thrown? js/Error
+                   (session/append-message ctx {:role :user
+                                                :content [(message/create-text-content "valid")]
+                                                :timestamp -1}))))))

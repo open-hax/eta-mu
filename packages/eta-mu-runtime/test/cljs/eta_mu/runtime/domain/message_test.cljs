@@ -53,6 +53,34 @@
       (is (= [:text :image :audio] (mapv :type (:content llm-message))))
       (is (= "audio/wav" (-> llm-message :content last :mime-type))))))
 
+(deftest llm-passthrough-message-test
+  (testing "already-compatible user, assistant, and tool-result messages pass through unchanged"
+    (let [usage {:input 1
+                 :output 2
+                 :cache-read 0
+                 :cache-write 0
+                 :total-tokens 3
+                 :cost {:input 0 :output 0 :cache-read 0 :cache-write 0 :total 0}}
+          user {:role :user
+                :content [(message/create-text-content "hello")]
+                :timestamp timestamp}
+          assistant {:role :assistant
+                     :content [(message/create-text-content "done")]
+                     :api "openai-responses"
+                     :provider "openai"
+                     :model "gpt-test"
+                     :usage usage
+                     :stop-reason :stop
+                     :timestamp timestamp}
+          tool-result {:role :tool-result
+                       :tool-call-id "tool-1"
+                       :tool-name "read"
+                       :content [(message/create-text-content "ok")]
+                       :is-error false
+                       :timestamp timestamp}]
+      (is (= [user assistant tool-result]
+             (message/convert-to-llm [user assistant tool-result]))))))
+
 (deftest malformed-content-rejected-test
   (testing "major content types reject malformed payloads"
     (is (thrown? js/Error (message/create-image-content "aW1n" nil)))

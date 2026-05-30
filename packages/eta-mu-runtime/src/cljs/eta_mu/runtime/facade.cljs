@@ -25,12 +25,25 @@
   [value]
   (js->clj (or value #js {}) :keywordize-keys true))
 
+(defn- finite-number!
+  [value label]
+  (if (and (number? value) (js/Number.isFinite value))
+    value
+    (throw (ex-info (str "Invalid eta-mu runtime " label)
+                    {:label label
+                     :value value}))))
+
 (defn- timestamp-ms
   [value]
   (cond
-    (number? value) value
-    (string? value) (.getTime (js/Date. value))
-    :else (.getTime (js/Date.))))
+    (number? value)
+    (finite-number! value "timestamp")
+
+    (string? value)
+    (finite-number! (.getTime (js/Date. value)) "timestamp")
+
+    :else
+    (finite-number! (.getTime (js/Date.)) "timestamp")))
 
 (defn- ->js
   [value]

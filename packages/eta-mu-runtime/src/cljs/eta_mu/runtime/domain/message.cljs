@@ -1,5 +1,6 @@
 (ns eta-mu.runtime.domain.message
-  (:require [eta-mu.runtime.law.content-part :as content-law]
+  (:require [clojure.string :as str]
+            [eta-mu.runtime.law.content-part :as content-law]
             [eta-mu.runtime.law.core :as law]
             [eta-mu.runtime.law.message :as message-law]))
 
@@ -44,11 +45,15 @@
       (law/validate! content-law/input-content-schema part "input content"))
     normalized))
 
+(defn- safe-fence-text
+  [text]
+  (str/replace text "```" "`​``"))
+
 (defn bash-execution->text
   [msg]
   (let [text (str "Ran `" (:command msg) "`\n"
                   (if (seq (:output msg))
-                    (str "```\n" (:output msg) "\n```")
+                    (str "```\n" (safe-fence-text (:output msg)) "\n```")
                     "(no output)"))
         text (cond
                (:cancelled msg)
@@ -80,7 +85,7 @@
                  (cond-> {:role :custom
                           :custom-type custom-type
                           :content content
-                          :display (boolean display)
+                          :display display
                           :timestamp timestamp}
                    (some? details) (assoc :details details))
                  "custom message"))

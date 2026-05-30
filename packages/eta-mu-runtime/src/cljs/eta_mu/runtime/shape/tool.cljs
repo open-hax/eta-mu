@@ -6,7 +6,7 @@
            :description (:description descriptor)
            :parameters (or (:parameters descriptor) {})
            :enabled (if (contains? descriptor :enabled)
-                      (boolean (:enabled descriptor))
+                      (:enabled descriptor)
                       true)}
     (contains? descriptor :metadata) (assoc :metadata (:metadata descriptor))))
 

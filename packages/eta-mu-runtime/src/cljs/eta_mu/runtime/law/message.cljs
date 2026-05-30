@@ -29,7 +29,7 @@
 (def user-message-schema
   [:map
    [:role [:= :user]]
-   [:content [:or string? [:vector content/input-content-schema]]]
+   [:content [:or string? [:vector {:min 1} content/input-content-schema]]]
    [:timestamp timestamp-schema]])
 
 (def assistant-message-schema
@@ -71,7 +71,7 @@
   [:map
    [:role [:= :custom]]
    [:custom-type [:string {:min 1}]]
-   [:content [:or string? [:vector content/input-content-schema]]]
+   [:content [:or string? [:vector {:min 1} content/input-content-schema]]]
    [:display boolean?]
    [:details {:optional true} any?]
    [:timestamp timestamp-schema]])

@@ -132,6 +132,12 @@
                                :createdAt 1780099200000
                                :updatedAt 1780099200000}))]
       (is (= ["read" "write"] (mapv :name tools)))
+      (is (false? (:enabled (first (filter #(= "write" (:name %)) tools)))))
       (is (= "reasoning-audio" (-> models first :id)))
       (is (= "s1" (:sessionId session)))
       (is (= "text" (-> session :messages first :content first :type))))))
+
+(deftest invalid-timestamp-rejected-test
+  (testing "facade rejects invalid timestamp inputs before domain validation"
+    (is (thrown? js/Error
+                 (facade/create-branch-summary-message "summary" "from" "not-a-date")))))

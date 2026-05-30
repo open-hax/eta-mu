@@ -28,7 +28,7 @@
            :api (:api model)
            :provider (:provider model)
            :base-url (or (:baseUrl model) (:base-url model))
-           :reasoning (boolean (:reasoning model))
+           :reasoning (:reasoning model)
            :input (mapv maybe-keyword (:input model))
            :cost (cost-from-external (:cost model))
            :context-window (or (:contextWindow model) (:context-window model))
