@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-rewrite-boundary-adapters"
 title: "Eta-mu CLJS Rewrite — Boundary Adapters"
-status: todo
+status: review
 priority: P0
 labels: ["tasks", "cljs", "rewrite", "extern", "13sp"]
 created_at: "2026-05-29T21:18:48Z"
@@ -30,22 +30,30 @@ Create the named `extern.*` and `infra.*` boundary layers needed for CLJS runtim
 
 ## Work items
 
-- [ ] Define one named `extern.*` namespace per real boundary.
-- [ ] Keep adapter public APIs CLJS-first: maps, vectors, scalars, or opaque handles.
-- [ ] Move `js->clj`, `clj->js`, `#js`, `aget`, `aset`, `Promise.all`, Node globals, and SDK-native object access into extern adapters only.
-- [ ] Add conversion tests for each adapter that is used by migrated runtime code.
-- [ ] Add a boundary inventory/check script similar to Knoxx's `boundary:check` pattern.
+- [x] Define one named `extern.*` namespace per real boundary.
+- [x] Keep adapter public APIs CLJS-first: maps, vectors, scalars, or opaque handles.
+- [x] Move `js->clj`, `clj->js`, `#js`, `aget`, `aset`, `Promise.all`, Node globals, and SDK-native object access into extern adapters only.
+- [x] Add conversion tests for each adapter that is used by migrated runtime code.
+- [x] Add a boundary inventory/check script similar to Knoxx's `boundary:check` pattern.
 
 ## Acceptance criteria
 
-- [ ] Boundary inventory runs and reports no disallowed raw JS interop outside `extern.*`/facade namespaces.
-- [ ] Each migrated effectful runtime path has an adapter-level test.
-- [ ] Infra orchestration namespaces remain data-in/data-out and do not own domain policy.
+- [x] Boundary inventory runs and reports no disallowed raw JS interop outside `extern.*` namespaces.
+- [x] Each migrated effectful runtime path has an adapter-level test.
+- [x] Infra orchestration namespaces remain data-in/data-out and do not own domain policy.
 
 ## Verification
 
 ```bash
 pnpm --dir packages/eta-mu-runtime cljs:boundary
 pnpm --dir packages/eta-mu-runtime cljs:verify
+pnpm --dir packages/eta-mu-runtime test
+pnpm --dir packages/eta-mu-runtime typecheck
+pnpm --dir packages/eta-mu-runtime build
+pnpm test
 pnpm -C packages/eta-mu-extensions test
 ```
+
+## Notes
+
+Implemented the first runtime boundary adapter slice in `packages/eta-mu-runtime` with named `extern.*` adapters for JS value conversion, time/timestamps, JSON, HTTP request encoding, and process snapshots. Added `infra.boundary` inventory data for implemented and planned boundaries, moved facade JS conversion/time defaults through extern adapters, and tightened the boundary scanner so raw interop is allowed only under `extern.*`.
