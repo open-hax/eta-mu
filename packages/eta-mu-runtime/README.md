@@ -22,7 +22,7 @@ What still belongs above or around it:
 
 ## CLJS transition surface
 
-The default package entrypoint remains the stable TypeScript runtime API. During the ClojureScript rewrite, additive CLJS-backed exports are exposed through `@open-hax/eta-mu-runtime/cljs` for narrow parity slices before any default-entrypoint cutover.
+The default package entrypoint remains the stable TypeScript runtime API. During the ClojureScript rewrite, additive CLJS-backed exports are exposed through `@open-hax/eta-mu-runtime/cljs` for narrow parity slices. The state/planner/envelope functions on the default entrypoint now delegate to the compiled CLJS runtime while preserving the existing TypeScript names, schemas, and declaration files.
 
 ```ts
 import { createSurfaceCommandResult } from "@open-hax/eta-mu-runtime/cljs";
