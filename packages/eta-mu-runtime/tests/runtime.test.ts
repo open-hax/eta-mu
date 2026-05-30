@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import {
+  createActionBatch as createActionBatchCljs,
+  createEtaBelief as createEtaBeliefCljs,
+  rankCheapMuCandidates as rankCheapMuCandidatesCljs,
+  selectPanelsFromContext as selectPanelsFromContextCljs,
+} from "@open-hax/eta-mu-runtime/cljs";
 import { createActionBatch } from "../src/envelope.js";
 import { rankCheapMuCandidates, selectPanelsFromContext } from "../src/planner.js";
 import { createEtaBelief } from "../src/state.js";
@@ -63,6 +69,35 @@ describe("rankCheapMuCandidates", () => {
     expect(candidates.map((candidate) => candidate.kind)).toContain(
       "request-human-attention",
     );
+  });
+});
+
+describe("CLJS cutover wrappers", () => {
+  it("keeps public TypeScript exports in parity with CLJS runtime exports", () => {
+    const context = {
+      repo: "open-hax/proxx",
+      trigger: "check.completed",
+      target: "staging",
+      summary: "staging gate changed",
+      belief: createEtaBelief({
+        urgency: 0.8,
+        reviewDebt: 0.7,
+        drift: 0.6,
+      }),
+      unresolvedReviewThreads: 2,
+      quietWindowDetected: true,
+    };
+
+    expect(createEtaBelief({ urgency: 2, ambiguity: -1 })).toEqual(
+      createEtaBeliefCljs({ urgency: 2, ambiguity: -1 }),
+    );
+    expect(selectPanelsFromContext(context)).toEqual(
+      selectPanelsFromContextCljs(context),
+    );
+    expect(rankCheapMuCandidates(context)).toEqual(
+      rankCheapMuCandidatesCljs(context),
+    );
+    expect(createActionBatch(context)).toEqual(createActionBatchCljs(context));
   });
 });
 
