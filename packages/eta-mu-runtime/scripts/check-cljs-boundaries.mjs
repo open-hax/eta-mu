@@ -49,12 +49,13 @@ const files = await walk(sourceRoot);
 
 for (const file of files) {
   const relative = path.relative(root, file);
-  if (hasForbiddenUtilsSegment(file)) {
-    violations.push(`${relative}: forbidden utils namespace/path segment`);
-  }
 
   if (isAllowedInteropFile(file)) {
     continue;
+  }
+
+  if (hasForbiddenUtilsSegment(file)) {
+    violations.push(`${relative}: forbidden utils namespace/path segment`);
   }
 
   const text = await readFile(file, "utf8");

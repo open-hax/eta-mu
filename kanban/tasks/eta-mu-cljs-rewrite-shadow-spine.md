@@ -43,8 +43,9 @@ Create the CLJS build spine that lets eta-mu migrate runtime slices behind stabl
 
 ## Verification
 
+Run from the repository root:
+
 ```bash
-cd orgs/open-hax/eta-mu
 pnpm --dir packages/eta-mu-runtime cljs:verify
 pnpm --dir packages/eta-mu-runtime test
 pnpm --dir packages/eta-mu-runtime typecheck
