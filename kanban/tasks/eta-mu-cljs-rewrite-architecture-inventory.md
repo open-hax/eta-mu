@@ -42,7 +42,7 @@ Create the package-by-package map that makes the CLJS rewrite safe and path-scop
 ## Verification
 
 ```bash
-find packages services -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.mjs' -o -name '*.cljs' -o -name '*.cljc' -o -name '*.clj' \) | wc -l
+find packages services \( -path '*/node_modules' -o -path '*/dist' -o -path '*/dist-cljs' -o -path '*/target' -o -path '*/.shadow-cljs' \) -prune -o -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.mjs' -o -name '*.cjs' -o -name '*.cljs' -o -name '*.cljc' -o -name '*.clj' \) -print | wc -l
 pnpm --dir packages/eta-mu-runtime cljs:verify
 pnpm --dir packages/presence-core test
 pnpm -C packages/eta-mu-extensions build

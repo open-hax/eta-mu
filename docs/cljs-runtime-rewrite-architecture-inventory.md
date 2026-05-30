@@ -3,6 +3,7 @@
 Date: 2026-05-29
 Parent epic: `kanban/epics/eta-mu-cljs-runtime-rewrite.md`
 Kanban task: `kanban/tasks/eta-mu-cljs-rewrite-architecture-inventory.md`
+Knowledge graph anchor: `AGENTS.md` → `kanban/epics/eta-mu-cljs-runtime-rewrite.md`
 Reference style: `orgs/open-hax/openplanner/packages/agents/knoxx/AGENTS.md`
 
 ## Purpose
@@ -125,7 +126,7 @@ Verification:
 pnpm --dir packages/eta-mu-runtime test
 pnpm --dir packages/eta-mu-runtime typecheck
 pnpm --dir packages/eta-mu-runtime cljs:verify
-node -e "import('./packages/eta-mu-runtime/dist-cljs/runtime/eta_mu_runtime.js').then(m => console.log(Object.keys(m)))"
+pnpm --dir packages/eta-mu-runtime cljs:smoke
 ```
 
 ### Slice 2 — `packages/output-contract-gate` law/shape port
