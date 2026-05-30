@@ -76,7 +76,9 @@
                           true
                           #js {:source "test"}
                           "2026-05-30T00:00:01.000Z")
+          bash-roundtrip (->clj bash-message)
           llm (->clj (facade/convert-to-llm-messages #js [bash-message custom-message]))]
+      (is (false? (:excludeFromContext bash-roundtrip)))
       (is (= ["user" "user"] (mapv :role llm)))
       (is (re-find #"Ran `echo hi`" (-> llm first :content first :text)))
       (is (= ["text" "image" "audio"] (mapv :type (-> llm second :content)))))))
@@ -135,7 +137,21 @@
       (is (false? (:enabled (first (filter #(= "write" (:name %)) tools)))))
       (is (= "reasoning-audio" (-> models first :id)))
       (is (= "s1" (:sessionId session)))
-      (is (= "text" (-> session :messages first :content first :type))))))
+      (is (= "text" (-> session :messages first :content first :type)))
+      (is (thrown? js/Error
+                   (facade/select-compatible-models
+                    #js [#js {:id "cheap-text"
+                              :name "Cheap Text"
+                              :api "openai-responses"
+                              :provider "openai"
+                              :baseUrl "https://api.openai.example/v1"
+                              :reasoning false
+                              :input #js ["text"]
+                              :cost #js {:input 0.1 :output 0.2 :cacheRead 0 :cacheWrite 0}
+                              :contextWindow 128000
+                              :maxTokens 4096}]
+                    #js {:inputs #js ["text"]
+                         :reasoningRequired "false"}))))))
 
 (deftest invalid-timestamp-rejected-test
   (testing "facade rejects invalid timestamp inputs before domain validation"

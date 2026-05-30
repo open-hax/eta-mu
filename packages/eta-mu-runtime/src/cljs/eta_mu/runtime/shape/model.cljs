@@ -55,9 +55,10 @@
   [requirements]
   (cond-> {}
     (:inputs requirements) (assoc :inputs (mapv maybe-keyword (:inputs requirements)))
-    (or (contains? requirements :reasoningRequired) (contains? requirements :reasoning-required))
-    (assoc :reasoning-required (boolean (or (:reasoningRequired requirements)
-                                            (:reasoning-required requirements))))
+    (contains? requirements :reasoningRequired)
+    (assoc :reasoning-required (:reasoningRequired requirements))
+    (contains? requirements :reasoning-required)
+    (assoc :reasoning-required (:reasoning-required requirements))
     (or (:minContextWindow requirements) (:min-context-window requirements))
     (assoc :min-context-window (or (:minContextWindow requirements)
                                    (:min-context-window requirements)))))
