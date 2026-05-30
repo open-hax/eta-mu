@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
         with:
           distribution: temurin
           java-version: '21'
@@ -77,7 +77,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
         with:
           distribution: temurin
           java-version: '21'
@@ -142,10 +142,11 @@ jobs:
             node -e "
               const s = JSON.parse(require('fs').readFileSync('coverage/coverage-summary.json','utf8')).total;
               const fmt = (x) => (x.pct + '%').padStart(7);
-              console.log('Statements : ' + fmt(s.statements) + '  (' + s.covered + '/' + s.total + ')');
-              console.log('Branches   : ' + fmt(s.branches)   + '  (' + s.covered + '/' + s.total + ')');
-              console.log('Functions  : ' + fmt(s.functions)  + '  (' + s.covered + '/' + s.total + ')');
-              console.log('Lines      : ' + fmt(s.lines)      + '  (' + s.covered + '/' + s.total + ')');
+              const row = (label, metric) => console.log(label + fmt(metric) + '  (' + metric.covered + '/' + metric.total + ')');
+              row('Statements : ', s.statements);
+              row('Branches   : ', s.branches);
+              row('Functions  : ', s.functions);
+              row('Lines      : ', s.lines);
             "
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
