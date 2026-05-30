@@ -47,8 +47,7 @@ Port the pure eta-mu runtime core into CLJS before migrating effectful command p
 ## Verification
 
 ```bash
-cd orgs/open-hax/eta-mu
-pnpm -C <cljs-runtime-package> exec shadow-cljs compile test
-pnpm -C <cljs-runtime-package> test
+pnpm --dir packages/eta-mu-runtime cljs:verify
+pnpm --dir packages/eta-mu-runtime test
 pnpm --filter @open-hax/eta-mu-cli test
 ```

@@ -44,7 +44,6 @@ Prove existing eta-mu user-facing surfaces can be served by CLJS-backed implemen
 ## Verification
 
 ```bash
-cd orgs/open-hax/eta-mu
 pnpm --filter @open-hax/eta-mu-cli test
 pnpm -C packages/opencode-reactant exec shadow-cljs compile app
 pnpm test
