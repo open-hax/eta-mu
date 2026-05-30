@@ -204,13 +204,17 @@ If a filtered Vitest invocation is unsupported, run the full package test and re
 
 ## Acceptance checklist
 
-- [ ] Current eta-mu-runtime public functions have CLJS equivalents behind the facade.
-- [ ] Existing TS tests still pass.
-- [ ] CLJS tests cover parity and malformed data rejection.
-- [ ] JS import smoke sees callable CLJS facade functions.
-- [ ] Internal CLJS maps use kebab-case; public JS outputs preserve camelCase.
-- [ ] No raw JS interop appears in `domain.*`, `law.*`, or `shape.*`.
-- [ ] No TypeScript deletion happens in this task.
+- [x] Current eta-mu-runtime public functions have CLJS equivalents behind the facade.
+- [x] Existing TS tests still pass.
+- [x] CLJS tests cover parity and malformed data rejection.
+- [x] JS import smoke sees callable CLJS facade functions.
+- [x] Internal CLJS maps use kebab-case; public JS outputs preserve camelCase.
+- [x] No raw JS interop appears in `domain.*`, `law.*`, or `shape.*`.
+- [x] No TypeScript deletion happens in this task.
+
+## Implementation note
+
+The runtime-core PR extends the first `packages/eta-mu-runtime` CLJS spine with pure data contracts for content parts, agent messages, model descriptors, tool descriptors, and session context maps. The new facade exports are additive and do not change package `main`, `types`, or public TypeScript exports.
 
 ## Risks
 

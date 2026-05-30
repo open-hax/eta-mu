@@ -12,7 +12,19 @@
                                 :selectPanelsFromContext eta-mu.runtime.facade/select-panels-from-context
                                 :rankCheapMuCandidates eta-mu.runtime.facade/rank-cheap-mu-candidates
                                 :recommendBreath eta-mu.runtime.facade/recommend-breath
-                                :createActionBatch eta-mu.runtime.facade/create-action-batch}}}
+                                :createActionBatch eta-mu.runtime.facade/create-action-batch
+                                :createTextContent eta-mu.runtime.facade/create-text-content
+                                :createImageContent eta-mu.runtime.facade/create-image-content
+                                :createAudioContent eta-mu.runtime.facade/create-audio-content
+                                :createBashExecutionMessage eta-mu.runtime.facade/create-bash-execution-message
+                                :createCustomMessage eta-mu.runtime.facade/create-custom-message
+                                :createBranchSummaryMessage eta-mu.runtime.facade/create-branch-summary-message
+                                :createCompactionSummaryMessage eta-mu.runtime.facade/create-compaction-summary-message
+                                :convertToLlmMessages eta-mu.runtime.facade/convert-to-llm-messages
+                                :createToolDescriptor eta-mu.runtime.facade/create-tool-descriptor
+                                :composeToolDescriptors eta-mu.runtime.facade/compose-tool-descriptors
+                                :selectCompatibleModels eta-mu.runtime.facade/select-compatible-models
+                                :createSessionContext eta-mu.runtime.facade/create-session-context}}}
    :compiler-options {:output-feature-set :es-next
                       :optimizations :simple
                       :source-map true}}

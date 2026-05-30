@@ -1,17 +1,36 @@
 (ns eta-mu.runtime.facade
   (:require [eta-mu.runtime.domain.breath :as breath]
             [eta-mu.runtime.domain.envelope :as envelope]
+            [eta-mu.runtime.domain.message :as message]
+            [eta-mu.runtime.domain.model :as model]
             [eta-mu.runtime.domain.planner :as planner]
+            [eta-mu.runtime.domain.session :as session]
             [eta-mu.runtime.domain.state :as state]
-            [eta-mu.runtime.shape.compat :as compat]))
+            [eta-mu.runtime.domain.tool :as tool]
+            [eta-mu.runtime.shape.compat :as compat]
+            [eta-mu.runtime.shape.message :as message-shape]
+            [eta-mu.runtime.shape.model :as model-shape]
+            [eta-mu.runtime.shape.session :as session-shape]
+            [eta-mu.runtime.shape.tool :as tool-shape]))
 
 (defn- now-iso
   []
   (.toISOString (js/Date.)))
 
+(defn- js-value
+  [value]
+  (js->clj value :keywordize-keys true))
+
 (defn- js-map
   [value]
   (js->clj (or value #js {}) :keywordize-keys true))
+
+(defn- timestamp-ms
+  [value]
+  (cond
+    (number? value) value
+    (string? value) (.getTime (js/Date. value))
+    :else (.getTime (js/Date.))))
 
 (defn- ->js
   [value]
@@ -95,3 +114,117 @@
       envelope/create-action-batch
       compat/action-batch->external
       ->js))
+
+(defn create-text-content
+  "JS facade for createTextContent."
+  [text]
+  (-> text
+      message/create-text-content
+      message-shape/content->external
+      ->js))
+
+(defn create-image-content
+  "JS facade for createImageContent."
+  [data mime-type]
+  (-> (message/create-image-content data mime-type)
+      message-shape/content->external
+      ->js))
+
+(defn create-audio-content
+  "JS facade for createAudioContent."
+  ([data mime-type]
+   (create-audio-content data mime-type nil))
+  ([data mime-type format]
+   (-> (message/create-audio-content data mime-type (some-> format keyword))
+       message-shape/content->external
+       ->js)))
+
+(defn create-bash-execution-message
+  "JS facade for createBashExecutionMessage."
+  [options]
+  (let [options (js-map options)
+        message (-> (assoc options :role "bashExecution")
+                    message-shape/message-from-external
+                    (assoc :timestamp (timestamp-ms (:timestamp options)))
+                    message/create-bash-execution-message)]
+    (-> message message-shape/message->external ->js)))
+
+(defn create-custom-message
+  "JS facade for createCustomMessage."
+  ([custom-type content display]
+   (create-custom-message custom-type content display nil nil))
+  ([custom-type content display details]
+   (create-custom-message custom-type content display details nil))
+  ([custom-type content display details timestamp]
+   (let [content (if (string? content)
+                   content
+                   (mapv message-shape/content-from-external (js-value content)))
+         details (some-> details js-value)]
+     (-> (message/create-custom-message custom-type content display details (timestamp-ms timestamp))
+         message-shape/message->external
+         ->js))))
+
+(defn create-branch-summary-message
+  "JS facade for createBranchSummaryMessage."
+  [summary from-id timestamp]
+  (-> (message/create-branch-summary-message summary from-id (timestamp-ms timestamp))
+      message-shape/message->external
+      ->js))
+
+(defn create-compaction-summary-message
+  "JS facade for createCompactionSummaryMessage."
+  [summary tokens-before timestamp]
+  (-> (message/create-compaction-summary-message summary tokens-before (timestamp-ms timestamp))
+      message-shape/message->external
+      ->js))
+
+(defn convert-to-llm-messages
+  "JS facade for convertToLlmMessages."
+  [messages]
+  (->> (js-value messages)
+       (mapv message-shape/message-from-external)
+       message/convert-to-llm
+       (mapv message-shape/message->external)
+       ->js))
+
+(defn create-tool-descriptor
+  "JS facade for createToolDescriptor."
+  [descriptor]
+  (-> descriptor
+      js-map
+      tool-shape/descriptor-from-external
+      tool/create-tool-descriptor
+      tool-shape/descriptor->external
+      ->js))
+
+(defn compose-tool-descriptors
+  "JS facade for composeToolDescriptors."
+  [descriptor-groups]
+  (let [groups (->> (js-value descriptor-groups)
+                    (mapv #(mapv tool-shape/descriptor-from-external %)))]
+    (->> groups
+         tool/compose-tool-descriptors
+         (mapv tool-shape/descriptor->external)
+         ->js)))
+
+(defn select-compatible-models
+  "JS facade for selectCompatibleModels."
+  [models requirements]
+  (let [models (mapv model-shape/model-from-external (js-value models))
+        requirements (model-shape/requirements-from-external (js-map requirements))]
+    (->> (model/select-compatible-models models requirements)
+         (mapv model-shape/model->external)
+         ->js)))
+
+(defn create-session-context
+  "JS facade for createSessionContext."
+  [context]
+  (let [context (js-map context)
+        now (timestamp-ms (:updatedAt context))]
+    (-> context
+        (update :createdAt #(or % now))
+        (update :updatedAt #(or % now))
+        session-shape/context-from-external
+        session/create-session-context
+        session-shape/context->external
+        ->js)))
