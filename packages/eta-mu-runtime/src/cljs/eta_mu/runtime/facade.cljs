@@ -6,6 +6,7 @@
             [eta-mu.runtime.domain.planner :as planner]
             [eta-mu.runtime.domain.session :as session]
             [eta-mu.runtime.domain.state :as state]
+            [eta-mu.runtime.domain.surface :as surface]
             [eta-mu.runtime.domain.tool :as tool]
             [eta-mu.runtime.extern.js :as host]
             [eta-mu.runtime.extern.time :as extern-time]
@@ -13,6 +14,7 @@
             [eta-mu.runtime.shape.message :as message-shape]
             [eta-mu.runtime.shape.model :as model-shape]
             [eta-mu.runtime.shape.session :as session-shape]
+            [eta-mu.runtime.shape.surface :as surface-shape]
             [eta-mu.runtime.shape.tool :as tool-shape]))
 
 (defn- now-iso
@@ -227,3 +229,13 @@
         session/create-session-context
         session-shape/context->external
         ->js)))
+
+(defn create-surface-command-result
+  "JS facade for createSurfaceCommandResult."
+  [input]
+  (-> input
+      js-map
+      surface-shape/command-input-from-external
+      surface/create-command-result
+      surface-shape/command-result->external
+      ->js))

@@ -119,6 +119,9 @@ importers:
       '@open-hax/eta-mu-extensions':
         specifier: workspace:*
         version: link:../eta-mu-extensions
+      '@open-hax/eta-mu-runtime':
+        specifier: workspace:*
+        version: link:../eta-mu-runtime
       '@open-hax/eta-mu-tui':
         specifier: workspace:*
         version: link:../tui

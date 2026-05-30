@@ -20,6 +20,17 @@ What still belongs above or around it:
 - council UI integration
 - breath receipts and memory writes
 
+## CLJS transition surface
+
+The default package entrypoint remains the stable TypeScript runtime API. During the ClojureScript rewrite, additive CLJS-backed exports are exposed through `@open-hax/eta-mu-runtime/cljs` for narrow parity slices before any default-entrypoint cutover.
+
+```ts
+import { createSurfaceCommandResult } from "@open-hax/eta-mu-runtime/cljs";
+
+const version = createSurfaceCommandResult({ command: "version", value: "0.70.15" });
+console.log(version.stdout);
+```
+
 ## Example
 
 ```ts

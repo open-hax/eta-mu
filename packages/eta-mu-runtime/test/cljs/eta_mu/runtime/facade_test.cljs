@@ -153,6 +153,19 @@
                     #js {:inputs #js ["text"]
                          :reasoningRequired "false"}))))))
 
+(deftest surface-command-facade-test
+  (testing "facade creates JS-compatible command results for CLI parity paths"
+    (let [result (->clj (facade/create-surface-command-result
+                         #js {:command "version"
+                              :value "0.70.15"}))]
+      (is (= "version" (:command result)))
+      (is (= "0.70.15" (:stdout result)))
+      (is (= 0 (:exitCode result)))
+      (is (thrown? js/Error
+                   (facade/create-surface-command-result
+                    #js {:command "unknown"
+                         :value "0.70.15"}))))))
+
 (deftest invalid-timestamp-rejected-test
   (testing "facade rejects invalid timestamp inputs before domain validation"
     (is (thrown? js/Error
