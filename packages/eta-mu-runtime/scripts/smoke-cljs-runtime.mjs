@@ -8,6 +8,18 @@ const expected = [
   "rankCheapMuCandidates",
   "recommendBreath",
   "createActionBatch",
+  "createTextContent",
+  "createImageContent",
+  "createAudioContent",
+  "createBashExecutionMessage",
+  "createCustomMessage",
+  "createBranchSummaryMessage",
+  "createCompactionSummaryMessage",
+  "convertToLlmMessages",
+  "createToolDescriptor",
+  "composeToolDescriptors",
+  "selectCompatibleModels",
+  "createSessionContext",
 ];
 
 for (const key of expected) {
@@ -33,4 +45,25 @@ if (batch.kind !== "eta-mu-action-batch.v1") {
   throw new Error(`createActionBatch smoke failed: ${JSON.stringify(batch)}`);
 }
 
-console.log(JSON.stringify({ ok: true, exports: expected, batchKind: batch.kind }));
+const bashMessage = mod.createBashExecutionMessage({
+  command: "echo hi",
+  output: "hi",
+  exitCode: 0,
+  cancelled: false,
+  truncated: false,
+  timestamp: "2026-05-30T00:00:00.000Z",
+});
+const llmMessages = mod.convertToLlmMessages([bashMessage]);
+if (llmMessages[0]?.role !== "user" || llmMessages[0]?.content?.[0]?.type !== "text") {
+  throw new Error(`convertToLlmMessages smoke failed: ${JSON.stringify(llmMessages)}`);
+}
+
+const tools = mod.composeToolDescriptors([
+  [mod.createToolDescriptor({ name: "read", description: "Read files", parameters: {} })],
+  [mod.createToolDescriptor({ name: "read", description: "Duplicate", parameters: {} })],
+]);
+if (tools.length !== 1 || tools[0].name !== "read") {
+  throw new Error(`composeToolDescriptors smoke failed: ${JSON.stringify(tools)}`);
+}
+
+console.log(JSON.stringify({ ok: true, exports: expected, batchKind: batch.kind, llmMessages: llmMessages.length }));
