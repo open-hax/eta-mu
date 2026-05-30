@@ -13,6 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - uses: pnpm/action-setup@v4
         with:
           version: '10.14.0'
@@ -24,7 +29,7 @@ jobs:
 
       - name: Get pnpm store path
         id: pnpm-cache
-        run: echo "store=$(pnpm store path)" >> $GITHUB_OUTPUT
+        run: echo "store=$(pnpm store path)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/cache@v4
         with:
@@ -72,7 +77,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
         with:
           distribution: temurin
           java-version: '21'
@@ -88,7 +93,7 @@ jobs:
 
       - name: Get pnpm store path
         id: pnpm-cache
-        run: echo "store=$(pnpm store path)" >> $GITHUB_OUTPUT
+        run: echo "store=$(pnpm store path)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/cache@v4
         with:
@@ -131,17 +136,20 @@ jobs:
         if: always()
         working-directory: packages/eta-mu-extensions
         run: |
-          echo '## CLJS Extension Coverage' >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          cat coverage/coverage-summary.json | node -e "
-            const s = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).total;
-            const fmt = (x) => (x.pct + '%').padStart(7);
-            console.log('Statements : ' + fmt(s.statements) + '  (' + s.covered + '/' + s.total + ')');
-            console.log('Branches   : ' + fmt(s.branches)   + '  (' + s.covered + '/' + s.total + ')');
-            console.log('Functions  : ' + fmt(s.functions)  + '  (' + s.covered + '/' + s.total + ')');
-            console.log('Lines      : ' + fmt(s.lines)      + '  (' + s.covered + '/' + s.total + ')');
-          " >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          {
+            echo '## CLJS Extension Coverage'
+            echo '```'
+            node -e "
+              const s = JSON.parse(require('fs').readFileSync('coverage/coverage-summary.json','utf8')).total;
+              const fmt = (x) => (x.pct + '%').padStart(7);
+              const row = (label, metric) => console.log(label + fmt(metric) + '  (' + metric.covered + '/' + metric.total + ')');
+              row('Statements : ', s.statements);
+              row('Branches   : ', s.branches);
+              row('Functions  : ', s.functions);
+              row('Lines      : ', s.lines);
+            "
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage report
         if: always()

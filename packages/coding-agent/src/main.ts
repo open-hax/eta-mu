@@ -474,8 +474,10 @@ export async function main(args: string[], options?: MainOptions) {
 	}
 
 	if (parsed.version) {
-		console.log(VERSION);
-		process.exit(0);
+		const { createSurfaceCommandResult } = await import("@open-hax/eta-mu-runtime/cljs");
+		const versionResult = createSurfaceCommandResult({ command: "version", value: VERSION });
+		console.log(versionResult.stdout);
+		process.exit(versionResult.exitCode);
 	}
 
 	if (parsed.export) {

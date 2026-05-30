@@ -24,7 +24,8 @@
                                 :createToolDescriptor eta-mu.runtime.facade/create-tool-descriptor
                                 :composeToolDescriptors eta-mu.runtime.facade/compose-tool-descriptors
                                 :selectCompatibleModels eta-mu.runtime.facade/select-compatible-models
-                                :createSessionContext eta-mu.runtime.facade/create-session-context}}}
+                                :createSessionContext eta-mu.runtime.facade/create-session-context
+                                :createSurfaceCommandResult eta-mu.runtime.facade/create-surface-command-result}}}
    :compiler-options {:output-feature-set :es-next
                       :optimizations :simple
                       :source-map true}}

@@ -10,10 +10,20 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./cljs": {
+      "types": "./dist/cljs-runtime.d.ts",
+      "import": "./dist-cljs/index.js",
+      "default": "./dist-cljs/index.js"
     }
   },
+  "files": [
+    "dist",
+    "dist-cljs",
+    "README.md"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "pnpm cljs:compile && tsc -p tsconfig.json",
     "clean": "rm -rf dist dist-cljs target",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --config vitest.config.ts",
