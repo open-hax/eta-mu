@@ -8,6 +8,7 @@ lib/
 !packages/eta-mu-extensions/src/eta_mu/build/
 !packages/eta-mu-extensions/src/eta_mu/build/**
 *.tsbuildinfo
+**/coverage/
 
 # Dependencies
 node_modules/
