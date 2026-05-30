@@ -33,7 +33,7 @@
    {:boundary :pi-host
     :namespace "eta-mu.runtime.extern.pi-host"}
    {:boundary :provider-proxx
-    :namespace "eta-mu.runtime.extern.provider.proxx"}])
+    :namespace "eta-mu.runtime.extern.provider-proxx"}])
 
 (defn boundary-inventory
   []

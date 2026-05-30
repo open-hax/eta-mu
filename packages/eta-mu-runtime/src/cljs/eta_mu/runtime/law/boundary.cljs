@@ -1,7 +1,20 @@
 (ns eta-mu.runtime.law.boundary)
 
 (def boundary-name-schema
-  [:enum :js :time :json :http :process :fs :path :process-exec :git :opencode :pi-host :provider-proxx])
+  ;; `proxx` is the project/provider name, not a typo for proxy.
+  [:enum
+   :js
+   :time
+   :json
+   :http
+   :process
+   :fs
+   :path
+   :process-exec
+   :git
+   :opencode
+   :pi-host
+   :provider-proxx])
 
 (def normalized-error-schema
   [:map

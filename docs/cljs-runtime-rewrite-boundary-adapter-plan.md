@@ -107,7 +107,8 @@ Inputs:
 Allowed file patterns:
 
 - `src/cljs/**/extern/**/*.cljs`
-- explicit allowlist comments for rare one-line facade conversions, only after review
+
+Allowlist comments are not implemented; the current scanner enforces an extern-only raw-interop boundary.
 
 Disallowed tokens:
 
