@@ -21,7 +21,7 @@ Create the CLJS build spine that lets eta-mu migrate runtime slices behind stabl
 
 ## Scope
 
-- shadow-cljs build targets for runtime/server/test slices
+- shadow-cljs build targets for runtime/test slices
 - package scripts for compile, test, lint, and typecheck-equivalent gates
 - JS facade export strategy for existing Node/CLI consumers
 - CLJS namespace layout conventions copied from Knoxx style, not Knoxx product behavior
@@ -43,8 +43,9 @@ Create the CLJS build spine that lets eta-mu migrate runtime slices behind stabl
 
 ## Verification
 
+Run from the repository root:
+
 ```bash
-cd orgs/open-hax/eta-mu
 pnpm --dir packages/eta-mu-runtime cljs:verify
 pnpm --dir packages/eta-mu-runtime test
 pnpm --dir packages/eta-mu-runtime typecheck

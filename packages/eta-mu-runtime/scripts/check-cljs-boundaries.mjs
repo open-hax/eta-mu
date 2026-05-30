@@ -49,18 +49,21 @@ const files = await walk(sourceRoot);
 
 for (const file of files) {
   const relative = path.relative(root, file);
-  if (hasForbiddenUtilsSegment(file)) {
-    violations.push(`${relative}: forbidden utils namespace/path segment`);
-  }
 
   if (isAllowedInteropFile(file)) {
     continue;
+  }
+
+  if (hasForbiddenUtilsSegment(file)) {
+    violations.push(`${relative}: forbidden utils namespace/path segment`);
   }
 
   const text = await readFile(file, "utf8");
   const lines = text.split(/\r?\n/);
   lines.forEach((line, index) => {
     for (const token of disallowedTokens) {
+      // Intentional first-pass scanner: this flags mentions in comments/docstrings too.
+      // Prefer occasional false positives over silently allowing raw interop to leak.
       if (line.includes(token)) {
         violations.push(`${relative}:${index + 1}: raw interop token outside extern/facade: ${token}`);
       }

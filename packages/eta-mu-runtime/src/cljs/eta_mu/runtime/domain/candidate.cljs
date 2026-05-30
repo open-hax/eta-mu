@@ -22,13 +22,14 @@
 (defn create-candidate
   "Create a candidate with the current eta-mu id format."
   [context index candidate]
-  (law/validate! candidate-law/mu-candidate-schema
-                 (assoc candidate
-                        :id (str (:repo context)
-                                 ":"
-                                 (:trigger context)
-                                 ":"
-                                 (name (:kind candidate))
-                                 ":"
-                                 (inc index)))
-                 "mu candidate"))
+  (let [kind-name (some-> (:kind candidate) name)]
+    (law/validate! candidate-law/mu-candidate-schema
+                   (assoc candidate
+                          :id (str (:repo context)
+                                   ":"
+                                   (:trigger context)
+                                   ":"
+                                   kind-name
+                                   ":"
+                                   (inc index)))
+                   "mu candidate")))
