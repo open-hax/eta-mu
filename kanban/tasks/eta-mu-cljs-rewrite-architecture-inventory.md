@@ -20,31 +20,32 @@ Create the package-by-package map that makes the CLJS rewrite safe and path-scop
 
 ## Scope
 
-- `orgs/open-hax/eta-mu/packages/**`
-- `orgs/open-hax/eta-mu/services/**`
+- `packages/**`
+- `services/**`
 - root `package.json`, `pnpm-workspace.yaml`, `deps.edn`, `shadow-cljs.edn`
 - existing CLJS packages such as `packages/eta-mu-extensions` and `packages/opencode-reactant`
 
 ## Work items
 
-- [ ] Count TS/JS/CLJS source by package and identify generated/dist folders to ignore.
-- [ ] Catalog public compatibility surfaces: binaries, package exports, SDK exports, tool manifests, provider adapters, session storage, TUI/web entrypoints, and service runners.
-- [ ] Classify each source cluster as `domain`, `shape`, `law`, `extern`, `infra`, `cli`, `tui`, or `web`.
-- [ ] Record known red tests or warning baselines before rewrite work starts.
-- [ ] Produce a migration map linked from the parent epic.
+- [x] Count TS/JS/CLJS source by package and identify generated/dist folders to ignore.
+- [x] Catalog public compatibility surfaces: binaries, package exports, SDK exports, tool manifests, provider adapters, session storage, TUI/web entrypoints, and service runners.
+- [x] Classify each source cluster as `domain`, `shape`, `law`, `extern`, `infra`, `cli`, `tui`, or `web`.
+- [x] Record known red tests or warning baselines before rewrite work starts.
+- [x] Produce a migration map linked from the parent epic.
 
 ## Acceptance criteria
 
-- [ ] Inventory document exists in the eta-mu repo and links every package to a target CLJS ownership category.
-- [ ] The first three parity slices are named with risk and verification gates.
-- [ ] No code rewrite begins from this task except inventory scripts/docs.
+- [x] Inventory document exists in the eta-mu repo and links every package to a target CLJS ownership category.
+- [x] The first three parity slices are named with risk and verification gates.
+- [x] No code rewrite begins from this task except inventory scripts/docs.
 
 ## Verification
 
 ```bash
-cd orgs/open-hax/eta-mu
-find packages services -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.mjs' -o -name '*.cljs' -o -name '*.cljc' -o -name '*.clj' \) | wc -l
-pnpm test
+find packages services \( -path '*/node_modules' -o -path '*/dist' -o -path '*/dist-cljs' -o -path '*/target' -o -path '*/.shadow-cljs' -o -path '*/.build' -o -path '*/out' \) -prune -o -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.mjs' -o -name '*.cjs' -o -name '*.cljs' -o -name '*.cljc' -o -name '*.clj' \) -print | wc -l
+pnpm --dir packages/eta-mu-runtime cljs:verify
+pnpm --dir packages/presence-core test
+pnpm -C packages/eta-mu-extensions build
 ```
 
 ---

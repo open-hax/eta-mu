@@ -45,9 +45,8 @@ Retire TypeScript/JavaScript runtime slices only after CLJS parity is proven, wi
 ## Verification
 
 ```bash
-cd orgs/open-hax/eta-mu
 git diff --stat
 pnpm --filter @open-hax/eta-mu-cli test
-pnpm -C <cljs-runtime-package> exec shadow-cljs compile test
+pnpm --dir packages/eta-mu-runtime cljs:verify
 pnpm test
 ```

@@ -56,6 +56,7 @@
 - Root: `AGENTS.md` (this file) links operational conventions and connects all docs.
 - Workspace docs: [Workspace AGENTS](../../AGENTS.md) ↔ [Repository Index](../../REPOSITORY_INDEX.md) ↔ [CROSS_REFERENCES.md](./CROSS_REFERENCES.md).
 - Backend/agentd: [spec/agentd-tests.md](./spec/agentd-tests.md) → vitest harness/tests; [spec/run-readiness.md](./spec/run-readiness.md) → install/run checklist; [spec/pm2-ecosystem.md](./spec/pm2-ecosystem.md) → PM2 setup.
+- CLJS runtime rewrite: [kanban/epics/eta-mu-cljs-runtime-rewrite.md](./kanban/epics/eta-mu-cljs-runtime-rewrite.md) ↔ [docs/cljs-runtime-rewrite-architecture-inventory.md](./docs/cljs-runtime-rewrite-architecture-inventory.md) ↔ [docs/cljs-runtime-rewrite-shadow-spine-plan.md](./docs/cljs-runtime-rewrite-shadow-spine-plan.md).
 - Frontend/opencode-reactant: [packages/opencode-reactant/README.md](./packages/opencode-reactant/README.md) ↔ [DEVELOPMENT.md](./packages/opencode-reactant/DEVELOPMENT.md) ↔ [CROSS_REFERENCES.md](./packages/opencode-reactant/CROSS_REFERENCES.md).
 - Notes: [docs/notes/*](./docs/notes/) hold dated investigations; treat as append-only references.
 - Memories: [.serena/memories/*.md](./.serena/memories/) capture conventions, error-handling plans, and suggested commands.

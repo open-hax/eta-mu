@@ -102,7 +102,7 @@ Inventory output: `docs/cljs-runtime-rewrite-architecture-inventory.md`
 
 ### Phase 2 — Shadow-CLJS spine and namespace gates
 
-- Define the CLJS build spine for runtime/server/test targets.
+- Define the CLJS build spine for runtime/test targets.
 - Add lint and boundary inventory gates before broad porting begins.
 - Establish `extern.*` adapter patterns and sample tests.
 - Keep JS facade exports stable for current Node consumers.
@@ -160,7 +160,6 @@ Child task: `kanban/tasks/eta-mu-cljs-rewrite-cutover-ratchet.md`
 Use the narrowest relevant gate per slice, but do not report a slice done while its gate is red.
 
 ```bash
-cd orgs/open-hax/eta-mu
 pnpm --filter @open-hax/eta-mu-cli test
 pnpm -C packages/eta-mu-extensions test
 pnpm test
@@ -169,9 +168,9 @@ pnpm test
 For new CLJS runtime targets, add and use shadow-cljs gates analogous to Knoxx:
 
 ```bash
-pnpm -C <cljs-runtime-package> exec shadow-cljs compile test
-pnpm -C <cljs-runtime-package> exec shadow-cljs compile server
-pnpm -C <cljs-runtime-package> lint
+pnpm --dir packages/eta-mu-runtime cljs:verify
+pnpm --dir packages/eta-mu-runtime cljs:boundary
+pnpm --dir packages/eta-mu-runtime typecheck
 ```
 
 ## Reference points
@@ -186,6 +185,6 @@ pnpm -C <cljs-runtime-package> lint
 
 ## Open questions
 
-- Should the first CLJS runtime home be a new package, a replacement inside `packages/coding-agent`, or a staged `packages/eta-mu-runtime-cljs` bridge?
-- Which existing TS package is the least risky first parity slice: `packages/eta-mu-runtime`, `packages/output-contract-gate`, `packages/agent`, or a command path inside `packages/coding-agent`?
+- Which existing TS package is the least risky second parity slice: `packages/output-contract-gate`, `packages/agent`, or a command path inside `packages/coding-agent`?
 - Which public package names must remain frozen for npm compatibility versus only workspace-local compatibility?
+- How broad should the first `packages/eta-mu-runtime` CLJS boundary scanner become before repo-wide boundary enforcement?

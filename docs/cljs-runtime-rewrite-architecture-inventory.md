@@ -3,6 +3,7 @@
 Date: 2026-05-29
 Parent epic: `kanban/epics/eta-mu-cljs-runtime-rewrite.md`
 Kanban task: `kanban/tasks/eta-mu-cljs-rewrite-architecture-inventory.md`
+Knowledge graph anchor: `AGENTS.md` → `kanban/epics/eta-mu-cljs-runtime-rewrite.md`
 Reference style: `orgs/open-hax/openplanner/packages/agents/knoxx/AGENTS.md`
 
 ## Purpose
@@ -27,12 +28,12 @@ Source counts below exclude obvious build/output folders such as `node_modules`,
 |---|---|---:|---:|---|
 | `packages/agent` | `@open-hax/eta-mu-agent-core` | 10 | 0 | `src`, `test` |
 | `packages/ai` | `@open-hax/eta-mu-ai` | 115 | 0 | `scripts`, `src`, `test` |
-| `packages/coding-agent` | `@open-hax/eta-mu-cli` | 260 | 0 | `scripts`, `src`, `test` |
+| `packages/coding-agent` | `@open-hax/eta-mu-cli` | 258 | 0 | `scripts`, `src`, `test` |
 | `packages/eta-mu-docs` | `@open-hax/eta-mu-docs` | 1 | 0 | `tests` |
-| `packages/eta-mu-extensions` | `@open-hax/eta-mu-extensions` | 7 | 60 | `externs`, `lib`, `scripts`, `src` |
+| `packages/eta-mu-extensions` | `@open-hax/eta-mu-extensions` | 7 | 63 | `externs`, `lib`, `scripts`, `src` |
 | `packages/eta-mu-extensions-e2e` | `@open-hax/eta-mu-extensions-e2e` | 0 | 3 | `src` |
 | `packages/eta-mu-github` | `@open-hax/eta-mu-github` | 14 | 0 | `src`, `tests` |
-| `packages/eta-mu-runtime` | `@open-hax/eta-mu-runtime` | 16 | 0 | `src`, `tests` |
+| `packages/eta-mu-runtime` | `@open-hax/eta-mu-runtime` | 18 | 15 | `scripts`, `src`, `test`, `tests` |
 | `packages/eta-mu-truth` | `@open-hax/eta-mu-truth` | 1 | 0 | `tests` |
 | `packages/kanban` | `@open-hax/kanban-legacy` | 18 | 0 | `e2e`, `src`, `tests`, `web` |
 | `packages/mom` | `@open-hax/pi-mom` | 19 | 0 | `scripts`, `src`, `test` |
@@ -49,7 +50,7 @@ Source counts below exclude obvious build/output folders such as `node_modules`,
 | `services/agentd` | `@open-hax/agentd` | 8 | 0 | `src`, `tests` |
 | `services/eta-mu-truth-workbench` | `@open-hax/eta-mu-truth-workbench` | 9 | 0 | `src` |
 
-Inventory caveat: `packages/eta-mu-runtime/src` currently contains `.js`, `.js.map`, and `.d.ts` siblings alongside `.ts` files. First implementation planning should decide whether those are intentional source artifacts, stale generated files, or compatibility shims that must be preserved during the CLJS facade phase.
+Inventory caveat: `packages/eta-mu-runtime` now contains the first CLJS shadow spine under `src/cljs` and `test/cljs`, while `packages/eta-mu-runtime/src` still contains `.js`, `.js.map`, and `.d.ts` siblings alongside `.ts` files. Runtime-core planning should decide whether those checked-in JS artifacts are intentional compatibility shims, stale generated files, or source artifacts that must be preserved during the facade phase.
 
 ## Public compatibility surfaces
 
@@ -122,11 +123,10 @@ Target categories:
 Verification:
 
 ```bash
-cd orgs/open-hax/eta-mu
 pnpm --dir packages/eta-mu-runtime test
 pnpm --dir packages/eta-mu-runtime typecheck
-pnpm -C <cljs-runtime-package> exec shadow-cljs compile test
-node -e "import('<compiled-entry>').then(m => console.log(Object.keys(m)))"
+pnpm --dir packages/eta-mu-runtime cljs:verify
+pnpm --dir packages/eta-mu-runtime cljs:smoke
 ```
 
 ### Slice 2 — `packages/output-contract-gate` law/shape port
@@ -148,10 +148,9 @@ Target categories:
 Verification:
 
 ```bash
-cd orgs/open-hax/eta-mu
 pnpm --dir packages/output-contract-gate test
 pnpm --dir packages/output-contract-gate typecheck
-pnpm -C <cljs-runtime-package> exec shadow-cljs compile test
+pnpm --dir packages/eta-mu-runtime cljs:verify
 ```
 
 ### Slice 3 — `packages/coding-agent` message/content/session core bridge
@@ -174,9 +173,8 @@ Target categories:
 Verification:
 
 ```bash
-cd orgs/open-hax/eta-mu
 pnpm --filter @open-hax/eta-mu-cli test
-pnpm -C <cljs-runtime-package> exec shadow-cljs compile test
+pnpm --dir packages/eta-mu-runtime cljs:verify
 ```
 
 ## Later migration lanes
@@ -239,12 +237,11 @@ Owner categories:
 
 Rule: UI layers consume stable runtime maps and should not define provider/session contract meaning.
 
-## Verification baseline to gather before implementation
+## Verification baseline for remaining implementation
 
-Run these before the first port PR/slice and record current failures instead of treating historical failures as rewrite failures:
+Run these before each parity slice and record current failures instead of treating historical failures as rewrite failures:
 
 ```bash
-cd orgs/open-hax/eta-mu
 pnpm --dir packages/eta-mu-runtime test
 pnpm --dir packages/eta-mu-runtime typecheck
 pnpm --dir packages/output-contract-gate test
@@ -256,11 +253,10 @@ pnpm test
 
 ## Open decisions
 
-1. First CLJS home: either `packages/eta-mu-runtime-cljs` as a bridge package or a CLJS source subtree inside `packages/eta-mu-runtime`.
-2. Public artifact strategy: whether npm packages should expose compiled CLJS directly or keep JS wrappers around compiled CLJS exports during transition.
-3. Generated artifacts: whether checked-in `.js`/`.d.ts` siblings in `packages/eta-mu-runtime/src` are intentionally source-compatible files.
-4. Boundary gate: whether to port Knoxx's `boundary:check` pattern directly or write a smaller eta-mu-specific scanner first.
+1. Public artifact strategy: whether npm packages should expose compiled CLJS directly or keep JS wrappers around compiled CLJS exports during transition.
+2. Generated artifacts: whether checked-in `.js`/`.d.ts` siblings in `packages/eta-mu-runtime/src` are intentionally source-compatible files.
+3. Boundary gate expansion: whether the first `packages/eta-mu-runtime` scanner should grow into a repo-wide Knoxx-style `boundary:check`.
 
 ## Recommended next planning move
 
-Proceed to `eta-mu-cljs-rewrite-shadow-spine` after human review of this inventory. The least risky implementation choice is to prove a CLJS ESM export for `packages/eta-mu-runtime` before touching `packages/coding-agent` or provider SDK code.
+Proceed to `eta-mu-cljs-rewrite-runtime-core` after human review of this inventory and the merged shadow-spine PRs. The least risky implementation choice remains to expand pure CLJS runtime data contracts inside `packages/eta-mu-runtime` before touching `packages/coding-agent` or provider SDK code.

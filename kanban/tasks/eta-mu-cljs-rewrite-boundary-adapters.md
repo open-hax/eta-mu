@@ -45,8 +45,7 @@ Create the named `extern.*` and `infra.*` boundary layers needed for CLJS runtim
 ## Verification
 
 ```bash
-cd orgs/open-hax/eta-mu
-pnpm -C <cljs-runtime-package> boundary:check
-pnpm -C <cljs-runtime-package> exec shadow-cljs compile test
+pnpm --dir packages/eta-mu-runtime cljs:boundary
+pnpm --dir packages/eta-mu-runtime cljs:verify
 pnpm -C packages/eta-mu-extensions test
 ```
