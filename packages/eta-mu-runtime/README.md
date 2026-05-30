@@ -1,4 +1,4 @@
-# @eta-mu/runtime
+# @open-hax/eta-mu-runtime
 
 Typed movement kernel for the eta-mu control plane.
 
@@ -26,7 +26,7 @@ What still belongs above or around it:
 import {
   createActionBatch,
   createEtaBelief,
-} from "@eta-mu/runtime";
+} from "@open-hax/eta-mu-runtime";
 
 const belief = createEtaBelief({
   urgency: 0.8,

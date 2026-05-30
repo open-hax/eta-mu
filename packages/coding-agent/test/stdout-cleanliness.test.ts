@@ -26,7 +26,7 @@ async function runCli(args: string[]): Promise<{ stdout: string; stderr: string;
 	const tempRoot = createTempDir();
 	const agentDir = join(tempRoot, "agent");
 	const projectDir = join(tempRoot, "project");
-	const projectConfigDir = join(projectDir, ".pi");
+	const projectConfigDir = join(projectDir, ".ημ");
 	mkdirSync(agentDir, { recursive: true });
 	mkdirSync(projectConfigDir, { recursive: true });
 
@@ -60,7 +60,7 @@ async function runCli(args: string[]): Promise<{ stdout: string; stderr: string;
 			env: {
 				...process.env,
 				[ENV_AGENT_DIR]: agentDir,
-				TSX_TSCONFIG_PATH: resolve(__dirname, "../../../tsconfig.json"),
+				TSX_TSCONFIG_PATH: resolve(__dirname, "../tsconfig.build.json"),
 			},
 			stdio: ["ignore", "pipe", "pipe"],
 		});

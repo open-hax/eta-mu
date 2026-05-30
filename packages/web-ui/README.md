@@ -1,4 +1,4 @@
-# @mariozechner/pi-web-ui
+# @open-hax/pi-web-ui
 
 Reusable web UI components for building AI chat interfaces powered by [@open-hax/eta-mu-ai](../ai) and [@open-hax/eta-mu-agent-core](../agent).
 
@@ -17,7 +17,7 @@ Built with [mini-lit](https://github.com/badlogic/mini-lit) web components and T
 ## Installation
 
 ```bash
-npm install @mariozechner/pi-web-ui @open-hax/eta-mu-agent-core @open-hax/eta-mu-ai
+npm install @open-hax/pi-web-ui @open-hax/eta-mu-agent-core @open-hax/eta-mu-ai
 ```
 
 ## Quick Start
@@ -37,8 +37,8 @@ import {
   setAppStorage,
   defaultConvertToLlm,
   ApiKeyPromptDialog,
-} from '@mariozechner/pi-web-ui';
-import '@mariozechner/pi-web-ui/app.css';
+} from '@open-hax/pi-web-ui';
+import '@open-hax/pi-web-ui/app.css';
 
 // Set up storage
 const settings = new SettingsStore();
@@ -287,7 +287,7 @@ function myConvertToLlm(messages: AgentMessage[]): Message[] {
 `convertToLlm` transforms app messages to LLM-compatible format:
 
 ```typescript
-import { defaultConvertToLlm, convertAttachments } from '@mariozechner/pi-web-ui';
+import { defaultConvertToLlm, convertAttachments } from '@open-hax/pi-web-ui';
 
 // defaultConvertToLlm handles:
 // - UserMessageWithAttachments → user message with image/text content blocks
@@ -302,7 +302,7 @@ import { defaultConvertToLlm, convertAttachments } from '@mariozechner/pi-web-ui
 Execute JavaScript in a sandboxed browser environment:
 
 ```typescript
-import { createJavaScriptReplTool } from '@mariozechner/pi-web-ui';
+import { createJavaScriptReplTool } from '@open-hax/pi-web-ui';
 
 const replTool = createJavaScriptReplTool();
 
@@ -320,7 +320,7 @@ agent.state.tools = [replTool];
 Extract text from documents at URLs:
 
 ```typescript
-import { createExtractDocumentTool } from '@mariozechner/pi-web-ui';
+import { createExtractDocumentTool } from '@open-hax/pi-web-ui';
 
 const extractTool = createExtractDocumentTool();
 extractTool.corsProxyUrl = 'https://corsproxy.io/?';
@@ -343,7 +343,7 @@ agent.state.tools = [artifactsPanel.tool];
 ### Custom Tool Renderers
 
 ```typescript
-import { registerToolRenderer, type ToolRenderer } from '@mariozechner/pi-web-ui';
+import { registerToolRenderer, type ToolRenderer } from '@open-hax/pi-web-ui';
 
 const myRenderer: ToolRenderer = {
   render(params, result, isStreaming) {
@@ -371,7 +371,7 @@ import {
   CustomProvidersStore,
   setAppStorage,
   getAppStorage,
-} from '@mariozechner/pi-web-ui';
+} from '@open-hax/pi-web-ui';
 
 // Create stores
 const settings = new SettingsStore();
@@ -466,7 +466,7 @@ const all = await storage.customProviders.getAll();
 Load and process files:
 
 ```typescript
-import { loadAttachment, type Attachment } from '@mariozechner/pi-web-ui';
+import { loadAttachment, type Attachment } from '@open-hax/pi-web-ui';
 
 // From File input
 const file = inputElement.files[0];
@@ -498,7 +498,7 @@ Supported formats: PDF, DOCX, XLSX, PPTX, images, text files.
 For browser environments with CORS restrictions:
 
 ```typescript
-import { createStreamFn, shouldUseProxyForProvider, isCorsError } from '@mariozechner/pi-web-ui';
+import { createStreamFn, shouldUseProxyForProvider, isCorsError } from '@open-hax/pi-web-ui';
 
 // AgentInterface auto-configures proxy from settings
 // For manual setup:
@@ -517,7 +517,7 @@ agent.streamFn = createStreamFn(async () => {
 ### SettingsDialog
 
 ```typescript
-import { SettingsDialog, ProvidersModelsTab, ProxyTab, ApiKeysTab } from '@mariozechner/pi-web-ui';
+import { SettingsDialog, ProvidersModelsTab, ProxyTab, ApiKeysTab } from '@open-hax/pi-web-ui';
 
 SettingsDialog.open([
   new ProvidersModelsTab(), // Custom providers + model list
@@ -529,7 +529,7 @@ SettingsDialog.open([
 ### SessionListDialog
 
 ```typescript
-import { SessionListDialog } from '@mariozechner/pi-web-ui';
+import { SessionListDialog } from '@open-hax/pi-web-ui';
 
 SessionListDialog.open(
   async (sessionId) => { /* load session */ },
@@ -540,7 +540,7 @@ SessionListDialog.open(
 ### ApiKeyPromptDialog
 
 ```typescript
-import { ApiKeyPromptDialog } from '@mariozechner/pi-web-ui';
+import { ApiKeyPromptDialog } from '@open-hax/pi-web-ui';
 
 const success = await ApiKeyPromptDialog.prompt('anthropic');
 ```
@@ -548,7 +548,7 @@ const success = await ApiKeyPromptDialog.prompt('anthropic');
 ### ModelSelector
 
 ```typescript
-import { ModelSelector } from '@mariozechner/pi-web-ui';
+import { ModelSelector } from '@open-hax/pi-web-ui';
 
 ModelSelector.open(currentModel, (selectedModel) => {
   agent.state.model = selectedModel;
@@ -560,7 +560,7 @@ ModelSelector.open(currentModel, (selectedModel) => {
 Import the pre-built CSS:
 
 ```typescript
-import '@mariozechner/pi-web-ui/app.css';
+import '@open-hax/pi-web-ui/app.css';
 ```
 
 Or use Tailwind with custom config:
@@ -575,7 +575,7 @@ Or use Tailwind with custom config:
 ## Internationalization
 
 ```typescript
-import { i18n, setLanguage, translations } from '@mariozechner/pi-web-ui';
+import { i18n, setLanguage, translations } from '@open-hax/pi-web-ui';
 
 // Add translations
 translations.de = {

@@ -1,6 +1,6 @@
 {
-  "name": "@mariozechner/pi-web-ui",
-  "version": "0.70.5",
+  "name": "@open-hax/pi-web-ui",
+  "version": "0.70.7",
   "description": "Reusable web UI components for AI chat interfaces powered by @open-hax/eta-mu-ai",
   "type": "module",
   "main": "dist/index.js",

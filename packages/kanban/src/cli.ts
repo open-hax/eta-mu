@@ -3,7 +3,7 @@
 import path from "node:path";
 
 import { buildBoardSnapshot, writeBoardSnapshot } from "./board.js";
-import { loadConfig, loadEnvironment, resolveConfigPathValue } from "./config.js";
+import { loadConfig, loadEnvironment, resolveConfigPathValue, resolveConfiguredProjects } from "./config.js";
 import { startKanbanServer } from "./server.js";
 import { syncTasksToTrello } from "./sync.js";
 import { loadTasks } from "./tasks.js";
@@ -24,6 +24,16 @@ USAGE
   openhax-kanban board snapshot [--tasks-dir <path>] [--out <path>] [--config <path>]
   openhax-kanban sync trello [--tasks-dir <path>] [--board-url <url>] [--board-id <id>] [--dry-run] [--archive-missing] [--config <path>]
   openhax-kanban serve [--tasks-dir <path>] [--host <host>] [--port <port>] [--config <path>]
+
+MULTI-PROJECT CONFIG
+  Add a projects array to openhax.kanban.json and run serve with --config:
+
+  {
+    "defaultProject": "knoxx",
+    "projects": [
+      { "id": "knoxx", "title": "Knoxx", "tasksDir": "../../orgs/open-hax/openplanner/packages/agents/knoxx/kanban" }
+    ]
+  }
 
 FLAGS
   --config <path>         Path to openhax.kanban.json
@@ -135,9 +145,9 @@ const main = async (): Promise<void> => {
     loadedConfig.configDir,
     loadedConfig.config.tasksDir
   );
-  const tasks = await loadTasks(tasksDir);
 
   if (parsedCli.command === "board" && parsedCli.subcommand === "snapshot") {
+    const tasks = await loadTasks(tasksDir);
     const snapshot = buildBoardSnapshot(tasks);
     const outputPath =
       readStringFlag(parsedCli.flags, "out") ??
@@ -154,6 +164,7 @@ const main = async (): Promise<void> => {
   }
 
   if (parsedCli.command === "sync" && parsedCli.subcommand === "trello") {
+    const tasks = await loadTasks(tasksDir);
     const apiKey = process.env.TRELLO_API_KEY;
     const apiToken = process.env.TRELLO_API_TOKEN;
     if (!apiKey || !apiToken) {
@@ -189,9 +200,11 @@ const main = async (): Promise<void> => {
   if (parsedCli.command === "serve") {
     const host = readStringFlag(parsedCli.flags, "host") ?? "127.0.0.1";
     const port = readNumberFlag(parsedCli.flags, "port") ?? 8787;
+    const projectState = resolveConfiguredProjects(loadedConfig, readStringFlag(parsedCli.flags, "tasks-dir"));
 
     await startKanbanServer({
-      tasksDir,
+      projects: projectState.projects,
+      defaultProjectId: projectState.defaultProjectId,
       host,
       port
     });

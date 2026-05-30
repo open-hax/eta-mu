@@ -80,7 +80,6 @@ const createResourceLoader = async (
     getAgentsFiles: () => ({ agentsFiles: [] }),
     getSystemPrompt: () => systemPrompt,
     getAppendSystemPrompt: () => [],
-    getPathMetadata: () => new Map(),
     extendResources: () => {},
     reload: async () => {},
   };
@@ -99,7 +98,7 @@ const createBaseSession = async (
   modelId?: string,
 ) => {
   const authStorage = AuthStorage.create();
-  const modelRegistry = new ModelRegistry(authStorage);
+  const modelRegistry = ModelRegistry.create(authStorage);
 
   // Load resource loader with extensions from PI_CODING_AGENT_DIR
   // This also flushes pending provider registrations to the ModelRegistry

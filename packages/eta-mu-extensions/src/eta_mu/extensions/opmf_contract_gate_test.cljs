@@ -237,37 +237,54 @@
       (is (= "rule/required-section" (get-in result [:report :failures 0 :rule-id]))))))
 
 (deftest auto-repair-delivery-mode-test
+  (testing "auto-repair is queued until core agent_idle and then injected directly"
+    (let [sent (atom [])
+          pi #js {:sendUserMessage (fn [message options]
+                                     (swap! sent conj {:message message
+                                                       :deliver-as (when options (aget options "deliverAs"))}))}
+          ctx #js {:hasUI false}
+          state (gate/get-state)
+          _ (aset state "config" #js {:enabled true
+                                      :autoRepair true
+                                      :maxSessionTurns 10})
+          _ (aset state "pendingRepair" nil)
+          _ (aset state "repairCounts" #js {})
+          _ (aset state "sessionRepairCount" 0)
+          result #js {:ok false
+                      :repairInfo #js {:attempt 0}
+                      :repairPrompt "Repair this response"
+                      :assistant #js {:id "assistant-1"}
+                      :contract {:repair-max-retries 2}}]
+      (gate/handle-validation-result pi ctx state result #js [])
+      (is (= 0 (count @sent)))
+      (is (some? (aget state "pendingRepair")))
+      (gate/handle-agent-idle pi ctx #js {})
+      (is (nil? (aget state "pendingRepair")))
+      (is (= 1 (count @sent)))
+      (is (nil? (:deliver-as (first @sent))))
+      (is (re-find #"^\[\[eta-mu-opmf-contract-gate repair 1/2\]\]"
+                   (:message (first @sent)))))))
+
+(deftest idle-disabled-gate-drops-pending-repair-test
   (async done
-    (testing "auto-repair is queued for agent_idle and injected after the event drain unwinds"
+    (testing "agent_idle must not inject stale queued repairs after the gate is disabled"
       (let [sent (atom [])
-            pi #js {:sendUserMessage (fn [message options]
-                                       (swap! sent conj {:message message
-                                                         :deliver-as (when options (aget options "deliverAs"))}))}
+            pi #js {:sendUserMessage (fn [message]
+                                       (swap! sent conj message))}
             ctx #js {:hasUI false}
-            state (gate/get-state)
-            _ (aset state "config" #js {:autoRepair true
-                                        :repairDelayMs 0
-                                        :maxSessionTurns 10})
-            _ (aset state "pendingRepair" nil)
-            _ (aset state "repairCounts" #js {})
-            _ (aset state "sessionRepairCount" 0)
-            result #js {:ok false
-                        :repairInfo #js {:attempt 0}
-                        :repairPrompt "Repair this response"
-                        :assistant #js {:id "assistant-1"}
-                        :contract {:repair-max-retries 2}}]
-        (gate/handle-validation-result pi ctx state result #js [])
-        (is (= 0 (count @sent)))
-        (is (some? (aget state "pendingRepair")))
+            state (gate/get-state)]
+        (aset state "config" #js {:enabled false
+                                  :autoRepair true
+                                  :maxSessionTurns 10})
+        (aset state "pendingRepair" #js {:message "repair should not send"
+                                         :attempt 1
+                                         :max 2
+                                         :key "disabled-gate"})
         (gate/handle-agent-idle pi ctx #js {})
-        (is (= 0 (count @sent)))
         (is (nil? (aget state "pendingRepair")))
         (js/setTimeout
          (fn []
-           (is (= 1 (count @sent)))
-           (is (nil? (:deliver-as (first @sent))))
-           (is (re-find #"^\[\[eta-mu-opmf-contract-gate repair 1/2\]\]"
-                        (:message (first @sent))))
+           (is (= [] @sent))
            (done))
          5)))))
 

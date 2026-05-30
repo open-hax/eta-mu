@@ -9,6 +9,12 @@
 - `npx shadow-cljs compile app` - Compile ClojureScript
 - `npx shadow-cljs release app` - Production frontend build
 
+## Testing Gate
+- A task is not done while any relevant automated test suite is failing.
+- For coding-agent changes, run `pnpm --filter @open-hax/eta-mu-cli test` and resolve all failures before reporting completion.
+- For eta-mu extension changes, run `pnpm -C packages/eta-mu-extensions test` and resolve all failures before reporting completion.
+- If a full suite cannot be run, state that the task is not complete and record the exact blocker instead of claiming done.
+
 ### Frontend status checks (Chrome DevTools)
 - Open http://localhost:8700, launch DevTools (Cmd/Ctrl+Opt+I), and reload with "Disable cache" to avoid stale CLJS bundles.
 - Console: watch for red errors; enable "Pause on exceptions" to catch runtime ClojureScript issues. Warnings are okay if shadow-cljs hot reload stays connected.

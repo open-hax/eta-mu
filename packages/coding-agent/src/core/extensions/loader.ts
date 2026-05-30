@@ -43,11 +43,11 @@ import type {
 
 /** Modules available to extensions via virtualModules (for compiled Bun binary) */
 const LEGACY_EXTENSION_IMPORTS: Record<string, string> = {
-	"@mariozechner/pi-agent-core": "@open-hax/eta-mu-agent-core",
-	"@mariozechner/pi-tui": "@open-hax/eta-mu-tui",
-	"@mariozechner/pi-ai": "@open-hax/eta-mu-ai",
-	"@mariozechner/pi-ai/oauth": "@open-hax/eta-mu-ai/oauth",
-	"@mariozechner/pi-coding-agent": "@open-hax/eta-mu-cli",
+	"@open-hax/pi-agent-core": "@open-hax/eta-mu-agent-core",
+	"@open-hax/pi-tui": "@open-hax/eta-mu-tui",
+	"@open-hax/pi-ai": "@open-hax/eta-mu-ai",
+	"@open-hax/pi-ai/oauth": "@open-hax/eta-mu-ai/oauth",
+	"@open-hax/pi-coding-agent": "@open-hax/eta-mu-cli",
 };
 
 const VIRTUAL_MODULES: Record<string, unknown> = {
@@ -62,11 +62,11 @@ const VIRTUAL_MODULES: Record<string, unknown> = {
 	"@open-hax/eta-mu-ai": _bundledPiAi,
 	"@open-hax/eta-mu-ai/oauth": _bundledPiAiOauth,
 	"@open-hax/eta-mu-cli": _bundledPiCodingAgent,
-	"@mariozechner/pi-agent-core": _bundledPiAgentCore,
-	"@mariozechner/pi-tui": _bundledPiTui,
-	"@mariozechner/pi-ai": _bundledPiAi,
-	"@mariozechner/pi-ai/oauth": _bundledPiAiOauth,
-	"@mariozechner/pi-coding-agent": _bundledPiCodingAgent,
+	"@open-hax/pi-agent-core": _bundledPiAgentCore,
+	"@open-hax/pi-tui": _bundledPiTui,
+	"@open-hax/pi-ai": _bundledPiAi,
+	"@open-hax/pi-ai/oauth": _bundledPiAiOauth,
+	"@open-hax/pi-coding-agent": _bundledPiCodingAgent,
 };
 
 const require = createRequire(import.meta.url);
@@ -107,11 +107,11 @@ function getAliases(): Record<string, string> {
 		"@open-hax/eta-mu-tui": etaMuTui,
 		"@open-hax/eta-mu-ai": etaMuAi,
 		"@open-hax/eta-mu-ai/oauth": etaMuAiOauth,
-		"@mariozechner/pi-coding-agent": packageIndex,
-		"@mariozechner/pi-agent-core": etaMuAgentCore,
-		"@mariozechner/pi-tui": etaMuTui,
-		"@mariozechner/pi-ai": etaMuAi,
-		"@mariozechner/pi-ai/oauth": etaMuAiOauth,
+		"@open-hax/pi-coding-agent": packageIndex,
+		"@open-hax/pi-agent-core": etaMuAgentCore,
+		"@open-hax/pi-tui": etaMuTui,
+		"@open-hax/pi-ai": etaMuAi,
+		"@open-hax/pi-ai/oauth": etaMuAiOauth,
 		typebox: typeboxEntry,
 		"typebox/compile": typeboxCompileEntry,
 		"typebox/value": typeboxValueEntry,

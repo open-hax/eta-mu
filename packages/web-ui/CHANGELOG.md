@@ -18,7 +18,7 @@
 
 ### Breaking Changes
 
-- Migrated the web UI's TypeBox-based tool definitions and runtime dependency from `@sinclair/typebox` 0.34.x to `typebox` 1.x. Install and import from `typebox` instead of `@sinclair/typebox` when embedding or extending `@mariozechner/pi-web-ui` with shared TypeBox schemas ([#3112](https://github.com/badlogic/pi-mono/issues/3112))
+- Migrated the web UI's TypeBox-based tool definitions and runtime dependency from `@sinclair/typebox` 0.34.x to `typebox` 1.x. Install and import from `typebox` instead of `@sinclair/typebox` when embedding or extending `@open-hax/pi-web-ui` with shared TypeBox schemas ([#3112](https://github.com/badlogic/pi-mono/issues/3112))
 
 ### Fixed
 
@@ -76,7 +76,7 @@
 
 ### Added
 
-- Exported `CustomProviderDialog` from `@mariozechner/pi-web-ui` ([#2267](https://github.com/badlogic/pi-mono/issues/2267))
+- Exported `CustomProviderDialog` from `@open-hax/pi-web-ui` ([#2267](https://github.com/badlogic/pi-mono/issues/2267))
 
 ## [0.58.4] - 2026-03-16
 
@@ -101,7 +101,7 @@
 
 ### Fixed
 
-- Build `@mariozechner/pi-web-ui` with `tsc` instead of `tsgo` so Lit decorator-based state updates rerender correctly.
+- Build `@open-hax/pi-web-ui` with `tsc` instead of `tsgo` so Lit decorator-based state updates rerender correctly.
 
 ## [0.58.2] - 2026-03-15
 
@@ -357,7 +357,7 @@
 
 **Before (0.30.x):**
 ```typescript
-import { Agent, ProviderTransport, type AppMessage } from '@mariozechner/pi-web-ui';
+import { Agent, ProviderTransport, type AppMessage } from '@open-hax/pi-web-ui';
 
 const agent = new Agent({
   transport: new ProviderTransport(),
@@ -368,7 +368,7 @@ const agent = new Agent({
 **After:**
 ```typescript
 import { Agent, type AgentMessage } from '@open-hax/eta-mu-agent-core';
-import { defaultConvertToLlm } from '@mariozechner/pi-web-ui';
+import { defaultConvertToLlm } from '@open-hax/pi-web-ui';
 
 const agent = new Agent({
   convertToLlm: (messages: AgentMessage[]) => {
@@ -382,7 +382,7 @@ const agent = new Agent({
 **Custom message types:**
 ```typescript
 // Before: declaration merging on CustomMessages
-declare module "@mariozechner/pi-web-ui" {
+declare module "@open-hax/pi-web-ui" {
   interface CustomMessages {
     "my-message": MyMessage;
   }

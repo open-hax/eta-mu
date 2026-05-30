@@ -3,6 +3,8 @@ packages:
   - services/*
   - shared/*
 
+gitChecks: false
+
 onlyBuiltDependencies:
   - esbuild
   - koffi

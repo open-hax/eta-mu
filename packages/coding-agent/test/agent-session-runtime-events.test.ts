@@ -89,6 +89,82 @@ describe("AgentSessionRuntime session lifecycle events", () => {
 		return { runtimeHost, faux };
 	}
 
+	it("emits agent_idle after the AgentSession event queue drains", async () => {
+		let sessionRef: { _agentEventQueue?: Promise<void>; messages: Array<{ role: string }> } | undefined;
+		let sentRepair = false;
+		const idleQueueDrained: boolean[] = [];
+		const { runtimeHost, faux } = await createRuntimeHost((pi) => {
+			pi.on("agent_idle", async () => {
+				let drained = false;
+				void sessionRef?._agentEventQueue?.then(() => {
+					drained = true;
+				});
+				await Promise.resolve();
+				idleQueueDrained.push(drained);
+
+				if (!sentRepair) {
+					sentRepair = true;
+					pi.sendUserMessage("repair from idle");
+				}
+			});
+		});
+		sessionRef = runtimeHost.session as unknown as typeof sessionRef;
+
+		await runtimeHost.session.prompt("hello");
+
+		const started = Date.now();
+		while (runtimeHost.session.messages.filter((message) => message.role === "assistant").length < 2) {
+			if (Date.now() - started > 1000) {
+				throw new Error("timed out waiting for idle-triggered repair turn");
+			}
+			await new Promise((resolve) => setTimeout(resolve, 10));
+		}
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		expect(idleQueueDrained).toEqual([true, true]);
+		expect(faux.state.callCount).toBe(2);
+	});
+
+	it("session.waitForIdle waits for queued AgentSession runtime events", async () => {
+		let releaseAgentEnd!: () => void;
+		const agentEndRelease = new Promise<void>((resolve) => {
+			releaseAgentEnd = resolve;
+		});
+		let markAgentEndStarted!: () => void;
+		const agentEndStarted = new Promise<void>((resolve) => {
+			markAgentEndStarted = resolve;
+		});
+		let agentEndFinished = false;
+		const { runtimeHost } = await createRuntimeHost((pi) => {
+			pi.on("agent_end", async () => {
+				markAgentEndStarted();
+				await agentEndRelease;
+				agentEndFinished = true;
+			});
+		});
+
+		const promptPromise = runtimeHost.session.prompt("hello");
+		await agentEndStarted;
+		await runtimeHost.session.agent.waitForIdle();
+
+		let sdkWaitResolved = false;
+		const sdkWaitPromise = runtimeHost.session.waitForIdle().then(() => {
+			sdkWaitResolved = true;
+		});
+		await Promise.resolve();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		expect(agentEndFinished).toBe(false);
+		expect(sdkWaitResolved).toBe(false);
+
+		releaseAgentEnd();
+		await sdkWaitPromise;
+		await promptPromise;
+
+		expect(agentEndFinished).toBe(true);
+		expect(sdkWaitResolved).toBe(true);
+	});
+
 	it("emits session_before_switch and session_start for new and resume flows", async () => {
 		const events: RecordedSessionEvent[] = [];
 		const { runtimeHost } = await createRuntimeHost((pi) => {

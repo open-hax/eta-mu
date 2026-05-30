@@ -225,6 +225,15 @@
   (ensure-dir STATE-DIR)
   (.writeFileSync fs CONFIG-FILE (str (.stringify js/JSON config nil 2) "\n") "utf8"))
 
+(defn gate-enabled? [state]
+  (true? (aget (aget state "config") "enabled")))
+
+(defn gate-auto-repair-enabled? [state]
+  (true? (aget (aget state "config") "autoRepair")))
+
+(defn clear-pending-repair! [state]
+  (aset state "pendingRepair" nil))
+
 (defn extract-text [content]
   (cond
     (string? content) content
@@ -265,14 +274,17 @@
   ([]
    (read-config (.cwd js/process)))
   ([cwd]
-   (let [runtime-contract (read-runtime-contract cwd)
+   (let [parsed (js-read-config-file)
+         env-override (env-enabled-override)
+         ;; An explicit env false is the emergency hard-off path: do not even
+         ;; parse runtime-feature contracts while the gate is disabled this way.
+         runtime-contract (when-not (= false env-override)
+                            (read-runtime-contract cwd))
          runtime-config (runtime-contract-config runtime-contract)
          built-in-enabled (default-enabled-for-cwd cwd)
          contract-default-enabled (runtime-contract-default-enabled runtime-contract built-in-enabled)
-         parsed (js-read-config-file)
          local-enabled (config-bool parsed "enabled" contract-default-enabled)
          contract-forced-enabled (runtime-contract-forced-enabled runtime-contract)
-         env-override (env-enabled-override)
          enabled (cond
                    (some? env-override) env-override
                    (some? contract-forced-enabled) contract-forced-enabled
@@ -304,9 +316,6 @@
           :maxSessionTurns (config-value parsed
                                          "maxSessionTurns"
                                          (runtime-config-value runtime-config :maxSessionTurns 10))
-          :repairDelayMs (config-value parsed
-                                       "repairDelayMs"
-                                       (runtime-config-value runtime-config :repairDelayMs 75))
           :configSource (cond
                           (some? env-override) "env+local+contract"
                           runtime-contract "local+contract"
@@ -901,59 +910,37 @@
                    (str "eta-mu-opmf-contract-gate repair queue failed: " message))
                  "warn")))
 
-(defn agent-busy-error? [message]
-  (and (string? message)
-       (or (.includes message "already processing")
-           (.includes message "Agent is already processing")
-           (.includes message "Specify streamingBehavior"))))
-
-(declare schedule-direct-repair!)
-
-(defn handle-direct-repair-error [pi ctx state msg next-attempt max-retries retry-index error]
+(defn handle-direct-repair-error [_pi ctx _state _msg _next-attempt _max-retries _retry-index error]
   (let [message (or (aget error "message") (str error))]
-    (cond
-      (stale-context-message? message)
-      (safe-notify ctx
+    (safe-notify ctx
+                 (if (stale-context-message? message)
                    "eta-mu-opmf-contract-gate skipped auto-repair because the session was replaced or extensions reloaded"
-                   "warn")
+                   (str "eta-mu-opmf-contract-gate direct repair injection failed: " message))
+                 "warn")))
 
-      (and (agent-busy-error? message) (< retry-index 5))
-      (schedule-direct-repair! pi ctx state msg next-attempt max-retries (inc retry-index))
-
-      :else
-      (safe-notify ctx
-                   (str "eta-mu-opmf-contract-gate direct repair injection failed: " message)
-                   "warn"))))
-
-(defn schedule-direct-repair! [pi ctx state msg next-attempt max-retries retry-index]
-  ;; The agent core emits agent_end before the run is idle. If we call
-  ;; sendUserMessage synchronously inside the agent_end extension callback, Pi
-  ;; still considers the run active and routes the repair as a steering event.
-  ;; Defer to the next macrotask (plus a small configurable delay), then inject
-  ;; a normal user message with no deliverAs option so it starts a fresh turn.
-  (let [base-delay (or (aget (aget state "config") "repairDelayMs") 75)
-        delay (* base-delay (inc retry-index))]
-    (js/setTimeout
-      (fn []
-        (let [sender (sender-for pi ctx)]
-          (if sender
-            (try
-              (let [send-result (.call (aget sender "sendUserMessage") sender msg)]
-                (if (and send-result (aget send-result "then"))
-                  (-> send-result
-                      (.then (fn [_]
-                               (safe-notify ctx
-                                            (str "eta-mu-opmf-contract-gate injected repair " next-attempt "/" max-retries)
-                                            "warn")))
-                      (.catch (fn [error]
-                                (handle-direct-repair-error pi ctx state msg next-attempt max-retries retry-index error))))
-                  (safe-notify ctx
-                               (str "eta-mu-opmf-contract-gate injected repair " next-attempt "/" max-retries)
-                               "warn")))
-              (catch :default error
-                (handle-direct-repair-error pi ctx state msg next-attempt max-retries retry-index error)))
-            (safe-notify ctx "eta-mu-opmf-contract-gate repair sender unavailable" "warn"))))
-      delay)))
+(defn send-direct-repair! [pi ctx state msg next-attempt max-retries retry-index]
+  ;; Pi now emits agent_idle from the core runtime only after agent_end handling
+  ;; has drained and Agent.waitForIdle has resolved. That makes extension-origin
+  ;; repair turns safe to submit directly here; do not create a second timer-based
+  ;; idle detector in the extension.
+  (let [sender (sender-for pi ctx)]
+    (if sender
+      (try
+        (let [send-result (.call (aget sender "sendUserMessage") sender msg)]
+          (if (and send-result (aget send-result "then"))
+            (-> send-result
+                (.then (fn [_]
+                         (safe-notify ctx
+                                      (str "eta-mu-opmf-contract-gate injected repair " next-attempt "/" max-retries)
+                                      "warn")))
+                (.catch (fn [error]
+                          (handle-direct-repair-error pi ctx state msg next-attempt max-retries retry-index error))))
+            (safe-notify ctx
+                         (str "eta-mu-opmf-contract-gate injected repair " next-attempt "/" max-retries)
+                         "warn")))
+        (catch :default error
+          (handle-direct-repair-error pi ctx state msg next-attempt max-retries retry-index error)))
+      (safe-notify ctx "eta-mu-opmf-contract-gate repair sender unavailable" "warn"))))
 
 (defn handle-validation-result [pi ctx state result messages]
   (set-status ctx state)
@@ -1044,8 +1031,11 @@
 
 (defn handle-agent-end [pi ctx event]
   (let [state (get-state)]
-    (if-not (aget (aget state "config") "enabled")
-      (set-status ctx state)
+    (if-not (gate-enabled? state)
+      (do
+        (clear-pending-repair! state)
+        (aset state "contractError" nil)
+        (set-status ctx state))
       (-> (validate-latest-assistant ctx state (aget event "messages"))
           (.then (fn [result]
                    (handle-validation-result pi ctx state result (aget event "messages"))))
@@ -1053,23 +1043,22 @@
                     (handle-agent-end-error ctx state error)))))))
 
 (defn handle-agent-idle [pi ctx _event]
-  ;; `agent_idle` is the first point where Pi reports the agent as idle, but the
-  ;; hook itself still runs inside AgentSession's serialized event-drain promise.
-  ;; Starting a fresh prompt synchronously from that callback can recursively
-  ;; append more agent events before the previous drain unwinds. Bounce the repair
-  ;; injection to the timer queue so the agent_end/agent_idle pipeline finishes
-  ;; before the extension-origin user turn starts.
+  ;; Core Pi emits agent_idle only after the AgentSession event queue drains and
+  ;; Agent.waitForIdle resolves, so this handler can submit the queued repair
+  ;; directly without maintaining a second timer-based idle detector here.
   (let [state (get-state)
         pending (aget state "pendingRepair")]
     (when pending
-      (aset state "pendingRepair" nil)
-      (schedule-direct-repair! pi
-                               ctx
-                               state
-                               (aget pending "message")
-                               (aget pending "attempt")
-                               (aget pending "max")
-                               0))))
+      (clear-pending-repair! state)
+      (when (and (gate-enabled? state)
+                 (gate-auto-repair-enabled? state))
+        (send-direct-repair! pi
+                             ctx
+                             state
+                             (aget pending "message")
+                             (aget pending "attempt")
+                             (aget pending "max")
+                             0)))))
 
 (defn handle-command [args ctx]
   (let [state (get-state)
@@ -1098,6 +1087,8 @@
       (#{"off" "disable"} cmd)
       (do
         (aset (aget state "config") "enabled" false)
+        (clear-pending-repair! state)
+        (aset state "contractError" nil)
         (write-config (aget state "config"))
         (set-status ctx state)
         (notify ctx "output-contract-gate disabled" "warn"))
@@ -1116,22 +1107,29 @@
 (defn handle-session-start [pi ctx]
   (let [state (get-state)]
     (aset state "config" (read-config (or (aget ctx "cwd") (.cwd js/process))))
-    (aset state "pendingRepair" nil)
+    (clear-pending-repair! state)
     (aset state "repairCounts" #js {})
     (aset state "sessionRepairCount" 0)
-    (-> (load-contract state)
-        (.then (fn [_]
-                 (aset state "contractError" nil)
-                 (set-status ctx state)))
-        (.catch (fn [error]
-                  (aset state "contractError" (or (aget error "message") (str error)))
-                  (notify ctx (str "output-contract-gate: " (aget state "contractError")) "warn")
-                  (set-status ctx state))))))
+    (if-not (gate-enabled? state)
+      (do
+        (aset state "contractError" nil)
+        (set-status ctx state))
+      (-> (load-contract state)
+          (.then (fn [_]
+                   (aset state "contractError" nil)
+                   (set-status ctx state)))
+          (.catch (fn [error]
+                    (aset state "contractError" (or (aget error "message") (str error)))
+                    (notify ctx (str "output-contract-gate: " (aget state "contractError")) "warn")
+                    (set-status ctx state)))))))
 
 (defn handle-before-agent-start [event ctx]
   (let [state (get-state)]
     (aset state "config" (read-config (or (aget ctx "cwd") (.cwd js/process))))
-    (when (aget (aget state "config") "enabled")
+    (if-not (gate-enabled? state)
+      (do
+        (clear-pending-repair! state)
+        (aset state "contractError" nil))
       (-> (load-contract state)
           (.then (fn [cached]
                    (aset state "contractError" nil)

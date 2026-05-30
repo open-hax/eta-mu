@@ -45,9 +45,23 @@ export interface KanbanBoardSnapshot {
   columns: KanbanColumnSnapshot[];
 }
 
+export interface KanbanProjectConfig {
+  id?: string;
+  title?: string;
+  tasksDir: string;
+}
+
+export interface KanbanProject {
+  id: string;
+  title: string;
+  tasksDir: string;
+}
+
 export interface KanbanConfigFile {
   tasksDir?: string;
   boardFile?: string;
+  defaultProject?: string;
+  projects?: KanbanProjectConfig[];
   trello?: {
     boardId?: string;
     boardUrl?: string;
