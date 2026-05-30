@@ -11,7 +11,7 @@
         actions (planner/rank-cheap-candidates context)
         panels (planner/select-panels context)
         recommendation (breath/recommend context actions)
-        batch {:kind "eta-mu-action-batch.v1"
+        batch {:kind planning-law/action-batch-version
                :repo (:repo context)
                :trigger (:trigger context)
                :summary (:summary context)
