@@ -1,5 +1,6 @@
 (ns eta-mu.runtime.domain.planner-test
   (:require [cljs.test :refer [deftest is testing]]
+            [eta-mu.runtime.domain.breath :as breath]
             [eta-mu.runtime.domain.envelope :as envelope]
             [eta-mu.runtime.domain.planner :as planner]
             [eta-mu.runtime.domain.state :as state]))
@@ -51,3 +52,20 @@
       (is (= 1 (count (:actions batch))))
       (is (= :noop (-> batch :actions first :kind)))
       (is (false? (get-in batch [:breath :should-commit]))))))
+
+(deftest recommend-breath-pending-commit-test
+  (testing "recommend commits immediately when an episode is already pending commit"
+    (let [recommendation (breath/recommend (context {:pending-commit true}))]
+      (is (true? (:should-commit recommendation)))
+      (is (= "Episode is already marked pending commit." (:reason recommendation))))))
+
+(deftest recommend-breath-quiet-window-test
+  (testing "recommend commits during a quiet window after meaningful movement"
+    (let [ctx (context {:quiet-window-detected true
+                        :failing-checks ["unit-tests"]
+                        :belief (state/create-belief {:deploy-risk 0.8})})
+          actions (planner/rank-cheap-candidates ctx)
+          recommendation (breath/recommend ctx actions)]
+      (is (some #(not= :noop (:kind %)) actions))
+      (is (true? (:should-commit recommendation)))
+      (is (= "Quiet window detected after meaningful movement planning." (:reason recommendation))))))

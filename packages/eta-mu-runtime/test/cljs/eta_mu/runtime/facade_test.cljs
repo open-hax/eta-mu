@@ -41,6 +41,8 @@
 
 (deftest malformed-context-rejected-test
   (testing "facade rejects malformed public planning context payloads"
+    ;; create-eta-belief is a permissive constructor that clamps belief scores;
+    ;; create-action-batch is a strict public boundary and rejects malformed contexts.
     (is (thrown? js/Error
                  (facade/create-action-batch
                   #js {:repo "open-hax/proxx"

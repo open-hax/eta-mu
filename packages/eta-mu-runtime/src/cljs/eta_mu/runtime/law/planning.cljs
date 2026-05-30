@@ -3,6 +3,8 @@
             [eta-mu.runtime.law.state :as state]
             [eta-mu.runtime.law.types :as types]))
 
+(def action-batch-version "eta-mu-action-batch.v1")
+
 (def eta-mu-planning-context-schema
   [:map
    [:repo [:string {:min 1}]]
@@ -24,7 +26,7 @@
 
 (def eta-mu-action-batch-schema
   [:map
-   [:kind [:= "eta-mu-action-batch.v1"]]
+   [:kind [:= action-batch-version]]
    [:repo [:string {:min 1}]]
    [:trigger [:string {:min 1}]]
    [:summary [:string {:min 1}]]

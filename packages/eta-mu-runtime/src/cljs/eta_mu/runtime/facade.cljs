@@ -45,8 +45,9 @@
   ([]
    (create-eta-mu-state nil))
   ([options]
-   (let [options (cond-> (js-map options)
-                   (not (contains? (js-map options) :now))
+   (let [options (js-map options)
+         options (cond-> options
+                   (not (contains? options :now))
                    (assoc :now (now-iso)))]
      (-> options
          compat/state-options-from-external
