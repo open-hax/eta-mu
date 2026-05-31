@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-quality-ratchet-baseline-inventory"
 title: "Eta-mu Quality Ratchet — Baseline Inventory"
-status: todo
+status: review
 priority: P0
 labels: ["tasks", "quality", "baseline", "lint", "testing", "3sp"]
 created_at: "2026-05-31T00:45:00Z"
@@ -13,6 +13,7 @@ category: tasks
 # Eta-mu Quality Ratchet — Baseline Inventory
 
 > Parent epic: `kanban/epics/eta-mu-quality-ratchet.md`
+> Baseline report: `docs/eta-mu-quality-ratchet-baseline-inventory.md`
 > Points: 3
 
 ## Purpose
@@ -29,19 +30,19 @@ Create a truthful, reproducible quality baseline before cleanup begins so future
 
 ## Work items
 
-- [ ] Enumerate existing package scripts for lint, test, typecheck, build, and coverage.
-- [ ] Run the current high-value gates and capture pass/fail/warning summaries.
-- [ ] Record known warnings with exact files, warning classes, and proposed owners.
-- [ ] Record known flaky/local-environment failures separately from product regressions.
-- [ ] Produce a short baseline report under `docs/`.
-- [ ] Update this task with verification evidence.
+- [x] Enumerate existing package scripts for lint, test, typecheck, build, and coverage.
+- [x] Run the current high-value gates and capture pass/fail/warning summaries.
+- [x] Record known warnings with exact files, warning classes, and proposed owners.
+- [x] Record known flaky/local-environment failures separately from product regressions.
+- [x] Produce a short baseline report under `docs/`.
+- [x] Update this task with verification evidence.
 
 ## Acceptance criteria
 
-- [ ] A docs baseline report exists and names commands, outcomes, warning counts, and blockers.
-- [ ] Baseline distinguishes source failures from local environment/generated-dist issues.
-- [ ] The next cleanup tasks have enough evidence to avoid rediscovering the same warnings.
-- [ ] No unrelated workspace dirt is staged.
+- [x] A docs baseline report exists and names commands, outcomes, warning counts, and blockers.
+- [x] Baseline distinguishes source failures from local environment/generated-dist issues.
+- [x] The next cleanup tasks have enough evidence to avoid rediscovering the same warnings.
+- [x] No unrelated workspace dirt is staged.
 
 ## Verification
 
@@ -56,3 +57,15 @@ pnpm --dir packages/eta-mu-extensions build
 pnpm --filter @open-hax/eta-mu-cli test
 pnpm test
 ```
+
+## Verification results
+
+- `pnpm install --frozen-lockfile`: passed with workspace-bin warnings for not-yet-built `dist/*` CLIs.
+- `pnpm --dir packages/eta-mu-runtime cljs:verify`: passed; boundary scanner reported `checked: 35`, `extern: 5`.
+- `pnpm --dir packages/eta-mu-runtime cljs:coverage`: passed; statements/lines 93.77%, above the >=90% gate.
+- `pnpm --dir packages/eta-mu-extensions test`: passed; 72 tests, 195 assertions, 0 warnings.
+- `pnpm --dir packages/eta-mu-extensions build`: passed with 210 CLJS infer warnings concentrated in `task_timing.cljs` and `lib/eta_mu/opencode.cljs`.
+- `pnpm --filter @open-hax/eta-mu-cli test` after install only: failed from missing built workspace package entries; passed after building CLI dependency artifacts.
+- `pnpm test`: passed; noted as not covering the CLI test suite.
+- `pnpm typecheck`: failed after install only from missing CLI build artifacts; passed after building CLI dependency artifacts.
+- `git diff --check`: passed for this task's docs/kanban changes.
