@@ -5,6 +5,7 @@ import path from "node:path";
 import { buildBoardSnapshot, writeBoardSnapshot } from "./board.js";
 import { loadConfig, loadEnvironment, resolveConfigPathValue, resolveConfiguredProjects } from "./config.js";
 import { startKanbanServer } from "./server.js";
+import { GitHubClient, inferGitHubRepo, syncTasksToGitHub } from "./github-sync.js";
 import { syncTasksToTrello } from "./sync.js";
 import { loadTasks } from "./tasks.js";
 import { TrelloClient } from "./trello-client.js";
@@ -23,6 +24,7 @@ const showHelp = (): void => {
 USAGE
   openhax-kanban board snapshot [--tasks-dir <path>] [--out <path>] [--config <path>]
   openhax-kanban sync trello [--tasks-dir <path>] [--board-url <url>] [--board-id <id>] [--dry-run] [--archive-missing] [--config <path>]
+  openhax-kanban sync github [--tasks-dir <path>] [--repo <owner/repo>] [--dry-run] [--write-delay-ms <ms>] [--max-writes <n>] [--no-close-done] [--no-close-rejected] [--no-manage-labels] [--config <path>]
   openhax-kanban serve [--tasks-dir <path>] [--host <host>] [--port <port>] [--config <path>]
 
 MULTI-PROJECT CONFIG
@@ -43,6 +45,12 @@ FLAGS
   --board-id <id>         Trello board short id or id
   --dry-run               Print sync plan without mutating Trello
   --archive-missing       Archive Trello cards with known UUIDs that are missing locally
+  --repo <owner/repo>      GitHub repository target for sync github
+  --no-close-done         Keep done tasks open during GitHub sync
+  --no-close-rejected     Keep rejected tasks open during GitHub sync
+  --no-manage-labels      Do not create missing GitHub labels
+  --write-delay-ms <ms>   Delay between GitHub writes to avoid secondary rate limits
+  --max-writes <n>        Stop after applying this many GitHub write operations
   --host <host>           Host to bind the local web UI (default: 127.0.0.1)
   --port <port>           Port to bind the local web UI (default: 8787)
   --help                  Show this help
@@ -130,6 +138,32 @@ const printSyncPlan = (result: Awaited<ReturnType<typeof syncTasksToTrello>>, dr
   });
 };
 
+const printGitHubSyncPlan = (result: Awaited<ReturnType<typeof syncTasksToGitHub>>, dryRun: boolean): void => {
+  console.log(`${dryRun ? "Dry-run" : "Live"} GitHub issue sync for ${result.repo}`);
+  console.log(`Operations: ${result.plan.operations.length}`);
+  console.log(`- Create labels: ${result.plan.summary.createLabels}`);
+  console.log(`- Create issues: ${result.plan.summary.createIssues}`);
+  console.log(`- Update issues: ${result.plan.summary.updateIssues}`);
+  console.log(`- Skip done/rejected tasks without existing issues: ${result.plan.summary.skippedClosedTasks}`);
+  if (!dryRun) {
+    console.log(`- Applied operations: ${result.appliedOperations.length}`);
+  }
+
+  result.plan.operations.forEach((operation) => {
+    switch (operation.type) {
+      case "createLabel":
+        console.log(`  + label ${operation.label.name}`);
+        break;
+      case "createIssue":
+        console.log(`  + issue ${operation.task.title}`);
+        break;
+      case "updateIssue":
+        console.log(`  ~ issue #${operation.issueNumber} ${operation.task.title} -> ${operation.state}`);
+        break;
+    }
+  });
+};
+
 const main = async (): Promise<void> => {
   loadEnvironment();
 
@@ -194,6 +228,39 @@ const main = async (): Promise<void> => {
     });
 
     printSyncPlan(result, dryRun);
+    return;
+  }
+
+  if (parsedCli.command === "sync" && parsedCli.subcommand === "github") {
+    const tasks = await loadTasks(tasksDir);
+    const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+    if (!token) {
+      throw new Error("Missing GITHUB_TOKEN or GH_TOKEN.");
+    }
+
+    const repo =
+      readStringFlag(parsedCli.flags, "repo") ??
+      loadedConfig.config.github?.repo ??
+      inferGitHubRepo(tasksDir);
+
+    if (!repo) {
+      throw new Error("Missing GitHub repo target. Pass --repo, set github.repo in config, or run inside a GitHub-backed repository.");
+    }
+
+    const dryRun = parsedCli.flags["dry-run"] === true;
+    const client = new GitHubClient({ token });
+    const result = await syncTasksToGitHub(client, tasks, {
+      repo,
+      dryRun,
+      cwd: process.cwd(),
+      closeDone: parsedCli.flags["no-close-done"] === true ? false : loadedConfig.config.github?.closeDone,
+      closeRejected: parsedCli.flags["no-close-rejected"] === true ? false : loadedConfig.config.github?.closeRejected,
+      manageLabels: parsedCli.flags["no-manage-labels"] === true ? false : loadedConfig.config.github?.manageLabels,
+      writeDelayMs: readNumberFlag(parsedCli.flags, "write-delay-ms"),
+      maxWrites: readNumberFlag(parsedCli.flags, "max-writes")
+    });
+
+    printGitHubSyncPlan(result, dryRun);
     return;
   }
 

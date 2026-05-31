@@ -1,6 +1,7 @@
 export * from "./board.js";
 export * from "./config.js";
 export * from "./sync.js";
+export * from "./github-sync.js";
 export * from "./tasks.js";
 export * from "./task-writeback.js";
 export * from "./server.js";
