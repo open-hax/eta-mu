@@ -9,49 +9,45 @@
 
 ;; ── Zod schema helpers ─────────────────────────────────────────────────────
 
-(defn- ->zod [z schema]
+(defn- describe-if [base description]
+  (if description
+    (.describe ^js base description)
+    base))
+
+(defn- ->zod [^js z schema]
   "Convert a JSON Schema map to a Zod schema object at runtime."
   (let [type* (aget schema "type")
         enum* (aget schema "enum")
-        desc* (aget schema "description")
-        min* (aget schema "min")
-        max* (aget schema "max")]
+        desc* (aget schema "description")]
     (cond
       (and enum* (pos? (alength enum*)))
-      (let [base (.apply (.-enum z) z enum*)]
-        (if desc* (.describe base desc*) base))
+      (describe-if (.apply ^js (aget z "enum") z enum*) desc*)
 
       (= type* "string")
-      (let [base (.string z)]
-        (if desc* (.describe base desc*) base))
+      (describe-if (.string z) desc*)
 
       (= type* "number")
-      (let [base (.number z)]
-        (if desc* (.describe base desc*) base))
+      (describe-if (.number z) desc*)
 
       (= type* "integer")
-      (let [base (.number z)]
-        (if desc* (.describe base desc*) base))
+      (describe-if (.number z) desc*)
 
       (= type* "boolean")
-      (let [base (.boolean z)]
-        (if desc* (.describe base desc*) base))
+      (describe-if (.boolean z) desc*)
 
       (= type* "array")
-      (let [base (.array z (.any z))]
-        (if desc* (.describe base desc*) base))
+      (describe-if (.array z (.any z)) desc*)
 
       :else
-      (let [base (.any z)]
-        (if desc* (.describe base desc*) base)))))
+      (describe-if (.any z) desc*))))
 
-(defn- build-args-schema [z params]
+(defn- build-args-schema [^js z params]
   "Build an OpenCode tool args shape from eta-mu parameter specs.
    @opencode-ai/plugin/tool expects a raw Zod shape object, not z.object(...)."
   (let [shape (js-obj)]
     (doseq [[k spec] params]
       (let [field (->zod z (clj->js (dissoc spec :optional)))]
-        (aset shape (name k) (if (:optional spec) (.optional field) field))))
+        (aset shape (name k) (if (:optional spec) (.optional ^js field) field))))
     shape))
 
 ;; ── Context adaptation ─────────────────────────────────────────────────────
@@ -97,8 +93,8 @@
   return values. step returns the next accumulator."
   [handlers initial step]
   (reduce (fn [p handler]
-            (.then p (fn [acc]
-                       (->promise (step acc handler)))))
+            (.then ^js p (fn [acc]
+                           (->promise (step acc handler)))))
           (js/Promise.resolve initial)
           handlers))
 
@@ -118,11 +114,17 @@
 (defn- set-output-system! [output system-prompt]
   (aset output "system" #js [system-prompt]))
 
+(defn- event-type [ev]
+  (aget (aget ev "event") "type"))
+
+(defn- event-payload [ev]
+  (aget ev "event"))
+
 ;; ── Plugin builders ────────────────────────────────────────────────────────
 
 (defn build-tool [tool-helper spec]
   "Create an OpenCode tool definition from an eta-mu tool spec."
-  (let [z (.-schema tool-helper)
+  (let [z (aget tool-helper "schema")
         params (:parameters spec)
         exec (:execute spec)]
     (tool-helper
@@ -136,11 +138,10 @@
   This preserves direct OpenCode SDK events while dedicated hook translators
   below handle pi lifecycle events with return-value propagation."
   (fn [ev]
-    (let [event-type (.. ev -event -type)
-          handlers (event-handlers events event-type)]
+    (let [handlers (event-handlers events (event-type ev))]
       (when (seq handlers)
         (doseq [handler handlers]
-          (handler (.. ev -event) #js {}))))))
+          (handler (event-payload ev) #js {}))))))
 
 (defn- build-system-transform-hook [input events]
   (let [turn-start-handlers (event-handlers events "turn_start")
@@ -165,7 +166,7 @@
                                      (fn [system-prompt handler]
                                        ;; Keep return-value propagation local to the handler while
                                        ;; allowing nil/no-op handlers.
-                                       (.then (->promise (handler (before-event system-prompt) pi-ctx))
+                                       (.then ^js (->promise (handler (before-event system-prompt) pi-ctx))
                                               (fn [result]
                                                 (or (when result
                                                       (aget result "systemPrompt"))
@@ -179,13 +180,13 @@
       (fn [_hook-input output]
         (let [ctx (hook-ctx input #js {})
               pi-ctx (adapt-ctx ctx)]
-          (.then (run-handlers handlers (aget output "messages")
-                               (fn [messages handler]
-                                 (.then (->promise (handler #js {:messages messages} pi-ctx))
-                                        (fn [result]
-                                          (or (when result
-                                                (aget result "messages"))
-                                              messages)))))
+          (.then ^js (run-handlers handlers (aget output "messages")
+                                   (fn [messages handler]
+                                     (.then ^js (->promise (handler #js {:messages messages} pi-ctx))
+                                            (fn [result]
+                                              (or (when result
+                                                    (aget result "messages"))
+                                                  messages)))))
                  (fn [messages]
                    (aset output "messages" messages))))))))
 
