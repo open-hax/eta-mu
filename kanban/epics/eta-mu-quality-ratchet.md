@@ -81,7 +81,7 @@ Use the narrowest relevant gate per child task, then run broader gates before me
 Baseline candidate commands:
 
 ```bash
-pnpm install --offline --frozen-lockfile
+pnpm install --frozen-lockfile
 pnpm --dir packages/eta-mu-runtime cljs:verify
 pnpm --dir packages/eta-mu-runtime cljs:coverage
 pnpm --dir packages/eta-mu-runtime test
@@ -98,7 +98,7 @@ Add task-specific gates such as `actionlint`, package smoke tests, or markdown l
 
 ## Known starting signals
 
-- `packages/eta-mu-runtime` CLJS coverage currently enforces >=90% statements/lines and reports 93.77% at the time this epic was created.
+- `packages/eta-mu-runtime` CLJS coverage currently enforces >=90% statements/lines and was above that gate in the 2026-05-31 coverage ratchet baseline.
 - `packages/eta-mu-extensions build` currently completes but emits CLJS infer warnings in `task_timing.cljs` and `lib/eta_mu/opencode.cljs`.
 - `eta-mu-beta` previously failed when the primary checkout was stale and `dist/pi/cljs-lisp-decomp-nudge/index.ts` was absent; rebuilding `packages/eta-mu-extensions` regenerated the target.
 - Root and nested receipt ledgers are intentionally dirty during agent work and must not be swept into quality PRs accidentally.

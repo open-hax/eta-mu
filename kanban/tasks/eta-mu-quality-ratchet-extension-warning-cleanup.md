@@ -44,7 +44,7 @@ Make `packages/eta-mu-extensions` builds stop normalizing CLJS infer warnings as
 ## Verification
 
 ```bash
-pnpm install --offline --frozen-lockfile
+pnpm install --frozen-lockfile
 pnpm --dir packages/eta-mu-extensions test
 pnpm --dir packages/eta-mu-extensions build
 git diff --check

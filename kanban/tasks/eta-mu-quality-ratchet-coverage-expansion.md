@@ -21,7 +21,7 @@ Extend coverage discipline beyond the first `packages/eta-mu-runtime` CLJS ratch
 
 ## Starting baseline
 
-`packages/eta-mu-runtime` currently gates CLJS line and statement coverage at 90% and reports 93.77%. `packages/eta-mu-extensions` has a coverage script, but raw c8 defaults can produce zero totals unless shadow-cljs generated runtime files are explicitly included.
+`packages/eta-mu-runtime` currently gates CLJS line and statement coverage at 90% and was above that gate in the 2026-05-31 coverage ratchet baseline. `packages/eta-mu-extensions` has a coverage script, but raw c8 defaults can produce zero totals unless shadow-cljs generated runtime files are explicitly included.
 
 ## Scope
 
@@ -50,7 +50,7 @@ Extend coverage discipline beyond the first `packages/eta-mu-runtime` CLJS ratch
 ## Verification
 
 ```bash
-pnpm install --offline --frozen-lockfile
+pnpm install --frozen-lockfile
 pnpm --dir packages/eta-mu-runtime cljs:coverage
 pnpm coverage
 # plus the new package coverage command added by this task

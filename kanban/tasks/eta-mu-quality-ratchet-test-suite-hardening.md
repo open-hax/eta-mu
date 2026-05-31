@@ -48,7 +48,7 @@ Make eta-mu's test suite trustworthy enough that failures point to product regre
 ## Verification
 
 ```bash
-pnpm install --offline --frozen-lockfile
+pnpm install --frozen-lockfile
 pnpm --filter @open-hax/eta-mu-cli test
 pnpm --dir packages/eta-mu-runtime cljs:verify
 pnpm --dir packages/eta-mu-runtime test

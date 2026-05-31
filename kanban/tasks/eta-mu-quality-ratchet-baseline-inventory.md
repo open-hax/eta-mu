@@ -48,7 +48,7 @@ Create a truthful, reproducible quality baseline before cleanup begins so future
 ```bash
 git diff --stat
 git diff --check
-pnpm install --offline --frozen-lockfile
+pnpm install --frozen-lockfile
 pnpm --dir packages/eta-mu-runtime cljs:verify
 pnpm --dir packages/eta-mu-runtime cljs:coverage
 pnpm --dir packages/eta-mu-extensions test

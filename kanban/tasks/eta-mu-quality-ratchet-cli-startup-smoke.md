@@ -54,7 +54,7 @@ Rebuilding `packages/eta-mu-extensions` regenerated the missing path, so this ta
 ## Verification
 
 ```bash
-pnpm install --offline --frozen-lockfile
+pnpm install --frozen-lockfile
 pnpm --dir packages/eta-mu-extensions build
 pnpm --dir packages/coding-agent build
 ETA_MU_NO_DEFAULT_EXTENSIONS=0 timeout 20s node packages/coding-agent/dist/cli.js --help

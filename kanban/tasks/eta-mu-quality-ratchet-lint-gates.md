@@ -45,7 +45,7 @@ Make lint/static checks discoverable, reproducible, and CI-owned inside eta-mu i
 ## Verification
 
 ```bash
-pnpm install --offline --frozen-lockfile
+pnpm install --frozen-lockfile
 pnpm --dir packages/eta-mu-runtime cljs:boundary
 # plus the new lint/static command added by this task
 git diff --check
