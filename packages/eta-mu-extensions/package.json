@@ -9,7 +9,7 @@
     "manifest.edn"
   ],
   "scripts": {
-    "build": "node scripts/build.mjs release",
+    "build": "node scripts/build-no-warnings.mjs release",
     "watch": "node scripts/build.mjs watch",
     "clean": "node scripts/build.mjs clean",
     "test": "shadow-cljs compile node-test && node target/test.cjs",
