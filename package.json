@@ -13,7 +13,7 @@
     "docs:ts": "pnpm --filter @open-hax/agentd doc",
     "docs:cljs": "clojure -X:codox",
     "docs": "pnpm docs:ts && pnpm docs:cljs",
-    "coverage": "pnpm --filter @open-hax/agentd coverage",
+    "coverage": "pnpm --dir packages/eta-mu-runtime cljs:coverage",
     "start": "pnpm --filter @open-hax/agentd start",
     "clean": "pnpm --recursive clean",
     "install:all": "pnpm install && pnpm --recursive install"
