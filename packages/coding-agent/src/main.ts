@@ -763,6 +763,7 @@ export async function main(args: string[], options?: MainOptions) {
  * Supports:
  *   eta-mu kanban serve [--tasks-dir <path>] [--port <port>] [--config <path>]
  *   eta-mu kanban board snapshot [--tasks-dir <path>] [--out <path>] [--config <path>]
+ *   eta-mu kanban sync github [--tasks-dir <path>] [--repo <owner/repo>] [--dry-run] [--config <path>]
  *   eta-mu kanban list [--tasks-dir <path>] [--config <path>]
  *   eta-mu kanban find <uuid> [--tasks-dir <path>] [--config <path>]
  *   eta-mu kanban search <query> [--tasks-dir <path>] [--config <path>]
@@ -1012,6 +1013,7 @@ function printKanbanHelp(): void {
 	console.log(`  serve                          Start the kanban web UI`);
 	console.log(`  board snapshot                 Generate board snapshot JSON`);
 	console.log(`  sync trello                    Sync tasks to Trello`);
+	console.log(`  sync github                    Sync tasks to GitHub issues`);
 	console.log(`  list                           List all tasks`);
 	console.log(`  find <uuid>                    Find task by UUID`);
 	console.log(`  search <query>                 Search tasks by title/content`);

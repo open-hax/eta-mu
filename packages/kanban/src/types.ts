@@ -68,6 +68,12 @@ export interface KanbanConfigFile {
     archiveMissing?: boolean;
     listMapping?: Record<string, string>;
   };
+  github?: {
+    repo?: string;
+    closeDone?: boolean;
+    closeRejected?: boolean;
+    manageLabels?: boolean;
+  };
 }
 
 export interface LoadedKanbanConfig {
