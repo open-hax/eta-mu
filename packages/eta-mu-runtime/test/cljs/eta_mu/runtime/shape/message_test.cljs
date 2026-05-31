@@ -30,6 +30,8 @@
       (is (= :wav (-> internal (nth 2) :format)))
       (is (false? (-> internal (nth 3) :redacted)))
       (is (= "sig:tool" (-> internal (nth 4) :thought-signature)))
+      ;; Shape external maps stay in CLJS data with keyword enum values;
+      ;; the facade host adapter stringifies them for public JavaScript callers.
       (is (= [:text :image :audio :thinking :toolCall]
              (mapv :type external)))
       (is (= "sig:text" (-> external first :textSignature)))
@@ -124,6 +126,8 @@
       (is (= "extension.notice" (-> internal (nth 4) :custom-type)))
       (is (= "abc" (-> internal (nth 5) :from-id)))
       (is (= 1200 (-> internal (nth 6) :tokens-before)))
+      ;; Shape external maps stay in CLJS data with keyword enum values;
+      ;; the facade host adapter stringifies them for public JavaScript callers.
       (is (= [:user :assistant :toolResult :bashExecution :custom :branchSummary :compactionSummary]
              (mapv :role external)))
       (is (= "tool-use" (-> external second :stopReason)))

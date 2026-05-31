@@ -72,7 +72,7 @@ jobs:
 
       - name: Upload eta-mu-runtime coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: eta-mu-runtime-cljs-coverage
           path: packages/eta-mu-runtime/coverage/
@@ -188,7 +188,7 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: cljs-coverage
           path: packages/eta-mu-extensions/coverage/
@@ -196,7 +196,7 @@ jobs:
 
       - name: Upload shadow-cljs logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: shadow-cljs-logs
           path: packages/eta-mu-extensions/.shadow-cljs/

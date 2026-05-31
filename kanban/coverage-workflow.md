@@ -53,8 +53,9 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 pnpm --dir packages/eta-mu-runtime test
 pnpm --dir packages/eta-mu-runtime typecheck
 git diff --check
-actionlint .github/workflows/coverage.yml
 ```
+
+Optional host-local workflow lint used during this slice: `actionlint .github/workflows/coverage.yml`.
 
 ## Baseline after ratchet
 
