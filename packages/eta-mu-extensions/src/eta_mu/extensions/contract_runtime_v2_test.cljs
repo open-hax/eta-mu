@@ -27,7 +27,9 @@
       (is (= :unknown (:contract/kind (first res)))))))
 
 (deftest contract-kind-test
-  (is (= :actor (core/contract-kind {:actor/id :mindfuck})))
+  (is (= :agent (core/contract-kind {:contract/kind :agent})))
+  (is (= :agent (core/contract-kind {:actor/id :mindfuck})))
+  (is (= :agent (core/contract-kind {:contract/kind :actor})))
   (is (= :runtime-feature (core/contract-kind {:runtime-feature/id "eta-mu.opmf-contract-gate"})))
   (is (= :policy (core/contract-kind {:contract/kind :policy})))
   (is (nil? (core/contract-kind {:x 1}))))
@@ -36,7 +38,7 @@
   (testing "known structured kinds dispatch to their collections"
     (let [raw "{:contract/kind :policy :contract/id \"p1\"}"
           acc (-> {:actors [] :policies [] :fulfills [] :runtime-features [] :caps {} :roles {} :prompt-blocks []}
-                  (core/apply-map-dispatch {:actor/id :mindfuck :system "hello"} raw)
+                  (core/apply-map-dispatch {:contract/kind :agent :actor-id :mindfuck :system "hello"} raw)
                   (core/apply-map-dispatch {:contract/kind :policy :contract/id "p1"} raw)
                   (core/apply-map-dispatch {:contract/kind :fulfillment :contract/id "f1"} raw)
                   (core/apply-map-dispatch {:contract/kind :runtime-feature :contract/id "eta-mu.opmf-contract-gate"} raw)
@@ -50,7 +52,15 @@
       (is (= {:contract/kind :capability :capability/id :cap/x}
              (get-in acc [:caps ":cap/x"])))
       (is (= {:contract/kind :role :role/id :role/x}
-             (get-in acc [:roles ":role/x"]))))))
+             (get-in acc [:roles ":role/x"])))))
+  (testing "legacy :actor/id form dispatches to :actors via shim"
+    (let [acc (core/apply-map-dispatch {} {:actor/id :legacy :system "legacy-text"} "raw")]
+      (is (= 1 (count (:actors acc))))
+      (is (= :legacy (:actor/id (first (:actors acc)))))))
+  (testing "legacy :contract/kind :actor dispatches to :actors via shim"
+    (let [acc (core/apply-map-dispatch {} {:contract/kind :actor :actor-id :legacy2 :system "legacy2"} "raw")]
+      (is (= 1 (count (:actors acc))))
+      (is (= :legacy2 (:actor-id (first (:actors acc))))))))
 
 (deftest prompt-blocks-fallthrough-test
   (testing "actor emits :system as prompt block"

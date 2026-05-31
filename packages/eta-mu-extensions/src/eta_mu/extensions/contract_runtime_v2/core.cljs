@@ -29,15 +29,22 @@
         [{:contract/kind :unknown :raw (or text "")}]))))
 
 (defn contract-kind [m]
-  (or (:contract/kind m)
-      (when (:actor/id m) :actor)
-      (when (:runtime-feature/id m) :runtime-feature)
-      nil))
+  (let [kind (:contract/kind m)]
+    (cond
+      (= kind :agent) :agent
+      (= kind :actor)
+      (do (js/console.warn "[contract-runtime-v2] Deprecated: :contract/kind :actor, use :agent")
+          :agent)
+      (:actor/id m)
+      (do (js/console.warn "[contract-runtime-v2] Deprecated: :actor/id form, use :contract/kind :agent with :actor-id")
+          :agent)
+      (:runtime-feature/id m) :runtime-feature
+      :else nil)))
 
 (defn prompt-block-for-map [m raw-text]
   (let [kind (contract-kind m)]
     (cond
-      (= kind :actor)
+      (= kind :agent)
       (let [sys (:system m)]
         (cond
           (string? sys) sys
@@ -50,7 +57,7 @@
   (let [kind   (contract-kind m)
         prompt (prompt-block-for-map m raw-text)]
     (cond-> acc
-      (= kind :actor)       (update :actors      (fnil conj []) m)
+      (= kind :agent)       (update :actors      (fnil conj []) m)
       (= kind :policy)      (update :policies    (fnil conj []) m)
       (= kind :fulfillment) (update :fulfills    (fnil conj []) m)
       (= kind :runtime-feature) (update :runtime-features (fnil conj []) m)
