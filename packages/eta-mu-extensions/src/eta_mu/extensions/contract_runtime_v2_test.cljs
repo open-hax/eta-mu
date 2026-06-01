@@ -27,7 +27,9 @@
       (is (= :unknown (:contract/kind (first res)))))))
 
 (deftest contract-kind-test
-  (is (= :actor (core/contract-kind {:actor/id :mindfuck})))
+  (is (= :agent (core/contract-kind {:actor/id :mindfuck})))
+  (is (= :agent (core/contract-kind {:contract/kind :agent})))
+  (is (= :agent (core/contract-kind {:contract/kind :actor})) "legacy :actor kind shim")
   (is (= :runtime-feature (core/contract-kind {:runtime-feature/id "eta-mu.opmf-contract-gate"})))
   (is (= :policy (core/contract-kind {:contract/kind :policy})))
   (is (nil? (core/contract-kind {:x 1}))))

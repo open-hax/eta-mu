@@ -183,7 +183,7 @@
         prompt       (core/prompt-block-for-map m nil)
         opmf-active? (gobj/get js/globalThis "__eta_mu_opmf_gate_active__")
         state*       (cond
-                       (= kind :actor)       (update state :actors conj tagged)
+                       (= kind :agent)       (update state :actors conj tagged)
                        (= kind :policy)      (update state :policies conj tagged)
                        (= kind :runtime-feature) (update state :runtime-features conj tagged)
                        (= kind :fulfillment) (if (and (= (:contract/id m) OPMF-OUTPUT-GATE-ID) opmf-active?)

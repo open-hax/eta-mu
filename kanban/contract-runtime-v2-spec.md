@@ -35,7 +35,7 @@ v2 replaces this with:
 - **`.ημ/` directory** per working directory: SHA cache, TTL state, PRINCIPLE.edn
 - **PRINCIPLE.edn bootstrap** generated from `agents/mindfuck/CONTRACT.edn` on session start
 - **Before/after hooks on path-bearing tool calls** for policy and fulfillment dispatch
-- **Dispatch table**: `:actor` | `:policy` | `:fulfillment` | `:capability` | `:role` | unknown→system-prompt verbatim
+- **Dispatch table**: `:agent` | `:policy` | `:fulfillment` | `:capability` | `:role` | unknown→system-prompt verbatim
 
 The existing `opmf_contract_gate.cljs` remains active. The new runtime
 detects its presence at session start and skips re-registering the
@@ -126,7 +126,7 @@ After loading, each top-level map in the EDN file is dispatched by `:contract/ki
 
 | `:contract/kind` | Action |
 |------------------|--------|
-| `:actor` | Merge actor `:system` prompt + `:capabilities` into session context. Register roles. |
+| `:agent` | Merge actor `:system` prompt + `:capabilities` into session context. Register roles. |
 | `:policy` | Register pre-tool check. Runs before next tool call in scope. `:block` severity halts the call. |
 | `:fulfillment` | Register post-tool check. Runs after tool call returns result. Emits `:verdict-record`. |
 | `:capability` | Register into session `:caps` registry. Actors reference by `:namespaced` id. |
