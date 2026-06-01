@@ -29,15 +29,18 @@
         [{:contract/kind :unknown :raw (or text "")}]))))
 
 (defn contract-kind [m]
-  (or (:contract/kind m)
-      (when (:actor/id m) :actor)
+  (or (when-let [k (:contract/kind m)]
+        (case k
+          :actor :agent   ;; migration shim: old CONTRACT.edn files
+          k))
+      (when (:actor/id m) :agent)
       (when (:runtime-feature/id m) :runtime-feature)
       nil))
 
 (defn prompt-block-for-map [m raw-text]
   (let [kind (contract-kind m)]
     (cond
-      (= kind :actor)
+      (= kind :agent)
       (let [sys (:system m)]
         (cond
           (string? sys) sys
@@ -50,7 +53,7 @@
   (let [kind   (contract-kind m)
         prompt (prompt-block-for-map m raw-text)]
     (cond-> acc
-      (= kind :actor)       (update :actors      (fnil conj []) m)
+      (= kind :agent)       (update :actors      (fnil conj []) m)
       (= kind :policy)      (update :policies    (fnil conj []) m)
       (= kind :fulfillment) (update :fulfills    (fnil conj []) m)
       (= kind :runtime-feature) (update :runtime-features (fnil conj []) m)
