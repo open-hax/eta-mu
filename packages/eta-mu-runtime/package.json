@@ -1,6 +1,6 @@
 {
   "name": "@open-hax/eta-mu-runtime",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Typed movement kernel for eta-mu belief state, panel selection, and auditable action envelopes",
   "private": false,
   "type": "module",

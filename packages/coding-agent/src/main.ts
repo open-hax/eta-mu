@@ -778,31 +778,31 @@ export async function main(args: string[], options?: MainOptions) {
 async function handleKanbanCommand(args: string[]): Promise<void> {
 	const { existsSync } = await import("node:fs");
 	const { resolve, dirname, join } = await import("node:path");
-	const { createRequire } = await import("node:module");
+	const { fileURLToPath } = await import("node:url");
 
 	if (args[0] === "help" || args[0] === "--help" || args[0] === "-h" || args.length === 0) {
 		printKanbanHelp();
 		return;
 	}
 
-	// Resolve the kanban package CLI
-	let kanbanCli: string;
-	try {
-		const require = createRequire(import.meta.url);
-		const packageNames = ["@open-hax/kanban-legacy", "@openhax/kanban-legacy"];
-		const kanbanPkgJson = packageNames
-			.map((packageName) => {
-				try {
-					return require.resolve(`${packageName}/package.json`);
-				} catch {
-					return undefined;
-				}
-			})
-			.find((candidate): candidate is string => typeof candidate === "string");
-		if (!kanbanPkgJson) throw new Error("kanban package not found");
-		kanbanCli = join(dirname(kanbanPkgJson), "dist", "cli.js");
-	} catch {
-		// Fallback: try relative path from coding-agent to kanban
+	// Resolve the kanban package CLI through package exports. The published package does
+	// not export package.json for createRequire(), but import.meta.resolve() can resolve
+	// the ESM import entry and the CLI lives beside it in dist/.
+	let kanbanCli: string | undefined;
+	for (const packageName of ["@open-hax/kanban-legacy", "@openhax/kanban-legacy"]) {
+		try {
+			const entryPoint = import.meta.resolve(packageName);
+			const candidate = join(dirname(fileURLToPath(entryPoint)), "cli.js");
+			if (existsSync(candidate)) {
+				kanbanCli = candidate;
+				break;
+			}
+		} catch {
+			// Try the next historical package name, then the monorepo fallback.
+		}
+	}
+	if (!kanbanCli) {
+		// Fallback: try relative path from coding-agent to kanban in a monorepo checkout.
 		const fallback = resolve(import.meta.dirname, "../../kanban/dist/cli.js");
 		if (existsSync(fallback)) {
 			kanbanCli = fallback;
@@ -828,17 +828,13 @@ async function handleKanbanCommand(args: string[]): Promise<void> {
 	const tasksDir = tasksDirFlag >= 0 ? args[tasksDirFlag + 1] : undefined;
 	const configFlag = args.indexOf("--config");
 	const configPath = configFlag >= 0 ? args[configFlag + 1] : undefined;
-	const cliArgs = [] as string[];
-	if (tasksDir) cliArgs.push("--tasks-dir", tasksDir);
-	if (configPath) cliArgs.push("--config", configPath);
-
-	const { loadTasks } = await import("../../kanban/dist/tasks.js");
-	const { buildBoardSnapshot } = await import("../../kanban/dist/board.js");
-	const { parseTaskContent } = await import("../../kanban/dist/content-parser.js");
+	const { loadTasks } = await import("@open-hax/kanban-legacy/tasks.js");
+	const { buildBoardSnapshot } = await import("@open-hax/kanban-legacy/board.js");
+	const { parseTaskContent } = await import("@open-hax/kanban-legacy/content-parser.js");
 	const { readFile } = await import("node:fs/promises");
 
 	// Resolve tasks dir
-	const { loadConfig, resolveConfigPathValue } = await import("../../kanban/dist/config.js");
+	const { loadConfig, resolveConfigPathValue } = await import("@open-hax/kanban-legacy/config.js");
 	const loadedConfig = await loadConfig(configPath);
 	const resolvedTasksDir = tasksDir
 		? resolve(tasksDir)
@@ -919,7 +915,7 @@ async function handleKanbanCommand(args: string[]): Promise<void> {
 		if (!tasks) return;
 		const task = tasks.find((t) => t.uuid === uuid || t.slug === uuid);
 		if (!task) { console.error(chalk.red(`Not found: ${uuid}`)); process.exitCode = 1; return; }
-		const { writeTaskStatus } = await import("../../kanban/dist/task-writeback.js");
+		const { writeTaskStatus } = await import("@open-hax/kanban-legacy/task-writeback.js");
 		const updated = await writeTaskStatus(task, resolvedTasksDir, status);
 		console.log(`${updated.uuid}  ${task.status} -> ${updated.status}`);
 		return;
@@ -946,7 +942,7 @@ async function handleKanbanCommand(args: string[]): Promise<void> {
 		if (!tasks) return;
 		const task = tasks.find((t) => t.uuid === uuid);
 		if (!task) { console.error(chalk.red(`Not found: ${uuid}`)); process.exitCode = 1; return; }
-		const { appendComment } = await import("../../kanban/dist/content-parser.js");
+		const { appendComment } = await import("@open-hax/kanban-legacy/content-parser.js");
 		const updated = await appendComment(task.sourcePath, text);
 		console.log("Comment added. Sections:");
 		for (const s of updated.sections) console.log(`  [${s.type}] ${s.content.slice(0, 60)}...`);
@@ -962,7 +958,7 @@ async function handleKanbanCommand(args: string[]): Promise<void> {
 		if (!tasks) return;
 		const task = tasks.find((t) => t.uuid === uuid);
 		if (!task) { console.error(chalk.red(`Not found: ${uuid}`)); process.exitCode = 1; return; }
-		const { updateFrontmatterField } = await import("../../kanban/dist/content-parser.js");
+		const { updateFrontmatterField } = await import("@open-hax/kanban-legacy/content-parser.js");
 		const parsed = await updateFrontmatterField(task.sourcePath, key, value);
 		console.log(`Updated ${key}: ${JSON.stringify(parsed.frontmatter[key])}`);
 		return;
