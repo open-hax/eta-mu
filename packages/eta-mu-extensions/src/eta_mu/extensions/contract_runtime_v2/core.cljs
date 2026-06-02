@@ -59,6 +59,41 @@
       (and (string? prompt) (not (str/blank? prompt)))
       (update :prompt-blocks (fnil conj []) prompt))))
 
+;; ── PRINCIPLE.edn merge ───────────────────────────────────────
+
+(defn parse-principle-components [text]
+  "Parse PRINCIPLE.edn text into a seq of {:id <contract/id> :form <map>}.
+   Only top-level maps with :contract/id are considered mergeable components.
+   Components without :contract/id are ignored for merge purposes."
+  (let [cleaned (strip-comment-lines text)
+        wrapped (if (str/starts-with? (str/trim cleaned) "[")
+                  cleaned
+                  (str "[" cleaned "]"))]
+    (->> (normalize-contract-forms wrapped)
+         (map (fn [form]
+                (when (map? form)
+                  {:id   (:contract/id form)
+                   :form form})))
+         (filter :id))))
+
+(defn merge-principle-text
+  "Pure append-only merge of src-text into dest-text.
+   Returns {:ok true :action :appended :added [ids...] :text <merged>}
+   or {:ok true :action :unchanged}."
+  [dest-text src-text]
+  (let [dest-components (parse-principle-components dest-text)
+        src-components  (parse-principle-components src-text)
+        dest-ids        (set (map :id dest-components))
+        new-components  (remove #(dest-ids (:id %)) src-components)
+        new-ids         (mapv :id new-components)]
+    (if (empty? new-ids)
+      {:ok true :action :unchanged}
+      (let [ts    (.toISOString (js/Date.))
+            chunk (str "\n\n;;[bootstrapped " ts "]\n"
+                       (str/join "\n\n" (map pr-str (map :form new-components))))
+            merged-text (str (str/trimr dest-text) chunk)]
+        {:ok true :action :appended :added new-ids :text merged-text}))))
+
 (defn build-prompt-append [principle-text prompt-blocks]
   (let [blocks (filter #(and (string? %) (not (str/blank? %)))
                        (concat [(when (and principle-text (not (str/blank? principle-text)))

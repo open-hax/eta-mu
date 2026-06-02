@@ -157,11 +157,11 @@
       (let [dest-text (safe-read-text dest)]
         (if (= (contract-sha src-text) (contract-sha dest-text))
           {:ok true :action :unchanged}
-          (if (str/includes? dest-text ":disabled true")
-            {:ok false :action :skipped
-             :reason "PRINCIPLE.edn has :disabled sections — manual merge required"}
-            (do (write-text! dest src-text)
-                {:ok true :action :updated :source source})))))))
+          (let [result (core/merge-principle-text dest-text src-text)]
+            (if (= (:action result) :appended)
+              (do (write-text! dest (:text result))
+                  (assoc result :source source))
+              result)))))))
 
 ;; ── Dispatch ──────────────────────────────────────────────
 

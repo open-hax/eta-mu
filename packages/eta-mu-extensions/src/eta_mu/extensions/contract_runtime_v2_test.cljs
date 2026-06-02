@@ -290,3 +290,54 @@
 
 (deftest fulfillment-empty-test
   (is (empty? (core/evaluate-fulfillments [] {:tool/name "anything"}))))
+
+;; ── PRINCIPLE.edn merge tests ───────────────────────────────────
+
+(deftest parse-principle-components-test
+  (testing "extracts components with :contract/id"
+    (let [text "[{:contract/id \"a\" :x 1} {:contract/id \"b\" :x 2}]"
+          comps (core/parse-principle-components text)]
+      (is (= 2 (count comps)))
+      (is (= #{"a" "b"} (set (map :id comps))))))
+  (testing "ignores components without :contract/id"
+    (let [text "[{:x 1} {:contract/id \"c\" :x 2}]"
+          comps (core/parse-principle-components text)]
+      (is (= 1 (count comps)))
+      (is (= "c" (:id (first comps))))))
+  (testing "single map form"
+    (let [text "{:contract/id \"d\" :x 1}"
+          comps (core/parse-principle-components text)]
+      (is (= 1 (count comps)))
+      (is (= "d" (:id (first comps)))))))
+
+(deftest merge-principle-text-test
+  (testing "unchanged when all ids present"
+    (let [dest "[{:contract/id \"a\" :x 1}]"
+          src  "[{:contract/id \"a\" :x 1}]"
+          res  (core/merge-principle-text dest src)]
+      (is (= :unchanged (:action res)))))
+  (testing "appends new components"
+    (let [dest "[{:contract/id \"a\" :x 1}]"
+          src  "[{:contract/id \"a\" :x 1} {:contract/id \"b\" :x 2}]"
+          res  (core/merge-principle-text dest src)]
+      (is (= :appended (:action res)))
+      (is (= ["b"] (:added res)))
+      (is (.includes (:text res) "b"))
+      (is (.includes (:text res) "bootstrapped"))))
+  (testing "preserves existing text exactly"
+    (let [dest ";; comment\n{:contract/id \"a\" :x 1}"
+          src  "{:contract/id \"a\" :x 1}\n{:contract/id \"b\" :x 2}"
+          res  (core/merge-principle-text dest src)]
+      (is (= :appended (:action res)))
+      (is (.startsWith (:text res) ";; comment"))))
+  (testing "empty dest appends all components"
+    (let [dest ""
+          src  "{:contract/id \"a\" :x 1}"
+          res  (core/merge-principle-text dest src)]
+      (is (= :appended (:action res)))
+      (is (= ["a"] (:added res)))))
+  (testing "no mergeable components in source → unchanged"
+    (let [dest "{:contract/id \"a\" :x 1}"
+          src  "{:x 2}"
+          res  (core/merge-principle-text dest src)]
+      (is (= :unchanged (:action res))))))
