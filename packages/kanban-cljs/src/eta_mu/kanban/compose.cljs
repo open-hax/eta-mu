@@ -53,11 +53,20 @@
         [(str/trim field) :contains (str/trim value)])
       :else nil)))
 
+(defn- meta-clause? [clause]
+  (str/starts-with? (name (first clause)) "meta."))
+
+(defn- task-clause? [clause]
+  (not (meta-clause? clause)))
+
 (defn- filter-task [task {:keys [status priority labels where-clauses]}]
   (and (or (empty? status) (some #(= (:status task) %) status))
        (or (empty? priority) (some #(= (:priority task) %) priority))
        (or (empty? labels) (every? (fn [label] (some #(= % label) (:labels task))) labels))
-       (or (empty? where-clauses) (every? #(match-where task %) where-clauses))))
+       (every? (fn [clause]
+                 (or (meta-clause? clause)
+                     (match-where task clause)))
+               (or where-clauses []))))
 
 (defn- filter-projects [projects {:keys [across where-clauses]}]
   (let [meta-clauses (filter #(str/starts-with? (name (first %)) "meta.") where-clauses)]
@@ -70,20 +79,23 @@
   (filter-projects projects query))
 
 (defn ^:async compose-snapshot [projects query]
-  (let [filtered-projects (filter-projects projects query)
-        all-tasks (atom [])]
-    ;; Load tasks from each filtered project
-    (loop [remaining filtered-projects]
-      (when (seq remaining)
-        (let [project (first remaining)]
-          (try
-            (let [tasks (await (tasks/load-tasks (:tasks-dir project)))]
-              (doseq [t tasks]
-                (swap! all-tasks conj (assoc t :source-board (:id project)))))
-            (catch :default _))
-          (recur (rest remaining)))))
-    (let [filtered (filterv #(filter-task % query) @all-tasks)]
-      (board/build-board-snapshot filtered))))
+  (try
+    (let [filtered-projects (filter-projects projects query)
+          all-tasks (atom [])]
+      (loop [remaining filtered-projects]
+        (when (seq remaining)
+          (let [project (first remaining)]
+            (try
+              (let [tasks (await (tasks/load-tasks (:tasks-dir project)))]
+                (doseq [t tasks]
+                  (swap! all-tasks conj (assoc t :source-board (:id project)))))
+              (catch :default _))
+            (recur (rest remaining)))))
+      (let [filtered (filterv #(filter-task % query) @all-tasks)]
+        (board/build-board-snapshot filtered)))
+    (catch :default err
+      (js/console.error "compose-snapshot error:" (.-message err))
+      (board/build-board-snapshot []))))
 
 (defn- get-flag [flags key]
   (or (get flags key)
