@@ -111,8 +111,9 @@ jobs:
           dry_run="${{ inputs.dry-run }}"
           close_done="${{ inputs.close-done }}"
           close_rejected="${{ inputs.close-rejected }}"
+          tasks_dir="${{ inputs.tasks-dir }}"
           
-          args="--repo $repo --tasks-dir ${{ inputs.tasks-dir }}"
+          args="--repo $repo --tasks-dir ${{ github.workspace }}/$tasks_dir"
           
           if [ "$dry_run" = "true" ]; then
             args="$args --dry-run"
