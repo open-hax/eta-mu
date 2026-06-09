@@ -1,0 +1,11 @@
+{:tasks
+ {build {:doc "Build production server + CLI"
+         :task (shell "shadow-cljs release server cli")}
+  watch {:doc "Dev watch with hot-reload"
+         :task (shell "shadow-cljs watch server-dev")}
+  test {:doc "Run tests"
+        :task (shell "shadow-cljs compile test && node target/test.cjs")}
+  lint {:doc "Lint source with clj-kondo"
+        :task (shell "clj-kondo --lint src test")}
+  clean {:doc "Clean build artifacts"
+         :task (shell "rm -rf dist dist-dev target")}}}

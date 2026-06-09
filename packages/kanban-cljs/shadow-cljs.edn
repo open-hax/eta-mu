@@ -1,0 +1,65 @@
+{:source-paths ["src" "test"
+                 "../../../../open-hax/openplanner/packages/openplanner-protocols/src"
+                 "../../../../open-hax/openplanner/packages/event-ledger/src"]
+ :dependencies [[metosin/malli "0.17.0"]]
+
+ :builds
+ {:server
+  {:target :esm
+   :runtime :node
+   :output-dir "dist"
+   :modules {:server {:init-fn eta-mu.kanban.server/init}}
+   :js-options {:js-provider :import
+                :keep-as-import #{"node:fs" "node:fs/promises" "node:path" "node:url"
+                                  "node:child_process" "node:crypto"
+                                  "chokidar"}}
+   :compiler-options {:output-feature-set :es-next
+                      :source-map true
+                      :infer-externs false}}
+
+  :server-dev
+  {:target :esm
+   :runtime :node
+   :output-dir "dist-dev"
+   :modules {:server {:init-fn eta-mu.kanban.server/init}}
+   :js-options {:js-provider :import
+                :keep-as-import #{"node:fs" "node:fs/promises" "node:path" "node:url"
+                                  "node:child_process" "node:crypto"
+                                  "chokidar"}}
+   :devtools {:autoload true
+              :preloads [shadow.cljs.devtools.client.node-esm]
+              :ignore-warnings true
+              :before-load-async eta-mu.kanban.server/stop!
+              :after-load-async  eta-mu.kanban.server/start!}
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :none
+                      :source-map true
+                      :infer-externs false}}
+
+  :app
+  {:target :browser
+   :output-dir "resources/public/js"
+   :asset-path "/js"
+   :modules {:main {:init-fn eta-mu.kanban.ui.core/init}}
+   :compiler-options {:warnings-as-errors true
+                      :elide-asserts false}}
+
+  :test
+  {:target :node-test
+   :output-to "target/test.cjs"
+   :ns-regex ["eta-mu.kanban.*-test$"]
+   :autorun true
+   :compiler-options {:output-feature-set :es-next}}
+
+  :cli
+  {:target :esm
+   :runtime :node
+   :output-dir "dist"
+   :modules {:cli {:init-fn eta-mu.kanban.cli/main}}
+   :js-options {:js-provider :import
+                :keep-as-import #{"node:fs" "node:fs/promises" "node:path" "node:url"
+                                  "node:child_process" "node:crypto"
+                                  "chokidar"}}
+   :compiler-options {:output-feature-set :es-next
+                      :source-map true
+                      :infer-externs false}}}}
