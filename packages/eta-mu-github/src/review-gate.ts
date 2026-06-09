@@ -18,3 +18,13 @@ export const findTrackedUnresolvedThreads = (
     unresolvedThreads,
   };
 };
+
+export const findAllUnresolvedThreads = (
+  threads: readonly ReviewThreadSummary[],
+): ReviewGateResult => {
+  const unresolvedThreads = threads.filter((thread) => !thread.isResolved);
+  return {
+    trackedActors: [],
+    unresolvedThreads,
+  };
+};

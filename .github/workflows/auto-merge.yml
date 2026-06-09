@@ -1,0 +1,58 @@
+name: Auto Merge
+
+on:
+  workflow_call:
+    inputs:
+      repo:
+        description: "Repository in owner/name format (defaults to calling repo)"
+        required: false
+        type: string
+        default: ""
+      pr:
+        description: "Pull request number"
+        required: true
+        type: number
+      merge-method:
+        description: "Merge method (MERGE, SQUASH, REBASE)"
+        required: false
+        type: string
+        default: "SQUASH"
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+
+      - name: Checkout eta-mu logic
+        uses: actions/checkout@v4
+        with:
+          repository: open-hax/eta-mu
+          ref: 92beede072dd013e1379c9a1ba0bd160d2f9b252
+          path: .eta-mu
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: .eta-mu/packages/eta-mu-github/pnpm-lock.yaml
+
+      - name: Install eta-mu dependencies
+        run: pnpm --dir .eta-mu/packages/eta-mu-github install --frozen-lockfile --ignore-workspace
+
+      - name: Enable auto-merge
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          pnpm --dir .eta-mu/packages/eta-mu-github dev auto-merge \
+            --repo "${{ inputs.repo || github.repository }}" \
+            --pr "${{ inputs.pr }}" \
+            --merge-method "${{ inputs.merge-method }}"

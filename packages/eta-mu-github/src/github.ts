@@ -294,3 +294,100 @@ export const publishCheckRun = async (
     },
   });
 };
+
+export interface BranchWithoutPR {
+  readonly name: string;
+  readonly sha: string;
+}
+
+export const listBranchesWithoutPRs = async (
+  octokit: Octokit,
+  repo: RepoSlug,
+  base: string,
+  patterns: readonly string[],
+): Promise<readonly BranchWithoutPR[]> => {
+  const [branches, prs] = await Promise.all([
+    octokit.paginate(octokit.rest.repos.listBranches, {
+      owner: repo.owner,
+      repo: repo.name,
+      per_page: 100,
+    }),
+    octokit.paginate(octokit.rest.pulls.list, {
+      owner: repo.owner,
+      repo: repo.name,
+      state: "open",
+      base,
+      per_page: 100,
+    }),
+  ]);
+
+  const prHeads = new Set(prs.map((pr) => pr.head.ref));
+
+  const protectedRefs = new Set(["main", "master", "staging", "production", "prod"]);
+  const branchPattern = new RegExp(
+    `^(?:${patterns.map((p) => p.replace(/\*/g, ".*")).join("|")})$`,
+  );
+
+  return branches
+    .filter((branch) => {
+      if (protectedRefs.has(branch.name)) return false;
+      if (branch.name === base) return false;
+      if (prHeads.has(branch.name)) return false;
+      return branchPattern.test(branch.name);
+    })
+    .map((branch) => ({
+      name: branch.name,
+      sha: branch.commit.sha,
+    }));
+};
+
+export const createPullRequest = async (
+  octokit: Octokit,
+  repo: RepoSlug,
+  head: string,
+  base: string,
+  title: string,
+  body: string,
+): Promise<{ number: number; url: string }> => {
+  const response = await octokit.rest.pulls.create({
+    owner: repo.owner,
+    repo: repo.name,
+    head,
+    base,
+    title,
+    body,
+  });
+  return {
+    number: response.data.number,
+    url: response.data.html_url,
+  };
+};
+
+export const inferPRTitle = (branchName: string): string => {
+  const withoutPrefix = branchName
+    .replace(/^(?:fix|feat|chore|docs|refactor|test|perf|ci|build)\//, "")
+    .replace(/-\d+$/, "");
+  return withoutPrefix
+    .split(/[-_]/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
+export const fetchBranchCommits = async (
+  octokit: Octokit,
+  repo: RepoSlug,
+  branch: string,
+  base: string,
+): Promise<readonly string[]> => {
+  try {
+    const comparison = await octokit.rest.repos.compareCommits({
+      owner: repo.owner,
+      repo: repo.name,
+      base,
+      head: branch,
+    });
+    return comparison.data.commits.slice(0, 10).map((commit) => commit.commit.message.split("\n")[0]);
+  } catch {
+    return [];
+  }
+};

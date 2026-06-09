@@ -21,14 +21,20 @@ import {
   parseActionBatch,
   publishActionBatch,
 } from "./runtime-batch.js";
-import { findTrackedUnresolvedThreads } from "./review-gate.js";
+import { findTrackedUnresolvedThreads, findAllUnresolvedThreads } from "./review-gate.js";
+import { ensurePRs } from "./ensure-pr.js";
 import type { AutofixResult, EtaMuAgentDecision } from "./types.js";
 import { readFile } from "node:fs/promises";
+import { execSync } from "node:child_process";
 
 const usage = `eta-mu commands:
-  eta-mu review-gate --repo owner/repo --pr 123 [--publish-check] [--check-name eta-mu-review-gate] [--head-sha <sha>]
+  eta-mu review-gate --repo owner/repo --pr 123 [--publish-check] [--check-name eta-mu-review-gate] [--head-sha <sha>] [--strict]
   eta-mu classify-event --repo owner/repo --event-name issue_comment --event-path /tmp/event.json
-  eta-mu run-event --repo owner/repo --event-name issue_comment --event-path /tmp/event.json --cwd /checkout/path [--dry-run]`;
+  eta-mu run-event --repo owner/repo --event-name issue_comment --event-path /tmp/event.json --cwd /checkout/path [--dry-run]
+  eta-mu ensure-pr --repo owner/repo --base staging [--pattern fix/*] [--pattern feat/*] [--dry-run]
+  eta-mu auto-merge --repo owner/repo --pr 123
+  eta-mu detect-packages --base <branch> [--workspace-glob packages/*/]
+  eta-mu release --repo owner/repo --pr 123 [--tag-prefix v] [--create-release] [--publish-npm]`;
 
 const requireArg = (name: string, value: string | undefined): string => {
   if (!value) throw new Error(`Missing required argument ${name}`);
@@ -89,7 +95,9 @@ const main = async (): Promise<void> => {
       issueNumber: pr,
       debounceKey: `${repo.owner}/${repo.name}:pr:${pr}`,
     }, {});
-    const result = findTrackedUnresolvedThreads(context.unresolvedReviewThreads ?? [], config.reviewActors);
+    const result = hasFlag(args, "--strict")
+      ? findAllUnresolvedThreads(context.unresolvedReviewThreads ?? [])
+      : findTrackedUnresolvedThreads(context.unresolvedReviewThreads ?? [], config.reviewActors);
     const output = formatReviewGateOutput(result);
     const checkName = getArg(args, "--check-name") ?? config.reviewCheckName;
     const headSha = getArg(args, "--head-sha") ?? context.pullRequestHead?.sha;
@@ -108,7 +116,8 @@ const main = async (): Promise<void> => {
     }
 
     if (result.unresolvedThreads.length > 0) {
-      throw new Error(`Unresolved tracked review threads: ${result.unresolvedThreads.length}`);
+      const scope = hasFlag(args, "--strict") ? "all" : "tracked";
+      throw new Error(`Unresolved ${scope} review threads: ${result.unresolvedThreads.length}`);
     }
     return;
   }
@@ -200,6 +209,183 @@ const main = async (): Promise<void> => {
       return;
     }
     await createIssueComment(octokit, repo, targetIssue, decision.body);
+    return;
+  }
+
+  if (command === "ensure-pr") {
+    const repo = parseRepoSlug(requireArg("--repo", getArg(args, "--repo")));
+    const base = getArg(args, "--base") ?? "staging";
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    if (!token) throw new Error("GITHUB_TOKEN or GH_TOKEN is required");
+    const patterns: string[] = [];
+    let index = args.indexOf("--pattern");
+    while (index >= 0) {
+      const pattern = args[index + 1];
+      if (pattern) patterns.push(pattern);
+      index = args.indexOf("--pattern", index + 1);
+    }
+    const result = await ensurePRs({
+      repo,
+      base,
+      token,
+      branchPatterns: patterns,
+      dryRun: hasFlag(args, "--dry-run"),
+    });
+    console.log(JSON.stringify(result, null, 2));
+    if (result.errors.length > 0) {
+      throw new Error(`Failed to create PRs for ${result.errors.length} branch(es)`);
+    }
+    return;
+  }
+
+  if (command === "auto-merge") {
+    const repo = parseRepoSlug(requireArg("--repo", getArg(args, "--repo")));
+    const pr = Number.parseInt(requireArg("--pr", getArg(args, "--pr")), 10);
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    if (!token) throw new Error("GITHUB_TOKEN or GH_TOKEN is required");
+    const octokit = createGitHubClient(token);
+
+    const query = `
+      query($owner: String!, $name: String!, $number: Int!) {
+        repository(owner: $owner, name: $name) {
+          pullRequest(number: $number) {
+            id
+            state
+            autoMergeRequest {
+              mergeMethod
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await octokit.graphql(query, {
+      owner: repo.owner,
+      name: repo.name,
+      number: pr,
+    }) as {
+      repository: {
+        pullRequest: {
+          id: string;
+          state: string;
+          autoMergeRequest?: { mergeMethod: string } | null;
+        };
+      };
+    };
+
+    const pullRequest = response.repository.pullRequest;
+    if (pullRequest.state !== "OPEN") {
+      console.log(JSON.stringify({ status: "skipped", reason: `PR state is ${pullRequest.state}` }, null, 2));
+      return;
+    }
+
+    if (pullRequest.autoMergeRequest) {
+      console.log(JSON.stringify({ status: "skipped", reason: "Auto-merge already enabled" }, null, 2));
+      return;
+    }
+
+    const mutation = `
+      mutation($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+        enablePullRequestAutoMerge(input: {
+          pullRequestId: $pullRequestId,
+          mergeMethod: $mergeMethod
+        }) {
+          pullRequest {
+            id
+            autoMergeRequest {
+              mergeMethod
+            }
+          }
+        }
+      }
+    `;
+
+    const mergeMethod = (getArg(args, "--merge-method") ?? "SQUASH").toUpperCase() as "MERGE" | "SQUASH" | "REBASE";
+
+    await octokit.graphql(mutation, {
+      pullRequestId: pullRequest.id,
+      mergeMethod,
+    });
+
+    console.log(JSON.stringify({ status: "enabled", pr, mergeMethod }, null, 2));
+    return;
+  }
+
+  if (command === "detect-packages") {
+    const base = requireArg("--base", getArg(args, "--base"));
+    const workspaceGlob = getArg(args, "--workspace-glob") ?? "packages/*/";
+
+    const changedFiles = execSync(`git diff --name-only origin/${base}...HEAD`, { encoding: "utf8" }).trim().split("\n").filter(Boolean);
+
+    const workspaceDirs = execSync(`ls -d ${workspaceGlob}`, { encoding: "utf8", shell: true })
+      .trim()
+      .split("\n")
+      .filter(Boolean);
+
+    const changedPackages: { path: string; name: string }[] = [];
+
+    for (const dir of workspaceDirs) {
+      const pkgJsonPath = `${dir}/package.json`;
+      if (!changedFiles.some((file) => file.startsWith(dir))) continue;
+
+      let pkgName: string | undefined;
+      try {
+        const pkgJson = JSON.parse(await readFile(pkgJsonPath, "utf8")) as { name?: string };
+        pkgName = pkgJson.name;
+      } catch {
+        continue;
+      }
+
+      changedPackages.push({ path: dir, name: pkgName ?? dir });
+    }
+
+    console.log(JSON.stringify({ changedPackages, changedFiles }, null, 2));
+    return;
+  }
+
+  if (command === "release") {
+    const repo = parseRepoSlug(requireArg("--repo", getArg(args, "--repo")));
+    const pr = Number.parseInt(requireArg("--pr", getArg(args, "--pr")), 10);
+    const tagPrefix = getArg(args, "--tag-prefix") ?? "v";
+    const createRelease = hasFlag(args, "--create-release");
+    const publishNpm = hasFlag(args, "--publish-npm");
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    if (!token) throw new Error("GITHUB_TOKEN or GH_TOKEN is required");
+
+    const octokit = createGitHubClient(token);
+
+    const pull = await octokit.rest.pulls.get({
+      owner: repo.owner,
+      repo: repo.name,
+      pull_number: pr,
+    });
+
+    if (pull.data.state !== "closed" || !pull.data.merged) {
+      throw new Error(`PR #${pr} must be merged to create a release`);
+    }
+
+    const tag = `${tagPrefix}${Date.now()}`;
+    const sha = pull.data.merge_commit_sha ?? pull.data.head.sha;
+
+    if (createRelease) {
+      const release = await octokit.rest.repos.createRelease({
+        owner: repo.owner,
+        repo: repo.name,
+        tag_name: tag,
+        target_commitish: sha,
+        name: `Release ${tag}`,
+        body: `Automated release for PR #${pr}: ${pull.data.title}\n\n${pull.data.body ?? ""}`,
+        draft: false,
+        prerelease: false,
+      });
+      console.log(JSON.stringify({ releaseUrl: release.data.html_url, tag }, null, 2));
+    }
+
+    if (publishNpm) {
+      console.log(JSON.stringify({ npmPublish: "npm publish not yet implemented - requires per-package detection" }, null, 2));
+    }
+
+    console.log(JSON.stringify({ tag, sha, pr, status: "released" }, null, 2));
     return;
   }
 
