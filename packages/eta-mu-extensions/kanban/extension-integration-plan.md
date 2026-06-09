@@ -1,7 +1,7 @@
 ---
 uuid: "orgs-open-hax-eta-mu-packages-eta-mu-extensions-kanban-orgs-open-hax-eta-mu-packages-eta-mu-extensions-spec-extension-integration-plan-md"
 title: "Extension Integration Plan for eta-mu"
-status: incoming
+status: in_progress
 priority: P3
 labels: ["specs", "migrated-spec"]
 created_at: "2026-05-29T04:29:38.093Z"
