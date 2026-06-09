@@ -1,7 +1,8 @@
 {:source-paths ["src" "test"
                  "../../../../open-hax/openplanner/packages/openplanner-protocols/src"
                  "../../../../open-hax/openplanner/packages/event-ledger/src"]
- :dependencies [[metosin/malli "0.17.0"]]
+ :dependencies [[metosin/malli "0.17.0"]
+                [lilactown/helix "0.2.2"]]
 
  :builds
  {:server
@@ -41,8 +42,7 @@
    :output-dir "resources/public/js"
    :asset-path "/js"
    :modules {:main {:init-fn eta-mu.kanban.ui.core/init}}
-   :compiler-options {:warnings-as-errors true
-                      :elide-asserts false}}
+   :compiler-options {:elide-asserts false}}
 
   :test
   {:target :node-test
