@@ -4,22 +4,40 @@
             [eta-mu.kanban.board :as board]
             [eta-mu.kanban.tasks :as tasks]))
 
+(defn- normalize-value [v]
+  (cond
+    (keyword? v) (name v)
+    :else (str v)))
+
 (defn- apply-operator [field-value op test-value]
-  (case op
-    :=  (= field-value test-value)
-    :in (if (vector? test-value) (some #(= field-value %) test-value) (= field-value test-value))
-    :contains (cond (vector? field-value) (some #(= % test-value) field-value)
-                    (string? field-value) (str/includes? field-value test-value)
-                    :else false)
-    :regex (re-matches (re-pattern test-value) (str field-value))
-    false))
+  (let [fv (normalize-value field-value)
+        tv (normalize-value test-value)]
+    (case op
+      :=  (= fv tv)
+      :in (if (vector? test-value)
+            (some #(= fv (normalize-value %)) test-value)
+            (= fv tv))
+      :contains (cond
+                  (vector? field-value) (some #(= (normalize-value %) tv) field-value)
+                  (string? fv) (str/includes? fv tv)
+                  :else false)
+      :regex (re-matches (re-pattern tv) fv)
+      false)))
 
 (defn- match-where [task [field op value]]
   (let [field-key (if (keyword? field) field (keyword field))]
     (apply-operator (get task field-key) op value)))
 
 (defn- match-meta-where [meta [field _op value]]
-  (apply-operator (get meta (keyword (name field))) := value))
+  (let [field-name (name field)
+        key (if (str/starts-with? field-name "meta.")
+              (keyword (subs field-name 5))
+              (keyword field-name))
+        meta-val (get meta key)
+        result (= (normalize-value meta-val) (normalize-value value))]
+    (when (= key :domain)
+      (js/console.error "MATCH domain:" (pr-str meta-val) "vs" (pr-str value) "->" result))
+    result))
 
 (defn parse-where-clause [clause]
   (let [clause (str/trim clause)]
@@ -48,24 +66,43 @@
                     (every? #(match-meta-where (:meta project) %) meta-clauses)))
              projects)))
 
+(defn filter-projects-for-debug [projects query]
+  (filter-projects projects query))
+
 (defn ^:async compose-snapshot [projects query]
   (let [filtered-projects (filter-projects projects query)
         all-tasks (atom [])]
+    ;; Load tasks from each filtered project
     (loop [remaining filtered-projects]
       (when (seq remaining)
-        (let [project (first remaining)
-              tasks (await (tasks/load-tasks (:tasks-dir project)))]
-          (swap! all-tasks into (mapv #(assoc % :source-board (:id project)) tasks))
+        (let [project (first remaining)]
+          (try
+            (let [tasks (await (tasks/load-tasks (:tasks-dir project)))]
+              (doseq [t tasks]
+                (swap! all-tasks conj (assoc t :source-board (:id project)))))
+            (catch :default _))
           (recur (rest remaining)))))
     (let [filtered (filterv #(filter-task % query) @all-tasks)]
       (board/build-board-snapshot filtered))))
 
+(defn- get-flag [flags key]
+  (or (get flags key)
+      (get flags (keyword key))
+      (aget flags key)))
+
 (defn parse-compose-query [flags]
-  (let [status (when (:status flags) (mapv str/trim (str/split (:status flags) #",")))
-        priority (when (:priority flags) (mapv str/trim (str/split (:priority flags) #",")))
-        labels (when (:labels flags) (mapv str/trim (str/split (:labels flags) #",")))
-        across (when (:projects flags) (mapv str/trim (str/split (:projects flags) #",")))
-        where-str (:where flags)
-        where-clauses (when where-str (mapv parse-where-clause (str/split where-str #" and ")))]
+  (let [status (when-let [v (get-flag flags "status")] (mapv str/trim (str/split (str v) #",")))
+        priority (when-let [v (get-flag flags "priority")] (mapv str/trim (str/split (str v) #",")))
+        labels (when-let [v (get-flag flags "labels")] (mapv str/trim (str/split (str v) #",")))
+        across (when-let [v (get-flag flags "projects")] (mapv str/trim (str/split (str v) #",")))
+        domain-val (get-flag flags "domain")
+        org-val (get-flag flags "org")
+        tier-val (get-flag flags "tier")
+        meta-filters (cond-> []
+                       domain-val (conj [(keyword "meta.domain") := (str domain-val)])
+                       org-val (conj [(keyword "meta.org") := (str org-val)])
+                       tier-val (conj [(keyword "meta.tier") := (str tier-val)]))
+        where-str (get-flag flags "where")
+        where-clauses (when where-str (mapv parse-where-clause (str/split (str where-str) #" and ")))]
     {:status (or status []) :priority (or priority []) :labels (or labels [])
-     :across (or across []) :where-clauses (filterv some? (or where-clauses []))}))
+     :across (or across []) :where-clauses (filterv some? (concat meta-filters (or where-clauses [])))}))

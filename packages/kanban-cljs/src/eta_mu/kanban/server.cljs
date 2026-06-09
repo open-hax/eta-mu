@@ -3,6 +3,7 @@
   (:require ["fastify" :default Fastify]
             ["@fastify/cors" :default fastifyCors]
             [eta-mu.kanban.board :as board]
+            [eta-mu.kanban.compose :as compose]
             [eta-mu.kanban.config :as config]
             [eta-mu.kanban.events :as events]
             [eta-mu.kanban.tasks :as tasks]
@@ -107,10 +108,42 @@
 
 (defn- handle-health [_req reply] (send-json reply #js {:ok true}))
 
+(defn ^:async handle-compose [req reply]
+  (try
+    (let [query-params (js->clj (.. req -query) :keywordize-keys true)
+          query (compose/parse-compose-query query-params)
+          projects (:projects @project-state)
+          filtered-projects (compose/filter-projects-for-debug projects query)
+          _ (js/console.error "COMPOSE:" (count filtered-projects) "projects match," (count (:where-clauses query)) "where-clauses")
+          snapshot (await (compose/compose-snapshot projects query))]
+      (send-json reply
+                 #js {:generatedAt (:generated-at snapshot)
+                      :totalTasks (:total-tasks snapshot)
+                      :query (clj->js query)
+                      :columns (clj->js
+                                (mapv (fn [col]
+                                        #js {:status (:status col)
+                                             :title (:title col)
+                                             :taskCount (:task-count col)
+                                             :tasks (clj->js
+                                                     (mapv (fn [t]
+                                                             #js {:uuid (:uuid t)
+                                                                  :title (:title t)
+                                                                  :status (:status t)
+                                                                  :priority (:priority t)
+                                                                  :labels (clj->js (:labels t))
+                                                                  :createdAt (:created-at t)
+                                                                  :sourcePath (:source-path t)
+                                                                  :sourceBoard (:source-board t)})
+                                                           (:tasks col)))})
+                                      (:columns snapshot)))}))
+    (catch :default err (send-error reply 500 (.-message err)))))
+
 (defn- register-routes [app]
   (.get app "/api/projects" handle-get-projects)
   (.get app "/api/boards" handle-get-boards)
   (.get app "/api/board" handle-get-board)
+  (.get app "/api/board/compose" handle-compose)
   (.get app "/api/events" handle-get-events)
   (.get app "/api/drift" handle-get-drift)
   (.post app "/api/task/:uuid/status" handle-post-status)
