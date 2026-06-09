@@ -1,0 +1,46 @@
+---
+uuid: "roadmap-global-projection"
+title: "Roadmap: Kanban Global Projection System"
+status: accepted
+priority: P0
+labels: ["roadmap", "kanban", "projection", "cljs"]
+created_at: "2026-06-08T00:00:00Z"
+source: "planning-session:2026-06-08"
+category: epics
+---
+
+# Roadmap: Kanban Global Projection System
+
+## Phases
+
+| Phase | Goal | Points | Depends on |
+|---|---|---|---|
+| 1 | Board Meta + Discovery | 6 | — |
+| 2 | Board Composition | 13 | Phase 1 |
+| 3 | Event Ledger | 17 | — |
+| 4 | FSM Engine | 14 | — |
+| 5 | Global Projection | 23 | Phases 1-4 |
+| | **Total** | **73** | |
+
+## Critical Path
+
+```
+Phase 1 (meta) ──→ Phase 2 (compose) ──┐
+                                        ├──→ Phase 5 (projection)
+Phase 3 (events) ───────────────────────┤
+Phase 4 (FSM) ─────────────────────────┘
+```
+
+## Decisions
+
+- All new code in CLJS
+- Sol = `eta-mu/packages/sol`, port 7777
+- Board meta: open-ended `meta` field on config
+- Query DSL protocol: file-backed now, Mongo-compatible later
+- FSM engine: config-driven, default 6-state
+- Kanban stays file-backed (no MongoDB dependency)
+- Sol shares knoxx's MongoDB
+- Harness field: opencode|eta-mu|pi|claude|hermes|codex|other
+- Build validation: `npm run typecheck/lint/test`
+- Review backlog threshold: default 5, configurable
+- Tokenizer: char count default, ITokenizer protocol
