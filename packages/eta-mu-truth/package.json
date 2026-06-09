@@ -20,7 +20,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@workspace/eta-mu-docs": "workspace:*"
+    "@open-hax/eta-mu-docs": "workspace:*"
   },
   "scripts": {
     "test": "node --test tests/*.test.cjs"
