@@ -2,6 +2,8 @@
   "Fastify HTTP server for the kanban board."
   (:require ["fastify" :default Fastify]
             ["@fastify/cors" :default fastifyCors]
+            ["@fastify/static" :default fastifyStatic]
+            ["node:path" :as path]
             [eta-mu.kanban.board :as board]
             [eta-mu.kanban.compose :as compose]
             [eta-mu.kanban.config :as config]
@@ -113,8 +115,6 @@
     (let [query-params (js->clj (.. req -query) :keywordize-keys true)
           query (compose/parse-compose-query query-params)
           projects (:projects @project-state)
-          filtered-projects (compose/filter-projects-for-debug projects query)
-          _ (js/console.error "COMPOSE:" (count filtered-projects) "projects match," (count (:where-clauses query)) "where-clauses")
           snapshot (await (compose/compose-snapshot projects query))]
       (send-json reply
                  #js {:generatedAt (:generated-at snapshot)
@@ -152,9 +152,13 @@
 (defn ^:async start!
   ([] (start! "127.0.0.1" 8791))
   ([host port]
-   (let [app (Fastify. #js {:logger true})]
+   (let [app (Fastify. #js {:logger true})
+         current-dir (js/process.cwd)
+         public-dir (path/join current-dir "resources" "public")]
      (await (.register app fastifyCors))
+     ;; Register API routes first, then static serving
      (register-routes app)
+     (await (.register app fastifyStatic #js {:root public-dir :prefix "/"}))
      (await (.listen app #js {:host host :port port}))
      (reset! server-state app)
      (js/console.log "Kanban server listening on http://" host ":" port)

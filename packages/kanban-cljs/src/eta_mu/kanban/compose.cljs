@@ -33,11 +33,8 @@
         key (if (str/starts-with? field-name "meta.")
               (keyword (subs field-name 5))
               (keyword field-name))
-        meta-val (get meta key)
-        result (= (normalize-value meta-val) (normalize-value value))]
-    (when (= key :domain)
-      (js/console.error "MATCH domain:" (pr-str meta-val) "vs" (pr-str value) "->" result))
-    result))
+        meta-val (get meta key)]
+    (= (normalize-value meta-val) (normalize-value value))))
 
 (defn parse-where-clause [clause]
   (let [clause (str/trim clause)]
@@ -74,9 +71,6 @@
                (and (or (empty? across) (some #(= (:id project) %) across))
                     (every? #(match-meta-where (:meta project) %) meta-clauses)))
              projects)))
-
-(defn filter-projects-for-debug [projects query]
-  (filter-projects projects query))
 
 (defn ^:async compose-snapshot [projects query]
   (try
