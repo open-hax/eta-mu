@@ -1,0 +1,29 @@
+{:source-paths ["src" "test"]
+ :dependencies [[lilactown/helix "0.2.2"]
+                [metosin/malli "0.17.0"]]
+
+ :builds
+ {:lib
+  {:target :esm
+   :output-dir "dist"
+   :modules {:main {:exports {:ChatPanel eta-mu.chat-ui.panel/ChatPanel
+                              :MessageBubble eta-mu.chat-ui.message/MessageBubble
+                              :ChatComposer eta-mu.chat-ui.composer/ChatComposer
+                              :useChatSession eta-mu.chat-ui.protocol/use-chat-session}}}
+   :compiler-options {:output-feature-set :es-next
+                      :source-map true
+                      :infer-externs false}}
+
+  :app
+  {:target :browser
+   :output-dir "resources/public/js"
+   :asset-path "/js"
+   :modules {:main {:init-fn eta-mu.chat-ui.core/init}}
+   :compiler-options {:elide-asserts false}}
+
+  :test
+  {:target :node-test
+   :output-to "target/test.cjs"
+   :ns-regex ["eta-mu.chat-ui.*-test$"]
+   :autorun true
+   :compiler-options {:output-feature-set :es-next}}}}
