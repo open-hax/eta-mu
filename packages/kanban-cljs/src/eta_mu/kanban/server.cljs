@@ -88,6 +88,23 @@
           (send-json reply #js {:events (clj->js (mapv events/envelope->kanban-event drift-evts)) :total (count drift-evts)}))
         (catch :default err (send-error reply 500 (.-message err)))))))
 
+(defn ^:async handle-get-task-content [req reply]
+  (let [project-id (.. req -query -project)
+        uuid (.. req -params -uuid)
+        project (find-project project-id)]
+    (if-not project
+      (send-error reply 404 "unknown project")
+      (try
+        (let [all-tasks (await (tasks/load-tasks (:tasks-dir project)))
+              task (first (filter #(= (:uuid %) uuid) all-tasks))]
+          (if-not task
+            (send-error reply 404 "unknown uuid")
+            (let [task-path (:source-path task)
+                  fs (js/require "fs/promises")
+                  content (try (await (.readFile fs task-path "utf-8")) (catch :default _ nil))]
+              (send-json reply #js {:uuid uuid :content (or content "")}))))
+        (catch :default err (send-error reply 500 (.-message err)))))))
+
 (defn ^:async handle-post-status [req reply]
   (let [project (find-project (.. req -query -project))
         uuid (.. req -params -uuid)
@@ -146,6 +163,7 @@
   (.get app "/api/board/compose" handle-compose)
   (.get app "/api/events" handle-get-events)
   (.get app "/api/drift" handle-get-drift)
+  (.get app "/api/task/:uuid/content" handle-get-task-content)
   (.post app "/api/task/:uuid/status" handle-post-status)
   (.get app "/api/health" handle-health))
 
