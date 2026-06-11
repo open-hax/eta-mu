@@ -154,11 +154,11 @@
   ([host port]
    (let [app (Fastify. #js {:logger true})
          current-dir (js/process.cwd)
-         public-dir (path/join current-dir "resources" "public")]
-     (await (.register app fastifyCors))
-     ;; Register API routes first, then static serving
-     (register-routes app)
-     (await (.register app fastifyStatic #js {:root public-dir :prefix "/"}))
+         static-dir (path/join current-dir "resources" "public")
+          web-dir (path/join current-dir "dist" "web")]
+      (await (.register app fastifyCors))
+      (await (.register app fastifyStatic #js {:root web-dir :prefix "/"}))
+      (register-routes app)
      (await (.listen app #js {:host host :port port}))
      (reset! server-state app)
      (js/console.log "Kanban server listening on http://" host ":" port)
@@ -180,3 +180,6 @@
     (js/console.log "Loaded" (count (:projects projects)) "projects")
     (when config-path (js/console.log "Config:" config-path))
     (await (start! host port))))
+
+(defn ^:export main []
+  (init))

@@ -1,6 +1,7 @@
 (ns eta-mu.kanban.ui.core
   "Kanban global projection frontend — Helix + uxx tokens."
-  (:require [helix.core :as hx :refer [defnc $ <>]]
+  (:require [clojure.string :as str]
+            [helix.core :as hx :refer [defnc $ <>]]
             [helix.hooks :as hooks]
             [helix.dom :as d]
             ["react-dom/client" :as rdom]
@@ -15,13 +16,16 @@
 (defn- fetch-json [url]
   (-> (js/fetch url)
       (.then (fn [res] (.json res)))
-      (.then (fn [data] (js->clj data :keywordize-keys true)))))
+      (.then (fn [data] (js->clj data)))))
 
 (defn- fetch-boards []
   (fetch-json "/api/boards"))
 
 (defn- fetch-compose [params]
-  (let [qs (->> (filter (fn [[_ v]] (and v (not= v "")))) (map (fn [[k v]] (str (name k) "=" (js/encodeURIComponent v))))
+  (let [entries (js/Object.entries (clj->js params))
+        qs (->> (js->clj entries)
+                (filter (fn [[_ v]] (and v (not= v ""))))
+                (map (fn [[k v]] (str (name k) "=" (js/encodeURIComponent (str v)))))
                 (str/join "&"))
         url (if (seq qs) (str "/api/board/compose?" qs) "/api/board/compose")]
     (fetch-json url)))
@@ -34,12 +38,12 @@
 ;; ---------------------------------------------------------------------------
 
 (defnc app []
-  (let [[boards set-boards] (hooks/useState nil)
-        [board-data set-board-data] (hooks/useState nil)
-        [filters set-filters] (hooks/useState {})
-        [selected set-selected] (hooks/useState nil)
-        [detail set-detail] (hooks/useState nil)
-        [loading set-loading] (hooks/useState true)]
+  (let [[boards set-boards] (hooks/use-state nil)
+        [board-data set-board-data] (hooks/use-state nil)
+        [filters set-filters] (hooks/use-state {})
+        [selected set-selected] (hooks/use-state nil)
+        [detail set-detail] (hooks/use-state nil)
+        [loading set-loading] (hooks/use-state true)]
 
     ;; Load boards on mount
     (hooks/use-effect []
@@ -59,7 +63,7 @@
     ;; Load task detail when selected changes
     (hooks/use-effect [selected]
       (when selected
-        (-> (fetch-task-content (:uuid selected) (:source-board selected "knoxx"))
+        (-> (fetch-task-content (get selected "uuid") (get selected "sourceBoard" "knoxx"))
             (.then (fn [data] (set-detail data))))))
 
     (d/div {:class "kanban-app" :style {:display "flex" :flex-direction "column" :height "100vh" :background "var(--token-colors-background-default)"}}
@@ -68,7 +72,7 @@
       (d/header {:style {:display "flex" :align-items "center" :gap "12px" :padding "8px 16px" :border-bottom "1px solid var(--token-colors-border-default)" :background "var(--token-colors-background-surface)"}}
         (d/h1 {:style {:font-size "16px" :font-weight "600" :margin "0"}} "Kanban")
         (d/span {:style {:color "var(--token-colors-text-muted)" :font-size "12px"}}
-          (str (:totalTasks board-data 0) " tasks")))
+          (str (get board-data "totalTasks" 0) " tasks")))
 
       ;; Filter bar
       ($ filter-bar/filter-bar
@@ -100,5 +104,8 @@
 ;; ---------------------------------------------------------------------------
 
 (defn ^:export init []
-  (let [root (rdom/createRoot (js/document.getElementById "root"))]
+  (let [root (.createRoot rdom (js/document.getElementById "root"))]
     (.render root ($ app))))
+
+(defn ^:dev/after-load dev-reload []
+  (js/console.log "Hot reload"))

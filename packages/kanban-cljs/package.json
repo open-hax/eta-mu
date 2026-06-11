@@ -2,7 +2,6 @@
   "name": "@open-hax/kanban-cljs",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "bin": {
     "openhax-kanban": "dist/cli.js"
   },
@@ -27,6 +26,7 @@
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.2",
     "shadow-cljs": "^3.4.10"
   }
 }
