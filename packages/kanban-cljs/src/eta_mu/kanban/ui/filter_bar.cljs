@@ -22,6 +22,7 @@
 
 (defnc filter-bar [{:keys [boards filters on-change]}]
   (let [domains (distinct (keep #(get-in % ["meta" "domain"]) (get boards "projects" [])))
+        orgs (distinct (keep #(get-in % ["meta" "org"]) (get boards "projects" [])))
         statuses ["incoming" "breakdown" "ready" "todo" "in_progress" "review" "done" "icebox" "blocked" "accepted" "rejected"]
         priorities ["P0" "P1" "P2" "P3"]
         set-filter (fn [k v] (on-change (if v (assoc filters k v) (dissoc filters k))))]
@@ -39,6 +40,7 @@
                  :font-size "12px"
                  :width "200px"}})
       ($ filter-dropdown {:label "Domain" :options domains :value (:domain filters) :on-change #(set-filter :domain %)})
+      ($ filter-dropdown {:label "Org" :options orgs :value (:org filters) :on-change #(set-filter :org %)})
       ($ filter-dropdown {:label "Status" :options statuses :value (:status filters) :on-change #(set-filter :status %)})
       ($ filter-dropdown {:label "Priority" :options priorities :value (:priority filters) :on-change #(set-filter :priority %)})
       (when (seq filters)

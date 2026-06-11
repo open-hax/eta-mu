@@ -1,7 +1,7 @@
 ---
 uuid: "global-projection-frontend"
 title: "Global Projection Frontend — All Boards, Filter Bar, Composed View"
-status: accepted
+status: done
 priority: P0
 labels: ["epics", "cljs", "helix", "kanban", "projection", "frontend"]
 created_at: "2026-06-09T00:00:00Z"
@@ -81,9 +81,10 @@ Each task card shows:
 
 ## Acceptance criteria
 
-- [ ] Default view shows all boards as one projection
-- [ ] Filter by domain, org, status, priority, labels
-- [ ] Text search across task titles
-- [ ] Source board name visible on each card
-- [ ] Filter state in URL params
-- [ ] Handles 800+ tasks without jank
+- [x] Default view shows all boards as one projection
+- [x] Filter by domain, status, priority
+- [x] Filter by org, labels
+- [x] Text search across task titles
+- [x] Source board name visible on each card
+- [x] Filter state in URL params
+- [x] Handles 800+ tasks without jank
