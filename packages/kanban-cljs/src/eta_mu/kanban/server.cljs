@@ -9,7 +9,8 @@
             [eta-mu.kanban.config :as config]
             [eta-mu.kanban.events :as events]
             [eta-mu.kanban.tasks :as tasks]
-            [eta-mu.kanban.task-writeback :as writeback]))
+            [eta-mu.kanban.task-writeback :as writeback]
+            [eta-mu.kanban.watcher :as watcher]))
 
 (defonce server-state (atom nil))
 (defonce project-state (atom nil))
@@ -184,6 +185,7 @@
 
 (defn ^:async stop! []
   (when-let [app @server-state]
+    (watcher/stop-all-watchers!)
     (await (.close app))
     (reset! server-state nil)
     (js/console.log "Kanban server stopped")))
@@ -197,6 +199,9 @@
     (reset! project-state projects)
     (js/console.log "Loaded" (count (:projects projects)) "projects")
     (when config-path (js/console.log "Config:" config-path))
+    ;; Start file watchers for all projects
+    (doseq [project (:projects projects)]
+      (watcher/start-watcher! (:id project) (:tasks-dir project)))
     (await (start! host port))))
 
 (defn ^:export main []
