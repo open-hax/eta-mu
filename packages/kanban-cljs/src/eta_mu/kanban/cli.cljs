@@ -2,22 +2,27 @@
   "CLI entry point for kanban operations."
   (:require ["node:fs/promises" :as fsp]
             [eta-mu.kanban.board :as board]
+            [eta-mu.kanban.compose :as compose]
             [eta-mu.kanban.config :as config]
             [eta-mu.kanban.events :as events]
             [eta-mu.kanban.tasks :as tasks]))
 
 (defn- parse-args [args]
-  (let [[cmd sub & rest] args
-        flags (loop [remaining rest acc {}]
+  (let [args-vec (vec args)
+        cmd (when (and (seq args-vec) (not (re-matches #"^--.*" (nth args-vec 0)))) (nth args-vec 0))
+        sub (when (and (> (count args-vec) 1) (not (re-matches #"^--.*" (nth args-vec 1)))) (nth args-vec 1))
+        rest-args (if sub (subvec args-vec 2) (if cmd (subvec args-vec 1) args-vec))
+        flags (loop [remaining rest-args acc {}]
                 (if (empty? remaining)
                   acc
-                  (let [[k v] remaining
+                  (let [k (first remaining)
+                        v (second remaining)
                         flag-name (when (and k (re-matches #"^--.*" k)) (subs k 2))]
                     (if flag-name
                       (recur (drop 2 remaining) (assoc acc flag-name v))
                       (recur (rest remaining) acc)))))]
-    {:command (when (and cmd (not (re-matches #"^--.*" cmd))) cmd)
-     :subcommand (when (and sub (not (re-matches #"^--.*" sub))) sub)
+    {:command cmd
+     :subcommand sub
      :flags flags}))
 
 (defn- show-help []
@@ -26,6 +31,7 @@
   (println "USAGE")
   (println "  openhax-kanban board snapshot [--tasks-dir <path>] [--out <path>]")
   (println "  openhax-kanban board list [--verbose]")
+  (println "  openhax-kanban compose [--domain <d>] [--org <o>] [--status <s>] [--priority <p>] [--q <text>] [--where <clause>]")
   (println "  openhax-kanban events [task-uuid] [--limit <n>]")
   (println "  openhax-kanban drift")
   (println "  openhax-kanban serve [--host <host>] [--port <port>]"))
@@ -66,6 +72,22 @@
             (when (and v (not= "" v))
               (println (str "  " (name k) ": " (pr-str v))))))))))
 
+(defn ^:async cmd-compose [project-state flags]
+  (let [query (compose/parse-compose-query flags)
+        snapshot (await (compose/compose-snapshot (:projects project-state) query))
+        out-path (get-flag flags "out")]
+    (if out-path
+      (do
+        (await (.writeFile fsp out-path (js/JSON.stringify (clj->js snapshot) nil 2) "utf8"))
+        (println "Wrote compose snapshot to" out-path))
+      (do
+        (println (str "Total tasks: " (:total-tasks snapshot)))
+        (doseq [col (:columns snapshot)]
+          (when (pos? (:task-count col))
+            (println (str "\n" (:title col) " (" (:task-count col) ")"))
+            (doseq [t (:tasks col)]
+              (println (str "  [" (:priority t) "] " (:title t))))))))))
+
 (defn ^:async cmd-events [project-state parsed]
   (let [project (first (:projects project-state))
         ledger (events/get-ledger (:tasks-dir project))
@@ -94,7 +116,9 @@
 (defn ^:async main []
   (let [args (vec (drop 2 (js->clj js/process.argv)))
         parsed (parse-args args)
-        loaded (await (config/load-config (get-flag (:flags parsed) "config")))
+        config-path (or (get-flag (:flags parsed) "config")
+                        (aget js/process.env "KANBAN_CONFIG"))
+        loaded (await (config/load-config config-path))
         tasks-dir (or (get-flag (:flags parsed) "tasks-dir")
                       (:tasksDir (:config loaded))
                       "docs/agile/tasks")
@@ -105,6 +129,9 @@
 
       (and (= "board" (:command parsed)) (= "list" (:subcommand parsed)))
       (cmd-board-list ps (:flags parsed))
+
+      (= "compose" (:command parsed))
+      (await (cmd-compose ps (:flags parsed)))
 
       (= "events" (:command parsed))
       (await (cmd-events ps parsed))

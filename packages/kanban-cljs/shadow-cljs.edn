@@ -19,6 +19,11 @@
               :devtools {:autoload true
                          :watch-dir "resources"}}
 
+ :cli {:target :node-script
+       :output-to "dist/cli.js"
+       :main eta-mu.kanban.cli/main
+       :devtools {:watch-dir "resources"}}
+
  :app {:target :browser
        :output-dir "dist/web/js"
        :asset-path "/js"
