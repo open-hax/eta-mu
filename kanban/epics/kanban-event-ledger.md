@@ -1,7 +1,7 @@
 ---
 uuid: "kanban-event-ledger"
 title: "Kanban Event Ledger + File Watcher + Drift Detection"
-status: accepted
+status: done
 priority: P0
 labels: ["epics", "cljs", "kanban", "event-ledger", "file-watcher", "drift-detection"]
 created_at: "2026-06-08T00:00:00Z"
