@@ -104,10 +104,12 @@
         domain-val (get-flag flags "domain")
         org-val (get-flag flags "org")
         tier-val (get-flag flags "tier")
+        q-val (get-flag flags "q")
         meta-filters (cond-> []
                        domain-val (conj [(keyword "meta.domain") := (str domain-val)])
                        org-val (conj [(keyword "meta.org") := (str org-val)])
-                       tier-val (conj [(keyword "meta.tier") := (str tier-val)]))
+                       tier-val (conj [(keyword "meta.tier") := (str tier-val)])
+                       q-val (conj [(keyword "title") :contains (str q-val)]))
         where-str (get-flag flags "where")
         where-clauses (when where-str (mapv parse-where-clause (str/split (str where-str) #" and ")))]
     {:status (or status []) :priority (or priority []) :labels (or labels [])
