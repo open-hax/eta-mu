@@ -9,6 +9,23 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     #root { height: 100vh; }
+
+    /* ── markdown (uxx tokens) ── */
+    .md h1,.md h2,.md h3,.md h4,.md h5,.md h6{color:var(--token-colors-text-default);margin:1.2em 0 .5em;font-weight:600}
+    .md h1{font-size:1.5em}.md h2{font-size:1.3em}.md h3{font-size:1.1em}
+    .md p{margin:0 0 1em;line-height:1.65;color:var(--token-colors-text-default)}
+    .md a{color:var(--token-colors-text-accent);text-decoration:none}.md a:hover{text-decoration:underline}
+    .md code{background:var(--token-colors-background-surface);padding:2px 5px;border-radius:4px;font-size:.88em}
+    .md pre{background:var(--token-colors-background-surface);border:1px solid var(--token-colors-border-default);border-radius:8px;padding:12px;overflow-x:auto;margin:0 0 1em}
+    .md pre code{background:none;padding:0}
+    .md blockquote{border-left:3px solid var(--token-colors-border-default);margin:0 0 1em;padding:4px 14px;color:var(--token-colors-text-soft)}
+    .md table{border-collapse:collapse;width:100%;margin:0 0 1em}
+    .md th,.md td{border:1px solid var(--token-colors-border-default);padding:7px 10px;text-align:left}
+    .md th{background:var(--token-colors-background-surface);font-weight:600}
+    .md ul,.md ol{margin:0 0 1em;padding-left:1.4em}
+    .md li{margin-bottom:.25em}
+    .md hr{border:none;border-top:1px solid var(--token-colors-border-default);margin:1.2em 0}
+    .md img{max-width:100%;border-radius:8px}
   </style>
 </head>
 <body>
