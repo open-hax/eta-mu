@@ -7,7 +7,7 @@
             [eta-mu.chat-ui.composer :as composer]))
 
 (defnc ChatPanel [{:keys [messages is-sending on-send on-abort placeholder title]}]
-  (let [scroll-ref (hooks/useRef nil)]
+  (let [scroll-ref (hooks/use-ref nil)]
     ;; Auto-scroll on new messages
     (hooks/use-effect [messages]
       (when (.-current scroll-ref)

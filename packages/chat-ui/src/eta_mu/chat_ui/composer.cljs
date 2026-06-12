@@ -5,7 +5,7 @@
             [helix.dom :as d]))
 
 (defnc ChatComposer [{:keys [on-send disabled placeholder]}]
-  (let [[text set-text] (hooks/useState "")
+  (let [[text set-text] (hooks/use-state "")
         handle-send (fn []
                       (when (and (seq text) (not disabled))
                         (on-send text)

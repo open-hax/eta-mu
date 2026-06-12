@@ -24,8 +24,8 @@
   "React hook that manages a chat session lifecycle.
    Returns {:messages :send :abort :is-sending :session}"
   [session]
-  (let [[messages set-messages] (hooks/useState [])
-        [is-sending set-sending] (hooks/useState false)
+  (let [[messages set-messages] (hooks/use-state [])
+        [is-sending set-sending] (hooks/use-state false)
         unsubscribe (atom nil)]
 
     ;; Subscribe to streaming on mount
