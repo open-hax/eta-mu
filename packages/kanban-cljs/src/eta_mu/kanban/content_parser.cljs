@@ -56,3 +56,31 @@
 (defn task-content->js [parsed]
   #js {:frontmatter (clj->js (:frontmatter parsed))
        :sections (clj->js (mapv (fn [s] #js {:type (:type s) :content (:content s)}) (:sections parsed)))})
+
+(defn serialize-frontmatter [frontmatter]
+  (let [lines (mapv (fn [[k v]]
+                      (cond
+                        (vector? v) (str (name k) ": [" (str/join ", " (mapv #(str "\"" % "\"") v)) "]")
+                        (string? v) (str (name k) ": \"" v "\"")
+                        (nil? v) (str (name k) ": ")
+                        :else (str (name k) ": " (str v))))
+                    frontmatter)]
+    (str "---\n" (str/join "\n" lines) "\n---")))
+
+(defn serialize-sections [sections]
+  (str/join "\n\n"
+    (mapv (fn [section]
+            (if (= (:type section) "comment")
+              (str "---\n" (:content section) "\n---")
+              (:content section)))
+          sections)))
+
+(defn serialize-task-content [parsed]
+  (str (serialize-frontmatter (:frontmatter parsed))
+       "\n\n"
+       (serialize-sections (:sections parsed))))
+
+(defn update-frontmatter [raw key value]
+  (let [parsed (parse-task-content raw)
+        updated (assoc-in parsed [:frontmatter (keyword key)] value)]
+    (serialize-task-content updated)))

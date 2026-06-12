@@ -123,7 +123,8 @@
           ($ sidebar/task-sidebar
             {:task selected
              :detail detail
-             :on-close #(do (set-selected nil) (set-detail nil))}))))))
+             :on-close #(do (set-selected nil) (set-detail nil))
+             :on-update (fn [data] (set-detail data))}))))))
 
 ;; ---------------------------------------------------------------------------
 ;; Mount

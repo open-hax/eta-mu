@@ -37,8 +37,88 @@
 ;; ---------------------------------------------------------------------------
 
 (def frontmatter-keys ["uuid" "title" "status" "priority" "labels" "created_at" "source" "points" "category"])
+(def status-options ["incoming" "breakdown" "ready" "todo" "in_progress" "review" "done" "icebox" "blocked" "accepted" "rejected"])
+(def priority-options ["P0" "P1" "P2" "P3"])
 
-(defnc frontmatter-section [{:keys [frontmatter]}]
+(defnc frontmatter-field [{:keys [key value editing-field edit-value on-edit on-save on-cancel]}]
+  (let [is-editing (= editing-field key)]
+    (d/div {:style {:display "flex" :align-items "flex-start" :gap "8px"}
+            :onDoubleClick #(when-not is-editing (on-edit key (str value)))}
+      (d/div {:style {:width "80px" :flex-shrink "0"}}
+        (d/div {:style {:font-size "11px" :font-weight "600" :color "var(--token-colors-text-muted)"}} key))
+      (d/div {:style {:flex "1" :min-width "0"}}
+        (if is-editing
+          ;; Edit mode
+          (cond
+            ;; Status dropdown
+            (= key "status")
+            (d/select {:value edit-value
+                       :onChange #(on-save key (.. % -target -value))
+                       :onBlur #(on-cancel)
+                       :autoFocus true
+                       :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}}
+              (map (fn [opt] (d/option {:key opt :value opt} opt)) status-options))
+
+            ;; Priority dropdown
+            (= key "priority")
+            (d/select {:value edit-value
+                       :onChange #(on-save key (.. % -target -value))
+                       :onBlur #(on-cancel)
+                       :autoFocus true
+                       :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}}
+              (map (fn [opt] (d/option {:key opt :value opt} opt)) priority-options))
+
+            ;; Labels (comma-separated)
+            (= key "labels")
+            (d/input {:type "text"
+                      :value edit-value
+                      :onChange #(on-edit key (.. % -target -value))
+                      :onKeyDown #(when (= "Enter" (.-key %)) (on-save key (.. % -target -value)))
+                      :onBlur #(on-cancel)
+                      :autoFocus true
+                      :placeholder "label1, label2, ..."
+                      :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}})
+
+            ;; Points (number)
+            (= key "points")
+            (d/input {:type "number"
+                      :value edit-value
+                      :onChange #(on-edit key (.. % -target -value))
+                      :onKeyDown #(when (= "Enter" (.-key %)) (on-save key (.. % -target -value)))
+                      :onBlur #(on-cancel)
+                      :autoFocus true
+                      :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}})
+
+            ;; Default text input
+            :else
+            (d/input {:type "text"
+                      :value edit-value
+                      :onChange #(on-edit key (.. % -target -value))
+                      :onKeyDown #(when (= "Enter" (.-key %)) (on-save key (.. % -target -value)))
+                      :onBlur #(on-cancel)
+                      :autoFocus true
+                      :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}}))
+
+          ;; View mode
+          (cond
+            ;; Labels as badges
+            (and (= key "labels") (vector? value))
+            (d/div {:style {:display "flex" :gap "4px" :flex-wrap "wrap"}}
+              (map-indexed (fn [i label] (d/span {:key i :style {:font-size "11px" :padding "1px 6px" :border-radius "999px" :border "1px solid var(--token-colors-border-subtle)"}} label)) value))
+
+            ;; Priority as badge
+            (= key "priority")
+            (d/span {:style {:font-size "11px" :padding "2px 8px" :border-radius "999px" :background "var(--token-colors-badge-default-bg)" :color "var(--token-colors-badge-default-fg)"}} (str value))
+
+            ;; Status as badge
+            (= key "status")
+            (d/span {:style {:font-size "12px" :padding "2px 8px" :border-radius "999px" :background "var(--token-colors-badge-info-bg)" :color "var(--token-colors-badge-info-fg)"}} (str value))
+
+            ;; Default text
+            :else
+            (d/span {:style {:font-size "13px" :color "var(--token-colors-text-default)"}} (str (or value "—")))))))))
+
+(defnc frontmatter-section [{:keys [frontmatter editing-field edit-value on-edit on-save on-cancel]}]
   (d/div {:style {:padding "12px 16px" :border-bottom "1px solid var(--token-colors-border-subtle)"}}
     (d/div {:style {:font-size "11px" :font-weight "700" :color "var(--token-colors-text-muted)" :text-transform "uppercase" :letter-spacing "0.05em" :margin-bottom "8px"}}
       "Frontmatter")
@@ -46,12 +126,13 @@
       (map-indexed
         (fn [_ key]
           (when (and (get frontmatter key) (not= (get frontmatter key) ""))
-            (d/div {:key key :style {:display "flex" :align-items "flex-start" :gap "8px"}}
-              (d/div {:style {:width "80px" :flex-shrink "0"}}
-                (d/div {:style {:font-size "11px" :font-weight "600" :color "var(--token-colors-text-muted)"}} key))
-              (d/div {:style {:flex "1" :min-width "0"}}
-                (d/div {:style {:font-size "12px" :color "var(--token-colors-text-default)" :word-break "break-word"}}
-                  (str (get frontmatter key)))))))
+            ($ frontmatter-field {:key key
+                                  :value (get frontmatter key)
+                                  :editing-field editing-field
+                                  :edit-value edit-value
+                                  :on-edit on-edit
+                                  :on-save on-save
+                                  :on-cancel on-cancel})))
         frontmatter-keys))
     (d/div {:style {:margin-top "8px" :font-size "11px" :color "var(--token-colors-text-muted)"}}
       "Double-click a field to edit")))
@@ -60,11 +141,30 @@
 ;; Sidebar component
 ;; ---------------------------------------------------------------------------
 
-(defnc task-sidebar [{:keys [task detail on-close]}]
+(defnc task-sidebar [{:keys [task detail on-close on-update]}]
   (let [task-uuid (get task "uuid")
         session (hooks/use-memo [task-uuid] (create-mock-session task))
         chat-state (chat-protocol/use-chat-session session)
-        source-path (or (get task "sourcePath") (get detail "sourcePath"))]
+        source-path (or (get task "sourcePath") (get detail "sourcePath"))
+        [editing-field set-editing-field] (hooks/use-state nil)
+        [edit-value set-edit-value] (hooks/use-state "")
+        handle-edit (fn [key value]
+                      (set-editing-field key)
+                      (set-edit-value value))
+        handle-cancel (fn []
+                        (set-editing-field nil)
+                        (set-edit-value ""))
+        handle-save (fn [key value]
+                      (-> (js/fetch (str "/api/task/" task-uuid "/frontmatter")
+                                    #js {:method "PATCH"
+                                         :headers #js {"Content-Type" "application/json"}
+                                         :body (js/JSON.stringify #js {:key key :value value})})
+                          (.then (fn [res]
+                                   (when (.-ok res)
+                                     (.then (.json res) (fn [data]
+                                                          (set-editing-field nil)
+                                                          (set-edit-value "")
+                                                          (when on-update (on-update data)))))))))]
     (d/div {:style {:width "380px" :min-width "380px" :border-left "1px solid var(--token-colors-border-default)" :background "var(--token-colors-background-surface)" :overflow-y "auto" :display "flex" :flex-direction "column"}}
 
       ;; Header (title + priority + buttons)
@@ -92,7 +192,12 @@
         (d/div {:style {:flex "1" :overflow-y "auto" :padding "0 0 16px"}}
           ;; Frontmatter
           (when (seq (get detail "frontmatter"))
-            ($ frontmatter-section {:frontmatter (get detail "frontmatter")}))
+            ($ frontmatter-section {:frontmatter (get detail "frontmatter")
+                                    :editing-field editing-field
+                                    :edit-value edit-value
+                                    :on-edit handle-edit
+                                    :on-save handle-save
+                                    :on-cancel handle-cancel}))
           ;; Body sections
           (map-indexed
             (fn [i section]

@@ -131,6 +131,36 @@
                     (send-json reply (serialize-task updated)))))
               (catch :default err (send-error reply 500 (.-message err)))))))
 
+(defn ^:async handle-update-frontmatter [req reply]
+  (let [project-id (.. req -query -project)
+        uuid (.. req -params -uuid)
+        body (js->clj (.-body req) :keywordize-keys true)
+        key (:key body)
+        value (:value body)
+        project (find-project project-id)]
+    (cond
+      (not project) (send-error reply 404 "unknown project")
+      (empty? key) (send-error reply 400 "missing key")
+      :else (try
+              (let [all-tasks (await (tasks/load-tasks (:tasks-dir project)))
+                    task (first (filter #(= (:uuid %) uuid) all-tasks))]
+                (if-not task
+                  (send-error reply 404 "unknown uuid")
+                  (let [task-path (:source-path task)
+                        fs (js/require "fs/promises")
+                        raw (await (.readFile fs task-path "utf-8"))
+                        updated (content-parser/update-frontmatter raw key value)
+                        write-id (events/generate-write-id)
+                        ledger (events/get-ledger (:tasks-dir project))]
+                    (await (.writeFile fs task-path updated "utf-8"))
+                    (events/emit-frontmatter-change! ledger (:id project) uuid key nil value write-id)
+                    (let [new-parsed (content-parser/parse-task-content updated)]
+                      (send-json reply #js {:uuid uuid
+                                            :frontmatter (clj->js (:frontmatter new-parsed))
+                                            :sections (clj->js (mapv (fn [s] #js {:type (:type s) :content (:content s)}) (:sections new-parsed)))
+                                            :sourcePath task-path})))))
+              (catch :default err (send-error reply 500 (.-message err)))))))
+
 (defn ^:async handle-open-editor [req reply]
   (let [project-id (.. req -query -project)
         uuid (.. req -params -uuid)
@@ -188,6 +218,7 @@
   (.get app "/api/events" handle-get-events)
   (.get app "/api/drift" handle-get-drift)
   (.get app "/api/task/:uuid/content" handle-get-task-content)
+  (.patch app "/api/task/:uuid/frontmatter" handle-update-frontmatter)
   (.post app "/api/task/:uuid/status" handle-post-status)
   (.post app "/api/task/:uuid/open-editor" handle-open-editor)
   (.get app "/api/health" handle-health))
