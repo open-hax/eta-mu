@@ -37,7 +37,8 @@
 ;; ---------------------------------------------------------------------------
 
 (defnc task-sidebar [{:keys [task detail on-close]}]
-  (let [session (hooks/use-memo #(create-mock-session task) #js [(get task "uuid")])
+  (let [task-uuid (get task "uuid")
+        session (hooks/use-memo [task-uuid] (create-mock-session task))
         chat-state (chat-protocol/use-chat-session session)]
     (d/div {:style {:width "380px" :min-width "380px" :border-left "1px solid var(--token-colors-border-default)" :background "var(--token-colors-background-surface)" :overflow-y "auto" :display "flex" :flex-direction "column"}}
 
