@@ -33,6 +33,30 @@
       (close [_] (reset! listeners [])))))
 
 ;; ---------------------------------------------------------------------------
+;; Frontmatter fields
+;; ---------------------------------------------------------------------------
+
+(def frontmatter-keys ["uuid" "title" "status" "priority" "labels" "created_at" "source" "points" "category"])
+
+(defnc frontmatter-section [{:keys [frontmatter]}]
+  (d/div {:style {:padding "12px 16px" :border-bottom "1px solid var(--token-colors-border-subtle)"}}
+    (d/div {:style {:font-size "11px" :font-weight "700" :color "var(--token-colors-text-muted)" :text-transform "uppercase" :letter-spacing "0.05em" :margin-bottom "8px"}}
+      "Frontmatter")
+    (d/div {:style {:display "flex" :flex-direction "column" :gap "6px"}}
+      (map-indexed
+        (fn [_ key]
+          (when (and (get frontmatter key) (not= (get frontmatter key) ""))
+            (d/div {:key key :style {:display "flex" :align-items "flex-start" :gap "8px"}}
+              (d/div {:style {:width "80px" :flex-shrink "0"}}
+                (d/div {:style {:font-size "11px" :font-weight "600" :color "var(--token-colors-text-muted)"}} key))
+              (d/div {:style {:flex "1" :min-width "0"}}
+                (d/div {:style {:font-size "12px" :color "var(--token-colors-text-default)" :word-break "break-word"}}
+                  (str (get frontmatter key)))))))
+        frontmatter-keys))
+    (d/div {:style {:margin-top "8px" :font-size "11px" :color "var(--token-colors-text-muted)"}}
+      "Double-click a field to edit")))
+
+;; ---------------------------------------------------------------------------
 ;; Sidebar component
 ;; ---------------------------------------------------------------------------
 
@@ -75,10 +99,31 @@
         (d/div {:style {:padding "8px 16px" :border-bottom "1px solid var(--token-colors-border-subtle)" :font-size "11px" :color "var(--token-colors-text-muted)" :word-break "break-all"}}
           (get task "sourcePath")))
 
-      ;; Body
-      (d/div {:style {:flex "1" :padding "12px 16px" :overflow-y "auto"}}
-        (if detail
-          (d/div {:class "markdownPreview" :dangerouslySetInnerHTML #js {:__html (marked (or (get detail "content") ""))}})
+      ;; Content
+      (if detail
+        (d/div {:style {:flex "1" :overflow-y "auto"}}
+          ;; Frontmatter
+          (when (seq (get detail "frontmatter"))
+            ($ frontmatter-section {:frontmatter (get detail "frontmatter")}))
+          ;; Body sections
+          (map-indexed
+            (fn [i section]
+              (when (= (get section "type") "body")
+                (d/div {:key (str "body-" i) :class "markdownPreview" :style {:padding "12px 16px" :border-bottom "1px solid var(--token-colors-border-subtle)"}}
+                  (d/div {:dangerouslySetInnerHTML #js {:__html (marked (get section "content" ""))}}))))
+            (get detail "sections"))
+          ;; Comment sections
+          (when (some #(= (get % "type") "comment") (get detail "sections"))
+            (d/div {:style {:padding "12px 16px" :border-bottom "1px solid var(--token-colors-border-subtle)"}}
+              (d/div {:style {:font-size "11px" :font-weight "700" :color "var(--token-colors-text-muted)" :text-transform "uppercase" :letter-spacing "0.05em" :margin-bottom "8px"}}
+                "Comments")
+              (map-indexed
+                (fn [i section]
+                  (when (= (get section "type") "comment")
+                    (d/div {:key (str "comment-" i) :style {:background "var(--token-colors-background-surface)" :border "1px solid var(--token-colors-border-subtle)" :border-left "3px solid var(--token-colors-text-accent)" :border-radius "6px" :padding "8px 12px" :margin-bottom "8px" :font-size "13px" :line-height "1.6" :color "var(--token-colors-text-soft)" :white-space "pre-wrap"}}
+                      (get section "content"))))
+                (get detail "sections")))))
+        (d/div {:style {:flex "1" :padding "12px 16px"}}
           (d/div {:style {:color "var(--token-colors-text-muted)" :font-size "12px"}}
             "Loading...")))
 

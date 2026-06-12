@@ -7,6 +7,7 @@
             [eta-mu.kanban.board :as board]
             [eta-mu.kanban.compose :as compose]
             [eta-mu.kanban.config :as config]
+            [eta-mu.kanban.content-parser :as content-parser]
             [eta-mu.kanban.events :as events]
             [eta-mu.kanban.tasks :as tasks]
             [eta-mu.kanban.task-writeback :as writeback]
@@ -102,8 +103,12 @@
             (send-error reply 404 "unknown uuid")
             (let [task-path (:source-path task)
                   fs (js/require "fs/promises")
-                  content (try (await (.readFile fs task-path "utf-8")) (catch :default _ nil))]
-              (send-json reply #js {:uuid uuid :content (or content "")}))))
+                  raw (try (await (.readFile fs task-path "utf-8")) (catch :default _ nil))
+                  parsed (content-parser/parse-task-content (or raw ""))]
+              (send-json reply #js {:uuid uuid
+                                    :frontmatter (clj->js (:frontmatter parsed))
+                                    :sections (clj->js (mapv (fn [s] #js {:type (:type s) :content (:content s)}) (:sections parsed)))
+                                    :sourcePath task-path}))))
         (catch :default err (send-error reply 500 (.-message err)))))))
 
 (defn ^:async handle-post-status [req reply]
