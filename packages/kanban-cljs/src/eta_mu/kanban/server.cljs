@@ -131,6 +131,24 @@
                     (send-json reply (serialize-task updated)))))
               (catch :default err (send-error reply 500 (.-message err)))))))
 
+(defn ^:async handle-open-editor [req reply]
+  (let [project-id (.. req -query -project)
+        uuid (.. req -params -uuid)
+        project (find-project project-id)]
+    (if-not project
+      (send-error reply 404 "unknown project")
+      (try
+        (let [all-tasks (await (tasks/load-tasks (:tasks-dir project)))
+              task (first (filter #(= (:uuid %) uuid) all-tasks))]
+          (if-not task
+            (send-error reply 404 "unknown uuid")
+            (let [task-path (:source-path task)
+                  child-process (js/require "child_process")]
+              ;; Open in system default editor
+              (.exec child-process (str "xdg-open \"" task-path "\" 2>/dev/null || open \"" task-path "\" 2>/dev/null"))
+              (send-json reply #js {:ok true}))))
+        (catch :default err (send-error reply 500 (.-message err)))))))
+
 (defn- handle-health [_req reply] (send-json reply #js {:ok true}))
 
 (defn ^:async handle-compose [req reply]
@@ -171,6 +189,7 @@
   (.get app "/api/drift" handle-get-drift)
   (.get app "/api/task/:uuid/content" handle-get-task-content)
   (.post app "/api/task/:uuid/status" handle-post-status)
+  (.post app "/api/task/:uuid/open-editor" handle-open-editor)
   (.get app "/api/health" handle-health))
 
 (defn ^:async start!
