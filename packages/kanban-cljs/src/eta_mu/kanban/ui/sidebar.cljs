@@ -78,7 +78,7 @@
       ;; Body
       (d/div {:style {:flex "1" :padding "12px 16px" :overflow-y "auto"}}
         (if detail
-          (d/div {:class "md" :dangerouslySetInnerHTML #js {:__html (marked (or (get detail "content") ""))}})
+          (d/div {:class "markdownPreview" :dangerouslySetInnerHTML #js {:__html (marked (or (get detail "content") ""))}})
           (d/div {:style {:color "var(--token-colors-text-muted)" :font-size "12px"}}
             "Loading...")))
 
