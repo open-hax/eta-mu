@@ -1,7 +1,7 @@
 ---
 uuid: "chat-ui-extraction"
 title: "Extract Chat UI from Knoxx into Reusable Helix Package"
-status: accepted
+status: done
 priority: P0
 labels: ["epics", "cljs", "helix", "chat", "extraction", "knoxx"]
 created_at: "2026-06-09T00:00:00Z"
