@@ -119,23 +119,21 @@
             (d/span {:style {:font-size "13px" :color "var(--token-colors-text-default)"}} (str (or value "—")))))))))
 
 (defnc frontmatter-section [{:keys [frontmatter editing-field edit-value on-edit on-save on-cancel]}]
-  (d/div {:style {:padding "12px 16px" :border-bottom "1px solid var(--token-colors-border-subtle)"}}
-    (d/div {:style {:font-size "11px" :font-weight "700" :color "var(--token-colors-text-muted)" :text-transform "uppercase" :letter-spacing "0.05em" :margin-bottom "8px"}}
-      "Frontmatter")
-    (d/div {:style {:display "flex" :flex-direction "column" :gap "6px"}}
-      (map-indexed
-        (fn [_ key]
-          (when (and (get frontmatter key) (not= (get frontmatter key) ""))
-            ($ frontmatter-field {:key key
-                                  :value (get frontmatter key)
-                                  :editing-field editing-field
-                                  :edit-value edit-value
-                                  :on-edit on-edit
-                                  :on-save on-save
-                                  :on-cancel on-cancel})))
-        frontmatter-keys))
-    (d/div {:style {:margin-top "8px" :font-size "11px" :color "var(--token-colors-text-muted)"}}
-      "Double-click a field to edit")))
+  (let [visible-keys (filterv (fn [key] (let [v (get frontmatter key)] (and v (not= v "")))) frontmatter-keys)]
+    (d/div {:style {:padding "12px 16px" :border-bottom "1px solid var(--token-colors-border-subtle)"}}
+      (d/div {:style {:font-size "11px" :font-weight "700" :color "var(--token-colors-text-muted)" :text-transform "uppercase" :letter-spacing "0.05em" :margin-bottom "8px"}}
+        "Frontmatter")
+      (d/div {:style {:display "flex" :flex-direction "column" :gap "6px"}}
+        (mapv (fn [key]
+                (let [value (get frontmatter key)]
+                  (d/div {:key key :style {:display "flex" :align-items "flex-start" :gap "8px"}}
+                    (d/div {:style {:width "80px" :flex-shrink "0"}}
+                      (d/div {:style {:font-size "11px" :font-weight "600" :color "var(--token-colors-text-muted)"}} key))
+                    (d/div {:style {:flex "1" :min-width "0"}}
+                      (d/span {:style {:font-size "13px" :color "var(--token-colors-text-default)"}} (str value))))))
+              visible-keys))
+      (d/div {:style {:margin-top "8px" :font-size "11px" :color "var(--token-colors-text-muted)"}}
+        "Double-click a field to edit"))))
 
 ;; ---------------------------------------------------------------------------
 ;; Sidebar component

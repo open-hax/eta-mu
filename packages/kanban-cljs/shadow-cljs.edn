@@ -1,4 +1,4 @@
-{ :source-paths ["src"
+{ :source-paths ["src" "test"
                 "../../../openplanner/packages/openplanner-protocols/src"
                 "../../../openplanner/packages/event-ledger/src"
                 "../chat-ui/src"]
@@ -36,5 +36,4 @@
  :test {:target :node-test
         :output-to "dist/test.js"
         :ns-regexp "-test$"
-        :js-options {:js-provider :shadow}
         :autorun true}}}

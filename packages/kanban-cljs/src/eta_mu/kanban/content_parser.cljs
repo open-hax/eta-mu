@@ -10,12 +10,21 @@
             lines (str/split-lines yaml-str)
             data (reduce (fn [acc line]
                            (cond
+                             ;; Array: key: ["a", "b", "c"]
+                             (re-matches #"^(\w[\w_-]*):\s*\[(.*)\]\s*" line)
+                             (let [[_ k v] (re-matches #"^(\w[\w_-]*):\s*\[(.*)\]\s*" line)
+                                   items (mapv #(str/trim (str/replace % "\"" ""))
+                                               (str/split v #","))]
+                               (assoc acc (keyword k) items))
+                             ;; Quoted string: key: "value"
                              (re-matches #"^(\w[\w_-]*):\s*\"(.*)\"\s*" line)
                              (let [[_ k v] (re-matches #"^(\w[\w_-]*):\s*\"(.*)\"\s*" line)]
                                (assoc acc (keyword k) v))
+                             ;; Unquoted value: key: value
                              (re-matches #"^(\w[\w_-]*):\s*(.+)\s*" line)
                              (let [[_ k v] (re-matches #"^(\w[\w_-]*):\s*(.+)\s*" line)]
                                (assoc acc (keyword k) (str/trim v)))
+                             ;; Empty value: key:
                              (re-matches #"^(\w[\w_-]*):\s*$" line)
                              (let [[_ k] (re-matches #"^(\w[\w_-]*):\s*$" line)]
                                (assoc acc (keyword k) ""))
