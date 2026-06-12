@@ -94,8 +94,8 @@
                                     :value edit-value
                                     :onChange #(on-edit key (.. % -target -value))
                                     :onKeyDown #(when (= "Enter" (.-key %))
-                                                  (on-save key (str/split (.. % -target -value) #",")))
-                                    :onBlur #(on-save key (str/split edit-value #","))
+                                                  (on-save key (->> (str/split (.. % -target -value) #",") (mapv str/trim) (filterv seq))))
+                                    :onBlur #(on-save key (->> (str/split edit-value #",") (mapv str/trim) (filterv seq)))
                                     :autoFocus true
                                     :placeholder "label1, label2, ..."
                                     :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}})
