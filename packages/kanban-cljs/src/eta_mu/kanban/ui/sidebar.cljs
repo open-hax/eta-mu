@@ -5,7 +5,8 @@
             [helix.dom :as d]
             ["marked" :refer [marked]]
             [eta-mu.chat-ui.panel :as chat-panel]
-            [eta-mu.chat-ui.protocol :as chat-protocol]))
+            [eta-mu.chat-ui.protocol :as chat-protocol]
+            [clojure.string :as str]))
 
 ;; ---------------------------------------------------------------------------
 ;; Mock session (no backend yet)
@@ -33,90 +34,23 @@
       (close [_] (reset! listeners [])))))
 
 ;; ---------------------------------------------------------------------------
-;; Frontmatter fields
+;; Constants
 ;; ---------------------------------------------------------------------------
 
 (def frontmatter-keys ["uuid" "title" "status" "priority" "labels" "created_at" "source" "points" "category"])
-(def status-options ["incoming" "breakdown" "ready" "todo" "in_progress" "review" "done" "icebox" "blocked" "accepted" "rejected"])
+(def status-options ["incoming" "todo" "in_progress" "blocked" "review" "document" "done" "rejected"])
 (def priority-options ["P0" "P1" "P2" "P3"])
 
-(defnc frontmatter-field [{:keys [key value editing-field edit-value on-edit on-save on-cancel]}]
-  (let [is-editing (= editing-field key)]
-    (d/div {:style {:display "flex" :align-items "flex-start" :gap "8px"}
-            :onDoubleClick #(when-not is-editing (on-edit key (str value)))}
-      (d/div {:style {:width "80px" :flex-shrink "0"}}
-        (d/div {:style {:font-size "11px" :font-weight "600" :color "var(--token-colors-text-muted)"}} key))
-      (d/div {:style {:flex "1" :min-width "0"}}
-        (if is-editing
-          ;; Edit mode
-          (cond
-            ;; Status dropdown
-            (= key "status")
-            (d/select {:value edit-value
-                       :onChange #(on-save key (.. % -target -value))
-                       :onBlur #(on-cancel)
-                       :autoFocus true
-                       :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}}
-              (map (fn [opt] (d/option {:key opt :value opt} opt)) status-options))
+(defn- priority-color [p]
+  (case p
+    "P0" {:bg "var(--token-colors-badge-error-bg)" :fg "var(--token-colors-badge-error-fg)"}
+    "P1" {:bg "var(--token-colors-badge-warning-bg)" :fg "var(--token-colors-badge-warning-fg)"}
+    "P2" {:bg "var(--token-colors-badge-info-bg)" :fg "var(--token-colors-badge-info-fg)"}
+    {:bg "var(--token-colors-badge-success-bg)" :fg "var(--token-colors-badge-success-fg)"}))
 
-            ;; Priority dropdown
-            (= key "priority")
-            (d/select {:value edit-value
-                       :onChange #(on-save key (.. % -target -value))
-                       :onBlur #(on-cancel)
-                       :autoFocus true
-                       :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}}
-              (map (fn [opt] (d/option {:key opt :value opt} opt)) priority-options))
-
-            ;; Labels (comma-separated)
-            (= key "labels")
-            (d/input {:type "text"
-                      :value edit-value
-                      :onChange #(on-edit key (.. % -target -value))
-                      :onKeyDown #(when (= "Enter" (.-key %)) (on-save key (.. % -target -value)))
-                      :onBlur #(on-cancel)
-                      :autoFocus true
-                      :placeholder "label1, label2, ..."
-                      :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}})
-
-            ;; Points (number)
-            (= key "points")
-            (d/input {:type "number"
-                      :value edit-value
-                      :onChange #(on-edit key (.. % -target -value))
-                      :onKeyDown #(when (= "Enter" (.-key %)) (on-save key (.. % -target -value)))
-                      :onBlur #(on-cancel)
-                      :autoFocus true
-                      :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}})
-
-            ;; Default text input
-            :else
-            (d/input {:type "text"
-                      :value edit-value
-                      :onChange #(on-edit key (.. % -target -value))
-                      :onKeyDown #(when (= "Enter" (.-key %)) (on-save key (.. % -target -value)))
-                      :onBlur #(on-cancel)
-                      :autoFocus true
-                      :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}}))
-
-          ;; View mode
-          (cond
-            ;; Labels as badges
-            (and (= key "labels") (vector? value))
-            (d/div {:style {:display "flex" :gap "4px" :flex-wrap "wrap"}}
-              (map-indexed (fn [i label] (d/span {:key i :style {:font-size "11px" :padding "1px 6px" :border-radius "999px" :border "1px solid var(--token-colors-border-subtle)"}} label)) value))
-
-            ;; Priority as badge
-            (= key "priority")
-            (d/span {:style {:font-size "11px" :padding "2px 8px" :border-radius "999px" :background "var(--token-colors-badge-default-bg)" :color "var(--token-colors-badge-default-fg)"}} (str value))
-
-            ;; Status as badge
-            (= key "status")
-            (d/span {:style {:font-size "12px" :padding "2px 8px" :border-radius "999px" :background "var(--token-colors-badge-info-bg)" :color "var(--token-colors-badge-info-fg)"}} (str value))
-
-            ;; Default text
-            :else
-            (d/span {:style {:font-size "13px" :color "var(--token-colors-text-default)"}} (str (or value "—")))))))))
+;; ---------------------------------------------------------------------------
+;; Frontmatter section
+;; ---------------------------------------------------------------------------
 
 (defnc frontmatter-section [{:keys [frontmatter editing-field edit-value on-edit on-save on-cancel]}]
   (let [visible-keys (filterv (fn [key] (let [v (get frontmatter key)] (and v (not= v "")))) frontmatter-keys)]
@@ -135,34 +69,76 @@
                     (d/div {:style {:flex "1" :min-width "0"}}
                       (if is-editing
                         ;; Edit mode
-                        (if (or (= key "status") (= key "priority"))
+                        (cond
+                          ;; Status dropdown
+                          (= key "status")
                           (d/select {:value edit-value
                                      :onChange #(on-save key (.. % -target -value))
-                                     :onBlur #(on-cancel)
+                                     :onBlur #(on-save key edit-value)
                                      :autoFocus true
                                      :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}}
-                            (mapv (fn [opt] (d/option {:key opt :value opt} opt))
-                                  (if (= key "status") status-options priority-options)))
+                            (mapv (fn [opt] (d/option {:key opt :value opt} opt)) status-options))
+
+                          ;; Priority dropdown
+                          (= key "priority")
+                          (d/select {:value edit-value
+                                     :onChange #(on-save key (.. % -target -value))
+                                     :onBlur #(on-save key edit-value)
+                                     :autoFocus true
+                                     :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}}
+                            (mapv (fn [opt] (d/option {:key opt :value opt} opt)) priority-options))
+
+                          ;; Labels (comma-separated → array on save)
+                          (= key "labels")
+                          (d/input {:type "text"
+                                    :value edit-value
+                                    :onChange #(on-edit key (.. % -target -value))
+                                    :onKeyDown #(when (= "Enter" (.-key %))
+                                                  (on-save key (str/split (.. % -target -value) #",")))
+                                    :onBlur #(on-save key (str/split edit-value #","))
+                                    :autoFocus true
+                                    :placeholder "label1, label2, ..."
+                                    :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}})
+
+                          ;; Points (number → coerce on save)
+                          (= key "points")
+                          (d/input {:type "number"
+                                    :value edit-value
+                                    :onChange #(on-edit key (.. % -target -value))
+                                    :onKeyDown #(when (= "Enter" (.-key %))
+                                                  (on-save key (when (seq (.. % -target -value)) (js/Number (.. % -target -value)))))
+                                    :onBlur #(on-save key (when (seq edit-value) (js/Number edit-value)))
+                                    :autoFocus true
+                                    :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}})
+
+                          ;; Default text input
+                          :else
                           (d/input {:type "text"
                                     :value edit-value
                                     :onChange #(on-edit key (.. % -target -value))
                                     :onKeyDown #(when (= "Enter" (.-key %)) (on-save key (.. % -target -value)))
-                                    :onBlur #(on-cancel)
+                                    :onBlur #(on-save key edit-value)
                                     :autoFocus true
                                     :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}}))
+
                         ;; View mode
                         (cond
+                          ;; Labels as chips
                           (and (= key "labels") (vector? value))
                           (d/div {:style {:display "flex" :gap "4px" :flex-wrap "wrap"}}
                             (mapv (fn [i label] (d/span {:key (str i) :style {:font-size "11px" :padding "1px 6px" :border-radius "999px" :border "1px solid var(--token-colors-border-subtle)"}} label))
                                   (range) value))
 
+                          ;; Priority as colored badge
                           (= key "priority")
-                          (d/span {:style {:font-size "11px" :padding "2px 8px" :border-radius "999px" :background "var(--token-colors-badge-default-bg)" :color "var(--token-colors-badge-default-fg)"}} (str value))
+                          (let [c (priority-color (str value))]
+                            (d/span {:style {:font-size "11px" :padding "2px 8px" :border-radius "999px" :background (:bg c) :color (:fg c)}} (str value)))
 
+                          ;; Status as badge
                           (= key "status")
                           (d/span {:style {:font-size "12px" :padding "2px 8px" :border-radius "999px" :background "var(--token-colors-badge-info-bg)" :color "var(--token-colors-badge-info-fg)"}} (str value))
 
+                          ;; Default text
                           :else
                           (d/span {:style {:font-size "13px" :color "var(--token-colors-text-default)"}} (str value))))))))
               visible-keys))
@@ -187,37 +163,39 @@
                         (set-editing-field nil)
                         (set-edit-value ""))
         handle-save (fn [key value]
-                      (-> (js/fetch (str "/api/task/" task-uuid "/frontmatter")
+                      (set-editing-field nil)
+                      (set-edit-value "")
+                      (-> (js/fetch (str "/api/task/" (js/encodeURIComponent task-uuid) "/frontmatter?project=" (js/encodeURIComponent (get task "sourceBoard" "")))
                                     #js {:method "PATCH"
                                          :headers #js {"Content-Type" "application/json"}
                                          :body (js/JSON.stringify #js {:key key :value value})})
                           (.then (fn [res]
                                    (when (.-ok res)
                                      (.then (.json res) (fn [data]
-                                                          (set-editing-field nil)
-                                                          (set-edit-value "")
-                                                          (when on-update (on-update data)))))))))]
+                                                          (when on-update (on-update data)))))))
+                          (.catch (fn [err] (js/console.error "Save failed:" err)))))]
     (d/div {:style {:width "380px" :min-width "380px" :border-left "1px solid var(--token-colors-border-default)" :background "var(--token-colors-background-surface)" :overflow-y "auto" :display "flex" :flex-direction "column"}}
 
       ;; Header (title + priority + buttons)
-      (d/div {:style {:display "flex" :align-items "center" :justify-content "space-between" :padding "10px 16px" :border-bottom "1px solid var(--token-colors-border-subtle)" :background "var(--token-colors-background-surface)" :flex-shrink "0"}}
-        (d/div {:style {:display "flex" :align-items "center" :gap "8px" :min-width "0"}}
-          (d/span {:style {:font-weight "600" :font-size "14px" :overflow "hidden" :text-overflow "ellipsis" :white-space "nowrap"}}
-            (get task "title"))
-          (d/span {:style {:font-size "10px" :padding "1px 6px" :border-radius "999px" :background "var(--token-colors-badge-default-bg)" :color "var(--token-colors-badge-default-fg)" :flex-shrink "0"}}
-            (get task "priority")))
-        (d/div {:style {:display "flex" :gap "4px" :flex-shrink "0"}}
-          (when source-path
+      (let [c (priority-color (get task "priority"))]
+        (d/div {:style {:display "flex" :align-items "center" :justify-content "space-between" :padding "10px 16px" :border-bottom "1px solid var(--token-colors-border-subtle)" :background "var(--token-colors-background-surface)" :flex-shrink "0"}}
+          (d/div {:style {:display "flex" :align-items "center" :gap "8px" :min-width "0"}}
+            (d/span {:style {:font-weight "600" :font-size "14px" :overflow "hidden" :text-overflow "ellipsis" :white-space "nowrap"}}
+              (get task "title"))
+            (d/span {:style {:font-size "10px" :padding "1px 6px" :border-radius "999px" :background (:bg c) :color (:fg c) :flex-shrink "0"}}
+              (get task "priority")))
+          (d/div {:style {:display "flex" :gap "4px" :flex-shrink "0"}}
+            (when source-path
+              (d/button
+                {:onClick #(js/fetch (str "/api/task/" (js/encodeURIComponent task-uuid) "/open-editor") #js {:method "POST"})
+                 :title "Open in editor"
+                 :style {:padding "5px 8px" :border-radius "6px" :border "1px solid var(--token-colors-border-default)" :background "var(--token-colors-button-secondary-bg)" :color "var(--token-colors-button-secondary-fg)" :cursor "pointer" :font-size "12px"}}
+                "✎"))
             (d/button
-              {:onClick #(js/fetch (str "/api/task/" task-uuid "/open-editor") #js {:method "POST"})
-               :title "Open in editor"
-               :style {:padding "5px 8px" :border-radius "6px" :border "1px solid var(--token-colors-border-default)" :background "var(--token-colors-button-secondary-bg)" :color "var(--token-colors-button-secondary-fg)" :cursor "pointer" :font-size "12px"}}
-              "✎"))
-          (d/button
-            {:onClick on-close
-             :title "Close"
-             :style {:padding "5px 8px" :border-radius "6px" :border "1px solid var(--token-colors-border-default)" :background "var(--token-colors-button-ghost-bg)" :color "var(--token-colors-button-ghost-fg)" :cursor "pointer" :font-size "12px"}}
-            "✕")))
+              {:onClick on-close
+               :title "Close"
+               :style {:padding "5px 8px" :border-radius "6px" :border "1px solid var(--token-colors-border-default)" :background "var(--token-colors-button-ghost-bg)" :color "var(--token-colors-button-ghost-fg)" :cursor "pointer" :font-size "12px"}}
+              "✕"))))
 
       ;; Content
       (if detail
