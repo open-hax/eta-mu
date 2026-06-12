@@ -1,7 +1,7 @@
 ---
 uuid: "kanban-chat-integration"
 title: "Kanban Chat — Side Panel with Witness Thread"
-status: accepted
+status: done
 priority: P0
 labels: ["epics", "cljs", "helix", "kanban", "chat", "witness"]
 created_at: "2026-06-09T00:00:00Z"
