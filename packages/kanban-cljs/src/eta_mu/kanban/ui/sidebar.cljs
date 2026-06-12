@@ -125,12 +125,46 @@
         "Frontmatter")
       (d/div {:style {:display "flex" :flex-direction "column" :gap "6px"}}
         (mapv (fn [key]
-                (let [value (get frontmatter key)]
-                  (d/div {:key key :style {:display "flex" :align-items "flex-start" :gap "8px"}}
+                (let [value (get frontmatter key)
+                      is-editing (= editing-field key)]
+                  (d/div {:key key
+                          :style {:display "flex" :align-items "flex-start" :gap "8px"}
+                          :onDoubleClick #(when-not is-editing (on-edit key (str value)))}
                     (d/div {:style {:width "80px" :flex-shrink "0"}}
                       (d/div {:style {:font-size "11px" :font-weight "600" :color "var(--token-colors-text-muted)"}} key))
                     (d/div {:style {:flex "1" :min-width "0"}}
-                      (d/span {:style {:font-size "13px" :color "var(--token-colors-text-default)"}} (str value))))))
+                      (if is-editing
+                        ;; Edit mode
+                        (if (or (= key "status") (= key "priority"))
+                          (d/select {:value edit-value
+                                     :onChange #(on-save key (.. % -target -value))
+                                     :onBlur #(on-cancel)
+                                     :autoFocus true
+                                     :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}}
+                            (mapv (fn [opt] (d/option {:key opt :value opt} opt))
+                                  (if (= key "status") status-options priority-options)))
+                          (d/input {:type "text"
+                                    :value edit-value
+                                    :onChange #(on-edit key (.. % -target -value))
+                                    :onKeyDown #(when (= "Enter" (.-key %)) (on-save key (.. % -target -value)))
+                                    :onBlur #(on-cancel)
+                                    :autoFocus true
+                                    :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "4px 8px" :font-size "12px"}}))
+                        ;; View mode
+                        (cond
+                          (and (= key "labels") (vector? value))
+                          (d/div {:style {:display "flex" :gap "4px" :flex-wrap "wrap"}}
+                            (mapv (fn [i label] (d/span {:key (str i) :style {:font-size "11px" :padding "1px 6px" :border-radius "999px" :border "1px solid var(--token-colors-border-subtle)"}} label))
+                                  (range) value))
+
+                          (= key "priority")
+                          (d/span {:style {:font-size "11px" :padding "2px 8px" :border-radius "999px" :background "var(--token-colors-badge-default-bg)" :color "var(--token-colors-badge-default-fg)"}} (str value))
+
+                          (= key "status")
+                          (d/span {:style {:font-size "12px" :padding "2px 8px" :border-radius "999px" :background "var(--token-colors-badge-info-bg)" :color "var(--token-colors-badge-info-fg)"}} (str value))
+
+                          :else
+                          (d/span {:style {:font-size "13px" :color "var(--token-colors-text-default)"}} (str value))))))))
               visible-keys))
       (d/div {:style {:margin-top "8px" :font-size "11px" :color "var(--token-colors-text-muted)"}}
         "Double-click a field to edit"))))
