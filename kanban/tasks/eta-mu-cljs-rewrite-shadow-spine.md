@@ -57,3 +57,20 @@ pnpm --dir packages/eta-mu-runtime build
 Implemented in `packages/eta-mu-runtime` with `shadow-cljs.edn`, CLJS `:runtime` and `:test` targets, ESM facade exports, Node smoke import, and a strict CLJS boundary scanner. Verification passed on 2026-05-29.
 
 ---
+
+---
+## CodeRabbit Review (2026-06-12)
+
+**PR:** https://github.com/open-hax/eta-mu/pull/112
+**Status:** Addressed
+
+### Issues fixed
+1. `config.ts:19` — Normalize `ETA_MU_CONTROL_PLANE_URL` (trim whitespace)
+2. `state.cljs:5-10` — Guard `clamp-unit` against nil/non-number inputs
+3. `compat.cljs:77-87` — Guard `belief-from-external` against nil input
+
+### Issues deferred (not in scope of this PR)
+4. `runtime-batch.ts:173-193` — Add fetch timeout with AbortController (separate PR)
+5. `app.js:104-111` — Add auth checks to POST handler (separate PR)
+6. `control-plane.js:521-539` — Validate element shapes (separate PR)
+7. `ui/app.js:90-99` — DOM XSS risk with innerHTML (separate PR)
