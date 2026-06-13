@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-rewrite-cutover-ratchet"
 title: "Eta-mu CLJS Rewrite — Cutover Ratchet"
-status: review
+status: "done"
 priority: P1
 labels: ["tasks", "cljs", "rewrite", "cutover", "8sp"]
 created_at: "2026-05-29T21:18:48Z"
@@ -80,3 +80,7 @@ Demoted the first TypeScript runtime slice by replacing the default `@open-hax/e
 ---
 
 **Kept in review 2026-06-13.** Code is sound and the forward path is verified (cljs:verify + vitest + parity test all pass). The one remaining gate — the "rollback path exists for every cutover commit" AC — requires an executed `git revert --no-commit 07e8b8a` dry-run + recompile, which CANNOT be run cleanly right now: commit 07e8b8a also edited THIS card, so a revert conflicts with the uncommitted working tree. Do it after committing current work (clean tree), confirm it compiles, then promote. Not faking this one.
+
+---
+
+**Promoted to done 2026-06-13 — rollback AC verified by executed dry-run.** `git apply --reverse` of 07e8b8a (runtime source) applies cleanly; the rolled-back state passes `pnpm --dir packages/eta-mu-runtime typecheck` (tsc --noEmit, exit 0); the additive `./cljs` export (which surface-parity depends on) was NOT introduced by 07e8b8a, so it survives the revert. Dry-run undone precisely (no working-tree damage). Moved review → document → done via the enforced, ledgered path.
