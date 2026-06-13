@@ -73,3 +73,21 @@ Before knoxx can swap its implementation, the event ledger protocol must exist i
 - Port: 7777 (knoxx is 8789; both must coexist during migration)
 - Same MongoDB database as knoxx (`openplanner`)
 - No knoxx-specific policy/auth coupling
+
+---
+## QA Review (2026-06-12)
+
+### Sub-agent findings
+- **Zero implementation.** `eta-mu/packages/sol/` does not exist. No code, no scaffolding, no git commits.
+- **IStore mismatch.** Spec defines 6-method IStore (get-by-id, query, put!, update!, delete!, count-all). Real protocol in `openplanner/packages/contract-runtime/` has 2 methods (-insert, -find). Must reconcile before implementation.
+- **MemLedger missing.** Spec requires 3 ledger backing stores. EdnFileLedger and MongoLedger exist. MemLedger does not.
+- **No acceptance criteria.** Spec has no `[ ]` checkboxes. Cannot verify completion.
+- **Blocked on knoxx decomposition.** Sol extraction depends on E16-E22 (knoxx decomposition roadmap) which is `status: incoming`.
+
+### Self-verification
+- Confirmed `packages/sol/` does not exist via `ls`
+- Confirmed IStore protocol in `openplanner/packages/contract-runtime/src/cljs/open_hax/contract_runtime/store/protocol.cljs` has 2 methods
+- Confirmed event-ledger exists in `openplanner/packages/event-ledger/` (MongoDB-backed)
+
+### Recommendation
+Do not start sol until knoxx decomposition reaches E19. Add acceptance criteria. Reconcile IStore spec with real protocol.

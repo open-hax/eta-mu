@@ -48,3 +48,28 @@ From a kanban task card, spawn an eta-mu agent in a chat context. Agent receives
 - Sessions scoped to (task, agent-identity)
 - WebSocket (not SSE) for streaming
 - Session persisted in localStorage
+
+---
+## QA Review (2026-06-12)
+
+### Sub-agent findings
+- **Not started.** Status is `incoming`. No implementation code exists.
+- Prerequisites substantial: chat-ui-extraction (done), kanban-chat-integration (done)
+- Sidebar has working chat panel with mock session
+- IChatSession protocol defined in chat-ui/protocol.cljs
+- Knoxx has agents.spawn tool (tools.cljs:87-101) and invoke_sub_agent.cljs (390 lines)
+
+### Self-verification
+- Confirmed sidebar.cljs:15-34 has `create-mock-session` using `reify chat-protocol/IChatSession`
+- Confirmed no real IChatSession implementation exists (KnoxxChatSession, SolChatSession)
+- Confirmed sol-extraction (primary dependency) has zero implementation
+
+### Gaps
+- **No acceptance criteria.** Epic has zero `[ ]` checkboxes.
+- No harness field in sidebar's frontmatter-keys
+- No localStorage session persistence
+- No agent tool implementations
+- No witness thread system prompt injection
+
+### Recommendation
+Add AC checkboxes. Decide: wait for sol or build KnoxxChatSession as interim (~50 lines). Knoxx is already running.

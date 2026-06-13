@@ -102,3 +102,27 @@ Add task-specific gates such as `actionlint`, package smoke tests, or markdown l
 - `packages/eta-mu-extensions build` currently completes but emits CLJS infer warnings in `task_timing.cljs` and `lib/eta_mu/opencode.cljs`.
 - `eta-mu-beta` previously failed when the primary checkout was stale and `dist/pi/cljs-lisp-decomp-nudge/index.ts` was absent; rebuilding `packages/eta-mu-extensions` regenerated the target.
 - Root and nested receipt ledgers are intentionally dirty during agent work and must not be swept into quality PRs accidentally.
+
+---
+## QA Review (2026-06-12)
+
+### Sub-agent findings
+- Tasks 1-2: `status: review`, commits on main (c953137, 499ef6f)
+- Tasks 3-6: `status: todo`, zero checked work items
+- Task 4 (Lint Gates): Weakest AC — no command names, no file paths, no specific tools
+- Task 5 (Test Hardening): Strong AC grounded in baseline report but weak work items
+- Task 6 (Coverage Expansion): Infrastructure partially pre-exists (.c8rc, CI workflow)
+
+### Self-verification
+- Confirmed baseline report exists at `docs/eta-mu-quality-ratchet-baseline-inventory.md`
+- Confirmed `build-no-warnings.mjs` exists at `packages/eta-mu-extensions/scripts/`
+- Tasks 3-6 have placeholder verification commands (`# plus the new ...`)
+
+### Gaps
+- Task 2 unchecked "OpenCode review" criterion has no machine-verifiable artifact
+- Task 3 needs dedicated extension-path validation script
+- Task 4 needs concrete implementation details (command name, CI workflow file, checks)
+- Task 5 needs specific flaky test names and setup scripts
+
+### Recommendation
+Prioritize filling concrete implementation details for tasks 4-6 before moving to `in_progress`.

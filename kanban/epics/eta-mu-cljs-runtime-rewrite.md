@@ -188,3 +188,28 @@ pnpm --dir packages/eta-mu-runtime typecheck
 - Which existing TS package is the least risky second parity slice: `packages/output-contract-gate`, `packages/agent`, or a command path inside `packages/coding-agent`?
 - Which public package names must remain frozen for npm compatibility versus only workspace-local compatibility?
 - How broad should the first `packages/eta-mu-runtime` CLJS boundary scanner become before repo-wide boundary enforcement?
+
+---
+## QA Review (2026-06-12)
+
+### Sub-agent findings
+- All 6 child tasks marked `status: review` with implementation complete
+- Git history: 5 commits (8d2513d → bb8307a) covering shadow-spine through cutover
+- 35 CLJS source files, 7 test files, 7 extern adapters in `packages/eta-mu-runtime/`
+- TS wrappers in state.ts, planner.ts, envelope.ts delegate to CLJS via `@open-hax/eta-mu-runtime/cljs`
+- Boundary scanner at `scripts/check-cljs-boundaries.mjs` enforces interop rules
+- Version parity test at `packages/coding-agent/test/version-command-cljs-parity.test.ts`
+
+### Self-verification
+- Confirmed `packages/eta-mu-runtime/shadow-cljs.edn` EXISTS
+- Confirmed git log shows 5 commits touching `packages/eta-mu-runtime/`
+- All 6 tasks have `status: review` — none have human reviewer approval
+
+### Gaps
+- Tasks 4 and 5 have vague acceptance criteria ("each migrated effectful runtime path" — which ones?)
+- Task 6 rollback path claimed but not tested (`git revert --no-commit` dry-run)
+- Coverage report not found — `pnpm cljs:coverage` should be run
+- 7 planned boundaries (fs, path, process-exec, git, opencode, pi-host, provider-proxx) have no follow-up tasks
+
+### Recommendation
+Run `pnpm --dir packages/eta-mu-runtime cljs:verify` to confirm full verification chain. Tighten vague AC before approving.

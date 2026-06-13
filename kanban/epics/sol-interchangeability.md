@@ -113,3 +113,31 @@ Plus the opencode-compat surface:
 - [ ] Config provides default backend + per-backend connection info
 - [ ] Switching backends doesn't lose chat history
 - [ ] Mock implementation for testing
+
+---
+## QA Review (2026-06-12)
+
+### Sub-agent findings
+- **~15% complete.** Protocol + UI done; all backend wiring missing.
+- IChatSession protocol defined (5 methods) — DONE
+- Mock session exists in sidebar.cljs (not in chat-ui package) — MISPLACED
+- KnoxxChatSession, SolChatSession, OpencodeChatSession — ALL MISSING
+- Harness field not in sidebar's frontmatter-keys
+- Config-driven backend selection — NOT IMPLEMENTED
+- stream.cljs not wired to any IChatSession implementation
+
+### Self-verification
+- Confirmed IChatSession at chat-ui/protocol.cljs:11-17 with 5 methods
+- Confirmed mock at sidebar.cljs:15-34 using `reify`
+- Confirmed no KnoxxChatSession, SolChatSession, or OpencodeChatSession anywhere
+- Confirmed no `harness` in sidebar.cljs frontmatter-keys
+
+### Gaps
+- Mock should be exported from @open-hax/chat-ui (AC #7), not inline in sidebar
+- No factory function for backend selection
+- No config schema for chat backends
+- AC #6 ("switching backends doesn't lose history") needs storage mechanism clarification
+- stream.cljs subscribe method overlaps with protocol subscribe — needs reconciliation
+
+### Recommendation
+Implement KnoxxChatSession first (knoxx is running, ~50 lines). Move mock to chat-ui package. Add harness field to frontmatter-keys.
