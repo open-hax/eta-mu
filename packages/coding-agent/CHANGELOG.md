@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.70.16] - 2026-06-02
+
+### Fixed
+
+- Fixed published `eta-mu kanban` commands by resolving `@open-hax/kanban-legacy` through ESM package exports instead of a non-exported `package.json` path and monorepo-only relative imports.
+
 ### Changed
 
 - Changed Pi version checks to identify Pi with a `pi/<version>` user agent.
