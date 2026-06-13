@@ -1,7 +1,7 @@
 ---
 uuid: "roadmap-global-projection"
 title: "Roadmap: Kanban Global Projection System"
-status: accepted
+status: done
 priority: P0
 labels: ["roadmap", "kanban", "projection", "cljs"]
 created_at: "2026-06-08T00:00:00Z"
