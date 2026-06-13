@@ -65,7 +65,22 @@
         [filters set-filters] (hooks/use-state (read-filters-from-url))
         [selected set-selected] (hooks/use-state nil)
         [detail set-detail] (hooks/use-state nil)
-        [loading set-loading] (hooks/use-state true)]
+        [loading set-loading] (hooks/use-state true)
+        [toast set-toast] (hooks/use-state nil)
+        ;; Drag-and-drop move: POST an FSM-enforced status change, then refetch the
+        ;; composed board. A rejected transition (HTTP 409) surfaces the FSM's reason.
+        move-task! (fn [uuid project status]
+                     (-> (js/fetch (str "/api/task/" (js/encodeURIComponent uuid)
+                                        "/status?project=" (js/encodeURIComponent (or project "")))
+                                   #js {:method "POST"
+                                        :headers #js {"Content-Type" "application/json"}
+                                        :body (js/JSON.stringify #js {:status status})})
+                         (.then (fn [res]
+                                  (if (.-ok res)
+                                    (-> (fetch-compose filters) (.then set-board-data))
+                                    (-> (.json res)
+                                        (.then (fn [b] (set-toast (or (.-error b) (str "move failed (" (.-status res) ")")))))))))
+                         (.catch (fn [e] (set-toast (str e))))))]
 
     ;; Sync filters to URL
     (hooks/use-effect [filters]
@@ -92,6 +107,12 @@
         (-> (fetch-task-content (get selected "uuid") (get selected "sourceBoard" "knoxx"))
             (.then (fn [data] (set-detail data))))))
 
+    ;; Auto-dismiss the toast after a few seconds
+    (hooks/use-effect [toast]
+      (when toast
+        (let [t (js/setTimeout #(set-toast nil) 5000)]
+          (fn [] (js/clearTimeout t)))))
+
     (d/div {:class "kanban-app" :style {:display "flex" :flex-direction "column" :height "100vh" :background "var(--token-colors-background-default)"}}
 
       ;; Header
@@ -116,7 +137,8 @@
               "Loading...")
             ($ board/board-view
               {:board board-data
-               :on-select (fn [task] (set-selected task))})))
+               :on-select (fn [task] (set-selected task))
+               :on-move move-task!})))
 
         ;; Sidebar
         (when selected
@@ -124,7 +146,17 @@
             {:task selected
              :detail detail
              :on-close #(do (set-selected nil) (set-detail nil))
-             :on-update (fn [data] (set-detail data))}))))))
+             :on-update (fn [data] (set-detail data))})))
+
+      ;; Toast — FSM rejections and move errors
+      (when toast
+        (d/div {:style {:position "fixed" :bottom "12px" :right "12px" :max-width "480px"
+                        :padding "10px 14px" :border-radius "8px" :z-index "9999"
+                        :border "1px solid var(--token-colors-border-default)"
+                        :background "var(--token-colors-background-elevated)"
+                        :color "var(--token-colors-text-default)" :font-size "12px"
+                        :white-space "pre-wrap"}}
+          toast)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Mount

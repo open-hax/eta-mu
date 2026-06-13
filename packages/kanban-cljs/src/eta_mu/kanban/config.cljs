@@ -51,7 +51,8 @@
                                           candidate))]
                                (swap! seen conj id)
                                {:id id :title (or (some-> (:title project) str/trim) id)
-                                :tasks-dir tasks-dir :meta (or (:meta project) {})}))
+                                :tasks-dir tasks-dir :meta (or (:meta project) {})
+                                :fsm (or (:fsm project) (:fsm config))}))
                            (:projects config) (range))
             default-id (or (when-let [d (:defaultProject config)]
                              (when (some #(= (:id %) d) projects) d))
@@ -61,5 +62,6 @@
                           (when (:tasksDir config) (path/resolve config-dir (:tasksDir config)))
                           (path/resolve (js/process.cwd) "docs/agile/tasks"))
             id (project-id-from-path tasks-dir)]
-        {:projects [{:id id :title id :tasks-dir tasks-dir :meta {}}]
+        {:projects [{:id id :title id :tasks-dir tasks-dir :meta {}
+                     :fsm (:fsm config)}]
          :default-project-id id}))))

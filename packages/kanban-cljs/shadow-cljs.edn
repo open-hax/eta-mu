@@ -11,6 +11,10 @@
  { :server {:target :node-script
            :output-to "dist/server.js"
            :main eta-mu.kanban.server/main
+           ;; node-script uses bare JS interop throughout (req.query, .readFile, fastify
+           ;; .patch/.post, ...); :advanced renames those and breaks every handler at
+           ;; runtime. Pin :simple — output size is irrelevant for a server process.
+           :compiler-options {:optimizations :simple}
            :devtools {:watch-dir "resources"}}
 
  :server-dev {:target :node-script
@@ -23,6 +27,7 @@
  :cli {:target :node-script
        :output-to "dist/cli.js"
        :main eta-mu.kanban.cli/main
+       :compiler-options {:optimizations :simple}
        :devtools {:watch-dir "resources"}}
 
  :app {:target :browser

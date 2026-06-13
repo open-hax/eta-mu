@@ -1,7 +1,7 @@
 ---
 uuid: "kanban-chat-integration"
 title: "Kanban Chat — Side Panel with Witness Thread"
-status: done
+status: "todo"
 priority: P0
 labels: ["epics", "cljs", "helix", "kanban", "chat", "witness"]
 created_at: "2026-06-09T00:00:00Z"
@@ -128,3 +128,12 @@ The `harness` field on the task determines which backend to use.
 - [ ] Switching tasks shows previous chat for that task
 - [ ] Backend switchable via harness field
 - [ ] No knoxx-specific imports in the kanban package
+
+
+---
+
+**Board audit 2026-06-12 — bounced done → review.** NOT done — UI shell only. The sidebar renders a chat panel, but it is backed by a hard-coded MOCK session (`create-mock-session` in `ui/sidebar.cljs`) that replies with a canned "connect a real backend" string. None of the agent tools (status-update, comment, subtask, search, read-board) exist; witness-thread context injection, per-task localStorage persistence, and harness-based backend switching are all absent. Every acceptance criterion in the card is still unchecked. Remaining: real IChatSession backend(s), tool wiring, context injection, persistence.
+
+---
+
+**Session 2026-06-13.** Sidebar chat panel shell exists (mock only). REMAINING: real backend, the 6 agent tools (status-update/comment/subtask/search/read-board), witness-thread context injection, per-task localStorage persistence, harness-based backend switching. Moved review → todo.

@@ -1,7 +1,7 @@
 ---
 uuid: "chat-ui-extraction"
 title: "Extract Chat UI from Knoxx into Reusable Helix Package"
-status: done
+status: "todo"
 priority: P0
 labels: ["epics", "cljs", "helix", "chat", "extraction", "knoxx"]
 created_at: "2026-06-09T00:00:00Z"
@@ -101,3 +101,12 @@ The session carries the task context as a pinned system prompt (witness thread).
 - [ ] Works standalone in a test page
 - [ ] Works embedded in kanban sidebar
 - [ ] No knoxx-specific imports in the package
+
+
+---
+
+**Board audit 2026-06-12 — bounced done → review.** PARTIAL. The `@open-hax/chat-ui` package exists and is consumed by the kanban sidebar, so extraction happened. But the only session implementation exercised is the MOCK; KnoxxChatSession / SolChatSession / OpencodeChatSession and WebSocket streaming are unverified, and the standalone test page is unconfirmed. All acceptance criteria in the card are unchecked. Remaining: implement + verify at least one real session and streaming, confirm standalone + embedded use.
+
+---
+
+**Session 2026-06-13.** Package extracted + consumed by the kanban sidebar, but only the MOCK IChatSession is wired. REMAINING: a real backend session (knoxx/sol/opencode), WebSocket streaming, standalone test page. Moved review → todo.

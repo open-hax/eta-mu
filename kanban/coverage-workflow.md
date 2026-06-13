@@ -1,7 +1,7 @@
 ---
 uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-coverage-workflow-md"
 title: "Coverage Workflow and Runtime Thresholds"
-status: review
+status: "done"
 priority: P1
 labels: ["tasks", "coverage", "runtime", "cljs", "ratchet", "3sp"]
 created_at: "2026-05-29T04:29:39.347Z"
@@ -67,3 +67,12 @@ Runtime CLJS coverage after adding shape/message coverage:
 - Branches: 61.49% (222/361)
 
 The enforced threshold is intentionally line/statement coverage because shadow-cljs-generated branch/function ranges are not stable enough to use as a 90% merge gate yet.
+
+
+---
+
+**Independent review 2026-06-13 (Sonnet).** VERDICT: DONE (high confidence). `pnpm coverage` delegates to eta-mu-runtime cljs:coverage with c8 `--check-coverage --lines 90 --statements 90`; CI coverage.yml runs it on PRs + main as a gating step; stale agentd coverage script removed; coverage/ gitignored. Closest to genuinely done of the set.
+
+---
+
+**Promoted to done 2026-06-13** after an executed verification run (not just static review): cljs:verify, vitest, cljs:coverage (93.77%% ≥90 gate), and the surface-parity --version test all passed (exit 0). Moved review → document → done via the FSM-enforced, ledger-backed path.

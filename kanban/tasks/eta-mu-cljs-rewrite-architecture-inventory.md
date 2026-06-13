@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-rewrite-architecture-inventory"
 title: "Eta-mu CLJS Rewrite — Architecture Inventory"
-status: review
+status: "todo"
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "inventory", "5sp"]
 created_at: "2026-05-29T21:18:48Z"
@@ -51,3 +51,8 @@ pnpm -C packages/eta-mu-extensions build
 ---
 Planning inventory drafted at docs/cljs-runtime-rewrite-architecture-inventory.md. It classifies package surfaces, target domain/shape/law/infra/extern ownership, boundary hotspots, and the first three parity slices: eta-mu-runtime, output-contract-gate, and coding-agent message/session core.
 ---
+
+
+---
+
+**Independent review 2026-06-13 (Sonnet).** VERDICT: PARTIAL — bounced review → todo. Inventory doc is substantive on the hard packages but AC1 ("every package mapped to a CLJS ownership category") fails: `packages/skills` is absent entirely and 10 packages (mom, eta-mu-github, eta-mu-docs, eta-mu-truth, eta-mu-extensions-e2e, presence-core, 4x signal-*) are counted but never assigned a category. Also the stated "record red-test/warning baseline" work item produced commands-to-run but no actual recorded baseline. Add skills, mark the 10 as explicitly deferred w/ rationale, and record the baseline.

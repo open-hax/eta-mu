@@ -30,3 +30,20 @@
 
 (deftest default-fsm-has-6-states
   (is (= 6 (count (:states fsm/default-fsm)))))
+
+(deftest promethean-rejects-multi-hop-to-done
+  ;; The exact failure this board suffered: agents hand-edited cards from
+  ;; incoming/accepted straight to done. A live FSM rejects those jumps.
+  (is (not (:allowed? (fsm/evaluate-transition fsm/promethean-fsm "incoming" "done" {}))))
+  (is (not (:allowed? (fsm/evaluate-transition fsm/promethean-fsm "accepted" "done" {}))))
+  (is (not (:allowed? (fsm/evaluate-transition fsm/promethean-fsm "todo" "done" {})))))
+
+(deftest promethean-allows-done-reopen
+  ;; done may be reopened for re-review (or iceboxed), but not arbitrarily.
+  (is (:allowed? (fsm/evaluate-transition fsm/promethean-fsm "done" "review" {})))
+  (is (:allowed? (fsm/evaluate-transition fsm/promethean-fsm "done" "icebox" {})))
+  (is (not (:allowed? (fsm/evaluate-transition fsm/promethean-fsm "done" "in_progress" {})))))
+
+(deftest promethean-normal-forward-path
+  (is (:allowed? (fsm/evaluate-transition fsm/promethean-fsm "review" "document" {})))
+  (is (:allowed? (fsm/evaluate-transition fsm/promethean-fsm "document" "done" {}))))

@@ -1,7 +1,7 @@
 ---
 uuid: "board-composition"
 title: "Board Composition: Query DSL + Multi-Board Projections"
-status: done
+status: "todo"
 priority: P0
 labels: ["epics", "cljs", "kanban", "composition", "query-dsl"]
 created_at: "2026-06-08T00:00:00Z"
@@ -64,3 +64,12 @@ eta-mu kanban compose --preset "infra-view"
 - All code in CLJS
 - No MongoDB dependency in kanban package
 - Query DSL is data (EDN/JSON), not code strings
+
+
+---
+
+**Board audit 2026-06-12 — bounced done → review.** PARTIAL. The core works: `GET /api/board/compose` with `--where` clauses returns merged multi-board snapshots (verified live, meta.domain/org filtering), and the CLI `compose` command exists. Missing vs the DoD: saved/preset views (`--save` / `--preset` are not implemented in `cli.cljs`), the `IStore` driver protocol (EdnStore/MongoStore) is absent, and the `contains`/`regex` DSL operators are unverified. Remaining: saved views, driver abstraction (or descope it), DSL operator coverage tests.
+
+---
+
+**Session 2026-06-13.** Core compose (where-clauses, multi-board projection) verified working live + CLI `compose`. REMAINING: saved/preset views (`--save`/`--preset`), the IStore driver protocol (EdnStore/MongoStore) or an explicit descope, and `contains`/`regex` DSL operator tests. Moved review → todo.

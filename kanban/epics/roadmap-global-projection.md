@@ -1,7 +1,7 @@
 ---
 uuid: "roadmap-global-projection"
 title: "Roadmap: Kanban Global Projection System"
-status: done
+status: "todo"
 priority: P0
 labels: ["roadmap", "kanban", "projection", "cljs"]
 created_at: "2026-06-08T00:00:00Z"
@@ -44,3 +44,12 @@ Phase 4 (FSM) ──────────────────────
 - Build validation: `npm run typecheck/lint/test`
 - Review backlog threshold: default 5, configurable
 - Tokenizer: char count default, ITokenizer protocol
+
+
+---
+
+**Board audit 2026-06-12 — bounced done → review.** NOT done as a tracking card. It marks all five phases complete, but Phase 3 (Event Ledger) and Phase 4 (FSM Engine) are not actually functional — see `kanban-event-ledger` and `fsm-engine`, both bounced in this audit. Keep open until phases 3 and 4 genuinely land and are enforced.
+
+---
+
+**Session 2026-06-13.** Phases 3 (Event Ledger) and 4 (FSM) are now substantially real and enforced (see those epics) rather than dead code. REMAINING: their full scope (drift/watcher; real FSM checks) + phase-5 card enrichment. Tracking card moved review → todo.
