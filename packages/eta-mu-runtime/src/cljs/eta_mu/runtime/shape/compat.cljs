@@ -75,15 +75,16 @@
     :else value))
 
 (defn belief-from-external
-  "Convert a JS-compatible belief map to the internal kebab-key shape."
+  "Convert a JS-compatible belief map to the internal kebab-key shape. Treats nil as empty map."
   [belief]
-  (reduce-kv
-   (fn [acc external-key internal-key]
-     (if (contains? belief external-key)
-       (assoc acc internal-key (get belief external-key))
-       acc))
-   {}
-   belief-key->internal))
+  (let [belief (or belief {})]
+    (reduce-kv
+     (fn [acc external-key internal-key]
+       (if (contains? belief external-key)
+         (assoc acc internal-key (get belief external-key))
+         acc))
+     {}
+     belief-key->internal)))
 
 (defn belief->external
   "Convert an internal belief map to the current public camelCase shape."

@@ -3,11 +3,11 @@
             [eta-mu.runtime.law.state :as state-law]))
 
 (defn clamp-unit
-  "Clamp a numeric value into the unit interval."
+  "Clamp a numeric value into the unit interval. Returns value unchanged if not a number."
   [value]
-  (-> value
-      (max 0)
-      (min 1)))
+  (if (number? value)
+    (-> value (max 0) (min 1))
+    value))
 
 (def default-eta-belief
   {:urgency 0
