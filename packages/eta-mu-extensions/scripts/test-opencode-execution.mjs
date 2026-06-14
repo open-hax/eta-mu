@@ -70,7 +70,8 @@ async function main() {
 
   for (const ext of ["receipt-river", "session-mycology"]) {
     const ok = await testExtension(ext);
-    if (ok) passed++; else failed++;
+    if (ok) passed++;
+    else failed++;
   }
 
   console.log(`\n======================================`);

@@ -1,11 +1,79 @@
 (pi-state
-  (timestamp "20260529T224313Z")
-  (scope "fork-tax snapshot of all visible eta-mu changes before merging origin/main")
-  (branch "pi/fork-tax/20260529T022118Z-main-softreset-all-dirt-eta-mu")
-  (pre-merge-head "839dd0edfc7c9a89ef6f124a2587adb3c474f755")
-  (origin-main "80cd987885f0e98388fe256087cabe08805ba0ba")
-  (merge-base "39db3c30c25cd207a3164376868bb95637371086")
-  (ahead-behind-before-merge "3/3")
-  (constraints "no destructive git operations; merge commit only for origin/main; no squash; no rebase")
-  (verification "fetch origin/main succeeded; secret-pattern scan passed; git diff --check pending before snapshot commit; post-merge tests pending")
-  (concurrent-dirt "all visible tracked/untracked repo changes staged path-scoped by explicit user request; ignored files left untouched"))
+  (timestamp "20260614T021717Z")
+  (branch "feat/kanban-comments-parity")
+  (pre-commit-head "b6a81a461bfa4b75ba25d944a0058402b0a61dd7")
+  (scope "kanban-comments-parity: lint gate, docs noise cleanup, kanban ledger, agentd type fixes")
+  (verification
+    (kanban-typecheck "pass — tsc --noEmit clean, npm warn only"))
+  (owned-tracked-modified
+    ".github/workflows/eta-mu-extensions-tests.yml"
+    ".github/workflows/main-pr-gate.yml"
+    ".github/workflows/staging-pr.yml"
+    ".gitignore"
+    "kanban/.kanban/board.json"
+    "kanban/tasks/eta-mu-quality-ratchet-cli-startup-smoke.md"
+    "kanban/tasks/eta-mu-quality-ratchet-lint-gates.md"
+    "package.json"
+    "packages/eta-mu-extensions/README.md"
+    "packages/eta-mu-extensions/externs/promise.js"
+    "packages/eta-mu-extensions/kanban/.kanban/board.json"
+    "packages/eta-mu-extensions/package.json"
+    "packages/eta-mu-extensions/scripts/build.mjs"
+    "packages/eta-mu-extensions/scripts/deploy-ci.mjs"
+    "packages/eta-mu-extensions/scripts/test-all-extensions.mjs"
+    "packages/eta-mu-extensions/scripts/test-opencode-execution.mjs"
+    "packages/eta-mu-extensions/scripts/test-opencode.mjs"
+    "packages/kanban/e2e/kanban-ui-scroll.spec.ts"
+    "packages/kanban/playwright.config.ts"
+    "packages/kanban/src/board.ts"
+    "packages/kanban/src/cli.ts"
+    "packages/kanban/src/config.ts"
+    "packages/kanban/src/content-parser.ts"
+    "packages/kanban/src/github-sync.ts"
+    "packages/kanban/src/index.ts"
+    "packages/kanban/src/server.ts"
+    "packages/kanban/src/sync.ts"
+    "packages/kanban/src/task-writeback.ts"
+    "packages/kanban/src/tasks.ts"
+    "packages/kanban/src/trello-client.ts"
+    "packages/kanban/src/types.ts"
+    "packages/kanban/tests/github-sync.test.ts"
+    "packages/kanban/tests/sync.test.ts"
+    "packages/kanban/tests/task-writeback.test.ts"
+    "packages/kanban/tests/tasks.test.ts"
+    "packages/kanban/tsconfig.json"
+    "packages/kanban/vite.config.ts"
+    "packages/kanban/vitest.config.ts"
+    "packages/kanban/web/src/App.tsx"
+    "packages/kanban/web/src/main.tsx"
+    "pnpm-lock.yaml"
+    "services/agentd/src/agents.ts"
+    "services/agentd/src/events.ts"
+    "services/agentd/src/fs.ts"
+    "services/agentd/src/git.ts"
+    "services/agentd/src/github.ts"
+    "services/agentd/src/index.ts"
+    "services/agentd/tests/events.test.ts"
+    "services/agentd/tests/fs.test.ts"
+    "services/agentd/tsconfig.json"
+    "services/agentd/vitest.config.ts")
+  (owned-staged-deletions
+    "docs/agentd-api/assets/hierarchy.js"
+    "docs/agentd-api/assets/icons.js"
+    "docs/agentd-api/assets/main.js"
+    "docs/agentd-api/assets/navigation.js"
+    "docs/agentd-api/assets/search.js"
+    "docs/opencode-reactant-api/js/highlight.min.js"
+    "docs/opencode-reactant-api/js/jquery.min.js"
+    "docs/opencode-reactant-api/js/page_effects.js")
+  (owned-untracked-absorbed
+    ".editorconfig"
+    ".prettierrc"
+    "biome.json"
+    "kanban/.events/ledger.edn"
+    "packages/eta-mu-extensions/scripts/cli-smoke-test.mjs"
+    "packages/eta-mu-extensions/scripts/validate-extension-paths.mjs"
+    "scripts/lint.mjs")
+  (concurrent-dirt none)
+  (formatter-noise-restored
+    "~700 files tabs->spaces Prettier noise across packages/agent packages/ai packages/coding-agent packages/opencode-reactant packages/web-ui packages/tui packages/mom packages/output-contract-gate packages/eta-mu-github packages/pods packages/eta-mu-runtime packages/signal-* packages/presence-core packages/eta-mu-truth packages/eta-mu-docs services/eta-mu-truth-workbench ecosystem.config.cjs opencode.json tsconfig.base.json — restored to HEAD before snapshot"))

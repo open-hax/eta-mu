@@ -38,7 +38,11 @@ const updateFrontmatterStatus = (source: string, nextStatus: string): string => 
   return normalizedPrefix + rest;
 };
 
-const looksLikeStatusFolderTree = (tasksDir: string, taskPath: string, taskStatus: string): boolean => {
+const looksLikeStatusFolderTree = (
+  tasksDir: string,
+  taskPath: string,
+  taskStatus: string,
+): boolean => {
   const relative = path.relative(tasksDir, taskPath);
   if (relative.startsWith("..") || path.isAbsolute(relative)) {
     return false;
@@ -50,13 +54,16 @@ const looksLikeStatusFolderTree = (tasksDir: string, taskPath: string, taskStatu
     return false;
   }
 
-  return parent === taskStatus && defaultStatusOrder.includes(parent as (typeof defaultStatusOrder)[number]);
+  return (
+    parent === taskStatus &&
+    defaultStatusOrder.includes(parent as (typeof defaultStatusOrder)[number])
+  );
 };
 
 const maybeMoveTaskFile = async (
   tasksDir: string,
   task: KanbanTask,
-  nextStatus: string
+  nextStatus: string,
 ): Promise<string> => {
   if (task.status === nextStatus) {
     return task.sourcePath;
@@ -88,7 +95,11 @@ const maybeMoveTaskFile = async (
   return nextPath;
 };
 
-export const writeTaskStatus = async (task: KanbanTask, tasksDir: string, nextStatus: string): Promise<KanbanTask> => {
+export const writeTaskStatus = async (
+  task: KanbanTask,
+  tasksDir: string,
+  nextStatus: string,
+): Promise<KanbanTask> => {
   const source = await readFile(task.sourcePath, "utf8");
   const updatedSource = updateFrontmatterStatus(source, nextStatus);
   await writeFile(task.sourcePath, updatedSource, "utf8");
@@ -103,6 +114,6 @@ export const writeTaskStatus = async (task: KanbanTask, tasksDir: string, nextSt
   return {
     ...task,
     status: nextStatus,
-    sourcePath: movedPath
+    sourcePath: movedPath,
   };
 };

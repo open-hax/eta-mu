@@ -23,6 +23,22 @@ jobs:
       - run: bash -n services/eta-mu/scripts/deploy-remote.sh
       - run: shellcheck services/eta-mu/scripts/deploy-remote.sh
 
+  eta-mu-lint:
+    name: eta-mu-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10.14.0'
+          run_install: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm lint
+
   main-tests:
     name: main-tests
     runs-on: ubuntu-latest

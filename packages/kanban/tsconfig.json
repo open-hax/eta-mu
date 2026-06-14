@@ -10,15 +10,8 @@
     "skipLibCheck": true,
     "declaration": true,
     "sourceMap": true,
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "tests",
-    "vitest.config.ts"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["tests", "vitest.config.ts"]
 }

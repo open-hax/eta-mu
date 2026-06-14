@@ -9,7 +9,7 @@ const priorityRank: Record<string, number> = {
   P0: 0,
   P1: 1,
   P2: 2,
-  P3: 3
+  P3: 3,
 };
 
 const titleCase = (value: string): string =>
@@ -24,7 +24,10 @@ export const normalizeStatus = (status: string | undefined): string => {
     return "incoming";
   }
 
-  return status.trim().toLowerCase().replace(/[\s-]+/gu, "_");
+  return status
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/gu, "_");
 };
 
 export const slugify = (value: string): string =>
@@ -69,12 +72,14 @@ const parseInlineValue = (value: string): unknown => {
   return trimmedValue.replace(/^['"]|['"]$/gu, "");
 };
 
-const parseFallbackFrontmatter = (source: string): { data: Record<string, unknown>; content: string } => {
+const parseFallbackFrontmatter = (
+  source: string,
+): { data: Record<string, unknown>; content: string } => {
   const frontmatterMatch = source.match(/^---\s*\n([\s\S]*?)\n---\s*\n?/u);
   if (!frontmatterMatch) {
     return {
       data: {},
-      content: source.trim()
+      content: source.trim(),
     };
   }
 
@@ -110,7 +115,7 @@ const parseFallbackFrontmatter = (source: string): { data: Record<string, unknow
 
   return {
     data,
-    content: source.slice(frontmatterMatch[0].length).trim()
+    content: source.slice(frontmatterMatch[0].length).trim(),
   };
 };
 
@@ -119,7 +124,7 @@ const parseTaskFile = (source: string): { data: Record<string, unknown>; content
     const parsed = matter(source);
     return {
       data: parsed.data as Record<string, unknown>,
-      content: parsed.content
+      content: parsed.content,
     };
   } catch {
     return parseFallbackFrontmatter(source);
@@ -136,17 +141,23 @@ const collectMarkdownFiles = async (directory: string): Promise<string[]> => {
       }
 
       return entry.isFile() && entry.name.endsWith(".md") ? [entryPath] : [];
-    })
+    }),
   );
 
   return files.flat();
 };
 
 const taskSort = (left: KanbanTask, right: KanbanTask): number => {
-  const leftStatusIndex = defaultStatusOrder.indexOf(left.status as (typeof defaultStatusOrder)[number]);
-  const rightStatusIndex = defaultStatusOrder.indexOf(right.status as (typeof defaultStatusOrder)[number]);
-  const normalizedLeftStatusIndex = leftStatusIndex === -1 ? defaultStatusOrder.length : leftStatusIndex;
-  const normalizedRightStatusIndex = rightStatusIndex === -1 ? defaultStatusOrder.length : rightStatusIndex;
+  const leftStatusIndex = defaultStatusOrder.indexOf(
+    left.status as (typeof defaultStatusOrder)[number],
+  );
+  const rightStatusIndex = defaultStatusOrder.indexOf(
+    right.status as (typeof defaultStatusOrder)[number],
+  );
+  const normalizedLeftStatusIndex =
+    leftStatusIndex === -1 ? defaultStatusOrder.length : leftStatusIndex;
+  const normalizedRightStatusIndex =
+    rightStatusIndex === -1 ? defaultStatusOrder.length : rightStatusIndex;
 
   if (normalizedLeftStatusIndex !== normalizedRightStatusIndex) {
     return normalizedLeftStatusIndex - normalizedRightStatusIndex;
@@ -172,11 +183,15 @@ export const loadTasks = async (tasksDir: string): Promise<KanbanTask[]> => {
       const fileStats = await stat(filePath);
       const frontmatter = parsed.data;
 
-      const title = typeof frontmatter.title === "string" ? frontmatter.title.trim() : path.basename(filePath, ".md");
-      const priority = typeof frontmatter.priority === "string" ? frontmatter.priority.toUpperCase() : "P3";
+      const title =
+        typeof frontmatter.title === "string"
+          ? frontmatter.title.trim()
+          : path.basename(filePath, ".md");
+      const priority =
+        typeof frontmatter.priority === "string" ? frontmatter.priority.toUpperCase() : "P3";
       const labels = [
         ...normalizeStringArray(frontmatter.labels),
-        ...normalizeStringArray(frontmatter.tags)
+        ...normalizeStringArray(frontmatter.tags),
       ];
 
       const uniqueLabels = Array.from(new Set(labels));
@@ -186,7 +201,9 @@ export const loadTasks = async (tasksDir: string): Promise<KanbanTask[]> => {
         uuid,
         title,
         slug: typeof frontmatter.slug === "string" ? frontmatter.slug : slugify(title),
-        status: normalizeStatus(typeof frontmatter.status === "string" ? frontmatter.status : undefined),
+        status: normalizeStatus(
+          typeof frontmatter.status === "string" ? frontmatter.status : undefined,
+        ),
         priority,
         labels: uniqueLabels,
         createdAt:
@@ -194,9 +211,9 @@ export const loadTasks = async (tasksDir: string): Promise<KanbanTask[]> => {
             ? frontmatter.created_at
             : fileStats.mtime.toISOString(),
         content: parsed.content.trim(),
-        sourcePath: filePath
+        sourcePath: filePath,
       } satisfies KanbanTask;
-    })
+    }),
   );
 
   return tasks.sort(taskSort);

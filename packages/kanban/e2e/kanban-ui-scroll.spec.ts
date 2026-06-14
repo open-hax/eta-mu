@@ -1,10 +1,9 @@
-import { test, expect } from "@playwright/test";
-
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { expect, test } from "@playwright/test";
 
-import { startKanbanServer, type StartedKanbanServer } from "../src/server.js";
+import { type StartedKanbanServer, startKanbanServer } from "../src/server.js";
 
 const writeTask = async (dir: string, index: number): Promise<void> => {
   const uuid = `t-${index}`;
@@ -18,7 +17,7 @@ const writeTask = async (dir: string, index: number): Promise<void> => {
       `labels: [e2e]\n` +
       `---\n\n` +
       `Body ${index}\n`,
-    "utf8"
+    "utf8",
   );
 };
 
@@ -36,7 +35,7 @@ test.describe("kanban UI scrolling", () => {
     started = await startKanbanServer({
       tasksDir: root,
       host: "127.0.0.1",
-      port: 0
+      port: 0,
     });
   });
 
@@ -66,7 +65,7 @@ test.describe("kanban UI scrolling", () => {
     const dims = await list.evaluate((el) => ({
       scrollHeight: el.scrollHeight,
       clientHeight: el.clientHeight,
-      scrollTop: el.scrollTop
+      scrollTop: el.scrollTop,
     }));
 
     expect(dims.scrollHeight).toBeGreaterThan(dims.clientHeight);

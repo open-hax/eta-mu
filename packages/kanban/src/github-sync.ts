@@ -86,7 +86,7 @@ const defaultLabelColors: Record<string, string> = {
   "priority:P0": "000000",
   "priority:P1": "d93f0b",
   "priority:P2": "fbca04",
-  "priority:P3": "0e8a16"
+  "priority:P3": "0e8a16",
 };
 
 const statusColor = "cfd3d7";
@@ -102,7 +102,9 @@ const normalizeGitHubLabelName = (label: string): string =>
 
 const unique = <T>(items: T[]): T[] => Array.from(new Set(items));
 
-export const extractTaskUuidFromIssue = (issue: Pick<GitHubIssueState, "body">): string | undefined => {
+export const extractTaskUuidFromIssue = (
+  issue: Pick<GitHubIssueState, "body">,
+): string | undefined => {
   const body = issue.body ?? "";
   const markerMatch = body.match(uuidMarkerPattern);
   if (markerMatch?.[1]) {
@@ -119,17 +121,18 @@ export const desiredIssueLabels = (task: KanbanTask): string[] =>
       "kanban",
       `status:${task.status}`,
       task.priority ? `priority:${task.priority}` : undefined,
-      ...task.labels
+      ...task.labels,
     ]
       .filter((label): label is string => Boolean(label?.trim()))
       .map(normalizeGitHubLabelName)
-      .filter((label) => label.length > 0)
+      .filter((label) => label.length > 0),
   );
 
 export const labelStateForName = (name: string): GitHubLabelState => ({
   name,
-  color: defaultLabelColors[name] ?? (name.startsWith("status:") ? statusColor : defaultTaskLabelColor),
-  description: name === "kanban" ? "Synced from OpenHax markdown kanban." : undefined
+  color:
+    defaultLabelColors[name] ?? (name.startsWith("status:") ? statusColor : defaultTaskLabelColor),
+  description: name === "kanban" ? "Synced from OpenHax markdown kanban." : undefined,
 });
 
 const relativeSourcePath = (task: KanbanTask, cwd: string): string => {
@@ -137,7 +140,8 @@ const relativeSourcePath = (task: KanbanTask, cwd: string): string => {
   return relative.startsWith("..") ? task.sourcePath : relative;
 };
 
-const truncateBody = (body: string): string => (body.length <= 58_000 ? body : `${body.slice(0, 57_900)}\n\n… truncated by kanban sync …\n`);
+const truncateBody = (body: string): string =>
+  body.length <= 58_000 ? body : `${body.slice(0, 57_900)}\n\n… truncated by kanban sync …\n`;
 
 export const buildIssueBody = (task: KanbanTask, options: { cwd?: string } = {}): string => {
   const cwd = options.cwd ?? process.cwd();
@@ -152,10 +156,12 @@ export const buildIssueBody = (task: KanbanTask, options: { cwd?: string } = {})
     `- Status: \`${task.status}\``,
     `- Priority: \`${task.priority}\``,
     `- Source: \`${sourcePath}\``,
-    task.labels.length > 0 ? `- Labels: ${task.labels.map((label) => `\`${label}\``).join(", ")}` : "- Labels: none",
+    task.labels.length > 0
+      ? `- Labels: ${task.labels.map((label) => `\`${label}\``).join(", ")}`
+      : "- Labels: none",
     "",
     "---",
-    ""
+    "",
   ].join("\n");
 
   return truncateBody(`${header}${task.content.trim()}\n`);
@@ -163,7 +169,7 @@ export const buildIssueBody = (task: KanbanTask, options: { cwd?: string } = {})
 
 const desiredIssueState = (
   task: KanbanTask,
-  options: Pick<GitHubSyncOptions, "closeDone" | "closeRejected">
+  options: Pick<GitHubSyncOptions, "closeDone" | "closeRejected">,
 ): { state: "open" | "closed"; stateReason?: "completed" | "not_planned" } => {
   if (task.status === "done" && options.closeDone !== false) {
     return { state: "closed", stateReason: "completed" };
@@ -185,7 +191,7 @@ const sameLabels = (current: string[], desired: string[]): boolean => {
 export const planGitHubIssueSync = (
   tasks: KanbanTask[],
   state: GitHubRepoState,
-  options: GitHubSyncOptions
+  options: GitHubSyncOptions,
 ): GitHubSyncPlan => {
   const operations: GitHubSyncOperation[] = [];
   const existingLabels = new Set(state.labels.map((label) => label.name.toLowerCase()));
@@ -240,7 +246,7 @@ export const planGitHubIssueSync = (
         body,
         labels,
         state: desiredState.state,
-        stateReason: desiredState.stateReason
+        stateReason: desiredState.stateReason,
       });
     }
   }
@@ -251,8 +257,8 @@ export const planGitHubIssueSync = (
       createLabels: operations.filter((operation) => operation.type === "createLabel").length,
       createIssues: operations.filter((operation) => operation.type === "createIssue").length,
       updateIssues: operations.filter((operation) => operation.type === "updateIssue").length,
-      skippedClosedTasks
-    }
+      skippedClosedTasks,
+    },
   };
 };
 
@@ -276,15 +282,17 @@ export class GitHubClient {
   }
 
   private async request<T>(endpointOrUrl: string, init: RequestInit = {}): Promise<T> {
-    const url = endpointOrUrl.startsWith("http") ? endpointOrUrl : `${this.baseUrl}${endpointOrUrl}`;
+    const url = endpointOrUrl.startsWith("http")
+      ? endpointOrUrl
+      : `${this.baseUrl}${endpointOrUrl}`;
     const response = await fetch(url, {
       ...init,
       headers: {
         accept: "application/vnd.github+json",
         authorization: `Bearer ${this.token}`,
         "x-github-api-version": "2022-11-28",
-        ...(init.headers ?? {})
-      }
+        ...(init.headers ?? {}),
+      },
     });
 
     if (!response.ok) {
@@ -308,8 +316,8 @@ export class GitHubClient {
         headers: {
           accept: "application/vnd.github+json",
           authorization: `Bearer ${this.token}`,
-          "x-github-api-version": "2022-11-28"
-        }
+          "x-github-api-version": "2022-11-28",
+        },
       });
 
       if (!response.ok) {
@@ -347,7 +355,7 @@ export class GitHubClient {
         body: issue.body,
         state: issue.state,
         labels: issue.labels,
-        htmlUrl: issue.html_url
+        htmlUrl: issue.html_url,
       }));
   }
 
@@ -356,7 +364,7 @@ export class GitHubClient {
       await this.request(`/repos/${repo}/labels`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(label)
+        body: JSON.stringify(label),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -366,30 +374,41 @@ export class GitHubClient {
     }
   }
 
-  async createIssue(repo: string, input: { title: string; body: string; labels: string[] }): Promise<void> {
+  async createIssue(
+    repo: string,
+    input: { title: string; body: string; labels: string[] },
+  ): Promise<void> {
     await this.request(`/repos/${repo}/issues`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(input)
+      body: JSON.stringify(input),
     });
   }
 
   async updateIssue(
     repo: string,
     issueNumber: number,
-    input: { title: string; body: string; labels: string[]; state: "open" | "closed"; state_reason?: string }
+    input: {
+      title: string;
+      body: string;
+      labels: string[];
+      state: "open" | "closed";
+      state_reason?: string;
+    },
   ): Promise<void> {
     await this.request(`/repos/${repo}/issues/${issueNumber}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(input)
+      body: JSON.stringify(input),
     });
   }
 }
 
 export const inferGitHubRepo = (cwd: string): string | undefined => {
   try {
-    const remoteUrl = execFileSync("git", ["-C", cwd, "remote", "get-url", "origin"], { encoding: "utf8" }).trim();
+    const remoteUrl = execFileSync("git", ["-C", cwd, "remote", "get-url", "origin"], {
+      encoding: "utf8",
+    }).trim();
     const match =
       remoteUrl.match(/^git@github\.com:([^/]+\/[^/]+?)(?:\.git)?$/u) ??
       remoteUrl.match(/^https:\/\/github\.com\/([^/]+\/[^/]+?)(?:\.git)?\/?$/u);
@@ -399,16 +418,17 @@ export const inferGitHubRepo = (cwd: string): string | undefined => {
   }
 };
 
-const sleep = (milliseconds: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const sleep = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 export const syncTasksToGitHub = async (
   client: GitHubClient,
   tasks: KanbanTask[],
-  options: GitHubSyncOptions
+  options: GitHubSyncOptions,
 ): Promise<GitHubSyncResult> => {
   const repoState: GitHubRepoState = {
     labels: await client.getLabels(options.repo),
-    issues: await client.getIssues(options.repo)
+    issues: await client.getIssues(options.repo),
   };
   const plan = planGitHubIssueSync(tasks, repoState, options);
   const appliedOperations: GitHubSyncOperation[] = [];
@@ -430,7 +450,7 @@ export const syncTasksToGitHub = async (
           await client.createIssue(options.repo, {
             title: operation.title,
             body: operation.body,
-            labels: operation.labels
+            labels: operation.labels,
           });
           appliedOperations.push(operation);
           break;
@@ -440,7 +460,7 @@ export const syncTasksToGitHub = async (
             body: operation.body,
             labels: operation.labels,
             state: operation.state,
-            state_reason: operation.stateReason
+            state_reason: operation.stateReason,
           });
           appliedOperations.push(operation);
           break;

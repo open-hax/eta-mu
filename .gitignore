@@ -47,3 +47,7 @@ packages/kanban/playwright-report/
 
 
 **/target/
+
+# Generated documentation assets
+docs/agentd-api/assets/
+docs/opencode-reactant-api/js/

@@ -2,4 +2,4 @@
  * @externs
  */
 var Promise = {};
-Promise.resolve = function(value) {};
+Promise.resolve = (value) => {};

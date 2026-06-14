@@ -60,7 +60,9 @@ async function testExtension(name) {
         const toolDef = hooks.tool[toolName];
         console.log(`    - ${toolName}: ${toolDef.description || "(no description)"}`);
         if (toolDef.args) {
-          console.log(`      args: ${Object.keys(toolDef.args?.shape || toolDef.args || {}).join(", ") || "(none)"}`);
+          console.log(
+            `      args: ${Object.keys(toolDef.args?.shape || toolDef.args || {}).join(", ") || "(none)"}`,
+          );
         }
         if (typeof toolDef.execute === "function") {
           console.log(`      execute: function`);
@@ -92,7 +94,8 @@ async function main() {
 
   for (const ext of EXTENSIONS) {
     const ok = await testExtension(ext);
-    if (ok) passed++; else failed++;
+    if (ok) passed++;
+    else failed++;
   }
 
   console.log(`\n==================================`);

@@ -1,5 +1,4 @@
-import { promises as fs } from "fs";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, promises as fs, readFileSync } from "fs";
 import path from "path";
 
 const REPO_PATH = process.env.REPO_PATH!;
@@ -35,7 +34,7 @@ function loadSubmodules() {
 
   const raw = readFileSync(gitmodulesPath, "utf8");
   const matches = [...raw.matchAll(/path\s*=\s*(.+)/g)];
-  submodulePaths = new Set(matches.map(m => m[1].trim()));
+  submodulePaths = new Set(matches.map((m) => m[1].trim()));
   return submodulePaths;
 }
 
@@ -78,7 +77,7 @@ export async function listFiles(relPath = ".") {
       type: isDir ? "dir" : "file",
       isSubmodule: submodule,
       size: stats ? stats.size : null,
-      mtime: stats ? stats.mtimeMs : null
+      mtime: stats ? stats.mtimeMs : null,
     });
   }
 
@@ -87,6 +86,6 @@ export async function listFiles(relPath = ".") {
     entries: results.sort((a, b) => {
       if (a.type === b.type) return a.name.localeCompare(b.name);
       return a.type === "dir" ? -1 : 1;
-    })
+    }),
   };
 }

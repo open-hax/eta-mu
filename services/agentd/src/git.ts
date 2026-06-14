@@ -14,7 +14,7 @@ export function getRepoInfo() {
     const remotes = execSync("git remote -v", { cwd: REPO_PATH, encoding: "utf8" })
       .trim()
       .split("\n")
-      .map(line => {
+      .map((line) => {
         const [name, url, type] = line.split(/\s+/);
         return { name, url, type: type.replace("(", "").replace(")", "") };
       });
@@ -22,14 +22,17 @@ export function getRepoInfo() {
     const branches = execSync("git branch -a", { cwd: REPO_PATH, encoding: "utf8" })
       .trim()
       .split("\n")
-      .map(line => line.replace(/^\*?\s+/, "").trim());
+      .map((line) => line.replace(/^\*?\s+/, "").trim());
 
-    const currentBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: REPO_PATH, encoding: "utf8" }).trim();
+    const currentBranch = execSync("git rev-parse --abbrev-ref HEAD", {
+      cwd: REPO_PATH,
+      encoding: "utf8",
+    }).trim();
 
     const recentCommits = execSync("git log --oneline -10", { cwd: REPO_PATH, encoding: "utf8" })
       .trim()
       .split("\n")
-      .map(line => {
+      .map((line) => {
         const [hash, ...message] = line.split(" ");
         return { hash, message: message.join(" ") };
       });
@@ -37,7 +40,7 @@ export function getRepoInfo() {
     const status = execSync("git status --porcelain", { cwd: REPO_PATH, encoding: "utf8" })
       .trim()
       .split("\n")
-      .filter(line => line.length > 0);
+      .filter((line) => line.length > 0);
 
     return {
       path: REPO_PATH,
@@ -47,7 +50,7 @@ export function getRepoInfo() {
       currentBranch,
       recentCommits,
       status,
-      isClean: status.length === 0
+      isClean: status.length === 0,
     };
   } catch (error) {
     return { error: String(error), path: REPO_PATH };
@@ -57,15 +60,15 @@ export function getRepoInfo() {
 export async function createWorktree(issue: number) {
   const branch = `issue/${issue}`;
   const path = `${WORKTREE_BASE_DIR}/${issue}`;
-  
+
   // For now, return a mock response to test frontend functionality
   // TODO: Fix git execution environment issues
   console.log("Mock worktree creation for issue:", issue);
-  return { 
-    branch, 
+  return {
+    branch,
     path,
     mock: true,
-    message: "Mock worktree created - git execution disabled due to environment issues"
+    message: "Mock worktree created - git execution disabled due to environment issues",
   };
 }
 
@@ -81,7 +84,7 @@ export async function pushBranch(branch: string) {
 export function getWorktreeConfig() {
   return {
     baseDir: WORKTREE_BASE_DIR,
-    repoPath: REPO_PATH
+    repoPath: REPO_PATH,
   };
 }
 
@@ -94,8 +97,8 @@ export function listWorktrees() {
         path: "worktrees/3870",
         branch: "issue/3870",
         issue: 3870,
-        commit: "abc123"
-      }
+        commit: "abc123",
+      },
     ];
   } catch (error) {
     console.error("Error listing worktrees:", error);

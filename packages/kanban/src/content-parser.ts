@@ -131,7 +131,7 @@ export const serializeTaskContent = (parsed: ParsedTaskContent): string => {
 export const updateFrontmatterField = async (
   filePath: string,
   key: string,
-  value: unknown
+  value: unknown,
 ): Promise<ParsedTaskContent> => {
   const raw = await (await import("node:fs/promises")).readFile(filePath, "utf8");
   const parsed = parseTaskContent(raw);
@@ -146,7 +146,7 @@ export const updateFrontmatterField = async (
  */
 export const appendComment = async (
   filePath: string,
-  commentText: string
+  commentText: string,
 ): Promise<ParsedTaskContent> => {
   const raw = await (await import("node:fs/promises")).readFile(filePath, "utf8");
   const parsed = parseTaskContent(raw);

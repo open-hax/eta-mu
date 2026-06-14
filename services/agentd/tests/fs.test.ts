@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, rm, writeFile } from "fs/promises";
-import path from "path";
 import { tmpdir } from "os";
+import path from "path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 type ListFilesFn = typeof import("../src/fs.js").listFiles;
@@ -41,7 +41,7 @@ describe("listFiles", () => {
     const repo = await createRepoRoot();
     const depsDir = path.join(repo, "deps");
     await mkdir(path.join(depsDir, "lib"), { recursive: true });
-    await writeFile(path.join(repo, ".gitmodules"), "[submodule \"lib\"]\n\tpath = deps/lib\n");
+    await writeFile(path.join(repo, ".gitmodules"), '[submodule "lib"]\n\tpath = deps/lib\n');
 
     const pluginsDir = path.join(repo, "plugins");
     await mkdir(pluginsDir, { recursive: true });
@@ -52,12 +52,17 @@ describe("listFiles", () => {
     const { listFiles } = await loadFs(repo);
     const rootListing = await listFiles(".");
 
-    expect(rootListing.entries.map(e => e.name)).toEqual(["deps", "plugins", ".gitmodules", "a.txt"]);
-    const pluginsEntry = rootListing.entries.find(e => e.name === "plugins");
+    expect(rootListing.entries.map((e) => e.name)).toEqual([
+      "deps",
+      "plugins",
+      ".gitmodules",
+      "a.txt",
+    ]);
+    const pluginsEntry = rootListing.entries.find((e) => e.name === "plugins");
     expect(pluginsEntry?.isSubmodule).toBe(true);
 
     const depsListing = await listFiles("deps");
-    const libEntry = depsListing.entries.find(e => e.name === "lib");
+    const libEntry = depsListing.entries.find((e) => e.name === "lib");
     expect(libEntry?.isSubmodule).toBe(true);
     expect(libEntry?.path).toBe("deps/lib");
   });

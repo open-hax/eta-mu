@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { EventBus } from "../src/events.js";
 import type { WebSocket } from "ws";
+import { EventBus } from "../src/events.js";
 
 describe("EventBus", () => {
   it("attaches and emits payloads with a timestamp", () => {
@@ -36,7 +36,9 @@ describe("EventBus", () => {
   it("continues broadcasting when one subscriber throws", () => {
     const bus = new EventBus();
     const goodSend = vi.fn();
-    const badSend = vi.fn(() => { throw new Error("boom"); });
+    const badSend = vi.fn(() => {
+      throw new Error("boom");
+    });
 
     const goodSocket = { send: goodSend } as unknown as WebSocket;
     const badSocket = { send: badSend } as unknown as WebSocket;

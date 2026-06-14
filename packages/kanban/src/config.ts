@@ -40,7 +40,7 @@ export const loadConfig = async (explicitPath?: string): Promise<LoadedKanbanCon
   if (!configPath) {
     return {
       config: {},
-      configDir: process.cwd()
+      configDir: process.cwd(),
     };
   }
 
@@ -50,11 +50,14 @@ export const loadConfig = async (explicitPath?: string): Promise<LoadedKanbanCon
   return {
     config: parsedConfig,
     configPath,
-    configDir: path.dirname(configPath)
+    configDir: path.dirname(configPath),
   };
 };
 
-export const resolveConfigPathValue = (value: string | undefined, configDir: string): string | undefined => {
+export const resolveConfigPathValue = (
+  value: string | undefined,
+  configDir: string,
+): string | undefined => {
   if (!value) {
     return undefined;
   }
@@ -72,9 +75,11 @@ const projectIdFromPath = (tasksDir: string): string =>
 
 export const resolveConfiguredProjects = (
   loadedConfig: LoadedKanbanConfig,
-  explicitTasksDir?: string
+  explicitTasksDir?: string,
 ): { projects: KanbanProject[]; defaultProjectId: string } => {
-  const explicitResolvedTasksDir = explicitTasksDir ? path.resolve(process.cwd(), explicitTasksDir) : undefined;
+  const explicitResolvedTasksDir = explicitTasksDir
+    ? path.resolve(process.cwd(), explicitTasksDir)
+    : undefined;
 
   if (loadedConfig.config.projects && loadedConfig.config.projects.length > 0) {
     const seen = new Set<string>();
@@ -96,12 +101,13 @@ export const resolveConfiguredProjects = (
       return {
         id,
         title: project.title?.trim() || id,
-        tasksDir
+        tasksDir,
       } satisfies KanbanProject;
     });
 
     const defaultProjectId =
-      loadedConfig.config.defaultProject && projects.some((project) => project.id === loadedConfig.config.defaultProject)
+      loadedConfig.config.defaultProject &&
+      projects.some((project) => project.id === loadedConfig.config.defaultProject)
         ? loadedConfig.config.defaultProject
         : projects[0]?.id;
 
@@ -123,9 +129,9 @@ export const resolveConfiguredProjects = (
       {
         id,
         title: id,
-        tasksDir
-      }
+        tasksDir,
+      },
     ],
-    defaultProjectId: id
+    defaultProjectId: id,
   };
 };

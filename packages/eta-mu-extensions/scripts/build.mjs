@@ -16,22 +16,15 @@
  */
 
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-  symlinkSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PKG_ROOT  = path.resolve(__dirname, "..");
-const HOME      = homedir();
-const mode      = process.argv[2] || "release";
+const PKG_ROOT = path.resolve(__dirname, "..");
+const HOME = homedir();
+const mode = process.argv[2] || "release";
 const DIST_ROOT = path.join(PKG_ROOT, "dist");
 
 // ── Minimal EDN parser (manifest subset only) ──────────────────────────────
@@ -40,19 +33,40 @@ function tokenizeEdn(text) {
   const tokens = [];
   let i = 0;
   while (i < text.length) {
-    if (/\s/.test(text[i])) { i++; continue; }
-    if (text[i] === ";") { while (i < text.length && text[i] !== "\n") i++; continue; }
+    if (/\s/.test(text[i])) {
+      i++;
+      continue;
+    }
+    if (text[i] === ";") {
+      while (i < text.length && text[i] !== "\n") i++;
+      continue;
+    }
     if (text[i] === '"') {
-      let s = ""; i++;
+      let s = "";
+      i++;
       while (i < text.length && text[i] !== '"') {
-        if (text[i] === "\\") { i++; s += text[i]; } else { s += text[i]; }
+        if (text[i] === "\\") {
+          i++;
+          s += text[i];
+        } else {
+          s += text[i];
+        }
         i++;
       }
-      i++; tokens.push(s); continue;
+      i++;
+      tokens.push(s);
+      continue;
     }
-    if ("[]{}".includes(text[i])) { tokens.push(text[i]); i++; continue; }
+    if ("[]{}".includes(text[i])) {
+      tokens.push(text[i]);
+      i++;
+      continue;
+    }
     let buf = "";
-    while (i < text.length && !/[\s\[\]{}";]/.test(text[i])) { buf += text[i]; i++; }
+    while (i < text.length && !/[\s[\]{}";]/.test(text[i])) {
+      buf += text[i];
+      i++;
+    }
     if (buf.length > 0) tokens.push(buf);
   }
   return tokens;
@@ -65,16 +79,22 @@ function parseEdn(text) {
     if (pos >= tokens.length) throw new Error("Unexpected end of EDN");
     const tok = tokens[pos];
     if (tok === "[") {
-      pos++; const items = [];
+      pos++;
+      const items = [];
       while (pos < tokens.length && tokens[pos] !== "]") items.push(parseValue());
-      pos++; return items;
+      pos++;
+      return items;
     }
     if (tok === "{") {
-      pos++; const map = {};
+      pos++;
+      const map = {};
       while (pos < tokens.length && tokens[pos] !== "}") {
-        const key = parseValue(); const val = parseValue(); map[key] = val;
+        const key = parseValue();
+        const val = parseValue();
+        map[key] = val;
       }
-      pos++; return map;
+      pos++;
+      return map;
     }
     pos++;
     if (tok === "true") return true;
@@ -90,7 +110,10 @@ function parseEdn(text) {
 
 function loadManifest() {
   const p = path.join(PKG_ROOT, "manifest.edn");
-  if (!existsSync(p)) { console.error("error: manifest.edn not found at", p); process.exit(1); }
+  if (!existsSync(p)) {
+    console.error("error: manifest.edn not found at", p);
+    process.exit(1);
+  }
   return parseEdn(readFileSync(p, "utf8"));
 }
 
@@ -103,20 +126,32 @@ function expandPath(p) {
 
 function resolvedExtensions(manifest) {
   return (manifest[":extensions"] || []).map((ext) => {
-    const name   = ext[":name"];
+    const name = ext[":name"];
     const source = ext[":source"];
     const relPath = ext[":path"];
     const absolutePath = expandPath(relPath);
     // Pi target: shadow-cljs writes to target/runtime/<name>/runtime.js
     const runtimeFile = path.join(PKG_ROOT, "target", "runtime", name, "runtime.js");
-    const runtimeCjs  = path.join(DIST_ROOT, "runtime", `${name}.cjs`);
-    const piDir       = path.join(DIST_ROOT, "pi", `cljs-${name}`);
-    const piIndex     = path.join(piDir, "index.ts");
+    const runtimeCjs = path.join(DIST_ROOT, "runtime", `${name}.cjs`);
+    const piDir = path.join(DIST_ROOT, "pi", `cljs-${name}`);
+    const piIndex = path.join(piDir, "index.ts");
     // Opencode target: shadow-cljs :esm writes to target/opencode/<name>/plugin.js
     const opencodeRuntimeFile = path.join(PKG_ROOT, "target", "opencode", name, "plugin.js");
     const opencodeFile = path.join(DIST_ROOT, "opencode", `${name}.mjs`);
     const hasOpencodeBuild = true;
-    return { name, source, absolutePath, runtimeFile, runtimeCjs, piDir, piIndex, opencodeRuntimeFile, opencodeFile, hasOpencodeBuild, npmDeps: ext[":npm-deps"] || [] };
+    return {
+      name,
+      source,
+      absolutePath,
+      runtimeFile,
+      runtimeCjs,
+      piDir,
+      piIndex,
+      opencodeRuntimeFile,
+      opencodeFile,
+      hasOpencodeBuild,
+      npmDeps: ext[":npm-deps"] || [],
+    };
   });
 }
 
@@ -133,11 +168,21 @@ function shadowBinary() {
 }
 
 function runShadow(action, buildIds) {
-  if (buildIds.length === 0) { console.log("  no build targets"); return 0; }
+  if (buildIds.length === 0) {
+    console.log("  no build targets");
+    return 0;
+  }
   const bin = shadowBinary();
   console.log(`  shadow-cljs ${action} ${buildIds.join(" ")}`);
-  const r = spawnSync(bin, [action, ...buildIds], { cwd: PKG_ROOT, stdio: "inherit", shell: false });
-  if (r.error) { console.error("error: could not start shadow-cljs:", r.error.message); return 1; }
+  const r = spawnSync(bin, [action, ...buildIds], {
+    cwd: PKG_ROOT,
+    stdio: "inherit",
+    shell: false,
+  });
+  if (r.error) {
+    console.error("error: could not start shadow-cljs:", r.error.message);
+    return 1;
+  }
   return r.status ?? 1;
 }
 
@@ -188,7 +233,9 @@ function materializeExt(ext) {
   // .mjs file from materializeOpencodeExt.
   if (!ext.hasOpencodeBuild) {
     mkdirSync(path.dirname(ext.opencodeFile), { recursive: true });
-    const ocRuntimeRel = path.relative(path.dirname(ext.opencodeFile), ext.runtimeCjs).replaceAll(path.sep, "/");
+    const ocRuntimeRel = path
+      .relative(path.dirname(ext.opencodeFile), ext.runtimeCjs)
+      .replaceAll(path.sep, "/");
     writeFileSync(
       ext.opencodeFile,
       `import runtimeModule from ${jsString(`./${ocRuntimeRel}`)};\n` +
@@ -224,7 +271,9 @@ function materializeOpencodeExt(ext) {
   writeFileSync(runtimeOut, readFileSync(ext.opencodeRuntimeFile, "utf8"), "utf8");
 
   mkdirSync(path.dirname(ext.opencodeFile), { recursive: true });
-  const runtimeRel = path.relative(path.dirname(ext.opencodeFile), runtimeOut).replaceAll(path.sep, "/");
+  const runtimeRel = path
+    .relative(path.dirname(ext.opencodeFile), runtimeOut)
+    .replaceAll(path.sep, "/");
   writeFileSync(
     ext.opencodeFile,
     `import plugin from ${jsString(`./${runtimeRel}`)};\nexport default plugin;\n`,
@@ -265,9 +314,22 @@ function stripJsonComments(text) {
       else if (ch === '"') inString = false;
       continue;
     }
-    if (ch === '"') { inString = true; out += ch; continue; }
-    if (ch === "/" && next === "/") { while (i < text.length && text[i] !== "\n") i++; out += "\n"; continue; }
-    if (ch === "/" && next === "*") { i += 2; while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i++; i++; continue; }
+    if (ch === '"') {
+      inString = true;
+      out += ch;
+      continue;
+    }
+    if (ch === "/" && next === "/") {
+      while (i < text.length && text[i] !== "\n") i++;
+      out += "\n";
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      i += 2;
+      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i++;
+      i++;
+      continue;
+    }
     out += ch;
   }
   return out.replace(/,\s*([}\]])/g, "$1");
@@ -304,7 +366,8 @@ function syncOpenCodeConfig(exts) {
       const uri = pathToFileURL(abs).href;
       managedUris.add(uri);
       if (existsSync(abs) && !current.has(uri)) {
-        current.add(uri); changed = true;
+        current.add(uri);
+        changed = true;
         console.log(`  registered ${uri}`);
       }
     }
@@ -314,7 +377,8 @@ function syncOpenCodeConfig(exts) {
       const uri = pathToFileURL(ext.opencodeFile).href;
       managedUris.add(uri);
       if (existsSync(ext.opencodeFile) && !current.has(uri)) {
-        current.add(uri); changed = true;
+        current.add(uri);
+        changed = true;
         console.log(`  registered ${uri}`);
       }
     }
@@ -323,14 +387,24 @@ function syncOpenCodeConfig(exts) {
   // Prune stale entries this package used to own
   for (const p of [...current]) {
     let pathname = "";
-    try { pathname = p.startsWith("file://") ? fileURLToPath(p) : p; }
-    catch { pathname = p; }
+    try {
+      pathname = p.startsWith("file://") ? fileURLToPath(p) : p;
+    } catch {
+      pathname = p;
+    }
     // Remove legacy plugin-dir copies
     const legacy = pathname.match(/\.config\/opencode\/plugins\/([^/]+)\/runtime\.cjs$/);
-    if (legacy) { current.delete(p); changed = true; console.log(`  pruned legacy ${p}`); continue; }
+    if (legacy) {
+      current.delete(p);
+      changed = true;
+      console.log(`  pruned legacy ${p}`);
+      continue;
+    }
     // Remove stale dist/opencode entries that no longer exist on disk
     if (managedUris.has(p) && !existsSync(pathname)) {
-      current.delete(p); changed = true; console.log(`  pruned missing ${p}`);
+      current.delete(p);
+      changed = true;
+      console.log(`  pruned missing ${p}`);
     }
   }
 
@@ -346,7 +420,7 @@ function syncOpenCodeConfig(exts) {
 
 function main() {
   const manifest = loadManifest();
-  const exts     = resolvedExtensions(manifest);
+  const exts = resolvedExtensions(manifest);
   const piBuildIds = exts.map((e) => e.name);
   const opencodeBuildIds = exts.filter((e) => e.hasOpencodeBuild).map((e) => `opencode-${e.name}`);
 
@@ -371,16 +445,25 @@ function main() {
   // Compile pi targets
   console.log("  compiling pi targets...");
   const piStatus = runShadow(mode, piBuildIds);
-  if (piStatus !== 0) { console.error("error: pi build failed"); process.exit(piStatus); }
+  if (piStatus !== 0) {
+    console.error("error: pi build failed");
+    process.exit(piStatus);
+  }
 
   // Compile opencode targets
   if (opencodeBuildIds.length > 0) {
     console.log("  compiling opencode targets...");
     const ocStatus = runShadow(mode, opencodeBuildIds);
-    if (ocStatus !== 0) { console.error("error: opencode build failed"); process.exit(ocStatus); }
+    if (ocStatus !== 0) {
+      console.error("error: opencode build failed");
+      process.exit(ocStatus);
+    }
   }
 
-  if (mode === "watch") { console.log("  watching..."); return; }
+  if (mode === "watch") {
+    console.log("  watching...");
+    return;
+  }
 
   // Materialize package-root targets and remove stale managed host copies.
   console.log("  materializing pi targets...");

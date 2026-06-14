@@ -1,9 +1,9 @@
 import { buildColumnTitle } from "./tasks.js";
-import { TrelloClient } from "./trello-client.js";
+import type { TrelloClient } from "./trello-client.js";
 import {
   defaultStatusOrder,
-  priorityColors,
   type KanbanTask,
+  priorityColors,
   type TrelloBoardState,
   type TrelloCard,
   type TrelloLabel,
@@ -11,14 +11,16 @@ import {
   type TrelloSyncOperation,
   type TrelloSyncOptions,
   type TrelloSyncPlan,
-  type TrelloSyncResult
+  type TrelloSyncResult,
 } from "./types.js";
 
 const uuidMarker = "Kanban UUID:";
 
-const normalizeListMapping = (mapping: Record<string, string> | undefined): Record<string, string> => {
+const normalizeListMapping = (
+  mapping: Record<string, string> | undefined,
+): Record<string, string> => {
   return Object.fromEntries(
-    Object.entries(mapping ?? {}).map(([status, listName]) => [status.toLowerCase(), listName])
+    Object.entries(mapping ?? {}).map(([status, listName]) => [status.toLowerCase(), listName]),
   );
 };
 
@@ -29,10 +31,7 @@ const listNameForStatus = (status: string, mapping: Record<string, string>): str
 const TRELLO_DESC_MAX = 16384;
 
 const sanitizeDescription = (text: string): string => {
-  return text
-    .replace(/\r\n/g, "\n")
-    .replace(/\0/g, "")
-    .substring(0, TRELLO_DESC_MAX);
+  return text.replace(/\r\n/g, "\n").replace(/\0/g, "").substring(0, TRELLO_DESC_MAX);
 };
 
 export const buildCardDescription = (task: KanbanTask): string => {
@@ -43,7 +42,7 @@ export const buildCardDescription = (task: KanbanTask): string => {
     `Labels: ${task.labels.join(", ") || "none"}`,
     `Source: ${task.sourcePath}`,
     "",
-    task.content || "No task body provided."
+    task.content || "No task body provided.",
   ];
 
   return sanitizeDescription(sections.join("\n"));
@@ -60,7 +59,7 @@ const cardNeedsUpdate = (
   description: string,
   targetListName: string,
   listById: Map<string, TrelloList>,
-  desiredLabelNames: string[]
+  desiredLabelNames: string[],
 ): boolean => {
   const currentListName = listById.get(card.idList)?.name;
   const currentLabelNames = card.labels.map((label) => label.name).sort();
@@ -77,7 +76,7 @@ const cardNeedsUpdate = (
 export const planTrelloSync = (
   tasks: KanbanTask[],
   boardState: TrelloBoardState,
-  options: Omit<TrelloSyncOptions, "boardIdOrUrl">
+  options: Omit<TrelloSyncOptions, "boardIdOrUrl">,
 ): TrelloSyncPlan => {
   const operations: TrelloSyncOperation[] = [];
   const normalizedListMapping = normalizeListMapping(options.listMapping);
@@ -101,7 +100,7 @@ export const planTrelloSync = (
   }
 
   const orderedStatuses = Array.from(
-    new Set([...defaultStatusOrder, ...tasks.map((task) => task.status)])
+    new Set([...defaultStatusOrder, ...tasks.map((task) => task.status)]),
   );
 
   orderedStatuses.forEach((status, index) => {
@@ -110,7 +109,7 @@ export const planTrelloSync = (
       operations.push({
         type: "createList",
         listName,
-        position: index + 1
+        position: index + 1,
       });
     }
   });
@@ -120,7 +119,7 @@ export const planTrelloSync = (
       operations.push({
         type: "createLabel",
         labelName,
-        color
+        color,
       });
     }
   });
@@ -137,7 +136,7 @@ export const planTrelloSync = (
         task,
         listName: targetListName,
         labelNames,
-        description
+        description,
       });
       continue;
     }
@@ -149,7 +148,7 @@ export const planTrelloSync = (
         task,
         listName: targetListName,
         labelNames,
-        description
+        description,
       });
     }
   }
@@ -161,7 +160,7 @@ export const planTrelloSync = (
         operations.push({
           type: "archiveCard",
           cardId: card.id,
-          cardName: card.name
+          cardName: card.name,
         });
       }
     }
@@ -174,8 +173,8 @@ export const planTrelloSync = (
       createLabels: operations.filter((operation) => operation.type === "createLabel").length,
       createCards: operations.filter((operation) => operation.type === "createCard").length,
       updateCards: operations.filter((operation) => operation.type === "updateCard").length,
-      archiveCards: operations.filter((operation) => operation.type === "archiveCard").length
-    }
+      archiveCards: operations.filter((operation) => operation.type === "archiveCard").length,
+    },
   };
 };
 
@@ -199,7 +198,7 @@ const listIdForName = (lists: TrelloList[], listName: string): string => {
 export const syncTasksToTrello = async (
   client: TrelloClient,
   tasks: KanbanTask[],
-  options: TrelloSyncOptions
+  options: TrelloSyncOptions,
 ): Promise<TrelloSyncResult> => {
   const board = await client.getBoard(options.boardIdOrUrl);
   let lists = await client.getLists(board.id);
@@ -216,13 +215,21 @@ export const syncTasksToTrello = async (
   for (const operation of plan.operations) {
     switch (operation.type) {
       case "createList": {
-        const createdList = await client.createList(board.id, operation.listName, operation.position);
+        const createdList = await client.createList(
+          board.id,
+          operation.listName,
+          operation.position,
+        );
         lists = [...lists, createdList];
         appliedOperations.push(operation);
         break;
       }
       case "createLabel": {
-        const createdLabel = await client.createLabel(board.id, operation.labelName, operation.color);
+        const createdLabel = await client.createLabel(
+          board.id,
+          operation.labelName,
+          operation.color,
+        );
         labels = [...labels, createdLabel];
         appliedOperations.push(operation);
         break;
@@ -232,7 +239,7 @@ export const syncTasksToTrello = async (
           listId: listIdForName(lists, operation.listName),
           name: operation.task.title,
           description: operation.description,
-          labelIds: labelIdsForNames(labels, operation.labelNames)
+          labelIds: labelIdsForNames(labels, operation.labelNames),
         });
         appliedOperations.push(operation);
         break;
@@ -242,7 +249,7 @@ export const syncTasksToTrello = async (
           listId: listIdForName(lists, operation.listName),
           name: operation.task.title,
           description: operation.description,
-          labelIds: labelIdsForNames(labels, operation.labelNames)
+          labelIds: labelIdsForNames(labels, operation.labelNames),
         });
         appliedOperations.push(operation);
         break;
