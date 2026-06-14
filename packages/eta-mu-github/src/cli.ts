@@ -317,7 +317,7 @@ const main = async (): Promise<void> => {
 
     const changedFiles = execSync(`git diff --name-only origin/${base}...HEAD`, { encoding: "utf8" }).trim().split("\n").filter(Boolean);
 
-    const workspaceDirs = execSync(`ls -d ${workspaceGlob}`, { encoding: "utf8", shell: true })
+    const workspaceDirs = execSync(`ls -d ${workspaceGlob}`, { encoding: "utf8" })
       .trim()
       .split("\n")
       .filter(Boolean);

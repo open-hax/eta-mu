@@ -36,5 +36,7 @@
     "@open-hax/eta-mu-agent-core": "workspace:*",
     "chalk": "^5.5.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/node": "^24.3.0"
+  }
 }

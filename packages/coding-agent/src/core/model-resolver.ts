@@ -38,7 +38,6 @@ export const defaultModelPerProvider: Record<KnownProvider, string> = {
 	"opencode-go": "kimi-k2.6",
 	"kimi-coding": "kimi-for-coding",
 	"cloudflare-workers-ai": "@cf/moonshotai/kimi-k2.6",
-	proxx: "mimo-v2.5-pro",
 };
 
 export interface ScopedModel {

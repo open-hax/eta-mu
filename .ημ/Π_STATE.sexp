@@ -1,79 +1,39 @@
 (pi-state
-  (timestamp "20260614T021717Z")
+  (timestamp "20260614T033718Z")
   (branch "feat/kanban-comments-parity")
-  (pre-commit-head "b6a81a461bfa4b75ba25d944a0058402b0a61dd7")
-  (scope "kanban-comments-parity: lint gate, docs noise cleanup, kanban ledger, agentd type fixes")
+  (pre-commit-head "f9bbf21489d092dbac7e4dabed74f551d358fd31")
+  (scope "unbreak full workspace build + tests after kanban CLJS migration left them red")
   (verification
-    (kanban-typecheck "pass — tsc --noEmit clean, npm warn only"))
+    (workspace-build "pass — pnpm build exit 0, all 26 projects")
+    (workspace-tests "pass — root chain + agentd(5) coding-agent(1120/47skip) tui(548) kanban-cljs(32/79asserts)"))
   (owned-tracked-modified
-    ".github/workflows/eta-mu-extensions-tests.yml"
-    ".github/workflows/main-pr-gate.yml"
-    ".github/workflows/staging-pr.yml"
-    ".gitignore"
-    "kanban/.kanban/board.json"
+    "packages/chat-ui/package.json"
+    "packages/coding-agent/src/core/model-resolver.ts"
+    "packages/eta-mu-github/src/cli.ts"
+    "packages/kanban-cljs/package.json"
+    "packages/pods/package.json"
+    "packages/tui/package.json"
+    "services/agentd/package.json"
+    "pnpm-lock.yaml")
+  (cross-repo-fix
+    (repo "open-hax/openplanner")
+    (branch "fix/kanban-event-ledger-edn-admission")
+    (commit "a4774e8")
+    (pr 89)
+    (file "packages/openplanner-protocols/src/promethean/records/edn/event_admission.cljs")
+    (what "await in non-async factory -> synchronous fs.mkdirSync; drop ensure-dir!"))
+  (preexisting-dirt-absorbed
+    ;; dirty at session start, not produced by this session's build/test work;
+    ;; included per user request for a full working-state Π
+    "pnpm-workspace.yaml"
+    "packages/coding-agent/package.json"
     "kanban/tasks/eta-mu-quality-ratchet-cli-startup-smoke.md"
-    "kanban/tasks/eta-mu-quality-ratchet-lint-gates.md"
-    "package.json"
-    "packages/eta-mu-extensions/README.md"
-    "packages/eta-mu-extensions/externs/promise.js"
-    "packages/eta-mu-extensions/kanban/.kanban/board.json"
-    "packages/eta-mu-extensions/package.json"
-    "packages/eta-mu-extensions/scripts/build.mjs"
-    "packages/eta-mu-extensions/scripts/deploy-ci.mjs"
-    "packages/eta-mu-extensions/scripts/test-all-extensions.mjs"
-    "packages/eta-mu-extensions/scripts/test-opencode-execution.mjs"
-    "packages/eta-mu-extensions/scripts/test-opencode.mjs"
-    "packages/kanban/e2e/kanban-ui-scroll.spec.ts"
-    "packages/kanban/playwright.config.ts"
-    "packages/kanban/src/board.ts"
-    "packages/kanban/src/cli.ts"
-    "packages/kanban/src/config.ts"
-    "packages/kanban/src/content-parser.ts"
-    "packages/kanban/src/github-sync.ts"
-    "packages/kanban/src/index.ts"
-    "packages/kanban/src/server.ts"
-    "packages/kanban/src/sync.ts"
-    "packages/kanban/src/task-writeback.ts"
-    "packages/kanban/src/tasks.ts"
-    "packages/kanban/src/trello-client.ts"
-    "packages/kanban/src/types.ts"
-    "packages/kanban/tests/github-sync.test.ts"
-    "packages/kanban/tests/sync.test.ts"
-    "packages/kanban/tests/task-writeback.test.ts"
-    "packages/kanban/tests/tasks.test.ts"
-    "packages/kanban/tsconfig.json"
-    "packages/kanban/vite.config.ts"
-    "packages/kanban/vitest.config.ts"
-    "packages/kanban/web/src/App.tsx"
-    "packages/kanban/web/src/main.tsx"
-    "pnpm-lock.yaml"
-    "services/agentd/src/agents.ts"
-    "services/agentd/src/events.ts"
-    "services/agentd/src/fs.ts"
-    "services/agentd/src/git.ts"
-    "services/agentd/src/github.ts"
-    "services/agentd/src/index.ts"
-    "services/agentd/tests/events.test.ts"
-    "services/agentd/tests/fs.test.ts"
-    "services/agentd/tsconfig.json"
-    "services/agentd/vitest.config.ts")
-  (owned-staged-deletions
-    "docs/agentd-api/assets/hierarchy.js"
-    "docs/agentd-api/assets/icons.js"
-    "docs/agentd-api/assets/main.js"
-    "docs/agentd-api/assets/navigation.js"
-    "docs/agentd-api/assets/search.js"
-    "docs/opencode-reactant-api/js/highlight.min.js"
-    "docs/opencode-reactant-api/js/jquery.min.js"
-    "docs/opencode-reactant-api/js/page_effects.js")
-  (owned-untracked-absorbed
-    ".editorconfig"
-    ".prettierrc"
-    "biome.json"
-    "kanban/.events/ledger.edn"
-    "packages/eta-mu-extensions/scripts/cli-smoke-test.mjs"
-    "packages/eta-mu-extensions/scripts/validate-extension-paths.mjs"
-    "scripts/lint.mjs")
-  (concurrent-dirt none)
-  (formatter-noise-restored
-    "~700 files tabs->spaces Prettier noise across packages/agent packages/ai packages/coding-agent packages/opencode-reactant packages/web-ui packages/tui packages/mom packages/output-contract-gate packages/eta-mu-github packages/pods packages/eta-mu-runtime packages/signal-* packages/presence-core packages/eta-mu-truth packages/eta-mu-docs services/eta-mu-truth-workbench ecosystem.config.cjs opencode.json tsconfig.base.json — restored to HEAD before snapshot"))
+    "packages/opencode-reactant/resources/public/js/main.js"
+    "packages/ai/src/models.generated.ts")
+  (generated-churn
+    ("packages/ai/src/models.generated.ts" "1968 lines — live model-API regeneration via generate-models"))
+  (concurrent-dirt-left-untouched
+    ;; in the openplanner repo, NOT absorbed into PR #89
+    ("openplanner/receipts.edn" "runtime receipts ledger")
+    ("openplanner/packages/agents/eta-mu-sol/" "untracked")
+    ("openplanner/packages/agents/opencode" "untracked")))

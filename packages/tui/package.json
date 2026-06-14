@@ -46,6 +46,7 @@
     "koffi": "^2.9.0"
   },
   "devDependencies": {
+    "@types/node": "^24.3.0",
     "@xterm/headless": "^5.5.0",
     "@xterm/xterm": "^5.5.0"
   }

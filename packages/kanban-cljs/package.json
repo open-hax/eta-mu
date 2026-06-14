@@ -9,7 +9,7 @@
     "build": "shadow-cljs release server cli",
     "watch": "shadow-cljs watch server-dev",
     "start": "node dist/server.js",
-    "test": "shadow-cljs compile test && node target/test.cjs",
+    "test": "shadow-cljs compile test && node dist/test.js",
     "lint": "clj-kondo --lint src test",
     "clean": "rm -rf dist dist-dev target"
   },

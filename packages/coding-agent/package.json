@@ -1,6 +1,6 @@
 {
   "name": "@open-hax/eta-mu-cli",
-  "version": "0.70.16",
+  "version": "0.70.17-beta",
   "description": "Coding agent CLI with read, bash, edit, write tools and session management",
   "type": "module",
   "piConfig": {

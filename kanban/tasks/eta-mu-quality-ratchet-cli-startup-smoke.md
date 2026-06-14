@@ -1,14 +1,15 @@
 ---
 uuid: "eta-mu-quality-ratchet-cli-startup-smoke"
 title: "Eta-mu Quality Ratchet — CLI Startup Smoke"
-status: review
-priority: P0
+status: "done"
+priority: "P0"
 labels: ["tasks", "quality", "startup", "extensions", "smoke", "3sp"]
 created_at: "2026-05-31T00:45:00Z"
 source: "kanban/epics/eta-mu-quality-ratchet.md"
 points: 3
-category: tasks
+category: "tasks"
 ---
+
 # Eta-mu Quality Ratchet — CLI Startup Smoke
 
 > Parent epic: `kanban/epics/eta-mu-quality-ratchet.md`
@@ -60,3 +61,7 @@ ETA_MU_NO_DEFAULT_EXTENSIONS=0 timeout 20s node packages/coding-agent/dist/cli.j
 # plus the new extension-path smoke script/test
 git diff --check
 ```
+
+---
+Review verified 2026-06-13: validate-extension-paths.mjs exists and passes (15/15 paths valid, cljs-lisp-decomp-nudge confirmed). cli-smoke-test.mjs wired as package 'smoke' script. postbuild hook gates every build. Branch clean. Promoting to done. --tasks-dir /home/err/devel.latest/orgs/open-hax/eta-mu/kanban
+---
