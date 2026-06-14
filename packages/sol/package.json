@@ -4,7 +4,7 @@
   "type": "module",
   "license": "GPL-3.0-or-later",
   "scripts": {
-    "build": "shadow-cljs release server",
+    "build": "shadow-cljs compile server",
     "watch": "shadow-cljs watch server-dev",
     "start": "node dist/server.js",
     "start:dev": "nbb scripts/start-server-dev.cljs",

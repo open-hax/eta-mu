@@ -1,7 +1,0 @@
-{
-  "error": "agent run failed",
-  "fallback": true,
-  "receipt_at": "2026-06-03T17:53:42Z",
-  "agent": "hormuz-clock",
-  "model": "opencode/big-pickle"
-}

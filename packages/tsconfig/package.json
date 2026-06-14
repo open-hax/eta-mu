@@ -1,0 +1,13 @@
+{
+  "name": "@eta-mu/tsconfig",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared TypeScript base config for the eta-mu workspace.",
+  "license": "GPL-3.0-only",
+  "files": [
+    "base.json"
+  ],
+  "exports": {
+    "./base.json": "./base.json"
+  }
+}

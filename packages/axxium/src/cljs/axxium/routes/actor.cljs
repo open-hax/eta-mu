@@ -96,7 +96,7 @@
                         (.then
                           (fn [_]
                             (.send reply (clj->js {:ok true})))))
-                    (.send (.code reply 403) (clj->js {:error "Forbidden"}))))))))
+                    (.send (.code reply 403) (clj->js {:error "Forbidden"})))))))))))
 
 (defn register-actor-routes! [app]
   (register-list-actors-route! app)

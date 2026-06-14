@@ -1,14 +1,15 @@
 ---
 uuid: "eta-mu-quality-ratchet-lint-gates"
 title: "Eta-mu Quality Ratchet — Lint and Static Gates"
-status: in_progress
-priority: P1
+status: "in_progress"
+priority: "P1"
 labels: ["tasks", "quality", "lint", "format", "ci", "5sp"]
 created_at: "2026-05-31T00:45:00Z"
 source: "kanban/epics/eta-mu-quality-ratchet.md"
 points: 5
-category: tasks
+category: "tasks"
 ---
+
 # Eta-mu Quality Ratchet — Lint and Static Gates
 
 > Parent epic: `kanban/epics/eta-mu-quality-ratchet.md`
@@ -49,3 +50,7 @@ pnpm --dir packages/eta-mu-runtime cljs:boundary
 # plus the new lint/static command added by this task
 git diff --check
 ```
+
+---
+Progress (2026-06-14): lint gate scaffold exists (scripts/lint.mjs: biome, typecheck, cljs:boundary, extension path validation, kanban frontmatter) and is CI-wired as eta-mu-lint in staging-pr.yml + main-pr-gate.yml. Fixed stale package refs broken by the CLJS-rewrite dir renames: lint.mjs and root test/typecheck/coverage scripts now target packages by --filter <package-name> instead of --dir <path>, so they survive directory moves. Kept legacy packages (eta-mu-github, eta-mu-docs, kanban-legacy) in the gates; dropped genuinely-removed packages (presence-core, eta-mu-truth, signal-*). Remaining: workflow lint path (actionlint), out-of-scope doc note, and a green end-to-end 'pnpm lint' run. --tasks-dir orgs/open-hax/eta-mu/kanban
+---

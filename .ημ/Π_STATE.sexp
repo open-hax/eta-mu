@@ -1,39 +1,44 @@
 (pi-state
-  (timestamp "20260614T033718Z")
+  (timestamp "20260614T144902Z")
   (branch "feat/kanban-comments-parity")
-  (pre-commit-head "f9bbf21489d092dbac7e4dabed74f551d358fd31")
-  (scope "unbreak full workspace build + tests after kanban CLJS migration left them red")
+  (pre-commit-head "cc77836bba9c9d8153450b50a33296218da20ece")
+  (scope "reorganize monorepo: move legacy packages under packages/legacy, rename kanban-cljs to packages/Rheos, add shared packages/tsconfig, remove retired services/receipts")
   (verification
-    (workspace-build "pass — pnpm build exit 0, all 26 projects")
-    (workspace-tests "pass — root chain + agentd(5) coding-agent(1120/47skip) tui(548) kanban-cljs(32/79asserts)"))
-  (owned-tracked-modified
-    "packages/chat-ui/package.json"
-    "packages/coding-agent/src/core/model-resolver.ts"
-    "packages/eta-mu-github/src/cli.ts"
-    "packages/kanban-cljs/package.json"
-    "packages/pods/package.json"
-    "packages/tui/package.json"
-    "services/agentd/package.json"
-    "pnpm-lock.yaml")
-  (cross-repo-fix
-    (repo "open-hax/openplanner")
-    (branch "fix/kanban-event-ledger-edn-admission")
-    (commit "a4774e8")
-    (pr 89)
-    (file "packages/openplanner-protocols/src/promethean/records/edn/event_admission.cljs")
-    (what "await in non-async factory -> synchronous fs.mkdirSync; drop ensure-dir!"))
-  (preexisting-dirt-absorbed
-    ;; dirty at session start, not produced by this session's build/test work;
-    ;; included per user request for a full working-state Π
+    (git-index "1508 paths staged — 786 pure renames, 696 deletions, 9 modifications, 4 additions, 3 modified renames")
+    (ignored-noise "alpha/ nested worktree ignored; build artifacts (node_modules, dist, target, .shadow-cljs, coverage) remain ignored")
+    (secrets-scan "no .env files staged; no obvious secrets in added paths"))
+  (renames
+    (packages/kanban-cljs -> packages/Rheos "full content move")
+    (packages/agent -> packages/legacy/agent)
+    (packages/ai -> packages/legacy/ai)
+    (packages/coding-agent -> packages/legacy/coding-agent)
+    (packages/docs -> packages/legacy/docs)
+    (packages/github -> packages/legacy/github)
+    (packages/kanban -> packages/legacy/kanban)
+    (packages/output-contract-gate -> packages/legacy/output-contract-gate)
+    (packages/publication-components -> packages/legacy/publication-components)
+    (packages/tui -> packages/legacy/tui))
+  (additions
+    "packages/tsconfig/base.json"
+    "packages/tsconfig/package.json"
+    "docs/notes/2026.06.14.00.38.02.md"
+    "docs/notes/2026.06.14.00.59.20.md")
+  (modifications
+    "package.json"
     "pnpm-workspace.yaml"
-    "packages/coding-agent/package.json"
-    "kanban/tasks/eta-mu-quality-ratchet-cli-startup-smoke.md"
-    "packages/opencode-reactant/resources/public/js/main.js"
-    "packages/ai/src/models.generated.ts")
-  (generated-churn
-    ("packages/ai/src/models.generated.ts" "1968 lines — live model-API regeneration via generate-models"))
-  (concurrent-dirt-left-untouched
-    ;; in the openplanner repo, NOT absorbed into PR #89
-    ("openplanner/receipts.edn" "runtime receipts ledger")
-    ("openplanner/packages/agents/eta-mu-sol/" "untracked")
-    ("openplanner/packages/agents/opencode" "untracked")))
+    "tsconfig.base.json"
+    "pnpm-lock.yaml"
+    "scripts/lint.mjs"
+    "packages/sol/package.json"
+    "packages/axxium/src/cljs/axxium/routes/actor.cljs"
+    "kanban/tasks/eta-mu-quality-ratchet-lint-gates.md"
+    ".gitignore")
+  (deletions
+    (services "agentd, eta-mu, eta-mu-truth-workbench")
+    (receipts "receipts/hormuz/*")
+    (workflow ".github/workflows/hormuz-clock.yml")
+    (shared "shared/js/opencode-events/events.edn")
+    (packages "truth, web-ui, reactant, skills"))
+  (blockers
+    (alpha/worktree "alpha/v2 is a nested git worktree (gitdir: .git/modules/orgs/octave-commons/eta-mu-sol); left untracked and /alpha/ added to .gitignore so it does not pollute this repo's snapshot")
+    (stale-scripts "root package.json scripts still reference @open-hax/agentd (dev, start, docs:ts) which was removed; fix needed before those commands work")))

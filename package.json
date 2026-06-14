@@ -8,14 +8,14 @@
   "scripts": {
     "dev": "concurrently \"pnpm --filter @open-hax/agentd dev\" \"pnpm --filter @open-hax/opencode-reactant dev\"",
     "build": "pnpm -r --no-bail build",
-    "test": "pnpm --dir packages/eta-mu-runtime test && pnpm --dir packages/eta-mu-github test && node --test packages/eta-mu-docs/tests/*.test.cjs && node --test packages/eta-mu-truth/tests/*.test.cjs && pnpm --dir packages/presence-core test && pnpm --dir packages/kanban test && node --test packages/signal-contracts/tests/*.test.cjs && node --test packages/signal-radar-core/tests/*.test.cjs && node --test packages/signal-source-utils/tests/*.test.cjs && node --test packages/signal-watchlists/tests/*.test.cjs",
-    "typecheck": "pnpm --dir packages/eta-mu-runtime typecheck && pnpm --dir packages/eta-mu-github typecheck && pnpm --dir packages/presence-core typecheck && pnpm --dir packages/kanban exec tsc -p tsconfig.json --noEmit",
+    "test": "pnpm --filter @open-hax/eta-mu-runtime test && pnpm --filter @open-hax/eta-mu-github test && pnpm --filter @open-hax/eta-mu-docs test && pnpm --filter @open-hax/kanban-legacy test",
+    "typecheck": "pnpm --filter @open-hax/eta-mu-runtime typecheck && pnpm --filter @open-hax/eta-mu-github typecheck && pnpm --filter @open-hax/kanban-legacy exec tsc -p tsconfig.json --noEmit",
     "lint": "node scripts/lint.mjs",
     "lint:fix": "node scripts/lint.mjs --fix",
     "docs:ts": "pnpm --filter @open-hax/agentd doc",
     "docs:cljs": "clojure -X:codox",
     "docs": "pnpm docs:ts && pnpm docs:cljs",
-    "coverage": "pnpm --dir packages/eta-mu-runtime cljs:coverage",
+    "coverage": "pnpm --filter @open-hax/eta-mu-runtime cljs:coverage",
     "start": "pnpm --filter @open-hax/agentd start",
     "clean": "pnpm --recursive clean",
     "install:all": "pnpm install && pnpm --recursive install"

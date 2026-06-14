@@ -34,6 +34,9 @@ node_modules/
 # Shadow-CLJS build caches
 **/.shadow-cljs/
 
+# Nested worktrees / standalone prototypes
+/alpha/
+
 # Local tool state
 **/.cpcache/
 **/.serena/
