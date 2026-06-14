@@ -1,6 +1,6 @@
 # eta-mu-github
 
-Pi-based GitHub automation for PRs, issues, review coordination, and autonomous PR fixes.
+Eta-mu-based GitHub automation for PRs, issues, review coordination, and autonomous PR fixes.
 
 ## Goals
 
