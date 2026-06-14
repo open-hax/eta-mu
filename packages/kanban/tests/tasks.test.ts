@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -25,7 +25,7 @@ labels: [alpha, platform]
 
 Ship alpha.
 `,
-      "utf8"
+      "utf8",
     );
 
     await writeFile(
@@ -38,7 +38,7 @@ tags: [beta, sync]
 
 Ship beta.
 `,
-      "utf8"
+      "utf8",
     );
 
     const tasks = await loadTasks(tempDir);
@@ -48,13 +48,13 @@ Ship beta.
       title: "Beta Task",
       status: "ready",
       priority: "P3",
-      labels: ["beta", "sync"]
+      labels: ["beta", "sync"],
     });
     expect(tasks[1]).toMatchObject({
       uuid: "alpha-1",
       status: "in_progress",
       priority: "P1",
-      labels: ["alpha", "platform"]
+      labels: ["alpha", "platform"],
     });
   });
 
@@ -71,7 +71,7 @@ labels: [alpha, "unterminated]
 
 Still readable.
 `,
-      "utf8"
+      "utf8",
     );
 
     const tasks = await loadTasks(tempDir);
@@ -79,7 +79,7 @@ Still readable.
     expect(tasks).toHaveLength(1);
     expect(tasks[0]).toMatchObject({
       title: "Broken Task",
-      status: "todo"
+      status: "todo",
     });
   });
 });
@@ -96,7 +96,7 @@ describe("buildBoardSnapshot", () => {
         labels: [],
         createdAt: "2026-01-01T00:00:00.000Z",
         content: "",
-        sourcePath: "/tmp/one.md"
+        sourcePath: "/tmp/one.md",
       },
       {
         uuid: "2",
@@ -107,8 +107,8 @@ describe("buildBoardSnapshot", () => {
         labels: [],
         createdAt: "2026-01-01T00:00:00.000Z",
         content: "",
-        sourcePath: "/tmp/two.md"
-      }
+        sourcePath: "/tmp/two.md",
+      },
     ]);
 
     expect(snapshot.totalTasks).toBe(2);

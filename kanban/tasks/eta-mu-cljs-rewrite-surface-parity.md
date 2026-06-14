@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-rewrite-surface-parity"
 title: "Eta-mu CLJS Rewrite — CLI/TUI/Web Surface Parity"
-status: review
+status: "done"
 priority: P1
 labels: ["tasks", "cljs", "rewrite", "parity", "8sp"]
 created_at: "2026-05-29T21:18:48Z"
@@ -70,3 +70,12 @@ Selected the existing `eta-mu`/`pi --version` path as the first thin surface-par
 TUI/web smoke evidence: `pnpm -C packages/opencode-reactant exec shadow-cljs compile app` completed with 0 warnings. The command rewrote tracked generated CLJS resources locally; those generated deltas were intentionally restored and are not part of this task PR.
 
 Full CLI suite evidence: `pnpm --filter @open-hax/eta-mu-cli test` passes with 110 files passed / 7 skipped and 1120 tests passed / 47 skipped. A small test-harness fix stubs SSH clipboard environment variables in `clipboard.test.ts` so local runs from SSH sessions do not accidentally exercise remote OSC52 behavior in tests named as local clipboard cases.
+
+
+---
+
+**Independent review 2026-06-13 (Sonnet).** VERDICT: DONE (medium confidence). All 3 ACs met — `--version` routes through compiled CLJS `createSurfaceCommandResult` (main.ts:477-480), `./cljs` subpath export is additive, TS wrappers delegate + re-validate, parity test present. Caveat: not build-verified (reviewer was barred from running builds); the parity test does not directly spy on the CLJS export so a future agent could bypass it undetected. Needs one `cljs:verify` run before promotion to done.
+
+---
+
+**Promoted to done 2026-06-13** after an executed verification run (not just static review): cljs:verify, vitest, cljs:coverage (93.77%% ≥90 gate), and the surface-parity --version test all passed (exit 0). Moved review → document → done via the FSM-enforced, ledger-backed path.

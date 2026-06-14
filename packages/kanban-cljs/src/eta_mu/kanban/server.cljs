@@ -10,7 +10,7 @@
             [eta-mu.kanban.content-parser :as content-parser]
             [eta-mu.kanban.events :as events]
             [eta-mu.kanban.tasks :as tasks]
-            [eta-mu.kanban.task-writeback :as writeback]
+            [eta-mu.kanban.transition :as transition]
             [eta-mu.kanban.watcher :as watcher]))
 
 (defonce server-state (atom nil))
@@ -44,7 +44,8 @@
                        (:columns snapshot)))})
 
 (defn- send-json [reply data] (.send reply data))
-(defn- send-error [reply code msg] (.code (.send reply #js {:error msg}) code))
+;; Fastify requires .code BEFORE .send; the reverse leaves the status at 200.
+(defn- send-error [reply code msg] (.send (.code reply code) #js {:error msg}))
 
 (defn- handle-get-projects [_req reply]
   (send-json reply
@@ -75,7 +76,7 @@
               task-id (.. req -query -taskId)
               limit (.. req -query -limit)
               filter-spec (if task-id {:task-id task-id} {})
-              evts (await (events/query-events ledger (clj->js filter-spec)))
+              evts (await (events/query-events ledger filter-spec))
               result (if limit (vec (take-last (js/parseInt limit) evts)) evts)]
           (send-json reply #js {:events (clj->js (mapv events/envelope->kanban-event result)) :total (count result)}))
         (catch :default err (send-error reply 500 (.-message err)))))))
@@ -86,7 +87,7 @@
       (send-error reply 404 "unknown project")
       (try
         (let [ledger (events/get-ledger (:tasks-dir project))
-              drift-evts (await (events/query-events ledger #js {:type "drift-detected"}))]
+              drift-evts (await (events/query-events ledger {:type "drift-detected"}))]
           (send-json reply #js {:events (clj->js (mapv events/envelope->kanban-event drift-evts)) :total (count drift-evts)}))
         (catch :default err (send-error reply 500 (.-message err)))))))
 
@@ -124,11 +125,13 @@
                     task (first (filter #(= (:uuid %) uuid) all-tasks))]
                 (if-not task
                   (send-error reply 404 "unknown uuid")
-                  (let [write-id (events/generate-write-id)
-                        ledger (events/get-ledger (:tasks-dir project))
-                        updated (await (writeback/write-task-status task (:tasks-dir project) new-status))]
-                    (events/emit-status-change! ledger (:id project) uuid (:status task) new-status write-id)
-                    (send-json reply (serialize-task updated)))))
+                  (let [result (await (transition/move-task!
+                                       {:project project :task task
+                                        :new-status new-status :source "web"}))]
+                    (if (:ok result)
+                      (send-json reply (serialize-task (:task result)))
+                      ;; 409 Conflict: the FSM refused this transition.
+                      (send-error reply 409 (:reason result))))))
               (catch :default err (send-error reply 500 (.-message err)))))))
 
 (defn ^:async handle-update-frontmatter [req reply]
@@ -210,7 +213,7 @@
                                       (:columns snapshot)))}))
     (catch :default err (send-error reply 500 (.-message err)))))
 
-(defn- register-routes [app]
+(defn- register-routes [^js app]
   (.get app "/api/projects" handle-get-projects)
   (.get app "/api/boards" handle-get-boards)
   (.get app "/api/board" handle-get-board)
@@ -226,7 +229,7 @@
 (defn ^:async start!
   ([] (start! "127.0.0.1" 8791))
   ([host port]
-   (let [app (Fastify. #js {:logger true})
+   (let [^js app (Fastify. #js {:logger true})
          current-dir (js/process.cwd)
          static-dir (path/join current-dir "resources" "public")
           web-dir (path/join current-dir "dist" "web")]
@@ -239,7 +242,7 @@
      app)))
 
 (defn ^:async stop! []
-  (when-let [app @server-state]
+  (when-let [^js app @server-state]
     (watcher/stop-all-watchers!)
     (await (.close app))
     (reset! server-state nil)

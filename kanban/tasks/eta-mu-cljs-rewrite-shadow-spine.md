@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-rewrite-shadow-spine"
 title: "Eta-mu CLJS Rewrite — Shadow-CLJS Spine"
-status: review
+status: "done"
 priority: P0
 labels: ["tasks", "cljs", "rewrite", "shadow-cljs", "8sp"]
 created_at: "2026-05-29T21:18:48Z"
@@ -57,3 +57,12 @@ pnpm --dir packages/eta-mu-runtime build
 Implemented in `packages/eta-mu-runtime` with `shadow-cljs.edn`, CLJS `:runtime` and `:test` targets, ESM facade exports, Node smoke import, and a strict CLJS boundary scanner. Verification passed on 2026-05-29.
 
 ---
+
+
+---
+
+**Independent review 2026-06-13 (Sonnet).** VERDICT: DONE (medium-high confidence). shadow-cljs.edn has :runtime(:esm)+:test(:node-test); 20 facade exports present in dist-cljs; smoke + boundary scanner implemented; 35 CLJS sources correctly layered (no `utils`, interop only in extern/). Caveat: :node-test last-run result unverifiable without running it. Needs one `cljs:verify` run before promotion to done.
+
+---
+
+**Promoted to done 2026-06-13** after an executed verification run (not just static review): cljs:verify, vitest, cljs:coverage (93.77%% ≥90 gate), and the surface-parity --version test all passed (exit 0). Moved review → document → done via the FSM-enforced, ledger-backed path.

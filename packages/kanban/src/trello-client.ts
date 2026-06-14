@@ -3,7 +3,7 @@ import type {
   TrelloBoard,
   TrelloCard,
   TrelloLabel,
-  TrelloList
+  TrelloList,
 } from "./types.js";
 
 export const extractBoardId = (boardIdOrUrl: string): string => {
@@ -39,8 +39,8 @@ export class TrelloClient {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        ...(init?.headers ?? {})
-      }
+        ...(init?.headers ?? {}),
+      },
     });
 
     if (!response.ok) {
@@ -68,8 +68,8 @@ export class TrelloClient {
       body: JSON.stringify({
         idBoard: boardId,
         name,
-        pos: position.toString()
-      })
+        pos: position.toString(),
+      }),
     });
   }
 
@@ -83,8 +83,8 @@ export class TrelloClient {
       body: JSON.stringify({
         idBoard: boardId,
         name,
-        color
-      })
+        color,
+      }),
     });
   }
 
@@ -104,8 +104,8 @@ export class TrelloClient {
         idList: input.listId,
         name: input.name,
         desc: input.description,
-        idLabels: input.labelIds.join(",") || null
-      })
+        idLabels: input.labelIds.join(",") || null,
+      }),
     });
   }
 
@@ -116,7 +116,7 @@ export class TrelloClient {
       name: string;
       description: string;
       labelIds: string[];
-    }
+    },
   ): Promise<TrelloCard> {
     return this.request<TrelloCard>(`/cards/${cardId}`, {
       method: "PUT",
@@ -124,15 +124,15 @@ export class TrelloClient {
         idList: input.listId,
         name: input.name,
         desc: input.description,
-        idLabels: input.labelIds.join(",") || null
-      })
+        idLabels: input.labelIds.join(",") || null,
+      }),
     });
   }
 
   async archiveCard(cardId: string): Promise<void> {
     await this.request(`/cards/${cardId}/closed`, {
       method: "PUT",
-      body: JSON.stringify({ value: true })
+      body: JSON.stringify({ value: true }),
     });
   }
 }

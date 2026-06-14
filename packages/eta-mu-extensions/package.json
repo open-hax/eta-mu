@@ -13,7 +13,10 @@
     "watch": "node scripts/build.mjs watch",
     "clean": "node scripts/build.mjs clean",
     "test": "shadow-cljs compile node-test && node target/test.cjs",
-    "test:coverage": "shadow-cljs compile node-test && c8 --reporter=text --reporter=lcov --reporter=json-summary node target/test.cjs"
+    "test:coverage": "shadow-cljs compile node-test && c8 --reporter=text --reporter=lcov --reporter=json-summary node target/test.cjs",
+    "validate-paths": "node scripts/validate-extension-paths.mjs",
+    "smoke": "node scripts/cli-smoke-test.mjs",
+    "postbuild": "node scripts/validate-extension-paths.mjs"
   },
   "dependencies": {
     "@open-hax/output-contract-gate": "workspace:*",

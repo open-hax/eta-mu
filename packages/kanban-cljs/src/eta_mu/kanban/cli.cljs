@@ -5,7 +5,8 @@
             [eta-mu.kanban.compose :as compose]
             [eta-mu.kanban.config :as config]
             [eta-mu.kanban.events :as events]
-            [eta-mu.kanban.tasks :as tasks]))
+            [eta-mu.kanban.tasks :as tasks]
+            [eta-mu.kanban.transition :as transition]))
 
 (defn- parse-args [args]
   (let [args-vec (vec args)
@@ -32,6 +33,7 @@
   (println "  openhax-kanban board snapshot [--tasks-dir <path>] [--out <path>]")
   (println "  openhax-kanban board list [--verbose]")
   (println "  openhax-kanban compose [--domain <d>] [--org <o>] [--status <s>] [--priority <p>] [--q <text>] [--where <clause>]")
+  (println "  openhax-kanban move <task-uuid> --to <status> [--project <id>]")
   (println "  openhax-kanban events [task-uuid] [--limit <n>]")
   (println "  openhax-kanban drift")
   (println "  openhax-kanban serve [--host <host>] [--port <port>]"))
@@ -88,20 +90,51 @@
             (doseq [t (:tasks col)]
               (println (str "  [" (:priority t) "] " (:title t))))))))))
 
+(defn- find-project [project-state pid]
+  (if pid
+    (first (filter #(= (:id %) pid) (:projects project-state)))
+    (first (:projects project-state))))
+
+(defn ^:async cmd-move
+  "FSM-enforced, ledger-backed status move. Mirrors the server's write path so the
+   CLI and UI cannot diverge on what transitions are legal."
+  [project-state parsed]
+  (let [uuid (:subcommand parsed)
+        new-status (or (get-flag (:flags parsed) "to") (get-flag (:flags parsed) "status"))
+        project (find-project project-state (get-flag (:flags parsed) "project"))]
+    (cond
+      (or (nil? uuid) (nil? new-status))
+      (println "usage: openhax-kanban move <task-uuid> --to <status>")
+
+      (nil? project)
+      (println "unknown project")
+
+      :else
+      (let [all-tasks (await (tasks/load-tasks (:tasks-dir project)))
+            task (first (filter #(= (:uuid %) uuid) all-tasks))]
+        (if-not task
+          (println (str "unknown task: " uuid))
+          (let [result (await (transition/move-task!
+                               {:project project :task task
+                                :new-status new-status :source "cli"}))]
+            (if (:ok result)
+              (println (str "moved " uuid ": " (:from result) " -> " (:to result)))
+              (println (str "REJECTED " uuid ": " (:reason result))))))))))
+
 (defn ^:async cmd-events [project-state parsed]
-  (let [project (first (:projects project-state))
+  (let [project (find-project project-state (get-flag (:flags parsed) "project"))
         ledger (events/get-ledger (:tasks-dir project))
         task-id (:subcommand parsed)
         limit (:limit (:flags parsed))
         filter-spec (if task-id {:task-id task-id} {})
-        evts (await (events/query-events ledger (clj->js filter-spec)))
+        evts (await (events/query-events ledger filter-spec))
         result (if limit (vec (take-last (js/parseInt limit) evts)) evts)]
     (doseq [evt result] (println (format-event evt)))))
 
-(defn ^:async cmd-drift [project-state]
-  (let [project (first (:projects project-state))
+(defn ^:async cmd-drift [project-state parsed]
+  (let [project (find-project project-state (get-flag (:flags parsed) "project"))
         ledger (events/get-ledger (:tasks-dir project))
-        drift-evts (await (events/query-events ledger #js {:type "drift-detected"}))]
+        drift-evts (await (events/query-events ledger {:type "drift-detected"}))]
     (if (empty? drift-evts)
       (println "No drift detected.")
       (doseq [evt drift-evts]
@@ -133,11 +166,14 @@
       (= "compose" (:command parsed))
       (await (cmd-compose ps (:flags parsed)))
 
+      (= "move" (:command parsed))
+      (await (cmd-move ps parsed))
+
       (= "events" (:command parsed))
       (await (cmd-events ps parsed))
 
       (= "drift" (:command parsed))
-      (await (cmd-drift ps))
+      (await (cmd-drift ps parsed))
 
       (= "serve" (:command parsed))
       (let [server-mod (js/require "./server.js")]

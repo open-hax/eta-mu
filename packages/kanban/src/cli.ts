@@ -3,9 +3,14 @@
 import path from "node:path";
 
 import { buildBoardSnapshot, writeBoardSnapshot } from "./board.js";
-import { loadConfig, loadEnvironment, resolveConfigPathValue, resolveConfiguredProjects } from "./config.js";
-import { startKanbanServer } from "./server.js";
+import {
+  loadConfig,
+  loadEnvironment,
+  resolveConfigPathValue,
+  resolveConfiguredProjects,
+} from "./config.js";
 import { GitHubClient, inferGitHubRepo, syncTasksToGitHub } from "./github-sync.js";
+import { startKanbanServer } from "./server.js";
 import { syncTasksToTrello } from "./sync.js";
 import { loadTasks } from "./tasks.js";
 import { TrelloClient } from "./trello-client.js";
@@ -60,9 +65,14 @@ FLAGS
 const parseArgs = (argv: string[]): ParsedCli => {
   const [command, maybeSubcommand, ...tail] = argv;
 
-  const hasSubcommand = typeof maybeSubcommand === "string" && maybeSubcommand.length > 0 && !maybeSubcommand.startsWith("--");
+  const hasSubcommand =
+    typeof maybeSubcommand === "string" &&
+    maybeSubcommand.length > 0 &&
+    !maybeSubcommand.startsWith("--");
   const subcommand = hasSubcommand ? maybeSubcommand : undefined;
-  const rest = hasSubcommand ? tail : [maybeSubcommand, ...tail].filter((value): value is string => typeof value === "string");
+  const rest = hasSubcommand
+    ? tail
+    : [maybeSubcommand, ...tail].filter((value): value is string => typeof value === "string");
 
   const flags: Record<string, FlagValue> = {};
 
@@ -100,14 +110,21 @@ const readNumberFlag = (flags: Record<string, FlagValue>, name: string): number 
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-const resolveTasksDir = (flagValue: string | undefined, configDir: string, configValue?: string): string => {
+const resolveTasksDir = (
+  flagValue: string | undefined,
+  configDir: string,
+  configValue?: string,
+): string => {
   const resolvedFromFlag = flagValue ? path.resolve(process.cwd(), flagValue) : undefined;
   const resolvedFromConfig = resolveConfigPathValue(configValue, configDir);
 
   return resolvedFromFlag ?? resolvedFromConfig ?? path.resolve(process.cwd(), "docs/agile/tasks");
 };
 
-const printSyncPlan = (result: Awaited<ReturnType<typeof syncTasksToTrello>>, dryRun: boolean): void => {
+const printSyncPlan = (
+  result: Awaited<ReturnType<typeof syncTasksToTrello>>,
+  dryRun: boolean,
+): void => {
   console.log(`${dryRun ? "Dry-run" : "Live"} sync for ${result.board.name}`);
   console.log(`Board: ${result.board.url}`);
   console.log(`Operations: ${result.plan.operations.length}`);
@@ -138,13 +155,18 @@ const printSyncPlan = (result: Awaited<ReturnType<typeof syncTasksToTrello>>, dr
   });
 };
 
-const printGitHubSyncPlan = (result: Awaited<ReturnType<typeof syncTasksToGitHub>>, dryRun: boolean): void => {
+const printGitHubSyncPlan = (
+  result: Awaited<ReturnType<typeof syncTasksToGitHub>>,
+  dryRun: boolean,
+): void => {
   console.log(`${dryRun ? "Dry-run" : "Live"} GitHub issue sync for ${result.repo}`);
   console.log(`Operations: ${result.plan.operations.length}`);
   console.log(`- Create labels: ${result.plan.summary.createLabels}`);
   console.log(`- Create issues: ${result.plan.summary.createIssues}`);
   console.log(`- Update issues: ${result.plan.summary.updateIssues}`);
-  console.log(`- Skip done/rejected tasks without existing issues: ${result.plan.summary.skippedClosedTasks}`);
+  console.log(
+    `- Skip done/rejected tasks without existing issues: ${result.plan.summary.skippedClosedTasks}`,
+  );
   if (!dryRun) {
     console.log(`- Applied operations: ${result.appliedOperations.length}`);
   }
@@ -158,7 +180,9 @@ const printGitHubSyncPlan = (result: Awaited<ReturnType<typeof syncTasksToGitHub
         console.log(`  + issue ${operation.task.title}`);
         break;
       case "updateIssue":
-        console.log(`  ~ issue #${operation.issueNumber} ${operation.task.title} -> ${operation.state}`);
+        console.log(
+          `  ~ issue #${operation.issueNumber} ${operation.task.title} -> ${operation.state}`,
+        );
         break;
     }
   });
@@ -177,7 +201,7 @@ const main = async (): Promise<void> => {
   const tasksDir = resolveTasksDir(
     readStringFlag(parsedCli.flags, "tasks-dir"),
     loadedConfig.configDir,
-    loadedConfig.config.tasksDir
+    loadedConfig.config.tasksDir,
   );
 
   if (parsedCli.command === "board" && parsedCli.subcommand === "snapshot") {
@@ -212,19 +236,22 @@ const main = async (): Promise<void> => {
       loadedConfig.config.trello?.boardId;
 
     if (!boardIdOrUrl) {
-      throw new Error("Missing Trello board target. Pass --board-url, --board-id, or set trello.boardUrl in config.");
+      throw new Error(
+        "Missing Trello board target. Pass --board-url, --board-id, or set trello.boardUrl in config.",
+      );
     }
 
     const client = new TrelloClient({ apiKey, apiToken });
     const dryRun = parsedCli.flags["dry-run"] === true;
     const archiveMissing =
-      parsedCli.flags["archive-missing"] === true || loadedConfig.config.trello?.archiveMissing === true;
+      parsedCli.flags["archive-missing"] === true ||
+      loadedConfig.config.trello?.archiveMissing === true;
 
     const result = await syncTasksToTrello(client, tasks, {
       boardIdOrUrl,
       dryRun,
       archiveMissing,
-      listMapping: loadedConfig.config.trello?.listMapping
+      listMapping: loadedConfig.config.trello?.listMapping,
     });
 
     printSyncPlan(result, dryRun);
@@ -244,7 +271,9 @@ const main = async (): Promise<void> => {
       inferGitHubRepo(tasksDir);
 
     if (!repo) {
-      throw new Error("Missing GitHub repo target. Pass --repo, set github.repo in config, or run inside a GitHub-backed repository.");
+      throw new Error(
+        "Missing GitHub repo target. Pass --repo, set github.repo in config, or run inside a GitHub-backed repository.",
+      );
     }
 
     const dryRun = parsedCli.flags["dry-run"] === true;
@@ -253,11 +282,18 @@ const main = async (): Promise<void> => {
       repo,
       dryRun,
       cwd: process.cwd(),
-      closeDone: parsedCli.flags["no-close-done"] === true ? false : loadedConfig.config.github?.closeDone,
-      closeRejected: parsedCli.flags["no-close-rejected"] === true ? false : loadedConfig.config.github?.closeRejected,
-      manageLabels: parsedCli.flags["no-manage-labels"] === true ? false : loadedConfig.config.github?.manageLabels,
+      closeDone:
+        parsedCli.flags["no-close-done"] === true ? false : loadedConfig.config.github?.closeDone,
+      closeRejected:
+        parsedCli.flags["no-close-rejected"] === true
+          ? false
+          : loadedConfig.config.github?.closeRejected,
+      manageLabels:
+        parsedCli.flags["no-manage-labels"] === true
+          ? false
+          : loadedConfig.config.github?.manageLabels,
       writeDelayMs: readNumberFlag(parsedCli.flags, "write-delay-ms"),
-      maxWrites: readNumberFlag(parsedCli.flags, "max-writes")
+      maxWrites: readNumberFlag(parsedCli.flags, "max-writes"),
     });
 
     printGitHubSyncPlan(result, dryRun);
@@ -267,13 +303,16 @@ const main = async (): Promise<void> => {
   if (parsedCli.command === "serve") {
     const host = readStringFlag(parsedCli.flags, "host") ?? "127.0.0.1";
     const port = readNumberFlag(parsedCli.flags, "port") ?? 8787;
-    const projectState = resolveConfiguredProjects(loadedConfig, readStringFlag(parsedCli.flags, "tasks-dir"));
+    const projectState = resolveConfiguredProjects(
+      loadedConfig,
+      readStringFlag(parsedCli.flags, "tasks-dir"),
+    );
 
     await startKanbanServer({
       projects: projectState.projects,
       defaultProjectId: projectState.defaultProjectId,
       host,
-      port
+      port,
     });
     return;
   }

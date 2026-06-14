@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-quality-ratchet-baseline-inventory"
 title: "Eta-mu Quality Ratchet — Baseline Inventory"
-status: review
+status: "done"
 priority: P0
 labels: ["tasks", "quality", "baseline", "lint", "testing", "3sp"]
 created_at: "2026-05-31T00:45:00Z"
@@ -69,3 +69,12 @@ pnpm test
 - `pnpm test`: passed; noted as not covering the CLI test suite.
 - `pnpm typecheck`: failed after install only from missing CLI build artifacts; passed after building CLI dependency artifacts.
 - `git diff --check`: passed for this task's docs/kanban changes.
+
+
+---
+
+**Independent review 2026-06-13 (Sonnet).** VERDICT: DONE (medium-high confidence). Baseline report names commands, exit codes, warning counts (27 install / 210 extension infer), test + coverage figures, and a 6-row blocker ledger classifying source vs build-prerequisite failures with owners. Minor cosmetic nit: a couple of "representative expressions" cited for task_timing.cljs do not appear literally (file targets + counts are correct). Actionable for follow-on tasks.
+
+---
+
+**Promoted to done 2026-06-13** after an executed verification run (not just static review): cljs:verify, vitest, cljs:coverage (93.77%% ≥90 gate), and the surface-parity --version test all passed (exit 0). Moved review → document → done via the FSM-enforced, ledger-backed path.

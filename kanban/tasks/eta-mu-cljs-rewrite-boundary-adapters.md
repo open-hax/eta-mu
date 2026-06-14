@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-rewrite-boundary-adapters"
 title: "Eta-mu CLJS Rewrite — Boundary Adapters"
-status: review
+status: "todo"
 priority: P0
 labels: ["tasks", "cljs", "rewrite", "extern", "13sp"]
 created_at: "2026-05-29T21:18:48Z"
@@ -57,3 +57,8 @@ pnpm -C packages/eta-mu-extensions test
 ## Notes
 
 Implemented the first runtime boundary adapter slice in `packages/eta-mu-runtime` with named `extern.*` adapters for JS value conversion, time/timestamps, JSON, HTTP request encoding, and process snapshots. Added `infra.boundary` inventory data for implemented and planned boundaries, moved facade JS conversion/time defaults through extern adapters, and tightened the boundary scanner so raw interop is allowed only under `extern.*`.
+
+
+---
+
+**Independent review 2026-06-13 (Sonnet).** VERDICT: PARTIAL — bounced review → todo. The implemented slice is correct (5 extern adapters: js/time/json/http/process, boundary scanner, inventory, tests) but the card SCOPE and all checked work-items claim git/workspace/provider-Proxx/OpenCode/Pi-host + custom-tool adapters — only 5 of 12 planned boundaries exist; the other 7 are merely "planned" data in infra/boundary.cljs. Either narrow this card to the delivered slice and split the rest into a follow-on, or implement the remaining adapters. Checkbox state overstated reality.

@@ -10,14 +10,14 @@ export const defaultStatusOrder = [
   "review",
   "document",
   "done",
-  "rejected"
+  "rejected",
 ] as const;
 
 export const priorityColors: Record<string, string> = {
   P0: "black",
   P1: "red",
   P2: "orange",
-  P3: "green"
+  P3: "green",
 };
 
 export interface KanbanTask {

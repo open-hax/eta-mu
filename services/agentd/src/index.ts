@@ -1,13 +1,19 @@
 import "dotenv/config";
-import Fastify from "fastify";
-import websocket from "@fastify/websocket";
 import cors from "@fastify/cors";
-import { WebSocket } from "ws";
-import { FastifyRequest } from "fastify";
+import websocket from "@fastify/websocket";
+import Fastify, { type FastifyRequest } from "fastify";
+import type { WebSocket } from "ws";
 import { bus } from "./events.js";
-import { listIssues, listPRs, openPR, commentPR, getIssueDetail, getPRDetail } from "./github.js";
-import { getRepoInfo, getWorktreeConfig, createWorktree, runTaskInWorktree, pushBranch, listWorktrees } from "./git.js";
 import { listFiles } from "./fs.js";
+import {
+  createWorktree,
+  getRepoInfo,
+  getWorktreeConfig,
+  listWorktrees,
+  pushBranch,
+  runTaskInWorktree,
+} from "./git.js";
+import { commentPR, getIssueDetail, getPRDetail, listIssues, listPRs, openPR } from "./github.js";
 
 const PORT = Number(process.env.WEB_PORT ?? 8787);
 const REPO = process.env.REPO_SLUG!;
@@ -66,14 +72,14 @@ app.get("/api/worktrees/config", async (req, rep) => {
 });
 
 app.post("/api/worktrees", async (req, rep) => {
-  const { repo = REPO, issue } = (req.body as any);
+  const { repo = REPO, issue } = req.body as any;
   const { branch, path } = await createWorktree(issue);
   // await runTaskInWorktree(path, `pnpm opencode run "Issue #${issue}" || true`);
   return { branch, path, issue };
 });
 
 app.post("/api/pulls", async (req, rep) => {
-  const { repo = REPO, issue } = (req.body as any);
+  const { repo = REPO, issue } = req.body as any;
   const branch = `issue/${issue}`;
   const pr = await openPR(repo, issue, branch);
   await pushBranch(branch);
@@ -81,7 +87,7 @@ app.post("/api/pulls", async (req, rep) => {
 });
 
 app.post("/api/pr-comment", async (req, rep) => {
-  const { repo = REPO, pr, body } = (req.body as any);
+  const { repo = REPO, pr, body } = req.body as any;
   return commentPR(repo, Number(pr), body);
 });
 

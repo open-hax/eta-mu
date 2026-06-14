@@ -4,7 +4,7 @@ import {
   buildIssueBody,
   desiredIssueLabels,
   extractTaskUuidFromIssue,
-  planGitHubIssueSync
+  planGitHubIssueSync,
 } from "../src/github-sync.js";
 import type { GitHubRepoState, KanbanTask } from "../src/index.js";
 
@@ -17,7 +17,7 @@ const sampleTask: KanbanTask = {
   labels: ["kanban sync", "github"],
   createdAt: "2026-05-31T00:00:00.000Z",
   content: "Create or update GitHub issues from markdown cards.",
-  sourcePath: "/workspace/kanban/sync-kanban.md"
+  sourcePath: "/workspace/kanban/sync-kanban.md",
 };
 
 describe("GitHub issue sync", () => {
@@ -35,7 +35,7 @@ describe("GitHub issue sync", () => {
       "status:in_progress",
       "priority:P1",
       "kanban-sync",
-      "github"
+      "github",
     ]);
   });
 
@@ -44,7 +44,7 @@ describe("GitHub issue sync", () => {
     const plan = planGitHubIssueSync([sampleTask], state, {
       repo: "open-hax/example",
       dryRun: true,
-      cwd: "/workspace"
+      cwd: "/workspace",
     });
 
     expect(plan.summary.createLabels).toBe(5);
@@ -64,14 +64,14 @@ describe("GitHub issue sync", () => {
           title: "Old title",
           body,
           state: "open",
-          labels: [{ name: "kanban" }]
-        }
-      ]
+          labels: [{ name: "kanban" }],
+        },
+      ],
     };
     const plan = planGitHubIssueSync([doneTask], state, {
       repo: "open-hax/example",
       dryRun: true,
-      cwd: "/workspace"
+      cwd: "/workspace",
     });
 
     expect(plan.summary.createIssues).toBe(0);
@@ -81,8 +81,8 @@ describe("GitHub issue sync", () => {
         type: "updateIssue",
         issueNumber: 42,
         state: "closed",
-        stateReason: "completed"
-      })
+        stateReason: "completed",
+      }),
     );
   });
 
@@ -92,7 +92,7 @@ describe("GitHub issue sync", () => {
     const plan = planGitHubIssueSync([doneTask], state, {
       repo: "open-hax/example",
       dryRun: true,
-      cwd: "/workspace"
+      cwd: "/workspace",
     });
 
     expect(plan.summary.createIssues).toBe(0);

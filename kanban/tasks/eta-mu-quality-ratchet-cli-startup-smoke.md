@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-quality-ratchet-cli-startup-smoke"
 title: "Eta-mu Quality Ratchet — CLI Startup Smoke"
-status: todo
+status: review
 priority: P0
 labels: ["tasks", "quality", "startup", "extensions", "smoke", "3sp"]
 created_at: "2026-05-31T00:45:00Z"
@@ -9,7 +9,6 @@ source: "kanban/epics/eta-mu-quality-ratchet.md"
 points: 3
 category: tasks
 ---
-
 # Eta-mu Quality Ratchet — CLI Startup Smoke
 
 > Parent epic: `kanban/epics/eta-mu-quality-ratchet.md`

@@ -143,6 +143,35 @@ The canonical home is `~/.ημ` which should be a symlink to this package:
 
 This allows the build system to find sources while keeping the repo as the source of truth.
 
+## Troubleshooting
+
+### Missing Extension Paths
+
+If you see errors like:
+
+```
+Failed to load extension ".../packages/eta-mu-extensions/dist/pi/cljs-lisp-decomp-nudge/index.ts": Extension path does not exist
+```
+
+This means the extension build output is missing or stale. To fix:
+
+```bash
+# Rebuild extensions
+pnpm --dir packages/eta-mu-extensions build
+
+# Validate all extension paths exist
+pnpm --dir packages/eta-mu-extensions validate-paths
+
+# Run CLI smoke test
+pnpm --dir packages/eta-mu-extensions smoke
+```
+
+### Validation Scripts
+
+- `pnpm validate-paths` — Validates that all extension paths declared in `package.json` exist after build
+- `pnpm smoke` — Starts the built CLI with built-in extensions and fails on extension loading errors
+- `pnpm postbuild` — Automatically runs path validation after each build
+
 ## License
 
 GPL-3.0-or-later

@@ -38,7 +38,8 @@
     {:from ["testing"] :to ["review" "in_progress" "todo"] :check :always-allow}
     {:from ["review"] :to ["document" "in_progress" "todo"] :check :always-allow}
     {:from ["document"] :to ["done" "review"] :check :always-allow}
-    {:from ["done"] :to ["icebox"] :check :always-allow}
+    ;; `done` may be reopened straight back to `review` (re-review) as well as iceboxed.
+    {:from ["done"] :to ["icebox" "review"] :check :always-allow}
     {:from ["accepted" "breakdown" "blocked" "ready" "todo" "in_progress" "review" "document"]
      :to ["rejected"] :check :always-allow}
     {:from ["icebox" "incoming" "accepted" "breakdown" "blocked" "ready"

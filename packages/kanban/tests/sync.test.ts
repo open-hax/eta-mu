@@ -13,7 +13,7 @@ const sampleTask: KanbanTask = {
   labels: ["kanban", "trello"],
   createdAt: "2026-03-11T00:00:00.000Z",
   content: "Make it portable.",
-  sourcePath: "/tmp/rewrite-kanban.md"
+  sourcePath: "/tmp/rewrite-kanban.md",
 };
 
 describe("extractBoardId", () => {
@@ -31,16 +31,16 @@ describe("planTrelloSync", () => {
         name: "ussyverse",
         url: "https://trello.com/b/Mu2BmeDE/ussyverse",
         shortUrl: "https://trello.com/b/Mu2BmeDE",
-        closed: false
+        closed: false,
       },
       lists: [],
       labels: [],
-      cards: []
+      cards: [],
     };
 
     const plan = planTrelloSync([sampleTask], boardState, {
       dryRun: true,
-      archiveMissing: false
+      archiveMissing: false,
     });
 
     expect(plan.summary.createLists).toBeGreaterThan(0);
@@ -55,17 +55,17 @@ describe("planTrelloSync", () => {
         name: "ussyverse",
         url: "https://trello.com/b/Mu2BmeDE/ussyverse",
         shortUrl: "https://trello.com/b/Mu2BmeDE",
-        closed: false
+        closed: false,
       },
       lists: [
         { id: "list-1", idBoard: "board-1", name: "In Progress", closed: false, pos: 1 },
-        { id: "list-2", idBoard: "board-1", name: "Done", closed: false, pos: 2 }
+        { id: "list-2", idBoard: "board-1", name: "Done", closed: false, pos: 2 },
       ],
       labels: [
         { id: "label-1", idBoard: "board-1", name: "P1", color: "red" },
         { id: "label-2", idBoard: "board-1", name: "P0", color: "black" },
         { id: "label-3", idBoard: "board-1", name: "P2", color: "orange" },
-        { id: "label-4", idBoard: "board-1", name: "P3", color: "green" }
+        { id: "label-4", idBoard: "board-1", name: "P3", color: "green" },
       ],
       cards: [
         {
@@ -76,7 +76,7 @@ describe("planTrelloSync", () => {
           closed: false,
           idLabels: ["label-1"],
           labels: [{ id: "label-1", idBoard: "board-1", name: "P1", color: "red" }],
-          shortUrl: "https://trello.com/c/card-1"
+          shortUrl: "https://trello.com/c/card-1",
         },
         {
           id: "card-2",
@@ -86,14 +86,14 @@ describe("planTrelloSync", () => {
           closed: false,
           idLabels: [],
           labels: [],
-          shortUrl: "https://trello.com/c/card-2"
-        }
-      ]
+          shortUrl: "https://trello.com/c/card-2",
+        },
+      ],
     };
 
     const plan = planTrelloSync([sampleTask], boardState, {
       dryRun: true,
-      archiveMissing: true
+      archiveMissing: true,
     });
 
     expect(plan.summary.updateCards).toBe(1);
@@ -105,6 +105,8 @@ describe("planTrelloSync", () => {
 
 describe("extractTaskUuidFromCard", () => {
   it("reads the UUID marker from descriptions", () => {
-    expect(extractTaskUuidFromCard({ desc: "Kanban UUID: task-123\nStatus: todo" })).toBe("task-123");
+    expect(extractTaskUuidFromCard({ desc: "Kanban UUID: task-123\nStatus: todo" })).toBe(
+      "task-123",
+    );
   });
 });

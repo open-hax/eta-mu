@@ -175,7 +175,12 @@ jobs:
             echo '## CLJS Extension Coverage'
             echo '```'
             node -e "
-              const s = JSON.parse(require('fs').readFileSync('coverage/coverage-summary.json','utf8')).total;
+              const fs = require('fs');
+              if (!fs.existsSync('coverage/coverage-summary.json')) {
+                console.log('coverage summary missing');
+                process.exit(0);
+              }
+              const s = JSON.parse(fs.readFileSync('coverage/coverage-summary.json','utf8')).total;
               const fmt = (x) => (x.pct + '%').padStart(7);
               const row = (label, metric) => console.log(label + fmt(metric) + '  (' + metric.covered + '/' + metric.total + ')');
               row('Statements : ', s.statements);

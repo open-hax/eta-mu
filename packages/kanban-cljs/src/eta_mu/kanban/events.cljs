@@ -1,6 +1,12 @@
 (ns eta-mu.kanban.events
-  "Event emission via the openplanner EventAdmission protocol."
+  "Event emission via the openplanner EventAdmission protocol.
+
+   Every kanban mutation (status change, frontmatter edit, comment) is appended
+   to an EDN-file-backed ledger under `<board-dir>/.events/ledger.edn`. The ledger
+   is the audit record of board activity — see [[eta-mu.kanban.transition]] for the
+   single enforced write path that produces status-change events."
   (:require ["node:path" :as path]
+            [promethean.records.edn.event-admission :as edn-ea]
             [promethean.openplanner-protocols :as protocols]))
 
 (defonce ledger-cache (atom {}))
@@ -8,12 +14,7 @@
 (defn get-ledger [board-dir]
   (or (@ledger-cache board-dir)
       (let [events-dir (path/join board-dir ".events")
-            g js/globalThis
-            edn-mod (-> g .-promethean .-records .-edn .-event_admission)
-            factory (aget edn-mod "create_edn_event_admission")
-            _ (when-not factory
-                (throw (ex-info "EdnFileEventAdmission not loaded" {:board-dir board-dir})))
-            ledger (factory events-dir)]
+            ledger (edn-ea/create-edn-event-admission events-dir)]
         (swap! ledger-cache assoc board-dir ledger)
         ledger)))
 
@@ -23,35 +24,54 @@
    :event/time (.toISOString (new js/Date))
    :session/id board-id
    :delivery/mode "tell"
-   :payload payload})
+   :payload (assoc payload :type event-type)})
 
-(defn emit-status-change! [ledger board-id task-id from to write-id]
-  (protocols/append-event!
-   ledger
-   (kanban-envelope board-id "status-change"
-                    {:task-id task-id :from from :to to
-                     :source "cli" :agent "eta-mu" :write-id write-id})))
+(defn emit-status-change!
+  ([ledger board-id task-id from to write-id]
+   (emit-status-change! ledger board-id task-id from to write-id "cli"))
+  ([ledger board-id task-id from to write-id source]
+   (protocols/append-event!
+    ledger
+    (kanban-envelope board-id "status-change"
+                     {:task-id task-id :from from :to to
+                      :source source :agent "eta-mu" :write-id write-id}))))
 
-(defn emit-frontmatter-change! [ledger board-id task-id key old-value new-value write-id]
-  (protocols/append-event!
-   ledger
-   (kanban-envelope board-id "frontmatter"
-                    {:task-id task-id :key key
-                     :old-value old-value :new-value new-value
-                     :source "cli" :agent "eta-mu" :write-id write-id})))
+(defn emit-frontmatter-change!
+  ([ledger board-id task-id key old-value new-value write-id]
+   (emit-frontmatter-change! ledger board-id task-id key old-value new-value write-id "cli"))
+  ([ledger board-id task-id key old-value new-value write-id source]
+   (protocols/append-event!
+    ledger
+    (kanban-envelope board-id "frontmatter"
+                     {:task-id task-id :key key
+                      :old-value old-value :new-value new-value
+                      :source source :agent "eta-mu" :write-id write-id}))))
 
-(defn emit-comment! [ledger board-id task-id write-id]
-  (protocols/append-event!
-   ledger
-   (kanban-envelope board-id "comment"
-                    {:task-id task-id :source "cli"
-                     :agent "eta-mu" :write-id write-id})))
+(defn emit-comment!
+  ([ledger board-id task-id write-id]
+   (emit-comment! ledger board-id task-id write-id "cli"))
+  ([ledger board-id task-id write-id source]
+   (protocols/append-event!
+    ledger
+    (kanban-envelope board-id "comment"
+                     {:task-id task-id :source source
+                      :agent "eta-mu" :write-id write-id}))))
 
 (defn generate-write-id []
   (str (.now js/Date) "-" (.toString (js/Math.random) 36) (.slice (.toString (js/Math.random) 36) 2 10)))
 
-(defn query-events [ledger filter-spec]
-  (protocols/query-events ledger filter-spec))
+(defn query-events
+  "Return ledger events, optionally filtered. `filter-spec` is a Clojure map whose
+   keys are matched against each event's `:payload` (e.g. {:task-id \"x\"} or
+   {:type \"status-change\"}). An empty map returns every event."
+  [ledger filter-spec]
+  (-> (protocols/query-events ledger {})
+      (.then (fn [evts]
+               (if (empty? filter-spec)
+                 (vec evts)
+                 (filterv (fn [e]
+                            (every? (fn [[k v]] (= (get-in e [:payload k]) v)) filter-spec))
+                          evts))))))
 
 (defn envelope->kanban-event [envelope]
   (let [payload (or (:payload envelope) {})]

@@ -1,11 +1,10 @@
-import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
-
-import { loadTasks } from "../src/tasks.js";
 import { writeTaskStatus } from "../src/task-writeback.js";
+import { loadTasks } from "../src/tasks.js";
 
 describe("writeTaskStatus", () => {
   it("updates YAML frontmatter status and moves files when using a tasks/<status>/ tree", async () => {
@@ -27,7 +26,7 @@ labels: [webring]
 
 Do alpha.
 `,
-      "utf8"
+      "utf8",
     );
 
     const tasks = await loadTasks(tasksDir);
@@ -57,7 +56,7 @@ title: Beta
 
 Do beta.
 `,
-      "utf8"
+      "utf8",
     );
 
     const tasks = await loadTasks(root);

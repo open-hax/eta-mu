@@ -57,6 +57,10 @@ jobs:
         working-directory: packages/eta-mu-extensions
         run: pnpm build
 
+      - name: Validate extension paths
+        working-directory: packages/eta-mu-extensions
+        run: pnpm validate-paths
+
       - name: Deploy runtimes to e2e extensions dir
         working-directory: packages/eta-mu-extensions
         run: |
@@ -73,6 +77,10 @@ jobs:
             exit 1
           fi
           echo "OK: all extensions loaded cleanly"
+
+      - name: CLI smoke test
+        working-directory: packages/eta-mu-extensions
+        run: pnpm smoke
 
       - name: Compile ClojureScript tests
         working-directory: packages/eta-mu-extensions

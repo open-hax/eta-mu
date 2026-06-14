@@ -1,14 +1,14 @@
-import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import { exec } from "node:child_process";
 import { readFile, stat } from "node:fs/promises";
+import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { buildBoardSnapshot } from "./board.js";
-import { parseTaskContent, updateFrontmatterField, appendComment } from "./content-parser.js";
+import { appendComment, parseTaskContent, updateFrontmatterField } from "./content-parser.js";
+import { writeTaskStatus } from "./task-writeback.js";
 import { loadTasks } from "./tasks.js";
 import type { KanbanBoardSnapshot, KanbanProject, KanbanTask } from "./types.js";
-import { writeTaskStatus } from "./task-writeback.js";
 
 export interface KanbanServerOptions {
   tasksDir?: string;
@@ -38,7 +38,12 @@ const sendJson = (res: ServerResponse, status: number, payload: unknown): void =
   res.end(body);
 };
 
-const sendText = (res: ServerResponse, status: number, body: string, contentType = "text/plain; charset=utf-8"): void => {
+const sendText = (
+  res: ServerResponse,
+  status: number,
+  body: string,
+  contentType = "text/plain; charset=utf-8",
+): void => {
   res.statusCode = status;
   res.setHeader("Content-Type", contentType);
   res.setHeader("Cache-Control", "no-store");
@@ -465,15 +470,26 @@ const normalizeProjectId = (value: string): string =>
     .replace(/[^a-z0-9]+/gu, "-")
     .replace(/^-+|-+$/gu, "") || "kanban";
 
-const normalizeProjects = ({ tasksDir, projects, defaultProjectId }: KanbanServerOptions): {
+const normalizeProjects = ({
+  tasksDir,
+  projects,
+  defaultProjectId,
+}: KanbanServerOptions): {
   projects: KanbanProject[];
   defaultProjectId: string;
 } => {
-  const rawProjects = projects && projects.length > 0
-    ? projects
-    : tasksDir
-      ? [{ id: normalizeProjectId(path.basename(tasksDir)), title: path.basename(tasksDir), tasksDir }]
-      : [];
+  const rawProjects =
+    projects && projects.length > 0
+      ? projects
+      : tasksDir
+        ? [
+            {
+              id: normalizeProjectId(path.basename(tasksDir)),
+              title: path.basename(tasksDir),
+              tasksDir,
+            },
+          ]
+        : [];
 
   if (rawProjects.length === 0) {
     throw new Error("Kanban server requires at least one tasksDir or project.");
@@ -481,7 +497,9 @@ const normalizeProjects = ({ tasksDir, projects, defaultProjectId }: KanbanServe
 
   const seen = new Set<string>();
   const normalized = rawProjects.map((project, index) => {
-    const baseId = normalizeProjectId(project.id || project.title || path.basename(project.tasksDir) || `project-${index + 1}`);
+    const baseId = normalizeProjectId(
+      project.id || project.title || path.basename(project.tasksDir) || `project-${index + 1}`,
+    );
     let id = baseId;
     let suffix = 2;
     while (seen.has(id)) {
@@ -493,7 +511,7 @@ const normalizeProjects = ({ tasksDir, projects, defaultProjectId }: KanbanServe
     return {
       id,
       title: project.title || id,
-      tasksDir: path.resolve(project.tasksDir)
+      tasksDir: path.resolve(project.tasksDir),
     } satisfies KanbanProject;
   });
 
@@ -520,29 +538,35 @@ export type StartedKanbanServer = Readonly<{
   defaultProjectId: string;
 }>;
 
-export const startKanbanServer = async (options: KanbanServerOptions): Promise<StartedKanbanServer> => {
+export const startKanbanServer = async (
+  options: KanbanServerOptions,
+): Promise<StartedKanbanServer> => {
   const { host, port } = options;
   const resolvedHost = host ?? "127.0.0.1";
   const projectState = normalizeProjects(options);
   const projectsById = new Map(projectState.projects.map((project) => [project.id, project]));
 
   const pickProject = (url: URL): KanbanProject | undefined => {
-    const requestedProjectId = url.searchParams.get("project")?.trim() || projectState.defaultProjectId;
+    const requestedProjectId =
+      url.searchParams.get("project")?.trim() || projectState.defaultProjectId;
     return projectsById.get(requestedProjectId);
   };
 
   const serializeTask = (project: KanbanProject, task: KanbanTask): KanbanTask => ({
     ...task,
-    sourcePath: stripBase(project.tasksDir, task.sourcePath)
+    sourcePath: stripBase(project.tasksDir, task.sourcePath),
   });
 
-  const serializeBoard = (project: KanbanProject, snapshot: KanbanBoardSnapshot): KanbanBoardSnapshot & { project: KanbanProject } => ({
+  const serializeBoard = (
+    project: KanbanProject,
+    snapshot: KanbanBoardSnapshot,
+  ): KanbanBoardSnapshot & { project: KanbanProject } => ({
     ...snapshot,
     project,
     columns: snapshot.columns.map((col) => ({
       ...col,
-      tasks: col.tasks.map((task) => serializeTask(project, task))
-    }))
+      tasks: col.tasks.map((task) => serializeTask(project, task)),
+    })),
   });
 
   const requireProject = (url: URL, res: ServerResponse): KanbanProject | undefined => {
@@ -551,7 +575,7 @@ export const startKanbanServer = async (options: KanbanServerOptions): Promise<S
       sendJson(res, 404, {
         error: "unknown project",
         project: url.searchParams.get("project") ?? projectState.defaultProjectId,
-        knownProjects: projectState.projects.map((candidate) => candidate.id)
+        knownProjects: projectState.projects.map((candidate) => candidate.id),
       });
       return undefined;
     }
@@ -566,7 +590,7 @@ export const startKanbanServer = async (options: KanbanServerOptions): Promise<S
       if (req.method === "GET" && url.pathname === "/api/projects") {
         sendJson(res, 200, {
           defaultProjectId: projectState.defaultProjectId,
-          projects: projectState.projects
+          projects: projectState.projects,
         });
         return;
       }
@@ -690,14 +714,18 @@ export const startKanbanServer = async (options: KanbanServerOptions): Promise<S
           }
         });
         child.unref();
-        sendJson(res, 200, { ok: true, file: stripBase(project.tasksDir, task.sourcePath), editor });
+        sendJson(res, 200, {
+          ok: true,
+          file: stripBase(project.tasksDir, task.sourcePath),
+          editor,
+        });
         return;
       }
 
       // Serve built web frontend (after API routes)
       if (req.method === "GET") {
         const staticPath = path.join(webDir, url.pathname);
-        if (url.pathname !== "/" && await sendFile(res, staticPath)) {
+        if (url.pathname !== "/" && (await sendFile(res, staticPath))) {
           return;
         }
         const indexPath = path.join(webDir, "index.html");
@@ -724,15 +752,20 @@ export const startKanbanServer = async (options: KanbanServerOptions): Promise<S
   const url = `http://${resolvedHost}:${resolvedPort}`;
 
   console.log(`Kanban UI running at ${url}`);
-  console.log(`Projects: ${projectState.projects.map((project) => `${project.id}=${project.tasksDir}`).join(", ")}`);
+  console.log(
+    `Projects: ${projectState.projects.map((project) => `${project.id}=${project.tasksDir}`).join(", ")}`,
+  );
 
   return {
     server,
     host: resolvedHost,
     port: resolvedPort,
     url,
-    tasksDir: projectsById.get(projectState.defaultProjectId)?.tasksDir ?? projectState.projects[0]?.tasksDir ?? "",
+    tasksDir:
+      projectsById.get(projectState.defaultProjectId)?.tasksDir ??
+      projectState.projects[0]?.tasksDir ??
+      "",
     projects: projectState.projects,
-    defaultProjectId: projectState.defaultProjectId
+    defaultProjectId: projectState.defaultProjectId,
   };
 };

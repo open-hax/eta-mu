@@ -1,4 +1,4 @@
-import { WebSocket } from "ws";
+import type { WebSocket } from "ws";
 
 type Event = {
   type: string;
@@ -11,11 +11,17 @@ export class EventBus {
   emit(e: Event) {
     const payload = JSON.stringify({ ...e, ts: Date.now() });
     for (const ws of this.subs) {
-      try { ws.send(payload); } catch {}
+      try {
+        ws.send(payload);
+      } catch {}
     }
   }
-  attach(ws: WebSocket) { this.subs.add(ws); }
-  detach(ws: WebSocket) { this.subs.delete(ws); }
+  attach(ws: WebSocket) {
+    this.subs.add(ws);
+  }
+  detach(ws: WebSocket) {
+    this.subs.delete(ws);
+  }
 }
 
 export const bus = new EventBus();
