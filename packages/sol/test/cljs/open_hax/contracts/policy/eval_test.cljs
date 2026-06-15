@@ -1,6 +1,6 @@
 (ns open-hax.contracts.policy.eval-test
   (:require [cljs.test :refer [deftest testing is]]
-            [open-hax.contracts.policy.eval :as eval]))
+            [katamorph.policy.eval :as eval]))
 
 (deftest eval-form-literals
   (testing "Literals pass through unchanged"

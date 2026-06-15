@@ -226,9 +226,12 @@
                                                    "template_context"
                                                    "template-context"))
      :mode (or (body-value body "mode") "direct")
-     :agent-spec (normalize-agent-spec (body-value body "agentSpec"
-                                                   "agent_spec"
-                                                   "agent-spec"))
+     :agent-spec (normalize-agent-spec (or (body-value body "agentId"
+                                                           "agent_id"
+                                                           "agent-id")
+                                            (body-value body "agentSpec"
+                                                        "agent_spec"
+                                                        "agent-spec")))
      :auth-context (maybe-cljs-map (body-value body "authContext"
                                                "auth_context"
                                                "auth-context"))}))

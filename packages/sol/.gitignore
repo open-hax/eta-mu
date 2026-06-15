@@ -3,7 +3,6 @@
 /dist-dev
 /target
 /.shadow-cljs
-/.clj-kondo
 /.lsp
 .nrepl-port
 *.log

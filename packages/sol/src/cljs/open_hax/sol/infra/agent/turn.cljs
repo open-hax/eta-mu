@@ -3,6 +3,7 @@
   (:require [clojure.string :as str]
             [open-hax.sol.domain.agent.content :as content]
             [open-hax.sol.domain.agent.text-delta :as text-delta]
+            [open-hax.sol.domain.contracts.resolve :as contracts]
             [open-hax.sol.domain.models :refer [effective-thinking-level normalize-thinking-level]]
             [open-hax.sol.domain.realtime :as realtime]
             [open-hax.sol.domain.text :refer [assistant-message-text]]
@@ -49,6 +50,21 @@
 (defn- resolve-turn-model
   [config model agent-spec]
   (or model (:model agent-spec) (:proxx-default-model config)))
+
+(defn- merge-agent-contract
+  "Resolve the agent contract for agent-spec and merge contract-derived fields
+   back into the spec so downstream turn/session code uses authoritative values."
+  [config agent-spec]
+  (if-let [contract-id (some-> agent-spec :contract-id str str/trim not-empty)]
+    (let [contract (contracts/effective-agent-contract config contract-id (:actor-id agent-spec))]
+      (cond-> agent-spec
+        contract (assoc :tool-ids (vec (:tool-ids contract)))
+        (:model contract) (assoc :model (str (:model contract)))
+        (:thinking-level contract) (assoc :thinking-level (str (:thinking-level contract)))
+        (:system-prompt contract) (assoc :system-prompt (str (:system-prompt contract)))
+        (:task-prompt contract) (assoc :task-prompt (str (:task-prompt contract)))
+        (:role contract) (assoc :role (str (:role contract)))))
+    agent-spec))
 
 (defn- resolve-turn-thinking-level
   [config model-id thinking-level agent-spec]
@@ -340,6 +356,7 @@
   (let [conversation-id (or conversation-id (xturn-node/random-uuid!))
         session-id (ensure-session-id session-id)
         run-id (or run-id (xturn-node/random-uuid!))
+        agent-spec (merge-agent-contract config agent-spec)
         auth-context (auth-context-for-agent-turn auth-context agent-spec)
         model-id (resolve-turn-model config model agent-spec)
         thinking-level (resolve-turn-thinking-level config model-id thinking-level agent-spec)

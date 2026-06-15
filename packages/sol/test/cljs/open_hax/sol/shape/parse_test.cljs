@@ -16,7 +16,7 @@
   (testing "rejects non-numeric strings"
     (is (nil? (parse/parse-positive-int "abc"))))
   (testing "rejects empty string"
-    (is (nil? (parse/parse-positive-int """))))
+    (is (nil? (parse/parse-positive-int ""))))
   (testing "rejects nil"
     (is (nil? (parse/parse-positive-int nil)))))
 

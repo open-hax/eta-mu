@@ -96,7 +96,10 @@
     (let [[op & args] form]
       (if (= op 'contract/apply)
         ;; Injected function call: (contract/apply [:fn-key :arg] ctx)
-        (let [[fn-key value] (eval-args args ctx injected-fns)]
+        (let [evald-args (eval-args args ctx injected-fns)
+              [fn-key value] (if (and (= 1 (count evald-args)) (vector? (first evald-args)))
+                               (first evald-args)
+                               evald-args)]
           (when-let [f (get injected-fns fn-key)]
             (f value)))
         ;; Core form evaluation
@@ -141,11 +144,9 @@
    Returns the combined result or nil."
   [op forms ctx injected-fns]
   (case op
-    :all   (reduce (fn [_ form]
-                     (let [result (eval-form* form ctx injected-fns)]
-                       (if (nil? result) (reduced nil) result)))
-                   true
-                   forms)
+    :all   (when (and (seq forms)
+                      (every? #(eval-form* % ctx injected-fns) forms))
+             true)
     :some  (some #(eval-form* % ctx injected-fns) forms)
     :none  (when-not (some #(eval-form* % ctx injected-fns) forms) true)
     :not   (when-not (eval-form* (first forms) ctx injected-fns) true)

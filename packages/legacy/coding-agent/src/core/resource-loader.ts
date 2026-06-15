@@ -34,6 +34,8 @@ export interface ResourceLoader {
 	getAgentsFiles(): { agentsFiles: Array<{ path: string; content: string }> };
 	getSystemPrompt(): string | undefined;
 	getAppendSystemPrompt(): string[];
+	setSystemPrompt(prompt: string | undefined): void;
+	setAppendSystemPrompt(prompts: string[]): void;
 	extendResources(paths: ResourceExtensionPaths): void;
 	reload(): Promise<void>;
 }
@@ -277,6 +279,17 @@ export class DefaultResourceLoader implements ResourceLoader {
 
 	getAppendSystemPrompt(): string[] {
 		return this.appendSystemPrompt;
+	}
+
+	setSystemPrompt(prompt: string | undefined): void {
+		this.systemPromptSource = prompt;
+		this.systemPrompt = resolvePromptInput(prompt, "system prompt");
+	}
+	setAppendSystemPrompt(prompts: string[]): void {
+		this.appendSystemPromptSource = prompts;
+		this.appendSystemPrompt = prompts
+			.map((s) => resolvePromptInput(s, "append system prompt"))
+			.filter((s): s is string => s !== undefined);
 	}
 
 	extendResources(paths: ResourceExtensionPaths): void {

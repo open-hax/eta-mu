@@ -64,9 +64,10 @@
    Lookup order:
      1. :tool/params (keyword key)
      2. :tool/params (string key)
-     3. tool-result top-level (keyword key)
-     4. tool-result top-level (string key)
-     5. Leave {key} as-is if not found"
+     3. :tool/<key> (keyword key)
+     4. tool-result top-level (keyword key)
+     5. tool-result top-level (string key)
+     6. Leave {key} as-is if not found"
   [template tool-result]
   (if (str/blank? template)
     template
@@ -76,10 +77,13 @@
                      (contains? (:tool/params tool-result) (keyword k))
                      (str (get-in tool-result [:tool/params (keyword k)]))
 
-                     (contains? (:tool/params tool-result) k)
-                     (str (get-in tool-result [:tool/params k]))
+                      (contains? (:tool/params tool-result) k)
+                      (str (get-in tool-result [:tool/params k]))
 
-                     (contains? tool-result (keyword k))
+                      (contains? tool-result (keyword "tool" k))
+                      (str (get tool-result (keyword "tool" k)))
+
+                      (contains? tool-result (keyword k))
                      (str (get tool-result (keyword k)))
 
                      (contains? tool-result k)

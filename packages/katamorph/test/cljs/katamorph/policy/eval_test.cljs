@@ -73,7 +73,7 @@
   (is (true? (policy-eval/eval-form '(clojure.string/includes? "hello world" "world") {})))
   (is (true? (policy-eval/eval-form '(clojure.string/starts-with? "hello" "hel") {})))
   (is (true? (policy-eval/eval-form '(clojure.string/ends-with? "hello" "llo") {})))
-  (is (= "HELLO" (policy-eval/eval-form '(clojure.string/lower-case "HELLO") {})))
+  (is (= "hello" (policy-eval/eval-form '(clojure.string/lower-case "HELLO") {})))
   (is (= "hello" (policy-eval/eval-form '(clojure.string/trim "  hello  ") {}))))
 
 (deftest eval-form-with-context

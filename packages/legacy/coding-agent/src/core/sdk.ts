@@ -65,7 +65,10 @@ export interface CreateAgentSessionOptions {
 	tools?: string[];
 	/** Custom tools to register (in addition to built-in tools). */
 	customTools?: ToolDefinition[];
-
+	/** Optional system prompt to use instead of discovering one from files. */
+	systemPrompt?: string;
+	/** Optional append-only system prompt segments. */
+	appendSystemPrompt?: string[];
 	/** Resource loader. When omitted, DefaultResourceLoader is used. */
 	resourceLoader?: ResourceLoader;
 
@@ -129,33 +132,10 @@ function getDefaultAgentDir(): string {
  *
  * @example
  * ```typescript
- * // Minimal - uses defaults
- * const { session } = await createAgentSession();
- *
- * // With explicit model
- * import { getModel } from '@open-hax/eta-mu-ai';
- * const { session } = await createAgentSession({
- *   model: getModel('anthropic', 'claude-opus-4-5'),
- *   thinkingLevel: 'high',
- * });
- *
- * // Continue previous session
- * const { session, modelFallbackMessage } = await createAgentSession({
- *   continueSession: true,
- * });
- *
- * // Full control
- * const loader = new DefaultResourceLoader({
- *   cwd: process.cwd(),
- *   agentDir: getAgentDir(),
- *   settingsManager: SettingsManager.create(),
- * });
- * await loader.reload();
  * const { session } = await createAgentSession({
  *   model: myModel,
- *   tools: [readTool, bashTool],
- *   resourceLoader: loader,
- *   sessionManager: SessionManager.inMemory(),
+ *   systemPrompt: "You are a helpful assistant.",
+ *   tools: ["read", "bash"],
  * });
  * ```
  */
@@ -177,6 +157,13 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		resourceLoader = new DefaultResourceLoader({ cwd, agentDir, settingsManager });
 		await resourceLoader.reload();
 		time("resourceLoader.reload");
+	}
+
+	if (options.systemPrompt !== undefined) {
+		resourceLoader.setSystemPrompt(options.systemPrompt);
+	}
+	if (options.appendSystemPrompt !== undefined) {
+		resourceLoader.setAppendSystemPrompt(options.appendSystemPrompt);
 	}
 
 	// Check if session has existing data to restore

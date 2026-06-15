@@ -4,54 +4,71 @@
 `feat/kanban-comments-parity`
 
 ## Base SHA
-`44844e3fc0bf5082beb19086c3b006d50ecc0ddf`
+`a03eeb6`
 
 ## What Changed
 
-### Rheos board-chat wiring
-- `packages/Rheos/ecosystem.config.cjs`
-  - Added `RHEOS_ORCHESTRATOR_MODEL` defaulting to `mimo-v2.5-pro`.
-  - Defaulted `KANBAN_CONFIG` to `../kanban/openhax.kanban.json`.
-- `packages/Rheos/src/rheos/backend/infra/chat_proxy.cljs`
-  - Forward the configured orchestrator model to Sol.
-  - Return `js/undefined` from SSE handlers to stop spurious `FST_ERR_REP_ALREADY_SENT`.
-- `packages/Rheos/src/rheos/backend/infra/http_server.cljs`
-  - Return `js/undefined` from the health/SSE stream handler.
-  - Enable `forceCloseConnections: true` so hot-reload can reclaim the port.
-  - Add `listen-with-retry!` for transient `EADDRINUSE` on reload.
+### Build hygiene
+- `.gitignore`
+  - Added `dist-dev/` to root ignore patterns so shadow-cljs dev builds are ignored everywhere.
+- `packages/sol/.gitignore`
+  - Removed stale `.clj-kondo` ignore line.
+- `packages/sol/dist-dev/`
+  - Removed from git tracking (files remain locally for dev server use).
 
-### Sol agent turn streaming
+### Katamorph policy
+- `packages/katamorph/src/cljs/katamorph/policy/eval.cljs`
+- `packages/katamorph/src/cljs/katamorph/policy/fulfillment.cljs`
+- `packages/katamorph/test/cljs/katamorph/policy/eval_test.cljs`
+  - Policy evaluation and fulfillment refinements (details in diff).
+
+### Legacy coding-agent
+- `packages/legacy/coding-agent/src/core/resource-loader.ts`
+- `packages/legacy/coding-agent/src/core/sdk.ts`
+  - SDK/resource-loader updates to support current contract wiring.
+
+### Sol runtime
+- `packages/sol/package.json` / `packages/sol/shadow-cljs.edn`
+  - Dependency/build configuration updates.
+- `packages/sol/src/cljs/open_hax/sol/domain/contracts/loader.cljs`
+  - Contract loader updates.
+- `packages/sol/src/cljs/open_hax/sol/domain/contracts/mcp_servers.cljs` *(new)*
+  - MCP server contract definitions.
+- `packages/sol/src/cljs/open_hax/sol/extern/eta_mu.cljs`
+  - eta-mu extern updates.
+- `packages/sol/src/cljs/open_hax/sol/infra/agent/session.cljs`
 - `packages/sol/src/cljs/open_hax/sol/infra/agent/turn.cljs`
-  - Stream assistant text deltas to the realtime WS `tokens` channel.
-  - Handle both incremental and cumulative provider delta shapes.
-  - Broadcast `run_started` / `run_completed` / `run_failed` lifecycle events on the `events` channel with the flat `:type` shape the board client expects.
-- `packages/sol/test/cljs/open_hax/sol/infra/agent/turn_stream_test.cljs`
-  - Regression tests for token streaming, cumulative-delta suffixing, message-end flush, and conversation-scoped broadcasts.
-
-### Notes
-- `docs/notes/2026.06.14.22.24.55.md` — katamorph runtime / FSM-as-resources next steps.
+  - Agent session and turn handling updates.
+- `packages/sol/src/cljs/open_hax/sol/infra/agent/mcp_tools.cljs` *(new)*
+  - MCP tool bridge.
+- `packages/sol/src/cljs/open_hax/sol/infra/defaults.cljs` *(new)*
+  - Default runtime configuration.
+- `packages/sol/src/cljs/open_hax/sol/law/contracts.cljs`
+  - Contract law/guard updates.
+- `packages/sol/src/cljs/open_hax/sol/shape/app_shapes.cljs`
+  - App shape schema updates.
+- `packages/sol/test/cljs/open_hax/contracts/policy/eval_test.cljs`
+- `packages/sol/test/cljs/open_hax/sol/shape/parse_test.cljs`
+  - Test updates.
 
 ## Excluded from Commit
-- `packages/sol/dist-dev/` — build artifacts
-- `packages/Rheos/dist-dev/` — build artifacts
-- `pnpm-lock.yaml` — stale, regenerate on next install
-- `.#migrating-sol.md` — Emacs lock file
+- `pnpm-lock.yaml` — stale lock state, regenerate on next `pnpm install`
 - `migrating-sol.md` — session scratch note
+- `packages/Rheos/dist-dev/` — build artifacts, untracked and now gitignored
 
 ## Verification Status
-- **Rheos tests**: Passed — 34 tests, 85 assertions
-- **Rheos build**: Passed — `shadow-cljs compile server`
-- **Sol build**: Passed — `shadow-cljs compile server`
-- **Sol tests**: Blocked — missing `open-hax.contracts.policy.eval` required by `open_hax/contracts/policy/eval_test.cljs`
-- **Sol lint**: Blocked — pre-existing EOF error in `test/cljs/open_hax/sol/shape/parse_test.cljs`
+- **eta-mu-cli tests**: Passed — 1120 tests, 47 skipped
+- **Katamorph tests**: Passed — 73 tests, 192 assertions
+- **Sol tests**: Failed — 24 failures, 1 error (pre-existing on this branch, not introduced by dist-removal)
 - **TS line count**: Unchanged at 174,537 lines
 
 ## Commit
-`82d283a` on `feat/kanban-comments-parity`
+`TBD` on `feat/kanban-comments-parity`
 
 ## Tag
-`Π/feat-kanban-comments-parity/2026-06-15T050647`
+`TBD`
 
 ## Notes
 - No concurrent agent dirt detected; excluded paths are generated/runtime/scratch.
 - Pre-commit TypeScript guard hook is not installed locally.
+- Sol test failures pre-date this Π snapshot and are documented as blockers for the branch.

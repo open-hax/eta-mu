@@ -131,6 +131,18 @@
    [:cap/tools {:optional true} [:sequential any?]]
    [:cap/user-surfaces {:optional true} [:vector UserSurface]]])
 
+(def McpServerContract
+  [:map {:closed false}
+   [:contract/kind {:optional true} [:or keyword? string?]]
+   [:contract/id string?]
+   [:mcp-server/id {:optional true} string?]
+   [:mcp_server/id {:optional true} string?]
+   [:mcp-server/transport {:optional true} [:or keyword? string?]]
+   [:mcp_server/transport {:optional true} [:or keyword? string?]]
+   [:mcp-server/url {:optional true} string?]
+   [:mcp_server/url {:optional true} string?]
+   [:enabled {:optional true} boolean?]])
+
 (def PolicyContract
   [:map {:closed false}
    [:contract/id string?]
@@ -401,6 +413,8 @@
     :source "sources"
     :runtime-feature "runtime_features"
     :ingest_source "ingest_sources"
+    :mcp-server "mcp_servers"
+    :mcp_server "mcp_servers"
     nil))
 
 (defn- structural-contract-class
@@ -409,6 +423,7 @@
     (contains? value :actor/id) "actors"
     (contains? value :role/id) "roles"
     (contains? value :cap/id) "capabilities"
+    (or (contains? value :mcp-server/id) (contains? value :mcp_server/id)) "mcp_servers"
     (contains? value :model/id) "models"
     (contains? value :model-family/id) "model_families"
     (contains? value :generator/id) "generators"
@@ -434,6 +449,7 @@
     "actors" ActorContract
     "roles" RoleContract
     "capabilities" CapabilityContract
+    "mcp_servers" McpServerContract
     "policies" PolicyContract
     "generators" GeneratorContract
     "schedules" ScheduleContract

@@ -242,6 +242,9 @@
                              :sessionManager (:session-manager opts)
                              :model (:model opts)
                              :thinkingLevel (:thinking-level opts)
+                             :systemPrompt (:system-prompt opts)
+                             :appendSystemPrompt (when (seq (:append-system-prompt opts))
+                                                   (clj->js (:append-system-prompt opts)))
                              :tools (when (seq (:tool-name-allowlist opts)) (clj->js (:tool-name-allowlist opts)))
                              :customTools (clj->js (or (:custom-tools opts) []))}))]
     {:session (wrap-eta-mu-session (aget created "session") hook)

@@ -25,20 +25,23 @@
    :js-options
    {:js-provider :import,
     :keep-as-import
-    #{"node:fs/promises"
-      "node:fs"
-      "node:path"
-      "node:url"
-      "@open-hax/eta-mu-cli"
-      "fastify"
-      "ws"}},
-   :compiler-options
-   {:output-feature-set :es-next,
-    :optimizations :simple,
-    :source-map true,
-    :infer-externs false,
-    :macros {:open-hax.sol.macros true},
-    :warnings {:infer-warning false}}},
+     #{"node:fs/promises"
+       "node:fs"
+       "node:path"
+       "node:url"
+       "@open-hax/eta-mu-cli"
+       "@modelcontextprotocol/sdk/client/index.js"
+       "@modelcontextprotocol/sdk/client/streamableHttp.js"
+       "typebox"
+       "fastify"
+       "ws"}},
+    :compiler-options
+    {:output-feature-set :es-next,
+     :optimizations :simple,
+     :source-map true,
+     :infer-externs false,
+     :macros {:open-hax.sol.macros true},
+     :warnings {:infer-warning false}}},
   :server-dev
   {:target :esm,
    :runtime :node,
@@ -47,19 +50,22 @@
    :js-options
    {:js-provider :import,
     :keep-as-import
-    #{"node:fs/promises"
-      "node:fs"
-      "node:path"
-      "node:url"
-      "@open-hax/eta-mu-cli"
-      "fastify"
-      "ws"}},
-   :devtools
-   {:autoload true,
-    :preloads [shadow.cljs.devtools.client.node-esm],
-    :ignore-warnings true,
-    :before-load-async open-hax.sol.bootstrap/stop-http-before-load!,
-    :after-load-async open-hax.sol.bootstrap/start-http-after-load!},
+     #{"node:fs/promises"
+       "node:fs"
+       "node:path"
+       "node:url"
+       "@open-hax/eta-mu-cli"
+       "@modelcontextprotocol/sdk/client/index.js"
+       "@modelcontextprotocol/sdk/client/streamableHttp.js"
+       "typebox"
+       "fastify"
+       "ws"}},
+    :devtools
+    {:autoload true,
+     :preloads [shadow.cljs.devtools.client.node-esm],
+     :ignore-warnings true,
+     :before-load-async open-hax.sol.bootstrap/stop-http-before-load!,
+     :after-load-async open-hax.sol.bootstrap/start-http-after-load!},
    :compiler-options
    {:output-feature-set :es-next,
     :optimizations :none,
@@ -75,20 +81,23 @@
    :js-options
    {:js-provider :import,
     :keep-as-import
-    #{"node:fs/promises"
-      "node:fs"
-      "node:path"
-      "node:url"
-      "@open-hax/eta-mu-cli"
-      "fastify"
-      "ws"}},
-   :compiler-options
-   {:output-feature-set :es-next,
-    :optimizations :none,
-    :source-map true,
-    :infer-externs false,
-    :macros {:open-hax.sol.macros true},
-    :warnings {:infer-warning false}}},
+     #{"node:fs/promises"
+       "node:fs"
+       "node:path"
+       "node:url"
+       "@open-hax/eta-mu-cli"
+       "@modelcontextprotocol/sdk/client/index.js"
+       "@modelcontextprotocol/sdk/client/streamableHttp.js"
+       "typebox"
+       "fastify"
+       "ws"}},
+    :compiler-options
+    {:output-feature-set :es-next,
+     :optimizations :none,
+     :source-map true,
+     :infer-externs false,
+     :macros {:open-hax.sol.macros true},
+     :warnings {:infer-warning false}}},
   :test
   {:target :node-test,
    :output-to "target/test/test.cjs",

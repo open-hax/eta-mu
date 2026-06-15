@@ -10,7 +10,7 @@
 ;; ── Constants ──────────────────────────────────────────────────────────────
 
 (def contract-class-order
-  ["agents" "actors" "roles" "capabilities" "policies"
+  ["agents" "actors" "roles" "capabilities" "mcp_servers" "policies"
    "generators" "schedules" "source_modes" "sources" "model_families" "models" "runtime_features" "ingest_sources" "actions" "triggers" "stores" "sub_agents" "cms"])
 
 ;; ── Predicates ─────────────────────────────────────────────────────────────
@@ -37,6 +37,7 @@
     (if (default-configured-contracts-dir? configured)
       ["../contracts" "contracts"
        "packages/agents/knoxx/contracts"
+       "packages/kanban-orchestrator/contracts"
        "orgs/open-hax/openplanner/packages/agents/knoxx/contracts"]
       [configured])))
 
@@ -79,6 +80,7 @@
       ("actor" "actors" "user" "users" "human" "humans") "actors"
       ("role" "roles") "roles"
       ("cap" "caps" "capability" "capabilities") "capabilities"
+      ("mcp-server" "mcp-servers" "mcp_server" "mcp_servers") "mcp_servers"
       ("policy" "policies") "policies"
       ("generator" "generators") "generators"
       ("schedule" "schedules") "schedules"
@@ -152,6 +154,10 @@
   (let [kind (some-> (or (when (:actor/id raw) "actors")
                           (when (:role/id raw) "roles")
                           (when (:cap/id raw) "capabilities")
+                          (when (:mcp-server/id raw) "mcp_servers")
+                          (when (:mcp_server/id raw) "mcp_servers")
+                          (when (= :mcp-server (:contract/kind raw)) "mcp_servers")
+                          (when (= :mcp_server (:contract/kind raw)) "mcp_servers")
                           (when (:model/id raw) "models")
                           (when (:generator/id raw) "generators")
                           (when (:schedule/id raw) "schedules")
@@ -168,6 +174,7 @@
                       keyword->str str/trim not-empty)
         id   (some-> (or (:contract/id raw) (:id raw)
                           (:actor/id raw) (:role/id raw) (:cap/id raw)
+                          (:mcp-server/id raw) (:mcp_server/id raw)
                           (:model/id raw) (:model-family/id raw)
                           (:generator/id raw) (:schedule/id raw)
                           (:source-mode/id raw)
