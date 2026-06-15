@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.manifest
+(ns katamorph.manifest
   "Pure parsing for namespace resource files — the resource manifest grammar.
 
    A namespace file groups resources under one :namespace:

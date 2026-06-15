@@ -1,4 +1,4 @@
-(ns eta-mu.kanban.shape
+(ns rheos.backend.shape.kanban
   "Malli schemas for kanban domain types."
   (:require [malli.core :as m]))
 

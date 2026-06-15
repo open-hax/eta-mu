@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.driver.registry
+(ns katamorph.driver.registry
   "Code-level registry for event drivers.
 
    Drivers are not resources. A driver is ClojureScript code that knows how to

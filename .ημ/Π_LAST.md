@@ -1,66 +1,44 @@
-# Π Last Handoff — feat/kanban-comments-parity (monorepo reorganization)
+# Π Fork Tax — 2026-06-14
 
-- timestamp: 20260614T144902Z
-- branch: feat/kanban-comments-parity
-- pre-commit-head: cc77836bba9c9d8153450b50a33296218da20ece
-- scope: reorganize the monorepo layout without losing content
+## Branch
+`feat/kanban-comments-parity`
 
-## Why this Π
+## Base SHA
+`4020a06a74d8c57d9004e88591f7358ae8caef42`
 
-The workspace was mid-reorganization: legacy packages were moved under
-`packages/legacy/`, `kanban-cljs` was renamed to `packages/Rheos`, a shared
-`packages/tsconfig/` was introduced, and retired services/receipts were removed.
-This snapshot captures the full move state so nothing is lost.
+## What Changed
 
-## Moves (content-preserving renames)
+### knoxx → sol Migration (~72k lines removed)
+- **Deleted**: All `packages/sol/src/cljs/knoxx/backend/` source files
+- **Deleted**: All `packages/sol/test/cljs/knoxx/backend/` test files
+- **Added**: New `packages/sol/src/cljs/open_hax/sol/` namespace tree
+- **Added**: New `packages/sol/test/cljs/open_hax/` test tree
+- **Modified**: `server.js`, `shadow-cljs.edn`, `package.json` (entrypoint rewrite)
 
-| old path | new path |
-|---|---|
-| `packages/kanban-cljs` | `packages/Rheos` |
-| `packages/agent` | `packages/legacy/agent` |
-| `packages/ai` | `packages/legacy/ai` |
-| `packages/coding-agent` | `packages/legacy/coding-agent` |
-| `packages/docs` | `packages/legacy/docs` |
-| `packages/github` | `packages/legacy/github` |
-| `packages/kanban` | `packages/legacy/kanban` |
-| `packages/output-contract-gate` | `packages/legacy/output-contract-gate` |
-| `packages/publication-components` | `packages/legacy/publication-components` |
-| `packages/tui` | `packages/legacy/tui` |
+### New Packages
+- `packages/Rheos/` — Rheos UI (orchestrator, layout, law, infra layers)
+- `packages/kanban-orchestrator/` — Kanban orchestration
+- `packages/katamorph/test/` — Katamorph tests
+- `packages/mcp-contracts/` — MCP contract definitions
+- `packages/sol-staging/` — Sol staging area
 
-## Active adjustments
+### Scripts
+- `scripts/pre-commit-ts-guard.sh` — TypeScript line-count guard
+- `scripts/ts-line-count.mjs` — TS line counter
 
-- `package.json` / `pnpm-workspace.yaml` / `tsconfig.base.json` — workspace roots updated for new layout
-- `pnpm-lock.yaml` — refreshed
-- `scripts/lint.mjs` — package paths updated to use pnpm filter names
-- `packages/sol/package.json` — build script changed from `release` to `compile`
-- `packages/axxium/src/cljs/axxium/routes/actor.cljs` — paren balance fix
-- `kanban/tasks/eta-mu-quality-ratchet-lint-gates.md` — task update
-- `.gitignore` — ignore `/alpha/` nested worktree
+### Notes
+- `docs/notes/2026.06.14.10.25.09.md`
+- `docs/notes/2026.06.14.12.19.50.md`
 
-## Removed (intentional deletions)
+## Excluded from Commit
+- `packages/sol/dist-dev/` — build artifacts (gitignored in sol/.gitignore)
+- `pnpm-lock.yaml` — stale, regenerate on next install
 
-- Services: `services/agentd`, `services/eta-mu`, `services/eta-mu-truth-workbench`
-- Receipts: `receipts/hormuz/*`
-- Workflow: `.github/workflows/hormuz-clock.yml`
-- Shared: `shared/js/opencode-events/events.edn`
-- Packages: `packages/truth`, `packages/web-ui`, `packages/reactant`, `packages/skills`
+## Verification Status
+- **Tests**: Skipped — knoxx tests deleted, sol tests not yet wired
+- **Build**: Skipped — shadow-cljs state is in excluded dist-dev
+- **Lint**: Not run
 
-## Verification
-
-- Git index: 1508 paths staged
-  - 786 pure renames (R100)
-  - 696 deletions
-  - 9 modifications
-  - 4 additions
-  - 3 modified renames (R073–R096)
-- No `.env` files staged
-- Build artifacts remain ignored (node_modules, dist, target, .shadow-cljs, coverage)
-
-## Blockers / follow-ups
-
-1. `alpha/v2` is a nested git worktree (`gitdir: .git/modules/orgs/octave-commons/eta-mu-sol`).
-   It is left untracked and `/alpha/` is added to `.gitignore` so it does not pollute
-   this repo's snapshot. Snapshot it separately if needed.
-2. Root `package.json` scripts still reference `@open-hax/agentd` (`dev`, `start`,
-   `docs:ts`), but `services/agentd` was removed. Those scripts need to be repointed
-   before they will run.
+## Notes
+- No concurrent agent dirt detected
+- dist-dev files were previously committed (pre-gitignore); they remain tracked but are excluded from this snapshot

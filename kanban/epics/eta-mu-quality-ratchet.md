@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-quality-ratchet"
 title: "Eta-mu Quality Ratchet — Delinting, Warning Cleanup, and Testing"
-status: accepted
+status: "ready"
 priority: P0
 labels: ["epics", "quality", "lint", "warnings", "testing", "coverage", "26sp"]
 created_at: "2026-05-31T00:45:00Z"

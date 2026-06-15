@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.store.protocol
+(ns katamorph.store.protocol
   "IStore: keyed persistence with schemas.
 
    Stores are declared by resources via :store/id and :store/schema and

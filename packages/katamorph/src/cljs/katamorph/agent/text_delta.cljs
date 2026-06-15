@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.agent.text-delta
+(ns katamorph.agent.text-delta
   "Pure text-delta helpers for provider streams."
   (:require [clojure.string :as str]))
 

@@ -1,4 +1,4 @@
-(ns open-hax.contracts.schema
+(ns katamorph.schema
   "Unified resource boundary schema registry.
 
    Merges schemas from:

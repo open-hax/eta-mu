@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.agent.turn-guards
+(ns katamorph.agent.turn-guards
   "Pure guard calculations for agent turn streaming.")
 
 (def default-death-spiral-streak-limit 6)

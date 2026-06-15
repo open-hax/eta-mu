@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.agent.reasoning
+(ns katamorph.agent.reasoning
   "Pure helpers for extracting/routing provider reasoning text."
   (:require [clojure.string :as str]))
 

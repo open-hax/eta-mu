@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { ENV_AGENT_DIR } from "../src/config.js";
 
 const cliPath = resolve(__dirname, "../src/cli.ts");
-const tsxPath = resolve(__dirname, "../../../node_modules/tsx/dist/cli.mjs");
+const tsxPath = resolve(__dirname, "../../../../node_modules/tsx/dist/cli.mjs");
 
 const tempDirs: string[] = [];
 

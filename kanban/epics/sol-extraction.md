@@ -1,7 +1,7 @@
 ---
 uuid: "sol-extraction"
 title: "Sol: Extract Agent API from Knoxx"
-status: accepted
+status: "ready"
 priority: P0
 labels: ["epics", "cljs", "agent-api", "sol", "knoxx-extraction"]
 created_at: "2026-06-08T00:00:00Z"
@@ -70,8 +70,8 @@ Before knoxx can swap its implementation, the event ledger protocol must exist i
 ## Constraints
 
 - All code in CLJS
-- Port: 7777 (knoxx is 8789; both must coexist during migration)
-- Same MongoDB database as knoxx (`openplanner`)
+- Port: 8777 (knoxx is 8789; both must coexist during migration)
+- edn driver by default for easy adoption
 - No knoxx-specific policy/auth coupling
 
 ---

@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.store.registry
+(ns katamorph.store.registry
   "Store registry: resolve store resource definitions into IStore instances.
 
    Stores are declared by resources (:store/id + :store/schema) and requested
@@ -9,7 +9,7 @@
 
    Dependencies are injected via the :contract-runtime/deps key in config:
    - :load-resources (fn [config] -> [{:resource/kind :resource/definition} ...])"
-  (:require [open-hax.contract-runtime.store.memory :as memory]))
+  (:require [katamorph.store.memory :as memory]))
 
 (defonce ^:private stores* (atom {}))
 

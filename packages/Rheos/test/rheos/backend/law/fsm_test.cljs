@@ -1,6 +1,6 @@
-(ns eta-mu.kanban.fsm-test
-  (:require [cljs.test :refer [deftest testing is]]
-            [eta-mu.kanban.fsm :as fsm]))
+(ns rheos.backend.law.fsm-test
+  (:require [cljs.test :refer [deftest is async]]
+            [rheos.backend.law.fsm :as fsm]))
 
 (deftest resolve-fsm-default
   (is (= fsm/default-fsm (fsm/resolve-fsm {}))))
@@ -47,3 +47,24 @@
 (deftest promethean-normal-forward-path
   (is (:allowed? (fsm/evaluate-transition fsm/promethean-fsm "review" "document" {})))
   (is (:allowed? (fsm/evaluate-transition fsm/promethean-fsm "document" "done" {}))))
+
+(deftest promethean-in-progress-to-review-is-gated
+  ;; in_progress -> review is structurally allowed but carries the :build-gate check,
+  ;; so the actual move runs build/lint/test via fsm/run-gate (see transition/move-task!).
+  (let [r (fsm/evaluate-transition fsm/promethean-fsm "in_progress" "review" {})]
+    (is (:allowed? r))
+    (is (= :build-gate (:check r)))
+    (is (= :command (get-in r [:check-spec :type]))))
+  ;; Sending work back stays free (no gate).
+  (let [r (fsm/evaluate-transition fsm/promethean-fsm "in_progress" "todo" {})]
+    (is (:allowed? r))
+    (is (= :always-allow (:check r)))))
+
+(deftest run-gate-passes-through-non-command-checks
+  ;; A structurally-allowed transition whose check is not a command gate clears immediately.
+  (async done
+    (let [decision (fsm/evaluate-transition fsm/promethean-fsm "in_progress" "todo" {})]
+      (-> (fsm/run-gate decision ".")
+          (.then (fn [gate]
+                   (is (:allowed? gate))
+                   (done)))))))

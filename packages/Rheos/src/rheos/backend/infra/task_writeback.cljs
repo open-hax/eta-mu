@@ -1,4 +1,4 @@
-(ns eta-mu.kanban.task-writeback
+(ns rheos.backend.infra.task-writeback
   "Writing task changes back to markdown files."
   (:require ["node:fs/promises" :as fsp]
             [clojure.string :as str]))

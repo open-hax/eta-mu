@@ -1,0 +1,6 @@
+{:actor/id "kanban_orchestrator"
+ :actor/kind :agent
+ :actor/org "open-hax"
+ :actor/label "Kanban Orchestrator"
+ :actor/default-agent "kanban_orchestrator"
+ :actor/roles [:role/kanban-orchestrator]}

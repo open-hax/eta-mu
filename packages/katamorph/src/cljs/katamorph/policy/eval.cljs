@@ -1,4 +1,4 @@
-(ns open-hax.contracts.policy.eval
+(ns katamorph.policy.eval
   "Unified policy form evaluator.
 
    Heritage: proxx.policy.eval

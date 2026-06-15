@@ -9,6 +9,7 @@
   },
   "bin": {
     "eta-mu": "dist/cli.js",
+    "eta-mu-beta": "dist/cli.js",
     "pi": "dist/cli.js"
   },
   "main": "./dist/index.js",

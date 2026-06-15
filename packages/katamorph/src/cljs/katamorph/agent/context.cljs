@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.agent.context
+(ns katamorph.agent.context
   "Global agent execution context for tools that need session/conversation IDs.
 
    Node.js is single-threaded; we track the currently executing turn's context

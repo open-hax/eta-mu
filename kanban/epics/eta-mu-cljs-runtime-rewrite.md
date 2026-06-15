@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-runtime-rewrite"
 title: "Eta-mu CLJS Runtime Rewrite"
-status: accepted
+status: "ready"
 priority: P0
 labels: ["epics", "cljs", "rewrite", "knoxx-style", "55sp"]
 created_at: "2026-05-29T21:18:48Z"

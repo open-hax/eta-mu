@@ -1,6 +1,6 @@
-(ns eta-mu.kanban.transition-test
-  (:require [cljs.test :refer [deftest testing is]]
-            [eta-mu.kanban.transition :as transition]))
+(ns rheos.backend.domain.transition-test
+  (:require [cljs.test :refer [deftest is]]
+            [rheos.backend.domain.transition :as transition]))
 
 (deftest current-counts-tallies-by-status
   (is (= {"todo" 2 "done" 1 "review" 1}

@@ -1,7 +1,7 @@
-(ns eta-mu.kanban.board
+(ns rheos.backend.domain.board
   "Board snapshot building — groups tasks into columns by status."
   (:require [clojure.string :as str]
-            [eta-mu.kanban.shape :as shape]))
+            [rheos.backend.shape.kanban :as shape]))
 
 (defn- title-case [status]
   (-> status (str/replace #"[-_]" " ") (str/split #"\s+")

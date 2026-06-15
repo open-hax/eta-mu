@@ -1,6 +1,6 @@
-(ns eta-mu.kanban.events-test
+(ns rheos.backend.domain.events-test
   (:require [cljs.test :refer [deftest testing is]]
-            [eta-mu.kanban.events :as events]))
+            [rheos.backend.domain.events :as events]))
 
 (deftest generate-write-id-format
   (testing "Write ID is a non-empty string"

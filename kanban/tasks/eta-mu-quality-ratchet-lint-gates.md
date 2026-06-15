@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-quality-ratchet-lint-gates"
 title: "Eta-mu Quality Ratchet — Lint and Static Gates"
-status: "in_progress"
+status: "document"
 priority: "P1"
 labels: ["tasks", "quality", "lint", "format", "ci", "5sp"]
 created_at: "2026-05-31T00:45:00Z"

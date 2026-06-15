@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.filter.registry
+(ns katamorph.filter.registry
   "Registry for scope filter functions.
 
    Filters are pure functions actions can request through :action/scope:

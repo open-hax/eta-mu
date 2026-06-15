@@ -1,7 +1,7 @@
 ---
 uuid: "kanban-cljs-rewrite"
 title: "Kanban CLJS Rewrite: Server, CLI, Frontend"
-status: "todo"
+status: "in_progress"
 priority: P0
 labels: ["epics", "cljs", "kanban", "rewrite", "openplanner-protocols"]
 created_at: "2026-06-08T00:00:00Z"

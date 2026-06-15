@@ -1,12 +1,14 @@
-(ns eta-mu.kanban.cli
+(ns rheos.backend.infra.cli
   "CLI entry point for kanban operations."
   (:require ["node:fs/promises" :as fsp]
-            [eta-mu.kanban.board :as board]
-            [eta-mu.kanban.compose :as compose]
-            [eta-mu.kanban.config :as config]
-            [eta-mu.kanban.events :as events]
-            [eta-mu.kanban.tasks :as tasks]
-            [eta-mu.kanban.transition :as transition]))
+            [rheos.backend.domain.board :as board]
+            [rheos.backend.domain.compose :as compose]
+            [rheos.backend.infra.config :as config]
+            [rheos.backend.domain.events :as events]
+            [rheos.backend.infra.ledger :as ledger]
+            [rheos.backend.infra.task-store :as tasks]
+            [rheos.backend.domain.transition :as transition]
+            [rheos.backend.infra.http-server :as http-server]))
 
 (defn- parse-args [args]
   (let [args-vec (vec args)
@@ -123,7 +125,7 @@
 
 (defn ^:async cmd-events [project-state parsed]
   (let [project (find-project project-state (get-flag (:flags parsed) "project"))
-        ledger (events/get-ledger (:tasks-dir project))
+        ledger (ledger/get-ledger (:tasks-dir project))
         task-id (:subcommand parsed)
         limit (:limit (:flags parsed))
         filter-spec (if task-id {:task-id task-id} {})
@@ -133,7 +135,7 @@
 
 (defn ^:async cmd-drift [project-state parsed]
   (let [project (find-project project-state (get-flag (:flags parsed) "project"))
-        ledger (events/get-ledger (:tasks-dir project))
+        ledger (ledger/get-ledger (:tasks-dir project))
         drift-evts (await (events/query-events ledger {:type "drift-detected"}))]
     (if (empty? drift-evts)
       (println "No drift detected.")
@@ -176,7 +178,6 @@
       (await (cmd-drift ps parsed))
 
       (= "serve" (:command parsed))
-      (let [server-mod (js/require "./server.js")]
-        (await (.init server-mod)))
+      (await (http-server/init))
 
       :else (show-help))))

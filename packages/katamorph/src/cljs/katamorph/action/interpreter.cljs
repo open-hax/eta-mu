@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.action.interpreter
+(ns katamorph.action.interpreter
   "Action interpreter: executes the :action/* facet of a resource.
 
    Resolution order for an action map:
@@ -18,7 +18,7 @@
    - :filter-fn    (fn [filter-id] -> filter-fn or nil)
    - :load-resources (fn [config] -> [{:resource/kind :resource/definition} ...])
    - :get-store    (fn [config store-id] -> IStore or nil)"
-  (:require [open-hax.contract-runtime.action.anonymous :as anonymous]))
+  (:require [katamorph.action.anonymous :as anonymous]))
 
 (defn- deps
   "Extract contract-runtime dependency functions from config."

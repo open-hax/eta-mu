@@ -1,11 +1,11 @@
-(ns open-hax.contract-runtime.store.memory
+(ns katamorph.store.memory
   "Process-local IStore backend.
 
    The default store backend when no database collection handle is configured.
    Documents live in an atom in insertion order; queries are field-equality
    matches with an optional :limit."
-  (:require [open-hax.contract-runtime.store.protocol :as store]
-            [open-hax.contract-runtime.store.law :as store-law]))
+  (:require [katamorph.store.protocol :as store]
+            [katamorph.store.law :as store-law]))
 
 (defn- matches-query?
   [doc query]

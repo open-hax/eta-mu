@@ -1,6 +1,6 @@
-(ns eta-mu.kanban.board-test
+(ns rheos.backend.domain.board-test
   (:require [cljs.test :refer [deftest testing is]]
-            [eta-mu.kanban.board :as board]))
+            [rheos.backend.domain.board :as board]))
 
 (deftest build-board-snapshot-empty
   (testing "Empty task list produces empty board with canonical columns"

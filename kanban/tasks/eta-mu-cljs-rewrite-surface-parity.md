@@ -79,3 +79,12 @@ Full CLI suite evidence: `pnpm --filter @open-hax/eta-mu-cli test` passes with 1
 ---
 
 **Promoted to done 2026-06-13** after an executed verification run (not just static review): cljs:verify, vitest, cljs:coverage (93.77%% ≥90 gate), and the surface-parity --version test all passed (exit 0). Moved review → document → done via the FSM-enforced, ledger-backed path.
+
+---
+
+User has verified parity with the kanban web and cli surfaces with some minor exceptions:
+- there is no UI to add a comment
+- the "open in editor" button does not work
+- updating a cards status from the frontmatter drop down does not update the primary board view
+
+And a minor style issue with black instead of white monokai font in the frontmatter labels, and the top most span containing the cards name along side the priority, the open in editor, and close view buttons

@@ -1,6 +1,6 @@
-(ns eta-mu.kanban.compose-test
-  (:require [cljs.test :refer [deftest testing is]]
-            [eta-mu.kanban.compose :as compose]))
+(ns rheos.backend.domain.compose-test
+  (:require [cljs.test :refer [deftest is]]
+            [rheos.backend.domain.compose :as compose]))
 
 (deftest parse-where-clause-eq
   (is (= ["meta.domain" := "infra"] (compose/parse-where-clause "meta.domain = infra"))))

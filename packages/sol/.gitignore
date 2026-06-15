@@ -1,0 +1,10 @@
+/node_modules
+/dist
+/dist-dev
+/target
+/.shadow-cljs
+/.clj-kondo
+/.lsp
+.nrepl-port
+*.log
+.ημ

@@ -1,4 +1,4 @@
-(ns open-hax.contracts.policy.fulfillment
+(ns katamorph.policy.fulfillment
   "Fulfillment evaluation for post-tool-call notification.
 
    Heritage: eta-mu.extensions.contract-runtime-v2.core

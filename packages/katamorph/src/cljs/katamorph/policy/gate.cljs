@@ -1,4 +1,4 @@
-(ns open-hax.contracts.policy.gate
+(ns katamorph.policy.gate
   "Flat policy gate evaluation for tool-call gating.
 
    Heritage: eta-mu.extensions.contract-runtime-v2.core

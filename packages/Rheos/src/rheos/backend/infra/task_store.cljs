@@ -1,9 +1,9 @@
-(ns eta-mu.kanban.tasks
+(ns rheos.backend.infra.task-store
   "Task loading from markdown files with YAML frontmatter parsing."
   (:require ["node:fs/promises" :as fsp]
             ["node:path" :as path]
             [clojure.string :as str]
-            [eta-mu.kanban.shape :as shape]))
+            [rheos.backend.shape.kanban :as shape]))
 
 (def status-index
   (into {} (map-indexed (fn [i s] [s i]) shape/StatusOrder)))

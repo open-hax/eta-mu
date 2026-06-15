@@ -54,3 +54,6 @@ packages/kanban/playwright-report/
 # Generated documentation assets
 docs/agentd-api/assets/
 docs/opencode-reactant-api/js/
+
+# TypeScript line-count baseline (local state)
+.ts-line-count-baseline

@@ -1,8 +1,7 @@
-(ns eta-mu.kanban.ui.filter-bar
+(ns rheos.ui.domain.filter-bar
   "Filter bar — domain, status, priority, labels filters."
   (:require [helix.core :as hx :refer [defnc $]]
-            [helix.dom :as d]
-            [clojure.string :as str]))
+            [helix.dom :as d]))
 
 (defnc filter-dropdown [{:keys [label options value on-change]}]
   (d/select

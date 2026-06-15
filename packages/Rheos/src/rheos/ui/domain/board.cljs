@@ -1,10 +1,10 @@
-(ns eta-mu.kanban.ui.board
+(ns rheos.ui.domain.board
   "Board view — columns and task cards, with drag-and-drop status moves.
 
    Dragging a card onto a column POSTs an FSM-enforced status change via `on-move`
-   (see [[eta-mu.kanban.ui.core]]); the server rejects illegal transitions, so the
+   (see [[rheos.ui.domain.layout]]); the server rejects illegal transitions, so the
    UI cannot move a card anywhere the FSM forbids."
-  (:require [helix.core :as hx :refer [defnc $ <>]]
+  (:require [helix.core :as hx :refer [defnc $]]
             [helix.hooks :as hooks]
             [helix.dom :as d]))
 
@@ -41,16 +41,22 @@
 (defnc column-view [{:keys [column on-select on-drag-start on-drag-end dragging-uuid
                             drag-over? on-drag-over on-drag-leave on-drop]}]
   (let [status (get column "status")]
-    (d/div {:style {:min-width "220px" :max-width "280px" :flex-shrink "0"}
+    ;; Full-height column: fixed header, then a task list that owns its OWN vertical
+    ;; scroll (min-height:0 lets the flex child shrink so overflow-y applies here,
+    ;; not at the board/page level).
+    (d/div {:style {:display "flex" :flex-direction "column" :height "100%"
+                    :min-width "240px" :max-width "320px" :flex-shrink "0"}
             :onDragOver (fn [e] (.preventDefault e) (on-drag-over status))
             :onDragLeave on-drag-leave
             :onDrop (fn [e] (.preventDefault e) (on-drop e status))}
-      (d/div {:style {:display "flex" :align-items "center" :gap "6px" :padding "8px 4px" :margin-bottom "6px"}}
+      (d/div {:style {:display "flex" :align-items "center" :gap "6px" :padding "8px 4px" :margin-bottom "6px" :flex-shrink "0"}}
         (d/h3 {:style {:font-size "12px" :font-weight "600" :text-transform "uppercase" :letter-spacing "0.05em" :color "var(--token-colors-text-muted)" :margin "0"}}
           (get column "title"))
         (d/span {:style {:font-size "11px" :color "var(--token-colors-text-soft)" :background "var(--token-colors-background-surface)" :padding "1px 6px" :border-radius "10px"}}
           (str (get column "taskCount"))))
-      (d/div {:style {:display "flex" :flex-direction "column" :min-height "40px" :border-radius "6px"
+      (d/div {:style {:display "flex" :flex-direction "column" :flex "1" :min-height "0"
+                      :overflow-y "auto" :overflow-x "hidden" :padding "2px"
+                      :border-radius "6px"
                       :outline (when drag-over? "2px dashed var(--token-colors-text-accent)")
                       :outline-offset "-4px"
                       :background (when drag-over? "var(--token-colors-background-surface)")}}
@@ -85,7 +91,10 @@
                           (let [data (js/JSON.parse raw)]
                             (when (not= (.-from data) status)
                               (on-move (.-uuid data) (.-project data) status))))))]
-    (d/div {:style {:display "flex" :gap "16px" :overflow-x "auto" :padding-bottom "16px"}}
+    ;; Board fills its region height and scrolls horizontally; each column scrolls
+    ;; its own tasks vertically. No vertical scroll lives here.
+    (d/div {:style {:display "flex" :gap "16px" :height "100%"
+                    :overflow-x "auto" :overflow-y "hidden" :padding-bottom "4px"}}
       (map-indexed
         (fn [i col]
           ($ column-view {:key (or (get col "status") (str i))

@@ -1,7 +1,7 @@
 ---
 uuid: "kanban-event-ledger"
 title: "Kanban Event Ledger + File Watcher + Drift Detection"
-status: "todo"
+status: "in_progress"
 priority: P0
 labels: ["epics", "cljs", "kanban", "event-ledger", "file-watcher", "drift-detection"]
 created_at: "2026-06-08T00:00:00Z"
@@ -51,3 +51,10 @@ File-backed implementation of same concept as `promethean.event-ledger`. Differe
 ---
 
 **Session 2026-06-13 progress.** NOW DONE: ledger loads (require fix), the mutex bug is fixed, and every status change is recorded in `.events/ledger.edn` + queryable via /api/events and `kanban events` (source-tagged web/cli). REMAINING for done: file watcher → drift detection (file edit with no correlated CLI event), and write-id injected into frontmatter + watcher correlation. Moved review → todo (core recording done, drift/watcher not).
+
+---
+
+**Session 2026-06-14 (chat-integration Slice 1 — ledger→SSE).** Two things landed here:
+- **File watcher fixed.** Root cause found: chokidar v4 (the pinned `^4.0.3`) DROPPED glob support, so `chokidar.watch("<dir>/**/*.md")` was treated as a literal path and matched nothing — the watcher had been firing ZERO file events. Now watches the tasks-dir directly and filters `.md` in the handlers. Verified: an external file create produces a `file-changed` (and, with no correlated write-id, a `drift-detected`) event in the ledger within ~2s. So file-watcher → drift detection now actually works end-to-end. (write-id injection into frontmatter for correlation is still NOT wired, so every external edit reads as drift — that piece remains.)
+- **Live event stream added.** A new in-process pub/sub bus routes every emission through one `record!` chokepoint (append-to-ledger + publish), exposed as SSE at `GET /api/events/stream`. This is the spine for live UI updates: any actor's mutation (HTTP, drag-drop, or external/CLI edit caught by the watcher) pushes to subscribed browsers, which refetch the board. Verified via a live SSE `data:` event on a frontmatter PATCH. The future Mongo `EventAdmission` will feed the same bus.
+REMAINING for done: write-id injected into frontmatter + watcher correlation (so legitimate CLI edits aren't all flagged as drift).

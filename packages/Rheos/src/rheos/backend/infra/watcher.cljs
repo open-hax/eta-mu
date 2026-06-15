@@ -1,8 +1,11 @@
-(ns eta-mu.kanban.watcher
+(ns rheos.backend.infra.watcher
   "File watcher for detecting task file changes with drift detection."
   (:require ["chokidar" :as chokidar]
-            ["node:path" :as path]
-            [eta-mu.kanban.events :as events]))
+            ["node:fs/promises" :as fsp]
+            [rheos.backend.domain.events :as events]
+            [rheos.backend.infra.ledger :as ledger]))
+
+(defn- md? [^js p] (.endsWith p ".md"))
 
 (defonce watchers (atom {}))
 (defonce recent-cli-events (atom {}))
@@ -29,19 +32,19 @@
   (cleanup-old-events)
   (let [has-cli-event? (and write-id (@recent-cli-events write-id))]
     (when-not has-cli-event?
-      (let [ledger (events/get-ledger tasks-dir)]
+      (let [ledger (ledger/get-ledger tasks-dir)]
         (events/emit-frontmatter-change!
          ledger board-id uuid "drift-detected" nil nil
          (events/generate-write-id))
         (js/console.log "Drift detected:" file-path)))))
 
 (defn- handle-file-change [board-id tasks-dir file-path _event-type]
-  (let [fs (js/require "fs/promises")]
+  (let [fs fsp]
     (-> (.readFile fs file-path "utf8")
         (.then (fn [content]
                  (let [write-id (extract-write-id content)
                        uuid (extract-uuid content)
-                       ledger (events/get-ledger tasks-dir)]
+                       ledger (ledger/get-ledger tasks-dir)]
                    (when uuid
                      ;; Emit file change event
                      (events/emit-frontmatter-change!
@@ -54,13 +57,15 @@
 
 (defn start-watcher! [board-id tasks-dir]
   (when-not (@watchers board-id)
-    (let [pattern (path/join tasks-dir "**" "*.md")
-          watcher (chokidar/watch pattern #js {:ignoreInitial true
-                                                :persistent true
-                                                :awaitWriteFinish true})]
-      (.on watcher "change" (fn [path] (handle-file-change board-id tasks-dir path "change")))
-      (.on watcher "add" (fn [path] (handle-file-change board-id tasks-dir path "add")))
-      (.on watcher "unlink" (fn [path] (handle-file-change board-id tasks-dir path "unlink")))
+    ;; chokidar v4 dropped glob support — watch the dir recursively and filter for
+    ;; .md in the handlers (a glob like `dir/**/*.md` would be treated as a literal
+    ;; path and silently match nothing).
+    (let [watcher (chokidar/watch tasks-dir #js {:ignoreInitial true
+                                                 :persistent true
+                                                 :awaitWriteFinish true})]
+      (.on watcher "change" (fn [path] (when (md? path) (handle-file-change board-id tasks-dir path "change"))))
+      (.on watcher "add" (fn [path] (when (md? path) (handle-file-change board-id tasks-dir path "add"))))
+      (.on watcher "unlink" (fn [path] (when (md? path) (handle-file-change board-id tasks-dir path "unlink"))))
       (swap! watchers assoc board-id watcher)
       (js/console.log "Watcher started for" board-id ":" tasks-dir))))
 

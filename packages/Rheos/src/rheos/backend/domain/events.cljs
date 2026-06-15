@@ -1,22 +1,15 @@
-(ns eta-mu.kanban.events
-  "Event emission via the openplanner EventAdmission protocol.
+(ns rheos.backend.domain.events
+  "Kanban event vocabulary — envelope construction, emission via the openplanner
+   EventAdmission protocol, and an in-process pub/sub bus.
 
    Every kanban mutation (status change, frontmatter edit, comment) is appended
-   to an EDN-file-backed ledger under `<board-dir>/.events/ledger.edn`. The ledger
-   is the audit record of board activity — see [[eta-mu.kanban.transition]] for the
-   single enforced write path that produces status-change events."
-  (:require ["node:path" :as path]
-            [promethean.records.edn.event-admission :as edn-ea]
-            [promethean.openplanner-protocols :as protocols]))
-
-(defonce ledger-cache (atom {}))
-
-(defn get-ledger [board-dir]
-  (or (@ledger-cache board-dir)
-      (let [events-dir (path/join board-dir ".events")
-            ledger (edn-ea/create-edn-event-admission events-dir)]
-        (swap! ledger-cache assoc board-dir ledger)
-        ledger)))
+   to the board's ledger (see [[rheos.backend.infra.ledger]] for the backing
+   store at `<board-dir>/.events/ledger.edn`) AND published to in-process
+   subscribers. The SSE endpoint subscribes here, so any actor's mutation — HTTP,
+   CLI (picked up by the file watcher), or drag-drop — flows to the live UI
+   through the one [[record!]] chokepoint. See [[rheos.backend.domain.transition]]
+   for the single enforced write path that produces status-change events."
+  (:require [promethean.openplanner-protocols :as protocols]))
 
 (defn- kanban-envelope [board-id event-type payload]
   {:event/type (str "kanban." event-type)
@@ -26,11 +19,62 @@
    :delivery/mode "tell"
    :payload (assoc payload :type event-type)})
 
+(defn envelope->kanban-event [envelope]
+  (let [payload (or (:payload envelope) {})]
+    {:board (or (:session/id envelope) "")
+     :task-id (or (:task-id payload) "")
+     :source (or (:source payload) "cli")
+     :type (or (:type payload) "file-changed")
+     :from (:from payload)
+     :to (:to payload)
+     :key (:key payload)
+     :old-value (:old-value payload)
+     :new-value (:new-value payload)
+     :write-id (:write-id payload)
+     :timestamp (or (:event/time envelope) (.toISOString (new js/Date)))
+     :agent (or (:agent payload) "unknown")
+     :details (:details payload)}))
+
+;; ---------------------------------------------------------------------------
+;; In-process pub/sub bus — the SSE stream's source. defonce so subscriptions
+;; survive hot reloads of this namespace.
+;; ---------------------------------------------------------------------------
+
+(defonce ^:private listeners (atom #{}))
+
+(defn subscribe!
+  "Register `callback`, invoked with each recorded event as a kanban-event map.
+   Returns a zero-arg unsubscribe fn."
+  [callback]
+  (swap! listeners conj callback)
+  (fn [] (swap! listeners disj callback)))
+
+(defn publish!
+  "Fan a kanban-event out to every subscriber. A throwing listener is isolated so
+   one dead SSE socket can't break the others."
+  [kanban-event]
+  (doseq [cb @listeners]
+    (try (cb kanban-event)
+         (catch :default e (js/console.error "[events] publish! listener error:" e)))))
+
+(defn- record!
+  "Append `envelope` to the ledger, then publish it to in-process subscribers.
+   Returns the append promise so callers keep awaiting persistence."
+  [ledger envelope]
+  (-> (protocols/append-event! ledger envelope)
+      (.then (fn [result]
+               (publish! (envelope->kanban-event envelope))
+               result))))
+
+;; ---------------------------------------------------------------------------
+;; Emission
+;; ---------------------------------------------------------------------------
+
 (defn emit-status-change!
   ([ledger board-id task-id from to write-id]
    (emit-status-change! ledger board-id task-id from to write-id "cli"))
   ([ledger board-id task-id from to write-id source]
-   (protocols/append-event!
+   (record!
     ledger
     (kanban-envelope board-id "status-change"
                      {:task-id task-id :from from :to to
@@ -40,7 +84,7 @@
   ([ledger board-id task-id key old-value new-value write-id]
    (emit-frontmatter-change! ledger board-id task-id key old-value new-value write-id "cli"))
   ([ledger board-id task-id key old-value new-value write-id source]
-   (protocols/append-event!
+   (record!
     ledger
     (kanban-envelope board-id "frontmatter"
                      {:task-id task-id :key key
@@ -51,7 +95,7 @@
   ([ledger board-id task-id write-id]
    (emit-comment! ledger board-id task-id write-id "cli"))
   ([ledger board-id task-id write-id source]
-   (protocols/append-event!
+   (record!
     ledger
     (kanban-envelope board-id "comment"
                      {:task-id task-id :source source
@@ -72,19 +116,3 @@
                  (filterv (fn [e]
                             (every? (fn [[k v]] (= (get-in e [:payload k]) v)) filter-spec))
                           evts))))))
-
-(defn envelope->kanban-event [envelope]
-  (let [payload (or (:payload envelope) {})]
-    {:board (or (:session/id envelope) "")
-     :task-id (or (:task-id payload) "")
-     :source (or (:source payload) "cli")
-     :type (or (:type payload) "file-changed")
-     :from (:from payload)
-     :to (:to payload)
-     :key (:key payload)
-     :old-value (:old-value payload)
-     :new-value (:new-value payload)
-     :write-id (:write-id payload)
-     :timestamp (or (:event/time envelope) (.toISOString (new js/Date)))
-     :agent (or (:agent payload) "unknown")
-     :details (:details payload)}))

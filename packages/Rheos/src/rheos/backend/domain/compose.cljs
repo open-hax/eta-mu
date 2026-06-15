@@ -1,8 +1,8 @@
-(ns eta-mu.kanban.compose
+(ns rheos.backend.domain.compose
   "Board composition — query DSL for filtering across multiple boards."
   (:require [clojure.string :as str]
-            [eta-mu.kanban.board :as board]
-            [eta-mu.kanban.tasks :as tasks]))
+            [rheos.backend.domain.board :as board]
+            [rheos.backend.infra.task-store :as tasks]))
 
 (defn- normalize-value [v]
   (cond
@@ -52,9 +52,6 @@
 
 (defn- meta-clause? [clause]
   (str/starts-with? (name (first clause)) "meta."))
-
-(defn- task-clause? [clause]
-  (not (meta-clause? clause)))
 
 (defn- filter-task [task {:keys [status priority labels where-clauses]}]
   (and (or (empty? status) (some #(= (:status task) %) status))

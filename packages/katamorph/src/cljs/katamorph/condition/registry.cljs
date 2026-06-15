@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.condition.registry
+(ns katamorph.condition.registry
   "Registry for trigger condition functions.
    Conditions are pure predicates: (condition-fn event actor trigger config) -> boolean.
    Condition expressions in trigger contracts are evaluated safely against this registry."

@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-rewrite-boundary-adapters"
 title: "Eta-mu CLJS Rewrite — Boundary Adapters"
-status: "todo"
+status: "in_progress"
 priority: P0
 labels: ["tasks", "cljs", "rewrite", "extern", "13sp"]
 created_at: "2026-05-29T21:18:48Z"

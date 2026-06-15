@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.law.url
+(ns katamorph.law.url
   (:require [clojure.string :as str]))
 
 (defn looks-like-url?  [value]

@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.action.anonymous
+(ns katamorph.action.anonymous
   "Compile :action/fn forms into callable anonymous action handlers.
 
    Anonymous actions are inline (fn [ctx action] body) forms carried by

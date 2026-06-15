@@ -1,6 +1,6 @@
-(ns eta-mu.kanban.content-parser-test
+(ns rheos.backend.shape.content-parser-test
   (:require [cljs.test :refer [deftest is testing]]
-            [eta-mu.kanban.content-parser :as parser]))
+            [rheos.backend.shape.content-parser :as parser]))
 
 (deftest test-parse-frontmatter
   (testing "parses quoted string values"

@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.store.law
+(ns katamorph.store.law
   "Contracts for store resources: document schema guards.
 
    Stores declare a Malli :store/schema. Every inserted document must satisfy

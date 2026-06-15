@@ -1,26 +1,29 @@
-(ns eta-mu.kanban.server
+(ns rheos.backend.infra.http-server
   "Fastify HTTP server for the kanban board."
   (:require ["fastify" :default Fastify]
             ["@fastify/cors" :default fastifyCors]
             ["@fastify/static" :default fastifyStatic]
             ["node:path" :as path]
-            [eta-mu.kanban.board :as board]
-            [eta-mu.kanban.compose :as compose]
-            [eta-mu.kanban.config :as config]
-            [eta-mu.kanban.content-parser :as content-parser]
-            [eta-mu.kanban.events :as events]
-            [eta-mu.kanban.tasks :as tasks]
-            [eta-mu.kanban.transition :as transition]
-            [eta-mu.kanban.watcher :as watcher]))
+            ["node:fs/promises" :as fsp]
+            ["node:child_process" :as cp]
+            [rheos.backend.domain.board :as board]
+            [rheos.backend.domain.compose :as compose]
+            [rheos.backend.infra.config :as config]
+            [rheos.backend.shape.content-parser :as content-parser]
+            [rheos.backend.domain.events :as events]
+            [rheos.backend.infra.chat-proxy :as chat-proxy]
+            [rheos.backend.infra.ledger :as ledger]
+            [rheos.backend.infra.mcp :as mcp]
+            [rheos.backend.infra.projects :as projects]
+            [rheos.backend.infra.task-store :as tasks]
+            [rheos.backend.domain.transition :as transition]
+            [rheos.backend.infra.watcher :as watcher]))
 
 (defonce server-state (atom nil))
-(defonce project-state (atom nil))
+;; Host/port captured at boot so the hot-reload after-load hook can re-listen.
+(defonce boot-state (atom nil))
 
-(defn- find-project [project-id]
-  (let [projects (:projects @project-state)
-        default-id (:default-project-id @project-state)
-        pid (or project-id default-id)]
-    (first (filter #(= (:id %) pid) projects))))
+(def ^:private find-project projects/find-project)
 
 (defn- serialize-task [task]
   #js {:uuid (:uuid task)
@@ -49,13 +52,13 @@
 
 (defn- handle-get-projects [_req reply]
   (send-json reply
-             #js {:defaultProjectId (:default-project-id @project-state)
-                  :projects (clj->js (mapv (fn [p] #js {:id (:id p) :title (:title p)}) (:projects @project-state)))}))
+             #js {:defaultProjectId (projects/default-id)
+                  :projects (clj->js (mapv (fn [p] #js {:id (:id p) :title (:title p)}) (projects/all)))}))
 
 (defn- handle-get-boards [_req reply]
   (send-json reply
-             #js {:defaultProjectId (:default-project-id @project-state)
-                  :projects (clj->js (mapv (fn [p] #js {:id (:id p) :title (:title p) :meta (clj->js (:meta p))}) (:projects @project-state)))}))
+             #js {:defaultProjectId (projects/default-id)
+                  :projects (clj->js (mapv (fn [p] #js {:id (:id p) :title (:title p) :meta (clj->js (:meta p))}) (projects/all)))}))
 
 (defn ^:async handle-get-board [^js req reply]
   (let [project (find-project (.. req -query -project))]
@@ -72,7 +75,7 @@
     (if-not project
       (send-error reply 404 "unknown project")
       (try
-        (let [ledger (events/get-ledger (:tasks-dir project))
+        (let [ledger (ledger/get-ledger (:tasks-dir project))
               task-id (.. req -query -taskId)
               limit (.. req -query -limit)
               filter-spec (if task-id {:task-id task-id} {})
@@ -86,7 +89,7 @@
     (if-not project
       (send-error reply 404 "unknown project")
       (try
-        (let [ledger (events/get-ledger (:tasks-dir project))
+        (let [ledger (ledger/get-ledger (:tasks-dir project))
               drift-evts (await (events/query-events ledger {:type "drift-detected"}))]
           (send-json reply #js {:events (clj->js (mapv events/envelope->kanban-event drift-evts)) :total (count drift-evts)}))
         (catch :default err (send-error reply 500 (.-message err)))))))
@@ -103,7 +106,7 @@
           (if-not task
             (send-error reply 404 "unknown uuid")
             (let [task-path (:source-path task)
-                  fs (js/require "fs/promises")
+                  fs fsp
                   raw (try (await (.readFile fs task-path "utf-8")) (catch :default _ nil))
                   parsed (content-parser/parse-task-content (or raw ""))]
               (send-json reply #js {:uuid uuid
@@ -150,13 +153,13 @@
                 (if-not task
                   (send-error reply 404 "unknown uuid")
                   (let [task-path (:source-path task)
-                        fs (js/require "fs/promises")
+                        fs fsp
                         raw (await (.readFile fs task-path "utf-8"))
                         updated (content-parser/update-frontmatter raw key value)
                         write-id (events/generate-write-id)
-                        ledger (events/get-ledger (:tasks-dir project))]
+                        ledger (ledger/get-ledger (:tasks-dir project))]
                     (await (.writeFile fs task-path updated "utf-8"))
-                    (events/emit-frontmatter-change! ledger (:id project) uuid key nil value write-id)
+                    (events/emit-frontmatter-change! ledger (:id project) uuid key nil value write-id "web")
                     (let [new-parsed (content-parser/parse-task-content updated)]
                       (send-json reply #js {:uuid uuid
                                             :frontmatter (clj->js (:frontmatter new-parsed))
@@ -176,7 +179,7 @@
           (if-not task
             (send-error reply 404 "unknown uuid")
             (let [task-path (:source-path task)
-                  child-process (js/require "child_process")]
+                  child-process cp]
               ;; Open in system default editor
               (.exec child-process (str "xdg-open \"" task-path "\" 2>/dev/null || open \"" task-path "\" 2>/dev/null"))
               (send-json reply #js {:ok true}))))
@@ -184,12 +187,39 @@
 
 (defn- handle-health [_req reply] (send-json reply #js {:ok true}))
 
+(defn handle-events-stream
+  "Server-Sent Events stream of ledger activity. Subscribes to the in-process
+   event bus ([[rheos.backend.domain.events/subscribe!]]) so every actor's
+   mutation — HTTP, drag-drop, or external/CLI edits caught by the file watcher —
+   pushes to connected browsers, which refetch the board in response."
+  [^js req ^js reply]
+  ;; Take ownership of the socket so Fastify doesn't try to serialize a reply.
+  (.hijack reply)
+  (let [raw (.-raw reply)]
+    (.writeHead raw 200
+                #js {"Content-Type" "text/event-stream"
+                     "Cache-Control" "no-cache"
+                     "Connection" "keep-alive"
+                     ;; defeat proxy buffering so events arrive promptly
+                     "X-Accel-Buffering" "no"})
+    (.write raw ": connected\n\n")
+    (let [unsub (events/subscribe!
+                 (fn [ev]
+                   (try (.write raw (str "data: " (js/JSON.stringify (clj->js ev)) "\n\n"))
+                        (catch :default _ nil))))
+          heartbeat (js/setInterval
+                     (fn [] (try (.write raw ": ping\n\n") (catch :default _ nil)))
+                     25000)]
+      (.on (.-raw req) "close"
+           (fn []
+             (js/clearInterval heartbeat)
+             (unsub))))))
+
 (defn ^:async handle-compose [^js req reply]
   (try
     (let [query-params (js->clj (.. req -query) :keywordize-keys true)
           query (compose/parse-compose-query query-params)
-          projects (:projects @project-state)
-          snapshot (await (compose/compose-snapshot projects query))]
+          snapshot (await (compose/compose-snapshot (projects/all) query))]
       (send-json reply
                  #js {:generatedAt (:generated-at snapshot)
                       :totalTasks (:total-tasks snapshot)
@@ -219,48 +249,81 @@
   (.get app "/api/board" handle-get-board)
   (.get app "/api/board/compose" handle-compose)
   (.get app "/api/events" handle-get-events)
+  (.get app "/api/events/stream" handle-events-stream)
   (.get app "/api/drift" handle-get-drift)
   (.get app "/api/task/:uuid/content" handle-get-task-content)
   (.patch app "/api/task/:uuid/frontmatter" handle-update-frontmatter)
   (.post app "/api/task/:uuid/status" handle-post-status)
   (.post app "/api/task/:uuid/open-editor" handle-open-editor)
+  ;; MCP Streamable-HTTP endpoint — the orchestrator agent's toolbox (Slice 3).
+  (.post app "/mcp" mcp/handle-post!)
+  ;; Orchestrator chat — proxied to knoxx with the API key injected server-side.
+  (.post app "/api/chat/start" chat-proxy/handle-start)
+  (.post app "/api/chat" chat-proxy/handle-send)
+  (.get app "/api/chat/stream" chat-proxy/handle-stream)
   (.get app "/api/health" handle-health))
 
-(defn ^:async start!
-  ([] (start! "127.0.0.1" 8791))
-  ([host port]
-   (let [^js app (Fastify. #js {:logger true})
-         current-dir (js/process.cwd)
-         static-dir (path/join current-dir "resources" "public")
-          web-dir (path/join current-dir "dist" "web")]
-      (await (.register app fastifyCors))
-      (await (.register app fastifyStatic #js {:root web-dir :prefix "/"}))
-      (register-routes app)
-     (await (.listen app #js {:host host :port port}))
-     (reset! server-state app)
-     (js/console.log "Kanban server listening on http://" host ":" port)
-     app)))
+(defn ^:async start-http!
+  "Create a fresh Fastify app, bind routes, and listen. Stored in `server-state`
+   so the hot-reload hooks can close and recreate it without disturbing the
+   durable watchers/project state."
+  [host port]
+  (let [^js app (Fastify. #js {:logger true})
+        current-dir (js/process.cwd)
+        web-dir (path/join current-dir "dist" "web")]
+    (await (.register app fastifyCors))
+    (await (.register app fastifyStatic #js {:root web-dir :prefix "/"}))
+    (register-routes app)
+    (await (.listen app #js {:host host :port port}))
+    (reset! server-state app)
+    (js/console.log "Kanban server listening on http://" host ":" port)
+    app))
 
-(defn ^:async stop! []
+(defn ^:async stop-http!
+  "Close the current Fastify listener, releasing the port. Leaves watchers and
+   project state intact — they are durable across hot reloads."
+  []
   (when-let [^js app @server-state]
-    (watcher/stop-all-watchers!)
     (await (.close app))
-    (reset! server-state nil)
-    (js/console.log "Kanban server stopped")))
+    (reset! server-state nil)))
 
-(defn ^:async init []
+(defn ^:async init
+  "Process entry (shadow :init-fn). Runs once at boot: load config, start the
+   durable file watchers, remember host/port, then start the HTTP server. On hot
+   reload this is NOT re-run — the load hooks below cycle only the HTTP listener."
+  []
   (let [config-path (aget js/process.env "KANBAN_CONFIG")
         host (or (aget js/process.env "KANBAN_HOST") "127.0.0.1")
         port (js/parseInt (or (aget js/process.env "KANBAN_PORT") "8791"))
         loaded (await (config/load-config config-path))
-        projects (config/resolve-configured-projects loaded nil)]
-    (reset! project-state projects)
-    (js/console.log "Loaded" (count (:projects projects)) "projects")
+        resolved (config/resolve-configured-projects loaded nil)]
+    (projects/set-projects! resolved)
+    (reset! boot-state {:host host :port port})
+    (js/console.log "Loaded" (count (:projects resolved)) "projects")
     (when config-path (js/console.log "Config:" config-path))
     ;; Start file watchers for all projects
-    (doseq [project (:projects projects)]
+    (doseq [project (:projects resolved)]
       (watcher/start-watcher! (:id project) (:tasks-dir project)))
-    (await (start! host port))))
+    (await (start-http! host port))))
 
-(defn ^:export main []
-  (init))
+(defn ^:async ^:dev/before-load-async stop-http-before-load!
+  "Hot-reload: close the HTTP listener before new code loads so the port is free."
+  [done]
+  (try
+    (await (stop-http!))
+    (js/console.log "[rheos-hot-reload] HTTP server closed")
+    (catch :default err
+      (js/console.error "[rheos-hot-reload] failed to close HTTP server" err))
+    (finally (done))))
+
+(defn ^:async ^:dev/after-load-async start-http-after-load!
+  "Hot-reload: re-create the HTTP server with freshly-loaded handlers. The durable
+   watchers and project state established by `init` survive untouched."
+  [done]
+  (let [{:keys [host port]} @boot-state]
+    (try
+      (await (start-http! (or host "127.0.0.1") (or port 8791)))
+      (js/console.log "[rheos-hot-reload] HTTP server restarted")
+      (catch :default err
+        (js/console.error "[rheos-hot-reload] failed to restart HTTP server" err))
+      (finally (done)))))

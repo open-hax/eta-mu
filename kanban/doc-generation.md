@@ -1,8 +1,8 @@
 ---
 uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-doc-generation-md"
 title: "Documentation Generation Setup"
-status: incoming
-priority: P3
+status: "rejected"
+priority: "P3"
 labels: ["specs", "migrated-spec"]
 created_at: "2026-05-29T04:29:39.349Z"
 source: "orgs/open-hax/eta-mu/specs/doc-generation.md"

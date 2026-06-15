@@ -1,13 +1,14 @@
-(ns eta-mu.kanban.transition
+(ns rheos.backend.domain.transition
   "The single, FSM-enforced, ledger-backed write path for status changes.
 
    Both the HTTP server and the CLI route status moves through [[move-task!]] so
    that no transition can bypass the FSM and every successful move is recorded in
    the event ledger. This is what makes the board self-enforcing rather than vibes."
-  (:require [eta-mu.kanban.fsm :as fsm]
-            [eta-mu.kanban.events :as events]
-            [eta-mu.kanban.tasks :as tasks]
-            [eta-mu.kanban.task-writeback :as writeback]))
+  (:require [rheos.backend.law.fsm :as fsm]
+            [rheos.backend.domain.events :as events]
+            [rheos.backend.infra.ledger :as ledger]
+            [rheos.backend.infra.task-store :as tasks]
+            [rheos.backend.infra.task-writeback :as writeback]))
 
 (defn current-counts
   "Map of status -> number of tasks currently in it (for WIP-limit checks)."
@@ -31,9 +32,14 @@
             decision (fsm/evaluate-transition fsm from new-status counts)]
         (if-not (:allowed? decision)
           {:ok false :reason (:reason decision) :from from :to new-status}
-          (let [write-id (events/generate-write-id)
-                ledger (events/get-ledger (:tasks-dir project))
-                updated (await (writeback/write-task-status task (:tasks-dir project) new-status))]
-            (await (events/emit-status-change! ledger (:id project) (:uuid task)
-                                               from new-status write-id (or source "cli")))
-            {:ok true :task updated :from from :to new-status}))))))
+          ;; Structurally valid: now run any command gate (build/lint/test) before
+          ;; committing the move. A failing gate rejects the transition and writes nothing.
+          (let [gate (await (fsm/run-gate decision (or (:gate-cwd project) (js/process.cwd))))]
+            (if-not (:allowed? gate)
+              {:ok false :reason (:reason gate) :from from :to new-status}
+              (let [write-id (events/generate-write-id)
+                    ledger (ledger/get-ledger (:tasks-dir project))
+                    updated (await (writeback/write-task-status task (:tasks-dir project) new-status))]
+                (await (events/emit-status-change! ledger (:id project) (:uuid task)
+                                                   from new-status write-id (or source "cli")))
+                {:ok true :task updated :from from :to new-status}))))))))

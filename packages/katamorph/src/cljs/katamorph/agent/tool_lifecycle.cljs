@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.agent.tool-lifecycle
+(ns katamorph.agent.tool-lifecycle
   "Pure transformations for provider tool lifecycle events."
   (:require [clojure.string :as str]))
 

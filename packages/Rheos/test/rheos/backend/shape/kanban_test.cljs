@@ -1,6 +1,6 @@
-(ns eta-mu.kanban.shape-test
+(ns rheos.backend.shape.kanban-test
   (:require [cljs.test :refer [deftest testing is]]
-            [eta-mu.kanban.shape :as shape]))
+            [rheos.backend.shape.kanban :as shape]))
 
 (deftest valid-task
   (testing "A well-formed task passes validation"

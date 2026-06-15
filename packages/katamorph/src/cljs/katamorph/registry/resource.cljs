@@ -1,4 +1,4 @@
-(ns open-hax.contract-runtime.registry.resource
+(ns katamorph.registry.resource
   "Generic registry protocol for EDN-described resources.
 
    A registry advertises resources of one kind. Actions, triggers, schedules,

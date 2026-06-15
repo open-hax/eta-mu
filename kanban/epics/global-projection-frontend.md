@@ -1,7 +1,7 @@
 ---
 uuid: "global-projection-frontend"
 title: "Global Projection Frontend — All Boards, Filter Bar, Composed View"
-status: "todo"
+status: "in_progress"
 priority: P0
 labels: ["epics", "cljs", "helix", "kanban", "projection", "frontend"]
 created_at: "2026-06-09T00:00:00Z"

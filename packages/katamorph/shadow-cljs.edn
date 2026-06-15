@@ -1,26 +1,30 @@
-{:source-paths ["src/cljs"]
+{:source-paths ["src/cljs" "test/cljs"]
  :dependencies [[metosin/malli "0.16.4"]]
+ :nrepl {:port 9001}
  :builds
- {:lib
+ {:test
+  {:target :node-test
+   ;; .cjs so node runs it as CommonJS under this package's "type":"module".
+   :output-to "dist/test.cjs"
+   :ns-regexp "-test$"
+   :autorun true}
+
+  ;; katamorph is consumed via CLJS source-path by other packages, so this esm
+  ;; build is for external JS consumers. It exports the manifest grammar — the
+  ;; package's front door ("data as interpreter": namespace file -> resources).
+  ;; (esm :exports is a map of name->var, never a set of namespaces.)
+  :lib
   {:target :esm
-   :output-dir "dist"
-   :modules {:lib {:exports #{open-hax.contract-runtime.manifest
-                              open-hax.contract-runtime.store.law
-                              open-hax.contract-runtime.store.protocol
-                              open-hax.contract-runtime.store.memory
-                              open-hax.contract-runtime.store.registry
-                              open-hax.contract-runtime.law.url
-                              open-hax.contract-runtime.action.anonymous
-                              open-hax.contract-runtime.action.interpreter
-                              open-hax.contract-runtime.driver.registry
-                              open-hax.contract-runtime.condition.registry
-                              open-hax.contract-runtime.filter.registry
-                              open-hax.contract-runtime.registry.resource
-                              open-hax.contract-runtime.agent.context
-                              open-hax.contract-runtime.agent.reasoning
-                              open-hax.contract-runtime.agent.turn-guards
-                              open-hax.contract-runtime.agent.tool-lifecycle
-                              open-hax.contract-runtime.agent.text-delta}}}
+   :runtime :node
+   :output-dir "dist/lib"
+   :modules {:lib {:exports {:isNamespaceFile katamorph.manifest/namespace-file?
+                             :namespaceFileDefinitions katamorph.manifest/namespace-file-definitions
+                             :qualifiedId katamorph.manifest/qualified-id
+                             :qualifiedIdStr katamorph.manifest/qualified-id-str
+                             :entryKinds katamorph.manifest/entry-kinds
+                             :facetKinds katamorph.manifest/facet-kinds
+                             :anonymousFacets katamorph.manifest/anonymous-facets}}}
+   :js-options {:js-provider :import}
    :compiler-options
    {:output-feature-set :es-next
     :optimizations :simple

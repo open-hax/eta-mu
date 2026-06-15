@@ -1,4 +1,4 @@
-(ns eta-mu.kanban.content-parser
+(ns rheos.backend.shape.content-parser
   "Parse task markdown into frontmatter + body/comment sections."
   (:require [clojure.string :as str]))
 
@@ -72,7 +72,7 @@
                         (vector? v) (str (name k) ": [" (str/join ", " (mapv #(str "\"" % "\"") v)) "]")
                         (string? v) (str (name k) ": \"" v "\"")
                         (nil? v) (str (name k) ": ")
-                        :else (str (name k) ": " (str v))))
+                        :else (str (name k) ": " v)))
                     frontmatter)]
     (str "---\n" (str/join "\n" lines) "\n---")))
 

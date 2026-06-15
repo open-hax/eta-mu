@@ -1,4 +1,4 @@
-(ns eta-mu.kanban.config
+(ns rheos.backend.infra.config
   "Config loading and project resolution from openhax.kanban.json."
   (:require ["node:fs/promises" :as fsp]
             ["node:path" :as path]

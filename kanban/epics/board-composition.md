@@ -1,7 +1,7 @@
 ---
 uuid: "board-composition"
 title: "Board Composition: Query DSL + Multi-Board Projections"
-status: "todo"
+status: "in_progress"
 priority: P0
 labels: ["epics", "cljs", "kanban", "composition", "query-dsl"]
 created_at: "2026-06-08T00:00:00Z"
