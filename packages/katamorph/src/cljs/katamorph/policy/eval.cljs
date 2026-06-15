@@ -15,11 +15,14 @@
 ;; ── Symbol resolution ─────────────────────────────────────────────────────────
 
 (defn- resolve-symbol
+  "Resolve a symbol against the context. Special symbols `ctx` and `it` are
+   handled first; otherwise look up the symbol directly, then as a keyword."
   [sym ctx _injected-fns]
   (case sym
     ctx ctx
     it  (:it ctx)
-    nil))
+    (or (get ctx sym)
+        (get ctx (keyword sym)))))
 
 ;; ── Core eval ─────────────────────────────────────────────────────────────────
 
@@ -129,11 +132,10 @@
    Returns the evaluation result, or nil on any error (never throws)."
   ([form ctx]
    (eval-form form ctx {}))
-  ([form ctx {:keys [_trace injected]}]
-   (try
-     (let [result (eval-form* form ctx (or injected {}))]
-       (when result result))
-     (catch :default _ nil))))
+   ([form ctx {:keys [_trace injected]}]
+    (try
+      (eval-form* form ctx (or injected {}))
+      (catch :default _ nil))))
 
 (defn eval-forms
   "Evaluate multiple forms under a logical operator.

@@ -20,13 +20,13 @@
 
 (deftest eval-form-equality
   (is (true? (policy-eval/eval-form '(= 1 1) {})))
-  (is (nil? (policy-eval/eval-form '(= 1 2) {})))
+  (is (false? (policy-eval/eval-form '(= 1 2) {})))
   (is (true? (policy-eval/eval-form '(not= 1 2) {})))
-  (is (nil? (policy-eval/eval-form '(not= 1 1) {}))))
+  (is (false? (policy-eval/eval-form '(not= 1 1) {}))))
 
 (deftest eval-form-comparison
   (is (true? (policy-eval/eval-form '(< 1 2) {})))
-  (is (nil? (policy-eval/eval-form '(< 2 1) {})))
+  (is (false? (policy-eval/eval-form '(< 2 1) {})))
   (is (true? (policy-eval/eval-form '(> 2 1) {})))
   (is (true? (policy-eval/eval-form '(<= 1 1) {})))
   (is (true? (policy-eval/eval-form '(>= 2 1) {}))))
@@ -34,7 +34,7 @@
 (deftest eval-form-logic
   (testing "not"
     (is (true? (policy-eval/eval-form '(not false) {})))
-    (is (nil? (policy-eval/eval-form '(not true) {}))))
+    (is (false? (policy-eval/eval-form '(not true) {}))))
   (testing "and"
     (is (true? (policy-eval/eval-form '(and true true) {})))
     (is (nil? (policy-eval/eval-form '(and true false) {})))
@@ -63,9 +63,9 @@
 
 (deftest eval-form-predicates
   (is (true? (policy-eval/eval-form '(some? 1) {})))
-  (is (nil? (policy-eval/eval-form '(some? nil) {})))
+  (is (false? (policy-eval/eval-form '(some? nil) {})))
   (is (true? (policy-eval/eval-form '(nil? nil) {})))
-  (is (nil? (policy-eval/eval-form '(nil? 1) {})))
+  (is (false? (policy-eval/eval-form '(nil? 1) {})))
   (is (true? (policy-eval/eval-form '(empty? []) {})))
   (is (true? (policy-eval/eval-form '(string? "x") {}))))
 
@@ -88,7 +88,7 @@
   (testing "contract/apply calls injected fn"
     (let [injected {:check/fn (fn [v] (= v "ok"))}]
       (is (true? (policy-eval/eval-form '(contract/apply [:check/fn "ok"]) {} {:injected injected})))
-      (is (nil? (policy-eval/eval-form '(contract/apply [:check/fn "bad"]) {} {:injected injected}))))))
+      (is (false? (policy-eval/eval-form '(contract/apply [:check/fn "bad"]) {} {:injected injected}))))))
 
 (deftest eval-forms-all
   (is (true? (policy-eval/eval-forms :all [true true] {} {})))
