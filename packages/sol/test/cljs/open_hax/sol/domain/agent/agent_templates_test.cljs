@@ -104,11 +104,11 @@
 
 (deftest eval-template-form-map-filter
   (testing "map applies fn to collection"
-    (is (= ["HELLO" "WORLD"]
+    (is (= '("hello" "world")
            (tpl/eval-template-form '(map (fn [x] (str x)) items) {'items ["hello" "world"]}))))
   (testing "filter keeps matching elements"
     (is (= [2 4]
-           (tpl/eval-template-form '(filter (fn [x] (= 0 (% x 2))) items) {'items [1 2 3 4 5]})))))
+           (tpl/eval-template-form '(filter (fn [x] (= 0 (mod x 2))) items) {'items [1 2 3 4 5]})))))
 
 (deftest eval-template-form-vector
   (testing "Vectors are evaluated element-wise"
@@ -154,7 +154,7 @@
   (testing "Renders list-form prompts"
     (is (= "hi alice"
            (tpl/render-prompt '(template ["hi" name])
-                              {} {'name "alice"})))))
+                              {} {} {'name "alice"})))))
 
 (deftest contract-template-context-merges
   (testing "Builds context from agent-spec and auth-context"

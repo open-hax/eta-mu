@@ -88,7 +88,7 @@
   #{"template" "quote" "do" "let" "if" "when" "fn" "fn*"
     "str" "pr-str" "name" "count" "first" "second" "last" "rest"
     "vec" "distinct" "sort" "keys" "vals" "get" "get-in" "map"
-    "filter" "keep" "join" "not" "and" "or" "="})
+    "filter" "keep" "join" "not" "and" "or" "=" "mod" "rem"})
 
 (def ^:private env-missing #js {})
 
@@ -99,7 +99,8 @@
      (remove nil?
              [value
               (when raw raw)
-              (when raw (symbol raw))]))))
+              (when raw (symbol raw))
+              (when raw (keyword raw))]))))
 
 (defn- lookup-env
   [env value]
@@ -320,17 +321,22 @@
       (= "and" op-name) (eval-and-call args env)
       (= "or" op-name) (eval-or-call args env)
       (= "=" op-name) (apply = (map #(eval-template-form % env) args))
+      (= "mod" op-name) (mod (eval-template-form (first args) env)
+                             (eval-template-form (second args) env))
+      (= "rem" op-name) (rem (eval-template-form (first args) env)
+                             (eval-template-form (second args) env))
       :else (throw (js/Error. (str "Unsupported contract template form: " op-name))))))
 
 (defn eval-template-form
   "Evaluate a trusted contract template form against env."
   [form env]
   (cond
+    (vector? form) (mapv #(eval-template-form % env) form)
     (template-form? form) (eval-list-call form env)
     (executable-vector-form? form env) (eval-list-call form env)
-    (symbol? form) (get env form)
+    (symbol? form) (let [v (lookup-env env form)]
+                     (if (identical? env-missing v) nil v))
     (keyword? form) form
-    (vector? form) (mapv #(eval-template-form % env) form)
     (map? form) (into {} (map (fn [[k v]] [k (eval-template-form v env)]) form))
     (seq? form) (eval-list-call form env)
     :else form))
@@ -427,8 +433,8 @@
    (let [ctx (contract-template-context agent-spec auth-context template-context)]
      (cond
        (string? prompt) (render-legacy-placeholders prompt auth-context ctx)
-       (template-form? prompt) (str (eval-template-form prompt {'ctx ctx}))
-       (seq? prompt) (str (eval-template-form prompt {'ctx ctx}))
+        (template-form? prompt) (str (eval-template-form prompt (merge {'ctx ctx} ctx)))
+        (seq? prompt) (str (eval-template-form prompt (merge {'ctx ctx} ctx)))
        (some? prompt) (str prompt)
        :else nil))))
 
@@ -475,7 +481,7 @@
    :channel (or (:channelName payload) (:channelId payload))
    :channel-id (:channelId payload)
    :timestamp (:timestamp event)
-   :message-id (:messageId payload)
+   :message-id (or (:messageId payload) (:messageId event))
    :text (or (:content payload) (:text payload) (:summary payload) (:payloadPreview payload) "")})
 
 (defn event-template-context

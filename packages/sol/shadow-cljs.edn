@@ -101,7 +101,7 @@
   :test
   {:target :node-test,
    :output-to "target/test/test.cjs",
-   :ns-regex ["open-hax.sol.*-test$"],
+    :ns-regexp "open-hax\\.sol\\..*-test$",
    :autorun true,
    :js-options {:resolve {"@open-hax/eta-mu-cli" {:target :file
                                                       :file "test/js/eta_mu_cli_test_stub.cjs"}}},

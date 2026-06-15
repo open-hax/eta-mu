@@ -201,7 +201,7 @@
   [value]
   (case (some-> value str str/lower-case)
     ("image" "image_url" "output_image") "image"
-    ("audio" "audio_url" "output_audio") "audio"
+    ("audio" "audio_url" "input_audio" "output_audio") "audio"
     ("video" "video_url" "output_video") "video"
     ("document" "file" "output_file") "document"
     nil))
