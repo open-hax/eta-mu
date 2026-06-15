@@ -42,7 +42,10 @@
       (str/starts-with? current previous) (let [appended (.slice current (count previous))]
                                             (if (duplicated-prefix? previous appended)
                                               (.slice appended (count previous))
-                                              appended))
+                                              (let [trimmed (str/triml appended)]
+                                                (if (str/starts-with? trimmed previous)
+                                                  trimmed
+                                                  appended))))
       :else (.slice current (max-overlap previous current)))))
 
 (defn suppress-replayed-prefix-delta
@@ -51,13 +54,14 @@
    Inputs:
    - previous: cumulative text already emitted
    - replay-offset: offset into previous when an in-progress replay is being
-     suppressed, or nil/0 when no replay is active
+     suppressed, or nil when no replay is active
    - delta: next provider delta
 
    Returns {:delta <safe delta> :replay-offset <next offset or nil>}."
   [previous replay-offset delta]
   (let [previous (str (or previous ""))
         delta (str (or delta ""))
+        active? (some? replay-offset)
         offset (long (or replay-offset 0))
         delta-len (count delta)
         previous-len (count previous)
@@ -67,9 +71,9 @@
                         value))]
     (cond
       (str/blank? delta)
-      {:delta "" :replay-offset (when (pos? offset) offset)}
+      {:delta "" :replay-offset (when active? offset)}
 
-      (pos? offset)
+      active?
       (let [expected (.slice previous offset (min previous-len (+ offset delta-len)))]
         (cond
           (= delta expected)

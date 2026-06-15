@@ -62,9 +62,8 @@
         (if (>= idx 0)
           (let [thinking (subs delta 0 idx)
                 after (subs delta (+ idx (count think-close)))
-                emissions (cond-> []
-                            (seq thinking) (conj {:kind :reasoning :delta thinking})
-                            (seq after) (conj {:kind :agent_message :delta after}))]
+                 emissions (cond-> [{:kind :reasoning :delta thinking}]
+                             (seq after) (conj {:kind :agent_message :delta after}))]
             {:mode :done
              :emissions emissions})
           {:mode mode
