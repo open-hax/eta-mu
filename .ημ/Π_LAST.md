@@ -51,7 +51,7 @@
 - **TS line count**: Unchanged at 174,537 lines
 
 ## Commit
-`TBD` on `feat/kanban-comments-parity`
+`11f31e1` on `feat/kanban-comments-parity`
 
 ## Tag
 `Π/feat-kanban-comments-parity/2026-06-15T221359`

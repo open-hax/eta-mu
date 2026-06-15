@@ -2,7 +2,7 @@
 # SHA256 hashes of key handoff artifacts
 
 e93d2b390afe38f0cf15fca34d4e0a63ba8f04dc54baa4277d6bc58de054b497  .ημ/Π_STATE.sexp
-9293f3b36b97158b945527430cb1453059f9d11d8ba9eb9c90a4d03651ed796d  .ημ/Π_LAST.md
+c22f72bd5e7380f16f28f23f69c279014c824141c2893d8644b07f33c9848003  .ημ/Π_LAST.md
 
 # Entry points
 62a1d1ff03b7dc4167cfb0df6389b1ac7f13b0d4ab948bbdce56826cbd6f23e7  packages/sol/shadow-cljs.edn
