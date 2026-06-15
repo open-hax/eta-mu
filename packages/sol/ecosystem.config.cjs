@@ -161,11 +161,12 @@ const apps = [
     env: {
       ...baseSolEnv,
       NODE_ENV: 'development',
-      HOST: envValue('SOL_HOST', envValue('HOST', '0.0.0.0')),
-      // Sol owns 8001. Prefer SOL_PORT and default to 8001 rather than
-      // inheriting an ambient PORT (e.g. PORT=8000 leaked from a knoxx shell),
-      // which would otherwise collide with knoxx-backend on 8000 (EADDRINUSE).
-      PORT: envValue('SOL_PORT', '8001'),
+      // Sol owns 8001. The server reads SOL_HOST/SOL_PORT first, so set those
+      // (not HOST/PORT) — they have no ambient collision and survive
+      // `pm2 restart --update-env`, which would otherwise overlay a leaked
+      // ambient PORT=8000 (knoxx's port) and cause EADDRINUSE.
+      SOL_HOST: envValue('SOL_HOST', '0.0.0.0'),
+      SOL_PORT: envValue('SOL_PORT', '8001'),
       WORKSPACE_ROOT: workspaceRoot,
       WORKSPACE_PROJECT_NAME: workspaceProjectName,
       CONTRACTS_DIR: envValue('CONTRACTS_DIR', path.join(backendDir, 'contracts')),
