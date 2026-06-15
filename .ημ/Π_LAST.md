@@ -46,6 +46,9 @@
 - **Sol lint**: Blocked — pre-existing EOF error in `test/cljs/open_hax/sol/shape/parse_test.cljs`
 - **TS line count**: Unchanged at 174,537 lines
 
+## Commit
+`82d283a` on `feat/kanban-comments-parity`
+
 ## Tag
 `Π/feat-kanban-comments-parity/2026-06-15T050647`
 
