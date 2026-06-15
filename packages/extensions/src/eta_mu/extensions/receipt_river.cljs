@@ -506,6 +506,8 @@
                           :record (clj->js record)
                           :line line})))))
 
+(def receipt-river nil)
+
 (em/defextension receipt-river
   :name "receipt-river"
   :description "Append-only per-repo receipts.edn ledger for multi-step work."
@@ -634,7 +636,7 @@
                                                         (aget state "enabled"))})))
 
   (em/on "before_agent_start"
-    :handler (fn [event ctx]
+    :handler (fn [event _ctx]
                (let [state (get-state)]
                  (when (aget state "enabled")
                    (let [repos (active-ledger-repos state)

@@ -355,6 +355,8 @@
 
 ;; ── Extension ────────────────────────────────────────────
 
+(def contract-runtime-v2 nil)
+
 (em/defextension contract-runtime-v2
   :name "contract-runtime-v2"
   :description "Contract Runtime v2: cwd-walk, EDN dispatch, policy gate, fulfillment notify/audit."

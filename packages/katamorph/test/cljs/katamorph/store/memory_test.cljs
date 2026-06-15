@@ -1,5 +1,5 @@
 (ns katamorph.store.memory-test
-  (:require [cljs.test :refer [deftest is async]]
+  (:require [cljs.test :refer [deftest is]]
             [katamorph.store.protocol :as store]
             [katamorph.store.memory :as mem]))
 
@@ -7,45 +7,34 @@
   (mem/memory-collection {:store/id :observed
                           :store/schema [:map [:message-id :string]]}))
 
-(deftest insert-then-find
-  (async done
-    (let [c (col)]
-      (-> (store/insert! c {:message-id "a"})
-          (.then (fn [doc]
-                   (is (= {:message-id "a"} doc) "insert returns the guarded doc")
-                   (store/insert! c {:message-id "b"})))
-          (.then (fn [_] (store/find-docs c {})))
-          (.then (fn [docs]
-                   (is (= 2 (count docs)) "both docs persisted in order")
-                   (is (= ["a" "b"] (mapv :message-id docs)))))
-          (.then done)))))
+(deftest ^:async insert-then-find
+  (let [c (col)]
+    (is (= {:message-id "a"} (await (store/insert! c {:message-id "a"})))
+        "insert returns the guarded doc")
+    (await (store/insert! c {:message-id "b"}))
+    (let [docs (await (store/find-docs c {}))]
+      (is (= 2 (count docs)) "both docs persisted in order")
+      (is (= ["a" "b"] (mapv :message-id docs))))))
 
-(deftest query-equality-and-limit
-  (async done
-    (let [c (col)]
-      (-> (store/insert! c {:message-id "x"})
-          (.then (fn [_] (store/insert! c {:message-id "y"})))
-          (.then (fn [_] (store/find-docs c {:message-id "y"})))
-          (.then (fn [docs]
-                   (is (= [{:message-id "y"}] docs) "field-equality query")))
-          (.then (fn [_] (store/find-docs c {:limit 1})))
-          (.then (fn [docs]
-                   (is (= 1 (count docs)) ":limit caps results")))
-          (.then done)))))
+(deftest ^:async query-equality-and-limit
+  (let [c (col)]
+    (await (store/insert! c {:message-id "x"}))
+    (await (store/insert! c {:message-id "y"}))
+    (is (= [{:message-id "y"}] (await (store/find-docs c {:message-id "y"})))
+        "field-equality query")
+    (is (= 1 (count (await (store/find-docs c {:limit 1}))))
+        ":limit caps results")))
 
-(deftest store-instance-is-callable
-  (async done
-    (let [c (col)]
-      (-> (store/insert! c {:message-id "z"})
-          (.then (fn [_] (c {})))            ;; (store query) == find-docs
-          (.then (fn [docs]
-                   (is (= [{:message-id "z"}] docs) "calling the store queries it")))
-          (.then done)))))
+(deftest ^:async store-instance-is-callable
+  (let [c (col)]
+    (await (store/insert! c {:message-id "z"}))
+    (is (= [{:message-id "z"}] (await (c {})))
+        "calling the store queries it")))
 
-(deftest invalid-insert-rejects
-  (async done
-    (let [c (col)]
-      (-> (store/insert! c {:message-id 42})
-          (.then (fn [_] (is false "expected rejection")))
-          (.catch (fn [e] (is (some? (:errors (ex-data e))) "rejects with schema errors")))
-          (.then done)))))
+(deftest ^:async invalid-insert-rejects
+  (let [c (col)]
+    (try
+      (await (store/insert! c {:message-id 42}))
+      (is false "expected rejection")
+      (catch :default e
+        (is (some? (:errors (ex-data e))) "rejects with schema errors")))))

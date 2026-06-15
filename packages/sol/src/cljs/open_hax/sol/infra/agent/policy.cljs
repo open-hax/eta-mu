@@ -1,11 +1,6 @@
 (ns open-hax.sol.infra.agent.policy
   "Chat policy enforcement: model allow-lists and rate-limiting.
-   Sol-compatible stub: allows all models and skips rate limits."
-  (:require [clojure.string :as str]))
-
-(defn- allowed-models
-  [_constraints]
-  #{})
+   Sol-compatible stub: allows all models and skips rate limits.")
 
 (defn- check-model-policy!
   "Throw if model-id is not in the allow-list."

@@ -29,7 +29,7 @@
 (defn- actor-allowed? [_actors _actor-id]
   true)
 
-(defn- effective-actor-id [actors requested-actor-id default-actor-id]
+(defn- effective-actor-id [_actors requested-actor-id default-actor-id]
   (or (some-> requested-actor-id str str/trim not-empty)
       default-actor-id))
 

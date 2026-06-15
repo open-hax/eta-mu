@@ -41,7 +41,8 @@ node_modules/
 # Local tool state
 **/.cpcache/
 **/.serena/
-**/.clj-kondo/.cache/
+**/.clj-kondo/.cache
+**/.clj-kondo/imports
 **/.lsp/
 packages/opencode-reactant/resources/public/js/main.js.map
 

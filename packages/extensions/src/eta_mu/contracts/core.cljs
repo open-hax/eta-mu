@@ -113,12 +113,6 @@
     (catch :default e
       (throw (contract-compile-error (str "EDN parse error: " (.-message e)))))))
 
-(defn- require-root!
-  [form head]
-  (when-not (= head (first form))
-    (throw (contract-compile-error (str "Root form must be (" head " ...)"))))
-  form)
-
 (defn- compile-review
   [form]
   (let [criteria (some-> form
@@ -298,14 +292,14 @@
           (reduce semantic-token-step
                   {:list-items 0 :paragraph-blocks 0 :list-item-depth 0}
                   (parse-markdown content))]
-      (max 1 (max list-items paragraph-blocks)))))
+      (max 1 list-items paragraph-blocks))))
 
 ;; ============================================================
 ;; Validation (functional, no atoms)
 ;; ============================================================
 
 (defn build-failure
-  [contract {:keys [rule-id section-id heading expected actual message]}]
+  [_contract {:keys [rule-id section-id heading expected actual message]}]
   (merge {:rule-id (or rule-id "unknown")
           :message (or message (str "Violation of " rule-id))}
          (when section-id {:section-id section-id})
@@ -420,7 +414,7 @@
     nil))
 
 (defn compile-repair-prompt
-  [contract result]
+  [_contract result]
   (when-not (:ok result)
     (str/join "\n\n"
       (for [failure (:failures result)]

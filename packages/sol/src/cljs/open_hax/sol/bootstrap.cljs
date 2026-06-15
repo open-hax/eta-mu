@@ -5,8 +5,7 @@
    - shadow-cljs calls open-hax.sol.entrypoint/init.
    - Node/npm modules are required by the CLJS namespaces that consume them.
    - This namespace orchestrates startup and manages the HTTP lifecycle."
-  (:require [clojure.string :as str]
-            [open-hax.sol.contract-runtime-deps :as contract-runtime-deps]
+  (:require [open-hax.sol.contract-runtime-deps :as contract-runtime-deps]
             [open-hax.sol.infra.agent.run-state :as run-state]
             [open-hax.sol.infra.agent.session-store :as session-store]
             [open-hax.sol.infra.core :as core]
@@ -17,14 +16,6 @@
             [open-hax.sol.domain.models :as runtime-models]
             [open-hax.sol.domain.node.path :as path]
             [open-hax.sol.runtime.state :as runtime-state]))
-
-(defn- env
-  [k default]
-  (or (aget js/process.env k) default))
-
-(defn- truthy?
-  [v]
-  (contains? #{"1" "true" "yes" "on" "y"} (-> (str (or v "")) str/trim str/lower-case)))
 
 (defn- process-uptime-ms
   []
@@ -72,7 +63,7 @@
   (core/register-app-routes! runtime app cfg))
 
 (defn- handle-app-listening!
-  [runtime app cfg]
+  [_runtime app cfg]
   (lifecycle/remember-app! app)
   (graceful-shutdown/install! app cfg)
   (notify-ready!)

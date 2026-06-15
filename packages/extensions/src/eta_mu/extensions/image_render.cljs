@@ -1,6 +1,6 @@
 (ns eta-mu.extensions.image-render
   "Render images (local files, URLs, data URLs) inline in the TUI.
-  Migrated from: ~/.ημ/agent/extensions/image-render.ts"
+   Migrated from: ~/.ημ/agent/extensions/image-render.ts"
   (:require-macros [eta-mu.core :as em])
   (:require ["node:fs/promises" :as fs]
             ["node:os" :as os]
@@ -69,12 +69,12 @@
         #js {:viewer viewer :file-path file-path})
       (catch :default _ nil))))
 
-(defn write-temp-image [buffer mime]
+(defn ^:async write-temp-image [buffer mime]
   (let [dir (path/join (os/tmpdir) "pi-render-image")
         ext (ext-from-mime mime)
         file (path/join dir (str "render-" (js/Date.now) "-" (.slice (.toString (js/Math.random) 16) 2) ext))]
-    (-> (fs/mkdir dir #js {:recursive true})
-        (.then (fn [] (fs/writeFile file buffer))))
+    (await (fs/mkdir dir #js {:recursive true}))
+    (await (fs/writeFile file buffer))
     file))
 
 (defn load-from-data-url [source max-bytes mime-override]
@@ -91,49 +91,48 @@
                                    :origin "data"})))
       parsed)))
 
-(defn load-from-url [source max-bytes mime-override signal]
-  (-> (js/fetch source #js {:signal signal})
-      (.then (fn [resp]
-               (if (.-ok resp)
-                 (-> (.arrayBuffer resp)
-                     (.then (fn [ab]
-                              (let [buffer (js/Buffer.from ab)
-                                    byte-count (.-length buffer)
-                                    mime (or mime-override
-                                             (some-> (.. resp -headers (get "content-type"))
-                                                     (.split ";")
-                                                     (aget 0)
-                                                     (.trim)))]
-                                (if (> byte-count max-bytes)
-                                  (js/Promise.reject (js/Error. (str "Image too large: " (format-bytes byte-count))))
-                                  (if-not mime
-                                    (js/Promise.reject (js/Error. "Unable to determine MIME type. Provide mimeType."))
-                                    #js {:data (.toString buffer "base64")
-                                         :mimeType mime
-                                         :bytes byte-count
-                                         :source-label source
-                                         :origin "url"}))))))
-                 (js/Promise.reject (js/Error. (str "Failed to fetch image (" (.-status resp) ")."))))))))
+(defn ^:async load-from-url [source max-bytes mime-override signal]
+  (let [resp (await (js/fetch source #js {:signal signal}))]
+    (if (.-ok resp)
+      (let [ab (await (.arrayBuffer resp))
+            buffer (js/Buffer.from ab)
+            byte-count (.-length buffer)
+            mime (or mime-override
+                     (some-> (.. resp -headers (get "content-type"))
+                              (.split ";")
+                              (aget 0)
+                              (.trim)))]
+        (if (> byte-count max-bytes)
+          (js/Promise.reject (js/Error. (str "Image too large: " (format-bytes byte-count))))
+          (if-not mime
+            (js/Promise.reject (js/Error. "Unable to determine MIME type. Provide mimeType."))
+            #js {:data (.toString buffer "base64")
+                 :mimeType mime
+                 :bytes byte-count
+                 :source-label source
+                 :origin "url"})))
+      (js/Promise.reject (js/Error. (str "Failed to fetch image (" (.-status resp) ")."))))))
 
-(defn load-from-file [source max-bytes mime-override cwd]
+(defn ^:async load-from-file [source max-bytes mime-override cwd]
   (let [expanded (if (.startsWith source "~/")
                    (path/resolve (os/homedir) (.slice source 2))
                    (.replace source (js/RegExp. "^file:///?" "i") ""))
-        resolved (path/resolve cwd expanded)]
-    (-> (fs/readFile resolved)
-        (.then (fn [buffer]
-                 (let [byte-count (.-length buffer)
-                       mime (or mime-override (mime-from-ext resolved))]
-                   (if (> byte-count max-bytes)
-                     (js/Promise.reject (js/Error. (str "Image too large: " (format-bytes byte-count))))
-                     (if-not mime
-                       (js/Promise.reject (js/Error. "Unable to infer MIME type. Provide mimeType."))
-                       #js {:data (.toString buffer "base64")
-                            :mimeType mime
-                            :bytes byte-count
-                            :source-label resolved
-                            :origin "file"
-                            :file-path resolved}))))))))
+        resolved (path/resolve cwd expanded)
+        buffer (await (fs/readFile resolved))
+        byte-count (.-length buffer)
+        mime (or mime-override (mime-from-ext resolved))]
+    (if (> byte-count max-bytes)
+      (js/Promise.reject (js/Error. (str "Image too large: " (format-bytes byte-count))))
+      (if-not mime
+        (js/Promise.reject (js/Error. "Unable to infer MIME type. Provide mimeType."))
+        #js {:data (.toString buffer "base64")
+             :mimeType mime
+             :bytes byte-count
+             :source-label resolved
+             :origin "file"
+             :file-path resolved}))))
+
+(def image-render nil)
 
 (em/defextension image-render
   :name "image-render"
@@ -145,38 +144,36 @@
     :parameters {:source {:type "string" :description "Local file path, http(s) URL, or data: URL to render."}
                  :mimeType {:type "string" :description "Optional MIME type override." :optional true}
                  :maxBytes {:type "integer" :description "Maximum bytes to load" :minimum 1 :optional true}}
-    :execute (fn [tool-call-id params signal on-update ctx]
+    :execute (fn ^:async [_tool-call-id params signal on-update ctx]
                (let [source (.trim (aget params "source"))
                      max-bytes (or (aget params "maxBytes") DEFAULT-MAX-BYTES)
                      mime-override (aget params "mimeType")
                      cwd (aget ctx "cwd")
-                     load-promise (cond
-                                    (.startsWith source "data:")
-                                    (load-from-data-url source max-bytes mime-override)
-                                    (or (.startsWith source "http://") (.startsWith source "https://"))
-                                    (load-from-url source max-bytes mime-override signal)
-                                    :else
-                                    (load-from-file source max-bytes mime-override cwd))]
+                     payload (await (cond
+                                      (.startsWith source "data:")
+                                      (load-from-data-url source max-bytes mime-override)
+                                      (or (.startsWith source "http://") (.startsWith source "https://"))
+                                      (load-from-url source max-bytes mime-override signal)
+                                      :else
+                                      (load-from-file source max-bytes mime-override cwd)))]
                  (when on-update
                    (on-update #js {:content #js [#js {:type "text" :text "Loading image..."}]}))
-                 (-> load-promise
-                     (.then (fn [payload]
-                              (let [opened (when (is-alacritty?)
-                                             (let [fp (if (and (= (aget payload "origin") "file")
-                                                               (aget payload "file-path"))
-                                                        (aget payload "file-path")
-                                                        (write-temp-image (js/Buffer.from (aget payload "data") "base64")
-                                                                          (aget payload "mimeType")))]
-                                               (when fp
-                                                 (open-in-viewer fp))))]
-                                #js {:content #js [#js {:type "text"
-                                                        :text (str "Rendered image from " (aget payload "source-label")
-                                                                   " (" (aget payload "mimeType") ", " (format-bytes (aget payload "bytes")) ")."
-                                                                   (when opened
-                                                                     (str " Opened externally via " (aget opened "viewer") ": " (aget opened "file-path"))))}
-                                                       #js {:type "image"
-                                                            :data (aget payload "data")
-                                                            :mimeType (aget payload "mimeType")}]
-                                     :details #js {:source (aget payload "source-label")
-                                                   :mimeType (aget payload "mimeType")
-                                                    :bytes (aget payload "bytes")}}))))))))
+                 (let [opened (when (is-alacritty?)
+                                (let [fp (if (and (= (aget payload "origin") "file")
+                                                  (aget payload "file-path"))
+                                           (aget payload "file-path")
+                                           (await (write-temp-image (js/Buffer.from (aget payload "data") "base64")
+                                                                    (aget payload "mimeType"))))]
+                                  (when fp
+                                    (open-in-viewer fp))))]
+                   #js {:content #js [#js {:type "text"
+                                           :text (str "Rendered image from " (aget payload "source-label")
+                                                      " (" (aget payload "mimeType") ", " (format-bytes (aget payload "bytes")) ")."
+                                                      (when opened
+                                                        (str " Opened externally via " (aget opened "viewer") ": " (aget opened "file-path"))))}
+                                          #js {:type "image"
+                                               :data (aget payload "data")
+                                               :mimeType (aget payload "mimeType")}]
+                        :details #js {:source (aget payload "source-label")
+                                      :mimeType (aget payload "mimeType")
+                                      :bytes (aget payload "bytes")}})))))

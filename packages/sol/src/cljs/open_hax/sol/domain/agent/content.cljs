@@ -34,14 +34,6 @@
           (preview-text-nonblank json max-chars)))
       (catch :default _ nil))))
 
-(defn- duplicate-normalized-text
-  [s]
-  (str/lower-case (str/replace (str s) #"[\s\W_]+" "")))
-
-(defn- boundary-ended?
-  [s]
-  (boolean (re-find #"[\s\W_]$" s)))
-
 (defn diff-appended-text
   [previous current]
   (text-delta/diff-appended-text previous current))

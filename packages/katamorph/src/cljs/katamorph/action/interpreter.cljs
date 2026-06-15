@@ -53,15 +53,6 @@
                        (get-scope-declaration (:action/kind action)))]
     (assoc ctx :scope (resolve-scope-decl (:config ctx) scope-decl))))
 
-(defn- known-kind?
-  [config kind]
-  (let [{:keys [get-action run-action!]} (deps config)]
-    (boolean (or (get-action kind)
-                 ;; Check if run-action! handles this kind via multimethod
-                 ;; This is a heuristic — the injection site should provide
-                 ;; a get-action that covers all known kinds.
-                 false))))
-
 (defn- action-resource
   "Find an enabled action resource definition whose id matches an action kind."
   [config kind]

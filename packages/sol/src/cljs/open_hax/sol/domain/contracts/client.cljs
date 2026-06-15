@@ -3,8 +3,7 @@
 
    Covers `/api/agent/contracts`, contract read/write, and validation calls."
   (:require [clojure.string :as str]
-            [open-hax.sol.extern.fetch :as xfetch]
-            [promesa.core :as p]))
+            [open-hax.sol.extern.fetch :as xfetch]))
 
 (defprotocol IContractLibrarianClient
   (list-contracts! [client klass])
@@ -24,15 +23,26 @@
   [base-url path]
   (str (trim-trailing-slashes base-url) path))
 
-(defn- text-request!
+(defn- ^:async text-request!
   [http-client base-url method path opts]
-  (p/let [resp (xfetch/text! http-client
-                             {:url (contract-url base-url path)
-                              :opts (merge {:method method} opts)
-                              :timeout-ms 30000})]
+  (let [resp (await (xfetch/text! http-client
+                                  {:url (contract-url base-url path)
+                                   :opts (merge {:method method} opts)
+                                   :timeout-ms 30000}))]
     {:ok (:ok resp)
      :status (:status resp)
      :text (:body resp)}))
+
+(defn- ^:async validate-contract-helper!
+  [http-client base-url klass edn-text]
+  (let [resp (await (xfetch/json! (or http-client xfetch/default-client)
+                                  {:url (contract-url base-url "/api/agent/contracts/validate")
+                                   :opts {:method "POST"
+                                          :headers {"Content-Type" "application/json"}
+                                          :json {:edn_text edn-text
+                                                 :contract_class klass}}
+                                   :timeout-ms 30000}))]
+    (:body resp)))
 
 (defrecord FetchContractLibrarianClient [base-url http-client]
   IContractLibrarianClient
@@ -56,14 +66,7 @@
                    {:headers {"Content-Type" "text/plain; charset=utf-8"}
                     :body edn-text}))
   (validate-contract! [_ klass edn-text]
-    (p/let [resp (xfetch/json! (or http-client xfetch/default-client)
-                               {:url (contract-url base-url "/api/agent/contracts/validate")
-                                :opts {:method "POST"
-                                       :headers {"Content-Type" "application/json"}
-                                       :json {:edn_text edn-text
-                                              :contract_class klass}}
-                                :timeout-ms 30000})]
-      (:body resp))))
+    (validate-contract-helper! http-client base-url klass edn-text)))
 
 (defn client
   ([config] (client config {}))

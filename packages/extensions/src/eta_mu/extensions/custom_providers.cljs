@@ -219,6 +219,8 @@
     ;;                         :context-window 262144 :max-tokens 262144))})
     ))
 
+(def custom-providers nil)
+
 (em/defextension custom-providers
   :name "custom-providers"
   :description "Register Open Hax remote and local LLM providers"

@@ -120,16 +120,13 @@
 (defn ^:async ensure-agent-session!
   "Return an existing agent session for the conversation, or create one.
    Accepts a single normalized map."
-  [{:keys [config runtime conversation-id model-id thinking-level session-id agent-spec] :as opts}]
+  [{:keys [model-id agent-spec] :as opts}]
   (let [effective-model-id (or (agent-spec-model agent-spec) model-id)
-        current-entry (active-session-entry conversation-id)]
+        current-entry (active-session-entry (:conversation-id opts))]
     (if (and current-entry
              (= (str (:model-id current-entry)) (str effective-model-id)))
       (:session current-entry)
-      (await (create-agent-session! (assoc opts
-                                           :model-id effective-model-id
-                                           :thinking-level thinking-level
-                                           :agent-spec agent-spec))))))
+      (await (create-agent-session! (assoc opts :model-id effective-model-id))))))
 
 (defn prune-session-messages
   [_agent-spec messages]

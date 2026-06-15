@@ -1,5 +1,5 @@
 (ns open-hax.sol.shape.app-shapes-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [deftest is]]
             [open-hax.sol.shape.app-shapes :as shapes]))
 
 ;; ── normalize-chat-body ─────────────────────────────────────────────────────

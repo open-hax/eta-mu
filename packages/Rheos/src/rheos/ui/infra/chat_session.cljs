@@ -8,11 +8,12 @@
 
 (defn- notify [listeners ev] (doseq [f @listeners] (f ev)))
 
-(defn- post-json [url body]
-  (-> (js/fetch url #js {:method "POST"
-                         :headers #js {"Content-Type" "application/json"}
-                         :body (js/JSON.stringify (clj->js body))})
-      (.then (fn [res] (.json res)))))
+(defn- ^:async post-json [url body]
+  (let [res (await (js/fetch url #js {:method "POST"
+                                      :headers #js {"Content-Type" "application/json"}
+                                      :body (js/JSON.stringify (clj->js body))}))
+        data (await (.json res))]
+    data))
 
 (defn- open-stream! [state listeners sid cid]
   (let [es (js/EventSource. (str "/api/chat/stream?session_id=" (js/encodeURIComponent sid)
@@ -33,6 +34,19 @@
                   nil)))))
     (swap! state assoc :es es)))
 
+(defn- ^:async start-conversation! [state listeners text]
+  (try
+    (let [d (await (post-json "/api/chat/start" {:message text}))
+          sid (or (aget d "sessionId") (aget d "session_id"))
+          cid (or (aget d "conversationId") (aget d "conversation_id"))]
+      (when (and sid cid)
+        (swap! state assoc :session-id sid :conversation-id cid)
+        (open-stream! state listeners sid cid))
+      {:ok true})
+    (catch :default e
+      (notify listeners {:type "error"})
+      (throw e))))
+
 (defn create-session
   "Create an orchestrator chat session bound to the kanban board."
   []
@@ -44,17 +58,7 @@
           ;; Continue the existing conversation.
           (post-json "/api/chat" {:message text :conversation_id cid :session_id (:session-id @state)})
           ;; First turn: start the conversation, then open the token stream.
-          (-> (post-json "/api/chat/start" {:message text})
-              (.then (fn [d]
-                       (let [sid (or (aget d "sessionId") (aget d "session_id"))
-                             cid (or (aget d "conversationId") (aget d "conversation_id"))]
-                         (when (and sid cid)
-                           (swap! state assoc :session-id sid :conversation-id cid)
-                           (open-stream! state listeners sid cid))
-                         {:ok true})))
-              (.catch (fn [e]
-                        (notify listeners {:type "error"})
-                        (js/Promise.reject e))))))
+          (start-conversation! state listeners text)))
       (subscribe [_ callback]
         (swap! listeners conj callback)
         (fn [] (swap! listeners (fn [ls] (filterv #(not= % callback) ls)))))

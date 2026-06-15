@@ -1,8 +1,6 @@
 (ns open-hax.sol.shape.app-shapes
   (:require [clojure.string :as str]))
 
-(def ^:private media-extension-pattern #".*\.(?:png|jpg|jpeg|gif|webp|mp4|webm|mp3|wav|ogg|m4a|flac|pdf)(?:\?.*)?$")
-
 (defn- body-value
   [body & names]
   (some (fn [field-name]
@@ -24,25 +22,6 @@
   [value]
   (when-let [value (maybe-cljs value)]
     (when (map? value) value)))
-
-(defn- extract-media-urls
-  "Extract media URLs from text content."
-  [text]
-  (when (string? text)
-    (->> (str/split text #"\s+")
-         (keep (fn [token]
-                 (let [lower (str/lower-case token)]
-                   (when (or (re-matches media-extension-pattern lower)
-                             (some #(str/includes? lower %) [".png" ".jpg" ".jpeg" ".gif" ".webp" ".mp4" ".webm" ".mp3" ".wav" ".ogg" ".m4a" ".flac" ".pdf"])
-                             (str/includes? token "cdn.discordapp.com"))
-                     {:url token
-                      :type (cond
-                              (some #(str/includes? lower %) [".png" ".jpg" ".jpeg" ".gif" ".webp"]) "image"
-                              (some #(str/includes? lower %) [".mp4" ".webm" ".mov"]) "video"
-                              (some #(str/includes? lower %) [".mp3" ".wav" ".ogg" ".m4a" ".flac"]) "audio"
-                              (some #(str/includes? lower %) [".pdf"]) "document"
-                              :else "image")}))))
-         vec)))
 
 (defn- normalize-tool-policy
   [policy]

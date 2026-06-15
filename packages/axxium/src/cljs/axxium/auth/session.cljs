@@ -15,43 +15,34 @@
       (.update token)
       (.digest "hex")))
 
-(defn- body-map [req]
-  (js->clj (or (aget req "body") #js {}) :keywordize-keys true))
-
-(defn create-session!
+(defn ^:async create-session!
   "Create a session for an actor. Returns {:token token :actor actor}."
   [actor]
-  (let [token-promise (token/create-token actor)]
-    (-> token-promise
-        (.then (fn [token]
-                 (let [token-hash (hash-token token)
-                       actor-id (:actor/id actor)
-                       expiry-hours (cfg/get-in-config [:jwt/expiry-hours])
-                       expires-at (js/Date. (+ (.getTime (js/Date.)) (* expiry-hours 3600000)))]
-                   (-> (db/query
-                        "INSERT INTO sessions (actor_id, token_hash, expires_at) VALUES ($1, $2, $3)"
-                        [actor-id token-hash expires-at])
-                       (.then (fn [_]
-                                {:token token
-                                 :actor actor})))))))))
+  (let [token (await (token/create-token actor))
+        token-hash (hash-token token)
+        actor-id (:actor/id actor)
+        expiry-hours (cfg/get-in-config [:jwt/expiry-hours])
+        expires-at (js/Date. (+ (.getTime (js/Date.)) (* expiry-hours 3600000)))]
+    (await (db/query
+            "INSERT INTO sessions (actor_id, token_hash, expires_at) VALUES ($1, $2, $3)"
+            [actor-id token-hash expires-at]))
+    {:token token
+     :actor actor}))
 
-(defn verify-session
+(defn ^:async verify-session
   "Verify a session token. Returns promise of actor or nil."
   [token]
-  (if (str/blank? token)
-    (js/Promise.resolve nil)
-    (-> (token/verify-token token)
-        (.then (fn [claims]
-                 (let [actor-id (:sub claims)]
-                   (-> (db/query-one
+  (try
+    (let [claims (await (token/verify-token token))
+          actor-id (:sub claims)
+          actor (await (db/query-one
                         "SELECT a.* FROM actors a
                          JOIN sessions s ON a.id = s.actor_id
                          WHERE a.id = $1 AND s.token_hash = $2 AND s.expires_at > NOW()"
-                        [actor-id (hash-token token)])
-                       (.then (fn [actor]
-                                (when actor
-                                  (js->clj actor :keywordize-keys true))))))))
-        (.catch (fn [_] nil)))))
+                        [actor-id (hash-token token)]))]
+      (when actor
+        (js->clj actor :keywordize-keys true)))
+    (catch :default _ nil)))
 
 (defn delete-session!
   "Delete a session by token."
@@ -85,15 +76,12 @@
        (str/trim (subs auth-header 7)))
      cookie-token)))
 
-(defn resolve-auth-context
+(defn ^:async resolve-auth-context
   "Resolve auth context from request. Returns promise of context map or nil."
   [req]
-  (let [token (extract-auth-token req)]
-    (-> (verify-session token)
-        (.then (fn [actor]
-                 (when actor
-                   {:auth/actor-id (:id actor)
-                    :auth/entity-id (:entity_id actor)
-                    :auth/email (:email actor)
-                    :auth/capabilities (js->clj (:capabilities actor) :keywordize-keys true)
-                    :auth/roles (js->clj (:roles actor) :keywordize-keys true)}))))))
+  (when-let [actor (await (verify-session (extract-auth-token req)))]
+    {:auth/actor-id (:id actor)
+     :auth/entity-id (:entity_id actor)
+     :auth/email (:email actor)
+     :auth/capabilities (js->clj (:capabilities actor) :keywordize-keys true)
+     :auth/roles (js->clj (:roles actor) :keywordize-keys true)}))

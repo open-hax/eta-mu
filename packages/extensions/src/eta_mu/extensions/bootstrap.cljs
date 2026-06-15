@@ -2,10 +2,12 @@
   "Bootstrap extension - verifies the CLJS compile/load path works."
   (:require-macros [eta-mu.core :as em]))
 
+(def bootstrap nil)
+
 (em/defextension bootstrap
   :name "bootstrap"
   :description "No-op verification extension for the eta-mu build pipeline."
 
   (em/on "session_start"
-    :handler (fn [event ctx]
+    :handler (fn [_event _ctx]
                nil)))

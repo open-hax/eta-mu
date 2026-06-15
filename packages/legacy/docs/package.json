@@ -20,6 +20,11 @@
     "README.md"
   ],
   "scripts": {
-    "test": "node --test tests/*.test.cjs"
+    "test": "node --test tests/*.test.cjs",
+    "typecheck": "tsc index.d.ts --noEmit --strict --module esnext --moduleResolution bundler --target es2022",
+    "build": "tsc index.d.ts --noEmit --strict --module esnext --moduleResolution bundler --target es2022"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }

@@ -2,6 +2,9 @@
   "name": "@open-hax/mcp-contracts",
   "version": "0.1.0",
   "private": true,
-  "description": "Generic loader that teaches a knoxx-style agent runtime to accept :mcp-server contracts (read them from contract roots → MCP gateway server config). No knowledge of any particular MCP server. Consumed via CLJS source-path.",
-  "license": "GPL-3.0-or-later"
+  "description": "Generic loader that teaches a knoxx-style agent runtime to accept :mcp-server contracts (read them from contract roots \u2192 MCP gateway server config). No knowledge of any particular MCP server. Consumed via CLJS source-path.",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "lint:kondo": "clj-kondo --lint src"
+  }
 }

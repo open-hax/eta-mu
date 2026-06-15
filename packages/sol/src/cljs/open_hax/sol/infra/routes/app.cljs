@@ -74,7 +74,7 @@
   "GET" "/v1/models"
   (let [model-config (models/models-config config)]
     (json-response! reply 200 {:object "list"
-                               :data (mapv (fn [[provider-id provider]]
+                               :data (mapv                                               (fn [[provider-id _provider]]
                                              {:id (name provider-id)
                                               :object "model"
                                               :owned_by (name provider-id)

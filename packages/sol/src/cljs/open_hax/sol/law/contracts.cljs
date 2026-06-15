@@ -368,7 +368,11 @@
    [:contract/kind [:= :pipeline]]
    [:contract/id ContractId]
    [:enabled {:optional true} boolean?]
-   [:pipeline/steps [:vector PipelineStep]]
+    [:pipeline/steps [:vector
+                       ;; PipelineStep is deprecated; kept here because PipelineContract itself is deprecated and still needs to validate legacy pipeline contracts during the migration window.
+                       #_:clj-kondo/ignore
+                       PipelineStep]]
+
    [:data {:optional true} [:map {:closed false}]]])
 
 (def TriggerContract
@@ -460,7 +464,10 @@
     "runtime_features" RuntimeFeatureContract
     "ingest_sources" IngestSourceContract
     "actions" ActionContract
-    "pipelines" PipelineContract
+    ;; PipelineContract is deprecated; kept in schema dispatch for backward compatibility with legacy pipeline contracts.
+    "pipelines"
+    #_:clj-kondo/ignore
+    PipelineContract
     "triggers" TriggerContract
     "stores" StoreContract
     "sub_agents" SubAgentContract

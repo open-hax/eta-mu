@@ -1,3 +1,5 @@
+// DEPRECATED: prefer CLJS tests in packages/runtime/test/cljs/eta_mu/docs/.
+// This smoke test remains only to guard the legacy CJS facade.
 // GPL-3.0-only
 
 const test = require('node:test');
@@ -41,4 +43,19 @@ Inline #TagOne and #tag_two.
   const ext = out.links.filter((l) => l.kind === 'markdown');
   assert.equal(ext.length, 1);
   assert.equal(ext[0].url, 'https://example.com');
+});
+
+test('public API surface exports expected functions', () => {
+  const api = require('../index.cjs');
+  const expected = [
+    'loadEtaMuMounts',
+    'parseEtaMuMarkdown',
+    'readJsonl',
+    'writeJsonl',
+    'indexEtaMuDocs',
+  ];
+  for (const name of expected) {
+    assert.ok(name in api, `expected export ${name}`);
+    assert.equal(typeof api[name], 'function', `${name} should be a function`);
+  }
 });

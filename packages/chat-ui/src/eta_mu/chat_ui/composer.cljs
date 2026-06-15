@@ -1,6 +1,6 @@
 (ns eta-mu.chat-ui.composer
   "ChatComposer — input field with send button."
-  (:require [helix.core :as hx :refer [defnc $]]
+  (:require [helix.core :refer [defnc]]
             [helix.hooks :as hooks]
             [helix.dom :as d]))
 

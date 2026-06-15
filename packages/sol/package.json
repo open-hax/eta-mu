@@ -10,6 +10,7 @@
     "start:dev": "node dist-dev/server.js",
     "test": "shadow-cljs compile test",
     "lint": "clj-kondo --lint src/cljs test/cljs",
+    "lint:kondo": "clj-kondo --lint src/cljs test/cljs",
     "typecheck": "shadow-cljs compile server"
   },
   "dependencies": {

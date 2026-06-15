@@ -3,10 +3,10 @@
    Components never call js/fetch directly; they go through these functions."
   (:require [clojure.string :as str]))
 
-(defn fetch-json [url]
-  (-> (js/fetch url)
-      (.then (fn [res] (.json res)))
-      (.then (fn [data] (js->clj data)))))
+(defn ^:async fetch-json [url]
+  (let [res (await (js/fetch url))
+        data (await (.json res))]
+    (js->clj data)))
 
 (defn fetch-boards []
   (fetch-json "/api/boards"))

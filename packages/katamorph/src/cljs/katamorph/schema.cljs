@@ -295,26 +295,6 @@
    [:namespace [:or keyword? string?]]
    [:resources [:sequential [:map {:closed false}]]]])
 
-;; ── Pipeline contract (DEPRECATED — use :actions/run-steps) ──────────────────
-
-(def ^:deprecated PipelineStep
-  "Deprecated: pipelines are now action contracts with :actions/run-steps."
-  [:map {:closed false}
-   [:step/id         :string]
-   [:step/contract   ContractId]
-   [:step/depends-on {:optional true} [:vector :string]]
-   [:step/condition  {:optional true} :string]
-   [:step/data       {:optional true} :map]])
-
-(def ^:deprecated PipelineContract
-  "Deprecated: pipelines are now action contracts with :actions/run-steps."
-  [:map {:closed false}
-   [:contract/kind   [:= :pipeline]]
-   [:contract/id     ContractId]
-   [:pipeline/steps  [:vector PipelineStep]]
-   [:enabled         {:optional true} :boolean]
-   [:data            {:optional true} :map]])
-
 ;; ── Trigger contract (actor-first) ────────────────────────────────────────────
 
 (def TriggerContract
@@ -482,10 +462,9 @@
    :fulfillment  FulfillmentContract
    :strategy     StrategyContract
 
-   ;; Orchestration (knoxx)
-   :action       ActionContract
-   :pipeline     PipelineContract
-   :trigger      TriggerContract
+    ;; Orchestration (knoxx)
+    :action       ActionContract
+    :trigger      TriggerContract
    :store        StoreContract
    :namespace    NamespaceFile
    :generator    GeneratorContract

@@ -169,47 +169,52 @@
         (broadcast-token! scope appended)
         (reset! seen-text* full)))))
 
-(defn- send-user-message-with-timeout!
+(defn- ^:async send-user-message-with-timeout!
   "Send content to the session and wait for agent_end. Resolves with the session.
    Streams assistant text deltas to the realtime WS as they arrive (scope carries
    :run-id/:conversation-id/:session-id). A timeout-ms of 0 or nil disables it."
   [session content timeout-ms scope]
-  (js/Promise.
-   (fn [resolve reject]
-     (try
-       (let [settled? (atom false)
-             unsubscribe* (atom nil)
-             timeout-id* (atom nil)
-             seen-text* (atom "")
-             settle! (fn [f]
-                       (when (compare-and-set! settled? false true)
-                         (when-let [tid @timeout-id*] (js/clearTimeout tid))
-                         (when-let [unsub @unsubscribe*] (unsub))
-                         (f)))
-             handler (fn [event]
-                       (let [event-type (some-> (aget event "type") str)]
-                         (case event-type
-                           ;; Token streaming is best-effort: a broadcast failure
-                           ;; must never abort the turn.
-                           "message_update" (try (stream-message-update! scope seen-text* event)
-                                                 (catch :default _ nil))
-                           "message_end" (try (stream-message-end! scope seen-text* event)
-                                              (catch :default _ nil))
-                           "agent_end" (settle! #(resolve session))
-                           "error" (settle! #(reject (js/Error. (str "Agent error: " (aget event "message")))))
-                           nil)))]
-         (reset! unsubscribe* (subscribe! session handler))
-         (-> (send-user-message! session content)
-             (.catch (fn [err]
-                       (settle! #(reject err)))))
-          (when (and timeout-ms (pos? timeout-ms))
-            (reset! timeout-id* (js/setTimeout
-                                 (fn []
-                                   (settle! (fn []
-                                              (reject (js/Error. (str "Agent turn timed out after " timeout-ms "ms"))))))
-                                 timeout-ms))))
-       (catch :default err
-         (reject err))))))
+  (let [settled? (atom false)
+        unsubscribe* (atom nil)
+        timeout-id* (atom nil)
+        seen-text* (atom "")
+        resolve* (atom nil)
+        reject* (atom nil)
+        settle! (fn [f]
+                  (when (compare-and-set! settled? false true)
+                    (when-let [tid @timeout-id*] (js/clearTimeout tid))
+                    (when-let [unsub @unsubscribe*] (unsub))
+                    (f)))
+        handler (fn [event]
+                  (let [event-type (some-> (aget event "type") str)]
+                    (case event-type
+                      ;; Token streaming is best-effort: a broadcast failure
+                      ;; must never abort the turn.
+                      "message_update" (try (stream-message-update! scope seen-text* event)
+                                            (catch :default _ nil))
+                      "message_end" (try (stream-message-end! scope seen-text* event)
+                                         (catch :default _ nil))
+                      "agent_end" (settle! #(when-let [r @resolve*] (r session)))
+                      "error" (settle! #(when-let [r @reject*]
+                                          (r (js/Error. (str "Agent error: " (aget event "message"))))))
+                      nil)))
+        result-promise (js/Promise.
+                        (fn [resolve reject]
+                          (reset! resolve* resolve)
+                          (reset! reject* reject)
+                          (reset! unsubscribe* (subscribe! session handler))
+                          (when (and timeout-ms (pos? timeout-ms))
+                            (reset! timeout-id* (js/setTimeout
+                                                 (fn []
+                                                   (settle! (fn []
+                                                              (when-let [r @reject*]
+                                                                (r (js/Error. (str "Agent turn timed out after " timeout-ms "ms")))))))
+                                                 timeout-ms)))))]
+    (try
+      (await (send-user-message! session content))
+      (catch :default err
+        (settle! #(when-let [r @reject*] (r err)))))
+    (await result-promise)))
 
 (defn- run-event-payload
   [run-id conversation-id session-id event-type payload]

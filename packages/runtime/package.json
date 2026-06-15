@@ -28,6 +28,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "pnpm cljs:compile && vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
+    "lint:kondo": "clj-kondo --lint src/cljs test/cljs",
     "cljs:compile": "shadow-cljs compile runtime",
     "cljs:test": "shadow-cljs compile test && node target/cljs-test.cjs",
     "cljs:coverage": "shadow-cljs compile test && c8 --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.runtime*.js' --exclude '**/*_test.js' --reporter=text --reporter=lcov --reporter=json-summary --check-coverage --lines 90 --statements 90 node target/cljs-test.cjs",

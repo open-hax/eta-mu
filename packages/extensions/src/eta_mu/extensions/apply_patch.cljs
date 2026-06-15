@@ -275,6 +275,8 @@
                               :text (str "Success. Updated the following files:\n" summary)}]
            :details #js {:root root :changes changes}})))
 
+(def apply-patch nil)
+
 (em/defextension apply-patch
   :name "apply-patch"
   :description "Codex-style multi-file patch tool"

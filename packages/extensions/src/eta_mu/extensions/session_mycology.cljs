@@ -576,6 +576,8 @@
                                   :spore spore
                                    :promotion promotion})))))))))
 
+(def session-mycology nil)
+
 (em/defextension session-mycology
   :name "session-mycology"
   :description "Per-turn retrospection with p-scores and skill spore incubation."

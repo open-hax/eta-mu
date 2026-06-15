@@ -38,22 +38,21 @@
          (events/generate-write-id))
         (js/console.log "Drift detected:" file-path)))))
 
-(defn- handle-file-change [board-id tasks-dir file-path _event-type]
-  (let [fs fsp]
-    (-> (.readFile fs file-path "utf8")
-        (.then (fn [content]
-                 (let [write-id (extract-write-id content)
-                       uuid (extract-uuid content)
-                       ledger (ledger/get-ledger tasks-dir)]
-                   (when uuid
-                     ;; Emit file change event
-                     (events/emit-frontmatter-change!
-                      ledger board-id uuid "file-changed" nil nil
-                      (or write-id (events/generate-write-id)))
-                     ;; Check for drift
-                     (check-drift board-id tasks-dir file-path write-id uuid)))))
-        (.catch (fn [err]
-                  (js/console.error "Watcher error:" file-path (.-message err)))))))
+(defn- ^:async handle-file-change [board-id tasks-dir file-path _event-type]
+  (try
+    (let [content (await (.readFile fsp file-path "utf8"))
+          write-id (extract-write-id content)
+          uuid (extract-uuid content)
+          ledger (ledger/get-ledger tasks-dir)]
+      (when uuid
+        ;; Emit file change event
+        (events/emit-frontmatter-change!
+         ledger board-id uuid "file-changed" nil nil
+         (or write-id (events/generate-write-id)))
+        ;; Check for drift
+        (check-drift board-id tasks-dir file-path write-id uuid)))
+    (catch :default err
+      (js/console.error "Watcher error:" file-path (.-message err)))))
 
 (defn start-watcher! [board-id tasks-dir]
   (when-not (@watchers board-id)

@@ -1,52 +1,74 @@
 ;; Π_STATE.sexp — Fork tax snapshot
-;; Generated: 2026-06-15T15:23:16Z
+;; Generated: 2026-06-15T22:13:59Z
 ;; Branch: feat/kanban-comments-parity
-;; Base commit: 2bf6329
+;; Base commit: ea053df
 
 (π-snapshot
   (branch "feat/kanban-comments-parity")
-  (base-sha "2bf6329")
-  (timestamp "2026-06-15T15:23:16Z")
+  (base-sha "ea053df")
+  (timestamp "2026-06-15T22:13:59Z")
 
   (summary
-    "Fix Sol test suite isolation, katamorph policy/agent evaluator bugs, and Sol agent-template/content issues. All targeted suites now pass.")
+    "Large CLJS runtime expansion across eta-mu, shared clj-kondo config rollout, kanban epic/task inventory for TS→CLJS rewrites, package dependency updates, and rewrite planning docs. All targeted suites pass.")
 
   (scope
-    ;; Katamorph policy
-    (modified-katamorph-eval "packages/katamorph/src/cljs/katamorph/policy/eval.cljs")
-    (modified-katamorph-eval-test "packages/katamorph/test/cljs/katamorph/policy/eval_test.cljs")
+    ;; Runtime / AI / coding / docs / gate / garden CLJS modules
+    (added-runtime-modules "packages/runtime/src/cljs/eta_mu/ai/**")
+    (added-runtime-modules "packages/runtime/src/cljs/eta_mu/coding/**")
+    (added-runtime-modules "packages/runtime/src/cljs/eta_mu/docs/**")
+    (added-runtime-modules "packages/runtime/src/cljs/eta_mu/garden/**")
+    (added-runtime-modules "packages/runtime/src/cljs/eta_mu/gate/**")
+    (added-runtime-tests "packages/runtime/test/cljs/eta_mu/ai/**")
+    (added-runtime-tests "packages/runtime/test/cljs/eta_mu/coding/**")
+    (added-runtime-tests "packages/runtime/test/cljs/eta_mu/docs/**")
+    (added-runtime-tests "packages/runtime/test/cljs/eta_mu/garden/**")
+    (added-runtime-tests "packages/runtime/test/cljs/eta_mu/gate/**")
 
-    ;; Katamorph agent helpers
-    (modified-katamorph-reasoning "packages/katamorph/src/cljs/katamorph/agent/reasoning.cljs")
-    (modified-katamorph-text-delta "packages/katamorph/src/cljs/katamorph/agent/text_delta.cljs")
-    (added-katamorph-agent-tests "packages/katamorph/test/cljs/katamorph/agent/reasoning_test.cljs")
-    (added-katamorph-agent-tests "packages/katamorph/test/cljs/katamorph/agent/text_delta_test.cljs")
-    (added-katamorph-agent-tests "packages/katamorph/test/cljs/katamorph/agent/turn_guards_test.cljs")
+    ;; Shared kondo config
+    (added-kondo-config-package "packages/kondo-config/**")
+    (modified-package-kondo-configs "packages/*/.clj-kondo/config.edn")
+    (removed-package-kondo-imports "packages/*/.clj-kondo/imports/**")
 
-    ;; Sol test isolation and evaluator
-    (modified-sol-shadow-config "packages/sol/shadow-cljs.edn")
-    (removed-sol-katamorph-tests "packages/sol/test/cljs/open_hax/katamorph/agent/*")
-    (removed-sol-duplicate-eval-test "packages/sol/test/cljs/open_hax/contracts/policy/eval_test.cljs")
-    (modified-sol-agent-templates "packages/sol/src/cljs/open_hax/sol/domain/agent/agent_templates.cljs")
-    (modified-sol-agent-templates-test "packages/sol/test/cljs/open_hax/sol/domain/agent/agent_templates_test.cljs")
-    (modified-sol-content "packages/sol/src/cljs/open_hax/sol/domain/agent/content.cljs")
+    ;; Sol, Katamorph, Rheos, axxium, chat-ui, event-ledger, extensions, protocols
+    (modified-sol "packages/sol/**")
+    (modified-katamorph "packages/katamorph/**")
+    (modified-rheos "packages/Rheos/**")
+    (modified-axxium "packages/axxium/**")
+    (modified-chat-ui "packages/chat-ui/**")
+    (modified-event-ledger "packages/event-ledger/**")
+    (modified-extensions "packages/extensions/**")
+    (modified-protocols "packages/protocols/**")
 
-    ;; Kanban record
-    (added-kanban-task "kanban/tasks/sol-test-failure-triage-2026-06-15.md"))
+    ;; Workspace config
+    (modified-root-config ".gitignore")
+    (modified-root-config "package.json")
+    (modified-lockfile "pnpm-lock.yaml")
+
+    ;; Process / docs / kanban
+    (added-process-doc "PROCESS.md")
+    (added-rewrite-inventories "docs/*-cljs-rewrite-inventory.md")
+    (added-kondo-baseline "docs/kondo-config-baseline.md")
+    (modified-kanban-ledger "kanban/.events/ledger.edn")
+    (added-kanban-epics "kanban/epics/*-cljs-rewrite.md")
+    (added-kanban-tasks "kanban/tasks/*-cljs-rewrite*.md")
+    (added-kanban-tasks "kanban/tasks/kondo-lint-cleanup-*.md")
+    (added-kanban-tasks "kanban/tasks/shared-kondo-config-*.md"))
 
   (excluded
-    (lockfile "pnpm-lock.yaml" (reason "stale lock state, regenerate on next pnpm install"))
-    (migration-scratch "migrating-sol.md" (reason "session scratch note, not curated for commit"))
-    (cljs-rewrite-inventories "docs/*-cljs-rewrite-inventory.md" (reason "untracked docs from concurrent rewrite planning"))
-    (kanban-epics "kanban/epics/*-cljs-rewrite.md" (reason "concurrent kanban epic/task creation")))
+    (build-cache ".cache/v1/lock" (reason "runtime/build cache artifact"))
+    (build-cache "packages/Rheos/.cache/v1/**" (reason "runtime/build cache artifact")))
 
   (concurrent-dirt
-    (note "Workspace is single-agent for this branch; excluded paths are generated/runtime/scratch or concurrent rewrite planning artifacts."))
+    (note "No concurrent-agent dirt detected. Staged state is treated as the owned snapshot scope."))
 
   (verification
-    (eta-mu-cli-tests "passed — 1120 tests, 47 skipped")
-    (katamorph-tests "passed — 102 tests, 253 assertions")
+    (eta-mu-runtime-tests "passed — 6 tests")
+    (eta-mu-github-tests "passed — 19 tests")
+    (eta-mu-docs-tests "passed — 2 tests")
+    (kanban-legacy-tests "passed — 14 tests")
+    (eta-mu-extensions-tests "passed — 72 tests, 195 assertions")
     (sol-tests "passed — 66 tests, 193 assertions")
+    (katamorph-tests "passed — 102 tests, 253 assertions")
     (ts-line-count "unchanged — 174,537 lines")))
 
 ;; END Π_STATE

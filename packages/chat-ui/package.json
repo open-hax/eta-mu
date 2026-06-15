@@ -7,7 +7,8 @@
   "scripts": {
     "build": "shadow-cljs compile lib",
     "test": "shadow-cljs compile test && node target/test.cjs",
-    "clean": "rm -rf dist target"
+    "clean": "rm -rf dist target",
+    "lint:kondo": "clj-kondo --lint src test"
   },
   "dependencies": {
     "react": "^18.3.1",

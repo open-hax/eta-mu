@@ -1,4 +1,4 @@
-(ns eta-mu.extensions.graph-memory
+(ns ^{:clj-kondo/ignore [:promise-chain/prefer-async-workflow]} eta-mu.extensions.graph-memory
   "Graph memory tools for OpenPlanner/Graph-Weaver integration.
 
   Provides:
@@ -16,6 +16,12 @@
             ["path" :as path]
             ["node:crypto" :as crypto]
             [clojure.string :as str]))
+
+;; NOTE: Several graph-memory helpers use `js/Promise` chains to interleave
+;; GraphQL HTTP calls and synchronous state/cache side effects. Converting
+;; these to `^:async` would change the return-shape of small helpers and
+;; require a broader refactor of the extension's event/tool handlers, so the
+;; :promise-chain/prefer-async-workflow rule is ignored for this file.
 
 ;; =============================================================================
 ;; State directory resolution (same pattern as other extensions)
@@ -422,16 +428,16 @@
                    url (:url data)
                    text (or (preview-text (:text node) 240)
                             (preview-text (:preview data) 240))]
-               (str (inc idx) ". [" lake "/" node-type "] " label
-                    (when score-text
-                      (str " (score=" score-text ")"))
-                    (str "\n   id: " (:id node))
-                    (when path
-                      (str "\n   path: " path))
-                    (when url
-                      (str "\n   url: " url))
-                    (when text
-                      (str "\n   text: " text)))))
+                (str (inc idx) ". [" lake "/" node-type "] " label
+                     (when score-text
+                       (str " (score=" score-text ")"))
+                     "\n   id: " (:id node)
+                     (when path
+                       (str "\n   path: " path))
+                     (when url
+                       (str "\n   url: " url))
+                      (when text
+                        (str "\n   text: " text)))))
            nodes)))))
 
 (defn format-workbench-context [results]
@@ -496,6 +502,8 @@
 ;; Tool Implementations
 ;; =============================================================================
 
+(def graph-memory nil)
+
 (em/defextension graph-memory
   :name "graph-memory"
   :description "Graph memory tools for OpenPlanner/Graph-Weaver integration"
@@ -508,7 +516,7 @@
     :description "Search the knowledge graph for relevant nodes by label, content, or metadata."
     :parameters {:query {:type "string" :description "Search query"}
                  :limit {:type "integer" :minimum 1 :maximum 200 :description "Maximum results (default: 20)" :optional true}}
-    :execute (fn [_tcid params signal onUpdate ctx]
+    :execute (fn [_tcid params signal onUpdate _ctx]
                (let [query (aget params "query")
                      limit (or (aget params "limit") 20)
                      gql-query "
@@ -570,7 +578,7 @@
                  :kind {:type "string" :description "Filter by edge kind" :optional true}
                  :limit {:type "integer" :minimum 1 :maximum 200 :description "Maximum neighbors (default: 50)" :optional true}
                  :include-preview {:type "boolean" :description "Include node preview content (default: false)" :optional true}}
-    :execute (fn [_tcid params signal onUpdate ctx]
+    :execute (fn [_tcid params signal onUpdate _ctx]
                (let [node-id (aget params "id")
                      direction (or (aget params "direction") "both")
                      kind (aget params "kind")
@@ -663,7 +671,7 @@
                                               :data {:type "object"}}
                                  :required ["id" "source" "target"]}
                          :description "Edges to upsert"}}
-    :execute (fn [_tcid params signal onUpdate ctx]
+    :execute (fn [_tcid params signal onUpdate _ctx]
                (when onUpdate
                  (onUpdate #js {:content #js [#js {:type "text" :text "Ingesting into graph memory..."}]}))
 
@@ -731,7 +739,7 @@
     :description "Passive context hydration: search the graph for relevant context and return it for injection into the conversation. Use this before complex operations to surface related knowledge."
     :parameters {:query {:type "string" :description "Query to find relevant context"}
                  :maxNodes {:type "integer" :minimum 1 :maximum 50 :description "Maximum context nodes (default: 10)" :optional true}}
-    :execute (fn [_tcid params signal onUpdate ctx]
+    :execute (fn [_tcid params signal onUpdate _ctx]
                (let [query (aget params "query")
                      max-nodes (or (aget params "maxNodes") 10)]
                  (when onUpdate
@@ -755,7 +763,7 @@
     :label "Graph Memory Status"
     :description "Get status of the graph memory service (node count, edge count, weaver status)."
     :parameters {}
-    :execute (fn [_tcid params signal onUpdate ctx]
+    :execute (fn [_tcid _params signal _onUpdate _ctx]
                (let [gql-query "
                  query Status {
                    status {

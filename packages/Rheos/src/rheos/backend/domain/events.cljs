@@ -57,14 +57,13 @@
     (try (cb kanban-event)
          (catch :default e (js/console.error "[events] publish! listener error:" e)))))
 
-(defn- record!
+(defn- ^:async record!
   "Append `envelope` to the ledger, then publish it to in-process subscribers.
    Returns the append promise so callers keep awaiting persistence."
   [ledger envelope]
-  (-> (protocols/append-event! ledger envelope)
-      (.then (fn [result]
-               (publish! (envelope->kanban-event envelope))
-               result))))
+  (let [result (await (protocols/append-event! ledger envelope))]
+    (publish! (envelope->kanban-event envelope))
+    result))
 
 ;; ---------------------------------------------------------------------------
 ;; Emission
@@ -104,15 +103,14 @@
 (defn generate-write-id []
   (str (.now js/Date) "-" (.toString (js/Math.random) 36) (.slice (.toString (js/Math.random) 36) 2 10)))
 
-(defn query-events
+(defn ^:async query-events
   "Return ledger events, optionally filtered. `filter-spec` is a Clojure map whose
    keys are matched against each event's `:payload` (e.g. {:task-id \"x\"} or
    {:type \"status-change\"}). An empty map returns every event."
   [ledger filter-spec]
-  (-> (protocols/query-events ledger {})
-      (.then (fn [evts]
-               (if (empty? filter-spec)
-                 (vec evts)
-                 (filterv (fn [e]
-                            (every? (fn [[k v]] (= (get-in e [:payload k]) v)) filter-spec))
-                          evts))))))
+  (let [evts (await (protocols/query-events ledger {}))]
+    (if (empty? filter-spec)
+      (vec evts)
+      (filterv (fn [e]
+                 (every? (fn [[k v]] (= (get-in e [:payload k]) v)) filter-spec))
+               evts))))

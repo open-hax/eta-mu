@@ -146,13 +146,13 @@
   (aset tool "execute" execute)
   tool)
 
-(defn with-promise-finally
+(defn ^:async with-promise-finally
   [result finalizer]
-  (if (and result (fn? (aget result "finally")))
-    (.finally result finalizer)
-    (do
-      (finalizer)
-      result)))
+  (try
+    (when (and result (fn? (aget result "finally")))
+      (await result))
+    (finally
+      (finalizer))))
 
 ;; ─── Media materialisation hook ──────────────────────────────────────────────
 

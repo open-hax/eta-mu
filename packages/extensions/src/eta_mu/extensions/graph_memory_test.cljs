@@ -1,5 +1,5 @@
 (ns eta-mu.extensions.graph-memory-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [deftest is]]
             [eta-mu.extensions.graph-memory :as gm]))
 
 (deftest vector-result-hits-test

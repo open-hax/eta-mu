@@ -21,7 +21,8 @@
     "build": "shadow-cljs release lib",
     "watch": "shadow-cljs watch lib",
     "test": "shadow-cljs compile test && node target/test.cjs",
-    "lint": "clj-kondo --lint src/ test/"
+    "lint": "clj-kondo --lint src/ test/",
+    "lint:kondo": "clj-kondo --lint src/ test/"
   },
   "devDependencies": {
     "shadow-cljs": "^3.4.10"

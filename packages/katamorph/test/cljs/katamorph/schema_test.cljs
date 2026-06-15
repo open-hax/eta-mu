@@ -1,5 +1,5 @@
 (ns katamorph.schema-test
-  (:require [cljs.test :refer [deftest testing is]]
+  (:require [cljs.test :refer [deftest is]]
             [katamorph.schema :as schema]))
 
 (deftest infer-contract-class-by-kind

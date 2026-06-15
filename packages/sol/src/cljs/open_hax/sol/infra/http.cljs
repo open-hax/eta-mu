@@ -1,8 +1,7 @@
 (ns open-hax.sol.infra.http
   (:require [clojure.string :as str]
             [open-hax.sol.extern.fastify :as xfastify]
-            [open-hax.sol.extern.fetch :as xfetch]
-            [promesa.core :as p]))
+            [open-hax.sol.extern.fetch :as xfetch]))
 
 (defn reply-already-sent?
   [reply]
@@ -124,7 +123,7 @@
   ([reply err] (error-response! reply err 500))
   ([reply err default-status]
    (error-response! reply err default-status {}))
-  ([reply err default-status context]
+  ([reply err default-status _context]
    (let [status (error-status err default-status)
           code (xfastify/error-code err)
           payload (cond-> {:detail (error-message err)}
@@ -141,10 +140,10 @@
   [reply headers]
   (xfastify/copy-response-headers! reply headers))
 
-(defn send-fetch-response!
+(defn ^:async send-fetch-response!
   [reply resp]
   (copy-response-headers! reply (.-headers resp))
-  (p/let [buf (.arrayBuffer resp)]
+  (let [buf (await (.arrayBuffer resp))]
     (xfastify/send-buffer-response! reply resp buf)))
 
 (defn request-body

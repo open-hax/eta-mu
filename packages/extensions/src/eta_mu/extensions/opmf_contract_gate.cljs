@@ -1,4 +1,4 @@
-(ns eta-mu.extensions.opmf-contract-gate
+(ns ^{:clj-kondo/ignore [:promise-chain/prefer-async-workflow]} eta-mu.extensions.opmf-contract-gate
   "Output contract gate enforcement with auto-repair.
    Pure CLJS implementation - no TypeScript dependencies."
   (:require-macros [eta-mu.core :as em])
@@ -10,6 +10,12 @@
             ["node:fs" :as fs]
             ["node:os" :as os]
             ["node:path" :as path]))
+
+;; NOTE: OPMF contract validation and repair rely on promise chains to keep
+;; error handling local to each validation stage and to preserve the existing
+;; synchronous tool-execute contract. A wholesale migration to `^:async` would
+;; be valuable but is out of scope for this lint pass; the
+;; :promise-chain/prefer-async-workflow rule is therefore ignored here.
 
 (def HOME (.homedir os))
 (def ETA-MU-STATE-ROOT (path/join HOME ".ημ" "state"))
@@ -212,9 +218,10 @@
   (ensure-dir (.dirname path file-path))
   (.appendFileSync fs file-path (str (.stringify js/JSON (clj->js value)) "\n") "utf8"))
 
-(defn looks-like-agent-error? [text]
+(defn looks-like-agent-error?
   "Returns true if the text appears to be an error message from the
    upstream provider or runtime rather than a real agent response."
+  [text]
   (and (string? text)
        (or (str/blank? text)
            (re-find #"^(Error|ERR)\s*:" text)
@@ -384,7 +391,7 @@
                       (str/join ", "))
         next-rule (first (filter #(= "rule/next-exactly-one-action" (:id %)) (:rules contract)))
         frames-rule (first (filter #(= "rule/frames-cardinality" (:id %)) (:rules contract)))]
-    (->> [(str "## Active Output Contract")
+    (->> ["## Active Output Contract"
           (str "- Return Markdown with these exact level-2 headings in order: " headings)
           "- Use `## Heading` level-2 markdown headers for each section. Do NOT use bold (`**Heading**`), emphasis, or deeper headings (`###`, `####`) in place of section headers."
           (when (some? (:exactly next-rule))
@@ -402,7 +409,7 @@
     (str system-prompt "\n\n" (build-prompt-append contract))))
 
 (defn format-status [state]
-  (if-let [err (aget state "contractError")]
+  (if-let [_err (aget state "contractError")]
     "gate:error"
     (let [mode (if (aget (aget state "config") "enabled") "on" "off")
           repair (if (aget (aget state "config") "autoRepair") "repair:on" "repair:off")
@@ -621,7 +628,7 @@
                      (header-inline-content tokens idx)))))
          vec)))
 
-(defn- header-only-failure [contract {:keys [rule-id section-id heading expected actual message]}]
+(defn- header-only-failure [_contract {:keys [rule-id section-id heading expected actual message]}]
   (merge {:rule-id (or rule-id "unknown")
           :message (or message (str "Violation of " rule-id))}
          (when section-id {:section-id section-id})
@@ -942,7 +949,7 @@
           (handle-direct-repair-error pi ctx state msg next-attempt max-retries retry-index error)))
       (safe-notify ctx "eta-mu-opmf-contract-gate repair sender unavailable" "warn"))))
 
-(defn handle-validation-result [pi ctx state result messages]
+(defn handle-validation-result [_pi ctx state result messages]
   (set-status ctx state)
   (cond
     (aget result "skip")
@@ -1104,7 +1111,7 @@
       :else
       (notify ctx "Unknown /output-gate command. Use: status|on|off|validate-last" "warn"))))
 
-(defn handle-session-start [pi ctx]
+(defn handle-session-start [_pi ctx]
   (let [state (get-state)]
     (aset state "config" (read-config (or (aget ctx "cwd") (.cwd js/process))))
     (clear-pending-repair! state)
@@ -1157,6 +1164,8 @@
   (.call (aget pi "on") pi "agent_end" (fn [event ctx] (handle-agent-end pi ctx event)))
   (.call (aget pi "on") pi "agent_idle" (fn [event ctx] (handle-agent-idle pi ctx event)))
   (.call (aget pi "on") pi "session_shutdown" (fn [_event ctx] (handle-session-shutdown ctx))))
+
+(def opmf-contract-gate nil)
 
 (em/defextension opmf-contract-gate
   :name "opmf-contract-gate"

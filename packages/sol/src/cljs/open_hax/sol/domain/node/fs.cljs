@@ -7,8 +7,7 @@
 
 (ns open-hax.sol.domain.node.fs
   (:refer-clojure :exclude [exists?])
-  (:require [clojure.string :as str]
-            ["node:fs"           :as node-fs]
+  (:require ["node:fs"           :as node-fs]
             ["node:fs/promises"  :as fs]
             ["node:path"         :as path]))
 

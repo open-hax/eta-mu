@@ -5,8 +5,7 @@
    CLJS request maps. This namespace owns AbortController, js/fetch,
    RequestInit construction, Response parsing, and JSON conversion."
   (:require [clojure.string :as str]
-            [open-hax.sol.extern.json :as xjson]
-            [promesa.core :as p]))
+            [open-hax.sol.extern.json :as xjson]))
 
 (defprotocol IHttpClient
   (response! [client request]
@@ -115,29 +114,47 @@
       (catch :default _
         {:raw text}))))
 
+(defn- ^:async response-helper!
+  [default-timeout-ms fetch-fn request]
+  (let [controller (js/AbortController.)
+        effective-timeout-ms (or (:timeout-ms request) default-timeout-ms 30000)
+        timeout-id (js/setTimeout #(.abort controller) effective-timeout-ms)
+        request-init (opts->js (request-opts request) (.-signal controller))
+        do-fetch (or fetch-fn js/fetch)]
+    (try
+      (await (do-fetch (:url request) request-init))
+      (finally
+        (js/clearTimeout timeout-id)))))
+
+(defn- ^:async json-helper!
+  [client request]
+  (let [resp (await (response! client request))
+        body (.text resp)]
+    (assoc (response->base-map resp)
+           :body (parse-json-text body))))
+
+(defn- ^:async text-helper!
+  [client request]
+  (let [resp (await (response! client request))
+        body (.text resp)]
+    (assoc (response->base-map resp) :body body)))
+
+(defn- ^:async array-buffer-helper!
+  [client request]
+  (let [resp (await (response! client request))
+        body (.arrayBuffer resp)]
+    (assoc (response->base-map resp) :body body)))
+
 (defrecord NativeFetchClient [default-timeout-ms fetch-fn]
   IHttpClient
-  (response! [_ {:keys [url timeout-ms] :as request}]
-    (let [controller (js/AbortController.)
-          effective-timeout-ms (or timeout-ms default-timeout-ms 30000)
-          timeout-id (js/setTimeout #(.abort controller) effective-timeout-ms)
-          request-init (opts->js (request-opts request) (.-signal controller))
-          do-fetch (or fetch-fn js/fetch)]
-      (-> (do-fetch url request-init)
-          (.finally (fn [] (js/clearTimeout timeout-id))))))
+  (response! [_ request]
+    (response-helper! default-timeout-ms fetch-fn request))
   (json! [client request]
-    (p/let [resp (response! client request)
-            body (.text resp)]
-      (assoc (response->base-map resp)
-             :body (parse-json-text body))))
+    (json-helper! client request))
   (text! [client request]
-    (p/let [resp (response! client request)
-            body (.text resp)]
-      (assoc (response->base-map resp) :body body)))
+    (text-helper! client request))
   (array-buffer! [client request]
-    (p/let [resp (response! client request)
-            body (.arrayBuffer resp)]
-      (assoc (response->base-map resp) :body body))))
+    (array-buffer-helper! client request)))
 
 (def default-client
   (->NativeFetchClient 30000 nil))

@@ -64,7 +64,7 @@
   ;; A structurally-allowed transition whose check is not a command gate clears immediately.
   (async done
     (let [decision (fsm/evaluate-transition fsm/promethean-fsm "in_progress" "todo" {})]
-      (-> (fsm/run-gate decision ".")
-          (.then (fn [gate]
-                   (is (:allowed? gate))
-                   (done)))))))
+      ((fn ^:async []
+         (let [gate (await (fsm/run-gate decision "."))]
+           (is (:allowed? gate))
+           (done)))))))

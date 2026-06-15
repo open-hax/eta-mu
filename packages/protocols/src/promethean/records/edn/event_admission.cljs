@@ -89,16 +89,54 @@
                (fn [event]
                  (every? (fn [[k v]] (= (get event k) v)) filter-spec)))]
     (.on watcher "change"
-         (fn [_event-type _filename]
-           (-> (read-events file-path)
-               (.then (fn [events]
-                        (when (seq events)
-                          (let [last-event (last events)]
-                            (when (or (nil? pred) (pred last-event))
-                              (callback last-event))))))
-               (.catch (fn [e] (js/console.error "EDN watch error:" e))))))
+         (^:async fn [_event-type _filename]
+           (try
+             (let [events (await (read-events file-path))]
+               (when (seq events)
+                 (let [last-event (last events)]
+                   (when (or (nil? pred) (pred last-event))
+                     (callback last-event)))))
+             (catch :default e
+               (js/console.error "EDN watch error:" e)))))
     {:id (str (random-uuid))
      :close! (fn [] (.close watcher))}))
+
+;; ---------------------------------------------------------------------------
+;; Protocol implementation helpers
+;; ---------------------------------------------------------------------------
+
+(defn- ^:async append-event-impl! [file-path mutex envelope]
+  (let [env (ensure-defaults envelope)
+        event-str (event->edn-str env)]
+    (try
+      (await ((:acquire! mutex)))
+      (await (append-to-file! file-path event-str))
+      env
+      (finally
+        ((:release! mutex))))))
+
+(defn- ^:async append-events-impl! [file-path mutex envelopes]
+  (try
+    (await ((:acquire! mutex)))
+    (loop [remaining envelopes
+           results []]
+      (if (empty? remaining)
+        (clj->js results)
+        (let [enriched (ensure-defaults (first remaining))]
+          (await (append-to-file! file-path (event->edn-str enriched)))
+          (recur (rest remaining) (conj results enriched)))))
+    (finally
+      ((:release! mutex)))))
+
+(defn- ^:async query-events-impl [file-path filter-spec]
+  (let [events (await (read-events file-path))]
+    (if (empty? filter-spec)
+      events
+      (let [pred (fn [event]
+                   (every? (fn [[k v]]
+                             (= (get event k) v))
+                           filter-spec))]
+        (filterv pred events)))))
 
 ;; ---------------------------------------------------------------------------
 ;; EdnFileEventAdmission record
@@ -108,47 +146,13 @@
   protocols/EventAdmission
 
   (append-event! [_ envelope]
-    (let [env (ensure-defaults envelope)
-          event-str (event->edn-str env)]
-      ;; `mutex` is the Clojure map returned by `create-mutex`, so call its
-      ;; :acquire!/:release! fns directly — JS interop (.acquire!) would look for a
-      ;; non-existent `acquire_BANG_` property and the append would never run.
-      (-> ((:acquire! mutex))
-          (.then (fn [_]
-                   (-> (append-to-file! file-path event-str)
-                       (.then (fn [_] env)))))
-          (.finally (fn [] ((:release! mutex)))))))
+    (append-event-impl! file-path mutex envelope))
 
-  (append-events! [this envelopes]
-    (-> ((:acquire! mutex))
-        (.then (fn [_]
-                 (let [results (atom [])]
-                   (-> (reduce
-                         (fn [acc env]
-                           (.then acc
-                             (fn [_]
-                               ;; Enrich once so the persisted line and the
-                               ;; returned envelope share the same generated
-                               ;; ids/timestamps/causal-root/session-id.
-                               (let [enriched (ensure-defaults env)]
-                                 (-> (append-to-file! file-path (event->edn-str enriched))
-                                     (.then (fn [_]
-                                              (swap! results conj enriched))))))))
-                         (js/Promise.resolve nil)
-                         envelopes)
-                       (.then (fn [_] (clj->js @results)))))))
-        (.finally (fn [] ((:release! mutex))))))
+  (append-events! [_ envelopes]
+    (append-events-impl! file-path mutex envelopes))
 
   (query-events [_ filter-spec]
-    (-> (read-events file-path)
-        (.then (fn [events]
-                 (if (empty? filter-spec)
-                   events
-                   (let [pred (fn [event]
-                                (every? (fn [[k v]]
-                                          (= (get event k) v))
-                                        filter-spec))]
-                     (filterv pred events)))))))
+    (query-events-impl file-path filter-spec))
 
   (watch-events [_ filter-spec callback]
     (read-file-for-watch file-path callback filter-spec)))

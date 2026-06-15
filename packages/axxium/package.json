@@ -10,6 +10,7 @@
     "start": "node dist/server.js",
     "typecheck": "shadow-cljs compile server",
     "test": "shadow-cljs compile test && node target/test.cjs",
+    "lint:kondo": "clj-kondo --lint src/cljs",
     "boundary:check": "node scripts/check-js-boundary.mjs --check"
   },
   "dependencies": {

@@ -441,6 +441,8 @@
             ["recent audit:"]
             (map summarize-row (take 12 audit))))))))
 
+(def contract-runtime nil)
+
 (em/defextension contract-runtime
   :name "contract-runtime"
   :description "Operational contract runtime: session context bridge + fulfillment-score evaluation + audit tool."
@@ -527,7 +529,7 @@
                                                                                     "error" (.-message e)}))))))
 
   (em/on "session_start"
-    :handler (fn [event ctx]
+    :handler (fn [_event ctx]
                (ensure-dir! STATE-DIR)
                (let [state (get-state)]
                  (aset state "contractCount" (count (discover-contract-files)))
@@ -536,13 +538,13 @@
                  nil)))
 
   (em/on "session_switch"
-    :handler (fn [event ctx]
+    :handler (fn [_event ctx]
                (let [state (get-state)]
                  (aset state "contractCount" (count (discover-contract-files)))
                  (set-status! ctx state)
                  nil)))
 
   (em/on "session_shutdown"
-    :handler (fn [event ctx]
+    :handler (fn [_event ctx]
                (when (has-ui? ctx)
                  (.setStatus (ctx-ui ctx) STATUS-KEY js/undefined)))))

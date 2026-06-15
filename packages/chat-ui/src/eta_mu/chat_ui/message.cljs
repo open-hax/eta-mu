@@ -1,6 +1,6 @@
 (ns eta-mu.chat-ui.message
   "MessageBubble — renders a single chat message with markdown."
-  (:require [helix.core :as hx :refer [defnc $]]
+  (:require [helix.core :refer [defnc]]
             [helix.dom :as d]
             ["marked" :refer [marked]]))
 

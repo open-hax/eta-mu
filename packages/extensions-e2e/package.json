@@ -4,7 +4,8 @@
   "version": "0.1.1",
   "scripts": {
     "test": "shadow-cljs compile e2e-test && node out/node-tests.cjs",
-    "test:watch": "shadow-cljs watch e2e-test"
+    "test:watch": "shadow-cljs watch e2e-test",
+    "lint:kondo": "clj-kondo --lint src"
   },
   "devDependencies": {
     "@open-hax/eta-mu-cli": "workspace:*",

@@ -31,14 +31,15 @@
         filters-ref (hooks/use-ref filters)
         ;; Drag-and-drop move: POST an FSM-enforced status change, then refetch the
         ;; composed board. A rejected transition (HTTP 409) surfaces the FSM's reason.
-        move-task! (fn [uuid project status]
-                     (-> (api/post-status uuid project status)
-                         (.then (fn [res]
-                                  (if (.-ok res)
-                                    (-> (api/fetch-compose filters) (.then set-board-data))
-                                    (-> (.json res)
-                                        (.then (fn [b] (set-toast (or (.-error b) (str "move failed (" (.-status res) ")")))))))))
-                         (.catch (fn [e] (set-toast (str e))))))]
+        move-task! (fn ^:async [uuid project status]
+                     (try
+                       (let [res (await (api/post-status uuid project status))]
+                         (if (.-ok res)
+                           (set-board-data (await (api/fetch-compose filters)))
+                           (let [b (await (.json res))]
+                             (set-toast (or (.-error b) (str "move failed (" (.-status res) ")"))))))
+                       (catch :default e
+                         (set-toast (str e)))))]
 
     ;; Sync filters to URL + keep the SSE handler's filters ref current
     (hooks/use-effect [filters]
@@ -50,12 +51,12 @@
     ;; board — debounced so a burst of events coalesces into one refetch.
     (hooks/use-effect []
       (let [timer (atom nil)
-            refetch (fn []
+            refetch (fn ^:async []
                       (when @timer (js/clearTimeout @timer))
                       (reset! timer
                               (js/setTimeout
-                               (fn [] (-> (api/fetch-compose (.-current filters-ref))
-                                          (.then set-board-data)))
+                               (fn ^:async []
+                                 (set-board-data (await (api/fetch-compose (.-current filters-ref)))))
                                150)))
             close (ledger-stream/subscribe (fn [_ev] (refetch)) set-live)]
         (fn []
@@ -64,24 +65,25 @@
 
     ;; Load boards on mount
     (hooks/use-effect []
-      (-> (api/fetch-boards)
-          (.then (fn [data]
-                   (set-boards data)
-                   (set-loading false)))))
+      ((fn ^:async []
+         (let [data (await (api/fetch-boards))]
+           (set-boards data)
+           (set-loading false)))))
 
     ;; Load composed board when filters change
     (hooks/use-effect [filters]
       (set-loading true)
-      (-> (api/fetch-compose filters)
-          (.then (fn [data]
-                   (set-board-data data)
-                   (set-loading false)))))
+      ((fn ^:async []
+         (let [data (await (api/fetch-compose filters))]
+           (set-board-data data)
+           (set-loading false)))))
 
     ;; Load task detail when selected changes
     (hooks/use-effect [selected]
       (when selected
-        (-> (api/fetch-task-content (get selected "uuid") (get selected "sourceBoard" "knoxx"))
-            (.then (fn [data] (set-detail data))))))
+        ((fn ^:async []
+           (let [data (await (api/fetch-task-content (get selected "uuid") (get selected "sourceBoard" "knoxx")))]
+             (set-detail data))))))
 
     ;; Auto-dismiss the toast after a few seconds
     (hooks/use-effect [toast]

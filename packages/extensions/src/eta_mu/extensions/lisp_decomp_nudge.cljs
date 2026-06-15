@@ -7,8 +7,7 @@
      before_agent_start → passive system-prompt instruction (burns in once)
      agent_end          → reactive user-turn injection on detected mismatch"
   (:require-macros [eta-mu.core :as em])
-  (:require [clojure.string :as str]
-            [goog.object :as gobj]))
+  (:require [clojure.string :as str]))
 
 (def GLOBAL-KEY "__eta_mu_lisp_decomp_nudge__")
 
@@ -100,6 +99,8 @@
          (fn [event _ctx] (handle-before-agent-start event)))
   (.call (aget pi "on") pi "agent_end"
          (fn [_event ctx] (handle-agent-end pi ctx))))
+
+(def lisp-decomp-nudge nil)
 
 (em/defextension lisp-decomp-nudge
   :name "lisp-decomp-nudge"

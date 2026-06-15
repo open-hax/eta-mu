@@ -1,5 +1,5 @@
 (ns katamorph.policy.gate-test
-  (:require [cljs.test :refer [deftest testing is]]
+  (:require [cljs.test :refer [deftest is]]
             [katamorph.policy.gate :as gate]))
 
 (deftest policy-matches?-by-tool-name

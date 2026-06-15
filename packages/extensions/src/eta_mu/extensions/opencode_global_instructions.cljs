@@ -111,17 +111,18 @@
        (remove #(str/starts-with? (str/trim %) ";;"))
        (str/join "\n")))
 
-(defn read-edn-forms [text]
+(defn read-edn-forms
   "Read all top-level EDN forms from text by wrapping in a vector.
    cljs.reader/read-string only reads one form, so we wrap the entire
    file content in [ ] to read all forms as a single vector."
+  [text]
   (try
     (let [cleaned (strip-comments text)
           ;; Wrap in vector brackets so read-string returns all forms
           wrapped (str "[" cleaned "]")]
       (reader/read-string wrapped))
-    (catch :default e
-      [])))
+  (catch :default _e
+    [])))
 
 (defn read-edn-file [path]
   (when-let [text (safe-read path)]
@@ -137,8 +138,9 @@
   (when (sequential? f)
     (rest f)))
 
-(defn- clause-map [clauses]
+(defn- clause-map
   "Convert a sequence of clauses like ((name \"x\") (v \"1\")) into a map."
+  [clauses]
   (reduce
     (fn [m clause]
       (if (and (sequential? clause) (symbol? (first clause)) (next clause))
@@ -147,8 +149,9 @@
     {}
     clauses))
 
-(defn- clause-seq [clauses]
+(defn- clause-seq
   "Convert a sequence of clauses into a map of head -> seq of rest-forms."
+  [clauses]
   (reduce
     (fn [m clause]
       (if (and (sequential? clause) (symbol? (first clause)))
@@ -233,9 +236,10 @@
   {:items (mapv str (fm-children f))
    :form head})
 
-(defn parse-form [f]
+(defn parse-form
   "Parse a single recognized contract form into structured data.
-  Returns nil for unrecognized forms (they become prose)."
+   Returns nil for unrecognized forms (they become prose)."
+  [f]
   (let [head (fm-head f)]
     (case head
       prompt (parse-prompt-meta f)
@@ -258,13 +262,14 @@
 
 ;; ── Full contract file parser ──────────────────────────────
 
-(defn parse-contract-file [path]
+(defn parse-contract-file
   "Parse a .edn contract file. Returns a map with:
     :source   — original file content (RAW PROMPT - the mindfuck IS the prompt)
     :forms    — all raw EDN forms
     :contract — parsed structured contract map (for deterministic enforcement)
     :prose    — ENTIRE raw source (the contract IS the prompt)
     :errors   — any parse errors"
+  [path]
   (let [source (or (safe-read path) "")
         forms (read-edn-forms source)
         ;; Most operation-mindfuck files are a single top-level (prompt ...)
@@ -429,8 +434,9 @@
           {:contracts {} :prose "" :contract-count 0 :errors []}
           files)))))
 
-(defn build-contract-summary [contracts]
+(defn build-contract-summary
   "Build a concise summary of parsed contract data for the system prompt."
+  [contracts]
   (let [parts (atom [])]
     (doseq [[filename parsed] contracts]
       (let [c (:contract parsed)]
@@ -574,7 +580,7 @@
     (set-status ctx state)
     nil))
 
-(defn handle-message-end [event ctx state]
+(defn handle-message-end [event ctx _state]
   (let [msg (aget event "message")]
     (when (and msg (= "assistant" (aget msg "role")))
       (let [parts (js/Array.from
@@ -604,17 +610,17 @@
                         (str "EDN lint: " (:error result))
                         "warn")))))))))
 
-(defn handle-session-shutdown [ctx state]
+(defn handle-session-shutdown [ctx _state]
   (when (has-ui? ctx)
     (.call (gobj/get (ctx-ui ctx) "setStatus") (ctx-ui ctx) STATUS-KEY js/undefined)))
 
 ;; ── Tools ──────────────────────────────────────────────────
 
-(defn tool-skill-graph [params ctx state]
+(defn tool-skill-graph [params _ctx state]
   (let [action (or (aget params "action") "list")
         graph (js->clj (aget state "skillGraph") :keywordize-keys true)
         nodes (:nodes graph)
-        errors (:errors graph)]
+        _errors (:errors graph)]
     (case action
       "list"
       (let [text (str/join "\n"
@@ -654,8 +660,9 @@
       {:content [{:type "text" :text (str "unknown action: " action)}]
        :details {"ok" false}})))
 
-(defn tool-opmf-parse [params ctx state]
+(defn tool-opmf-parse
   "Parse and display the structured contract data from operation-mindfuck .edn files."
+  [params _ctx state]
   (let [action (or (aget params "action") "summary")
         contracts (js->clj (aget state "contracts") :keywordize-keys true)]
     (case action
@@ -712,6 +719,8 @@
 
 ;; ── Extension registration ─────────────────────────────────
 
+(def opencode-global-instructions nil)
+
 (em/defextension opencode-global-instructions
   :name "opencode-global-instructions"
   :description "Parse operation-mindfuck .edn contracts, inject structured data + prose into system prompt, skill graph, EDN linting."
@@ -722,29 +731,28 @@
                (let [state (get-state)
                      tokens (if (str/blank? args) [] (str/split (str/trim args) #"\s+"))
                      cmd (or (first tokens) "summary")]
-                 (cond
-                   (= cmd "summary")
-                   (when (has-ui? ctx)
-                     (let [contracts (js->clj (aget state "contracts") :keywordize-keys true)
-                           lines (vec
-                                  (concat
-                                    [(str "contracts loaded: " (aget state "contractCount"))]
-                                    (map (fn [[f _]] (str "  " f)) (sort-by key contracts))
-                                    (when-let [err (aget state "lastError")]
-                                      [(str "errors: " err)])))]
-                       (.setWidget (ctx-ui ctx) "opmf-runtime" (clj->js lines)))))
+                  (case cmd
+                    "summary"
+                    (when (has-ui? ctx)
+                      (let [contracts (js->clj (aget state "contracts") :keywordize-keys true)
+                            lines (vec
+                                   (concat
+                                     [(str "contracts loaded: " (aget state "contractCount"))]
+                                     (map (fn [[f _]] (str "  " f)) (sort-by key contracts))
+                                     (when-let [err (aget state "lastError")]
+                                       [(str "errors: " err)])))]
+                        (.setWidget (ctx-ui ctx) "opmf-runtime" (clj->js lines))))
 
-                   (= cmd "context-symbols")
-                   (when (has-ui? ctx)
-                     (.notify (ctx-ui ctx)
-                              (str "Use the opmf-parse tool with action=context-symbols")
-                              "info"))
+                    "context-symbols"
+                    (when (has-ui? ctx)
+                      (.notify (ctx-ui ctx)
+                               "Use the opmf-parse tool with action=context-symbols"
+                               "info"))
 
-                   :else
-                   (when (has-ui? ctx)
-                     (.notify (ctx-ui ctx)
-                              (str "Unknown /opmf command. Use: summary|context-symbols|operators")
-                              "warn")))))
+                    (when (has-ui? ctx)
+                      (.notify (ctx-ui ctx)
+                               "Unknown /opmf command. Use: summary|context-symbols|operators"
+                               "warn")))))
 
   (em/tool "opmf_parse"
     :label "OMPF Parse"
@@ -770,11 +778,11 @@
                  (clj->js (tool-skill-graph params ctx state)))))
 
   (em/on "session_start"
-    :handler (fn [event ctx]
+    :handler (fn [_event ctx]
                (handle-session-start ctx (get-state))))
 
   (em/on "before_agent_start"
-    :handler (fn [event ctx]
+    :handler (fn [event _ctx]
                (handle-before-agent-start event (get-state))))
 
   (em/on "message_end"
@@ -782,5 +790,6 @@
                (handle-message-end event ctx (get-state))))
 
   (em/on "session_shutdown"
-    :handler (fn [event ctx]
+    :handler (fn [_event ctx]
                (handle-session-shutdown ctx (get-state)))))
+)

@@ -90,7 +90,9 @@
                    {:finish-reason "stop"
                     :content (get-in script [1 :content])}
                    :else {:finish-reason "tool_calls"})]
+      (is (= 0 (:step state0)))
       (is (= "tool_calls" (:finish-reason resp0)))
       (is (= "write_file" (:tool-name resp0)))
+      (is (= 1 (:step state1)))
       (is (= "stop" (:finish-reason resp1)))
       (is (= "all done" (:content resp1))))))

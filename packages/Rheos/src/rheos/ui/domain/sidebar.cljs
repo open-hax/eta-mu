@@ -134,18 +134,19 @@
         handle-cancel (fn []
                         (set-editing-field nil)
                         (set-edit-value ""))
-        handle-save (fn [key value]
+        handle-save (fn ^:async [key value]
                       (set-editing-field nil)
                       (set-edit-value "")
-                      (-> (js/fetch (str "/api/task/" (js/encodeURIComponent task-uuid) "/frontmatter?project=" (js/encodeURIComponent (get task "sourceBoard" "")))
-                                    #js {:method "PATCH"
-                                         :headers #js {"Content-Type" "application/json"}
-                                         :body (js/JSON.stringify #js {:key key :value value})})
-                          (.then (fn [res]
-                                   (when (.-ok res)
-                                     (.then (.json res) (fn [data]
-                                                          (when on-update (on-update data)))))))
-                          (.catch (fn [err] (js/console.error "Save failed:" err)))))]
+                      (try
+                        (let [res (await (js/fetch (str "/api/task/" (js/encodeURIComponent task-uuid) "/frontmatter?project=" (js/encodeURIComponent (get task "sourceBoard" "")))
+                                                  #js {:method "PATCH"
+                                                       :headers #js {"Content-Type" "application/json"}
+                                                       :body (js/JSON.stringify #js {:key key :value value})}))]
+                          (when (.-ok res)
+                            (let [data (await (.json res))]
+                              (when on-update (on-update data)))))
+                        (catch :default err
+                          (js/console.error "Save failed:" err))))]
     ;; Fills the flex slot the layout gives it; the content area below owns the scroll.
     (d/div {:style {:width "100%" :height "100%" :border-left "1px solid var(--token-colors-border-default)" :background "var(--token-colors-background-surface)" :overflow "hidden" :display "flex" :flex-direction "column"}}
 

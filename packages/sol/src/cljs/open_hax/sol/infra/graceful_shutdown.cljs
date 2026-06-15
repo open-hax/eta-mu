@@ -3,8 +3,7 @@
 
    Sol strips out Mongo, Discord, event-runtime, etc. Shutdown simply drains
    the HTTP server and stops realtime broadcasting."
-  (:require [open-hax.sol.domain.realtime :as realtime]
-            [open-hax.sol.runtime.state :as runtime-state]))
+  (:require [open-hax.sol.domain.realtime :as realtime]))
 
 (defonce shutdown-state* (atom {:installed? false
                                 :in-progress? false
@@ -38,7 +37,7 @@
       false)))
 
 (defn- ^:async run-shutdown!
-  [app config signal]
+  [app _config signal]
   (try
     (swap! shutdown-state* assoc :in-progress? true :signal signal)
     (log-info! app (str "[shutdown] received " signal "; draining Sol"))

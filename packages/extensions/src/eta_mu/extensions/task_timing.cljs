@@ -105,13 +105,15 @@
              (- now-ms (aget state "toolSegmentStartMs"))))
     (aset state "toolSegmentStartMs" nil)))
 
+(def task-timing nil)
+
 (em/defextension task-timing
   :name "task-timing"
   :description "Toggle live task timing (runtime + inference vs tool wait split)"
 
   (em/command "timing"
     :description "Toggle live task timing (runtime + inference vs tool wait split)"
-    :handler (fn [args ctx]
+    :handler (fn [_args ctx]
                (let [state (get-state)]
                  (aset state "enabled" (not (aget state "enabled")))
                  (if (not (aget state "enabled"))
@@ -127,7 +129,7 @@
                        (refresh-ui state)))))))
 
   (em/on "agent_start"
-    :handler (fn [event ctx]
+    :handler (fn [_event ctx]
                (let [state (get-state)]
                  (clear-interval-safe state)
                  (aset state "ctx" ctx)
@@ -143,7 +145,7 @@
                      (start-ticker state))))))
 
   (em/on "tool_execution_start"
-    :handler (fn [event ctx]
+    :handler (fn [_event ctx]
                (let [state (get-state)]
                  (when (aget state "running")
                    (let [now (js/performance.now)]
@@ -154,7 +156,7 @@
                      (refresh-ui state))))))
 
   (em/on "tool_execution_end"
-    :handler (fn [event ctx]
+    :handler (fn [_event ctx]
                (let [state (get-state)]
                  (when (aget state "running")
                    (let [now (js/performance.now)]
@@ -164,7 +166,7 @@
                      (refresh-ui state))))))
 
   (em/on "agent_end"
-    :handler (fn [event ctx]
+    :handler (fn [_event ctx]
                (let [state (get-state)]
                  (when (aget state "running")
                    (let [now (js/performance.now)]
@@ -181,7 +183,7 @@
                      (aset state "running" false))))))
 
   (em/on "session_shutdown"
-    :handler (fn [event ctx]
+    :handler (fn [_event ctx]
                (let [state (get-state)]
                  (clear-interval-safe state)
                  (aset state "running" false)
