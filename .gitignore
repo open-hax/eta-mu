@@ -35,6 +35,9 @@ node_modules/
 # Shadow-CLJS build caches
 **/.shadow-cljs/
 
+# Runtime/build caches
+**/.cache/
+
 # Nested worktrees / standalone prototypes
 /alpha/
 
