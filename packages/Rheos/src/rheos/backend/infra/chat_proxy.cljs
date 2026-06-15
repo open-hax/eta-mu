@@ -23,11 +23,15 @@
 (def agent-prefix (str/replace (env "RHEOS_AGENT_PREFIX" "/api/agent") #"/$" ""))
 (def api-key (env "KNOXX_API_KEY" ""))
 (def agent-id (env "KANBAN_ORCHESTRATOR_AGENT" "kanban_orchestrator"))
+;; Model the orchestrator runs on. mimo-v2.5-pro responds far faster than the
+;; gemma4:31b default, which kept the board chat appearing unresponsive.
+(def orchestrator-model (env "RHEOS_ORCHESTRATOR_MODEL" "mimo-v2.5-pro"))
 
 (defn- ^:async forward [path ^js body]
   ;; Always run as the orchestrator agent regardless of what the client sent.
   (aset body "agentId" agent-id)
   (aset body "agent_id" agent-id)
+  (aset body "model" orchestrator-model)
   (let [res (await (js/fetch (str agent-base path)
                              #js {:method "POST"
                                   :headers #js {"Content-Type" "application/json"
@@ -69,4 +73,7 @@
     (set! (.-onerror ws) (fn [_] (try (.write raw ": ws-error\n\n") (catch :default _ nil))))
     (let [hb (js/setInterval (fn [] (try (.write raw ": ping\n\n") (catch :default _ nil))) 25000)]
       (.on (.-raw req) "close"
-           (fn [] (js/clearInterval hb) (try (.close ws) (catch :default _ nil)))))))
+           (fn [] (js/clearInterval hb) (try (.close ws) (catch :default _ nil)))))
+    ;; Return undefined: the reply is hijacked, so Fastify must NOT try to send a
+    ;; value. Returning the `.on` result triggers a spurious FST_ERR_REP_ALREADY_SENT.
+    js/undefined))

@@ -2,7 +2,10 @@
   "Minimal turn orchestrator for Sol."
   (:require [clojure.string :as str]
             [open-hax.sol.domain.agent.content :as content]
+            [open-hax.sol.domain.agent.text-delta :as text-delta]
             [open-hax.sol.domain.models :refer [effective-thinking-level normalize-thinking-level]]
+            [open-hax.sol.domain.realtime :as realtime]
+            [open-hax.sol.domain.text :refer [assistant-message-text]]
             [open-hax.sol.domain.time :refer [now-iso]]
             [open-hax.sol.extern.agent-turn-prompt :as xprompt]
             [open-hax.sol.infra.agent.run-state :as run-state]
@@ -103,16 +106,65 @@
              str/trim
              not-empty)))
 
+;; ── Realtime token streaming ─────────────────────────────────────────────────
+;; The board chat renders the assistant reply from "tokens" events whose payload
+;; is {:kind "assistant_message" :token <delta> :run_id ...}. The agent session
+;; emits provider stream events; we forward assistant text deltas as token
+;; broadcasts. text-delta/diff-appended-text keeps this correct whether the
+;; provider streams incremental deltas or resends cumulative "text so far".
+
+(defn- broadcast-token!
+  [{:keys [run-id conversation-id session-id]} delta]
+  (when (seq delta)
+    (realtime/broadcast-ws-session!
+     session-id "tokens"
+     {:run_id run-id
+      :conversation_id conversation-id
+      :session_id session-id
+      :kind "assistant_message"
+      :token delta})))
+
+(defn stream-message-update!
+  "Forward an assistant text delta from a provider message_update event."
+  [scope seen-text* event]
+  (let [ame (aget event "assistantMessageEvent")
+        ame-type (some-> ame (aget "type") str)]
+    (when (= ame-type "text_delta")
+      (let [delta (str (or (aget ame "delta") (aget ame "text") ""))
+            seen @seen-text*]
+        (if (and (seq seen) (str/starts-with? delta seen))
+          ;; Provider resent the full message-so-far: emit only the new suffix.
+          (let [appended (text-delta/diff-appended-text seen delta)]
+            (broadcast-token! scope appended)
+            (reset! seen-text* delta))
+          ;; Incremental delta.
+          (do
+            (broadcast-token! scope delta)
+            (swap! seen-text* str delta)))))))
+
+(defn stream-message-end!
+  "Flush any text not already streamed when the assistant message completes.
+   Covers providers that send only a terminal message with no incremental deltas."
+  [scope seen-text* event]
+  (when-let [message (aget event "message")]
+    (let [full (str (or (assistant-message-text message) ""))
+          appended (text-delta/diff-appended-text @seen-text* full)]
+      (when (seq appended)
+        (broadcast-token! scope appended)
+        (reset! seen-text* full)))))
+
 (defn- send-user-message-with-timeout!
   "Send content to the session and wait for agent_end. Resolves with the session.
-   A timeout-ms of 0 or nil disables the timeout."
-  [session content timeout-ms]
+   Streams assistant text deltas to the realtime WS as they arrive (scope carries
+   :run-id/:conversation-id/:session-id). A timeout-ms of 0 or nil disables it."
+  [session content timeout-ms scope]
   (js/Promise.
    (fn [resolve reject]
      (try
        (let [settled? (atom false)
              unsubscribe* (atom nil)
              timeout-id* (atom nil)
+             seen-text* (atom "")
              settle! (fn [f]
                        (when (compare-and-set! settled? false true)
                          (when-let [tid @timeout-id*] (js/clearTimeout tid))
@@ -120,10 +172,16 @@
                          (f)))
              handler (fn [event]
                        (let [event-type (some-> (aget event "type") str)]
-                         (when (= event-type "agent_end")
-                           (settle! #(resolve session)))
-                         (when (= event-type "error")
-                           (settle! #(reject (js/Error. (str "Agent error: " (aget event "message"))))))))]
+                         (case event-type
+                           ;; Token streaming is best-effort: a broadcast failure
+                           ;; must never abort the turn.
+                           "message_update" (try (stream-message-update! scope seen-text* event)
+                                                 (catch :default _ nil))
+                           "message_end" (try (stream-message-end! scope seen-text* event)
+                                              (catch :default _ nil))
+                           "agent_end" (settle! #(resolve session))
+                           "error" (settle! #(reject (js/Error. (str "Agent error: " (aget event "message")))))
+                           nil)))]
          (reset! unsubscribe* (subscribe! session handler))
          (-> (send-user-message! session content)
              (.catch (fn [err]
@@ -146,10 +204,30 @@
    :payload payload
    :created_at (now-iso)})
 
+;; Realtime broadcast shape mirrors knoxx's tool-event-payload: a flat map keyed
+;; by :type (NOT :event_type). The board chat client (Rheos) scopes by
+;; conversation_id and switches on payload.type, so lifecycle events must use
+;; this shape to be recognized as run_started / run_completed / run_failed.
+(defn broadcast-run-event!
+  [run-id conversation-id session-id event-type payload]
+  (realtime/broadcast-ws-session!
+   session-id "events"
+   (merge {:run_id run-id
+           :conversation_id conversation-id
+           :session_id session-id
+           :type event-type
+           :at (now-iso)}
+          (when (map? payload) payload))))
+
 (defn- emit-run-event!
   [run-id conversation-id session-id event-type payload]
+  ;; Ledger append (read by GET /api/agent/run/:id/events) keeps the :event_type shape.
   (run-state/append-run-event! run-id
-                               (run-event-payload run-id conversation-id session-id event-type payload)))
+                               (run-event-payload run-id conversation-id session-id event-type payload))
+  ;; Realtime broadcast so the board chat actually receives lifecycle events. The
+  ;; previous implementation only appended to the ledger and never broadcast,
+  ;; which is why the chat never showed a reply or a completion.
+  (broadcast-run-event! run-id conversation-id session-id event-type payload))
 
 (defn- ^:async persist-run-completed!
   [run-id conversation-id session-id model-id answer messages]
@@ -215,7 +293,10 @@
                                      :media-parts-count (count (or content-parts []))
                                      :omitted-count 0
                                      :content content})
-             _ (await (send-user-message-with-timeout! session content (:agent-turn-timeout-ms config)))
+             _ (await (send-user-message-with-timeout! session content (:agent-turn-timeout-ms config)
+                                                       {:run-id run-id
+                                                        :conversation-id conversation-id
+                                                        :session-id session-id}))
              answer (or (last-assistant-text session) "[Sol] No response from agent.")
              messages-after (transcript/session->stored-messages session)]
          (resolve [answer messages-after session]))

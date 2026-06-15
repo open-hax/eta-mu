@@ -106,10 +106,13 @@ const backendEnv = {
   RHEOS_AGENT_PREFIX: envValue('RHEOS_AGENT_PREFIX', '/api/agent'),
   KNOXX_API_KEY: envValue('KNOXX_API_KEY', ''),
   KANBAN_ORCHESTRATOR_AGENT: envValue('KANBAN_ORCHESTRATOR_AGENT', 'kanban_orchestrator'),
+  // Model the orchestrator chat runs on (forwarded to Sol). mimo-v2.5-pro is far
+  // faster than the gemma4:31b default that left the board chat feeling dead.
+  RHEOS_ORCHESTRATOR_MODEL: envValue('RHEOS_ORCHESTRATOR_MODEL', 'mimo-v2.5-pro'),
 };
 
 // Optional kanban config path — only forward when explicitly set.
-const kanbanConfig = envValue('KANBAN_CONFIG', '');
+const kanbanConfig = envValue('KANBAN_CONFIG', '../kanban/openhax.kanban.json');
 if (kanbanConfig) backendEnv.KANBAN_CONFIG = kanbanConfig;
 
 const apps = [

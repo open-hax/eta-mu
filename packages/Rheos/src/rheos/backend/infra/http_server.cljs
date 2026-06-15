@@ -213,7 +213,10 @@
       (.on (.-raw req) "close"
            (fn []
              (js/clearInterval heartbeat)
-             (unsub))))))
+             (unsub))))
+    ;; Return undefined: the reply is hijacked, so Fastify must NOT try to send a
+    ;; value. Returning the `.on` result triggers a spurious FST_ERR_REP_ALREADY_SENT.
+    js/undefined))
 
 (defn ^:async handle-compose [^js req reply]
   (try
@@ -263,18 +266,41 @@
   (.get app "/api/chat/stream" chat-proxy/handle-stream)
   (.get app "/api/health" handle-health))
 
+(defn- sleep [ms] (js/Promise. (fn [resolve] (js/setTimeout resolve ms))))
+
+(defn ^:async listen-with-retry!
+  "Bind the listener, retrying transient EADDRINUSE. On hot-reload the previous
+   listener's port can linger for a tick after `close()`; without a retry the
+   re-`listen()` throws and leaves the dev server down until the next reload."
+  [^js app host port attempts delay-ms]
+  (loop [n attempts]
+    (let [err (try
+                (await (.listen app #js {:host host :port port}))
+                nil
+                (catch :default e e))]
+      (cond
+        (nil? err) app
+        (and (> n 1) (= (.-code err) "EADDRINUSE"))
+        (do (js/console.warn "[rheos] port" port "busy, retrying in" delay-ms "ms")
+            (await (sleep delay-ms))
+            (recur (dec n)))
+        :else (throw err)))))
+
 (defn ^:async start-http!
   "Create a fresh Fastify app, bind routes, and listen. Stored in `server-state`
    so the hot-reload hooks can close and recreate it without disturbing the
    durable watchers/project state."
   [host port]
-  (let [^js app (Fastify. #js {:logger true})
+  ;; forceCloseConnections: SSE streams are active connections that never end on
+  ;; their own, so Fastify's default close() would leave the port held. Forcing
+  ;; them closed lets stop-http! free the port deterministically before re-listen.
+  (let [^js app (Fastify. #js {:logger true :forceCloseConnections true})
         current-dir (js/process.cwd)
         web-dir (path/join current-dir "dist" "web")]
     (await (.register app fastifyCors))
     (await (.register app fastifyStatic #js {:root web-dir :prefix "/"}))
     (register-routes app)
-    (await (.listen app #js {:host host :port port}))
+    (await (listen-with-retry! app host port 5 250))
     (reset! server-state app)
     (js/console.log "Kanban server listening on http://" host ":" port)
     app))

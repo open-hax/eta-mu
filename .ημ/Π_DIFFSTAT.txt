@@ -1,24 +1,7 @@
- package.json                                       |   35 +
- pnpm-workspace.yaml                                |    6 +
- tsconfig.base.json                                 |   22 +
- pnpm-lock.yaml                                     | 1506 +++++++++++
- .gitignore                                         |    3 +
- scripts/lint.mjs                                   |    4 +-
- packages/sol/package.json                          |    2 +-
- packages/axxium/src/cljs/axxium/routes/actor.cljs  |    2 +-
- kanban/tasks/eta-mu-quality-ratchet-lint-gates.md |    8 +-
- packages/tsconfig/base.json                        |  553 +++
- packages/tsconfig/package.json                     |  266 ++
- docs/notes/2026.06.14.00.38.02.md                 |    1 +
- docs/notes/2026.06.14.00.59.20.md                 |    1 +
- packages/Rheos/* (rename from packages/kanban-cljs/*) | 786 files
- packages/legacy/* (rename from packages/*)            | 786 files
- services/* (deleted)                                  |  ~44 files
- receipts/hormuz/* (deleted)                           |  ~46 files
- packages/truth/* (deleted)                            |   6 files
- packages/web-ui/* (deleted)                           |  ~87 files
- packages/reactant/* (deleted)                         |  ~400 files
- packages/skills/* (deleted)                           |  ~31 files
- shared/js/opencode-events/events.edn (deleted)        |   1 file
- .github/workflows/hormuz-clock.yml (deleted)          |   1 file
- 1508 files changed, 8838 insertions(+), 163153 deletions(-)
+ docs/notes/2026.06.14.22.24.55.md                  | 28 +++----
+ packages/Rheos/ecosystem.config.cjs                |  5 +-
+ .../Rheos/src/rheos/backend/infra/chat_proxy.cljs  |  9 +-
+ .../Rheos/src/rheos/backend/infra/http_server.cljs | 32 ++++++-
+ .../src/cljs/open_hax/sol/infra/agent/turn.cljs    | 97 ++++++++++++++++++++--
+ .../open_hax/sol/infra/agent/turn_stream_test.cljs | 94 +++++++++++++++++++++
+ 6 files changed, 235 insertions(+), 30 deletions(-)
