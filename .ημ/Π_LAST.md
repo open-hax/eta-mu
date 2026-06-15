@@ -63,10 +63,10 @@
 - **TS line count**: Unchanged at 174,537 lines
 
 ## Commit
-`TBD` on `feat/kanban-comments-parity`
+`61887d8` on `feat/kanban-comments-parity`
 
 ## Tag
-`TBD`
+`Π/feat-kanban-comments-parity/2026-06-15T144706`
 
 ## Notes
 - No concurrent agent dirt detected; excluded paths are generated/runtime/scratch.
