@@ -1,7 +1,14 @@
 #!/usr/bin/env nbb
-(ns knoxx.scripts.start-server-dev
+(ns open-hax.sol.scripts.start-server-dev
+  "Foreground launcher for the Sol backend dev server.
+
+   Waits for shadow-cljs :server-dev to produce dist-dev/server.js, patches the
+   shadow-cljs devtools defines if necessary, then dynamically imports the
+   compiled entrypoint. PM2 runs this script with wait_ready; shadow-cljs owns
+   hot reload."
   (:require
    [clojure.string :as str]
+   [cljs.reader :as reader]
    [nbb.core :as nbb]
    [promesa.core :as p]
    ["node:fs/promises" :as fs]
@@ -20,32 +27,51 @@
 (def shadow-token-path
   (path/join backend-dir ".shadow-cljs" "server.token"))
 
-(def shadow-url
-  (or (aget js/process.env "KNOXX_SHADOW_URL") "http://127.0.0.1:9630"))
+(def shadow-cljs-edn-path
+  (path/join backend-dir "shadow-cljs.edn"))
+
+(def default-shadow-port
+  (js/Number (or (aget js/process.env "SOL_SHADOW_PORT") 9633)))
+
+(defn read-shadow-http-port
+  "Read the :http :port from shadow-cljs.edn, falling back to default-shadow-port."
+  []
+  (-> (p/let [src (fs/readFile shadow-cljs-edn-path "utf8")
+              config (reader/read-string src)
+              port (get-in config [:http :port])]
+        (if (pos? (js/Number port))
+          (js/Number port)
+          default-shadow-port))
+      (.catch (fn [_err]
+                (js/console.warn (str "[sol-backend-dev] could not read " shadow-cljs-edn-path "; using port " default-shadow-port))
+                default-shadow-port))))
+
+(def shadow-url-base
+  (or (aget js/process.env "SOL_SHADOW_HOST") "http://127.0.0.1"))
 
 (def build-wait-ms
-  (js/Number (or (aget js/process.env "KNOXX_SHADOW_BUILD_WAIT_MS") 90000)))
+  (js/Number (or (aget js/process.env "SOL_SHADOW_BUILD_WAIT_MS") 90000)))
 
 (def poll-ms
-  (js/Number (or (aget js/process.env "KNOXX_SHADOW_POLL_MS") 500)))
+  (js/Number (or (aget js/process.env "SOL_SHADOW_POLL_MS") 500)))
 
 (def started-at-ms
   (.now js/Date))
 
 (defn log!
   [message]
-  (js/console.log (str "[knoxx-backend-dev] " message)))
+  (js/console.log (str "[sol-backend-dev] " message)))
 
 (defn warn!
   [message]
-  (js/console.warn (str "[knoxx-backend-dev] " message)))
+  (js/console.warn (str "[sol-backend-dev] " message)))
 
 (defn sleep
   [ms]
   (js/Promise. (fn [resolve _reject] (js/setTimeout resolve ms))))
 
 (defn shadow-server-ready?
-  []
+  [shadow-url]
   (-> (p/let [response (js/fetch shadow-url #js {:signal (.timeout js/AbortSignal 1000)})]
         (< (.-status response) 500))
       (.catch (fn [_err] false))))
@@ -62,7 +88,7 @@
   (boolean
    (and artifact
         (.isFile (.-stat artifact))
-        (str/includes? (.-source artifact) "knoxx.backend.entrypoint.init")
+        (str/includes? (.-source artifact) "open_hax.sol.entrypoint.init")
         (str/includes? (.-source artifact) "shadow.cljs.devtools.client.node_esm"))))
 
 (defn read-shadow-token
@@ -140,10 +166,10 @@
             (when (= patched source)
               (throw (js/Error. (str "Unable to patch shadow-cljs devtools defines in " cljs-env-path))))
             (p/let [_ (fs/writeFile cljs-env-path patched)]
-              (warn! "patched fallback shadow-cljs devtools defines; prefer restarting knoxx-shadow if hot reload does not attach"))))))))
+              (warn! "patched fallback shadow-cljs devtools defines; prefer restarting sol-shadow if hot reload does not attach"))))))))
 
 (defn wait-for-shadow-and-build!
-  []
+  [shadow-url]
   (let [deadline (+ started-at-ms build-wait-ms)
         state #js {:sawShadow false :sawRunnableArtifact false}]
     (log! (str "waiting for shadow-cljs dev server at " shadow-url))
@@ -160,7 +186,7 @@
                   (do
                     (warn! "timed out waiting for a fresh shadow artifact; continuing with existing runnable dist-dev/server.js")
                     nil))
-                (p/let [result (js/Promise.all #js [(shadow-server-ready?) (read-build-artifact)])]
+                (p/let [result (js/Promise.all #js [(shadow-server-ready? shadow-url) (read-build-artifact)])]
                   (let [shadow-ready (aget result 0)
                         artifact (aget result 1)
                         runnable (artifact-runnable? artifact)]
@@ -184,11 +210,14 @@
 
 (defn dry-run?
   []
-  (= "1" (aget js/process.env "KNOXX_BACKEND_DEV_DRY_RUN")))
+  (= "1" (aget js/process.env "SOL_BACKEND_DEV_DRY_RUN")))
 
 (defn main!
   []
-  (p/let [_ (wait-for-shadow-and-build!)
+  (p/let [port (read-shadow-http-port)
+          shadow-url (str shadow-url-base ":" port)
+          _ (log! (str "resolved shadow-cljs http port: " port))
+          _ (wait-for-shadow-and-build! shadow-url)
           _ (patch-shadow-devtools-defines!)]
     (if (dry-run?)
       (log! "dry run complete; not importing dist-dev/server.js")
@@ -198,5 +227,5 @@
 
 (-> (main!)
     (.catch (fn [err]
-              (js/console.error "[knoxx-backend-dev] unhandled rejection" err)
+              (js/console.error "[sol-backend-dev] unhandled rejection" err)
               (set! (.-exitCode js/process) 1))))
