@@ -34,6 +34,12 @@
 - `packages/sol/dist-dev/` — build artifacts (gitignored in sol/.gitignore)
 - `pnpm-lock.yaml` — stale, regenerate on next install
 
+## Commit
+`2f8d396` on `feat/kanban-comments-parity`
+
+## Tag
+`Π/feat-kanban-comments-parity/2026-06-15T033242`
+
 ## Verification Status
 - **Tests**: Skipped — knoxx tests deleted, sol tests not yet wired
 - **Build**: Skipped — shadow-cljs state is in excluded dist-dev
