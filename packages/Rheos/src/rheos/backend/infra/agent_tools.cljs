@@ -59,10 +59,12 @@
 (defn- ^:async tool-project-grep [{:keys [pattern path glob limit]}]
   ;; Always pass an explicit search path — with none, rg reads stdin (a pipe under
   ;; execFile) and blocks forever instead of searching the tree.
+  ;; Resolve the search path through safe-resolve (same guard tool-project-read
+  ;; uses) so the orchestrator can't grep outside the project root.
   (let [args (cond-> ["-n" "--no-heading" "--color" "never"]
                glob (into ["-g" glob])
                true (into ["--" pattern])
-               true (conj (or path ".")))]
+               true (conj (safe-resolve path)))]
     {:matches (lines (await (exec-file "rg" args)) (or limit 200))}))
 
 (defn- ^:async tool-project-read [{:keys [path max-bytes]}]

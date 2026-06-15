@@ -180,8 +180,14 @@
             (send-error reply 404 "unknown uuid")
             (let [task-path (:source-path task)
                   child-process cp]
-              ;; Open in system default editor
-              (.exec child-process (str "xdg-open \"" task-path "\" 2>/dev/null || open \"" task-path "\" 2>/dev/null"))
+              ;; Open in the system default editor. Pass the path as an argv entry
+              ;; via execFile (no shell), so a task filename containing shell
+              ;; metacharacters can't execute arbitrary commands. Fall back from
+              ;; xdg-open (Linux) to open (macOS) on failure.
+              (.execFile child-process "xdg-open" #js [task-path]
+                         (fn [err _stdout _stderr]
+                           (when err
+                             (.execFile child-process "open" #js [task-path] (fn [_ _ _])))))
               (send-json reply #js {:ok true}))))
         (catch :default err (send-error reply 500 (.-message err)))))))
 

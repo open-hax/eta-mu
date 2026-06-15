@@ -29,7 +29,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/open-hax/eta-mu.git",
-    "directory": "packages/tui"
+    "directory": "packages/legacy/tui"
   },
   "engines": {
     "node": ">=20.0.0"

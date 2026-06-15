@@ -1,6 +1,6 @@
 {
   "name": "@open-hax/eta-mu-cli",
-  "version": "0.70.17-beta",
+  "version": "0.70.16",
   "description": "Coding agent CLI with read, bash, edit, write tools and session management",
   "type": "module",
   "piConfig": {
@@ -101,7 +101,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/open-hax/eta-mu.git",
-    "directory": "packages/coding-agent"
+    "directory": "packages/legacy/coding-agent"
   },
   "engines": {
     "node": ">=20.6.0"

@@ -25,7 +25,29 @@ import { findTrackedUnresolvedThreads, findAllUnresolvedThreads } from "./review
 import { ensurePRs } from "./ensure-pr.js";
 import type { AutofixResult, EtaMuAgentDecision } from "./types.js";
 import { readFile } from "node:fs/promises";
-import { execSync } from "node:child_process";
+import { readdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+
+// A git branch name (allows the usual `feat/foo-bar` shapes) — used to keep
+// untrusted `--base` values out of anything that could be (mis)read as a flag.
+const BRANCH_NAME_RE = /^[A-Za-z0-9._/-]+$/;
+
+// Expand a simple "<dir>/*[/]" workspace glob without invoking a shell, so a
+// hostile --workspace-glob can't inject commands the way `ls -d <glob>` did.
+const expandWorkspaceGlob = (glob: string): string[] => {
+  const match = glob.match(/^(.*?)\/\*\/?$/);
+  if (!match) {
+    throw new Error(`Unsupported --workspace-glob "${glob}"; expected a "<dir>/*/" pattern`);
+  }
+  const prefix = match[1];
+  try {
+    return readdirSync(prefix, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => `${prefix}/${entry.name}`);
+  } catch {
+    return [];
+  }
+};
 
 const usage = `eta-mu commands:
   eta-mu review-gate --repo owner/repo --pr 123 [--publish-check] [--check-name eta-mu-review-gate] [--head-sha <sha>] [--strict]
@@ -313,14 +335,17 @@ const main = async (): Promise<void> => {
 
   if (command === "detect-packages") {
     const base = requireArg("--base", getArg(args, "--base"));
+    if (!BRANCH_NAME_RE.test(base)) {
+      throw new Error(`Invalid --base "${base}"; expected a git branch name`);
+    }
     const workspaceGlob = getArg(args, "--workspace-glob") ?? "packages/*/";
 
-    const changedFiles = execSync(`git diff --name-only origin/${base}...HEAD`, { encoding: "utf8" }).trim().split("\n").filter(Boolean);
-
-    const workspaceDirs = execSync(`ls -d ${workspaceGlob}`, { encoding: "utf8" })
+    const changedFiles = execFileSync("git", ["diff", "--name-only", `origin/${base}...HEAD`], { encoding: "utf8" })
       .trim()
       .split("\n")
       .filter(Boolean);
+
+    const workspaceDirs = expandWorkspaceGlob(workspaceGlob);
 
     const changedPackages: { path: string; name: string }[] = [];
 

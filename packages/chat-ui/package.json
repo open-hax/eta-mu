@@ -10,6 +10,7 @@
     "clean": "rm -rf dist target",
     "lint:kondo": "clj-kondo --lint src test"
   },
+  "//marked": "marked is pinned to v4: marked@12+ uses ECMAScript #private class fields that the Closure compiler (shadow-cljs) cannot parse, which breaks the build. The v4 call-site API is compatible. Do not bump without verifying the Closure build.",
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

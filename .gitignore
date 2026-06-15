@@ -47,7 +47,6 @@ node_modules/
 **/.clj-kondo/.cache
 **/.clj-kondo/imports
 **/.lsp/
-packages/opencode-reactant/resources/public/js/main.js.map
 
 # Playwright artifacts
 packages/kanban/test-results/
@@ -55,10 +54,6 @@ packages/kanban/playwright-report/
 
 
 **/target/
-
-# Generated documentation assets
-docs/agentd-api/assets/
-docs/opencode-reactant-api/js/
 
 # TypeScript line-count baseline (local state)
 .ts-line-count-baseline
