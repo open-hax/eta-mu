@@ -137,9 +137,15 @@
 
 ;; ── Agent turn routes ────────────────────────────────────────────────
 ;; These mirror knoxx's /api/knoxx/* surface 1:1 — only the prefix differs
-;; (/api/agent here vs /api/knoxx there). Each mode has a synchronous variant
-;; (runs to completion, returns the turn result) and an async `…/start` variant
+;; (/api/agent here vs /api/knoxx there). Each has a synchronous variant (runs
+;; to completion, returns the turn result) and an async `…/start` variant
 ;; (queues a run, returns 202; reply tokens stream over /ws/stream).
+;;
+;; NOTE: in knoxx, /chat vs /direct selects RAG vs no-RAG. Sol has no retrieval
+;; layer — RAG is not a harness concern here — so the chat/* and direct/* routes
+;; are wire-compatible aliases that run the same plain turn. If retrieval is
+;; added, it belongs in front of the turn (context injection / a tool), not as a
+;; mode threaded through the agent loop.
 
 (defn- async-start-response
   "knoxx-compatible accepted-response (both snake_case and camelCase keys)."
@@ -154,69 +160,53 @@
    :sessionId session-id
    :model model})
 
-;; Async start (RAG). Mirrors knoxx POST /api/knoxx/chat/start.
+(defn- ^:async queue-agent-run!
+  "Shared async-start handler: queue a run and reply 202."
+  [runtime config reply request]
+  (let [parsed (normalize-chat-body (request-body request))
+        session-id (ensure-session-id (:session-id parsed))
+        conversation-id (or (:conversation-id parsed) (.randomUUID crypto))
+        run-id (or (:run-id parsed) (.randomUUID crypto))
+        model (or (:model parsed) "gemma4:31b")
+        body (assoc parsed
+                    :session-id session-id
+                    :conversation-id conversation-id
+                    :run-id run-id)]
+    (try
+      (await (agent-policy/validate-chat-policy! nil model))
+      (agent-service/spawn-direct! runtime config body)
+      (json-response! reply 202 (async-start-response run-id conversation-id session-id model))
+      (catch :default err
+        (error-response! reply err 429)))))
+
+(defn- ^:async run-agent-turn!
+  "Shared synchronous handler: run a turn to completion and reply 200."
+  [runtime config reply request]
+  (let [parsed (normalize-chat-body (request-body request))
+        model (or (:model parsed) "gemma4:31b")]
+    (try
+      (await (agent-policy/validate-chat-policy! nil model))
+      (json-response! reply 200 (await (agent-service/send-agent-turn! runtime config parsed)))
+      (catch :default err
+        (error-response! reply err 502)))))
+
+;; Async start. Mirrors knoxx POST /api/knoxx/chat/start and /api/knoxx/direct/start.
 (defroute api-agent-chat-start! []
   "POST" "/api/agent/chat/start"
-  (let [parsed (normalize-chat-body (request-body request))
-        session-id (ensure-session-id (:session-id parsed))
-        conversation-id (or (:conversation-id parsed) (.randomUUID crypto))
-        run-id (or (:run-id parsed) (.randomUUID crypto))
-        model (or (:model parsed) "gemma4:31b")
-        body (assoc parsed
-                    :session-id session-id
-                    :conversation-id conversation-id
-                    :run-id run-id
-                    :mode "rag")]
-    (try
-      (await (agent-policy/validate-chat-policy! nil model))
-      (agent-service/spawn-direct! runtime config body)
-      (json-response! reply 202 (async-start-response run-id conversation-id session-id model))
-      (catch :default err
-        (error-response! reply err 429)))))
+  (await (queue-agent-run! runtime config reply request)))
 
-;; Async start (direct, no RAG). Mirrors knoxx POST /api/knoxx/direct/start.
 (defroute api-agent-direct-start! []
   "POST" "/api/agent/direct/start"
-  (let [parsed (normalize-chat-body (request-body request))
-        session-id (ensure-session-id (:session-id parsed))
-        conversation-id (or (:conversation-id parsed) (.randomUUID crypto))
-        run-id (or (:run-id parsed) (.randomUUID crypto))
-        model (or (:model parsed) "gemma4:31b")
-        body (assoc parsed
-                    :session-id session-id
-                    :conversation-id conversation-id
-                    :run-id run-id
-                    :mode "direct")]
-    (try
-      (await (agent-policy/validate-chat-policy! nil model))
-      (agent-service/spawn-direct! runtime config body)
-      (json-response! reply 202 (async-start-response run-id conversation-id session-id model))
-      (catch :default err
-        (error-response! reply err 429)))))
+  (await (queue-agent-run! runtime config reply request)))
 
-;; Synchronous turn (RAG). Mirrors knoxx POST /api/knoxx/chat.
+;; Synchronous turn. Mirrors knoxx POST /api/knoxx/chat and /api/knoxx/direct.
 (defroute api-agent-chat! []
   "POST" "/api/agent/chat"
-  (let [parsed (normalize-chat-body (request-body request))
-        model (or (:model parsed) "gemma4:31b")
-        body (assoc parsed :mode "rag")]
-    (try
-      (await (agent-policy/validate-chat-policy! nil model))
-      (json-response! reply 200 (await (agent-service/send-agent-turn! runtime config body)))
-      (catch :default err
-        (error-response! reply err 502)))))
+  (await (run-agent-turn! runtime config reply request)))
 
-;; Synchronous turn (direct, no RAG). Mirrors knoxx POST /api/knoxx/direct.
 (defroute api-agent-direct! []
   "POST" "/api/agent/direct"
-  (let [parsed (normalize-chat-body (request-body request))
-        model (or (:model parsed) "gemma4:31b")
-        body (assoc parsed :mode "direct")]
-    (try
-      (await (agent-policy/validate-chat-policy! nil model))
-      (json-response! reply 200 (await (agent-service/send-agent-turn! runtime config body)))
-      (catch :default err
-        (error-response! reply err 502)))))
+  (await (run-agent-turn! runtime config reply request)))
 
 (defroute api-agent-session-status! []
   "GET" "/api/agent/sessions/:id"
