@@ -50,7 +50,7 @@
 
 (defn- build-args-schema
   "Build an OpenCode tool args shape from eta-mu parameter specs.
-   @opencode-ai/plugin/tool expects a raw Zod shape object, not z.object(...)."
+   The opencode-ai/plugin tool expects a raw Zod shape object, not z.object(...)."
   [^js z params]
   (let [shape (js-obj)]
     (doseq [[k spec] params]

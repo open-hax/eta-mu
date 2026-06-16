@@ -576,7 +576,8 @@
                                   :spore spore
                                    :promotion promotion})))))))))
 
-(def session-mycology nil)
+
+(declare session-mycology)
 
 (em/defextension session-mycology
   :name "session-mycology"

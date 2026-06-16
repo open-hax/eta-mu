@@ -441,7 +441,8 @@
             ["recent audit:"]
             (map summarize-row (take 12 audit))))))))
 
-(def contract-runtime nil)
+
+(declare contract-runtime)
 
 (em/defextension contract-runtime
   :name "contract-runtime"

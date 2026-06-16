@@ -1165,7 +1165,8 @@
   (.call (aget pi "on") pi "agent_idle" (fn [event ctx] (handle-agent-idle pi ctx event)))
   (.call (aget pi "on") pi "session_shutdown" (fn [_event ctx] (handle-session-shutdown ctx))))
 
-(def opmf-contract-gate nil)
+
+(declare opmf-contract-gate)
 
 (em/defextension opmf-contract-gate
   :name "opmf-contract-gate"

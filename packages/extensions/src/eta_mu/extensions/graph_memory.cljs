@@ -502,7 +502,8 @@
 ;; Tool Implementations
 ;; =============================================================================
 
-(def graph-memory nil)
+
+(declare graph-memory)
 
 (em/defextension graph-memory
   :name "graph-memory"

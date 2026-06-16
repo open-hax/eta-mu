@@ -132,7 +132,45 @@
              :origin "file"
              :file-path resolved}))))
 
-(def image-render nil)
+
+;; The async body lives in a top-level `^:async` defn rather than inline in the
+;; `em/tool` :execute fn: syntax-quote strips the `^:async` metadata when a fn
+;; form is spliced through the em/tool/defextension macros, so an inline
+;; `(fn ^:async [...] (await ...))` fails to compile ("await can only be used in
+;; async contexts"). A top-level defn is read directly, so its async marking is
+;; honored.
+(defn ^:async render-image!
+  [source max-bytes mime-override signal cwd on-update]
+  (let [payload (await (cond
+                         (.startsWith source "data:")
+                         (load-from-data-url source max-bytes mime-override)
+                         (or (.startsWith source "http://") (.startsWith source "https://"))
+                         (load-from-url source max-bytes mime-override signal)
+                         :else
+                         (load-from-file source max-bytes mime-override cwd)))]
+    (when on-update
+      (on-update #js {:content #js [#js {:type "text" :text "Loading image..."}]}))
+    (let [opened (when (is-alacritty?)
+                   (let [fp (if (and (= (aget payload "origin") "file")
+                                     (aget payload "file-path"))
+                              (aget payload "file-path")
+                              (await (write-temp-image (js/Buffer.from (aget payload "data") "base64")
+                                                       (aget payload "mimeType"))))]
+                     (when fp
+                       (open-in-viewer fp))))]
+      #js {:content #js [#js {:type "text"
+                              :text (str "Rendered image from " (aget payload "source-label")
+                                         " (" (aget payload "mimeType") ", " (format-bytes (aget payload "bytes")) ")."
+                                         (when opened
+                                           (str " Opened externally via " (aget opened "viewer") ": " (aget opened "file-path"))))}
+                         #js {:type "image"
+                              :data (aget payload "data")
+                              :mimeType (aget payload "mimeType")}]
+           :details #js {:source (aget payload "source-label")
+                         :mimeType (aget payload "mimeType")
+                         :bytes (aget payload "bytes")}})))
+
+(declare image-render)
 
 (em/defextension image-render
   :name "image-render"
@@ -144,36 +182,10 @@
     :parameters {:source {:type "string" :description "Local file path, http(s) URL, or data: URL to render."}
                  :mimeType {:type "string" :description "Optional MIME type override." :optional true}
                  :maxBytes {:type "integer" :description "Maximum bytes to load" :minimum 1 :optional true}}
-    :execute (fn ^:async [_tool-call-id params signal on-update ctx]
-               (let [source (.trim (aget params "source"))
-                     max-bytes (or (aget params "maxBytes") DEFAULT-MAX-BYTES)
-                     mime-override (aget params "mimeType")
-                     cwd (aget ctx "cwd")
-                     payload (await (cond
-                                      (.startsWith source "data:")
-                                      (load-from-data-url source max-bytes mime-override)
-                                      (or (.startsWith source "http://") (.startsWith source "https://"))
-                                      (load-from-url source max-bytes mime-override signal)
-                                      :else
-                                      (load-from-file source max-bytes mime-override cwd)))]
-                 (when on-update
-                   (on-update #js {:content #js [#js {:type "text" :text "Loading image..."}]}))
-                 (let [opened (when (is-alacritty?)
-                                (let [fp (if (and (= (aget payload "origin") "file")
-                                                  (aget payload "file-path"))
-                                           (aget payload "file-path")
-                                           (await (write-temp-image (js/Buffer.from (aget payload "data") "base64")
-                                                                    (aget payload "mimeType"))))]
-                                  (when fp
-                                    (open-in-viewer fp))))]
-                   #js {:content #js [#js {:type "text"
-                                           :text (str "Rendered image from " (aget payload "source-label")
-                                                      " (" (aget payload "mimeType") ", " (format-bytes (aget payload "bytes")) ")."
-                                                      (when opened
-                                                        (str " Opened externally via " (aget opened "viewer") ": " (aget opened "file-path"))))}
-                                          #js {:type "image"
-                                               :data (aget payload "data")
-                                               :mimeType (aget payload "mimeType")}]
-                        :details #js {:source (aget payload "source-label")
-                                      :mimeType (aget payload "mimeType")
-                                      :bytes (aget payload "bytes")}})))))
+    :execute (fn [_tool-call-id params signal on-update ctx]
+               (render-image! (.trim (aget params "source"))
+                              (or (aget params "maxBytes") DEFAULT-MAX-BYTES)
+                              (aget params "mimeType")
+                              signal
+                              (aget ctx "cwd")
+                              on-update))))

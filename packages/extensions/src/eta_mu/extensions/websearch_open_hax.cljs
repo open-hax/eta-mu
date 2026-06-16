@@ -105,7 +105,52 @@
                            :truncated true
                            :outputPath output-path}}))))
 
-(def websearch-open-hax nil)
+
+;; The async body lives in a top-level `^:async` defn rather than inline in the
+;; `em/tool` :execute fn: syntax-quote strips the `^:async` metadata when a fn
+;; form is spliced through the em/tool/defextension macros, so an inline
+;; `(fn ^:async [...] (await ...))` fails to compile ("await can only be used in
+;; async contexts"). A top-level defn is read directly, so its async marking is
+;; honored.
+(defn ^:async run-websearch!
+  [params signal onUpdate]
+  (let [token (proxy-token)]
+    (if-not token
+      (js/Promise.reject (js/Error. "Missing auth token for Open Hax proxy. Set OPEN_HAX_OPENAI_PROXY_AUTH_TOKEN (or PROXY_AUTH_TOKEN)."))
+      (let [endpoint (str (.replace (proxy-url) #"/+$" "") "/api/tools/websearch")
+            model (or (aget params "model")
+                      (aget js/process.env "OPEN_HAX_WEBSEARCH_MODEL")
+                      DEFAULT-MODEL)]
+        (when onUpdate
+          (onUpdate #js {:content #js [#js {:type "text" :text (str "Calling Open Hax websearch... (" endpoint ")")}]
+                         :details #js {:status "starting" :endpoint endpoint :model model}}))
+        (let [resp (await (js/fetch endpoint
+                                    #js {:method "POST"
+                                         :headers #js {"Authorization" (str "Bearer " token)
+                                                       "Content-Type" "application/json"}
+                                         :body (js/JSON.stringify #js {:query (aget params "query")
+                                                                       :numResults (aget params "numResults")
+                                                                       :searchContextSize (aget params "searchContextSize")
+                                                                       :allowedDomains (aget params "allowedDomains")
+                                                                       :model model})
+                                         :signal signal}))
+              raw (await (.text resp))
+              json (try
+                     (js/JSON.parse raw)
+                     (catch :default _ nil))]
+          (cond
+            (not json)
+            (js/Promise.reject
+              (js/Error. (str "Open Hax websearch returned non-JSON: " (subs raw 0 2000))))
+
+            (not (.-ok resp))
+            (js/Promise.reject
+              (js/Error. (str "Open Hax websearch error (" (.-status resp) " " (.-statusText resp) "): " (subs raw 0 2000))))
+
+            :else
+            (await (handle-success json endpoint model))))))))
+
+(declare websearch-open-hax)
 
 (em/defextension websearch-open-hax
   :name "websearch-open-hax"
@@ -119,39 +164,5 @@
                  :searchContextSize {:type "string" :enum ["low" "medium" "high"] :description "Search context size (default: medium)" :optional true}
                  :allowedDomains {:type "array" :items {:type "string"} :description "Optional allow-list of domains" :optional true}
                  :model {:type "string" :description "Model ID to use" :optional true}}
-    :execute (fn ^:async [_tcid params signal onUpdate _ctx]
-               (let [token (proxy-token)]
-                 (if-not token
-                   (js/Promise.reject (js/Error. "Missing auth token for Open Hax proxy. Set OPEN_HAX_OPENAI_PROXY_AUTH_TOKEN (or PROXY_AUTH_TOKEN)."))
-                   (let [endpoint (str (.replace (proxy-url) #"/+$" "") "/api/tools/websearch")
-                         model (or (aget params "model")
-                                   (aget js/process.env "OPEN_HAX_WEBSEARCH_MODEL")
-                                   DEFAULT-MODEL)]
-                     (when onUpdate
-                       (onUpdate #js {:content #js [#js {:type "text" :text (str "Calling Open Hax websearch... (" endpoint ")")}]
-                                  :details #js {:status "starting" :endpoint endpoint :model model}}))
-                     (let [resp (await (js/fetch endpoint
-                                                 #js {:method "POST"
-                                                      :headers #js {"Authorization" (str "Bearer " token)
-                                                                    "Content-Type" "application/json"}
-                                                      :body (js/JSON.stringify #js {:query (aget params "query")
-                                                                                    :numResults (aget params "numResults")
-                                                                                    :searchContextSize (aget params "searchContextSize")
-                                                                                    :allowedDomains (aget params "allowedDomains")
-                                                                                    :model model})
-                                                      :signal signal}))
-                           raw (await (.text resp))
-                           json (try
-                                  (js/JSON.parse raw)
-                                  (catch :default _ nil))]
-                       (cond
-                         (not json)
-                         (js/Promise.reject
-                           (js/Error. (str "Open Hax websearch returned non-JSON: " (subs raw 0 2000))))
-
-                         (not (.-ok resp))
-                         (js/Promise.reject
-                           (js/Error. (str "Open Hax websearch error (" (.-status resp) " " (.-statusText resp) "): " (subs raw 0 2000))))
-
-                         :else
-                         (await (handle-success json endpoint model))))))))))
+    :execute (fn [_tcid params signal onUpdate _ctx]
+               (run-websearch! params signal onUpdate))))

@@ -506,7 +506,8 @@
                           :record (clj->js record)
                           :line line})))))
 
-(def receipt-river nil)
+
+(declare receipt-river)
 
 (em/defextension receipt-river
   :name "receipt-river"
