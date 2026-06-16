@@ -15,3 +15,17 @@
       (is (string? (:text (first token-events)))))
     (is (some #(= "done" (:type %)) @events))
     (proto/close session)))
+
+(deftest ^:async mock-session-abort-resolves-promise
+  (let [session (mock/create-mock-session {:delay 1000})
+        events (atom [])
+        unsub (proto/subscribe session #(swap! events conj %))]
+    (let [p (proto/send-message session "hello")]
+      (proto/abort session)
+      (let [result (await p)]
+        (is (= false (:ok result)))
+        (is (= true (:aborted result)))))
+    (await (js/Promise. (fn [resolve _] (js/setTimeout resolve 100))))
+    (unsub)
+    (is (not (some #(= "done" (:type %)) @events)))
+    (proto/close session)))

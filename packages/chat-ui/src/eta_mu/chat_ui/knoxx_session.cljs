@@ -31,7 +31,9 @@
         _ (when (seq api-key) (aset headers "x-api-key" api-key))
         res (await (js/fetch url #js {:method "POST" :headers headers :body (js/JSON.stringify (clj->js body))}))
         data (await (.json res))]
-    data))
+    (if (.-ok res)
+      data
+      (throw (js/Error. (str "HTTP " (.-status res) " " (.-statusText res) ": " (pr-str data)))))))
 
 (defn- open-stream! [state listeners base-url chat-path sid cid]
   (let [url (str (ws-url base-url) chat-path "/ws/stream?session_id=" (js/encodeURIComponent sid)
@@ -78,23 +80,32 @@
            api-key (default-api-key)
            agent-id "kanban_orchestrator"
            model ""}}]
-   (let [listeners (atom [])
-         state (atom {:session-id nil :conversation-id nil :stream nil})]
-     (reify proto/IChatSession
-       (send-message [_ text]
-         (if-let [cid (:conversation-id @state)]
-           (post-json (str base-url chat-path)
-                      (cond-> {:message text :conversation_id cid :session_id (:session-id @state)}
-                        (seq agent-id) (assoc :agent_id agent-id)
-                        (seq model) (assoc :model model))
-                      api-key)
-           (start-conversation! state listeners base-url chat-path api-key agent-id model text)))
-       (subscribe [_ callback]
-         (swap! listeners conj callback)
-         (fn [] (swap! listeners (fn [ls] (filterv #(not= % callback) ls)))))
-       (abort [_]
-         (when-let [conn (:stream @state)] ((:close conn))))
-       (history [_] (js/Promise.resolve []))
-       (close [_]
-         (when-let [conn (:stream @state)] ((:close conn)))
-         (reset! listeners []))))))
+    (let [listeners (atom [])
+          state (atom {:session-id nil :conversation-id nil :stream nil})]
+      (reify proto/IChatSession
+        (send-message ^:async [_ text]
+          (if-let [cid (:conversation-id @state)]
+            (do
+              (when-not (:stream @state)
+                (open-stream! state listeners base-url chat-path (:session-id @state) cid))
+              (await (post-json (str base-url chat-path)
+                                (cond-> {:message text :conversation_id cid :session_id (:session-id @state)}
+                                  (seq agent-id) (assoc :agent_id agent-id)
+                                  (seq model) (assoc :model model))
+                                api-key)))
+            (await (start-conversation! state listeners base-url chat-path api-key agent-id model text))))
+        (subscribe [_ callback]
+          (swap! listeners conj callback)
+          (when-let [sid (:session-id @state)]
+            (when-let [cid (:conversation-id @state)]
+              (when-not (:stream @state)
+                (open-stream! state listeners base-url chat-path sid cid))))
+          (fn [] (swap! listeners (fn [ls] (filterv #(not= % callback) ls)))))
+        (abort [_]
+          (when-let [conn (:stream @state)] ((:close conn)))
+          (swap! state assoc :stream nil))
+        (history [_] (js/Promise.resolve []))
+        (close [_]
+          (when-let [conn (:stream @state)] ((:close conn)))
+          (swap! state assoc :stream nil)
+          (reset! listeners []))))))

@@ -48,7 +48,9 @@
                                       :headers #js {"Content-Type" "application/json"}
                                       :body (js/JSON.stringify (clj->js body))}))
         data (await (.json res))]
-    data))
+    (if (.-ok res)
+      data
+      (throw (js/Error. (str "HTTP " (.-status res) " " (.-statusText res) ": " (pr-str data)))))))
 
 (defn- ^:async start-conversation! [config state listeners text]
   (let [url (str (:base-url config) (:prefix config) "/chat/start")
@@ -76,14 +78,17 @@
          state (atom {})
          listeners (atom [])]
      (reify proto/IChatSession
-       (send-message ^:async [_ text]
-         (if-let [cid (:conversation-id @state)]
-           (post-json (str base-url prefix "/chat")
-                      (cond-> {:message text
-                               :conversation_id cid
-                               :session_id (:session-id @state)}
-                        (:model config) (assoc :model (:model config))))
-           (start-conversation! config state listeners text)))
+        (send-message ^:async [_ text]
+          (if-let [cid (:conversation-id @state)]
+            (do
+              (when-not (:ws @state)
+                (open-stream! config state listeners))
+              (await (post-json (str base-url prefix "/chat")
+                                (cond-> {:message text
+                                           :conversation_id cid
+                                           :session_id (:session-id @state)}
+                                  (:model config) (assoc :model (:model config))))))
+            (await (start-conversation! config state listeners text))))
        (subscribe [_ callback]
          (swap! listeners conj callback)
          (when (and (:session-id @state) (:conversation-id @state) (not (:ws @state)))

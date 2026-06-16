@@ -15,7 +15,12 @@
         [base-url set-base-url] (hooks/use-state "http://127.0.0.1:8001")
         [model set-model] (hooks/use-state "proxx")
         [session set-session] (hooks/use-state nil)
+        [error set-error] (hooks/use-state nil)
         chat (proto/use-chat-session session)]
+    (hooks/use-effect [session]
+      (fn []
+        (when session
+          (set-error nil))))
     (hooks/use-effect [session]
       (fn []
         (when session
@@ -63,12 +68,16 @@
                           :font-size "13px"}})
         (d/button {:onClick (fn []
                               (when session (proto/close session))
-                              (set-session (case backend
-                                             "sol" (sol/create-sol-session {:base-url base-url
-                                                                            :model (when (seq model) model)})
-                                             "knoxx" (knoxx/create-knoxx-session {:base-url base-url
-                                                                                  :model (when (seq model) model)})
-                                             (mock/create-mock-session))))
+                              (set-error nil)
+                              (try
+                                (set-session (case backend
+                                               "sol" (sol/create-sol-session {:base-url base-url
+                                                                              :model (when (seq model) model)})
+                                               "knoxx" (knoxx/create-knoxx-session {:base-url base-url
+                                                                                    :model (when (seq model) model)})
+                                               (mock/create-mock-session)))
+                                (catch :default e
+                                  (set-error (str "Failed to connect: " (.-message e))))))
                    :style {:background "var(--token-colors-button-secondary-bg)"
                            :color "var(--token-colors-button-secondary-fg)"
                            :border "none"
@@ -77,8 +86,14 @@
                            :font-size "13px"
                            :font-weight "600"
                            :cursor "pointer"}}
-          "Connect"))
-      ($ panel/ChatPanel {:messages (:messages chat)
+           "Connect"))
+       (when error
+         (d/div {:style {:padding "8px 12px"
+                         :color "var(--token-colors-text-error)"
+                         :border-bottom "1px solid var(--token-colors-border-subtle)"
+                         :font-size "13px"}}
+           error))
+       ($ panel/ChatPanel {:messages (:messages chat)
                           :is-sending (:is-sending chat)
                           :on-send (:send chat)
                           :on-abort (:abort chat)
@@ -88,5 +103,7 @@
                                                      "Mock"))}))))
 
 (defn init []
-  (let [root (createRoot (.getElementById js/document "root"))]
-    (.render root ($ App))))
+  (if-let [el (.getElementById js/document "root")]
+    (let [root (createRoot el)]
+      (.render root ($ App)))
+    (throw (js/Error. "chat-ui.core/init: #root element not found"))))

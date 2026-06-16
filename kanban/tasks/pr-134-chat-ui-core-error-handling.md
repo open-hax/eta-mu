@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-chat-ui-core-error-handling"
 title: "PR #134: Add error handling to chat-ui core.cljs"
-status: "todo"
+status: "done"
 priority: "P1"
 labels: ["tasks", "chat-ui", "cljs", "pr-134", "3sp"]
 created_at: "2026-06-16T12:30:00Z"

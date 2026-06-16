@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-chat-ui-mock-session-abort"
 title: "PR #134: Fix chat-ui mock session abort and async metadata"
-status: "todo"
+status: "done"
 priority: "P1"
 labels: ["tasks", "chat-ui", "cljs", "pr-134", "2sp"]
 created_at: "2026-06-16T12:30:00Z"

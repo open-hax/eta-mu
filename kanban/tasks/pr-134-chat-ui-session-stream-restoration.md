@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-chat-ui-session-stream-restoration"
 title: "PR #134: Restore chat-ui streams after abort/close/reconnect"
-status: "todo"
+status: "done"
 priority: "P1"
 labels: ["tasks", "chat-ui", "cljs", "pr-134", "5sp"]
 created_at: "2026-06-16T12:30:00Z"
