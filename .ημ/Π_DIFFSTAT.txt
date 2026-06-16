@@ -1,7 +1,9 @@
-.ημ/Π_LAST.md                                      |  83 +++----
+.ημ/Π_DIFFSTAT.txt                               |  89 +++++----
+.ημ/Π_LAST.md                                      |  83 ++++----
+.ημ/Π_MANIFEST.sha256                              |  19 +-
 .ημ/Π_STATE.sexp                                   | 117 ++++++------
 docs/cljs-runtime-rewrite-architecture-inventory.md | 212 +++++++++++++---------
-docs/notes/2026.06.16.06.43.13.md                  |   2 +
+docs/notes/2026.06.16.06.43.13.md                  |   8 +
 kanban/.events/ledger.edn                          |  24 +++
 kanban/epics/board-composition.md                  |  14 +-
 kanban/epics/chat-ui-extraction.md                 |  13 +-
@@ -37,7 +39,7 @@ packages/Rheos/test/rheos/backend/law/fsm_test.cljs |  14 +-
 packages/Rheos/test/rheos/backend/shape/content_parser_test.cljs |  49 +++++
 packages/chat-ui/.gitignore                        |   5 +
 packages/chat-ui/package.json                      |   4 +-
-packages/chat-ui/resources/public/index.html       |  33 ++++
+packages/chat-ui/resources/public/index.html       |  33 +++
 packages/chat-ui/shadow-cljs.edn                   |  26 ++-
 packages/chat-ui/src/eta_mu/chat_ui/core.cljs      |  92 +++++++++
 packages/chat-ui/src/eta_mu/chat_ui/knoxx_session.cljs | 100 ++++++++++
@@ -45,7 +47,7 @@ packages/chat-ui/src/eta_mu/chat_ui/mock_session.cljs |  46 +++++
 packages/chat-ui/src/eta_mu/chat_ui/protocol.cljs  |  14 +-
 packages/chat-ui/src/eta_mu/chat_ui/sol_session.cljs | 101 ++++++++++
 packages/chat-ui/test/eta_mu/chat_ui/mock_session_test.cljs |  17 ++
- 47 files changed, 1914 insertions(+), 386 deletions(-)
+ 49 files changed, 1982 insertions(+), 432 deletions(-)
 
 Excluded from commit:
   cljs-rewrite                                       | 0 bytes (empty untracked artifact)
