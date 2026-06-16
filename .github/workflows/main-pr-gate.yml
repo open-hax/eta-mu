@@ -7,28 +7,34 @@ on:
     paths:
       - 'packages/legacy/docs/**'
       - 'packages/legacy/github/**'
-      - '.github/workflows/eta-mu*.yml'
+      - '.github/workflows/*.yml'
 
 jobs:
   main-lint:
     name: main-lint
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions: {}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          persist-credentials: false
       - run: echo "services/ removed; no deploy scripts to lint in current layout"
 
   eta-mu-lint:
     name: eta-mu-lint
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions: {}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
         with:
           version: '10.14.0'
           run_install: false
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: 20
       - run: pnpm install --no-frozen-lockfile
@@ -38,9 +44,12 @@ jobs:
     name: main-tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions: {}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: 22
           package-manager-cache: false
@@ -50,18 +59,25 @@ jobs:
     name: main-build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions: {}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          persist-credentials: false
       - run: echo "services/ removed; no docker compose build in current layout"
 
   staging-promotion-gate:
     name: staging-promotion-gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      checks: read
+      pull-requests: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
         with:
           fetch-depth: 0
+          persist-credentials: false
       - run: git fetch origin staging --depth=1
       - run: git merge-base --is-ancestor "${PR_HEAD_SHA}" origin/staging
         env:

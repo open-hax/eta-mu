@@ -76,5 +76,4 @@ pnpm --dir packages/eta-mu-github test
 pnpm --dir packages/eta-mu-runtime test
 pnpm --dir packages/kanban test
 pnpm --dir packages/opencode-reactant build
-docker compose -f services/eta-mu/compose.yaml config
 ```

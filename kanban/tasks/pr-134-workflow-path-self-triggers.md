@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-workflow-path-self-triggers"
 title: "PR #134: Fix workflow path triggers to include the workflow files themselves"
-status: "todo"
+status: "done"
 priority: "P2"
 labels: ["tasks", "ci", "pr-134", "2sp"]
 created_at: "2026-06-16T12:30:00Z"

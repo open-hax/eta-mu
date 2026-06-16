@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-workflow-security-hardening"
 title: "PR #134: Harden workflow security and retire verify-production curl"
-status: "todo"
+status: "done"
 priority: "P1"
 labels: ["tasks", "ci", "security", "pr-134", "5sp"]
 created_at: "2026-06-16T12:30:00Z"
