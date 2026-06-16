@@ -49,11 +49,11 @@ importers:
         specifier: ^0.1.0
         version: 0.1.0
       '@promethean-os/event-ledger':
-        specifier: file:../../../../open-hax/openplanner/packages/event-ledger
-        version: file:../openplanner/packages/event-ledger
+        specifier: workspace:*
+        version: link:../event-ledger
       '@promethean-os/openplanner-protocols':
-        specifier: file:../../../../open-hax/openplanner/packages/openplanner-protocols
-        version: file:../openplanner/packages/openplanner-protocols
+        specifier: workspace:*
+        version: link:../protocols
       chokidar:
         specifier: ^4.0.3
         version: 4.0.3
@@ -1509,12 +1509,6 @@ packages:
     resolution: {integrity: sha512-PG6q63nQg5c9rIi4/Z5lR5IVF7yU5MqmKaPOe0HSc0O2cX1fPi96sUQu5j7eo4gKCkB2AnNGoWt7y4/Xx3Kcqg==}
     engines: {node: '>=18'}
     hasBin: true
-
-  '@promethean-os/event-ledger@file:../openplanner/packages/event-ledger':
-    resolution: {directory: ../openplanner/packages/event-ledger, type: directory}
-
-  '@promethean-os/openplanner-protocols@file:../openplanner/packages/openplanner-protocols':
-    resolution: {directory: ../openplanner/packages/openplanner-protocols, type: directory}
 
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
@@ -6324,17 +6318,6 @@ snapshots:
   '@playwright/test@1.59.1':
     dependencies:
       playwright: 1.59.1
-
-  '@promethean-os/event-ledger@file:../openplanner/packages/event-ledger': {}
-
-  '@promethean-os/openplanner-protocols@file:../openplanner/packages/openplanner-protocols':
-    dependencies:
-      shadow-cljs: 3.4.11
-      socket.io-client: 4.8.3
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
 
   '@protobufjs/aspromise@1.1.2': {}
 

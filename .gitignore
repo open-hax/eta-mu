@@ -49,8 +49,8 @@ node_modules/
 **/.lsp/
 
 # Playwright artifacts
-packages/kanban/test-results/
-packages/kanban/playwright-report/
+packages/legacy/kanban/test-results/
+packages/legacy/kanban/playwright-report/
 
 
 **/target/

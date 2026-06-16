@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-quality-ratchet-cli-startup-smoke"
 title: "Eta-mu Quality Ratchet — CLI Startup Smoke"
-status: "done"
+status: "review"
 priority: "P0"
 labels: ["tasks", "quality", "startup", "extensions", "smoke", "3sp"]
 created_at: "2026-05-31T00:45:00Z"

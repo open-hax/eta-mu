@@ -112,7 +112,7 @@ const backendEnv = {
 };
 
 // Optional kanban config path — only forward when explicitly set.
-const kanbanConfig = envValue('KANBAN_CONFIG', '../kanban/openhax.kanban.json');
+const kanbanConfig = envValue('KANBAN_CONFIG', '../../kanban/openhax.kanban.json');
 if (kanbanConfig) backendEnv.KANBAN_CONFIG = kanbanConfig;
 
 const apps = [
