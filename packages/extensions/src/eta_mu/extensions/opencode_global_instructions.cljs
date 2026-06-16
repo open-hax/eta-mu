@@ -719,7 +719,8 @@
 
 ;; ── Extension registration ─────────────────────────────────
 
-(def opencode-global-instructions nil)
+
+(declare opencode-global-instructions)
 
 (em/defextension opencode-global-instructions
   :name "opencode-global-instructions"

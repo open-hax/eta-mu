@@ -128,7 +128,8 @@
                              (js/Array.from projects)))]
         (make-result (str/join "\n" lines) #js {:projects projects})))))
 
-(def chronos nil)
+
+(declare chronos)
 
 (em/defextension chronos
   :name "chronos"

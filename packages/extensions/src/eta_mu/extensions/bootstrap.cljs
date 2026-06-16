@@ -2,7 +2,8 @@
   "Bootstrap extension - verifies the CLJS compile/load path works."
   (:require-macros [eta-mu.core :as em]))
 
-(def bootstrap nil)
+
+(declare bootstrap)
 
 (em/defextension bootstrap
   :name "bootstrap"

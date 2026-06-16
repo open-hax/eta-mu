@@ -105,7 +105,8 @@
              (- now-ms (aget state "toolSegmentStartMs"))))
     (aset state "toolSegmentStartMs" nil)))
 
-(def task-timing nil)
+
+(declare task-timing)
 
 (em/defextension task-timing
   :name "task-timing"

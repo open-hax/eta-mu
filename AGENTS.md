@@ -1,3 +1,41 @@
+
+## Clojure House Rules (eta-mu-sol constitution)
+
+# Architecture Paradigm: Categories vs. Contracts
+When modeling domains, you must strictly differentiate between the grammar of motion and the enforcement of that motion.
+- Categories: Describe the space of lawful possible transformations. They dictate "what kind of move this is" and define the state space, transition vocabulary, and general laws of composition for the runtime or a subsystem.
+- Contracts: Decide whether a particular runtime entity, event, or transition is admissible under current obligations. They dictate "whether you are allowed to count it as a valid move right now" by defining guards, admissibility checks, evidence requirements, delivery expectations, and side-effect constraints.
+
+
+### Zero Warnings
+`clj-kondo`, type checks, and tests must all pass with zero warnings. Warnings
+are failed contracts, not noise.
+
+### Namespace Architecture
+| Layer         | Pattern            | Rule                             |
+|---------------|--------------------|----------------------------------|
+| `domain.*`    | Business logic     | No I/O. Pure functions only.     |
+| `infra.*`     | Transport/DB/Queue | No domain policy.                |
+| `shape.*`     | Data morphisms     | Pure, domain-agnostic.           |
+| `law.*`       | Contracts/Malli    | No I/O. Validators only.         |
+### Modern ClojureScript
+Always use `^:async` metadata (ClojureScript ≥ 1.12.145). Never use
+`core.async` channels or Promise chains in new code.
+
+```clojure
+(defn ^:async fetch-data [url]
+  (await (js/fetch url)))
+
+(deftest ^:async fetch-test
+  (is (some? (await (fetch-data "https://example.com")))))
+```
+
+### Idioms
+- `when-let` over nested `let` + `if`
+- `->` / `->>` over nested `let` forms
+- No `utils` namespaces
+- No broad `:refer :all`
+- Custom macros registered in `.clj-kondo/config.edn` on day one
 ## Testing Gate
 - A task is not done while any relevant automated test suite is failing.
 - For coding-agent changes, run `pnpm --filter @open-hax/eta-mu-cli test` and resolve all failures before reporting completion.

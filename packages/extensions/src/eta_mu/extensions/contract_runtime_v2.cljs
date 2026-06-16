@@ -355,7 +355,8 @@
 
 ;; ── Extension ────────────────────────────────────────────
 
-(def contract-runtime-v2 nil)
+
+(declare contract-runtime-v2)
 
 (em/defextension contract-runtime-v2
   :name "contract-runtime-v2"

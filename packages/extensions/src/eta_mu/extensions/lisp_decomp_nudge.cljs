@@ -100,7 +100,8 @@
   (.call (aget pi "on") pi "agent_end"
          (fn [_event ctx] (handle-agent-end pi ctx))))
 
-(def lisp-decomp-nudge nil)
+
+(declare lisp-decomp-nudge)
 
 (em/defextension lisp-decomp-nudge
   :name "lisp-decomp-nudge"
