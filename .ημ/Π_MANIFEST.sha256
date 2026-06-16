@@ -1,17 +1,16 @@
-# Π_MANIFEST — 2026-06-16T11:51:55Z
+# Π_MANIFEST — 2026-06-16T21:42:48Z
 # SHA256 hashes of key handoff artifacts
 
-0559b42504ca6559c85073fad37f225682ff48844740c82df99c603e78ad0da8  .ημ/Π_STATE.sexp
-65e5dd92d0805fcd3daa435dcd56f0137f3369078bc18588350a4201f25fac35  .ημ/Π_LAST.md
+ea0163db229aa046d9a3243af344fecc24c34f27ce3bf5d9f0e3cc761b99a5c3  .ημ/Π_STATE.sexp
+5d04b9dd39ff401134eb3232f2ed7e70953974ac800c245c599f8d213f37e7ec  .ημ/Π_LAST.md
 
 # Entry points
 30504160076369b849f735321dfd1d86241d421ec9e084de60176ea4e03ca40a  packages/Rheos/shadow-cljs.edn
 72dbdc7fb223905f0545076cdcf07c455d137c82b222ef725ec44f79df1d7bee  packages/chat-ui/shadow-cljs.edn
 
 # Source counts
-sol .cljs/.cljc files: 76
+sol .cljs/.cljc files: 80
 katamorph .cljs/.cljc files: 32
-Rheos .cljs/.cljc files: 43
+Rheos .cljs/.cljc files: 56
 chat-ui .cljs/.cljc files: 10
 runtime .cljs/.cljc files: 99
-extensions .cljs/.cljc files: 56

@@ -1,58 +1,42 @@
-# Π Fork Tax — 2026-06-16
+# Π Fork Tax — 2026-06-16T21:42:48Z
 
 ## Branch
 `chore/ts-cljs-rewrite`
 
 ## Base SHA
-`1809efd`
+`e28b355aa6df6c23bc813b451e66a0fe7abf04df`
 
 ## What Changed
 
-### Rheos backend domain and infrastructure
-- Hardened `compose`, `events`, `transition`, `agent_tools`, `cli`, `http_server`, `task_writeback`, `watcher`, `content_parser`, and `kanban` shape modules.
-- Added new domain module `task_edit.cljs` for in-place task editing.
-- Added new infrastructure modules `store.cljs` and `view_store.cljs` for state persistence and view projection.
-- Added/updated corresponding tests, including new `task_edit_test.cljs`, `store_test.cljs`, `view_store_test.cljs`, and `watcher_test.cljs`.
+### Notes
+- Revised `docs/notes/2026.06.16.06.43.13.md` (Eta-mu Orchestrator constraints).
+- Added working notes:
+  - `docs/notes/2026.06.16.07.13.42.md` — Improve Eta-mu's AGENTS.md task brief.
+  - `docs/notes/2026.06.16.07.28.31.md` — Compiler-of-intent prompt template.
+  - `docs/notes/2026.06.16.07.37.19.md` — Perplexity Agent user instructions.
+  - `docs/notes/2026.06.16.12.02.30.md` — Eta-mu CLI / kanban orchestrator sketch.
 
-### Rheos UI domain
-- Refined `board`, `layout`, `orchestrator`, and `sidebar` UI domain modules.
-
-### chat-ui extraction
-- Updated `package.json` and `shadow-cljs.edn` build configuration.
-- Refined `protocol.cljs` session contract.
-- Added standalone app entry `core.cljs` and session adapters:
-  - `mock_session.cljs` — local test session
-  - `knoxx_session.cljs` — knoxx-backed session
-  - `sol_session.cljs` — sol-backed session
-- Added `test/eta_mu/chat_ui/mock_session_test.cljs`.
-- Added `resources/public/index.html` standalone test page.
-- Added `.gitignore` to exclude build artifacts (`dist/`, `target/`, `resources/public/js/`, `.shadow-cljs/`, `node_modules/`).
-
-### Kanban and documentation
-- Updated `kanban/.events/ledger.edn`.
-- Refreshed epics: `board-composition`, `chat-ui-extraction`, `kanban-chat-integration`, `kanban-cljs-rewrite`, `kanban-event-ledger`, `roadmap-global-projection`.
-- Updated task `eta-mu-cljs-rewrite-architecture-inventory.md`.
-- Updated `docs/cljs-runtime-rewrite-architecture-inventory.md`.
-- Added note `docs/notes/2026.06.16.06.43.13.md`.
+### Kanban
+- Appended five events to `kanban/.events/ledger.edn` for task `fetch-timeout-abort-controller` (accepted → breakdown → blocked).
+- Updated `kanban/tasks/eta-mu-github-fetch-timeout.md` frontmatter: added category, labels, write-id, source, priority, and set status to `blocked`.
 
 ## Excluded from Commit
-- `cljs-rewrite` — 0-byte untracked artifact, not part of snapshot scope.
-- `docs/notes/.#2026.06.16.06.43.13.md` — Emacs lock file for the note added in this snapshot; transient editor artifact, not commit content.
+- `cljs-rewrite` — 0-byte untracked artifact, previously excluded.
+- `docs/notes/2026.06.16.07.37.18.md` — 0-byte untracked note artifact.
+- `.dir-locals.el` — 0-byte untracked Emacs dir-local file; local editor config.
 
 ## Verification Status
-- **Rheos tests**: Passed — 55 tests, 150 assertions
-- **chat-ui tests**: Passed — 1 test, 3 assertions
-- **Rheos clj-kondo**: Passed — 0 errors, 0 warnings
-- **chat-ui clj-kondo**: Passed — 0 errors, 0 warnings
-- **TS line count**: 174,562 lines (baseline updated from 174,537 to reflect prior branch commits; no new TypeScript files staged)
+- **Code tests**: Skipped — no code packages touched.
+- **clj-kondo**: Skipped — no code packages touched.
+- **TS line count**: Skipped — no TypeScript files touched.
+- **Ledger EDN**: Visually validated — appended lines are well-formed EDN maps.
 
 ## Commit
-`dfe835b` on `chore/ts-cljs-rewrite`
+`<TBD>` on `chore/ts-cljs-rewrite`
 
 ## Tag
-`Π/chore-ts-cljs-rewrite/2026-06-16T115155`
+`Π/chore-ts-cljs-rewrite/2026-06-16T214248`
 
 ## Notes
-- Workspace treated as single-agent for this snapshot; no concurrent dirt left unstaged except the two excluded artifacts above.
-- Pre-commit TypeScript guard hook is not installed locally.
-- `.ts-line-count-baseline` was updated to match the current HEAD count before staging.
+- Workspace treated as shared by default per concurrent-agent guardrails.
+- Only owned/repo-relevant changes were staged; excluded artifacts are documented as residual/unowned.

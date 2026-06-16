@@ -1,54 +1,17 @@
-.ημ/Π_DIFFSTAT.txt                               |  89 +++++----
-.ημ/Π_LAST.md                                      |  83 ++++----
-.ημ/Π_MANIFEST.sha256                              |  19 +-
-.ημ/Π_STATE.sexp                                   | 117 ++++++------
-docs/cljs-runtime-rewrite-architecture-inventory.md | 212 +++++++++++++---------
-docs/notes/2026.06.16.06.43.13.md                  |   8 +
-kanban/.events/ledger.edn                          |  24 +++
-kanban/epics/board-composition.md                  |  14 +-
-kanban/epics/chat-ui-extraction.md                 |  13 +-
-kanban/epics/kanban-chat-integration.md            |  11 +-
-kanban/epics/kanban-cljs-rewrite.md                |  12 +-
-kanban/epics/kanban-event-ledger.md                |  10 +-
-kanban/epics/roadmap-global-projection.md          |  16 ++
-kanban/tasks/eta-mu-cljs-rewrite-architecture-inventory.md |  32 +++-
-packages/Rheos/src/rheos/backend/domain/compose.cljs |  26 ++-
-packages/Rheos/src/rheos/backend/domain/events.cljs |  29 ++-
-packages/Rheos/src/rheos/backend/domain/task_edit.cljs |  57 ++++++
-packages/Rheos/src/rheos/backend/domain/transition.cljs |  14 +-
-packages/Rheos/src/rheos/backend/infra/agent_tools.cljs | 100 +++++++++-
-packages/Rheos/src/rheos/backend/infra/cli.cljs    | 109 ++++++++++-
-packages/Rheos/src/rheos/backend/infra/http_server.cljs |  99 +++++----
-packages/Rheos/src/rheos/backend/infra/store.cljs  |  59 ++++++
-packages/Rheos/src/rheos/backend/infra/task_writeback.cljs |   9 +-
-packages/Rheos/src/rheos/backend/infra/view_store.cljs |  31 +++
-packages/Rheos/src/rheos/backend/infra/watcher.cljs |  54 +++---
-packages/Rheos/src/rheos/backend/shape/content_parser.cljs |  22 ++-
-packages/Rheos/src/rheos/backend/shape/kanban.cljs |   5 +-
-packages/Rheos/src/rheos/ui/domain/board.cljs      | 117 +++++++++---
-packages/Rheos/src/rheos/ui/domain/layout.cljs     |  94 +++++----
-packages/Rheos/src/rheos/ui/domain/orchestrator.cljs |  31 ++-
-packages/Rheos/src/rheos/ui/domain/sidebar.cljs    |  25 +--
-packages/Rheos/test/rheos/backend/domain/compose_test.cljs |  80 +++++++-
-packages/Rheos/test/rheos/backend/domain/events_test.cljs |  47 ++++-
-packages/Rheos/test/rheos/backend/domain/task_edit_test.cljs | 122 ++++++++++++
-packages/Rheos/test/rheos/backend/infra/store_test.cljs |  17 ++
-packages/Rheos/test/rheos/backend/infra/view_store_test.cljs |  17 ++
-packages/Rheos/test/rheos/backend/infra/watcher_test.cljs |  89 +++++++++
-packages/Rheos/test/rheos/backend/law/fsm_test.cljs |  14 +-
-packages/Rheos/test/rheos/backend/shape/content_parser_test.cljs |  49 +++++
-packages/chat-ui/.gitignore                        |   5 +
-packages/chat-ui/package.json                      |   4 +-
-packages/chat-ui/resources/public/index.html       |  33 +++
-packages/chat-ui/shadow-cljs.edn                   |  26 ++-
-packages/chat-ui/src/eta_mu/chat_ui/core.cljs      |  92 +++++++++
-packages/chat-ui/src/eta_mu/chat_ui/knoxx_session.cljs | 100 ++++++++++
-packages/chat-ui/src/eta_mu/chat_ui/mock_session.cljs |  46 +++++
-packages/chat-ui/src/eta_mu/chat_ui/protocol.cljs  |  14 +-
-packages/chat-ui/src/eta_mu/chat_ui/sol_session.cljs | 101 ++++++++++
-packages/chat-ui/test/eta_mu/chat_ui/mock_session_test.cljs |  17 ++
- 49 files changed, 1982 insertions(+), 432 deletions(-)
+.ημ/Π_DIFFSTAT.txt                               |  11 +++++
+.ημ/Π_LAST.md                                      |  43 ++++++++++++++
+.ημ/Π_MANIFEST.sha256                              |   9 +++
+.ημ/Π_STATE.sexp                                   |  34 ++++++++++++
+docs/notes/2026.06.16.06.43.13.md                  |   6 +++-
+docs/notes/2026.06.16.07.13.42.md                  | 103 ++++++++++++++
+docs/notes/2026.06.16.07.28.31.md                  |  21 +++++++
+docs/notes/2026.06.16.07.37.19.md                  |  33 +++++++++
+docs/notes/2026.06.16.12.02.30.md                  |  15 +++++
+kanban/.events/ledger.edn                          |   5 +++++
+kanban/tasks/eta-mu-github-fetch-timeout.md        |  13 +++++-
+ 11 files changed, 279 insertions(+), 9 deletions(-)
 
 Excluded from commit:
   cljs-rewrite                                       | 0 bytes (empty untracked artifact)
-  docs/notes/.#2026.06.16.06.43.13.md                | Emacs lock file
+  docs/notes/2026.06.16.07.37.18.md                  | 0 bytes (empty untracked note artifact)
+  .dir-locals.el                                     | 0 bytes (empty untracked Emacs dir-local file)
