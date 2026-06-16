@@ -32,7 +32,7 @@
 - **Ledger EDN**: Visually validated — appended lines are well-formed EDN maps.
 
 ## Commit
-`<TBD>` on `chore/ts-cljs-rewrite`
+`92b1cd4` on `chore/ts-cljs-rewrite`
 
 ## Tag
 `Π/chore-ts-cljs-rewrite/2026-06-16T214248`
