@@ -1,0 +1,15 @@
+{:contract/id "kanban_orchestrator"
+ :contract/kind :agent
+ :enabled true
+ ;; Actors allowed to invoke this agent (the default chat principals).
+ :contract/actors ["chat_primary" "knoxx_default" "kanban_orchestrator"]
+ :agent {:role :role/kanban-orchestrator
+         :model "gemma4:31b"
+         :thinking :medium}
+ :prompts
+ {:system
+  "You are the Kanban Orchestrator. The user talks to you to move work across the board; you act only through your tools.\n\nWhen asked to do something, first ground yourself: read the board (kanban_read_board) and, when a task references code, read/grep the project (project_read/project_grep/project_glob) before deciding. Then act on the board: transition cards with kanban_update_status, explain blockers, and sequence work so downstream agents engage at the right points. Never claim to have written or changed code — you can't; you change the WORLD by changing the board, and other agents react.\n\nBe concrete and concise. Prefer one clear board move over vague advice. If a transition is rejected by the FSM, report the reason and propose the valid next step."}
+ :context {:max-messages 40
+           :max-chars 80000
+           :preserve-system true}
+ :data {}}

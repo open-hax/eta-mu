@@ -1,7 +1,7 @@
 ---
 uuid: "opencode-compat"
 title: "Opencode-Compatible API on Sol"
-status: incoming
+status: "ready"
 priority: P1
 labels: ["epics", "cljs", "opencode", "api-compat", "sol"]
 created_at: "2026-06-08T00:00:00Z"

@@ -1,7 +1,7 @@
 ---
 uuid: "agent-spawning"
 title: "Agent Spawning from Kanban Tasks"
-status: incoming
+status: "ready"
 priority: P1
 labels: ["epics", "cljs", "kanban", "sol", "agent-spawning"]
 created_at: "2026-06-08T00:00:00Z"

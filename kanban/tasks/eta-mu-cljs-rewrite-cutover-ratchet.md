@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-rewrite-cutover-ratchet"
 title: "Eta-mu CLJS Rewrite — Cutover Ratchet"
-status: "done"
+status: "document"
 priority: P1
 labels: ["tasks", "cljs", "rewrite", "cutover", "8sp"]
 created_at: "2026-05-29T21:18:48Z"

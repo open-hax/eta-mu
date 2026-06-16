@@ -1,79 +1,74 @@
-(pi-state
-  (timestamp "20260614T021717Z")
+;; Π_STATE.sexp — Fork tax snapshot
+;; Generated: 2026-06-15T22:13:59Z
+;; Branch: feat/kanban-comments-parity
+;; Base commit: ea053df
+
+(π-snapshot
   (branch "feat/kanban-comments-parity")
-  (pre-commit-head "b6a81a461bfa4b75ba25d944a0058402b0a61dd7")
-  (scope "kanban-comments-parity: lint gate, docs noise cleanup, kanban ledger, agentd type fixes")
+  (base-sha "ea053df")
+  (timestamp "2026-06-15T22:13:59Z")
+
+  (summary
+    "Large CLJS runtime expansion across eta-mu, shared clj-kondo config rollout, kanban epic/task inventory for TS→CLJS rewrites, package dependency updates, and rewrite planning docs. All targeted suites pass.")
+
+  (scope
+    ;; Runtime / AI / coding / docs / gate / garden CLJS modules
+    (added-runtime-modules "packages/runtime/src/cljs/eta_mu/ai/**")
+    (added-runtime-modules "packages/runtime/src/cljs/eta_mu/coding/**")
+    (added-runtime-modules "packages/runtime/src/cljs/eta_mu/docs/**")
+    (added-runtime-modules "packages/runtime/src/cljs/eta_mu/garden/**")
+    (added-runtime-modules "packages/runtime/src/cljs/eta_mu/gate/**")
+    (added-runtime-tests "packages/runtime/test/cljs/eta_mu/ai/**")
+    (added-runtime-tests "packages/runtime/test/cljs/eta_mu/coding/**")
+    (added-runtime-tests "packages/runtime/test/cljs/eta_mu/docs/**")
+    (added-runtime-tests "packages/runtime/test/cljs/eta_mu/garden/**")
+    (added-runtime-tests "packages/runtime/test/cljs/eta_mu/gate/**")
+
+    ;; Shared kondo config
+    (added-kondo-config-package "packages/kondo-config/**")
+    (modified-package-kondo-configs "packages/*/.clj-kondo/config.edn")
+    (removed-package-kondo-imports "packages/*/.clj-kondo/imports/**")
+
+    ;; Sol, Katamorph, Rheos, axxium, chat-ui, event-ledger, extensions, protocols
+    (modified-sol "packages/sol/**")
+    (modified-katamorph "packages/katamorph/**")
+    (modified-rheos "packages/Rheos/**")
+    (modified-axxium "packages/axxium/**")
+    (modified-chat-ui "packages/chat-ui/**")
+    (modified-event-ledger "packages/event-ledger/**")
+    (modified-extensions "packages/extensions/**")
+    (modified-protocols "packages/protocols/**")
+
+    ;; Workspace config
+    (modified-root-config ".gitignore")
+    (modified-root-config "package.json")
+    (modified-lockfile "pnpm-lock.yaml")
+
+    ;; Process / docs / kanban
+    (added-process-doc "PROCESS.md")
+    (added-rewrite-inventories "docs/*-cljs-rewrite-inventory.md")
+    (added-kondo-baseline "docs/kondo-config-baseline.md")
+    (modified-kanban-ledger "kanban/.events/ledger.edn")
+    (added-kanban-epics "kanban/epics/*-cljs-rewrite.md")
+    (added-kanban-tasks "kanban/tasks/*-cljs-rewrite*.md")
+    (added-kanban-tasks "kanban/tasks/kondo-lint-cleanup-*.md")
+    (added-kanban-tasks "kanban/tasks/shared-kondo-config-*.md"))
+
+  (excluded
+    (build-cache ".cache/v1/lock" (reason "runtime/build cache artifact"))
+    (build-cache "packages/Rheos/.cache/v1/**" (reason "runtime/build cache artifact")))
+
+  (concurrent-dirt
+    (note "No concurrent-agent dirt detected. Staged state is treated as the owned snapshot scope."))
+
   (verification
-    (kanban-typecheck "pass — tsc --noEmit clean, npm warn only"))
-  (owned-tracked-modified
-    ".github/workflows/eta-mu-extensions-tests.yml"
-    ".github/workflows/main-pr-gate.yml"
-    ".github/workflows/staging-pr.yml"
-    ".gitignore"
-    "kanban/.kanban/board.json"
-    "kanban/tasks/eta-mu-quality-ratchet-cli-startup-smoke.md"
-    "kanban/tasks/eta-mu-quality-ratchet-lint-gates.md"
-    "package.json"
-    "packages/eta-mu-extensions/README.md"
-    "packages/eta-mu-extensions/externs/promise.js"
-    "packages/eta-mu-extensions/kanban/.kanban/board.json"
-    "packages/eta-mu-extensions/package.json"
-    "packages/eta-mu-extensions/scripts/build.mjs"
-    "packages/eta-mu-extensions/scripts/deploy-ci.mjs"
-    "packages/eta-mu-extensions/scripts/test-all-extensions.mjs"
-    "packages/eta-mu-extensions/scripts/test-opencode-execution.mjs"
-    "packages/eta-mu-extensions/scripts/test-opencode.mjs"
-    "packages/kanban/e2e/kanban-ui-scroll.spec.ts"
-    "packages/kanban/playwright.config.ts"
-    "packages/kanban/src/board.ts"
-    "packages/kanban/src/cli.ts"
-    "packages/kanban/src/config.ts"
-    "packages/kanban/src/content-parser.ts"
-    "packages/kanban/src/github-sync.ts"
-    "packages/kanban/src/index.ts"
-    "packages/kanban/src/server.ts"
-    "packages/kanban/src/sync.ts"
-    "packages/kanban/src/task-writeback.ts"
-    "packages/kanban/src/tasks.ts"
-    "packages/kanban/src/trello-client.ts"
-    "packages/kanban/src/types.ts"
-    "packages/kanban/tests/github-sync.test.ts"
-    "packages/kanban/tests/sync.test.ts"
-    "packages/kanban/tests/task-writeback.test.ts"
-    "packages/kanban/tests/tasks.test.ts"
-    "packages/kanban/tsconfig.json"
-    "packages/kanban/vite.config.ts"
-    "packages/kanban/vitest.config.ts"
-    "packages/kanban/web/src/App.tsx"
-    "packages/kanban/web/src/main.tsx"
-    "pnpm-lock.yaml"
-    "services/agentd/src/agents.ts"
-    "services/agentd/src/events.ts"
-    "services/agentd/src/fs.ts"
-    "services/agentd/src/git.ts"
-    "services/agentd/src/github.ts"
-    "services/agentd/src/index.ts"
-    "services/agentd/tests/events.test.ts"
-    "services/agentd/tests/fs.test.ts"
-    "services/agentd/tsconfig.json"
-    "services/agentd/vitest.config.ts")
-  (owned-staged-deletions
-    "docs/agentd-api/assets/hierarchy.js"
-    "docs/agentd-api/assets/icons.js"
-    "docs/agentd-api/assets/main.js"
-    "docs/agentd-api/assets/navigation.js"
-    "docs/agentd-api/assets/search.js"
-    "docs/opencode-reactant-api/js/highlight.min.js"
-    "docs/opencode-reactant-api/js/jquery.min.js"
-    "docs/opencode-reactant-api/js/page_effects.js")
-  (owned-untracked-absorbed
-    ".editorconfig"
-    ".prettierrc"
-    "biome.json"
-    "kanban/.events/ledger.edn"
-    "packages/eta-mu-extensions/scripts/cli-smoke-test.mjs"
-    "packages/eta-mu-extensions/scripts/validate-extension-paths.mjs"
-    "scripts/lint.mjs")
-  (concurrent-dirt none)
-  (formatter-noise-restored
-    "~700 files tabs->spaces Prettier noise across packages/agent packages/ai packages/coding-agent packages/opencode-reactant packages/web-ui packages/tui packages/mom packages/output-contract-gate packages/eta-mu-github packages/pods packages/eta-mu-runtime packages/signal-* packages/presence-core packages/eta-mu-truth packages/eta-mu-docs services/eta-mu-truth-workbench ecosystem.config.cjs opencode.json tsconfig.base.json — restored to HEAD before snapshot"))
+    (eta-mu-runtime-tests "passed — 6 tests")
+    (eta-mu-github-tests "passed — 19 tests")
+    (eta-mu-docs-tests "passed — 2 tests")
+    (kanban-legacy-tests "passed — 14 tests")
+    (eta-mu-extensions-tests "passed — 72 tests, 195 assertions")
+    (sol-tests "passed — 66 tests, 193 assertions")
+    (katamorph-tests "passed — 102 tests, 253 assertions")
+    (ts-line-count "unchanged — 174,537 lines")))
+
+;; END Π_STATE

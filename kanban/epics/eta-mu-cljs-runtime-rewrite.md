@@ -1,13 +1,13 @@
 ---
 uuid: "eta-mu-cljs-runtime-rewrite"
 title: "Eta-mu CLJS Runtime Rewrite"
-status: accepted
-priority: P0
+status: "todo"
+priority: "P0"
 labels: ["epics", "cljs", "rewrite", "knoxx-style", "55sp"]
 created_at: "2026-05-29T21:18:48Z"
 source: "user-request:2026-05-29"
 points: 55
-category: epics
+category: "epics"
 ---
 
 # Eta-mu CLJS Runtime Rewrite
@@ -136,14 +136,29 @@ Planning output: `docs/cljs-runtime-rewrite-boundary-adapter-plan.md`
 - Keep eta-mu extension manifests consumable by OpenCode and pi harnesses.
 
 Child task: `kanban/tasks/eta-mu-cljs-rewrite-surface-parity.md`
+Child epics:
+- `kanban/epics/coding-agent-cljs-rewrite.md` (eta-mu CLI binary)
+- `kanban/epics/tui-cljs-rewrite.md` (terminal UI library)
+- `kanban/epics/publication-components-cljs-rewrite.md` (web publication components)
 
-### Phase 6 — Cutover ratchet and TypeScript retirement
+### Phase 6 — Package-by-package cutover ratchet and TypeScript retirement
 
 - Replace TS modules only after equivalent CLJS paths pass parity tests.
 - Remove obsolete TS in small path-scoped commits.
 - Update docs, package exports, and service runners after each proven cutover.
+- Drive each legacy package to zero TypeScript through its own epic.
 
 Child task: `kanban/tasks/eta-mu-cljs-rewrite-cutover-ratchet.md`
+Child epics:
+- `kanban/epics/agent-cljs-rewrite.md`
+- `kanban/epics/ai-cljs-rewrite.md`
+- `kanban/epics/coding-agent-cljs-rewrite.md`
+- `kanban/epics/docs-cljs-rewrite.md`
+- `kanban/epics/github-cljs-rewrite.md`
+- `kanban/epics/kanban-cljs-rewrite.md` (already in progress)
+- `kanban/epics/output-contract-gate-cljs-rewrite.md`
+- `kanban/epics/publication-components-cljs-rewrite.md`
+- `kanban/epics/tui-cljs-rewrite.md`
 
 ## Acceptance criteria
 
@@ -213,3 +228,4 @@ pnpm --dir packages/eta-mu-runtime typecheck
 
 ### Recommendation
 Run `pnpm --dir packages/eta-mu-runtime cljs:verify` to confirm full verification chain. Tighten vague AC before approving.
+---

@@ -5,12 +5,12 @@ on:
     branches:
       - staging
     paths:
-      - 'packages/eta-mu-docs/**'
+      - 'packages/legacy/docs/**'
       - 'packages/eta-mu-truth/**'
       - 'services/eta-mu/**'
       - 'services/eta-mu-truth-workbench/**'
       - '.github/workflows/eta-mu*.yml'
-      - 'packages/eta-mu-github/**'
+      - 'packages/legacy/github/**'
   workflow_dispatch:
 
 concurrency:
@@ -31,7 +31,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y shellcheck
       - run: bash -n services/eta-mu/scripts/deploy-remote.sh
       - run: shellcheck services/eta-mu/scripts/deploy-remote.sh
-      - run: node --test packages/eta-mu-docs/tests/*.test.cjs
+      - run: node --test packages/legacy/docs/tests/*.test.cjs
       - run: node --test packages/eta-mu-truth/tests/*.test.cjs
       - run: docker compose --project-name eta-mu-staging-ci -f services/eta-mu/compose.yaml config >/tmp/eta-mu-compose.txt
       - run: docker build -f services/eta-mu-truth-workbench/Dockerfile .

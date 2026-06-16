@@ -1,13 +1,15 @@
 packages:
   - packages/*
-  - services/*
-  - shared/*
+  - packages/legacy/*
 
 gitChecks: false
 
 onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - canvas
   - esbuild
   - koffi
+  - msgpackr-extract
   - protobufjs
 
 overrides:

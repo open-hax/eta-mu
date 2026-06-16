@@ -62,13 +62,13 @@ results.push({
 // 3. CLJS boundary check for eta-mu-runtime
 results.push({
   name: "CLJS Boundary Check",
-  ok: run("CLJS Boundary Check", "pnpm --dir packages/eta-mu-runtime cljs:boundary"),
+  ok: run("CLJS Boundary Check", "pnpm --filter @open-hax/eta-mu-runtime cljs:boundary"),
 });
 
 // 4. Extension path validation
 results.push({
   name: "Extension Path Validation",
-  ok: run("Extension Path Validation", "pnpm --dir packages/eta-mu-extensions validate-paths"),
+  ok: run("Extension Path Validation", "pnpm --filter @open-hax/eta-mu-extensions validate-paths"),
 });
 
 // 5. Kanban markdown validation

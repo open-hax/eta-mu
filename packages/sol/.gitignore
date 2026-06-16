@@ -1,0 +1,9 @@
+/node_modules
+/dist
+/dist-dev
+/target
+/.shadow-cljs
+/.lsp
+.nrepl-port
+*.log
+.ημ

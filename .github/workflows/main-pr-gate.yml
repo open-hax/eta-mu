@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - 'packages/eta-mu-docs/**'
+      - 'packages/legacy/docs/**'
       - 'packages/eta-mu-truth/**'
       - 'services/eta-mu/**'
       - 'services/eta-mu-truth-workbench/**'
       - '.github/workflows/eta-mu*.yml'
-      - 'packages/eta-mu-github/**'
+      - 'packages/legacy/github/**'
 
 jobs:
   main-lint:
@@ -49,7 +49,7 @@ jobs:
         with:
           node-version: 22
           package-manager-cache: false
-      - run: node --test packages/eta-mu-docs/tests/*.test.cjs
+      - run: node --test packages/legacy/docs/tests/*.test.cjs
       - run: node --test packages/eta-mu-truth/tests/*.test.cjs
 
   main-build:

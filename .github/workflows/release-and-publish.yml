@@ -55,17 +55,17 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: .eta-mu/packages/eta-mu-github/pnpm-lock.yaml
+          cache-dependency-path: .eta-mu/packages/legacy/github/pnpm-lock.yaml
 
       - name: Install eta-mu dependencies
-        run: pnpm --dir .eta-mu/packages/eta-mu-github install --frozen-lockfile --ignore-workspace
+        run: pnpm --dir .eta-mu/packages/legacy/github install --frozen-lockfile --ignore-workspace
 
       - name: Detect changed packages
         id: detect
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          pnpm --dir .eta-mu/packages/eta-mu-github dev detect-packages \
+          pnpm --dir .eta-mu/packages/legacy/github dev detect-packages \
             --base "origin/main" \
             --workspace-glob "packages/*/"
 
@@ -82,7 +82,7 @@ jobs:
           if [ "${{ inputs.publish-npm }}" = "true" ]; then
             npm_flag="--publish-npm"
           fi
-          pnpm --dir .eta-mu/packages/eta-mu-github dev release \
+          pnpm --dir .eta-mu/packages/legacy/github dev release \
             --repo "${{ inputs.repo || github.repository }}" \
             --pr "${{ inputs.pr }}" \
             --tag-prefix "${{ inputs.tag-prefix }}" \

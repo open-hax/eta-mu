@@ -3,15 +3,15 @@ name: eta-mu-extensions-tests
 on:
   pull_request:
     paths:
-      - 'packages/eta-mu-extensions/**'
-      - 'packages/eta-mu-extensions-e2e/**'
+      - 'packages/extensions/**'
+      - 'packages/extensions-e2e/**'
       - '.github/workflows/eta-mu-extensions-tests.yml'
   push:
     branches:
       - main
     paths:
-      - 'packages/eta-mu-extensions/**'
-      - 'packages/eta-mu-extensions-e2e/**'
+      - 'packages/extensions/**'
+      - 'packages/extensions-e2e/**'
       - '.github/workflows/eta-mu-extensions-tests.yml'
 
 jobs:
@@ -54,20 +54,20 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Build extensions
-        working-directory: packages/eta-mu-extensions
+        working-directory: packages/extensions
         run: pnpm build
 
       - name: Validate extension paths
-        working-directory: packages/eta-mu-extensions
+        working-directory: packages/extensions
         run: pnpm validate-paths
 
       - name: Deploy runtimes to e2e extensions dir
-        working-directory: packages/eta-mu-extensions
+        working-directory: packages/extensions
         run: |
           node scripts/deploy-ci.mjs
 
       - name: Smoke test — pi loads all extensions
-        working-directory: packages/eta-mu-extensions-e2e
+        working-directory: packages/extensions-e2e
         run: |
           output=$(pnpm exec pi -p "smoke" 2>&1 || true)
           echo "$output"
@@ -79,20 +79,20 @@ jobs:
           echo "OK: all extensions loaded cleanly"
 
       - name: CLI smoke test
-        working-directory: packages/eta-mu-extensions
+        working-directory: packages/extensions
         run: pnpm smoke
 
       - name: Compile ClojureScript tests
-        working-directory: packages/eta-mu-extensions
+        working-directory: packages/extensions
         run: pnpm exec shadow-cljs --verbose compile node-test
 
       - name: Run tests
-        working-directory: packages/eta-mu-extensions
+        working-directory: packages/extensions
         run: node target/test.cjs
 
       - name: Test summary
         if: always()
-        working-directory: packages/eta-mu-extensions
+        working-directory: packages/extensions
         run: |
           echo '## Test Results' >> $GITHUB_STEP_SUMMARY
           node target/test.cjs 2>&1 | tee /tmp/test-output.txt || true
@@ -113,5 +113,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: shadow-cljs-logs
-          path: packages/eta-mu-extensions/.shadow-cljs/
+          path: packages/extensions/.shadow-cljs/
           if-no-files-found: ignore

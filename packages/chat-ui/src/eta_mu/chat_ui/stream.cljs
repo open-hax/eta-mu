@@ -1,6 +1,5 @@
 (ns eta-mu.chat-ui.stream
-  "WebSocket streaming connection management."
-  (:require [clojure.string :as str]))
+  "WebSocket streaming connection management.")
 
 ;; ---------------------------------------------------------------------------
 ;; WebSocket connection

@@ -4,6 +4,14 @@ Canonical eta-mu monorepo.
 
 This repo absorbs the active eta-mu surfaces that were previously scattered across multiple repos and workspace paths, including the former `open-hax/openhax` monorepo.
 
+## TypeScript Deprecation
+
+**TypeScript is DEPRECATED. All new code must be ClojureScript.**
+
+A pre-commit hook enforces that total TypeScript line count never increases. Existing TypeScript lives in `packages/legacy/` and will be migrated to CLJS over time.
+
+See `node scripts/ts-line-count.mjs` for current inventory (~174,500 lines across 612 files).
+
 ## Charter
 
 - `spec/eta-mu-charter-v1.md` - active working definition of eta-mu core, satellites, and the first living vault

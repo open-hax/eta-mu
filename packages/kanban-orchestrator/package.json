@@ -1,0 +1,7 @@
+{
+  "name": "@open-hax/kanban-orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kanban board orchestrator agent — contracts only (mcp-server, capability, role, actor, agent). Loaded by a knoxx-style runtime as an extra contract root; the rheos-kanban MCP server connection is wired generically by @open-hax/mcp-contracts.",
+  "license": "GPL-3.0-or-later"
+}

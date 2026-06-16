@@ -1,12 +1,12 @@
 ---
 uuid: "truth-workbench-auth-checks"
 title: "Add auth checks to truth-workbench POST handlers"
-status: incoming
-priority: P2
+status: "rejected"
+priority: "P2"
 labels: ["tech-debt", "security", "truth-workbench"]
 created_at: "2026-06-12T00:00:00Z"
 source: "coderabbit-review:PR-112"
-category: tasks
+category: "tasks"
 ---
 
 # Add auth checks to truth-workbench POST handlers

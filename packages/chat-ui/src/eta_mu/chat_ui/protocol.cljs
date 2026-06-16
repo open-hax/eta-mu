@@ -1,8 +1,7 @@
 (ns eta-mu.chat-ui.protocol
   "IChatSession protocol — backend-agnostic chat interface.
    Implementations: knoxx, sol, opencode, mock."
-  (:require [helix.core :as hx :refer [defnc $]]
-            [helix.hooks :as hooks]))
+  (:require [helix.hooks :as hooks]))
 
 ;; ---------------------------------------------------------------------------
 ;; Protocol
@@ -54,11 +53,12 @@
 
     {:messages messages
      :is-sending is-sending
-     :send (fn [text]
+     :send (fn ^:async [text]
              (when session
                (set-sending true)
                (set-messages (fn [msgs] (conj msgs {:role "user" :content text :id (str (random-uuid))})))
-               (-> (send-message session text)
-                   (.catch (fn [_] (set-sending false))))))
+               (try
+                 (await (send-message session text))
+                 (catch :default _ (set-sending false)))))
      :abort (fn [] (when session (abort session)))
      :session session}))

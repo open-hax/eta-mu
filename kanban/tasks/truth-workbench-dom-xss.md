@@ -1,12 +1,12 @@
 ---
 uuid: "truth-workbench-dom-xss"
 title: "Sanitize innerHTML in truth-workbench UI to prevent DOM XSS"
-status: incoming
-priority: P2
+status: "rejected"
+priority: "P2"
 labels: ["tech-debt", "security", "truth-workbench"]
 created_at: "2026-06-12T00:00:00Z"
 source: "coderabbit-review:PR-112"
-category: tasks
+category: "tasks"
 ---
 
 # Sanitize innerHTML in truth-workbench UI

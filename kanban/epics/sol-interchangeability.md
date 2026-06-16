@@ -1,7 +1,7 @@
 ---
 uuid: "sol-interchangeability"
 title: "Sol/Knoxx Interchangeability via IChatSession Protocol"
-status: accepted
+status: "ready"
 priority: P1
 labels: ["epics", "cljs", "sol", "knoxx", "protocol", "interchange"]
 created_at: "2026-06-09T00:00:00Z"

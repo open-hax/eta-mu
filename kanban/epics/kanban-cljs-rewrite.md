@@ -1,7 +1,7 @@
 ---
 uuid: "kanban-cljs-rewrite"
 title: "Kanban CLJS Rewrite: Server, CLI, Frontend"
-status: "todo"
+status: "in_progress"
 priority: P0
 labels: ["epics", "cljs", "kanban", "rewrite", "openplanner-protocols"]
 created_at: "2026-06-08T00:00:00Z"
@@ -12,7 +12,11 @@ category: epics
 
 # Kanban CLJS Rewrite: Server, CLI, Frontend
 
-**Status: DONE** — CLJS kanban at feature parity. Server, CLI, 21 tests, 0 warnings. Ecosystem config updated.
+> Package: `packages/legacy/kanban` (`@open-hax/kanban-legacy`)
+> Parent program: `kanban/epics/eta-mu-cljs-runtime-rewrite.md`
+> Related package epic: `kanban/epics/output-contract-gate-cljs-rewrite.md` shares board composition logic
+
+**Status:** In progress — server FSM + ledger live; CLI write commands (comment/frontmatter) and the comment endpoint remain for TS parity. See `kanban/tasks/rheos-comments-parity.md`.
 
 ## What was built
 

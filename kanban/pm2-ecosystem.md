@@ -1,8 +1,8 @@
 ---
 uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-pm2-ecosystem-md"
 title: "PM2 Ecosystem Setup"
-status: incoming
-priority: P3
+status: "rejected"
+priority: "P3"
 labels: ["specs", "migrated-spec"]
 created_at: "2026-05-29T04:29:39.348Z"
 source: "orgs/open-hax/eta-mu/specs/pm2-ecosystem.md"

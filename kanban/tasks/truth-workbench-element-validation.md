@@ -1,12 +1,12 @@
 ---
 uuid: "truth-workbench-element-validation"
 title: "Validate element shapes in isValidActionBatch"
-status: incoming
-priority: P2
+status: "rejected"
+priority: "P2"
 labels: ["tech-debt", "security", "truth-workbench"]
 created_at: "2026-06-12T00:00:00Z"
 source: "coderabbit-review:PR-112"
-category: tasks
+category: "tasks"
 ---
 
 # Validate element shapes in isValidActionBatch
