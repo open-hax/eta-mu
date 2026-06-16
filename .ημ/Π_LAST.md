@@ -46,10 +46,10 @@
 - **TS line count**: 174,562 lines (baseline updated from 174,537 to reflect prior branch commits; no new TypeScript files staged)
 
 ## Commit
-TBD on `chore/ts-cljs-rewrite`
+`dfe835b` on `chore/ts-cljs-rewrite`
 
 ## Tag
-TBD
+`Π/chore-ts-cljs-rewrite/2026-06-16T115155`
 
 ## Notes
 - Workspace treated as single-agent for this snapshot; no concurrent dirt left unstaged except the excluded stray file.

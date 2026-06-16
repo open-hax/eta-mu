@@ -2,7 +2,7 @@
 # SHA256 hashes of key handoff artifacts
 
 0559b42504ca6559c85073fad37f225682ff48844740c82df99c603e78ad0da8  .ημ/Π_STATE.sexp
-5261f2440d29820a5a2357cc809e87d1d0c7f376bd1c6330f01f991c7e73735a  .ημ/Π_LAST.md
+65e5dd92d0805fcd3daa435dcd56f0137f3369078bc18588350a4201f25fac35  .ημ/Π_LAST.md
 
 # Entry points
 30504160076369b849f735321dfd1d86241d421ec9e084de60176ea4e03ca40a  packages/Rheos/shadow-cljs.edn
