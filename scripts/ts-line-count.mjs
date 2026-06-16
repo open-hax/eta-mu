@@ -13,8 +13,8 @@
  */
 
 import { execSync } from "node:child_process";
-import { resolve, relative, dirname } from "node:path";
-import { writeFileSync, readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, relative, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dirname, "..");
 
@@ -29,7 +29,7 @@ const FLAG_CHECK_VALUE = FLAG_CHECK ? args[args.indexOf("--check") + 1] : null;
 function findTsFiles() {
   const raw = execSync(
     `find . -type f \\( -name '*.ts' -o -name '*.tsx' \\) ! -path '*/node_modules/*' ! -path '*/dist/*' ! -path '*/.shadow-cljs/*' ! -path '*/.git/*'`,
-    { cwd: ROOT, encoding: "utf8" }
+    { cwd: ROOT, encoding: "utf8" },
   );
   return raw
     .trim()
@@ -111,8 +111,8 @@ if (FLAG_JSON) {
         files: FLAG_GLOBAL ? undefined : fileLines,
       },
       null,
-      2
-    )
+      2,
+    ),
   );
   process.exit(0);
 }

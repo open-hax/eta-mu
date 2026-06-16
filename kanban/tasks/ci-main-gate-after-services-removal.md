@@ -33,8 +33,31 @@ Either:
 2. Restore `services/eta-mu/**` if its deletion in #132 was unintended branch dirt, **or**
 3. Retire the eta-mu service-deploy gate if the service is no longer deployed this way.
 
+## Other CI/repo-shape mismatches found (same root cause: workflows authored against a different layout)
+
+PR #132 already fixed the **moved-package** path references in the workflows
+(`eta-mu-extensions`→`extensions`, `eta-mu-runtime`→`runtime`, `eta-mu-github`→`legacy/github`,
+`kanban`/`docs`→`legacy/*`). These remaining items are NOT path renames — they need a decision:
+
+- **`coverage.yml` (`TS package tests`) + `main-pr-gate.yml` (`main-tests`) run steps for
+  packages that don't exist yet**: `eta-mu-truth`, `presence-core`, `signal-contracts`,
+  `signal-radar-core`, `signal-source-utils`, `signal-watchlists`. These are *planned* packages
+  (see `kanban/signal-extraction-foundation.md`, `kanban/eta-mu-charter-v1.md`,
+  `kanban/tasks/truth-workbench-*`). The steps fail because the packages haven't landed. Either
+  guard the steps (skip-if-absent) or gate them behind the packages actually existing.
+- **`eta-mu-lint` → `pnpm typecheck`** fails on a real pre-existing TS error:
+  `packages/legacy/github/src/pi-agent.ts` — `ResourceLoader` is missing `setSystemPrompt` /
+  `setAppendSystemPrompt`. Needs a code fix (separate from the reorg).
+- **`eta-mu-lint` → Extension Path Validation** (`pnpm --filter @open-hax/eta-mu-extensions
+  validate-paths`) fails because the lint job never builds `dist/`. Either build extensions
+  before validating, or have `validate-paths` check sources.
+- **`main-build`** also runs `docker build -f services/eta-mu-truth-workbench/Dockerfile .`
+  (also deleted).
+
 ## Acceptance
 
 - `main-pr-gate`, deploy, and staging workflows pass (or are intentionally removed) for a
   PR that no longer ships `services/`.
+- `coverage`/`main-tests` either skip not-yet-built packages or those packages exist.
+- `eta-mu-lint` typecheck + validate-paths pass.
 - `mergeStateStatus` is no longer BLOCKED on these checks.

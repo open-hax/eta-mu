@@ -3,15 +3,15 @@ name: eta-mu-extensions-e2e
 on:
   pull_request:
     paths:
-      - 'packages/eta-mu-extensions/**'
-      - 'packages/eta-mu-extensions-e2e/**'
+      - 'packages/extensions/**'
+      - 'packages/extensions-e2e/**'
       - '.github/workflows/eta-mu-extensions-e2e.yml'
   push:
     branches:
       - main
     paths:
-      - 'packages/eta-mu-extensions/**'
-      - 'packages/eta-mu-extensions-e2e/**'
+      - 'packages/extensions/**'
+      - 'packages/extensions-e2e/**'
       - '.github/workflows/eta-mu-extensions-e2e.yml'
 
 jobs:
@@ -54,16 +54,16 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Compile E2E tests
-        working-directory: packages/eta-mu-extensions-e2e
+        working-directory: packages/extensions-e2e
         run: pnpm exec shadow-cljs --verbose compile e2e-test
 
       - name: Run E2E tests
-        working-directory: packages/eta-mu-extensions-e2e
+        working-directory: packages/extensions-e2e
         run: node out/node-tests.cjs
 
       - name: Test summary
         if: always()
-        working-directory: packages/eta-mu-extensions-e2e
+        working-directory: packages/extensions-e2e
         run: |
           echo '## E2E Test Results' >> $GITHUB_STEP_SUMMARY
           node out/node-tests.cjs 2>&1 | tee /tmp/e2e-output.txt || true
@@ -76,7 +76,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: e2e-shadow-cljs-logs
-          path: packages/eta-mu-extensions-e2e/.shadow-cljs/
+          path: packages/extensions-e2e/.shadow-cljs/
           if-no-files-found: ignore
 
       - name: Upload Clojure error reports

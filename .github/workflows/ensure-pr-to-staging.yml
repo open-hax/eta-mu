@@ -70,10 +70,10 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: .eta-mu/packages/eta-mu-github/pnpm-lock.yaml
+          cache-dependency-path: .eta-mu/packages/legacy/github/pnpm-lock.yaml
 
       - name: Install eta-mu dependencies
-        run: pnpm --dir .eta-mu/packages/eta-mu-github install --frozen-lockfile --ignore-workspace
+        run: pnpm --dir .eta-mu/packages/legacy/github install --frozen-lockfile --ignore-workspace
 
       - name: Run eta-mu ensure-pr
         id: ensure_pr
@@ -89,7 +89,7 @@ jobs:
           for pat in "${PATTERNS_ARR[@]}"; do
             pattern_args="$pattern_args --pattern $pat"
           done
-          pnpm --dir .eta-mu/packages/eta-mu-github dev ensure-pr \
+          pnpm --dir .eta-mu/packages/legacy/github dev ensure-pr \
             --repo "$repo" \
             --base "${{ inputs.base }}" \
             $pattern_args
