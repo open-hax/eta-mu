@@ -65,6 +65,21 @@
       (notify listeners {:type "error"})
       (throw e))))
 
+(defn- ^:async send-message! [state listeners base-url chat-path api-key agent-id model text]
+  ;; Hoisted to a top-level ^:async defn: shadow-cljs does not treat `^:async`
+  ;; on a reify method's arglist as an async context, so `await` there fails to
+  ;; compile. The reify `send-message` delegates here and returns this promise.
+  (if-let [cid (:conversation-id @state)]
+    (do
+      (when-not (:stream @state)
+        (open-stream! state listeners base-url chat-path (:session-id @state) cid))
+      (await (post-json (str base-url chat-path)
+                        (cond-> {:message text :conversation_id cid :session_id (:session-id @state)}
+                          (seq agent-id) (assoc :agent_id agent-id)
+                          (seq model) (assoc :model model))
+                        api-key)))
+    (await (start-conversation! state listeners base-url chat-path api-key agent-id model text))))
+
 (defn create-knoxx-session
   "Create a knoxx-backed chat session.
    Options:
@@ -83,17 +98,8 @@
     (let [listeners (atom [])
           state (atom {:session-id nil :conversation-id nil :stream nil})]
       (reify proto/IChatSession
-        (send-message ^:async [_ text]
-          (if-let [cid (:conversation-id @state)]
-            (do
-              (when-not (:stream @state)
-                (open-stream! state listeners base-url chat-path (:session-id @state) cid))
-              (await (post-json (str base-url chat-path)
-                                (cond-> {:message text :conversation_id cid :session_id (:session-id @state)}
-                                  (seq agent-id) (assoc :agent_id agent-id)
-                                  (seq model) (assoc :model model))
-                                api-key)))
-            (await (start-conversation! state listeners base-url chat-path api-key agent-id model text))))
+        (send-message [_ text]
+          (send-message! state listeners base-url chat-path api-key agent-id model text))
         (subscribe [_ callback]
           (swap! listeners conj callback)
           (when-let [sid (:session-id @state)]

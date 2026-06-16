@@ -24,6 +24,7 @@
     "@promethean-os/event-ledger": "workspace:*",
     "@promethean-os/openplanner-protocols": "workspace:*",
     "chokidar": "^4.0.3",
+    "dompurify": "^3.4.10",
     "fastify": "^5.3.3",
     "helix": "^0.3.1",
     "marked": "^18.0.5",

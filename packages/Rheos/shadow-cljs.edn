@@ -1,6 +1,6 @@
 { :source-paths ["src" "test"
-                "../../../openplanner/packages/openplanner-protocols/src"
-                "../../../openplanner/packages/event-ledger/src"
+                "../protocols/src"
+                "../event-ledger/src"
                 "../chat-ui/src"]
  :repositories {"clojars" {:url "https://repo.clojars.org/"}}
  :dependencies [[lilactown/helix "0.2.2"]

@@ -41,7 +41,10 @@
     (let [ledger (reify protocols/EventAdmission
                    (append-event! [_ envelope]
                      (js/Promise.resolve envelope))
-                   (query-events [_ _] (js/Promise.resolve #js [])))
+                   (append-events! [_ envelopes]
+                     (js/Promise.resolve (vec envelopes)))
+                   (query-events [_ _] (js/Promise.resolve #js []))
+                   (watch-events [_ _ _] #js {:close! (fn [])}))
           captured (atom nil)
           unsub (events/subscribe! #(reset! captured %))]
       (try
@@ -57,7 +60,10 @@
     (let [ledger (reify protocols/EventAdmission
                    (append-event! [_ envelope]
                      (js/Promise.resolve envelope))
-                   (query-events [_ _] (js/Promise.resolve #js [])))
+                   (append-events! [_ envelopes]
+                     (js/Promise.resolve (vec envelopes)))
+                   (query-events [_ _] (js/Promise.resolve #js []))
+                   (watch-events [_ _ _] #js {:close! (fn [])}))
           captured (atom nil)
           unsub (events/subscribe! #(reset! captured %))]
       (try

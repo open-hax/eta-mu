@@ -23,7 +23,7 @@
                   (vector? field-value) (some #(= (normalize-value %) tv) field-value)
                   (string? fv) (str/includes? fv tv)
                   :else false)
-      :regex (re-matches (re-pattern tv) fv)
+      :regex (try (boolean (re-matches (re-pattern tv) fv)) (catch :default _ false))
       false)))
 
 (defn- match-where [task [field op value]]

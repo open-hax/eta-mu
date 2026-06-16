@@ -65,6 +65,21 @@
       (open-stream! config state listeners))
     data))
 
+(defn- ^:async send-message! [config state listeners base-url prefix text]
+  ;; Hoisted to a top-level ^:async defn: shadow-cljs does not treat `^:async`
+  ;; on a reify method's arglist as an async context, so `await` there fails to
+  ;; compile. The reify `send-message` delegates here and returns this promise.
+  (if-let [cid (:conversation-id @state)]
+    (do
+      (when-not (:ws @state)
+        (open-stream! config state listeners))
+      (await (post-json (str base-url prefix "/chat")
+                        (cond-> {:message text
+                                 :conversation_id cid
+                                 :session_id (:session-id @state)}
+                          (:model config) (assoc :model (:model config))))))
+    (await (start-conversation! config state listeners text))))
+
 (defn create-sol-session
   "Create a Sol-backed chat session.
    opts: {:base-url default http://127.0.0.1:8001
@@ -78,17 +93,8 @@
          state (atom {})
          listeners (atom [])]
      (reify proto/IChatSession
-        (send-message ^:async [_ text]
-          (if-let [cid (:conversation-id @state)]
-            (do
-              (when-not (:ws @state)
-                (open-stream! config state listeners))
-              (await (post-json (str base-url prefix "/chat")
-                                (cond-> {:message text
-                                           :conversation_id cid
-                                           :session_id (:session-id @state)}
-                                  (:model config) (assoc :model (:model config))))))
-            (await (start-conversation! config state listeners text))))
+        (send-message [_ text]
+          (send-message! config state listeners base-url prefix text))
        (subscribe [_ callback]
          (swap! listeners conj callback)
          (when (and (:session-id @state) (:conversation-id @state) (not (:ws @state)))

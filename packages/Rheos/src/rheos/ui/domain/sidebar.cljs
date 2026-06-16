@@ -5,6 +5,7 @@
             [helix.hooks :as hooks]
             [helix.dom :as d]
             ["marked" :refer [marked]]
+            ["dompurify" :default DOMPurify]
             [clojure.string :as str]))
 
 ;; ---------------------------------------------------------------------------
@@ -135,7 +136,7 @@
 ;; Sidebar component
 ;; ---------------------------------------------------------------------------
 
-(defnc task-sidebar [{:keys [task detail on-close on-update]}]
+(defnc task-sidebar [{:keys [task detail on-close on-update on-status]}]
   (let [task-uuid (get task "uuid")
         source-path (or (get task "sourcePath") (get detail "sourcePath"))
         [editing-field set-editing-field] (hooks/use-state nil)
@@ -149,7 +150,13 @@
         handle-save (fn [key value]
                       (set-editing-field nil)
                       (set-edit-value "")
-                      (patch-frontmatter! task-uuid (get task "sourceBoard" "") key value on-update))]
+                      ;; Status changes must go through the FSM-enforced status
+                      ;; endpoint (WIP limits, command gates, valid transitions) —
+                      ;; the same path the board uses. A direct frontmatter PATCH
+                      ;; would let the sidebar set statuses drag-and-drop rejects.
+                      (if (= key "status")
+                        (when on-status (on-status value))
+                        (patch-frontmatter! task-uuid (get task "sourceBoard" "") key value on-update)))]
     ;; Fills the flex slot the layout gives it; the content area below owns the scroll.
     (d/div {:style {:width "100%" :height "100%" :border-left "1px solid var(--token-colors-border-default)" :background "var(--token-colors-background-surface)" :overflow "hidden" :display "flex" :flex-direction "column"}}
 
@@ -190,7 +197,7 @@
             (fn [i section]
               (when (= (get section "type") "body")
                 (d/div {:key (str "body-" i) :class "markdownPreview" :style {:padding "12px 16px" :border-bottom "1px solid var(--token-colors-border-subtle)"}}
-                  (d/div {:dangerouslySetInnerHTML #js {:__html (marked (get section "content" ""))}}))))
+                  (d/div {:dangerouslySetInnerHTML #js {:__html (.sanitize DOMPurify (marked (get section "content" "")))}}))))
             (get detail "sections"))
           ;; Comment sections
           (when (some #(= (get % "type") "comment") (get detail "sections"))

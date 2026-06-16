@@ -41,12 +41,12 @@ const getAgentDir = (): string | undefined => {
 };
 
 const createResourceLoader = async (
-  systemPrompt: string,
+  systemPrompt: string | undefined,
   cwd: string,
   modelRegistry: ModelRegistry,
 ): Promise<ResourceLoader> => {
   const agentDir = getAgentDir();
-
+  let appendPrompts: string[] = []; // mutated by setAppendSystemPrompt
   // Create runtime that can queue provider registrations
   const runtime = createExtensionRuntime();
 
@@ -79,9 +79,9 @@ const createResourceLoader = async (
     getThemes: () => ({ themes: [], diagnostics: [] }),
     getAgentsFiles: () => ({ agentsFiles: [] }),
     getSystemPrompt: () => systemPrompt,
-    getAppendSystemPrompt: () => [],
-    setSystemPrompt: (prompt: string | undefined) => { systemPrompt = prompt ?? ""; },
-    setAppendSystemPrompt: (_prompts: string[]) => {},
+    getAppendSystemPrompt: () => appendPrompts,
+    setSystemPrompt: (prompt: string | undefined) => { systemPrompt = prompt; },
+    setAppendSystemPrompt: (prompts: string[]) => { appendPrompts = prompts; },
     extendResources: () => {},
     reload: async () => {},
   };

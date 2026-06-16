@@ -16,6 +16,7 @@
              [rheos.backend.domain.task-edit :as task-edit]
              [rheos.backend.infra.chat-proxy :as chat-proxy]
              [rheos.backend.infra.ledger :as ledger]
+             [rheos.backend.law.frontmatter :as law-frontmatter]
 
             [rheos.backend.infra.mcp :as mcp]
             [rheos.backend.infra.projects :as projects]
@@ -147,10 +148,21 @@
         body (js->clj (.-body req) :keywordize-keys true)
         updates (or (:updates body)
                     (when (:key body) {(:key body) (:value body)}))
+        ;; A client-supplied `key` arrives as a string; normalize to a keyword so
+        ;; the law (keyword set) can decide both the `:updates` and `:key` shapes.
+        updates (when (map? updates)
+                  (reduce-kv (fn [m k v] (assoc m (keyword k) v)) {} updates))
+        bad-keys (when (seq updates) (law-frontmatter/disallowed-keys updates))
         project (find-project project-id)]
     (cond
       (not project) (send-error reply 404 "unknown project")
       (empty? updates) (send-error reply 400 "missing key or updates")
+      ;; `status` is FSM-governed: refuse it here and point at the status endpoint.
+      (law-frontmatter/status-update? updates)
+      (send-error reply 400 (str "status is not editable via frontmatter; "
+                                 "POST /api/task/" uuid "/status"))
+      (seq bad-keys)
+      (send-error reply 400 (law-frontmatter/disallowed-keys-message bad-keys))
       :else (try
               (let [all-tasks (await (tasks/load-tasks (:tasks-dir project)))
                     task (first (filter #(= (:uuid %) uuid) all-tasks))]

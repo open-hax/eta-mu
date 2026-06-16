@@ -46,6 +46,11 @@
     (catch :default e
       (set-toast (str e)))))
 
+(defn- ^:async move-from-sidebar! [selected status get-filters set-board-data set-detail set-toast]
+  (await (do-move-task! (get selected "uuid") (get selected "sourceBoard" "")
+                        status get-filters set-board-data set-toast))
+  (await (load-task-detail! selected set-detail)))
+
 ;; ---------------------------------------------------------------------------
 ;; App component
 ;; ---------------------------------------------------------------------------
@@ -173,7 +178,13 @@
               {:task selected
                :detail detail
                :on-close #(do (set-selected nil) (set-detail nil) (set-focus :board))
-               :on-update (fn [data] (set-detail data))}))))
+               :on-update (fn [data] (set-detail data))
+               ;; Status edits route through the FSM-enforced move path (toast on
+               ;; 409), then refresh the open detail; the board refetches via SSE.
+               :on-status (fn [status]
+                            (move-from-sidebar! selected status
+                                                #(.-current filters-ref)
+                                                set-board-data set-detail set-toast))}))))
 
       ;; Toast — FSM rejections and move errors
       (when toast
