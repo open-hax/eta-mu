@@ -44,9 +44,10 @@
    ;; Prefer Sol-scoped vars so a leaked ambient HOST/PORT (e.g. PORT=8000 from a
    ;; knoxx shell, which collides with knoxx-backend) can't re-point Sol. Default
    ;; port is 8001 — Sol's own port, not knoxx's 8000.
-   :host (env "SOL_HOST" (env "HOST" "0.0.0.0"))
-   :port (js/parseInt (env "SOL_PORT" (env "PORT" "8001")) 10)
-   :knoxx-base-url (env "KNOXX_BASE_URL" "http://localhost:8000")
+    :host (env "SOL_HOST" (env "HOST" "0.0.0.0"))
+    :port (js/parseInt (env "SOL_PORT" (env "PORT" "8001")) 10)
+    :public-base-url (env "SOL_PUBLIC_BASE_URL" "")
+    :knoxx-base-url (env "KNOXX_BASE_URL" "http://localhost:8000")
    :knoxx-api-key (env "KNOXX_API_KEY" "")
    :knoxx-default-role (env "KNOXX_DEFAULT_ROLE" "knowledge_worker")
    :knoxx-default-actor-id (env "KNOXX_DEFAULT_ACTOR_ID" "chat_primary")

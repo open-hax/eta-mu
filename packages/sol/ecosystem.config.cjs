@@ -177,7 +177,10 @@ const apps = [
       PROXX_AUTH_TOKEN: envValue('PROXX_AUTH_TOKEN', envValue('PROXY_AUTH_TOKEN', '')),
       PROXX_DEFAULT_MODEL: envValue('PROXX_DEFAULT_MODEL', 'gemma4:31b'),
 
-      // Provider overrides (optional)
+      // Sol public base URL behind the Cloudflare tunnel.
+      SOL_PUBLIC_BASE_URL: envValue('SOL_PUBLIC_BASE_URL', 'https://sol-stealth.promethean.rest'),
+      // Knoxx callback/OAuth reachability through the tunnel.
+      KNOXX_BASE_URL: envValue('KNOXX_BASE_URL', 'https://knoxx-stealth.promethean.rest'),
       KNOXX_PROVIDER_BASE_URLS: envValue('KNOXX_PROVIDER_BASE_URLS', ''),
       KNOXX_PROVIDER_AUTH_TOKENS: envValue('KNOXX_PROVIDER_AUTH_TOKENS', ''),
       KNOXX_PROVIDER_AUTH_HEADERS: envValue('KNOXX_PROVIDER_AUTH_HEADERS', ''),
