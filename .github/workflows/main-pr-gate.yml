@@ -24,12 +24,16 @@ jobs:
   eta-mu-lint:
     name: eta-mu-lint
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions: {}
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
         with:
           persist-credentials: false
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
+        with:
+          distribution: temurin
+          java-version: '21'
       - uses: pnpm/action-setup@v4
         with:
           version: '10.14.0'
@@ -38,6 +42,7 @@ jobs:
         with:
           node-version: 20
       - run: pnpm install --no-frozen-lockfile
+      - run: pnpm --dir packages/extensions build
       - run: pnpm lint
 
   main-tests:
