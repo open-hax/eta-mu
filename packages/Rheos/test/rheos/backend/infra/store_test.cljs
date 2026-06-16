@@ -10,8 +10,13 @@
           file-path (path/join tmp-dir "views.edn")
           _ (await (.mkdir fsp tmp-dir #js {:recursive true}))
           s (await (store/load-edn-store file-path))]
-      (is (empty? (await (store/-keys s))))
-      (await (store/-put! s "infra" {:domain "infrastructure"}))
-      (is (= ["infra"] (await (store/-keys s))))
-      (is (= {:domain "infrastructure"} (await (store/-get s "infra"))))
-      (await (.rm fsp tmp-dir #js {:recursive true :force true})))))
+      (try
+        (is (empty? (await (store/-keys s))))
+        (await (store/-put! s "infra" {:domain "infrastructure"}))
+        (is (= ["infra"] (await (store/-keys s))))
+        (is (= {:domain "infrastructure"} (await (store/-get s "infra"))))
+        (let [reloaded (await (store/load-edn-store file-path))]
+          (is (= ["infra"] (await (store/-keys reloaded))))
+          (is (= {:domain "infrastructure"} (await (store/-get reloaded "infra")))))
+        (finally
+          (await (.rm fsp tmp-dir #js {:recursive true :force true})))))))

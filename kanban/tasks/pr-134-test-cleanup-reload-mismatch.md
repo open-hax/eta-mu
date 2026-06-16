@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-test-cleanup-reload-mismatch"
 title: "PR #134: Improve store/view-store/watcher tests"
-status: "todo"
+status: "done"
 priority: "P1"
 labels: ["tasks", "rheos", "cljs", "testing", "pr-134", "3sp"]
 created_at: "2026-06-16T12:30:00Z"

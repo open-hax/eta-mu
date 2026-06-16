@@ -9,9 +9,11 @@
     (let [tmp-dir (path/join (js/process.cwd) "target" "test-views")
           _ (await (.mkdir fsp tmp-dir #js {:recursive true}))
           store (await (views/load-view-store tmp-dir))]
-      (await (views/save-view! store "infra" {:domain "infrastructure" :status "todo"}))
-      (is (= {:domain "infrastructure" :status "todo"} (await (views/load-view store "infra"))))
-      (is (= ["infra"] (await (views/list-views store))))
-      (is (= {:domain "infrastructure" :status "done"}
-             (views/merge-preset {:status "done"} (await (views/load-view store "infra")))))
-      (await (.rm fsp tmp-dir #js {:recursive true :force true})))))
+      (try
+        (await (views/save-view! store "infra" {:domain "infrastructure" :status "todo"}))
+        (is (= {:domain "infrastructure" :status "todo"} (await (views/load-view store "infra"))))
+        (is (= ["infra"] (await (views/list-views store))))
+        (is (= {:domain "infrastructure" :status "done"}
+               (views/merge-preset {:status "done"} (await (views/load-view store "infra")))))
+        (finally
+          (await (.rm fsp tmp-dir #js {:recursive true :force true})))))))

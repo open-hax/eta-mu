@@ -67,23 +67,26 @@
           (unsub)
           (await (.rm fsp dir #js {:recursive true :force true})))))))
 
-(deftest ^:async handle-file-event-detects-drift-without-write-id
-  (testing "External edit with no write-id at all is drift"
+(deftest ^:async handle-file-event-detects-cross-task-write-id
+  (testing "Registered write-id for a different task is drift, not correlation"
     (let [dir (tmp-dir)
           _ (await (.mkdir fsp dir #js {:recursive true}))
-          _ (await (write-task! dir "t3" "Task Three"))
+          _ (await (write-task! dir "t4" "Task Four"))
+          _ (await (write-task! dir "t5" "Task Five"))
           captured (atom [])
           unsub (events/subscribe! #(swap! captured conj %))]
       (try
-        (let [file-path (path/join dir "t3.md")
-              raw (await (.readFile fsp file-path "utf8"))
-              edited (str raw "\n\nExternal edit")]
-          (await (.writeFile fsp file-path edited "utf8"))
-          (await (watcher/handle-file-event! "test" dir file-path "change"))
+        (let [t4-file-path (path/join dir "t4.md")
+              t4-raw (await (.readFile fsp t4-file-path "utf8"))
+              t5-write-id "t5-write-123"]
+          (watcher/expect-write! t5-write-id "t5")
+          (await (.writeFile fsp t4-file-path (content-parser/inject-write-id t4-raw t5-write-id) "utf8"))
+          (await (watcher/handle-file-event! "test" dir t4-file-path "change"))
           (is (some #(and (= "drift-detected" (:type %))
                           (= "drift" (:correlation/status %))
-                          (= "t3" (:task-id %)))
-                    @captured)))
+                          (= "t4" (:task-id %)))
+                    @captured))
+          (is (not (some #(= "file-changed" (:type %)) @captured))))
         (finally
           (unsub)
           (await (.rm fsp dir #js {:recursive true :force true})))))))

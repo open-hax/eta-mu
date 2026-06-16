@@ -49,10 +49,12 @@
           write-id (extract-write-id content)
           uuid (extract-uuid content)
           ledger (ledger/get-ledger tasks-dir)]
-      (when uuid
-        (if (correlate-write write-id)
-          (events/emit-file-changed! ledger board-id uuid write-id "correlated")
-          (events/emit-drift-detected! ledger board-id uuid write-id))))
+       (when uuid
+         (if-let [info (and write-id (correlate-write write-id))]
+           (if (= uuid (:task-id info))
+             (events/emit-file-changed! ledger board-id uuid write-id "correlated")
+             (events/emit-drift-detected! ledger board-id uuid write-id))
+           (events/emit-drift-detected! ledger board-id uuid write-id))))
     (catch :default err
       (js/console.error "Watcher error:" file-path (.-message err)))))
 
