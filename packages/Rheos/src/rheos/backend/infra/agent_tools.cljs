@@ -18,9 +18,9 @@
             [clojure.string :as str]
             [rheos.backend.domain.compose :as compose]
             [rheos.backend.domain.events :as events]
+            [rheos.backend.domain.task-edit :as task-edit]
             [rheos.backend.domain.transition :as transition]
             [rheos.backend.infra.projects :as projects]
-            [rheos.backend.infra.task-edit :as task-edit]
             [rheos.backend.infra.task-store :as tasks]
             [rheos.backend.infra.watcher :as watcher]
             [rheos.backend.shape.content-parser :as content-parser]))
@@ -177,10 +177,11 @@
                      :labels (vec (or labels []))
                      :created_at (.toISOString (new js/Date))
                      :parent parent-uuid}
-             raw (content-parser/serialize-task-content {:frontmatter subtask :sections []})
-             write-id (events/generate-write-id)]
-         (watcher/register-cli-event! write-id sub-uuid)
-         (await (.writeFile fsp file-path raw "utf8"))
+            write-id (events/generate-write-id)
+            raw (-> (content-parser/serialize-task-content {:frontmatter subtask :sections []})
+                    (content-parser/inject-write-id write-id))]
+        (watcher/register-cli-event! write-id sub-uuid)
+        (await (.writeFile fsp file-path raw "utf8"))
          {:ok true :uuid sub-uuid :title title :source-path file-path}))))
 
 ;; ---------------------------------------------------------------------------
