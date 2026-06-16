@@ -141,3 +141,12 @@ The `harness` field on the task determines which backend to use.
 ---
 
 **Session 2026-06-14 — DESIGN REVISED + Slice 2 done.** The owner reframed this card: chat is NOT a right, task-bound witness-thread panel. It is a **standalone board-scoped "task orchestrator"** mounted on the **LEFT**, decoupled from task selection — "I talk to it and its actions update the UI." The mechanism is the event ledger as the spine (see [[kanban-event-ledger]] Slice 1, done): the agent is just another actor; its mutations hit the ledger and the UI updates via SSE. Delivery is sliced: 0=Rheos layer reorg, 1=ledger→SSE live updates (DONE), 2=decouple chat→left orchestrator (THIS — DONE), 3=board tools for the agent via the `eta-mu kanban` CLI, 4=real `KnoxxChatSession` against the running knoxx (:8000). Slice 2: removed chat from the right sidebar (`rheos.ui.domain.sidebar` is now pure task detail); added `rheos.ui.domain.orchestrator` (collapsible left panel, chat-ui `ChatPanel`, MOCK session for now). NOTE: the per-task witness-thread + localStorage + the 6 tools described above are being reshaped — the orchestrator is board-scoped, and tools come via the CLI in Slice 3.
+
+---
+
+**Session 2026-06-16.** Slices 3 and 4 delivered:
+- Board tools exposed via Rheos CLI (`status-update`, `add-comment`, `create-subtask`, `read-task`, `search-tasks`, `read-board`) and MCP endpoint.
+- `KnoxxChatSession` wired into the orchestrator as one of multiple possible backends (default remains the safer Rheos proxy; direct browser-to-knoxx is opt-in via board meta).
+- Sol backend remains supported as a distinct implementation — sol and knoxx coexist; Knoxx is the working runtime to verify first, but Sol is not sunset or deprecated.
+
+Remaining: verify `KnoxxChatSession` end-to-end against knoxx `:8000`; add `OpencodeChatSession`; decide whether to route new Rheos subcommands through the legacy `eta-mu kanban` dispatcher.

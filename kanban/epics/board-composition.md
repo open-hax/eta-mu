@@ -1,7 +1,7 @@
 ---
 uuid: "board-composition"
 title: "Board Composition: Query DSL + Multi-Board Projections"
-status: "in_progress"
+status: "review"
 priority: P0
 labels: ["epics", "cljs", "kanban", "composition", "query-dsl"]
 created_at: "2026-06-08T00:00:00Z"
@@ -73,3 +73,13 @@ eta-mu kanban compose --preset "infra-view"
 ---
 
 **Session 2026-06-13.** Core compose (where-clauses, multi-board projection) verified working live + CLI `compose`. REMAINING: saved/preset views (`--save`/`--preset`), the IStore driver protocol (EdnStore/MongoStore) or an explicit descope, and `contains`/`regex` DSL operator tests. Moved review → todo.
+
+---
+
+**Session 2026-06-16.** Delivered:
+- Saved/preset views implemented in `cli.cljs`: `--save <name>` persists the current effective query flags to `.kanban/views.edn`; `--preset <name>` loads a saved view and lets explicit CLI flags override it.
+- `IStore` protocol introduced in `rheos.backend.infra.store` with a file-backed `EdnStore` driver used for view persistence. Full migration of task/config loading to `IStore` is intentionally staged: markdown tasks and JSON board configs are loaded directly today because their shapes are stable; the protocol exists so `EdnStore` and `MongoStore` can coexist polymorphically as framework needs evolve.
+- `contains` and `regex` DSL operators verified: regex parsing added (`field ~ /pattern/` and `field ~ pattern`), and meta-field filtering now respects all operators (not just `=`).
+- Added tests for saved views, EdnStore, and `contains`/`regex` operators; fixed pre-existing test/lint issues in `fsm_test.cljs`, `transition.cljs`, `content_parser.cljs`, `events.cljs`, and `task_edit_test.cljs` so the Rheos suite is green.
+
+**Status:** review.

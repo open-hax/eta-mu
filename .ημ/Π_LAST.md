@@ -1,62 +1,57 @@
-# Π Fork Tax — 2026-06-15
+# Π Fork Tax — 2026-06-16
 
 ## Branch
-`feat/kanban-comments-parity`
+`chore/ts-cljs-rewrite`
 
 ## Base SHA
-`ea053df`
+`1809efd`
 
 ## What Changed
 
-### CLJS runtime expansion
-- Added new domain, extern, infra, law, and shape namespaces under `packages/runtime/src/cljs/eta_mu/`
-  - `ai` — message/content canonical types, provider transforms, Malli schemas, extern adapters
-  - `coding` — diagnostics, session, fs/git/path/shell/process externs, boundary infra
-  - `docs` — frontmatter, markdown parsing, JSONL, indexing
-  - `garden` — publication law and block/track shapes
-  - `gate` — contract law, review/validate/repair domain
-- Added corresponding test coverage under `packages/runtime/test/cljs/eta_mu/`
+### Rheos backend domain and infrastructure
+- Hardened `compose`, `events`, `transition`, `agent_tools`, `cli`, `http_server`, `task_writeback`, `watcher`, `content_parser`, and `kanban` shape modules.
+- Added new domain module `task_edit.cljs` for in-place task editing.
+- Added new infrastructure modules `store.cljs` and `view_store.cljs` for state persistence and view projection.
+- Added/updated corresponding tests, including new `task_edit_test.cljs`, `store_test.cljs`, `view_store_test.cljs`, and `watcher_test.cljs`.
 
-### Shared clj-kondo configuration
-- New package `packages/kondo-config/` exporting shared hooks and config
-- Rolled shared config out to `packages/Rheos`, `packages/axxium`, `packages/chat-ui`, `packages/event-ledger`, `packages/extensions`, `packages/katamorph`, `packages/mcp-contracts`, `packages/protocols`, `packages/runtime`, `packages/sol`
-- Removed per-package `.clj-kondo/imports` directories now covered by shared config
-- Added `docs/kondo-config-baseline.md` documenting baseline lint state
+### Rheos UI domain
+- Refined `board`, `layout`, `orchestrator`, and `sidebar` UI domain modules.
 
-### Package updates
-- Updated `package.json` and `pnpm-lock.yaml` to reflect dependency changes
-- Added `.gitignore` entries for `**/.clj-kondo/.cache` and `**/.clj-kondo/imports`
+### chat-ui extraction
+- Updated `package.json` and `shadow-cljs.edn` build configuration.
+- Refined `protocol.cljs` session contract.
+- Added standalone app entry `core.cljs` and session adapters:
+  - `mock_session.cljs` — local test session
+  - `knoxx_session.cljs` — knoxx-backed session
+  - `sol_session.cljs` — sol-backed session
+- Added `test/eta_mu/chat_ui/mock_session_test.cljs`.
+- Added `resources/public/index.html` standalone test page.
+- Added `.gitignore` to exclude build artifacts (`dist/`, `target/`, `resources/public/js/`, `.shadow-cljs/`, `node_modules/`).
 
-### Kanban and process documentation
-- Added `PROCESS.md`
-- Added rewrite inventory docs under `docs/*-cljs-rewrite-inventory.md`
-- Added kanban epics and tasks for the TS→CLJS rewrite phases and kondo cleanup
-- Updated `kanban/.events/ledger.edn`
-
-### Sol, Katamorph, Rheos, axxium, chat-ui, event-ledger, extensions, protocols
-- Ongoing CLJS refinements and test updates across these packages
+### Kanban and documentation
+- Updated `kanban/.events/ledger.edn`.
+- Refreshed epics: `board-composition`, `chat-ui-extraction`, `kanban-chat-integration`, `kanban-cljs-rewrite`, `kanban-event-ledger`, `roadmap-global-projection`.
+- Updated task `eta-mu-cljs-rewrite-architecture-inventory.md`.
+- Updated `docs/cljs-runtime-rewrite-architecture-inventory.md`.
+- Added note `docs/notes/2026.06.16.06.43.13.md`.
 
 ## Excluded from Commit
-- `.cache/v1/lock` — runtime/build cache artifact
-- `packages/Rheos/.cache/v1/**` — runtime/build cache artifact
+- `cljs-rewrite` — 0-byte untracked artifact, not part of snapshot scope.
 
 ## Verification Status
-- **eta-mu-runtime tests**: Passed — 6 tests
-- **eta-mu-github tests**: Passed — 19 tests
-- **eta-mu-docs tests**: Passed — 2 tests
-- **kanban-legacy tests**: Passed — 14 tests
-- **eta-mu-extensions tests**: Passed — 72 tests, 195 assertions
-- **Sol tests**: Passed — 66 tests, 193 assertions
-- **Katamorph tests**: Passed — 102 tests, 253 assertions
-- **TS line count**: Unchanged at 174,537 lines
+- **Rheos tests**: Passed — 55 tests, 150 assertions
+- **chat-ui tests**: Passed — 1 test, 3 assertions
+- **Rheos clj-kondo**: Passed — 0 errors, 0 warnings
+- **chat-ui clj-kondo**: Passed — 0 errors, 0 warnings
+- **TS line count**: 174,562 lines (baseline updated from 174,537 to reflect prior branch commits; no new TypeScript files staged)
 
 ## Commit
-`11f31e1` on `feat/kanban-comments-parity`
+TBD on `chore/ts-cljs-rewrite`
 
 ## Tag
-`Π/feat-kanban-comments-parity/2026-06-15T221359`
+TBD
 
 ## Notes
-- Workspace treated as single-agent for this snapshot; no concurrent dirt left unstaged.
-- LSP diagnostics report unresolved symbols in several `packages/Rheos/src/rheos/ui/domain/*.cljs` files; these are pre-existing and did not fail the executed test suites.
+- Workspace treated as single-agent for this snapshot; no concurrent dirt left unstaged except the excluded stray file.
 - Pre-commit TypeScript guard hook is not installed locally.
+- `.ts-line-count-baseline` was updated to match the current HEAD count before staging.

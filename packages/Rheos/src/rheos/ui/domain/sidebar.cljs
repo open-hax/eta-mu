@@ -119,6 +119,18 @@
       (d/div {:style {:margin-top "8px" :font-size "11px" :color "var(--token-colors-text-muted)"}}
         "Double-click a field to edit"))))
 
+(defn- ^:async patch-frontmatter! [task-uuid project key value on-update]
+  (try
+    (let [res (await (js/fetch (str "/api/task/" (js/encodeURIComponent task-uuid) "/frontmatter?project=" (js/encodeURIComponent (or project "")))
+                               #js {:method "PATCH"
+                                    :headers #js {"Content-Type" "application/json"}
+                                    :body (js/JSON.stringify #js {:key key :value value})}))]
+      (when (.-ok res)
+        (let [data (await (.json res))]
+          (when on-update (on-update data)))))
+    (catch :default err
+      (js/console.error "Save failed:" err))))
+
 ;; ---------------------------------------------------------------------------
 ;; Sidebar component
 ;; ---------------------------------------------------------------------------
@@ -134,19 +146,10 @@
         handle-cancel (fn []
                         (set-editing-field nil)
                         (set-edit-value ""))
-        handle-save (fn ^:async [key value]
+        handle-save (fn [key value]
                       (set-editing-field nil)
                       (set-edit-value "")
-                      (try
-                        (let [res (await (js/fetch (str "/api/task/" (js/encodeURIComponent task-uuid) "/frontmatter?project=" (js/encodeURIComponent (get task "sourceBoard" "")))
-                                                  #js {:method "PATCH"
-                                                       :headers #js {"Content-Type" "application/json"}
-                                                       :body (js/JSON.stringify #js {:key key :value value})}))]
-                          (when (.-ok res)
-                            (let [data (await (.json res))]
-                              (when on-update (on-update data)))))
-                        (catch :default err
-                          (js/console.error "Save failed:" err))))]
+                      (patch-frontmatter! task-uuid (get task "sourceBoard" "") key value on-update))]
     ;; Fills the flex slot the layout gives it; the content area below owns the scroll.
     (d/div {:style {:width "100%" :height "100%" :border-left "1px solid var(--token-colors-border-default)" :background "var(--token-colors-background-surface)" :overflow "hidden" :display "flex" :flex-direction "column"}}
 

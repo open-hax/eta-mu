@@ -53,12 +53,12 @@
 
     {:messages messages
      :is-sending is-sending
-     :send (fn ^:async [text]
-             (when session
-               (set-sending true)
-               (set-messages (fn [msgs] (conj msgs {:role "user" :content text :id (str (random-uuid))})))
-               (try
-                 (await (send-message session text))
-                 (catch :default _ (set-sending false)))))
+      :send (^:async fn [text]
+              (when session
+                (set-sending true)
+                (set-messages (fn [msgs] (conj msgs {:role "user" :content text :id (str (random-uuid))})))
+                (try
+                  (await (send-message session text))
+                  (catch :default _ (set-sending false)))))
      :abort (fn [] (when session (abort session)))
      :session session}))

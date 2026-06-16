@@ -34,3 +34,13 @@ category: epics
 ---
 
 **Session 2026-06-13 progress.** NOW DONE: server enforces FSM + records to ledger; CLI gained project-aware `move`/`events`/`drift`. REMAINING for true TS parity: comment endpoint + CLI `comment`/`frontmatter` commands (the legacy TS CLI has these). Moved review → todo.
+
+---
+
+**Session 2026-06-16.** Comment + frontmatter parity delivered in Rheos:
+- `POST /api/task/:uuid/comment` appends a comment section and records the event.
+- `PATCH /api/task/:uuid/frontmatter` updates frontmatter keys and records the event.
+- CLI `comment` and `frontmatter` subcommands added.
+- `write-id` correlation keeps legitimate CLI edits from being flagged as drift.
+
+Remaining: UI editors for comment/frontmatter in the web view (not strictly CLI parity); potential routing of new Rheos subcommands through the legacy `eta-mu kanban` dispatcher.

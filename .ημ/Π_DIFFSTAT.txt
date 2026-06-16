@@ -1,37 +1,52 @@
-.cache/v1/lock                                      |  0 +
-.gitignore                                          |  3 +-
-PROCESS.md                                          | 90 ++++++++++
-docs/agent-cljs-rewrite-inventory.md               | 208 +++++++++++++++++
-docs/ai-cljs-rewrite-inventory.md                  | 208 +++++++++++++++++
-docs/coding-agent-cljs-rewrite-inventory-core.md   | 208 +++++++++++++++++
-docs/coding-agent-cljs-rewrite-inventory-modes-cli.md | 208 +++++++++++++++++
-docs/docs-cljs-rewrite-inventory.md                | 208 +++++++++++++++++
-docs/github-cljs-rewrite-inventory.md              | 208 +++++++++++++++++
-docs/kondo-config-baseline.md                      | 90 ++++++++++
-docs/output-contract-gate-cljs-rewrite-inventory.md | 208 +++++++++++++++++
-docs/publication-components-cljs-rewrite-inventory.md | 208 +++++++++++++++++
-docs/tui-cljs-rewrite-inventory.md                 | 208 +++++++++++++++++
-kanban/.events/ledger.edn                          |1238 ++++++++++++++++++++
-kanban/epics/*-cljs-rewrite.md                     |  9 files
-kanban/tasks/*-cljs-rewrite*.md                    | 65 files
-kanban/tasks/kondo-lint-cleanup-*.md               | 11 files
-kanban/tasks/shared-kondo-config-*.md              | 12 files
-package.json                                        |  1 +
-packages/*/package.json                             | 22 files changed
-packages/*/.clj-kondo/config.edn                   | 10 files changed
-packages/*/.clj-kondo/imports/**                   | deleted
-packages/kondo-config/**                           |  3 files added
-packages/Rheos/.cache/v1/**                        |  3 files added
-packages/Rheos/src/rheos/**/*.cljs                 |  6 files changed
-packages/axxium/src/cljs/axxium/**/*.cljs          |  6 files changed
-packages/chat-ui/src/eta_mu/chat_ui/**/*.cljs      |  5 files changed
-packages/event-ledger/src/**/*.cljs                |  1 file changed
-packages/extensions/src/eta_mu/extensions/**/*.cljs | 16 files changed
-packages/katamorph/src/cljs/katamorph/**/*.cljs    |  3 files changed
-packages/protocols/src/promethean/**/*.cljs        |  1 file changed
-packages/runtime/src/cljs/eta_mu/**/*.cljs         | 43 files added
-packages/runtime/test/cljs/eta_mu/**/*.cljs        | 18 files added
-packages/sol/src/cljs/open_hax/sol/**/*.cljs      | 16 files changed
-packages/sol/test/cljs/open_hax/sol/**/*.cljs     |  1 file changed
-pnpm-lock.yaml                                     |1375 ++++++++++--------
- 294 files changed, 20729 insertions(+), 3637 deletions(-)
+.ημ/Π_LAST.md                                      |  83 +++----
+.ημ/Π_STATE.sexp                                   | 117 ++++++------
+docs/cljs-runtime-rewrite-architecture-inventory.md | 212 +++++++++++++---------
+docs/notes/2026.06.16.06.43.13.md                  |   2 +
+kanban/.events/ledger.edn                          |  24 +++
+kanban/epics/board-composition.md                  |  14 +-
+kanban/epics/chat-ui-extraction.md                 |  13 +-
+kanban/epics/kanban-chat-integration.md            |  11 +-
+kanban/epics/kanban-cljs-rewrite.md                |  12 +-
+kanban/epics/kanban-event-ledger.md                |  10 +-
+kanban/epics/roadmap-global-projection.md          |  16 ++
+kanban/tasks/eta-mu-cljs-rewrite-architecture-inventory.md |  32 +++-
+packages/Rheos/src/rheos/backend/domain/compose.cljs |  26 ++-
+packages/Rheos/src/rheos/backend/domain/events.cljs |  29 ++-
+packages/Rheos/src/rheos/backend/domain/task_edit.cljs |  57 ++++++
+packages/Rheos/src/rheos/backend/domain/transition.cljs |  14 +-
+packages/Rheos/src/rheos/backend/infra/agent_tools.cljs | 100 +++++++++-
+packages/Rheos/src/rheos/backend/infra/cli.cljs    | 109 ++++++++++-
+packages/Rheos/src/rheos/backend/infra/http_server.cljs |  99 +++++----
+packages/Rheos/src/rheos/backend/infra/store.cljs  |  59 ++++++
+packages/Rheos/src/rheos/backend/infra/task_writeback.cljs |   9 +-
+packages/Rheos/src/rheos/backend/infra/view_store.cljs |  31 +++
+packages/Rheos/src/rheos/backend/infra/watcher.cljs |  54 +++---
+packages/Rheos/src/rheos/backend/shape/content_parser.cljs |  22 ++-
+packages/Rheos/src/rheos/backend/shape/kanban.cljs |   5 +-
+packages/Rheos/src/rheos/ui/domain/board.cljs      | 117 +++++++++---
+packages/Rheos/src/rheos/ui/domain/layout.cljs     |  94 +++++----
+packages/Rheos/src/rheos/ui/domain/orchestrator.cljs |  31 ++-
+packages/Rheos/src/rheos/ui/domain/sidebar.cljs    |  25 +--
+packages/Rheos/test/rheos/backend/domain/compose_test.cljs |  80 +++++++-
+packages/Rheos/test/rheos/backend/domain/events_test.cljs |  47 ++++-
+packages/Rheos/test/rheos/backend/domain/task_edit_test.cljs | 122 ++++++++++++
+packages/Rheos/test/rheos/backend/infra/store_test.cljs |  17 ++
+packages/Rheos/test/rheos/backend/infra/view_store_test.cljs |  17 ++
+packages/Rheos/test/rheos/backend/infra/watcher_test.cljs |  89 +++++++++
+packages/Rheos/test/rheos/backend/law/fsm_test.cljs |  14 +-
+packages/Rheos/test/rheos/backend/shape/content_parser_test.cljs |  49 +++++
+packages/chat-ui/.gitignore                        |   5 +
+packages/chat-ui/package.json                      |   4 +-
+packages/chat-ui/resources/public/index.html       |  33 ++++
+packages/chat-ui/shadow-cljs.edn                   |  26 ++-
+packages/chat-ui/src/eta_mu/chat_ui/core.cljs      |  92 +++++++++
+packages/chat-ui/src/eta_mu/chat_ui/knoxx_session.cljs | 100 ++++++++++
+packages/chat-ui/src/eta_mu/chat_ui/mock_session.cljs |  46 +++++
+packages/chat-ui/src/eta_mu/chat_ui/protocol.cljs  |  14 +-
+packages/chat-ui/src/eta_mu/chat_ui/sol_session.cljs | 101 ++++++++++
+packages/chat-ui/test/eta_mu/chat_ui/mock_session_test.cljs |  17 ++
+ 47 files changed, 1914 insertions(+), 386 deletions(-)
+
+Excluded from commit:
+  cljs-rewrite                                       | 0 bytes (empty untracked artifact)
+  docs/notes/.#2026.06.16.06.43.13.md                | Emacs lock file

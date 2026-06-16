@@ -2,17 +2,38 @@
   "Board-scoped chat orchestrator — a standalone, collapsible left panel decoupled
    from task selection. You talk to it about the whole board; it acts on the board
    and its mutations flow back into the UI via the ledger SSE stream (Slice 1). The
-   agent is just another actor on the wire. Backed by a mock IChatSession until the
-   real knoxx session lands (Slice 4); the board tools land in Slice 3."
+   agent is just another actor on the wire. Backend is selected via the `backend`
+   prop (knoxx | mock | rheos); the default Rheos proxy keeps the knoxx API key on
+   the server."
   (:require [helix.core :as hx :refer [defnc $]]
             [helix.hooks :as hooks]
             [helix.dom :as d]
+            [eta-mu.chat-ui.knoxx-session :as knoxx]
+            [eta-mu.chat-ui.mock-session :as mock]
             [eta-mu.chat-ui.panel :as chat-panel]
             [eta-mu.chat-ui.protocol :as chat-protocol]
-            [rheos.ui.infra.chat-session :as chat-session]))
+            [rheos.ui.infra.chat-session :as rheos-chat]))
 
-(defnc orchestrator-panel [{:keys [collapsed on-toggle]}]
-  (let [session (hooks/use-memo [] (chat-session/create-session))
+(defn- default-knoxx-base-url []
+  (or (when (exists? js/window)
+        (some-> js/window .-location .-origin))
+      "http://127.0.0.1:8000"))
+
+(defn- create-session
+  "Create an IChatSession for the orchestrator panel.
+   backend: knoxx | mock | rheos (default).
+   chat-config: optional map passed to the knoxx session (base-url, api-key, agent-id, model)."
+  [backend chat-config]
+  (case backend
+    "knoxx" (knoxx/create-knoxx-session (merge {:base-url (default-knoxx-base-url)
+                                                 :chat-path "/api/knoxx/chat"}
+                                                chat-config))
+    "mock" (mock/create-mock-session)
+    (rheos-chat/create-session)))
+
+(defnc orchestrator-panel [{:keys [collapsed on-toggle backend chat-config]}]
+  (let [session (hooks/use-memo [backend chat-config]
+                  (create-session (or backend "rheos") chat-config))
         chat-state (chat-protocol/use-chat-session session)]
     (if collapsed
       ;; Collapsed rail (the layout sizes the slot to ~44px)

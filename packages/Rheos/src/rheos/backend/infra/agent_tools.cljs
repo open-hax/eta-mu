@@ -15,8 +15,11 @@
   (:require ["node:child_process" :as cp]
             ["node:fs/promises" :as fsp]
             ["node:path" :as path]
+            [clojure.string :as str]
             [rheos.backend.domain.compose :as compose]
+            [rheos.backend.domain.events :as events]
             [rheos.backend.domain.transition :as transition]
+            [rheos.backend.infra.ledger :as ledger]
             [rheos.backend.infra.projects :as projects]
             [rheos.backend.infra.task-store :as tasks]
             [rheos.backend.shape.content-parser :as content-parser]))
@@ -85,8 +88,17 @@
                                         (:tasks c))})
                   (:columns snapshot))})
 
-(defn- ^:async tool-kanban-read-board [_]
-  (snapshot->summary (await (compose/compose-snapshot (projects/all) (compose/parse-compose-query {})))))
+(defn- project->wip-limits [project]
+  (when-let [fsm (or (:fsm project) {})]
+    (if (map? fsm)
+      (:wip-limits fsm {})
+      {})))
+
+(defn- ^:async tool-kanban-read-board [{:keys [project]}]
+  (let [proj (projects/find-project project)
+        snapshot (await (compose/compose-snapshot (projects/all) (compose/parse-compose-query {})))]
+    (assoc (snapshot->summary snapshot)
+           :wip-limits (project->wip-limits proj))))
 
 (defn- ^:async tool-kanban-search-tasks [{:keys [query]}]
   (let [snap (await (compose/compose-snapshot (projects/all) (compose/parse-compose-query {:q query})))]
@@ -120,6 +132,60 @@
           {:ok true :uuid uuid :from (:from result) :to (:to result)}
           (throw (js/Error. (str "transition rejected: " (:reason result)))))))))
 
+(defn- ^:async tool-kanban-add-comment [{:keys [uuid text project]}]
+  (when (empty? text) (throw (js/Error. "missing comment text")))
+  (let [proj (projects/find-project project)]
+    (when-not proj (throw (js/Error. (str "unknown project: " project))))
+    (let [task (await (load-task proj uuid))]
+      (when-not task (throw (js/Error. (str "unknown task: " uuid))))
+      (let [raw (await (.readFile fsp (:source-path task) "utf8"))
+            parsed (content-parser/parse-task-content raw)
+            updated (update parsed :sections conj {:type "comment" :content text})
+            new-raw (content-parser/serialize-task-content updated)]
+        (await (.writeFile fsp (:source-path task) new-raw "utf8"))
+        (events/emit-comment! (ledger/get-ledger (:tasks-dir proj)) (:id proj) uuid
+                              (events/generate-write-id) "agent")
+        {:ok true :uuid uuid :comment text}))))
+
+(defn- slugify [title]
+  (-> title
+      str/lower-case
+      (str/replace #"[^a-z0-9]+" "-")
+      (str/replace #"^-+|-+$" "")
+      (or "subtask")))
+
+(defn- ^:async file-exists? [file-path]
+  (try
+    (await (.access fsp file-path))
+    true
+    (catch :default _ false)))
+
+(defn- ^:async unique-file-path [dir slug uuid]
+  (let [candidate (path/join dir (str slug ".md"))]
+    (if (await (file-exists? candidate))
+      (path/join dir (str slug "-" (subs uuid 0 8) ".md"))
+      candidate)))
+
+(defn- ^:async tool-kanban-create-subtask [{:keys [parent-uuid title project status priority labels]}]
+  (let [proj (projects/find-project project)]
+    (when-not proj (throw (js/Error. (str "unknown project: " project))))
+    (let [parent (await (load-task proj parent-uuid))]
+      (when-not parent (throw (js/Error. (str "unknown parent task: " parent-uuid))))
+      (let [sub-uuid (str (random-uuid))
+            sub-slug (slugify title)
+            parent-dir (path/dirname (:source-path parent))
+            file-path (await (unique-file-path parent-dir sub-slug sub-uuid))
+            subtask {:uuid sub-uuid
+                     :title title
+                     :status (or status "incoming")
+                     :priority (or priority "P3")
+                     :labels (vec (or labels []))
+                     :created_at (.toISOString (new js/Date))
+                     :parent parent-uuid}
+            raw (content-parser/serialize-task-content {:frontmatter subtask :sections []})]
+        (await (.writeFile fsp file-path raw "utf8"))
+        {:ok true :uuid sub-uuid :title title :source-path file-path}))))
+
 ;; ---------------------------------------------------------------------------
 ;; Tool registry — name, description, JSON-Schema input, handler
 ;; ---------------------------------------------------------------------------
@@ -147,8 +213,8 @@
                    :required ["path"]}
     :handler tool-project-read}
    {:name "kanban_read_board"
-    :description "Read the composed board: columns, per-column counts, and tasks (uuid/title/priority/board)."
-    :input-schema {:type "object" :properties {}}
+    :description "Read the composed board: columns, per-column counts, tasks (uuid/title/priority/board), and WIP limits."
+    :input-schema {:type "object" :properties {:project {:type "string"}}}
     :handler tool-kanban-read-board}
    {:name "kanban_search_tasks"
     :description "Search tasks across all boards by text query. Returns matching tasks (uuid/title/status/board)."
@@ -165,13 +231,35 @@
     :input-schema {:type "object"
                    :properties {:uuid {:type "string"} :status {:type "string"} :project {:type "string"}}
                    :required ["uuid" "status"]}
-    :handler tool-kanban-update-status}])
+    :handler tool-kanban-update-status}
+   {:name "kanban_add_comment"
+    :description "Append a comment section to a task markdown file. The comment is streamed live via the ledger."
+    :input-schema {:type "object"
+                   :properties {:uuid {:type "string"} :text {:type "string"} :project {:type "string"}}
+                   :required ["uuid" "text"]}
+    :handler tool-kanban-add-comment}
+   {:name "kanban_create_subtask"
+    :description "Create a new task file linked to a parent task. The subtask starts in 'incoming'."
+    :input-schema {:type "object"
+                   :properties {:parent-uuid {:type "string"} :title {:type "string"}
+                                :project {:type "string"} :status {:type "string"}
+                                :priority {:type "string"} :labels {:type "array" :items {:type "string"}}}
+                   :required ["parent-uuid" "title"]}
+    :handler tool-kanban-create-subtask}])
+
+(def ^:private aliases
+  {"kanban-status-update" "kanban_update_status"
+   "kanban-add-comment" "kanban_add_comment"
+   "kanban-create-subtask" "kanban_create_subtask"
+   "kanban-read-task" "kanban_read_task"
+   "kanban-search-tasks" "kanban_search_tasks"
+   "kanban-read-board" "kanban_read_board"})
 
 (def ^:private by-name (into {} (map (juxt :name identity)) tools))
 
 (defn ^:async dispatch
   "Run tool `name` with `args` (a clj map). Returns the handler's result (clj data)."
   [name args]
-  (if-let [tool (by-name name)]
+  (if-let [tool (or (by-name name) (by-name (aliases name)))]
     (await ((:handler tool) args))
     (throw (js/Error. (str "unknown tool: " name)))))

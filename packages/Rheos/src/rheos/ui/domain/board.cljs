@@ -3,10 +3,18 @@
 
    Dragging a card onto a column POSTs an FSM-enforced status change via `on-move`
    (see [[rheos.ui.domain.layout]]); the server rejects illegal transitions, so the
-   UI cannot move a card anywhere the FSM forbids."
+   UI cannot move a card anywhere the FSM forbids.
+
+   Task columns are virtualized so 800+ tasks do not create 800+ DOM nodes."
   (:require [helix.core :as hx :refer [defnc $]]
             [helix.hooks :as hooks]
             [helix.dom :as d]))
+
+;; ---------------------------------------------------------------------------
+;; Design tokens
+;; ---------------------------------------------------------------------------
+
+(def ^:private task-item-height 66)
 
 (defn- priority-color [p]
   (case p
@@ -15,8 +23,19 @@
     "P2" {:bg "var(--token-colors-badge-info-bg)" :fg "var(--token-colors-badge-info-fg)"}
     {:bg "var(--token-colors-badge-success-bg)" :fg "var(--token-colors-badge-success-fg)"}))
 
+;; ---------------------------------------------------------------------------
+;; Task card
+;; ---------------------------------------------------------------------------
+
+(defn- chip [label bg fg]
+  (when (seq label)
+    (d/span {:style {:font-size "10px" :font-weight "500" :padding "1px 5px" :border-radius "999px"
+                     :background bg :color fg :white-space "nowrap"}}
+      label)))
+
 (defnc task-card [{:keys [task on-select on-drag-start on-drag-end dragging?]}]
-  (let [prio (priority-color (get task "priority"))]
+  (let [prio (priority-color (get task "priority"))
+        drift? (get task "drift")]
     (d/div
       {:draggable true
        :onDragStart #(on-drag-start % task)
@@ -27,23 +46,76 @@
                :border-radius "6px"
                :padding "8px 10px"
                :margin-bottom "6px"
+               :height (str (- task-item-height 6) "px")
+               :box-sizing "border-box"
                :cursor "grab"
-               :opacity (if dragging? "0.4" "1")}}
-      (d/div {:style {:display "flex" :align-items "center" :gap "6px" :margin-bottom "4px"}}
-        (d/span {:style {:background (:bg prio) :color (:fg prio) :font-size "10px" :font-weight "600" :padding "1px 5px" :border-radius "3px"}}
+               :opacity (if dragging? "0.4" "1")
+               :display "flex" :flex-direction "column" :gap "4px"
+               :overflow "hidden"}}
+      (d/div {:style {:display "flex" :align-items "center" :gap "6px" :flex-shrink "0"}}
+        (d/span {:style {:background (:bg prio) :color (:fg prio) :font-size "10px" :font-weight "600" :padding "1px 5px" :border-radius "3px" :flex-shrink "0"}}
           (get task "priority"))
         (when (get task "sourceBoard")
-          (d/span {:style {:color "var(--token-colors-text-muted)" :font-size "10px"}}
-            (get task "sourceBoard"))))
-      (d/div {:style {:font-size "13px" :font-weight "500" :line-height "1.35" :color "var(--token-colors-text-default)"}}
-        (get task "title")))))
+          (d/span {:style {:color "var(--token-colors-text-muted)" :font-size "10px" :white-space "nowrap" :overflow "hidden" :text-overflow "ellipsis"}}
+            (get task "sourceBoard")))
+        (when drift?
+          (d/span {:title "Drift detected"
+                   :style {:font-size "10px" :font-weight "700" :color "var(--token-colors-badge-error-fg)" :flex-shrink "0"}}
+            "⚠")))
+      (d/div {:style {:font-size "13px" :font-weight "500" :line-height "1.35" :color "var(--token-colors-text-default)"
+                      :overflow "hidden" :display "-webkit-box" :WebkitLineClamp 2 :WebkitBoxOrient "vertical"}}
+        (get task "title"))
+      (d/div {:style {:display "flex" :align-items "center" :gap "4px" :flex-wrap "nowrap" :overflow "hidden" :margin-top "auto"}}
+        (chip (get task "domain") "var(--token-colors-badge-info-bg)" "var(--token-colors-badge-info-fg)")
+        (chip (get task "org") "var(--token-colors-badge-success-bg)" "var(--token-colors-badge-success-fg)")))))
+
+;; ---------------------------------------------------------------------------
+;; Virtual list
+;; ---------------------------------------------------------------------------
+
+(defn- use-container-size []
+  (let [ref (hooks/use-ref nil)
+        [size set-size] (hooks/use-state #js {:width 0 :height 0})]
+    (hooks/use-effect
+      []
+      (when-let [el (.-current ref)]
+        (let [measure #(set-size #js {:width (.-clientWidth el) :height (.-clientHeight el)})]
+          (measure)
+          (.addEventListener js/window "resize" measure)
+          (fn [] (.removeEventListener js/window "resize" measure)))))
+    [ref size]))
+
+(defnc virtual-task-list [{:keys [items render-item]}]
+  (let [[container-ref size] (use-container-size)
+        [scroll-top set-scroll-top] (hooks/use-state 0)
+        total-height (* (count items) task-item-height)
+        container-height (.-height size)
+        start-idx (max 0 (js/Math.floor (/ scroll-top task-item-height)))
+        visible-count (if (pos? container-height)
+                        (inc (js/Math.ceil (/ container-height task-item-height)))
+                        0)
+        overscan 3
+        end-idx (min (count items) (+ start-idx visible-count overscan))
+        padding-top (* start-idx task-item-height)
+        visible-items (subvec (vec items) start-idx end-idx)]
+    (d/div {:ref container-ref
+            :onScroll #(set-scroll-top (.-scrollTop (.-current container-ref)))
+            :style {:flex "1" :min-height "0" :overflow-y "auto" :overflow-x "hidden" :padding "2px"
+                    :border-radius "6px"}}
+      (d/div {:style {:height total-height :padding-top padding-top}}
+        (map-indexed
+          (fn [idx task]
+            (render-item (+ start-idx idx) task))
+          visible-items)))))
+
+;; ---------------------------------------------------------------------------
+;; Column + board
+;; ---------------------------------------------------------------------------
 
 (defnc column-view [{:keys [column on-select on-drag-start on-drag-end dragging-uuid
                             drag-over? on-drag-over on-drag-leave on-drop]}]
-  (let [status (get column "status")]
-    ;; Full-height column: fixed header, then a task list that owns its OWN vertical
-    ;; scroll (min-height:0 lets the flex child shrink so overflow-y applies here,
-    ;; not at the board/page level).
+  (let [status (get column "status")
+        tasks (get column "tasks")]
     (d/div {:style {:display "flex" :flex-direction "column" :height "100%"
                     :min-width "240px" :max-width "320px" :flex-shrink "0"}
             :onDragOver (fn [e] (.preventDefault e) (on-drag-over status))
@@ -55,20 +127,19 @@
         (d/span {:style {:font-size "11px" :color "var(--token-colors-text-soft)" :background "var(--token-colors-background-surface)" :padding "1px 6px" :border-radius "10px"}}
           (str (get column "taskCount"))))
       (d/div {:style {:display "flex" :flex-direction "column" :flex "1" :min-height "0"
-                      :overflow-y "auto" :overflow-x "hidden" :padding "2px"
                       :border-radius "6px"
                       :outline (when drag-over? "2px dashed var(--token-colors-text-accent)")
                       :outline-offset "-4px"
                       :background (when drag-over? "var(--token-colors-background-surface)")}}
-        (map-indexed
-          (fn [i task]
-            ($ task-card {:key (or (get task "uuid") (str i))
-                          :task task
-                          :on-select on-select
-                          :on-drag-start on-drag-start
-                          :on-drag-end on-drag-end
-                          :dragging? (= dragging-uuid (get task "uuid"))}))
-          (get column "tasks"))))))
+        ($ virtual-task-list
+          {:items tasks
+           :render-item (fn [idx task]
+                          ($ task-card {:key (or (get task "uuid") (str idx))
+                                        :task task
+                                        :on-select on-select
+                                        :on-drag-start on-drag-start
+                                        :on-drag-end on-drag-end
+                                        :dragging? (= dragging-uuid (get task "uuid"))}))})))))
 
 (defnc board-view [{:keys [board on-select on-move]}]
   ;; Render ALL columns (not just non-empty ones) so a card can be dropped into an

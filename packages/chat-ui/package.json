@@ -3,9 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/main.js",
   "scripts": {
     "build": "shadow-cljs compile lib",
+    "build:app": "shadow-cljs compile app",
+    "dev": "shadow-cljs watch app",
     "test": "shadow-cljs compile test && node target/test.cjs",
     "clean": "rm -rf dist target",
     "lint:kondo": "clj-kondo --lint src test"

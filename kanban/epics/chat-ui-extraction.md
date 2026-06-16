@@ -110,3 +110,14 @@ The session carries the task context as a pinned system prompt (witness thread).
 ---
 
 **Session 2026-06-13.** Package extracted + consumed by the kanban sidebar, but only the MOCK IChatSession is wired. REMAINING: a real backend session (knoxx/sol/opencode), WebSocket streaming, standalone test page. Moved review → todo.
+
+---
+
+**Session 2026-06-16.** Knoxx is the working implementation and should NOT be cut. Sol is a separate runtime that happens to expose a compatible chat API; both coexist. Implementations delivered:
+- `KnoxxChatSession` added/updated in `packages/chat-ui/src/eta_mu/chat_ui/knoxx_session.cljs`, implementing `IChatSession` directly against knoxx's `/api/knoxx/chat` + WebSocket stream.
+- `SolChatSession` added in `packages/chat-ui/src/eta_mu/chat_ui/sol_session.cljs`, implementing `IChatSession` directly against sol's `/api/agent/chat/start` + WebSocket stream.
+- `MockChatSession` extracted to its own namespace for standalone testing.
+- Standalone test page wired (`packages/chat-ui/resources/public/index.html` + `:app` build target).
+- WebSocket streaming plumbing generalized in `packages/chat-ui/src/eta_mu/chat_ui/stream.cljs`.
+
+Remaining: end-to-end verification of `KnoxxChatSession` against the running knoxx on `:8000`; `SolChatSession` verification once a working model/provider config is available; `OpencodeChatSession` not yet implemented.

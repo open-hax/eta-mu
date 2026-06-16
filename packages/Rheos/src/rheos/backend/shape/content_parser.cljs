@@ -89,7 +89,27 @@
        "\n\n"
        (serialize-sections (:sections parsed))))
 
-(defn update-frontmatter [raw key value]
+(defn update-frontmatter-keys [raw updates]
   (let [parsed (parse-task-content raw)
-        updated (assoc-in parsed [:frontmatter (keyword key)] value)]
+        new-frontmatter (reduce-kv (fn [fm k v] (assoc fm (keyword k) v))
+                                   (:frontmatter parsed)
+                                   updates)]
+    (serialize-task-content (assoc parsed :frontmatter new-frontmatter))))
+
+(defn update-frontmatter [raw key value]
+  (update-frontmatter-keys raw {key value}))
+
+(defn inject-write-id [raw write-id]
+  (let [parsed (parse-task-content raw)
+        updated (assoc-in parsed [:frontmatter :write-id] write-id)]
+    (serialize-task-content updated)))
+
+(defn append-comment [raw comment-text]
+  (let [parsed (parse-task-content raw)
+        sections (:sections parsed)
+        last-section (last sections)
+        updated (if (= "comment" (:type last-section))
+                  (assoc-in parsed [:sections (dec (count sections)) :content]
+                            (str (:content last-section) "\n\n" comment-text))
+                  (update parsed :sections conj {:type "comment" :content comment-text}))]
     (serialize-task-content updated)))

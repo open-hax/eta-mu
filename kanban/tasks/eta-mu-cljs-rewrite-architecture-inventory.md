@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-rewrite-architecture-inventory"
 title: "Eta-mu CLJS Rewrite — Architecture Inventory"
-status: "in_progress"
+status: "review"
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "inventory", "5sp"]
 created_at: "2026-05-29T21:18:48Z"
@@ -20,10 +20,10 @@ Create the package-by-package map that makes the CLJS rewrite safe and path-scop
 
 ## Scope
 
-- `packages/**`
-- `services/**`
+- `packages/**` (including `packages/legacy/**`)
 - root `package.json`, `pnpm-workspace.yaml`, `deps.edn`, `shadow-cljs.edn`
-- existing CLJS packages such as `packages/eta-mu-extensions` and `packages/opencode-reactant`
+- existing CLJS packages such as `packages/extensions`, `packages/runtime`, `packages/sol`, and `packages/Rheos`
+- agent skill manifests loaded from `~/.agents/skills/*` (host-boundary runtime surface, not a workspace package)
 
 ## Work items
 
@@ -42,17 +42,29 @@ Create the package-by-package map that makes the CLJS rewrite safe and path-scop
 ## Verification
 
 ```bash
-find packages services \( -path '*/node_modules' -o -path '*/dist' -o -path '*/dist-cljs' -o -path '*/target' -o -path '*/.shadow-cljs' -o -path '*/.build' -o -path '*/out' \) -prune -o -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.mjs' -o -name '*.cjs' -o -name '*.cljs' -o -name '*.cljc' -o -name '*.clj' \) -print | wc -l
-pnpm --dir packages/eta-mu-runtime cljs:verify
-pnpm --dir packages/presence-core test
-pnpm -C packages/eta-mu-extensions build
+find packages \( -path '*/node_modules' -o -path '*/dist' -o -path '*/dist-cljs' -o -path '*/target' -o -path '*/.shadow-cljs' -o -path '*/.build' -o -path '*/out' \) -prune -o -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.mjs' -o -name '*.cjs' -o -name '*.cljs' -o -name '*.cljc' -o -name '*.clj' \) -print | wc -l
+pnpm --dir packages/runtime cljs:verify
+pnpm --dir packages/legacy/output-contract-gate test
+pnpm -C packages/extensions test
+pnpm lint
 ```
 
 ---
-Planning inventory drafted at docs/cljs-runtime-rewrite-architecture-inventory.md. It classifies package surfaces, target domain/shape/law/infra/extern ownership, boundary hotspots, and the first three parity slices: eta-mu-runtime, output-contract-gate, and coding-agent message/session core.
+Planning inventory drafted at docs/cljs-runtime-rewrite-architecture-inventory.md. It classifies package surfaces, target domain/shape/law/infra/extern ownership, boundary hotspots, deferred packages, agent skill surface, and the first three parity slices: runtime, output-contract-gate, and coding-agent message/session core.
 ---
 
 
 ---
 
-**Independent review 2026-06-13 (Sonnet).** VERDICT: PARTIAL — bounced review → todo. Inventory doc is substantive on the hard packages but AC1 ("every package mapped to a CLJS ownership category") fails: `packages/skills` is absent entirely and 10 packages (mom, eta-mu-github, eta-mu-docs, eta-mu-truth, eta-mu-extensions-e2e, presence-core, 4x signal-*) are counted but never assigned a category. Also the stated "record red-test/warning baseline" work item produced commands-to-run but no actual recorded baseline. Add skills, mark the 10 as explicitly deferred w/ rationale, and record the baseline.
+**Update 2026-06-16.** Inventory refreshed after the monorepo reorg. Addressed the 2026-06-13 review gaps:
+
+- Added `packages/skills` coverage: skills are a host-loaded runtime protocol surface (`~/.agents/skills/*`), not a workspace package, and are classified as `extern.runtime`/`infra.skill_loader`/`law.skill_contract`.
+- Added the "Deferred packages" table with rationale for `mom`, `eta-mu-github`, `eta-mu-docs`, `eta-mu-truth`, `eta-mu-extensions-e2e`, `presence-core`, and the four `signal-*` packages.
+- Recorded an actual verification baseline in the inventory doc, including the one historical lint/typecheck failure in `packages/legacy/github/src/pi-agent.ts`.
+
+Status moved to `review` for human verification; not closed.
+
+
+---
+
+**Session 2026-06-16 clarification.** All CLJS rewrites remain maximum priority. This inventory is a living map; "deferred" means those packages are intentionally postponed in the rewrite ordering, not cancelled or descoped. The deferred list should be revisited as dependency pressure changes (e.g., when `runtime`, `sol`, or `extensions` need one of them).

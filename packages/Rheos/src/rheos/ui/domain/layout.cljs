@@ -1,6 +1,6 @@
 (ns rheos.ui.domain.layout
   "Kanban global projection app shell — composes the header, filter bar, board,
-   and task sidebar, and owns the top-level board/selection/filter state."
+    and task sidebar, and owns the top-level board/selection/filter state."
   (:require [helix.core :as hx :refer [defnc $]]
             [helix.hooks :as hooks]
             [helix.dom :as d]
@@ -11,6 +11,44 @@
             [rheos.ui.infra.api :as api]
             [rheos.ui.infra.ledger-stream :as ledger-stream]
             [rheos.ui.law.url :as url]))
+
+;; ---------------------------------------------------------------------------
+;; Async side effects — kept as top-level ^:async defs because ClojureScript's
+;; `^:async` metadata on anonymous fns inside `let` is not accepted by the
+;; browser build's analyzer.
+;; ---------------------------------------------------------------------------
+
+(defn- ^:async load-boards! [set-boards set-loading]
+  (let [data (await (api/fetch-boards))]
+    (set-boards data)
+    (set-loading false)))
+
+(defn- ^:async load-compose! [filters set-board-data set-loading]
+  (set-loading true)
+  (let [data (await (api/fetch-compose filters))]
+    (set-board-data data)
+    (set-loading false)))
+
+(defn- ^:async load-task-detail! [selected set-detail]
+  (let [data (await (api/fetch-task-content (get selected "uuid") (get selected "sourceBoard" "knoxx")))]
+    (set-detail data)))
+
+(defn- ^:async refetch-compose! [filters-ref set-board-data]
+  (set-board-data (await (api/fetch-compose (.-current filters-ref)))))
+
+(defn- ^:async do-move-task! [uuid project status get-filters set-board-data set-toast]
+  (try
+    (let [res (await (api/post-status uuid project status))]
+      (if (.-ok res)
+        (set-board-data (await (api/fetch-compose (get-filters))))
+        (let [b (await (.json res))]
+          (set-toast (or (.-error b) (str "move failed (" (.-status res) ")"))))))
+    (catch :default e
+      (set-toast (str e)))))
+
+;; ---------------------------------------------------------------------------
+;; App component
+;; ---------------------------------------------------------------------------
 
 (defnc app []
   (let [[boards set-boards] (hooks/use-state nil)
@@ -26,20 +64,14 @@
         ;; to their baseline. :orchestrator | :board | :sidebar.
         [focus set-focus] (hooks/use-state :board)
         region-flex (fn [region base] (str (if (= focus region) 1.618 base)))
+        ;; Chat backend selection from the active board's meta config.
+        active-board (first boards)
+        chat-config (when active-board
+                      (get (js->clj (get active-board "meta") :keywordize-keys true) :chat {}))
+        chat-backend (or (:defaultBackend chat-config) "rheos")
         ;; Latest filters, readable from the (mount-once) SSE handler without
         ;; reopening the stream on every filter keystroke.
-        filters-ref (hooks/use-ref filters)
-        ;; Drag-and-drop move: POST an FSM-enforced status change, then refetch the
-        ;; composed board. A rejected transition (HTTP 409) surfaces the FSM's reason.
-        move-task! (fn ^:async [uuid project status]
-                     (try
-                       (let [res (await (api/post-status uuid project status))]
-                         (if (.-ok res)
-                           (set-board-data (await (api/fetch-compose filters)))
-                           (let [b (await (.json res))]
-                             (set-toast (or (.-error b) (str "move failed (" (.-status res) ")"))))))
-                       (catch :default e
-                         (set-toast (str e)))))]
+        filters-ref (hooks/use-ref filters)]
 
     ;; Sync filters to URL + keep the SSE handler's filters ref current
     (hooks/use-effect [filters]
@@ -51,39 +83,28 @@
     ;; board — debounced so a burst of events coalesces into one refetch.
     (hooks/use-effect []
       (let [timer (atom nil)
-            refetch (fn ^:async []
-                      (when @timer (js/clearTimeout @timer))
-                      (reset! timer
-                              (js/setTimeout
-                               (fn ^:async []
-                                 (set-board-data (await (api/fetch-compose (.-current filters-ref)))))
-                               150)))
-            close (ledger-stream/subscribe (fn [_ev] (refetch)) set-live)]
+            debounced-refetch #(do (when @timer (js/clearTimeout @timer))
+                                   (reset! timer
+                                           (js/setTimeout
+                                            (fn [] (refetch-compose! filters-ref set-board-data))
+                                            150)))
+            close (ledger-stream/subscribe (fn [_ev] (debounced-refetch)) set-live)]
         (fn []
           (when @timer (js/clearTimeout @timer))
           (close))))
 
     ;; Load boards on mount
     (hooks/use-effect []
-      ((fn ^:async []
-         (let [data (await (api/fetch-boards))]
-           (set-boards data)
-           (set-loading false)))))
+      (load-boards! set-boards set-loading))
 
     ;; Load composed board when filters change
     (hooks/use-effect [filters]
-      (set-loading true)
-      ((fn ^:async []
-         (let [data (await (api/fetch-compose filters))]
-           (set-board-data data)
-           (set-loading false)))))
+      (load-compose! filters set-board-data set-loading))
 
     ;; Load task detail when selected changes
     (hooks/use-effect [selected]
       (when selected
-        ((fn ^:async []
-           (let [data (await (api/fetch-task-content (get selected "uuid") (get selected "sourceBoard" "knoxx")))]
-             (set-detail data))))))
+        (load-task-detail! selected set-detail)))
 
     ;; Auto-dismiss the toast after a few seconds
     (hooks/use-effect [toast]
@@ -126,7 +147,9 @@
           ($ orchestrator/orchestrator-panel
             {:collapsed chat-collapsed
              :on-toggle #(do (set-chat-collapsed (not chat-collapsed))
-                             (set-focus :orchestrator))}))
+                             (set-focus :orchestrator))
+             :backend chat-backend
+             :chat-config chat-config}))
 
         ;; Board
         (d/div {:onMouseDownCapture #(set-focus :board)
@@ -138,7 +161,8 @@
             ($ board/board-view
               {:board board-data
                :on-select (fn [task] (set-selected task) (set-focus :sidebar))
-               :on-move move-task!})))
+               :on-move (fn [uuid project status]
+                          (do-move-task! uuid project status #(.-current filters-ref) set-board-data set-toast))})))
 
         ;; Sidebar (task detail) — focus-weighted slot when a task is open
         (when selected
