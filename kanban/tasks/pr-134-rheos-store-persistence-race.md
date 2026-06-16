@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-rheos-store-persistence-race"
 title: "PR #134: Fix Rheos store persistence ordering and races"
-status: "todo"
+status: "done"
 priority: "P1"
 labels: ["tasks", "rheos", "cljs", "pr-134", "5sp"]
 created_at: "2026-06-16T12:30:00Z"

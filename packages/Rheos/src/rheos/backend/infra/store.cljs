@@ -25,23 +25,37 @@
     (.mkdir fsp parent #js {:recursive true})))
 
 (defn- ^:async write-doc! [file-path data-atom key doc]
-  (try
-    (swap! data-atom assoc key doc)
-    (let [content (pr-str @data-atom)]
-      (await (ensure-parent-dir file-path))
+  (await (ensure-parent-dir file-path))
+  (let [content (pr-str (assoc @data-atom key doc))]
+    (try
       (await (.writeFile fsp file-path content "utf8"))
-      doc)
-    (catch :default err
-      (js/console.error "EdnStore put error:" err)
-      doc)))
+      (swap! data-atom assoc key doc)
+      doc
+      (catch :default err
+        (js/console.error "EdnStore put error:" err)
+        (throw err)))))
 
-(defrecord EdnStore [file-path data-atom]
+(defn- ^:async acquire-lock [lock]
+  (loop []
+    (if (compare-and-set! lock false true)
+      true
+      (do (await (js/Promise. (fn [resolve] (js/setTimeout resolve 0))))
+          (recur)))))
+
+(defn- ^:async serialized-put! [lock file-path data-atom key doc]
+  (await (acquire-lock lock))
+  (try
+    (await (write-doc! file-path data-atom key doc))
+    (finally
+      (reset! lock false))))
+
+(defrecord EdnStore [file-path data-atom lock]
   IStore
   (-get [_ key]
     (js/Promise.resolve (get @data-atom key)))
 
   (-put! [_ key doc]
-    (write-doc! file-path data-atom key doc))
+    (serialized-put! lock file-path data-atom key doc))
 
   (-keys [_]
     (js/Promise.resolve (vec (keys @data-atom)))))
@@ -56,4 +70,4 @@
                    (js/console.error "Failed to read EdnStore:" file-path (.-message err))
                    {}))
                {})]
-    (->EdnStore file-path (atom data))))
+    (->EdnStore file-path (atom data) (atom false))))

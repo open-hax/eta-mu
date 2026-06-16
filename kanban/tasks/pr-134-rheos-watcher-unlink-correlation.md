@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-rheos-watcher-unlink-correlation"
 title: "PR #134: Fix Rheos watcher unlink and task-id correlation"
-status: "todo"
+status: "done"
 priority: "P1"
 labels: ["tasks", "rheos", "cljs", "pr-134", "5sp"]
 created_at: "2026-06-16T12:30:00Z"

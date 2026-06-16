@@ -19,9 +19,10 @@
             [rheos.backend.domain.compose :as compose]
             [rheos.backend.domain.events :as events]
             [rheos.backend.domain.transition :as transition]
-            [rheos.backend.infra.ledger :as ledger]
             [rheos.backend.infra.projects :as projects]
+            [rheos.backend.infra.task-edit :as task-edit]
             [rheos.backend.infra.task-store :as tasks]
+            [rheos.backend.infra.watcher :as watcher]
             [rheos.backend.shape.content-parser :as content-parser]))
 
 (defn- env [k default] (or (aget js/process.env k) default))
@@ -138,14 +139,8 @@
     (when-not proj (throw (js/Error. (str "unknown project: " project))))
     (let [task (await (load-task proj uuid))]
       (when-not task (throw (js/Error. (str "unknown task: " uuid))))
-      (let [raw (await (.readFile fsp (:source-path task) "utf8"))
-            parsed (content-parser/parse-task-content raw)
-            updated (update parsed :sections conj {:type "comment" :content text})
-            new-raw (content-parser/serialize-task-content updated)]
-        (await (.writeFile fsp (:source-path task) new-raw "utf8"))
-        (events/emit-comment! (ledger/get-ledger (:tasks-dir proj)) (:id proj) uuid
-                              (events/generate-write-id) "agent")
-        {:ok true :uuid uuid :comment text}))))
+      (await (task-edit/append-comment! {:project proj :task task :text text :source "agent"}))
+      {:ok true :uuid uuid :comment text})))
 
 (defn- slugify [title]
   (-> title
@@ -182,9 +177,11 @@
                      :labels (vec (or labels []))
                      :created_at (.toISOString (new js/Date))
                      :parent parent-uuid}
-            raw (content-parser/serialize-task-content {:frontmatter subtask :sections []})]
-        (await (.writeFile fsp file-path raw "utf8"))
-        {:ok true :uuid sub-uuid :title title :source-path file-path}))))
+             raw (content-parser/serialize-task-content {:frontmatter subtask :sections []})
+             write-id (events/generate-write-id)]
+         (watcher/register-cli-event! write-id sub-uuid)
+         (await (.writeFile fsp file-path raw "utf8"))
+         {:ok true :uuid sub-uuid :title title :source-path file-path}))))
 
 ;; ---------------------------------------------------------------------------
 ;; Tool registry — name, description, JSON-Schema input, handler

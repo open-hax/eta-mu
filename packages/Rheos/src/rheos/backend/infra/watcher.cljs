@@ -43,20 +43,22 @@
 (defn ^:async handle-file-event!
   "Handle a single file change: read the file, extract the write-id, and either
    correlate it to a known mutation or emit a drift event."
-  [board-id tasks-dir file-path _event-type]
-  (try
-    (let [content (await (.readFile fsp file-path "utf8"))
-          write-id (extract-write-id content)
-          uuid (extract-uuid content)
-          ledger (ledger/get-ledger tasks-dir)]
-       (when uuid
-         (if-let [info (and write-id (correlate-write write-id))]
-           (if (= uuid (:task-id info))
-             (events/emit-file-changed! ledger board-id uuid write-id "correlated")
-             (events/emit-drift-detected! ledger board-id uuid write-id))
-           (events/emit-drift-detected! ledger board-id uuid write-id))))
-    (catch :default err
-      (js/console.error "Watcher error:" file-path (.-message err)))))
+  [board-id tasks-dir file-path event-type]
+  (if (= event-type "unlink")
+    (js/Promise.resolve nil)
+    (try
+      (let [content (await (.readFile fsp file-path "utf8"))
+            write-id (extract-write-id content)
+            uuid (extract-uuid content)
+            ledger (ledger/get-ledger tasks-dir)]
+        (when uuid
+          (if-let [info (correlate-write write-id)]
+            (if (= (:task-id info) uuid)
+              (events/emit-file-changed! ledger board-id uuid write-id "correlated")
+              (events/emit-drift-detected! ledger board-id uuid write-id))
+            (events/emit-drift-detected! ledger board-id uuid write-id))))
+      (catch :default err
+        (js/console.error "Watcher error:" file-path (.-message err))))))
 
 (defn start-watcher! [board-id tasks-dir]
   (when-not (@watchers board-id)

@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-rheos-task-writeback-frontmatter"
 title: "PR #134: Use structured frontmatter update in Rheos task writeback"
-status: "todo"
+status: "done"
 priority: "P1"
 labels: ["tasks", "rheos", "cljs", "pr-134", "3sp"]
 created_at: "2026-06-16T12:30:00Z"

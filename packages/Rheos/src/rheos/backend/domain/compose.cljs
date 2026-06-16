@@ -44,12 +44,6 @@
       (str/includes? clause " = ")
       (let [[field value] (str/split clause #" = " 2)]
         [(str/trim field) := (str/trim value)])
-      (str/includes? clause " in ")
-      (let [[field values] (str/split clause #" in " 2)]
-        [(str/trim field) :in (mapv str/trim (str/split values #","))])
-      (str/includes? clause " contains ")
-      (let [[field value] (str/split clause #" contains " 2)]
-        [(str/trim field) :contains (str/trim value)])
       (str/includes? clause " ~ ")
       (let [[field pattern] (str/split clause #" ~ " 2)
             pattern (str/trim pattern)
@@ -57,6 +51,12 @@
                    (subs pattern 1 (dec (count pattern)))
                    pattern)]
         [(str/trim field) :regex bare])
+      (str/includes? clause " in ")
+      (let [[field values] (str/split clause #" in " 2)]
+        [(str/trim field) :in (mapv str/trim (str/split values #","))])
+      (str/includes? clause " contains ")
+      (let [[field value] (str/split clause #" contains " 2)]
+        [(str/trim field) :contains (str/trim value)])
       :else nil)))
 
 (defn- meta-clause? [clause]

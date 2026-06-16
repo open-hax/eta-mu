@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-rheos-agent-tools-delegate"
 title: "PR #134: Delegate agent tool comment/subtask to task-edit and watcher"
-status: "todo"
+status: "done"
 priority: "P1"
 labels: ["tasks", "rheos", "cljs", "pr-134", "3sp"]
 created_at: "2026-06-16T12:30:00Z"

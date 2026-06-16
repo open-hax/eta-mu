@@ -18,7 +18,9 @@
 
 (deftest parse-where-clause-regex
   (is (= ["title" :regex "infra.*"] (compose/parse-where-clause "title ~ infra.*")))
-  (is (= ["title" :regex "infra.*"] (compose/parse-where-clause "title ~ /infra.*/"))))
+  (is (= ["title" :regex "infra.*"] (compose/parse-where-clause "title ~ /infra.*/")))
+  (is (= ["title" :regex ".*in progress.*"] (compose/parse-where-clause "title ~ .*in progress.*")))
+  (is (= ["title" :regex ".*contains.*"] (compose/parse-where-clause "title ~ /.*contains.*/"))))
 
 (deftest parse-compose-query-basic
   (let [flags {:status "todo,in_progress" :priority "P0,P1" :projects "proxx,eta-mu"}

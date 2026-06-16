@@ -90,3 +90,19 @@
         (finally
           (unsub)
           (await (.rm fsp dir #js {:recursive true :force true})))))))
+
+(deftest ^:async handle-file-event-unlink-does-not-read
+  (testing "Unlink events are handled without reading the deleted file"
+    (let [dir (tmp-dir)
+          _ (await (.mkdir fsp dir #js {:recursive true}))
+          _ (await (write-task! dir "t6" "Task Six"))
+          captured (atom [])
+          unsub (events/subscribe! #(swap! captured conj %))]
+      (try
+        (let [file-path (path/join dir "t6.md")]
+          (await (.unlink fsp file-path))
+          (await (watcher/handle-file-event! "test" dir file-path "unlink"))
+          (is (empty? @captured)))
+        (finally
+          (unsub)
+          (await (.rm fsp dir #js {:recursive true :force true})))))))

@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-rheos-compose-regex-order"
 title: "PR #134: Fix regex clause detection order in Rheos compose"
-status: "todo"
+status: "done"
 priority: "P1"
 labels: ["tasks", "rheos", "cljs", "pr-134", "2sp"]
 created_at: "2026-06-16T12:30:00Z"
