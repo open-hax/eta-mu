@@ -1,7 +1,7 @@
 ---
 uuid: "ci-main-gate-after-services-removal"
 title: "Repair main-pr-gate / deploy workflows after services/ removal"
-status: "ready"
+status: "done"
 priority: "P0"
 labels: ["tasks", "ci", "deploy", "monorepo", "blocker"]
 created_at: "2026-06-15T00:00:00Z"
@@ -53,6 +53,18 @@ PR #132 already fixed the **moved-package** path references in the workflows
   before validating, or have `validate-paths` check sources.
 - **`main-build`** also runs `docker build -f services/eta-mu-truth-workbench/Dockerfile .`
   (also deleted).
+
+## Resolution (2026-06-16)
+
+- Removed `packages/eta-mu-truth/**`, `services/eta-mu/**`, `services/eta-mu-truth-workbench/**`,
+  and all `signal-*` / `presence-core` references from:
+  - `.github/workflows/main-pr-gate.yml`
+  - `.github/workflows/coverage.yml`
+  - `.github/workflows/staging-pr.yml`
+  - `.github/workflows/deploy-staging.yml`
+  - `.github/workflows/deploy-production.yml`
+- Replaced missing `services/eta-mu` deploy/compose jobs with no-op placeholders that print
+  a clear retirement message until a new deployment target is defined.
 
 ## Acceptance
 

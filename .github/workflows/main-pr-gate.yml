@@ -6,11 +6,8 @@ on:
       - main
     paths:
       - 'packages/legacy/docs/**'
-      - 'packages/eta-mu-truth/**'
-      - 'services/eta-mu/**'
-      - 'services/eta-mu-truth-workbench/**'
-      - '.github/workflows/eta-mu*.yml'
       - 'packages/legacy/github/**'
+      - '.github/workflows/eta-mu*.yml'
 
 jobs:
   main-lint:
@@ -19,9 +16,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
-      - run: sudo apt-get update && sudo apt-get install -y shellcheck
-      - run: bash -n services/eta-mu/scripts/deploy-remote.sh
-      - run: shellcheck services/eta-mu/scripts/deploy-remote.sh
+      - run: echo "services/ removed; no deploy scripts to lint in current layout"
 
   eta-mu-lint:
     name: eta-mu-lint
@@ -50,7 +45,6 @@ jobs:
           node-version: 22
           package-manager-cache: false
       - run: node --test packages/legacy/docs/tests/*.test.cjs
-      - run: node --test packages/eta-mu-truth/tests/*.test.cjs
 
   main-build:
     name: main-build
@@ -58,8 +52,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-      - run: docker compose --project-name eta-mu-main-ci -f services/eta-mu/compose.yaml config >/tmp/eta-mu-compose.txt
-      - run: docker build -f services/eta-mu-truth-workbench/Dockerfile .
+      - run: echo "services/ removed; no docker compose build in current layout"
 
   staging-promotion-gate:
     name: staging-promotion-gate
