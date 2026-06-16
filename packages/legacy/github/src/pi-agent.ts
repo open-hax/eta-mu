@@ -80,6 +80,8 @@ const createResourceLoader = async (
     getAgentsFiles: () => ({ agentsFiles: [] }),
     getSystemPrompt: () => systemPrompt,
     getAppendSystemPrompt: () => [],
+    setSystemPrompt: (prompt: string | undefined) => { systemPrompt = prompt ?? ""; },
+    setAppendSystemPrompt: (_prompts: string[]) => {},
     extendResources: () => {},
     reload: async () => {},
   };
