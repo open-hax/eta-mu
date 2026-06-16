@@ -61,7 +61,7 @@ The chat UI talks to a backend through a protocol, not directly to knoxx or sol:
 
 Implementations:
 - **KnoxxChatSession** — talks to knoxx's `/api/knoxx/chat` endpoint
-- **SolChatSession** — talks to sol's `/api/sol/chat` endpoint
+- **SolChatSession** — talks to sol's `/api/agent/chat/start` endpoint
 - **OpencodeChatSession** — talks to opencode's `/session/:id/prompt` endpoint
 - **MockChatSession** — for testing
 

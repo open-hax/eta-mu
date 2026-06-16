@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-event-ledger-doc-paths"
 title: "PR #134: Fix event ledger epic storage path and unlink handling"
-status: "todo"
+status: "done"
 priority: "P1"
 labels: ["tasks", "docs", "kanban", "pr-134", "2sp"]
 created_at: "2026-06-16T12:30:00Z"

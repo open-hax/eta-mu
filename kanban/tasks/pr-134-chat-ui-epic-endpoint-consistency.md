@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-chat-ui-epic-endpoint-consistency"
 title: "PR #134: Reconcile Sol endpoint reference in chat-ui extraction epic"
-status: "todo"
+status: "done"
 priority: "P2"
 labels: ["tasks", "docs", "kanban", "pr-134", "1sp"]
 created_at: "2026-06-16T12:30:00Z"

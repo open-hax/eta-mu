@@ -81,12 +81,15 @@ The login redirect is broken when...
 
 ### Backend
 
-Chat panel uses `@open-hax/chat-ui` with `IChatSession` protocol. Backend can be:
-- knoxx (default, during migration)
-- sol (when available)
-- opencode (when available)
+Chat panel uses `@open-hax/chat-ui` with `IChatSession` protocol. The default backend is the **Rheos proxy**, which keeps browser credentials and model configuration out of the browser and routes chat traffic through the Rheos server. Direct browser-to-knoxx (or browser-to-sol) is opt-in per board via board meta, e.g. `{:chat-backend :knoxx}` or `{:chat-backend :sol}.
 
-The `harness` field on the task determines which backend to use.
+Supported backends:
+- **rheos** (default) — Rheos proxy handles authentication and provider routing
+- **knoxx** — direct browser-to-knoxx, opt-in via board meta
+- **sol** — direct browser-to-sol, opt-in via board meta
+- **opencode** — planned; not yet available
+
+The `harness` field on the task can still influence tool execution, but chat backend selection is board-scoped.
 
 ### Implementation
 

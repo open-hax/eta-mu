@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-pi-last-excluded-artifact"
 title: "PR #134: List every excluded artifact in Π_LAST.md"
-status: "todo"
+status: "done"
 priority: "P2"
 labels: ["tasks", "pi", "docs", "pr-134", "1sp"]
 created_at: "2026-06-16T12:30:00Z"

@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-architecture-inventory-heading-style"
 title: "PR #134: Convert setext heading to ATX in architecture inventory"
-status: "todo"
+status: "done"
 priority: "P2"
 labels: ["tasks", "docs", "lint", "pr-134", "1sp"]
 created_at: "2026-06-16T12:30:00Z"

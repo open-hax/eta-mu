@@ -28,6 +28,8 @@ Source counts below exclude obvious build/output folders such as `node_modules`,
 
 Total under `packages/**`: ~1620 TS/JS/CLJS source files.
 
+> Scope note: the per-package row counts below sum to fewer than the repo-wide `find` total (~1786 at baseline) because the table only counts files under the explicitly listed source roots for each package. Configuration, resources, build scripts, and additional source-like paths outside those roots are intentionally excluded from the planning baseline so the inventory stays focused on rewrite-relevant code.
+
 | Path | Package | TS/JS | CLJ/CLJS/EDN | Source roots |
 |---|---|---:|---:|---|
 | `packages/legacy/agent` | `@open-hax/eta-mu-agent-core` | 10 | 0 | `src`, `test` |

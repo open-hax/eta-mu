@@ -48,10 +48,11 @@ pnpm --dir packages/legacy/output-contract-gate test
 pnpm -C packages/extensions test
 pnpm lint
 ```
+---
 
----
+## Planning inventory drafted
+
 Planning inventory drafted at docs/cljs-runtime-rewrite-architecture-inventory.md. It classifies package surfaces, target domain/shape/law/infra/extern ownership, boundary hotspots, deferred packages, agent skill surface, and the first three parity slices: runtime, output-contract-gate, and coding-agent message/session core.
----
 
 
 ---

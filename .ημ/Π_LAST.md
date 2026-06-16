@@ -37,6 +37,7 @@
 
 ## Excluded from Commit
 - `cljs-rewrite` — 0-byte untracked artifact, not part of snapshot scope.
+- `docs/notes/.#2026.06.16.06.43.13.md` — Emacs lock file for the note added in this snapshot; transient editor artifact, not commit content.
 
 ## Verification Status
 - **Rheos tests**: Passed — 55 tests, 150 assertions
@@ -52,6 +53,6 @@
 `Π/chore-ts-cljs-rewrite/2026-06-16T115155`
 
 ## Notes
-- Workspace treated as single-agent for this snapshot; no concurrent dirt left unstaged except the excluded stray file.
+- Workspace treated as single-agent for this snapshot; no concurrent dirt left unstaged except the two excluded artifacts above.
 - Pre-commit TypeScript guard hook is not installed locally.
 - `.ts-line-count-baseline` was updated to match the current HEAD count before staging.

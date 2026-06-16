@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-chat-integration-backend-default"
 title: "PR #134: Reconcile default backend story in kanban-chat-integration epic"
-status: "todo"
+status: "done"
 priority: "P2"
 labels: ["tasks", "docs", "kanban", "pr-134", "1sp"]
 created_at: "2026-06-16T12:30:00Z"

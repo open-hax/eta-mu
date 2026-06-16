@@ -30,7 +30,7 @@ CLI events emit BEFORE file writes (optimistic). Write-id nonce injected into fi
 
 ## Storage
 
-EDN file per board: `<board>/.events/events.jsonl`. Append-only. Async mutex for concurrent writes.
+EDN file per board: `<board>/.events/ledger.edn`. Append-only. Async mutex for concurrent writes.
 
 ## Relationship to OpenPlanner Event Ledger
 
@@ -62,7 +62,7 @@ File-backed implementation of same concept as `promethean.event-ledger`. Differe
 
 **Session 2026-06-16.** write-id correlation fully wired:
 - Every mutation (status, frontmatter, comment) generates a `write-id` nonce, registers it with the watcher, injects it into the task file frontmatter, writes the file, and emits the source event.
-- The file watcher extracts the `write-id` on `change`/`add`/`unlink`, matches it against pending writes, and emits `kanban.file-changed` with `correlation/status: correlated` or `kanban.drift-detected` with `correlation/status: drift` for unmatched edits.
+- The file watcher extracts the `write-id` on `change`/`add`, matches it against pending writes, and emits `kanban.file-changed` with `correlation/status: correlated` or `kanban.drift-detected` with `correlation/status: drift` for unmatched edits. `unlink` (file deletion) is not correlated through the write-id path because the watcher cannot read frontmatter from a deleted file; deletion handling is future work.
 - Storage path is confirmed as `<board>/.events/ledger.edn`; the original `events.jsonl` mention was a spec drift and is now corrected.
 
 Remaining: define and implement `drift:protocol-rerun` behavior (currently only `drift-detected` is emitted).
