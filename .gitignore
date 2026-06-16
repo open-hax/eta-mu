@@ -4,10 +4,10 @@ dist-dev/
 dist-cljs/
 build/
 lib/
-!packages/eta-mu-extensions/lib/
-!packages/eta-mu-extensions/lib/**
-!packages/eta-mu-extensions/src/eta_mu/build/
-!packages/eta-mu-extensions/src/eta_mu/build/**
+!packages/extensions/lib/
+!packages/extensions/lib/**
+!packages/extensions/src/eta_mu/build/
+!packages/extensions/src/eta_mu/build/**
 *.tsbuildinfo
 **/coverage/
 

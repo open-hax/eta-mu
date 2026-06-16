@@ -1,6 +1,6 @@
 {:source-paths ["src"
-                "../eta-mu-extensions/src"
-                "../eta-mu-extensions/lib"]
+                "../extensions/src"
+                "../extensions/lib"]
 
  :builds
  {:e2e-test
