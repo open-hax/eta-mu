@@ -3,16 +3,21 @@
   (:require ["fastify" :default Fastify]
             ["@fastify/cors" :default fastifyCors]
             ["@fastify/static" :default fastifyStatic]
-            ["node:path" :as path]
-            ["node:fs/promises" :as fsp]
-            ["node:child_process" :as cp]
-            [rheos.backend.domain.board :as board]
+             ["node:path" :as path]
+             ["node:fs/promises" :as fsp]
+             ["node:child_process" :as cp]
+             [clojure.string :as str]
+             [rheos.backend.domain.board :as board]
+
             [rheos.backend.domain.compose :as compose]
             [rheos.backend.infra.config :as config]
             [rheos.backend.shape.content-parser :as content-parser]
-            [rheos.backend.domain.events :as events]
-            [rheos.backend.infra.chat-proxy :as chat-proxy]
-            [rheos.backend.infra.ledger :as ledger]
+             [rheos.backend.domain.events :as events]
+             [rheos.backend.domain.task-edit :as task-edit]
+             [rheos.backend.infra.chat-proxy :as chat-proxy]
+             [rheos.backend.infra.ledger :as ledger]
+             [rheos.backend.law.frontmatter :as law-frontmatter]
+
             [rheos.backend.infra.mcp :as mcp]
             [rheos.backend.infra.projects :as projects]
             [rheos.backend.infra.task-store :as tasks]
@@ -141,31 +146,65 @@
   (let [project-id (.. req -query -project)
         uuid (.. req -params -uuid)
         body (js->clj (.-body req) :keywordize-keys true)
-        key (:key body)
-        value (:value body)
+        updates (or (:updates body)
+                    (when (:key body) {(:key body) (:value body)}))
+        ;; A client-supplied `key` arrives as a string; normalize to a keyword so
+        ;; the law (keyword set) can decide both the `:updates` and `:key` shapes.
+        updates (when (map? updates)
+                  (reduce-kv (fn [m k v] (assoc m (keyword k) v)) {} updates))
+        bad-keys (when (seq updates) (law-frontmatter/disallowed-keys updates))
         project (find-project project-id)]
     (cond
       (not project) (send-error reply 404 "unknown project")
-      (empty? key) (send-error reply 400 "missing key")
+      (empty? updates) (send-error reply 400 "missing key or updates")
+      ;; `status` is FSM-governed: refuse it here and point at the status endpoint.
+      (law-frontmatter/status-update? updates)
+      (send-error reply 400 (str "status is not editable via frontmatter; "
+                                 "POST /api/task/" uuid "/status"))
+      (seq bad-keys)
+      (send-error reply 400 (law-frontmatter/disallowed-keys-message bad-keys))
       :else (try
               (let [all-tasks (await (tasks/load-tasks (:tasks-dir project)))
                     task (first (filter #(= (:uuid %) uuid) all-tasks))]
                 (if-not task
                   (send-error reply 404 "unknown uuid")
-                  (let [task-path (:source-path task)
-                        fs fsp
-                        raw (await (.readFile fs task-path "utf-8"))
-                        updated (content-parser/update-frontmatter raw key value)
-                        write-id (events/generate-write-id)
-                        ledger (ledger/get-ledger (:tasks-dir project))]
-                    (await (.writeFile fs task-path updated "utf-8"))
-                    (events/emit-frontmatter-change! ledger (:id project) uuid key nil value write-id "web")
-                    (let [new-parsed (content-parser/parse-task-content updated)]
-                      (send-json reply #js {:uuid uuid
-                                            :frontmatter (clj->js (:frontmatter new-parsed))
-                                            :sections (clj->js (mapv (fn [s] #js {:type (:type s) :content (:content s)}) (:sections new-parsed)))
-                                            :sourcePath task-path})))))
+                   (let [_ (await (task-edit/update-frontmatter!
+                                        {:project project :task task
+                                         :updates updates
+                                         :source "web"}))
+                         new-parsed (content-parser/parse-task-content
+                                     (await (.readFile fsp (:source-path task) "utf-8")))]
+                    (send-json reply #js {:uuid uuid
+                                          :frontmatter (clj->js (:frontmatter new-parsed))
+                                          :sections (clj->js (mapv (fn [s] #js {:type (:type s) :content (:content s)}) (:sections new-parsed)))
+                                          :sourcePath (:source-path task)}))))
               (catch :default err (send-error reply 500 (.-message err)))))))
+
+(defn ^:async handle-post-comment [^js req reply]
+  (let [project-id (.. req -query -project)
+        uuid (.. req -params -uuid)
+        body (js->clj (.-body req) :keywordize-keys true)
+        text (str/trim (or (:text body) ""))
+        project (find-project project-id)]
+    (cond
+      (not project) (send-error reply 404 "unknown project")
+      (empty? text) (send-error reply 400 "missing text")
+      :else (try
+              (let [all-tasks (await (tasks/load-tasks (:tasks-dir project)))
+                    task (first (filter #(= (:uuid %) uuid) all-tasks))]
+                (if-not task
+                  (send-error reply 404 "unknown uuid")
+                  (let [_ (await (task-edit/append-comment!
+                                        {:project project :task task
+                                         :text text :source "web"}))
+                        new-parsed (content-parser/parse-task-content
+                                    (await (.readFile fsp (:source-path task) "utf-8")))]
+                    (send-json reply #js {:uuid uuid
+                                          :frontmatter (clj->js (:frontmatter new-parsed))
+                                          :sections (clj->js (mapv (fn [s] #js {:type (:type s) :content (:content s)}) (:sections new-parsed)))
+                                          :sourcePath (:source-path task)}))))
+              (catch :default err (send-error reply 500 (.-message err)))))))
+
 
 (defn ^:async handle-open-editor [^js req reply]
   (let [project-id (.. req -query -project)
@@ -238,17 +277,20 @@
                                         #js {:status (:status col)
                                              :title (:title col)
                                              :taskCount (:task-count col)
-                                             :tasks (clj->js
-                                                     (mapv (fn [t]
-                                                             #js {:uuid (:uuid t)
-                                                                  :title (:title t)
-                                                                  :status (:status t)
-                                                                  :priority (:priority t)
-                                                                  :labels (clj->js (:labels t))
-                                                                  :createdAt (:created-at t)
-                                                                  :sourcePath (:source-path t)
-                                                                  :sourceBoard (:source-board t)})
-                                                           (:tasks col)))})
+                                                  :tasks (clj->js
+                                                          (mapv (fn [t]
+                                                                  #js {:uuid (:uuid t)
+                                                                       :title (:title t)
+                                                                       :status (:status t)
+                                                                       :priority (:priority t)
+                                                                       :labels (clj->js (:labels t))
+                                                                       :createdAt (:created-at t)
+                                                                       :sourcePath (:source-path t)
+                                                                       :sourceBoard (:source-board t)
+                                                                       :domain (:domain t)
+                                                                       :org (:org t)
+                                                                       :drift (:drift t)})
+                                                                (:tasks col)))})
                                       (:columns snapshot)))}))
     (catch :default err (send-error reply 500 (.-message err)))))
 
@@ -262,6 +304,7 @@
   (.get app "/api/drift" handle-get-drift)
   (.get app "/api/task/:uuid/content" handle-get-task-content)
   (.patch app "/api/task/:uuid/frontmatter" handle-update-frontmatter)
+  (.post app "/api/task/:uuid/comment" handle-post-comment)
   (.post app "/api/task/:uuid/status" handle-post-status)
   (.post app "/api/task/:uuid/open-editor" handle-open-editor)
   ;; MCP Streamable-HTTP endpoint — the orchestrator agent's toolbox (Slice 3).

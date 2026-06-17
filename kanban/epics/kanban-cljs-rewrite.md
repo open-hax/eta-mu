@@ -34,3 +34,30 @@ category: epics
 ---
 
 **Session 2026-06-13 progress.** NOW DONE: server enforces FSM + records to ledger; CLI gained project-aware `move`/`events`/`drift`. REMAINING for true TS parity: comment endpoint + CLI `comment`/`frontmatter` commands (the legacy TS CLI has these). Moved review → todo.
+
+---
+
+**Session 2026-06-16.** Comment + frontmatter parity delivered in Rheos:
+- `POST /api/task/:uuid/comment` appends a comment section and records the event.
+- `PATCH /api/task/:uuid/frontmatter` updates frontmatter keys and records the event.
+- CLI `comment` and `frontmatter` subcommands added.
+- `write-id` correlation keeps legitimate CLI edits from being flagged as drift.
+
+Remaining: UI editors for comment/frontmatter in the web view (not strictly CLI parity); potential routing of new Rheos subcommands through the legacy `eta-mu kanban` dispatcher.
+
+---
+
+**Discovery 2026-06-16.** Construction-order Discovery pass over the Rheos + chat-ui surface (post PR #134): `docs/rheos-chat-ui-shape-discovery.md`, tracked by `kanban/tasks/rheos-chat-ui-shape-discovery.md`. Names the latent `law.*`/`shape.*` shapes and surfaces that the canonical event envelope (`event-ledger`), keyed store (`katamorph.store`), and chat contract (`sol.shape.agent`) **already exist** — the next slices are largely adoption, not authorship. The standing "domain.* does I/O" review note is folded into the follow-on `domain/infra` slice.
+
+---
+
+**PR #134 should-fix batch 2026-06-16.** Closed out the remaining Kimi/CodeRabbit should-fix findings in `kanban/tasks/pr-134-review-should-fix-batch.md` (status `review`). All five implemented and verified green:
+- **frontmatter-whitelist** — new pure `rheos.backend.law.frontmatter` (mutable allow-list + forbidden identity/correlation keys); handler 400s `:status` and any non-mutable key so a client can no longer overwrite uuid/write-id/source-path/created_at or bypass the FSM.
+- **compose-regex-guard** — `compose.cljs:26` regex match wrapped in try/catch → non-match instead of crashing the query DSL.
+- **xss-sanitize** — Rheos `sidebar.cljs` + chat-ui `message.cljs` now route `marked` output through `DOMPurify.sanitize`; `dompurify ^3.4.10` added to both packages and installed (lockfile updated).
+- **workflow-harden** — `staging-pr.yml` + `main-pr-gate.yml` hardened (explicit permissions, SHA-pinned actions, `persist-credentials: false`); actionlint clean.
+- **pi-agent-contract** — `pi-agent.ts` ResourceLoader now honors the interface (append prompts stored; `undefined` system prompt preserved); typecheck clean, net-zero TS lines.
+
+Verification across owned sets: clj-kondo 0/0, Rheos `pnpm test` 58/164 green, chat-ui `pnpm test` 2/6 green, both browser/esm builds clean, actionlint exit 0, `pnpm typecheck` exit 0.
+
+**Remaining for PR #134 to merge clean:** commit + push the working-tree edits (this batch did not commit/push) — touches `packages/Rheos/{src,package.json}`, `packages/chat-ui/{src,package.json}`, `pnpm-lock.yaml`, `packages/legacy/github/src/pi-agent.ts`, `.github/workflows/{staging-pr,main-pr-gate}.yml`. Then re-run CI on the PR. Non-blocking follow-ups recorded on the card: decide whether frontmatter handler should 400 vs. drop unknown keys (board client may echo read-only fields), SHA-pin the remaining ~12 workflows still on tag pins, and revisit DOMPurify allow-list config if specific markdown elements need gating.

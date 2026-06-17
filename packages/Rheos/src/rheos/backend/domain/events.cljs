@@ -30,7 +30,9 @@
      :key (:key payload)
      :old-value (:old-value payload)
      :new-value (:new-value payload)
+     :text (:text payload)
      :write-id (:write-id payload)
+     :correlation/status (:correlation/status payload)
      :timestamp (or (:event/time envelope) (.toISOString (new js/Date)))
      :agent (or (:agent payload) "unknown")
      :details (:details payload)}))
@@ -92,16 +94,37 @@
 
 (defn emit-comment!
   ([ledger board-id task-id write-id]
-   (emit-comment! ledger board-id task-id write-id "cli"))
-  ([ledger board-id task-id write-id source]
+   (emit-comment! ledger board-id task-id nil write-id "cli"))
+  ([ledger board-id task-id text write-id]
+   (emit-comment! ledger board-id task-id text write-id "cli"))
+  ([ledger board-id task-id text write-id source]
    (record!
     ledger
     (kanban-envelope board-id "comment"
-                     {:task-id task-id :source source
+                     {:task-id task-id :text text :source source
                       :agent "eta-mu" :write-id write-id}))))
 
 (defn generate-write-id []
   (str (.now js/Date) "-" (.toString (js/Math.random) 36) (.slice (.toString (js/Math.random) 36) 2 10)))
+
+(defn emit-file-changed!
+  ([ledger board-id task-id write-id]
+   (emit-file-changed! ledger board-id task-id write-id "correlated"))
+  ([ledger board-id task-id write-id correlation-status]
+   (record!
+    ledger
+    (kanban-envelope board-id "file-changed"
+                     {:task-id task-id :source "watcher" :agent "eta-mu"
+                      :write-id write-id :correlation/status correlation-status}))))
+
+(defn emit-drift-detected!
+  [ledger board-id task-id write-id]
+  (record!
+   ledger
+   (kanban-envelope board-id "drift-detected"
+                    {:task-id task-id :source "watcher" :agent "eta-mu"
+                     :write-id (or write-id (generate-write-id))
+                     :correlation/status "drift"})))
 
 (defn ^:async query-events
   "Return ledger events, optionally filtered. `filter-spec` is a Clojure map whose

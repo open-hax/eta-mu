@@ -30,7 +30,7 @@ CLI events emit BEFORE file writes (optimistic). Write-id nonce injected into fi
 
 ## Storage
 
-EDN file per board: `<board>/.events/events.jsonl`. Append-only. Async mutex for concurrent writes.
+EDN file per board: `<board>/.events/ledger.edn`. Append-only. Async mutex for concurrent writes.
 
 ## Relationship to OpenPlanner Event Ledger
 
@@ -57,4 +57,12 @@ File-backed implementation of same concept as `promethean.event-ledger`. Differe
 **Session 2026-06-14 (chat-integration Slice 1 — ledger→SSE).** Two things landed here:
 - **File watcher fixed.** Root cause found: chokidar v4 (the pinned `^4.0.3`) DROPPED glob support, so `chokidar.watch("<dir>/**/*.md")` was treated as a literal path and matched nothing — the watcher had been firing ZERO file events. Now watches the tasks-dir directly and filters `.md` in the handlers. Verified: an external file create produces a `file-changed` (and, with no correlated write-id, a `drift-detected`) event in the ledger within ~2s. So file-watcher → drift detection now actually works end-to-end. (write-id injection into frontmatter for correlation is still NOT wired, so every external edit reads as drift — that piece remains.)
 - **Live event stream added.** A new in-process pub/sub bus routes every emission through one `record!` chokepoint (append-to-ledger + publish), exposed as SSE at `GET /api/events/stream`. This is the spine for live UI updates: any actor's mutation (HTTP, drag-drop, or external/CLI edit caught by the watcher) pushes to subscribed browsers, which refetch the board. Verified via a live SSE `data:` event on a frontmatter PATCH. The future Mongo `EventAdmission` will feed the same bus.
-REMAINING for done: write-id injected into frontmatter + watcher correlation (so legitimate CLI edits aren't all flagged as drift).
+
+---
+
+**Session 2026-06-16.** write-id correlation fully wired:
+- Every mutation (status, frontmatter, comment) generates a `write-id` nonce, registers it with the watcher, injects it into the task file frontmatter, writes the file, and emits the source event.
+- The file watcher extracts the `write-id` on `change`/`add`, matches it against pending writes, and emits `kanban.file-changed` with `correlation/status: correlated` or `kanban.drift-detected` with `correlation/status: drift` for unmatched edits. `unlink` (file deletion) is not correlated through the write-id path because the watcher cannot read frontmatter from a deleted file; deletion handling is future work.
+- Storage path is confirmed as `<board>/.events/ledger.edn`; the original `events.jsonl` mention was a spec drift and is now corrected.
+
+Remaining: define and implement `drift:protocol-rerun` behavior (currently only `drift-detected` is emitted).

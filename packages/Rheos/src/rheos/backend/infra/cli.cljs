@@ -1,13 +1,17 @@
 (ns rheos.backend.infra.cli
   "CLI entry point for kanban operations."
-  (:require ["node:fs/promises" :as fsp]
+  (:require [clojure.string :as str]
+            ["node:fs/promises" :as fsp]
             [rheos.backend.domain.board :as board]
             [rheos.backend.domain.compose :as compose]
+            [rheos.backend.infra.agent-tools :as agent-tools]
             [rheos.backend.infra.config :as config]
             [rheos.backend.domain.events :as events]
             [rheos.backend.infra.ledger :as ledger]
+            [rheos.backend.infra.projects :as projects]
             [rheos.backend.infra.task-store :as tasks]
             [rheos.backend.domain.transition :as transition]
+            [rheos.backend.infra.view-store :as views]
             [rheos.backend.infra.http-server :as http-server]))
 
 (defn- parse-args [args]
@@ -34,8 +38,14 @@
   (println "USAGE")
   (println "  openhax-kanban board snapshot [--tasks-dir <path>] [--out <path>]")
   (println "  openhax-kanban board list [--verbose]")
-  (println "  openhax-kanban compose [--domain <d>] [--org <o>] [--status <s>] [--priority <p>] [--q <text>] [--where <clause>]")
+  (println "  openhax-kanban compose [--domain <d>] [--org <o>] [--status <s>] [--priority <p>] [--labels <l>] [--projects <p>] [--q <text>] [--where <clause>] [--save <name>] [--preset <name>]")
   (println "  openhax-kanban move <task-uuid> --to <status> [--project <id>]")
+  (println "  openhax-kanban status-update <task-uuid> --to <status> [--project <id>]")
+  (println "  openhax-kanban add-comment <task-uuid> --text <text> [--project <id>]")
+  (println "  openhax-kanban create-subtask <parent-uuid> --title <title> [--project <id>] [--status <s>] [--priority <p>]")
+  (println "  openhax-kanban read-task <task-uuid> [--project <id>]")
+  (println "  openhax-kanban search-tasks --query <text>")
+  (println "  openhax-kanban read-board [--project <id>]")
   (println "  openhax-kanban events [task-uuid] [--limit <n>]")
   (println "  openhax-kanban drift")
   (println "  openhax-kanban serve [--host <host>] [--port <port>]"))
@@ -55,7 +65,7 @@
         task (subs (or (:task-id e) "?") 0 30)]
     (str ts " [" src "] " typ " " task)))
 
-(defn ^:async cmd-board-snapshot [project-state flags]
+(defn- ^:async cmd-board-snapshot [project-state flags]
   (let [project (first (:projects project-state))
         all-tasks (await (tasks/load-tasks (:tasks-dir project)))
         snapshot (board/build-board-snapshot all-tasks)
@@ -76,10 +86,19 @@
             (when (and v (not= "" v))
               (println (str "  " (name k) ": " (pr-str v))))))))))
 
-(defn ^:async cmd-compose [project-state flags]
-  (let [query (compose/parse-compose-query flags)
+(defn- ^:async cmd-compose [project-state view-store flags]
+  (let [preset-name (get-flag flags "preset")
+        preset (when preset-name (await (views/load-view view-store preset-name)))
+        effective-flags (if preset (views/merge-preset flags preset) flags)
+        _ (when (and preset-name (not preset))
+            (println (str "Unknown preset: " preset-name)))
+        query (compose/parse-compose-query effective-flags)
         snapshot (await (compose/compose-snapshot (:projects project-state) query))
+        save-name (get-flag flags "save")
         out-path (get-flag flags "out")]
+    (when save-name
+      (await (views/save-view! view-store save-name effective-flags))
+      (println (str "Saved view '" save-name "'")))
     (if out-path
       (do
         (await (.writeFile fsp out-path (js/JSON.stringify (clj->js snapshot) nil 2) "utf8"))
@@ -97,7 +116,7 @@
     (first (filter #(= (:id %) pid) (:projects project-state)))
     (first (:projects project-state))))
 
-(defn ^:async cmd-move
+(defn- ^:async cmd-move
   "FSM-enforced, ledger-backed status move. Mirrors the server's write path so the
    CLI and UI cannot diverge on what transitions are legal."
   [project-state parsed]
@@ -122,6 +141,59 @@
             (if (:ok result)
               (println (str "moved " uuid ": " (:from result) " -> " (:to result)))
               (println (str "REJECTED " uuid ": " (:reason result))))))))))
+
+(defn- ^:async run-tool [tool-name args]
+  (let [result (await (agent-tools/dispatch tool-name args))]
+    (println (js/JSON.stringify (clj->js result) nil 2))))
+
+(defn- ^:async cmd-status-update [_ parsed]
+  (let [uuid (:subcommand parsed)
+        status (or (get-flag (:flags parsed) "to") (get-flag (:flags parsed) "status"))
+        project (get-flag (:flags parsed) "project")]
+    (if (or (nil? uuid) (nil? status))
+      (println "usage: openhax-kanban status-update <task-uuid> --to <status>")
+      (run-tool "kanban_update_status" {:uuid uuid :status status :project project}))))
+
+(defn- ^:async cmd-add-comment [_ parsed]
+  (let [uuid (:subcommand parsed)
+        text (get-flag (:flags parsed) "text")
+        project (get-flag (:flags parsed) "project")]
+    (if (or (nil? uuid) (nil? text))
+      (println "usage: openhax-kanban add-comment <task-uuid> --text <text>")
+      (run-tool "kanban_add_comment" {:uuid uuid :text text :project project}))))
+
+(defn- ^:async cmd-create-subtask [_ parsed]
+  (let [parent (:subcommand parsed)
+        title (get-flag (:flags parsed) "title")
+        project (get-flag (:flags parsed) "project")
+        status (get-flag (:flags parsed) "status")
+        priority (get-flag (:flags parsed) "priority")
+        labels (when-let [l (get-flag (:flags parsed) "labels")]
+                 (vec (filter seq (map str/trim (str/split l #",")))))]
+    (if (or (nil? parent) (nil? title))
+      (println "usage: openhax-kanban create-subtask <parent-uuid> --title <title>")
+      (run-tool "kanban_create_subtask"
+                (cond-> {:parent-uuid parent :title title :project project}
+                  status (assoc :status status)
+                  priority (assoc :priority priority)
+                  labels (assoc :labels labels))))))
+
+(defn- ^:async cmd-read-task [_ parsed]
+  (let [uuid (:subcommand parsed)
+        project (get-flag (:flags parsed) "project")]
+    (if (nil? uuid)
+      (println "usage: openhax-kanban read-task <task-uuid>")
+      (run-tool "kanban_read_task" {:uuid uuid :project project}))))
+
+(defn- ^:async cmd-search-tasks [_ parsed]
+  (let [query (get-flag (:flags parsed) "query")]
+    (if (nil? query)
+      (println "usage: openhax-kanban search-tasks --query <text>")
+      (run-tool "kanban_search_tasks" {:query query}))))
+
+(defn- ^:async cmd-read-board [_ parsed]
+  (let [project (get-flag (:flags parsed) "project")]
+    (run-tool "kanban_read_board" {:project project})))
 
 (defn ^:async cmd-events [project-state parsed]
   (let [project (find-project project-state (get-flag (:flags parsed) "project"))
@@ -157,7 +229,10 @@
         tasks-dir (or (get-flag (:flags parsed) "tasks-dir")
                       (:tasksDir (:config loaded))
                       "docs/agile/tasks")
-        ps (config/resolve-configured-projects loaded tasks-dir)]
+        ps (config/resolve-configured-projects loaded tasks-dir)
+        view-store (await (views/load-view-store (:config-dir loaded)))]
+    ;; Share resolved projects with the tool registry so CLI and server resolve identically.
+    (projects/set-projects! ps)
     (cond
       (and (= "board" (:command parsed)) (= "snapshot" (:subcommand parsed)))
       (await (cmd-board-snapshot ps (:flags parsed)))
@@ -166,10 +241,28 @@
       (cmd-board-list ps (:flags parsed))
 
       (= "compose" (:command parsed))
-      (await (cmd-compose ps (:flags parsed)))
+      (await (cmd-compose ps view-store (:flags parsed)))
 
       (= "move" (:command parsed))
       (await (cmd-move ps parsed))
+
+      (= "status-update" (:command parsed))
+      (await (cmd-status-update ps parsed))
+
+      (= "add-comment" (:command parsed))
+      (await (cmd-add-comment ps parsed))
+
+      (= "create-subtask" (:command parsed))
+      (await (cmd-create-subtask ps parsed))
+
+      (= "read-task" (:command parsed))
+      (await (cmd-read-task ps parsed))
+
+      (= "search-tasks" (:command parsed))
+      (await (cmd-search-tasks ps parsed))
+
+      (= "read-board" (:command parsed))
+      (await (cmd-read-board ps parsed))
 
       (= "events" (:command parsed))
       (await (cmd-events ps parsed))

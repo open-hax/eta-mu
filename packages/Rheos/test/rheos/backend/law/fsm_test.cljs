@@ -1,6 +1,7 @@
 (ns rheos.backend.law.fsm-test
-  (:require [cljs.test :refer [deftest is async]]
+  (:require [cljs.test :refer [deftest is]]
             [rheos.backend.law.fsm :as fsm]))
+
 
 (deftest resolve-fsm-default
   (is (= fsm/default-fsm (fsm/resolve-fsm {}))))
@@ -60,11 +61,8 @@
     (is (:allowed? r))
     (is (= :always-allow (:check r)))))
 
-(deftest run-gate-passes-through-non-command-checks
+(deftest ^:async run-gate-passes-through-non-command-checks
   ;; A structurally-allowed transition whose check is not a command gate clears immediately.
-  (async done
-    (let [decision (fsm/evaluate-transition fsm/promethean-fsm "in_progress" "todo" {})]
-      ((fn ^:async []
-         (let [gate (await (fsm/run-gate decision "."))]
-           (is (:allowed? gate))
-           (done)))))))
+  (let [decision (fsm/evaluate-transition fsm/promethean-fsm "in_progress" "todo" {})
+        gate (await (fsm/run-gate decision "."))]
+    (is (:allowed? gate))))

@@ -2,6 +2,8 @@
   "Board composition — query DSL for filtering across multiple boards."
   (:require [clojure.string :as str]
             [rheos.backend.domain.board :as board]
+            [rheos.backend.domain.events :as events]
+            [rheos.backend.infra.ledger :as ledger]
             [rheos.backend.infra.task-store :as tasks]))
 
 (defn- normalize-value [v]
@@ -21,20 +23,20 @@
                   (vector? field-value) (some #(= (normalize-value %) tv) field-value)
                   (string? fv) (str/includes? fv tv)
                   :else false)
-      :regex (re-matches (re-pattern tv) fv)
+      :regex (try (boolean (re-matches (re-pattern tv) fv)) (catch :default _ false))
       false)))
 
 (defn- match-where [task [field op value]]
   (let [field-key (if (keyword? field) field (keyword field))]
     (apply-operator (get task field-key) op value)))
 
-(defn- match-meta-where [meta [field _op value]]
+(defn- match-meta-where [meta [field op value]]
   (let [field-name (name field)
         key (if (str/starts-with? field-name "meta.")
               (keyword (subs field-name 5))
               (keyword field-name))
         meta-val (get meta key)]
-    (= (normalize-value meta-val) (normalize-value value))))
+    (apply-operator meta-val op value)))
 
 (defn parse-where-clause [clause]
   (let [clause (str/trim clause)]
@@ -42,6 +44,13 @@
       (str/includes? clause " = ")
       (let [[field value] (str/split clause #" = " 2)]
         [(str/trim field) := (str/trim value)])
+      (str/includes? clause " ~ ")
+      (let [[field pattern] (str/split clause #" ~ " 2)
+            pattern (str/trim pattern)
+            bare (if (and (str/starts-with? pattern "/") (str/ends-with? pattern "/"))
+                   (subs pattern 1 (dec (count pattern)))
+                   pattern)]
+        [(str/trim field) :regex bare])
       (str/includes? clause " in ")
       (let [[field values] (str/split clause #" in " 2)]
         [(str/trim field) :in (mapv str/trim (str/split values #","))])
@@ -77,9 +86,18 @@
         (when (seq remaining)
           (let [project (first remaining)]
             (try
-              (let [tasks (await (tasks/load-tasks (:tasks-dir project)))]
+              (let [tasks (await (tasks/load-tasks (:tasks-dir project)))
+                    ledger (ledger/get-ledger (:tasks-dir project))
+                    drift-evts (await (events/query-events ledger {:type "drift-detected"}))
+                    drift-uuids (set (map #(get-in % [:payload :task-id]) drift-evts))
+                    domain (get-in project [:meta :domain])
+                    org (get-in project [:meta :org])]
                 (doseq [t tasks]
-                  (swap! all-tasks conj (assoc t :source-board (:id project)))))
+                  (swap! all-tasks conj (assoc t
+                                               :source-board (:id project)
+                                               :domain domain
+                                               :org org
+                                               :drift (boolean (drift-uuids (:uuid t)))))))
               (catch :default _))
             (recur (rest remaining)))))
       (let [filtered (filterv #(filter-task % query) @all-tasks)]

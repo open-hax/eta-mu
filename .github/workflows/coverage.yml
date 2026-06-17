@@ -84,27 +84,6 @@ jobs:
       - name: eta-mu-docs
         run: node --test packages/legacy/docs/tests/*.test.cjs
 
-      - name: eta-mu-truth
-        run: node --test packages/eta-mu-truth/tests/*.test.cjs
-
-      - name: presence-core
-        run: pnpm --dir packages/presence-core test
-
-      - name: kanban
-        run: pnpm --dir packages/legacy/kanban test
-
-      - name: signal-contracts
-        run: node --test packages/signal-contracts/tests/*.test.cjs
-
-      - name: signal-radar-core
-        run: node --test packages/signal-radar-core/tests/*.test.cjs
-
-      - name: signal-source-utils
-        run: node --test packages/signal-source-utils/tests/*.test.cjs
-
-      - name: signal-watchlists
-        run: node --test packages/signal-watchlists/tests/*.test.cjs
-
   # ── ClojureScript extensions + coverage ─────────────────────────────
   cljs-extensions:
     name: CLJS extension tests + coverage

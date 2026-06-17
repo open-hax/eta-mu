@@ -1,37 +1,17 @@
-.cache/v1/lock                                      |  0 +
-.gitignore                                          |  3 +-
-PROCESS.md                                          | 90 ++++++++++
-docs/agent-cljs-rewrite-inventory.md               | 208 +++++++++++++++++
-docs/ai-cljs-rewrite-inventory.md                  | 208 +++++++++++++++++
-docs/coding-agent-cljs-rewrite-inventory-core.md   | 208 +++++++++++++++++
-docs/coding-agent-cljs-rewrite-inventory-modes-cli.md | 208 +++++++++++++++++
-docs/docs-cljs-rewrite-inventory.md                | 208 +++++++++++++++++
-docs/github-cljs-rewrite-inventory.md              | 208 +++++++++++++++++
-docs/kondo-config-baseline.md                      | 90 ++++++++++
-docs/output-contract-gate-cljs-rewrite-inventory.md | 208 +++++++++++++++++
-docs/publication-components-cljs-rewrite-inventory.md | 208 +++++++++++++++++
-docs/tui-cljs-rewrite-inventory.md                 | 208 +++++++++++++++++
-kanban/.events/ledger.edn                          |1238 ++++++++++++++++++++
-kanban/epics/*-cljs-rewrite.md                     |  9 files
-kanban/tasks/*-cljs-rewrite*.md                    | 65 files
-kanban/tasks/kondo-lint-cleanup-*.md               | 11 files
-kanban/tasks/shared-kondo-config-*.md              | 12 files
-package.json                                        |  1 +
-packages/*/package.json                             | 22 files changed
-packages/*/.clj-kondo/config.edn                   | 10 files changed
-packages/*/.clj-kondo/imports/**                   | deleted
-packages/kondo-config/**                           |  3 files added
-packages/Rheos/.cache/v1/**                        |  3 files added
-packages/Rheos/src/rheos/**/*.cljs                 |  6 files changed
-packages/axxium/src/cljs/axxium/**/*.cljs          |  6 files changed
-packages/chat-ui/src/eta_mu/chat_ui/**/*.cljs      |  5 files changed
-packages/event-ledger/src/**/*.cljs                |  1 file changed
-packages/extensions/src/eta_mu/extensions/**/*.cljs | 16 files changed
-packages/katamorph/src/cljs/katamorph/**/*.cljs    |  3 files changed
-packages/protocols/src/promethean/**/*.cljs        |  1 file changed
-packages/runtime/src/cljs/eta_mu/**/*.cljs         | 43 files added
-packages/runtime/test/cljs/eta_mu/**/*.cljs        | 18 files added
-packages/sol/src/cljs/open_hax/sol/**/*.cljs      | 16 files changed
-packages/sol/test/cljs/open_hax/sol/**/*.cljs     |  1 file changed
-pnpm-lock.yaml                                     |1375 ++++++++++--------
- 294 files changed, 20729 insertions(+), 3637 deletions(-)
+.ημ/Π_DIFFSTAT.txt                               |  11 +++++
+.ημ/Π_LAST.md                                      |  43 ++++++++++++++
+.ημ/Π_MANIFEST.sha256                              |   9 +++
+.ημ/Π_STATE.sexp                                   |  34 ++++++++++++
+docs/notes/2026.06.16.06.43.13.md                  |   6 +++-
+docs/notes/2026.06.16.07.13.42.md                  | 103 ++++++++++++++
+docs/notes/2026.06.16.07.28.31.md                  |  21 +++++++
+docs/notes/2026.06.16.07.37.19.md                  |  33 +++++++++
+docs/notes/2026.06.16.12.02.30.md                  |  15 +++++
+kanban/.events/ledger.edn                          |   5 +++++
+kanban/tasks/eta-mu-github-fetch-timeout.md        |  13 +++++-
+ 11 files changed, 279 insertions(+), 9 deletions(-)
+
+Excluded from commit:
+  cljs-rewrite                                       | 0 bytes (empty untracked artifact)
+  docs/notes/2026.06.16.07.37.18.md                  | 0 bytes (empty untracked note artifact)
+  .dir-locals.el                                     | 0 bytes (empty untracked Emacs dir-local file)

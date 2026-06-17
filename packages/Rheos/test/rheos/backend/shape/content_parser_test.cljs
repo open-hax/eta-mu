@@ -84,6 +84,55 @@
       (is (re-find #"status: \"done\"" result))
       (is (re-find #"uuid: \"test\"" result)))))
 
+(deftest test-inject-write-id
+  (testing "adds write-id to frontmatter"
+    (let [raw "---\nuuid: \"test\"\nstatus: \"incoming\"\n---\n\nBody"
+          result (parser/inject-write-id raw "wid-123")]
+      (is (re-find #"write-id: \"wid-123\"" result))
+      (is (re-find #"uuid: \"test\"" result))
+      (is (re-find #"status: \"incoming\"" result))))
+
+  (testing "updates existing write-id"
+    (let [raw "---\nuuid: \"test\"\nwrite-id: \"old\"\n---\n\nBody"
+          result (parser/inject-write-id raw "new")]
+      (is (re-find #"write-id: \"new\"" result))
+      (is (not (re-find #"write-id: \"old\"" result)))))
+
+  (testing "preserves body and sections"
+    (let [raw "---\nuuid: \"test\"\n---\n\n# Title\n\nBody\n---\nComment\n---"
+          result (parser/inject-write-id raw "wid-abc")]
+      (is (re-find #"write-id: \"wid-abc\"" result))
+      (is (re-find #"# Title" result))
+      (is (re-find #"Body" result))
+      (is (re-find #"Comment" result)))))
+
+(deftest test-update-frontmatter-multiple
+  (testing "updates several frontmatter fields at once"
+    (let [raw "---\nuuid: \"test\"\nstatus: \"incoming\"\n---\n\nBody"
+          result (parser/update-frontmatter-keys raw {"status" "done" "priority" "P0"})
+          parsed (parser/parse-task-content result)]
+      (is (= "done" (get-in parsed [:frontmatter :status])))
+      (is (= "P0" (get-in parsed [:frontmatter :priority]))))))
+
+(deftest test-append-comment-creates-section
+  (testing "appends a comment block when none exists"
+    (let [raw "---\nuuid: \"test\"\n---\n\nBody"
+          result (parser/append-comment raw "First comment")
+          parsed (parser/parse-task-content result)
+          comments (filter #(= "comment" (:type %)) (:sections parsed))]
+      (is (= 1 (count comments)))
+      (is (= "First comment" (:content (first comments)))))))
+
+(deftest test-append-comment-appends-to-last
+  (testing "appends to the last comment section"
+    (let [raw "---\nuuid: \"test\"\n---\n\nBody\n\n---\nExisting\n---"
+          result (parser/append-comment raw "More")
+          parsed (parser/parse-task-content result)
+          comments (filter #(= "comment" (:type %)) (:sections parsed))]
+      (is (= 1 (count comments)))
+      (is (re-find #"Existing" (:content (first comments))))
+      (is (re-find #"More" (:content (first comments)))))))
+
 (deftest test-roundtrip
   (testing "parse then serialize preserves data"
     (let [raw "---\nuuid: \"test\"\ntitle: \"Test\"\nstatus: done\npriority: P0\nlabels: [\"epics\", \"cljs\"]\n---\n\n# Title\n\nBody content"

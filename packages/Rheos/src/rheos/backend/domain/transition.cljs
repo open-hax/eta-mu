@@ -8,7 +8,8 @@
             [rheos.backend.domain.events :as events]
             [rheos.backend.infra.ledger :as ledger]
             [rheos.backend.infra.task-store :as tasks]
-            [rheos.backend.infra.task-writeback :as writeback]))
+            [rheos.backend.infra.task-writeback :as writeback]
+            [rheos.backend.infra.watcher :as watcher]))
 
 (defn current-counts
   "Map of status -> number of tasks currently in it (for WIP-limit checks)."
@@ -38,8 +39,9 @@
             (if-not (:allowed? gate)
               {:ok false :reason (:reason gate) :from from :to new-status}
               (let [write-id (events/generate-write-id)
-                    ledger (ledger/get-ledger (:tasks-dir project))
-                    updated (await (writeback/write-task-status task (:tasks-dir project) new-status))]
-                (await (events/emit-status-change! ledger (:id project) (:uuid task)
-                                                   from new-status write-id (or source "cli")))
-                {:ok true :task updated :from from :to new-status}))))))))
+                    ledger (ledger/get-ledger (:tasks-dir project))]
+                 (watcher/register-cli-event! write-id (:uuid task))
+                (let [updated (await (writeback/write-task-status task (:tasks-dir project) new-status write-id))]
+                  (await (events/emit-status-change! ledger (:id project) (:uuid task)
+                                                     from new-status write-id (or source "cli")))
+                  {:ok true :task updated :from from :to new-status})))))))))

@@ -1,62 +1,42 @@
-# Π Fork Tax — 2026-06-15
+# Π Fork Tax — 2026-06-16T21:42:48Z
 
 ## Branch
-`feat/kanban-comments-parity`
+`chore/ts-cljs-rewrite`
 
 ## Base SHA
-`ea053df`
+`e28b355aa6df6c23bc813b451e66a0fe7abf04df`
 
 ## What Changed
 
-### CLJS runtime expansion
-- Added new domain, extern, infra, law, and shape namespaces under `packages/runtime/src/cljs/eta_mu/`
-  - `ai` — message/content canonical types, provider transforms, Malli schemas, extern adapters
-  - `coding` — diagnostics, session, fs/git/path/shell/process externs, boundary infra
-  - `docs` — frontmatter, markdown parsing, JSONL, indexing
-  - `garden` — publication law and block/track shapes
-  - `gate` — contract law, review/validate/repair domain
-- Added corresponding test coverage under `packages/runtime/test/cljs/eta_mu/`
+### Notes
+- Revised `docs/notes/2026.06.16.06.43.13.md` (Eta-mu Orchestrator constraints).
+- Added working notes:
+  - `docs/notes/2026.06.16.07.13.42.md` — Improve Eta-mu's AGENTS.md task brief.
+  - `docs/notes/2026.06.16.07.28.31.md` — Compiler-of-intent prompt template.
+  - `docs/notes/2026.06.16.07.37.19.md` — Perplexity Agent user instructions.
+  - `docs/notes/2026.06.16.12.02.30.md` — Eta-mu CLI / kanban orchestrator sketch.
 
-### Shared clj-kondo configuration
-- New package `packages/kondo-config/` exporting shared hooks and config
-- Rolled shared config out to `packages/Rheos`, `packages/axxium`, `packages/chat-ui`, `packages/event-ledger`, `packages/extensions`, `packages/katamorph`, `packages/mcp-contracts`, `packages/protocols`, `packages/runtime`, `packages/sol`
-- Removed per-package `.clj-kondo/imports` directories now covered by shared config
-- Added `docs/kondo-config-baseline.md` documenting baseline lint state
-
-### Package updates
-- Updated `package.json` and `pnpm-lock.yaml` to reflect dependency changes
-- Added `.gitignore` entries for `**/.clj-kondo/.cache` and `**/.clj-kondo/imports`
-
-### Kanban and process documentation
-- Added `PROCESS.md`
-- Added rewrite inventory docs under `docs/*-cljs-rewrite-inventory.md`
-- Added kanban epics and tasks for the TS→CLJS rewrite phases and kondo cleanup
-- Updated `kanban/.events/ledger.edn`
-
-### Sol, Katamorph, Rheos, axxium, chat-ui, event-ledger, extensions, protocols
-- Ongoing CLJS refinements and test updates across these packages
+### Kanban
+- Appended five events to `kanban/.events/ledger.edn` for task `fetch-timeout-abort-controller` (accepted → breakdown → blocked).
+- Updated `kanban/tasks/eta-mu-github-fetch-timeout.md` frontmatter: added category, labels, write-id, source, priority, and set status to `blocked`.
 
 ## Excluded from Commit
-- `.cache/v1/lock` — runtime/build cache artifact
-- `packages/Rheos/.cache/v1/**` — runtime/build cache artifact
+- `cljs-rewrite` — 0-byte untracked artifact, previously excluded.
+- `docs/notes/2026.06.16.07.37.18.md` — 0-byte untracked note artifact.
+- `.dir-locals.el` — 0-byte untracked Emacs dir-local file; local editor config.
 
 ## Verification Status
-- **eta-mu-runtime tests**: Passed — 6 tests
-- **eta-mu-github tests**: Passed — 19 tests
-- **eta-mu-docs tests**: Passed — 2 tests
-- **kanban-legacy tests**: Passed — 14 tests
-- **eta-mu-extensions tests**: Passed — 72 tests, 195 assertions
-- **Sol tests**: Passed — 66 tests, 193 assertions
-- **Katamorph tests**: Passed — 102 tests, 253 assertions
-- **TS line count**: Unchanged at 174,537 lines
+- **Code tests**: Skipped — no code packages touched.
+- **clj-kondo**: Skipped — no code packages touched.
+- **TS line count**: Skipped — no TypeScript files touched.
+- **Ledger EDN**: Visually validated — appended lines are well-formed EDN maps.
 
 ## Commit
-`11f31e1` on `feat/kanban-comments-parity`
+`92b1cd4` on `chore/ts-cljs-rewrite`
 
 ## Tag
-`Π/feat-kanban-comments-parity/2026-06-15T221359`
+`Π/chore-ts-cljs-rewrite/2026-06-16T214248`
 
 ## Notes
-- Workspace treated as single-agent for this snapshot; no concurrent dirt left unstaged.
-- LSP diagnostics report unresolved symbols in several `packages/Rheos/src/rheos/ui/domain/*.cljs` files; these are pre-existing and did not fail the executed test suites.
-- Pre-commit TypeScript guard hook is not installed locally.
+- Workspace treated as shared by default per concurrent-agent guardrails.
+- Only owned/repo-relevant changes were staged; excluded artifacts are documented as residual/unowned.

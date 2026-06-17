@@ -16,7 +16,10 @@
    [:labels [:vector :string]]
    [:created-at :string]
    [:content :string]
-   [:source-path :string]])
+   [:source-path :string]
+   [:domain {:optional true} [:maybe :string]]
+   [:org {:optional true} [:maybe :string]]
+   [:drift {:optional true} [:maybe :boolean]]])
 
 (def ColumnSnapshot
   [:map

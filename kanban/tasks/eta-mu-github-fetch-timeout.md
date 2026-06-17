@@ -1,12 +1,13 @@
 ---
-uuid: "fetch-timeout-abort-controller"
-title: "Add fetch timeout with AbortController to runtime-batch.ts"
-status: "incoming"
-priority: "P0"
-labels: ["tech-debt", "security", "eta-mu-github"]
-created_at: "2026-06-12T00:00:00Z"
-source: "coderabbit-review:PR-112"
 category: "tasks"
+labels: ["tech-debt", "security", "eta-mu-github"]
+write-id: "1781638185534-0.qz60lbj9brlhgznrq9n"
+source: "coderabbit-review:PR-112"
+title: "Add fetch timeout with AbortController to runtime-batch.ts"
+priority: "P0"
+status: "blocked"
+uuid: "fetch-timeout-abort-controller"
+created_at: "2026-06-12T00:00:00Z"
 ---
 
 # Add fetch timeout with AbortController

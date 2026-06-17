@@ -2,7 +2,8 @@
   "MessageBubble — renders a single chat message with markdown."
   (:require [helix.core :refer [defnc]]
             [helix.dom :as d]
-            ["marked" :refer [marked]]))
+            ["marked" :refer [marked]]
+            ["dompurify" :default DOMPurify]))
 
 (defnc MessageBubble [{:keys [message]}]
   (let [is-user (= "user" (:role message))]
@@ -25,4 +26,4 @@
         (when-not is-user
           (d/div {:style {:font-size "10px" :color "var(--token-colors-text-muted)" :margin-bottom "4px"}}
             "assistant"))
-        (d/div {:dangerouslySetInnerHTML #js {:__html (marked (or (:content message) ""))}})))))
+        (d/div {:dangerouslySetInnerHTML #js {:__html (.sanitize DOMPurify (marked (or (:content message) "")))}})))))

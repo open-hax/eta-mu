@@ -5,6 +5,7 @@
             [helix.hooks :as hooks]
             [helix.dom :as d]
             ["marked" :refer [marked]]
+            ["dompurify" :default DOMPurify]
             [clojure.string :as str]))
 
 ;; ---------------------------------------------------------------------------
@@ -119,11 +120,23 @@
       (d/div {:style {:margin-top "8px" :font-size "11px" :color "var(--token-colors-text-muted)"}}
         "Double-click a field to edit"))))
 
+(defn- ^:async patch-frontmatter! [task-uuid project key value on-update]
+  (try
+    (let [res (await (js/fetch (str "/api/task/" (js/encodeURIComponent task-uuid) "/frontmatter?project=" (js/encodeURIComponent (or project "")))
+                               #js {:method "PATCH"
+                                    :headers #js {"Content-Type" "application/json"}
+                                    :body (js/JSON.stringify #js {:key key :value value})}))]
+      (when (.-ok res)
+        (let [data (await (.json res))]
+          (when on-update (on-update data)))))
+    (catch :default err
+      (js/console.error "Save failed:" err))))
+
 ;; ---------------------------------------------------------------------------
 ;; Sidebar component
 ;; ---------------------------------------------------------------------------
 
-(defnc task-sidebar [{:keys [task detail on-close on-update]}]
+(defnc task-sidebar [{:keys [task detail on-close on-update on-status]}]
   (let [task-uuid (get task "uuid")
         source-path (or (get task "sourcePath") (get detail "sourcePath"))
         [editing-field set-editing-field] (hooks/use-state nil)
@@ -134,19 +147,16 @@
         handle-cancel (fn []
                         (set-editing-field nil)
                         (set-edit-value ""))
-        handle-save (fn ^:async [key value]
+        handle-save (fn [key value]
                       (set-editing-field nil)
                       (set-edit-value "")
-                      (try
-                        (let [res (await (js/fetch (str "/api/task/" (js/encodeURIComponent task-uuid) "/frontmatter?project=" (js/encodeURIComponent (get task "sourceBoard" "")))
-                                                  #js {:method "PATCH"
-                                                       :headers #js {"Content-Type" "application/json"}
-                                                       :body (js/JSON.stringify #js {:key key :value value})}))]
-                          (when (.-ok res)
-                            (let [data (await (.json res))]
-                              (when on-update (on-update data)))))
-                        (catch :default err
-                          (js/console.error "Save failed:" err))))]
+                      ;; Status changes must go through the FSM-enforced status
+                      ;; endpoint (WIP limits, command gates, valid transitions) —
+                      ;; the same path the board uses. A direct frontmatter PATCH
+                      ;; would let the sidebar set statuses drag-and-drop rejects.
+                      (if (= key "status")
+                        (when on-status (on-status value))
+                        (patch-frontmatter! task-uuid (get task "sourceBoard" "") key value on-update)))]
     ;; Fills the flex slot the layout gives it; the content area below owns the scroll.
     (d/div {:style {:width "100%" :height "100%" :border-left "1px solid var(--token-colors-border-default)" :background "var(--token-colors-background-surface)" :overflow "hidden" :display "flex" :flex-direction "column"}}
 
@@ -187,7 +197,7 @@
             (fn [i section]
               (when (= (get section "type") "body")
                 (d/div {:key (str "body-" i) :class "markdownPreview" :style {:padding "12px 16px" :border-bottom "1px solid var(--token-colors-border-subtle)"}}
-                  (d/div {:dangerouslySetInnerHTML #js {:__html (marked (get section "content" ""))}}))))
+                  (d/div {:dangerouslySetInnerHTML #js {:__html (.sanitize DOMPurify (marked (get section "content" "")))}}))))
             (get detail "sections"))
           ;; Comment sections
           (when (some #(= (get % "type") "comment") (get detail "sections"))
