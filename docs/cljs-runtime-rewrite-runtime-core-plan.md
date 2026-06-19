@@ -21,12 +21,12 @@ This is the rewrite's first real Knoxx-style domain/law/shape slice:
 
 Primary source package:
 
-- `packages/eta-mu-runtime/src/types.ts`
-- `packages/eta-mu-runtime/src/state.ts`
-- `packages/eta-mu-runtime/src/planner.ts`
-- `packages/eta-mu-runtime/src/envelope.ts`
-- `packages/eta-mu-runtime/src/index.ts`
-- `packages/eta-mu-runtime/tests/runtime.test.ts`
+- `packages/runtime/src/types.ts`
+- `packages/runtime/src/state.ts`
+- `packages/runtime/src/planner.ts`
+- `packages/runtime/src/envelope.ts`
+- `packages/runtime/src/index.ts`
+- `packages/runtime/tests/runtime.test.ts`
 
 Secondary follow-up source once the pure runtime slice passes:
 
@@ -140,7 +140,7 @@ Add two new rewrite-specific tests:
 
 ## Coding-agent message core follow-up
 
-After `eta-mu-runtime` pure parity passes, extend the runtime core to cover message/content/session shapes used by `packages/coding-agent/src/core/messages.ts`.
+After `eta-mu-runtime` pure parity passes, extend the runtime core to cover message/content/session shapes used by `packages/legacy/coding-agent/src/core/messages.ts`.
 
 Target data:
 
@@ -187,9 +187,9 @@ Those belong to boundary-adapter and surface-parity tasks.
 
 ```bash
 cd orgs/open-hax/eta-mu
-pnpm --dir packages/eta-mu-runtime test
-pnpm --dir packages/eta-mu-runtime typecheck
-pnpm --dir packages/eta-mu-runtime cljs:verify
+pnpm --dir packages/runtime test
+pnpm --dir packages/runtime typecheck
+pnpm --dir packages/runtime cljs:verify
 ```
 
 When the coding-agent message follow-up starts:
@@ -214,7 +214,7 @@ If a filtered Vitest invocation is unsupported, run the full package test and re
 
 ## Implementation note
 
-The runtime-core PR extends the first `packages/eta-mu-runtime` CLJS spine with pure data contracts for content parts, agent messages, model descriptors, tool descriptors, and session context maps. The new facade exports are additive and do not change package `main`, `types`, or public TypeScript exports.
+The runtime-core PR extends the first `packages/runtime` CLJS spine with pure data contracts for content parts, agent messages, model descriptors, tool descriptors, and session context maps. The new facade exports are additive and do not change package `main`, `types`, or public TypeScript exports.
 
 ## Risks
 
@@ -224,4 +224,4 @@ The runtime-core PR extends the first `packages/eta-mu-runtime` CLJS spine with 
 
 ## Recommended next planning handoff
 
-Once the shadow spine is implemented, use this plan to port only `packages/eta-mu-runtime` pure semantics first. Do not start `AgentSession` or provider logic until this pure core is verified.
+Once the shadow spine is implemented, use this plan to port only `packages/runtime` pure semantics first. Do not start `AgentSession` or provider logic until this pure core is verified.

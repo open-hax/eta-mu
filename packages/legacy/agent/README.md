@@ -1,11 +1,40 @@
 # @open-hax/eta-mu-agent-core
 
+> [!WARNING]
+> **DEPRECATED — legacy TypeScript.** This package (`packages/legacy/agent`) is being
+> rewritten in ClojureScript and will be removed once the port lands. Do not build new
+> features on it. The CLJS replacement lives under the `eta_mu.agent.*` namespace in
+> `packages/runtime`.
+>
+> - File-by-file port plan: [`docs/agent-cljs-rewrite-inventory.md`](../../../docs/agent-cljs-rewrite-inventory.md)
+> - Parent epic: [`kanban/epics/agent-cljs-rewrite.md`](../../../kanban/epics/agent-cljs-rewrite.md)
+
 Stateful agent with tool execution and event streaming. Built on `@open-hax/eta-mu-ai`.
+
+## Public exports → CLJS migration map
+
+Where each public surface is headed in the ClojureScript rewrite (taxonomy and namespace
+roots per `docs/agent-cljs-rewrite-inventory.md`):
+
+| Source (`src/`) | Public exports | Target CLJS namespace |
+|-----------------|----------------|------------------------|
+| `index.ts` | barrel re-export of the four modules below | `eta_mu.agent.cli.*` (JS facade) |
+| `agent.ts` | `Agent`, `AgentOptions` | `eta_mu.agent.infra.agent` |
+| `agent-loop.ts` | `agentLoop`, `agentLoopContinue`, `runAgentLoop`, `runAgentLoopContinue`, `AgentEventSink` | `eta_mu.agent.domain.loop` + `eta_mu.agent.infra.stream` |
+| `proxy.ts` | `streamProxy`, `ProxyStreamOptions`, `ProxyAssistantMessageEvent` | `eta_mu.agent.extern.proxy` |
+| `types.ts` | `AgentMessage`, `AgentState`, `AgentTool`, `AgentToolCall`, `AgentToolResult`, `AgentContext`, `AgentEvent`, `AgentLoopConfig`, `ThinkingLevel`, `ToolExecutionMode`, `CustomAgentMessages`, hooks/result types | `eta_mu.agent.law.types` (Malli) + `eta_mu.agent.shape.*` |
+
+The `AgentEvent` lifecycle contract must stay byte-for-byte compatible across the port —
+it is the public API consumed by UIs and session managers.
 
 ## Installation
 
-```bash
-npm install @open-hax/eta-mu-agent-core
+> This package is published from the workspace; it is not installed standalone. Add it as a
+> workspace dependency:
+
+```jsonc
+// package.json
+"dependencies": { "@open-hax/eta-mu-agent-core": "workspace:*" }
 ```
 
 ## Quick Start
@@ -469,6 +498,21 @@ for await (const event of agentLoopContinue(context, config)) {
 
 These low-level streams are observational. They preserve event order, but they do not wait for your async event handling to settle before later producer phases continue. If you need message processing to act as a barrier before tool preflight, use the `Agent` class instead of raw `agentLoop()` or `agentLoopContinue()`.
 
+## Build and test
+
+From the workspace root (`pnpm`, never `npm`); scripts match `package.json`:
+
+```bash
+pnpm -C packages/legacy/agent run build   # tsgo -p tsconfig.build.json
+pnpm -C packages/legacy/agent run dev     # tsgo --watch
+pnpm -C packages/legacy/agent test        # vitest --run
+pnpm -C packages/legacy/agent run clean
+```
+
+This package has no `typecheck` script; type errors surface through `build`.
+
 ## License
 
-MIT
+MIT. Copyright (c) 2025 Mario Zechner — this package is a fork of an upstream agent SDK,
+which is why the `author` and `LICENSE` copyright holder differ from the `@open-hax`
+package scope. License is consistent across `package.json` and `LICENSE`.

@@ -1,23 +1,20 @@
 # Development
 
-See [AGENTS.md](../../../AGENTS.md) for additional guidelines.
+> **DEPRECATED — legacy TypeScript.** This is the legacy coding-agent (`@open-hax/eta-mu-cli`) at `packages/legacy/coding-agent`, being rewritten to ClojureScript. See the rewrite inventories under `docs/coding-agent-cljs-rewrite-inventory-*.md`. Do not start new TS work here.
+
+See the workspace [AGENTS.md](../../../../AGENTS.md) for ClojureScript conventions and the Kanban/GitHub workflow.
 
 ## Setup
 
-```bash
-git clone https://github.com/badlogic/pi-mono
-cd pi-mono
-npm install
-npm run build
-```
-
-Run from source:
+This package lives in the eta-mu pnpm monorepo. Work from the monorepo root and use pnpm workspace filters — do not clone it standalone.
 
 ```bash
-/path/to/pi-mono/pi-test.sh
+# from the eta-mu monorepo root
+pnpm install
+pnpm --filter @open-hax/eta-mu-cli run build
 ```
 
-The script can be run from any directory. Pi keeps the caller's current working directory.
+`build` first builds its CLJS/TS workspace dependency `@open-hax/eta-mu-runtime` (via the `prebuild` script), then compiles with `tsgo` and copies assets.
 
 ## Forking / Rebranding
 
@@ -54,18 +51,24 @@ Never use `__dirname` directly for package assets.
 
 ## Testing
 
+Tests run under Vitest. The `pretest` script first compiles `@open-hax/eta-mu-runtime`'s CLJS.
+
 ```bash
-./test.sh                         # Run non-LLM tests (no API keys needed)
-npm test                          # Run all tests
-npm test -- test/specific.test.ts # Run specific test
+# from the eta-mu monorepo root
+pnpm --filter @open-hax/eta-mu-cli test                                  # run all tests
+pnpm --filter @open-hax/eta-mu-cli exec vitest run test/specific.test.ts # run a specific test
 ```
 
 ## Project Structure
 
+This package is `packages/legacy/coding-agent` (`@open-hax/eta-mu-cli`). Its sibling legacy TS dependencies in the monorepo:
+
 ```
-packages/
-  ai/           # LLM provider abstraction
-  agent/        # Agent loop and message types  
-  tui/          # Terminal UI components
-  coding-agent/ # CLI and interactive mode
+packages/legacy/
+  ai/           # @open-hax/eta-mu-ai — LLM provider abstraction
+  agent/        # @open-hax/eta-mu-agent-core — agent loop and message types
+  tui/          # @open-hax/eta-mu-tui — terminal UI components
+  coding-agent/ # @open-hax/eta-mu-cli — this package: CLI and interactive mode
 ```
+
+It also depends on the active CLJS package `@open-hax/eta-mu-runtime` (`packages/runtime`) and `@open-hax/eta-mu-extensions` (`packages/extensions`).

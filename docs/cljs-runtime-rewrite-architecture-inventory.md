@@ -1,6 +1,6 @@
 # Eta-mu CLJS Runtime Rewrite — Architecture Inventory
 
-Date: 2026-06-16 (refreshed after monorepo reorg)
+Date: 2026-06-19 (refreshed against source: reclassified axxium/extensions-e2e/protocols/katamorph, corrected file counts, recorded the `eta-mu-extensions` stub and `sol-staging`)
 Parent epic: `kanban/epics/eta-mu-cljs-runtime-rewrite.md`
 Kanban task: `kanban/tasks/eta-mu-cljs-rewrite-architecture-inventory.md`
 Knowledge graph anchor: `AGENTS.md` → `kanban/epics/eta-mu-cljs-runtime-rewrite.md`
@@ -26,9 +26,9 @@ The design target is Knoxx-style organization, not Knoxx product behavior:
 
 Source counts below exclude obvious build/output folders such as `node_modules`, `dist`, `target`, `.shadow-cljs`, `.build`, and `out`, and only count files under source-like roots such as `src`, `test`, `tests`, `lib`, `scripts`, `e2e`, `web`, and `externs`.
 
-Total under `packages/**`: ~1620 TS/JS/CLJS source files.
+Total under `packages/**`: ~1789 TS/JS/CLJS source files (re-counted 2026-06-19 with the source-count command below; the earlier ~1620 figure predated subsequent CLJS growth).
 
-> Scope note: the per-package row counts below sum to fewer than the repo-wide `find` total (~1786 at baseline) because the table only counts files under the explicitly listed source roots for each package. Configuration, resources, build scripts, and additional source-like paths outside those roots are intentionally excluded from the planning baseline so the inventory stays focused on rewrite-relevant code.
+> Scope note: the per-package row counts below sum to fewer than the repo-wide `find` total because the table only counts files under the explicitly listed source roots for each package. Configuration, resources, build scripts, and additional source-like paths outside those roots are intentionally excluded from the planning baseline so the inventory stays focused on rewrite-relevant code. `packages/sol-staging` (the unbuilt Knoxx-backend source tree, ~265 CLJS files) is also excluded from the planning sum because it has no `package.json` and is compiled only via `packages/sol`'s shadow-cljs config; it is listed separately at the bottom of the table.
 
 | Path | Package | TS/JS | CLJ/CLJS/EDN | Source roots |
 |---|---|---:|---:|---|
@@ -44,19 +44,26 @@ Total under `packages/**`: ~1620 TS/JS/CLJS source files.
 | `packages/legacy/output-contract-gate` | `@open-hax/output-contract-gate` | 16 | 0 | `src` |
 | `packages/legacy/publication-components` | `@open-hax/garden-publication-components` | 10 | 0 | `src` |
 | `packages/legacy/tui` | `@open-hax/eta-mu-tui` | 52 | 0 | `src`, `test` |
-| `packages/Rheos` | `@open-hax/rheos` | 1 | 38 | `src`, `test`, `scripts` |
+| `packages/Rheos` | `@open-hax/rheos` | 1 | 45 | `src`, `test`, `scripts` |
 | `packages/sol` | `@open-hax/sol` | 7 | 114 | `src`, `test`, `scripts` |
 | `packages/katamorph` | `@open-hax/katamorph` | 0 | 32 | `src`, `test` |
-| `packages/chat-ui` | `@open-hax/chat-ui` | 0 | 5 | `src`, `test` |
+| `packages/chat-ui` | `@open-hax/chat-ui` | 0 | 10 | `src`, `test` |
 | `packages/event-ledger` | `@promethean-os/event-ledger` | 0 | 14 | `src`, `test` |
 | `packages/protocols` | `@promethean-os/openplanner-protocols` | 0 | 34 | `src`, `test` |
 | `packages/axxium` | `@open-hax/axxium` | 2 | 9 | `src`, `scripts` |
 | `packages/mcp-contracts` | `@open-hax/mcp-contracts` | 0 | 1 | `src` |
-| `packages/kanban-orchestrator` | `@open-hax/kanban-orchestrator` | 0 | 0 | — |
-| `packages/kondo-config` | `@open-hax/kondo-config` | 0 | 0 | — |
+| `packages/kanban-orchestrator` | `@open-hax/kanban-orchestrator` | 0 | 5 | `contracts` (EDN) |
+| `packages/kondo-config` | `@open-hax/kondo-config` | 0 | 0 | — (config + one `.clj` hook) |
 | `packages/tsconfig` | `@eta-mu/tsconfig` | 0 | 0 | — |
+| `packages/eta-mu-extensions` | — (STALE STUB) | 0 | 1 | — (only `kanban/.events/ledger.edn`) |
+| `packages/sol-staging` | — (no `package.json`) | 0 | ~265 | `src/cljs`, `test/cljs` |
 
 Inventory caveat: `packages/runtime` now contains the CLJS shadow spine under `src/cljs` and `test/cljs`, while `packages/runtime/src` still contains `.js`, `.js.map`, and `.d.ts` siblings alongside `.ts` files. Runtime-core planning should decide whether those checked-in JS artifacts are intentional compatibility shims, stale generated files, or source artifacts that must be preserved during the facade phase.
+
+Two non-package directories sit under `packages/` and are NOT workspace members:
+
+- `packages/eta-mu-extensions` — **stale stub flagged for removal.** It has no `package.json` and no `src`; its only content is `kanban/.events/ledger.edn`. The canonical eta-mu-extensions code lives at `packages/extensions` (`@open-hax/eta-mu-extensions`). The path rename `packages/eta-mu-extensions` → `packages/extensions` already happened; this leftover directory should be deleted. Any doc or path reference pointing at `packages/eta-mu-extensions` is wrong and should be retargeted to `packages/extensions`.
+- `packages/sol-staging` — the Knoxx-backend source tree (`knoxx.backend.*` under `src/cljs`/`test/cljs`, ~265 CLJS files). It has no `package.json` and no `shadow-cljs.edn`; it is built only through `packages/sol`'s shadow-cljs config. `packages/sol` (`@open-hax/sol`) is the canonical/active package.
 
 ## Public compatibility surfaces
 
@@ -72,13 +79,15 @@ Inventory caveat: `packages/runtime` now contains the CLJS shadow spine under `s
 | `packages/legacy/kanban` | binary `openhax-kanban`; multiple board/content/task exports | Keep as operational support unless rewrite scope expands to the board tool itself. |
 | `packages/sol` | `@open-hax/sol` | New CLJS-first eta-mu core (belief state, panels, mu candidates, action envelopes). Likely supersedes parts of `runtime` over time; treat as experimental category owner. |
 | `packages/Rheos` | `@open-hax/rheos` | Kanban/web UI runtime and service shell. Contains both CLJS UI and small TS bootstraps. |
-| `packages/katamorph` | `@open-hax/katamorph` | Shape/transformation library. Pure CLJS shape work. |
-| `packages/chat-ui` | `@open-hax/chat-ui` | Reagent chat UI components. Browser `extern.*` reference. |
+| `packages/katamorph` | `@open-hax/katamorph` | Contract/resource runtime ("data as interpreter"): manifest grammar, Malli schema registry, store protocol + memory/mongo registries, action interpreter, policy/condition/filter/driver registries, agent-turn utils. All-CLJS. Pure data + interpreter; the schema/manifest grammar is a `law.*`/`shape.*` reference, the interpreter is `domain.*`. |
+| `packages/chat-ui` | `@open-hax/chat-ui` | Helix/React chat UI components (`ChatPanel`, `MessageBubble`, `ChatComposer`) + `IChatSession` protocol with sol/knoxx/mock backends. Browser `extern.*` reference. (Uses lilactown/helix exclusively — not Reagent.) |
 | `packages/legacy/publication-components` | `@open-hax/garden-publication-components` | Web publication components. Defer until message shapes are stable. |
 | `packages/event-ledger` | `@promethean-os/event-ledger` | Event ledger contracts and storage. Infra/extern boundary. |
-| `packages/protocols` | `@promethean-os/openplanner-protocols` | Cross-package protocol schemas. `law.*` candidate. |
-| `packages/axxium` | `@open-hax/axxium` | Small mixed TS/CLJS utility. Audit before classifying. |
-| `packages/mcp-contracts` | `@open-hax/mcp-contracts` | MCP tool contract schemas. `law.*` candidate. |
+| `packages/protocols` | `@promethean-os/openplanner-protocols` | Cross-package CLJS protocol/schema definitions for OpenPlanner: canonical event-ledger envelope (Malli, via `metosin/malli`) plus eight `defprotocol`s (EventAdmission, SessionManagement, DocumentStorage, GraphOperations, TranslationManagement, LabelManagement, UserManagement, RealtimeSubscription) and four transport record families under `src/promethean/records/` (`edn/`, `mongo/`, `rest/`, `socket-io/`). Namespace root is `promethean.*`, not `open-hax.*`. Both `law.*` (schemas/protocols) and `extern.*`/`infra.*` (transport records) candidate. |
+| `packages/axxium` | `@open-hax/axxium` | All-ClojureScript identity/auth kernel (shadow-cljs `:esm`/Node, Fastify + Postgres): password auth (bcryptjs), JWT/cookie sessions, actor read surface, single entity read endpoint. Ten `.cljs` sources under `src/cljs/` plus two helper `.mjs` files; **no `.ts`/`.tsx`**. Not a "mixed TS/CLJS utility" — classify as a full CLJS server. |
+| `packages/mcp-contracts` | `@open-hax/mcp-contracts` | Generic CLJS loader that teaches a knoxx-style runtime to accept `:mcp-server` contracts (single `src/eta_mu/mcp_contracts.cljs`, consumed via source-path). `law.*`/`infra.*` candidate. |
+| `packages/extensions-e2e` | `@open-hax/eta-mu-extensions-e2e` | **Active** shadow-cljs `:node-test` harness that compiles contract-runtime-v2 directly from `packages/extensions` (source-paths `../extensions/src`, `../extensions/lib`) and runs cljs.test E2E coverage of `evaluate-policies`/`evaluate-fulfillments`. Boundary test surface, not deferred. |
+| `packages/kanban-orchestrator` | `@open-hax/kanban-orchestrator` | Kanban board orchestrator agent expressed as contract **data only** (agent/role/capability/actor + `rheos-kanban` MCP-server EDN under `contracts/`). Loaded by a knoxx-style runtime; no build/test scripts. Host-config surface, not a port target. |
 | `~/.agents/skills/*` (not a workspace package) | Agent skill manifests (`SKILL.md`, `CONTRACT.edn`) loaded by the harness | Runtime protocol surface. Classify as `extern.runtime` host-boundary configuration, not a package to port. |
 
 ## Target ownership map
@@ -104,7 +113,7 @@ Inventory caveat: `packages/runtime` now contains the CLJS shadow spine under `s
 
 ## Deferred packages
 
-The following packages are explicitly deferred from the first rewrite slices. They are either legacy support surfaces, not-yet-landed planned packages, or test-only boundaries that depend on core runtime parity.
+The following packages are explicitly deferred from the first rewrite slices. They are either legacy support surfaces or not-yet-landed planned packages. (`packages/extensions-e2e` was previously listed here as deferred; it is now an active boundary test harness — see the public-compatibility table above — and has been removed from this list.)
 
 | Package | Current location / status | Rationale for deferral |
 |---|---|---|
@@ -112,7 +121,6 @@ The following packages are explicitly deferred from the first rewrite slices. Th
 | `eta-mu-github` | `packages/legacy/github` | Legacy GitHub automation/review gate. Depends on `runtime`, `ai`, and `cli`. Defer until core runtime parity is proven and provider/extern adapters are stable. |
 | `eta-mu-docs` | `packages/legacy/docs` | Docs view/intake projection surface. Small and stable; defer until core message/session shapes are finalized so the projection contract does not churn. |
 | `eta-mu-truth` | Planned; not yet landed (see `kanban/eta-mu-charter-v1.md`, `kanban/signal-extraction-foundation.md`) | Not implemented. Blocked on runtime core and truth-workbench design. |
-| `eta-mu-extensions-e2e` | `packages/extensions-e2e` | E2E tests for the extension boundary. Defer until the extension surface and `extern.opencode` adapter contracts are stable. |
 | `presence-core` | Planned; not yet landed | Not implemented. Part of the eta-mu charter but has no source tree yet. |
 | `signal-contracts` | Planned; not yet landed | Not implemented. Signal extraction foundation package; defer until signal-system contracts are stabilized. |
 | `signal-radar-core` | Planned; not yet landed | Not implemented. Signal extraction foundation package; defer until radar core is stabilized. |
@@ -279,7 +287,7 @@ Baseline recorded 2026-06-16 against commit `1809efd`. Run these before each par
 
 ```bash
 find packages \( -path '*/node_modules' -o -path '*/dist' -o -path '*/dist-cljs' -o -path '*/target' -o -path '*/.shadow-cljs' -o -path '*/.build' -o -path '*/out' \) -prune -o -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.mjs' -o -name '*.cjs' -o -name '*.cljs' -o -name '*.cljc' -o -name '*.clj' \) -print | wc -l
-# => 1620
+# => 1789 (2026-06-19; was 1620 at the 2026-06-16 baseline)
 ```
 
 (The original command also referenced `services/`, which no longer exists in this workspace.)

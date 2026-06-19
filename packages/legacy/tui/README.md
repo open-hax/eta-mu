@@ -1,5 +1,8 @@
 # @open-hax/eta-mu-tui
 
+> [!WARNING]
+> **DEPRECATED — legacy TypeScript.** This package lives under `packages/legacy/` and is slated for a ClojureScript rewrite. Do not add new TypeScript here. See the rewrite plan and dependency map in [`docs/tui-cljs-rewrite-inventory.md`](../../../docs/tui-cljs-rewrite-inventory.md) (parent epic: `kanban/epics/tui-cljs-rewrite.md`). New code in this monorepo is ClojureScript-first.
+
 Minimal terminal UI framework with differential rendering and synchronized output for flicker-free interactive CLI applications.
 
 ## Features
@@ -752,28 +755,45 @@ See `test/chat-simple.ts` for a complete chat interface example with:
 - Editor with autocomplete and slash commands
 - Spacers between messages
 
-Run it:
+Run it (from this package directory, `packages/legacy/tui`):
 ```bash
-npx tsx test/chat-simple.ts
+pnpm exec tsx test/chat-simple.ts
 ```
 
 ## Development
 
+All commands run from this package directory (`packages/legacy/tui`); `pnpm install` is run once from the monorepo root.
+
 ```bash
 # Install dependencies (from monorepo root)
-npm install
+pnpm install
 
-# Run type checking
-npm run check
+# Build (emits dist/ via tsgo against tsconfig.build.json)
+pnpm run build
+
+# Watch build
+pnpm run dev
+
+# Run the test suite (node --test via tsx)
+pnpm test
+
+# Remove build output
+pnpm run clean
 
 # Run the demo
-npx tsx test/chat-simple.ts
+pnpm exec tsx test/chat-simple.ts
 ```
+
+The full script list is in [`package.json`](./package.json): `build`, `dev`, `test`, `clean`, `prepublishOnly`. There is no `check` script — use `pnpm run build` (tsgo) for type checking.
 
 ### Debug logging
 
 Set `PI_TUI_WRITE_LOG` to capture the raw ANSI stream written to stdout.
 
 ```bash
-PI_TUI_WRITE_LOG=/tmp/tui-ansi.log npx tsx test/chat-simple.ts
+PI_TUI_WRITE_LOG=/tmp/tui-ansi.log pnpm exec tsx test/chat-simple.ts
 ```
+
+## License
+
+MIT — see [`LICENSE`](./LICENSE) (Copyright (c) 2025 Mario Zechner). Both `package.json` (`"license": "MIT"`) and the `LICENSE` file agree: this package is MIT-licensed, inherited from its upstream origin. No LGPL/GPL notice exists anywhere in this package; if you encounter a doc claiming an LGPL license for this TUI, it is stale and incorrect.

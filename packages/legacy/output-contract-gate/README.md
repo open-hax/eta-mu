@@ -1,4 +1,12 @@
-# @workspace/output-contract-gate
+# @open-hax/output-contract-gate
+
+> **DEPRECATED (legacy TypeScript).** This package lives under `packages/legacy/`
+> and is slated for a ClojureScript rewrite. Do not add new TypeScript here.
+> See the rewrite inventory: [`docs/output-contract-gate-cljs-rewrite-inventory.md`](../../../docs/output-contract-gate-cljs-rewrite-inventory.md).
+>
+> Note: despite the deprecation, this package is still consumed at runtime by
+> the canonical CLJS `packages/extensions` via `workspace:*`, so it remains
+> buildable until that dependency is migrated.
 
 Prototype runtime for contract-enforced agent output.
 
@@ -9,28 +17,32 @@ Current scope:
 - validate the five-section ημ response shape deterministically
 - compile bounded repair prompts from machine failures
 
-This package is the first implementation slice for:
-- `specs/drafts/contract-enforced-agent-output-pipeline-2026-03-23.md`
-
 ## Commands
 
+This is a TypeScript package built with `tsc`. Scripts (see `package.json`):
+
 ```bash
-pnpm --filter @workspace/output-contract-gate build
-pnpm --filter @workspace/output-contract-gate test
-pnpm --filter @workspace/output-contract-gate validate -- --contract ../../specs/drafts/contract-enforced-agent-output-pipeline.example.edn --response ./sample.md
+pnpm --filter @open-hax/output-contract-gate build       # tsc -p tsconfig.json
+pnpm --filter @open-hax/output-contract-gate typecheck   # tsc --noEmit
+pnpm --filter @open-hax/output-contract-gate test        # node --test dist/**/*.test.js
+pnpm --filter @open-hax/output-contract-gate clean       # rm -rf dist
+pnpm --filter @open-hax/output-contract-gate validate    # node dist/cli.js
 ```
+
+`test` runs against compiled output, so `build` first.
 
 ## CLI
 
-Validate a Markdown response against an EDN contract file:
+The package ships an `output-contract-gate` bin (`dist/cli.js`). Validate a
+Markdown response against an EDN contract file:
 
 ```bash
-pnpm --filter @workspace/output-contract-gate build
+pnpm --filter @open-hax/output-contract-gate build
 
-node devel/packages/output-contract-gate/dist/cli.js \
-  --contract devel/specs/drafts/contract-enforced-agent-output-pipeline.example.edn \
+node packages/legacy/output-contract-gate/dist/cli.js \
+  --contract ./contract.example.edn \
   --response /tmp/candidate.md \
-  --artifacts-root devel/artifacts/output-contract-gate
+  --artifacts-root ./artifacts/output-contract-gate
 ```
 
 The CLI prints JSON.
@@ -62,22 +74,22 @@ Current artifact bundle:
 Generate a candidate, then pipe it through the structure gate and, on success, the review stub:
 
 ```bash
-node devel/packages/output-contract-gate/dist/cli.js generate \
-  --contract devel/specs/drafts/contract-enforced-agent-output-pipeline.example.edn \
+node packages/legacy/output-contract-gate/dist/cli.js generate \
+  --contract ./contract.example.edn \
   --task-text "Turn this request into the required five-section response." \
   --generator fixture-valid \
-  --artifacts-root devel/artifacts/output-contract-gate
+  --artifacts-root ./artifacts/output-contract-gate
 ```
 
-Supported generators:
+Supported generators (default `fixture-valid`):
 - `fixture-valid`
 - `fixture-invalid`
 - `openai-chat`
 
-`openai-chat` uses an OpenAI-compatible `POST /chat/completions` transport.
-
-Default model for `openai-chat` remains `gpt-5.4`.
-`qwen3.5` was verified successfully through local `proxx`, but must be selected explicitly when desired.
+`openai-chat` uses an OpenAI-compatible `POST /chat/completions` transport. The
+default base URL is `OPENAI_BASE_URL` or `http://127.0.0.1:8789/v1` (the canonical
+local `proxx` primary port). The default model is `gpt-5.4`; select another model
+explicitly with `--model`.
 
 Useful flags:
 - `--task-file <path>`
@@ -100,8 +112,8 @@ and, when structure passes, also writes:
 Once a structurally valid bundle exists, emit a machine-shaped stub review report:
 
 ```bash
-node devel/packages/output-contract-gate/dist/cli.js review-stub \
-  --bundle devel/artifacts/output-contract-gate/<run-id>
+node packages/legacy/output-contract-gate/dist/cli.js review-stub \
+  --bundle ./artifacts/output-contract-gate/<run-id>
 ```
 
 This writes:
@@ -114,10 +126,15 @@ The stub reviewer is deterministic and heuristic-only. It is a placeholder for t
 
 ## Status
 
-Prototype only.
+Prototype only, and deprecated (see banner above).
 The first reference contract is the five-section response shape:
 - Signal
 - Evidence
 - Frames
 - Countermoves
 - Next
+
+## License
+
+Package `license` field is `GPL-3.0-only` (`package.json`). No `LICENSE` file is
+present in this package directory.

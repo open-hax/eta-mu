@@ -5,12 +5,13 @@ status: incoming
 priority: P3
 labels: ["specs", "migrated-spec"]
 created_at: "2026-05-29T04:29:38.093Z"
-source: "orgs/open-hax/eta-mu/packages/eta-mu-extensions/spec/extension-integration-plan.md"
+source: "orgs/open-hax/eta-mu/packages/extensions/kanban/extension-integration-plan.md"
 category: "specs"
 ---
 
-> Source: `orgs/open-hax/eta-mu/packages/eta-mu-extensions/spec/extension-integration-plan.md`
-> Migrated-to-kanban: `orgs/open-hax/eta-mu/packages/eta-mu-extensions/kanban/extension-integration-plan.md`
+> Source: `orgs/open-hax/eta-mu/packages/extensions/kanban/extension-integration-plan.md`
+> Migrated-to-kanban: `orgs/open-hax/eta-mu/packages/extensions/kanban/extension-integration-plan.md`
+> Reconciled against `manifest.edn` on 2026-06-19 (15 `:local :tracked` extensions; phantom image extensions removed).
 
 # Extension Integration Plan for eta-mu
 
@@ -24,25 +25,42 @@ This document specifies the integration plan for remaining pi/opencode extension
 
 ## Current State
 
-### Ported Extensions (CLJS - 11 total)
+### Ported Extensions (CLJS — 15 total)
 
-| Extension | Lines | Status | Dependencies |
-|-----------|-------|--------|--------------|
-| `bootstrap.cljs` | 345 | ✅ Active | None |
-| `chronos.cljs` | 9,623 | ✅ Active | None |
-| `contract_runtime.cljs` | 18,197 | ✅ Active | None |
-| `custom_providers.cljs` | 7,678 | ✅ Active | None |
-| `image_render.cljs` | 9,220 | ✅ Active | None |
-| `opencode_global_instructions.cljs` | 2,185 | ✅ Active | None |
-| `opmf_contract_gate.cljs` | 17,272 | ✅ Active | `@open-hax/output-contract-gate` |
-| `receipt_river.cljs` | 23,868 | ✅ Active | None |
-| `session_mycology.cljs` | 30,152 | ✅ Active | None |
-| `task_timing.cljs` | 7,425 | ✅ Active | None |
-| `websearch_open_hax.cljs` | 5,599 | ✅ Active | None |
+Source of truth is `manifest.edn`, which declares exactly 15 `:source :local :tracked true`
+extensions, every one of which has matching CLJS source under
+`src/eta_mu/extensions/`. The table below is the manifest set:
+
+| Extension (manifest name) | Source file | Description |
+|---------------------------|-------------|-------------|
+| `apply-patch` | `apply_patch.cljs` | Codex-style multi-file patch tool |
+| `bootstrap` | `bootstrap.cljs` | Session initialization and state recovery |
+| `chronos` | `chronos.cljs` | Time tracking for contracting work |
+| `contract-runtime` | `contract_runtime.cljs` | Operational contract runtime v1 |
+| `contract-runtime-v2` | `contract_runtime_v2.cljs` | Contract runtime v2: cwd-walk, policy gate, fulfillment notify/audit |
+| `custom-providers` | `custom_providers.cljs` | Provider configuration extensions |
+| `graph-memory` | `graph_memory.cljs` | Graph memory tools for OpenPlanner/Graph-Weaver |
+| `image-render` | `image_render.cljs` | Image rendering for TUI (the only image extension) |
+| `lisp-decomp-nudge` | `lisp_decomp_nudge.cljs` | Nudge agent to decompose large Lisp fns on paren mismatch |
+| `opencode-global-instructions` | `opencode_global_instructions.cljs` | Global instruction injection for OpenCode |
+| `opmf-contract-gate` | `opmf_contract_gate.cljs` | Output contract gate enforcement (depends on `@open-hax/output-contract-gate`) |
+| `receipt-river` | `receipt_river.cljs` | Append-only receipts.log ledger for multi-step work |
+| `session-mycology` | `session_mycology.cljs` | Per-turn retrospection with p-scores and skill-spore incubation |
+| `task-timing` | `task_timing.cljs` | Task timing and performance tracking |
+| `websearch-open-hax` | `websearch_open_hax.cljs` | Web search via OpenHax proxy |
+
+Non-extension source under the same directory (helpers/tests, deliberately absent from
+the manifest): `prompt_section.cljs`, the `*_test.cljs` files, and the
+`contract_runtime_v2/` and `receipt_river/` subdirectories.
 
 ### Legacy TypeScript extensions
 
-The `pi/agent/extensions` TypeScript source directory has been retired to avoid runtime drift. `apply-patch` is now CLJS (`src/eta_mu/extensions/apply_patch.cljs`). `skill-graph-aco` was removed from the active runtime; static `skill_graph`/graph-memory tooling is canonical until an ACO CLJS rewrite is justified.
+The `pi/agent/extensions` TypeScript source directory has been retired to avoid runtime drift.
+`apply-patch` is now CLJS (`src/eta_mu/extensions/apply_patch.cljs`). `skill-graph-aco` was
+removed from the active runtime; static `skill_graph`/graph-memory tooling is canonical until
+an ACO CLJS rewrite is justified. (`contract_runtime.cljs` still *reads* a
+`skill-graph-aco/skill-call-events.jsonl` telemetry file, but there is no `skill-graph-aco`
+extension.)
 
 ## Identified Patterns for Macroization
 
@@ -87,12 +105,16 @@ Repetitive parameter definitions with:
 - [x] Create `lib/eta_mu/macros/tool.cljc`
 - [ ] Refactor existing extensions to use macros
 
-### Week 2: Image Extensions (P1) - IN PROGRESS
+### Week 2: Image Extensions (P1) — NOT LANDED / DROPPED
 
-- [x] Create `src/eta_mu/extensions/analyze_image.cljs`
-- [ ] Create `src/eta_mu/extensions/manipulate_image.cljs`
-- [ ] Create integration tests
-- [ ] Update build system
+This roadmap item never shipped. There is **no** `analyze_image.cljs` or
+`manipulate_image.cljs` source anywhere under `packages/extensions`, and neither has a
+`manifest.edn` entry. The single shipped image extension is `image-render`
+(`image_render.cljs`). `analyze_image` survives only as an example docstring inside the
+`deftool` macro (`lib/eta_mu/macros/tool.cljc`).
+
+- [ ] (dropped) `analyze-image` — schedule explicitly only if vision tooling is needed beyond `image-render`
+- [ ] (dropped) `manipulate-image` — same; no current demand
 
 ### Week 3: Drift removal
 
@@ -118,7 +140,7 @@ Repetitive parameter definitions with:
 
 ## Success Metrics
 
-- All 18 extensions load without errors
+- All 15 manifest-declared extensions load without errors
 - Build time < 60 seconds
 - Test coverage > 80%
 - No runtime errors in production use

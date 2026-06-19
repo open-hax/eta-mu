@@ -1,166 +1,103 @@
 # Shared clj-kondo config baseline inventory
 
-> Generated: 2026-06-15T00:00:00Z
-> Branch: `feat/kanban-comments-parity`
+> Generated: 2026-06-15 (original baseline) · Refreshed: 2026-06-19 against source
 > Scope: every package under `packages/*`
+
+> **Status update (2026-06-19): the wiring described as future work in this doc is DONE.**
+> The original baseline was written *before* clj-kondo was wired up and recorded most packages as having no `.clj-kondo` and no `lint:kondo` script. That is no longer true. As of this refresh, **every CLJS workspace package** (Rheos, axxium, chat-ui, event-ledger, extensions, extensions-e2e, katamorph, mcp-contracts, protocols, runtime, sol) has a `.clj-kondo/config.edn` that is a thin `:config-paths` wrapper pointing at the shared `@open-hax/kondo-config` export, plus a `lint:kondo` script in its `package.json`. The local config duplication that the original doc flagged as cleanup work has been removed; only the documented package-local exceptions remain (see §3). Sections below are updated to current state; the original "gaps / cleanup" framing is preserved only where it explains *why* a local exception still exists.
 
 ## 1. Package classification table
 
+Verified 2026-06-19. "Has `.clj-kondo`?" / "Has `lint:kondo`?" reflect current source state, not the pre-wiring baseline.
+
 | Package | Classification | Has `.clj-kondo`? | Has `lint:kondo` script? | Notes |
 |---------|---------------|-------------------|--------------------------|-------|
-| Rheos | `cljs` | Yes (`packages/Rheos/.clj-kondo/config.edn`) | No (has `lint`) | shadow-cljs + deps (`src`, `test`) |
-| axxium | `cljs` | No | No | shadow-cljs + deps.edn; sources under `src/cljs` |
-| chat-ui | `cljs` | No | No | shadow-cljs; sources under `src`, `test` |
-| event-ledger | `cljs` | Yes | No (has `lint`) | shadow-cljs; sources under `src`, `test` |
-| extensions | `cljs` | No | No | shadow-cljs; sources under `src`, `lib` |
-| extensions-e2e | `cljs` | No | No | shadow-cljs; sources under `src` |
-| kanban-orchestrator | `config-only` | No | No | contracts only; no source files |
-| katamorph | `cljs` | No | No (has `lint`) | shadow-cljs + deps.edn; sources under `src/cljs`, `test/cljs` |
+| Rheos | `cljs` | Yes (`:config-paths` + nothing local) | Yes (also has legacy `lint`) | shadow-cljs + deps (`src`, `test`) |
+| axxium | `cljs` | Yes (`:config-paths` only) | Yes (also has `boundary:check`) | shadow-cljs + deps.edn; sources under `src/cljs` |
+| chat-ui | `cljs` | Yes (`:config-paths` only) | Yes | shadow-cljs; sources under `src`, `test` |
+| event-ledger | `cljs` | Yes (`:config-paths` + local `(malli.core/=>)` exclude) | Yes (also has legacy `lint`) | shadow-cljs; sources under `src`, `test` |
+| extensions | `cljs` | Yes (`:config-paths` only) | Yes | shadow-cljs; sources under `src`, `lib` |
+| extensions-e2e | `cljs` | Yes (`:config-paths` only) | Yes | shadow-cljs; sources under `src`; lint scope is `src` only |
+| kanban-orchestrator | `config-only` | No | No | contracts (EDN) only; no `.cljs`/`.clj` source, no shadow-cljs |
+| katamorph | `cljs` | Yes (`:config-paths` only) | Yes (also has legacy `lint`) | shadow-cljs + deps.edn; sources under `src/cljs`, `test/cljs` |
+| kondo-config | `config-only` (rule owner) | n/a (it IS the shared config) | No | `@open-hax/kondo-config`: ships `clj-kondo.exports/open-hax/kondo-config/config.edn` + `hooks/promise_chain.clj`. Source of the rules every other package inherits. |
 | legacy | `ts-only` | No | No | meta-directory of TS subpackages; no root package.json or CLJS build config |
-| mcp-contracts | `cljs` | No | No | single `src/eta_mu/mcp_contracts.cljs` consumed as source-path by `sol`; no shadow-cljs/deps.edn of its own |
-| protocols | `cljs` | Yes | No (has `lint`) | shadow-cljs; sources under `src`, `test` |
-| runtime | `cljs` | No | No | shadow-cljs; sources under `src/cljs`, `test/cljs` |
-| sol | `cljs` | Yes | No (has `lint`) | shadow-cljs + deps.edn; sources under `src/cljs`, `test/cljs` |
-| sol-staging | `unknown` | No | No | large `src/cljs` and `test/cljs` tree but no `package.json`, no `shadow-cljs.edn`, and not a pnpm workspace package |
+| mcp-contracts | `cljs` | Yes (`:config-paths` only) | Yes | single `src/eta_mu/mcp_contracts.cljs` consumed as source-path by `sol`; no shadow-cljs/deps.edn of its own |
+| protocols | `cljs` | Yes (`:config-paths` + local `(malli.core/=>)` exclude) | Yes (also has legacy `lint`) | shadow-cljs; sources under `src`, `test` (namespace root `promethean.*`) |
+| runtime | `cljs` | Yes (`:config-paths` only) | Yes | shadow-cljs; sources under `src/cljs`, `test/cljs` |
+| sol | `cljs` | Yes (`:config-paths` + local `defroute` hook) | Yes (also has legacy `lint`) | shadow-cljs + deps.edn; sources under `src/cljs`, `test/cljs` |
+| sol-staging | `unmanaged-cljs` | No | No | large `src/cljs`/`test/cljs` tree (~265 cljs, `knoxx.backend.*`) but no `package.json`, no `shadow-cljs.edn`; built only via `packages/sol`. Not separately wired. |
 | tsconfig | `config-only` | No | No | shared TypeScript base config only |
 
-**CLJS packages to wire (11):** Rheos, axxium, chat-ui, event-ledger, extensions, extensions-e2e, katamorph, mcp-contracts, protocols, runtime, sol.
+**CLJS packages wired (11, all done):** Rheos, axxium, chat-ui, event-ledger, extensions, extensions-e2e, katamorph, mcp-contracts, protocols, runtime, sol. Each has a `.clj-kondo/config.edn` and a `lint:kondo` script. `kondo-config` is the rule owner and `sol-staging` is unmanaged (built through `sol`); neither is in the wired-package count.
 
-## 2. CLJS packages — lint surface
+## 2. CLJS packages — lint surface (current)
 
-| Package | Lint paths | Existing config conflict / duplication |
-|---------|------------|----------------------------------------|
-| Rheos | `src`, `test` | Has local `:lint-as` for `js-await` and `:linters` for unresolved symbols / discouraged vars. These duplicate shared rules and should be removed after `:config-paths` is added. No hooks installed. |
-| axxium | `src/cljs` | No existing config; clean install. |
-| chat-ui | `src`, `test` | No existing config; clean install. |
-| event-ledger | `src`, `test` | Existing config already installs the shared promise-chain hooks and linters. Must be merged/preserved; do not duplicate the `:hooks` block. |
-| extensions | `src`, `lib` | No existing config; clean install. Note `lib/` contains `.cljc` macros. |
-| extensions-e2e | `src` | No existing config; clean install. |
-| katamorph | `src/cljs`, `test/cljs` | No existing config; clean install. |
-| mcp-contracts | `src` | No existing config; clean install. |
-| protocols | `src`, `test` | Existing config already installs the shared promise-chain hooks and linters. Must be merged/preserved. |
-| runtime | `src/cljs`, `test/cljs` | No existing config; clean install. |
-| sol | `src/cljs`, `test/cljs` | Existing config installs the shared promise-chain hooks and linters, plus a package-local `knoxx.backend.macros/defroute` hook. The defroute hook must stay local; the rest should be removed from the local file and inherited from the shared config. |
+The `lint:kondo` script in each package determines the lint scope. All local configs now reduce to `{:config-paths ["../../kondo-config/clj-kondo.exports/open-hax/kondo-config"]}` plus the per-package exceptions noted in the last column. The duplication-cleanup that the original baseline anticipated is complete.
 
-## 3. Existing kondo gaps
+| Package | `lint:kondo` scope | Local config beyond `:config-paths` |
+|---------|--------------------|--------------------------------------|
+| Rheos | `src test` | None (previously-duplicated `:lint-as`/`:linters` removed). |
+| axxium | `src/cljs test/cljs` | None. (Separately has a `boundary:check` script: `scripts/check-js-boundary.mjs`.) |
+| chat-ui | `src test` | None. |
+| event-ledger | `src test` | `:linters {:unresolved-symbol {:exclude [(malli.core/=>)]}}` preserved. |
+| extensions | `src lib` | None. `lib/` holds the `.cljc` macros (`event.cljc`, `state.cljc`, `tool.cljc`). |
+| extensions-e2e | `src` (only) | None. Sources are all under `src`; no `test/` root. |
+| katamorph | `src/cljs test/cljs` | None. |
+| mcp-contracts | `src` | None. |
+| protocols | `src test` | `:linters {:unresolved-symbol {:exclude [(malli.core/=>)]}}` preserved. |
+| runtime | `src/cljs test/cljs` | None. |
+| sol | `src/cljs test/cljs` | Package-local `defroute` hook in `:hooks :analyze-call` (see §3 — the hook key is **stale** and needs fixing). Also imports under `.clj-kondo/imports/` for promesa/malli/rewrite-clj. |
 
-### Rheos (`packages/Rheos/.clj-kondo/config.edn`)
+## 3. Shared-rule ownership and current local configs
 
-```edn
-{:lint-as {shadow.cljs.modern/js-await  clojure.core/let
-           shadow.cljs.modern/js-await* clojure.core/let}
- :linters
- {:unresolved-symbol
-  {:exclude [js/console js/Promise js/Error js/JSON js/Object
-             js/Array js/fetch js/parseInt js/parseFloat js/Boolean
-             js/clearTimeout js/setTimeout js/setInterval js/clearInterval
-             js/process js/Buffer js/Symbol js/Date js/Math js/Number
-             js/String js/Uint8Array js/ArrayBuffer js/TextDecoder
-             js/TextEncoder js/structuredClone js/URL js/URLSearchParams
-             js/require js/module js/exports js/__dirname js/__filename]}
-  :discouraged-var
-  {shadow.cljs.modern/js-await  {:level :error
-                                 :message "js-await is deprecated; use bare (await ...) inside ^:async fn."}
-   shadow.cljs.modern/js-await* {:level :error
-                                 :message "js-await* is deprecated; use bare (await ...) inside ^:async fn."}}}}
+### Rule owner: `@open-hax/kondo-config`
 
-```
+All shared rules live in one place: `packages/kondo-config/clj-kondo.exports/open-hax/kondo-config/`. That export directory holds:
 
-- `:lint-as` duplicates the shared config — remove local copy.
-- `:linters` entries for `:unresolved-symbol` and `:discouraged-var` duplicate shared rules — remove local copy.
-- No package-local hooks; safe to replace with a thin `:config-paths` wrapper.
+- `config.edn` — the shared rule set, applied to every consumer via `:config-paths`. It provides:
+  - `:lint-as` — `shadow.cljs.modern/js-await` + `js-await*` → `let`; `helix.core/defnc` → `defn`.
+  - `:linters` levels for `:fn-length/{long,too-long}`, `:file-length/{long,too-long}`, `:complexity/{high,too-complex}`, and `:promise-chain/prefer-async-workflow` (warning).
+  - A large `:unresolved-symbol :exclude` JS-interop allowlist (`js/console`, `js/Promise`, …).
+  - `:discouraged-var` entries for `js-await`/`js-await*`.
+  - `:hooks :analyze-call` wiring the promise-chain hook into `ns`, `->`, `->>`, `do`, `let`, `when`, `when-let`, `if`, `defn`, `defn-`.
+- `hooks/promise_chain.clj` (ns `hooks.promise-chain`) — the only shared hook implementation.
 
-### event-ledger (`packages/event-ledger/.clj-kondo/config.edn`)
+> Caveat: `:fn-length/*`, `:file-length/*`, and `:complexity/*` are **non-standard clj-kondo keys**. `kondo-config` only sets their *levels*; it does not implement those linters (no source for them exists anywhere in the repo). They depend on an external/forked clj-kondo that recognizes them. Stock clj-kondo will ignore those keys.
+
+Consumers reference the export by relative path in their own `.clj-kondo/config.edn`:
 
 ```edn
-{:linters
- {:unresolved-symbol
-  {:exclude [js/console js/Promise js/Error js/JSON js/Object
-             js/Array js/fetch js/parseInt js/parseFloat js/Boolean
-             js/clearTimeout js/setTimeout js/setInterval js/clearInterval
-             js/process js/Buffer js/Symbol js/Date js/Math js/Number
-             js/String js/Uint8Array js/ArrayBuffer js/TextDecoder
-             js/TextEncoder js/structuredClone js/URL js/URLSearchParams
-             js/require js/module js/exports js/__dirname js/__filename
-             js->clj clj->js number js
-             (malli.core/=>)]}
-  :promise-chain/prefer-async-workflow {:level :warning}
-  :fn-length/long                     {:level :warning}
-  :fn-length/too-long                 {:level :error}
-  :file-length/long                   {:level :warning}
-  :file-length/too-long               {:level :error}
-  :complexity/high                    {:level :warning}
-  :complexity/too-complex             {:level :error}}
- :unresolved-namespace {:exclude [js]}
- :hooks
- {:analyze-call
-  {cljs.core/ns       hooks.promise-chain/check-ns
-   cljs.core/->       hooks.promise-chain/check
-   cljs.core/->>      hooks.promise-chain/check
-   cljs.core/do       hooks.promise-chain/check
-   cljs.core/let      hooks.promise-chain/check
-   cljs.core/when     hooks.promise-chain/check
-   cljs.core/when-let hooks.promise-chain/check
-   cljs.core/if       hooks.promise-chain/check
-   cljs.core/defn     hooks.promise-chain/check-defn
-   cljs.core/defn-    hooks.promise-chain/check-defn}}}
-
+{:config-paths ["../../kondo-config/clj-kondo.exports/open-hax/kondo-config"]}
 ```
 
-- Entire file duplicates the shared config **except** `(malli.core/=>)` in `:unresolved-symbol` exclusions.
-- Preserve `(malli.core/=>)` locally; remove all duplicated `:linters`, `:unresolved-namespace`, and `:hooks` entries.
+Root lint command: `pnpm lint:kondo` = `pnpm -r --no-bail --if-present lint:kondo` (fans out to each package's `lint:kondo`).
 
-### protocols (`packages/protocols/.clj-kondo/config.edn`)
+### Packages with the bare wrapper (no local additions)
 
-Identical to event-ledger above, including the `(malli.core/=>)` exclusion.
+`axxium`, `chat-ui`, `extensions`, `extensions-e2e`, `mcp-contracts`, `runtime`, `Rheos` — each `.clj-kondo/config.edn` is exactly the `:config-paths` wrapper above. The duplicated `:lint-as`/`:linters`/`:discouraged-var` blocks that the original baseline showed for Rheos and sol have been removed and are now inherited.
 
-- Preserve `(malli.core/=>)` locally; remove all shared duplicates.
+### Packages with a preserved local exception
 
-### sol (`packages/sol/.clj-kondo/config.edn`)
+**event-ledger** and **protocols** — wrapper plus one local exclusion:
 
 ```edn
-{:lint-as {shadow.cljs.modern/js-await  clojure.core/let
-           shadow.cljs.modern/js-await* clojure.core/let}
- :linters
- {:unresolved-symbol
-  {:exclude [js/console js/Promise js/Error js/JSON js/Object
-             js/Array js/fetch js/parseInt js/parseFloat js/Boolean
-             js/clearTimeout js/setTimeout js/setInterval js/clearInterval
-             js/process js/Buffer js/Symbol js/Date js/Math js/Number
-             js/String js/Uint8Array js/ArrayBuffer js/TextDecoder
-             js/TextEncoder js/structuredClone js/URL js/URLSearchParams
-             js/require js/module js/exports js/__dirname js/__filename]}
-  :promise-chain/prefer-async-workflow {:level :warning}
-  :fn-length/long                     {:level :warning}
-  :fn-length/too-long                 {:level :error}
-  :file-length/long                   {:level :warning}
-  :file-length/too-long               {:level :error}
-  :complexity/high                    {:level :warning}
-  :complexity/too-complex             {:level :error}
-  :discouraged-var
-  {shadow.cljs.modern/js-await  {:level :error
-                                 :message "js-await is the deprecated async form in Knoxx; use a bare (await ...) inside a ^:async fn/defn — it compiles directly to ES async/await."}
-   shadow.cljs.modern/js-await* {:level :error
-                                 :message "js-await* is the deprecated async form in Knoxx; use a bare (await ...) inside a ^:async fn/defn — it compiles directly to ES async/await."}}}
- :hooks
- {:analyze-call
-  {knoxx.backend.macros/defroute hooks.defroute/defroute
-   cljs.core/ns       hooks.promise-chain/check-ns
-   cljs.core/->       hooks.promise-chain/check
-   cljs.core/->>      hooks.promise-chain/check
-   cljs.core/do       hooks.promise-chain/check
-   cljs.core/let      hooks.promise-chain/check
-   cljs.core/when     hooks.promise-chain/check
-   cljs.core/when-let hooks.promise-chain/check
-   cljs.core/if       hooks.promise-chain/check
-   cljs.core/defn     hooks.promise-chain/check-defn
-   cljs.core/defn-    hooks.promise-chain/check-defn}}}
-
+{:config-paths ["../../kondo-config/clj-kondo.exports/open-hax/kondo-config"]
+ :linters {:unresolved-symbol {:exclude [(malli.core/=>)]}}}
 ```
 
-- `knoxx.backend.macros/defroute` hook is **package-local and knoxx-specific** — preserve it.
-- `hooks.defroute/defroute` is not part of the eta-mu shared config; keep the local `hooks/defroute.clj` file and hook wiring.
-- All other `:lint-as`, `:linters`, and `:hooks` entries duplicate the shared config and should be removed.
+The `(malli.core/=>)` exclusion is intentionally local (not pushed to the shared config) and is preserved.
+
+**sol** — wrapper plus a package-local `defroute` hook:
+
+```edn
+{:config-paths ["../../kondo-config/clj-kondo.exports/open-hax/kondo-config"]
+ :hooks {:analyze-call {knoxx.backend.macros/defroute hooks.defroute/defroute}}}
+```
+
+The hook implementation lives at `packages/sol/.clj-kondo/hooks/defroute.clj` and is correctly local (it is not part of the shared eta-mu config). sol also ships `.clj-kondo/imports/` configs for `funcool/promesa`, `metosin/malli`, and `rewrite-clj`.
+
+> **DRIFT FLAG (needs fixing): the sol defroute hook key is stale.** The hook is wired for `knoxx.backend.macros/defroute`, but sol's `defroute` macro now lives in **`open-hax.sol.macros`** (`packages/sol/src/cljs/open_hax/sol/macros.cljc`, ns `open-hax.sol.macros`; used by `infra/routes/app.cljs` and `shape/app_shapes.cljs`). The `knoxx.backend.macros` namespace no longer exists in sol — that name survives only in `packages/sol-staging`. The `:analyze-call` key should be changed to `open-hax.sol.macros/defroute` so the hook actually fires; right now it analyzes a namespace sol no longer defines.
 
 ## 4. Known rule violations (pre-lint signal)
 
@@ -170,7 +107,7 @@ Methodology: regex scan of every `.cljs`/`.cljc`/`.clj` file under each CLJS pac
 - js-await usage: string match for `js-await` / `js-await*` / `shadow.cljs.modern/js-await` (comment occurrences noted).
 - File length flag: total lines > 300.
 
-> **Caveat:** these are coarse signals. The actual clj-kondo run (Epic 2) may report different or additional findings.
+> **Caveat:** these are coarse regex signals from the original baseline, not a clj-kondo run, and they predate the wiring. They are retained as a historical pre-lint snapshot. Now that every CLJS package is wired (§1–§3), run `pnpm lint:kondo` for authoritative findings. Note the `sol-staging` rows below are informational only — that tree has no `package.json` and is not separately linted.
 
 | Package | File | Promise-chain hits | Likely long fns | js-await usage | File length flag |
 |---------|------|--------------------|-----------------|----------------|------------------|
@@ -271,29 +208,28 @@ Methodology: regex scan of every `.cljs`/`.cljc`/`.clj` file under each CLJS pac
 | sol | 11 | 5 | 9 | 0 |
 | sol-staging | 32 | 18 | 29 | 0 |
 
-## 5. Risk flags
+## 5. Risk flags (current state)
 
-1. **Hook overlap with shared config**
-   - `event-ledger`, `protocols`, and `sol` already register `hooks.promise-chain/check` and `hooks.promise-chain/check-defn` for `cljs.core/->`, `->>`, `do`, `let`, `when`, `when-let`, `if`, `defn`, `defn-`, plus `hooks.promise-chain/check-ns` for `cljs.core/ns`.
-   - If the wiring task merges local and shared configs naively, kondo will error on duplicate hook registration. The task must **remove** these entries from the local config and rely on `:config-paths`.
+1. **Stale sol defroute hook (open, needs fixing).**
+   - `packages/sol/.clj-kondo/config.edn` wires `knoxx.backend.macros/defroute → hooks.defroute/defroute`, but sol's `defroute` macro is now `open-hax.sol.macros/defroute`. The hook never matches and the `defroute` forms in `infra/routes/app.cljs` / `shape/app_shapes.cljs` go un-analyzed. Fix: rename the `:analyze-call` key to `open-hax.sol.macros/defroute`. The `knoxx.backend.macros` name only still exists in `packages/sol-staging`. (See §3.)
 
-2. **Package-local hooks that must survive**
-   - `sol` has `knoxx.backend.macros/defroute` mapped to `hooks.defroute/defroute`. This is not part of the eta-mu shared config and must remain in `packages/sol/.clj-kondo/config.edn`.
-   - `event-ledger` and `protocols` each add `(malli.core/=>)` to `:unresolved-symbol` exclusions. This must be preserved in the local config.
+2. **Hook overlap with shared config — RESOLVED.**
+   - The pre-wiring local configs that duplicated `hooks.promise-chain/check`/`check-defn`/`check-ns` have been removed; those hooks are now inherited via `:config-paths` only. No duplicate-registration risk remains.
 
-3. **No `src/` directory at package root**
-   - `axxium`: sources are under `src/cljs`; lint script must use `src/cljs`.
-   - `katamorph`: sources under `src/cljs` and `test/cljs`.
-   - `runtime`: sources under `src/cljs` and `test/cljs`.
-   - `sol`: sources under `src/cljs` and `test/cljs`.
-   - `sol-staging`: sources under `src/cljs` and `test/cljs`, but no workspace package.json; excluded from wiring until build ownership is clarified.
+3. **Package-local exceptions that intentionally survive.**
+   - `sol`: the local `defroute` hook (keep — but fix its key per flag 1).
+   - `event-ledger` and `protocols`: `(malli.core/=>)` in `:unresolved-symbol :exclude`. Preserved locally on purpose.
 
-4. **Non-standard relative path risk**
-   - `Rheos/shadow-cljs.edn` includes source paths outside the package (`../../../openplanner/...`). The clj-kondo `:config-paths` for Rheos is still the standard `../../kondo-config/clj-kondo.exports/open-hax/kondo-config` from `packages/Rheos/.clj-kondo/config.edn` because the config file itself lives at the normal depth.
-   - All other wired packages live at `packages/<name>` and use the same two-level `../../kondo-config/...` relative path.
+4. **Non-`src/`-root lint scopes (handled correctly by each `lint:kondo`).**
+   - `axxium`, `katamorph`, `runtime`, `sol`: sources under `src/cljs` (+`test/cljs`); each `lint:kondo` targets those paths.
+   - `extensions-e2e`: sources only under `src`; lint scope is `src` (no `test/`).
+   - `sol-staging`: `src/cljs`/`test/cljs` but no workspace `package.json`, so it has no `lint:kondo` of its own and is not separately wired; it is linted only insofar as `sol` pulls it in.
 
-5. **`legacy` classification boundary**
-   - `packages/legacy` is `ts-only` at the root; its subpackages are not individually evaluated here. If any subpackage contains CLJS, it should be handled in a follow-up task, not Epic 1.
+5. **Rheos source paths — corrected.**
+   - The original baseline noted `Rheos/shadow-cljs.edn` reaching `../../../openplanner/...`. That is no longer true: Rheos source-paths are now sibling monorepo packages (`../protocols/src`, `../event-ledger/src`, `../chat-ui/src`). The `:config-paths` value is the standard `../../kondo-config/...` (config file lives at normal depth).
 
-6. **Existing `lint` scripts vs new `lint:kondo` scripts**
-   - Rheos, event-ledger, katamorph, protocols, and sol already have a `lint` script that invokes clj-kondo. Epic 1 adds a `lint:kondo` script (it does not rename or delete the existing `lint` script). A future cleanup task may decide whether to unify them.
+6. **`legacy` classification boundary.**
+   - `packages/legacy` is `ts-only`; its subpackages are not individually evaluated here. No CLJS lint wiring applies.
+
+7. **Legacy `lint` vs `lint:kondo`.**
+   - Rheos, event-ledger, katamorph, protocols, and sol carry both a legacy `lint` script and the canonical `lint:kondo`. The root `lint:kondo` fan-out only invokes `lint:kondo`. A future cleanup may unify or drop the legacy `lint` aliases.

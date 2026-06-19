@@ -1,17 +1,63 @@
-.ημ/Π_DIFFSTAT.txt                               |  11 +++++
-.ημ/Π_LAST.md                                      |  43 ++++++++++++++
-.ημ/Π_MANIFEST.sha256                              |   9 +++
-.ημ/Π_STATE.sexp                                   |  34 ++++++++++++
-docs/notes/2026.06.16.06.43.13.md                  |   6 +++-
-docs/notes/2026.06.16.07.13.42.md                  | 103 ++++++++++++++
-docs/notes/2026.06.16.07.28.31.md                  |  21 +++++++
-docs/notes/2026.06.16.07.37.19.md                  |  33 +++++++++
-docs/notes/2026.06.16.12.02.30.md                  |  15 +++++
-kanban/.events/ledger.edn                          |   5 +++++
-kanban/tasks/eta-mu-github-fetch-timeout.md        |  13 +++++-
- 11 files changed, 279 insertions(+), 9 deletions(-)
+# Π_DIFFSTAT — 2026-06-19T15:33:41Z
+# git diff --cached --stat (owned docs scope only)
 
-Excluded from commit:
-  cljs-rewrite                                       | 0 bytes (empty untracked artifact)
-  docs/notes/2026.06.16.07.37.18.md                  | 0 bytes (empty untracked note artifact)
-  .dir-locals.el                                     | 0 bytes (empty untracked Emacs dir-local file)
+ AGENTS.md                                          |   6 +-
+ CROSS_REFERENCES.md                                | 289 -------------
+ DEVELOPMENT.md                                     | 143 +++++--
+ README.md                                          | 130 +++---
+ .../cljs-runtime-rewrite-architecture-inventory.md |  38 +-
+ docs/cljs-runtime-rewrite-boundary-adapter-plan.md |  10 +-
+ docs/cljs-runtime-rewrite-runtime-core-plan.md     |  24 +-
+ docs/cljs-runtime-rewrite-shadow-spine-plan.md     |  24 +-
+ docs/design/contract-model.md                      | 114 ++++++
+ docs/kondo-config-baseline.md                      | 240 ++++-------
+ docs/notes/2026.05.05.11.03.52.md                  |   0
+ docs/notes/2026.05.08.13.48.10.md                  |   0
+ docs/notes/2026.06.14.10.25.09.md                  |   0
+ docs/notes/INDEX.md                                |  83 ++++
+ docs/notes/research-prompt/2025.11.04.11.54.30.md  | 113 ------
+ docs/notes/research-prompt/2025.11.04.12.11.40.md  | 144 -------
+ kanban/eta-mu-extensions-integration.md            | 164 ++++----
+ packages/Rheos/README.md                           | 115 ++++++
+ packages/axxium/README.md                          | 176 +++++---
+ packages/axxium/docs/axxium-kernel-spec-v2.md      |  25 ++
+ packages/axxium/docs/axxium-kernel-spec.md         |  26 ++
+ packages/chat-ui/README.md                         |  86 ++++
+ packages/event-ledger/README.md                    | 107 +++++
+ packages/extensions-e2e/README.md                  |  39 +-
+ packages/extensions/README.md                      | 242 ++++++-----
+ .../kanban/extension-integration-plan.md           |  72 ++--
+ packages/kanban-orchestrator/README.md             |  57 +++
+ packages/katamorph/README.md                       | 131 ++++++
+ packages/kondo-config/README.md                    |  55 +++
+ packages/legacy/agent/README.md                    |  50 ++-
+ packages/legacy/ai/README.md                       |  34 +-
+ packages/legacy/coding-agent/README.md             |  24 +-
+ packages/legacy/coding-agent/docs/development.md   |  41 +-
+ .../legacy/coding-agent/examples/sdk/README.md     |   8 +-
+ packages/legacy/docs/README.md                     |  42 +-
+ packages/legacy/github/README.md                   |  64 ++-
+ packages/legacy/kanban/README.md                   | 101 +++--
+ packages/legacy/output-contract-gate/README.md     |  63 +--
+ packages/legacy/publication-components/README.md   |  76 ++++
+ packages/legacy/tui/README.md                      |  34 +-
+ packages/mcp-contracts/README.md                   |  72 ++++
+ packages/protocols/README.md                       |  80 ++++
+ packages/runtime/README.md                         | 120 +++++-
+ .../docs/design/runtime-vs-sol-ownership.md        |  64 +++
+ packages/sol/AGENTS.md                             |  93 +++++
+ packages/sol/Dockerfile                            |  11 +-
+ packages/sol/README.md                             | 449 +++++++--------------
+ packages/sol/ROUTE_MIGRATION_AUDIT.md              |  58 ---
+ packages/sol/mutation/README.md                    |  48 ++-
+ packages/sol/pseudo/hack.md                        | 222 ----------
+ 50 files changed, 2576 insertions(+), 1831 deletions(-)
+
+Excluded from commit (concurrent dirt, left untouched):
+  ecosystem.config.cjs, receipts.edn, kanban/.events/ledger.edn,
+  kanban/epics/fsm-engine.md, packages/Rheos/src/rheos/ui/domain/{board,sidebar}.cljs,
+  packages/chat-ui/src/eta_mu/chat_ui/message.cljs (modified, unowned)
+  .dir-locals.el, cljs-rewrite, openhax.kanban.json,
+  kanban/tasks/docs-*.md (13), kanban/tasks/fsm-*.md (12),
+  kanban/tasks/ops-fix-root-package-json-scripts.md (untracked, unowned)
+  packages/eta-mu-extensions/ (stale stub, flagged for removal)
