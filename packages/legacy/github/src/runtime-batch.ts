@@ -173,22 +173,21 @@ export const buildDraftActionBatch = (
 export const publishActionBatch = async (
   controlPlaneUrl: string | undefined,
   record: EtaMuActionBatchRecord,
+  timeoutMs = 30000,
 ): Promise<void> => {
-  if (!controlPlaneUrl) {
-    return;
-  }
+  if (!controlPlaneUrl) return;
 
-  const endpoint = new URL("/api/control-plane/action-batches", controlPlaneUrl).toString();
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      accept: "application/json",
-    },
-    body: JSON.stringify(record),
-  });
-
-  if (!response.ok) {
-    throw new Error(`control plane action-batch publish failed: ${response.status}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(new URL("/api/control-plane/action-batches", controlPlaneUrl).toString(), {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify(record),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`control plane action-batch publish failed: ${response.status}`);
+  } finally {
+    clearTimeout(timeoutId);
   }
-}
+};
