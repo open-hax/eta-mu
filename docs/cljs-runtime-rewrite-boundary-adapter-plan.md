@@ -96,7 +96,7 @@ Do not let browser globals appear in reusable runtime core namespaces.
 Add a first scanner under the first CLJS runtime home, likely:
 
 ```text
-packages/eta-mu-runtime/scripts/check-cljs-boundaries.mjs
+packages/runtime/scripts/check-cljs-boundaries.mjs
 ```
 
 Inputs:
@@ -177,7 +177,7 @@ Examples:
 
 ### Step 1 — Core package boundary scanner
 
-Build scanner in `packages/eta-mu-runtime` as part of the shadow spine. It should be intentionally strict because the first runtime core has no real reason to use raw JS outside facade.
+Build scanner in `packages/runtime` as part of the shadow spine. It should be intentionally strict because the first runtime core has no real reason to use raw JS outside facade.
 
 ### Step 2 — Minimal externs for runtime facade
 
@@ -259,8 +259,8 @@ Do not migrate all providers in one slice.
 For the first package:
 
 ```bash
-pnpm --dir packages/eta-mu-runtime cljs:boundary
-pnpm --dir packages/eta-mu-runtime cljs:verify
+pnpm --dir packages/runtime cljs:boundary
+pnpm --dir packages/runtime cljs:verify
 ```
 
 For later extension/tool slices:
@@ -291,4 +291,4 @@ The boundary-adapter PR moved facade JS conversion and timestamp defaults throug
 
 ## Recommended next planning handoff
 
-Use this plan during the next surface-parity implementation to broaden adapter coverage only where a migrated runtime path actually touches the world. Keep the scanner strict and local to `packages/eta-mu-runtime` until additional CLJS packages join the rewrite.
+Use this plan during the next surface-parity implementation to broaden adapter coverage only where a migrated runtime path actually touches the world. Keep the scanner strict and local to `packages/runtime` until additional CLJS packages join the rewrite.

@@ -1,11 +1,11 @@
-# Knoxx Backend Dockerfile
-# Builds the current shadow-cljs/Fastify backend runtime.
+# Sol Dockerfile (@open-hax/sol)
+# Builds the shadow-cljs/Fastify Sol backend runtime.
 #
-# Build prerequisite from backend/:
+# Build prerequisite from packages/sol/:
 #   pnpm run build          # writes dist/server.js
 #
 # Build image:
-#   docker build -t knoxx-backend:latest .
+#   docker build -t sol:latest .
 #
 # Runtime entrypoint:
 #   node dist/server.js
@@ -36,5 +36,6 @@ RUN useradd --uid 1000 --create-home --shell /bin/bash agent || true \
 
 USER 1000
 
-EXPOSE 8000
+# Sol defaults to SOL_PORT/PORT 8001 (Knoxx uses 8000).
+EXPOSE 8001
 CMD ["node", "dist/server.js"]

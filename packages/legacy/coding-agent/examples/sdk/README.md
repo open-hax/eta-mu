@@ -1,5 +1,7 @@
 # SDK Examples
 
+> **DEPRECATED — legacy TypeScript.** Part of `@open-hax/eta-mu-cli` (`packages/legacy/coding-agent`), which is being rewritten to ClojureScript. See `docs/coding-agent-cljs-rewrite-inventory-*.md`.
+
 Programmatic usage of pi-coding-agent via `createAgentSession()` and `createAgentSessionRuntime()`.
 
 The runtime example shows how to build a recreate function that closes over process-global fixed inputs and recreates cwd-bound services and sessions as the active session cwd changes.
@@ -15,7 +17,7 @@ The runtime example shows how to build a recreate function that closes over proc
 | `05-tools.ts` | Built-in tools, custom tools |
 | `06-extensions.ts` | Logging, blocking, result modification |
 | `07-context-files.ts` | AGENTS.md context files |
-| `08-slash-commands.ts` | File-based slash commands |
+| `08-prompt-templates.ts` | File-based prompt templates |
 | `09-api-keys-and-oauth.ts` | API key resolution, OAuth config |
 | `10-settings.ts` | Override compaction, retry, terminal settings |
 | `11-sessions.ts` | In-memory, persistent, continue, list sessions |
@@ -25,8 +27,8 @@ The runtime example shows how to build a recreate function that closes over proc
 ## Running
 
 ```bash
-cd packages/coding-agent
-npx tsx examples/sdk/01-minimal.ts
+cd packages/legacy/coding-agent
+pnpm exec tsx examples/sdk/01-minimal.ts
 ```
 
 ## Quick Reference

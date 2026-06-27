@@ -1,3 +1,10 @@
+> [!WARNING]
+> **DEPRECATED — legacy TypeScript.** This package (`@open-hax/eta-mu-cli`, formerly at `packages/coding-agent`, now `packages/legacy/coding-agent`) is the legacy TS coding-agent CLI. The eta-mu monorepo is ClojureScript-first; this package is being rewritten to CLJS and will be retired. Do not build new features here.
+>
+> Rewrite inventories (what is being ported, and where): [coding-agent-cljs-rewrite-inventory-core.md](../../../docs/coding-agent-cljs-rewrite-inventory-core.md) and [coding-agent-cljs-rewrite-inventory-modes-cli.md](../../../docs/coding-agent-cljs-rewrite-inventory-modes-cli.md). Parent epic: `kanban/epics/coding-agent-cljs-rewrite.md`.
+>
+> Note: this package is still the CLI/test target referenced by the workspace `AGENTS.md`.
+
 <p align="center">
   <a href="https://pi.dev">
     <img src="https://pi.dev/logo.svg" alt="pi logo" width="128">
@@ -13,8 +20,6 @@
   <br /><br />
   <a href="https://exe.dev"><img src="docs/images/exy.png" alt="Exy mascot" width="48" /><br />exe.dev</a>
 </p>
-
-> New issues and PRs from new contributors are auto-closed by default. Maintainers review auto-closed issues daily. See [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 ---
 
@@ -68,8 +73,11 @@ I regularly publish my own `pi-mono` work sessions here:
 
 ## Quick Start
 
+This is a workspace package in the eta-mu pnpm monorepo. Build it from the monorepo root, which exposes the `eta-mu` / `eta-mu-beta` / `pi` bins:
+
 ```bash
-npm install -g @open-hax/eta-mu-cli
+pnpm install
+pnpm --filter @open-hax/eta-mu-cli run build
 ```
 
 Authenticate with an API key:
@@ -618,7 +626,7 @@ pi --thinking high "Solve this complex problem"
 
 ## Contributing & Development
 
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines and [docs/development.md](docs/development.md) for setup, forking, and debugging.
+See [docs/development.md](docs/development.md) for monorepo setup and debugging. ClojureScript conventions and the Kanban/GitHub workflow live in the workspace [AGENTS.md](../../../AGENTS.md).
 
 ---
 
@@ -628,6 +636,8 @@ MIT
 
 ## See Also
 
-- [@open-hax/eta-mu-ai](https://www.npmjs.com/package/@open-hax/eta-mu-ai): Core LLM toolkit
-- [@open-hax/pi-agent](https://www.npmjs.com/package/@open-hax/pi-agent): Agent framework
-- [@open-hax/eta-mu-tui](https://www.npmjs.com/package/@open-hax/eta-mu-tui): Terminal UI components
+Sibling legacy TS packages in this monorepo (also deprecated, being rewritten to CLJS):
+
+- `@open-hax/eta-mu-ai` (`../ai`): unified LLM API / provider abstraction
+- `@open-hax/eta-mu-agent-core` (`../agent`): general-purpose agent framework
+- `@open-hax/eta-mu-tui` (`../tui`): terminal UI components

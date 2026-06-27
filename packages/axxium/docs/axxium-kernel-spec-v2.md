@@ -3,6 +3,31 @@
 
 ---
 
+> **SPEC-TO-CODE RECONCILIATION (added 2026-06-19, design vs. implemented).**
+> The "Five Axioms" below are a **design vision** for a shared kernel across
+> eta-mu/proxx/openplanner/knoxx/tooloxx. They are **not** a description of what
+> `packages/axxium` currently ships. Verified against
+> `packages/axxium/src/cljs/`:
+>
+> | Axiom / primitive | Status in code |
+> |---|---|
+> | **1. Identity is capability-bearing** (`:axxium/actor`) | Partial. Actors with capabilities/roles/status exist (`schema/Actor`, `actors` table, `/api/actors`). No DID, no PASETO — auth is password + JWT cookie. |
+> | **2. All action is attributable** (`:axxium/receipt`) | Not implemented. No receipt type, no append-only store, no provenance in source. |
+> | **3. Truth is constructed through evidence** (`:axxium/evidence`, epistemic pipeline) | Not implemented. No truth/evidence/inference/attestation/judgment code. |
+> | **4. Contracts define admissible behavior** (`:axxium/contract`) | Not implemented. No contract schema, compiler, or admissibility evaluator. |
+> | **5. Append-only + causality-tracking** (`:axxium/causality`) | Not implemented. Sessions and tables are mutable rows; no causal chains. |
+>
+> The Malli registry actually present (`axxium.schema`) defines `Actor`,
+> `Entity`, `Role`, `Session`, `AuthContext`, and `OAuthClient` — **not** the
+> `:axxium/receipt`, `:axxium/evidence`, `:axxium/contract`, `:axxium/truth`, or
+> `:axxium/causality` schemas drafted here. The `OAuthClient` schema and the
+> `oauth_clients` table exist, but **no OAuth provider routes are implemented**.
+> The "extract from `orgs/open-hax/axxium/`" / per-repo consumption phases below
+> have not happened. See the package README for the authoritative
+> implemented-surface list.
+
+---
+
 ## What Axxium Is
 
 **Axxium** is the axiomatic substrate of the Promethean system. It is not a new project. It is the extraction of what already exists — the shared kernel that gives meaning to identity, action, truth, and constraint across eta-mu, proxx, openplanner, knoxx, and tooloxx.

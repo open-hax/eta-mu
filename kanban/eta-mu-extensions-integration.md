@@ -14,85 +14,67 @@ category: "specs"
 
 # eta-mu-extensions Integration Spec
 
-Status: draft
+Status: done — SUPERSEDED / HISTORICAL
 Date: 2026-04-09
+Reconciled: 2026-06-19
 License: GPL-3.0-or-later
+
+> **Superseded.** This card captured the *initial* TS→CLJS extension migration plan.
+> The migration is complete and the live extension set is now governed by
+> `packages/extensions/manifest.edn` (15 `:source :local :tracked true` extensions).
+> The "Unported Extensions" table and the phased "Integration Priorities" roadmap below
+> are kept only as historical record — **do not treat them as work to do**. For the current
+> ported set, the source of truth is `manifest.edn`; for live planning see
+> `packages/extensions/kanban/extension-integration-plan.md`. The macroization analysis
+> further down did land (`lib/eta_mu/macros/{state,event,tool}.cljc`) and remains useful
+> design context.
 
 ## Overview
 
-This spec defines the integration path for unported pi TypeScript extensions into the eta-mu-extensions CLJS package, and identifies repeating patterns suitable for macroization.
+This spec defined the integration path for unported pi TypeScript extensions into the
+eta-mu-extensions CLJS package (now at `packages/extensions`), and identified repeating
+patterns suitable for macroization.
 
-## Current State
+## Current State (canonical)
 
-### Ported Extensions (CLJS)
+The package now ships **15** manifest-declared CLJS extensions, all `:local` and `:tracked`:
+`apply-patch`, `bootstrap`, `chronos`, `contract-runtime`, `contract-runtime-v2`,
+`custom-providers`, `graph-memory`, `image-render`, `lisp-decomp-nudge`,
+`opencode-global-instructions`, `opmf-contract-gate`, `receipt-river`, `session-mycology`,
+`task-timing`, `websearch-open-hax`. Each has matching source under
+`packages/extensions/src/eta_mu/extensions/`. See `manifest.edn` for the authoritative list.
 
-| Extension | Lines | Status | Notes |
-|-----------|-------|--------|-------|
-| `bootstrap.cljs` | 345 | ✅ Active | Session initialization, state recovery |
-| `chronos.cljs` | 9,623 | ✅ Active | Time tracking for contracting work |
-| `contract_runtime.cljs` | 18,197 | ✅ Active | Contract fulfillment evaluation |
-| `custom_providers.cljs` | 7,678 | ✅ Active | Provider configuration extensions |
-| `image_render.cljs` | 9,220 | ✅ Active | Image rendering for TUI |
-| `opencode_global_instructions.cljs` | 2,185 | ✅ Active | Global instruction injection |
-| `opmf_contract_gate.cljs` | 17,272 | ✅ Active | Output contract gate enforcement |
-| `receipt_river.cljs` | 23,868 | ✅ Active | Append-only audit ledger |
-| `session_mycology.cljs` | 30,152 | ✅ Active | Per-turn retrospection + skill spore incubation |
-| `task_timing.cljs` | 7,425 | ✅ Active | Task timing and performance tracking |
-| `websearch_open_hax.cljs` | 5,599 | ✅ Active | Web search via OpenHax proxy |
+Note `apply-patch` (listed below as "unported") **is** now CLJS. There is **no**
+`analyze-image`/`manipulate-image` source or manifest entry anywhere — those were never
+landed and are dropped; `image-render` is the sole image extension. `skill-graph-aco`,
+`desktop-ops`, `webpage-markdown`, and `opmf-contract-runtime` were likewise never ported
+to CLJS and have no source.
 
-**Total ported: 11 extensions, ~131k lines generated**
+## Historical migration plan (superseded — not work to do)
 
-### Unported Extensions (TypeScript)
+<details>
+<summary>Original "Unported Extensions" table and phased roadmap (obsolete)</summary>
 
-| Extension | Lines | Priority | Dependencies | Notes |
-|-----------|-------|----------|--------------|-------|
-| `analyze-image.ts` | 338 | P1 | Vision API, contracts | Contract-based image analysis |
-| `manipulate-image.ts` | 338 | P1 | Sharp/jimp | Image operations (crop, resize, etc.) |
-| `apply-patch.ts` | 799 | P2 | None | Codex-style multi-file patches |
-| `desktop-ops.ts` | 705 | P2 | KDE/Spectacle/i3 | Desktop integration (screenshots, firefox) |
-| `webpage-markdown.ts` | 758 | P3 | Fetch, pandoc | URL fetching with markdown extraction |
-| `opmf-contract-runtime.ts` | 470 | P3 | Superseded by CLJS | Legacy, will be removed |
-| `skill-graph-aco.ts` | 1,400 | P1 | Embeddings, ACO | Adaptive skill graph with decay |
+### Unported Extensions (TypeScript) — OBSOLETE
 
-**Total unported: 7 extensions, ~4.8k lines source**
+These reflect the 2026-04 backlog before the migration completed. `apply-patch` was ported;
+the rest were dropped (no CLJS source exists for any of them).
 
-## Integration Priorities
+| Extension | Priority | Outcome |
+|-----------|----------|---------|
+| `apply-patch.ts` | P2 | **Ported** → `apply_patch.cljs` (in manifest) |
+| `analyze-image.ts` | P1 | **Dropped** — never landed, no source |
+| `manipulate-image.ts` | P1 | **Dropped** — never landed, no source |
+| `desktop-ops.ts` | P2 | **Dropped** — not ported |
+| `webpage-markdown.ts` | P3 | **Dropped** — not ported |
+| `opmf-contract-runtime.ts` | P3 | **Dropped** — superseded by CLJS contract runtime |
+| `skill-graph-aco.ts` | P1 | **Dropped** — static skill-graph/graph-memory tooling is canonical |
 
-### Phase 1: Core Constitutional Extensions (Week 1)
+The original phased "Integration Priorities" (Week 1 skill-graph-aco + image extensions,
+Week 2 apply-patch/desktop-ops, Week 3 webpage-markdown) is obsolete and intentionally
+removed; only `apply-patch` survived into the shipped set.
 
-These are the constitutional layer primitives that should be in eta-mu:
-
-1. **skill-graph-aco** (P1)
-   - Adaptive skill graph derived from skill-call telemetry
-   - Uses Markov chains + semantic similarity (embeddings)
-   - Ant-colony optimization for skill suggestion
-   - Depends on Ollama embeddings (configurable)
-   - Key files: `STATE_DIR/skill-call-events.jsonl`, `adaptive-skill-graph.json`
-
-2. **analyze-image** + **manipulate-image** (P1)
-   - Vision capabilities via OpenHax proxy
-   - Contract-based structured output for image analysis
-   - Operations: crop, resize, pad, grayscale, blur
-   - Enables screenshot-based workflows
-
-### Phase 2: Workflow Extensions (Week 2)
-
-3. **apply-patch** (P2)
-   - GPT models often prefer patch format over edit/write
-   - Multi-file changes in single atomic operation
-   - Codex/Claude patch format parser
-
-4. **desktop-ops** (P2)
-   - Screenshot capture (Spectacle on KDE)
-   - Firefox/XDG-open integration
-   - i3 window manager control
-
-### Phase 3: Utility Extensions (Week 3)
-
-5. **webpage-markdown** (P3)
-   - URL content extraction
-   - Static HTML → Markdown
-   - PDF text extraction
+</details>
 
 ## Macroization Opportunities
 
@@ -268,37 +250,42 @@ Tools have verbose parameter definitions:
          (increment-counter!))))")
 ```
 
-## Implementation Roadmap
+## Implementation Roadmap (historical — superseded)
+
+> The original four-week roadmap below is obsolete. What actually shipped: the macro
+> library landed as `lib/eta_mu/macros/{state,event,tool}.cljc` (not a single
+> `macros.cljc`); `apply-patch` was ported to CLJS; the legacy TS extension tree was
+> removed. The image extensions and `skill-graph-aco`/`desktop-ops`/`webpage-markdown`
+> ports were dropped, not done. Live planning continues in
+> `packages/extensions/kanban/extension-integration-plan.md`.
+
+<details>
+<summary>Original four-week roadmap (obsolete)</summary>
 
 ### Week 1: Macros + skill-graph-aco
 
-1. Create `lib/eta_mu/macros.cljc` with:
-   - `defstate`
-   - `defstate-dir`
-   - `jsonl-file`
-   - `ui-helpers`
+1. Create the macro library (landed as `lib/eta_mu/macros/{state,event,tool}.cljc`).
+2. Refactor one existing extension to use macros.
+3. ~~Port `skill-graph-aco.ts`~~ — dropped.
 
-2. Refactor one existing extension (e.g., `chronos.cljs`) to use macros
+### Week 2: Image Extensions — DROPPED
 
-3. Port `skill-graph-aco.ts` to CLJS using new macros
-
-### Week 2: Image Extensions
-
-4. Port `analyze-image.ts` to CLJS
-5. Port `manipulate-image.ts` to CLJS
-6. Refactor remaining extensions to use macros
+4. ~~Port `analyze-image.ts`~~ — never landed, no source.
+5. ~~Port `manipulate-image.ts`~~ — never landed, no source.
 
 ### Week 3: Workflow Extensions
 
-7. Port `apply-patch.ts` to CLJS
-8. Port `desktop-ops.ts` to CLJS
-9. Port `webpage-markdown.ts` to CLJS
+7. Port `apply-patch.ts` to CLJS — **done**.
+8. ~~Port `desktop-ops.ts`~~ — dropped.
+9. ~~Port `webpage-markdown.ts`~~ — dropped.
 
 ### Week 4: Cleanup + Documentation
 
-10. Remove legacy TypeScript extensions
-11. Update all extension READMEs
-12. Create extension authoring guide
+10. Remove legacy TypeScript extensions — **done**.
+11. Update all extension READMEs.
+12. Create extension authoring guide.
+
+</details>
 
 ## Fork Tax Integration
 
@@ -309,10 +296,11 @@ After completing this spec, we commit:
 3. Updated README for eta-mu-extensions
 4. New CLJS extension ports
 
-## Success Criteria
+## Success Criteria (outcome)
 
-- [ ] All 7 unported TypeScript extensions have CLJS equivalents
-- [ ] Macro library reduces extension boilerplate by 40%+
-- [ ] All extensions compile and load without errors
-- [ ] No duplicate code patterns across extensions
+- [x] TS→CLJS migration complete — 15 CLJS extensions declared in `manifest.edn`
+      (the original "7 unported" goal is moot: `apply-patch` was ported, the rest dropped)
+- [x] Macro library landed (`lib/eta_mu/macros/{state,event,tool}.cljc`)
+- [x] All 15 manifest extensions compile and load without errors
+- [ ] No duplicate code patterns across extensions (ongoing — macro adoption incremental)
 - [ ] Documentation covers extension authoring workflow

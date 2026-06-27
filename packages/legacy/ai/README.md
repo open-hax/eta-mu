@@ -1,5 +1,13 @@
 # @open-hax/eta-mu-ai
 
+> [!WARNING]
+> **DEPRECATED — legacy TypeScript.** This package (`packages/legacy/ai`) is frozen.
+> The eta-mu monorepo is ClojureScript-first; the unified-LLM model is being rewritten
+> into the CLJS control plane at [`packages/runtime`](../../runtime) (the `@open-hax/eta-mu-runtime`
+> `eta_mu.ai.*` domain). For the file-by-file rewrite plan and target CLJS namespaces, see
+> [`docs/ai-cljs-rewrite-inventory.md`](../../../docs/ai-cljs-rewrite-inventory.md).
+> Do not build new TypeScript here. The content below documents the existing legacy API as-is.
+
 Unified LLM API with automatic model discovery, provider configuration, token and cost tracking, and simple context persistence and hand-off to other models mid-session.
 
 **Note**: This library only includes models that support tool calling (function calling), as this is essential for agentic workflows.
@@ -74,9 +82,8 @@ Unified LLM API with automatic model discovery, provider configuration, token an
 
 ## Installation
 
-```bash
-npm install @open-hax/eta-mu-ai
-```
+Within this workspace the package is consumed via `workspace:*` (pnpm). It is not currently
+published to npm; resolve it through the monorepo workspace rather than a registry install.
 
 TypeBox exports are re-exported from `@open-hax/eta-mu-ai`: `Type`, `Static`, and `TSchema`.
 
@@ -1232,6 +1239,17 @@ const response = await complete(model, {
 
 ## Development
 
+> Legacy/frozen — see the deprecation banner at the top. Build, test, and watch via pnpm:
+>
+> ```bash
+> pnpm -C packages/legacy/ai build    # generate-models then tsgo -p tsconfig.build.json
+> pnpm -C packages/legacy/ai test     # vitest --run
+> pnpm -C packages/legacy/ai dev      # tsgo --watch
+> ```
+>
+> The package ships a `pi-ai` CLI bin (`dist/cli.js`) for OAuth login/list against the
+> providers above.
+
 ### Adding a New Provider
 
 Adding a new LLM provider requires changes across multiple files. This checklist covers all necessary steps:
@@ -1290,6 +1308,10 @@ For providers with non-standard auth (AWS, Google Vertex), create a utility like
 
 #### 6. Coding Agent Integration (`../coding-agent/`)
 
+> Note: the coding agent now lives at [`packages/legacy/coding-agent`](../coding-agent)
+> (`@open-hax/eta-mu-cli`) and is itself deprecated. New work targets the CLJS rewrite
+> in `packages/runtime`, not these legacy edits.
+
 Update `src/core/model-resolver.ts`:
 
 - Add a default model ID for the provider in `DEFAULT_MODELS`
@@ -1304,15 +1326,15 @@ Update `README.md`:
 
 #### 7. Documentation
 
-Update `packages/ai/README.md`:
+Update this `README.md` (`packages/legacy/ai/README.md`):
 
-- Add to the Supported Providers table
+- Add to the Supported Providers section
 - Document any provider-specific options or authentication requirements
 - Add environment variable to the Environment Variables section
 
 #### 8. Changelog
 
-Add an entry to `packages/ai/CHANGELOG.md` under `## [Unreleased]`:
+Add an entry to `CHANGELOG.md` (`packages/legacy/ai/CHANGELOG.md`) under `## [Unreleased]`:
 
 ```markdown
 ### Added

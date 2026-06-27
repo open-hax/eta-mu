@@ -1,7 +1,7 @@
 
 ## Clojure House Rules (eta-mu-sol constitution)
 
-# Architecture Paradigm: Categories vs. Contracts
+### Architecture Paradigm: Categories vs. Contracts
 When modeling domains, you must strictly differentiate between the grammar of motion and the enforcement of that motion.
 - Categories: Describe the space of lawful possible transformations. They dictate "what kind of move this is" and define the state space, transition vocabulary, and general laws of composition for the runtime or a subsystem.
 - Contracts: Decide whether a particular runtime entity, event, or transition is admissible under current obligations. They dictate "whether you are allowed to count it as a valid move right now" by defining guards, admissibility checks, evidence requirements, delivery expectations, and side-effect constraints.
@@ -75,8 +75,8 @@ Always use `^:async` metadata (ClojureScript ≥ 1.12.145). Never use
 - Custom macros registered in `.clj-kondo/config.edn` on day one
 ## Testing Gate
 - A task is not done while any relevant automated test suite is failing.
-- For coding-agent changes, run `pnpm --filter @open-hax/eta-mu-cli test` and resolve all failures before reporting completion.
-- For eta-mu extension changes, run `pnpm -C packages/eta-mu-extensions test` and resolve all failures before reporting completion.
+- For coding-agent changes, run `pnpm -C packages/legacy/coding-agent test` and resolve all failures before reporting completion.
+- For eta-mu extension changes, run `pnpm -C packages/extensions test` and resolve all failures before reporting completion.
 - If a full suite cannot be run, state that the task is not complete and record the exact blocker instead of claiming done.
 
 ## TypeScript Deprecation Policy

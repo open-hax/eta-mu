@@ -4,6 +4,32 @@
 
 ---
 
+> **SPEC-TO-CODE RECONCILIATION (added 2026-06-19, design vs. implemented).**
+> This document is a **design vision**, not a description of the shipped code.
+> Verified against `packages/axxium/src/cljs/`:
+>
+> - **Actor** — *partially implemented.* Actors exist (Postgres `actors` table,
+>   `axxium.schema/Actor`, the `/api/actors` routes) with capabilities, roles,
+>   and `:active/:suspended/:retired` status. There is **no DID per actor** —
+>   the "every actor has a DID" / DID-based authentication claims here are
+>   aspirational. Authentication is email + password (`bcryptjs`) with JWT
+>   cookie sessions.
+> - **Receipt** — *not implemented.* There is no receipt type, no append-only
+>   audit store, and no causal-chain query in source. The receipt-river concept
+>   lives elsewhere in eta-mu; Axxium does not yet own it.
+> - **Contract (admissibility)** — *not implemented.* No contract schema,
+>   compiler, or runtime admissibility evaluator exists in this package.
+> - **Capabilities as the only authority mechanism** — *partially true.* Actors
+>   carry a capability vector and `POST /api/actors/:id/capabilities` is gated by
+>   self-or-`:axxium/admin`, but there is no general contract/policy evaluation
+>   enforcing capabilities across the system.
+>
+> Implemented today: password auth, JWT/cookie sessions, an actor read surface,
+> a single entity read endpoint, and a static portal landing page. See the
+> package README for the authoritative implemented-surface list.
+
+---
+
 ## The Problem
 
 You built the same concept three times:
