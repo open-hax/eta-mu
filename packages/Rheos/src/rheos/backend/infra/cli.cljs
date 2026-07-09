@@ -226,9 +226,7 @@
         config-path (or (get-flag (:flags parsed) "config")
                         (aget js/process.env "KANBAN_CONFIG"))
         loaded (await (config/load-config config-path))
-        tasks-dir (or (get-flag (:flags parsed) "tasks-dir")
-                      (:tasksDir (:config loaded))
-                      "docs/agile/tasks")
+        tasks-dir (get-flag (:flags parsed) "tasks-dir")
         ps (config/resolve-configured-projects loaded tasks-dir)
         view-store (await (views/load-view-store (:config-dir loaded)))]
     ;; Share resolved projects with the tool registry so CLI and server resolve identically.

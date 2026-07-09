@@ -1,0 +1,31 @@
+{
+  "name": "eta-mu",
+  "version": "0.1.0",
+  "description": "Global eta-mu / pi CLI entry point and sub-command router",
+  "type": "module",
+  "private": false,
+  "files": [
+    "dist-cli",
+    "README.md"
+  ],
+  "bin": {
+    "eta-mu": "dist-cli/index.cjs",
+    "pi": "dist-cli/index.cjs"
+  },
+  "scripts": {
+    "build": "shadow-cljs release cli",
+    "clean": "rm -rf dist-cli target .shadow-cljs",
+    "test": "shadow-cljs compile test && node target/eta-mu-test.cjs",
+    "lint:kondo": "clj-kondo --lint src/cljs test/cljs",
+    "watch": "shadow-cljs watch cli"
+  },
+  "dependencies": {
+    "@eta-mu/contracts-output": "workspace:*",
+    "@open-hax/eta-mu-cli": "workspace:*",
+    "@open-hax/rheos": "workspace:*"
+  },
+  "devDependencies": {
+    "shadow-cljs": "^3.4.11"
+  },
+  "license": "GPL-3.0-or-later"
+}

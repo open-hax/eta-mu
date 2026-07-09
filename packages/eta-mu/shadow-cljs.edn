@@ -1,0 +1,20 @@
+{:source-paths ["src/cljs" "test/cljs"]
+ :dependencies [[metosin/malli "0.16.4"]]
+ :js-options {:js-provider :import}
+ :builds
+ {:cli
+  {:target :node-script
+   :output-to "dist-cli/index.cjs"
+   :main eta-mu.infra.cli.main/main
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :simple
+                      :source-map true}}
+
+  :test
+  {:target :node-test
+   :output-to "target/eta-mu-test.cjs"
+   :ns-regexp "-test$"
+   :autorun false
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :none
+                      :source-map true}}}}

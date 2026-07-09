@@ -5,6 +5,7 @@
             [clojure.string :as str]))
 
 (def default-config-names ["openhax.kanban.json" "kanban.json"])
+(def default-config-dirs ["." "kanban" ".kanban"])
 
 (defn- ^:async try-paths [paths]
   (when (seq paths)
@@ -17,7 +18,9 @@
 (defn ^:async find-config-path [explicit-path]
   (if explicit-path
     (path/resolve (js/process.cwd) explicit-path)
-    (let [candidates (mapv #(path/resolve (js/process.cwd) %) default-config-names)]
+    (let [candidates (for [dir default-config-dirs
+                           name default-config-names]
+                       (path/resolve (js/process.cwd) dir name))]
       (await (try-paths candidates)))))
 
 (defn ^:async load-config [explicit-path]
