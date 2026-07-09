@@ -63,14 +63,6 @@
                              (js/console.error (str "Failed to spawn '" command "': " (.-message err)))
                              (resolve 1)))))))
 
-(defn resolve-legacy-cli-path
-  "Resolve the legacy @open-hax/eta-mu-cli dist/cli.js path, or nil if not installed."
-  []
-  (when-let [root (resolve-package-root "@open-hax/eta-mu-cli")]
-    (let [candidate (path/join root "dist" "cli.js")]
-      (when (.existsSync fs candidate)
-        candidate))))
-
 (defn resolve-rheos-path
   "Resolve the @open-hax/rheos dist/cli.cjs path, or nil if not installed."
   []

@@ -20,7 +20,6 @@
     "postbuild": "node scripts/validate-extension-paths.mjs"
   },
   "dependencies": {
-    "@open-hax/output-contract-gate": "workspace:*",
     "@opencode-ai/plugin": "^1.14.41",
     "markdown-it": "^14.1.0"
   },

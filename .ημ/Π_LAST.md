@@ -1,64 +1,70 @@
-# Π Fork Tax — 2026-06-19T15:33:41Z
+# Π Fork Tax — 2026-07-09T21:12:00Z
 
 ## Branch
-`docs/discovery-sweep-update`
+`main`
 
 ## Base SHA
-`ec489dae6b566df6ddd93d8c0ec6a3ec97a5a144`
+`6bd3e6cf1605995f0dc0a21bb16070a70284dda2`
 
 ## What Changed
+eta-mu CLJS rewrite handoff — new CLI/contract/terminal/turn CLJS packages, legacy gate removal, extension bridge updates, and workspace reorganization.
 
-Documentation discovery-sweep update closing the 13 `docs-*` kanban tasks (2026-06-16 sweep).
-Markdown-only; **no source code touched**. Produced by a 30-agent workflow partitioned by
-file ownership. 50 files: 13 added, 8 deleted, 29 modified.
+### New packages
+- `packages/contracts/` — ClojureScript contracts package skeleton
+- `packages/terminal-ui/` — terminal UI CLJS package skeleton
+- `packages/turn-processor/` — turn processor CLJS package skeleton
+- `packages/eta-mu/src/cljs/eta_mu/extern/openai.cljs`, `readline.cljs`, `infra/cli/repl.cljs`
+- `packages/eta-mu/test/cljs/eta_mu/extern/...`
+- `packages/eta-mu/test/cljs/eta_mu/infra/cli/commands/agent_test.cljs`
+- `packages/legacy/coding-agent/src/core/extensions/cljs-extension-compiler.js`
+- `packages/legacy/coding-agent/test/extensions-cljs.test.js`
 
-### Top-level docs (P0)
-- Rewrote `README.md` Layout to the real `packages/*` tree (active-cljs / legacy-ts / config-tooling), fixed the charter path to `kanban/eta-mu-charter-v1.md`, corrected Local Commands, removed all aspirational/non-existent paths.
-- Rewrote `DEVELOPMENT.md` for the CLJS stack (removed all `services/agentd` references).
-- Cleaned up `AGENTS.md` (heading levels, charter path, testing-gate package names).
+### Removed packages/files
+- `packages/legacy/output-contract-gate/` entire TypeScript package
+- `packages/runtime/src/cljs/eta_mu/gate/` entire CLJS package
+- `packages/runtime/test/cljs/eta_mu/gate/` tests
 
-### New package READMEs (9)
-`chat-ui`, `event-ledger`, `Rheos`, `protocols`, `mcp-contracts`, `kanban-orchestrator`, `katamorph`, `kondo-config`, `legacy/publication-components`.
+### Modified
+- `packages/eta-mu/dist-cli/index.cjs` + `.map` rebuilt
+- `packages/eta-mu/package.json`, `shadow-cljs.edn`
+- `packages/eta-mu/src/cljs/eta_mu/extern/child_process.cljs`
+- `packages/eta-mu/src/cljs/eta_mu/infra/cli/commands/{agent,doctor}.cljs`
+- `packages/eta-mu/src/cljs/eta_mu/infra/cli/router.cljs`
+- `packages/extensions/lib/eta_mu/core.cljc`, `package.json`
+- `packages/legacy/ai/src/models.generated.ts`
+- `packages/legacy/coding-agent/src/core/extensions/loader.ts`
+- `packages/legacy/output-contract-gate/package.json`
+- `pnpm-lock.yaml`, `pnpm-workspace.yaml`
+- `receipts.edn`
+- `kanban/tasks/eta-mu-cljs-rewrite-architecture-inventory.md`
 
-### Reconciled package docs
-- `axxium` — README rewritten to implemented surface (password auth, JWT/cookie sessions, single entity read); kernel specs annotated implemented-vs-aspirational. Boundary `--check` exits 1 on 56 violations (documented).
-- `extensions` — inventory matched to the 15-extension manifest; phantom `analyze-image`/`manipulate-image` removed; authoring guide added.
-- `extensions-e2e` — path/pnpm/fixture-keyword fixes.
-- `runtime` — full facade/domain layout README + `docs/design/runtime-vs-sol-ownership.md` ADR; path fixes in 3 rewrite-plan docs.
-- `sol` — README rewritten for Sol; new `AGENTS.md`; Knoxx-copied artifacts removed/relabeled; `KNOXX_*` lineage documented.
+### New docs/kanban
+- `docs/design/eta-mu-base-cli-router.md`
+- `docs/design/legacy-package-reorganization.md`
+- `docs/design/turn-processor-cljs-package.md`
+- `docs/design/user-clojurescript-extensions.md`
+- `docs/notes/2026.07.08.14.15.47.md`
+- `kanban/tasks/contracts-output-cljs-package.md`
+- `kanban/tasks/eta-mu-base-cli-package.md`
+- `kanban/tasks/legacy-package-reorganization.md`
+- `kanban/tasks/terminal-ui-cljs-package.md`
+- `kanban/tasks/turn-processor-cljs-package.md`
 
-### Legacy READMEs (8)
-Deprecation banners + path/name/command fixes for `agent`, `ai`, `coding-agent`, `github`, `kanban`, `docs`, `output-contract-gate`, `tui`.
-
-### Inventories
-Refreshed `docs/cljs-runtime-rewrite-architecture-inventory.md` and `docs/kondo-config-baseline.md`; reconciled the two extension kanban specs to the manifest.
-
-### Notes
-Added `docs/notes/INDEX.md` + promoted `docs/design/contract-model.md`; removed 4 empty notes and 2 `research-prompt/` duplicates.
-
-### Deletions
-`CROSS_REFERENCES.md` (stale, wrong-project dump), `packages/sol/{ROUTE_MIGRATION_AUDIT.md,pseudo/hack.md}` (Knoxx artifacts), 4 empty notes, 2 duplicate notes.
-
-## Excluded from Commit (concurrent dirt, left untouched)
-- Modified (unowned): `ecosystem.config.cjs`, `receipts.edn`, `kanban/.events/ledger.edn`, `kanban/epics/fsm-engine.md`, `packages/Rheos/src/rheos/ui/domain/{board,sidebar}.cljs`, `packages/chat-ui/src/eta_mu/chat_ui/message.cljs`.
-- Untracked (unowned): `.dir-locals.el`, `cljs-rewrite`, `openhax.kanban.json`, `kanban/tasks/docs-*.md` (13 source task cards driving this work), `kanban/tasks/fsm-*.md` (12), `kanban/tasks/ops-fix-root-package-json-scripts.md`.
-
-## Residual Follow-ups (flagged, not fixed — outside file ownership)
-- `packages/eta-mu-extensions/` — stale stub dir superseded by `packages/extensions`; safe to delete.
-- `packages/event-ledger/index.d.ts` — declares 5 exports not in shadow-cljs `:exports` (documented as drift).
-- `packages/sol/.clj-kondo/config.edn` — `defroute` hook key still points at `knoxx.backend.macros/defroute`; should be `open-hax.sol.macros/defroute`.
+## Excluded from Commit
+- `EOF` — empty stray file (untracked)
+- `.ημ/session-reflections.edn` — test reflection artifact (untracked)
 
 ## Verification Status
-- **Code tests**: Skipped — no code packages touched.
-- **clj-kondo**: Skipped — no `.cljs/.clj/.cljc` source touched.
-- **Markdown links**: Validated — no dangling references to deleted files.
-- **Package names**: Verified against `package.json` — renamed dirs retain `@open-hax/eta-mu-*` npm names.
+- `pnpm -C packages/extensions test`: **PASS** (72 tests, 195 assertions, 0 failures)
+- `pnpm -C packages/legacy/coding-agent test`: **FAIL** (1 failed) — `test/tools.test.ts:520` `executeBash should persist full output when truncation happens by line count only` (expected full output to contain `1\n2\n3`, received empty string)
+- `node scripts/ts-line-count.mjs`: **PASS** — global TS line count decreased from ~174,500 to 172,809
 
 ## Commit
-`<filled post-commit>` on `docs/discovery-sweep-update`
+`<filled post-commit>` on `main`
 
 ## Tag
-`Π/docs-discovery-sweep-update/2026-06-19T153341`
+`Π/eta-mu-cljs-rewrite/2026-07-09T211200Z`
 
 ## Notes
-- Workspace treated as shared per concurrent-agent guardrails. Only owned docs deliverables were staged; excluded artifacts documented as residual/unowned.
+- Workspace treated as shared per concurrent-agent guardrails; all owned repo-relevant changes staged.
+- Left generated `dist-cli` rebuilds and lockfile/package changes in place because they belong to the same handoff.

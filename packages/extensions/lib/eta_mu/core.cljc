@@ -28,7 +28,7 @@
   The build system generates the platform-specific init function."
   [sym & body]
   (let [[opts rest-body] (parse-kw-opts body)
-        name (:name opts)
+        name-opt (:name opts)
         description (:description opts)
         commands (filter #(= 'command (form-op %)) rest-body)
         tools (filter #(= 'tool (form-op %)) rest-body)
@@ -36,7 +36,7 @@
    `(def ~sym
       ~(or description (str sym))
       {:eta-mu/extension true
-        :name ~(or name (name sym))
+        :name ~(or name-opt (name sym))
         :description ~description
         :init ~(:init opts)
         :commands ~(vec commands)

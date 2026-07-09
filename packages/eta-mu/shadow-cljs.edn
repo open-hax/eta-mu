@@ -1,4 +1,4 @@
-{:source-paths ["src/cljs" "test/cljs"]
+{:source-paths ["src/cljs" "test/cljs" "../turn-processor/src/cljs"]
  :dependencies [[metosin/malli "0.16.4"]]
  :js-options {:js-provider :import}
  :builds

@@ -1,7 +1,9 @@
 /**
- * Extension loader - loads TypeScript extension modules using jiti.
+ * Extension loader - loads TypeScript and ClojureScript extension modules.
  *
- * Uses @mariozechner/jiti fork with virtualModules support for compiled Bun binaries.
+ * TypeScript extensions are loaded via jiti. ClojureScript extensions are
+ * compiled on-demand with shadow-cljs to a cached Node.js module, then loaded
+ * through the same jiti pipeline.
  */
 
 import * as fs from "node:fs";
@@ -15,15 +17,10 @@ import * as _bundledPiAi from "@open-hax/eta-mu-ai";
 import * as _bundledPiAiOauth from "@open-hax/eta-mu-ai/oauth";
 import type { KeyId } from "@open-hax/eta-mu-tui";
 import * as _bundledPiTui from "@open-hax/eta-mu-tui";
-// Static imports of packages that extensions may use.
-// These MUST be static so Bun bundles them into the compiled binary.
-// The virtualModules option then makes them available to extensions.
 import * as _bundledTypebox from "typebox";
 import * as _bundledTypeboxCompile from "typebox/compile";
 import * as _bundledTypeboxValue from "typebox/value";
 import { CONFIG_DIR_NAME, getAgentDir, isBunBinary } from "../../config.js";
-// NOTE: This import works because loader.ts exports are NOT re-exported from index.ts,
-// avoiding a circular dependency. Extensions can import from @open-hax/eta-mu-cli.
 import * as _bundledPiCodingAgent from "../../index.js";
 import { createEventBus, type EventBus } from "../event-bus.js";
 import type { ExecOptions } from "../exec.js";
@@ -392,7 +389,9 @@ async function loadExtensionModule(extensionPath: string) {
 	});
 
 	const module = await jiti.import(extensionPath, { default: true });
-	const factory = module as ExtensionFactory;
+	// jiti returns the default export directly for ESM, but for UMD/CommonJS it may
+	// return the module namespace with the default under `module.default`.
+	const factory = typeof module === "function" ? module : (module as { default?: ExtensionFactory }).default;
 	return typeof factory !== "function" ? undefined : factory;
 }
 
@@ -419,13 +418,35 @@ function createExtension(extensionPath: string, resolvedPath: string): Extension
 	};
 }
 
+async function maybeCompileCljsExtension(extensionPath: string): Promise<string> {
+	if (!extensionPath.endsWith(".cljs")) {
+		return extensionPath;
+	}
+	// @ts-ignore - compiler is a plain .js module without declaration file.
+	const compiler = (await import("./cljs-extension-compiler.js")) as {
+		compileCljsExtension: (
+			sourcePath: string,
+			options?: { extraSourcePaths?: string[] },
+		) => Promise<{ jsPath: string; cacheHit: boolean }>;
+	};
+	const result = await compiler.compileCljsExtension(extensionPath);
+	return result.jsPath;
+}
+
 async function loadExtension(
 	extensionPath: string,
 	cwd: string,
 	eventBus: EventBus,
 	runtime: ExtensionRuntime,
 ): Promise<{ extension: Extension | null; error: string | null }> {
-	const resolvedPath = resolvePath(extensionPath, cwd);
+	let resolvedPath = resolvePath(extensionPath, cwd);
+
+	try {
+		resolvedPath = await maybeCompileCljsExtension(resolvedPath);
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		return { extension: null, error: `Failed to compile ClojureScript extension: ${message}` };
+	}
 
 	try {
 		const factory = await loadExtensionModule(resolvedPath);
@@ -510,7 +531,7 @@ function readPiManifest(packageJsonPath: string): PiManifest | null {
 }
 
 function isExtensionFile(name: string): boolean {
-	return name.endsWith(".ts") || name.endsWith(".js");
+	return name.endsWith(".ts") || name.endsWith(".js") || name.endsWith(".cljs");
 }
 
 /**
@@ -541,14 +562,18 @@ function resolveExtensionEntries(dir: string): string[] | null {
 		}
 	}
 
-	// Check for index.ts or index.js
+	// Check for index.ts, index.js, or index.cljs
 	const indexTs = path.join(dir, "index.ts");
 	const indexJs = path.join(dir, "index.js");
+	const indexCljs = path.join(dir, "index.cljs");
 	if (fs.existsSync(indexTs)) {
 		return [indexTs];
 	}
 	if (fs.existsSync(indexJs)) {
 		return [indexJs];
+	}
+	if (fs.existsSync(indexCljs)) {
+		return [indexCljs];
 	}
 
 	return null;

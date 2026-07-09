@@ -1,83 +1,71 @@
 ;; Π_STATE.sexp — Fork tax snapshot
-;; Generated: 2026-06-19T15:33:41Z
-;; Branch: docs/discovery-sweep-update
-;; Base commit: ec489dae6b566df6ddd93d8c0ec6a3ec97a5a144
+;; Generated: 2026-07-09T21:12:00Z
+;; Branch: main
+;; Base commit: 6bd3e6cf1605995f0dc0a21bb16070a70284dda2
 
 (π-snapshot
-  (branch "docs/discovery-sweep-update")
-  (base-sha "ec489dae6b566df6ddd93d8c0ec6a3ec97a5a144")
-  (timestamp "2026-06-19T15:33:41Z")
+  (branch "main")
+  (base-sha "6bd3e6cf1605995f0dc0a21bb16070a70284dda2")
+  (timestamp "2026-07-09T21:12:00Z")
 
   (summary
-    "Documentation discovery-sweep update closing 13 docs-* kanban tasks: rewrote the
-     top-level README, DEVELOPMENT.md, and AGENTS.md for the real ClojureScript-first
-     monorepo; created 9 missing package READMEs; refreshed 8 legacy READMEs with
-     deprecation banners; reconciled axxium / extensions / extensions-e2e / runtime / sol
-     docs; refreshed the architecture-inventory and kondo-config baselines; consolidated
-     docs/notes with an INDEX; deleted the stale CROSS_REFERENCES.md and Knoxx-copied sol
-     artifacts. Markdown-only; no source code touched. Produced by a 30-agent workflow
-     partitioned by file ownership.")
+    "eta-mu CLJS rewrite handoff: new CLI/contract/terminal/turn CLJS packages, removal of legacy output-contract-gate and runtime gate packages, extension bridge updates, and workspace reorganization.")
 
   (scope
-    (added-package-readmes
-      "packages/chat-ui/README.md" "packages/event-ledger/README.md"
-      "packages/Rheos/README.md" "packages/protocols/README.md"
-      "packages/mcp-contracts/README.md" "packages/kanban-orchestrator/README.md"
-      "packages/katamorph/README.md" "packages/kondo-config/README.md"
-      "packages/legacy/publication-components/README.md")
+    (added-packages
+      "packages/contracts/"
+      "packages/terminal-ui/"
+      "packages/turn-processor/")
+    (added-source
+      "packages/eta-mu/src/cljs/eta_mu/extern/openai.cljs"
+      "packages/eta-mu/src/cljs/eta_mu/extern/readline.cljs"
+      "packages/eta-mu/src/cljs/eta_mu/infra/cli/repl.cljs"
+      "packages/eta-mu/test/cljs/eta_mu/extern/"
+      "packages/eta-mu/test/cljs/eta_mu/infra/cli/commands/agent_test.cljs"
+      "packages/legacy/coding-agent/src/core/extensions/cljs-extension-compiler.js"
+      "packages/legacy/coding-agent/test/extensions-cljs.test.js")
+    (removed-packages
+      "packages/legacy/output-contract-gate/"
+      "packages/runtime/src/cljs/eta_mu/gate/")
+    (modified
+      "packages/eta-mu/dist-cli/index.cjs"
+      "packages/eta-mu/dist-cli/index.cjs.map"
+      "packages/eta-mu/package.json"
+      "packages/eta-mu/shadow-cljs.edn"
+      "packages/eta-mu/src/cljs/eta_mu/extern/child_process.cljs"
+      "packages/eta-mu/src/cljs/eta_mu/infra/cli/commands/agent.cljs"
+      "packages/eta-mu/src/cljs/eta_mu/infra/cli/commands/doctor.cljs"
+      "packages/eta-mu/src/cljs/eta_mu/infra/cli/router.cljs"
+      "packages/extensions/lib/eta_mu/core.cljc"
+      "packages/extensions/package.json"
+      "packages/legacy/ai/src/models.generated.ts"
+      "packages/legacy/coding-agent/src/core/extensions/loader.ts"
+      "packages/legacy/output-contract-gate/package.json"
+      "pnpm-lock.yaml"
+      "pnpm-workspace.yaml"
+      "receipts.edn"
+      "kanban/tasks/eta-mu-cljs-rewrite-architecture-inventory.md")
     (added-docs
-      "packages/sol/AGENTS.md"
-      "packages/runtime/docs/design/runtime-vs-sol-ownership.md"
-      "docs/design/contract-model.md" "docs/notes/INDEX.md")
-    (rewritten-top-level "README.md" "DEVELOPMENT.md" "AGENTS.md")
-    (refreshed-package-docs
-      "packages/axxium/README.md" "packages/axxium/docs/axxium-kernel-spec.md"
-      "packages/axxium/docs/axxium-kernel-spec-v2.md"
-      "packages/extensions/README.md" "packages/extensions/kanban/extension-integration-plan.md"
-      "packages/extensions-e2e/README.md" "packages/runtime/README.md"
-      "packages/sol/README.md" "packages/sol/mutation/README.md" "packages/sol/Dockerfile")
-    (refreshed-legacy-readmes
-      "packages/legacy/agent/README.md" "packages/legacy/ai/README.md"
-      "packages/legacy/coding-agent/README.md" "packages/legacy/coding-agent/docs/development.md"
-      "packages/legacy/coding-agent/examples/sdk/README.md" "packages/legacy/docs/README.md"
-      "packages/legacy/github/README.md" "packages/legacy/kanban/README.md"
-      "packages/legacy/output-contract-gate/README.md" "packages/legacy/tui/README.md")
-    (refreshed-inventories
-      "docs/cljs-runtime-rewrite-architecture-inventory.md" "docs/kondo-config-baseline.md"
-      "docs/cljs-runtime-rewrite-runtime-core-plan.md"
-      "docs/cljs-runtime-rewrite-boundary-adapter-plan.md"
-      "docs/cljs-runtime-rewrite-shadow-spine-plan.md"
-      "kanban/eta-mu-extensions-integration.md")
-    (deleted-stale
-      "CROSS_REFERENCES.md"
-      "packages/sol/ROUTE_MIGRATION_AUDIT.md" "packages/sol/pseudo/hack.md"
-      "docs/notes/2026.05.05.11.03.52.md" "docs/notes/2026.05.08.13.48.10.md"
-      "docs/notes/2026.06.14.10.25.09.md"
-      "docs/notes/research-prompt/2025.11.04.11.54.30.md"
-      "docs/notes/research-prompt/2025.11.04.12.11.40.md"))
+      "docs/design/eta-mu-base-cli-router.md"
+      "docs/design/legacy-package-reorganization.md"
+      "docs/design/turn-processor-cljs-package.md"
+      "docs/design/user-clojurescript-extensions.md"
+      "docs/notes/2026.07.08.14.15.47.md"
+      "kanban/tasks/contracts-output-cljs-package.md"
+      "kanban/tasks/eta-mu-base-cli-package.md"
+      "kanban/tasks/legacy-package-reorganization.md"
+      "kanban/tasks/terminal-ui-cljs-package.md"
+      "kanban/tasks/turn-processor-cljs-package.md"))
 
   (concurrent-dirt
-    (note "Workspace treated as shared per concurrent-agent guardrails. Only the docs
-           deliverables above were staged; the following pre-existing dirt was left
-           untouched and unstaged.")
-    (unowned-modified
-      "ecosystem.config.cjs" "receipts.edn" "kanban/.events/ledger.edn"
-      "kanban/epics/fsm-engine.md" "packages/Rheos/src/rheos/ui/domain/board.cljs"
-      "packages/Rheos/src/rheos/ui/domain/sidebar.cljs"
-      "packages/chat-ui/src/eta_mu/chat_ui/message.cljs")
-    (unowned-untracked
-      ".dir-locals.el" "cljs-rewrite" "openhax.kanban.json"
-      "kanban/tasks/docs-*.md (13 source task cards driving this work)"
-      "kanban/tasks/fsm-*.md (12 cards)" "kanban/tasks/ops-fix-root-package-json-scripts.md")
-    (residual-followups
-      "packages/eta-mu-extensions/ — stale stub dir (only kanban/.events/ledger.edn), superseded by packages/extensions; flagged for removal (not deleted: unowned)."
-      "packages/event-ledger/index.d.ts — declares 5 exports not in shadow-cljs :exports; documented as drift, fix pending."
-      "packages/sol/.clj-kondo/config.edn — defroute hook key still references knoxx.backend.macros/defroute; should be open-hax.sol.macros/defroute."))
+    (note "Workspace treated as shared per concurrent-agent guardrails. All owned repo-relevant changes were staged; the following stray/test artifacts were left untouched.")
+    (untracked-excluded
+      "EOF"
+      ".ημ/session-reflections.edn"))
 
   (verification
-    (code-tests "skipped — no code packages touched (Markdown + Dockerfile relabel only)")
-    (clj-kondo "skipped — no .cljs/.clj/.cljc source touched")
-    (markdown-links "validated — no dangling references to deleted files; phantom analyze-image/manipulate-image claims remain only as explicit historical/dropped disclaimers")
-    (package-names "verified against package.json — renamed dirs (packages/{extensions,runtime}) retain @open-hax/eta-mu-* npm names; --filter commands confirmed")))
+    (extensions-test "PASS — 72 tests, 195 assertions, 0 failures")
+    (coding-agent-test "FAIL — test/tools.test.ts:520 executeBash truncation persistence; expected full output to contain '1\\n2\\n3', received empty string")
+    (ts-line-count "PASS — global TS line count decreased from ~174,500 to 172,809")))
 
 ;; END Π_STATE

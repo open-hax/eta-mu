@@ -19,7 +19,7 @@
   "Build the command registry."
   []
   {"agent"     {:name "agent"
-                :description "Start the TUI agent (default)"
+                :description "Start the agent (default; REPL if no prompt)"
                 :handler agent/handle}
    "doctor"    {:name "doctor"
                 :description "Report workspace health"

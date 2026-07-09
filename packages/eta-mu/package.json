@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@eta-mu/contracts-output": "workspace:*",
-    "@open-hax/eta-mu-cli": "workspace:*",
+    "@eta-mu/turn-processor": "workspace:*",
     "@open-hax/rheos": "workspace:*"
   },
   "devDependencies": {
