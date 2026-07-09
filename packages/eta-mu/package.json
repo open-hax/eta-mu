@@ -14,8 +14,9 @@
   },
   "scripts": {
     "build": "shadow-cljs release cli",
+    "prepublishOnly": "pnpm build",
     "clean": "rm -rf dist-cli target .shadow-cljs",
-    "test": "shadow-cljs compile test && node target/eta-mu-test.cjs",
+    "test": "shadow-cljs compile test \u0026\u0026 node target/eta-mu-test.cjs",
     "lint:kondo": "clj-kondo --lint src/cljs test/cljs",
     "watch": "shadow-cljs watch cli"
   },
