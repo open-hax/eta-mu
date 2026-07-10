@@ -1,8 +1,9 @@
 # Π_MANIFEST — 2026-07-10T08:06:21Z
 # SHA256 hashes of key handoff artifacts and modified sources
 
-b52adecc4dd882c51d006334b30569286902b25bbd8e2879c79b293840d29afb  .ημ/Π_STATE.sexp
-9d8ff91676b713185577b7200ef2d4bd31a3b008aa7569086212159924d0c4c8  .ημ/Π_LAST.md
+c7b4ebec76a46d1d15c38e9af7d9a92dfa9ec6a9b60a94856b6a4e44af97dc22  .ημ/Π_STATE.sexp
+0dd1ad8239d6e6587e9bf31e2c538ade0c8ccdc24398278fff14a44aea4305d2  .ημ/Π_LAST.md
+6831de2b4d35232725df02c3d84aee38be0f8d099e3615144d1d72b7aae6b8e5  .ημ/Π_DIFFSTAT.txt
 
 # Modified source files (owned by this snapshot)
 7f69162002f4e0bd20ee254028599dac6720ab27f165725ba89b0919fbe25f3c  packages/Rheos/src/rheos/ui/domain/board.cljs
@@ -19,3 +20,4 @@ katamorph .cljs/.cljc files: 32
 Rheos .cljs/.cljc files: 57
 chat-ui .cljs/.cljc files: 10
 runtime .cljs/.cljc files: 99
+

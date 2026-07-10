@@ -36,7 +36,8 @@ Continuation of the `docs/discovery-sweep-update` branch from the 2026-06-19 Π 
 - **Secret scan**: No suspicious patterns in changed or untracked files.
 
 ## Commit
-`<filled post-commit>` on `docs/discovery-sweep-update`
+`53fc9ef43891220200f41fa80f82f9d031eb33e5` on `docs/discovery-sweep-update`
+(this artifact updated in a follow-up commit recording the snapshot SHA)
 
 ## Tag
 `Π/docs-discovery-sweep-update/2026-07-10T080621`
