@@ -1,83 +1,83 @@
 ;; Π_STATE.sexp — Fork tax snapshot
-;; Generated: 2026-06-19T15:33:41Z
+;; Generated: 2026-07-10T08:06:21Z
 ;; Branch: docs/discovery-sweep-update
-;; Base commit: ec489dae6b566df6ddd93d8c0ec6a3ec97a5a144
+;; Base commit: 18e8ffc46d06890b2ce15e756f8bcfec7a61298f
 
 (π-snapshot
   (branch "docs/discovery-sweep-update")
-  (base-sha "ec489dae6b566df6ddd93d8c0ec6a3ec97a5a144")
-  (timestamp "2026-06-19T15:33:41Z")
+  (base-sha "18e8ffc46d06890b2ce15e756f8bcfec7a61298f")
+  (timestamp "2026-07-10T08:06:21Z")
 
   (summary
-    "Documentation discovery-sweep update closing 13 docs-* kanban tasks: rewrote the
-     top-level README, DEVELOPMENT.md, and AGENTS.md for the real ClojureScript-first
-     monorepo; created 9 missing package READMEs; refreshed 8 legacy READMEs with
-     deprecation banners; reconciled axxium / extensions / extensions-e2e / runtime / sol
-     docs; refreshed the architecture-inventory and kondo-config baselines; consolidated
-     docs/notes with an INDEX; deleted the stale CROSS_REFERENCES.md and Knoxx-copied sol
-     artifacts. Markdown-only; no source code touched. Produced by a 30-agent workflow
-     partitioned by file ownership.")
+    "Continuation of the docs/discovery-sweep-update branch, absorbing the work
+     that was left unstaged by the 2026-06-19 Π snapshot. This handoff commits
+     the previously-excluded concurrent dirt (root PM2 ecosystem, kanban ledger
+     events, FSM engine epic breakdown, Rheos/chat-ui DOMPurify ESM fixes), plus
+     new discovery output: the 2026-07-10 note, 40+ new kanban task cards from
+     the FSM and ops sweeps, the openhax.kanban.json config stub, and the
+     packages/eta-mu-extensions ledger stub. Receipt-river log updated.")
 
   (scope
-    (added-package-readmes
-      "packages/chat-ui/README.md" "packages/event-ledger/README.md"
-      "packages/Rheos/README.md" "packages/protocols/README.md"
-      "packages/mcp-contracts/README.md" "packages/kanban-orchestrator/README.md"
-      "packages/katamorph/README.md" "packages/kondo-config/README.md"
-      "packages/legacy/publication-components/README.md")
-    (added-docs
-      "packages/sol/AGENTS.md"
-      "packages/runtime/docs/design/runtime-vs-sol-ownership.md"
-      "docs/design/contract-model.md" "docs/notes/INDEX.md")
-    (rewritten-top-level "README.md" "DEVELOPMENT.md" "AGENTS.md")
-    (refreshed-package-docs
-      "packages/axxium/README.md" "packages/axxium/docs/axxium-kernel-spec.md"
-      "packages/axxium/docs/axxium-kernel-spec-v2.md"
-      "packages/extensions/README.md" "packages/extensions/kanban/extension-integration-plan.md"
-      "packages/extensions-e2e/README.md" "packages/runtime/README.md"
-      "packages/sol/README.md" "packages/sol/mutation/README.md" "packages/sol/Dockerfile")
-    (refreshed-legacy-readmes
-      "packages/legacy/agent/README.md" "packages/legacy/ai/README.md"
-      "packages/legacy/coding-agent/README.md" "packages/legacy/coding-agent/docs/development.md"
-      "packages/legacy/coding-agent/examples/sdk/README.md" "packages/legacy/docs/README.md"
-      "packages/legacy/github/README.md" "packages/legacy/kanban/README.md"
-      "packages/legacy/output-contract-gate/README.md" "packages/legacy/tui/README.md")
-    (refreshed-inventories
-      "docs/cljs-runtime-rewrite-architecture-inventory.md" "docs/kondo-config-baseline.md"
-      "docs/cljs-runtime-rewrite-runtime-core-plan.md"
-      "docs/cljs-runtime-rewrite-boundary-adapter-plan.md"
-      "docs/cljs-runtime-rewrite-shadow-spine-plan.md"
-      "kanban/eta-mu-extensions-integration.md")
-    (deleted-stale
-      "CROSS_REFERENCES.md"
-      "packages/sol/ROUTE_MIGRATION_AUDIT.md" "packages/sol/pseudo/hack.md"
-      "docs/notes/2026.05.05.11.03.52.md" "docs/notes/2026.05.08.13.48.10.md"
-      "docs/notes/2026.06.14.10.25.09.md"
-      "docs/notes/research-prompt/2025.11.04.11.54.30.md"
-      "docs/notes/research-prompt/2025.11.04.12.11.40.md"))
-
-  (concurrent-dirt
-    (note "Workspace treated as shared per concurrent-agent guardrails. Only the docs
-           deliverables above were staged; the following pre-existing dirt was left
-           untouched and unstaged.")
-    (unowned-modified
-      "ecosystem.config.cjs" "receipts.edn" "kanban/.events/ledger.edn"
-      "kanban/epics/fsm-engine.md" "packages/Rheos/src/rheos/ui/domain/board.cljs"
-      "packages/Rheos/src/rheos/ui/domain/sidebar.cljs"
-      "packages/chat-ui/src/eta_mu/chat_ui/message.cljs")
-    (unowned-untracked
-      ".dir-locals.el" "cljs-rewrite" "openhax.kanban.json"
-      "kanban/tasks/docs-*.md (13 source task cards driving this work)"
-      "kanban/tasks/fsm-*.md (12 cards)" "kanban/tasks/ops-fix-root-package-json-scripts.md")
-    (residual-followups
-      "packages/eta-mu-extensions/ — stale stub dir (only kanban/.events/ledger.edn), superseded by packages/extensions; flagged for removal (not deleted: unowned)."
-      "packages/event-ledger/index.d.ts — declares 5 exports not in shadow-cljs :exports; documented as drift, fix pending."
-      "packages/sol/.clj-kondo/config.edn — defroute hook key still references knoxx.backend.macros/defroute; should be open-hax.sol.macros/defroute."))
+    (modified
+      .ημ/Π_LAST.md
+      ecosystem.config.cjs
+      kanban/.events/ledger.edn
+      kanban/epics/fsm-engine.md
+      packages/Rheos/src/rheos/ui/domain/board.cljs
+      packages/Rheos/src/rheos/ui/domain/sidebar.cljs
+      packages/chat-ui/src/eta_mu/chat_ui/message.cljs
+      receipts.edn)
+    (added
+      .dir-locals.el
+      docs/notes/2026.07.10.03.00.16.md
+      openhax.kanban.json
+      kanban/tasks/docs-cleanup-agents-md.md
+      kanban/tasks/docs-consolidate-notes-index.md
+      kanban/tasks/docs-create-missing-package-readmes.md
+      kanban/tasks/docs-fix-axxium-readme.md
+      kanban/tasks/docs-fix-extensions-e2e-readme.md
+      kanban/tasks/docs-fix-extensions-readme-drift.md
+      kanban/tasks/docs-fix-runtime-paths-readme.md
+      kanban/tasks/docs-fix-sol-knoxx-artifacts.md
+      kanban/tasks/docs-reconcile-cross-references.md
+      kanban/tasks/docs-refresh-architecture-inventories.md
+      kanban/tasks/docs-refresh-legacy-package-readmes.md
+      kanban/tasks/docs-rewrite-development-md.md
+      kanban/tasks/docs-rewrite-top-level-readme.md
+      kanban/tasks/fsm-bounce-reconciler.md
+      kanban/tasks/fsm-check-agent-review.md
+      kanban/tasks/fsm-check-code-review.md
+      kanban/tasks/fsm-check-js-agent-shell-types.md
+      kanban/tasks/fsm-check-markdown-score.md
+      kanban/tasks/fsm-config-as-data-edn.md
+      kanban/tasks/fsm-event-cascade-derivation.md
+      kanban/tasks/fsm-frontmatter-interface-generalization.md
+      kanban/tasks/fsm-harness-auto-verify.md
+      kanban/tasks/fsm-ledger-fold-accepted-state.md
+      kanban/tasks/fsm-provenance-filtering.md
+      kanban/tasks/fsm-transition-contract-pending-lock.md
+      kanban/tasks/ops-fix-root-package-json-scripts.md
+      packages/eta-mu-extensions/kanban/.events/ledger.edn)
+    (not-trackable
+      "cljs-rewrite/ — empty directory; git does not track empty dirs."))
 
   (verification
-    (code-tests "skipped — no code packages touched (Markdown + Dockerfile relabel only)")
-    (clj-kondo "skipped — no .cljs/.clj/.cljc source touched")
-    (markdown-links "validated — no dangling references to deleted files; phantom analyze-image/manipulate-image claims remain only as explicit historical/dropped disclaimers")
-    (package-names "verified against package.json — renamed dirs (packages/{extensions,runtime}) retain @open-hax/eta-mu-* npm names; --filter commands confirmed")))
+    (code-tests
+      "passed — pnpm -C packages/Rheos test: 58 tests, 164 assertions, 0 failures"
+      "passed — pnpm -C packages/chat-ui test: 2 tests, 6 assertions, 0 failures")
+    (clj-kondo
+      "passed — pnpm -C packages/Rheos lint:kondo: 0 errors, 0 warnings"
+      "passed — pnpm -C packages/chat-ui lint:kondo: 0 errors, 0 warnings")
+    (ts-line-count
+      "global total 174,564 lines; 0 .ts/.tsx files added/modified in this snapshot")
+    (secrets
+      "no suspicious patterns in changed/untracked files"))
+
+  (concurrent-dirt
+    (note "Workspace still treated as shared. This snapshot intentionally absorbs
+           all currently owned/stageable paths; no other concurrent dirt was left
+           unstaged. The empty cljs-rewrite directory is not stageable."))
+
+  (tag "Π/docs-discovery-sweep-update/2026-07-10T080621"))
 
 ;; END Π_STATE

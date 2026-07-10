@@ -1,63 +1,54 @@
-# Π_DIFFSTAT — 2026-06-19T15:33:41Z
-# git diff --cached --stat (owned docs scope only)
+# Π_DIFFSTAT — 2026-07-10T08:06:21Z
+# git diff --cached --stat (owned scope excluding .ημ artifacts)
 
- AGENTS.md                                          |   6 +-
- CROSS_REFERENCES.md                                | 289 -------------
- DEVELOPMENT.md                                     | 143 +++++--
- README.md                                          | 130 +++---
- .../cljs-runtime-rewrite-architecture-inventory.md |  38 +-
- docs/cljs-runtime-rewrite-boundary-adapter-plan.md |  10 +-
- docs/cljs-runtime-rewrite-runtime-core-plan.md     |  24 +-
- docs/cljs-runtime-rewrite-shadow-spine-plan.md     |  24 +-
- docs/design/contract-model.md                      | 114 ++++++
- docs/kondo-config-baseline.md                      | 240 ++++-------
- docs/notes/2026.05.05.11.03.52.md                  |   0
- docs/notes/2026.05.08.13.48.10.md                  |   0
- docs/notes/2026.06.14.10.25.09.md                  |   0
- docs/notes/INDEX.md                                |  83 ++++
- docs/notes/research-prompt/2025.11.04.11.54.30.md  | 113 ------
- docs/notes/research-prompt/2025.11.04.12.11.40.md  | 144 -------
- kanban/eta-mu-extensions-integration.md            | 164 ++++----
- packages/Rheos/README.md                           | 115 ++++++
- packages/axxium/README.md                          | 176 +++++---
- packages/axxium/docs/axxium-kernel-spec-v2.md      |  25 ++
- packages/axxium/docs/axxium-kernel-spec.md         |  26 ++
- packages/chat-ui/README.md                         |  86 ++++
- packages/event-ledger/README.md                    | 107 +++++
- packages/extensions-e2e/README.md                  |  39 +-
- packages/extensions/README.md                      | 242 ++++++-----
- .../kanban/extension-integration-plan.md           |  72 ++--
- packages/kanban-orchestrator/README.md             |  57 +++
- packages/katamorph/README.md                       | 131 ++++++
- packages/kondo-config/README.md                    |  55 +++
- packages/legacy/agent/README.md                    |  50 ++-
- packages/legacy/ai/README.md                       |  34 +-
- packages/legacy/coding-agent/README.md             |  24 +-
- packages/legacy/coding-agent/docs/development.md   |  41 +-
- .../legacy/coding-agent/examples/sdk/README.md     |   8 +-
- packages/legacy/docs/README.md                     |  42 +-
- packages/legacy/github/README.md                   |  64 ++-
- packages/legacy/kanban/README.md                   | 101 +++--
- packages/legacy/output-contract-gate/README.md     |  63 +--
- packages/legacy/publication-components/README.md   |  76 ++++
- packages/legacy/tui/README.md                      |  34 +-
- packages/mcp-contracts/README.md                   |  72 ++++
- packages/protocols/README.md                       |  80 ++++
- packages/runtime/README.md                         | 120 +++++-
- .../docs/design/runtime-vs-sol-ownership.md        |  64 +++
- packages/sol/AGENTS.md                             |  93 +++++
- packages/sol/Dockerfile                            |  11 +-
- packages/sol/README.md                             | 449 +++++++--------------
- packages/sol/ROUTE_MIGRATION_AUDIT.md              |  58 ---
- packages/sol/mutation/README.md                    |  48 ++-
- packages/sol/pseudo/hack.md                        | 222 ----------
- 50 files changed, 2576 insertions(+), 1831 deletions(-)
+ .dir-locals.el                                     |   0
+docs/notes/2026.07.10.03.00.16.md                  | 677 +++++++++++++++++++++
+ ecosystem.config.cjs                               |  45 +-
+ kanban/.events/ledger.edn                          |  32 +
+ kanban/epics/fsm-engine.md                         |  96 ++-
+ kanban/tasks/docs-cleanup-agents-md.md             |  30 +
+ kanban/tasks/docs-consolidate-notes-index.md       |  31 +
+ kanban/tasks/docs-create-missing-package-readmes.md |  38 ++
+ kanban/tasks/docs-fix-axxium-readme.md             |  35 +
+ kanban/tasks/docs-fix-extensions-e2e-readme.md     |  31 +
+ kanban/tasks/docs-fix-extensions-readme-drift.md   |  33 +
+ kanban/tasks/docs-fix-runtime-paths-readme.md      |  31 +
+ kanban/tasks/docs-fix-sol-knoxx-artifacts.md       |  34 +
+ kanban/tasks/docs-reconcile-cross-references.md    |  30 +
+ kanban/tasks/docs-refresh-architecture-inventories.md |  33 +
+ kanban/tasks/docs-refresh-legacy-package-readmes.md |  38 ++
+ kanban/tasks/docs-rewrite-development-md.md        |  31 +
+ kanban/tasks/docs-rewrite-top-level-readme.md      |  32 +
+ kanban/tasks/fsm-bounce-reconciler.md              |  28 +
+ kanban/tasks/fsm-check-agent-review.md             |  25 +
+ kanban/tasks/fsm-check-code-review.md              |  24 +
+ kanban/tasks/fsm-check-js-agent-shell-types.md     |  25 +
+ kanban/tasks/fsm-check-markdown-score.md           |  25 +
+ kanban/tasks/fsm-config-as-data-edn.md             |  28 +
+ kanban/tasks/fsm-event-cascade-derivation.md       |  30 +
+ kanban/tasks/fsm-frontmatter-interface-generalization.md |  28 +
+ kanban/tasks/fsm-harness-auto-verify.md            |  24 +
+ kanban/tasks/fsm-ledger-fold-accepted-state.md     |  30 +
+ kanban/tasks/fsm-provenance-filtering.md           |  30 +
+ kanban/tasks/fsm-transition-contract-pending-lock.md |  30 +
+ kanban/tasks/ops-fix-root-package-json-scripts.md  |  32 +
+ openhax.kanban.json                                |   5 +
+ packages/Rheos/src/rheos/ui/domain/board.cljs      |   2 +-
+ packages/Rheos/src/rheos/ui/domain/sidebar.cljs    |   4 +-
+ packages/chat-ui/src/eta_mu/chat_ui/message.cljs   |   4 +-
+ packages/eta-mu-extensions/kanban/.events/ledger.edn |   0
+ receipts.edn                                       |   5 +
+ 40 files changed, 1737 insertions(+), 144 deletions(-)
 
-Excluded from commit (concurrent dirt, left untouched):
-  ecosystem.config.cjs, receipts.edn, kanban/.events/ledger.edn,
-  kanban/epics/fsm-engine.md, packages/Rheos/src/rheos/ui/domain/{board,sidebar}.cljs,
-  packages/chat-ui/src/eta_mu/chat_ui/message.cljs (modified, unowned)
-  .dir-locals.el, cljs-rewrite, openhax.kanban.json,
-  kanban/tasks/docs-*.md (13), kanban/tasks/fsm-*.md (12),
-  kanban/tasks/ops-fix-root-package-json-scripts.md (untracked, unowned)
-  packages/eta-mu-extensions/ (stale stub, flagged for removal)
+Excluded from diffstat (Π artifacts updated in this commit):
+  .ημ/Π_STATE.sexp, .ημ/Π_LAST.md, .ημ/Π_MANIFEST.sha256, .ημ/Π_DIFFSTAT.txt
+
+Not tracked (empty directory):
+  cljs-rewrite/
+
+Verified before commit:
+  - Rheos tests: 58 tests, 164 assertions, 0 failures
+  - chat-ui tests: 2 tests, 6 assertions, 0 failures
+  - clj-kondo: 0 errors, 0 warnings in both packages
+  - TypeScript line count: 174,564 global lines, no .ts/.tsx changes
+  - Secret scan: no suspicious patterns

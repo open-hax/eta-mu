@@ -14,7 +14,7 @@
 ;; Design tokens
 ;; ---------------------------------------------------------------------------
 
-(def ^:private task-item-height 66)
+(def ^:private task-item-height 104)
 
 (defn- priority-color [p]
   (case p
