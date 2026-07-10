@@ -1,106 +1,54 @@
- ".\316\267\316\274/\316\240_LAST.md"               |  106 +-
- ".\316\267\316\274/\316\240_MANIFEST.sha256"       |   19 +-
- ".\316\267\316\274/\316\240_STATE.sexp"            |  126 +-
- docs/design/eta-mu-base-cli-router.md              |  171 +
- docs/design/legacy-package-reorganization.md       |   95 +
- docs/design/turn-processor-cljs-package.md         |  115 +
- docs/design/user-clojurescript-extensions.md       |   91 +
- docs/notes/2026.07.08.14.15.47.md                  |  119 +
- kanban/tasks/contracts-output-cljs-package.md      |   59 +
- kanban/tasks/eta-mu-base-cli-package.md            |   75 +
- .../eta-mu-cljs-rewrite-architecture-inventory.md  |   23 +-
- kanban/tasks/legacy-package-reorganization.md      |   61 +
- kanban/tasks/terminal-ui-cljs-package.md           |   72 +
- kanban/tasks/turn-processor-cljs-package.md        |   69 +
- packages/contracts/output/.clj-kondo/config.edn    |    2 +
- packages/contracts/output/README.md                |   33 +
- packages/contracts/output/dist-cli/index.cjs       | 4687 ++++++++++++++++++++
- packages/contracts/output/dist-cli/index.cjs.map   |    1 +
- packages/contracts/output/dist-cli/index.js        | 4668 +++++++++++++++++++
- packages/contracts/output/dist-cli/index.js.map    |    1 +
- packages/contracts/output/package.json             |   29 +
- packages/contracts/output/shadow-cljs.edn          |   48 +
- .../eta_mu/contracts/output/domain/generate.cljs   |  146 +
- .../eta_mu/contracts/output}/domain/repair.cljs    |    4 +-
- .../eta_mu/contracts/output}/domain/review.cljs    |   84 +-
- .../eta_mu/contracts/output}/domain/validate.cljs  |    6 +-
- .../cljs/eta_mu/contracts/output/extern/fs.cljs    |   71 +
- .../cljs/eta_mu/contracts/output/extern/http.cljs  |   21 +
- .../cljs/eta_mu/contracts/output}/extern/js.cljs   |    2 +-
- .../cljs/eta_mu/contracts/output/extern/path.cljs  |   44 +
- .../eta_mu/contracts/output/infra/artifacts.cljs   |  119 +
- .../cljs/eta_mu/contracts/output/infra/cli.cljs    |  396 ++
- .../eta_mu/contracts/output/infra/generate.cljs    |   31 +
- .../cljs/eta_mu/contracts/output/infra/review.cljs |   35 +
- .../eta_mu/contracts/output}/law/contract.cljs     |    2 +-
- .../cljs/eta_mu/contracts/output/shape/edn.cljs    |  318 ++
- .../eta_mu/contracts/output}/shape/fixtures.cljs   |    4 +-
- .../eta_mu/contracts/output}/shape/markdown.cljs   |    6 +-
- .../contracts/output}/contract_law_test.cljs       |   50 +-
- .../cljs/eta_mu/contracts/output}/domain_test.cljs |   10 +-
- .../eta_mu/contracts/output/shape/edn_test.cljs    |   35 +
- packages/eta-mu/dist-cli/index.cjs                 | 2310 +++++-----
- packages/eta-mu/dist-cli/index.cjs.map             |    2 +-
- packages/eta-mu/package.json                       |    2 +-
- packages/eta-mu/shadow-cljs.edn                    |    2 +-
- .../src/cljs/eta_mu/extern/child_process.cljs      |    8 -
- packages/eta-mu/src/cljs/eta_mu/extern/openai.cljs |   67 +
- .../eta-mu/src/cljs/eta_mu/extern/readline.cljs    |   25 +
- .../src/cljs/eta_mu/infra/cli/commands/agent.cljs  |   68 +-
- .../src/cljs/eta_mu/infra/cli/commands/doctor.cljs |    4 +-
- .../eta-mu/src/cljs/eta_mu/infra/cli/repl.cljs     |  104 +
- .../eta-mu/src/cljs/eta_mu/infra/cli/router.cljs   |    2 +-
- .../test/cljs/eta_mu/extern/openai_test.cljs       |   72 +
- .../cljs/eta_mu/infra/cli/commands/agent_test.cljs |   66 +
- packages/extensions/lib/eta_mu/core.cljc           |    4 +-
- packages/extensions/package.json                   |    1 -
- packages/legacy/ai/src/models.generated.ts         | 1605 +++++--
- .../src/core/extensions/cljs-extension-compiler.js |  249 ++
- .../coding-agent/src/core/extensions/loader.ts     |   47 +-
- .../coding-agent/test/extensions-cljs.test.js      |  160 +
- packages/legacy/output-contract-gate/package.json  |   35 +-
- .../legacy/output-contract-gate/src/artifacts.ts   |  198 -
- .../legacy/output-contract-gate/src/cli.test.ts    |  301 --
- packages/legacy/output-contract-gate/src/cli.ts    |  619 ---
- .../legacy/output-contract-gate/src/edn.test.ts    |   22 -
- packages/legacy/output-contract-gate/src/edn.ts    |  223 -
- .../legacy/output-contract-gate/src/fixtures.ts    |  161 -
- .../legacy/output-contract-gate/src/generate.ts    |  Bin 7800 -> 0 bytes
- packages/legacy/output-contract-gate/src/index.ts  |   35 -
- .../legacy/output-contract-gate/src/jsedn.d.ts     |    8 -
- .../legacy/output-contract-gate/src/markdown.ts    |  124 -
- .../legacy/output-contract-gate/src/repair.test.ts |   21 -
- packages/legacy/output-contract-gate/src/repair.ts |   37 -
- packages/legacy/output-contract-gate/src/review.ts |  365 --
- packages/legacy/output-contract-gate/src/types.ts  |  173 -
- .../output-contract-gate/src/validate.test.ts      |   74 -
- .../legacy/output-contract-gate/src/validate.ts    |  192 -
- packages/legacy/output-contract-gate/tsconfig.json |   18 -
- packages/terminal-ui/.clj-kondo/config.edn         |    2 +
- packages/terminal-ui/README.md                     |   12 +
- packages/terminal-ui/package.json                  |   31 +
- packages/terminal-ui/shadow-cljs.edn               |   22 +
- .../cljs/eta_mu/terminal_ui/extern/terminal.cljs   |  108 +
- .../eta_mu/terminal_ui/extern/terminal_test.cljs   |  108 +
- packages/turn-processor/.clj-kondo/config.edn      |    2 +
- packages/turn-processor/README.md                  |   24 +
- packages/turn-processor/package.json               |   28 +
- packages/turn-processor/shadow-cljs.edn            |   37 +
- .../cljs/eta_mu/turn_processor/domain/turn.cljs    |  112 +
- .../src/cljs/eta_mu/turn_processor/infra/loop.cljs |  241 +
- .../src/cljs/eta_mu/turn_processor/law/agent.cljs  |   43 +
- .../cljs/eta_mu/turn_processor/law/message.cljs    |   95 +
- .../src/cljs/eta_mu/turn_processor/law/tool.cljs   |   24 +
- .../cljs/eta_mu/turn_processor/shape/message.cljs  |  220 +
- .../src/cljs/eta_mu/turn_processor/shape/tool.cljs |   61 +
- .../eta_mu/turn_processor/domain/turn_test.cljs    |   68 +
- .../eta_mu/turn_processor/infra/loop_test.cljs     |  149 +
- .../cljs/eta_mu/turn_processor/law/agent_test.cljs |   20 +
- .../eta_mu/turn_processor/law/message_test.cljs    |   50 +
- .../cljs/eta_mu/turn_processor/law/tool_test.cljs  |   24 +
- .../eta_mu/turn_processor/shape/message_test.cljs  |  110 +
- .../eta_mu/turn_processor/shape/tool_test.cljs     |   46 +
- pnpm-lock.yaml                                     |   75 +-
- pnpm-workspace.yaml                                |    1 +
- receipts.edn                                       |   27 +
- 105 files changed, 16906 insertions(+), 4292 deletions(-)
+# Π_DIFFSTAT — 2026-07-10T08:06:21Z
+# git diff --cached --stat (owned scope excluding .ημ artifacts)
+
+ .dir-locals.el                                     |   0
+docs/notes/2026.07.10.03.00.16.md                  | 677 +++++++++++++++++++++
+ ecosystem.config.cjs                               |  45 +-
+ kanban/.events/ledger.edn                          |  32 +
+ kanban/epics/fsm-engine.md                         |  96 ++-
+ kanban/tasks/docs-cleanup-agents-md.md             |  30 +
+ kanban/tasks/docs-consolidate-notes-index.md       |  31 +
+ kanban/tasks/docs-create-missing-package-readmes.md |  38 ++
+ kanban/tasks/docs-fix-axxium-readme.md             |  35 +
+ kanban/tasks/docs-fix-extensions-e2e-readme.md     |  31 +
+ kanban/tasks/docs-fix-extensions-readme-drift.md   |  33 +
+ kanban/tasks/docs-fix-runtime-paths-readme.md      |  31 +
+ kanban/tasks/docs-fix-sol-knoxx-artifacts.md       |  34 +
+ kanban/tasks/docs-reconcile-cross-references.md    |  30 +
+ kanban/tasks/docs-refresh-architecture-inventories.md |  33 +
+ kanban/tasks/docs-refresh-legacy-package-readmes.md |  38 ++
+ kanban/tasks/docs-rewrite-development-md.md        |  31 +
+ kanban/tasks/docs-rewrite-top-level-readme.md      |  32 +
+ kanban/tasks/fsm-bounce-reconciler.md              |  28 +
+ kanban/tasks/fsm-check-agent-review.md             |  25 +
+ kanban/tasks/fsm-check-code-review.md              |  24 +
+ kanban/tasks/fsm-check-js-agent-shell-types.md     |  25 +
+ kanban/tasks/fsm-check-markdown-score.md           |  25 +
+ kanban/tasks/fsm-config-as-data-edn.md             |  28 +
+ kanban/tasks/fsm-event-cascade-derivation.md       |  30 +
+ kanban/tasks/fsm-frontmatter-interface-generalization.md |  28 +
+ kanban/tasks/fsm-harness-auto-verify.md            |  24 +
+ kanban/tasks/fsm-ledger-fold-accepted-state.md     |  30 +
+ kanban/tasks/fsm-provenance-filtering.md           |  30 +
+ kanban/tasks/fsm-transition-contract-pending-lock.md |  30 +
+ kanban/tasks/ops-fix-root-package-json-scripts.md  |  32 +
+ openhax.kanban.json                                |   5 +
+ packages/Rheos/src/rheos/ui/domain/board.cljs      |   2 +-
+ packages/Rheos/src/rheos/ui/domain/sidebar.cljs    |   4 +-
+ packages/chat-ui/src/eta_mu/chat_ui/message.cljs   |   4 +-
+ packages/eta-mu-extensions/kanban/.events/ledger.edn |   0
+ receipts.edn                                       |   5 +
+ 40 files changed, 1737 insertions(+), 144 deletions(-)
+
+Excluded from diffstat (Π artifacts updated in this commit):
+  .ημ/Π_STATE.sexp, .ημ/Π_LAST.md, .ημ/Π_MANIFEST.sha256, .ημ/Π_DIFFSTAT.txt
+
+Not tracked (empty directory):
+  cljs-rewrite/
+
+Verified before commit:
+  - Rheos tests: 58 tests, 164 assertions, 0 failures
+  - chat-ui tests: 2 tests, 6 assertions, 0 failures
+  - clj-kondo: 0 errors, 0 warnings in both packages
+  - TypeScript line count: 174,564 global lines, no .ts/.tsx changes
+  - Secret scan: no suspicious patterns

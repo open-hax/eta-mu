@@ -3,7 +3,9 @@
   (:require [helix.core :refer [defnc]]
             [helix.dom :as d]
             ["marked" :refer [marked]]
-            ["dompurify" :default DOMPurify]))
+            ["dompurify" :as dompurify-module]))
+
+(def ^:private DOMPurify (or (.-default dompurify-module) dompurify-module))
 
 (defnc MessageBubble [{:keys [message]}]
   (let [is-user (= "user" (:role message))]

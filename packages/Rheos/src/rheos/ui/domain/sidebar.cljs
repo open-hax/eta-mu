@@ -5,8 +5,10 @@
             [helix.hooks :as hooks]
             [helix.dom :as d]
             ["marked" :refer [marked]]
-            ["dompurify" :default DOMPurify]
+            ["dompurify" :as dompurify-module]
             [clojure.string :as str]))
+
+(def ^:private DOMPurify (or (.-default dompurify-module) dompurify-module))
 
 ;; ---------------------------------------------------------------------------
 ;; Constants

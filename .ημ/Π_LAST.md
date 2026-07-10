@@ -1,70 +1,48 @@
-# Π Fork Tax — 2026-07-09T21:12:00Z
+# Π Fork Tax — 2026-07-10T08:06:21Z
 
 ## Branch
-`main`
+`docs/discovery-sweep-update`
 
 ## Base SHA
-`6bd3e6cf1605995f0dc0a21bb16070a70284dda2`
+`18e8ffc46d06890b2ce15e756f8bcfec7a61298f`
 
 ## What Changed
 eta-mu CLJS rewrite handoff — new CLI/contract/terminal/turn CLJS packages, legacy gate removal, extension bridge updates, and workspace reorganization.
 
-### New packages
-- `packages/contracts/` — ClojureScript contracts package skeleton
-- `packages/terminal-ui/` — terminal UI CLJS package skeleton
-- `packages/turn-processor/` — turn processor CLJS package skeleton
-- `packages/eta-mu/src/cljs/eta_mu/extern/openai.cljs`, `readline.cljs`, `infra/cli/repl.cljs`
-- `packages/eta-mu/test/cljs/eta_mu/extern/...`
-- `packages/eta-mu/test/cljs/eta_mu/infra/cli/commands/agent_test.cljs`
-- `packages/legacy/coding-agent/src/core/extensions/cljs-extension-compiler.js`
-- `packages/legacy/coding-agent/test/extensions-cljs.test.js`
+Continuation of the `docs/discovery-sweep-update` branch from the 2026-06-19 Π snapshot. This handoff absorbs the previously-excluded "concurrent dirt" plus new discovery output.
 
-### Removed packages/files
-- `packages/legacy/output-contract-gate/` entire TypeScript package
-- `packages/runtime/src/cljs/eta_mu/gate/` entire CLJS package
-- `packages/runtime/test/cljs/eta_mu/gate/` tests
+### Previously-excluded concurrent dirt (now owned and committed)
+- **Root PM2 ecosystem** — `ecosystem.config.cjs` rewritten as an aggregator that discovers and requires every `packages/*/ecosystem.config.cjs`.
+- **Kanban ledger** — `kanban/.events/ledger.edn` appended with drift-detected events for the 13 docs tasks, the `fsm-engine` epic, and all 12 FSM subtask cards.
+- **FSM engine epic** — `kanban/epics/fsm-engine.md` updated to `breakdown` status with a reconciliation-architecture section (event cascade, invariants, config-as-data, frontmatter-as-interface) and 12 linked subtask cards.
+- **Rheos UI** — `packages/Rheos/src/rheos/ui/domain/board.cljs` task-item height adjusted; `packages/Rheos/src/rheos/ui/domain/sidebar.cljs` DOMPurify import fixed for ESM module shape.
+- **chat-ui** — `packages/chat-ui/src/eta_mu/chat_ui/message.cljs` DOMPurify import fixed for ESM module shape.
+- **Receipts** — `receipts.edn` updated with the last work log.
 
-### Modified
-- `packages/eta-mu/dist-cli/index.cjs` + `.map` rebuilt
-- `packages/eta-mu/package.json`, `shadow-cljs.edn`
-- `packages/eta-mu/src/cljs/eta_mu/extern/child_process.cljs`
-- `packages/eta-mu/src/cljs/eta_mu/infra/cli/commands/{agent,doctor}.cljs`
-- `packages/eta-mu/src/cljs/eta_mu/infra/cli/router.cljs`
-- `packages/extensions/lib/eta_mu/core.cljc`, `package.json`
-- `packages/legacy/ai/src/models.generated.ts`
-- `packages/legacy/coding-agent/src/core/extensions/loader.ts`
-- `packages/legacy/output-contract-gate/package.json`
-- `pnpm-lock.yaml`, `pnpm-workspace.yaml`
-- `receipts.edn`
-- `kanban/tasks/eta-mu-cljs-rewrite-architecture-inventory.md`
+### New discovery output
+- `.dir-locals.el` — Emacs local variables.
+- `docs/notes/2026.07.10.03.00.16.md` — long-form note (prompt-wizard / perplexity space material).
+- `openhax.kanban.json` — kanban config stub (`tasksDir`, `boardFile`, `fsm: promethean`).
+- `kanban/tasks/` — 28 new task cards: 13 docs-cleanup, 12 FSM breakdown, 1 ops-fix-root-package-json-scripts.
+- `packages/eta-mu-extensions/kanban/.events/ledger.edn` — stub ledger for the old extensions package.
 
-### New docs/kanban
-- `docs/design/eta-mu-base-cli-router.md`
-- `docs/design/legacy-package-reorganization.md`
-- `docs/design/turn-processor-cljs-package.md`
-- `docs/design/user-clojurescript-extensions.md`
-- `docs/notes/2026.07.08.14.15.47.md`
-- `kanban/tasks/contracts-output-cljs-package.md`
-- `kanban/tasks/eta-mu-base-cli-package.md`
-- `kanban/tasks/legacy-package-reorganization.md`
-- `kanban/tasks/terminal-ui-cljs-package.md`
-- `kanban/tasks/turn-processor-cljs-package.md`
-
-## Excluded from Commit
-- `EOF` — empty stray file (untracked)
-- `.ημ/session-reflections.edn` — test reflection artifact (untracked)
+### Not tracked
+- `cljs-rewrite/` — empty directory; git does not track empty directories.
 
 ## Verification Status
-- `pnpm -C packages/extensions test`: **PASS** (72 tests, 195 assertions, 0 failures)
-- `pnpm -C packages/legacy/coding-agent test`: **FAIL** (1 failed) — `test/tools.test.ts:520` `executeBash should persist full output when truncation happens by line count only` (expected full output to contain `1\n2\n3`, received empty string)
-- `node scripts/ts-line-count.mjs`: **PASS** — global TS line count decreased from ~174,500 to 172,809
+- **Rheos tests**: Passed — 58 tests, 164 assertions, 0 failures.
+- **chat-ui tests**: Passed — 2 tests, 6 assertions, 0 failures.
+- **clj-kondo**: Passed — 0 errors, 0 warnings in both modified packages.
+- **TypeScript line count**: No `.ts/.tsx` files added or modified; global total unchanged at 174,564 lines.
+- **Secret scan**: No suspicious patterns in changed or untracked files.
 
 ## Commit
-`<filled post-commit>` on `main`
+`53fc9ef43891220200f41fa80f82f9d031eb33e5` on `docs/discovery-sweep-update`
+(this artifact updated in a follow-up commit recording the snapshot SHA)
 
 ## Tag
-`Π/eta-mu-cljs-rewrite/2026-07-09T211200Z`
+`Π/docs-discovery-sweep-update/2026-07-10T080621`
 
 ## Notes
-- Workspace treated as shared per concurrent-agent guardrails; all owned repo-relevant changes staged.
-- Left generated `dist-cli` rebuilds and lockfile/package changes in place because they belong to the same handoff.
+- Workspace treated as shared per concurrent-agent guardrails. This snapshot intentionally absorbs all currently stageable paths; no other concurrent dirt was left unstaged.
+- The `docs/notes/2026.07.10.03.00.16.md` file appears to be external prompt-wizard material; included in the snapshot as-is because it is part of the current working tree.

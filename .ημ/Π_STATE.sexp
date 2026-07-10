@@ -1,71 +1,84 @@
 ;; Π_STATE.sexp — Fork tax snapshot
-;; Generated: 2026-07-09T21:12:00Z
-;; Branch: main
-;; Base commit: 6bd3e6cf1605995f0dc0a21bb16070a70284dda2
+;; Generated: 2026-07-10T08:06:21Z
+;; Branch: docs/discovery-sweep-update
+;; Base commit: 18e8ffc46d06890b2ce15e756f8bcfec7a61298f
 
 (π-snapshot
-  (branch "main")
-  (base-sha "6bd3e6cf1605995f0dc0a21bb16070a70284dda2")
-  (timestamp "2026-07-09T21:12:00Z")
+  (branch "docs/discovery-sweep-update")
+  (base-sha "18e8ffc46d06890b2ce15e756f8bcfec7a61298f")
+  (commit "53fc9ef43891220200f41fa80f82f9d031eb33e5")
+  (timestamp "2026-07-10T08:06:21Z")
 
   (summary
-    "eta-mu CLJS rewrite handoff: new CLI/contract/terminal/turn CLJS packages, removal of legacy output-contract-gate and runtime gate packages, extension bridge updates, and workspace reorganization.")
+    "Continuation of the docs/discovery-sweep-update branch, absorbing the work
+     that was left unstaged by the 2026-06-19 Π snapshot. This handoff commits
+     the previously-excluded concurrent dirt (root PM2 ecosystem, kanban ledger
+     events, FSM engine epic breakdown, Rheos/chat-ui DOMPurify ESM fixes), plus
+     new discovery output: the 2026-07-10 note, 40+ new kanban task cards from
+     the FSM and ops sweeps, the openhax.kanban.json config stub, and the
+     packages/eta-mu-extensions ledger stub. Receipt-river log updated.")
 
   (scope
-    (added-packages
-      "packages/contracts/"
-      "packages/terminal-ui/"
-      "packages/turn-processor/")
-    (added-source
-      "packages/eta-mu/src/cljs/eta_mu/extern/openai.cljs"
-      "packages/eta-mu/src/cljs/eta_mu/extern/readline.cljs"
-      "packages/eta-mu/src/cljs/eta_mu/infra/cli/repl.cljs"
-      "packages/eta-mu/test/cljs/eta_mu/extern/"
-      "packages/eta-mu/test/cljs/eta_mu/infra/cli/commands/agent_test.cljs"
-      "packages/legacy/coding-agent/src/core/extensions/cljs-extension-compiler.js"
-      "packages/legacy/coding-agent/test/extensions-cljs.test.js")
-    (removed-packages
-      "packages/legacy/output-contract-gate/"
-      "packages/runtime/src/cljs/eta_mu/gate/")
     (modified
-      "packages/eta-mu/dist-cli/index.cjs"
-      "packages/eta-mu/dist-cli/index.cjs.map"
-      "packages/eta-mu/package.json"
-      "packages/eta-mu/shadow-cljs.edn"
-      "packages/eta-mu/src/cljs/eta_mu/extern/child_process.cljs"
-      "packages/eta-mu/src/cljs/eta_mu/infra/cli/commands/agent.cljs"
-      "packages/eta-mu/src/cljs/eta_mu/infra/cli/commands/doctor.cljs"
-      "packages/eta-mu/src/cljs/eta_mu/infra/cli/router.cljs"
-      "packages/extensions/lib/eta_mu/core.cljc"
-      "packages/extensions/package.json"
-      "packages/legacy/ai/src/models.generated.ts"
-      "packages/legacy/coding-agent/src/core/extensions/loader.ts"
-      "packages/legacy/output-contract-gate/package.json"
-      "pnpm-lock.yaml"
-      "pnpm-workspace.yaml"
-      "receipts.edn"
-      "kanban/tasks/eta-mu-cljs-rewrite-architecture-inventory.md")
-    (added-docs
-      "docs/design/eta-mu-base-cli-router.md"
-      "docs/design/legacy-package-reorganization.md"
-      "docs/design/turn-processor-cljs-package.md"
-      "docs/design/user-clojurescript-extensions.md"
-      "docs/notes/2026.07.08.14.15.47.md"
-      "kanban/tasks/contracts-output-cljs-package.md"
-      "kanban/tasks/eta-mu-base-cli-package.md"
-      "kanban/tasks/legacy-package-reorganization.md"
-      "kanban/tasks/terminal-ui-cljs-package.md"
-      "kanban/tasks/turn-processor-cljs-package.md"))
-
-  (concurrent-dirt
-    (note "Workspace treated as shared per concurrent-agent guardrails. All owned repo-relevant changes were staged; the following stray/test artifacts were left untouched.")
-    (untracked-excluded
-      "EOF"
-      ".ημ/session-reflections.edn"))
+      .ημ/Π_LAST.md
+      ecosystem.config.cjs
+      kanban/.events/ledger.edn
+      kanban/epics/fsm-engine.md
+      packages/Rheos/src/rheos/ui/domain/board.cljs
+      packages/Rheos/src/rheos/ui/domain/sidebar.cljs
+      packages/chat-ui/src/eta_mu/chat_ui/message.cljs
+      receipts.edn)
+    (added
+      .dir-locals.el
+      docs/notes/2026.07.10.03.00.16.md
+      openhax.kanban.json
+      kanban/tasks/docs-cleanup-agents-md.md
+      kanban/tasks/docs-consolidate-notes-index.md
+      kanban/tasks/docs-create-missing-package-readmes.md
+      kanban/tasks/docs-fix-axxium-readme.md
+      kanban/tasks/docs-fix-extensions-e2e-readme.md
+      kanban/tasks/docs-fix-extensions-readme-drift.md
+      kanban/tasks/docs-fix-runtime-paths-readme.md
+      kanban/tasks/docs-fix-sol-knoxx-artifacts.md
+      kanban/tasks/docs-reconcile-cross-references.md
+      kanban/tasks/docs-refresh-architecture-inventories.md
+      kanban/tasks/docs-refresh-legacy-package-readmes.md
+      kanban/tasks/docs-rewrite-development-md.md
+      kanban/tasks/docs-rewrite-top-level-readme.md
+      kanban/tasks/fsm-bounce-reconciler.md
+      kanban/tasks/fsm-check-agent-review.md
+      kanban/tasks/fsm-check-code-review.md
+      kanban/tasks/fsm-check-js-agent-shell-types.md
+      kanban/tasks/fsm-check-markdown-score.md
+      kanban/tasks/fsm-config-as-data-edn.md
+      kanban/tasks/fsm-event-cascade-derivation.md
+      kanban/tasks/fsm-frontmatter-interface-generalization.md
+      kanban/tasks/fsm-harness-auto-verify.md
+      kanban/tasks/fsm-ledger-fold-accepted-state.md
+      kanban/tasks/fsm-provenance-filtering.md
+      kanban/tasks/fsm-transition-contract-pending-lock.md
+      kanban/tasks/ops-fix-root-package-json-scripts.md
+      packages/eta-mu-extensions/kanban/.events/ledger.edn)
+    (not-trackable
+      "cljs-rewrite/ — empty directory; git does not track empty dirs."))
 
   (verification
-    (extensions-test "PASS — 72 tests, 195 assertions, 0 failures")
-    (coding-agent-test "FAIL — test/tools.test.ts:520 executeBash truncation persistence; expected full output to contain '1\\n2\\n3', received empty string")
-    (ts-line-count "PASS — global TS line count decreased from ~174,500 to 172,809")))
+    (code-tests
+      "passed — pnpm -C packages/Rheos test: 58 tests, 164 assertions, 0 failures"
+      "passed — pnpm -C packages/chat-ui test: 2 tests, 6 assertions, 0 failures")
+    (clj-kondo
+      "passed — pnpm -C packages/Rheos lint:kondo: 0 errors, 0 warnings"
+      "passed — pnpm -C packages/chat-ui lint:kondo: 0 errors, 0 warnings")
+    (ts-line-count
+      "global total 174,564 lines; 0 .ts/.tsx files added/modified in this snapshot")
+    (secrets
+      "no suspicious patterns in changed/untracked files"))
+
+  (concurrent-dirt
+    (note "Workspace still treated as shared. This snapshot intentionally absorbs
+           all currently owned/stageable paths; no other concurrent dirt was left
+           unstaged. The empty cljs-rewrite directory is not stageable."))
+
+  (tag "Π/docs-discovery-sweep-update/2026-07-10T080621"))
 
 ;; END Π_STATE
