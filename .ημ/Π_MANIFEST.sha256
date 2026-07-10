@@ -1,6 +1,57 @@
 # Π manifest — generated 2026-07-10T14:42:17Z
-# Scope: all staged/untracked files in the snapshot except this manifest file (self-hash paradox).
+# Scope: all files changed in snapshot a9c5f395..base (excluding this manifest file).
 # Deleted: packages/eta-mu-extensions/kanban/.events/ledger.edn
 # Format: sha256  path
-d04f693b4807326029bdf5ccabcf7262a3ab207987c84d924c21e1c641a4e050  .ημ/Π_LAST.md
-2d7f4a0380ae115d38695c26e9c4085a27119f5d8d68d4bce50a841fc7f049a4  .ημ/Π_STATE.sexp
+aec054d8791acf3aa174b3ddba9b5b7d83365a9d1d22ef7ceb27e5b2f9243d91  AGENTS.md
+71f4a27608b5a45ff45dc6898ad0870d0393bcaf6bbf4ead14025f2e13288ea9  README.md
+788eec9eb89b12f2b4d7d99d0b6bcf98709e5d947154f67c622484df7eb9a273  agents/mindfuck/CONTRACT.edn
+32392ab6836788f96a4328400cb9657c6997f0c6c46713dabe74acd181b6a29e  biome.json
+4c45a127f806ffcb53dcdd7618213c96405b7e9ac52d5bfce303e2083aef82ee  docs/notes/INDEX.md
+83504d3fb97e4f2c0c7635c08f2dc01edfba78683eac9a7efaccaefdf9d9fe2b  kanban/.events/ledger.edn
+868ad6d2ff89301fb60600758e3ac5d1fdd912a78f2fbd4b9b0a5fb07c3de520  kanban/tasks/agent-cljs-rewrite-phase-2-extern-adapters.md
+c57430659cd67674fa887524ee2c32da6a341c596ffcc80131dcf0c969290658  kanban/tasks/ai-cljs-rewrite-phase-3-extern-anthropic.md
+dae6315f829fded20cbbc52cfb708a911f7728222c39062f39ac34cd2e16e79c  kanban/tasks/ai-cljs-rewrite-phase-3-extern-auxiliary.md
+cb9837328efeb45338e62e6a3e2a54fc9017e42ba5755dbcf0c7a2e0ce49bb30  kanban/tasks/ai-cljs-rewrite-phase-3-extern-bedrock.md
+2359161575d420d01c18cf0ae56852009500b24a430be991f588c9c2b7fd52e4  kanban/tasks/ai-cljs-rewrite-phase-3-extern-google.md
+063b9b8995fb91bb5a3badbdb8152730879b99e50820be3fa47bc25d9be90c6e  kanban/tasks/ai-cljs-rewrite-phase-3-extern-openai.md
+26171a63d1a1d2bddff4dee8925c234aac7783219b8e78cbccb115f8c5d032a0  kanban/tasks/coding-agent-cljs-rewrite-domain-extensions-law.md
+9e14629ea411e578b5acb31d8b9bdbd5f6a3246f79d102e64557b7639b9ec969  kanban/tasks/coding-agent-cljs-rewrite-domain-tools-law.md
+de73a862b5512ba7e67a4c86b5208e93d7a3c31d600b4a5f529572ecd6ec7dff  kanban/tasks/coding-agent-cljs-rewrite-extern-clipboard-image-oauth.md
+18a7b6fe212ba96639c07cf5b345bbb350226428e04a3d0158257e13950547c6  kanban/tasks/coding-agent-cljs-rewrite-extern-fs-git-bash.md
+db1e1934b21606d0a83e27b04c45a6dd50689e6221eb4a3ccc498e511ffa8831  kanban/tasks/coding-agent-cljs-rewrite-infra-package-settings-auth.md
+4da834b528eaa5cd81eff1bd8c9402af575ee057c9185652bbc5ba36fb8253db  kanban/tasks/coding-agent-cljs-rewrite-infra-session-manager.md
+e0e0cbb4bc93e215fd782a02911c9bddba66eb5445a46579816cc948ef5786cc  kanban/tasks/coding-agent-cljs-rewrite-messages-diagnostics-law.md
+d2eb7f7b33bd4b4b471df4b72dce37a454977549c3e4352f75055b0ddc8ce167  kanban/tasks/eta-mu-cljs-rewrite-cutover-ratchet.md
+0dffae98e6ab151bc0e7ccdbfed2f7cd9c97584b449bae933c70fdfabfa55b01  kanban/tasks/eta-mu-github-fetch-timeout.md
+26686c9ad9d77513b198c40fa2f3d0d771f8d4af337f78f91cc2f9a2c2fdd703  kanban/tasks/eta-mu-quality-ratchet-cli-startup-smoke.md
+3589b02a5b451352fb1a852b46ff20fd8055c9d18544de48168db8dc4da6833c  kanban/tasks/fsm-provenance-filtering.md
+c3a66dbba7b01dec41137745d4fe4ceba67e8d35f8c1e93e1f2c2d175475ba88  kanban/tasks/github-cljs-rewrite-domain-pr.md
+638c24e2b962fd6fc8c3fd6369d5d2c3074796ff087f14e070b47bfedf757007  kanban/tasks/github-cljs-rewrite-event-classifier.md
+c31bc9836505faffccb257f911c1c6940d93213aa43807952f85b66e9b552d70  kanban/tasks/github-cljs-rewrite-extern-adapters.md
+022f2822b17f979d67db03edb99cf694b23723cef9bd03583498dfb0d9b4b55f  kanban/tasks/github-cljs-rewrite-review-gate.md
+b565e0dc4d426e31aa5259c79651e981cc69a91d3429d96331c7e2615f34a3a4  kanban/tasks/github-cljs-rewrite-runtime-batch-adapter.md
+d0d9fb97d24bff497d9fc7737b3cf652075aa744952cdde55292db3305c1870a  kanban/tasks/legacy-package-reorganization.md
+f778cddd8c6697f21b99297b5b6a52d6ef42a9272fe1c3607c8134b5c10e5739  kanban/tasks/monorepo-reorg-biome-lint-coverage.md
+7519e457322413fdd391b07e7c66ae41bd819dbca7655607315a77bf38a0a42e  kanban/tasks/output-contract-gate-cljs-rewrite-extern-adapters.md
+d22a5fe475f02dd868bd55df6f38f8a0e5c3ad7e2dc7d80b36724d532b630b06  kanban/tasks/publication-components-cljs-rewrite-audio-player.md
+8edb97025bd12bfda358ff616f33f91f4db2e0fec9cb40853f7970d33fac32c0  kanban/tasks/publication-components-cljs-rewrite-queue-list.md
+8cc2a23a1363f02cc60511e6727c154afc30f3a5ff73c05d0a34e24dc0a3a9d6  kanban/tasks/rheos-comments-parity.md
+d6956b9e114eff0c0ad1d26501e8cb99fcb85dd6bf4d9f2dc2f79924c750689c  kanban/tasks/tui-cljs-rewrite-core-tui.md
+8aa58a41b44e8aa6d1206b5f086c867bbff8118a9859597b9b6c522e8936eb17  kanban/tasks/tui-cljs-rewrite-facade-cutover.md
+3bfff329e2758b969815a8c22d6dbb4f119e5fab1581daac96ff63d465f99138  kanban/tasks/tui-cljs-rewrite-image-extern.md
+031eee7d1ef040b582e45f3b77e8554a9c89570c8cf8c6e09fb853385a980fb9  kanban/tasks/tui-cljs-rewrite-input-editor.md
+25d7476d50e67a8b1f4757daf77089eb9031babe091ead440ad36c77bc91c19a  kanban/tasks/tui-cljs-rewrite-markdown-overlays.md
+16ae47dbbbce7b6510454177948c9db35e3f5f24fbd29edfaf4ff3c0fcf4fa6c  kanban/tasks/tui-cljs-rewrite-terminal-extern.md
+42c76c712128d46d30715e37a36f068b927baa9e4ca1af7aaf0bb9d78133c3a7  kanban/tasks/tui-cljs-rewrite-test-parity.md
+81d01be74c2f5874d64746e7d9cc9606e17d338d32ebca3eb4415d53f0c2a25b  kanban/tasks/tui-cljs-rewrite-utilities.md
+7a106be5923138a7c40089e3edd8292027eede57539a645015cf92ace35bb66e  operation-mindfuck/README.md
+68275b4743d50f5e4ac7bbc587ca9a6e9f1c4b4217ec9371ec92b09afac21b17  packages/eta-mu/README.md
+3be364c7e3e8d9ab7c1f6e774e932c4bf90e9da7e0e6a29b4476facc5b93edd0  packages/eta-mu/dist-cli/index.cjs
+82f8f20bb19667e69393caec9a28a6b21caa8dbf88499e12441ff764b682e9b0  packages/eta-mu/dist-cli/index.cjs.map
+fa32f07e82a142b76d86ebd8cdc9af8e459d285ef3b4d532dbec071a02c06ae3  packages/eta-mu/package.json
+7a28f8eba2b92897cb5ac439111bea12a269bfef6cd2eb201f25d2b6c96aea15  packages/eta-mu/src/cljs/eta_mu/extern/readline.cljs
+6d781a6d61f1aaa4edd855005aa13ec5140028e2be053967a3e3f8dcca1cb3fa  packages/eta-mu/src/cljs/eta_mu/infra/cli/repl.cljs
+7d50173e19333f30acaaeb26c6fb023bf837c071062b54a6472c97cb27d913f6  packages/eta-mu/test/cljs/eta_mu/extern/readline_test.cljs
+1a01f3b466929dc4be46fe081362b5966e1913a05f192e121e8569fa2cd95e44  packages/extensions/lib/eta_mu/macros/state.cljc
+b9ff5589d5c1324703d5f945b55369996eaeb69bfd728d28764311dee696545d  packages/legacy/github/src/runtime-batch.ts
+b1fc5e7cf2fe053afec74a8e85f4f449a78936bc5d75b7c5619982b1ebcd9f68  packages/legacy/github/tests/runtime-batch.test.ts
