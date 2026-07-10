@@ -42,5 +42,5 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 ```
 
 ---
-**Blocking assessment:** Blocked by inventory-core acceptance and by eta-mu-cljs-rewrite-boundary-adapters (in progress). Image/OAuth adapters also depend on ai-cljs-rewrite provider/OAuth parity (incoming).
+**Blocking assessment:** Blocked by inventory-core acceptance and by eta-mu-cljs-rewrite-boundary-adapters (done). Image/OAuth adapters also depend on ai-cljs-rewrite provider/OAuth parity (incoming).
 ---

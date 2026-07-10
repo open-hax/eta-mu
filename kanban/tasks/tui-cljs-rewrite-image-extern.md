@@ -1,13 +1,14 @@
 ---
-uuid: "tui-cljs-rewrite-image-extern"
-title: "TUI CLJS Rewrite — Terminal Image Extern"
-status: "blocked"
-priority: "P1"
-labels: ["tasks", "cljs", "rewrite", "tui"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/tui-cljs-rewrite.md"
-points: 2
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "tui"]
+write-id: "1783693463232-0.6aj8d63405alta1i9x1"
+points: "2"
+source: "kanban/epics/tui-cljs-rewrite.md"
+title: "TUI CLJS Rewrite — Terminal Image Extern"
+priority: "P1"
+status: "rejected"
+uuid: "tui-cljs-rewrite-image-extern"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # TUI CLJS Rewrite — Terminal Image Extern
@@ -43,4 +44,6 @@ pnpm --filter @open-hax/eta-mu-tui test
 
 ---
 Blocked by `eta-mu-cljs-rewrite-boundary-adapters` (core program): image extern adapters need the established `extern.*` boundary pattern and conversion-test conventions. Terminal capability conventions from `tui-cljs-rewrite-terminal-extern` should also be stable first.
+
+Triage 2026-07-10: superseded by terminal-ui-cljs-package (2026-07-09 decision to build packages/terminal-ui); this epic's scope maps 1:1 onto that card's open work items. Closed as superseded, not abandoned.
 ---

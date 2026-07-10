@@ -1,13 +1,14 @@
 ---
-uuid: "tui-cljs-rewrite-facade-cutover"
-title: "TUI CLJS Rewrite — CLI Facade and TS Cutover"
-status: "blocked"
-priority: "P1"
-labels: ["tasks", "cljs", "rewrite", "tui"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/tui-cljs-rewrite.md"
-points: 3
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "tui"]
+write-id: "1783693468058-0.1i0406jisqkhos6mx9bp"
+points: "3"
+source: "kanban/epics/tui-cljs-rewrite.md"
+title: "TUI CLJS Rewrite — CLI Facade and TS Cutover"
+priority: "P1"
+status: "rejected"
+uuid: "tui-cljs-rewrite-facade-cutover"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # TUI CLJS Rewrite — CLI Facade and TS Cutover
@@ -48,4 +49,6 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 
 ---
 Blocked by `tui-cljs-rewrite-test-parity` and `eta-mu-cljs-runtime-rewrite` (core program): the compatibility facade and TypeScript cutover require passing parity tests and a stable CLJS runtime spine first.
+
+Triage 2026-07-10: superseded by terminal-ui-cljs-package (2026-07-09 decision to build packages/terminal-ui); this epic's scope maps 1:1 onto that card's open work items. Closed as superseded, not abandoned.
 ---

@@ -1,13 +1,14 @@
 ---
-uuid: "coding-agent-cljs-rewrite-messages-diagnostics-law"
-title: "Coding Agent CLJS Rewrite — Messages, Diagnostics & Output Guard"
-status: "blocked"
-priority: "P0"
-labels: ["tasks", "cljs", "rewrite", "coding-agent", "2sp"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/coding-agent-cljs-rewrite.md"
-points: 2
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "coding-agent", "2sp"]
+write-id: "1783693256221-0.w389l0z79nebdtvpcs9"
+points: "2"
+source: "kanban/epics/coding-agent-cljs-rewrite.md"
+title: "Coding Agent CLJS Rewrite — Messages, Diagnostics & Output Guard"
+priority: "P0"
+status: "ready"
+uuid: "coding-agent-cljs-rewrite-messages-diagnostics-law"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # Coding Agent CLJS Rewrite — Messages, Diagnostics & Output Guard

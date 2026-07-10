@@ -1,13 +1,14 @@
 ---
-uuid: "legacy-package-reorganization"
-title: "Legacy Package Reorganization"
-status: "review"
-priority: "P1"
-labels: ["tasks", "planning", "3sp"]
-created_at: "2026-07-08T20:20:00Z"
-source: "docs/design/legacy-package-reorganization.md"
-points: 3
 category: "tasks"
+labels: ["tasks", "planning", "3sp"]
+write-id: "1783693440187-0.761f0v9a8wlmooz2ce0"
+points: "3"
+source: "docs/design/legacy-package-reorganization.md"
+title: "Legacy Package Reorganization"
+priority: "P1"
+status: "done"
+uuid: "legacy-package-reorganization"
+created_at: "2026-07-08T20:20:00Z"
 ---
 
 # Legacy Package Reorganization
@@ -59,3 +60,7 @@ The remaining slice is the full terminal-ui package split from `packages/legacy/
 # Ensure the document exists and is well-formed markdown
 pnpm -C packages/legacy/coding-agent exec eta-mu kanban content legacy-package-reorganization --config /home/err/spaces/eta-mu/kanban/openhax.kanban.json
 ```
+
+---
+Triage 2026-07-10: receipts.edn records DoD met (2026-07-09); the remaining terminal-ui split is tracked by terminal-ui-cljs-package. Promoted review->done.
+---

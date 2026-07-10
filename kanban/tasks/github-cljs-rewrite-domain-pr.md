@@ -48,5 +48,5 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 ```
 
 ---
-**Status note:** Blocked by `github-cljs-rewrite-inventory`, `github-cljs-rewrite-extern-adapters` (needs PR/autofix data shapes and config adapter), and `eta-mu-cljs-rewrite-boundary-adapters` (boundary patterns still in progress).
+**Status note:** Blocked by `github-cljs-rewrite-inventory`, `github-cljs-rewrite-extern-adapters` (needs PR/autofix data shapes and config adapter), and `eta-mu-cljs-rewrite-boundary-adapters` (done).
 ---

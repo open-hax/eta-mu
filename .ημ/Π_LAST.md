@@ -1,48 +1,62 @@
-# Π Fork Tax — 2026-07-10T08:06:21Z
+# Π Fork Tax — 2026-07-10T14:42:17Z
 
 ## Branch
-`docs/discovery-sweep-update`
+`device/yoga`
 
 ## Base SHA
-`18e8ffc46d06890b2ce15e756f8bcfec7a61298f`
+`415b2f2811dbf4d42673530cf2927fd0b3789d14`
 
 ## What Changed
-eta-mu CLJS rewrite handoff — new CLI/contract/terminal/turn CLJS packages, legacy gate removal, extension bridge updates, and workspace reorganization.
+Continuation of the eta-mu CLJS rewrite on the `device/yoga` branch after the `docs/discovery-sweep-update` merge. This handoff absorbs contract-runtime-v2 migrations, kanban updates, eta-mu CLI readline/repl work, an extension macro change, and a legacy/github runtime-batch fix.
 
-Continuation of the `docs/discovery-sweep-update` branch from the 2026-06-19 Π snapshot. This handoff absorbs the previously-excluded "concurrent dirt" plus new discovery output.
+### Contract / workspace state
+- **`.ημ/PRINCIPLE.edn`** — updated contract runtime content.
+- **`AGENTS.md`** — updated Clojure house rules and project instructions.
+- **`README.md`** — refreshed top-level project readme.
+- **`agents/mindfuck/CONTRACT.edn`** — updated agent contract.
+- **`biome.json`** — updated package paths to reflect legacy/ reorganization.
+- **`operation-mindfuck/ημΠ.dev.v5.skill-graph.edn`** — updated skill-graph registry.
+- **`operation-mindfuck/README.md`** — new readme for the operation-mindfuck directory.
 
-### Previously-excluded concurrent dirt (now owned and committed)
-- **Root PM2 ecosystem** — `ecosystem.config.cjs` rewritten as an aggregator that discovers and requires every `packages/*/ecosystem.config.cjs`.
-- **Kanban ledger** — `kanban/.events/ledger.edn` appended with drift-detected events for the 13 docs tasks, the `fsm-engine` epic, and all 12 FSM subtask cards.
-- **FSM engine epic** — `kanban/epics/fsm-engine.md` updated to `breakdown` status with a reconciliation-architecture section (event cascade, invariants, config-as-data, frontmatter-as-interface) and 12 linked subtask cards.
-- **Rheos UI** — `packages/Rheos/src/rheos/ui/domain/board.cljs` task-item height adjusted; `packages/Rheos/src/rheos/ui/domain/sidebar.cljs` DOMPurify import fixed for ESM module shape.
-- **chat-ui** — `packages/chat-ui/src/eta_mu/chat_ui/message.cljs` DOMPurify import fixed for ESM module shape.
-- **Receipts** — `receipts.edn` updated with the last work log.
+### Kanban
+- **`kanban/.events/ledger.edn`** — appended ledger events.
+- **`kanban/tasks/*`** — 40+ task cards updated with new frontmatter/body edits across the CLJS rewrite portfolio (agent, ai, coding-agent, eta-mu, github, publication-components, tui, etc.).
 
-### New discovery output
-- `.dir-locals.el` — Emacs local variables.
-- `docs/notes/2026.07.10.03.00.16.md` — long-form note (prompt-wizard / perplexity space material).
-- `openhax.kanban.json` — kanban config stub (`tasksDir`, `boardFile`, `fsm: promethean`).
-- `kanban/tasks/` — 28 new task cards: 13 docs-cleanup, 12 FSM breakdown, 1 ops-fix-root-package-json-scripts.
-- `packages/eta-mu-extensions/kanban/.events/ledger.edn` — stub ledger for the old extensions package.
+### eta-mu CLI
+- **`packages/eta-mu/package.json`** — updated scripts/deps.
+- **`packages/eta-mu/README.md`** — updated package readme.
+- **`packages/eta-mu/src/cljs/eta_mu/extern/readline.cljs`** — readline extern improvements.
+- **`packages/eta-mu/src/cljs/eta_mu/infra/cli/repl.cljs`** — REPL infra updates.
+- **`packages/eta-mu/test/cljs/eta_mu/extern/readline_test.cljs`** — new readline test.
+- **`packages/eta-mu/dist-cli/index.cjs`** / **`packages/eta-mu/dist-cli/index.cjs.map`** — rebuilt CLI artifacts.
 
-### Not tracked
-- `cljs-rewrite/` — empty directory; git does not track empty directories.
+### Extensions
+- **`packages/extensions/lib/eta_mu/macros/state.cljc`** — state macro changes.
+
+### Legacy / GitHub
+- **`packages/legacy/github/src/runtime-batch.ts`** — runtime-batch logic fix.
+- **`packages/legacy/github/tests/runtime-batch.test.ts`** — matching regression test.
+
+### Deleted
+- **`packages/eta-mu-extensions/kanban/.events/ledger.edn`** — removed stale ledger stub.
+
+### Docs notes
+- **`docs/notes/INDEX.md`** — updated note index.
 
 ## Verification Status
-- **Rheos tests**: Passed — 58 tests, 164 assertions, 0 failures.
-- **chat-ui tests**: Passed — 2 tests, 6 assertions, 0 failures.
-- **clj-kondo**: Passed — 0 errors, 0 warnings in both modified packages.
-- **TypeScript line count**: No `.ts/.tsx` files added or modified; global total unchanged at 174,564 lines.
-- **Secret scan**: No suspicious patterns in changed or untracked files.
+- **packages/eta-mu tests**: Passed — 54 tests, 100 assertions, 0 failures, 0 errors.
+- **packages/extensions tests**: Passed — 72 tests, 195 assertions, 0 failures, 0 errors.
+- **packages/legacy/github tests**: Passed — 21 tests, 0 failures.
+- **clj-kondo**: Passed — 0 errors, 0 warnings in `packages/eta-mu`.
+- **TypeScript line count**: Global total 172,853 lines; net reduction from prior snapshot (no `.ts/.tsx` added).
+- **Secret scan**: No plaintext secrets found; grep hits were build artifacts and feature descriptions.
 
 ## Commit
-`53fc9ef43891220200f41fa80f82f9d031eb33e5` on `docs/discovery-sweep-update`
-(this artifact updated in a follow-up commit recording the snapshot SHA)
+`π-pending` on `device/yoga` (this artifact will be updated in a follow-up commit recording the snapshot SHA).
 
 ## Tag
-`Π/docs-discovery-sweep-update/2026-07-10T080621`
+`Π/device/yoga/2026-07-10T144217`
 
 ## Notes
-- Workspace treated as shared per concurrent-agent guardrails. This snapshot intentionally absorbs all currently stageable paths; no other concurrent dirt was left unstaged.
-- The `docs/notes/2026.07.10.03.00.16.md` file appears to be external prompt-wizard material; included in the snapshot as-is because it is part of the current working tree.
+- Workspace treated as shared per multi-agent guardrails. This snapshot intentionally absorbs all currently stageable paths; no other concurrent dirt was left unstaged.
+- The `packages/eta-mu/dist-cli/index.cjs` and `.map` files are generated build artifacts committed because they are part of the current working tree.

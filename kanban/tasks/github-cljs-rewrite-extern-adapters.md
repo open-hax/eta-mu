@@ -51,5 +51,5 @@ pnpm --dir packages/eta-mu-runtime cljs:test
 ```
 
 ---
-**Status note:** Blocked by `github-cljs-rewrite-inventory` (needs file/namespace mapping), `eta-mu-cljs-rewrite-boundary-adapters` (extern adapter patterns still in progress), and `fetch-timeout-abort-controller` (epic says merge first; the fetch client adapter must incorporate the timeout).
+**Status note:** Blocked by `github-cljs-rewrite-inventory` (needs file/namespace mapping), `eta-mu-cljs-rewrite-boundary-adapters` (done), and `fetch-timeout-abort-controller` (epic says merge first; the fetch client adapter must incorporate the timeout).
 ---

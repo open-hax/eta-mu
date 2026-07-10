@@ -52,5 +52,5 @@ node scripts/ts-line-count.mjs packages/legacy/ai
 ```
 
 ---
-Status updated to blocked: waiting for Phase 2 canonical message model and shared boundary-adapter conventions (core boundary-adapters task is still in_progress).
+Status updated to blocked: waiting for Phase 2 canonical message model and shared boundary-adapter conventions (core boundary-adapters task is done as of 2026-07-10).
 ---

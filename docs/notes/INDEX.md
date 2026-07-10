@@ -29,6 +29,7 @@ thread.
 | [2026.04.19.08.44.04.md](2026.04.19.08.44.04.md) | design intent | Intent contracts (pre-execution gate, inverse of fulfillment) and the case for deterministic — not just LLM-judge — fulfillment checks. |
 | [2026.04.19.10.07.53.md](2026.04.19.10.07.53.md) | historical | Long Perplexity transcript reviewing the contract DSL direction (EDN-first, Malli, SCI evaluator, bracket-repair toolchain). Source material for the design-intent notes above. |
 | [2026.05.08.11.37.09.md](2026.05.08.11.37.09.md) | design intent | Prompt-contract-as-source-language: a two-stage compiler (contract source → prompt + enforcement spec; response markdown → semantic AST) and parsing leading epistemic parentheticals `(己, p=…)` into claim data. |
+| [2026.07.08.14.15.47.md](2026.07.08.14.15.47.md) | design intent | Working prototype notes for loading `.cljs` user extensions directly ("just work" in Node.js/dev mode) — companion to [`../design/user-clojurescript-extensions.md`](../design/user-clojurescript-extensions.md). |
 
 ## Agent model, orchestrator & kanban FSM
 
@@ -68,6 +69,7 @@ Notes about running agents in specific harnesses, not about eta-mu's own design.
 |------|--------|---------|
 | [2026.06.16.07.28.31.md](2026.06.16.07.28.31.md) | historical | "Compiler of intent" prompt template (Clarified Intent / Copy-Ready Prompt / Possible Refinements) plus exploration rules. |
 | [2026.06.16.07.37.19.md](2026.06.16.07.37.19.md) | historical | Perplexity sandbox operating notes: Debian TTL/reset behavior, `SETUP.sh` toolchain (JDK 21, Babashka, Clojure CLI, clj-kondo, nbb, shadow-cljs), snapshot protocol. |
+| [2026.07.10.03.00.16.md](2026.07.10.03.00.16.md) | historical | **Misfiled?** Agent prompt for an unrelated repo (`riatzukiza/perplexity_spaces_memory_protocol` Prompt Wizard PR) — not eta-mu design; candidate to move out of `docs/notes/`. |
 
 ---
 

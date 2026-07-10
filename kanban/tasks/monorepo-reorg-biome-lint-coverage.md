@@ -1,13 +1,14 @@
 ---
-uuid: "monorepo-reorg-biome-lint-coverage"
-title: "Refresh biome.json lint globs after packages/legacy reorg"
-status: "ready"
-priority: "P2"
-labels: ["tasks", "lint", "biome", "monorepo", "tech-debt"]
-created_at: "2026-06-15T00:00:00Z"
-source: "PR #132 review"
-points: 2
 category: "tasks"
+labels: ["tasks", "lint", "biome", "monorepo", "tech-debt"]
+write-id: "1783694673973-0.r9bnh6eznsgajheezud"
+points: "2"
+source: "PR #132 review"
+title: "Refresh biome.json lint globs after packages/legacy reorg"
+priority: "P2"
+status: "in_progress"
+uuid: "monorepo-reorg-biome-lint-coverage"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # Refresh biome.json lint globs after the packages/legacy reorg

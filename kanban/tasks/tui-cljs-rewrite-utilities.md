@@ -1,13 +1,14 @@
 ---
-uuid: "tui-cljs-rewrite-utilities"
-title: "TUI CLJS Rewrite — Fuzzy, Keys, Keybindings, and Autocomplete"
-status: "blocked"
-priority: "P1"
-labels: ["tasks", "cljs", "rewrite", "tui"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/tui-cljs-rewrite.md"
-points: 3
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "tui"]
+write-id: "1783693464827-0.8uem1n13l3p3bvhmw9d"
+points: "3"
+source: "kanban/epics/tui-cljs-rewrite.md"
+title: "TUI CLJS Rewrite — Fuzzy, Keys, Keybindings, and Autocomplete"
+priority: "P1"
+status: "rejected"
+uuid: "tui-cljs-rewrite-utilities"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # TUI CLJS Rewrite — Fuzzy, Keys, Keybindings, and Autocomplete
@@ -43,4 +44,6 @@ pnpm --filter @open-hax/eta-mu-tui test
 
 ---
 Blocked by `tui-cljs-rewrite-terminal-extern` (within-epic): keybindings and autocomplete compose with the keys extern, and fuzzy matching shares component test infrastructure with the core TUI port.
+
+Triage 2026-07-10: superseded by terminal-ui-cljs-package (2026-07-09 decision to build packages/terminal-ui); this epic's scope maps 1:1 onto that card's open work items. Closed as superseded, not abandoned.
 ---

@@ -75,7 +75,7 @@ Always use `^:async` metadata (ClojureScript ≥ 1.12.145). Never use
 - Custom macros registered in `.clj-kondo/config.edn` on day one
 ## Testing Gate
 - A task is not done while any relevant automated test suite is failing.
-- For coding-agent changes, run `pnpm -C packages/legacy/coding-agent test` and resolve all failures before reporting completion.
+- For CLI changes, run `pnpm -C packages/eta-mu test` and `pnpm -C packages/eta-mu lint:kondo` — `packages/eta-mu` is the CLI now, not `packages/legacy/coding-agent`. (Only run the legacy coding-agent suite when a change actually touches that package.)
 - For eta-mu extension changes, run `pnpm -C packages/extensions test` and resolve all failures before reporting completion.
 - If a full suite cannot be run, state that the task is not complete and record the exact blocker instead of claiming done.
 

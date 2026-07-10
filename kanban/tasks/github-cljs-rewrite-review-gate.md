@@ -47,5 +47,5 @@ pnpm --filter @open-hax/eta-mu-github typecheck
 ```
 
 ---
-**Status note:** Blocked by `github-cljs-rewrite-inventory`, `github-cljs-rewrite-extern-adapters` (needs review payload shapes), and `eta-mu-cljs-rewrite-boundary-adapters` (boundary patterns still in progress).
+**Status note:** Blocked by `github-cljs-rewrite-inventory`, `github-cljs-rewrite-extern-adapters` (needs review payload shapes), and `eta-mu-cljs-rewrite-boundary-adapters` (done).
 ---

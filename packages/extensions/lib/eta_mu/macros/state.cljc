@@ -21,7 +21,10 @@
 
 (defn- state-key
   "Generate global state key: __eta_mu_<ext_name>_state__
-   Falls back to __pi_<ext_name>_state__ for backward compat."
+
+   No __pi_ fallback is generated here. Extensions that must keep their
+   historical __pi_<ext_name>_state__ key (receipt-river, session-mycology,
+   task-timing) bypass this macro and hardcode GLOBAL-KEY themselves."
   [ext-name]
   (str "__eta_mu_" (normalize-name ext-name) "_state__"))
 

@@ -1,13 +1,14 @@
 ---
-uuid: "ai-cljs-rewrite-phase-3-extern-bedrock"
-title: "AI CLJS Rewrite — Amazon Bedrock Extern Adapter"
-status: "blocked"
-priority: "P1"
-labels: ["tasks", "cljs", "rewrite", "ai"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/ai-cljs-rewrite.md"
-points: 2
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "ai"]
+write-id: "1783693251997-0.uhgekk9ymk4p8usl26"
+points: "2"
+source: "kanban/epics/ai-cljs-rewrite.md"
+title: "AI CLJS Rewrite — Amazon Bedrock Extern Adapter"
+priority: "P1"
+status: "ready"
+uuid: "ai-cljs-rewrite-phase-3-extern-bedrock"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # AI CLJS Rewrite — Amazon Bedrock Extern Adapter
@@ -45,5 +46,5 @@ node scripts/ts-line-count.mjs packages/legacy/ai
 ```
 
 ---
-Status updated to blocked: waiting for Phase 2 canonical message model and shared boundary-adapter conventions (core boundary-adapters task is still in_progress).
+Status updated to blocked: waiting for Phase 2 canonical message model and shared boundary-adapter conventions (core boundary-adapters task is done as of 2026-07-10).
 ---

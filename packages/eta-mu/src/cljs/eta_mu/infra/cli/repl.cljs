@@ -59,9 +59,14 @@
   `config` is the turn-loop config.
   `stream-fn` produces the LLM stream.
   `get-input` is an optional function `(prompt) -> Promise<string?` that returns
-  the next line of input or nil when closed. Defaults to `readline/read-line`."
+  the next line of input or nil when closed. Defaults to questions against a
+  single readline interface held open for the whole session."
   ([context config stream-fn]
-   (run-repl context config stream-fn readline/read-line))
+   (let [rl (readline/create-interface)]
+     (try
+       (await (run-repl context config stream-fn #(readline/question rl %)))
+       (finally
+         (readline/close! rl)))))
   ([context config stream-fn get-input]
    (println "eta-mu agent REPL. Type /exit to quit, /clear to reset context.")
    (loop [ctx context]

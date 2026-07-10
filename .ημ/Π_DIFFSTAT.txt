@@ -1,54 +1,67 @@
-# Π_DIFFSTAT — 2026-07-10T08:06:21Z
-# git diff --cached --stat (owned scope excluding .ημ artifacts)
-
- .dir-locals.el                                     |   0
-docs/notes/2026.07.10.03.00.16.md                  | 677 +++++++++++++++++++++
- ecosystem.config.cjs                               |  45 +-
- kanban/.events/ledger.edn                          |  32 +
- kanban/epics/fsm-engine.md                         |  96 ++-
- kanban/tasks/docs-cleanup-agents-md.md             |  30 +
- kanban/tasks/docs-consolidate-notes-index.md       |  31 +
- kanban/tasks/docs-create-missing-package-readmes.md |  38 ++
- kanban/tasks/docs-fix-axxium-readme.md             |  35 +
- kanban/tasks/docs-fix-extensions-e2e-readme.md     |  31 +
- kanban/tasks/docs-fix-extensions-readme-drift.md   |  33 +
- kanban/tasks/docs-fix-runtime-paths-readme.md      |  31 +
- kanban/tasks/docs-fix-sol-knoxx-artifacts.md       |  34 +
- kanban/tasks/docs-reconcile-cross-references.md    |  30 +
- kanban/tasks/docs-refresh-architecture-inventories.md |  33 +
- kanban/tasks/docs-refresh-legacy-package-readmes.md |  38 ++
- kanban/tasks/docs-rewrite-development-md.md        |  31 +
- kanban/tasks/docs-rewrite-top-level-readme.md      |  32 +
- kanban/tasks/fsm-bounce-reconciler.md              |  28 +
- kanban/tasks/fsm-check-agent-review.md             |  25 +
- kanban/tasks/fsm-check-code-review.md              |  24 +
- kanban/tasks/fsm-check-js-agent-shell-types.md     |  25 +
- kanban/tasks/fsm-check-markdown-score.md           |  25 +
- kanban/tasks/fsm-config-as-data-edn.md             |  28 +
- kanban/tasks/fsm-event-cascade-derivation.md       |  30 +
- kanban/tasks/fsm-frontmatter-interface-generalization.md |  28 +
- kanban/tasks/fsm-harness-auto-verify.md            |  24 +
- kanban/tasks/fsm-ledger-fold-accepted-state.md     |  30 +
- kanban/tasks/fsm-provenance-filtering.md           |  30 +
- kanban/tasks/fsm-transition-contract-pending-lock.md |  30 +
- kanban/tasks/ops-fix-root-package-json-scripts.md  |  32 +
- openhax.kanban.json                                |   5 +
- packages/Rheos/src/rheos/ui/domain/board.cljs      |   2 +-
- packages/Rheos/src/rheos/ui/domain/sidebar.cljs    |   4 +-
- packages/chat-ui/src/eta_mu/chat_ui/message.cljs   |   4 +-
- packages/eta-mu-extensions/kanban/.events/ledger.edn |   0
- receipts.edn                                       |   5 +
- 40 files changed, 1737 insertions(+), 144 deletions(-)
-
-Excluded from diffstat (Π artifacts updated in this commit):
-  .ημ/Π_STATE.sexp, .ημ/Π_LAST.md, .ημ/Π_MANIFEST.sha256, .ημ/Π_DIFFSTAT.txt
-
-Not tracked (empty directory):
-  cljs-rewrite/
-
-Verified before commit:
-  - Rheos tests: 58 tests, 164 assertions, 0 failures
-  - chat-ui tests: 2 tests, 6 assertions, 0 failures
-  - clj-kondo: 0 errors, 0 warnings in both packages
-  - TypeScript line count: 174,564 global lines, no .ts/.tsx changes
-  - Secret scan: no suspicious patterns
+# Π diffstat — generated 2026-07-10T14:42:17Z
+# Branch: device/yoga
+# Base: 415b2f2811dbf4d42673530cf2927fd0b3789d14
+#
+# Full diffstat (excluding generated dist-cli map to keep readable):
+ ".\316\267\316\274/PRINCIPLE.edn"                  |  25 +-
+ ".\316\267\316\274/\316\240_DIFFSTAT.txt"          |  59 +-
+ ".\316\267\316\274/\316\240_LAST.md"               |  82 +--
+ ".\316\267\316\274/\316\240_MANIFEST.sha256"       |  85 ++-
+ ".\316\267\316\274/\316\240_STATE.sexp"            | 139 +++--
+ AGENTS.md                                          |   2 +-
+ README.md                                          |  13 +-
+ agents/mindfuck/CONTRACT.edn                       |   2 +-
+ biome.json                                         |  53 +-
+ docs/notes/INDEX.md                                |   2 +
+ kanban/.events/ledger.edn                          |  62 ++
+ .../agent-cljs-rewrite-phase-2-extern-adapters.md  |  17 +-
+ .../ai-cljs-rewrite-phase-3-extern-anthropic.md    |  17 +-
+ .../ai-cljs-rewrite-phase-3-extern-auxiliary.md    |  17 +-
+ .../ai-cljs-rewrite-phase-3-extern-bedrock.md      |  17 +-
+ .../tasks/ai-cljs-rewrite-phase-3-extern-google.md |  17 +-
+ .../tasks/ai-cljs-rewrite-phase-3-extern-openai.md |   2 +-
+ ...ing-agent-cljs-rewrite-domain-extensions-law.md |  15 +-
+ .../coding-agent-cljs-rewrite-domain-tools-law.md  |  17 +-
+ ...nt-cljs-rewrite-extern-clipboard-image-oauth.md |   2 +-
+ ...coding-agent-cljs-rewrite-extern-fs-git-bash.md |   2 +-
+ ...ent-cljs-rewrite-infra-package-settings-auth.md |  15 +-
+ ...ing-agent-cljs-rewrite-infra-session-manager.md |  15 +-
+ ...-agent-cljs-rewrite-messages-diagnostics-law.md |  15 +-
+ .../tasks/eta-mu-cljs-rewrite-cutover-ratchet.md   |  23 +-
+ kanban/tasks/eta-mu-github-fetch-timeout.md        |  25 +-
+ .../eta-mu-quality-ratchet-cli-startup-smoke.md    |  17 +-
+ kanban/tasks/fsm-provenance-filtering.md           |  19 +-
+ kanban/tasks/github-cljs-rewrite-domain-pr.md      |   2 +-
+ .../tasks/github-cljs-rewrite-event-classifier.md  |   2 +-
+ .../tasks/github-cljs-rewrite-extern-adapters.md   |   2 +-
+ kanban/tasks/github-cljs-rewrite-review-gate.md    |   2 +-
+ .../github-cljs-rewrite-runtime-batch-adapter.md   |   2 +-
+ kanban/tasks/legacy-package-reorganization.md      |  17 +-
+ kanban/tasks/monorepo-reorg-biome-lint-coverage.md |  15 +-
+ ...t-contract-gate-cljs-rewrite-extern-adapters.md |  17 +-
+ ...ication-components-cljs-rewrite-audio-player.md |  17 +-
+ ...blication-components-cljs-rewrite-queue-list.md |  17 +-
+ kanban/tasks/rheos-comments-parity.md              |  23 +-
+ kanban/tasks/tui-cljs-rewrite-core-tui.md          |  17 +-
+ kanban/tasks/tui-cljs-rewrite-facade-cutover.md    |  17 +-
+ kanban/tasks/tui-cljs-rewrite-image-extern.md      |  17 +-
+ kanban/tasks/tui-cljs-rewrite-input-editor.md      |  17 +-
+ kanban/tasks/tui-cljs-rewrite-markdown-overlays.md |  17 +-
+ kanban/tasks/tui-cljs-rewrite-terminal-extern.md   |  17 +-
+ kanban/tasks/tui-cljs-rewrite-test-parity.md       |  17 +-
+ kanban/tasks/tui-cljs-rewrite-utilities.md         |  17 +-
+ operation-mindfuck/README.md                       |  22 +
+ ...316\267\316\274\316\240.dev.v5.skill-graph.edn" |  25 +-
+ .../eta-mu-extensions/kanban/.events/ledger.edn    |   0
+ packages/eta-mu/README.md                          |   4 +-
+ packages/eta-mu/dist-cli/index.cjs                 | 661 +++++++++++----------
+ packages/eta-mu/package.json                       |   2 +-
+ .../eta-mu/src/cljs/eta_mu/extern/readline.cljs    |  73 ++-
+ .../eta-mu/src/cljs/eta_mu/infra/cli/repl.cljs     |   9 +-
+ .../test/cljs/eta_mu/extern/readline_test.cljs     |  36 ++
+ packages/extensions/lib/eta_mu/macros/state.cljc   |   5 +-
+ packages/legacy/github/src/runtime-batch.ts        |  32 +-
+ packages/legacy/github/tests/runtime-batch.test.ts |  36 +-
+ 59 files changed, 1116 insertions(+), 817 deletions(-)
+#
+# Dist-cli map is part of the snapshot but omitted from the diffstat above.

@@ -1,13 +1,14 @@
 ---
-uuid: "coding-agent-cljs-rewrite-infra-package-settings-auth"
-title: "Coding Agent CLJS Rewrite — Package, Settings & Auth Infra"
-status: "blocked"
-priority: "P0"
-labels: ["tasks", "cljs", "rewrite", "coding-agent", "3sp"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/coding-agent-cljs-rewrite.md"
-points: 3
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "coding-agent", "3sp"]
+write-id: "1783693257126-0.sm9mbe5pjva3n67ps21"
+points: "3"
+source: "kanban/epics/coding-agent-cljs-rewrite.md"
+title: "Coding Agent CLJS Rewrite — Package, Settings & Auth Infra"
+priority: "P0"
+status: "ready"
+uuid: "coding-agent-cljs-rewrite-infra-package-settings-auth"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # Coding Agent CLJS Rewrite — Package, Settings & Auth Infra

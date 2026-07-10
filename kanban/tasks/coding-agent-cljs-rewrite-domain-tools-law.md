@@ -1,13 +1,14 @@
 ---
-uuid: "coding-agent-cljs-rewrite-domain-tools-law"
-title: "Coding Agent CLJS Rewrite — Tool Domain & Law"
-status: "blocked"
-priority: "P0"
-labels: ["tasks", "cljs", "rewrite", "coding-agent", "5sp"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/coding-agent-cljs-rewrite.md"
-points: 5
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "coding-agent", "5sp"]
+write-id: "1783693254547-0.41roov7awnx8qf9gnat"
+points: "5"
+source: "kanban/epics/coding-agent-cljs-rewrite.md"
+title: "Coding Agent CLJS Rewrite — Tool Domain & Law"
+priority: "P0"
+status: "ready"
+uuid: "coding-agent-cljs-rewrite-domain-tools-law"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # Coding Agent CLJS Rewrite — Tool Domain & Law
@@ -43,5 +44,5 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 ```
 
 ---
-**Blocking assessment:** Blocked by inventory-core acceptance. Tool schemas and dispatch logic can be drafted in parallel with other domain tasks, but full implementation and integration tests require extern-fs-git-bash adapters and the boundary conventions from eta-mu-cljs-rewrite-boundary-adapters (in progress).
+**Blocking assessment:** Blocked by inventory-core acceptance. Tool schemas and dispatch logic can be drafted in parallel with other domain tasks, but full implementation and integration tests require extern-fs-git-bash adapters and the boundary conventions from eta-mu-cljs-rewrite-boundary-adapters (done).
 ---

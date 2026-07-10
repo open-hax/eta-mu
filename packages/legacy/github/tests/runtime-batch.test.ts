@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   buildDraftActionBatch,
   buildPlanningContext,
   mapActionBatchToDecision,
+  publishActionBatch,
 } from "../src/runtime-batch.js";
 
 describe("buildPlanningContext", () => {
@@ -101,5 +102,38 @@ describe("mapActionBatchToDecision", () => {
 
     expect(decision.mode).toBe("autofix");
     expect(decision.shouldRespond).toBe(true);
+  });
+});
+
+describe("publishActionBatch", () => {
+  const originalFetch = globalThis.fetch;
+  const record = { batch: {} };
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("aborts a hung publish once the timeout elapses and surfaces the abort error", async () => {
+    globalThis.fetch = ((_endpoint: unknown, init?: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(init.signal?.reason ?? new Error("aborted"));
+        });
+      })) as typeof fetch;
+
+    await expect(publishActionBatch("http://127.0.0.1:9", record, 25)).rejects.toThrow(
+      /abort/i,
+    );
+  });
+
+  it("passes an abort signal to fetch and resolves on a fast ok response", async () => {
+    let sawSignal: unknown;
+    globalThis.fetch = (async (_endpoint: unknown, init?: RequestInit) => {
+      sawSignal = init?.signal;
+      return { ok: true, status: 200 } as Response;
+    }) as typeof fetch;
+
+    await expect(publishActionBatch("http://127.0.0.1:9", record)).resolves.toBeUndefined();
+    expect(sawSignal).toBeInstanceOf(AbortSignal);
   });
 });

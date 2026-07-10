@@ -1,13 +1,14 @@
 ---
-uuid: "tui-cljs-rewrite-core-tui"
-title: "TUI CLJS Rewrite — Core TUI and Layout Components"
-status: "blocked"
-priority: "P1"
-labels: ["tasks", "cljs", "rewrite", "tui"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/tui-cljs-rewrite.md"
-points: 5
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "tui"]
+write-id: "1783693458589-0.6nr1goqo9orf82rhqn"
+points: "5"
+source: "kanban/epics/tui-cljs-rewrite.md"
+title: "TUI CLJS Rewrite — Core TUI and Layout Components"
+priority: "P1"
+status: "rejected"
+uuid: "tui-cljs-rewrite-core-tui"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # TUI CLJS Rewrite — Core TUI and Layout Components
@@ -44,4 +45,6 @@ pnpm --filter @open-hax/eta-mu-tui test
 
 ---
 Blocked by `tui-cljs-rewrite-terminal-extern` (within-epic) and `eta-mu-cljs-runtime-rewrite` / `eta-mu-cljs-rewrite-boundary-adapters` (core program): core TUI layout and rendering need terminal extern abstractions and the CLJS runtime spine before component porting can begin.
+
+Triage 2026-07-10: superseded by terminal-ui-cljs-package (2026-07-09 decision to build packages/terminal-ui); this epic's scope maps 1:1 onto that card's open work items. Closed as superseded, not abandoned.
 ---

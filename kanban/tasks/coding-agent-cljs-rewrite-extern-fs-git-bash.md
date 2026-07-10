@@ -69,5 +69,5 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 ```
 
 ---
-**Blocking assessment:** Blocked by inventory-core acceptance and by eta-mu-cljs-rewrite-boundary-adapters (in progress). FS/git/process conventions and the runtime boundary scanner must be finalized before coding-agent adapters can be built safely. Runtime state/envelope primitives are ready.
+**Blocking assessment:** Blocked by inventory-core acceptance and by eta-mu-cljs-rewrite-boundary-adapters (done). FS/git/process conventions and the runtime boundary scanner must be finalized before coding-agent adapters can be built safely. Runtime state/envelope primitives are ready.
 ---

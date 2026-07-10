@@ -1,13 +1,14 @@
 ---
-uuid: "coding-agent-cljs-rewrite-domain-extensions-law"
-title: "Coding Agent CLJS Rewrite — Extension Domain & Law"
-status: "blocked"
-priority: "P0"
-labels: ["tasks", "cljs", "rewrite", "coding-agent", "5sp"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/coding-agent-cljs-rewrite.md"
-points: 5
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "coding-agent", "5sp"]
+write-id: "1783693255365-0.jfng67mxcyfvwexrzbb"
+points: "5"
+source: "kanban/epics/coding-agent-cljs-rewrite.md"
+title: "Coding Agent CLJS Rewrite — Extension Domain & Law"
+priority: "P0"
+status: "ready"
+uuid: "coding-agent-cljs-rewrite-domain-extensions-law"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # Coding Agent CLJS Rewrite — Extension Domain & Law

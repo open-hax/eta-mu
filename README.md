@@ -10,7 +10,7 @@ This repo absorbs the active eta-mu surfaces that were previously scattered acro
 
 A pre-commit hook (`scripts/pre-commit-ts-guard.sh`, installed via `pnpm hooks:install`) enforces that the total TypeScript line count never increases. All remaining TypeScript lives under `packages/legacy/` and is being ported to CLJS over time; each legacy package has a `*-cljs-rewrite-inventory.md` doc under `docs/` tracking its port.
 
-Current inventory: ~174,500 lines of TypeScript (run `pnpm ts:count`, or `pnpm ts:count:global` / `pnpm ts:count:json`).
+Current inventory: ~172,800 lines of TypeScript (run `pnpm ts:count`, or `pnpm ts:count:global` / `pnpm ts:count:json`).
 
 ## Charter
 
@@ -38,6 +38,8 @@ pnpm -C packages/extensions watch      # dev
 
 - [`packages/axxium`](packages/axxium/README.md) — `@open-hax/axxium`: axiomatic identity/auth kernel. All-CLJS (shadow-cljs `:esm`/Node) Fastify + Postgres server providing password auth, JWT/cookie sessions, an actor read surface, and an entity read endpoint; intended shared identity provider for proxx/knoxx/openplanner.
 - [`packages/chat-ui`](packages/chat-ui/README.md) — `@open-hax/chat-ui`: backend-agnostic Helix/React chat UI components (ChatPanel, MessageBubble, ChatComposer) and the `IChatSession` protocol with sol/knoxx/mock backends; consumed by Rheos via shadow-cljs source path.
+- [`packages/contracts/output`](packages/contracts/output) — `@eta-mu/contracts-output`: CLJS output-contract gate (rewrite of `legacy/output-contract-gate`), shipped as a CLI binary and spawned by `eta-mu contracts output`.
+- [`packages/eta-mu`](packages/eta-mu/README.md) — `eta-mu`: the global CLI entry point and sub-command router (bins `eta-mu` and `pi`), shadow-cljs `:node-script` bundling the turn-processor agent loop; `npm install -g eta-mu` is the intended install path. **This supersedes `packages/legacy/coding-agent` as the CLI.**
 - [`packages/event-ledger`](packages/event-ledger/README.md) — `@promethean-os/event-ledger`: append-only MongoDB-backed CLJS event store (envelope schema, change-stream watchers, TTL config, REST adapter, legacy bridge).
 - [`packages/extensions`](packages/extensions/README.md) — `@open-hax/eta-mu-extensions`: **canonical** eta-mu constitutional-layer extension runtimes (15 `:local` extensions) compiled to pi/opencode/runtime targets via shadow-cljs. See the Constitutional Layer section above.
 - [`packages/extensions-e2e`](packages/extensions-e2e/README.md) — `@open-hax/eta-mu-extensions-e2e`: shadow-cljs `:node-test` harness exercising contract-runtime-v2 policy/fulfillment flows against the canonical `packages/extensions` source.
@@ -48,8 +50,10 @@ pnpm -C packages/extensions watch      # dev
 - [`packages/Rheos`](packages/Rheos/README.md) — `@open-hax/rheos`: kanban board runtime + service shell. CLJS Fastify/React app (board UI, kanban HTTP/MCP API, FSM-enforced ledger-backed moves) shipping a `rheos` CLI.
 - [`packages/runtime`](packages/runtime/README.md) — `@open-hax/eta-mu-runtime`: typed movement kernel for the eta-mu control plane (belief state, panel selection, auditable action envelopes); shadow-cljs + TS-facade library hosting the CLJS rewrite of the `runtime`, `ai`, `coding`, `docs`, `garden`, and `gate` domains. Library only — there is no `services/eta-mu` runtime.
 - [`packages/sol`](packages/sol/README.md) — `@open-hax/sol`: eta-mu CLJS agent runtime backend (Node 22 + shadow-cljs + Fastify control plane; `open-hax.sol.*`). Trimmed eta-mu successor of the Knoxx backend; OpenAI-compatible `/v1/*` + `/api/agent/*` + `/ws/stream`, Proxx-backed.
+- [`packages/terminal-ui`](packages/terminal-ui) — `@eta-mu/terminal-ui`: CLJS terminal-UI package (rewrite home for `legacy/tui`); the visual counterpart to `turn-processor`, extraction in progress.
+- [`packages/turn-processor`](packages/turn-processor) — `@eta-mu/turn-processor`: provider/UI-agnostic CLJS agent turn loop (event-emitting `run-loop`, sequential/parallel tool execution); consumed by the `eta-mu` CLI via shadow-cljs source path.
 
-`packages/sol-staging` is the staging/source tree built via `packages/sol`'s shadow-cljs config (no `package.json` of its own). `packages/eta-mu-extensions` is a stale stub superseded by `packages/extensions` and is flagged for removal — do not add to it.
+`packages/sol-staging` is the staging/source tree built via `packages/sol`'s shadow-cljs config (no `package.json` of its own). (The stale `packages/eta-mu-extensions` stub was removed 2026-07-10; the canonical extensions package is `packages/extensions`.)
 
 ### Legacy TypeScript packages (`packages/legacy/*`, DEPRECATED)
 
@@ -57,7 +61,7 @@ All of these are slated for CLJS rewrite; see the matching `docs/*-cljs-rewrite-
 
 - [`packages/legacy/agent`](packages/legacy/agent/README.md) — `@open-hax/eta-mu-agent-core`: stateful agent with tool execution + event streaming (rewrite → CLJS `eta_mu.agent.*`).
 - [`packages/legacy/ai`](packages/legacy/ai/README.md) — `@open-hax/eta-mu-ai`: unified LLM API with model discovery + multi-provider config (rewrite target `packages/runtime` `eta_mu.ai.*`).
-- [`packages/legacy/coding-agent`](packages/legacy/coding-agent/README.md) — `@open-hax/eta-mu-cli`: coding-agent CLI (bins `eta-mu`/`eta-mu-beta`/`pi`) with read/bash/edit/write tools + session management. Still the CLI/test target referenced by `AGENTS.md`.
+- [`packages/legacy/coding-agent`](packages/legacy/coding-agent/README.md) — `@open-hax/eta-mu-cli`: coding-agent CLI (bins `eta-mu`/`eta-mu-beta`/`pi`) with read/bash/edit/write tools + session management. **Superseded as the CLI by `packages/eta-mu`** (which owns the same bin names — do not global-install both); retained while the interactive/RPC mode rewrites land.
 - [`packages/legacy/docs`](packages/legacy/docs/README.md) — `@open-hax/eta-mu-docs`: ημ docs-indexing library (view-graph substrate) emitting `ημ.docs-index.v1`/`ημ.docs-backlinks.v1` JSONL caches.
 - [`packages/legacy/github`](packages/legacy/github/README.md) — `@open-hax/eta-mu-github`: Pi-based GitHub automation bot and PR/issue/mention review gate (octokit).
 - [`packages/legacy/kanban`](packages/legacy/kanban/README.md) — `@open-hax/kanban-legacy`: markdown kanban library + `openhax-kanban` CLI (board snapshots, React web UI, Trello/GitHub sync); replaced by `packages/Rheos` and the `eta-mu kanban` CLI.
@@ -73,8 +77,9 @@ All of these are slated for CLJS rewrite; see the matching `docs/*-cljs-rewrite-
 ### Clojure & runtime config (repo root)
 
 - `deps.edn` — Clojure dependencies / aliases.
-- `shadow-cljs.edn` — workspace-level ClojureScript build config.
 - `ecosystem.config.cjs` / `ecosystem.cljs` — PM2 ecosystem (JS config + CLJS source).
+
+(There is no root `shadow-cljs.edn`; each CLJS package carries its own.)
 
 ## Local Commands
 
