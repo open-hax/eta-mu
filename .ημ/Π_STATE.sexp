@@ -6,7 +6,7 @@
 (π-snapshot
   (branch "device/yoga")
   (base-sha "415b2f2811dbf4d42673530cf2927fd0b3789d14")
-  (commit "π-pending")
+  (commit "a9c5f3952de66421dc6ccf5cc672bc2200a8bd34")
   (timestamp "2026-07-10T14:42:17Z")
 
   (summary

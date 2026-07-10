@@ -52,7 +52,7 @@ Continuation of the eta-mu CLJS rewrite on the `device/yoga` branch after the `d
 - **Secret scan**: No plaintext secrets found; grep hits were build artifacts and feature descriptions.
 
 ## Commit
-`π-pending` on `device/yoga` (this artifact will be updated in a follow-up commit recording the snapshot SHA).
+`a9c5f3952de66421dc6ccf5cc672bc2200a8bd34` on `device/yoga` (this artifact updated in a follow-up commit recording the snapshot SHA).
 
 ## Tag
 `Π/device/yoga/2026-07-10T144217`
