@@ -1,5 +1,11 @@
 {
   "tasksDir": "./kanban",
   "boardFile": "kanban/.kanban/board.json",
-  "fsm": "promethean"
+  "fsm": "promethean",
+  "meta": {
+    "chat": {
+      "backend": "sol",
+      "model": "gemma4:31b"
+    }
+  }
 }

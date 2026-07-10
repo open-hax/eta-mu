@@ -1,13 +1,14 @@
 ---
-uuid: "ops-fix-root-package-json-scripts"
-title: "Fix root package.json scripts to reference real packages"
-status: "incoming"
-priority: "P1"
-labels: ["ops", "package-json", "scripts", "2sp"]
-created_at: "2026-06-17T00:00:00Z"
-source: "docs discovery sweep 2026-06-16"
-points: 2
 category: "tasks"
+labels: ["ops", "package-json", "scripts", "2sp"]
+write-id: "1783698031624-0.c5r8ssj8sy59anfwoov"
+points: "2"
+source: "docs discovery sweep 2026-06-16"
+title: "Fix root package.json scripts to reference real packages"
+priority: "P1"
+status: "review"
+uuid: "ops-fix-root-package-json-scripts"
+created_at: "2026-06-17T00:00:00Z"
 ---
 
 # Fix root package.json scripts to reference real packages
@@ -30,3 +31,7 @@ The root `package.json` scripts reference packages that no longer exist under th
 - [ ] Update `test`, `typecheck`, and `docs:ts` scripts to use real package names and scripts.
 - [ ] Remove or rewrite scripts for packages that have been deleted.
 - [ ] Run the corrected scripts to confirm they execute without "unknown package" errors.
+
+---
+2026-07-10: done. Audit: test + typecheck filters all resolve to real packages (earlier lint-gates work had fixed them); the genuinely broken pieces were docs:ts (pnpm --filter @open-hax/eta-mu-cli doc — no 'doc' script exists in any package; removed, docs now = docs:cljs via clojure -X:codox) and typecheck missing @open-hax/eta-mu-docs (added). Verified: pnpm typecheck runs all four chains clean; pnpm test exit 0 (runtime 6, github 21, docs+kanban-legacy 20 tests). Awaiting commit + review.
+---

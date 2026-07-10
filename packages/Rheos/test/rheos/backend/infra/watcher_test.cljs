@@ -62,6 +62,11 @@
                           (= "drift" (:correlation/status %))
                           (= "t2" (:task-id %)))
                     @captured))
+          (is (some #(and (= "drift-protocol-rerun" (:type %))
+                          (= "t2" (:task-id %))
+                          (= "kanban.drift/fsm-status-check" (:protocol %))
+                          (= "valid" (:result %)))
+                    @captured))
           (is (not (some #(= "file-changed" (:type %)) @captured))))
         (finally
           (unsub)
@@ -85,6 +90,10 @@
           (is (some #(and (= "drift-detected" (:type %))
                           (= "drift" (:correlation/status %))
                           (= "t4" (:task-id %)))
+                    @captured))
+          (is (some #(and (= "drift-protocol-rerun" (:type %))
+                          (= "t4" (:task-id %))
+                          (= "kanban.drift/fsm-status-check" (:protocol %)))
                     @captured))
           (is (not (some #(= "file-changed" (:type %)) @captured))))
         (finally

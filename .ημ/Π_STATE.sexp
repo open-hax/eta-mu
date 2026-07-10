@@ -1,99 +1,97 @@
 ;; Π_STATE.sexp — Fork tax snapshot
-;; Generated: 2026-07-10T14:42:17Z
+;; Generated: 2026-07-10T20:07:21Z
 ;; Branch: device/yoga
-;; Base commit: 415b2f2811dbf4d42673530cf2927fd0b3789d14
+;; Base commit: 2a4d9da7ea1709f89e0717c8f14e5fd7dfa4a5b3
 
 (π-snapshot
   (branch "device/yoga")
-  (base-sha "415b2f2811dbf4d42673530cf2927fd0b3789d14")
-  (commit "a9c5f3952de66421dc6ccf5cc672bc2200a8bd34")
-  (timestamp "2026-07-10T14:42:17Z")
+  (base-sha "2a4d9da7ea1709f89e0717c8f14e5fd7dfa4a5b3")
+  (timestamp "2026-07-10T20:07:21Z")
+  (tag "Π/device/yoga/2026-07-10T200721")
 
   (summary
-    "Continuation of the eta-mu CLJS rewrite on the device/yoga branch after the
-     docs/discovery-sweep-update merge. This handoff absorbs contract-runtime-v2
-     migrations (PRINCIPLE.edn, AGENTS.md, agents/mindfuck/CONTRACT.edn, ημΠ skill-graph),
-     a new operation-mindfuck README, biome.json package-path reorganization, kanban
-     ledger/task updates across the rewrite portfolio, eta-mu CLI readline/repl
-     improvements with a new readline test, packages/extensions state macro changes,
-     and legacy/github runtime-batch fixes.")
+    "Full working-state snapshot on device/yoga after the previous fork-tax commit.
+     Absorbs AGENTS/PROCESS docs, biome.json, the kanban ledger and task
+     portfolio, openhax.kanban.json, top-level package.json, Rheos backend/UI
+     and watcher work, chat-ui package and opencode-session code, runtime
+     TypeScript envelope/planner/state changes, sol eta_mu.cljs updates,
+     contracts dist-cli build artifacts, pnpm-lock.yaml refresh, receipts
+     ledger append, and new docs/CLAUDE.md/process-docs-reconciliation
+     artifacts.")
 
   (scope
     (modified
-      .ημ/PRINCIPLE.edn
+      ".\316\267\316\274/\316\240_LAST.md"
+      ".\316\267\316\274/\316\240_STATE.sexp"
       AGENTS.md
-      README.md
-      agents/mindfuck/CONTRACT.edn
+      PROCESS.md
       biome.json
-      docs/notes/INDEX.md
+      docs/cljs-runtime-rewrite-boundary-adapter-plan.md
       kanban/.events/ledger.edn
-      kanban/tasks/agent-cljs-rewrite-phase-2-extern-adapters.md
-      kanban/tasks/ai-cljs-rewrite-phase-3-extern-anthropic.md
-      kanban/tasks/ai-cljs-rewrite-phase-3-extern-auxiliary.md
-      kanban/tasks/ai-cljs-rewrite-phase-3-extern-bedrock.md
-      kanban/tasks/ai-cljs-rewrite-phase-3-extern-google.md
-      kanban/tasks/ai-cljs-rewrite-phase-3-extern-openai.md
-      kanban/tasks/coding-agent-cljs-rewrite-domain-extensions-law.md
-      kanban/tasks/coding-agent-cljs-rewrite-domain-tools-law.md
-      kanban/tasks/coding-agent-cljs-rewrite-extern-clipboard-image-oauth.md
-      kanban/tasks/coding-agent-cljs-rewrite-extern-fs-git-bash.md
-      kanban/tasks/coding-agent-cljs-rewrite-infra-package-settings-auth.md
-      kanban/tasks/coding-agent-cljs-rewrite-infra-session-manager.md
-      kanban/tasks/coding-agent-cljs-rewrite-messages-diagnostics-law.md
-      kanban/tasks/eta-mu-cljs-rewrite-cutover-ratchet.md
-      kanban/tasks/eta-mu-github-fetch-timeout.md
-      kanban/tasks/eta-mu-quality-ratchet-cli-startup-smoke.md
-      kanban/tasks/fsm-provenance-filtering.md
-      kanban/tasks/github-cljs-rewrite-domain-pr.md
-      kanban/tasks/github-cljs-rewrite-event-classifier.md
-      kanban/tasks/github-cljs-rewrite-extern-adapters.md
-      kanban/tasks/github-cljs-rewrite-review-gate.md
-      kanban/tasks/github-cljs-rewrite-runtime-batch-adapter.md
-      kanban/tasks/legacy-package-reorganization.md
-      kanban/tasks/output-contract-gate-cljs-rewrite-extern-adapters.md
-      kanban/tasks/publication-components-cljs-rewrite-audio-player.md
-      kanban/tasks/publication-components-cljs-rewrite-queue-list.md
+      kanban/agentd-tests.md
+      kanban/doc-generation.md
+      kanban/epics/chat-ui-extraction.md
+      kanban/epics/global-projection-frontend.md
+      kanban/epics/kanban-chat-integration.md
+      kanban/epics/kanban-cljs-rewrite.md
+      kanban/epics/kanban-event-ledger.md
+      kanban/eta-mu-charter-v1.md
+      kanban/frontend-devtools-guidance.md
+      kanban/pm2-ecosystem.md
+      kanban/run-readiness.md
+      kanban/tasks/monorepo-reorg-biome-lint-coverage.md
+      kanban/tasks/monorepo-reorg-docs-sweep.md
+      kanban/tasks/ops-fix-root-package-json-scripts.md
       kanban/tasks/rheos-comments-parity.md
-      kanban/tasks/tui-cljs-rewrite-core-tui.md
-      kanban/tasks/tui-cljs-rewrite-facade-cutover.md
-      kanban/tasks/tui-cljs-rewrite-image-extern.md
-      kanban/tasks/tui-cljs-rewrite-input-editor.md
-      kanban/tasks/tui-cljs-rewrite-markdown-overlays.md
-      kanban/tasks/tui-cljs-rewrite-terminal-extern.md
-      kanban/tasks/tui-cljs-rewrite-test-parity.md
-      kanban/tasks/tui-cljs-rewrite-utilities.md
-      operation-mindfuck/ημΠ.dev.v5.skill-graph.edn
-      packages/eta-mu/README.md
-      packages/eta-mu/dist-cli/index.cjs
-      packages/eta-mu/dist-cli/index.cjs.map
-      packages/eta-mu/package.json
-      packages/eta-mu/src/cljs/eta_mu/extern/readline.cljs
-      packages/eta-mu/src/cljs/eta_mu/infra/cli/repl.cljs
-      packages/extensions/lib/eta_mu/macros/state.cljc
-      packages/legacy/github/src/runtime-batch.ts
-      packages/legacy/github/tests/runtime-batch.test.ts)
+      openhax.kanban.json
+      package.json
+      packages/Rheos/package.json
+      packages/Rheos/src/rheos/backend/domain/events.cljs
+      packages/Rheos/src/rheos/backend/infra/config.cljs
+      packages/Rheos/src/rheos/backend/infra/http_server.cljs
+      packages/Rheos/src/rheos/backend/infra/watcher.cljs
+      packages/Rheos/src/rheos/ui/domain/layout.cljs
+      packages/Rheos/src/rheos/ui/domain/orchestrator.cljs
+      packages/Rheos/src/rheos/ui/domain/sidebar.cljs
+      packages/Rheos/test/rheos/backend/infra/watcher_test.cljs
+      packages/chat-ui/package.json
+      packages/chat-ui/shadow-cljs.edn
+      packages/contracts/output/dist-cli/index.cjs
+      packages/contracts/output/dist-cli/index.cjs.map
+      packages/runtime/src/cljs-runtime.ts
+      packages/runtime/src/envelope.ts
+      packages/runtime/src/index.ts
+      packages/runtime/src/planner.ts
+      packages/runtime/src/state.ts
+      packages/runtime/tests/runtime.test.ts
+      packages/sol/src/cljs/open_hax/sol/extern/eta_mu.cljs
+      pnpm-lock.yaml
+      receipts.edn
+    )
     (added
-      operation-mindfuck/README.md
-      packages/eta-mu/test/cljs/eta_mu/extern/readline_test.cljs)
+      CLAUDE.md
+      kanban/tasks/process-docs-reconciliation.md
+      packages/Rheos/docs/agile/tasks/.events/ledger.edn
+      packages/chat-ui/src/eta_mu/chat_ui/opencode_session.cljs
+      packages/chat-ui/test/eta_mu/chat_ui/opencode_session_test.cljs
+    )
     (deleted
-      packages/eta-mu-extensions/kanban/.events/ledger.edn)
+    )
     (not-trackable))
 
   (verification
     (code-tests
-      "passed — pnpm -C packages/eta-mu test: 54 tests, 100 assertions, 0 failures, 0 errors"
-      "passed — pnpm -C packages/extensions test: 72 tests, 195 assertions, 0 failures, 0 errors"
-      "passed — pnpm -C packages/legacy/github test: 21 tests, 0 failures")
+      "passed — pnpm -C packages/Rheos test: 58 tests, 166 assertions, 0 failures, 0 errors"
+      "passed — pnpm -C packages/chat-ui test: 3 tests, 6 assertions, 0 failures, 0 errors")
     (clj-kondo
-      "passed — pnpm -C packages/eta-mu lint:kondo: 0 errors, 0 warnings")
+      "passed — pnpm -C packages/Rheos lint:kondo: 0 errors, 0 warnings"
+      "passed — pnpm -C packages/chat-ui lint:kondo: 0 errors, 0 warnings")
     (ts-line-count
-      "global total 172,853 lines; 0 .ts/.tsx files added; net reduction from prior snapshot")
+      "global total 172796 lines; 0 .ts/.tsx files added; net reduction from prior snapshot")
     (secrets
-      "no plaintext secrets in changed/untracked files; grep hits were build artifacts and feature descriptions only"))
+      "no manual plaintext secret scan performed; no obvious secrets in changed/untracked files"))
 
   (concurrent-dirt
-    (note "Workspace treated as shared per multi-agent guardrails. This snapshot intentionally absorbs all currently stageable paths. No other concurrent dirt was left unstaged."))
-
-  (tag "Π/device/yoga/2026-07-10T144217"))
+    (note "Workspace treated as shared per multi-agent guardrails. This snapshot intentionally absorbs all currently stageable paths. No other concurrent dirt was left unstaged.")))
 
 ;; END Π_STATE

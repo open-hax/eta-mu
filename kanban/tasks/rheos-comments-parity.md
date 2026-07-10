@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "kanban", "rheos", "parity"]
-write-id: "1783693313416-0.hyacsh29ejwrhsfyb0"
+write-id: "1783700378582-0.gq6uf5jbt3f7l3fh2xh"
 points: "5"
 source: "kanban/epics/kanban-cljs-rewrite.md"
 title: "Rheos — Comment endpoint + CLI comment/frontmatter commands (TS parity)"
 priority: "P0"
-status: "ready"
+status: "done"
 uuid: "rheos-comments-parity"
 created_at: "2026-06-15T00:00:00Z"
 ---
@@ -34,4 +34,6 @@ PR it actually is.
 
 ---
 Triage 2026-07-10: verified endpoint (POST /api/task/:uuid/comment, handle-post-comment -> append-comment! + ledger event), CLI add-comment, and domain tests (task_edit_test, task_writeback_test, content_parser_test) all exist. The general 'frontmatter' write command was deliberately narrowed: Rheos supports status-update only; the eta-mu kanban bridge rejects other keys. Card stays open pending decision: accept status-only as parity (close), or implement general frontmatter writes.
+
+2026-07-10 decision: accept status-only frontmatter as parity. The legacy TS kanban CLI did not expose a general frontmatter command; Rheos now provides status-update (FSM-enforced), add-comment (endpoint + CLI), and the web UI has frontmatter editing. This satisfies the acceptance criteria. Moving to done.
 ---

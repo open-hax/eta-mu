@@ -1,67 +1,56 @@
-# Π diffstat — generated 2026-07-10T14:42:17Z
+# Π diffstat — generated 2026-07-10T20:07:21Z
 # Branch: device/yoga
-# Base: 415b2f2811dbf4d42673530cf2927fd0b3789d14
-#
-# Full diffstat (excluding generated dist-cli map to keep readable):
- ".\316\267\316\274/PRINCIPLE.edn"                  |  25 +-
- ".\316\267\316\274/\316\240_DIFFSTAT.txt"          |  59 +-
- ".\316\267\316\274/\316\240_LAST.md"               |  82 +--
- ".\316\267\316\274/\316\240_MANIFEST.sha256"       |  85 ++-
- ".\316\267\316\274/\316\240_STATE.sexp"            | 139 +++--
- AGENTS.md                                          |   2 +-
- README.md                                          |  13 +-
- agents/mindfuck/CONTRACT.edn                       |   2 +-
- biome.json                                         |  53 +-
- docs/notes/INDEX.md                                |   2 +
- kanban/.events/ledger.edn                          |  62 ++
- .../agent-cljs-rewrite-phase-2-extern-adapters.md  |  17 +-
- .../ai-cljs-rewrite-phase-3-extern-anthropic.md    |  17 +-
- .../ai-cljs-rewrite-phase-3-extern-auxiliary.md    |  17 +-
- .../ai-cljs-rewrite-phase-3-extern-bedrock.md      |  17 +-
- .../tasks/ai-cljs-rewrite-phase-3-extern-google.md |  17 +-
- .../tasks/ai-cljs-rewrite-phase-3-extern-openai.md |   2 +-
- ...ing-agent-cljs-rewrite-domain-extensions-law.md |  15 +-
- .../coding-agent-cljs-rewrite-domain-tools-law.md  |  17 +-
- ...nt-cljs-rewrite-extern-clipboard-image-oauth.md |   2 +-
- ...coding-agent-cljs-rewrite-extern-fs-git-bash.md |   2 +-
- ...ent-cljs-rewrite-infra-package-settings-auth.md |  15 +-
- ...ing-agent-cljs-rewrite-infra-session-manager.md |  15 +-
- ...-agent-cljs-rewrite-messages-diagnostics-law.md |  15 +-
- .../tasks/eta-mu-cljs-rewrite-cutover-ratchet.md   |  23 +-
- kanban/tasks/eta-mu-github-fetch-timeout.md        |  25 +-
- .../eta-mu-quality-ratchet-cli-startup-smoke.md    |  17 +-
- kanban/tasks/fsm-provenance-filtering.md           |  19 +-
- kanban/tasks/github-cljs-rewrite-domain-pr.md      |   2 +-
- .../tasks/github-cljs-rewrite-event-classifier.md  |   2 +-
- .../tasks/github-cljs-rewrite-extern-adapters.md   |   2 +-
- kanban/tasks/github-cljs-rewrite-review-gate.md    |   2 +-
- .../github-cljs-rewrite-runtime-batch-adapter.md   |   2 +-
- kanban/tasks/legacy-package-reorganization.md      |  17 +-
- kanban/tasks/monorepo-reorg-biome-lint-coverage.md |  15 +-
- ...t-contract-gate-cljs-rewrite-extern-adapters.md |  17 +-
- ...ication-components-cljs-rewrite-audio-player.md |  17 +-
- ...blication-components-cljs-rewrite-queue-list.md |  17 +-
- kanban/tasks/rheos-comments-parity.md              |  23 +-
- kanban/tasks/tui-cljs-rewrite-core-tui.md          |  17 +-
- kanban/tasks/tui-cljs-rewrite-facade-cutover.md    |  17 +-
- kanban/tasks/tui-cljs-rewrite-image-extern.md      |  17 +-
- kanban/tasks/tui-cljs-rewrite-input-editor.md      |  17 +-
- kanban/tasks/tui-cljs-rewrite-markdown-overlays.md |  17 +-
- kanban/tasks/tui-cljs-rewrite-terminal-extern.md   |  17 +-
- kanban/tasks/tui-cljs-rewrite-test-parity.md       |  17 +-
- kanban/tasks/tui-cljs-rewrite-utilities.md         |  17 +-
- operation-mindfuck/README.md                       |  22 +
- ...316\267\316\274\316\240.dev.v5.skill-graph.edn" |  25 +-
- .../eta-mu-extensions/kanban/.events/ledger.edn    |   0
- packages/eta-mu/README.md                          |   4 +-
- packages/eta-mu/dist-cli/index.cjs                 | 661 +++++++++++----------
- packages/eta-mu/package.json                       |   2 +-
- .../eta-mu/src/cljs/eta_mu/extern/readline.cljs    |  73 ++-
- .../eta-mu/src/cljs/eta_mu/infra/cli/repl.cljs     |   9 +-
- .../test/cljs/eta_mu/extern/readline_test.cljs     |  36 ++
- packages/extensions/lib/eta_mu/macros/state.cljc   |   5 +-
- packages/legacy/github/src/runtime-batch.ts        |  32 +-
- packages/legacy/github/tests/runtime-batch.test.ts |  36 +-
- 59 files changed, 1116 insertions(+), 817 deletions(-)
-#
-# Dist-cli map is part of the snapshot but omitted from the diffstat above.
+# Base: 2a4d9da7ea1709f89e0717c8f14e5fd7dfa4a5b3
+
+".\316\267\316\274/\316\240_LAST.md"               |  89 ++++++-------
+ ".\316\267\316\274/\316\240_STATE.sexp"            | 142 ++++++++++-----------
+ AGENTS.md                                          |  16 +++
+ CLAUDE.md                                          |  44 +++++++
+ PROCESS.md                                         | 110 ++++++++--------
+ biome.json                                         |  27 +++-
+ docs/cljs-runtime-rewrite-boundary-adapter-plan.md |   3 +
+ kanban/.events/ledger.edn                          |  51 ++++++++
+ kanban/agentd-tests.md                             |   4 +
+ kanban/doc-generation.md                           |   4 +
+ kanban/epics/chat-ui-extraction.md                 |  26 ++--
+ kanban/epics/global-projection-frontend.md         |  24 ++--
+ kanban/epics/kanban-chat-integration.md            |  17 +--
+ kanban/epics/kanban-cljs-rewrite.md                |  26 ++--
+ kanban/epics/kanban-event-ledger.md                |  26 ++--
+ kanban/eta-mu-charter-v1.md                        |  16 +--
+ kanban/frontend-devtools-guidance.md               |   4 +
+ kanban/pm2-ecosystem.md                            |   4 +
+ kanban/run-readiness.md                            |   4 +
+ kanban/tasks/monorepo-reorg-biome-lint-coverage.md |  10 +-
+ kanban/tasks/monorepo-reorg-docs-sweep.md          |  17 ++-
+ kanban/tasks/ops-fix-root-package-json-scripts.md  |  17 ++-
+ kanban/tasks/process-docs-reconciliation.md        |  48 +++++++
+ kanban/tasks/rheos-comments-parity.md              |   6 +-
+ openhax.kanban.json                                |   8 +-
+ package.json                                       |   5 +-
+ packages/Rheos/docs/agile/tasks/.events/ledger.edn |   0
+ packages/Rheos/package.json                        |   4 +-
+ .../Rheos/src/rheos/backend/domain/events.cljs     |  13 ++
+ packages/Rheos/src/rheos/backend/infra/config.cljs |  21 ++-
+ .../Rheos/src/rheos/backend/infra/http_server.cljs |   7 +-
+ .../Rheos/src/rheos/backend/infra/watcher.cljs     |  19 ++-
+ packages/Rheos/src/rheos/ui/domain/layout.cljs     |   4 +-
+ .../Rheos/src/rheos/ui/domain/orchestrator.cljs    |  27 +++-
+ packages/Rheos/src/rheos/ui/domain/sidebar.cljs    |  33 ++++-
+ .../test/rheos/backend/infra/watcher_test.cljs     |   9 ++
+ packages/chat-ui/package.json                      |   3 +-
+ packages/chat-ui/shadow-cljs.edn                   |   7 +-
+ .../src/eta_mu/chat_ui/opencode_session.cljs       |  84 ++++++++++++
+ .../test/eta_mu/chat_ui/opencode_session_test.cljs |  44 +++++++
+ packages/contracts/output/dist-cli/index.cjs       |   4 +-
+ packages/contracts/output/dist-cli/index.cjs.map   |   2 +-
+ packages/runtime/src/cljs-runtime.ts               |  16 +--
+ packages/runtime/src/envelope.ts                   |  16 +--
+ packages/runtime/src/index.ts                      |  26 ++--
+ packages/runtime/src/planner.ts                    |  22 +---
+ packages/runtime/src/state.ts                      |  34 +++--
+ packages/runtime/tests/runtime.test.ts             |  53 ++------
+ .../sol/src/cljs/open_hax/sol/extern/eta_mu.cljs   |   3 +-
+ pnpm-lock.yaml                                     |  15 ++-
+ receipts.edn                                       |   3 +
+ 51 files changed, 810 insertions(+), 407 deletions(-)

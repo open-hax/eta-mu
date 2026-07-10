@@ -22,9 +22,7 @@ export interface SurfaceCommandResult {
   exitCode: number;
 }
 
-export declare function createEtaBelief(
-  overrides?: Partial<EtaBelief>,
-): EtaBelief;
+export declare function createEtaBelief(overrides?: Partial<EtaBelief>): EtaBelief;
 
 export declare function createBreathEpisode(
   id: string,
@@ -43,22 +41,16 @@ export declare function createEtaMuState(options?: {
   activityScalar?: number;
 }): EtaMuState;
 
-export declare function selectPanelsFromContext(
-  context: EtaMuPlanningContextInput,
-): PanelName[];
+export declare function selectPanelsFromContext(context: EtaMuPlanningContextInput): PanelName[];
 
-export declare function rankCheapMuCandidates(
-  context: EtaMuPlanningContextInput,
-): MuCandidate[];
+export declare function rankCheapMuCandidates(context: EtaMuPlanningContextInput): MuCandidate[];
 
 export declare function recommendBreath(
   context: EtaMuPlanningContextInput,
   actions?: MuCandidate[],
 ): BreathRecommendation;
 
-export declare function createActionBatch(
-  context: EtaMuPlanningContextInput,
-): EtaMuActionBatch;
+export declare function createActionBatch(context: EtaMuPlanningContextInput): EtaMuActionBatch;
 
 export declare function createSurfaceCommandResult(
   input: SurfaceCommandInput,

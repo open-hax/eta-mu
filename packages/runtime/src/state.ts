@@ -4,19 +4,17 @@ import {
   createEtaMuState as createEtaMuStateCljs,
 } from "@open-hax/eta-mu-runtime/cljs";
 import {
-  breathEpisodeSchema,
-  etaBeliefSchema,
-  etaMuStateSchema,
   type BreathEpisode,
+  breathEpisodeSchema,
   type EtaBelief,
   type EtaMuState,
+  etaBeliefSchema,
+  etaMuStateSchema,
   type MuCandidate,
   type PanelName,
 } from "./types.js";
 
-export const DEFAULT_ETA_BELIEF: EtaBelief = etaBeliefSchema.parse(
-  createEtaBeliefCljs(),
-);
+export const DEFAULT_ETA_BELIEF: EtaBelief = etaBeliefSchema.parse(createEtaBeliefCljs());
 
 export function createEtaBelief(overrides: Partial<EtaBelief> = {}): EtaBelief {
   return etaBeliefSchema.parse(createEtaBeliefCljs(overrides));
@@ -28,19 +26,19 @@ export function createBreathEpisode(
   pendingCommit = false,
   activityScalar = 0,
 ): BreathEpisode {
-  return breathEpisodeSchema.parse(
-    createBreathEpisodeCljs(id, now, pendingCommit, activityScalar),
-  );
+  return breathEpisodeSchema.parse(createBreathEpisodeCljs(id, now, pendingCommit, activityScalar));
 }
 
-export function createEtaMuState(options: {
-  belief?: Partial<EtaBelief>;
-  panels?: PanelName[];
-  proposedMoves?: MuCandidate[];
-  currentEpisodeId?: string;
-  now?: string;
-  pendingCommit?: boolean;
-  activityScalar?: number;
-} = {}): EtaMuState {
+export function createEtaMuState(
+  options: {
+    belief?: Partial<EtaBelief>;
+    panels?: PanelName[];
+    proposedMoves?: MuCandidate[];
+    currentEpisodeId?: string;
+    now?: string;
+    pendingCommit?: boolean;
+    activityScalar?: number;
+  } = {},
+): EtaMuState {
   return etaMuStateSchema.parse(createEtaMuStateCljs(options));
 }

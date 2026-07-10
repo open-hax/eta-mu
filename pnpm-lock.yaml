@@ -69,12 +69,18 @@ importers:
       marked:
         specifier: ^18.0.5
         version: 18.0.5
+      process:
+        specifier: ^0.11.10
+        version: 0.11.10
       react:
         specifier: ^19.2.7
         version: 19.2.7
       react-dom:
         specifier: ^19.2.7
         version: 19.2.7(react@19.2.7)
+      scheduler:
+        specifier: ^0.23.2
+        version: 0.23.2
     devDependencies:
       '@vitejs/plugin-react':
         specifier: ^6.0.2
@@ -124,6 +130,9 @@ importers:
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
+      scheduler:
+        specifier: ^0.23.2
+        version: 0.23.2
     devDependencies:
       shadow-cljs:
         specifier: ^3.4.10
@@ -146,13 +155,13 @@ importers:
       '@eta-mu/contracts-output':
         specifier: workspace:*
         version: link:../contracts/output
-      '@eta-mu/turn-processor':
-        specifier: workspace:*
-        version: link:../turn-processor
       '@open-hax/rheos':
         specifier: workspace:*
         version: link:../Rheos
     devDependencies:
+      '@eta-mu/turn-processor':
+        specifier: workspace:*
+        version: link:../turn-processor
       shadow-cljs:
         specifier: ^3.4.11
         version: 3.4.11

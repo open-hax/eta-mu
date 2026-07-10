@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 import {
   createActionBatch as createActionBatchCljs,
   createBreathEpisode as createBreathEpisodeCljs,
@@ -8,13 +6,10 @@ import {
   rankCheapMuCandidates as rankCheapMuCandidatesCljs,
   selectPanelsFromContext as selectPanelsFromContextCljs,
 } from "@open-hax/eta-mu-runtime/cljs";
+import { describe, expect, it } from "vitest";
 import { createActionBatch } from "../src/envelope.js";
 import { rankCheapMuCandidates, selectPanelsFromContext } from "../src/planner.js";
-import {
-  createBreathEpisode,
-  createEtaBelief,
-  createEtaMuState,
-} from "../src/state.js";
+import { createBreathEpisode, createEtaBelief, createEtaMuState } from "../src/state.js";
 
 describe("createEtaBelief", () => {
   it("clamps values into the unit interval", () => {
@@ -44,14 +39,7 @@ describe("selectPanelsFromContext", () => {
       quietWindowDetected: true,
     });
 
-    expect(panels).toEqual([
-      "field",
-      "movement",
-      "truth",
-      "trajectory",
-      "memory",
-      "breath",
-    ]);
+    expect(panels).toEqual(["field", "movement", "truth", "trajectory", "memory", "breath"]);
   });
 });
 
@@ -69,12 +57,8 @@ describe("rankCheapMuCandidates", () => {
       hasPendingHumanAttention: true,
     });
 
-    expect(candidates.map((candidate) => candidate.kind)).toContain(
-      "request-evidence",
-    );
-    expect(candidates.map((candidate) => candidate.kind)).toContain(
-      "request-human-attention",
-    );
+    expect(candidates.map((candidate) => candidate.kind)).toContain("request-evidence");
+    expect(candidates.map((candidate) => candidate.kind)).toContain("request-human-attention");
   });
 });
 
@@ -97,15 +81,8 @@ describe("CLJS cutover wrappers", () => {
     expect(createEtaBelief({ urgency: 2, ambiguity: -1 })).toEqual(
       createEtaBeliefCljs({ urgency: 2, ambiguity: -1 }),
     );
-    expect(
-      createBreathEpisode("episode:test", "2026-05-30T00:00:00.000Z", true, 2),
-    ).toEqual(
-      createBreathEpisodeCljs(
-        "episode:test",
-        "2026-05-30T00:00:00.000Z",
-        true,
-        2,
-      ),
+    expect(createBreathEpisode("episode:test", "2026-05-30T00:00:00.000Z", true, 2)).toEqual(
+      createBreathEpisodeCljs("episode:test", "2026-05-30T00:00:00.000Z", true, 2),
     );
     expect(
       createEtaMuState({
@@ -120,12 +97,8 @@ describe("CLJS cutover wrappers", () => {
         belief: { urgency: 0.2 },
       }),
     );
-    expect(selectPanelsFromContext(context)).toEqual(
-      selectPanelsFromContextCljs(context),
-    );
-    expect(rankCheapMuCandidates(context)).toEqual(
-      rankCheapMuCandidatesCljs(context),
-    );
+    expect(selectPanelsFromContext(context)).toEqual(selectPanelsFromContextCljs(context));
+    expect(rankCheapMuCandidates(context)).toEqual(rankCheapMuCandidatesCljs(context));
     expect(createActionBatch(context)).toEqual(createActionBatchCljs(context));
   });
 
@@ -138,12 +111,8 @@ describe("CLJS cutover wrappers", () => {
       belief: createEtaBelief(),
     };
 
-    expect(selectPanelsFromContext(context)).toEqual(
-      selectPanelsFromContextCljs(context),
-    );
-    expect(rankCheapMuCandidates(context)).toEqual(
-      rankCheapMuCandidatesCljs(context),
-    );
+    expect(selectPanelsFromContext(context)).toEqual(selectPanelsFromContextCljs(context));
+    expect(rankCheapMuCandidates(context)).toEqual(rankCheapMuCandidatesCljs(context));
     expect(createActionBatch(context)).toEqual(createActionBatchCljs(context));
   });
 });

@@ -5,7 +5,6 @@
             [clojure.string :as str]))
 
 (def default-config-names ["openhax.kanban.json" "kanban.json"])
-(def default-config-dirs ["." "kanban" ".kanban"])
 
 (defn- ^:async try-paths [paths]
   (when (seq paths)
@@ -15,12 +14,24 @@
       (catch :default _
         (await (try-paths (rest paths)))))))
 
+(defn- ^:async parent-dirs
+  "Return [cwd, parent, grand-parent, ...] up to the filesystem root."
+  []
+  (let [cwd (js/process.cwd)]
+    (loop [dir cwd
+           dirs []]
+      (if (or (str/blank? dir) (= dir (path/dirname dir)))
+        (conj dirs dir)
+        (recur (path/dirname dir) (conj dirs dir))))))
+
 (defn ^:async find-config-path [explicit-path]
   (if explicit-path
     (path/resolve (js/process.cwd) explicit-path)
-    (let [candidates (for [dir default-config-dirs
+    (let [base-dirs (await (parent-dirs))
+          candidates (for [dir base-dirs
+                           subdir ["" "kanban" ".kanban"]
                            name default-config-names]
-                       (path/resolve (js/process.cwd) dir name))]
+                       (path/resolve dir subdir name))]
       (await (try-paths candidates)))))
 
 (defn ^:async load-config [explicit-path]
@@ -54,7 +65,7 @@
                                           candidate))]
                                (swap! seen conj id)
                                {:id id :title (or (some-> (:title project) str/trim) id)
-                                :tasks-dir tasks-dir :meta (or (:meta project) {})
+                                :tasks-dir tasks-dir :meta (or (:meta project) (:meta config) {})
                                 :fsm (or (:fsm project) (:fsm config))}))
                            (:projects config) (range))
             default-id (or (when-let [d (:defaultProject config)]
@@ -65,6 +76,6 @@
                           (when (:tasksDir config) (path/resolve config-dir (:tasksDir config)))
                           (path/resolve (js/process.cwd) "docs/agile/tasks"))
             id (project-id-from-path tasks-dir)]
-        {:projects [{:id id :title id :tasks-dir tasks-dir :meta {}
+        {:projects [{:id id :title id :tasks-dir tasks-dir :meta (or (:meta config) {})
                      :fsm (:fsm config)}]
          :default-project-id id}))))

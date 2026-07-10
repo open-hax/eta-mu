@@ -14,7 +14,10 @@
       "packages/legacy/tui/**/*.ts",
       "scripts/**/*.mjs",
       "biome.json",
-      "package.json"
+      "package.json",
+      "!**/dist/**",
+      "!**/target/**",
+      "!**/.shadow-cljs/**"
     ]
   },
   "formatter": {
@@ -80,14 +83,28 @@
   },
   "overrides": [
     {
-      "includes": [
-        "**/*.test.ts",
-        "**/*.spec.ts"
-      ],
+      "includes": ["**/*.test.ts", "**/*.spec.ts"],
       "linter": {
         "rules": {
           "suspicious": {
             "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/legacy/**"],
+      "formatter": {
+        "enabled": false
+      },
+      "assist": {
+        "enabled": false
+      },
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noEmptyInterface": "warn",
+            "noAsyncPromiseExecutor": "warn"
           }
         }
       }
