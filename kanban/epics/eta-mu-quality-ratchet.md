@@ -1,13 +1,13 @@
 ---
 uuid: "eta-mu-quality-ratchet"
 title: "Eta-mu Quality Ratchet — Delinting, Warning Cleanup, and Testing"
-status: "ready"
-priority: P0
+status: "in_progress"
+priority: "P0"
 labels: ["epics", "quality", "lint", "warnings", "testing", "coverage", "26sp"]
 created_at: "2026-05-31T00:45:00Z"
 source: "user-request:2026-05-31"
 points: 26
-category: epics
+category: "epics"
 ---
 
 # Eta-mu Quality Ratchet — Delinting, Warning Cleanup, and Testing
@@ -126,3 +126,4 @@ Add task-specific gates such as `actionlint`, package smoke tests, or markdown l
 
 ### Recommendation
 Prioritize filling concrete implementation details for tasks 4-6 before moving to `in_progress`.
+---

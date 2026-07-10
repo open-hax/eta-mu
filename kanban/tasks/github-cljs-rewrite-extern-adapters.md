@@ -1,7 +1,7 @@
 ---
 uuid: "github-cljs-rewrite-extern-adapters"
 title: "GitHub CLJS Rewrite — Extern Adapters"
-status: "blocked"
+status: "in_progress"
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "github"]
 created_at: "2026-06-15T00:00:00Z"

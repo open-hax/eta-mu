@@ -1,3 +1,11 @@
+---
+original_name: "2025.11.04.11.54.30.md"
+title: "ClojureScript Tooling Survey"
+summary: "Survey of ClojureScript development tooling: clojure-lsp, clj-kondo, cljfmt, Portal, re-frame-10x, and shadow test targets."
+category: "dev"
+created: "2025-11-04"
+---
+
 ### Editor, lint & format
 
 * **clojure-lsp** (one server; code actions, rename, clean-ns, format, etc.). It uses **clj-kondo** under the hood—drop a `.clj-kondo/config.edn` in the repo and you’re off. If you’re in VS Code (Calva) or Emacs (lsp-mode), this is the baseline. ([clojure-lsp.io][1])

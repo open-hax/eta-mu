@@ -1,56 +1,223 @@
-# Π diffstat — generated 2026-07-10T20:07:21Z
+# Π diffstat — generated 2026-07-10T23:23:38Z
 # Branch: device/yoga
-# Base: 2a4d9da7ea1709f89e0717c8f14e5fd7dfa4a5b3
+# Base: c3496ad550819193d5cc6b256db993bf58b55b0d
+# Tag: Π/device/yoga/2026-07-10T232338
 
-".\316\267\316\274/\316\240_LAST.md"               |  89 ++++++-------
- ".\316\267\316\274/\316\240_STATE.sexp"            | 142 ++++++++++-----------
- AGENTS.md                                          |  16 +++
- CLAUDE.md                                          |  44 +++++++
- PROCESS.md                                         | 110 ++++++++--------
- biome.json                                         |  27 +++-
- docs/cljs-runtime-rewrite-boundary-adapter-plan.md |   3 +
- kanban/.events/ledger.edn                          |  51 ++++++++
- kanban/agentd-tests.md                             |   4 +
- kanban/doc-generation.md                           |   4 +
- kanban/epics/chat-ui-extraction.md                 |  26 ++--
- kanban/epics/global-projection-frontend.md         |  24 ++--
- kanban/epics/kanban-chat-integration.md            |  17 +--
- kanban/epics/kanban-cljs-rewrite.md                |  26 ++--
- kanban/epics/kanban-event-ledger.md                |  26 ++--
- kanban/eta-mu-charter-v1.md                        |  16 +--
- kanban/frontend-devtools-guidance.md               |   4 +
- kanban/pm2-ecosystem.md                            |   4 +
- kanban/run-readiness.md                            |   4 +
- kanban/tasks/monorepo-reorg-biome-lint-coverage.md |  10 +-
- kanban/tasks/monorepo-reorg-docs-sweep.md          |  17 ++-
- kanban/tasks/ops-fix-root-package-json-scripts.md  |  17 ++-
- kanban/tasks/process-docs-reconciliation.md        |  48 +++++++
- kanban/tasks/rheos-comments-parity.md              |   6 +-
- openhax.kanban.json                                |   8 +-
- package.json                                       |   5 +-
- packages/Rheos/docs/agile/tasks/.events/ledger.edn |   0
- packages/Rheos/package.json                        |   4 +-
- .../Rheos/src/rheos/backend/domain/events.cljs     |  13 ++
- packages/Rheos/src/rheos/backend/infra/config.cljs |  21 ++-
- .../Rheos/src/rheos/backend/infra/http_server.cljs |   7 +-
- .../Rheos/src/rheos/backend/infra/watcher.cljs     |  19 ++-
- packages/Rheos/src/rheos/ui/domain/layout.cljs     |   4 +-
- .../Rheos/src/rheos/ui/domain/orchestrator.cljs    |  27 +++-
- packages/Rheos/src/rheos/ui/domain/sidebar.cljs    |  33 ++++-
- .../test/rheos/backend/infra/watcher_test.cljs     |   9 ++
- packages/chat-ui/package.json                      |   3 +-
- packages/chat-ui/shadow-cljs.edn                   |   7 +-
- .../src/eta_mu/chat_ui/opencode_session.cljs       |  84 ++++++++++++
- .../test/eta_mu/chat_ui/opencode_session_test.cljs |  44 +++++++
- packages/contracts/output/dist-cli/index.cjs       |   4 +-
- packages/contracts/output/dist-cli/index.cjs.map   |   2 +-
- packages/runtime/src/cljs-runtime.ts               |  16 +--
- packages/runtime/src/envelope.ts                   |  16 +--
- packages/runtime/src/index.ts                      |  26 ++--
- packages/runtime/src/planner.ts                    |  22 +---
- packages/runtime/src/state.ts                      |  34 +++--
- packages/runtime/tests/runtime.test.ts             |  53 ++------
- .../sol/src/cljs/open_hax/sol/extern/eta_mu.cljs   |   3 +-
- pnpm-lock.yaml                                     |  15 ++-
- receipts.edn                                       |   3 +
- 51 files changed, 810 insertions(+), 407 deletions(-)
+## git status --short
+ M ".\316\267\316\274/\316\240_DIFFSTAT.txt"
+ M ".\316\267\316\274/\316\240_LAST.md"
+ M ".\316\267\316\274/\316\240_MANIFEST.sha256"
+ M ".\316\267\316\274/\316\240_STATE.sexp"
+ M docs/design/contract-model.md
+ D docs/notes/2025.11.04.11.54.30.md
+ D docs/notes/2025.11.04.12.11.40.md
+ D docs/notes/2026.04.19.08.44.04.md
+ D docs/notes/2026.04.19.08.47.39.md
+ D docs/notes/2026.04.19.08.56.22.md
+ D docs/notes/2026.04.19.10.07.53.md
+ D docs/notes/2026.05.08.11.37.09.md
+ D docs/notes/2026.06.14.00.38.02.md
+ D docs/notes/2026.06.14.12.19.50.md
+ D docs/notes/2026.06.14.22.24.55.md
+ D docs/notes/2026.06.16.06.43.13.md
+ D docs/notes/2026.06.16.07.13.42.md
+ D docs/notes/2026.06.16.07.28.31.md
+ D docs/notes/2026.06.16.07.37.19.md
+ D docs/notes/2026.06.16.12.02.30.md
+ D docs/notes/2026.07.08.14.15.47.md
+ D docs/notes/2026.07.10.03.00.16.md
+ M docs/notes/INDEX.md
+ M kanban/.events/ledger.edn
+ M kanban/epics/agent-cljs-rewrite.md
+ M kanban/epics/agent-spawning.md
+ M kanban/epics/ai-cljs-rewrite.md
+ M kanban/epics/board-composition.md
+ M kanban/epics/coding-agent-cljs-rewrite.md
+ M kanban/epics/eta-mu-cljs-runtime-rewrite.md
+ M kanban/epics/eta-mu-quality-ratchet.md
+ M kanban/epics/fsm-engine.md
+ M kanban/epics/github-cljs-rewrite.md
+ M kanban/epics/opencode-compat.md
+ M kanban/epics/output-contract-gate-cljs-rewrite.md
+ M kanban/epics/publication-components-cljs-rewrite.md
+ M kanban/epics/sol-extraction.md
+ M kanban/epics/sol-interchangeability.md
+ M kanban/epics/tui-cljs-rewrite.md
+ M kanban/frontend-devtools-guidance.md
+ M kanban/tasks/agent-cljs-rewrite-phase-2-extern-adapters.md
+ M kanban/tasks/ai-cljs-rewrite-phase-3-extern-anthropic.md
+ M kanban/tasks/ai-cljs-rewrite-phase-3-extern-auxiliary.md
+ M kanban/tasks/ai-cljs-rewrite-phase-3-extern-bedrock.md
+ M kanban/tasks/ai-cljs-rewrite-phase-3-extern-google.md
+ M kanban/tasks/ai-cljs-rewrite-phase-3-extern-openai.md
+ M kanban/tasks/coding-agent-cljs-rewrite-domain-extensions-law.md
+ M kanban/tasks/coding-agent-cljs-rewrite-domain-tools-law.md
+ M kanban/tasks/coding-agent-cljs-rewrite-infra-package-settings-auth.md
+ M kanban/tasks/coding-agent-cljs-rewrite-infra-session-manager.md
+ M kanban/tasks/coding-agent-cljs-rewrite-messages-diagnostics-law.md
+ M kanban/tasks/coding-agent-cljs-rewrite-mode-interactive.md
+ M kanban/tasks/coding-agent-cljs-rewrite-mode-rpc-cli.md
+ M kanban/tasks/docs-cleanup-agents-md.md
+ M kanban/tasks/docs-consolidate-notes-index.md
+ M kanban/tasks/docs-create-missing-package-readmes.md
+ M kanban/tasks/docs-fix-axxium-readme.md
+ M kanban/tasks/docs-fix-extensions-e2e-readme.md
+ M kanban/tasks/docs-fix-extensions-readme-drift.md
+ M kanban/tasks/docs-fix-runtime-paths-readme.md
+ M kanban/tasks/docs-fix-sol-knoxx-artifacts.md
+ M kanban/tasks/docs-reconcile-cross-references.md
+ M kanban/tasks/docs-refresh-architecture-inventories.md
+ M kanban/tasks/docs-refresh-legacy-package-readmes.md
+ M kanban/tasks/docs-rewrite-development-md.md
+ M kanban/tasks/docs-rewrite-top-level-readme.md
+ M kanban/tasks/eta-mu-cljs-rewrite-architecture-inventory.md
+ M kanban/tasks/eta-mu-github-fetch-timeout.md
+ M kanban/tasks/eta-mu-quality-ratchet-coverage-expansion.md
+ M kanban/tasks/eta-mu-quality-ratchet-test-suite-hardening.md
+ M kanban/tasks/fsm-bounce-reconciler.md
+ M kanban/tasks/fsm-check-agent-review.md
+ M kanban/tasks/fsm-check-code-review.md
+ M kanban/tasks/fsm-check-js-agent-shell-types.md
+ M kanban/tasks/fsm-check-markdown-score.md
+ M kanban/tasks/fsm-config-as-data-edn.md
+ M kanban/tasks/fsm-event-cascade-derivation.md
+ M kanban/tasks/fsm-frontmatter-interface-generalization.md
+ M kanban/tasks/fsm-harness-auto-verify.md
+ M kanban/tasks/fsm-ledger-fold-accepted-state.md
+ M kanban/tasks/fsm-transition-contract-pending-lock.md
+ M kanban/tasks/github-cljs-rewrite-extern-adapters.md
+ M kanban/tasks/monorepo-reorg-biome-lint-coverage.md
+ M kanban/tasks/monorepo-reorg-docs-sweep.md
+ M kanban/tasks/ops-fix-root-package-json-scripts.md
+ M kanban/tasks/output-contract-gate-cljs-rewrite-cli-facade.md
+ M kanban/tasks/output-contract-gate-cljs-rewrite-conversion-tests.md
+ M kanban/tasks/output-contract-gate-cljs-rewrite-cutover.md
+ M kanban/tasks/output-contract-gate-cljs-rewrite-extern-adapters.md
+ M kanban/tasks/output-contract-gate-cljs-rewrite-generation.md
+ M kanban/tasks/output-contract-gate-cljs-rewrite-infra-artifacts.md
+ M kanban/tasks/output-contract-gate-cljs-rewrite-parity-tests.md
+ M kanban/tasks/output-contract-gate-cljs-rewrite-review.md
+ M kanban/tasks/pr-134-review-should-fix-batch.md
+ M kanban/tasks/pr-134-staging-promotion-gate-blocker.md
+ M kanban/tasks/publication-components-cljs-rewrite-audio-player.md
+ M kanban/tasks/publication-components-cljs-rewrite-blocks-renderer.md
+ M kanban/tasks/publication-components-cljs-rewrite-build-facade.md
+ M kanban/tasks/publication-components-cljs-rewrite-music-player.md
+ M kanban/tasks/publication-components-cljs-rewrite-queue-list.md
+ M kanban/tasks/publication-components-cljs-rewrite-verification.md
+ M kanban/tasks/rheos-chat-ui-shape-discovery.md
+ M receipts.edn
+?? ".\316\267\316\274/session-mycology/"
+?? docs/notes/design/
+?? docs/notes/dev/
+?? docs/notes/other/
+?? docs/notes/research/
+
+
+## git diff --stat HEAD
+ ".\316\267\316\274/\316\240_DIFFSTAT.txt"          |  268 +-
+ ".\316\267\316\274/\316\240_LAST.md"               |   70 +-
+ ".\316\267\316\274/\316\240_MANIFEST.sha256"       |  215 +-
+ ".\316\267\316\274/\316\240_STATE.sexp"            |  192 +-
+ docs/design/contract-model.md                      |    8 +-
+ docs/notes/2025.11.04.11.54.30.md                  |  113 -
+ docs/notes/2025.11.04.12.11.40.md                  |  144 -
+ docs/notes/2026.04.19.08.44.04.md                  |  183 --
+ docs/notes/2026.04.19.08.47.39.md                  |  354 --
+ docs/notes/2026.04.19.08.56.22.md                  |  184 --
+ docs/notes/2026.04.19.10.07.53.md                  | 3439 --------------------
+ docs/notes/2026.05.08.11.37.09.md                  |   76 -
+ docs/notes/2026.06.14.00.38.02.md                  |  811 -----
+ docs/notes/2026.06.14.12.19.50.md                  |   62 -
+ docs/notes/2026.06.14.22.24.55.md                  |   36 -
+ docs/notes/2026.06.16.06.43.13.md                  |   10 -
+ docs/notes/2026.06.16.07.13.42.md                  |  103 -
+ docs/notes/2026.06.16.07.28.31.md                  |   21 -
+ docs/notes/2026.06.16.07.37.19.md                  |   33 -
+ docs/notes/2026.06.16.12.02.30.md                  |   15 -
+ docs/notes/2026.07.08.14.15.47.md                  |  119 -
+ docs/notes/2026.07.10.03.00.16.md                  |  677 ----
+ docs/notes/INDEX.md                                |   39 +-
+ kanban/.events/ledger.edn                          |  186 ++
+ kanban/epics/agent-cljs-rewrite.md                 |    2 +-
+ kanban/epics/agent-spawning.md                     |    9 +-
+ kanban/epics/ai-cljs-rewrite.md                    |    2 +-
+ kanban/epics/board-composition.md                  |   13 +-
+ kanban/epics/coding-agent-cljs-rewrite.md          |    7 +-
+ kanban/epics/eta-mu-cljs-runtime-rewrite.md        |    2 +-
+ kanban/epics/eta-mu-quality-ratchet.md             |    9 +-
+ kanban/epics/fsm-engine.md                         |    2 +-
+ kanban/epics/github-cljs-rewrite.md                |    2 +-
+ kanban/epics/opencode-compat.md                    |    9 +-
+ kanban/epics/output-contract-gate-cljs-rewrite.md  |   10 +-
+ .../epics/publication-components-cljs-rewrite.md   |   10 +-
+ kanban/epics/sol-extraction.md                     |    7 +-
+ kanban/epics/sol-interchangeability.md             |    9 +-
+ kanban/epics/tui-cljs-rewrite.md                   |    2 +-
+ kanban/frontend-devtools-guidance.md               |    4 +-
+ .../agent-cljs-rewrite-phase-2-extern-adapters.md  |    4 +-
+ .../ai-cljs-rewrite-phase-3-extern-anthropic.md    |    4 +-
+ .../ai-cljs-rewrite-phase-3-extern-auxiliary.md    |    4 +-
+ .../ai-cljs-rewrite-phase-3-extern-bedrock.md      |    4 +-
+ .../tasks/ai-cljs-rewrite-phase-3-extern-google.md |    4 +-
+ .../tasks/ai-cljs-rewrite-phase-3-extern-openai.md |    2 +-
+ ...ing-agent-cljs-rewrite-domain-extensions-law.md |    4 +-
+ .../coding-agent-cljs-rewrite-domain-tools-law.md  |    4 +-
+ ...ent-cljs-rewrite-infra-package-settings-auth.md |    4 +-
+ ...ing-agent-cljs-rewrite-infra-session-manager.md |    4 +-
+ ...-agent-cljs-rewrite-messages-diagnostics-law.md |    4 +-
+ .../coding-agent-cljs-rewrite-mode-interactive.md  |    2 +-
+ .../coding-agent-cljs-rewrite-mode-rpc-cli.md      |    2 +-
+ kanban/tasks/docs-cleanup-agents-md.md             |    2 +-
+ kanban/tasks/docs-consolidate-notes-index.md       |    2 +-
+ .../tasks/docs-create-missing-package-readmes.md   |    2 +-
+ kanban/tasks/docs-fix-axxium-readme.md             |    2 +-
+ kanban/tasks/docs-fix-extensions-e2e-readme.md     |    2 +-
+ kanban/tasks/docs-fix-extensions-readme-drift.md   |    2 +-
+ kanban/tasks/docs-fix-runtime-paths-readme.md      |    2 +-
+ kanban/tasks/docs-fix-sol-knoxx-artifacts.md       |    2 +-
+ kanban/tasks/docs-reconcile-cross-references.md    |    2 +-
+ .../tasks/docs-refresh-architecture-inventories.md |    2 +-
+ .../tasks/docs-refresh-legacy-package-readmes.md   |    2 +-
+ kanban/tasks/docs-rewrite-development-md.md        |    4 +-
+ kanban/tasks/docs-rewrite-top-level-readme.md      |    4 +-
+ .../eta-mu-cljs-rewrite-architecture-inventory.md  |   12 +-
+ kanban/tasks/eta-mu-github-fetch-timeout.md        |    4 +-
+ .../eta-mu-quality-ratchet-coverage-expansion.md   |    6 +-
+ .../eta-mu-quality-ratchet-test-suite-hardening.md |    6 +-
+ kanban/tasks/fsm-bounce-reconciler.md              |    2 +-
+ kanban/tasks/fsm-check-agent-review.md             |    2 +-
+ kanban/tasks/fsm-check-code-review.md              |    2 +-
+ kanban/tasks/fsm-check-js-agent-shell-types.md     |    2 +-
+ kanban/tasks/fsm-check-markdown-score.md           |    2 +-
+ kanban/tasks/fsm-config-as-data-edn.md             |    2 +-
+ kanban/tasks/fsm-event-cascade-derivation.md       |    2 +-
+ .../fsm-frontmatter-interface-generalization.md    |    2 +-
+ kanban/tasks/fsm-harness-auto-verify.md            |    2 +-
+ kanban/tasks/fsm-ledger-fold-accepted-state.md     |    2 +-
+ .../tasks/fsm-transition-contract-pending-lock.md  |    2 +-
+ .../tasks/github-cljs-rewrite-extern-adapters.md   |    2 +-
+ kanban/tasks/monorepo-reorg-biome-lint-coverage.md |    4 +-
+ kanban/tasks/monorepo-reorg-docs-sweep.md          |    4 +-
+ kanban/tasks/ops-fix-root-package-json-scripts.md  |    4 +-
+ ...output-contract-gate-cljs-rewrite-cli-facade.md |    8 +-
+ ...-contract-gate-cljs-rewrite-conversion-tests.md |    8 +-
+ .../output-contract-gate-cljs-rewrite-cutover.md   |    8 +-
+ ...t-contract-gate-cljs-rewrite-extern-adapters.md |    4 +-
+ ...output-contract-gate-cljs-rewrite-generation.md |    8 +-
+ ...t-contract-gate-cljs-rewrite-infra-artifacts.md |    8 +-
+ ...tput-contract-gate-cljs-rewrite-parity-tests.md |    8 +-
+ .../output-contract-gate-cljs-rewrite-review.md    |    8 +-
+ kanban/tasks/pr-134-review-should-fix-batch.md     |    2 +-
+ .../tasks/pr-134-staging-promotion-gate-blocker.md |    2 +-
+ ...ication-components-cljs-rewrite-audio-player.md |    4 +-
+ ...tion-components-cljs-rewrite-blocks-renderer.md |    8 +-
+ ...ication-components-cljs-rewrite-build-facade.md |    8 +-
+ ...ication-components-cljs-rewrite-music-player.md |    9 +-
+ ...blication-components-cljs-rewrite-queue-list.md |    4 +-
+ ...ication-components-cljs-rewrite-verification.md |    8 +-
+ kanban/tasks/rheos-chat-ui-shape-discovery.md      |    2 +-
+ receipts.edn                                       |    5 +
+ 103 files changed, 849 insertions(+), 6860 deletions(-)
+
+

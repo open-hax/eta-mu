@@ -1,13 +1,13 @@
 ---
 uuid: "output-contract-gate-cljs-rewrite-generation"
 title: "Output Contract Gate CLJS Rewrite — Generation Logic"
-status: "blocked"
-priority: P2
+status: "rejected"
+priority: "P2"
 labels: ["tasks", "cljs", "rewrite", "output-contract-gate"]
 created_at: "2026-06-15T00:00:00Z"
 source: "kanban/epics/output-contract-gate-cljs-rewrite.md"
 points: 4
-category: tasks
+category: "tasks"
 ---
 
 # Output Contract Gate CLJS Rewrite — Generation Logic
@@ -35,5 +35,5 @@ Port the candidate generation logic from `src/generate.ts` into CLJS, covering f
 - [ ] Generation logic delegates HTTP to `extern.openai`.
 
 ---
-
 > Blocked by `output-contract-gate-cljs-rewrite-extern-adapters` (needs extern.openai/extern.fetch) and `output-contract-gate-cljs-rewrite-law-schemas` (needs GenerationReport schema).
+---

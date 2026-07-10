@@ -6,7 +6,7 @@ points: "3"
 source: "kanban/epics/agent-cljs-rewrite.md"
 title: "Agent CLJS Rewrite — Boundary Adapters"
 priority: "P0"
-status: "ready"
+status: "in_progress"
 uuid: "agent-cljs-rewrite-phase-2-extern-adapters"
 created_at: "2026-06-15T00:00:00Z"
 ---

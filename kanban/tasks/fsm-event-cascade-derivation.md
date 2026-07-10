@@ -1,7 +1,7 @@
 ---
 uuid: "fsm-event-cascade-derivation"
 title: "FSM: event derivation cascade"
-status: "incoming"
+status: "rejected"
 priority: "P1"
 labels: ["tasks", "cljs", "fsm", "kanban", "reconciliation"]
 created_at: "2026-06-17T00:00:00Z"

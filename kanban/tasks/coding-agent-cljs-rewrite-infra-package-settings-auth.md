@@ -6,7 +6,7 @@ points: "3"
 source: "kanban/epics/coding-agent-cljs-rewrite.md"
 title: "Coding Agent CLJS Rewrite — Package, Settings & Auth Infra"
 priority: "P0"
-status: "ready"
+status: "in_progress"
 uuid: "coding-agent-cljs-rewrite-infra-package-settings-auth"
 created_at: "2026-06-15T00:00:00Z"
 ---

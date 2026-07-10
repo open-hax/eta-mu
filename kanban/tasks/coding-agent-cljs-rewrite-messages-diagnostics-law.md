@@ -6,7 +6,7 @@ points: "2"
 source: "kanban/epics/coding-agent-cljs-rewrite.md"
 title: "Coding Agent CLJS Rewrite — Messages, Diagnostics & Output Guard"
 priority: "P0"
-status: "ready"
+status: "in_progress"
 uuid: "coding-agent-cljs-rewrite-messages-diagnostics-law"
 created_at: "2026-06-15T00:00:00Z"
 ---

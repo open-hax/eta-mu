@@ -1,13 +1,13 @@
 ---
 uuid: "opencode-compat"
 title: "Opencode-Compatible API on Sol"
-status: "ready"
-priority: P1
+status: "in_progress"
+priority: "P1"
 labels: ["epics", "cljs", "opencode", "api-compat", "sol"]
 created_at: "2026-06-08T00:00:00Z"
 source: "planning-session:2026-06-08"
 points: 21
-category: epics
+category: "epics"
 ---
 
 # Opencode-Compatible API on Sol
@@ -63,3 +63,4 @@ Sol exposes an opencode-compatible REST API. Map the 78-operation OpenAPI surfac
 
 ### Recommendation
 Draft coverage matrix: 100 upstream ops vs 35 reference routes. Tag each as implemented/stubbed/missing. Do not start until sol reaches `in_progress`.
+---

@@ -1,3 +1,11 @@
+---
+original_name: "2026.04.19.08.47.39.md"
+title: "Capability vs Policy and Actor Model"
+summary: "Resolves capability vs. policy distinction and flattens actor, contract, role, intent, and fulfillment EDN shapes."
+category: "design"
+created: "2026-04-19"
+---
+
 ## Capability vs. Policy — Resolved
 
 **Capability** = a named bundle of tools + their default configurations that make a class of work *possible*. It implies access. You either have it or you don't. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/collection_23a4406f-5526-4a3e-9023-46480ab57089/25de6e96-1bc2-4cd2-9276-f14a5b83a60a/clojure-shadow-cljs-regex-synt-Ea7Yflk1RGG.lacjWPTG2w.md)

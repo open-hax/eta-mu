@@ -1,13 +1,13 @@
 ---
 uuid: "publication-components-cljs-rewrite-build-facade"
 title: "Publication Components CLJS Rewrite — Build and JS Facade"
-status: "blocked"
-priority: P3
+status: "rejected"
+priority: "P3"
 labels: ["tasks", "cljs", "rewrite", "publication-components"]
 created_at: "2026-06-15T00:00:00Z"
 source: "kanban/epics/publication-components-cljs-rewrite.md"
 points: 3
-category: tasks
+category: "tasks"
 ---
 
 # Publication Components CLJS Rewrite — Build and JS Facade
@@ -53,5 +53,5 @@ node scripts/ts-line-count.mjs packages/legacy/publication-components
 ```
 
 ---
-
 Blocked by component porting tasks (`blocks-renderer`, `music-player`, `audio-player`, `queue-list`) and `law-shape`; the facade must mirror the ported public API. Core runtime build/spine patterns are available via the completed shadow-spine task.
+---

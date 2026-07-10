@@ -1,7 +1,7 @@
 ---
 uuid: "coding-agent-cljs-rewrite"
 title: "Coding Agent Package CLJS Rewrite"
-status: "incoming"
+status: "in_progress"
 priority: "P0"
 labels: ["epics", "cljs", "rewrite", "legacy-ts", "coding-agent"]
 created_at: "2026-06-15T00:00:00Z"
@@ -146,7 +146,6 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 **Recommended next action:** Keep inventories in `review` pending human sign-off, and drive `eta-mu-cljs-rewrite-boundary-adapters`, `agent-cljs-rewrite`, `ai-cljs-rewrite-phase-2-canonical-model`, and `tui-cljs-rewrite-terminal-extern` to unblock implementation.
 
 ---
-
 ## FS/Git/Bash extern adapters review (2026-06-15)
 
 **Reviewer:** human supervisor (me)
@@ -174,7 +173,6 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 - `coding-agent-cljs-rewrite-domain-session-law` remains partially blocked on `AgentSession` class/agent-loop parity, but standalone session-store/session-cwd/diagnostics law is ready.
 
 **Recommended next action:** Dispatch `coding-agent-cljs-rewrite-messages-diagnostics-law` and `coding-agent-cljs-rewrite-domain-tools-law` to continue clearing pure-domain slices while agent/AI/TUI externs are built.
-
 ---
 
 ## Session domain & law review (2026-06-15)
@@ -199,6 +197,3 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 - The `AgentSession` class, `agent-session-runtime`, and service factories remain blocked on `agent-cljs-rewrite` agent-loop parity and `ai-cljs-rewrite` provider adapters.
 
 **Recommended next action:** Continue with `coding-agent-cljs-rewrite-messages-diagnostics-law` (already partially covered) and `coding-agent-cljs-rewrite-domain-tools-law` to clear more pure-domain slices.
-
----
-

@@ -1,13 +1,13 @@
 ---
 uuid: "sol-interchangeability"
 title: "Sol/Knoxx Interchangeability via IChatSession Protocol"
-status: "ready"
-priority: P1
+status: "in_progress"
+priority: "P1"
 labels: ["epics", "cljs", "sol", "knoxx", "protocol", "interchange"]
 created_at: "2026-06-09T00:00:00Z"
 source: "planning-session:2026-06-09"
 points: 13
-category: epics
+category: "epics"
 ---
 
 # Sol/Knoxx Interchangeability via IChatSession Protocol
@@ -141,3 +141,4 @@ Plus the opencode-compat surface:
 
 ### Recommendation
 Implement KnoxxChatSession first (knoxx is running, ~50 lines). Move mock to chat-ui package. Add harness field to frontmatter-keys.
+---

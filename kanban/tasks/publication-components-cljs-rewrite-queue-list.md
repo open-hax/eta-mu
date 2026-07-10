@@ -6,7 +6,7 @@ points: "2"
 source: "kanban/epics/publication-components-cljs-rewrite.md"
 title: "Publication Components CLJS Rewrite — PlaylistQueueList"
 priority: "P3"
-status: "ready"
+status: "rejected"
 uuid: "publication-components-cljs-rewrite-queue-list"
 created_at: "2026-06-15T00:00:00Z"
 ---

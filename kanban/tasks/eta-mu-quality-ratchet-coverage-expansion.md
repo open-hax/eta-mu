@@ -1,13 +1,13 @@
 ---
 uuid: "eta-mu-quality-ratchet-coverage-expansion"
 title: "Eta-mu Quality Ratchet — Coverage Expansion"
-status: todo
-priority: P1
+status: "in_progress"
+priority: "P1"
 labels: ["tasks", "quality", "coverage", "cljs", "testing", "5sp"]
 created_at: "2026-05-31T00:45:00Z"
 source: "kanban/epics/eta-mu-quality-ratchet.md"
 points: 5
-category: tasks
+category: "tasks"
 ---
 
 # Eta-mu Quality Ratchet — Coverage Expansion

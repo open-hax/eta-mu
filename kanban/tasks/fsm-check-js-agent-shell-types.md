@@ -1,7 +1,7 @@
 ---
 uuid: "fsm-check-js-agent-shell-types"
 title: "FSM Check: js/agent/shell check types"
-status: "incoming"
+status: "rejected"
 priority: "P1"
 labels: ["tasks", "cljs", "fsm", "kanban", "pluggable-checks"]
 created_at: "2026-06-17T00:00:00Z"

@@ -1,7 +1,7 @@
 ---
 uuid: "docs-fix-runtime-paths-readme"
 title: "Fix packages/runtime README and stale eta-mu-runtime path references"
-status: "incoming"
+status: "ready"
 priority: "P1"
 labels: ["docs", "runtime", "paths", "3sp"]
 created_at: "2026-06-17T00:00:00Z"

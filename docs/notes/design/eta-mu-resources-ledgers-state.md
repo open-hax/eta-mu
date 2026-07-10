@@ -1,3 +1,11 @@
+---
+original_name: "2026.06.14.22.24.55.md"
+title: "Eta Mu Resources, Ledgers, and State"
+summary: "Sketches `.eta-mu/` as resources, ledgers, and state projections; kanban FSM as katamorph resources."
+category: "design"
+created: "2026-06-14"
+---
+
 so our .eta-mu folder is gonna have like 3 kinds of things in it.
 - resources (basicly a layer over top of contraogether related kinds of contracts that arepaired together in a loosely coupled kind of way)
 - ledgers (append only records)

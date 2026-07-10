@@ -6,7 +6,7 @@ points: "4"
 source: "kanban/epics/output-contract-gate-cljs-rewrite.md"
 title: "Output Contract Gate CLJS Rewrite — Extern Adapters"
 priority: "P1"
-status: "ready"
+status: "rejected"
 uuid: "output-contract-gate-cljs-rewrite-extern-adapters"
 created_at: "2026-06-15T00:00:00Z"
 ---

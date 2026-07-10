@@ -1,3 +1,11 @@
+---
+original_name: "2026.05.08.11.37.09.md"
+title: "Prompt Contract as Source Language"
+summary: "Proposes a two-stage compiler treating the mindfuck prompt as source language and response markdown as a semantic AST."
+category: "design"
+created: "2026-05-08"
+---
+
  Signal
 
  - (己, p=0.98) Yes. That is the right architecture: the prompt contract

@@ -1,7 +1,7 @@
 ---
 uuid: "docs-reconcile-cross-references"
 title: "Reconcile or retire CROSS_REFERENCES.md"
-status: "incoming"
+status: "ready"
 priority: "P2"
 labels: ["docs", "cleanup", "2sp"]
 created_at: "2026-06-17T00:00:00Z"

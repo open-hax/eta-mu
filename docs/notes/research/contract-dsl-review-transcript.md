@@ -1,3 +1,11 @@
+---
+original_name: "2026.04.19.10.07.53.md"
+title: "Contract DSL Review Transcript"
+summary: "Long Perplexity transcript reviewing the Knoxx contract DSL direction, EDN-first design, Malli, and SCI evaluator."
+category: "research"
+created: "2026-04-19"
+---
+
 ## Signal
 
 Your Knoxx contract DSL is already pointed in the **right** direction: EDN-first, Clojure-shaped, composable, and designed around a portable runtime seam rather than a one-off event-agent config format.  The strongest parts are the shift from flat JS/job specs to named contract kinds, the decision to keep `ctx` as a map instead of a vector, and the move toward Malli validation plus a CLJS SCI evaluator instead of raw unrestricted forms.[^1_1]

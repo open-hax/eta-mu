@@ -1,7 +1,7 @@
 ---
 uuid: "docs-fix-axxium-readme"
 title: "Reconcile packages/axxium README with implemented surface and add to root docs"
-status: "incoming"
+status: "ready"
 priority: "P1"
 labels: ["docs", "axxium", "identity", "3sp"]
 created_at: "2026-06-17T00:00:00Z"

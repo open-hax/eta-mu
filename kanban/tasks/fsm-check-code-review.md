@@ -1,7 +1,7 @@
 ---
 uuid: "fsm-check-code-review"
 title: "FSM Check: code-review"
-status: "incoming"
+status: "rejected"
 priority: "P1"
 labels: ["tasks", "cljs", "fsm", "kanban", "pluggable-checks"]
 created_at: "2026-06-17T00:00:00Z"

@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-review-should-fix-batch"
 title: "PR #134: resolve remaining should-fix review findings"
-status: "review"
+status: "done"
 priority: "P1"
 labels: ["tasks", "rheos", "chat-ui", "github", "cljs", "pr-134", "5sp"]
 created_at: "2026-06-16T00:00:00Z"

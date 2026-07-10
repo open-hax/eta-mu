@@ -6,7 +6,7 @@ points: "2"
 source: "PR #132 review"
 title: "Sweep docs/planning cards referencing deleted services/agentd + opencode-reactant"
 priority: "P3"
-status: "review"
+status: "breakdown"
 uuid: "monorepo-reorg-docs-sweep"
 created_at: "2026-06-15T00:00:00Z"
 ---

@@ -1,3 +1,11 @@
+---
+original_name: "2026.07.08.14.15.47.md"
+title: "ClojureScript Extension Loader Prototype"
+summary: "Prototype notes for transparently loading `.cljs` user extensions via shadow-cljs on-demand compilation."
+category: "design"
+created: "2026-07-08"
+---
+
  Signal
 
  I researched how ημ currently loads extensions, grokked your

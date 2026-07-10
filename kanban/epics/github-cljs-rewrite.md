@@ -1,7 +1,7 @@
 ---
 uuid: "github-cljs-rewrite"
 title: "GitHub Package CLJS Rewrite"
-status: "incoming"
+status: "in_progress"
 priority: "P0"
 labels: ["epics", "cljs", "rewrite", "legacy-ts", "github"]
 created_at: "2026-06-15T00:00:00Z"

@@ -1,3 +1,11 @@
+---
+original_name: "2026.07.10.03.00.16.md"
+title: "Prompt Wizard PR Agent Prompt"
+summary: "Agent prompt for creating Prompt Wizard space files in a separate GitHub repository."
+category: "other"
+created: "2026-07-10"
+---
+
 You are a GitHub + code-execution agent with access to:
 
 - The GitHub repo: https://github.com/riatzukiza/perplexity_spaces_memory_protocol

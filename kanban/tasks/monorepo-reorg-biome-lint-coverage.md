@@ -6,7 +6,7 @@ points: "2"
 source: "PR #132 review"
 title: "Refresh biome.json lint globs after packages/legacy reorg"
 priority: "P2"
-status: "review"
+status: "rejected"
 uuid: "monorepo-reorg-biome-lint-coverage"
 created_at: "2026-06-15T00:00:00Z"
 ---

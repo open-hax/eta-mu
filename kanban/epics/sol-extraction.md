@@ -1,13 +1,13 @@
 ---
 uuid: "sol-extraction"
 title: "Sol: Extract Agent API from Knoxx"
-status: "ready"
-priority: P0
+status: "in_progress"
+priority: "P0"
 labels: ["epics", "cljs", "agent-api", "sol", "knoxx-extraction"]
 created_at: "2026-06-08T00:00:00Z"
 source: "planning-session:2026-06-08"
 points: 34
-category: epics
+category: "epics"
 ---
 
 # Sol: Extract Agent API from Knoxx
@@ -91,3 +91,4 @@ Before knoxx can swap its implementation, the event ledger protocol must exist i
 
 ### Recommendation
 Do not start sol until knoxx decomposition reaches E19. Add acceptance criteria. Reconcile IStore spec with real protocol.
+---

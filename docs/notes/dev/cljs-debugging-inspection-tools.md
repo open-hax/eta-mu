@@ -1,3 +1,11 @@
+---
+original_name: "2025.11.04.12.11.40.md"
+title: "ClojureScript Debugging and Inspection Tools"
+summary: "Companion list of ClojureScript debugging, linting, testing, and CI tools."
+category: "dev"
+created: "2025-11-04"
+---
+
 --
 
 ### Inspector & Debugging

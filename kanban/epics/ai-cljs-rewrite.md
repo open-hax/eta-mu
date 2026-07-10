@@ -1,7 +1,7 @@
 ---
 uuid: "ai-cljs-rewrite"
 title: "AI Package CLJS Rewrite"
-status: "incoming"
+status: "in_progress"
 priority: "P0"
 labels: ["epics", "cljs", "rewrite", "legacy-ts", "ai"]
 created_at: "2026-06-15T00:00:00Z"

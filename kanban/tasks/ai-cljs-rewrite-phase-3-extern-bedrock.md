@@ -6,7 +6,7 @@ points: "2"
 source: "kanban/epics/ai-cljs-rewrite.md"
 title: "AI CLJS Rewrite — Amazon Bedrock Extern Adapter"
 priority: "P1"
-status: "ready"
+status: "in_progress"
 uuid: "ai-cljs-rewrite-phase-3-extern-bedrock"
 created_at: "2026-06-15T00:00:00Z"
 ---

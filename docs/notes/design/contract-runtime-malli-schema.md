@@ -1,3 +1,11 @@
+---
+original_name: "2026.04.19.08.56.22.md"
+title: "Contract Runtime Malli Schema"
+summary: "Malli schema for contract runtime v2 covering actor, role, capability, intent, fulfillment, policy, and agent contracts."
+category: "design"
+created: "2026-04-19"
+---
+
 Skill contracts are short lived contracts that are only held onto
 is triggered.
 for the duration of the turn the skill was invoked in

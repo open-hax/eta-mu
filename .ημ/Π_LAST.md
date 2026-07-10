@@ -1,53 +1,39 @@
-# Π Fork Tax — 2026-07-10T20:07:21Z
+# Π_LAST — Fork tax handoff
 
-## Branch
+## Summary
 
-`device/yoga`
+Full working-state snapshot on **device/yoga** after the notes-reorganization and kanban-ledger update session.
 
-## Base SHA
+Absorbs:
+- Reorganization of `docs/notes/` into categorized subdirectories (`design/`, `dev/`, `other/`, `research/`).
+- Deletion of 17 timestamped note files that were consolidated or superseded.
+- Updates to `docs/notes/INDEX.md` and `docs/design/contract-model.md`.
+- Widespread kanban epic/task frontmatter updates (status, references, scope) plus ledger events in `kanban/.events/ledger.edn`.
+- Receipts ledger append in `receipts.edn`.
+- New session-mycology ledger under `.ημ/session-mycology/`.
 
-`2a4d9da7ea1709f89e0717c8f14e5fd7dfa4a5b3`
+## Snapshot
 
-## What Changed
+- **Branch:** `device/yoga`
+- **Base commit:** `c3496ad550819193d5cc6b256db993bf58b55b0d`
+- **Tag:** `Π/device/yoga/2026-07-10T232338`
+- **Generated:** `2026-07-10T23:23:38Z`
 
-Continuation of work on the `device/yoga` branch after the previous fork-tax handoff.
+## Verification
 
-### Documentation / workspace
-- **AGENTS.md** — updated Clojure house rules and project instructions.
-- **PROCESS.md** — updated process documentation.
-- **CLAUDE.md** — new artifact (untracked).
-- **biome.json** — updated monorepo lint configuration.
-- **docs/cljs-runtime-rewrite-boundary-adapter-plan.md** — updated plan.
+- `receipts.edn` EDN syntax: OK
+- `kanban/.events/ledger.edn` EDN syntax: OK
+- Code tests: skipped (no package source files touched in this slice)
+- clj-kondo: skipped (no CLJS source files touched)
+- TypeScript line count: unchanged (no `.ts`/`.tsx` files added)
+- Secret scan: no obvious plaintext secrets in changed/untracked files
 
-### Kanban / planning
-- **kanban/.events/ledger.edn** — appended events.
-- **openhax.kanban.json** — updated board snapshot.
-- **kanban/epics/** and **kanban/tasks/** — continued card edits.
-- **kanban/tasks/process-docs-reconciliation.md** — new task card.
+## Concurrent dirt / blockers
 
-### Packages
-- **packages/Rheos** — backend events/config/http/watcher, UI layout/orchestrator/sidebar, and watcher test updates.
-- **packages/chat-ui** — package.json/shadow-cljs updates and new opencode-session code + test.
-- **packages/runtime** — TypeScript runtime/envelope/index/planner/state changes.
-- **packages/sol** — `eta_mu.cljs` update.
-- **packages/contracts/output/dist-cli** — regenerated build artifacts.
+None. All stageable changes in the working tree belong to this snapshot. No unrelated concurrent dirt was left unstaged.
 
-### Build / lock
-- **package.json** / **pnpm-lock.yaml** — workspace dependency refresh.
-- **receipts.edn** — append-only ledger updated.
+## Scope summary
 
-## Verification Status
-- **packages/Rheos tests**: Passed — 58 tests, 166 assertions, 0 failures, 0 errors.
-- **packages/chat-ui tests**: Passed — 3 tests, 6 assertions, 0 failures, 0 errors.
-- **packages/Rheos clj-kondo**: Passed — 0 errors, 0 warnings.
-- **packages/chat-ui clj-kondo**: Passed — 0 errors, 0 warnings.
-- **TypeScript line count**: Global total 172,796 lines; net reduction from prior snapshot (0 .ts/.tsx added).
-- **Secret scan**: Not performed; no obvious plaintext secrets observed.
-
-## Tag
-
-`Π/device/yoga/2026-07-10T200721`
-
-## Notes
-- Workspace treated as shared per multi-agent guardrails. This snapshot intentionally absorbs all currently stageable paths.
-- Generated `packages/contracts/output/dist-cli/index.cjs` and `.map` are committed because they are tracked build artifacts in the current working tree.
+- Modified files: 86
+- Added directories/files: 5
+- Deleted files: 17

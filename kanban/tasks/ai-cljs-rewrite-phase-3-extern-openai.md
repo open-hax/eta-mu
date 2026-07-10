@@ -1,7 +1,7 @@
 ---
 uuid: "ai-cljs-rewrite-phase-3-extern-openai"
 title: "AI CLJS Rewrite — OpenAI Family Extern Adapters"
-status: "ready"
+status: "in_progress"
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "ai"]
 created_at: "2026-06-15T00:00:00Z"

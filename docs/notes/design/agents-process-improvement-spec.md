@@ -1,3 +1,11 @@
+---
+original_name: "2026.06.16.07.13.42.md"
+title: "AGENTS and PROCESS Improvement Spec"
+summary: "Acceptance criteria and task spec for improving `AGENTS.md`, `PROCESS.md`, and per-package agent guidance."
+category: "design"
+created: "2026-06-16"
+---
+
 ## Improve Eta-mu's AGENTS.md
 
 

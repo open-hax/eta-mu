@@ -1,3 +1,11 @@
+---
+original_name: "2026.06.16.07.37.19.md"
+title: "Perplexity Sandbox Operating Notes"
+summary: "Perplexity sandbox operating notes: Debian environment, SETUP.sh toolchain, and snapshot protocol."
+category: "other"
+created: "2026-06-16"
+---
+
 # Perplexity Agent — User Instructions
 
 ## Sandbox Model

@@ -6,7 +6,7 @@ points: "5"
 source: "kanban/epics/coding-agent-cljs-rewrite.md"
 title: "Coding Agent CLJS Rewrite — Tool Domain & Law"
 priority: "P0"
-status: "ready"
+status: "in_progress"
 uuid: "coding-agent-cljs-rewrite-domain-tools-law"
 created_at: "2026-06-15T00:00:00Z"
 ---

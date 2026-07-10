@@ -1,13 +1,13 @@
 ---
 uuid: "publication-components-cljs-rewrite-blocks-renderer"
 title: "Publication Components CLJS Rewrite — PublicationBlocksRenderer"
-status: "blocked"
-priority: P3
+status: "rejected"
+priority: "P3"
 labels: ["tasks", "cljs", "rewrite", "publication-components"]
 created_at: "2026-06-15T00:00:00Z"
 source: "kanban/epics/publication-components-cljs-rewrite.md"
 points: 5
-category: tasks
+category: "tasks"
 ---
 
 # Publication Components CLJS Rewrite — PublicationBlocksRenderer
@@ -54,5 +54,5 @@ pnpm --filter @open-hax/garden-publication-components build
 ```
 
 ---
-
 Blocked by `publication-components-cljs-rewrite-inventory`, `publication-components-cljs-rewrite-law-shape` (block schemas/normalization), and `publication-components-cljs-rewrite-audio-player` (`StudioPlaylistPlayer` integration). Core runtime web boundary patterns are established enough to proceed once internal blockers clear.
+---

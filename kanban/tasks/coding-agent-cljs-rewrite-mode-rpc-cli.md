@@ -1,7 +1,7 @@
 ---
 uuid: "coding-agent-cljs-rewrite-mode-rpc-cli"
 title: "Coding Agent CLJS Rewrite — RPC Mode & CLI Parity"
-status: "blocked"
+status: "rejected"
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "coding-agent", "3sp"]
 created_at: "2026-06-15T00:00:00Z"

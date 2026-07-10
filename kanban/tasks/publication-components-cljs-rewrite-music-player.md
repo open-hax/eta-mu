@@ -1,14 +1,15 @@
 ---
 uuid: "publication-components-cljs-rewrite-music-player"
 title: "Publication Components CLJS Rewrite — MusicPlayerView"
-status: todo
-priority: P3
+status: "rejected"
+priority: "P3"
 labels: ["tasks", "cljs", "rewrite", "publication-components"]
 created_at: "2026-06-15T00:00:00Z"
 source: "kanban/epics/publication-components-cljs-rewrite.md"
 points: 3
-category: tasks
+category: "tasks"
 ---
+
 # Publication Components CLJS Rewrite — MusicPlayerView
 
 > Parent epic: `kanban/epics/publication-components-cljs-rewrite.md`
@@ -51,5 +52,5 @@ pnpm --filter @open-hax/garden-publication-components build
 ```
 
 ---
-
 Blocked by `publication-components-cljs-rewrite-inventory` and `publication-components-cljs-rewrite-law-shape` (track/permission schemas). Core runtime boundary conventions are already available.
+---

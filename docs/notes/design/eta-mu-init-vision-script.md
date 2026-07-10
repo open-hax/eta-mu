@@ -1,3 +1,11 @@
+---
+original_name: "2026.06.14.12.19.50.md"
+title: "Eta Mu Init Vision Script"
+summary: "Vision script for the `eta-mu init` experience: ledger, sentinel, fork tax, receipt river, session mycology, retrospective agent."
+category: "design"
+created: "2026-06-14"
+---
+
 What do I really want eta-mu to feel like?
 ```bash
 $ eta-mu init

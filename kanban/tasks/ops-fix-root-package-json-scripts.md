@@ -6,7 +6,7 @@ points: "2"
 source: "docs discovery sweep 2026-06-16"
 title: "Fix root package.json scripts to reference real packages"
 priority: "P1"
-status: "review"
+status: "done"
 uuid: "ops-fix-root-package-json-scripts"
 created_at: "2026-06-17T00:00:00Z"
 ---

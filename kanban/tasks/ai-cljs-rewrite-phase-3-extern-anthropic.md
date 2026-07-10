@@ -6,7 +6,7 @@ points: "5"
 source: "kanban/epics/ai-cljs-rewrite.md"
 title: "AI CLJS Rewrite — Anthropic Extern Adapter"
 priority: "P1"
-status: "ready"
+status: "in_progress"
 uuid: "ai-cljs-rewrite-phase-3-extern-anthropic"
 created_at: "2026-06-15T00:00:00Z"
 ---

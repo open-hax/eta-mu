@@ -1,7 +1,7 @@
 ---
 uuid: "docs-refresh-architecture-inventories"
 title: "Refresh architecture inventory docs for accuracy"
-status: "incoming"
+status: "ready"
 priority: "P2"
 labels: ["docs", "inventory", "architecture", "5sp"]
 created_at: "2026-06-17T00:00:00Z"

@@ -6,7 +6,7 @@ points: "2"
 source: "coderabbit-review:PR-112"
 title: "Add fetch timeout with AbortController to runtime-batch.ts"
 priority: "P0"
-status: "review"
+status: "done"
 uuid: "fetch-timeout-abort-controller"
 created_at: "2026-06-12T00:00:00Z"
 ---

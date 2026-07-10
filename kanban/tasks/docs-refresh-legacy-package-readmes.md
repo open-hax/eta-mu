@@ -1,7 +1,7 @@
 ---
 uuid: "docs-refresh-legacy-package-readmes"
 title: "Refresh legacy package READMEs with deprecation banners and path fixes"
-status: "incoming"
+status: "ready"
 priority: "P1"
 labels: ["docs", "legacy", "readme", "8sp"]
 created_at: "2026-06-17T00:00:00Z"
