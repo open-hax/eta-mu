@@ -8,6 +8,7 @@
   cut small. A streaming SSE implementation can replace this later without
   changing the turn-processor contract."
   (:require [eta-mu.turn-processor.shape.message :as shape.msg]
+            [eta-mu.turn-processor.shape.tool :as shape.tool]
             [eta-mu.extern.process :as process]))
 
 (defn- ^:async fetch-chat
@@ -65,7 +66,7 @@
         messages (if (some? system-prompt)
                    (vec (cons (build-system-message system-prompt) messages))
                    messages)
-        tools (:tools llm-context)
+        tools (shape.tool/tools->openai (:tools llm-context))
         response (try
                    (await (fetch-chat base-url auth-token model messages tools))
                    (catch :default e
