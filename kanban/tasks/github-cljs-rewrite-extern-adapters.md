@@ -1,7 +1,7 @@
 ---
 uuid: "github-cljs-rewrite-extern-adapters"
 title: "GitHub CLJS Rewrite — Extern Adapters"
-status: "in_progress"
+status: icebox
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "github"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "kanban/epics/github-cljs-rewrite.md"
 points: 4
 category: "tasks"
 ---
-
 # GitHub CLJS Rewrite — Extern Adapters
 
 > Parent epic: `kanban/epics/github-cljs-rewrite.md`

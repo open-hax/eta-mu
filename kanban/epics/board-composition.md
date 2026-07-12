@@ -79,4 +79,6 @@ eta-mu kanban compose --preset "infra-view"
 - Added tests for saved views, EdnStore, and `contains`/`regex` operators; fixed pre-existing test/lint issues in `fsm_test.cljs`, `transition.cljs`, `content_parser.cljs`, `events.cljs`, and `task_edit_test.cljs` so the Rheos suite is green.
 
 **Status:** review.
+
+Board audit 2026-07-12: code deliverables verified present (--save/--preset CLI, IStore/EdnStore, contains/regex compose clauses), but the done status bypassed the FSM: card body still ends 'Status: review', frontmatter has no write-id, and the ledger's last transition for this uuid is todo->in_progress. Needs a lawful closing transition or demotion to review.
 ---

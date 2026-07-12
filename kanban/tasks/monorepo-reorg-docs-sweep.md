@@ -6,11 +6,10 @@ points: "2"
 source: "PR #132 review"
 title: "Sweep docs/planning cards referencing deleted services/agentd + opencode-reactant"
 priority: "P3"
-status: "breakdown"
+status: icebox
 uuid: "monorepo-reorg-docs-sweep"
 created_at: "2026-06-15T00:00:00Z"
 ---
-
 # Sweep stale path references after the monorepo reorg
 
 Deferred from PR #132 (docs-only, non-blocking). Several docs/planning files still

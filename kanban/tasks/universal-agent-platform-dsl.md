@@ -1,13 +1,12 @@
 ---
 uuid: "universal-agent-platform-dsl"
 title: "Universal Agent Platform DSL — Boundary + OpenCode Target"
-status: "in_progress"
+status: icebox
 priority: "P0"
 labels: ["cljs", "opencode", "dsl", "boundary", "extensions"]
 created_at: "2026-07-11T13:00:00Z"
 category: "tasks"
 ---
-
 # Universal Agent Platform DSL — Boundary + OpenCode Target
 
 Build the ημ data-first agent platform DSL with strict JS boundaries and an OpenCode compiler target.

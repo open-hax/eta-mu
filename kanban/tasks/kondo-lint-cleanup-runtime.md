@@ -66,7 +66,6 @@ pnpm --filter @open-hax/eta-mu-runtime lint:kondo
 ```
 
 ---
-
 ## Completion
 
 - Completed at: 2026-06-15
@@ -75,7 +74,10 @@ pnpm --filter @open-hax/eta-mu-runtime lint:kondo
 - Fixed: unused requires/bindings, redundant let, promise chains converted to `^:async` + `await`.
 - No `#_:clj-kondo/ignore` annotations added.
 - No changes to `.clj-kondo/config.edn` or `package.json`.
-
 ---
 
 **Review note:** Verified clean by parent agent — `lint:kondo` exits 0 errors, 0 warnings.
+
+---
+Board audit 2026-07-12: regression — packages/runtime lint now emits 23 unused-binding warnings in test/cljs/eta_mu/coding/**, independent of the broken shared kondo config. Zero-warning gate does not hold.
+---

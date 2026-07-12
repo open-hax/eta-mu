@@ -1,7 +1,7 @@
 ---
 uuid: "github-cljs-rewrite-cutover"
 title: "GitHub CLJS Rewrite — Cutover"
-status: "blocked"
+status: icebox
 priority: "P1"
 labels: ["tasks", "cljs", "rewrite", "github"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "kanban/epics/github-cljs-rewrite.md"
 points: 1
 category: "tasks"
 ---
-
 # GitHub CLJS Rewrite — Cutover
 
 > Parent epic: `kanban/epics/github-cljs-rewrite.md`

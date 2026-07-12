@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-quality-ratchet-coverage-expansion"
 title: "Eta-mu Quality Ratchet — Coverage Expansion"
-status: "in_progress"
+status: icebox
 priority: "P1"
 labels: ["tasks", "quality", "coverage", "cljs", "testing", "5sp"]
 created_at: "2026-05-31T00:45:00Z"
@@ -9,7 +9,6 @@ source: "kanban/epics/eta-mu-quality-ratchet.md"
 points: 5
 category: "tasks"
 ---
-
 # Eta-mu Quality Ratchet — Coverage Expansion
 
 > Parent epic: `kanban/epics/eta-mu-quality-ratchet.md`

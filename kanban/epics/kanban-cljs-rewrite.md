@@ -43,7 +43,7 @@ created_at: "2026-06-08T00:00:00Z"
 Remaining: UI editors for comment/frontmatter in the web view (not strictly CLI parity); potential routing of new Rheos subcommands through the legacy `eta-mu kanban` dispatcher.
 ---
 
-**Discovery 2026-06-16.** Construction-order Discovery pass over the Rheos + chat-ui surface (post PR #134): `docs/rheos-chat-ui-shape-discovery.md`, tracked by `kanban/tasks/rheos-chat-ui-shape-discovery.md`. Names the latent `law.*`/`shape.*` shapes and surfaces that the canonical event envelope (`event-ledger`), keyed store (`katamorph.store`), and chat contract (`sol.shape.agent`) **already exist** — the next slices are largely adoption, not authorship. The standing "domain.* does I/O" review note is folded into the follow-on `domain/infra` slice.
+[Omitted long matching line]
 
 ---
 **PR #134 should-fix batch 2026-06-16.** Closed out the remaining Kimi/CodeRabbit should-fix findings in `kanban/tasks/pr-134-review-should-fix-batch.md` (status `review`). All five implemented and verified green:

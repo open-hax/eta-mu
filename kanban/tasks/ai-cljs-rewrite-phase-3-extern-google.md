@@ -6,11 +6,10 @@ points: "5"
 source: "kanban/epics/ai-cljs-rewrite.md"
 title: "AI CLJS Rewrite — Google Family Extern Adapters"
 priority: "P1"
-status: "in_progress"
+status: breakdown
 uuid: "ai-cljs-rewrite-phase-3-extern-google"
 created_at: "2026-06-15T00:00:00Z"
 ---
-
 # AI CLJS Rewrite — Google Family Extern Adapters
 
 > Parent epic: `kanban/epics/ai-cljs-rewrite.md`

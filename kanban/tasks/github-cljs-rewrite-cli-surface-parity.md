@@ -1,7 +1,7 @@
 ---
 uuid: "github-cljs-rewrite-cli-surface-parity"
 title: "GitHub CLJS Rewrite — CLI Surface Parity"
-status: "blocked"
+status: icebox
 priority: "P1"
 labels: ["tasks", "cljs", "rewrite", "github"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "kanban/epics/github-cljs-rewrite.md"
 points: 3
 category: "tasks"
 ---
-
 # GitHub CLJS Rewrite — CLI Surface Parity
 
 > Parent epic: `kanban/epics/github-cljs-rewrite.md`

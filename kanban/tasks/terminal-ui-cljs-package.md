@@ -1,7 +1,7 @@
 ---
 uuid: "terminal-ui-cljs-package"
 title: "Terminal UI CLJS Package"
-status: "in_progress"
+status: breakdown
 priority: "P1"
 labels: ["tasks", "cljs", "rewrite", "tui", "terminal-ui", "5sp"]
 created_at: "2026-07-09T18:00:00Z"
@@ -9,7 +9,6 @@ source: "kanban/tasks/legacy-package-reorganization.md"
 points: 5
 category: "tasks"
 ---
-
 # Terminal UI CLJS Package
 
 > Parent: `kanban/tasks/legacy-package-reorganization.md`

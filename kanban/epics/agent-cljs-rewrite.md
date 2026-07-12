@@ -1,7 +1,7 @@
 ---
 uuid: "agent-cljs-rewrite"
 title: "Agent Package CLJS Rewrite"
-status: "in_progress"
+status: "breakdown"
 priority: "P0"
 labels: ["epics", "cljs", "rewrite", "legacy-ts", "agent"]
 created_at: "2026-06-15T00:00:00Z"
@@ -129,3 +129,23 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 - Once Phase 2 lands, Phases 3–5 can proceed sequentially.
 
 **Recommended next action:** Accept this inventory and move `agent-cljs-rewrite-phase-2-extern-adapters` to `ready` as soon as `eta-mu-cljs-rewrite-boundary-adapters` is done.
+
+---
+## State of affairs (2026-07-12)
+
+**Agent CLI is functional in `packages/eta-mu` but not yet split into a standalone agent package.**
+
+The agent command (`eta-mu agent`) works as a ClojureScript single-turn chat, REPL, or piped-input handler. It uses:
+- `eta-mu.extern.openai` — LLM boundary (now with proxy support)
+- `eta-mu.extern.fs`, `git`, `process`, `readline` — system boundaries
+- `eta-mu.turn-processor` — shared turn loop
+- `eta-mu.infra.cli.repl` — interactive REPL
+
+The original epic planned a separate `packages/eta-mu-agent` (from `packages/legacy/agent`), but the agent functionality landed in `packages/eta-mu` (the CLI package) instead. The agent is not a standalone library — it's the CLI's default command.
+
+Phase 2 (extern adapters) is partially done — the OpenAI adapter is complete with proxy support. Remaining extern work (FS, Git, Bash) is in the CLI package, not a separate agent package.
+
+**Recommendation:** Consider whether the agent package split is still needed, or if the agent should stay as part of the CLI. The current architecture has the agent as a CLI command, not a reusable library.
+
+Triage 2026-07-12: Phase 1 done and holds. Phase 2 partially superseded (extern layer lives in packages/eta-mu; turn-processor is the de-facto legacy/agent successor). Phases 3-5 blocked. Core open question, unresolved since the 2026-07-12 state-of-affairs note: is a standalone agent library still a goal, or is the epic retargeted at turn-processor parity with legacy/agent (Agent class lifecycle, agentLoop/agentLoopContinue semantics, streamProxy)? Recommend retargeting the epic at turn-processor parity and rewriting phases 3-5 accordingly. Stays in breakdown pending that decision.
+---

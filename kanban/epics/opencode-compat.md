@@ -1,7 +1,7 @@
 ---
 uuid: "opencode-compat"
 title: "Opencode-Compatible API on Sol"
-status: "ready"
+status: icebox
 priority: "P1"
 labels: ["epics", "cljs", "opencode", "api-compat", "sol"]
 created_at: "2026-06-08T00:00:00Z"
@@ -9,7 +9,6 @@ source: "planning-session:2026-06-08"
 points: 21
 category: "epics"
 ---
-
 # Opencode-Compatible API on Sol
 
 ## Purpose

@@ -1,7 +1,7 @@
 ---
 uuid: "ai-cljs-rewrite"
 title: "AI Package CLJS Rewrite"
-status: "in_progress"
+status: "breakdown"
 priority: "P0"
 labels: ["epics", "cljs", "rewrite", "legacy-ts", "ai"]
 created_at: "2026-06-15T00:00:00Z"
@@ -162,4 +162,29 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 - Phase 4 infra/registry, Phase 5 CLI parity, and Phase 6 cutover remain sequentially blocked.
 
 **Recommended next action:** Drive core `eta-mu-cljs-rewrite-boundary-adapters` to completion, then move `ai-cljs-rewrite-phase-3-extern-openai` to `ready` as the first provider adapter.
+
+## State of affairs (2026-07-12)
+
+**First LLM adapter delivered in `packages/eta-mu`, not `packages/llm-providers`.**
+
+The AI package rewrite epic planned a standalone `packages/llm-providers` package (from `packages/legacy/ai`). Instead, the first working OpenAI-compatible adapter landed in `packages/eta-mu/src/cljs/eta_mu/extern/openai.cljs` as part of the CLI agent command.
+
+What exists:
+- Configurable OpenAI-compatible chat-completions client (proxy support via `OPENAI_BASE_URL`, `OPENAI_AUTH_TOKEN`)
+- Model passed as `{:id string :provider string}` map
+- Synchronous (non-streaming), handles text + tool_calls
+- 54 tests, 0 failures
+
+What does NOT exist:
+- No `packages/llm-providers` package
+- No multi-provider catalog/registry
+- No SSE streaming
+- No responses API, completions API, Codex, Azure, Anthropic, Bedrock, or Google adapters
+- No provider SDK construction — raw `js/fetch` only
+
+The provider-specific tasks (bedrock, anthropic, google, auxiliary) are all still `in_progress` but have no implementation. The OpenAI task was the most advanced and it landed in the wrong package.
+
+**Recommendation:** Decide whether to create `packages/llm-providers` as a separate package or consolidate all LLM adapters into `packages/eta-mu`. The current architecture has the LLM client as a CLI-internal detail, not a reusable provider library.
+
+Triage 2026-07-12: Phases 1-2 done and hold (canonical model in packages/runtime eta_mu.ai.*). Phase 3 has exactly one delivered adapter (OpenAI-compatible, in packages/eta-mu, non-streaming); bedrock/anthropic/google/auxiliary cards have zero implementation. Blocking decision: create packages/llm-providers per the inventory map, or consolidate adapters into packages/eta-mu extern. Recommend consolidating (CLI is the only consumer today), prioritizing SSE streaming + anthropic, and iceboxing bedrock/google/auxiliary until the coding-agent migration demands them. Stays in breakdown pending that decision.
 ---

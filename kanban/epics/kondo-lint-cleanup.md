@@ -2,12 +2,12 @@
 uuid: "kondo-lint-cleanup"
 title: "clj-kondo lint clean-up pass"
 status: "done"
-priority: P1
+priority: "P1"
 labels: ["epics", "lint", "clj-kondo", "quality", "21sp"]
 created_at: "2026-06-15T00:00:00Z"
 source: "user-request:2026-06-15"
 points: 21
-category: epics
+category: "epics"
 ---
 
 # clj-kondo lint clean-up pass
@@ -153,8 +153,8 @@ pnpm lint:kondo
 | protocols | 0 | 12 | Promise-chain warnings |
 | runtime | 0 | 46 | Mixed unused bindings / promise chains |
 | sol | 4 | 23 | Includes `defroute`-related findings |
-
 ---
+
 ## Final implementation summary (2026-06-15)
 
 All 11 child cleanup tasks are `status: done`. Verified by parent agent:
@@ -181,3 +181,7 @@ All 11 child cleanup tasks are `status: done`. Verified by parent agent:
 - One sub-agent noted 2 pre-existing test failures in `promethean.records.mongo.user-management-test` that exist on HEAD and are unrelated to this lint cleanup.
 - No `#_:clj-kondo/ignore` annotations were added without comments.
 - No `js-await`/`js-await*` usage remains in any wired CLJS package.
+
+---
+Board audit 2026-07-12: DONE no longer holds — 6 of 11 packages fail lint today (axxium, event-ledger, extensions, katamorph, protocols via the broken shared kondo-config config.edn; runtime independently has 23 unused-binding warnings in test/cljs/eta_mu/coding/**). See comment on shared-kondo-config-create-package for root cause.
+---

@@ -1,7 +1,7 @@
 ---
 uuid: "coding-agent-cljs-rewrite"
 title: "Coding Agent Package CLJS Rewrite"
-status: "in_progress"
+status: "breakdown"
 priority: "P0"
 labels: ["epics", "cljs", "rewrite", "legacy-ts", "coding-agent"]
 created_at: "2026-06-15T00:00:00Z"
@@ -197,3 +197,7 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 - The `AgentSession` class, `agent-session-runtime`, and service factories remain blocked on `agent-cljs-rewrite` agent-loop parity and `ai-cljs-rewrite` provider adapters.
 
 **Recommended next action:** Continue with `coding-agent-cljs-rewrite-messages-diagnostics-law` (already partially covered) and `coding-agent-cljs-rewrite-domain-tools-law` to clear more pure-domain slices.
+
+---
+Triage 2026-07-12: the priority epic. Phases 1-2 inventories hold; domain/law slices (session, tools, extensions) hold; fs/git/bash externs hold; session-manager infra holds. Known drift: messages-diagnostics-law was marked done but only the diagnostics slice exists — messages.ts port, output-guard, and message DTO shapes are missing (see card comment); recommend reopening or cutting a corrected follow-up card. Critical-path blockers to phases 4-6: agent-loop parity (agent-cljs-rewrite / turn-processor decision), provider streaming (ai-cljs-rewrite), and terminal-ui (only 1 of 4 scoped externs exists). Recommended dispatch order: 1) messages/output-guard slice (pure, unblocked), 2) SSE streaming extern, 3) terminal-ui stdin/keys/ansi externs, 4) infra phase 4 continuation.
+---

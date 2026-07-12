@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "rewrite", "coding-agent", "3sp"]
-write-id: "1783828883669-0.e0n46nm3e3r4q8t93tx"
+write-id: "1783880855024-0.8q27v9a3q33qnrfs7oe"
 points: "3"
 source: "kanban/epics/coding-agent-cljs-rewrite.md"
 title: "Coding Agent CLJS Rewrite — Package, Settings & Auth Infra"
 priority: "P0"
-status: "document"
+status: "review"
 uuid: "coding-agent-cljs-rewrite-infra-package-settings-auth"
 created_at: "2026-06-15T00:00:00Z"
 ---

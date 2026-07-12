@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "rewrite", "coding-agent", "5sp"]
-write-id: "1783828882216-0.0puzas0xnldeun7o66fo"
+write-id: "1783880853247-0.9jb21h0ufnb4phlzsyu"
 points: "5"
 source: "kanban/epics/coding-agent-cljs-rewrite.md"
 title: "Coding Agent CLJS Rewrite — Extension Runner Infra"
 priority: "P0"
-status: "document"
+status: "review"
 uuid: "coding-agent-cljs-rewrite-infra-extension-runner"
 created_at: "2026-06-15T00:00:00Z"
 ---

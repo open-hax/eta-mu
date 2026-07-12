@@ -1,7 +1,7 @@
 ---
 uuid: "agent-spawning"
 title: "Agent Spawning from Kanban Tasks"
-status: "ready"
+status: icebox
 priority: "P1"
 labels: ["epics", "cljs", "kanban", "sol", "agent-spawning"]
 created_at: "2026-06-08T00:00:00Z"
@@ -9,7 +9,6 @@ source: "planning-session:2026-06-08"
 points: 13
 category: "epics"
 ---
-
 # Agent Spawning from Kanban Tasks
 
 ## Purpose
