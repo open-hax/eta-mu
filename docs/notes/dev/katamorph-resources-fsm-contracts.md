@@ -1,3 +1,11 @@
+---
+original_name: "2026.06.14.22.24.55.md"
+title: "Katamorph Resources and FSM as Contracts"
+summary: "Proposes modeling katamorph resources, drivers, and the kanban finite-state machine as pure resources over event ledgers."
+category: "dev"
+created: "2026-06-14"
+---
+
 so our .eta-mu folder is gonna have like 3 kinds of things in it.
 - resources (basicly a layer over top of contraogether related kinds of contracts that arepaired together in a loosely coupled kind of way)
 - ledgers (append only records)

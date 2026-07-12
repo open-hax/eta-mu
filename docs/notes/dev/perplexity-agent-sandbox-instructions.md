@@ -1,3 +1,11 @@
+---
+original_name: "2026.06.16.07.37.19.md"
+title: "Perplexity Agent Sandbox Instructions"
+summary: "Documents the Perplexity sandbox model, setup protocol, installed tools, and persistence rules."
+category: "dev"
+created: "2026-06-16"
+---
+
 # Perplexity Agent — User Instructions
 
 ## Sandbox Model

@@ -1,3 +1,11 @@
+---
+original_name: "2026.04.19.08.56.22.md"
+title: "Contract Runtime V2 Schema and Gaps"
+summary: "Proposes a complete contract-runtime schema and identifies missing pieces like intent contracts and bootstrap merging."
+category: "dev"
+created: "2026-04-19"
+---
+
 Skill contracts are short lived contracts that are only held onto
 is triggered.
 for the duration of the turn the skill was invoked in

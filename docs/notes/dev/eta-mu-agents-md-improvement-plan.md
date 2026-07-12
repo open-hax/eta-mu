@@ -1,3 +1,11 @@
+---
+original_name: "2026.06.16.07.13.42.md"
+title: "Eta-Mu AGENTS.md Improvement Plan"
+summary: "Outlines refactoring PROCESS.md, enforcing kanban FSM transitions, and writing package-specific AGENTS.md files."
+category: "dev"
+created: "2026-06-16"
+---
+
 ## Improve Eta-mu's AGENTS.md
 
 

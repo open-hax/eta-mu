@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.2",
-    "shadow-cljs": "^3.4.10"
+    "shadow-cljs": "^3.4.10",
+    "ws": "^8.20.1"
   }
 }

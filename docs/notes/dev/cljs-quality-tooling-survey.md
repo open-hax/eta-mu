@@ -1,3 +1,11 @@
+---
+original_name: "2025.11.04.12.11.40.md"
+title: "ClojureScript Quality Tooling Survey"
+summary: "Survey of ClojureScript debugging, linting, testing, E2E, mocking, error reporting, and CI tooling."
+category: "dev"
+created: "2025-11-04"
+---
+
 --
 
 ### Inspector & Debugging

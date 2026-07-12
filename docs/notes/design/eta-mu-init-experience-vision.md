@@ -1,3 +1,11 @@
+---
+original_name: "2026.06.14.12.19.50.md"
+title: "Eta-Mu Init Experience Vision"
+summary: "Describes the desired first-run eta-mu init experience scanning a project and initializing ledgers, kanban, and agent integrations."
+category: "design"
+created: "2026-06-14"
+---
+
 What do I really want eta-mu to feel like?
 ```bash
 $ eta-mu init

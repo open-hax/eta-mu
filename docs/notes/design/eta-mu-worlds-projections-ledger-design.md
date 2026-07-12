@@ -1,3 +1,11 @@
+---
+original_name: "2026.06.14.00.38.02.md"
+title: "Eta-Mu Worlds, Projections, and Event Ledger Design"
+summary: "Sketches eta-mu as a non-destructive Git porcelain around worlds, projections, an append-only event ledger, and kanban FSM contracts."
+category: "design"
+created: "2026-06-14"
+---
+
 <img src="https://r2cdn.perplexity.ai/pplx-full-logo-primary-dark%402x.png" style="height:64px;margin-right:32px"/>
 
 # @Power User Aight I'm tryin to rethink how I manage my workspace.

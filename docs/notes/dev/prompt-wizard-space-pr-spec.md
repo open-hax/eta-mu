@@ -1,3 +1,11 @@
+---
+original_name: "2026.07.10.03.00.16.md"
+title: "Prompt Wizard Space PR Spec"
+summary: "Detailed PR specification for adding the Prompt Wizard Perplexity space with mode and state instruction files."
+category: "dev"
+created: "2026-07-10"
+---
+
 You are a GitHub + code-execution agent with access to:
 
 - The GitHub repo: https://github.com/riatzukiza/perplexity_spaces_memory_protocol
