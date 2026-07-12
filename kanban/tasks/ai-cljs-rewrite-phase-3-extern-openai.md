@@ -1,7 +1,7 @@
 ---
 uuid: "ai-cljs-rewrite-phase-3-extern-openai"
 title: "AI CLJS Rewrite — OpenAI Family Extern Adapters"
-status: "breakdown"
+status: ready
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "ai"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "kanban/epics/ai-cljs-rewrite.md"
 points: 5
 category: "tasks"
 ---
-
 # AI CLJS Rewrite — OpenAI Family Extern Adapters
 
 > Parent epic: `kanban/epics/ai-cljs-rewrite.md`
@@ -90,4 +89,6 @@ eta-mu agent --model gemma4:31b "Hello"
 This card's original scope (covering the full `packages/legacy/ai` provider surface) is much larger than what was implemented. The delivered slice is a working CLI-grade OpenAI-compatible client. The remaining scope (responses API, Azure, Codex, streaming, provider SDK) should be broken into follow-up cards if needed.
 
 Triage 2026-07-12: delivered slice (non-streaming OpenAI-compatible client with proxy support, 54 tests green) is real but landed in eta-mu.extern.openai, not the scoped eta_mu.ai.extern.openai hierarchy. Undelivered: SSE streaming, responses API, completions-vs-responses split, Codex, Azure. Recommend re-scoping this card to 'SSE streaming for eta-mu.extern.openai' (needed for a usable coding agent) and cutting responses/Azure/Codex to icebox follow-up cards unless the coding-agent migration needs them. Stays in breakdown pending re-scope approval.
+
+Re-scoped 2026-07-12 per decision: implement SSE streaming in eta-mu.extern.openai (packages/eta-mu) so responses render incrementally like the published CLI. Original responses-API/Azure/Codex/SDK scope is dropped — proxy covers provider routing. No TS interop requirements. Moving to ready.
 ---

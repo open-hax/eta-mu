@@ -12,7 +12,7 @@
                                                                cljs.core/aget    {:level :off}
                                                                cljs.core/aset    {:level :off}
                                                                cljs.core/alength {:level :off}}}}
-               eta-mu.platform.target.opencode {:linters {:discouraged-var {cljs.core/clj->js {:level :off}}}}
+               eta-mu.platform.target.opencode {:linters {:discouraged-var {cljs.core/clj->js {:level :off}}}}}
  :linters {:unresolved-symbol {:exclude [js/console
                                         js/Promise
                                         js/Error

@@ -1,7 +1,7 @@
 ---
 uuid: "ai-cljs-rewrite-phase-5-cli-test-parity"
 title: "AI CLJS Rewrite — CLI Facade and Test Parity"
-status: "blocked"
+status: icebox
 priority: "P1"
 labels: ["tasks", "cljs", "rewrite", "ai"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "kanban/epics/ai-cljs-rewrite.md"
 points: 3
 category: "tasks"
 ---
-
 # AI CLJS Rewrite — CLI Facade and Test Parity
 
 > Parent epic: `kanban/epics/ai-cljs-rewrite.md`

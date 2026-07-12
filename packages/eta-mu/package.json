@@ -20,12 +20,10 @@
     "lint:kondo": "clj-kondo --lint src/cljs test/cljs",
     "watch": "shadow-cljs watch cli"
   },
-  "dependencies": {
-    "@eta-mu/contracts-output": "workspace:*",
-    "@open-hax/rheos": "workspace:*"
-  },
   "devDependencies": {
+    "@eta-mu/contracts-output": "workspace:*",
     "@eta-mu/turn-processor": "workspace:*",
+    "@open-hax/rheos": "workspace:*",
     "shadow-cljs": "^3.4.11"
   },
   "license": "GPL-3.0-or-later"

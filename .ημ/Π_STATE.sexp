@@ -1,9 +1,9 @@
 (π-state
-  (version "0.63.3")
-  (timestamp "2026-07-12T183731Z")
+  (version "0.64.0")
+  (timestamp "20260712T191632Z")
   (branch "device/yoga")
   (host "local")
   (commits 1)
-  (summary "Π: openai extern generic base-url/auth-token, kanban task updates, ledger advance, docs refresh, receipt tick")
+  (summary "Π: kanban task status advances, ledger + receipts tick, dist rebuild, package.json bump, kondo config update")
   (concurrent-dirt "none — all owned paths staged")
   (manifest ".ημ/Π_MANIFEST.sha256"))

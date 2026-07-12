@@ -172,17 +172,16 @@ importers:
         version: 2.28.23
 
   packages/eta-mu:
-    dependencies:
+    devDependencies:
       '@eta-mu/contracts-output':
         specifier: workspace:*
         version: link:../contracts/output
-      '@open-hax/rheos':
-        specifier: workspace:*
-        version: link:../Rheos
-    devDependencies:
       '@eta-mu/turn-processor':
         specifier: workspace:*
         version: link:../turn-processor
+      '@open-hax/rheos':
+        specifier: workspace:*
+        version: link:../Rheos
       shadow-cljs:
         specifier: ^3.4.11
         version: 3.4.11

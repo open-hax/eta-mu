@@ -1,7 +1,7 @@
 ---
 uuid: "agent-cljs-rewrite"
 title: "Agent Package CLJS Rewrite"
-status: "breakdown"
+status: icebox
 priority: "P0"
 labels: ["epics", "cljs", "rewrite", "legacy-ts", "agent"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "user-request:2026-06-15"
 points: 13
 category: "epics"
 ---
-
 # Agent Package CLJS Rewrite
 
 > Package: `packages/legacy/agent` (`@open-hax/eta-mu-agent-core`)
@@ -148,4 +147,6 @@ Phase 2 (extern adapters) is partially done — the OpenAI adapter is complete w
 **Recommendation:** Consider whether the agent package split is still needed, or if the agent should stay as part of the CLI. The current architecture has the agent as a CLI command, not a reusable library.
 
 Triage 2026-07-12: Phase 1 done and holds. Phase 2 partially superseded (extern layer lives in packages/eta-mu; turn-processor is the de-facto legacy/agent successor). Phases 3-5 blocked. Core open question, unresolved since the 2026-07-12 state-of-affairs note: is a standalone agent library still a goal, or is the epic retargeted at turn-processor parity with legacy/agent (Agent class lifecycle, agentLoop/agentLoopContinue semantics, streamProxy)? Recommend retargeting the epic at turn-processor parity and rewriting phases 3-5 accordingly. Stays in breakdown pending that decision.
+
+Decision 2026-07-12 (Aaron): no standalone agent package — turn-processor owns the loop, eta-mu owns the CLI, and 'the agent' is the composition, not a module. TS interop / API parity with legacy/agent is explicitly dropped. Epic superseded; iceboxed with all phase cards.
 ---

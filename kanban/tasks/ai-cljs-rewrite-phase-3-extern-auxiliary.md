@@ -6,7 +6,7 @@ points: "2"
 source: "kanban/epics/ai-cljs-rewrite.md"
 title: "AI CLJS Rewrite — Auxiliary Provider Extern Adapters"
 priority: "P1"
-status: breakdown
+status: icebox
 uuid: "ai-cljs-rewrite-phase-3-extern-auxiliary"
 created_at: "2026-06-15T00:00:00Z"
 ---

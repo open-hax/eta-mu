@@ -1,7 +1,7 @@
 ---
 uuid: "ai-cljs-rewrite"
 title: "AI Package CLJS Rewrite"
-status: "breakdown"
+status: icebox
 priority: "P0"
 labels: ["epics", "cljs", "rewrite", "legacy-ts", "ai"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "user-request:2026-06-15"
 points: 34
 category: "epics"
 ---
-
 # AI Package CLJS Rewrite
 
 > Package: `packages/legacy/ai` (`@open-hax/eta-mu-ai`)
@@ -187,4 +186,6 @@ The provider-specific tasks (bedrock, anthropic, google, auxiliary) are all stil
 **Recommendation:** Decide whether to create `packages/llm-providers` as a separate package or consolidate all LLM adapters into `packages/eta-mu`. The current architecture has the LLM client as a CLI-internal detail, not a reusable provider library.
 
 Triage 2026-07-12: Phases 1-2 done and hold (canonical model in packages/runtime eta_mu.ai.*). Phase 3 has exactly one delivered adapter (OpenAI-compatible, in packages/eta-mu, non-streaming); bedrock/anthropic/google/auxiliary cards have zero implementation. Blocking decision: create packages/llm-providers per the inventory map, or consolidate adapters into packages/eta-mu extern. Recommend consolidating (CLI is the only consumer today), prioritizing SSE streaming + anthropic, and iceboxing bedrock/google/auxiliary until the coding-agent migration demands them. Stays in breakdown pending that decision.
+
+Decision 2026-07-12 (Aaron): no standalone LLM-provider library. The proxy-facing OpenAI-compatible client (eta-mu.extern.openai) is the LLM boundary; provider-specific adapters (anthropic/bedrock/google/azure/codex) are not needed. Only surviving slice: SSE streaming on the existing client (re-scoped into ai-cljs-rewrite-phase-3-extern-openai). Epic iceboxed with remaining phase cards.
 ---

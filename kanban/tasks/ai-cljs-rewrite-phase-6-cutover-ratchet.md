@@ -1,7 +1,7 @@
 ---
 uuid: "ai-cljs-rewrite-phase-6-cutover-ratchet"
 title: "AI CLJS Rewrite — Cutover Ratchet and TS Line-Count Reduction"
-status: "blocked"
+status: icebox
 priority: "P1"
 labels: ["tasks", "cljs", "rewrite", "ai"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "kanban/epics/ai-cljs-rewrite.md"
 points: 1
 category: "tasks"
 ---
-
 # AI CLJS Rewrite — Cutover Ratchet and TS Line-Count Reduction
 
 > Parent epic: `kanban/epics/ai-cljs-rewrite.md`

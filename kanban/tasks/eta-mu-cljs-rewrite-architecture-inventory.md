@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-rewrite-architecture-inventory"
 title: "Eta-mu CLJS Rewrite — Architecture Inventory"
-status: ready
+status: review
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "inventory", "5sp"]
 created_at: "2026-05-29T21:18:48Z"
@@ -103,4 +103,6 @@ The turn-processor (`packages/turn-processor`) remains the shared loop infrastru
 - The inventory should be updated to reflect that the first working LLM adapter is in `packages/eta-mu`, not `packages/llm-providers`
 
 Triage 2026-07-12: all work items and ACs checked; inventory doc exists and has been maintained through the reorg. One remaining gap: update docs/cljs-runtime-rewrite-architecture-inventory.md to record that the first LLM adapter landed in packages/eta-mu (eta-mu.extern.openai), that packages/llm-providers does not exist, and whether the legacy/ai -> llm-providers mapping still stands. Scope is small and unambiguous -> moving to ready.
+
+2026-07-12: appended 'Decision record (2026-07-12) — simplification directives' to docs/cljs-runtime-rewrite-architecture-inventory.md: no agent package (turn-processor owns the loop), no llm-providers (proxy + eta-mu.extern.openai is the boundary; legacy/ai -> llm-providers mapping voided), eta-mu owns the CLI, TS-interop/JSON-config compatibility dropped, north star is npm install -g parity with published stable. Remaining parity gaps listed. Card scope complete -> review.
 ---
