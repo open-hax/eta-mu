@@ -1,13 +1,14 @@
 ---
-uuid: "coding-agent-cljs-rewrite-extern-clipboard-image-oauth"
-title: "Coding Agent CLJS Rewrite — Clipboard, Image & OAuth Extern Adapters"
-status: "review"
-priority: "P0"
-labels: ["tasks", "cljs", "rewrite", "coding-agent", "2sp"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/coding-agent-cljs-rewrite.md"
-points: 2
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "coding-agent", "2sp"]
+write-id: "1783815461953-0.pr1dfvu3o4oo5bn6r4u"
+points: "2"
+source: "kanban/epics/coding-agent-cljs-rewrite.md"
+title: "Coding Agent CLJS Rewrite — Clipboard, Image & OAuth Extern Adapters"
+priority: "P0"
+status: "done"
+uuid: "coding-agent-cljs-rewrite-extern-clipboard-image-oauth"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # Coding Agent CLJS Rewrite — Clipboard, Image & OAuth Extern Adapters

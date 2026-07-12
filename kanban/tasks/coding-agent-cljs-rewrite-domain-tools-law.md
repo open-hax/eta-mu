@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "rewrite", "coding-agent", "5sp"]
-write-id: "1783693254547-0.41roov7awnx8qf9gnat"
+write-id: "1783815460784-0.jqwmfeiq8ozalt163n"
 points: "5"
 source: "kanban/epics/coding-agent-cljs-rewrite.md"
 title: "Coding Agent CLJS Rewrite — Tool Domain & Law"
 priority: "P0"
-status: "review"
+status: "done"
 uuid: "coding-agent-cljs-rewrite-domain-tools-law"
 created_at: "2026-06-15T00:00:00Z"
 ---

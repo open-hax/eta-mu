@@ -96,7 +96,18 @@
   (cond-> {:name (:name command)
            :source-info {:source (keyword-or-nil (or (get-in command [:sourceInfo :source]) :local))
                          :base-dir (first-present command [:sourceInfo :baseDir :source-info :base-dir])}}
-    (:description command) (assoc :description (:description command))))
+    (:description command) (assoc :description (:description command))
+    (:invocationName command) (assoc :invocation-name (:invocationName command))
+    (:invocation-name command) (assoc :invocation-name (:invocation-name command))))
+
+(defn registered-command->external
+  "Convert an internal registered command to external form."
+  [command]
+  (cond-> {:name (:name command)
+           :sourceInfo {:source (name (get-in command [:source-info :source]))
+                        :baseDir (get-in command [:source-info :base-dir])}}
+    (:description command) (assoc :description (:description command))
+    (:invocation-name command) (assoc :invocationName (:invocation-name command))))
 
 (defn resolved-command->external
   "Convert an internal resolved command to external form."

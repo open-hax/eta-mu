@@ -1,7 +1,7 @@
 ---
 uuid: "coding-agent-cljs-rewrite-infra-extension-runner"
 title: "Coding Agent CLJS Rewrite — Extension Runner Infra"
-status: "blocked"
+status: "review"
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "coding-agent", "5sp"]
 created_at: "2026-06-15T00:00:00Z"
@@ -44,4 +44,14 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 
 ---
 **Blocking assessment:** Blocked by inventory-core and domain-extensions-law. Also depends on extern-fs-git-bash for discovery/loading and runtime state/envelope primitives (ready).
+
+Partial implementation: core extension runner with event emission, tool/command/flag registration, context creation. 549 lines infra/extension.cljs + 110 lines extension_test.cljs. All gates green (0 clj-kondo, 0 boundary, 311 tests/1120 assertions/0 failures). Loader and CLJS extension compilation deferred to next iteration.
+
+Added extension discovery: read-pi-manifest, resolve-extension-entries, discover-extensions-in-dir, expand-path, resolve-path, discover-and-collect-paths. All using extern/fs boundary-compliant functions. Total infra/extension.cljs now ~690 lines. All gates green.
+
+Added tests for extension-file? and expand-path. Total test count: 313 tests / 1127 assertions / 0 failures. All gates green.
+
+Completed loader implementation: load-cljs-extension, load-extension, load-extensions, discover-and-load-extensions. Added extern wrappers: node-require, to-js. Total: ~755 lines infra/extension.cljs, 175 lines tests. All gates green (0 clj-kondo, 0 boundary, 317 tests/1138 assertions/0 failures).
+
+All gates green: clj-kondo 0 errors, boundary scanner 0 violations, runtime tests 336/1165 pass. Ready for sign-off.
 ---

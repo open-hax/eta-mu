@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "rewrite", "coding-agent", "5sp"]
-write-id: "1783813714727-0.v9hue69sehmyhsqoq3"
+write-id: "1783815453626-0.qwq7igh46wp8czn49x"
 points: "5"
 source: "kanban/epics/coding-agent-cljs-rewrite.md"
 title: "Coding Agent CLJS Rewrite — Session Manager Infra"
 priority: "P0"
-status: "document"
+status: "done"
 uuid: "coding-agent-cljs-rewrite-infra-session-manager"
 created_at: "2026-06-15T00:00:00Z"
 ---

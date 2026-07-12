@@ -1,11 +1,11 @@
 ---
 category: "epics"
 labels: ["roadmap", "kanban", "projection", "cljs"]
-write-id: "1783813716799-0.ysxbik4n05d8bxzapj"
+write-id: "1783815459444-0.q0ag8x65rqbuiyceczf"
 source: "planning-session:2026-06-08"
 title: "Roadmap: Kanban Global Projection System"
 priority: "P0"
-status: "document"
+status: "done"
 uuid: "roadmap-global-projection"
 created_at: "2026-06-08T00:00:00Z"
 ---

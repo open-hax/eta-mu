@@ -1,12 +1,12 @@
 ---
 category: "epics"
 labels: ["epics", "cljs", "helix", "kanban", "chat", "witness"]
-write-id: "1783813715700-0.dnfhc1iw3jgkbd2xedg"
+write-id: "1783815454850-0.atkkua1q8ox6ivwp5g"
 points: "13"
 source: "planning-session:2026-06-09"
 title: "Kanban Chat — Side Panel with Witness Thread"
 priority: "P0"
-status: "document"
+status: "done"
 uuid: "kanban-chat-integration"
 created_at: "2026-06-09T00:00:00Z"
 ---

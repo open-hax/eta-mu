@@ -1,4 +1,4 @@
-(ns eta-mu-extensions-e2e.core-test
+(ns eta-mu-e2e.core-test
   (:require [cljs.test :refer [deftest is testing]]
             [eta-mu.extensions.contract-runtime-v2.core :as core]))
 
