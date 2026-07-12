@@ -1,54 +1,5 @@
-# Π_DIFFSTAT — 2026-07-10T08:06:21Z
-# git diff --cached --stat (owned scope excluding .ημ artifacts)
-
- .dir-locals.el                                     |   0
-docs/notes/2026.07.10.03.00.16.md                  | 677 +++++++++++++++++++++
- ecosystem.config.cjs                               |  45 +-
- kanban/.events/ledger.edn                          |  32 +
- kanban/epics/fsm-engine.md                         |  96 ++-
- kanban/tasks/docs-cleanup-agents-md.md             |  30 +
- kanban/tasks/docs-consolidate-notes-index.md       |  31 +
- kanban/tasks/docs-create-missing-package-readmes.md |  38 ++
- kanban/tasks/docs-fix-axxium-readme.md             |  35 +
- kanban/tasks/docs-fix-extensions-e2e-readme.md     |  31 +
- kanban/tasks/docs-fix-extensions-readme-drift.md   |  33 +
- kanban/tasks/docs-fix-runtime-paths-readme.md      |  31 +
- kanban/tasks/docs-fix-sol-knoxx-artifacts.md       |  34 +
- kanban/tasks/docs-reconcile-cross-references.md    |  30 +
- kanban/tasks/docs-refresh-architecture-inventories.md |  33 +
- kanban/tasks/docs-refresh-legacy-package-readmes.md |  38 ++
- kanban/tasks/docs-rewrite-development-md.md        |  31 +
- kanban/tasks/docs-rewrite-top-level-readme.md      |  32 +
- kanban/tasks/fsm-bounce-reconciler.md              |  28 +
- kanban/tasks/fsm-check-agent-review.md             |  25 +
- kanban/tasks/fsm-check-code-review.md              |  24 +
- kanban/tasks/fsm-check-js-agent-shell-types.md     |  25 +
- kanban/tasks/fsm-check-markdown-score.md           |  25 +
- kanban/tasks/fsm-config-as-data-edn.md             |  28 +
- kanban/tasks/fsm-event-cascade-derivation.md       |  30 +
- kanban/tasks/fsm-frontmatter-interface-generalization.md |  28 +
- kanban/tasks/fsm-harness-auto-verify.md            |  24 +
- kanban/tasks/fsm-ledger-fold-accepted-state.md     |  30 +
- kanban/tasks/fsm-provenance-filtering.md           |  30 +
- kanban/tasks/fsm-transition-contract-pending-lock.md |  30 +
- kanban/tasks/ops-fix-root-package-json-scripts.md  |  32 +
- openhax.kanban.json                                |   5 +
- packages/Rheos/src/rheos/ui/domain/board.cljs      |   2 +-
- packages/Rheos/src/rheos/ui/domain/sidebar.cljs    |   4 +-
- packages/chat-ui/src/eta_mu/chat_ui/message.cljs   |   4 +-
- packages/eta-mu-extensions/kanban/.events/ledger.edn |   0
- receipts.edn                                       |   5 +
- 40 files changed, 1737 insertions(+), 144 deletions(-)
-
-Excluded from diffstat (Π artifacts updated in this commit):
-  .ημ/Π_STATE.sexp, .ημ/Π_LAST.md, .ημ/Π_MANIFEST.sha256, .ημ/Π_DIFFSTAT.txt
-
-Not tracked (empty directory):
-  cljs-rewrite/
-
-Verified before commit:
-  - Rheos tests: 58 tests, 164 assertions, 0 failures
-  - chat-ui tests: 2 tests, 6 assertions, 0 failures
-  - clj-kondo: 0 errors, 0 warnings in both packages
-  - TypeScript line count: 174,564 global lines, no .ts/.tsx changes
-  - Secret scan: no suspicious patterns
+ ".\316\267\316\274/\316\240_DIFFSTAT.txt"    |  223 ---
+ ".\316\267\316\274/\316\240_LAST.md"         |   58 +-
+ ".\316\267\316\274/\316\240_MANIFEST.sha256" | 1970 +-------------------------
+ ".\316\267\316\274/\316\240_STATE.sexp"      |  164 +--
+ 4 files changed, 39 insertions(+), 2376 deletions(-)

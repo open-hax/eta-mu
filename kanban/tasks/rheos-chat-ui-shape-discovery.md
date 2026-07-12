@@ -1,7 +1,7 @@
 ---
 uuid: "rheos-chat-ui-shape-discovery"
 title: "Discovery: Rheos + chat-ui latent shapes and reuse map"
-status: "incoming"
+status: "ready"
 priority: "P1"
 labels: ["tasks", "rheos", "chat-ui", "cljs", "discovery", "shape", "law", "3sp"]
 created_at: "2026-06-16T00:00:00Z"

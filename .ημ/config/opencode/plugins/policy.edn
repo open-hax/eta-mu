@@ -1,0 +1,8 @@
+{:hooks
+ [{:id       :policy/protect-secrets
+   :event    :tool.execute.before
+   :priority 100}
+
+  {:id       :policy/audit-execution
+   :event    :tool.execute.after
+   :priority -100}]}

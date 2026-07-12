@@ -70,10 +70,10 @@
         [focus set-focus] (hooks/use-state :board)
         region-flex (fn [region base] (str (if (= focus region) 1.618 base)))
         ;; Chat backend selection from the active board's meta config.
-        active-board (first boards)
+        active-board (first (get boards "projects" []))
         chat-config (when active-board
                       (get (js->clj (get active-board "meta") :keywordize-keys true) :chat {}))
-        chat-backend (or (:defaultBackend chat-config) "rheos")
+        chat-backend (or (:backend chat-config) (:defaultBackend chat-config) "rheos")
         ;; Latest filters, readable from the (mount-once) SSE handler without
         ;; reopening the stream on every filter keystroke.
         filters-ref (hooks/use-ref filters)]

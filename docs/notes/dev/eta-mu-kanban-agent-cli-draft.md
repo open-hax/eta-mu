@@ -1,8 +1,14 @@
 ---
 original_name: "2026.06.16.12.02.30.md"
+<<<<<<<< HEAD:docs/notes/dev/eta-mu-kanban-agent-cli-draft.md
 title: "Eta-Mu Kanban Agent CLI Draft"
 summary: "Fragment sketching the eta-mu kanban agent start flow and new CLI task/board structures."
 category: "dev"
+========
+title: "Eta Mu Kanban Agent CLI Sketch"
+summary: "Sketch of the unimplemented `eta-mu kanban agent` CLI with session registration and ledger-backed state."
+category: "design"
+>>>>>>>> origin/device/yoga:docs/notes/design/eta-mu-kanban-agent-cli-sketch.md
 created: "2026-06-16"
 ---
 

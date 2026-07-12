@@ -1,7 +1,7 @@
 ---
 uuid: "pr-134-staging-promotion-gate-blocker"
 title: "PR #134: Staging promotion gate requires branch ancestry to staging"
-status: "blocked"
+status: "rejected"
 priority: "P0"
 labels: ["tasks", "ci", "process", "pr-134", "blocker"]
 created_at: "2026-06-16T18:30:00Z"

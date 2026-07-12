@@ -1,8 +1,13 @@
 ---
 original_name: "2026.07.08.14.15.47.md"
 title: "ClojureScript Extension Loader Prototype"
+<<<<<<<< HEAD:docs/notes/dev/cljs-extension-loader-prototype.md
 summary: "Reports implementation of on-demand .cljs extension compilation and loading with tests and a design spec."
 category: "dev"
+========
+summary: "Prototype notes for transparently loading `.cljs` user extensions via shadow-cljs on-demand compilation."
+category: "design"
+>>>>>>>> origin/device/yoga:docs/notes/design/cljs-extension-loader-prototype.md
 created: "2026-07-08"
 ---
 

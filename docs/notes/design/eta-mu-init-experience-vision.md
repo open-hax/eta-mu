@@ -1,7 +1,12 @@
 ---
 original_name: "2026.06.14.12.19.50.md"
+<<<<<<<< HEAD:docs/notes/design/eta-mu-init-experience-vision.md
 title: "Eta-Mu Init Experience Vision"
 summary: "Describes the desired first-run eta-mu init experience scanning a project and initializing ledgers, kanban, and agent integrations."
+========
+title: "Eta Mu Init Vision Script"
+summary: "Vision script for the `eta-mu init` experience: ledger, sentinel, fork tax, receipt river, session mycology, retrospective agent."
+>>>>>>>> origin/device/yoga:docs/notes/design/eta-mu-init-vision-script.md
 category: "design"
 created: "2026-06-14"
 ---

@@ -1,7 +1,7 @@
 ---
 uuid: "github-cljs-rewrite-extern-adapters"
 title: "GitHub CLJS Rewrite — Extern Adapters"
-status: "blocked"
+status: "in_progress"
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "github"]
 created_at: "2026-06-15T00:00:00Z"
@@ -51,5 +51,5 @@ pnpm --dir packages/eta-mu-runtime cljs:test
 ```
 
 ---
-**Status note:** Blocked by `github-cljs-rewrite-inventory` (needs file/namespace mapping), `eta-mu-cljs-rewrite-boundary-adapters` (extern adapter patterns still in progress), and `fetch-timeout-abort-controller` (epic says merge first; the fetch client adapter must incorporate the timeout).
+**Status note:** Blocked by `github-cljs-rewrite-inventory` (needs file/namespace mapping), `eta-mu-cljs-rewrite-boundary-adapters` (done), and `fetch-timeout-abort-controller` (epic says merge first; the fetch client adapter must incorporate the timeout).
 ---

@@ -4,14 +4,14 @@ on:
   pull_request:
     paths:
       - 'packages/extensions/**'
-      - 'packages/extensions-e2e/**'
+      - 'packages/e2e/**'
       - '.github/workflows/eta-mu-extensions-tests.yml'
   push:
     branches:
       - main
     paths:
       - 'packages/extensions/**'
-      - 'packages/extensions-e2e/**'
+      - 'packages/e2e/**'
       - '.github/workflows/eta-mu-extensions-tests.yml'
 
 jobs:
@@ -67,7 +67,7 @@ jobs:
           node scripts/deploy-ci.mjs
 
       - name: Smoke test — pi loads all extensions
-        working-directory: packages/extensions-e2e
+        working-directory: packages/e2e
         run: |
           output=$(pnpm exec pi -p "smoke" 2>&1 || true)
           echo "$output"

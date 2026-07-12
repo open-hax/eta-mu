@@ -1,7 +1,7 @@
 ---
 uuid: "fsm-frontmatter-interface-generalization"
 title: "FSM: frontmatter-as-interface (per-field ports)"
-status: "incoming"
+status: "rejected"
 priority: "P2"
 labels: ["tasks", "cljs", "fsm", "kanban", "reconciliation"]
 created_at: "2026-06-17T00:00:00Z"

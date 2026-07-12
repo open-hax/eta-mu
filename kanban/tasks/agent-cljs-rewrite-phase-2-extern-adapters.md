@@ -1,13 +1,14 @@
 ---
-uuid: "agent-cljs-rewrite-phase-2-extern-adapters"
-title: "Agent CLJS Rewrite — Boundary Adapters"
-status: "blocked"
-priority: "P0"
-labels: ["tasks", "cljs", "rewrite", "agent"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/agent-cljs-rewrite.md"
-points: 3
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "agent"]
+write-id: "1783693258835-0.p1dtibid4bxkc4u5rx"
+points: "3"
+source: "kanban/epics/agent-cljs-rewrite.md"
+title: "Agent CLJS Rewrite — Boundary Adapters"
+priority: "P0"
+status: "in_progress"
+uuid: "agent-cljs-rewrite-phase-2-extern-adapters"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # Agent CLJS Rewrite — Boundary Adapters
@@ -51,5 +52,5 @@ node scripts/ts-line-count.mjs packages/legacy/agent
 ```
 
 ---
-Blocked by `agent-cljs-rewrite-phase-1-inventory-contracts`: the inventory must finish classifying which surfaces need agent-specific extern adapters. Also blocked by core program `eta-mu-cljs-rewrite-boundary-adapters` (status: in_progress) until shared extern conventions are finalized.
+Formerly blocked by `agent-cljs-rewrite-phase-1-inventory-contracts` and core program `eta-mu-cljs-rewrite-boundary-adapters`; both are done as of 2026-07-10, so this card is ready.
 ---

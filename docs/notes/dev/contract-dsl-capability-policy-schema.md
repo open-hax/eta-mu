@@ -1,8 +1,14 @@
 ---
 original_name: "2026.04.19.08.47.39.md"
+<<<<<<<< HEAD:docs/notes/dev/contract-dsl-capability-policy-schema.md
 title: "Contract DSL Capability and Policy Schema"
 summary: "Refines the contract DSL with capabilities, policies, roles, actors, and flattened agent/intent/fulfillment schemas."
 category: "dev"
+========
+title: "Capability vs Policy and Actor Model"
+summary: "Resolves capability vs. policy distinction and flattens actor, contract, role, intent, and fulfillment EDN shapes."
+category: "design"
+>>>>>>>> origin/device/yoga:docs/notes/design/capability-vs-policy-actor-model.md
 created: "2026-04-19"
 ---
 

@@ -1,8 +1,14 @@
 ---
 original_name: "2026.06.16.07.13.42.md"
+<<<<<<<< HEAD:docs/notes/dev/eta-mu-agents-md-improvement-plan.md
 title: "Eta-Mu AGENTS.md Improvement Plan"
 summary: "Outlines refactoring PROCESS.md, enforcing kanban FSM transitions, and writing package-specific AGENTS.md files."
 category: "dev"
+========
+title: "AGENTS and PROCESS Improvement Spec"
+summary: "Acceptance criteria and task spec for improving `AGENTS.md`, `PROCESS.md`, and per-package agent guidance."
+category: "design"
+>>>>>>>> origin/device/yoga:docs/notes/design/agents-process-improvement-spec.md
 created: "2026-06-16"
 ---
 

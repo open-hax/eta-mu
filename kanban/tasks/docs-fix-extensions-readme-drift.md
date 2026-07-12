@@ -1,7 +1,7 @@
 ---
 uuid: "docs-fix-extensions-readme-drift"
 title: "Refresh packages/extensions README and fix path/name drift"
-status: "incoming"
+status: "ready"
 priority: "P1"
 labels: ["docs", "extensions", "constitutional", "3sp"]
 created_at: "2026-06-17T00:00:00Z"

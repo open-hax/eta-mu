@@ -50,3 +50,8 @@
   "Return the platform-specific path delimiter."
   []
   (.-delimiter node-path))
+
+(defn current-cwd
+  "Return the current working directory."
+  []
+  (.-cwd js/process))

@@ -1,4 +1,4 @@
-(ns eta-mu-extensions-e2e.fixture-contracts)
+(ns eta-mu-e2e.fixture-contracts)
 
 (def block-contract
   {:contract/kind  :policy

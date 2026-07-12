@@ -9,6 +9,10 @@ source: "orgs/open-hax/eta-mu/specs/run-readiness.md"
 category: "specs"
 ---
 
+> **Historical (2026-07-10):** this document references packages deleted in the monorepo
+> reorganization (`services/agentd`, `packages/opencode-reactant`, `packages/signal-*`,
+> pre-reorg `packages/kanban`). Retained as a decision/planning record; do not treat paths as current.
+
 > Source: `orgs/open-hax/eta-mu/specs/run-readiness.md`
 > Migrated-to-kanban: `orgs/open-hax/eta-mu/kanban/run-readiness.md`
 

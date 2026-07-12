@@ -22,10 +22,10 @@
   },
   "dependencies": {
     "@eta-mu/contracts-output": "workspace:*",
-    "@eta-mu/turn-processor": "workspace:*",
     "@open-hax/rheos": "workspace:*"
   },
   "devDependencies": {
+    "@eta-mu/turn-processor": "workspace:*",
     "shadow-cljs": "^3.4.11"
   },
   "license": "GPL-3.0-or-later"

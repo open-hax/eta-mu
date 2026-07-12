@@ -48,12 +48,22 @@ Move through _In Review_, _Testing_ and _Document_ then _Done_ per board flow, r
 We treat the board as an FSM over tasks.
 
 - **States (C)**: the board’s columns.
-- **Initial state (S)**: **Incoming** (new tasks land here).
+- **Initial state (S)**: **Incoming** (new tasks land here; **Ice Box** for deferred work).
 - **Transitions (T)**: moves between columns.
 - **Rules R(Tₙ, t)**: predicates over task `t` that permit or block transition `Tₙ`.
 - **Single source of status**: each task has exactly one column/status at a time.
 - **Board is law**: never edit the board file directly; tasks drive board generation.
 - **WIP**: a transition fails if the target state’s WIP cap is full.
+
+> **Enforcement source of truth:** the `promethean` FSM in
+> `packages/Rheos/src/rheos/backend/law/fsm.cljs`. The diagram and rules below are
+> a rendering of that law; when they disagree, the law wins (and this file should be
+> updated). Transitions are executed via the Rheos CLI
+> (`node packages/Rheos/dist/cli.cjs status-update <uuid> --to <status>`, run from the
+> **repo root** — the CLI resolves the board relative to the working directory). Every
+> CLI transition stamps a `write-id` and appends a ledger event; direct frontmatter
+> edits are detected as drift. There are no shortcut edges: to promote a card several
+> lanes forward, walk each lawful hop in order.
 
 ### FSM diagram
 
@@ -84,20 +94,23 @@ flowchart TD
 
   subgraph Abandoned
     Rejected["❌ Rejected"]
+    Archived["🗄 Archived"]
   end
 
-  %% ====== Forward flow ======
+  %% ====== Forward flow (promethean) ======
   IceBox --> Incoming
   Incoming --> Accepted
   Incoming --> Rejected
   Incoming --> IceBox
   Accepted --> Breakdown
+  Accepted --> IceBox
   Breakdown --> Ready
+  Breakdown --> Blocked
   Ready --> Todo
   Todo --> InProgress
-  InProgress --> InReview
-  InReview --> Testing
-  Testing --> Document
+  InProgress --> Testing
+  Testing --> InReview
+  InReview --> Document
   Document --> Done
 
   %% ====== Cycles back to Planning / queue ======
@@ -105,87 +118,82 @@ flowchart TD
   Todo --> Breakdown
   InProgress --> Breakdown
   InReview --> Breakdown
+
+  %% ====== Review crossroads ======
+  InProgress --> InReview
+  InReview --> InProgress
+  InReview --> Todo
   Testing --> InProgress
+  Testing --> Todo
+  Document --> InReview
+  Done --> InReview
 
   %% ====== Session-end, no-PR handoff ======
   InProgress --> Todo
-  Document --> InReview
-
-  %% ====== Review crossroads (re-open work) ======
-  InReview --> InProgress
-  InReview --> Todo
-  Testing --> InReview
 
   %% ====== Defer / archive loops ======
   Accepted --> IceBox
   Breakdown --> IceBox
   Rejected --> IceBox
+  Rejected --> Archived
+  Done --> IceBox
 
   %% ====== Blocked (narrow, explicit dependency) ======
   Breakdown --> Blocked
   Blocked --> Breakdown
+  Blocked --> Ready
 ```
 
 ### Minimal transition rules (only what matters)
 
-- START STATES = Ice Box | Incoming
-
-  - All new tasks must start in either **Ice Box** (for future work) or **Incoming** (for immediate triage)
-  - This constraint is enforced by the CLI to ensure proper workflow adherence
-  - Tasks cannot be created directly in active columns (todo, in_progress, etc.)
-
-- **Incoming → Accepted | Rejected | Ice Box**
-  Relevance/priority triage; allow defer to Ice Box.
+- START STATES = **Ice Box** | **Incoming**
+  - All new tasks must start in either **Ice Box** (future work) or **Incoming** (immediate triage).
+  - This is enforced by the CLI; tasks cannot be created directly in active columns.
 
 - **Ice Box → Incoming**
-  When deferred work is ready for triage and prioritization.
+  Deferred work is ready for triage.
+
+- **Incoming → Accepted | Rejected | Ice Box**
+  Relevance/priority triage; allow defer back to Ice Box.
 
 - **Accepted → Breakdown | Ice Box**
   Ready to analyze, or consciously deferred.
 
-- **Breakdown → Ready | Rejected | Ice Box | Blocked**
-  Scoped & feasible → Ready; non-viable → Rejected; defer → Ice Box;
-  **→ Blocked** only for a true inter-task dependency with **bidirectional links** (Blocking ⇄ Blocked By).
+- **Breakdown → Ready | Accepted | Blocked | Rejected | Ice Box**
+  Scoped & feasible → **Ready**; needs a dependency → **Blocked** (use bidirectional links); non-viable → **Rejected**; defer → **Ice Box**.
 
-- **Ready → Todo**
-  Prioritized into the execution queue (respect WIP).
+- **Blocked → Breakdown | Ready**
+  Unblock event returns work to **Breakdown** for re-plan; if the dependency is simply cleared, **Ready** is also lawful.
+
+- **Ready → Todo | Breakdown**
+  Prioritized into the execution queue, or sent back for re-plan.
 
 - **Todo → In Progress**
-  Pulled by a worker (respect WIP).
+  Pulled by a worker. This transition is **WIP-gated**: it fails if **In Progress** is at its cap.
 
-- **In Progress → In Review**
-  Coherent, reviewable change exists.
+- **In Progress → Testing | Todo | Breakdown**
+  Default forward flow is **Testing** (always-allowed). Send back to **Todo** for a session-end handoff, or to **Breakdown** if the slice needs re-planning.
 
-- **In Review → Testing**
-  Review approved; proceed to testing phase.
+- **In Progress → Review** _(gated shortcut)_
+  A direct move from **In Progress** to **Review** is allowed only when the project’s build-gate commands (`pnpm build`, `pnpm lint`, `pnpm test`) exit cleanly. This is a shortcut, not the default flow.
 
-- **Testing → Document**
-  Testing complete; proceed to documentation.
+- **Testing → Review | In Progress | Todo**
+  Testing complete → **Review**; tests failed or need adjustment → **In Progress** or **Todo**.
 
-- **In Progress → Todo** _session-end handoff; no PR required_
-  Capacity limit reached without a reviewable change. Record artifacts/notes + next step; move to **Todo** if WIP allows; else remain **In Progress** and mark a minor blocker.
-  Artifacts must include partial outputs (e.g., audit logs, findings lists, reproduction steps) so a follow-on slice can resume immediately.
+- **Review → Document | In Progress | Todo**
+  Review approved → **Document**; changes requested → **In Progress** (preferred) or **Todo** (fallback).
 
-- **In Progress → Breakdown**
-  Slice needs re-plan or is wrong shape.
+- **Document → Done | Review**
+  Docs/evidence complete → **Done**; otherwise → **Review** for another pass.
 
-- **In Review → In Progress** _(preferred)_
-  Changes requested; current assignee free; **In Progress** WIP allows.
+- **Done → Ice Box | Review**
+  Done work can be reopened to **Review** or sent back to **Ice Box**; follow-ups are modeled as new tasks.
 
-- **In Review → Todo** _(fallback)_
-  Changes requested; assignee busy **or** **In Progress** WIP full.
+- **Any state → Rejected**
+  Work that is non-viable or explicitly abandoned.
 
-- **Testing → In Review**
-  Testing failed or needs review adjustments; return to review phase.
-
-- **Document → Done | In Review**
-  Docs/evidence complete → Done; otherwise → In Review for another pass.
-
-- **Done → (no mandatory back edge)**
-  Follow-ups are modeled as new tasks (optionally seeded from Done).
-
-- **Blocked → Breakdown** _(unblock event)_
-  Fires when any linked blocker advances e.g., to In Review/Done or evidence shows dependency removed; return to Breakdown to re-plan.
+- **Any state → Archived**
+  Terminal exit for tasks that are no longer tracked. This edge is not rendered individually in the diagram above.
 
 ### Blocking policy
 

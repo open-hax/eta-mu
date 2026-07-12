@@ -1,8 +1,14 @@
 ---
 original_name: "2026.06.14.22.24.55.md"
+<<<<<<<< HEAD:docs/notes/dev/katamorph-resources-fsm-contracts.md
 title: "Katamorph Resources and FSM as Contracts"
 summary: "Proposes modeling katamorph resources, drivers, and the kanban finite-state machine as pure resources over event ledgers."
 category: "dev"
+========
+title: "Eta Mu Resources, Ledgers, and State"
+summary: "Sketches `.eta-mu/` as resources, ledgers, and state projections; kanban FSM as katamorph resources."
+category: "design"
+>>>>>>>> origin/device/yoga:docs/notes/design/eta-mu-resources-ledgers-state.md
 created: "2026-06-14"
 ---
 

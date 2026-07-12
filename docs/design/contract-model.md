@@ -5,9 +5,9 @@ declares *who* an agent is, *what* may trigger it, *what* it may do, and *what
 counts as success*.
 
 This is a **design-intent** document promoted from working notes
-([2026.04.19.08.47.39](../notes/2026.04.19.08.47.39.md),
-[2026.04.19.08.56.22](../notes/2026.04.19.08.56.22.md),
-[2026.04.19.08.44.04](../notes/2026.04.19.08.44.04.md)). It describes the target
+([capability-vs-policy-actor-model](../notes/design/capability-vs-policy-actor-model.md),
+[contract-runtime-malli-schema](../notes/design/contract-runtime-malli-schema.md),
+[intent-contracts-and-deterministic-fulfillment](../notes/design/intent-contracts-and-deterministic-fulfillment.md)). It describes the target
 shape, not a guaranteed-current implementation. The runtime that loads and
 enforces these contracts lives in the `contract-runtime` /
 `contract-runtime-v2` extensions
@@ -102,7 +102,7 @@ component records and may *disable* components, but may **not** delete
 components of the principle contract. (The notes flag a bug in an early
 `bootstrap-principle!` that overwrote edits or no-op'd on any `:disabled`
 section instead of merging — see
-[2026.04.19.08.56.22](../notes/2026.04.19.08.56.22.md).)
+[contract-runtime-malli-schema](../notes/design/contract-runtime-malli-schema.md).)
 
 ## Open gaps recorded in the notes
 

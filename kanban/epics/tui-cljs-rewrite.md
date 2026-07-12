@@ -1,7 +1,7 @@
 ---
 uuid: "tui-cljs-rewrite"
 title: "TUI Package CLJS Rewrite"
-status: "incoming"
+status: "rejected"
 priority: "P0"
 labels: ["epics", "cljs", "rewrite", "legacy-ts", "tui"]
 created_at: "2026-06-15T00:00:00Z"

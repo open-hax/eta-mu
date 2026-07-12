@@ -1,7 +1,7 @@
 ---
 uuid: "coding-agent-cljs-rewrite-extern-fs-git-bash"
 title: "Coding Agent CLJS Rewrite — FS, Git & Bash Extern Adapters"
-status: done
+status: "done"
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "coding-agent", "5sp"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,6 +9,7 @@ source: "kanban/epics/coding-agent-cljs-rewrite.md"
 points: 5
 category: "tasks"
 ---
+
 # Coding Agent CLJS Rewrite — FS, Git & Bash Extern Adapters
 
 > Parent epic: `kanban/epics/coding-agent-cljs-rewrite.md`
@@ -69,5 +70,7 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 ```
 
 ---
-**Blocking assessment:** Blocked by inventory-core acceptance and by eta-mu-cljs-rewrite-boundary-adapters (in progress). FS/git/process conventions and the runtime boundary scanner must be finalized before coding-agent adapters can be built safely. Runtime state/envelope primitives are ready.
+**Blocking assessment:** Blocked by inventory-core acceptance and by eta-mu-cljs-rewrite-boundary-adapters (done). FS/git/process conventions and the runtime boundary scanner must be finalized before coding-agent adapters can be built safely. Runtime state/envelope primitives are ready.
+
+Board audit 2026-07-11 — moved to done. 7 extern namespaces confirmed: extern/fs.cljs, extern/fs_watch.cljs, extern/git.cljs, extern/lockfile.cljs, extern/path.cljs, extern/process_exec.cljs, extern/shell.cljs. Plus infra/boundary.cljs. All at packages/runtime/src/cljs/eta_mu/coding/. Tests exist for all.
 ---

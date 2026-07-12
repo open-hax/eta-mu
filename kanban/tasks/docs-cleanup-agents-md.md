@@ -1,7 +1,7 @@
 ---
 uuid: "docs-cleanup-agents-md"
 title: "Clean up AGENTS.md inconsistencies and update testing gate"
-status: "incoming"
+status: "ready"
 priority: "P3"
 labels: ["docs", "agents", "cleanup", "1sp"]
 created_at: "2026-06-17T00:00:00Z"

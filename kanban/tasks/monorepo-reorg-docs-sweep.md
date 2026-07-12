@@ -1,13 +1,14 @@
 ---
-uuid: "monorepo-reorg-docs-sweep"
-title: "Sweep docs/planning cards referencing deleted services/agentd + opencode-reactant"
-status: "ready"
-priority: "P3"
-labels: ["tasks", "docs", "monorepo", "tech-debt"]
-created_at: "2026-06-15T00:00:00Z"
-source: "PR #132 review"
-points: 2
 category: "tasks"
+labels: ["tasks", "docs", "monorepo", "tech-debt"]
+write-id: "1783697889088-0.9qm7dmudnp5ltj0a6x6"
+points: "2"
+source: "PR #132 review"
+title: "Sweep docs/planning cards referencing deleted services/agentd + opencode-reactant"
+priority: "P3"
+status: "breakdown"
+uuid: "monorepo-reorg-docs-sweep"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # Sweep stale path references after the monorepo reorg
@@ -27,3 +28,7 @@ reference deleted packages (`services/agentd`, `packages/opencode-reactant`,
 ## Acceptance
 
 - No doc references a deleted package path or stale package name.
+
+---
+2026-07-10: done. README.md and packages/legacy/kanban/README.md were already clean (fixed in the 2026-07-10 docs pass). Remaining references to services/agentd / opencode-reactant / signal-* live only in historical planning specs (kanban/{agentd-tests,doc-generation,run-readiness,pm2-ecosystem,frontend-devtools-guidance}.md, docs/cljs-runtime-rewrite-boundary-adapter-plan.md) — each now carries an explicit Historical banner rather than a rewrite, preserving them as decision records. kanban/eta-mu-charter-v1.md package lists annotated inline with deletion notes. NOTE for reviewer: README calls the charter the 'active working definition' while the charter card frontmatter says rejected — needs an owner decision on charter status.
+---

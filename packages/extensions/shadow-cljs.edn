@@ -5,6 +5,8 @@
 ;; To add an extension: add a .cljs file under src/, add a build entry here.
 {:source-paths ["src" "lib"]
 
+ :dependencies [[metosin/malli "0.16.4"]]
+
  :builds
  {
   ;; ── Extensions ───────────────────────────────────────────────────────
@@ -203,6 +205,15 @@
    {:target :esm
     :output-dir "target/opencode/websearch-open-hax"
     :modules {:plugin {:exports {:default eta-mu.build.opencode.websearch-open-hax/init}}}
+    :js-options {:js-provider :import}
+    :compiler-options {:optimizations :simple}}
+
+   ;; ── ημ platform OpenCode target ────────────────────────────────────────
+
+   :opencode-eta-mu-platform
+   {:target :esm
+    :output-dir ".opencode/plugins/eta-mu-platform"
+    :modules {:plugin {:exports {:default eta-mu.platform.runtime.opencode/makePlugin}}}
     :js-options {:js-provider :import}
     :compiler-options {:optimizations :simple}}
 

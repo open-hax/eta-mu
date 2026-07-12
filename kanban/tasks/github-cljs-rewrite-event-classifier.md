@@ -47,5 +47,5 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 ```
 
 ---
-**Status note:** Blocked by `github-cljs-rewrite-inventory`, `github-cljs-rewrite-extern-adapters` (needs webhook payload schemas), and `eta-mu-cljs-rewrite-boundary-adapters` (boundary patterns still in progress).
+**Status note:** Blocked by `github-cljs-rewrite-inventory`, `github-cljs-rewrite-extern-adapters` (needs webhook payload schemas), and `eta-mu-cljs-rewrite-boundary-adapters` (done).
 ---

@@ -1,8 +1,14 @@
 ---
 original_name: "2026.06.16.07.37.19.md"
+<<<<<<<< HEAD:docs/notes/dev/perplexity-agent-sandbox-instructions.md
 title: "Perplexity Agent Sandbox Instructions"
 summary: "Documents the Perplexity sandbox model, setup protocol, installed tools, and persistence rules."
 category: "dev"
+========
+title: "Perplexity Sandbox Operating Notes"
+summary: "Perplexity sandbox operating notes: Debian environment, SETUP.sh toolchain, and snapshot protocol."
+category: "other"
+>>>>>>>> origin/device/yoga:docs/notes/other/perplexity-sandbox-operating-notes.md
 created: "2026-06-16"
 ---
 

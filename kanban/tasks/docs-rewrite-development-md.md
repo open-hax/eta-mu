@@ -1,8 +1,8 @@
 ---
 uuid: "docs-rewrite-development-md"
 title: "Rewrite DEVELOPMENT.md for the current ClojureScript stack"
-status: "incoming"
-priority: "P0"
+status: "ready"
+priority: "P1"
 labels: ["docs", "development", "onboarding", "3sp"]
 created_at: "2026-06-17T00:00:00Z"
 source: "docs discovery sweep 2026-06-16"

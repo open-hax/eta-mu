@@ -47,5 +47,5 @@ pnpm --filter @open-hax/eta-mu-github typecheck
 ```
 
 ---
-**Status note:** Blocked by `github-cljs-rewrite-inventory`, `github-cljs-rewrite-extern-adapters` (needs fetch/client adapter), `eta-mu-cljs-rewrite-boundary-adapters` (runtime state primitive patterns still in progress), and `fetch-timeout-abort-controller` (target file `runtime-batch.ts` is the one being modified).
+**Status note:** Blocked by `github-cljs-rewrite-inventory`, `github-cljs-rewrite-extern-adapters` (needs fetch/client adapter), `eta-mu-cljs-rewrite-boundary-adapters` (done), and `fetch-timeout-abort-controller` (target file `runtime-batch.ts` is the one being modified).
 ---

@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-rewrite-architecture-inventory"
 title: "Eta-mu CLJS Rewrite — Architecture Inventory"
-status: "review"
+status: "breakdown"
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "inventory", "5sp"]
 created_at: "2026-05-29T21:18:48Z"
@@ -9,6 +9,7 @@ source: "kanban/epics/eta-mu-cljs-runtime-rewrite.md"
 points: 5
 category: "tasks"
 ---
+
 # Eta-mu CLJS Rewrite — Architecture Inventory
 
 > Parent epic: `kanban/epics/eta-mu-cljs-runtime-rewrite.md`
@@ -48,13 +49,11 @@ pnpm --dir packages/legacy/output-contract-gate test
 pnpm -C packages/extensions test
 pnpm lint
 ```
----
 
+---
 ## Planning inventory drafted
 
 Planning inventory drafted at docs/cljs-runtime-rewrite-architecture-inventory.md. It classifies package surfaces, target domain/shape/law/infra/extern ownership, boundary hotspots, deferred packages, agent skill surface, and the first three parity slices: runtime, output-contract-gate, and coding-agent message/session core.
-
-
 ---
 
 **Update 2026-06-16.** Inventory refreshed after the monorepo reorg. Addressed the 2026-06-13 review gaps:
@@ -65,9 +64,7 @@ Planning inventory drafted at docs/cljs-runtime-rewrite-architecture-inventory.m
 
 Status moved to `review` for human verification; not closed.
 
-
 ---
-
 **Session 2026-06-16 clarification.** All CLJS rewrites remain maximum priority. This inventory is a living map; "deferred" means those packages are intentionally postponed in the rewrite ordering, not cancelled or descoped. The deferred list should be revisited as dependency pressure changes (e.g., when `runtime`, `sol`, or `extensions` need one of them).
 
 **Update 2026-07-08.** Cross-referenced `kanban/tasks/legacy-package-reorganization.md` and `docs/design/legacy-package-reorganization.md`. Final package names resolved:
@@ -90,3 +87,4 @@ Deletion of `packages/legacy/` is scheduled for one final cleanup PR after the l
 **Update 2026-07-09 (eta-mu agent REPL).** `packages/eta-mu` now implements the default `agent` command as a ClojureScript single-turn chat, REPL, or piped-input handler using `@eta-mu/turn-processor`. Added `eta-mu.extern.readline` and `eta-mu.infra.cli.repl`. 51 tests, 95 assertions, 0 failures in `packages/eta-mu`. The legacy `@open-hax/eta-mu-cli` dependency is no longer used by `eta-mu`. The remaining slice is the full terminal-ui package split from `packages/legacy/tui`.
 
 **Update 2026-07-09 (terminal-ui planning).** Created `kanban/tasks/terminal-ui-cljs-package.md` to plan the migration of `packages/legacy/tui` into a new ClojureScript package `packages/terminal-ui`. The `packages/eta-mu` REPL is the interim text-only agent experience; the terminal-ui package will host the richer terminal interface.
+---

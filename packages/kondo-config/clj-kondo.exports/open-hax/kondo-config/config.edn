@@ -1,6 +1,18 @@
 {:lint-as {shadow.cljs.modern/js-await clojure.core/let
-           js-await* clojure.core/let
-           helix.core/defnc cljs.core/defn}
+            js-await* clojure.core/let
+            helix.core/defnc cljs.core/defn
+            eta-mu.platform.dsl/defschema clojure.core/def
+            eta-mu.platform.dsl/defcapability clojure.core/defn
+            eta-mu.platform.dsl/defhook clojure.core/defn
+            eta-mu.platform.dsl/deftool clojure.core/def
+            eta-mu.platform.dsl/defplugin clojure.core/def}
+:config-in-ns {eta-mu.platform.boundary.js     {:linters {:discouraged-var {cljs.core/js->clj {:level :off}
+                                                               cljs.core/clj->js {:level :off}
+                                                               cljs.core/js-obj  {:level :off}
+                                                               cljs.core/aget    {:level :off}
+                                                               cljs.core/aset    {:level :off}
+                                                               cljs.core/alength {:level :off}}}}
+               eta-mu.platform.target.opencode {:linters {:discouraged-var {cljs.core/clj->js {:level :off}}}}
  :linters {:unresolved-symbol {:exclude [js/console
                                         js/Promise
                                         js/Error

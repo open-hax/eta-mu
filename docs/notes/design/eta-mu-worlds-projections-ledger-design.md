@@ -1,8 +1,14 @@
 ---
 original_name: "2026.06.14.00.38.02.md"
+<<<<<<<< HEAD:docs/notes/design/eta-mu-worlds-projections-ledger-design.md
 title: "Eta-Mu Worlds, Projections, and Event Ledger Design"
 summary: "Sketches eta-mu as a non-destructive Git porcelain around worlds, projections, an append-only event ledger, and kanban FSM contracts."
 category: "design"
+========
+title: "Worlds and Projections Framing"
+summary: "Perplexity transcript exploring worlds, projections, and manifest-defined working sets for multi-repo workspaces."
+category: "research"
+>>>>>>>> origin/device/yoga:docs/notes/research/worlds-and-projections-framing.md
 created: "2026-06-14"
 ---
 

@@ -1,7 +1,12 @@
 ---
 original_name: "2025.11.04.11.54.30.md"
+<<<<<<<< HEAD:docs/notes/dev/cljs-dev-tooling-quick-picks.md
 title: "ClojureScript Dev Tooling Quick Picks"
 summary: "Curated ClojureScript editor, lint, REPL, test, and debugging tools with drop-in shadow-cljs snippets."
+========
+title: "ClojureScript Tooling Survey"
+summary: "Survey of ClojureScript development tooling: clojure-lsp, clj-kondo, cljfmt, Portal, re-frame-10x, and shadow test targets."
+>>>>>>>> origin/device/yoga:docs/notes/dev/cljs-tooling-survey.md
 category: "dev"
 created: "2025-11-04"
 ---

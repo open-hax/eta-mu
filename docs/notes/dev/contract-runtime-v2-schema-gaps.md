@@ -1,8 +1,14 @@
 ---
 original_name: "2026.04.19.08.56.22.md"
+<<<<<<<< HEAD:docs/notes/dev/contract-runtime-v2-schema-gaps.md
 title: "Contract Runtime V2 Schema and Gaps"
 summary: "Proposes a complete contract-runtime schema and identifies missing pieces like intent contracts and bootstrap merging."
 category: "dev"
+========
+title: "Contract Runtime Malli Schema"
+summary: "Malli schema for contract runtime v2 covering actor, role, capability, intent, fulfillment, policy, and agent contracts."
+category: "design"
+>>>>>>>> origin/device/yoga:docs/notes/design/contract-runtime-malli-schema.md
 created: "2026-04-19"
 ---
 

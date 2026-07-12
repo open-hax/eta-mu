@@ -1,13 +1,14 @@
 ---
-uuid: "publication-components-cljs-rewrite-audio-player"
-title: "Publication Components CLJS Rewrite — Audio Widgets and StudioPlaylistPlayer"
-status: "blocked"
-priority: P3
+category: "tasks"
 labels: ["tasks", "cljs", "rewrite", "publication-components"]
-created_at: "2026-06-15T00:00:00Z"
+write-id: "1783693259678-0.dptkavuaq7co62w78tv"
+points: "5"
 source: "kanban/epics/publication-components-cljs-rewrite.md"
-points: 5
-category: tasks
+title: "Publication Components CLJS Rewrite — Audio Widgets and StudioPlaylistPlayer"
+priority: "P3"
+status: "rejected"
+uuid: "publication-components-cljs-rewrite-audio-player"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # Publication Components CLJS Rewrite — Audio Widgets and StudioPlaylistPlayer
@@ -54,5 +55,5 @@ pnpm --filter @open-hax/garden-publication-components build
 ```
 
 ---
-
 Blocked by `publication-components-cljs-rewrite-inventory` and `publication-components-cljs-rewrite-law-shape` (track schemas and audio URL shape). Core runtime extern conventions are already available.
+---

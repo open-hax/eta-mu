@@ -1,13 +1,13 @@
 ---
 uuid: "output-contract-gate-cljs-rewrite-conversion-tests"
 title: "Output Contract Gate CLJS Rewrite — Conversion Tests"
-status: "blocked"
-priority: P2
+status: "rejected"
+priority: "P2"
 labels: ["tasks", "cljs", "rewrite", "output-contract-gate"]
 created_at: "2026-06-15T00:00:00Z"
 source: "kanban/epics/output-contract-gate-cljs-rewrite.md"
 points: 3
-category: tasks
+category: "tasks"
 ---
 
 # Output Contract Gate CLJS Rewrite — Conversion Tests
@@ -35,5 +35,5 @@ Add conversion and surface-parity tests that prove the CLJS implementation match
 - [ ] Tests run under the CLJS test target without failure.
 
 ---
-
 > Blocked by `output-contract-gate-cljs-rewrite-domain-core`, `output-contract-gate-cljs-rewrite-extern-adapters`, `output-contract-gate-cljs-rewrite-infra-artifacts`, `output-contract-gate-cljs-rewrite-generation`, and `output-contract-gate-cljs-rewrite-review`.
+---

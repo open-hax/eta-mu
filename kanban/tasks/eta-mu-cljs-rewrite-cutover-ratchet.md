@@ -1,13 +1,14 @@
 ---
-uuid: "eta-mu-cljs-rewrite-cutover-ratchet"
-title: "Eta-mu CLJS Rewrite — Cutover Ratchet"
-status: "document"
-priority: P1
+category: "tasks"
 labels: ["tasks", "cljs", "rewrite", "cutover", "8sp"]
-created_at: "2026-05-29T21:18:48Z"
+write-id: "1783693344338-0.cvvixdjphnjjxjr3zou"
+points: "8"
 source: "kanban/epics/eta-mu-cljs-runtime-rewrite.md"
-points: 8
-category: tasks
+title: "Eta-mu CLJS Rewrite — Cutover Ratchet"
+priority: "P1"
+status: "done"
+uuid: "eta-mu-cljs-rewrite-cutover-ratchet"
+created_at: "2026-05-29T21:18:48Z"
 ---
 
 # Eta-mu CLJS Rewrite — Cutover Ratchet
@@ -71,16 +72,12 @@ A migrated slice can bypass or demote TypeScript only when:
 
 Demoted the first TypeScript runtime slice by replacing the default `@open-hax/eta-mu-runtime` state/planner/envelope function bodies with thin TypeScript compatibility wrappers over the compiled CLJS runtime exports. The public package name, default entrypoint, binary/service wiring, and TypeScript declaration surface remain stable. Zod schemas/types stay in TypeScript as compatibility guards while the pure behavior is served by CLJS.
 
-
 ---
-
 **Independent review 2026-06-13 (Sonnet).** VERDICT: PARTIAL — keep in review. TS slices demoted to CLJS-delegating wrappers with parity tests, exports/docs point at ./cljs, no unrelated dirt, Java21 added to CI jobs. BLOCKER: the "rollback path exists for every cutover commit" AC is marked done but the `git revert --no-commit` dry-run was never performed (epic QA already flagged this). Do that ~10-min dry-run + confirm it compiles before promotion.
-
-
 ---
 
 **Kept in review 2026-06-13.** Code is sound and the forward path is verified (cljs:verify + vitest + parity test all pass). The one remaining gate — the "rollback path exists for every cutover commit" AC — requires an executed `git revert --no-commit 07e8b8a` dry-run + recompile, which CANNOT be run cleanly right now: commit 07e8b8a also edited THIS card, so a revert conflicts with the uncommitted working tree. Do it after committing current work (clean tree), confirm it compiles, then promote. Not faking this one.
 
 ---
-
 **Promoted to done 2026-06-13 — rollback AC verified by executed dry-run.** `git apply --reverse` of 07e8b8a (runtime source) applies cleanly; the rolled-back state passes `pnpm --dir packages/eta-mu-runtime typecheck` (tsc --noEmit, exit 0); the additive `./cljs` export (which surface-parity depends on) was NOT introduced by 07e8b8a, so it survives the revert. Dry-run undone precisely (no working-tree damage). Moved review → document → done via the enforced, ledgered path.
+---

@@ -1,0 +1,13 @@
+{:profiles
+ {:dev
+  {:allow #{:capability/research-search}
+   :audit :verbose}
+
+  :ci
+  {:allow #{:capability/research-search}
+   :deny-effects #{:network/search}
+   :audit :strict}
+
+  :personal
+  {:allow #{:capability/*}
+   :audit :full}}}

@@ -1,13 +1,13 @@
 ---
 uuid: "publication-components-cljs-rewrite-verification"
 title: "Publication Components CLJS Rewrite — Verification and Regression Tests"
-status: "blocked"
-priority: P3
+status: "rejected"
+priority: "P3"
 labels: ["tasks", "cljs", "rewrite", "publication-components"]
 created_at: "2026-06-15T00:00:00Z"
 source: "kanban/epics/publication-components-cljs-rewrite.md"
 points: 3
-category: tasks
+category: "tasks"
 ---
 
 # Publication Components CLJS Rewrite — Verification and Regression Tests
@@ -54,5 +54,5 @@ node scripts/ts-line-count.mjs packages/legacy/publication-components
 ```
 
 ---
-
 Blocked by all prior tasks; cannot verify until components, build, and facade are complete. Core runtime verification gates can be reused once this epic's deliverables are ready.
+---

@@ -1,13 +1,13 @@
 ---
 uuid: "output-contract-gate-cljs-rewrite-cli-facade"
 title: "Output Contract Gate CLJS Rewrite — CLI Facade"
-status: "blocked"
-priority: P1
+status: "rejected"
+priority: "P1"
 labels: ["tasks", "cljs", "rewrite", "output-contract-gate"]
 created_at: "2026-06-15T00:00:00Z"
 source: "kanban/epics/output-contract-gate-cljs-rewrite.md"
 points: 4
-category: tasks
+category: "tasks"
 ---
 
 # Output Contract Gate CLJS Rewrite — CLI Facade
@@ -35,5 +35,5 @@ Keep `src/cli.ts` as a thin TypeScript compatibility shell that delegates argume
 - [ ] Review-stub command appends review artifacts to a valid bundle.
 
 ---
-
 > Blocked by `output-contract-gate-cljs-rewrite-domain-core`, `output-contract-gate-cljs-rewrite-extern-adapters`, `output-contract-gate-cljs-rewrite-infra-artifacts`, `output-contract-gate-cljs-rewrite-generation`, and `output-contract-gate-cljs-rewrite-review`.
+---

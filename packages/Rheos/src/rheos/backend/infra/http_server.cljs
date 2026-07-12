@@ -345,9 +345,12 @@
   ;; them closed lets stop-http! free the port deterministically before re-listen.
   (let [^js app (Fastify. #js {:logger true :forceCloseConnections true})
         current-dir (js/process.cwd)
-        web-dir (path/join current-dir "dist" "web")]
+        static-dir (path/join current-dir "resources" "public")
+        js-dir (path/join current-dir "dist" "web" "js")]
     (await (.register app fastifyCors))
-    (await (.register app fastifyStatic #js {:root web-dir :prefix "/"}))
+    ;; serve HTML/CSS from resources/public and the release JS bundle at /js
+    (await (.register app fastifyStatic #js {:root static-dir :prefix "/"}))
+    (await (.register app fastifyStatic #js {:root js-dir :prefix "/js" :decorateReply false}))
     (register-routes app)
     (await (listen-with-retry! app host port 5 250))
     (reset! server-state app)

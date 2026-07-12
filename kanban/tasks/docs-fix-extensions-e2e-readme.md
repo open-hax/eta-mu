@@ -1,7 +1,7 @@
 ---
 uuid: "docs-fix-extensions-e2e-readme"
 title: "Fix packages/extensions-e2e README paths and claims"
-status: "incoming"
+status: "ready"
 priority: "P2"
 labels: ["docs", "extensions-e2e", "readme", "1sp"]
 created_at: "2026-06-17T00:00:00Z"

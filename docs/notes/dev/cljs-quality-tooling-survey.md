@@ -1,7 +1,12 @@
 ---
 original_name: "2025.11.04.12.11.40.md"
+<<<<<<<< HEAD:docs/notes/dev/cljs-quality-tooling-survey.md
 title: "ClojureScript Quality Tooling Survey"
 summary: "Survey of ClojureScript debugging, linting, testing, E2E, mocking, error reporting, and CI tooling."
+========
+title: "ClojureScript Debugging and Inspection Tools"
+summary: "Companion list of ClojureScript debugging, linting, testing, and CI tools."
+>>>>>>>> origin/device/yoga:docs/notes/dev/cljs-debugging-inspection-tools.md
 category: "dev"
 created: "2025-11-04"
 ---

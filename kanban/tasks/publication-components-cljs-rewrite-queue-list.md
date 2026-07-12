@@ -1,13 +1,14 @@
 ---
-uuid: "publication-components-cljs-rewrite-queue-list"
-title: "Publication Components CLJS Rewrite — PlaylistQueueList"
-status: "blocked"
-priority: P3
+category: "tasks"
 labels: ["tasks", "cljs", "rewrite", "publication-components"]
-created_at: "2026-06-15T00:00:00Z"
+write-id: "1783693260489-0.ucn06c0wkj8xm6uu10"
+points: "2"
 source: "kanban/epics/publication-components-cljs-rewrite.md"
-points: 2
-category: tasks
+title: "Publication Components CLJS Rewrite — PlaylistQueueList"
+priority: "P3"
+status: "rejected"
+uuid: "publication-components-cljs-rewrite-queue-list"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # Publication Components CLJS Rewrite — PlaylistQueueList
@@ -50,5 +51,5 @@ pnpm --filter @open-hax/garden-publication-components build
 ```
 
 ---
-
 Blocked by `publication-components-cljs-rewrite-inventory` and `publication-components-cljs-rewrite-law-shape` (track schemas). Core runtime boundary conventions are already available.
+---

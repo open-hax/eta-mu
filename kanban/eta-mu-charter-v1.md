@@ -147,19 +147,19 @@ This package belongs to the extracted substrate line and should stay aligned wit
 ### Radar and signal satellites
 
 - `packages/signal-contracts`
-- `packages/signal-radar-core`
-- `packages/signal-source-utils`
-- `packages/signal-watchlists`
+- `packages/signal-radar-core` *(deleted in the 2026-06 reorg)*
+- `packages/signal-source-utils` *(deleted in the 2026-06 reorg)*
+- `packages/signal-watchlists` *(deleted in the 2026-06 reorg)*
 
-These are currently housed here, but they are not the long-term definition of `eta-mu`.
+These were housed here, but they are not the long-term definition of `eta-mu`.
 Current migration intent points toward normalization into an `eta-mu-radar` line under `open-hax`.
 
 ### Absorbed OpenHax legacy satellites
 
-- `packages/opencode-reactant`
-- `services/agentd`
-- `shared/js/opencode-events`
-- `packages/kanban`
+- `packages/opencode-reactant` *(deleted in the 2026-06 reorg)*
+- `services/agentd` *(deleted in the 2026-06 reorg)*
+- `shared/js/opencode-events` *(deleted in the 2026-06 reorg)*
+- `packages/kanban` *(now `packages/legacy/kanban`, superseded by `packages/Rheos`)*
 
 These are absorbed legacy or transitional surfaces.
 They may remain temporarily, but they are not the canonical answer to "what is eta-mu?"

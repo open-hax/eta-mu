@@ -1,8 +1,14 @@
 ---
 original_name: "2026.05.08.11.37.09.md"
+<<<<<<<< HEAD:docs/notes/dev/prompt-contract-compiler-response-ast.md
 title: "Prompt Contract Compiler and Response AST"
 summary: "Argues the prompt contract should be the source language and sketches a two-stage compiler to prompts and enforcement specs."
 category: "dev"
+========
+title: "Prompt Contract as Source Language"
+summary: "Proposes a two-stage compiler treating the mindfuck prompt as source language and response markdown as a semantic AST."
+category: "design"
+>>>>>>>> origin/device/yoga:docs/notes/design/prompt-contract-source-language.md
 created: "2026-05-08"
 ---
 

@@ -1,4 +1,4 @@
-(ns eta-mu-extensions-e2e.mock-openai)
+(ns eta-mu-e2e.mock-openai)
 
 (defn scripted-response
   [{:keys [_messages _tools state]}]

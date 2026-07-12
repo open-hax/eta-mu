@@ -1,13 +1,13 @@
 ---
 uuid: "output-contract-gate-cljs-rewrite-cutover"
 title: "Output Contract Gate CLJS Rewrite — Cutover"
-status: "blocked"
-priority: P1
+status: "rejected"
+priority: "P1"
 labels: ["tasks", "cljs", "rewrite", "output-contract-gate"]
 created_at: "2026-06-15T00:00:00Z"
 source: "kanban/epics/output-contract-gate-cljs-rewrite.md"
 points: 2
-category: tasks
+category: "tasks"
 ---
 
 # Output Contract Gate CLJS Rewrite — Cutover
@@ -34,5 +34,5 @@ Delete obsolete TypeScript modules after parity tests pass and the TS-line-count
 - [ ] No remaining duplicate logic between legacy TS and new CLJS namespaces.
 
 ---
-
 > Blocked by `output-contract-gate-cljs-rewrite-parity-tests`: obsolete TS modules can only be deleted after parity is proven.
+---

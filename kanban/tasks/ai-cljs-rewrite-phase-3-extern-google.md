@@ -1,13 +1,14 @@
 ---
-uuid: "ai-cljs-rewrite-phase-3-extern-google"
-title: "AI CLJS Rewrite — Google Family Extern Adapters"
-status: "blocked"
-priority: "P1"
-labels: ["tasks", "cljs", "rewrite", "ai"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/ai-cljs-rewrite.md"
-points: 5
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "ai"]
+write-id: "1783693252831-0.we3x8tzcdog5u8h7zmn"
+points: "5"
+source: "kanban/epics/ai-cljs-rewrite.md"
+title: "AI CLJS Rewrite — Google Family Extern Adapters"
+priority: "P1"
+status: "in_progress"
+uuid: "ai-cljs-rewrite-phase-3-extern-google"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # AI CLJS Rewrite — Google Family Extern Adapters
@@ -51,5 +52,5 @@ node scripts/ts-line-count.mjs packages/legacy/ai
 ```
 
 ---
-Status updated to blocked: waiting for Phase 2 canonical message model and shared boundary-adapter conventions (core boundary-adapters task is still in_progress).
+Status updated to blocked: waiting for Phase 2 canonical message model and shared boundary-adapter conventions (core boundary-adapters task is done as of 2026-07-10).
 ---

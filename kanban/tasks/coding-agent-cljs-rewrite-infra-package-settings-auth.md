@@ -1,13 +1,14 @@
 ---
-uuid: "coding-agent-cljs-rewrite-infra-package-settings-auth"
-title: "Coding Agent CLJS Rewrite — Package, Settings & Auth Infra"
-status: "blocked"
-priority: "P0"
-labels: ["tasks", "cljs", "rewrite", "coding-agent", "3sp"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/coding-agent-cljs-rewrite.md"
-points: 3
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "coding-agent", "3sp"]
+write-id: "1783693257126-0.sm9mbe5pjva3n67ps21"
+points: "3"
+source: "kanban/epics/coding-agent-cljs-rewrite.md"
+title: "Coding Agent CLJS Rewrite — Package, Settings & Auth Infra"
+priority: "P0"
+status: "review"
+uuid: "coding-agent-cljs-rewrite-infra-package-settings-auth"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # Coding Agent CLJS Rewrite — Package, Settings & Auth Infra
@@ -42,4 +43,8 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 
 ---
 **Blocking assessment:** Blocked by inventory-core and extern-fs-git-bash (FS/path adapters). Settings/auth domain/law can be drafted once inventory is accepted, but package manager wiring needs the FS extern surface.
+
+Completed: settings + auth infra with structured error handling. 7 source files, 2 test files, all gates green (0 clj-kondo, 0 boundary, 302 tests/1086 assertions/0 failures). read-json-file now returns {:ok true/false} maps instead of nil.
+
+All gates green: clj-kondo 0 errors, boundary scanner 0 violations, runtime tests 336/1165 pass. Ready for sign-off.
 ---

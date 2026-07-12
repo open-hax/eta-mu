@@ -1,8 +1,13 @@
 ---
 original_name: "2026.06.16.07.28.31.md"
 title: "Compiler of Intent Prompt Template"
+<<<<<<<< HEAD:docs/notes/dev/compiler-of-intent-prompt-template.md
 summary: "A short prompt template requiring Clarified Intent, Copy Ready Prompt, and Possible Refinements sections."
 category: "dev"
+========
+summary: "Prompt template requiring Clarified Intent, Copy-Ready Prompt, and Possible Refinements sections."
+category: "other"
+>>>>>>>> origin/device/yoga:docs/notes/other/compiler-of-intent-prompt-template.md
 created: "2026-06-16"
 ---
 

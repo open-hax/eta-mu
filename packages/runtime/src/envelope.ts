@@ -3,19 +3,17 @@ import {
   recommendBreath as recommendBreathCljs,
 } from "@open-hax/eta-mu-runtime/cljs";
 import {
-  breathRecommendationSchema,
-  etaMuActionBatchSchema,
   type BreathRecommendation,
+  breathRecommendationSchema,
   type EtaMuActionBatch,
   type EtaMuPlanningContext,
   type EtaMuPlanningContextInput,
+  etaMuActionBatchSchema,
   etaMuPlanningContextSchema,
   type MuCandidate,
 } from "./types.js";
 
-function normalizeContext(
-  context: EtaMuPlanningContextInput,
-): EtaMuPlanningContext {
+function normalizeContext(context: EtaMuPlanningContextInput): EtaMuPlanningContext {
   return etaMuPlanningContextSchema.parse(context);
 }
 
@@ -28,10 +26,6 @@ export function recommendBreath(
   );
 }
 
-export function createActionBatch(
-  contextInput: EtaMuPlanningContextInput,
-): EtaMuActionBatch {
-  return etaMuActionBatchSchema.parse(
-    createActionBatchCljs(normalizeContext(contextInput)),
-  );
+export function createActionBatch(contextInput: EtaMuPlanningContextInput): EtaMuActionBatch {
+  return etaMuActionBatchSchema.parse(createActionBatchCljs(normalizeContext(contextInput)));
 }

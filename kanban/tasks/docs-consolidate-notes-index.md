@@ -1,7 +1,7 @@
 ---
 uuid: "docs-consolidate-notes-index"
 title: "Consolidate docs/notes and add an index"
-status: "incoming"
+status: "ready"
 priority: "P2"
 labels: ["docs", "notes", "cleanup", "3sp"]
 created_at: "2026-06-17T00:00:00Z"

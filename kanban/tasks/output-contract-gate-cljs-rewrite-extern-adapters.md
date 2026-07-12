@@ -1,13 +1,14 @@
 ---
-uuid: "output-contract-gate-cljs-rewrite-extern-adapters"
-title: "Output Contract Gate CLJS Rewrite — Extern Adapters"
-status: "blocked"
-priority: P1
+category: "tasks"
 labels: ["tasks", "cljs", "rewrite", "output-contract-gate"]
-created_at: "2026-06-15T00:00:00Z"
+write-id: "1783693258012-0.yqjsm9ayjm3o5wg4ce"
+points: "4"
 source: "kanban/epics/output-contract-gate-cljs-rewrite.md"
-points: 4
-category: tasks
+title: "Output Contract Gate CLJS Rewrite — Extern Adapters"
+priority: "P1"
+status: "rejected"
+uuid: "output-contract-gate-cljs-rewrite-extern-adapters"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # Output Contract Gate CLJS Rewrite — Extern Adapters
@@ -36,5 +37,5 @@ Create `eta_mu.gate.extern.*` adapters for raw JS interop: EDN parsing, markdown
 - [ ] Crypto adapter produces stable sha256 and valid UUIDs.
 
 ---
-
 > Blocked by `kanban/tasks/eta-mu-cljs-rewrite-boundary-adapters.md`: the core extern/infra adapter patterns and boundary scanner must land first so this gate does not duplicate or conflict with runtime boundary work.
+---

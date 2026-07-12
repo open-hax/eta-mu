@@ -1,7 +1,7 @@
 ---
 uuid: "docs-fix-sol-knoxx-artifacts"
 title: "Fix packages/sol documentation and remove Knoxx-copied artifacts"
-status: "incoming"
+status: "ready"
 priority: "P1"
 labels: ["docs", "sol", "knoxx", "5sp"]
 created_at: "2026-06-17T00:00:00Z"

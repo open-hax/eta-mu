@@ -1,8 +1,14 @@
 ---
 original_name: "2026.06.16.06.43.13.md"
+<<<<<<<< HEAD:docs/notes/dev/eta-mu-orchestrator-prompt-draft.md
 title: "Eta-Mu Orchestrator Prompt Draft"
 summary: "A brief, incomplete draft of an Eta-mu orchestrator prompt tied to process and kanban tasks."
 category: "dev"
+========
+title: "Eta Mu Orchestrator Persona Stub"
+summary: "Stub system prompt outline for the Eta Mu orchestrator persona."
+category: "other"
+>>>>>>>> origin/device/yoga:docs/notes/other/eta-mu-orchestrator-persona-stub.md
 created: "2026-06-16"
 ---
 

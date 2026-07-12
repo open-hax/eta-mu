@@ -1,8 +1,14 @@
 ---
 original_name: "2026.04.19.08.44.04.md"
+<<<<<<<< HEAD:docs/notes/dev/contract-intent-fulfillment-design.md
 title: "Contract Intent and Fulfillment Design"
 summary: "Defines intent contracts and argues fulfillment contracts should default to deterministic checks, not LLM judges."
 category: "dev"
+========
+title: "Intent Contracts and Deterministic Fulfillment"
+summary: "Defines intent contracts as pre-execution gates and argues for deterministic fulfillment checks alongside LLM-judge modes."
+category: "design"
+>>>>>>>> origin/device/yoga:docs/notes/design/intent-contracts-and-deterministic-fulfillment.md
 created: "2026-04-19"
 ---
 

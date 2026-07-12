@@ -1,8 +1,14 @@
 ---
 original_name: "2026.07.10.03.00.16.md"
+<<<<<<<< HEAD:docs/notes/dev/prompt-wizard-space-pr-spec.md
 title: "Prompt Wizard Space PR Spec"
 summary: "Detailed PR specification for adding the Prompt Wizard Perplexity space with mode and state instruction files."
 category: "dev"
+========
+title: "Prompt Wizard PR Agent Prompt"
+summary: "Agent prompt for creating Prompt Wizard space files in a separate GitHub repository."
+category: "other"
+>>>>>>>> origin/device/yoga:docs/notes/other/prompt-wizard-pr-agent-prompt.md
 created: "2026-07-10"
 ---
 

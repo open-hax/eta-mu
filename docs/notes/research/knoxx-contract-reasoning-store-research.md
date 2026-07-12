@@ -1,7 +1,12 @@
 ---
 original_name: "2026.04.19.10.07.53.md"
+<<<<<<<< HEAD:docs/notes/research/knoxx-contract-reasoning-store-research.md
 title: "Knoxx Contract and Reasoning Store Research"
 summary: "Multi-part research thread tying Knoxx contracts, agent identity, promptdb epistemic primitives, Datalog engines, and openplanner."
+========
+title: "Contract DSL Review Transcript"
+summary: "Long Perplexity transcript reviewing the Knoxx contract DSL direction, EDN-first design, Malli, and SCI evaluator."
+>>>>>>>> origin/device/yoga:docs/notes/research/contract-dsl-review-transcript.md
 category: "research"
 created: "2026-04-19"
 ---

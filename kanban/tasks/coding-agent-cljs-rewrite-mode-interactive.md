@@ -1,7 +1,7 @@
 ---
 uuid: "coding-agent-cljs-rewrite-mode-interactive"
 title: "Coding Agent CLJS Rewrite — Interactive Mode Parity"
-status: "blocked"
+status: "rejected"
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "coding-agent", "5sp"]
 created_at: "2026-06-15T00:00:00Z"

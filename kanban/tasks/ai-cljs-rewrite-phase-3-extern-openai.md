@@ -1,7 +1,7 @@
 ---
 uuid: "ai-cljs-rewrite-phase-3-extern-openai"
 title: "AI CLJS Rewrite — OpenAI Family Extern Adapters"
-status: "ready"
+status: "in_progress"
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "ai"]
 created_at: "2026-06-15T00:00:00Z"
@@ -52,5 +52,5 @@ node scripts/ts-line-count.mjs packages/legacy/ai
 ```
 
 ---
-Status updated to blocked: waiting for Phase 2 canonical message model and shared boundary-adapter conventions (core boundary-adapters task is still in_progress).
+Status updated to blocked: waiting for Phase 2 canonical message model and shared boundary-adapter conventions (core boundary-adapters task is done as of 2026-07-10).
 ---
