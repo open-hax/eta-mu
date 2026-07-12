@@ -1,12 +1,13 @@
 ---
-uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-contract-runtime-v2-spec-md"
-title: "Contract Runtime v2 Spec"
-status: "document"
-priority: "P3"
-labels: ["specs", "migrated-spec"]
-created_at: "2026-05-29T04:29:39.347Z"
-source: "orgs/open-hax/eta-mu/specs/contract-runtime-v2-spec.md"
 category: "specs"
+labels: ["specs", "migrated-spec"]
+write-id: "1783813710841-0.e5497a0zljpwrq0blcp"
+source: "orgs/open-hax/eta-mu/specs/contract-runtime-v2-spec.md"
+title: "Contract Runtime v2 Spec"
+priority: "P3"
+status: "done"
+uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-contract-runtime-v2-spec-md"
+created_at: "2026-05-29T04:29:39.347Z"
 ---
 
 > Source: `orgs/open-hax/eta-mu/specs/contract-runtime-v2-spec.md`

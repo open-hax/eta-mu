@@ -1,13 +1,14 @@
 ---
-uuid: "eta-mu-quality-ratchet-lint-gates"
-title: "Eta-mu Quality Ratchet — Lint and Static Gates"
-status: "document"
-priority: "P1"
-labels: ["tasks", "quality", "lint", "format", "ci", "5sp"]
-created_at: "2026-05-31T00:45:00Z"
-source: "kanban/epics/eta-mu-quality-ratchet.md"
-points: 5
 category: "tasks"
+labels: ["tasks", "quality", "lint", "format", "ci", "5sp"]
+write-id: "1783813709521-0.t48j0j2vgmo6l6t0dy"
+points: "5"
+source: "kanban/epics/eta-mu-quality-ratchet.md"
+title: "Eta-mu Quality Ratchet — Lint and Static Gates"
+priority: "P1"
+status: "done"
+uuid: "eta-mu-quality-ratchet-lint-gates"
+created_at: "2026-05-31T00:45:00Z"
 ---
 
 # Eta-mu Quality Ratchet — Lint and Static Gates

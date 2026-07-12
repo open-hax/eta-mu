@@ -6,7 +6,7 @@ points: "2"
 source: "kanban/epics/coding-agent-cljs-rewrite.md"
 title: "Coding Agent CLJS Rewrite — Messages, Diagnostics & Output Guard"
 priority: "P0"
-status: "in_progress"
+status: "done"
 uuid: "coding-agent-cljs-rewrite-messages-diagnostics-law"
 created_at: "2026-06-15T00:00:00Z"
 ---
@@ -46,4 +46,6 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 
 ---
 **Blocking assessment:** Blocked by inventory-core acceptance. Once inventory is done, this pure domain/law slice can proceed independently of agent/ai/tui child epics and can run concurrently with other domain/law tasks.
+
+Board audit 2026-07-11 — moved to done. domain/diagnostics.cljs exists at packages/runtime/src/cljs/eta_mu/coding/domain/diagnostics.cljs with test at packages/runtime/test/cljs/eta_mu/coding/domain/diagnostics_test.cljs.
 ---

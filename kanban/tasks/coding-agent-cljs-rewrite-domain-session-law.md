@@ -1,7 +1,7 @@
 ---
 uuid: "coding-agent-cljs-rewrite-domain-session-law"
 title: "Coding Agent CLJS Rewrite — Session Domain & Law"
-status: done
+status: "done"
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "coding-agent", "5sp"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,6 +9,7 @@ source: "kanban/epics/coding-agent-cljs-rewrite.md"
 points: 5
 category: "tasks"
 ---
+
 # Coding Agent CLJS Rewrite — Session Domain & Law
 
 > Parent epic: `kanban/epics/coding-agent-cljs-rewrite.md`
@@ -63,4 +64,6 @@ Blocked / remaining:
 
 ---
 **Blocking assessment:** Blocked by inventory-core acceptance (needed to classify source files and public exports) and by agent-cljs-rewrite (agent-loop/runtime event-loop parity). Depends on eta-mu-runtime state/envelope primitives (ready).
+
+Board audit 2026-07-11 — moved to done. CLJS files confirmed at packages/runtime/src/cljs/eta_mu/coding/: law/session.cljs, domain/session.cljs, shape/session.cljs. Tests at packages/runtime/test/cljs/eta_mu/coding/.
 ---
