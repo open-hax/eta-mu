@@ -189,6 +189,9 @@ importers:
       '@open-hax/rheos':
         specifier: workspace:*
         version: link:../Rheos
+      c8:
+        specifier: ^10.1.2
+        version: 10.1.3
       shadow-cljs:
         specifier: ^3.4.11
         version: 3.4.11
@@ -644,6 +647,9 @@ importers:
         specifier: ^1.3.0
         version: 1.5.0
     devDependencies:
+      c8:
+        specifier: ^10.1.2
+        version: 10.1.3
       shadow-cljs:
         specifier: ^3.4.11
         version: 3.4.11
