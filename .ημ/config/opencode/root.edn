@@ -1,0 +1,9 @@
+{:ημ/opencode-version 1
+ :id                  :knoxx/opencode
+
+ :imports
+ ["profiles.edn"
+  "plugins/research.edn"
+  "plugins/policy.edn"]
+
+ :profile :dev}
