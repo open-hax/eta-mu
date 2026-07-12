@@ -22,7 +22,8 @@
     "watch": "shadow-cljs watch terminal-ui"
   },
   "dependencies": {
-    "@eta-mu/turn-processor": "workspace:*"
+    "@eta-mu/turn-processor": "workspace:*",
+    "get-east-asian-width": "^1.3.0"
   },
   "devDependencies": {
     "shadow-cljs": "^3.4.11"

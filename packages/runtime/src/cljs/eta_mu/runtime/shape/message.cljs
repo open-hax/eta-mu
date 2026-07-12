@@ -260,8 +260,8 @@
              :provider (:provider message)
              :model (:model message)
              :usage (usage->external (:usage message))
-             :stopReason (name (:stop-reason message))
              :timestamp (:timestamp message)}
+      (:stop-reason message) (assoc :stopReason (name (:stop-reason message)))
       (:response-id message) (assoc :responseId (:response-id message))
       (:error-message message) (assoc :errorMessage (:error-message message)))
 

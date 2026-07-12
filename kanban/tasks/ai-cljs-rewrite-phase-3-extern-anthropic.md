@@ -52,4 +52,6 @@ node scripts/ts-line-count.mjs packages/legacy/ai
 
 ---
 Status updated to blocked: waiting for Phase 2 canonical message model and shared boundary-adapter conventions (core boundary-adapters task is done as of 2026-07-10).
+
+Unblocked: core boundary-adapters task completed 2026-07-10. Phase 2 canonical message model and shared conventions are in place. Ready to begin Anthropic extern adapter implementation.
 ---

@@ -634,6 +634,9 @@ importers:
       '@eta-mu/turn-processor':
         specifier: workspace:*
         version: link:../turn-processor
+      get-east-asian-width:
+        specifier: ^1.3.0
+        version: 1.5.0
     devDependencies:
       shadow-cljs:
         specifier: ^3.4.11

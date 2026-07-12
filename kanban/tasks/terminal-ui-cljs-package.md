@@ -70,3 +70,7 @@ adapters; those live in the engine and provider packages.
 - Package created with ESM build target and 7 tests covering `ProcessTerminal`.
 - First extern (`eta-mu.terminal-ui.extern.terminal`) ported with write,
   dimensions, cursor, clear, title, start/stop, and drain-input.
+
+---
+Fixed 24 tests: bracket mismatches (text_utils, box, undo_stack_test), Segmenter iterator protocol, Map.size property, strip-ansi, forward declarations, clojure.string requires, kill-ring rotate test, undo-stack structuredClone. Lint clean 0/0.
+---
