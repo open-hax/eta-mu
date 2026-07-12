@@ -1,6 +1,16 @@
-Π/20260712T204800Z/alpha-cljs-tui
-branch: alpha/cljs-tui
-summary: agent tools (read/bash/edit/write) + TUI REPL host + message/ansi components
-tests: eta-mu 79/147, terminal-ui 32/78 — all green
-lint: clj-kondo 0 errors / 0 warnings
-hash: a374cb6b6d28b6849ea9b6105739688a680e0b6ec56ec99a4e6b54cfbd2dc885
+cc41ec343d1fb49d3fa609772936d3e0cf09620fb53b2170e678a34599341407  .github/workflows/coverage.yml
+ffe6a28aa88caa071758b7cc73764576d7a093ea352ac32a2049d0d61864a31e  kanban/.events/ledger.edn
+e08907cc67b59a824b4b1a17add6c9907cb69a885fc0907639ade53224a5b38e  kanban/tasks/docs-governance-rehaul-epiphany-aligned.md
+fd3af31c980872f5b78dbcdccafc778c13750c28018be8fbfb6cfca300f2d48c  kanban/tasks/eta-mu-agent-tools.md
+e2d8833f0f7f466e40e66e0232278d1c3a9820c77897772ff8c21c7864c52aaa  kanban/tasks/terminal-ui-cljs-package.md
+6a23b027c0ef333a619aa54e0118ca1b4f99efa9534a097767246760aec5bd35  packages/eta-mu/package.json
+215c7e3b1413ae4a7792d6d6e8f9707908260ffe8e97b7dc75d5089c94bb0244  packages/eta-mu/README.md
+a828f13abb3c654a933f88d1173e25155bed8c18d27d6f395c4e843f98f27a76  packages/eta-mu/shadow-cljs.edn
+f2bf18b84d78b044874bec956ab96290bdfa20216cd5912fa942f9010f60f63f  packages/eta-mu/src/cljs/eta_mu/extern/openai.cljs
+df9587d057c3e20d09246e577e9ed22a6c27310f5dced588a8dc091cf794bd01  packages/eta-mu/src/cljs/eta_mu/infra/cli/commands/agent.cljs
+df0c1b1a3dd1b302b68cac8040f1e34ad6219365e406c2a56ad8913a5bf4f67a  packages/eta-mu/test/cljs/eta_mu/extern/openai_test.cljs
+e7d7c059e8de56935764cb1f525e9d6384ac600e4dba65b12a08eefcac411c92  packages/eta-mu/test-e2e/cljs/eta_mu/e2e/agent_cli_e2e.cljs
+105c10956fdd566b8632ca23aeb78de30029a29b758cb822c21b688ea6988dc9  packages/terminal-ui/package.json
+67e87014c59c022b169132d4ee305f64f0c3599e455bdd7a3bf0820a7a3d10b5  packages/terminal-ui/README.md
+928deb1e4123e1fa2a1d32ca83bf64e677268f065257c8beefd828270203c866  packages/turn-processor/src/cljs/eta_mu/turn_processor/infra/loop.cljs
+090b58e18a2cd37eca203ee7971f9646a20abfbc89d83066ee9d4f89def042bb  pnpm-lock.yaml
