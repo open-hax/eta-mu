@@ -52,6 +52,37 @@
         (.on child "close" (fn [code] (resolve {:exit (or code 0) :stdout @stdout :stderr @stderr})))
         (.on child "error" (fn [err] (resolve {:exit 1 :stdout @stdout :stderr (.-message err)})))))))
 
+(defn exec-shell-capture
+  "Execute a shell command string, capture stdout/stderr, and return a promise
+  of {:exit <code> :stdout <string> :stderr <string> :timed-out? <bool>}.
+
+  When `timeout-ms` is a positive number, the process is killed and the exit
+  code reported as 124 if it has not closed within that window. Stdio is
+  piped; the current working directory is process.cwd()."
+  [command timeout-ms]
+  (js/Promise.
+    (fn [resolve _reject]
+      (let [stdout (atom "")
+            stderr (atom "")
+            timed-out (atom false)
+            child (.spawn cp command #js {"shell" true "stdio" "pipe" "cwd" (js/process.cwd)})
+            timer (when (and timeout-ms (pos? timeout-ms))
+                    (js/setTimeout (fn []
+                                     (reset! timed-out true)
+                                     (.kill child))
+                                   timeout-ms))]
+        (.on (.-stdout child) "data" (fn [data] (swap! stdout str data)))
+        (.on (.-stderr child) "data" (fn [data] (swap! stderr str data)))
+        (.on child "close" (fn [code]
+                             (when timer (js/clearTimeout timer))
+                             (resolve {:exit (if @timed-out 124 (or code 0))
+                                       :stdout @stdout :stderr @stderr
+                                       :timed-out? @timed-out})))
+        (.on child "error" (fn [err]
+                             (when timer (js/clearTimeout timer))
+                             (resolve {:exit 1 :stdout @stdout :stderr (.-message err)
+                                       :timed-out? @timed-out})))))))
+
 (defn spawn-inherit
   "Spawn a command with inherited stdio and return a promise that resolves with its exit code."
   [command args]

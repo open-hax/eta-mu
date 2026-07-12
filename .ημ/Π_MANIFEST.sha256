@@ -1,5 +1,6 @@
-1a8d13736851483264771440705cc202f3909541002509880382a78d29f3dc06  packages/eta-mu/dist-cli/index.cjs
-9a8f714ffb5e31f861249d06b001d6250950466c677e4835a0b8356eff2e7867  packages/eta-mu/package.json
-7855bb1c38b4aa4e95adbbda33bcd03b5f1ee9a868f20115ee384f8b9f137e3a  packages/kondo-config/clj-kondo.exports/open-hax/kondo-config/config.edn
-89a5b71dd0083f93ab4f307f4f8db23b794c27cc7bec3cdcf2df17497306c19a  receipts.edn
-dfe14a5452d0842b1a4b5f67305b46eb167c86e0a5f8d4bd5eef1259209cde9a  pnpm-lock.yaml
+Π/20260712T204800Z/alpha-cljs-tui
+branch: alpha/cljs-tui
+summary: agent tools (read/bash/edit/write) + TUI REPL host + message/ansi components
+tests: eta-mu 79/147, terminal-ui 32/78 — all green
+lint: clj-kondo 0 errors / 0 warnings
+hash: a374cb6b6d28b6849ea9b6105739688a680e0b6ec56ec99a4e6b54cfbd2dc885
