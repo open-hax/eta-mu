@@ -1,7 +1,7 @@
 ---
 uuid: "github-cljs-rewrite-runtime-batch-adapter"
 title: "GitHub CLJS Rewrite — Runtime Batch Adapter"
-status: "blocked"
+status: icebox
 priority: "P1"
 labels: ["tasks", "cljs", "rewrite", "github"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "kanban/epics/github-cljs-rewrite.md"
 points: 2
 category: "tasks"
 ---
-
 # GitHub CLJS Rewrite — Runtime Batch Adapter
 
 > Parent epic: `kanban/epics/github-cljs-rewrite.md`
@@ -47,5 +46,5 @@ pnpm --filter @open-hax/eta-mu-github typecheck
 ```
 
 ---
-**Status note:** Blocked by `github-cljs-rewrite-inventory`, `github-cljs-rewrite-extern-adapters` (needs fetch/client adapter), `eta-mu-cljs-rewrite-boundary-adapters` (runtime state primitive patterns still in progress), and `fetch-timeout-abort-controller` (target file `runtime-batch.ts` is the one being modified).
+**Status note:** Blocked by `github-cljs-rewrite-inventory`, `github-cljs-rewrite-extern-adapters` (needs fetch/client adapter), `eta-mu-cljs-rewrite-boundary-adapters` (done), and `fetch-timeout-abort-controller` (target file `runtime-batch.ts` is the one being modified).
 ---

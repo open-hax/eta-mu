@@ -1,7 +1,7 @@
 ---
 uuid: "agent-cljs-rewrite-phase-4-infra-cli"
 title: "Agent CLJS Rewrite — Infra, Shape, and CLI Facade"
-status: "blocked"
+status: icebox
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "agent"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "kanban/epics/agent-cljs-rewrite.md"
 points: 3
 category: "tasks"
 ---
-
 # Agent CLJS Rewrite — Infra, Shape, and CLI Facade
 
 > Parent epic: `kanban/epics/agent-cljs-rewrite.md`

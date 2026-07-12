@@ -1,15 +1,14 @@
 ---
 uuid: "docs-rewrite-top-level-readme"
 title: "Rewrite top-level README.md to match actual monorepo"
-status: "incoming"
-priority: "P0"
+status: icebox
+priority: "P1"
 labels: ["docs", "readme", "monorepo", "5sp"]
 created_at: "2026-06-17T00:00:00Z"
 source: "docs discovery sweep 2026-06-16"
 points: 5
 category: "tasks"
 ---
-
 # Rewrite top-level README.md to match actual monorepo
 
 ## Context

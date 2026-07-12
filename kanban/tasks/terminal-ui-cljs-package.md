@@ -1,7 +1,7 @@
 ---
 uuid: "terminal-ui-cljs-package"
 title: "Terminal UI CLJS Package"
-status: "in_progress"
+status: breakdown
 priority: "P1"
 labels: ["tasks", "cljs", "rewrite", "tui", "terminal-ui", "5sp"]
 created_at: "2026-07-09T18:00:00Z"
@@ -9,7 +9,6 @@ source: "kanban/tasks/legacy-package-reorganization.md"
 points: 5
 category: "tasks"
 ---
-
 # Terminal UI CLJS Package
 
 > Parent: `kanban/tasks/legacy-package-reorganization.md`
@@ -70,3 +69,7 @@ adapters; those live in the engine and provider packages.
 - Package created with ESM build target and 7 tests covering `ProcessTerminal`.
 - First extern (`eta-mu.terminal-ui.extern.terminal`) ported with write,
   dimensions, cursor, clear, title, start/stop, and drain-input.
+
+---
+Fixed 24 tests: bracket mismatches (text_utils, box, undo_stack_test), Segmenter iterator protocol, Map.size property, strip-ansi, forward declarations, clojure.string requires, kill-ring rotate test, undo-stack structuredClone. Lint clean 0/0.
+---

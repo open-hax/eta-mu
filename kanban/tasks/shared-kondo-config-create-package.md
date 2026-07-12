@@ -69,7 +69,6 @@ pnpm lint:kondo
 ```
 
 ---
-
 ## Completion notes
 
 - Created:
@@ -91,7 +90,10 @@ pnpm lint:kondo
   - No `imports/` directory was created inside `packages/kondo-config`.
   - No `defroute` hook was added.
 - Status: done.
-
 ---
 
 **Review note (2026-06-15):** Shared package created; config resolves; hook uses api/reg-finding!.
+
+---
+Board audit 2026-07-12: DONE status nonfunctional in practice. packages/kondo-config/clj-kondo.exports/open-hax/kondo-config/config.edn is unbalanced EDN (map opened at the eta-mu.platform.boundary.js :config-in-ns entry never closed) — clj-kondo emits 'EOF while reading' and silently loads the shared config as nothing. Committed in 66bac20 (universal-agent-platform-dsl). Effect: await/DSL excludes never load, so 6 of 11 wired packages currently fail lint (axxium 7, event-ledger 9, extensions 13, katamorph 1, protocols 20 errors; runtime has 23 independent unused-binding warnings). Fixing the braces should clear 5 of the 6.
+---

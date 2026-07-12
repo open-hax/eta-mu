@@ -1,13 +1,14 @@
 ---
-uuid: "eta-mu-quality-ratchet-cli-startup-smoke"
-title: "Eta-mu Quality Ratchet — CLI Startup Smoke"
-status: "review"
-priority: "P0"
-labels: ["tasks", "quality", "startup", "extensions", "smoke", "3sp"]
-created_at: "2026-05-31T00:45:00Z"
-source: "kanban/epics/eta-mu-quality-ratchet.md"
-points: 3
 category: "tasks"
+labels: ["tasks", "quality", "startup", "extensions", "smoke", "3sp"]
+write-id: "1783693439450-0.vq0cs7uc79psxsdsij0"
+points: "3"
+source: "kanban/epics/eta-mu-quality-ratchet.md"
+title: "Eta-mu Quality Ratchet — CLI Startup Smoke"
+priority: "P0"
+status: "done"
+uuid: "eta-mu-quality-ratchet-cli-startup-smoke"
+created_at: "2026-05-31T00:45:00Z"
 ---
 
 # Eta-mu Quality Ratchet — CLI Startup Smoke
@@ -64,4 +65,6 @@ git diff --check
 
 ---
 Review verified 2026-06-13: validate-extension-paths.mjs exists and passes (15/15 paths valid, cljs-lisp-decomp-nudge confirmed). cli-smoke-test.mjs wired as package 'smoke' script. postbuild hook gates every build. Branch clean. Promoting to done. --tasks-dir /home/err/devel.latest/orgs/open-hax/eta-mu/kanban
+
+Triage 2026-07-10: body already recorded 'Review verified 2026-06-13, promoting to done'; frontmatter was stale. Walked review->document->done.
 ---

@@ -11,21 +11,25 @@
             [eta-mu.extern.process :as process]))
 
 (defn- ^:async fetch-chat
-  "POST to the OpenAI chat-completions endpoint and return the parsed JSON."
-  [api-key model messages tools]
+  "POST to the chat-completions endpoint and return the parsed JSON.
+
+  `base-url` is the full endpoint URL (defaults to OpenAI production).
+  `auth-token` is the Bearer token; if nil, no Authorization header is sent."
+  [base-url auth-token model messages tools]
   (let [body (cond-> {:model (:id model)
                          :messages (clj->js messages)
                          :stream false}
                  (seq tools) (assoc :tools (clj->js tools)))
-        response (await (js/fetch "https://api.openai.com/v1/chat/completions"
+        headers (cond-> {"Content-Type" "application/json"}
+                  auth-token (assoc "Authorization" (str "Bearer " auth-token)))
+        response (await (js/fetch base-url
                                   #js {:method "POST"
-                                       :headers #js {"Content-Type" "application/json"
-                                                     "Authorization" (str "Bearer " api-key)}
+                                       :headers (clj->js headers)
                                        :body (js/JSON.stringify (clj->js body))}))]
     (if (.-ok response)
       (js->clj (await (.json response)) :keywordize-keys true)
       (let [error (js->clj (await (.json response)) :keywordize-keys true)]
-        (throw (ex-info (str "OpenAI API error: " (pr-str error))
+        (throw (ex-info (str "LLM API error: " (pr-str error))
                         {:status (.-status response) :body error}))))))
 
 (defn- build-system-message
@@ -41,27 +45,33 @@
    {:api "openai" :provider "openai" :model (:id model)}))
 
 (defn ^:async stream-chat
-  "Create a turn-processor-compatible stream from an OpenAI chat-completions call.
+  "Create a turn-processor-compatible stream from an OpenAI-compatible chat-completions call.
 
   `model` is a map `{:id string :provider string}`.
   `llm-context` is `{:system-prompt string :messages [...] :tools [...]}`.
-  `options` may contain `:api-key`; otherwise `OPENAI_API_KEY` is read from the environment."
+  `options` may contain:
+    :api-key    — Bearer token (falls back to OPENAI_AUTH_TOKEN, then OPENAI_API_KEY)
+    :base-url   — full endpoint URL (falls back to OPENAI_BASE_URL,
+                  then https://api.openai.com/v1/chat/completions)"
   [model llm-context options]
-  (let [api-key (or (:api-key options) (process/env "OPENAI_API_KEY"))
+  (let [base-url (or (:base-url options)
+                     (process/env "OPENAI_BASE_URL")
+                     "https://api.openai.com/v1/chat/completions")
+        auth-token (or (:api-key options)
+                       (process/env "OPENAI_AUTH_TOKEN")
+                       (process/env "OPENAI_API_KEY"))
         system-prompt (:system-prompt llm-context)
         messages (:messages llm-context)
         messages (if (some? system-prompt)
                    (vec (cons (build-system-message system-prompt) messages))
                    messages)
-        tools (:tools llm-context)]
-    (if-not api-key
-      (throw (ex-info "OpenAI API key not provided. Pass :api-key or set OPENAI_API_KEY." {}))
-      (let [response (try
-                        (await (fetch-chat api-key model messages tools))
-                        (catch :default e
-                          {:error true :message (.-message e)}))]
-        (if (:error response)
-          #js {:next (fn [] (js/Promise.resolve #js {:done true}))
-               :result (fn [] (js/Promise.resolve (shape.msg/openai-error-message response {:model (:id model)})))}
-          #js {:next (fn [] (js/Promise.resolve #js {:done true}))
-               :result (fn [] (stream-result response model))})))))
+        tools (:tools llm-context)
+        response (try
+                   (await (fetch-chat base-url auth-token model messages tools))
+                   (catch :default e
+                     {:error true :message (.-message e)}))]
+    (if (:error response)
+      #js {:next (fn [] (js/Promise.resolve #js {:done true}))
+           :result (fn [] (js/Promise.resolve (shape.msg/openai-error-message response {:model (:id model)})))}
+      #js {:next (fn [] (js/Promise.resolve #js {:done true}))
+           :result (fn [] (stream-result response model))})))

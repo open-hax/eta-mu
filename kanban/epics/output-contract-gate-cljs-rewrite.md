@@ -1,13 +1,13 @@
 ---
 uuid: "output-contract-gate-cljs-rewrite"
 title: "Output Contract Gate CLJS Rewrite"
-status: "incoming"
-priority: P1
+status: "rejected"
+priority: "P1"
 labels: ["epics", "cljs", "rewrite", "legacy-ts", "output-contract-gate"]
 created_at: "2026-06-15T00:00:00Z"
 source: "user-request:2026-06-15"
 points: 8
-category: epics
+category: "epics"
 ---
 
 # Output Contract Gate CLJS Rewrite
@@ -99,14 +99,12 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 - `eta-mu-cljs-rewrite-boundary-adapters`
 
 ---
-
 ## Scheduling review (2026-06-15)
 
 - 1 task ready for breakdown: `output-contract-gate-cljs-rewrite-inventory`.
 - 10 tasks blocked: law schemas and domain core await inventory; extern adapters await inventory + core `boundary-adapters`; review/generation/artifacts/tests/cli-facade/parity/cutover each await preceding implementation tasks.
 - Current bottleneck: core program `eta-mu-cljs-rewrite-boundary-adapters` (in_progress) and inventory acceptance.
 - Concurrency: law-schemas and domain-core can proceed together once inventory is done; review/generation/artifact-infra can then run in parallel.
-
 ---
 
 ## Inventory review (2026-06-15)
@@ -136,7 +134,6 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 **Recommended next action:** Accept inventory and move `output-contract-gate-cljs-rewrite-law-schemas` to `ready`; port `src/types.ts` to `eta_mu.gate.law.contract` Malli schemas.
 
 ---
-
 ## Law + domain review (2026-06-15)
 
 **Reviewer:** human supervisor (me)
@@ -164,3 +161,4 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 - `output-contract-gate-cljs-rewrite-generation`, `output-contract-gate-cljs-rewrite-review`, and `output-contract-gate-cljs-rewrite-infra-artifacts` are blocked until extern adapters land.
 
 **Recommended next action:** Drive core `eta-mu-cljs-rewrite-boundary-adapters` to completion, then move `output-contract-gate-cljs-rewrite-extern-adapters` to `ready`.
+---

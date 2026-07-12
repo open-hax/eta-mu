@@ -1,7 +1,7 @@
 ---
 uuid: "github-cljs-rewrite-event-classifier"
 title: "GitHub CLJS Rewrite — Event Classifier"
-status: "blocked"
+status: icebox
 priority: "P1"
 labels: ["tasks", "cljs", "rewrite", "github"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "kanban/epics/github-cljs-rewrite.md"
 points: 2
 category: "tasks"
 ---
-
 # GitHub CLJS Rewrite — Event Classifier
 
 > Parent epic: `kanban/epics/github-cljs-rewrite.md`
@@ -47,5 +46,5 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 ```
 
 ---
-**Status note:** Blocked by `github-cljs-rewrite-inventory`, `github-cljs-rewrite-extern-adapters` (needs webhook payload schemas), and `eta-mu-cljs-rewrite-boundary-adapters` (boundary patterns still in progress).
+**Status note:** Blocked by `github-cljs-rewrite-inventory`, `github-cljs-rewrite-extern-adapters` (needs webhook payload schemas), and `eta-mu-cljs-rewrite-boundary-adapters` (done).
 ---

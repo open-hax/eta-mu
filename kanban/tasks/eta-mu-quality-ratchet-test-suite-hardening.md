@@ -1,15 +1,14 @@
 ---
 uuid: "eta-mu-quality-ratchet-test-suite-hardening"
 title: "Eta-mu Quality Ratchet — Test Suite Hardening"
-status: todo
-priority: P1
+status: icebox
+priority: "P1"
 labels: ["tasks", "quality", "testing", "flaky", "ci", "5sp"]
 created_at: "2026-05-31T00:45:00Z"
 source: "kanban/epics/eta-mu-quality-ratchet.md"
 points: 5
-category: tasks
+category: "tasks"
 ---
-
 # Eta-mu Quality Ratchet — Test Suite Hardening
 
 > Parent epic: `kanban/epics/eta-mu-quality-ratchet.md`

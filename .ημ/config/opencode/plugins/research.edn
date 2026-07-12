@@ -1,0 +1,6 @@
+{:tools
+ [{:id          :opencode/research-search
+   :capability  :capability/research-search
+   :name        "research_search"
+   :description "Search configured public sources."
+   :tags        #{:research :network}}]}

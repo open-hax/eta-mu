@@ -1,23 +1,5 @@
-# Π_MANIFEST — 2026-07-10T08:06:21Z
-# SHA256 hashes of key handoff artifacts and modified sources
-
-c7b4ebec76a46d1d15c38e9af7d9a92dfa9ec6a9b60a94856b6a4e44af97dc22  .ημ/Π_STATE.sexp
-0dd1ad8239d6e6587e9bf31e2c538ade0c8ccdc24398278fff14a44aea4305d2  .ημ/Π_LAST.md
-6831de2b4d35232725df02c3d84aee38be0f8d099e3615144d1d72b7aae6b8e5  .ημ/Π_DIFFSTAT.txt
-
-# Modified source files (owned by this snapshot)
-7f69162002f4e0bd20ee254028599dac6720ab27f165725ba89b0919fbe25f3c  packages/Rheos/src/rheos/ui/domain/board.cljs
-cd9a33657b1d7b23da0ed19083b31103f0f6131da1784a50cf1c7f581021b4f9  packages/Rheos/src/rheos/ui/domain/sidebar.cljs
-04f815bb30f3bf37a9eb51a3d96087475edaf381aa475069ea29d4a8ddb7cb55  packages/chat-ui/src/eta_mu/chat_ui/message.cljs
-
-# Entry points (unchanged by this snapshot)
-5a6be306c6390452fdb2f25dc4cb3611f9b49fbf06023d3595ede8d65d6e6c14  packages/Rheos/shadow-cljs.edn
-72dbdc7fb223905f0545076cdcf07c455d137c82b222ef725ec44f79df1d7bee  packages/chat-ui/shadow-cljs.edn
-
-# Source counts (unchanged by this snapshot)
-sol .cljs/.cljc files: 80
-katamorph .cljs/.cljc files: 32
-Rheos .cljs/.cljc files: 57
-chat-ui .cljs/.cljc files: 10
-runtime .cljs/.cljc files: 99
-
+1a8d13736851483264771440705cc202f3909541002509880382a78d29f3dc06  packages/eta-mu/dist-cli/index.cjs
+9a8f714ffb5e31f861249d06b001d6250950466c677e4835a0b8356eff2e7867  packages/eta-mu/package.json
+7855bb1c38b4aa4e95adbbda33bcd03b5f1ee9a868f20115ee384f8b9f137e3a  packages/kondo-config/clj-kondo.exports/open-hax/kondo-config/config.edn
+89a5b71dd0083f93ab4f307f4f8db23b794c27cc7bec3cdcf2df17497306c19a  receipts.edn
+dfe14a5452d0842b1a4b5f67305b46eb167c86e0a5f8d4bd5eef1259209cde9a  pnpm-lock.yaml

@@ -1,7 +1,7 @@
 ---
 uuid: "fsm-config-as-data-edn"
 title: "FSM: absorb .kanban config into .eta-mu edn"
-status: "incoming"
+status: "rejected"
 priority: "P1"
 labels: ["tasks", "cljs", "fsm", "kanban", "reconciliation", "config-as-data"]
 created_at: "2026-06-17T00:00:00Z"

@@ -1,13 +1,13 @@
 ---
 uuid: "output-contract-gate-cljs-rewrite-review"
 title: "Output Contract Gate CLJS Rewrite — Review Logic"
-status: "blocked"
-priority: P2
+status: "rejected"
+priority: "P2"
 labels: ["tasks", "cljs", "rewrite", "output-contract-gate"]
 created_at: "2026-06-15T00:00:00Z"
 source: "kanban/epics/output-contract-gate-cljs-rewrite.md"
 points: 4
-category: tasks
+category: "tasks"
 ---
 
 # Output Contract Gate CLJS Rewrite — Review Logic
@@ -35,5 +35,5 @@ Port the stub and GPT review logic from `src/review.ts` into pure CLJS domain co
 - [ ] No raw JS interop outside `extern.*` namespaces.
 
 ---
-
 > Blocked by `output-contract-gate-cljs-rewrite-law-schemas`, `output-contract-gate-cljs-rewrite-domain-core` (contract/markdown parsing), and `output-contract-gate-cljs-rewrite-extern-adapters` (extern.openai fetch wrapper).
+---

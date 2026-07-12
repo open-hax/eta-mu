@@ -1,7 +1,7 @@
 ---
 uuid: "docs-fix-axxium-readme"
 title: "Reconcile packages/axxium README with implemented surface and add to root docs"
-status: "incoming"
+status: icebox
 priority: "P1"
 labels: ["docs", "axxium", "identity", "3sp"]
 created_at: "2026-06-17T00:00:00Z"
@@ -9,7 +9,6 @@ source: "docs discovery sweep 2026-06-16"
 points: 3
 category: "tasks"
 ---
-
 # Reconcile packages/axxium README with implemented surface and add to root docs
 
 ## Context

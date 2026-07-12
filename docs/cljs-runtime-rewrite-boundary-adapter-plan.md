@@ -1,3 +1,6 @@
+> **Historical (2026-07-10):** this document references packages deleted in the monorepo
+> reorganization (`services/agentd`, `packages/opencode-reactant`, `packages/signal-*`,
+> pre-reorg `packages/kanban`). Retained as a decision/planning record; do not treat paths as current.
 # Eta-mu CLJS Runtime Rewrite — Boundary Adapter Plan
 
 Date: 2026-05-29

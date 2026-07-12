@@ -3,7 +3,8 @@
   (:require ["chokidar" :as chokidar]
             ["node:fs/promises" :as fsp]
             [rheos.backend.domain.events :as events]
-            [rheos.backend.infra.ledger :as ledger]))
+            [rheos.backend.infra.ledger :as ledger]
+            [rheos.backend.law.fsm :as fsm]))
 
 (defn- md? [^js p] (.endsWith p ".md"))
 
@@ -16,6 +17,10 @@
 
 (defn- extract-uuid [content]
   (let [match (re-find #"uuid:\s*\"([^\"]+)\"" content)]
+    (when match (nth match 1))))
+
+(defn- extract-status [content]
+  (let [match (re-find #"status:\s*\"([^\"]+)\"" content)]
     (when match (nth match 1))))
 
 (defn expect-write!
@@ -55,8 +60,16 @@
           (if-let [info (correlate-write write-id)]
             (if (= (:task-id info) uuid)
               (events/emit-file-changed! ledger board-id uuid write-id "correlated")
-              (events/emit-drift-detected! ledger board-id uuid write-id))
-            (events/emit-drift-detected! ledger board-id uuid write-id))))
+              (do
+                (events/emit-drift-detected! ledger board-id uuid write-id)
+                (let [status (extract-status content)
+                      valid? (and status (some #(= status %) (:states fsm/promethean-fsm)))]
+                  (events/emit-drift-protocol-rerun! ledger board-id uuid status (if valid? "valid" "invalid")))))
+            (do
+              (events/emit-drift-detected! ledger board-id uuid write-id)
+              (let [status (extract-status content)
+                    valid? (and status (some #(= status %) (:states fsm/promethean-fsm)))]
+                (events/emit-drift-protocol-rerun! ledger board-id uuid status (if valid? "valid" "invalid")))))))
       (catch :default err
         (js/console.error "Watcher error:" file-path (.-message err))))))
 

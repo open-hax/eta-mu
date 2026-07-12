@@ -33,6 +33,9 @@
      :text (:text payload)
      :write-id (:write-id payload)
      :correlation/status (:correlation/status payload)
+     :protocol (:protocol payload)
+     :status (:status payload)
+     :result (:result payload)
      :timestamp (or (:event/time envelope) (.toISOString (new js/Date)))
      :agent (or (:agent payload) "unknown")
      :details (:details payload)}))
@@ -125,6 +128,16 @@
                     {:task-id task-id :source "watcher" :agent "eta-mu"
                      :write-id (or write-id (generate-write-id))
                      :correlation/status "drift"})))
+
+(defn emit-drift-protocol-rerun!
+  [ledger board-id task-id status result]
+  (record!
+   ledger
+   (kanban-envelope board-id "drift-protocol-rerun"
+                    {:task-id task-id :source "watcher" :agent "eta-mu"
+                     :protocol "kanban.drift/fsm-status-check"
+                     :status status
+                     :result result})))
 
 (defn ^:async query-events
   "Return ledger events, optionally filtered. `filter-spec` is a Clojure map whose

@@ -1,7 +1,7 @@
 ---
 uuid: "fsm-ledger-fold-accepted-state"
 title: "FSM: ledger fold + frontmatter projection"
-status: "incoming"
+status: "rejected"
 priority: "P1"
 labels: ["tasks", "cljs", "fsm", "kanban", "reconciliation"]
 created_at: "2026-06-17T00:00:00Z"

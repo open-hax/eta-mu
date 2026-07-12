@@ -1,7 +1,7 @@
 ---
 uuid: "docs-consolidate-notes-index"
 title: "Consolidate docs/notes and add an index"
-status: "incoming"
+status: icebox
 priority: "P2"
 labels: ["docs", "notes", "cleanup", "3sp"]
 created_at: "2026-06-17T00:00:00Z"
@@ -9,7 +9,6 @@ source: "docs discovery sweep 2026-06-16"
 points: 3
 category: "tasks"
 ---
-
 # Consolidate docs/notes and add an index
 
 ## Context

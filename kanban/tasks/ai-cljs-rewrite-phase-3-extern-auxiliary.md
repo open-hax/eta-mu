@@ -1,15 +1,15 @@
 ---
-uuid: "ai-cljs-rewrite-phase-3-extern-auxiliary"
-title: "AI CLJS Rewrite — Auxiliary Provider Extern Adapters"
-status: "blocked"
-priority: "P1"
-labels: ["tasks", "cljs", "rewrite", "ai"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/ai-cljs-rewrite.md"
-points: 2
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "ai"]
+write-id: "1783693251133-0.ljpxlpmd8qkadr6d3a1"
+points: "2"
+source: "kanban/epics/ai-cljs-rewrite.md"
+title: "AI CLJS Rewrite — Auxiliary Provider Extern Adapters"
+priority: "P1"
+status: icebox
+uuid: "ai-cljs-rewrite-phase-3-extern-auxiliary"
+created_at: "2026-06-15T00:00:00Z"
 ---
-
 # AI CLJS Rewrite — Auxiliary Provider Extern Adapters
 
 > Parent epic: `kanban/epics/ai-cljs-rewrite.md`
@@ -50,5 +50,7 @@ node scripts/ts-line-count.mjs packages/legacy/ai
 ```
 
 ---
-Status updated to blocked: waiting for Phase 2 canonical message model and shared boundary-adapter conventions (core boundary-adapters task is still in_progress).
+Status updated to blocked: waiting for Phase 2 canonical message model and shared boundary-adapter conventions (core boundary-adapters task is done as of 2026-07-10).
+
+Unblocked: core boundary-adapters task completed 2026-07-10. Phase 2 canonical message model and shared conventions are in place. Ready to begin auxiliary provider extern adapter implementation (Mistral, Cloudflare, Faux, Copilot).
 ---

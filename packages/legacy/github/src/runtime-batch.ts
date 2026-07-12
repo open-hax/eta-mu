@@ -170,25 +170,35 @@ export const buildDraftActionBatch = (
   context: GitHubEventContext,
 ): EtaMuActionBatch => createActionBatch(buildPlanningContext(classification, context));
 
+export const DEFAULT_PUBLISH_TIMEOUT_MS = 30_000;
+
 export const publishActionBatch = async (
   controlPlaneUrl: string | undefined,
   record: EtaMuActionBatchRecord,
+  timeoutMs: number = DEFAULT_PUBLISH_TIMEOUT_MS,
 ): Promise<void> => {
   if (!controlPlaneUrl) {
     return;
   }
 
   const endpoint = new URL("/api/control-plane/action-batches", controlPlaneUrl).toString();
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      accept: "application/json",
-    },
-    body: JSON.stringify(record),
-  });
+  const controller = new AbortController();
+  const abortTimer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify(record),
+      signal: controller.signal,
+    });
 
-  if (!response.ok) {
-    throw new Error(`control plane action-batch publish failed: ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`control plane action-batch publish failed: ${response.status}`);
+    }
+  } finally {
+    clearTimeout(abortTimer);
   }
 }

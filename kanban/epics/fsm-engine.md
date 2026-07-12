@@ -1,7 +1,7 @@
 ---
 uuid: "fsm-engine"
 title: "Config-Driven FSM Engine"
-status: "breakdown"
+status: "rejected"
 priority: "P1"
 labels: ["epics", "cljs", "fsm", "kanban", "pluggable-checks"]
 created_at: "2026-06-08T00:00:00Z"

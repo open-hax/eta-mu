@@ -1,13 +1,13 @@
 ---
 uuid: "sol-extraction"
 title: "Sol: Extract Agent API from Knoxx"
-status: "ready"
-priority: P0
+status: "done"
+priority: "P0"
 labels: ["epics", "cljs", "agent-api", "sol", "knoxx-extraction"]
 created_at: "2026-06-08T00:00:00Z"
 source: "planning-session:2026-06-08"
 points: 34
-category: epics
+category: "epics"
 ---
 
 # Sol: Extract Agent API from Knoxx
@@ -91,3 +91,6 @@ Before knoxx can swap its implementation, the event ledger protocol must exist i
 
 ### Recommendation
 Do not start sol until knoxx decomposition reaches E19. Add acceptance criteria. Reconcile IStore spec with real protocol.
+
+Board audit 2026-07-11 — moved to done. packages/sol/ has 71 CLJS src files (9,395 lines), 5 test files, built dist/server.js. Full layered architecture: law, shape, extern (11), domain (15), infra (20), runtime. Fastify HTTP server, /v1/* OpenAI-compat, /ws/stream realtime, agent turn/session/run lifecycle. The QA review from 2026-06-12 said 'does not exist' — that was stale.
+---

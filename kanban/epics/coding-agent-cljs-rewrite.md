@@ -1,7 +1,7 @@
 ---
 uuid: "coding-agent-cljs-rewrite"
 title: "Coding Agent Package CLJS Rewrite"
-status: "incoming"
+status: "breakdown"
 priority: "P0"
 labels: ["epics", "cljs", "rewrite", "legacy-ts", "coding-agent"]
 created_at: "2026-06-15T00:00:00Z"
@@ -146,7 +146,6 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 **Recommended next action:** Keep inventories in `review` pending human sign-off, and drive `eta-mu-cljs-rewrite-boundary-adapters`, `agent-cljs-rewrite`, `ai-cljs-rewrite-phase-2-canonical-model`, and `tui-cljs-rewrite-terminal-extern` to unblock implementation.
 
 ---
-
 ## FS/Git/Bash extern adapters review (2026-06-15)
 
 **Reviewer:** human supervisor (me)
@@ -174,7 +173,6 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 - `coding-agent-cljs-rewrite-domain-session-law` remains partially blocked on `AgentSession` class/agent-loop parity, but standalone session-store/session-cwd/diagnostics law is ready.
 
 **Recommended next action:** Dispatch `coding-agent-cljs-rewrite-messages-diagnostics-law` and `coding-agent-cljs-rewrite-domain-tools-law` to continue clearing pure-domain slices while agent/AI/TUI externs are built.
-
 ---
 
 ## Session domain & law review (2026-06-15)
@@ -201,4 +199,9 @@ pnpm --dir packages/eta-mu-runtime cljs:verify
 **Recommended next action:** Continue with `coding-agent-cljs-rewrite-messages-diagnostics-law` (already partially covered) and `coding-agent-cljs-rewrite-domain-tools-law` to clear more pure-domain slices.
 
 ---
+Triage 2026-07-12: the priority epic. Phases 1-2 inventories hold; domain/law slices (session, tools, extensions) hold; fs/git/bash externs hold; session-manager infra holds. Known drift: messages-diagnostics-law was marked done but only the diagnostics slice exists — messages.ts port, output-guard, and message DTO shapes are missing (see card comment); recommend reopening or cutting a corrected follow-up card. Critical-path blockers to phases 4-6: agent-loop parity (agent-cljs-rewrite / turn-processor decision), provider streaming (ai-cljs-rewrite), and terminal-ui (only 1 of 4 scoped externs exists). Recommended dispatch order: 1) messages/output-guard slice (pure, unblocked), 2) SSE streaming extern, 3) terminal-ui stdin/keys/ansi externs, 4) infra phase 4 continuation.
 
+Retargeted 2026-07-12 per decision: goal is 'npm install -g eta-mu' delivering a CLI equivalent to the published stable eta-mu, implemented in CLJS in packages/eta-mu (+ turn-processor, terminal-ui). Dropped constraints: TS interop, JSON config compatibility, legacy package/binary contract preservation, monotonic-TS-line-count ceremony. Once logic is in CLJS somewhere, moving it later is cheap. Gap analysis toward publish parity follows as a comment.
+
+Gap analysis toward 'npm install -g eta-mu' (2026-07-12), in dependency order: 1) PUBLISH MECHANICS — fixed today: workspace deps moved to devDependencies (release bundle is self-contained, Node built-ins only); npm pack + global tarball install verified (eta-mu --version, help). Follow-up card: eta-mu-npm-publish-readiness (ready, P0). 2) AGENT TOOLS — the CLJS agent runs with :tools [] ; read/bash/edit/write do not exist. New card: eta-mu-agent-tools (ready, P0). This is the critical gap. 3) SSE STREAMING — ai-cljs-rewrite-phase-3-extern-openai (ready, P0, re-scoped). 4) SESSION PERSISTENCE in the agent flow — session command exists; agent loop does not persist; break down next. 5) TERMINAL UI — terminal-ui-cljs-package (breakdown, P1); REPL is the interim surface. Also fixed today: shared kondo-config config.edn unbalanced brace; axxium/event-ledger/extensions/katamorph/protocols lint clean again.
+---

@@ -1,7 +1,7 @@
 ---
 uuid: "agent-cljs-rewrite-phase-5-cutover-ratchet"
 title: "Agent CLJS Rewrite — Cutover Ratchet"
-status: "blocked"
+status: icebox
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "agent"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "kanban/epics/agent-cljs-rewrite.md"
 points: 2
 category: "tasks"
 ---
-
 # Agent CLJS Rewrite — Cutover Ratchet
 
 > Parent epic: `kanban/epics/agent-cljs-rewrite.md`

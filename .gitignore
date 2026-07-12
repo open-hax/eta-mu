@@ -57,3 +57,9 @@ packages/legacy/kanban/playwright-report/
 
 # TypeScript line-count baseline (local state)
 .ts-line-count-baseline
+
+# Generated OpenCode host artifacts
+.opencode/
+
+# Core dumps
+core

@@ -1,13 +1,13 @@
 ---
 uuid: "output-contract-gate-cljs-rewrite-infra-artifacts"
 title: "Output Contract Gate CLJS Rewrite — Artifact Infra"
-status: "blocked"
-priority: P2
+status: "rejected"
+priority: "P2"
 labels: ["tasks", "cljs", "rewrite", "output-contract-gate"]
 created_at: "2026-06-15T00:00:00Z"
 source: "kanban/epics/output-contract-gate-cljs-rewrite.md"
 points: 4
-category: tasks
+category: "tasks"
 ---
 
 # Output Contract Gate CLJS Rewrite — Artifact Infra
@@ -36,5 +36,5 @@ Port artifact writing from `src/artifacts.ts` into `eta_mu.gate.infra.*` using t
 - [ ] All file I/O goes through `extern.fs`.
 
 ---
-
 > Blocked by `output-contract-gate-cljs-rewrite-extern-adapters`: artifact writing depends on the FS/crypto/EDN extern adapters.
+---

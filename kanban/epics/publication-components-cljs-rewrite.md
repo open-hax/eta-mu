@@ -1,13 +1,13 @@
 ---
 uuid: "publication-components-cljs-rewrite"
 title: "Publication Components CLJS Rewrite"
-status: "incoming"
-priority: P3
+status: "rejected"
+priority: "P3"
 labels: ["epics", "cljs", "rewrite", "legacy-ts", "publication-components", "react"]
 created_at: "2026-06-15T00:00:00Z"
 source: "user-request:2026-06-15"
 points: 5
-category: epics
+category: "epics"
 ---
 
 # Publication Components CLJS Rewrite
@@ -86,14 +86,12 @@ node scripts/ts-line-count.mjs packages/legacy/publication-components
 - `eta-mu-cljs-runtime-rewrite` (web boundary patterns)
 
 ---
-
 ## Scheduling review (2026-06-15)
 
 - 1 task ready for breakdown: `publication-components-cljs-rewrite-inventory`.
 - 7 tasks blocked: law-shape awaits inventory; component tasks await law-shape; blocks-renderer also depends on audio-player/studio-playlist; build-facade awaits component ports; verification awaits everything.
 - Current bottleneck: inventory acceptance (consumer/build-target map).
 - Concurrency: after law-shape, MusicPlayerView, PlaylistQueueList, and audio widgets can proceed in parallel; PublicationBlocksRenderer follows audio widgets.
-
 ---
 
 ## Inventory review (2026-06-15)
@@ -121,7 +119,6 @@ node scripts/ts-line-count.mjs packages/legacy/publication-components
 **Recommended next action:** Accept inventory and move `publication-components-cljs-rewrite-law-shape` to `ready`; define Malli schemas for publication blocks, tracks, player props, and permissions.
 
 ---
-
 ## Law-shape review (2026-06-15)
 
 **Reviewer:** human supervisor (me)
@@ -144,3 +141,4 @@ node scripts/ts-line-count.mjs packages/legacy/publication-components
 - The first component task should also establish shared `eta_mu.garden.extern.react` and `eta_mu.garden.extern.uxx` adapters for the others to reuse.
 
 **Recommended next action:** Move `publication-components-cljs-rewrite-music-player` to `ready` and port it, creating the shared React/UXX extern adapters in the process.
+---

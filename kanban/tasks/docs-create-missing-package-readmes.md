@@ -1,7 +1,7 @@
 ---
 uuid: "docs-create-missing-package-readmes"
 title: "Create missing package READMEs for active CLJS packages"
-status: "incoming"
+status: icebox
 priority: "P1"
 labels: ["docs", "packages", "readme", "8sp"]
 created_at: "2026-06-17T00:00:00Z"
@@ -9,7 +9,6 @@ source: "docs discovery sweep 2026-06-16"
 points: 8
 category: "tasks"
 ---
-
 # Create missing package READMEs for active CLJS packages
 
 ## Context

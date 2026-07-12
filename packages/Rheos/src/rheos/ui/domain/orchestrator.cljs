@@ -8,10 +8,12 @@
   (:require [helix.core :as hx :refer [defnc $]]
             [helix.hooks :as hooks]
             [helix.dom :as d]
-            [eta-mu.chat-ui.knoxx-session :as knoxx]
-            [eta-mu.chat-ui.mock-session :as mock]
-            [eta-mu.chat-ui.panel :as chat-panel]
+   [eta-mu.chat-ui.knoxx-session :as knoxx]
+   [eta-mu.chat-ui.mock-session :as mock]
+   [eta-mu.chat-ui.opencode-session :as opencode]
+   [eta-mu.chat-ui.panel :as chat-panel]
             [eta-mu.chat-ui.protocol :as chat-protocol]
+            [eta-mu.chat-ui.sol-session :as sol]
             [rheos.ui.infra.chat-session :as rheos-chat]))
 
 (defn- default-knoxx-base-url []
@@ -19,15 +21,30 @@
         (some-> js/window .-location .-origin))
       "http://127.0.0.1:8000"))
 
+(defn- default-sol-base-url []
+  (or (when (exists? js/window)
+        (some-> js/window .-location .-origin))
+      "http://127.0.0.1:8001"))
+
+(defn- default-opencode-base-url []
+  (or (when (exists? js/window)
+        (some-> js/window .-location .-origin))
+      "http://127.0.0.1:8001"))
+
 (defn- create-session
   "Create an IChatSession for the orchestrator panel.
-   backend: knoxx | mock | rheos (default).
-   chat-config: optional map passed to the knoxx session (base-url, api-key, agent-id, model)."
+   backend: knoxx | sol | opencode | mock | rheos (default).
+   chat-config: optional map passed to the backend session (base-url, api-key, agent-id, model)."
   [backend chat-config]
   (case backend
     "knoxx" (knoxx/create-knoxx-session (merge {:base-url (default-knoxx-base-url)
                                                  :chat-path "/api/knoxx/chat"}
                                                 chat-config))
+    "sol" (sol/create-sol-session (merge {:base-url (default-sol-base-url)
+                                          :prefix "/api/agent"}
+                                         chat-config))
+    "opencode" (opencode/create-opencode-session (merge {:base-url (default-opencode-base-url)}
+                                                         chat-config))
     "mock" (mock/create-mock-session)
     (rheos-chat/create-session)))
 

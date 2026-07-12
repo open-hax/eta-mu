@@ -1,7 +1,7 @@
 ---
 uuid: "docs-refresh-legacy-package-readmes"
 title: "Refresh legacy package READMEs with deprecation banners and path fixes"
-status: "incoming"
+status: icebox
 priority: "P1"
 labels: ["docs", "legacy", "readme", "8sp"]
 created_at: "2026-06-17T00:00:00Z"
@@ -9,7 +9,6 @@ source: "docs discovery sweep 2026-06-16"
 points: 8
 category: "tasks"
 ---
-
 # Refresh legacy package READMEs with deprecation banners and path fixes
 
 ## Context

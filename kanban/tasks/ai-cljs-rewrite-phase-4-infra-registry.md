@@ -1,7 +1,7 @@
 ---
 uuid: "ai-cljs-rewrite-phase-4-infra-registry"
 title: "AI CLJS Rewrite — Infra, Registry, and Model Catalog"
-status: "blocked"
+status: icebox
 priority: "P1"
 labels: ["tasks", "cljs", "rewrite", "ai"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "kanban/epics/ai-cljs-rewrite.md"
 points: 4
 category: "tasks"
 ---
-
 # AI CLJS Rewrite — Infra, Registry, and Model Catalog
 
 > Parent epic: `kanban/epics/ai-cljs-rewrite.md`

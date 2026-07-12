@@ -1,7 +1,7 @@
 ---
 uuid: "docs-fix-sol-knoxx-artifacts"
 title: "Fix packages/sol documentation and remove Knoxx-copied artifacts"
-status: "incoming"
+status: icebox
 priority: "P1"
 labels: ["docs", "sol", "knoxx", "5sp"]
 created_at: "2026-06-17T00:00:00Z"
@@ -9,7 +9,6 @@ source: "docs discovery sweep 2026-06-16"
 points: 5
 category: "tasks"
 ---
-
 # Fix packages/sol documentation and remove Knoxx-copied artifacts
 
 ## Context

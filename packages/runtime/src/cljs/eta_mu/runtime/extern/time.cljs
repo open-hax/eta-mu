@@ -27,3 +27,8 @@
 
     :else
     (now-ms)))
+
+(defn parse-date
+  "Parse an ISO timestamp string to a Date object."
+  [timestamp]
+  (js/Date. timestamp))

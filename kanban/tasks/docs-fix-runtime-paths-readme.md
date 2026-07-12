@@ -1,7 +1,7 @@
 ---
 uuid: "docs-fix-runtime-paths-readme"
 title: "Fix packages/runtime README and stale eta-mu-runtime path references"
-status: "incoming"
+status: icebox
 priority: "P1"
 labels: ["docs", "runtime", "paths", "3sp"]
 created_at: "2026-06-17T00:00:00Z"
@@ -9,7 +9,6 @@ source: "docs discovery sweep 2026-06-16"
 points: 3
 category: "tasks"
 ---
-
 # Fix packages/runtime README and stale eta-mu-runtime path references
 
 ## Context

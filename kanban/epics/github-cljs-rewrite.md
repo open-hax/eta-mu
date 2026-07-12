@@ -1,7 +1,7 @@
 ---
 uuid: "github-cljs-rewrite"
 title: "GitHub Package CLJS Rewrite"
-status: "incoming"
+status: icebox
 priority: "P0"
 labels: ["epics", "cljs", "rewrite", "legacy-ts", "github"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "user-request:2026-06-15"
 points: 8
 category: "epics"
 ---
-
 # GitHub Package CLJS Rewrite
 
 > Package: `packages/legacy/github` (`@open-hax/eta-mu-github`)

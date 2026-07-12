@@ -1,13 +1,14 @@
 ---
-uuid: "tui-cljs-rewrite-test-parity"
-title: "TUI CLJS Rewrite — Test Parity and Coverage"
-status: "blocked"
-priority: "P1"
-labels: ["tasks", "cljs", "rewrite", "tui"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/tui-cljs-rewrite.md"
-points: 3
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "tui"]
+write-id: "1783693466421-0.z7jlfjpr368yzu3efp"
+points: "3"
+source: "kanban/epics/tui-cljs-rewrite.md"
+title: "TUI CLJS Rewrite — Test Parity and Coverage"
+priority: "P1"
+status: "rejected"
+uuid: "tui-cljs-rewrite-test-parity"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # TUI CLJS Rewrite — Test Parity and Coverage
@@ -43,4 +44,6 @@ pnpm --dir packages/eta-mu-tui cljs:coverage
 
 ---
 Blocked by `tui-cljs-rewrite-core-tui`, `tui-cljs-rewrite-input-editor`, `tui-cljs-rewrite-markdown-overlays`, and `tui-cljs-rewrite-utilities` (within-epic): tests cannot reach parity until all ported modules exist and are individually verifiable.
+
+Triage 2026-07-10: superseded by terminal-ui-cljs-package (2026-07-09 decision to build packages/terminal-ui); this epic's scope maps 1:1 onto that card's open work items. Closed as superseded, not abandoned.
 ---

@@ -134,6 +134,18 @@
     (catch :default err
       (js/console.error "Save failed:" err))))
 
+(defn- ^:async post-comment! [task-uuid project text on-update]
+  (try
+    (let [res (await (js/fetch (str "/api/task/" (js/encodeURIComponent task-uuid) "/comment?project=" (js/encodeURIComponent (or project "")))
+                               #js {:method "POST"
+                                    :headers #js {"Content-Type" "application/json"}
+                                    :body (js/JSON.stringify #js {:text text})}))]
+      (when (.-ok res)
+        (let [data (await (.json res))]
+          (when on-update (on-update data)))))
+    (catch :default err
+      (js/console.error "Comment failed:" err))))
+
 ;; ---------------------------------------------------------------------------
 ;; Sidebar component
 ;; ---------------------------------------------------------------------------
@@ -143,6 +155,7 @@
         source-path (or (get task "sourcePath") (get detail "sourcePath"))
         [editing-field set-editing-field] (hooks/use-state nil)
         [edit-value set-edit-value] (hooks/use-state "")
+        [new-comment set-new-comment] (hooks/use-state "")
         handle-edit (fn [key value]
                       (set-editing-field key)
                       (set-edit-value value))
@@ -158,7 +171,12 @@
                       ;; would let the sidebar set statuses drag-and-drop rejects.
                       (if (= key "status")
                         (when on-status (on-status value))
-                        (patch-frontmatter! task-uuid (get task "sourceBoard" "") key value on-update)))]
+                        (patch-frontmatter! task-uuid (get task "sourceBoard" "") key value on-update)))
+        handle-submit (fn []
+                        (let [text (str/trim new-comment)]
+                          (when (seq text)
+                            (post-comment! task-uuid (get task "sourceBoard" "") text on-update)
+                            (set-new-comment ""))))]
     ;; Fills the flex slot the layout gives it; the content area below owns the scroll.
     (d/div {:style {:width "100%" :height "100%" :border-left "1px solid var(--token-colors-border-default)" :background "var(--token-colors-background-surface)" :overflow "hidden" :display "flex" :flex-direction "column"}}
 
@@ -212,6 +230,19 @@
                     (d/div {:key (str "comment-" i) :style {:background "var(--token-colors-background-surface)" :border "1px solid var(--token-colors-border-subtle)" :border-left "3px solid var(--token-colors-text-accent)" :border-radius "6px" :padding "8px 12px" :margin-bottom "8px" :font-size "13px" :line-height "1.6" :color "var(--token-colors-text-soft)" :white-space "pre-wrap"}}
                       (get section "content"))))
                 (get detail "sections"))))
+          ;; Add comment
+          (d/div {:style {:padding "12px 16px" :border-bottom "1px solid var(--token-colors-border-subtle)"}}
+            (d/div {:style {:font-size "11px" :font-weight "700" :color "var(--token-colors-text-muted)" :text-transform "uppercase" :letter-spacing "0.05em" :margin-bottom "8px"}}
+              "Add comment")
+            (d/textarea {:value new-comment
+                         :onChange #(set-new-comment (.. % -target -value))
+                         :placeholder "Write a comment…"
+                         :rows 3
+                         :style {:width "100%" :background "var(--token-colors-background-default)" :color "var(--token-colors-text-default)" :border "1px solid var(--token-colors-border-default)" :border-radius "4px" :padding "8px" :font-size "12px" :resize "vertical"}})
+            (d/button {:onClick handle-submit
+                       :disabled (not (seq (str/trim new-comment)))
+                       :style {:margin-top "8px" :align-self "flex-start" :padding "6px 12px" :border-radius "6px" :border "1px solid var(--token-colors-border-default)" :background "var(--token-colors-button-secondary-bg)" :color "var(--token-colors-button-secondary-fg)" :cursor "pointer" :font-size "12px"}}
+              "Comment"))
           ;; Source path
           (when source-path
             (d/div {:style {:padding "8px 16px" :font-size "11px" :color "var(--token-colors-text-muted)" :word-break "break-all"}}

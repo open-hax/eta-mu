@@ -131,6 +131,40 @@
 
 ;; ── Plugin builders ────────────────────────────────────────────────────────
 
+;; ── Result coercion ────────────────────────────────────────────────────────
+
+(defn- result->string
+  "Coerce an eta-mu extension result to the string OpenCode expects.
+
+  Extension tools return #js {:content #js [#js {:type \"text\" :text text}]}.
+  OpenCode's tool.execute must return Promise<string>."
+  [result]
+  (cond
+    (nil? result) ""
+
+    (string? result) result
+
+    (.-content ^js result)
+    (let [content (.-content ^js result)]
+      (if (array? content)
+        (->> (array-seq content)
+             (map #(or (.-text ^js %) (pr-str %)))
+             (clojure.string/join "\n"))
+        (pr-str result)))
+
+    :else (pr-str result)))
+
+(defn- wrap-execute
+  "Wrap an extension execute function to return a string for OpenCode."
+  [exec]
+  (fn [args ctx]
+    (try
+      (-> (exec nil args (aget ctx "abort") nil (adapt-ctx ctx))
+          ->promise
+          (.then result->string))
+      (catch :default e
+        (js/Promise.resolve (str "Error: " (ex-message e)))))))
+
 (defn build-tool
   "Create an OpenCode tool definition from an eta-mu tool spec."
   [tool-helper spec]
@@ -140,8 +174,7 @@
     (tool-helper
       #js {:description (or (:description spec) (:label spec) (:name spec))
            :args (build-args-schema z params)
-           :execute (fn [args ctx]
-                      (exec nil args (aget ctx "abort") nil (adapt-ctx ctx)))})))
+           :execute (wrap-execute exec)})))
 
 (defn build-event-handler
   "Create a generic OpenCode event handler from eta-mu event specs.

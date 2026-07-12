@@ -1,7 +1,7 @@
 ---
 uuid: "fsm-harness-auto-verify"
 title: "FSM Harness Auto-Verification"
-status: "incoming"
+status: "rejected"
 priority: "P2"
 labels: ["tasks", "cljs", "fsm", "kanban", "pluggable-checks"]
 created_at: "2026-06-17T00:00:00Z"

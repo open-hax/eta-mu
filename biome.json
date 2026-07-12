@@ -2,23 +2,22 @@
   "$schema": "https://biomejs.dev/schemas/2.3.5/schema.json",
   "files": {
     "includes": [
-      "packages/eta-mu-extensions/**/*.ts",
-      "packages/eta-mu-extensions/**/*.mjs",
-      "packages/eta-mu-runtime/**/*.ts",
-      "packages/eta-mu-github/**/*.ts",
-      "packages/coding-agent/src/**/*.ts",
-      "packages/coding-agent/test/**/*.ts",
-      "packages/presence-core/**/*.ts",
-      "packages/kanban/**/*.ts",
-      "packages/signal-*/**/*.ts",
-      "packages/agent/**/*.ts",
-      "packages/ai/**/*.ts",
-      "packages/tui/**/*.ts",
-      "packages/chat-ui/src/**/*.ts",
-      "packages/chat-ui/src/**/*.tsx",
+      "packages/extensions/**/*.ts",
+      "packages/extensions/**/*.mjs",
+      "packages/runtime/**/*.ts",
+      "packages/legacy/github/**/*.ts",
+      "packages/legacy/coding-agent/src/**/*.ts",
+      "packages/legacy/coding-agent/test/**/*.ts",
+      "packages/legacy/kanban/**/*.ts",
+      "packages/legacy/agent/**/*.ts",
+      "packages/legacy/ai/**/*.ts",
+      "packages/legacy/tui/**/*.ts",
       "scripts/**/*.mjs",
       "biome.json",
-      "package.json"
+      "package.json",
+      "!**/dist/**",
+      "!**/target/**",
+      "!**/.shadow-cljs/**"
     ]
   },
   "formatter": {
@@ -58,20 +57,16 @@
       }
     },
     "includes": [
-      "packages/eta-mu-extensions/**/*.ts",
-      "packages/eta-mu-extensions/**/*.mjs",
-      "packages/eta-mu-runtime/**/*.ts",
-      "packages/eta-mu-github/**/*.ts",
-      "packages/coding-agent/src/**/*.ts",
-      "packages/coding-agent/test/**/*.ts",
-      "packages/presence-core/**/*.ts",
-      "packages/kanban/**/*.ts",
-      "packages/signal-*/**/*.ts",
-      "packages/agent/**/*.ts",
-      "packages/ai/**/*.ts",
-      "packages/tui/**/*.ts",
-      "packages/chat-ui/src/**/*.ts",
-      "packages/chat-ui/src/**/*.tsx",
+      "packages/extensions/**/*.ts",
+      "packages/extensions/**/*.mjs",
+      "packages/runtime/**/*.ts",
+      "packages/legacy/github/**/*.ts",
+      "packages/legacy/coding-agent/src/**/*.ts",
+      "packages/legacy/coding-agent/test/**/*.ts",
+      "packages/legacy/kanban/**/*.ts",
+      "packages/legacy/agent/**/*.ts",
+      "packages/legacy/ai/**/*.ts",
+      "packages/legacy/tui/**/*.ts",
       "scripts/**/*.mjs"
     ]
   },
@@ -93,6 +88,23 @@
         "rules": {
           "suspicious": {
             "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/legacy/**"],
+      "formatter": {
+        "enabled": false
+      },
+      "assist": {
+        "enabled": false
+      },
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noEmptyInterface": "warn",
+            "noAsyncPromiseExecutor": "warn"
           }
         }
       }

@@ -1,14 +1,15 @@
 ---
-uuid: "fsm-provenance-filtering"
-title: "FSM: provenance filtering of self-writes"
-status: "incoming"
-priority: "P1"
-labels: ["tasks", "cljs", "fsm", "kanban", "reconciliation"]
-created_at: "2026-06-17T00:00:00Z"
-source: "kanban/epics/fsm-engine.md"
-points: 3
 category: "tasks"
+labels: ["tasks", "cljs", "fsm", "kanban", "reconciliation"]
 parent: "fsm-engine"
+write-id: "1783693440913-0.nrsjnx6b719jiern3ms"
+points: "3"
+source: "kanban/epics/fsm-engine.md"
+title: "FSM: provenance filtering of self-writes"
+priority: "P1"
+status: "done"
+uuid: "fsm-provenance-filtering"
+created_at: "2026-06-17T00:00:00Z"
 ---
 
 # FSM: provenance filtering of self-writes
@@ -28,3 +29,7 @@ Distinguish engine/workflow writes from external edits via `:write-id` +
 - [ ] Unit tests: self-write skipped, external edit processed, intermediate-state
       write not self-rejected.
 - [ ] Zero clj-kondo warnings; Rheos tests pass.
+
+---
+Triage 2026-07-10: done-in-fact in Rheos — write-id provenance (transition.cljs), register-cli-event! (task_edit.cljs), watcher drift detection (events.cljs) all implemented. Walked incoming->done via lawful FSM path.
+---

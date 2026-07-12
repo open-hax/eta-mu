@@ -8,28 +8,18 @@ import {
   etaMuPlanningContextSchema,
   type MuCandidate,
   muCandidateSchema,
-  panelNameSchema,
   type PanelName,
+  panelNameSchema,
 } from "./types.js";
 
-function normalizeContext(
-  context: EtaMuPlanningContextInput,
-): EtaMuPlanningContext {
+function normalizeContext(context: EtaMuPlanningContextInput): EtaMuPlanningContext {
   return etaMuPlanningContextSchema.parse(context);
 }
 
-export function selectPanelsFromContext(
-  contextInput: EtaMuPlanningContextInput,
-): PanelName[] {
-  return panelNameSchema.array().parse(
-    selectPanelsFromContextCljs(normalizeContext(contextInput)),
-  );
+export function selectPanelsFromContext(contextInput: EtaMuPlanningContextInput): PanelName[] {
+  return panelNameSchema.array().parse(selectPanelsFromContextCljs(normalizeContext(contextInput)));
 }
 
-export function rankCheapMuCandidates(
-  contextInput: EtaMuPlanningContextInput,
-): MuCandidate[] {
-  return muCandidateSchema.array().parse(
-    rankCheapMuCandidatesCljs(normalizeContext(contextInput)),
-  );
+export function rankCheapMuCandidates(contextInput: EtaMuPlanningContextInput): MuCandidate[] {
+  return muCandidateSchema.array().parse(rankCheapMuCandidatesCljs(normalizeContext(contextInput)));
 }

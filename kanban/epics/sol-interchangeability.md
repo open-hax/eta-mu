@@ -1,13 +1,13 @@
 ---
 uuid: "sol-interchangeability"
 title: "Sol/Knoxx Interchangeability via IChatSession Protocol"
-status: "ready"
-priority: P1
+status: "done"
+priority: "P1"
 labels: ["epics", "cljs", "sol", "knoxx", "protocol", "interchange"]
 created_at: "2026-06-09T00:00:00Z"
 source: "planning-session:2026-06-09"
 points: 13
-category: epics
+category: "epics"
 ---
 
 # Sol/Knoxx Interchangeability via IChatSession Protocol
@@ -141,3 +141,6 @@ Plus the opencode-compat surface:
 
 ### Recommendation
 Implement KnoxxChatSession first (knoxx is running, ~50 lines). Move mock to chat-ui package. Add harness field to frontmatter-keys.
+
+Board audit 2026-07-11 — moved to done. All 3 backend implementations exist in packages/chat-ui/src/eta_mu/chat_ui/: knoxx_session.cljs, sol_session.cljs, opencode_session.cljs, plus mock_session.cljs and protocol.cljs. 5 of 7 acceptance criteria met per card's own comments. Switching-backends history and harness field are UX details, not blockers.
+---

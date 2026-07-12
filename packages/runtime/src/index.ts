@@ -12,19 +12,6 @@ export {
   createEtaMuState,
   DEFAULT_ETA_BELIEF,
 } from "./state.js";
-export {
-  breathEpisodeSchema,
-  breathRecommendationSchema,
-  costClassSchema,
-  etaBeliefSchema,
-  etaMuActionBatchSchema,
-  etaMuPlanningContextSchema,
-  etaMuStateSchema,
-  muCandidateKindSchema,
-  muCandidateSchema,
-  panelNameSchema,
-  reversibilitySchema,
-} from "./types.js";
 export type {
   BreathEpisode,
   BreathRecommendation,
@@ -38,4 +25,17 @@ export type {
   MuCandidateKind,
   PanelName,
   Reversibility,
+} from "./types.js";
+export {
+  breathEpisodeSchema,
+  breathRecommendationSchema,
+  costClassSchema,
+  etaBeliefSchema,
+  etaMuActionBatchSchema,
+  etaMuPlanningContextSchema,
+  etaMuStateSchema,
+  muCandidateKindSchema,
+  muCandidateSchema,
+  panelNameSchema,
+  reversibilitySchema,
 } from "./types.js";

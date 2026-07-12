@@ -1,13 +1,13 @@
 ---
 uuid: "output-contract-gate-cljs-rewrite-parity-tests"
 title: "Output Contract Gate CLJS Rewrite — Parity Tests"
-status: "blocked"
-priority: P1
+status: "rejected"
+priority: "P1"
 labels: ["tasks", "cljs", "rewrite", "output-contract-gate"]
 created_at: "2026-06-15T00:00:00Z"
 source: "kanban/epics/output-contract-gate-cljs-rewrite.md"
 points: 4
-category: tasks
+category: "tasks"
 ---
 
 # Output Contract Gate CLJS Rewrite — Parity Tests
@@ -34,5 +34,5 @@ Run the full existing test suite against the CLJS-backed implementation and reso
 - [ ] `pnpm --dir packages/eta-mu-runtime cljs:verify` exits 0.
 
 ---
-
 > Blocked by `output-contract-gate-cljs-rewrite-cli-facade` and `output-contract-gate-cljs-rewrite-conversion-tests`.
+---

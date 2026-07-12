@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-rewrite-architecture-inventory"
 title: "Eta-mu CLJS Rewrite — Architecture Inventory"
-status: "review"
+status: review
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "inventory", "5sp"]
 created_at: "2026-05-29T21:18:48Z"
@@ -48,13 +48,11 @@ pnpm --dir packages/legacy/output-contract-gate test
 pnpm -C packages/extensions test
 pnpm lint
 ```
----
 
+---
 ## Planning inventory drafted
 
 Planning inventory drafted at docs/cljs-runtime-rewrite-architecture-inventory.md. It classifies package surfaces, target domain/shape/law/infra/extern ownership, boundary hotspots, deferred packages, agent skill surface, and the first three parity slices: runtime, output-contract-gate, and coding-agent message/session core.
-
-
 ---
 
 **Update 2026-06-16.** Inventory refreshed after the monorepo reorg. Addressed the 2026-06-13 review gaps:
@@ -65,9 +63,7 @@ Planning inventory drafted at docs/cljs-runtime-rewrite-architecture-inventory.m
 
 Status moved to `review` for human verification; not closed.
 
-
 ---
-
 **Session 2026-06-16 clarification.** All CLJS rewrites remain maximum priority. This inventory is a living map; "deferred" means those packages are intentionally postponed in the rewrite ordering, not cancelled or descoped. The deferred list should be revisited as dependency pressure changes (e.g., when `runtime`, `sol`, or `extensions` need one of them).
 
 **Update 2026-07-08.** Cross-referenced `kanban/tasks/legacy-package-reorganization.md` and `docs/design/legacy-package-reorganization.md`. Final package names resolved:
@@ -90,3 +86,23 @@ Deletion of `packages/legacy/` is scheduled for one final cleanup PR after the l
 **Update 2026-07-09 (eta-mu agent REPL).** `packages/eta-mu` now implements the default `agent` command as a ClojureScript single-turn chat, REPL, or piped-input handler using `@eta-mu/turn-processor`. Added `eta-mu.extern.readline` and `eta-mu.infra.cli.repl`. 51 tests, 95 assertions, 0 failures in `packages/eta-mu`. The legacy `@open-hax/eta-mu-cli` dependency is no longer used by `eta-mu`. The remaining slice is the full terminal-ui package split from `packages/legacy/tui`.
 
 **Update 2026-07-09 (terminal-ui planning).** Created `kanban/tasks/terminal-ui-cljs-package.md` to plan the migration of `packages/legacy/tui` into a new ClojureScript package `packages/terminal-ui`. The `packages/eta-mu` REPL is the interim text-only agent experience; the terminal-ui package will host the richer terminal interface.
+
+## State of affairs (2026-07-12)
+
+**OpenAI extern adapter landed in `packages/eta-mu` instead of a dedicated `ai` package.**
+
+The `eta-mu.extern.openai` namespace in `packages/eta-mu/src/cljs/eta_mu/extern/openai.cljs` now provides a configurable OpenAI-compatible chat-completions client with proxy support (`OPENAI_BASE_URL`, `OPENAI_AUTH_TOKEN`). This is the CLI-grade LLM boundary adapter.
+
+Key architectural observation: the OpenAI client ended up in the CLI package (`packages/eta-mu`) rather than a separate `packages/llm-providers` package. The original inventory mapped `packages/legacy/ai` → `packages/llm-providers`, but the actual implementation landed in `packages/eta-mu` as part of the agent CLI command. This is a divergence from the inventory plan.
+
+The turn-processor (`packages/turn-processor`) remains the shared loop infrastructure. The OpenAI adapter is consumed by `eta-mu.infra.cli.commands.agent` and passed to the turn-processor loop.
+
+**Remaining inventory gaps:**
+- The `packages/llm-providers` package from the inventory does not exist yet
+- Provider catalog/registry (multi-provider routing) is not implemented
+- The inventory should be updated to reflect that the first working LLM adapter is in `packages/eta-mu`, not `packages/llm-providers`
+
+Triage 2026-07-12: all work items and ACs checked; inventory doc exists and has been maintained through the reorg. One remaining gap: update docs/cljs-runtime-rewrite-architecture-inventory.md to record that the first LLM adapter landed in packages/eta-mu (eta-mu.extern.openai), that packages/llm-providers does not exist, and whether the legacy/ai -> llm-providers mapping still stands. Scope is small and unambiguous -> moving to ready.
+
+2026-07-12: appended 'Decision record (2026-07-12) — simplification directives' to docs/cljs-runtime-rewrite-architecture-inventory.md: no agent package (turn-processor owns the loop), no llm-providers (proxy + eta-mu.extern.openai is the boundary; legacy/ai -> llm-providers mapping voided), eta-mu owns the CLI, TS-interop/JSON-config compatibility dropped, north star is npm install -g parity with published stable. Remaining parity gaps listed. Card scope complete -> review.
+---

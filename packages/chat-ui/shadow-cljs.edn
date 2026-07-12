@@ -12,9 +12,10 @@
                                 :MessageBubble eta-mu.chat-ui.message/MessageBubble
                                 :ChatComposer eta-mu.chat-ui.composer/ChatComposer
                                :useChatSession eta-mu.chat-ui.protocol/use-chat-session
-                               :createSolSession eta-mu.chat-ui.sol-session/create-sol-session
-                               :createKnoxxSession eta-mu.chat-ui.knoxx-session/create-knoxx-session
-                               :createMockSession eta-mu.chat-ui.mock-session/create-mock-session}}}
+                                 :createSolSession eta-mu.chat-ui.sol-session/create-sol-session
+                                 :createKnoxxSession eta-mu.chat-ui.knoxx-session/create-knoxx-session
+                                 :createOpencodeSession eta-mu.chat-ui.opencode-session/create-opencode-session
+                                 :createMockSession eta-mu.chat-ui.mock-session/create-mock-session}}}
     :compiler-options {:output-feature-set :es-next
                        :source-map true
                        :infer-externs false}}

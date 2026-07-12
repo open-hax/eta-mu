@@ -1,0 +1,68 @@
+(ns eta-mu.platform.target-opencode-test
+  "End-to-end tests for the OpenCode target compiler."
+  (:require-macros [eta-mu.platform.dsl :as platform])
+  (:require
+   [cljs.test :refer [deftest is]]
+   [eta-mu.platform.boundary.js :as jsb]
+   [eta-mu.platform.dsl :as platform]
+   [eta-mu.platform.registry :as registry]
+   [eta-mu.platform.target.opencode :as opencode]))
+
+(platform/defschema research-input
+  [:map [:query :string]])
+
+(platform/defcapability research-search
+  {:id :capability/research-search
+   :input research-input
+   :output [:map [:findings [:vector :map]]]}
+  [{:keys [query]} _ctx]
+  {:ημ/result :plan
+   :ημ/effects [{:effect/id :network/search
+                 :effect/input {:query query}}]})
+
+(platform/deftool research-search-tool
+  {:id :tool/research-search
+   :capability :capability/research-search
+   :expose {:opencode {:name "research_search"
+                       :description "Search configured sources."}}})
+
+(deftest ^:async compile-tool-execute
+  (let [capability-registry
+        {:capability/research-search research-search
+         :network/search
+         (fn [{:keys [query]}]
+           {:findings [{:title (str "Result for " query)}]})}
+
+        registry
+        (registry/validate!
+         (registry/link-capabilities
+          (registry/normalize-plugin
+           (platform/plugin :plugin/test research-search-tool))
+          capability-registry))
+
+         plugin (opencode/compile-plugin registry capability-registry)
+         tools (.-tool plugin)
+         ^js tool (aget tools "research_search")
+         execute (.-execute tool)]
+    (is (= "research_search" (first (jsb/decode (js/Object.keys tools)))))
+    (is (= "Search configured sources." (.-description tool)))
+    (is (fn? execute))
+    (let [result (await (execute #js {"query" "ClojureScript"} #js {}))]
+      (is (= {:findings [{:title "Result for ClojureScript"}]}
+             (jsb/decode result))))))
+
+(deftest ^:async compile-tool-validates-input
+  (let [capability-registry {:capability/research-search research-search}
+        registry (registry/validate!
+                  (registry/link-capabilities
+                   (registry/normalize-plugin
+                    (platform/plugin :plugin/test research-search-tool))
+                   capability-registry))
+        plugin (opencode/compile-plugin registry capability-registry)
+        ^js tool (aget (.-tool plugin) "research_search")
+        execute (.-execute tool)]
+    (try
+      (await (execute #js {"query" 123} #js {}))
+      (is false "expected validation error")
+      (catch :default _
+        (is true)))))

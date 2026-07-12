@@ -1,7 +1,7 @@
 ---
 uuid: "rheos-chat-ui-shape-discovery"
 title: "Discovery: Rheos + chat-ui latent shapes and reuse map"
-status: "incoming"
+status: icebox
 priority: "P1"
 labels: ["tasks", "rheos", "chat-ui", "cljs", "discovery", "shape", "law", "3sp"]
 created_at: "2026-06-16T00:00:00Z"
@@ -9,7 +9,6 @@ source: "construction-order discovery pass after PR #134"
 points: 3
 category: "tasks"
 ---
-
 # Discovery: Rheos + chat-ui latent shapes and reuse map
 
 Discovery phase of the Clojure Construction Order (`AGENTS.md` → "Clojure Construction
