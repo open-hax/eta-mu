@@ -9,7 +9,7 @@
    CLI (picked up by the file watcher), or drag-drop — flows to the live UI
    through the one [[record!]] chokepoint. See [[rheos.backend.domain.transition]]
    for the single enforced write path that produces status-change events."
-  (:require [promethean.openplanner-protocols :as protocols]))
+  (:require [open-hax.openplanner-protocols :as protocols]))
 
 (defn- kanban-envelope [board-id event-type payload]
   {:event/type (str "kanban." event-type)

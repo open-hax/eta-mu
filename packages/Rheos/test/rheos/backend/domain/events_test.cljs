@@ -1,6 +1,6 @@
 (ns rheos.backend.domain.events-test
   (:require [cljs.test :refer [deftest testing is]]
-            [promethean.openplanner-protocols :as protocols]
+            [open-hax.openplanner-protocols :as protocols]
             [rheos.backend.domain.events :as events]))
 
 (deftest generate-write-id-format

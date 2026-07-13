@@ -6,7 +6,7 @@
    a future Mongo-backed adapter (the knoxx deployment of this system) plugs in
    here behind the same protocol without touching callers."
   (:require ["node:path" :as path]
-            [promethean.records.edn.event-admission :as edn-ea]))
+            [open-hax.records.edn.event-admission :as edn-ea]))
 
 (defonce ledger-cache (atom {}))
 

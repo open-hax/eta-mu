@@ -1,5 +1,5 @@
 {
-  "name": "@promethean-os/openplanner-protocols",
+  "name": "@open-hax/openplanner-protocols",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",

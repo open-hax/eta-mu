@@ -45,15 +45,12 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(zod@4.1.8)
+      '@open-hax/openplanner-protocols':
+        specifier: workspace:*
+        version: link:../protocols
       '@open-hax/uxx-helix':
         specifier: ^0.1.0
         version: 0.1.0
-      '@promethean-os/event-ledger':
-        specifier: workspace:*
-        version: link:../event-ledger
-      '@promethean-os/openplanner-protocols':
-        specifier: workspace:*
-        version: link:../protocols
       chokidar:
         specifier: ^4.0.3
         version: 4.0.3
@@ -196,12 +193,6 @@ importers:
         specifier: ^3.4.11
         version: 3.4.11
 
-  packages/event-ledger:
-    devDependencies:
-      shadow-cljs:
-        specifier: ^3.4.10
-        version: 3.4.11
-
   packages/extensions:
     dependencies:
       '@opencode-ai/plugin':
@@ -222,12 +213,6 @@ importers:
         version: 0.5.21
 
   packages/kanban-orchestrator: {}
-
-  packages/katamorph:
-    devDependencies:
-      shadow-cljs:
-        specifier: ^3.4.11
-        version: 3.4.11
 
   packages/kondo-config: {}
 

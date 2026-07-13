@@ -1,2 +1,0 @@
-{:config-paths ["../../kondo-config/clj-kondo.exports/open-hax/kondo-config"]
- :linters {:unresolved-symbol {:exclude [(malli.core/=>)]}}}

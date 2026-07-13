@@ -1,12 +1,7 @@
 {:http {:port 9633},
- :source-paths ["src/cljs" "test/cljs"
-                "../katamorph/src/cljs"
-                "../event-ledger/src"],
- :dependencies
- [[cider/cider-nrepl "0.50.2"]
-  [refactor-nrepl "3.9.1"]
-  [metosin/malli "0.16.4"]
-  [funcool/promesa "11.0.678"]],
+ ;; Classpath (paths + JVM deps) comes from deps.edn. katamorph + event-ledger
+ ;; are git-ref deps there — no "../katamorph/src/cljs" sibling source-paths.
+ :deps true,
  :nrepl {:port 4501},
  :js-options {:js-provider :import},
  :builds
