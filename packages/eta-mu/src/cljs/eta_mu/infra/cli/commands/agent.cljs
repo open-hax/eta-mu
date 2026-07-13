@@ -5,6 +5,8 @@
             [eta-mu.extern.openai :as openai]
             [eta-mu.extern.process :as process]
             [eta-mu.infra.cli.repl :as repl]
+            [eta-mu.infra.cli.tui-repl :as tui-repl]
+            [eta-mu.infra.tools.registry :as tools]
             [eta-mu.turn-processor.infra.loop :as loop]
             [eta-mu.turn-processor.shape.message :as shape.msg]))
 
@@ -18,13 +20,14 @@
   [flags]
   {:model (default-model flags)
    :convert-to-llm shape.msg/messages->openai
-   :api-key (get flags "api-key")})
+   :api-key (get flags "api-key")
+   :base-url (get flags "base-url")})
 
 (defn- initial-context
   [flags]
   {:system-prompt (or (get flags "system") "You are a helpful assistant.")
    :messages []
-   :tools []})
+   :tools tools/tools})
 
 (defn- ^:async run-single-turn
   [prompt context config]
@@ -41,7 +44,12 @@
   - With no arguments and a TTY stdin: interactive REPL.
   - With no arguments and piped stdin: single-turn from stdin.
 
-  Usage: eta-mu agent [--model MODEL] [--system SYSTEM] [--api-key KEY] [PROMPT ...]"  
+  Usage: eta-mu agent [--model MODEL] [--provider PROVIDER] [--api-key KEY]
+                      [--base-url URL] [--system SYSTEM] [--plain] [PROMPT ...]
+
+  By default, an interactive TTY session renders through the terminal-ui-backed
+  TUI (colorized, wrapped tool calls/results). Pass --plain for the older
+  println-based REPL."
   [{:keys [args flags]}]
   (try
     (let [context (initial-context flags)
@@ -51,7 +59,9 @@
         (await (run-single-turn (str/join " " args) context config))
 
         (process/stdin-tty?)
-        (await (repl/run-repl context config openai/stream-chat))
+        (if (get flags "plain")
+          (await (repl/run-repl context config openai/stream-chat))
+          (await (tui-repl/run-tui-repl context config openai/stream-chat)))
 
         :else
         (await (repl/run-piped-input context config openai/stream-chat))))

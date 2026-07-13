@@ -1,9 +1,10 @@
 # Π Last Snapshot
 
-- **Branch**: device/yoga
-- **Tag**: Π/20260712T191647Z/device-yoga
-- **Commit**: 484e413
-- **TS lines**: 173,622 (down from 174,500 baseline)
-- **Files**: 25 changed (449+/371-)
-- **Summary**: kanban task status advances, ledger + receipts tick, dist rebuild, package.json bump, kondo config update
+- **Branch**: alpha/cljs-tui
+- **Tag**: Π/20260712T230119Z/alpha-cljs-tui
+- **Commit**: 6ec3edb
+- **Files**: 16 changed (743+/39-)
+- **Summary**: coverage workflow, openai edge fixes, e2e agent CLI tests, docs-governance card, terminal-ui README
+- **Tests**: eta-mu 80/149 — all green
+- **Lint**: clj-kondo 0 errors / 0 warnings
 - **Concurrent dirt**: none — all owned paths staged

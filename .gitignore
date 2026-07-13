@@ -63,3 +63,5 @@ packages/legacy/kanban/playwright-report/
 
 # Core dumps
 core
+
+packages/eta-mu/dist-cli/
