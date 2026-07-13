@@ -91,9 +91,6 @@ importers:
       shadow-cljs:
         specifier: ^3.4.10
         version: 3.4.11
-      ws:
-        specifier: ^8.20.1
-        version: 8.20.1
 
   packages/axxium:
     dependencies:

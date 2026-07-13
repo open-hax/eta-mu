@@ -10,7 +10,8 @@
       (.get params "org") (assoc :org (.get params "org"))
       (.get params "status") (assoc :status (.get params "status"))
       (.get params "priority") (assoc :priority (.get params "priority"))
-      (.get params "q") (assoc :q (.get params "q")))))
+      (.get params "q") (assoc :q (.get params "q"))
+      (.get params "projects") (assoc :projects (.get params "projects")))))
 
 (defn write-filters-to-url! [filters]
   (let [params (js/URLSearchParams.)]
