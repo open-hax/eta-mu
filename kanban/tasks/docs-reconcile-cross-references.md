@@ -1,7 +1,7 @@
 ---
 uuid: "docs-reconcile-cross-references"
 title: "Reconcile or retire CROSS_REFERENCES.md"
-status: "ready"
+status: icebox
 priority: "P2"
 labels: ["docs", "cleanup", "2sp"]
 created_at: "2026-06-17T00:00:00Z"
@@ -9,7 +9,6 @@ source: "docs discovery sweep 2026-06-16"
 points: 2
 category: "tasks"
 ---
-
 # Reconcile or retire CROSS_REFERENCES.md
 
 ## Context

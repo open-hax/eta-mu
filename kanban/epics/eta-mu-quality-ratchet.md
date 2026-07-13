@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-quality-ratchet"
 title: "Eta-mu Quality Ratchet — Delinting, Warning Cleanup, and Testing"
-status: "in_progress"
+status: icebox
 priority: "P0"
 labels: ["epics", "quality", "lint", "warnings", "testing", "coverage", "26sp"]
 created_at: "2026-05-31T00:45:00Z"
@@ -9,7 +9,6 @@ source: "user-request:2026-05-31"
 points: 26
 category: "epics"
 ---
-
 # Eta-mu Quality Ratchet — Delinting, Warning Cleanup, and Testing
 
 > Source: user request, 2026-05-31

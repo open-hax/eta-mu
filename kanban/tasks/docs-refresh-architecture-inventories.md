@@ -1,7 +1,7 @@
 ---
 uuid: "docs-refresh-architecture-inventories"
 title: "Refresh architecture inventory docs for accuracy"
-status: "ready"
+status: icebox
 priority: "P2"
 labels: ["docs", "inventory", "architecture", "5sp"]
 created_at: "2026-06-17T00:00:00Z"
@@ -9,7 +9,6 @@ source: "docs discovery sweep 2026-06-16"
 points: 5
 category: "tasks"
 ---
-
 # Refresh architecture inventory docs for accuracy
 
 ## Context

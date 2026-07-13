@@ -6,11 +6,10 @@ points: "2"
 source: "kanban/epics/ai-cljs-rewrite.md"
 title: "AI CLJS Rewrite — Amazon Bedrock Extern Adapter"
 priority: "P1"
-status: "in_progress"
+status: icebox
 uuid: "ai-cljs-rewrite-phase-3-extern-bedrock"
 created_at: "2026-06-15T00:00:00Z"
 ---
-
 # AI CLJS Rewrite — Amazon Bedrock Extern Adapter
 
 > Parent epic: `kanban/epics/ai-cljs-rewrite.md`
@@ -47,4 +46,6 @@ node scripts/ts-line-count.mjs packages/legacy/ai
 
 ---
 Status updated to blocked: waiting for Phase 2 canonical message model and shared boundary-adapter conventions (core boundary-adapters task is done as of 2026-07-10).
+
+Unblocked: core boundary-adapters task completed 2026-07-10. Phase 2 canonical message model and shared conventions are in place. Ready to begin Bedrock extern adapter implementation.
 ---

@@ -203,7 +203,7 @@
             llm-context {:system-prompt (:system-prompt @ctx)
                          :messages llm-messages
                          :tools (:tools @ctx)}
-            stream (stream-fn (:model config) llm-context {:api-key (:api-key config)})
+            stream (stream-fn (:model config) llm-context {:api-key (:api-key config) :base-url (:base-url config)})
             assistant (await (stream-final-message stream emit))]
         (update-context! ctx assistant)
         (update-new-messages! new-messages assistant)

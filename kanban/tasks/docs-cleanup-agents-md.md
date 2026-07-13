@@ -1,7 +1,7 @@
 ---
 uuid: "docs-cleanup-agents-md"
 title: "Clean up AGENTS.md inconsistencies and update testing gate"
-status: "ready"
+status: icebox
 priority: "P3"
 labels: ["docs", "agents", "cleanup", "1sp"]
 created_at: "2026-06-17T00:00:00Z"
@@ -9,7 +9,6 @@ source: "docs discovery sweep 2026-06-16"
 points: 1
 category: "tasks"
 ---
-
 # Clean up AGENTS.md inconsistencies and update testing gate
 
 ## Context

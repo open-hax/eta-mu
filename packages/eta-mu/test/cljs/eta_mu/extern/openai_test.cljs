@@ -59,14 +59,31 @@
       (is (= :tool-call (-> final :content first :type)))
       (is (= "a.txt" (-> final :content first :arguments :path))))))
 
-(deftest ^:async stream-chat-no-api-key-test
-  (testing "stream-chat throws when no api key is provided"
-    (set! js/fetch (fn [_url _opts] (js/Promise.reject (js/Error. "should not be called"))))
-    (try
-      (await (openai/stream-chat
-               {:id "gpt-4o-mini" :provider "openai"}
-               {:system-prompt "sys" :messages [] :tools []}
-               {}))
-      (is false "expected an error")
-      (catch :default e
-        (is (some? e))))))
+(deftest ^:async stream-chat-no-api-key-local-proxy-test
+  (testing "stream-chat succeeds without an auth token when a non-default base-url is set (local proxy)"
+    (set! js/fetch
+          (fn [_url _opts]
+            (js/Promise.resolve
+              (json-response
+                {:model "local-model"
+                 :choices [{:message {:role "assistant" :content "Hi"}
+                            :finish_reason "stop"}]
+                 :usage {:prompt_tokens 1 :completion_tokens 1 :total_tokens 2}}))))
+    (let [stream (await (openai/stream-chat
+                          {:id "local-model" :provider "local"}
+                          {:system-prompt "sys" :messages [] :tools []}
+                          {:base-url "http://localhost:1234/v1/chat/completions"}))
+          final (await (.result stream))]
+      (is (= :assistant (:role final)))
+      (is (= "Hi" (-> final :content first :text))))))
+
+(deftest ^:async stream-chat-no-provider-configured-test
+  (testing "stream-chat short-circuits with a clear error when no api key and no alternate base-url are set"
+    (set! js/fetch (fn [_url _opts] (throw (js/Error. "fetch should not be called"))))
+    (let [stream (await (openai/stream-chat
+                          {:id "gpt-4o-mini" :provider "openai"}
+                          {:system-prompt "sys" :messages [] :tools []}
+                          {}))
+          final (await (.result stream))]
+      (is (= :error (:stop-reason final)))
+      (is (re-find #"No API key configured" (:error-message final))))))

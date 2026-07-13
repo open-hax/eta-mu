@@ -23,10 +23,10 @@ Repo-specific bearings for Claude Code sessions in `eta-mu`.
   `pnpm -C packages/extensions test`. Never report a task done while a relevant
   suite is failing.
 - **Lint**: `clj-kondo`, type checks, and tests must pass with **zero warnings**.
-- **Receipts**: Use `receipt_river` to append observations, decisions, test
+- **Receipts**: Use `receipt-river` skill  to append observations, decisions, test
   runs, and build results. The ledger is the source of truth for significant
   state transitions.
-- **Mycology**: At the end of substantive turns, run a `session_mycology`
+- **Mycology**: At the end of substantive turns, use the `session-mycology` skill to run a
   retrospective to capture reusable skill candidates.
 - **Dev frontend**: `http://127.0.0.1:5197` (fixed port).
 - **TS baseline**: If you must touch legacy TypeScript and the net change is a

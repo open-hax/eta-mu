@@ -47,4 +47,6 @@ pnpm --filter @open-hax/eta-mu-tui test
 Blocked by `eta-mu-cljs-rewrite-boundary-adapters` (core program): terminal extern adapters need the established `extern.*` boundary pattern, boundary scanner, and conversion-test conventions before they can be authored consistently. Also logically precedes component port tasks.
 
 Triage 2026-07-10: done-in-fact — eta-mu.terminal-ui.extern.terminal ported in packages/terminal-ui (receipts.edn 2026-07-09). Promoted to done.
+
+Board audit 2026-07-12: DONE status only partially holds. extern/terminal.cljs + test exist, but scoped extern.stdin, extern.keys, and extern.ansi namespaces do not exist anywhere in packages/terminal-ui. Checkboxes unchecked; promoted done on the terminal extern alone (2026-07-10 triage). Recommend reopening or re-scoping.
 ---

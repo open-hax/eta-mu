@@ -1,6 +1,7 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "rewrite", "coding-agent", "1sp"]
+write-id: "1783880856718-0.ez1hlq89p2bwk4qn0bc"
 points: "1"
 source: "kanban/epics/coding-agent-cljs-rewrite.md"
 title: "Coding Agent CLJS Rewrite — Settings Error Handling Policy"

@@ -1,7 +1,7 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "rewrite", "coding-agent", "3sp"]
-write-id: "1783693257126-0.sm9mbe5pjva3n67ps21"
+write-id: "1783880855024-0.8q27v9a3q33qnrfs7oe"
 points: "3"
 source: "kanban/epics/coding-agent-cljs-rewrite.md"
 title: "Coding Agent CLJS Rewrite — Package, Settings & Auth Infra"

@@ -1,7 +1,7 @@
 ---
 uuid: "github-cljs-rewrite-domain-pr"
 title: "GitHub CLJS Rewrite — PR Automation Domain"
-status: "blocked"
+status: icebox
 priority: "P1"
 labels: ["tasks", "cljs", "rewrite", "github"]
 created_at: "2026-06-15T00:00:00Z"
@@ -9,7 +9,6 @@ source: "kanban/epics/github-cljs-rewrite.md"
 points: 3
 category: "tasks"
 ---
-
 # GitHub CLJS Rewrite — PR Automation Domain
 
 > Parent epic: `kanban/epics/github-cljs-rewrite.md`

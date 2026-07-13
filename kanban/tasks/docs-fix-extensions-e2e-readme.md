@@ -1,7 +1,7 @@
 ---
 uuid: "docs-fix-extensions-e2e-readme"
 title: "Fix packages/extensions-e2e README paths and claims"
-status: "ready"
+status: icebox
 priority: "P2"
 labels: ["docs", "extensions-e2e", "readme", "1sp"]
 created_at: "2026-06-17T00:00:00Z"
@@ -9,7 +9,6 @@ source: "docs discovery sweep 2026-06-16"
 points: 1
 category: "tasks"
 ---
-
 # Fix packages/extensions-e2e README paths and claims
 
 ## Context

@@ -176,16 +176,25 @@ importers:
 
   packages/eta-mu:
     dependencies:
+      get-east-asian-width:
+        specifier: ^1.3.0
+        version: 1.5.0
+    devDependencies:
       '@eta-mu/contracts-output':
         specifier: workspace:*
         version: link:../contracts/output
-      '@open-hax/rheos':
+      '@eta-mu/terminal-ui':
         specifier: workspace:*
-        version: link:../Rheos
-    devDependencies:
+        version: link:../terminal-ui
       '@eta-mu/turn-processor':
         specifier: workspace:*
         version: link:../turn-processor
+      '@open-hax/rheos':
+        specifier: workspace:*
+        version: link:../Rheos
+      c8:
+        specifier: ^10.1.2
+        version: 10.1.3
       shadow-cljs:
         specifier: ^3.4.11
         version: 3.4.11
@@ -637,7 +646,13 @@ importers:
       '@eta-mu/turn-processor':
         specifier: workspace:*
         version: link:../turn-processor
+      get-east-asian-width:
+        specifier: ^1.3.0
+        version: 1.5.0
     devDependencies:
+      c8:
+        specifier: ^10.1.2
+        version: 10.1.3
       shadow-cljs:
         specifier: ^3.4.11
         version: 3.4.11

@@ -4,7 +4,7 @@
 > Scope: every package under `packages/*`
 
 > **Status update (2026-06-19): the wiring described as future work in this doc is DONE.**
-> The original baseline was written *before* clj-kondo was wired up and recorded most packages as having no `.clj-kondo` and no `lint:kondo` script. That is no longer true. As of this refresh, **every CLJS workspace package** (Rheos, axxium, chat-ui, event-ledger, extensions, extensions-e2e, katamorph, mcp-contracts, protocols, runtime, sol) has a `.clj-kondo/config.edn` that is a thin `:config-paths` wrapper pointing at the shared `@open-hax/kondo-config` export, plus a `lint:kondo` script in its `package.json`. The local config duplication that the original doc flagged as cleanup work has been removed; only the documented package-local exceptions remain (see §3). Sections below are updated to current state; the original "gaps / cleanup" framing is preserved only where it explains *why* a local exception still exists.
+[Omitted long matching line]
 
 ## 1. Package classification table
 

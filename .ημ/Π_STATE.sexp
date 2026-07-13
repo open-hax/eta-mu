@@ -1,9 +1,9 @@
 (π-state
-  (version "0.63.2")
-  (timestamp "2026-07-12T033921Z")
-  (branch "device/yoga")
+  (version "0.66.0")
+  (timestamp "20260712T230119Z")
+  (branch "alpha/cljs-tui")
   (host "local")
   (commits 1)
-  (summary "Π: extensions-e2e→e2e rename, new CLJS coding layers (domain/infra/shape for settings/auth/extension), new e2e tests, kanban updates, README refresh")
+  (summary "Π: coverage workflow, openai edge fixes, e2e agent CLI tests, docs-governance card, terminal-ui README")
   (concurrent-dirt "none — all owned paths staged")
   (manifest ".ημ/Π_MANIFEST.sha256"))

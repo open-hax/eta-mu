@@ -83,7 +83,7 @@ Two non-package directories sit under `packages/` and are NOT workspace members:
 | `packages/chat-ui` | `@open-hax/chat-ui` | Helix/React chat UI components (`ChatPanel`, `MessageBubble`, `ChatComposer`) + `IChatSession` protocol with sol/knoxx/mock backends. Browser `extern.*` reference. (Uses lilactown/helix exclusively — not Reagent.) |
 | `packages/legacy/publication-components` | `@open-hax/garden-publication-components` | Web publication components. Defer until message shapes are stable. |
 | `packages/event-ledger` | `@promethean-os/event-ledger` | Event ledger contracts and storage. Infra/extern boundary. |
-| `packages/protocols` | `@promethean-os/openplanner-protocols` | Cross-package CLJS protocol/schema definitions for OpenPlanner: canonical event-ledger envelope (Malli, via `metosin/malli`) plus eight `defprotocol`s (EventAdmission, SessionManagement, DocumentStorage, GraphOperations, TranslationManagement, LabelManagement, UserManagement, RealtimeSubscription) and four transport record families under `src/promethean/records/` (`edn/`, `mongo/`, `rest/`, `socket-io/`). Namespace root is `promethean.*`, not `open-hax.*`. Both `law.*` (schemas/protocols) and `extern.*`/`infra.*` (transport records) candidate. |
+[Omitted long matching line]
 | `packages/axxium` | `@open-hax/axxium` | All-ClojureScript identity/auth kernel (shadow-cljs `:esm`/Node, Fastify + Postgres): password auth (bcryptjs), JWT/cookie sessions, actor read surface, single entity read endpoint. Ten `.cljs` sources under `src/cljs/` plus two helper `.mjs` files; **no `.ts`/`.tsx`**. Not a "mixed TS/CLJS utility" — classify as a full CLJS server. |
 | `packages/mcp-contracts` | `@open-hax/mcp-contracts` | Generic CLJS loader that teaches a knoxx-style runtime to accept `:mcp-server` contracts (single `src/eta_mu/mcp_contracts.cljs`, consumed via source-path). `law.*`/`infra.*` candidate. |
 | `packages/extensions-e2e` | `@open-hax/eta-mu-extensions-e2e` | **Active** shadow-cljs `:node-test` harness that compiles contract-runtime-v2 directly from `packages/extensions` (source-paths `../extensions/src`, `../extensions/lib`) and runs cljs.test E2E coverage of `evaluate-policies`/`evaluate-fulfillments`. Boundary test surface, not deferred. |
@@ -332,3 +332,35 @@ This type error is recorded as a historical baseline, not a rewrite regression. 
 ## Recommended next planning move
 
 Proceed to `eta-mu-cljs-rewrite-runtime-core` after human review of this inventory and the merged shadow-spine PRs. The least risky implementation choice remains to expand pure CLJS runtime data contracts inside `packages/runtime` (or resolve ownership with `packages/sol`) before touching `packages/legacy/coding-agent` or provider SDK code.
+
+## Decision record (2026-07-12) — simplification directives
+
+Recorded from direct maintainer decisions; these supersede earlier open questions
+and the original package mapping where they conflict.
+
+1. **No standalone agent package.** `packages/turn-processor` owns the turn
+   loop; there is no `eta_mu.agent.*` package and no plan for one. "The agent"
+   is the composition of CLI + turn-processor + externs, not a module.
+   `agent-cljs-rewrite` and its phase cards are iceboxed.
+2. **No `packages/llm-providers`.** The maintainer routes providers through a
+   proxy; the OpenAI-compatible client at
+   `packages/eta-mu/src/cljs/eta_mu/extern/openai.cljs` is the LLM boundary.
+   Provider-specific adapters (anthropic/bedrock/google/azure/codex) are out of
+   scope. The `packages/legacy/ai` → `packages/llm-providers` mapping in this
+   inventory is void. Remaining slice: SSE streaming on the existing client.
+3. **`packages/eta-mu` owns the CLI.** Command-line parsing stays separate from
+   any other primary concern; other packages are routed through it.
+4. **Compatibility constraints dropped.** TS interop facades, JSON config
+   compatibility, and legacy package/binary contract preservation are no longer
+   goals. Getting logic into CLJS *somewhere* wins; relocation is cheap
+   afterwards.
+5. **North star:** `npm install -g eta-mu` produces a CLI equivalent to the
+   published stable `eta-mu`. Publish blocker fixed 2026-07-12: workspace
+   runtime deps moved to devDependencies (the shadow-cljs release bundle is
+   self-contained, Node built-ins only); `npm pack` + global install from
+   tarball verified.
+
+Remaining parity gaps toward the north star: agent tools (read/bash/edit/write
+are absent — `:tools []` in the CLJS agent command), SSE streaming, session
+persistence in the agent flow, and the richer terminal UI
+(`terminal-ui-cljs-package`).
