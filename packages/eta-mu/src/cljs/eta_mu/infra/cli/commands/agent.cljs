@@ -31,10 +31,8 @@
 
 (defn- ^:async run-single-turn
   [prompt context config]
-  (let [ctx (update context :messages conj {:role :user :content prompt :timestamp (js/Date.now)})
-        result (await (loop/run-loop ctx config repl/repl-emit openai/stream-chat))]
-    (when (seq result)
-      (repl/print-assistant-text (last result)))))
+  (let [ctx (update context :messages conj {:role :user :content prompt :timestamp (js/Date.now)})]
+    (await (loop/run-loop ctx config (repl/make-repl-emit) openai/stream-chat))))
 
 (defn ^:async handle
   "Run the agent.

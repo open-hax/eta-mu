@@ -17,19 +17,24 @@
   [context new-messages]
   (update context :messages into new-messages))
 
+(defn- assistant-text
+  "Extract the concatenated text content of an assistant message."
+  [message]
+  (transduce (comp (filter #(= (:type %) :text))
+                  (map :text))
+            str
+            (:content message)))
+
 (defn print-assistant-text
-  "Print the text content of an assistant message."  
+  "Print the text content of an assistant message."
   [message]
   (when (= :assistant (:role message))
-    (let [text (transduce (comp (filter #(= (:type %) :text))
-                                (map :text))
-                          str
-                          (:content message))]
+    (let [text (assistant-text message)]
       (when (seq text)
         (println text)))))
 
 (defn- print-tool-result
-  "Print a concise summary of a tool-result message."  
+  "Print a concise summary of a tool-result message."
   [message]
   (when (= :tool-result (:role message))
     (let [text (transduce (comp (filter #(= (:type %) :text))
@@ -40,17 +45,42 @@
                     (if (:is-error message) "error" "ok")
                     "] " text)))))
 
-(defn repl-emit
-  "Event sink that prints tool results and the final assistant message.
+(defn make-repl-emit
+  "Build an event sink that streams assistant text deltas to stdout as they
+  arrive, and prints tool results as they finish.
 
-  Text deltas are not streamed because the current OpenAI client is synchronous."  
-  [event]
-  (let [type (:type event)
-        message (:message event)]
-    (when (and (= type :message_end) (= :tool-result (:role message)))
-      (print-tool-result message))
-    (when (and (= type :turn_end) (= :assistant (:role message)))
-      (print-assistant-text message))))
+  Streamed deltas are written directly to `process.stdout` rather than via
+  `println` — this runtime's `*print-fn*` is wired to `console.log`, which
+  appends its own trailing newline to every call, which would otherwise
+  fragment one streamed reply across several needlessly blank lines.
+
+  Streaming state (how much of the current assistant message's text has
+  already been printed) is held in a closure so the returned fn can be
+  reused across an entire REPL session."
+  []
+  (let [printed (atom 0)]
+    (fn repl-emit [event]
+      (let [type (:type event)
+            message (:message event)]
+        (case type
+          :message_update
+          (when (= :assistant (:role message))
+            (let [text (assistant-text message)]
+              (when (> (count text) @printed)
+                (.write js/process.stdout (subs text @printed))
+                (reset! printed (count text)))))
+
+          :message_end
+          (cond
+            (= :tool-result (:role message))
+            (print-tool-result message)
+
+            (= :assistant (:role message))
+            (if (pos? @printed)
+              (do (.write js/process.stdout "\n") (reset! printed 0))
+              (print-assistant-text message)))
+
+          nil)))))
 
 (defn ^:async run-repl
   "Run an interactive REPL agent.
@@ -69,6 +99,7 @@
          (readline/close! rl)))))
   ([context config stream-fn get-input]
    (println "eta-mu agent REPL. Type /exit to quit, /clear to reset context.")
+   (let [emit (make-repl-emit)]
    (loop [ctx context]
      (let [input (await (get-input "\u003e "))]
        (cond
@@ -85,16 +116,17 @@
          :else
          (let [updated-ctx (update ctx :messages conj (user-message input))
                new-messages (try
-                              (await (loop/run-loop updated-ctx config repl-emit stream-fn))
+                              (await (loop/run-loop updated-ctx config emit stream-fn))
                               (catch :default e
                                 (js/console.error (str "Turn error: " (.-message e)))
                                 []))]
-           (recur (append-messages updated-ctx new-messages))))))))
+           (recur (append-messages updated-ctx new-messages)))))))))
 
 (defn ^:async run-piped-input
   "Run a single-turn agent from stdin input that is not a TTY."  
   [context config stream-fn]
-  (let [input (atom "")]
+  (let [input (atom "")
+        emit (make-repl-emit)]
     (js/Promise.
      (fn [resolve _reject]
        (.on js/process.stdin "data"
@@ -105,5 +137,5 @@
               (let [prompt (str/trim @input)]
                 (if (seq prompt)
                   (let [ctx (update context :messages conj (user-message prompt))]
-                    (resolve (loop/run-loop ctx config repl-emit stream-fn)))
+                    (resolve (loop/run-loop ctx config emit stream-fn)))
                   (resolve [])))))))))

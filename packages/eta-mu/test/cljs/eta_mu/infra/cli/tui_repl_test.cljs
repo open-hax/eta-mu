@@ -53,6 +53,26 @@
         (is (str/includes? output "Hello there"))
         (is (str/includes? output "Goodbye"))))))
 
+(deftest ^:async tui-repl-shows-and-clears-thinking-indicator-test
+  (testing "shows a 'thinking...' status line while awaiting the model, clears it once output starts"
+    (let [term (fake-terminal)
+          inputs (atom ["hi" "/exit"])
+          get-input (fn [_prompt]
+                      (let [next (first @inputs)]
+                        (swap! inputs rest)
+                        (js/Promise.resolve next)))]
+      (await (tui-repl/run-tui-repl {:system-prompt "sys" :messages [] :tools []}
+                                    {:model {:id "m" :provider "p"}
+                                     :convert-to-llm (fn [messages] messages)}
+                                    (assistant-stream "Hello there")
+                                    get-input
+                                    term))
+      (let [output @(.-buf term)]
+        (is (str/includes? output "thinking...")
+            "the indicator should have been written at least once")
+        (is (str/includes? output "Hello there")
+            "the reply should still render after the indicator clears")))))
+
 (deftest ^:async tui-repl-clear-resets-context-test
   (testing "/clear resets messages and keeps the session running"
     (let [term (fake-terminal)

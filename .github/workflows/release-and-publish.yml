@@ -69,6 +69,12 @@ jobs:
             --base "origin/main" \
             --workspace-glob "packages/*/"
 
+      - name: eta-mu tarball smoke test
+        if: inputs.publish-npm && hashFiles('scripts/eta-mu-publish-smoke.sh') != ''
+        run: |
+          pnpm install --frozen-lockfile
+          scripts/eta-mu-publish-smoke.sh
+
       - name: Create release and publish
         env:
           GITHUB_TOKEN: ${{ github.token }}

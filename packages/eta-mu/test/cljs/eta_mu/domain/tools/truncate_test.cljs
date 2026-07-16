@@ -28,3 +28,16 @@
   (testing "formats bytes, kilobytes, and megabytes"
     (is (= "512B" (truncate/format-size 512)))
     (is (= "1.0KB" (truncate/format-size 1024)))))
+
+(deftest truncate-line-under-limit-test
+  (testing "a line under the limit is returned unchanged"
+    (let [result (truncate/truncate-line "short line")]
+      (is (not (:truncated? result)))
+      (is (= "short line" (:text result))))))
+
+(deftest truncate-line-over-limit-test
+  (testing "a line over the limit is cut and marked truncated"
+    (let [long-line (apply str (repeat 20 "0123456789"))
+          result (truncate/truncate-line long-line 50)]
+      (is (:truncated? result))
+      (is (= (str (subs long-line 0 50) "... [truncated]") (:text result))))))

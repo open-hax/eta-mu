@@ -25,3 +25,12 @@
   spore: none
   receipt-refs: none
   note: Extensions returned #js {:content ...} but OpenCode expects Promise<string>. Fix was small (result->string + wrap-execute) but required tracing the full loading chain. Pattern: OpenCode plugin API contract mismatch.
+- ts: 2026-07-15T20:23:51.446131751Z
+  session: /home/err/spaces/eta-mu
+  task: Board triage: verify 6 review cards vs code, close umbrella epic, cut 3 follow-up cards
+  p-efficiency: 0.8
+  p-friction: 0.35
+  p-skill-candidate: 0.7
+  spore: none
+  receipt-refs: none
+  note: Pattern: review-card triage = re-run each card's own verification gate + grep the claimed namespaces before promoting; kanban comment CLI absorbs trailing flags into comment text

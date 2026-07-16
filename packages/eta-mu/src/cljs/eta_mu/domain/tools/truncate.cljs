@@ -7,6 +7,7 @@
 
 (def default-max-lines 2000)
 (def default-max-bytes (* 50 1024))
+(def grep-max-line-length 500)
 
 (defn- byte-length [s]
   (.byteLength js/Buffer s "utf-8"))
@@ -60,3 +61,12 @@
   ([content] (truncate-tail content {}))
   ([content opts]
    (truncate* content opts take-last)))
+
+(defn truncate-line
+  "Truncate a single line to `max-chars` (default `grep-max-line-length`),
+  appending a `[truncated]` marker. Used for grep match lines."
+  ([line] (truncate-line line grep-max-line-length))
+  ([line max-chars]
+   (if (<= (count line) max-chars)
+     {:text line :truncated? false}
+     {:text (str (subs line 0 max-chars) "... [truncated]") :truncated? true})))
