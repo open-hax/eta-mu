@@ -89,10 +89,14 @@ jobs:
         working-directory: packages/extensions
         run: node scripts/deploy-ci.mjs
 
+      - name: Build legacy pi host (extension smoke host)
+        working-directory: packages/legacy/coding-agent
+        run: pnpm build
+
       - name: Smoke test — pi loads all extensions
-        working-directory: packages/extensions-e2e
+        working-directory: packages/e2e
         run: |
-          output=$(pnpm exec pi -p "smoke" 2>&1 || true)
+          output=$(node ../legacy/coding-agent/dist/cli.js -p "smoke" 2>&1 || true)
           echo "$output"
           if echo "$output" | grep -q "Failed to load extension"; then
             echo "FAIL: one or more extensions failed to load"

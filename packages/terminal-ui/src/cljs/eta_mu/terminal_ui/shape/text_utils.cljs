@@ -257,8 +257,8 @@
                              (if (> nv max-width)
                                {:r r :rw rw2 :overflowed true}
                                (if (and keep? (<= (+ rw2 w) target))
-                                 (recur nil (str r seg) (+ rw2 w))
-                                 (recur nil r rw2)))))))]
+                                 (recur iter (str r seg) (+ rw2 w))
+                                 (recur iter r rw2)))))))]
               (recur text-end (:r sr) (:rw sr)
                      (+ visible (- (:rw sr) rw))
                      keep?
@@ -286,37 +286,33 @@
 ;; ---------------------------------------------------------------------------
 
 (defn slice-with-width
-  "Extract visible columns from a line. Returns {:text :width}."
+  "Extract visible columns [start-col, start-col+length) from a line.
+  Returns {:text :width}. ANSI codes before start-col are dropped; codes
+  inside the window are preserved; under `strict?` a column that would
+  exceed the window ends the slice instead."
   ([line start-col length] (slice-with-width line start-col length false))
   ([line start-col length strict?]
-   (if (<= length 0) {:text "" :width 0}
-       (let [end-col (+ start-col length)]
-         (loop [i 0 cc 0 result "" rw 0 pa ""]
-           (if (>= i (.-length line))
-             {:text result :width rw}
-             (if-let [ansi (extract-ansi-code line i)]
-               (if (and (>= cc start-col) (< cc end-col))
-                 (recur (+ i (.-length ansi)) cc (str result (.-code ansi)) rw pa)
-                 (recur (+ i (.-length ansi)) cc result rw (str pa (.-code ansi))))
-               (let [text-end (loop [te (inc i)]
-                                (if (or (>= te (.-length line))
-                                        (extract-ansi-code line te))
-                                  te (recur (inc te))))]
-                  (loop [iter (segment-iter (.substring line i text-end))
-                        r result rw2 rw]
-                   (let [n (.next iter)]
-                     (if (.-done n)
-                       {:text r :width rw2}
-                       (let [seg (.-segment (.-value n))
-                             w (grapheme-width seg)]
-                         (if (>= cc end-col)
-                           {:text r :width rw2}
-                           (if (and (>= cc start-col) (< cc end-col))
-                             (if (and strict? (> (+ cc w) end-col))
-                               {:text r :width rw2}
-                               (let [nr (if (empty? pa) (str r seg) (str r pa seg))]
-                                 (recur nil nr (+ rw2 w))))
-                              (recur nil r rw2)))))))))))))))
+   (if (<= length 0)
+     {:text "" :width 0}
+     (let [end-col (+ start-col length)]
+       (loop [i 0 cc 0 result "" rw 0]
+         (if (or (>= i (.-length line)) (>= cc end-col))
+           {:text result :width rw}
+           (if-let [ansi (extract-ansi-code line i)]
+             (recur (+ i (.-length ansi)) cc
+                    (if (>= cc start-col) (str result (.-code ansi)) result)
+                    rw)
+             (let [seg (.charAt line i)
+                   w (grapheme-width seg)]
+               (cond
+                 (< cc start-col)
+                 (recur (inc i) (+ cc w) result rw)
+
+                 (and strict? (> (+ cc w) end-col))
+                 {:text result :width rw}
+
+                 :else
+                 (recur (inc i) (+ cc w) (str result seg) (+ rw w)))))))))))
 
 (defn slice-by-column
   "Extract visible columns from a line."
@@ -476,15 +472,15 @@
                            (cond
                              (< cc before-end)
                              (let [nb (if (empty? pa-inner) (str b seg) (str b pa-inner seg))]
-                                (recur nil nb (+ bw2 w) a aw2 "" started?-inner))
+                                (recur iter nb (+ bw2 w) a aw2 "" started?-inner))
                              (and (>= cc after-start) (< cc after-end))
                              (let [ns? (or started?-inner true)
                                    na (if-not started?-inner
                                         (str (.getActiveCodes tracker) seg)
                                         (str a pa-inner seg))]
-                                (recur nil b bw2 na (+ aw2 w) "" ns?))
+                                (recur iter b bw2 na (+ aw2 w) "" ns?))
                              :else
-                             (recur nil b bw2 a aw2 pa-inner started?-inner))))))]
+                             (recur iter b bw2 a aw2 pa-inner started?-inner))))))]
             (recur text-end (+ cc (:bw sr))
                    (:b sr) (:bw sr)
                    (:a sr) (:aw sr)
