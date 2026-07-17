@@ -1,17 +1,37 @@
-{:paths ["mutation"]
+{;; Default classpath = the shadow-cljs build (shadow-cljs.edn uses :deps true).
+ ;; katamorph + event-ledger are consumed from immutable git refs (open-hax
+ ;; repos, tag v0.1.0), NOT the removed local packages/ copies — bump the
+ ;; :git/sha + :git/tag to adopt a new release.
+ :paths ["src/cljs" "test/cljs"]
 
  :deps
- {org.clojure/clojure      {:mvn/version "1.12.0"}
-  org.clojure/tools.reader {:mvn/version "1.5.2"}
-  rewrite-clj/rewrite-clj {:mvn/version "1.1.49"}}
+ {thheller/shadow-cljs          {:mvn/version "3.4.11"}
+  metosin/malli                 {:mvn/version "0.16.4"}
+  funcool/promesa               {:mvn/version "11.0.678"}
+  cider/cider-nrepl             {:mvn/version "0.50.2"}
+  refactor-nrepl/refactor-nrepl {:mvn/version "3.9.1"}
+  io.github.open-hax/katamorph    {:git/tag "v0.1.0"
+                                   :git/sha "509878193515b199ce8477b3c2d583f0d5b32ac8"}
+  io.github.open-hax/event-ledger {:git/tag "v0.2.0"
+                                   :git/sha "9e7fd430c26b245a3b120f5d2dee33fc8cb4a71f"}}
 
  :aliases
+ ;; Clojure-first mutation harness (mutation/knoxx/…) — mutates CLJS source
+ ;; forms before shadow compiles them. Its own classpath, kept off the shadow
+ ;; build. See mutation/README.md.
  {:mutation
-  {:main-opts ["-m" "knoxx.mutation-test"]}
+  {:extra-paths ["mutation"]
+   :extra-deps {org.clojure/clojure      {:mvn/version "1.12.0"}
+                org.clojure/tools.reader {:mvn/version "1.5.2"}
+                rewrite-clj/rewrite-clj  {:mvn/version "1.1.49"}}
+   :main-opts ["-m" "knoxx.mutation-test"]}
 
   :mutation-test
-  {:extra-paths ["test/clj"]
-   :extra-deps {io.github.cognitect-labs/test-runner
+  {:extra-paths ["mutation" "test/clj"]
+   :extra-deps {org.clojure/clojure      {:mvn/version "1.12.0"}
+                org.clojure/tools.reader {:mvn/version "1.5.2"}
+                rewrite-clj/rewrite-clj  {:mvn/version "1.1.49"}
+                io.github.cognitect-labs/test-runner
                 {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
    :main-opts ["-m" "cognitect.test-runner"
                "--namespace-regex" "^knoxx\\..*-test$"]}}}

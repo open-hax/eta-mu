@@ -21,8 +21,8 @@ Run the shared clj-kondo rules against Rheos and resolve every finding per the e
 
 ## Scope
 
-- `packages/Rheos/src/**/*.cljs`
-- `packages/Rheos/test/**/*.cljs`
+- `packages/rheos/src/**/*.cljs`
+- `packages/rheos/test/**/*.cljs`
 
 ## Baseline pre-lint signal
 
@@ -62,13 +62,13 @@ pnpm --filter @open-hax/kanban-cljs lint:kondo
 ### Files modified
 
 - `packages/kondo-config/clj-kondo.exports/open-hax/kondo-config/config.edn` — added `helix.core/defnc` lint-as rule so component definitions resolve correctly.
-- `packages/Rheos/src/rheos/backend/domain/events.cljs` — converted `record!` and `query-events` to `^:async` + bare `await`.
-- `packages/Rheos/src/rheos/backend/infra/watcher.cljs` — converted `handle-file-change` to `^:async` + bare `await`; removed local `fs` alias binding.
-- `packages/Rheos/src/rheos/ui/domain/layout.cljs` — converted `move-task!`, live refetch, and all mount/filter/detail effects to `^:async` + bare `await`.
-- `packages/Rheos/src/rheos/ui/domain/sidebar.cljs` — converted `handle-save` to `^:async` + bare `await`.
-- `packages/Rheos/src/rheos/ui/infra/api.cljs` — converted `fetch-json` to `^:async` + bare `await`.
-- `packages/Rheos/src/rheos/ui/infra/chat_session.cljs` — converted `post-json` and `send-message` start flow to `^:async` + bare `await`.
-- `packages/Rheos/test/rheos/backend/law/fsm_test.cljs` — converted `run-gate-passes-through-non-command-checks` to `^:async` + bare `await`.
+- `packages/rheos/src/rheos/backend/domain/events.cljs` — converted `record!` and `query-events` to `^:async` + bare `await`.
+- `packages/rheos/src/rheos/backend/infra/watcher.cljs` — converted `handle-file-change` to `^:async` + bare `await`; removed local `fs` alias binding.
+- `packages/rheos/src/rheos/ui/domain/layout.cljs` — converted `move-task!`, live refetch, and all mount/filter/detail effects to `^:async` + bare `await`.
+- `packages/rheos/src/rheos/ui/domain/sidebar.cljs` — converted `handle-save` to `^:async` + bare `await`.
+- `packages/rheos/src/rheos/ui/infra/api.cljs` — converted `fetch-json` to `^:async` + bare `await`.
+- `packages/rheos/src/rheos/ui/infra/chat_session.cljs` — converted `post-json` and `send-message` start flow to `^:async` + bare `await`.
+- `packages/rheos/test/rheos/backend/law/fsm_test.cljs` — converted `run-gate-passes-through-non-command-checks` to `^:async` + bare `await`.
 
 ### Verification
 
@@ -79,7 +79,7 @@ pnpm --filter @open-hax/kanban-cljs lint:kondo
 Output:
 
 ```
-> @open-hax/kanban-cljs@0.1.0 lint:kondo /home/err/devel/orgs/open-hax/eta-mu/packages/Rheos
+> @open-hax/kanban-cljs@0.1.0 lint:kondo /home/err/devel/orgs/open-hax/eta-mu/packages/rheos
 > clj-kondo --lint src test
 
 linting took 243ms, errors: 0, warnings: 0

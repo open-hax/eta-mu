@@ -56,10 +56,10 @@ We treat the board as an FSM over tasks.
 - **WIP**: a transition fails if the target state’s WIP cap is full.
 
 > **Enforcement source of truth:** the `promethean` FSM in
-> `packages/Rheos/src/rheos/backend/law/fsm.cljs`. The diagram and rules below are
+> `packages/rheos/src/rheos/backend/law/fsm.cljs`. The diagram and rules below are
 > a rendering of that law; when they disagree, the law wins (and this file should be
 > updated). Transitions are executed via the Rheos CLI
-> (`node packages/Rheos/dist/cli.cjs status-update <uuid> --to <status>`, run from the
+> (`node packages/rheos/dist/cli.cjs status-update <uuid> --to <status>`, run from the
 > **repo root** — the CLI resolves the board relative to the working directory). Every
 > CLI transition stamps a `write-id` and appends a ledger event; direct frontmatter
 > edits are detected as drift. There are no shortcut edges: to promote a card several

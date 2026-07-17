@@ -6,7 +6,7 @@ points: "5"
 source: "kanban/epics/coding-agent-cljs-rewrite.md"
 title: "Coding Agent CLJS Rewrite — Extension Runner Infra"
 priority: "P0"
-status: "review"
+status: "done"
 uuid: "coding-agent-cljs-rewrite-infra-extension-runner"
 created_at: "2026-06-15T00:00:00Z"
 ---
@@ -55,4 +55,6 @@ Added tests for extension-file? and expand-path. Total test count: 313 tests / 1
 Completed loader implementation: load-cljs-extension, load-extension, load-extensions, discover-and-load-extensions. Added extern wrappers: node-require, to-js. Total: ~755 lines infra/extension.cljs, 175 lines tests. All gates green (0 clj-kondo, 0 boundary, 317 tests/1138 assertions/0 failures).
 
 All gates green: clj-kondo 0 errors, boundary scanner 0 violations, runtime tests 336/1165 pass. Ready for sign-off.
+
+Board triage 2026-07-15 (reviewed against code): infra/extension.cljs (~755 lines) + tests exist in packages/runtime under eta_mu.coding.infra — discovery, loader, runner, tool/command/flag registration, input events. cljs:verify re-run today: green. Promoting review -> done as the delivered slice is real and gated. CAVEAT recorded for the epic: this runner implements the LEGACY extension API inside packages/runtime; the new packages/eta-mu CLI does not consume it yet, and the 2026-07-12 decision record dropped legacy-contract preservation. Whether the new CLI adopts this runner (depend on runtime), ports it, or descopes extensions from npm-parity v1 is an open question on the epic.
 ---

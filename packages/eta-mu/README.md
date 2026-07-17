@@ -2,8 +2,8 @@
 
 Global `eta-mu` / `pi` CLI entry point and sub-command router. This is the
 `npm install -g eta-mu` binary: a coding agent with real tools (read, bash,
-edit, write) driven by an OpenAI-compatible chat-completions endpoint, plus a
-kanban/git/contracts command surface.
+edit, write, find, grep, ls) driven by an OpenAI-compatible chat-completions
+endpoint with SSE streaming, plus a kanban/git/contracts command surface.
 
 ## Status
 
@@ -95,9 +95,15 @@ eta-mu --help                 # Show command help
 
 ### Agent tools
 
-The agent has four tools wired in by default (see
-`src/cljs/eta_mu/infra/tools/`): `read`, `bash`, `edit`, `write`. There is no
-opt-out flag yet — see [Roadmap](#roadmap).
+The agent has seven tools wired in by default (see
+`src/cljs/eta_mu/infra/tools/`): `read`, `bash`, `edit`, `write`, `find`,
+`grep`, `ls`. There is no opt-out flag yet — see [Roadmap](#roadmap).
+
+### Streaming
+
+Responses stream incrementally over SSE (`stream: true`) — both the TUI and
+`--plain` REPL render text as it arrives rather than waiting for the full
+turn.
 
 ## Development
 
@@ -130,10 +136,6 @@ touch tool execution, the turn loop, or the provider client.
 Tracked on the kanban board (`kanban/epics/coding-agent-cljs-rewrite.md` and
 related cards). Rough shape of what's not done yet:
 
-- **Streaming responses.** The OpenAI client (`extern/openai.cljs`) makes a
-  single non-streaming `stream: false` request per turn; there's no
-  token-by-token streaming yet, so the TUI can't show partial output as it
-  arrives.
 - **Interactive TUI depth.** `infra/cli/tui_repl.cljs` is an append-only,
   scrolling REPL (colorized tool calls/results). It does not have a
   full-screen differential-render host, raw-mode input editor (multi-line

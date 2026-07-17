@@ -78,7 +78,7 @@ the panel to a backend selector (mock/sol/knoxx) for manual testing.
 ## Relationship to Rheos
 
 [`@open-hax/rheos`](../Rheos) consumes chat-ui **as a shadow-cljs source path**
-(`../chat-ui/src` in `packages/Rheos/shadow-cljs.edn`), not as a published npm
+(`../chat-ui/src` in `packages/rheos/shadow-cljs.edn`), not as a published npm
 dependency. Rheos's UI slice requires `eta-mu.chat-ui.protocol`,
 `eta-mu.chat-ui.panel`, `eta-mu.chat-ui.knoxx-session`, and
 `eta-mu.chat-ui.mock-session` directly (see `rheos/ui/domain/orchestrator.cljs`

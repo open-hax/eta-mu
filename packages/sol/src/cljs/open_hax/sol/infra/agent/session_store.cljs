@@ -9,7 +9,7 @@
             [open-hax.sol.domain.node.path :as path]
             [open-hax.sol.domain.time :as time]
             [open-hax.sol.shape.session-persistence :as persistence]
-            [promethean.event-ledger.schema :as event-schema])
+            [open-hax.event-ledger.schema :as event-schema])
 )
 
 (defprotocol ISessionStore

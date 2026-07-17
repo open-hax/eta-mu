@@ -6,7 +6,7 @@ points: "1"
 source: "kanban/epics/coding-agent-cljs-rewrite.md"
 title: "Coding Agent CLJS Rewrite — Settings Error Handling Policy"
 priority: "P1"
-status: "review"
+status: "done"
 uuid: "coding-agent-cljs-rewrite-settings-error-handling"
 created_at: "2026-07-11T00:00:00Z"
 ---
@@ -51,4 +51,6 @@ Should `load-settings!` and `load-auth!`:
 Implemented error handling policy: throw on parse/permission errors, defaults on ENOENT. Updated load-settings! and load-auth! to follow the policy. Added infra/settings_test.cljs (8 tests) and infra/auth_test.cljs (12 tests). All gates green (0 clj-kondo, 0 boundary, 336 tests/1165 assertions/0 failures).
 
 Policy decided and implemented: throw on parse/permission errors, defaults on ENOENT. All 336 tests pass. Ready for sign-off.
+
+Board triage 2026-07-15 (reviewed against code): policy implemented in packages/runtime eta_mu.coding.infra.{settings,auth} — throw on parse/permission errors, defaults on ENOENT — with settings_test + auth_test. cljs:verify re-run today: green (boundary 83 files / 0 violations). Promoting review -> done. NOTE: this policy currently lives in the legacy-compat namespaces in packages/runtime; when packages/eta-mu grows its own settings/config story (see epic open questions) the policy should be adopted there, not reinvented.
 ---

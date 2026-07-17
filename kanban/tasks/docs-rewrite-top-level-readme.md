@@ -17,7 +17,7 @@ The root `README.md` describes an aspirational package layout (`packages/eta-mu-
 
 ## Findings
 
-- Missing real packages: `packages/Rheos`, `packages/sol`, `packages/runtime`, `packages/chat-ui`, `packages/event-ledger`, `packages/extensions`, `packages/extensions-e2e`, `packages/kanban-orchestrator`, `packages/katamorph`, `packages/protocols`, `packages/mcp-contracts`, `packages/axxium`, `packages/kondo-config`.
+- Missing real packages: `packages/rheos`, `packages/sol`, `packages/runtime`, `packages/chat-ui`, `packages/event-ledger`, `packages/extensions`, `packages/extensions-e2e`, `packages/kanban-orchestrator`, `packages/katamorph`, `packages/protocols`, `packages/mcp-contracts`, `packages/axxium`, `packages/kondo-config`.
 - Wrong paths for legacy packages: `packages/eta-mu-github` is actually `packages/legacy/github`; `packages/kanban` is actually `packages/legacy/kanban` (`@open-hax/kanban-legacy`).
 - Local commands reference non-existent packages (`pnpm --dir packages/eta-mu-runtime test`, `pnpm --dir packages/eta-mu-github test`, `pnpm --dir packages/eta-mu-docs test`, `pnpm --dir packages/kanban test`).
 - The TypeScript deprecation section and `~/.ημ` symlink note are still accurate.

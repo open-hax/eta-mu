@@ -1,2 +1,0 @@
-{:deps {metosin/malli {:mvn/version "0.16.4"}}
- :paths ["src/cljs"]}

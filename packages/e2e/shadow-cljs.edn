@@ -1,7 +1,7 @@
 {:source-paths ["src"
                 "../extensions/src"
                 "../extensions/lib"
-                "../runtime/src/cljs"]
+                ]
  :dependencies [[metosin/malli "0.16.4"]]
 
  :builds

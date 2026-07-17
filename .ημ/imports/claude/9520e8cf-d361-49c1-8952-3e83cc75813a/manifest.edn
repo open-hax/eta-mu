@@ -1,0 +1,62 @@
+{:import/id :claude-9520e8cf-review-two-p0-cards
+ :ημ/kind :claude/workflow-import
+ :ημ/version 1
+
+ :source
+ {:provider :claude-code
+  :session-id "9520e8cf-d361-49c1-8952-3e83cc75813a"
+  :session-name "Plan and execute eta-mu CLJS CLI rewrite to v1.0.0"
+  :workflow-run-id "wf_6da4a522-ccf"
+  :workflow-task-id "wy56tdq4v"
+  :project "/home/err/spaces/eta-mu"
+  :imported-at "2026-07-16T23:00:00-05:00"
+  :default-model "claude-fable-5"}
+
+ :artifacts
+ [{:artifact/kind :workflow/script
+   :path "~/.claude/projects/-home-err-spaces-eta-mu/9520e8cf-d361-49c1-8952-3e83cc75813a/workflows/scripts/review-two-p0-cards-wf_6da4a522-ccf.js"
+   :sha256 "ba5682397c004eaa636a17231454efd815458c4f17e7538bef48c7b34f65e435"}
+  {:artifact/kind :workflow/run-state
+   :path "~/.claude/projects/-home-err-spaces/9520e8cf-d361-49c1-8952-3e83cc75813a/workflows/wf_6da4a522-ccf.json"
+   :sha256 "18b227c549dfc5433b4b9927b650361175bc3293ea68cddcf6b454766d6b9d81"}
+  {:artifact/kind :workflow/journal
+   :path "~/.claude/projects/-home-err-spaces/9520e8cf-d361-49c1-8952-3e83cc75813a/subagents/workflows/wf_6da4a522-ccf/journal.jsonl"
+   :sha256 "93c001e98bb688f33687f91bef606834861c0feaf11b1ba275a777f5dcd9a8f2"}
+  {:artifact/kind :session/transcript
+   :path "~/.claude/projects/-home-err-spaces/9520e8cf-d361-49c1-8952-3e83cc75813a.jsonl"
+   :sha256 "8088bba45532ce818f44193a4f3776df4d2343e118487fa9d0aeeec20978a845"}
+  {:artifact/kind :session/tasks
+   :path "~/.claude/tasks/9520e8cf-d361-49c1-8952-3e83cc75813a/"}]
+
+ :observed-run
+ {:status :completed
+  :duration-ms 411793
+  :agent-count 22
+  :total-tokens 800435
+  :total-tool-calls 214
+  :raw-findings 8
+  :confirmed-findings 0
+  :errors ["verify-phase agents hit Claude session limit; failed votes excluded from quorum (filter Boolean)"]}
+
+ :semantics
+ {:primitives {:agent "spawn subagent with prompt + JSON-schema structured output + label + phase"
+               :pipeline "fan-out over items with per-item stage-2 continuation"
+               :parallel "concurrent thunk evaluation"
+               :journal "content-hash keyed (v2:sha256) started/result events; result cached, errors retried on resume"
+               :survival "finding survives iff >= 2 of 2 skeptic votes fail to refute"}
+  :resume-capability :semantic-only
+  :note "Claude's runtime cannot be attached post-exit; this import preserves topology, prompts, schemas, and verdict rules as executable ημ data."}
+
+ :translations
+ [{:from :artifact/workflow-script
+   :to ".ημ/workflows/review-two-p0-cards.edn"
+   :fidelity :full}
+  {:from :semantics/primitives
+   :to "scripts/ultra.bb"
+   :fidelity :equivalent-substrate}
+  {:from :semantics/primitives
+   :to ".opencode/agents/ultra-reviewer.md, .opencode/agents/ultra-skeptic.md"
+   :fidelity :role-equivalent}
+  {:from :workflow/run-state
+   :to ".opencode/skills/ultracode/SKILL.md"
+   :fidelity :protocol-generalized}]}

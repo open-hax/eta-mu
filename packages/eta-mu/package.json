@@ -1,6 +1,6 @@
 {
   "name": "eta-mu",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Global eta-mu / pi CLI entry point and sub-command router",
   "type": "module",
   "private": false,

@@ -3,7 +3,7 @@
 
 (clobber.macro/defapp "rheos"
   {:script "dist/server.js"
-   :cwd "packages/Rheos"
+   :cwd "packages/rheos"
    :interpreter "node"
    :exec_mode "fork"
    :instances 1

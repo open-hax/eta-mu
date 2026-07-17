@@ -49,7 +49,7 @@
       (is (clojure.string/includes? result "..."))))
   (testing "pad mode"
     (let [result (tu/truncate-to-width "hi" 10 "..." true)]
-      (is (== 10 (tu/visible-width result)))))
+      (is (== 10 (tu/visible-width result))))))
 
 (deftest truncate-to-width-ansi-test
   (testing "ANSI codes don't count toward width"
@@ -66,4 +66,4 @@
 (deftest apply-background-to-line-test
   (testing "pads and applies bg-fn"
     (let [result (tu/apply-background-to-line "hi" 5 identity)]
-      (is (== 5 (tu/visible-width result)))))))
+      (is (== 5 (tu/visible-width result))))))

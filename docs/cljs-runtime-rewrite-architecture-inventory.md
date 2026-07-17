@@ -44,7 +44,7 @@ Total under `packages/**`: ~1789 TS/JS/CLJS source files (re-counted 2026-06-19 
 | `packages/legacy/output-contract-gate` | `@open-hax/output-contract-gate` | 16 | 0 | `src` |
 | `packages/legacy/publication-components` | `@open-hax/garden-publication-components` | 10 | 0 | `src` |
 | `packages/legacy/tui` | `@open-hax/eta-mu-tui` | 52 | 0 | `src`, `test` |
-| `packages/Rheos` | `@open-hax/rheos` | 1 | 45 | `src`, `test`, `scripts` |
+| `packages/rheos` | `@open-hax/rheos` | 1 | 45 | `src`, `test`, `scripts` |
 | `packages/sol` | `@open-hax/sol` | 7 | 114 | `src`, `test`, `scripts` |
 | `packages/katamorph` | `@open-hax/katamorph` | 0 | 32 | `src`, `test` |
 | `packages/chat-ui` | `@open-hax/chat-ui` | 0 | 10 | `src`, `test` |
@@ -78,7 +78,7 @@ Two non-package directories sit under `packages/` and are NOT workspace members:
 | `packages/legacy/tui` | `@open-hax/eta-mu-tui` library | Presentation/runtime shell. Defer until CLI/runtime state contracts stabilize. |
 | `packages/legacy/kanban` | binary `openhax-kanban`; multiple board/content/task exports | Keep as operational support unless rewrite scope expands to the board tool itself. |
 | `packages/sol` | `@open-hax/sol` | New CLJS-first eta-mu core (belief state, panels, mu candidates, action envelopes). Likely supersedes parts of `runtime` over time; treat as experimental category owner. |
-| `packages/Rheos` | `@open-hax/rheos` | Kanban/web UI runtime and service shell. Contains both CLJS UI and small TS bootstraps. |
+| `packages/rheos` | `@open-hax/rheos` | Kanban/web UI runtime and service shell. Contains both CLJS UI and small TS bootstraps. |
 | `packages/katamorph` | `@open-hax/katamorph` | Contract/resource runtime ("data as interpreter"): manifest grammar, Malli schema registry, store protocol + memory/mongo registries, action interpreter, policy/condition/filter/driver registries, agent-turn utils. All-CLJS. Pure data + interpreter; the schema/manifest grammar is a `law.*`/`shape.*` reference, the interpreter is `domain.*`. |
 | `packages/chat-ui` | `@open-hax/chat-ui` | Helix/React chat UI components (`ChatPanel`, `MessageBubble`, `ChatComposer`) + `IChatSession` protocol with sol/knoxx/mock backends. Browser `extern.*` reference. (Uses lilactown/helix exclusively — not Reagent.) |
 | `packages/legacy/publication-components` | `@open-hax/garden-publication-components` | Web publication components. Defer until message shapes are stable. |
@@ -136,7 +136,7 @@ Observed hotspots:
 - `packages/extensions/src/eta_mu/extensions/websearch_open_hax.cljs` uses `js/process.env`, `js/fetch`, `js/JSON`, `js/Promise`, `js/Buffer`, `#js`, `aget`.
 - `packages/extensions/src/eta_mu/extensions/opencode_global_instructions.cljs` uses filesystem/process/global state, `js/JSON`, `clj->js`, `js->clj`, `aget`, `aset`, `js/Array.from`.
 - `packages/extensions/src/eta_mu/contracts/core.cljs` uses MarkdownIt JS token objects through `js/Reflect`, `js/Array.from`, `aget`.
-- `packages/chat-ui/src/**` and `packages/Rheos/src/**` use browser globals, React DOM, WebSocket, localStorage, history, JSON parsing, and environment/global config.
+- `packages/chat-ui/src/**` and `packages/rheos/src/**` use browser globals, React DOM, WebSocket, localStorage, history, JSON parsing, and environment/global config.
 
 Target handling:
 

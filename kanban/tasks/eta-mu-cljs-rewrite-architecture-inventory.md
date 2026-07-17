@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-rewrite-architecture-inventory"
 title: "Eta-mu CLJS Rewrite — Architecture Inventory"
-status: review
+status: "done"
 priority: "P0"
 labels: ["tasks", "cljs", "rewrite", "inventory", "5sp"]
 created_at: "2026-05-29T21:18:48Z"
@@ -9,6 +9,7 @@ source: "kanban/epics/eta-mu-cljs-runtime-rewrite.md"
 points: 5
 category: "tasks"
 ---
+
 # Eta-mu CLJS Rewrite — Architecture Inventory
 
 > Parent epic: `kanban/epics/eta-mu-cljs-runtime-rewrite.md`
@@ -22,7 +23,7 @@ Create the package-by-package map that makes the CLJS rewrite safe and path-scop
 
 - `packages/**` (including `packages/legacy/**`)
 - root `package.json`, `pnpm-workspace.yaml`, `deps.edn`, `shadow-cljs.edn`
-- existing CLJS packages such as `packages/extensions`, `packages/runtime`, `packages/sol`, and `packages/Rheos`
+- existing CLJS packages such as `packages/extensions`, `packages/runtime`, `packages/sol`, and `packages/rheos`
 - agent skill manifests loaded from `~/.agents/skills/*` (host-boundary runtime surface, not a workspace package)
 
 ## Work items
@@ -72,7 +73,7 @@ Status moved to `review` for human verification; not closed.
 - `packages/legacy/ai` → `packages/llm-providers`
 - `packages/legacy/coding-agent` → `packages/eta-mu` (npm: `eta-mu`)
 - `packages/legacy/tui` → `packages/terminal-ui`
-- `packages/legacy/kanban` → superseded by `packages/Rheos`
+- `packages/legacy/kanban` → superseded by `packages/rheos`
 - `packages/legacy/github` → `packages/github-agent`
 - `packages/legacy/output-contract-gate` → `packages/contracts/output`
 - `packages/legacy/publication-components` → `packages/publication-ui`
@@ -105,4 +106,6 @@ The turn-processor (`packages/turn-processor`) remains the shared loop infrastru
 Triage 2026-07-12: all work items and ACs checked; inventory doc exists and has been maintained through the reorg. One remaining gap: update docs/cljs-runtime-rewrite-architecture-inventory.md to record that the first LLM adapter landed in packages/eta-mu (eta-mu.extern.openai), that packages/llm-providers does not exist, and whether the legacy/ai -> llm-providers mapping still stands. Scope is small and unambiguous -> moving to ready.
 
 2026-07-12: appended 'Decision record (2026-07-12) — simplification directives' to docs/cljs-runtime-rewrite-architecture-inventory.md: no agent package (turn-processor owns the loop), no llm-providers (proxy + eta-mu.extern.openai is the boundary; legacy/ai -> llm-providers mapping voided), eta-mu owns the CLI, TS-interop/JSON-config compatibility dropped, north star is npm install -g parity with published stable. Remaining parity gaps listed. Card scope complete -> review.
+
+Board triage 2026-07-15 (reviewed against code): all work items and ACs verified. Inventory doc exists, was maintained through the monorepo reorg, and carries the Decision record (2026-07-12) that supersedes the original package map (no agent package, no llm-providers, eta-mu owns the CLI, compat constraints dropped, north star = npm install -g parity). The doc-refresh gap from the 2026-07-12 triage is closed. Promoting review -> done. This card's living-map function passes to kanban/epics/coding-agent-cljs-rewrite.md.
 ---

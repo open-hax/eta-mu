@@ -21,7 +21,7 @@ The current `packages/legacy/*` names reflect the old TypeScript product split:
 | `tui` | Jargon. It is a terminal UI library. |
 | `output-contract-gate` | Long and tool-specific. It is really a law/shape package for output contracts and OPMF. |
 | `github` | Tied to a single provider. It is a GitHub automation agent. |
-| `kanban` | Superseded by `packages/Rheos`. The real kanban implementation is now in Rheos; the legacy package is only operational support. |
+| `kanban` | Superseded by `packages/rheos`. The real kanban implementation is now in Rheos; the legacy package is only operational support. |
 
 The goal is to give each package a name that describes **what it owns** in the new architecture, using the category vocabulary from the rewrite inventory: `domain`, `shape`, `law`, `extern`, `infra`, `cli`, `tui`, `web`.
 
@@ -72,7 +72,7 @@ Keep the rewrite order from the architecture inventory, but move code into the n
 3. **Slice 3 — CLI/message/session bridge.** Create `packages/eta-mu` from `packages/legacy/coding-agent` core. The remaining legacy providers/TUI stay in `packages/legacy/` until their slices.
 4. **Slice 4 — providers.** Create `packages/llm-providers` from `packages/legacy/ai`.
 5. **Slice 5 — TUI.** Create `packages/terminal-ui` from `packages/legacy/tui`.
-6. **Slice 6 — remaining agents/tools.** Create `packages/github-agent`, `packages/publication-ui`, `packages/docs-ui` as their dependencies stabilize. The legacy `kanban` package is not recreated; `packages/Rheos` is the canonical kanban implementation.
+6. **Slice 6 — remaining agents/tools.** Create `packages/github-agent`, `packages/publication-ui`, `packages/docs-ui` as their dependencies stabilize. The legacy `kanban` package is not recreated; `packages/rheos` is the canonical kanban implementation.
 7. **Slice 7 — delete `packages/legacy/`.** Once all legacy packages are empty, remove the directory and the TS-line-count guard can be retired.
 
 ## Open questions

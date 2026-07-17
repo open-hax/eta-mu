@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-agent-tools"
 title: "Eta-mu Agent Tools — read, bash, edit, write"
-status: "review"
+status: "done"
 priority: "P0"
 labels: ["tasks", "cljs", "coding-agent", "eta-mu", "5sp"]
 created_at: "2026-07-12T00:00:00Z"
@@ -60,4 +60,6 @@ Implemented read/bash/edit/write tools: law.tools (malli arg schemas + JSON-sche
 Manual smoke test completed against the live proxy ($PROXX_URL, model gemma4:31b): read (read package.json, extracted name field), bash (wc -l on a scratch file), edit (unique-match replace, verified via a follow-up read after the model self-corrected on a re-run), and write (created a new file with content) all executed successfully and their tool-result content round-tripped back through the turn-processor loop into the assistant's final reply. All acceptance criteria now checked off.
 
 Addressed review feedback (2026-07-12): added a real e2e test (packages/eta-mu/test-e2e/cljs/eta_mu/e2e/agent_cli_e2e.cljs, run via 'pnpm --dir packages/eta-mu test:e2e') that builds dist-cli/index.cjs, spawns it as a real child process against a mock OpenAI-compatible HTTP server serving a fixed, hand-shuffled queue of tool-calling turns, and asserts both the tool_result payloads sent back to the mock and the real filesystem side effects, isolated per-run via a random tmp dir + OS-assigned port. Also fixed the exact bug you hit: eta-mu agent used to forward OpenAI's raw 401 JSON body when no API key was configured; extern/openai.cljs now short-circuits with a clear, actionable message ('Set --api-key/OPENAI_AUTH_TOKEN/OPENAI_API_KEY, or point --base-url/OPENAI_BASE_URL at a different provider') before ever making a network call, and agent.cljs now accepts a --base-url flag (previously only available via env var, and not even threaded through turn-processor's loop.cljs -- fixed that gap too). README.md rewritten with the full provider-config table, quick start, and roadmap.
+
+Board triage 2026-07-15 (reviewed against code): verified in packages/eta-mu — law.tools, domain.tools.*, extern.child-process, infra.tools.{read,bash,edit,write,registry}; registry wired into agent.cljs initial-context (src/cljs/eta_mu/infra/cli/commands/agent.cljs:30). E2e suite exists at test-e2e/cljs/eta_mu/e2e/agent_cli_e2e.cljs. Gates re-run today: 80 tests / 149 assertions / 0 failures, clj-kondo 0/0. All ACs checked. Promoting review -> done. OPEN QUESTION carried to the epic: published stable ships find/grep/ls and edit-diff tools too — is bash sufficient for npm-install-g parity, or do those need their own cards?
 ---

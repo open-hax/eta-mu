@@ -159,7 +159,7 @@ Current migration intent points toward normalization into an `eta-mu-radar` line
 - `packages/opencode-reactant` *(deleted in the 2026-06 reorg)*
 - `services/agentd` *(deleted in the 2026-06 reorg)*
 - `shared/js/opencode-events` *(deleted in the 2026-06 reorg)*
-- `packages/kanban` *(now `packages/legacy/kanban`, superseded by `packages/Rheos`)*
+- `packages/kanban` *(now `packages/legacy/kanban`, superseded by `packages/rheos`)*
 
 These are absorbed legacy or transitional surfaces.
 They may remain temporarily, but they are not the canonical answer to "what is eta-mu?"

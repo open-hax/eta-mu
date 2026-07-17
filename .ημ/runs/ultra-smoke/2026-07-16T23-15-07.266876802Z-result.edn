@@ -1,0 +1,6 @@
+{:workflow/id :ultra-smoke,
+ :ημ/kind :ultra/run-result,
+ :finished-at "2026-07-16T23:15:07.266863736Z",
+ :raw-findings 0,
+ :confirmed [],
+ :all []}

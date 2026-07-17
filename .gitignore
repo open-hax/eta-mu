@@ -65,3 +65,4 @@ packages/legacy/kanban/playwright-report/
 core
 
 packages/eta-mu/dist-cli/
+packages/eta-mu/*.tgz

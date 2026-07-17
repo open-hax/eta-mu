@@ -12,7 +12,7 @@ category: "tasks"
 
 # PR #134: Use structured frontmatter update in Rheos task writeback
 
-`packages/Rheos/src/rheos/backend/infra/task_writeback.cljs` (lines 18-20) uses raw line scanning via `update-frontmatter-status`, which can corrupt task body or comment lines containing `status:`. Replace with a structured frontmatter update that only touches the YAML frontmatter block.
+`packages/rheos/src/rheos/backend/infra/task_writeback.cljs` (lines 18-20) uses raw line scanning via `update-frontmatter-status`, which can corrupt task body or comment lines containing `status:`. Replace with a structured frontmatter update that only touches the YAML frontmatter block.
 
 ## Acceptance
 - Only the frontmatter `status` field is modified.

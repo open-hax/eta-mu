@@ -1,5 +1,5 @@
 {
-  "name": "@open-hax/eta-mu-e2e",
+  "name": "@eta-mu/e2e",
   "private": true,
   "version": "0.1.1",
   "description": "Monorepo-wide end-to-end tests for cross-package interactions",
@@ -9,8 +9,6 @@
     "lint:kondo": "clj-kondo --lint src"
   },
   "devDependencies": {
-    "@open-hax/eta-mu-cli": "workspace:*",
-    "@open-hax/eta-mu-runtime": "workspace:*",
     "express": "^4.21.2",
     "shadow-cljs": "^2.28.20",
     "markdown-it": "^14.1.0"

@@ -1,5 +1,5 @@
 {:apps [{:name "rheos"
-         :cwd "packages/Rheos"
+         :cwd "packages/rheos"
          :script "dist/server.js"
          :interpreter "node"
          :exec_mode "fork"

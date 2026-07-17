@@ -43,17 +43,22 @@
   (str (js/Date.now) "-" (.floor js/Math (* (.random js/Math) 1000000))))
 
 (defn- tool-call-message
-  "Build an OpenAI-shaped assistant message issuing one or more tool calls."
+  "Build an OpenAI streaming-delta assistant message issuing one or more tool
+  calls, each fully formed in a single delta (a degenerate one-chunk stream)."
   [calls]
   {:role "assistant"
-   :tool_calls (mapv (fn [[id name args]]
-                       {:id id :type "function"
-                        :function {:name name :arguments (js/JSON.stringify (clj->js args))}})
-                     calls)})
+   :tool_calls (map-indexed (fn [idx [id name args]]
+                              {:index idx :id id :type "function"
+                               :function {:name name :arguments (js/JSON.stringify (clj->js args))}})
+                            calls)})
 
-(defn- completion [message finish-reason]
+(defn- completion
+  "Build a single-chunk SSE `data:` payload equivalent to a full (non-streamed)
+  OpenAI chat-completion turn — the real client always requests `stream:
+  true`, so every mock turn must be shaped as a streaming-delta chunk."
+  [delta finish-reason]
   {:model "mock-model"
-   :choices [{:message message :finish_reason finish-reason}]
+   :choices [{:index 0 :delta delta :finish_reason finish-reason}]
    :usage {:prompt_tokens 1 :completion_tokens 1 :total_tokens 2}})
 
 ;; The canned turn queue. Two shuffled (non-default-order) parallel-tool-call
@@ -75,7 +80,8 @@
 
 (defn- request-handler
   "Build the (req res) handler for the mock server: read the full body,
-  record it, pop the next canned response off `remaining`, and reply."
+  record it, pop the next canned response off `remaining`, and reply as a
+  single-event SSE stream (the real client always sends `stream: true`)."
   [remaining requests]
   (fn [^js req ^js res]
     (.setEncoding req "utf8")
@@ -88,8 +94,9 @@
                    next-response (first @remaining)]
                (swap! requests conj {:body body :authorization auth})
                (swap! remaining rest)
-               (.writeHead res 200 #js {"Content-Type" "application/json"})
-               (.end res (js/JSON.stringify (clj->js next-response)))))))))
+               (.writeHead res 200 #js {"Content-Type" "text/event-stream"})
+               (.write res (str "data: " (js/JSON.stringify (clj->js next-response)) "\n\n"))
+               (.end res "data: [DONE]\n\n")))))))
 
 (defn- ^:async start-mock-server
   "Start an HTTP server on an OS-assigned port serving `queue` (a vector of
@@ -191,5 +198,101 @@
           (testing "the real filesystem reflects every tool's effect, with no cross-file interference"
             (is (= "ZZZ" (.readFileSync fs (path/join tmp-dir "a.txt") "utf8")))
             (is (= "BBB" (.readFileSync fs (path/join tmp-dir "b.txt") "utf8"))))
+
+          (await (stop-mock-server! server)))))))
+
+(deftest ^:async agent-cli-find-grep-ls-tools-e2e-test
+  (testing "eta-mu agent drives find/grep/ls tool calls against a mock LLM"
+    (let [entry-path (path/join (js/process.cwd) "dist-cli" "index.cjs")]
+      (is (.existsSync fs entry-path)
+          (str "dist-cli/index.cjs is missing at " entry-path
+               " — run `pnpm build` before `pnpm test:e2e`."))
+
+      (let [tmp-dir (path/join (os/tmpdir) (str "eta-mu-e2e-tools-" (unique-id)))]
+        (.mkdirSync fs tmp-dir #js {:recursive true})
+        (.writeFileSync fs (path/join tmp-dir "needle.txt") "find the needle here")
+        (.mkdirSync fs (path/join tmp-dir "sub") #js {:recursive true})
+        (.writeFileSync fs (path/join tmp-dir "sub" "other.txt") "nothing to see")
+
+        (let [queue [(completion (tool-call-message [["call-1" "find" {:pattern "*.txt"}]]) "tool_calls")
+                     (completion (tool-call-message [["call-2" "grep" {:pattern "needle"}]]) "tool_calls")
+                     (completion (tool-call-message [["call-3" "ls" {}]]) "tool_calls")
+                     (completion {:role "assistant" :content "Done."} "stop")]
+              {:keys [server port requests]} (await (start-mock-server queue))
+              result (await (run-cli! entry-path tmp-dir
+                                      {"OPENAI_BASE_URL" (str "http://127.0.0.1:" port "/v1/chat/completions")
+                                       "OPENAI_AUTH_TOKEN" "e2e-test-token"}
+                                      ["agent" "--model" "mock-model" "start"]))]
+
+          (testing "the CLI process completes successfully"
+            (is (= 0 (:exit result)) (str "stderr: " (:stderr result)))
+            (is (str/includes? (:stdout result) "Done.")))
+
+          (testing "find returned both .txt files, sorted, relative to cwd"
+            (let [messages (tool-messages (nth @requests 1))]
+              (is (= "needle.txt\nsub/other.txt" (:content (first messages))))))
+
+          (testing "grep found the match in needle.txt with the right line number"
+            (let [messages (tool-messages (nth @requests 2))]
+              (is (= "needle.txt:1: find the needle here" (:content (last messages))))))
+
+          (testing "ls listed both the file and the sub directory"
+            (let [messages (tool-messages (nth @requests 3))
+                  content (:content (last messages))]
+              (is (str/includes? content "needle.txt"))
+              (is (str/includes? content "sub/"))))
+
+          (await (stop-mock-server! server)))))))
+
+(defn- ^:async start-sse-mock-server
+  "Start an HTTP server that always replies with the same genuinely
+  multi-chunk `text/event-stream` body — each SSE `data:` line is written as
+  a SEPARATE `res.write`, so the real client must reassemble the response
+  from several network reads rather than getting it whole in one shot."
+  [sse-body]
+  (let [server (http/createServer
+                (fn [^js req ^js res]
+                  (.on req "data" (fn [_chunk]))
+                  (.on req "end"
+                       (fn []
+                         (.writeHead res 200 #js {"Content-Type" "text/event-stream"})
+                         (doseq [line sse-body]
+                           (.write res line))
+                         (.end res)))))]
+    (js/Promise.
+     (fn [resolve _reject]
+       (.listen server 0 "127.0.0.1"
+                (fn [] (resolve {:server server :port (.-port (.address server))})))))))
+
+(deftest ^:async agent-cli-sse-streaming-e2e-test
+  (testing "eta-mu agent reassembles a genuinely chunked SSE response into the final reply"
+    (let [entry-path (path/join (js/process.cwd) "dist-cli" "index.cjs")]
+      (is (.existsSync fs entry-path)
+          (str "dist-cli/index.cjs is missing at " entry-path
+               " — run `pnpm build` before `pnpm test:e2e`."))
+
+      (let [tmp-dir (path/join (os/tmpdir) (str "eta-mu-e2e-sse-" (unique-id)))
+            sse-body ["data: " (js/JSON.stringify (clj->js {:choices [{:index 0 :delta {:role "assistant"} :finish_reason nil}]}))
+                      "\n\n"
+                      "data: " (js/JSON.stringify (clj->js {:choices [{:index 0 :delta {:content "Hel"} :finish_reason nil}]}))
+                      "\n\n"
+                      "data: " (js/JSON.stringify (clj->js {:choices [{:index 0 :delta {:content "lo, "} :finish_reason nil}]}))
+                      "\n\n"
+                      "data: " (js/JSON.stringify (clj->js {:choices [{:index 0 :delta {:content "world!"} :finish_reason nil}]}))
+                      "\n\n"
+                      "data: " (js/JSON.stringify (clj->js {:choices [{:index 0 :delta {} :finish_reason "stop"}]}))
+                      "\n\n"
+                      "data: [DONE]\n\n"]]
+        (.mkdirSync fs tmp-dir #js {:recursive true})
+
+        (let [{:keys [server port]} (await (start-sse-mock-server sse-body))
+              result (await (run-cli! entry-path tmp-dir
+                                      {"OPENAI_BASE_URL" (str "http://127.0.0.1:" port "/v1/chat/completions")
+                                       "OPENAI_AUTH_TOKEN" "e2e-test-token"}
+                                      ["agent" "--model" "mock-model" "hi"]))]
+
+          (testing "the CLI process completes successfully with the reassembled text"
+            (is (= 0 (:exit result)) (str "stderr: " (:stderr result)))
+            (is (str/includes? (:stdout result) "Hello, world!")))
 
           (await (stop-mock-server! server)))))))

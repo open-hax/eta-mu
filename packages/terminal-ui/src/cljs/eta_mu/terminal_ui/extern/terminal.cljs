@@ -26,10 +26,12 @@
     (.write ^js stdout data))
 
   (columns [_]
-    (or (.-columns ^js stdout) 80))
+    (let [c (.-columns ^js stdout)]
+      (if (pos? c) c 80)))
 
   (rows [_]
-    (or (.-rows ^js stdout) 24))
+    (let [r (.-rows ^js stdout)]
+      (if (pos? r) r 24)))
 
   (hide-cursor [_]
     (.write ^js stdout "\u001b[?25l"))

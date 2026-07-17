@@ -14,7 +14,7 @@ namespace layers, and the testing gate that all CLJS work follows.
 - **Node** + **pnpm** (`packageManager: pnpm@10.14.0`; use `corepack enable`).
 - A JVM (shadow-cljs and clj-kondo run on it).
 - `clj-kondo` on `PATH` for `lint:kondo`.
-- `bb` (Babashka) is optional — only `packages/Rheos` ships a `bb.edn`.
+- `bb` (Babashka) is optional — only `packages/rheos` ships a `bb.edn`.
 
 ## First-time setup
 
@@ -31,8 +31,9 @@ pnpm test
 ```
 
 `pnpm test` at the root runs the suites wired into the root `package.json`
-(`runtime`, `github`, `docs`, `kanban-legacy`). Per-package CLJS suites are run
-with `--filter` (see below).
+(`github`, `docs`, `kanban-legacy` — all legacy; `packages/runtime` was
+dissolved 2026-07-17). Per-package CLJS suites are run with `--filter`
+(see below).
 
 ## Day-to-day dev loop
 
@@ -56,7 +57,6 @@ Each CLJS package has its own `shadow-cljs.edn` with `build`, `watch`, and
 # Watch + hot-reload a single package
 pnpm --filter @open-hax/rheos watch
 pnpm --filter @open-hax/sol watch
-pnpm --filter @open-hax/eta-mu-runtime cljs:compile   # one-shot compile
 
 # Compile + run a package's test suite
 pnpm --filter @open-hax/rheos test
@@ -66,11 +66,11 @@ pnpm --filter @open-hax/eta-mu-extensions test
 pnpm --filter @open-hax/sol lint:kondo
 ```
 
-Inside `packages/Rheos` you can also use the Babashka tasks defined in its
+Inside `packages/rheos` you can also use the Babashka tasks defined in its
 `bb.edn`:
 
 ```bash
-cd packages/Rheos
+cd packages/rheos
 bb watch    # shadow-cljs watch server-dev
 bb test     # shadow-cljs compile test && node target/test.cjs
 bb build    # shadow-cljs release server cli
@@ -79,29 +79,14 @@ bb build    # shadow-cljs release server cli
 `bb` tasks exist **only** for Rheos; for every other package use the
 `pnpm --filter <name>` scripts.
 
-### Verify gate (runtime)
-
-`packages/runtime` ships an aggregate verification script that compiles, tests,
-smoke-checks, and runs the CLJS boundary check:
-
-```bash
-pnpm --filter @open-hax/eta-mu-runtime cljs:verify
-# == cljs:compile && cljs:test && cljs:smoke && cljs:boundary
-pnpm --filter @open-hax/eta-mu-runtime cljs:boundary   # boundary check alone
-```
-
-`cljs:verify` / `cljs:boundary` are runtime-specific scripts; they are not
-defined on the other packages.
-
 ## Targeting common packages
 
 | Package | Filter name | Build | Watch / dev | Test |
 |---------|-------------|-------|-------------|------|
 | Rheos (Fastify + React app, `rheos` CLI) | `@open-hax/rheos` | `build` | `watch` | `test` |
 | sol (Knoxx-derived backend control plane) | `@open-hax/sol` | `build` | `watch` | `test` |
-| runtime (movement kernel + TS facade) | `@open-hax/eta-mu-runtime` | `build` | `cljs:compile` | `test` / `cljs:verify` |
 | chat-ui (Reagent chat component lib) | `@open-hax/chat-ui` | `build` (lib) / `build:app` | `dev` | `test` |
-| extensions (Pi/OpenCode contract runtimes) | `@open-hax/eta-mu-extensions` | `build` | `watch` | `test` |
+| extensions (Pi/OpenCode contract runtimes) | `@eta-mu/extensions` | `build` | `watch` | `test` |
 | event-ledger (append-only event store lib) | `@promethean-os/event-ledger` | `build` | `watch` | `test` |
 
 Examples:

@@ -1,7 +1,7 @@
 ---
 uuid: "terminal-ui-cljs-package"
 title: "Terminal UI CLJS Package"
-status: "review"
+status: "done"
 priority: "P1"
 labels: ["tasks", "cljs", "rewrite", "tui", "terminal-ui", "5sp"]
 created_at: "2026-07-09T18:00:00Z"
@@ -96,4 +96,6 @@ Fixed 24 tests: bracket mismatches (text_utils, box, undo_stack_test), Segmenter
 Wired a real, working TUI for eta-mu agent: added component.message (user/assistant/thinking/tool-call/tool-result rendering) and shape.ansi (SGR color helpers) to packages/terminal-ui, and eta-mu.infra.cli.tui-repl in packages/eta-mu that renders every turn-processor lifecycle event through those components. eta-mu agent now defaults to this TUI on a TTY (--plain reverts to the old println REPL). Verified live against $PROXX_URL with model gemma4:31b using 'script' to allocate a real pty: banner, colorized assistant reply, and clean /exit all rendered correctly. terminal-ui: 32 tests/78 assertions, 0 kondo warnings. eta-mu: 79 tests/147 assertions, 0 kondo warnings, both build clean. Scope note: this is an append-only scrolling REPL, not the full-screen differential-render + raw-mode input editor from the legacy TUI (session selectors, cursor-addressable multi-line composition, markdown overlays) -- that remains open follow-on work, noted in the card body.
 
 Addressed review feedback (2026-07-12): README.md rewritten (component table, usage example, roadmap noting what's not built -- full-screen differential host, input editor, session selector). Coverage reporting (pnpm --dir packages/terminal-ui test:coverage) restored after an earlier revert; current numbers 90.96% lines / 51.52% branches / 42.85% functions. Both terminal-ui and eta-mu's coverage + eta-mu's new e2e suite are now wired into CI in .github/workflows/coverage.yml (new 'eta-mu-cljs' job: turn-processor test+lint, terminal-ui test+lint+coverage, eta-mu test+lint+coverage+test:e2e) -- this workflow runs on every PR/push to main, unlike main-pr-gate.yml which is path-scoped and doesn't currently cover any of these three packages. Also opened kanban/tasks/docs-governance-rehaul-epiphany-aligned.md per your request to rehaul docs/agent-instructions/governance aligned to ../epiphany's model.
+
+Board triage 2026-07-15 (reviewed against code): packages/terminal-ui exists (@eta-mu/terminal-ui), extern.terminal + component.message + shape.ansi ported, tui-repl wired as default TTY surface for 'eta-mu agent' (--plain opts out). Gates re-run today: 32 tests / 78 assertions / 0 failures, lint clean; coverage + e2e wired into .github/workflows/coverage.yml. All ACs checked with the documented scope reduction (append-only REPL, not full-screen host). Promoting review -> done. The deferred scope (full-screen differential-render host, raw-mode input editor, session selector/overlays) is now tracked by the new card kanban/tasks/terminal-ui-interactive-host.md so it doesn't evaporate with this card.
 ---

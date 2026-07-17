@@ -4,7 +4,7 @@
  * so that `pnpm exec pi` in the e2e package can load them.
  *
  * Mirrors what build.mjs does locally to ~/.pi/agent/extensions/cljs-<name>/
- * but targets packages/eta-mu-extensions-e2e/extensions/cljs-<name>/ instead.
+ * but targets packages/e2e/extensions/cljs-<name>/ instead.
  */
 import { copyFileSync, existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = path.resolve(__dirname, "..");
-const E2E_ROOT = path.resolve(PKG_ROOT, "..", "eta-mu-extensions-e2e");
+const E2E_ROOT = path.resolve(PKG_ROOT, "..", "e2e");
 const TARGET = path.join(PKG_ROOT, "target", "runtime");
 const EXT_DIR = path.join(E2E_ROOT, "extensions");
 

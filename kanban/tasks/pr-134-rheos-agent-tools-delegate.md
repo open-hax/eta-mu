@@ -12,7 +12,7 @@ category: "tasks"
 
 # PR #134: Delegate agent tool comment/subtask to task-edit and watcher
 
-CodeRabbit flagged issues in `packages/Rheos/src/rheos/backend/infra/agent_tools.cljs`:
+CodeRabbit flagged issues in `packages/rheos/src/rheos/backend/infra/agent_tools.cljs`:
 
 1. `tool-kanban-add-comment` is missing the `text` parameter in its `emit-comment!` call and duplicates logic already in `task-edit/append-comment!`. Refactor it to delegate to `task-edit/append-comment!`.
 2. `tool-kanban-create-subtask` does not register a write-id, causing the watcher to emit spurious drift when the new file is created. Add `watcher` to the requires and call `watcher/register-cli-event!` before writing the file.

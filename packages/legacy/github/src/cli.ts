@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import "dotenv/config";
-import { etaMuActionBatchSchema } from "@open-hax/eta-mu-runtime";
 import { loadConfig } from "./config.js";
 import { classifyGithubEvent } from "./event-classifier.js";
 import {
@@ -14,13 +13,6 @@ import {
 } from "./github.js";
 import { runAutofixForEvent } from "./autofix.js";
 import { runEtaMuPrompt } from "./pi-agent.js";
-import {
-  buildDraftActionBatch,
-  buildPlanningContext,
-  mapActionBatchToDecision,
-  parseActionBatch,
-  publishActionBatch,
-} from "./runtime-batch.js";
 import { findTrackedUnresolvedThreads, findAllUnresolvedThreads } from "./review-gate.js";
 import { ensurePRs } from "./ensure-pr.js";
 import type { AutofixResult, EtaMuAgentDecision } from "./types.js";
@@ -87,6 +79,25 @@ const buildSystemPrompt = (): string => [
 ].join("\n");
 
 const buildPrompt = (context: string): string => `${context}\n\nReturn JSON only.`;
+
+// Leniently parse the model's JSON reply into an agent decision. Anything
+// unparseable or shapeless degrades to a no-op (the caller's fallback path).
+const parseAgentDecision = (raw: string): EtaMuAgentDecision => {
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start < 0 || end <= start) return { shouldRespond: false, mode: "noop", body: "" };
+  try {
+    const parsed = JSON.parse(raw.slice(start, end + 1)) as Partial<EtaMuAgentDecision>;
+    const mode = parsed.mode;
+    return {
+      shouldRespond: parsed.shouldRespond === true,
+      mode: mode === "reply" || mode === "upsert-state" || mode === "autofix" || mode === "noop" ? mode : "noop",
+      body: typeof parsed.body === "string" ? parsed.body : "",
+    };
+  } catch {
+    return { shouldRespond: false, mode: "noop", body: "" };
+  }
+};
 
 const formatAutofixComment = (result: AutofixResult): string => {
   const lines = ["## eta-mu autofix", "", `- status: ${result.pushed ? "pushed" : result.applied ? "applied" : "no-change"}`, `- reason: ${result.reason}`];
@@ -167,54 +178,23 @@ const main = async (): Promise<void> => {
     if (!token) throw new Error("GITHUB_TOKEN or GH_TOKEN is required");
     const octokit = createGitHubClient(token);
     const context = await fetchEventContext(octokit, repo, classification, payload);
-    const planningContext = buildPlanningContext(classification, context);
-    const draftBatch = buildDraftActionBatch(classification, context);
-    let actionBatch = draftBatch;
 
+    let decision: EtaMuAgentDecision = { shouldRespond: false, mode: "noop", body: "" };
     try {
       const decisionJson = await runEtaMuPrompt(
         cwd,
         buildSystemPrompt(),
-        buildPrompt(
-          JSON.stringify(
-            {
-              classification,
-              context,
-              planningContext,
-              draftActionBatch: draftBatch,
-              schemaHint: etaMuActionBatchSchema.shape.kind.value,
-            },
-            null,
-            2,
-          ),
-        ),
+        buildPrompt(JSON.stringify({ classification, context }, null, 2)),
         config.modelProvider,
         config.modelId,
       );
-      actionBatch = parseActionBatch(decisionJson, draftBatch);
+      decision = parseAgentDecision(decisionJson);
     } catch (error) {
       console.warn(
-        `eta-mu action-batch fallback: ${error instanceof Error ? error.message : String(error)}`,
+        `eta-mu decision fallback: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-
-    const decision: EtaMuAgentDecision = mapActionBatchToDecision(actionBatch);
-    console.log(JSON.stringify({ phase: "decide", actionBatch, decision }, null, 2));
-
-    if (!hasFlag(args, "--dry-run")) {
-      try {
-        await publishActionBatch(config.controlPlaneUrl, {
-          source: "eta-mu-github",
-          issue_number: context.issueNumber,
-          pull_request_number: context.pullRequestNumber,
-          batch: actionBatch as unknown as Record<string, unknown>,
-        });
-      } catch (error) {
-        console.warn(
-          `eta-mu action-batch publish skipped: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-    }
+    console.log(JSON.stringify({ phase: "decide", decision }, null, 2));
 
     if (!decision.shouldRespond || hasFlag(args, "--dry-run")) return;
     const targetIssue = context.issueNumber ?? context.pullRequestNumber;

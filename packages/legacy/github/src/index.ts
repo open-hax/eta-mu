@@ -2,14 +2,6 @@ export { runAutofixForEvent } from "./autofix.js";
 export { loadConfig, normalizeLogin } from "./config.js";
 export { classifyGithubEvent } from "./event-classifier.js";
 export {
-  buildDraftActionBatch,
-  buildPlanningContext,
-  formatActionBatchMarkdown,
-  mapActionBatchToDecision,
-  parseActionBatch,
-  publishActionBatch,
-} from "./runtime-batch.js";
-export {
   createGitHubClient,
   fetchEventContext,
   formatReviewGateOutput,

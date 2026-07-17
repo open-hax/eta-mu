@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = resolve(__dirname, "..");
 const ETA_MU_ROOT = resolve(PACKAGE_ROOT, "../..");
-const CLI_PATH = resolve(ETA_MU_ROOT, "packages/coding-agent/dist/cli.js");
+const CLI_PATH = resolve(ETA_MU_ROOT, "packages/legacy/coding-agent/dist/cli.js");
 
 const TIMEOUT_MS = 20_000;
 const EXTENSION_ERROR_PATTERN = /Failed to load extension/i;

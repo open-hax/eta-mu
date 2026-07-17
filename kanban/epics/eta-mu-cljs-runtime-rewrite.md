@@ -1,7 +1,7 @@
 ---
 uuid: "eta-mu-cljs-runtime-rewrite"
 title: "Eta-mu CLJS Runtime Rewrite"
-status: review
+status: "done"
 priority: "P0"
 labels: ["epics", "cljs", "rewrite", "knoxx-style", "55sp"]
 created_at: "2026-05-29T21:18:48Z"
@@ -9,6 +9,7 @@ source: "user-request:2026-05-29"
 points: 55
 category: "epics"
 ---
+
 # Eta-mu CLJS Runtime Rewrite
 
 > Source: user request, 2026-05-29
@@ -229,4 +230,6 @@ pnpm --dir packages/eta-mu-runtime typecheck
 Run `pnpm --dir packages/eta-mu-runtime cljs:verify` to confirm full verification chain. Tighten vague AC before approving.
 
 Triage 2026-07-12: all six child tasks are done and verified against the repo (shadow spine, runtime core, boundary adapters, surface parity, cutover ratchet, architecture inventory — the last now in ready for a small doc refresh). The 2026-06-12 QA gaps (vague ACs on tasks 4/5, untested rollback, missing coverage run) were never formally closed but the child cards passed audit. This umbrella epic's remaining function is coordination of the child epics (agent, ai, coding-agent), which carry their own cards. Recommend moving this epic to review for human sign-off and closing it; residual work is fully represented elsewhere.
+
+Board triage 2026-07-15: all six child tasks are now done (architecture-inventory promoted today after the decision-record refresh landed). Gates re-verified today: packages/eta-mu 80/149 green + kondo 0/0, terminal-ui 32/78, turn-processor 38/88, runtime cljs:verify green (boundary 83 files / 0 violations). The 2026-06-12 QA gaps were either closed by later work or superseded by the 2026-07-12 decision record (legacy-compat constraints dropped). Closing this umbrella epic; the live successor is kanban/epics/coding-agent-cljs-rewrite.md (npm install -g eta-mu parity), which now carries the consolidated open-questions list.
 ---

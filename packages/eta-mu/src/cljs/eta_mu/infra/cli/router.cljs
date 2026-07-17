@@ -10,10 +10,11 @@
             [eta-mu.infra.cli.commands.doctor :as doctor]
             [eta-mu.infra.cli.commands.git :as git]
             [eta-mu.infra.cli.commands.kanban :as kanban]
+            [eta-mu.infra.cli.commands.sessions :as sessions]
             [eta-mu.law.command :as law]
             [eta-mu.shape.args :as args]))
 
-(def version "0.1.0")
+(def version "1.0.0")
 
 (defn- registry
   "Build the command registry."
@@ -25,8 +26,11 @@
                 :description "Report workspace health"
                 :handler doctor/handle}
    "kanban"    {:name "kanban"
-                :description "Agent-first task board"
-                :handler kanban/handle}
+                 :description "Agent-first task board"
+                 :handler kanban/handle}
+   "session"   {:name "session"
+                 :description "List and inspect persisted agent sessions"
+                 :handler sessions/handle}
    "git"       (git/group)
    "contracts" {:name "contracts"
                 :description "Contract gate commands"

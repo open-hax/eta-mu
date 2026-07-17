@@ -14,9 +14,9 @@ category: "tasks"
 
 CodeRabbit requested three test improvements:
 
-1. `packages/Rheos/test/rheos/backend/infra/view_store_test.cljs`: wrap the test body in `try/finally` and move temp-dir cleanup into `finally`.
-2. `packages/Rheos/test/rheos/backend/infra/store_test.cljs`: add a reload assertion that creates a new store against the same directory and verifies persistence.
-3. `packages/Rheos/test/rheos/backend/infra/watcher_test.cljs`: add a regression test where `expect-write!` is registered for one task-id but the event carries a different write-id, expecting `drift-detected`.
+1. `packages/rheos/test/rheos/backend/infra/view_store_test.cljs`: wrap the test body in `try/finally` and move temp-dir cleanup into `finally`.
+2. `packages/rheos/test/rheos/backend/infra/store_test.cljs`: add a reload assertion that creates a new store against the same directory and verifies persistence.
+3. `packages/rheos/test/rheos/backend/infra/watcher_test.cljs`: add a regression test where `expect-write!` is registered for one task-id but the event carries a different write-id, expecting `drift-detected`.
 
 ## Acceptance
 - All three test files updated.

@@ -1,5 +1,5 @@
 {
-  "name": "@open-hax/eta-mu-extensions",
+  "name": "@eta-mu/extensions",
   "version": "0.2.7",
   "description": "Constitutional layer runtime extensions for cybernetic governance. Source of receipt-river, session-mycology, contract-runtime, fork-tax, and other eta-mu primitives.",
   "type": "module",
@@ -32,7 +32,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/open-hax/eta-mu.git",
-    "directory": "packages/eta-mu-extensions"
+    "directory": "packages/extensions"
   },
   "keywords": [
     "eta-mu",

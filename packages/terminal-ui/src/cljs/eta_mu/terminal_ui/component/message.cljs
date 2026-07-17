@@ -7,6 +7,7 @@
   package decoupled from the turn-processor law schemas."
   (:require [clojure.string :as str]
             [eta-mu.terminal-ui.component.text :as text-c]
+            [eta-mu.terminal-ui.domain.markdown :as markdown]
             [eta-mu.terminal-ui.shape.ansi :as ansi]))
 
 (defn- content->text [content]
@@ -29,9 +30,13 @@
   (render-lines (str (ansi/style [:bold :cyan] "you") " " (content->text content)) width))
 
 (defn assistant-message
-  "Render an assistant message with an `assistant` label."
+  "Render an assistant message with an `assistant` label; the body runs
+  through the markdown transform (headers, code, lists, quotes styled)."
   [content width]
-  (render-lines (str (ansi/style [:bold :green] "assistant") " " (content->text content)) width))
+  (let [md-lines (markdown/markdown-lines (content->text content))
+        labeled (cons (str (ansi/style [:bold :green] "assistant") " " (first md-lines))
+                      (rest md-lines))]
+    (vec (mapcat #(render-lines % width) labeled))))
 
 (defn thinking
   "Render a dimmed thinking block."

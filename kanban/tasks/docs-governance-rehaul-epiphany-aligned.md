@@ -1,7 +1,7 @@
 ---
 uuid: "docs-governance-rehaul-epiphany-aligned"
 title: "Rehaul docs, agent instructions, and governance model — aligned to ../epiphany, tuned to eta-mu"
-status: incoming
+status: "accepted"
 priority: "P1"
 labels: ["docs", "governance", "process", "agents", "8sp"]
 created_at: "2026-07-12T00:00:00Z"
@@ -9,6 +9,7 @@ source: "user-request:2026-07-12 (review feedback on eta-mu-agent-tools / termin
 points: 8
 category: "tasks"
 ---
+
 # Rehaul docs, agent instructions, and governance model
 
 > Requested during review of `eta-mu-agent-tools` and `terminal-ui-cljs-package`:
@@ -68,7 +69,7 @@ partially tool-enforced model worth adapting rather than reinventing.
 ## What's already in place in eta-mu (don't rebuild)
 
 - `kanban/.events/ledger.edn` + the `eta-mu kanban` CLI + the `promethean` FSM
-  in `packages/Rheos/src/rheos/backend/law/fsm.cljs` already play the role of
+  in `packages/rheos/src/rheos/backend/law/fsm.cljs` already play the role of
   epiphany's `docs/kanban/` + board FSM.
 - The `receipt-river` skill (see `CLAUDE.md`) already produces something like
   a receipts ledger — confirm where its output actually lands and whether it
@@ -104,3 +105,7 @@ partially tool-enforced model worth adapting rather than reinventing.
   personal/cross-repo tooling, not project governance, and are out of scope
   here.
 - Do not implement anything on this card — breakdown and scoping only.
+
+---
+Triage 2026-07-16: accepted into the funnel, but 8sp means it must cycle through breakdown before any implementation (PROCESS: 8 => continue refinement). Suggest first slice: align CLAUDE.md/AGENTS.md/PROCESS.md with the 2026-07-15 decision record on the epic (experience parity, @eta-mu scope, banned words, dissolve packages/runtime) — the docs currently still describe the voided TS-line-count ratchet world.
+---

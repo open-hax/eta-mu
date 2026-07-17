@@ -26,7 +26,7 @@ type EtaMuBuiltinsPackageJson = {
 function getDefaultBuiltInTools(packageJson: EtaMuBuiltinsPackageJson): string[] {
 	const extensions = packageJson.pi?.extensions;
 	if (!Array.isArray(extensions) || !extensions.every((extension) => typeof extension === "string")) {
-		throw new Error("@open-hax/eta-mu-extensions package.json must declare pi.extensions as string[]");
+		throw new Error("@eta-mu/extensions package.json must declare pi.extensions as string[]");
 	}
 	return extensions;
 }
@@ -36,7 +36,7 @@ function injectDefaultBuiltInTools(): void {
 	if (process.argv.includes("--no-extensions") || process.argv.includes("-ne")) return;
 
 	const require = createRequire(import.meta.url);
-	const builtinsPackageJson = require.resolve("@open-hax/eta-mu-extensions/package.json");
+	const builtinsPackageJson = require.resolve("@eta-mu/extensions/package.json");
 	const builtinsPackage = require(builtinsPackageJson) as EtaMuBuiltinsPackageJson;
 	const builtinsRoot = dirname(builtinsPackageJson);
 	const extensionArgs = getDefaultBuiltInTools(builtinsPackage).flatMap((extensionPath) => [
