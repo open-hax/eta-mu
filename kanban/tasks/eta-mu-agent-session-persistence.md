@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "eta-mu", "session", "5sp"]
-write-id: "1784237803484-0.lbf9gq71v6pztou252q"
+write-id: "1784248855621-0.mvi55uqp4jrg4etmvp1"
 points: "5"
 source: "kanban/epics/coding-agent-cljs-rewrite.md"
 title: "Eta-mu Agent — Session Persistence in the Turn Loop"
 priority: "P0"
-status: "review"
+status: "done"
 uuid: "eta-mu-agent-session-persistence"
 created_at: "2026-07-15T00:00:00Z"
 ---

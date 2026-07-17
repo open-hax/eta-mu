@@ -12,7 +12,7 @@ category: "tasks"
 
 # PR #134: Fix Rheos store persistence ordering and races
 
-In `packages/Rheos/src/rheos/backend/infra/store.cljs` (lines 27-47), `write-doc!` updates the atom before the async file write completes and returns success even on write failure. This allows in-memory/disk divergence and races between concurrent `-put!` calls.
+In `packages/rheos/src/rheos/backend/infra/store.cljs` (lines 27-47), `write-doc!` updates the atom before the async file write completes and returns success even on write failure. This allows in-memory/disk divergence and races between concurrent `-put!` calls.
 
 Fix by:
 - Updating the atom only after successful file write.

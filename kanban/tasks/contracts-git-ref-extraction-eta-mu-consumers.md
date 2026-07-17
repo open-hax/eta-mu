@@ -29,11 +29,11 @@ contracts to drift.
   build — flipping `:deps true` naively would collide; the shadow classpath
   must be modelled as the default `:paths`/`:deps` with mutation kept under its
   own alias.
-- `packages/Rheos/shadow-cljs.edn` — source-paths `../protocols/src`,
+- `packages/rheos/shadow-cljs.edn` — source-paths `../protocols/src`,
   `../event-ledger/src`, `../chat-ui/src`. Only event-ledger leaves;
   protocols + chat-ui stay local (keep as relative `:paths` in a new
   `Rheos/deps.edn`).
-- `packages/Rheos/package.json` — `@promethean-os/event-ledger": "workspace:*"`
+- `packages/rheos/package.json` — `@promethean-os/event-ledger": "workspace:*"`
   → `github:open-hax/event-ledger#v0.1.0`.
 - `pnpm-workspace.yaml` globs `packages/*` (picks up both dirs);
   `pnpm-lock.yaml` has `link:../event-ledger` + `packages/{katamorph,event-ledger}`.

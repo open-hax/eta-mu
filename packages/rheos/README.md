@@ -15,14 +15,14 @@ editing build/test flows.
 All commands run from this package directory via pnpm:
 
 ```bash
-pnpm -C packages/Rheos build        # shadow-cljs release server cli  -> dist/server.js, dist/cli.cjs
-pnpm -C packages/Rheos watch        # shadow-cljs watch server-dev (hot reload, dist-dev)
-pnpm -C packages/Rheos start        # node dist/server.js  (production build output)
-pnpm -C packages/Rheos start:dev    # node dist-dev/server.js  (dev build output)
-pnpm -C packages/Rheos test         # shadow-cljs compile test && node dist/test.cjs
-pnpm -C packages/Rheos lint         # clj-kondo --lint src test
-pnpm -C packages/Rheos lint:kondo   # alias of lint
-pnpm -C packages/Rheos clean        # rm -rf dist dist-dev target
+pnpm -C packages/rheos build        # shadow-cljs release server cli  -> dist/server.js, dist/cli.cjs
+pnpm -C packages/rheos watch        # shadow-cljs watch server-dev (hot reload, dist-dev)
+pnpm -C packages/rheos start        # node dist/server.js  (production build output)
+pnpm -C packages/rheos start:dev    # node dist-dev/server.js  (dev build output)
+pnpm -C packages/rheos test         # shadow-cljs compile test && node dist/test.cjs
+pnpm -C packages/rheos lint         # clj-kondo --lint src test
+pnpm -C packages/rheos lint:kondo   # alias of lint
+pnpm -C packages/rheos clean        # rm -rf dist dist-dev target
 ```
 
 `build` releases both the `server` and `cli` shadow-cljs builds. The browser

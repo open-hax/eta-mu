@@ -1,13 +1,14 @@
 ---
-uuid: "package-naming-alignment"
-title: "Package Naming Alignment — folder = npm name, one scope"
-status: "ready"
-priority: "P1"
-labels: ["tasks", "naming", "monorepo", "3sp"]
-created_at: "2026-07-15T00:00:00Z"
-source: "user-request:2026-07-15"
-points: 3
 category: "tasks"
+labels: ["tasks", "naming", "monorepo", "3sp"]
+write-id: "1784253772040-0.llzkxyv5uakteeee3j1"
+points: "3"
+source: "user-request:2026-07-15"
+title: "Package Naming Alignment — folder = npm name, one scope"
+priority: "P1"
+status: "in_progress"
+uuid: "package-naming-alignment"
+created_at: "2026-07-15T00:00:00Z"
 ---
 
 # Package Naming Alignment — folder = npm name, one scope
@@ -30,7 +31,7 @@ invocations stop needing a mental translation table.
 | `packages/e2e` | `@open-hax/eta-mu-e2e` | |
 | `packages/extensions` | `@open-hax/eta-mu-extensions` | split into `extension-core` + `extension-*` already planned |
 | `packages/protocols` | `@open-hax/openplanner-protocols` | inherited name from openplanner |
-| `packages/Rheos` | `@open-hax/rheos` | case mismatch; lowercase the folder |
+| `packages/rheos` | `@open-hax/rheos` | case mismatch; lowercase the folder |
 | `packages/legacy/agent` | `@open-hax/eta-mu-agent-core` | frozen; dies with legacy retirement |
 | `packages/legacy/ai` | `@open-hax/eta-mu-ai` | frozen |
 | `packages/legacy/coding-agent` | `@open-hax/eta-mu-cli` | frozen; bins collide with new `eta-mu` (`eta-mu`, `pi`) |
@@ -67,5 +68,9 @@ node -e "const fs=require('fs');..." # folder-vs-name audit script, to be added
 ```
 
 ---
-2026-07-15 maintainer decisions — both open questions on this card are resolved: (1) SCOPE: @eta-mu/* for the product family; the CLI stays unscoped eta-mu. Non-product org packages (sol, Rheos, chat-ui, protocols, kanban-orchestrator...) keep @open-hax. (2) packages/runtime: dissolved, not renamed — see kanban/tasks/dissolve-runtime-package.md; strike its row from this card's table. Additional naming law from the epic decision record: folder name == npm name (minus scope); banned words in package/namespace names: runtime, core, utils, agent (the user-facing 'eta-mu agent' command is the one exception). Remaining execution scope here: rename packages/e2e -> match its name (or rename package to @eta-mu/e2e), lowercase packages/Rheos -> packages/rheos, decide protocols' name, and resolve the eta-mu/pi bin collision row. Legacy rows still retire via the Legacy Retirement card. Moving to ready.
+2026-07-15 maintainer decisions — both open questions on this card are resolved: (1) SCOPE: @eta-mu/* for the product family; the CLI stays unscoped eta-mu. Non-product org packages (sol, Rheos, chat-ui, protocols, kanban-orchestrator...) keep @open-hax. (2) packages/runtime: dissolved, not renamed — see kanban/tasks/dissolve-runtime-package.md; strike its row from this card's table. Additional naming law from the epic decision record: folder name == npm name (minus scope); banned words in package/namespace names: runtime, core, utils, agent (the user-facing 'eta-mu agent' command is the one exception). Remaining execution scope here: rename packages/e2e -> match its name (or rename package to @eta-mu/e2e), lowercase packages/rheos -> packages/rheos, decide protocols' name, and resolve the eta-mu/pi bin collision row. Legacy rows still retire via the Legacy Retirement card. Moving to ready.
+
+2026-07-16 maintainer decision (epic question h) reinforces this card: unscoped 'eta-mu' is the app package; '@eta-mu/*' is reserved for library packages — anything usable beyond the CLI. Versioning: eta-mu hits 1.0.0 when the full CLJS rewrite is complete. Rename/scope work on this card should apply that app-vs-library test per package.
+
+DECISION (driving agent, 2026-07-17): (a) Canonical scope: @eta-mu/* for eta-mu-product-stack packages (turn-processor, terminal-ui, tsconfig, contracts-output already there); @open-hax/* stays for cross-org infrastructure (Rheos kanban engine, protocols); CLI stays unscoped 'eta-mu'. (b) Per row: packages/e2e package-rename to @eta-mu/e2e (folder already matches); packages/extensions package-rename to @eta-mu/extensions; packages/protocols package-rename to @open-hax/protocols (drops inherited openplanner name); packages/rheos folder-rename to lowercase rheos (package @open-hax/rheos already matches); packages/runtime NO ACTION (dissolves via dissolve-runtime-package); legacy rows excluded per card. Bin collision (eta-mu, pi): ACCEPTED-UNTIL-LEGACY-RETIREMENT — new stack wins on PATH; legacy bins die with packages/legacy in the cutover wave.
 ---

@@ -50,7 +50,7 @@ Acknowledging the lineage between eta-mu, and knoxx.
 	- [ ] Custom tools plugin that provide failiure feedback
 	- [ ] a smoke test shell that runs a mimo-v2.5-pro testing agent  in a controled environent 
 - [ ] An `AGENTS.md` file has been written for all mentioned packages
-  - [ ] eta-mu/packages/Rheos
+  - [ ] eta-mu/packages/rheos
   - [ ] eta-mu/packages/sol
   - [ ] eta-mu/packages/katamorph
   - [ ] eta-mu/packages/runtime.
@@ -61,7 +61,7 @@ Acknowledging the lineage between eta-mu, and knoxx.
 - [ ] Update Process.md
   - [ ] split it into sections
 - [ ] Explore essential eta-mu and knoxx packages and generate reports on their internal structure
-  - [ ] eta-mu/packages/Rheos
+  - [ ] eta-mu/packages/rheos
   - [ ] eta-mu/packages/sol
   - [ ] eta-mu/packages/katamorph
   - [ ] eta-mu/packages/runtime.

@@ -1,5 +1,5 @@
 {
-  "name": "@open-hax/eta-mu-e2e",
+  "name": "@eta-mu/e2e",
   "private": true,
   "version": "0.1.1",
   "description": "Monorepo-wide end-to-end tests for cross-package interactions",

@@ -14,7 +14,7 @@ namespace layers, and the testing gate that all CLJS work follows.
 - **Node** + **pnpm** (`packageManager: pnpm@10.14.0`; use `corepack enable`).
 - A JVM (shadow-cljs and clj-kondo run on it).
 - `clj-kondo` on `PATH` for `lint:kondo`.
-- `bb` (Babashka) is optional — only `packages/Rheos` ships a `bb.edn`.
+- `bb` (Babashka) is optional — only `packages/rheos` ships a `bb.edn`.
 
 ## First-time setup
 
@@ -66,11 +66,11 @@ pnpm --filter @open-hax/eta-mu-extensions test
 pnpm --filter @open-hax/sol lint:kondo
 ```
 
-Inside `packages/Rheos` you can also use the Babashka tasks defined in its
+Inside `packages/rheos` you can also use the Babashka tasks defined in its
 `bb.edn`:
 
 ```bash
-cd packages/Rheos
+cd packages/rheos
 bb watch    # shadow-cljs watch server-dev
 bb test     # shadow-cljs compile test && node target/test.cjs
 bb build    # shadow-cljs release server cli

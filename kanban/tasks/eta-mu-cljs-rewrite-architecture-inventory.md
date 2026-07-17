@@ -23,7 +23,7 @@ Create the package-by-package map that makes the CLJS rewrite safe and path-scop
 
 - `packages/**` (including `packages/legacy/**`)
 - root `package.json`, `pnpm-workspace.yaml`, `deps.edn`, `shadow-cljs.edn`
-- existing CLJS packages such as `packages/extensions`, `packages/runtime`, `packages/sol`, and `packages/Rheos`
+- existing CLJS packages such as `packages/extensions`, `packages/runtime`, `packages/sol`, and `packages/rheos`
 - agent skill manifests loaded from `~/.agents/skills/*` (host-boundary runtime surface, not a workspace package)
 
 ## Work items
@@ -73,7 +73,7 @@ Status moved to `review` for human verification; not closed.
 - `packages/legacy/ai` → `packages/llm-providers`
 - `packages/legacy/coding-agent` → `packages/eta-mu` (npm: `eta-mu`)
 - `packages/legacy/tui` → `packages/terminal-ui`
-- `packages/legacy/kanban` → superseded by `packages/Rheos`
+- `packages/legacy/kanban` → superseded by `packages/rheos`
 - `packages/legacy/github` → `packages/github-agent`
 - `packages/legacy/output-contract-gate` → `packages/contracts/output`
 - `packages/legacy/publication-components` → `packages/publication-ui`

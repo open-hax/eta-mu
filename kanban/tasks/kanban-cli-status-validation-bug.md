@@ -1,7 +1,7 @@
 ---
 uuid: "kanban-cli-status-validation-bug"
 title: "eta-mu kanban update-status accepts non-FSM statuses (e.g. in_review)"
-status: "incoming"
+status: "accepted"
 priority: "P2"
 labels: ["tasks", "kanban", "bug"]
 created_at: "2026-07-16T00:00:00Z"
@@ -16,7 +16,7 @@ category: "tasks"
 
 `eta-mu kanban update-status <uuid> <status>` does not validate `<status>`
 against the canonical FSM state list
-(`packages/Rheos/src/rheos/backend/law/fsm.cljs` :states —
+(`packages/rheos/src/rheos/backend/law/fsm.cljs` :states —
 `icebox incoming accepted breakdown blocked ready todo in_progress testing
 review document done rejected`). It happily accepted `in_review` (not a real
 state, and not even a valid transition target from `review` back to itself)
@@ -28,7 +28,7 @@ board couldn't render or transition out of ("done" was unreachable from
 
 The `eta-mu kanban` CLI in this repo currently shells out to/still runs the
 old `packages/legacy/kanban` (TS) implementation rather than the CLJS FSM in
-`packages/Rheos`, so none of `Rheos`'s FSM transition/validity checks apply.
+`packages/rheos`, so none of `Rheos`'s FSM transition/validity checks apply.
 
 ## Scope
 
@@ -53,3 +53,7 @@ symptom class (legacy CLI not enforcing the newer CLJS contract).
 eta-mu kanban update-status <any-card> in_review   # should fail, currently succeeds
 grep -rln 'status: "\?in_review"\?' kanban/         # should be empty after fix
 ```
+
+---
+Triage 2026-07-16: accepted. Real FSM-integrity bug — update-status/frontmatter accepts statuses outside the canonical set (e.g. in_review), which silently corrupts board state. Small, well-bounded fix: validate against the FSM status list in the CLI before writing. Related known CLI wart: comment subcommand absorbs trailing flags into the comment text — fix both in one pass or card the second separately.
+---

@@ -1,13 +1,14 @@
 ---
-uuid: "terminal-ui-differential-render-host"
-title: "Terminal UI — Differential-Render Host"
-status: "review"
-priority: "P0"
-labels: ["tasks", "cljs", "terminal-ui", "tui", "3sp"]
-created_at: "2026-07-16T00:00:00Z"
-source: "kanban/tasks/terminal-ui-interactive-host.md"
-points: 3
 category: "tasks"
+labels: ["tasks", "cljs", "terminal-ui", "tui", "3sp"]
+write-id: "1784248856250-0.znqk52u2mfi2l2d1hk"
+points: "3"
+source: "kanban/tasks/terminal-ui-interactive-host.md"
+title: "Terminal UI — Differential-Render Host"
+priority: "P0"
+status: "done"
+uuid: "terminal-ui-differential-render-host"
+created_at: "2026-07-16T00:00:00Z"
 ---
 
 # Terminal UI — Differential-Render Host

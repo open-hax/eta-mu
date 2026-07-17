@@ -20,7 +20,7 @@ file set was lint/typecheck/test-verified green.
 ## 1. frontmatter-whitelist (Rheos backend)
 
 **Finding:** `handle-update-frontmatter` in
-`packages/Rheos/src/rheos/backend/infra/http_server.cljs` (~144-169) passed an
+`packages/rheos/src/rheos/backend/infra/http_server.cljs` (~144-169) passed an
 arbitrary client `updates` map straight into `task-edit/update-frontmatter!`,
 letting a client overwrite identity/correlation metadata (uuid, write-id,
 source-path, created_at) and bypass the FSM by setting `status`.
@@ -37,8 +37,8 @@ keywords, then (1) reject any `:status` touch with 400 pointing at
 with 400 naming offending keys. Only allow-listed updates reach
 `task-edit/update-frontmatter!`.
 
-**Files:** `packages/Rheos/src/rheos/backend/law/frontmatter.cljs`,
-`packages/Rheos/src/rheos/backend/infra/http_server.cljs`
+**Files:** `packages/rheos/src/rheos/backend/law/frontmatter.cljs`,
+`packages/rheos/src/rheos/backend/infra/http_server.cljs`
 
 **Verification:** clj-kondo clean on owned files and full `src`/`test` tree
 (0/0). Rheos `pnpm test` (58 tests, 164 assertions) 0 failures; browser
@@ -62,7 +62,7 @@ which throws an unhandled exception on a malformed user regex (e.g.
 `:regex (try (boolean (re-matches (re-pattern tv) fv)) (catch :default _ false))`.
 Malformed regex now yields a non-match instead of crashing the query.
 
-**Files:** `packages/Rheos/src/rheos/backend/domain/compose.cljs`
+**Files:** `packages/rheos/src/rheos/backend/domain/compose.cljs`
 
 **Verification:** clj-kondo clean (0/0) when run from the Rheos package dir
 (picks up the package `.clj-kondo` config defining `^:async/await`). Covered by
@@ -81,8 +81,8 @@ lockfile updated). Required as `["dompurify" :default DOMPurify]` (correct
 shadow-cljs `:js-provider :shadow` browser interop) and wrapped marked output:
 `(.sanitize DOMPurify (marked ...))`. `:__html` now receives sanitized HTML.
 
-**Files:** `packages/Rheos/src/rheos/ui/domain/sidebar.cljs`,
-`packages/Rheos/package.json`,
+**Files:** `packages/rheos/src/rheos/ui/domain/sidebar.cljs`,
+`packages/rheos/package.json`,
 `packages/chat-ui/src/eta_mu/chat_ui/message.cljs`,
 `packages/chat-ui/package.json`, `pnpm-lock.yaml`
 

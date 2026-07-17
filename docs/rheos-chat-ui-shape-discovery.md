@@ -17,7 +17,7 @@ Discovery is also where the **surprises** surface: shapes that are *already ther
 package or a sibling) that we hadn't described. Those are logged as anomalies; where they
 don't invalidate a targeted projection, we record and continue.
 
-Scope swept: `packages/Rheos/src/rheos/backend/**`, `packages/Rheos/src/rheos/ui/**`,
+Scope swept: `packages/rheos/src/rheos/backend/**`, `packages/rheos/src/rheos/ui/**`,
 `packages/chat-ui/src/eta_mu/chat_ui/**`, with reuse-reconnaissance into
 `packages/katamorph`, `packages/protocols`, `packages/event-ledger`, `packages/sol`.
 

@@ -74,7 +74,7 @@ Relative paths are computed from `packages/<name>/.clj-kondo/config.edn` → `pa
    - Create `packages/kondo-config/`, write `package.json`, write the shared `config.edn`, copy the `promise_chain.clj` hook. Wire `pnpm-workspace.yaml` if needed.
 
 2. `kanban/tasks/shared-kondo-config-wire-Rheos.md`
-   - Add `:config-paths` to `packages/Rheos/.clj-kondo/config.edn`; remove duplicated shared entries; add `lint:kondo` script to `package.json`.
+   - Add `:config-paths` to `packages/rheos/.clj-kondo/config.edn`; remove duplicated shared entries; add `lint:kondo` script to `package.json`.
 
 3. `kanban/tasks/shared-kondo-config-wire-axxium.md`
    - Create `.clj-kondo/config.edn` with `:config-paths`; add `lint:kondo` script to `package.json`.

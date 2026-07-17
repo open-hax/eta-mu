@@ -19,7 +19,7 @@ The 2026-07-10 triage session surfaced drift between the documented process and 
 system that actually enforces it:
 
 - `PROCESS.md` describes the flow `In Progress → In Review → Testing → Document`,
-  but the promethean FSM in `packages/Rheos/src/rheos/backend/law/fsm.cljs` enforces
+  but the promethean FSM in `packages/rheos/src/rheos/backend/law/fsm.cljs` enforces
   `in_progress → testing → review → document`, gates `in_progress → review` directly
   behind a build-gate command check, and allows `blocked → ready` (not just breakdown).
 - `AGENTS.md` documents the kanban workflow only abstractly; the concrete operations
@@ -40,9 +40,9 @@ system that actually enforces it:
       (pnpm-only, CLJS-only, board workflow pointers, receipts + mycology liturgy).
 
 ---
-Agent process pass 2026-07-10: selecting this in-progress P1/3pt task. Scope slice: reconcile PROCESS.md FSM diagram and transition rules with packages/Rheos/src/rheos/backend/law/fsm.cljs (promethean), add AGENTS.md 'Board operations' section + TS baseline update procedure, and create CLAUDE.md. Will verify with clj-kondo/lint gates if touched packages support it.
+Agent process pass 2026-07-10: selecting this in-progress P1/3pt task. Scope slice: reconcile PROCESS.md FSM diagram and transition rules with packages/rheos/src/rheos/backend/law/fsm.cljs (promethean), add AGENTS.md 'Board operations' section + TS baseline update procedure, and create CLAUDE.md. Will verify with clj-kondo/lint gates if touched packages support it.
 
-Slice delivered 2026-07-10: PROCESS.md FSM diagram + transition rules reconciled with promethean law (packages/Rheos/src/rheos/backend/law/fsm.cljs); added Board Operations section + TS baseline update procedure to AGENTS.md; created CLAUDE.md. Moved to testing for review.
+Slice delivered 2026-07-10: PROCESS.md FSM diagram + transition rules reconciled with promethean law (packages/rheos/src/rheos/backend/law/fsm.cljs); added Board Operations section + TS baseline update procedure to AGENTS.md; created CLAUDE.md. Moved to testing for review.
 
 Build gate passed; card moved to review. All acceptance criteria satisfied: PROCESS.md reconciled, AGENTS.md updated with Board Operations and TS baseline procedure, CLAUDE.md created.
 ---

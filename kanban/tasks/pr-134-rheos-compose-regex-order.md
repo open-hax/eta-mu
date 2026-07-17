@@ -12,7 +12,7 @@ category: "tasks"
 
 # PR #134: Fix regex clause detection order in Rheos compose
 
-In `packages/Rheos/src/rheos/backend/domain/compose.cljs` (lines 47-59), the operator detection order checks `" in "` and `" contains "` before the regex check (`" ~ "`). This misclassifies regex clauses that contain those substrings. Reorder so regex is checked first.
+In `packages/rheos/src/rheos/backend/domain/compose.cljs` (lines 47-59), the operator detection order checks `" in "` and `" contains "` before the regex check (`" ~ "`). This misclassifies regex clauses that contain those substrings. Reorder so regex is checked first.
 
 ## Acceptance
 - Regex clauses are routed to `:regex` before generic operator checks.

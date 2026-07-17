@@ -1,5 +1,5 @@
 {
-  "name": "@open-hax/openplanner-protocols",
+  "name": "@open-hax/protocols",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",

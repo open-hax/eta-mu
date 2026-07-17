@@ -47,7 +47,7 @@ pnpm -C packages/extensions watch      # dev
 - [`packages/katamorph`](packages/katamorph/README.md) — `@open-hax/katamorph`: contract/resource runtime ("data as interpreter") — manifest grammar, Malli schema registry, store protocol + memory/mongo registries, action interpreter, policy engine, and agent-turn utilities.
 - [`packages/mcp-contracts`](packages/mcp-contracts/README.md) — `@open-hax/mcp-contracts`: generic CLJS loader that teaches a knoxx-style runtime to accept `:mcp-server` contracts (read from contract roots, returned as gateway server-config); source-only, consumed via source-path.
 - [`packages/protocols`](packages/protocols/README.md) — `@promethean-os/openplanner-protocols`: cross-package CLJS protocol/schema definitions for OpenPlanner — canonical event-ledger envelope (Malli) plus EventAdmission/Session/Document/Graph/Translation/Label/User/Realtime defprotocols, with Mongo/REST/Socket.IO/EDN-file record implementations.
-- [`packages/Rheos`](packages/Rheos/README.md) — `@open-hax/rheos`: kanban board runtime + service shell. CLJS Fastify/React app (board UI, kanban HTTP/MCP API, FSM-enforced ledger-backed moves) shipping a `rheos` CLI.
+- [`packages/rheos`](packages/rheos/README.md) — `@open-hax/rheos`: kanban board runtime + service shell. CLJS Fastify/React app (board UI, kanban HTTP/MCP API, FSM-enforced ledger-backed moves) shipping a `rheos` CLI.
 - [`packages/runtime`](packages/runtime/README.md) — `@open-hax/eta-mu-runtime`: typed movement kernel for the eta-mu control plane (belief state, panel selection, auditable action envelopes); shadow-cljs + TS-facade library hosting the CLJS rewrite of the `runtime`, `ai`, `coding`, `docs`, `garden`, and `gate` domains. Library only — there is no `services/eta-mu` runtime.
 - [`packages/sol`](packages/sol/README.md) — `@open-hax/sol`: eta-mu CLJS agent runtime backend (Node 22 + shadow-cljs + Fastify control plane; `open-hax.sol.*`). Trimmed eta-mu successor of the Knoxx backend; OpenAI-compatible `/v1/*` + `/api/agent/*` + `/ws/stream`, Proxx-backed.
 - [`packages/terminal-ui`](packages/terminal-ui) — `@eta-mu/terminal-ui`: CLJS terminal-UI package (rewrite home for `legacy/tui`); the visual counterpart to `turn-processor`, extraction in progress.
@@ -64,7 +64,7 @@ All of these are slated for CLJS rewrite; see the matching `docs/*-cljs-rewrite-
 - [`packages/legacy/coding-agent`](packages/legacy/coding-agent/README.md) — `@open-hax/eta-mu-cli`: coding-agent CLI (bins `eta-mu`/`eta-mu-beta`/`pi`) with read/bash/edit/write tools + session management. **Superseded as the CLI by `packages/eta-mu`** (which owns the same bin names — do not global-install both); retained while the interactive/RPC mode rewrites land.
 - [`packages/legacy/docs`](packages/legacy/docs/README.md) — `@open-hax/eta-mu-docs`: ημ docs-indexing library (view-graph substrate) emitting `ημ.docs-index.v1`/`ημ.docs-backlinks.v1` JSONL caches.
 - [`packages/legacy/github`](packages/legacy/github/README.md) — `@open-hax/eta-mu-github`: Pi-based GitHub automation bot and PR/issue/mention review gate (octokit).
-- [`packages/legacy/kanban`](packages/legacy/kanban/README.md) — `@open-hax/kanban-legacy`: markdown kanban library + `openhax-kanban` CLI (board snapshots, React web UI, Trello/GitHub sync); replaced by `packages/Rheos` and the `eta-mu kanban` CLI.
+- [`packages/legacy/kanban`](packages/legacy/kanban/README.md) — `@open-hax/kanban-legacy`: markdown kanban library + `openhax-kanban` CLI (board snapshots, React web UI, Trello/GitHub sync); replaced by `packages/rheos` and the `eta-mu kanban` CLI.
 - [`packages/legacy/output-contract-gate`](packages/legacy/output-contract-gate/README.md) — `@open-hax/output-contract-gate`: output-contract gate/validator (remark + edn-data) with an `output-contract-gate` CLI bin; still consumed at runtime by `packages/extensions` via `workspace:*`.
 - [`packages/legacy/publication-components`](packages/legacy/publication-components/README.md) — `@open-hax/garden-publication-components`: React "Garden" publication component library (block renderer + music/playlist players, server-render + browser-hydration entrypoints).
 - [`packages/legacy/tui`](packages/legacy/tui/README.md) — `@open-hax/eta-mu-tui`: terminal-UI library with differential rendering.
@@ -104,7 +104,7 @@ Targeted package work (use the real package names / paths):
 pnpm -C packages/runtime cljs:verify      # compile + cljs-test + smoke + boundary
 pnpm -C packages/sol build                # shadow-cljs compile server
 pnpm -C packages/extensions build         # build constitutional-layer extensions
-pnpm -C packages/Rheos test               # rheos test suite
+pnpm -C packages/rheos test               # rheos test suite
 pnpm --filter @open-hax/axxium test       # by package name
 ```
 

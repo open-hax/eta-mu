@@ -2,7 +2,7 @@
 
 > **DEPRECATED — legacy TypeScript.** This package lives under `packages/legacy/`
 > and is being replaced by ClojureScript. Kanban orchestration is moving to the
-> active CLJS packages (`packages/Rheos`, which ships the MCP-backed kanban
+> active CLJS packages (`packages/rheos`, which ships the MCP-backed kanban
 > server, and the `eta-mu kanban` CLI). Do not add new TypeScript here; use this
 > package only for the existing `openhax-kanban` bin and Trello/GitHub sync until
 > the CLJS replacement lands.

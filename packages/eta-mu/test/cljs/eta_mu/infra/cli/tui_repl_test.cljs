@@ -88,6 +88,30 @@
       (is (empty? (:frame @state))
           "the first real output clears the indicator"))))
 
+(deftest tui-emit-streams-markdown-through-host-test
+  (testing "assistant deltas re-render as markdown frames; tool results interleave; turn ends cleanly"
+    (let [term (fake-terminal)
+          state (host/new-state)
+          emit (tui-repl/tui-emit term state)]
+      (emit {:type :agent_start})
+      (emit {:type :message_update
+             :message {:role :assistant :content [{:type :text :text "# Title"}]}})
+      (emit {:type :message_update
+             :message {:role :assistant :content [{:type :text :text "# Title\nsome **bold** text"}]}})
+      (emit {:type :message_end
+             :message {:role :tool-result :tool-name "bash" :is-error false
+                       :content [{:type :text :text "ok"}]}})
+      (emit {:type :turn_end
+             :message {:role :assistant :content [{:type :text :text "# Title\nsome **bold** text"}]}})
+      (let [output @(.-buf term)]
+        (is (str/includes? output "Title") "markdown content rendered")
+        (is (str/includes? output "[1;36m") "header styled (cyan) at least once")
+        (is (str/includes? output "✓") "tool result interleaved in the frame"))
+      (emit {:type :message_update
+             :message {:role :assistant :content [{:type :text :text "next turn"}]}})
+      (is (str/includes? @(.-buf term) "next turn")
+          "a fresh turn renders after segments reset"))))
+
 (deftest ^:async tui-repl-survives-persistence-failure-test
   (testing "a law-gate throw from record-turn! warns and the REPL keeps running"
     (let [term (fake-terminal)
