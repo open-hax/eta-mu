@@ -1,17 +1,17 @@
 ;; infra/agent/mcp_tools.cljs
 (ns open-hax.sol.infra.agent.mcp-tools
   "MCP client bridge: connect to mcp_server contracts and expose their tools as
-   eta-mu custom ToolDefinition objects."
+   turn-processor tool descriptors — the `eta-mu.infra.tools` registry shape
+   (:name/:label/:description/:parameters plus a runtime :execute invoked as
+   (id args signal on-update))."
   (:require [clojure.string :as str]
             [open-hax.sol.domain.contracts.mcp-servers :as mcp-contracts]
             ["@modelcontextprotocol/sdk/client/index.js" :as mcp-client]
-            ["@modelcontextprotocol/sdk/client/streamableHttp.js" :as mcp-transport]
-            ["typebox" :refer [Type]]
-            ["@open-hax/eta-mu-cli" :as eta-mu]))
+            ["@modelcontextprotocol/sdk/client/streamableHttp.js" :as mcp-transport]))
 
 ;; ── Client cache ─────────────────────────────────────────────────────────────
 
-(defonce ^:private clients* (atom {}))
+(defonce clients* (atom {}))
 
 (defn- client-key
   [server-id]
@@ -56,8 +56,8 @@
         is-error (and result (true? (aget result "isError")))]
     (when is-error
       (throw (js/Error. (or text "MCP tool returned an error"))))
-    #js {:content #js [#js {:type "text" :text text}]
-         :details #js {}}))
+    {:content [{:type :text :text text}]
+     :details {}}))
 
 ;; ── Client lifecycle ─────────────────────────────────────────────────────────
 
@@ -99,37 +99,46 @@
                                   (aget mcp-client "CallToolResultSchema")))]
       (mcp-result->tool-result result))))
 
-;; ── Eta-mu custom tool wrapping ──────────────────────────────────────────────
+;; ── Tool descriptors on the new tool shape ───────────────────────────────────
 
-(defn- unknown-parameters
-  "A TypeBox schema that accepts any object. Used for every MCP tool because the
-   eta-mu SDK validates against the declared schema before executing."
-  []
-  (.Object Type #js {} #js {:additionalProperties true}))
+(def any-object-parameters
+  "OpenAI-style parameter map accepting any object — the JSON-schema projection
+   of the Malli form [:map-of :any :any] (Malli maps are open by default).
+   Preserves the previous additionalProperties: true stance: MCP tool argument
+   shapes are unknowable at describe-time, so every MCP tool carries it."
+  {:type "object"
+   :additionalProperties true})
 
-(defn- define-tool-fn
-  "Access the SDK's defineTool export at runtime."
-  []
-  (aget eta-mu "defineTool"))
+(defn- ->js-args
+  "Normalize tool-call arguments for the MCP client. The turn-processor
+   run-loop hands :execute CLJS data; the MCP wire wants a JS object."
+  [args]
+  (cond
+    (nil? args) #js {}
+    (object? args) args
+    :else (clj->js args)))
 
-(defn- mcp-tool->custom-tool
-  "Wrap one MCP tool definition as an eta-mu custom ToolDefinition.
-   The runtime name is the fully-qualified mcp.<server-id>.<tool-name> id."
+(defn mcp-tool->custom-tool
+  "Wrap one MCP tool definition as a turn-processor tool descriptor (the
+   eta-mu.infra.tools registry shape). The runtime name is the fully-qualified
+   mcp.<server-id>.<tool-name> id; :execute follows the run-loop protocol
+   (id args signal on-update) and resolves to {:content [{:type :text ...}]
+   :details {}}, throwing on an isError result."
   [server-id tool-name ^js mcp-tool]
   (let [description (or (some-> mcp-tool (aget "description")) "")
         tool-id (str "mcp." server-id "." tool-name)
-        execute (fn [_tool-call-id args _signal _on-update _ctx]
-                  (call-mcp-tool! server-id tool-name (clj->js args)))]
-    ((define-tool-fn)
-     #js {:name tool-id
-          :label tool-name
-          :description description
-          :parameters (unknown-parameters)
-          :execute execute})))
+        execute (fn [_tool-call-id args _signal _on-update]
+                  (call-mcp-tool! server-id tool-name (->js-args args)))]
+    {:name tool-id
+     :label tool-name
+     :description description
+     :parameters any-object-parameters
+     :execute execute}))
 
 (defn ^:async build-mcp-custom-tools!
-  "Given a config and a collection of contract tool ids, build eta-mu custom
-   tools for every mcp.<server-id>.<tool-name> reference. Returns a JS array."
+  "Given a config and a collection of contract tool ids, build turn-processor
+   tool descriptors for every mcp.<server-id>.<tool-name> reference. Returns a
+   CLJS vector of tool maps."
   [config tool-ids]
   (let [refs (mcp-contracts/mcp-tool-refs tool-ids)]
     (if (seq refs)
@@ -139,7 +148,7 @@
                                         (^:async fn []
                                          (let [server (mcp-contracts/find-mcp-server-contract config server-id)]
                                            (if-not server
-                                             #js []
+                                             []
                                              (let [mcp-tools (await (list-mcp-tools! server))
                                                    wanted (set (map :tool-name server-refs))]
                                                (->> (js-array-seq mcp-tools)
@@ -149,10 +158,7 @@
                                                     (map (fn [t]
                                                            (let [n (some-> t (aget "name"))]
                                                              (mcp-tool->custom-tool server-id n t))))
-                                                    clj->js))))))
+                                                    vec))))))
                                       by-server)))]
-        (->> (js-array-seq tools-parts)
-             (mapcat js-array-seq)
-             vec
-             clj->js))
-      #js [])))
+        (into [] cat (js-array-seq tools-parts)))
+      [])))
