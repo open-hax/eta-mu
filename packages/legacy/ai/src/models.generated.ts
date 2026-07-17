@@ -13027,9 +13027,9 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.8974,
-				output: 2.8204000000000002,
-				cacheRead: 0.16666,
+				input: 1.218,
+				output: 3.8279999999999994,
+				cacheRead: 0.2262,
 				cacheWrite: 0,
 			},
 			contextWindow: 1048576,

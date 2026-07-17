@@ -1,0 +1,79 @@
+{:workflow/id :review-two-p0-cards
+ :workflow/version 1
+ :workflow/source {:provider :claude-code
+                   :session-id "9520e8cf-d361-49c1-8952-3e83cc75813a"
+                   :workflow-run-id "wf_6da4a522-ccf"
+                   :import-manifest ".ημ/imports/claude/9520e8cf-d361-49c1-8952-3e83cc75813a/manifest.edn"}
+
+ :meta {:name "review-two-p0-cards"
+        :description "Adversarially review session-persistence and differential-render-host before promoting to done"
+        :phases [{:title "Review" :detail "3 lenses per card"}
+                 {:title "Verify" :detail "skeptic votes per finding"}]}
+
+ :run {:model "kimi-for-coding/k3"
+       :dir "/home/err/spaces/eta-mu"
+       :agent-timeout-ms 900000
+       :max-concurrency 6}
+
+ :vars
+ {:repo "/home/err/spaces/eta-mu"
+  :cards
+  [{:key "session-persistence"
+    :path "/home/err/spaces/eta-mu/kanban/tasks/eta-mu-agent-session-persistence.md"
+    :context "The implementation is UNCOMMITTED in the working tree of /home/err/spaces/eta-mu (branch device/stealth).\nInspect with: git -C /home/err/spaces/eta-mu diff -- packages/eta-mu   (modified files)\nNew untracked files: packages/eta-mu/src/cljs/eta_mu/law/session.cljs, domain/session.cljs, extern/os.cljs, infra/session.cljs, infra/cli/commands/sessions.cljs.\nModified: infra/cli/commands/agent.cljs, infra/cli/repl.cljs, infra/cli/router.cljs, infra/cli/tui_repl.cljs, test/cljs/eta_mu/infra/cli/commands/agent_test.cljs.\nE2E: packages/eta-mu/test-e2e/cljs (session-persistence-e2e). Gates already verified green: 135 tests/266 assertions, kondo 0/0, e2e 4/47."}
+   {:key "differential-render-host"
+    :path "/home/err/spaces/eta-mu/kanban/tasks/terminal-ui-differential-render-host.md"
+    :context "Implementation landed in commit 054dd55. Key files: packages/terminal-ui/src/cljs/eta_mu/terminal_ui/infra/host.cljs, packages/terminal-ui/test/cljs/eta_mu/terminal_ui/infra/host_test.cljs, extern/terminal.cljs, and the consumer wiring in packages/eta-mu/src/cljs/eta_mu/infra/cli/tui_repl.cljs.\nGates already verified green: terminal-ui 37 tests/87 assertions, kondo 0/0. Read the card's Scope note — alt-screen takeover was deliberately deferred to terminal-ui-input-editor; judge against the delivered scope, not the original framing."}]
+  :lenses
+  [{:key "correctness"
+    :prompt "Hunt for real correctness bugs: logic errors, race conditions, broken edge cases (empty input, missing files, malformed EDN, resize-during-render, unicode/wide chars), error paths that swallow or misreport failures, async bugs in ^:async/await code."}
+   {:key "architecture-law"
+    :prompt "Audit against the repo constitution in AGENTS.md: I/O only behind extern.* namespaces; domain.*/law.* pure (no I/O, no js interop beyond what sibling code already established as precedent); law schemas actually enforced at boundaries (not decorative); no utils namespaces; zero-warning contract; modern ^:async style (no promise chains/core.async)."}
+   {:key "dod-coverage"
+    :prompt "Verify every Definition-of-done checkbox on the card against the actual code and tests. For each DoD item, name the exact test or evidence that satisfies it, or flag it unmet. Also flag DoD items satisfied only by a claim in a comment with no artifact behind it."}]}
+
+ :schemas
+ {:findings {:type "object"
+             :additionalProperties false
+             :properties {:findings {:type "array"
+                                     :items {:type "object"
+                                             :additionalProperties false
+                                             :properties {:title {:type "string"}
+                                                          :file {:type "string"}
+                                                          :detail {:type "string" :description "What is wrong / unmet, with concrete evidence (line refs, failing scenario)"}
+                                                          :severity {:type "string" :enum ["blocker" "should-fix" "nit"]}}
+                                             :required ["title" "file" "detail" "severity"]}}
+                          :dodVerdict {:type "string" :description "For dod-coverage lens only: per-DoD-item evidence table as text; empty string otherwise"}}
+             :required ["findings" "dodVerdict"]}
+  :verdict {:type "object"
+            :additionalProperties false
+            :properties {:refuted {:type "boolean" :description "true if the finding is wrong, already handled, out of scope for the card, or not worth acting on"}
+                         :reason {:type "string"}}
+            :required ["refuted" "reason"]}}
+
+ :stages
+ [{:stage/id :review
+   :stage/kind :map-agent
+   :stage/phase "Review"
+   :stage/items {:cartesian [{:bind :card :from [:vars :cards]}
+                             {:bind :lens :from [:vars :lenses]}]}
+   :stage/agent "ultra-reviewer"
+   :stage/schema :findings
+   :stage/label "review:{card/key}:{lens/key}"
+   :stage/prompt "You are reviewing a ClojureScript change in the eta-mu repo ({repo}) against its kanban card.\n\nCard: read {card/path} in full (including comment history — earlier reviews may have already fixed things; do not re-report fixed items).\nRepo rules: read {repo}/AGENTS.md.\n{card/context}\n\nYour lens: {lens/prompt}\n\nRead the actual source files (and tests) relevant to your lens. Report ONLY findings that would matter to a maintainer deciding whether to promote this card from review to done. Do not report style preferences the repo doesn't legislate. If the dod-coverage lens, also fill dodVerdict with the per-item evidence table."}
+
+  {:stage/id :verify
+   :stage/kind :vote-fan-out
+   :stage/phase "Verify"
+   :stage/over :review
+   :stage/finding-path [:findings]
+   :stage/agent "ultra-skeptic"
+   :stage/schema :verdict
+   :stage/votes 2
+   :stage/quorum 2
+   :stage/label "verify:{finding/title|40}"
+   :stage/prompt "A code reviewer claims the following about the eta-mu repo ({repo}), card {card/path}:\n\nTITLE: {finding/title}\nFILE: {finding/file}\nCLAIM: {finding/detail}\nSEVERITY CLAIMED: {finding/severity}\n\nSkeptic pass #{vote/n}: try to REFUTE this. Read the actual code and card (including comment history — the card may already document this as an accepted tradeoff or fixed item). Refute if: the claim is factually wrong, the behavior is deliberate and documented, it is out of the card's delivered scope, or it is too minor to gate a review promotion. Default to refuted=true if uncertain."}
+
+  {:stage/id :return
+   :stage/kind :return
+   :stage/return {:confirmed :surviving :all :flat}}]}

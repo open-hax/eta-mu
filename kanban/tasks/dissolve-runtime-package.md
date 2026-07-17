@@ -1,13 +1,14 @@
 ---
-uuid: "dissolve-runtime-package"
-title: "Dissolve packages/runtime"
-status: breakdown
-priority: "P1"
-labels: ["tasks", "cljs", "naming", "monorepo", "5sp"]
-created_at: "2026-07-15T00:00:00Z"
-source: "kanban/epics/coding-agent-cljs-rewrite.md"
-points: 5
 category: "tasks"
+labels: ["tasks", "cljs", "naming", "monorepo", "5sp"]
+write-id: "1784255929397-0.qviv3mnvj8cts66okk9"
+points: "5"
+source: "kanban/epics/coding-agent-cljs-rewrite.md"
+title: "Dissolve packages/runtime"
+priority: "P1"
+status: "done"
+uuid: "dissolve-runtime-package"
+created_at: "2026-07-15T00:00:00Z"
 ---
 
 # Dissolve packages/runtime
@@ -55,3 +56,9 @@ pnpm install
 pnpm test
 git grep -ln "eta-mu-runtime\|eta_mu.runtime\|eta_mu/runtime" -- ':!kanban' ':!docs' ':!packages/legacy' | wc -l  # → 0
 ```
+
+---
+CONSUMER AUDIT (recovered from Claude session 9520e8cf Explore agent, verified against current tree): 5 CLJS clusters + 6 TS wrappers; NO new-stack package depends on @open-hax/eta-mu-runtime. Only non-legacy consumer: @eta-mu/e2e (devDep + shadow source-path '../runtime/src/cljs' + 4 coding.* test files — all exercising descoped coding-compat layers, verdict RETIRE). legacy/github + legacy/coding-agent consume the TS barrel (retire with legacy wave). runtime.* movement kernel: no external CLJS requires anywhere (legacy/github TS only) — RETIRE. coding.session/settings/auth/extension/tool/diagnostics: RETIRE (descoped 2026-07-15; eta-mu already owns eta_mu.{law,domain,infra}.session; turn-processor owns law/shape.{message,tool}). coding.extern.*: RETIRE (duplicates eta-mu externs — one owner per boundary). ai.*/docs.*/garden.*: RETIRE (no consumers; owned by other epics). TS wrappers (index/types/state/planner/envelope/cljs-runtime): RETIRE. NET: zero namespaces need porting — every verdict is retire. Atomic edits: e2e dep+source-path+4 test files, root package.json filter clauses, scripts/lint.mjs boundary step, .github/workflows/{coverage,e2e}.yml, DEVELOPMENT.md.
+
+DISSOLVED 2026-07-17: packages/runtime deleted (136 tracked files). Zero namespaces ported — the recovered consumer audit showed every cluster retires (new stack already owns equivalents; coding.* was descoped). Atomic edits: @eta-mu/e2e dep+source-path removed + 4 descoped coding.* test files retired; root package.json coverage script dropped and test/typecheck RETARGETED to the new stack (eta-mu, terminal-ui, turn-processor, kanban-legacy) — legacy/github exits the root gate here because its vitest imports the deleted barrel (see cutover-ratchet card); scripts/lint.mjs boundary step removed; .github/workflows/coverage.yml runtime steps + e2e.yml path triggers removed; DEVELOPMENT.md + README rows removed. legacy/github + legacy/coding-agent package.jsons: dead workspace dep + pre* hooks removed mechanically (their runtime-batch code is dead-on-arrival until the packages retire). Verification: grep-count 0 for eta-mu-runtime|eta_mu.runtime|eta_mu/runtime outside kanban/docs/legacy; pnpm install + root test green (138/275 + 67/168 + 38/88 + 20).
+---

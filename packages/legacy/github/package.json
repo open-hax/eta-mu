@@ -9,16 +9,12 @@
     "eta-mu-github": "dist/cli.js"
   },
   "scripts": {
-    "prebuild": "pnpm --filter @open-hax/eta-mu-runtime build",
-    "pretest": "pnpm --filter @open-hax/eta-mu-runtime build",
-    "pretypecheck": "pnpm --filter @open-hax/eta-mu-runtime build",
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "tsx src/cli.ts"
   },
   "dependencies": {
-    "@open-hax/eta-mu-runtime": "workspace:*",
     "@open-hax/eta-mu-ai": "workspace:*",
     "@open-hax/eta-mu-cli": "workspace:*",
     "@octokit/rest": "^22.0.1",

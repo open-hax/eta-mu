@@ -34,3 +34,12 @@
   spore: none
   receipt-refs: none
   note: Pattern: review-card triage = re-run each card's own verification gate + grep the claimed namespaces before promoting; kanban comment CLI absorbs trailing flags into comment text
+- ts: 2026-07-16T17:31:26.702349889Z
+  session: /home/err/spaces/eta-mu
+  task: Board triage: walk kanban, verify review gates, accept incoming, promote breakdown card, record dispatch order on epic
+  p-efficiency: 0.85
+  p-friction: 0.15
+  p-skill-candidate: 0.4
+  spore: none
+  receipt-refs: none
+  note: Epic card comment history is the real triage index — read it before individual cards; gates-first verification made review recommendation cheap

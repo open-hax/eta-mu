@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "naming", "monorepo", "3sp"]
-write-id: "1784253772040-0.llzkxyv5uakteeee3j1"
+write-id: "1784254211143-0.n6u8q1v51t34gx83wd"
 points: "3"
 source: "user-request:2026-07-15"
 title: "Package Naming Alignment — folder = npm name, one scope"
 priority: "P1"
-status: "in_progress"
+status: "done"
 uuid: "package-naming-alignment"
 created_at: "2026-07-15T00:00:00Z"
 ---
