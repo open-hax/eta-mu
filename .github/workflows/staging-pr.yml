@@ -30,6 +30,7 @@ jobs:
         with:
           node-version: 20
       - run: pnpm install --no-frozen-lockfile
+      - run: pnpm --filter @eta-mu/extensions build
       - run: pnpm lint
 
   eta-mu-docs-tests:
