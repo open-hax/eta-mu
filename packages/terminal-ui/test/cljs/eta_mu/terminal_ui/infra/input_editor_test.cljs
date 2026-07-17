@@ -3,10 +3,10 @@
             [eta-mu.terminal-ui.extern.terminal :as terminal]
             [eta-mu.terminal-ui.infra.input-editor :as editor]))
 
-(deftype FakeTerminal [buf on-input]
+(deftype FakeTerminal [buf on-input cols]
   terminal/Terminal
   (write [_ data] (swap! buf str data))
-  (columns [_] 80)
+  (columns [_] cols)
   (rows [_] 24)
   (hide-cursor [_] nil)
   (show-cursor [_] nil)
@@ -19,9 +19,11 @@
   (stop [_] nil)
   (drain-input [_ _max-ms _idle-ms] (js/Promise.resolve nil)))
 
-(defn- fake-terminal []
-  (let [on-input (atom nil)]
-    [(->FakeTerminal (atom "") on-input) on-input]))
+(defn- fake-terminal
+  ([] (fake-terminal 80))
+  ([cols]
+   (let [on-input (atom nil)]
+     [(->FakeTerminal (atom "") on-input cols) on-input])))
 
 (defn- feed!
   "Deliver key chunks to the running editor on the next tick, sequentially."
@@ -74,6 +76,13 @@
         (feed! handler ["\u001b[A" "\r"])
         (let [r2 (await (editor/ask term "> " {:history (:history r1)}))]
           (is (= "first" (:text r2))))))))
+
+(deftest ^:async input-editor-soft-wrap-test
+  (testing "a line longer than the terminal width soft-wraps across frame rows and still submits whole"
+    (let [[term handler] (fake-terminal 8)]
+      (feed! handler ["abcdefghij" "\r"])
+      (let [result (await (editor/ask term "> " {}))]
+        (is (= "abcdefghij" (:text result)))))))
 
 (deftest ^:async input-editor-abort-test
   (testing "ctrl-c resolves nil"

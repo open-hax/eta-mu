@@ -6,13 +6,13 @@
   components — tool calls, tool results, and the final assistant reply all
   render with color and word-wrapping at the terminal's current width."
   (:require [clojure.string :as str]
+            [eta-mu.extern.process :as process]
             [eta-mu.extern.readline :as readline]
             [eta-mu.infra.session :as session]
             [eta-mu.terminal-ui.component.message :as message]
             [eta-mu.terminal-ui.extern.terminal :as terminal]
             [eta-mu.terminal-ui.infra.host :as host]
             [eta-mu.terminal-ui.infra.input-editor :as editor]
-            [eta-mu.terminal-ui.shape.ansi :as ansi]
             [eta-mu.turn-processor.infra.loop :as loop]))
 
 (defn- user-message*
@@ -32,8 +32,8 @@
   (transduce (comp (filter #(= (:type %) :text)) (map :text)) str content))
 
 (defn tui-emit
-  "Build an event sink bound to `term` that renders tool results and the
-  final assistant message through terminal-ui components.
+  "Build an event sink bound to `term` that renders a whole turn through the
+  differential-render host.
 
   `status-state` (a `host/new-state` atom) drives the single-line 'thinking'
   indicator shown while waiting for the model's first token or tool result —
@@ -43,39 +43,57 @@
   lifecycle bookkeeping like :agent_start does not erase it during the
   actual model wait.
 
-  Assistant text deltas are streamed to the terminal raw (unwrapped) as they
-  arrive; once any text has been streamed for a turn, the boxed/wrapped
-  `turn_end` render is skipped so the reply isn't printed twice. When no
-  deltas arrive (e.g. a non-streaming stream-fn), the boxed render at
-  `turn_end` is the only output — matching the prior synchronous behavior."
+  Turn content is kept as an ordered segment list (assistant markdown
+  in-progress + finished tool results); every delta re-renders the full
+  frame as markdown through the host, which diffs rows — in-progress blocks
+  update in place without flicker and tool results interleave correctly.
+  When no deltas arrive (e.g. a non-streaming stream-fn), the boxed render
+  at `turn_end` is the only output — matching the prior synchronous
+  behavior."
   [term status-state]
-  (let [printed (atom 0)
+  (let [segments (atom [])
+        content-state (atom nil)
         clear-status! (fn []
                         (when (seq (:frame @status-state))
-                          (host/render! status-state term [])))]
+                          (host/render! status-state term [])))
+        render-frame! (fn []
+                      (let [width (terminal/columns term)
+                            frame (vec (mapcat (fn [seg]
+                                                 (if (= :assistant (:kind seg))
+                                                   (message/assistant-message (:text seg) width)
+                                                   (message/tool-result (:name seg) (:is-error seg)
+                                                                        (:content seg) width)))
+                                               @segments))]
+                        (when (nil? @content-state)
+                          (reset! content-state (host/new-state)))
+                        (host/render! @content-state term frame)))]
     (fn [event]
       (let [type (:type event)
             event-message (:message event)
             width (terminal/columns term)]
         (when (and (= type :message_update) (= :assistant (:role event-message)))
           (let [text (content-text (:content event-message))]
-            (when (> (count text) @printed)
+            (when (seq text)
               (clear-status!)
-              (when (zero? @printed)
-                (terminal/write term (str (ansi/style [:bold :green] "assistant") " ")))
-              (terminal/write term (subs text @printed))
-              (reset! printed (count text)))))
+              (if (and (seq @segments) (= :assistant (:kind (peek @segments))))
+                (swap! segments update (dec (count @segments)) assoc :text text)
+                (swap! segments conj {:kind :assistant :text text}))
+              (render-frame!))))
 
         (when (and (= type :message_end) (= :tool-result (:role event-message)))
           (clear-status!)
-          (write-lines! term (message/tool-result (:tool-name event-message)
-                                                  (:is-error event-message)
-                                                  (:content event-message)
-                                                  width)))
+          (swap! segments conj {:kind :tool-result
+                                :name (:tool-name event-message)
+                                :is-error (:is-error event-message)
+                                :content (:content event-message)})
+          (render-frame!))
 
         (when (and (= type :turn_end) (= :assistant (:role event-message)))
-          (if (pos? @printed)
-            (do (terminal/write term "\n") (reset! printed 0))
+          (if (seq @segments)
+            (do (render-frame!)
+                (terminal/write term "\n")
+                (reset! segments [])
+                (reset! content-state nil))
             (when (seq (:content event-message))
               (clear-status!)
               (write-lines! term (message/assistant-message (:content event-message) width)))))))))
@@ -120,7 +138,7 @@
    (run-tui-repl context config stream-fn {:get-input get-input :term term}))
   ([context config stream-fn {:keys [get-input term session]}]
    (let [term (or term (terminal/process-terminal))
-         use-editor? (and (nil? get-input) (.-isTTY js/process.stdin))
+         use-editor? (and (nil? get-input) (process/stdin-tty?))
          rl (when-not (or get-input use-editor?) (readline/create-interface))
          history (atom nil)
          get-input (or get-input

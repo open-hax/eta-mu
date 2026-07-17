@@ -61,23 +61,54 @@
                                 i))]
                     (recur (subs s run) (conj keys [:text (subs s 0 run)])))))))))
 
-(defn- editor-frame
-  "Prompt + buffer text as host frame rows: prompt prefixes the first line."
-  [prompt-text text]
-  (let [lines (str/split text #"\n" -1)]
-    (into [(str prompt-text (first lines))] (rest lines))))
+(defn- hard-wrap
+  "Split `s` into physical rows of at most `width` columns (no word-boundary
+  logic — an input buffer wraps mid-word)."
+  [s width]
+  (let [width (max 1 width)]
+    (if (<= (count s) width)
+      [s]
+      (loop [remaining s out []]
+        (if (<= (count remaining) width)
+          (conj out remaining)
+          (recur (subs remaining width) (conj out (subs remaining 0 width))))))))
+
+(defn- editor-layout
+  "Prompt + buffer text laid out as physical terminal rows at `width`,
+  soft-wrapping long lines (host frames are pre-wrapped rows — an unwrapped
+  long line would occupy 2+ physical rows and desync the host's row model).
+  Returns {:rows [...] :cursor [row col]} with the cursor's physical position
+  for the buffer's current [line col]."
+  [prompt-text buffer width]
+  (let [lines (str/split (:text buffer) #"\n" -1)
+        [cursor-line cursor-col] (eb/cursor-line-col buffer)]
+    (loop [remaining lines
+           line-idx 0
+           rows []
+           cursor-pos nil]
+      (if (empty? remaining)
+        {:rows (if (seq rows) rows [""]) :cursor (or cursor-pos [0 (count prompt-text)])}
+        (let [logical (first remaining)
+              display (if (zero? line-idx) (str prompt-text logical) logical)
+              wrapped (hard-wrap display width)
+              cursor-here? (= line-idx cursor-line)
+              cursor-pos (when cursor-here?
+                           (let [visible (+ cursor-col (if (zero? line-idx) (count prompt-text) 0))]
+                             [(+ (count rows) (quot visible width)) (rem visible width)]))]
+          (recur (rest remaining)
+                 (inc line-idx)
+                 (into rows wrapped)
+                 cursor-pos))))))
 
 (defn- render-cursor!
   "After a host render (cursor parked at the start of the frame's last row),
-  move the terminal cursor to the buffer cursor's [line col]."
-  [term prompt-text buffer frame]
-  (let [[line col] (eb/cursor-line-col buffer)
-        up (- (dec (count frame)) line)
-        target-col (+ col (if (zero? line) (count prompt-text) 0))]
+  move the terminal cursor to the layout's physical [row col]."
+  [term rows [row col]]
+  (let [up (- (dec (count rows)) row)]
     (when (pos? up)
       (terminal/move-by term (- up)))
-    (when (pos? target-col)
-      (terminal/write term (str "\u001b[" target-col "C")))))
+    (when (pos? col)
+      (terminal/write term (str "\u001b[" col "C")))))
 
 (defn- initial-state [history]
   {:buffer (eb/buffer)
@@ -85,17 +116,16 @@
    :kill (kill-ring/kill-ring)
    :undo (undo-stack/undo-stack)})
 
-(defn- record-undo! [state]
-  ((:push (:undo @state)) (:buffer @state)))
-
 (defn- apply-key
   "Advance editor state by one decoded key. Returns :submit, :abort, or nil
-  (continue editing)."
+  (continue editing). An undo snapshot is pushed only when the key actually
+  changed the buffer text (navigation and history recall don't pollute the
+  stack)."
   [state key]
-  (record-undo! state)
-  (let [swap-buffer! (fn [f & args] (apply swap! state update :buffer f args))
-        kill-push! (fn [text opts] ((:push (:kill @state)) text opts))]
-    (case (first key)
+  (let [before (:buffer @state)
+        swap-buffer! (fn [f & args] (apply swap! state update :buffer f args))
+        kill-push! (fn [text opts] ((:push (:kill @state)) text opts))
+        outcome (case (first key)
       :text (swap-buffer! eb/insert (second key))
       :backspace (swap-buffer! eb/delete-back)
       :delete-forward (swap-buffer! eb/delete-forward)
@@ -155,7 +185,10 @@
                      (swap-buffer! eb/insert "\n")
                      nil)
                  :submit))
-      nil)))
+      nil)]
+    (when (not= (:text before) (:text (:buffer @state)))
+      ((:push (:undo @state)) before))
+    outcome))
 
 (defn ^:async ask
   "Prompt for one line (or several, via ctrl-j / trailing `\\`) on a raw-mode
@@ -167,9 +200,10 @@
   (let [{:keys [history]} opts
         state (atom (initial-state history))
         render! (fn []
-                  (let [frame (editor-frame prompt-text (:text (:buffer @state)))]
-                    (host/render! (:host-state @state) term frame)
-                    (render-cursor! term prompt-text (:buffer @state) frame)))]
+                  (let [{:keys [rows cursor]} (editor-layout prompt-text (:buffer @state)
+                                                             (terminal/columns term))]
+                    (host/render! (:host-state @state) term rows)
+                    (render-cursor! term rows cursor)))]
     (swap! state assoc :host-state (host/new-state))
     (js/Promise.
      (fn [resolve _reject]
