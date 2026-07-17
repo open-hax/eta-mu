@@ -1,14 +1,16 @@
 ---
-uuid: "terminal-ui-markdown-rendering"
-title: "Terminal UI — Markdown Rendering of Assistant Output"
-status: blocked
-priority: "P1"
-labels: ["tasks", "cljs", "terminal-ui", "tui", "2sp"]
-created_at: "2026-07-16T00:00:00Z"
-source: "kanban/tasks/terminal-ui-interactive-host.md"
-points: 2
 category: "tasks"
+labels: ["tasks", "cljs", "terminal-ui", "tui", "2sp"]
+write-id: "1784252440044-0.zvktoiulk6el1i1asec"
+points: "2"
+source: "kanban/tasks/terminal-ui-interactive-host.md"
+title: "Terminal UI — Markdown Rendering of Assistant Output"
+priority: "P1"
+status: "done"
+uuid: "terminal-ui-markdown-rendering"
+created_at: "2026-07-16T00:00:00Z"
 ---
+
 # Terminal UI — Markdown Rendering of Assistant Output
 
 > Parent epic: `kanban/epics/coding-agent-cljs-rewrite.md`
@@ -55,3 +57,7 @@ pnpm --dir packages/terminal-ui lint:kondo
 pnpm -C packages/eta-mu test
 pnpm -C packages/eta-mu lint:kondo
 ```
+
+---
+Implemented: domain.markdown (pure md->styled-lines: headers, bold/italic/inline-code, fences, bullets/numbered, blockquotes; 8 construct tests + combined case) + component.message assistant path + tui-emit rewritten to render the whole turn through the diff host (segment list: in-progress assistant markdown + interleaved tool results, re-rendered per delta without flicker). Pty-verified 2026-07-17 via script(1)+mock SSE: 'assistant # Summary' header+bullets+fence+quote final screen confirmed. Found+fixed a real extern bug en route: ProcessTerminal columns/rows passed 0 through when a pty reports 0 (word-per-row wrap fragmentation) — now guards non-positive, fallback 80x24, with test. Syntax highlighting inside fences skipped for v1 (noted on card). Gates: terminal-ui 62/160 + kondo 0/0, eta-mu 138/275 + kondo 0/0.
+---

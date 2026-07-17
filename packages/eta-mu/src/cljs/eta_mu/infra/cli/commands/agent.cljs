@@ -9,6 +9,8 @@
             [eta-mu.infra.cli.tui-repl :as tui-repl]
             [eta-mu.infra.session :as session]
             [eta-mu.infra.tools.registry :as tools]
+            [eta-mu.terminal-ui.extern.terminal :as terminal]
+            [eta-mu.terminal-ui.infra.session-selector :as selector]
             [eta-mu.turn-processor.infra.loop :as loop]
             [eta-mu.turn-processor.shape.message :as shape.msg]))
 
@@ -84,10 +86,17 @@
   [{:keys [args flags]}]
   (try
     (let [resume-id (get flags "resume")
-          resumed (when resume-id
-                    (when-not (string? resume-id)
-                      (throw (js/Error. "--resume requires a session id")))
-                    (await (session/resume! resume-id)))
+          interactive? (and (process/stdin-tty?) (not (get flags "plain")) (empty? args))
+          overlay-resumed (when (and interactive? (not resume-id))
+                            (let [sessions (await (session/list-sessions))]
+                              (when (seq sessions)
+                                (when-let [chosen (await (selector/choose (terminal/process-terminal) sessions))]
+                                  (await (session/resume! (:session-id chosen)))))))
+          resumed (or overlay-resumed
+                      (when resume-id
+                        (when-not (string? resume-id)
+                          (throw (js/Error. "--resume requires a session id")))
+                        (await (session/resume! resume-id))))
           context (initial-context flags (some-> resumed deref))
           config (build-config flags (some-> resumed deref))
           session-atom (or resumed

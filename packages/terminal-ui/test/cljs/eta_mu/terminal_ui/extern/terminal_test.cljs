@@ -83,6 +83,20 @@
       (is (= 80 (terminal/columns term)))
       (is (= 24 (terminal/rows term))))))
 
+(deftest dimensions-fallback-test
+  (testing "a stdout reporting 0 or nil dimensions falls back to 80x24"
+    (let [stdin (mock-stdin)
+          stdout (mock-stdout)
+          term (terminal/->ProcessTerminal stdin stdout)]
+      (set! (.-columns stdout) 0)
+      (set! (.-rows stdout) 0)
+      (is (= 80 (terminal/columns term)))
+      (is (= 24 (terminal/rows term)))
+      (set! (.-columns stdout) nil)
+      (set! (.-rows stdout) nil)
+      (is (= 80 (terminal/columns term)))
+      (is (= 24 (terminal/rows term))))))
+
 (deftest start-stop-test
   (testing "start enables raw mode and attaches handlers; stop reverses"
     (let [stdin (mock-stdin)

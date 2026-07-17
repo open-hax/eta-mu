@@ -1,14 +1,16 @@
 ---
-uuid: "terminal-ui-session-selector"
-title: "Terminal UI — Session Selector Overlay"
-status: blocked
-priority: "P1"
-labels: ["tasks", "cljs", "terminal-ui", "tui", "2sp"]
-created_at: "2026-07-16T00:00:00Z"
-source: "kanban/tasks/terminal-ui-interactive-host.md"
-points: 2
 category: "tasks"
+labels: ["tasks", "cljs", "terminal-ui", "tui", "2sp"]
+write-id: "1784253620632-0.b2l4hjpa7ngjw2027e7"
+points: "2"
+source: "kanban/tasks/terminal-ui-interactive-host.md"
+title: "Terminal UI — Session Selector Overlay"
+priority: "P1"
+status: "done"
+uuid: "terminal-ui-session-selector"
+created_at: "2026-07-16T00:00:00Z"
 ---
+
 # Terminal UI — Session Selector Overlay
 
 > Parent epic: `kanban/epics/coding-agent-cljs-rewrite.md`
@@ -56,3 +58,7 @@ pnpm -C packages/eta-mu test
 pnpm -C packages/eta-mu test:e2e
 pnpm -C packages/eta-mu lint:kondo
 ```
+
+---
+Implemented: component.session-list (pure overlay rows) + infra.session-selector (raw-mode overlay loop, fuzzy filter via domain.fuzzy — the previously caller-less domain now has its caller) + agent.cljs startup wiring (interactive TTY only; --plain/piped/args/--resume skip it entirely, e2e green as proof). decode-keys now emits bare ESC as a control key so overlay dismiss works. Tests: filter-sessions + render/select/type-to-filter/dismiss via fake terminal (4 tests). Pty-verified 2026-07-17: seeded 2 sessions, down-arrow+enter selected the newer one, follow-up turn arrived at the mock with the FULL prior transcript (second-session-prompt + assistant + followup). Gates: terminal-ui 67/168 + kondo 0/0, eta-mu 138/275 + kondo 0/0 + e2e 4/47.
+---

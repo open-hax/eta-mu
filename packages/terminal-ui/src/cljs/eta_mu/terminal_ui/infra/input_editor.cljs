@@ -35,7 +35,7 @@
    "\u001b[b" [:move-word -1] "\u001b[f" [:move-word 1]
    "\u001b[3;5~" [:kill-word-forward]})
 
-(defn- decode-keys
+(defn decode-keys
   "Split a raw input chunk into a sequence of key tokens: escape sequences
   matched greedily, control chars as themselves, printable runs as strings."
   [chunk]
@@ -47,7 +47,9 @@
         (recur (subs s (count seq-token)) (conj keys action))
         (let [ch (subs s 0 1)]
           (cond
-            (= ch "") (recur (subs s 1) keys)
+            (= ch "\u001b") (if (= 1 (count s))
+                           (recur (subs s 1) (conj keys [:control "\u001b"]))
+                           (recur (subs s 1) keys))
             (= ch "\r") (recur (subs s 1) (conj keys [:enter]))
             (< (.charCodeAt ch 0) 32) (recur (subs s 1) (conj keys [:control ch]))
             (= ch "\u007f") (recur (subs s 1) (conj keys [:backspace]))
