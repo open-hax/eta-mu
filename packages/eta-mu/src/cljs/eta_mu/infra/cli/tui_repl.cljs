@@ -11,6 +11,7 @@
             [eta-mu.terminal-ui.component.message :as message]
             [eta-mu.terminal-ui.extern.terminal :as terminal]
             [eta-mu.terminal-ui.infra.host :as host]
+            [eta-mu.terminal-ui.infra.input-editor :as editor]
             [eta-mu.terminal-ui.shape.ansi :as ansi]
             [eta-mu.turn-processor.infra.loop :as loop]))
 
@@ -90,6 +91,15 @@
       (terminal/write term (str "Session persistence " label " failed (continuing without persisting): "
                                 (.-message e) "\n")))))
 
+(defn- ^:async editor-input
+  "get-input implementation backed by the raw-mode input editor, carrying the
+  shared prompt-history atom across calls."
+  [term history-atom prompt-text]
+  (let [result (await (editor/ask term prompt-text {:history @history-atom}))]
+    (when result
+      (reset! history-atom (:history result))
+      (:text result))))
+
 (defn ^:async run-tui-repl
   "Run an interactive, terminal-ui-rendered REPL agent.
 
@@ -109,9 +119,14 @@
   ([context config stream-fn get-input term]
    (run-tui-repl context config stream-fn {:get-input get-input :term term}))
   ([context config stream-fn {:keys [get-input term session]}]
-   (let [rl (when-not get-input (readline/create-interface))
-         get-input (or get-input #(readline/question rl %))
-         term (or term (terminal/process-terminal))]
+   (let [term (or term (terminal/process-terminal))
+         use-editor? (and (nil? get-input) (.-isTTY js/process.stdin))
+         rl (when-not (or get-input use-editor?) (readline/create-interface))
+         history (atom nil)
+         get-input (or get-input
+                       (if use-editor?
+                         (partial editor-input term history)
+                         #(readline/question rl %)))]
      (try
        (terminal/write term "eta-mu agent TUI. Type /exit to quit, /clear to reset context.\n")
        (let [status-state (host/new-state)

@@ -1,14 +1,16 @@
 ---
-uuid: "terminal-ui-input-editor"
-title: "Terminal UI — Raw-Mode Input Editor"
-status: blocked
-priority: "P0"
-labels: ["tasks", "cljs", "terminal-ui", "tui", "3sp"]
-created_at: "2026-07-16T00:00:00Z"
-source: "kanban/tasks/terminal-ui-interactive-host.md"
-points: 3
 category: "tasks"
+labels: ["tasks", "cljs", "terminal-ui", "tui", "3sp"]
+write-id: "1784250766789-0.7og3i9nfb6lget81gmt"
+points: "3"
+source: "kanban/tasks/terminal-ui-interactive-host.md"
+title: "Terminal UI — Raw-Mode Input Editor"
+priority: "P0"
+status: "review"
+uuid: "terminal-ui-input-editor"
+created_at: "2026-07-16T00:00:00Z"
 ---
+
 # Terminal UI — Raw-Mode Input Editor
 
 > Parent epic: `kanban/epics/coding-agent-cljs-rewrite.md`
@@ -68,3 +70,9 @@ pnpm -C packages/eta-mu test
 pnpm -C packages/eta-mu test:e2e
 pnpm -C packages/eta-mu lint:kondo
 ```
+
+---
+Decision recorded (per Open questions): persistent cross-process history is FOLLOW-ON work that will piggyback on stored sessions (eta-mu-agent-session-persistence, now done); this card delivers an in-memory history ring only. Unblocked 2026-07-17 after differential-render-host landed; starting implementation: domain buffer/cursor + infra.input-editor via extern.terminal, rendering through host, wired into eta-mu agent TTY path.
+
+Implemented: domain.edit-buffer (pure buffer/cursor/history, 13 tests) + infra.input-editor (ANSI decode, host-rendered, kill-ring + undo-stack wired; 6 fake-terminal tests) + tui-repl wiring (raw-mode editor on TTY, readline fallback for pipes/tests). Pty-verified 2026-07-17 via script(1) + mock SSE: typed 'hello\<enter>there<enter>' arrived at the mock as ONE message 'hello\nthere' (trailing-backslash continuation — impossible under readline); thinking... indicator survived until the streamed reply replaced it; /exit tore down raw mode cleanly (exit 0). Note: domain.fuzzy's caller lands with terminal-ui-session-selector, not this card. Gates: terminal-ui 53/136 + kondo 0/0, eta-mu 137/271 + kondo 0/0 + e2e 4/47 — all green.
+---
