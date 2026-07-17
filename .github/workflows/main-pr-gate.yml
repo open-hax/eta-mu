@@ -83,7 +83,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - run: git fetch origin staging --depth=1
+      - run: git fetch origin staging --depth=50
       - run: git merge-base --is-ancestor "${PR_HEAD_SHA}" origin/staging
         env:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
