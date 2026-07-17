@@ -11,21 +11,8 @@
 
 ;; ─── Class constructors (read from module at call time) ──────────────────────
 
-(defn settings-manager-class ^js [] (aget eta-mu "SettingsManager"))
-(defn auth-storage-class     ^js [] (aget eta-mu "AuthStorage"))
-(defn model-registry-class   ^js [] (aget eta-mu "ModelRegistry"))
-(defn resource-loader-class  ^js [] (aget eta-mu "DefaultResourceLoader"))
 (defn session-manager-class  ^js [] (aget eta-mu "SessionManager"))
 (defn create-agent-session-fn ^js [] (aget eta-mu "createAgentSession"))
-
-;; ─── Post-init singleton accessors ──────────────────────────────────────────
-;; These are populated by the eta-mu runtime after loader.reload() completes.
-
-(defn model-registry   ^js [] (aget eta-mu "modelRegistry"))
-(defn auth-storage     ^js [] (aget eta-mu "authStorage"))
-(defn loader           ^js [] (aget eta-mu "loader"))
-(defn settings-manager ^js [] (aget eta-mu "settingsManager"))
-(defn runtime-dir      []     (aget eta-mu "runtimeDir"))
 
 ;; ─── Small JS helpers local to the eta-mu boundary ───────────────────────────
 
@@ -47,52 +34,19 @@
   [& parts]
   (.apply (.-join node-path) node-path (clj->js (keep #(when % (str %)) parts))))
 
-(defn- provider-token
-  [env-var]
-  (when-let [env-var (some-> env-var str str/trim not-empty)]
-    (let [token (aget js/process.env env-var)]
-      (when (and (string? token) (not (str/blank? token)))
-        token))))
+;; ─── Eta-mu runtime data ─────────────────────────────────────────────────────
 
-;; ─── Eta-mu runtime setup ────────────────────────────────────────────────────
-
-(defn ^:async setup-runtime!
-  "Initialise eta-mu runtime and persist models.json.
-   Accepts CLJS config/model maps; returns a CLJS map containing opaque SDK
-   objects under :auth-storage, :model-registry, :settings-manager, :loader,
-   and :runtime-dir."
-  [config model-config compaction-settings]
+(defn ^:async ensure-runtime!
+  "Ensure sol's agent data dir exists and models.json holds model-config.
+   Returns plain runtime data — :runtime-dir plus the :models lookup table.
+   No SDK objects: settings/auth are plain config assembled upstream."
+  [config model-config]
   (let [runtime-dir-value (:agent-dir config)
-        models-file       (path-join runtime-dir-value "models.json")
-        auth-file         (path-join runtime-dir-value "auth.json")
-        SettingsManager   (settings-manager-class)
-        AuthStorage       (auth-storage-class)
-        ModelRegistry     (model-registry-class)
-        ResourceLoader    (resource-loader-class)
-        settings-manager  (.inMemory SettingsManager
-                                      (clj->js {:compaction compaction-settings
-                                                :retry {:enabled true
-                                                        :maxRetries 1}}))]
+        models-file       (path-join runtime-dir-value "models.json")]
     (await (mkdirp! runtime-dir-value))
     (await (write-file! models-file (.stringify js/JSON (clj->js model-config) nil 2)))
-    (let [auth-storage (.create AuthStorage auth-file)]
-      (when-not (str/blank? (:proxx-auth-token config))
-        (.setRuntimeApiKey auth-storage "proxx" (:proxx-auth-token config)))
-      (doseq [[provider-id env-var] (or (:provider-auth-tokens config) {})]
-        (when-let [token (provider-token env-var)]
-          (when-let [provider-id (some-> provider-id str str/trim not-empty)]
-            (.setRuntimeApiKey auth-storage provider-id token))))
-      (let [model-registry (ModelRegistry. auth-storage models-file)
-            resource-loader (ResourceLoader.
-                             #js {:cwd (:workspace-root config)
-                                  :agentDir runtime-dir-value
-                                  :settingsManager settings-manager})]
-        (await (.reload resource-loader))
-        {:auth-storage auth-storage
-         :model-registry model-registry
-         :settings-manager settings-manager
-         :loader resource-loader
-         :runtime-dir runtime-dir-value}))))
+    {:runtime-dir runtime-dir-value
+     :models model-config}))
 
 (defn make-session-manager!
   "Create an eta-mu SessionManager and optionally seed a specific session id."
@@ -114,12 +68,6 @@
 (defn append-thinking-level-change!
   [session-manager thinking-level]
   (.appendThinkingLevelChange session-manager thinking-level))
-
-(defn find-model
-  [model-registry provider-id model-id fallback-model-id]
-  (or (.find model-registry (str provider-id) model-id)
-      (.find model-registry "proxx" model-id)
-      (.find model-registry "proxx" fallback-model-id)))
 
 ;; ─── Eta-mu tool object helpers ──────────────────────────────────────────────
 
@@ -229,18 +177,13 @@
    because the eta-mu SDK creates sessions asynchronously."
   [opts]
   (let [create-agent-session (create-agent-session-fn)
-        runtime-dir-value    (or (:runtime-dir opts) (runtime-dir))
         hook                 (when-let [materialize! (:materialize! opts)]
                                (media-materialize-hook materialize!))
         created (await (create-agent-session
                         #js {:cwd (:workspace-root opts)
-                             :agentDir runtime-dir-value
-                             :authStorage (:auth-storage opts)
-                             :modelRegistry (:model-registry opts)
-                             :resourceLoader (:loader opts)
-                             :settingsManager (:settings-manager opts)
+                             :agentDir (:runtime-dir opts)
                              :sessionManager (:session-manager opts)
-                             :model (:model opts)
+                             :model (clj->js (:model opts))
                              :thinkingLevel (:thinking-level opts)
                              :systemPrompt (:system-prompt opts)
                              :appendSystemPrompt (clj->js (vec (or (:append-system-prompt opts) [])))

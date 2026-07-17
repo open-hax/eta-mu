@@ -404,6 +404,34 @@
                               models-by-provider)]
      {:providers providers})))
 
+(defn chat-completions-url
+  "Compose the full OpenAI chat-completions endpoint from a normalized /v1
+   base URL (see provider-openai-base-url). Returns nil for a blank base."
+  [base-url]
+  (let [base (some-> base-url str str/trim not-empty)]
+    (when base
+      (str base "/chat/completions"))))
+
+(defn- provider-model-entry
+  [models-data provider-id model-id]
+  (let [provider-name (normalize-provider-id provider-id)
+        wanted (some-> model-id str str/trim not-empty)]
+    (when (and provider-name wanted)
+      (when-let [entry (some (fn [model]
+                               (when (= wanted (:id model))
+                                 model))
+                             (get-in models-data [:providers (keyword provider-name) :models]))]
+        (assoc entry :provider provider-name)))))
+
+(defn find-model
+  "Plain lookup over models.json data with the legacy ModelRegistry fallback
+   chain: explicit provider, then proxx, then the proxx fallback id. Returns
+   the model entry with its :provider attached, or nil when nothing matches."
+  [models-data provider-id model-id fallback-model-id]
+  (or (provider-model-entry models-data provider-id model-id)
+      (provider-model-entry models-data "proxx" model-id)
+      (provider-model-entry models-data "proxx" fallback-model-id)))
+
 (defn- default-model-from-contracts
   [config]
   (or (some->> (model-contracts config)

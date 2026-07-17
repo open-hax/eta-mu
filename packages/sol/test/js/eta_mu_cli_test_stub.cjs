@@ -1,49 +1,3 @@
-class AuthStorage {
-  static create(file) {
-    return new AuthStorage(file)
-  }
-
-  constructor(file) {
-    this.file = file
-    this.keys = {}
-  }
-
-  setRuntimeApiKey(provider, token) {
-    this.keys[provider] = token
-  }
-}
-
-class ModelRegistry {
-  constructor(authStorage, modelsFile) {
-    this.authStorage = authStorage
-    this.modelsFile = modelsFile
-  }
-
-  find(provider, model) {
-    return { provider, model, id: model }
-  }
-}
-
-class DefaultResourceLoader {
-  constructor(options) {
-    this.options = options
-  }
-
-  reload() {
-    return Promise.resolve(this)
-  }
-}
-
-class SettingsManager {
-  static inMemory(settings) {
-    return new SettingsManager(settings)
-  }
-
-  constructor(settings) {
-    this.settings = settings
-  }
-}
-
 class SessionManager {
   static inMemory(workspaceRoot) {
     return new SessionManager(workspaceRoot)
@@ -86,10 +40,6 @@ function createAgentSession(options) {
 }
 
 module.exports = {
-  AuthStorage,
-  ModelRegistry,
-  DefaultResourceLoader,
-  SettingsManager,
   SessionManager,
   createAgentSession
 }

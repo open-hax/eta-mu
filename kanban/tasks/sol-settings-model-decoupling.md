@@ -1,11 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "sol", "settings", "2sp"]
+write-id: "1784324812614-0.88qbvicdjglj9926dv8"
 points: "2"
 source: "kanban/epics/sol-turn-processor-cutover.md"
 title: "Sol — Settings/Auth/Model Decoupling (kill SettingsManager, AuthStorage, ModelRegistry, ResourceLoader)"
 priority: "P0"
-status: "breakdown"
+status: "in_progress"
 uuid: "sol-settings-model-decoupling"
 created_at: "2026-07-17T00:00:00Z"
 ---
@@ -61,3 +62,25 @@ construction with data, and re-implement `ensure-runtime!` /
 pnpm --filter @open-hax/sol test
 pnpm --filter @open-hax/sol lint:kondo
 ```
+
+---
+ResourceLoader audit + decoupling record (implemented 2026-07-17).
+
+WHAT DefaultResourceLoader.reload() FED THE SESSION (legacy/coding-agent resource-loader.ts, sdk.ts, agent-session.ts):
+1. getSystemPrompt — base system prompt; sol overrode it per session via :system-prompt. Replacement home: plain assembly — agent-spec-system-prompt in infra/agent/session.cljs, turn_session :system-prompt dep; default text is config :agent-system-prompt.
+2. getAppendSystemPrompt — append-prompt list; sol passed the opt through but never populated it. Replacement: :append-system-prompt pass-through (unchanged, plain data).
+3. getAgentsFiles — AGENTS.md/CLAUDE.md from agentDir + cwd ancestors injected into the system prompt. Replacement: dropped; sol never surfaced them beyond SDK defaults. If context files are wanted later they belong in front of the turn as plain prompt assembly (context injection), not a resource loader.
+4. getSkills — slash-command skill prompts in the system prompt. Not used by sol's HTTP turn surface; dropped.
+5. getPrompts — prompt templates (slash commands). Sol has no slash-command surface; dropped.
+6. getExtensions — extension runtime/tools. Replacement: sol tools are explicit — name allowlist + MCP custom tools (infra/agent/mcp_tools.cljs); new tool shape is card sol-mcp-tools-new-tool-shape.
+7. getThemes — interactive TUI only; never used by sol; dropped.
+8. SettingsManager handle inside the loader — replaced by plain policy data: domain.agent.settings/context-policy (compaction defaults enabled/16384/20000, retry maxRetries 1 preserved).
+
+AUTH + REGISTRY REPLACEMENT: AuthStorage/.setRuntimeApiKey -> domain.agent.settings/provider-auth: plain {provider-id {:api-key :base-url}} map (proxx from :proxx-auth-token, per-provider env vars from :provider-auth-tokens resolved via extern.process/env-var), shaped for the openai extern per call. ModelRegistry.find -> domain.models/find-model, a plain lookup over the models.json data ensure-runtime! writes, same fallback chain (explicit provider -> proxx -> proxx fallback id).
+
+SESSION PERSISTENCE (runtimeDir bullet): :agent-dir stays sol's data dir (models.json only — auth.json died with AuthStorage). Sessions were never persisted under agent-dir (legacy SessionManager was .inMemory); sol's persisted session/run state lives in its own EDN store at .ημ/sol/sessions/ (infra/agent/session_store.cljs) because that store serves the /api/agent/* control plane (KnoxxRun wire shape + event ledgers), not turn-processor transcripts — that is why sol keeps its own store. eta-mu.infra.session EDN artifacts remain the CLI transcript format; adopting them is the provider-swap card's call.
+
+ANOMALY LOG (construction-order rule): domain/models.cljs enrich-config reads js/process.env directly (already-there, predates card; does not invalidate the new shapes — new env reads go through extern/process). infra/config.cljs env reads are the established config-assembly seam (unchanged).
+
+INTERIM STATE: extern/create-session! no longer passes authStorage/modelRegistry/resourceLoader/settingsManager to legacy createAgentSession (resolved model now goes as clj->js data); legacy session construction is degraded until sol-provider-swap-legacy-drop wires the turn-processor adapter in.
+---
