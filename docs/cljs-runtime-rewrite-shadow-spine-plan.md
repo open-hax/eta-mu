@@ -13,7 +13,7 @@ The spine must prove that eta-mu can compile CLJS to Node-importable ESM, run CL
 
 ## Decision recommendation
 
-Start inside `packages/eta-mu-runtime`, not in a new temporary package.
+Start inside `packages/runtime`, not in a new temporary package.
 
 Rationale:
 
@@ -24,14 +24,14 @@ Rationale:
 
 Rejected for first slice:
 
-- `packages/eta-mu-runtime-cljs`: lower risk to the existing package, but creates temporary package-management and publish semantics.
+- `packages/runtime-cljs`: lower risk to the existing package, but creates temporary package-management and publish semantics.
 - root-level `shadow-cljs.edn` only: useful for the existing browser app, but too broad for a package-level runtime proof.
 - starting in `packages/coding-agent`: too many I/O and UI boundaries before the CLJS ESM proof exists.
 
 ## Proposed package layout
 
 ```text
-packages/eta-mu-runtime/
+packages/runtime/
   shadow-cljs.edn
   src/
     cljs/
@@ -108,8 +108,8 @@ Do not replace existing TS scripts during spine setup. Add CLJS-specific scripts
 Existing scripts stay authoritative for the published package until cutover:
 
 ```bash
-pnpm --dir packages/eta-mu-runtime test
-pnpm --dir packages/eta-mu-runtime typecheck
+pnpm --dir packages/runtime test
+pnpm --dir packages/runtime typecheck
 ```
 
 ## ESM runtime smoke requirement
@@ -119,7 +119,7 @@ After every `shadow-cljs compile runtime`, run a real Node import smoke, not jus
 Example smoke:
 
 ```js
-// packages/eta-mu-runtime/scripts/smoke-cljs-runtime.mjs
+// packages/runtime/scripts/smoke-cljs-runtime.mjs
 const mod = await import("../dist-cljs/index.js");
 const expected = ["normalizeEnvelope", "initialState", "planNext"];
 for (const key of expected) {
@@ -206,14 +206,14 @@ The spine task is done when CLJS compile/test/smoke/boundary gates pass while ex
 
 ## Acceptance checklist for the spine task
 
-- [ ] `packages/eta-mu-runtime/shadow-cljs.edn` exists with `:runtime` and `:test` targets.
-- [ ] `pnpm --dir packages/eta-mu-runtime cljs:compile` passes.
-- [ ] `pnpm --dir packages/eta-mu-runtime cljs:test` passes.
-- [ ] `pnpm --dir packages/eta-mu-runtime cljs:smoke` proves Node can import CLJS ESM exports.
-- [ ] `pnpm --dir packages/eta-mu-runtime cljs:boundary` rejects disallowed raw JS interop outside allowed namespaces.
+- [ ] `packages/runtime/shadow-cljs.edn` exists with `:runtime` and `:test` targets.
+- [ ] `pnpm --dir packages/runtime cljs:compile` passes.
+- [ ] `pnpm --dir packages/runtime cljs:test` passes.
+- [ ] `pnpm --dir packages/runtime cljs:smoke` proves Node can import CLJS ESM exports.
+- [ ] `pnpm --dir packages/runtime cljs:boundary` rejects disallowed raw JS interop outside allowed namespaces.
 - [ ] Existing TS gates still pass: `test` and `typecheck`.
 - [ ] No public package export is changed until parity tasks approve it.
 
 ## Recommended next implementation move
 
-Implement only the minimal spine in `packages/eta-mu-runtime` and export placeholder-compatible pure functions backed by tests. Treat the Node import smoke as a blocking gate after every shadow-cljs build.
+Implement only the minimal spine in `packages/runtime` and export placeholder-compatible pure functions backed by tests. Treat the Node import smoke as a blocking gate after every shadow-cljs build.

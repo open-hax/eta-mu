@@ -1,0 +1,13 @@
+{:source-paths ["src"
+                "../extensions/src"
+                "../extensions/lib"
+                ]
+ :dependencies [[metosin/malli "0.16.4"]]
+
+ :builds
+ {:e2e-test
+  {:target    :node-test
+   :output-to "out/node-tests.cjs"
+   :ns-regexp "eta-mu-e2e.*-test$"
+   :autorun   true
+   :compiler-options {:output-feature-set :es-next}}}}

@@ -1,0 +1,102 @@
+name: Ensure PR to Staging
+
+on:
+  workflow_call:
+    inputs:
+      base:
+        description: "Base branch for the PR"
+        required: false
+        type: string
+        default: staging
+      repo:
+        description: "Repository in owner/name format (defaults to calling repo)"
+        required: false
+        type: string
+        default: ""
+      branch-patterns:
+        description: "Comma-separated branch patterns to match (e.g. fix/*,feat/*,chore/*)"
+        required: false
+        type: string
+        default: "fix/*,feat/*,chore/*,docs/*,refactor/*,test/*,perf/*"
+    secrets:
+      ETA_MU_APP_ID:
+        required: false
+      ETA_MU_APP_PRIVATE_KEY:
+        required: false
+
+jobs:
+  ensure-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout eta-mu logic
+        uses: actions/checkout@v4
+        with:
+          repository: open-hax/eta-mu
+          ref: 92beede072dd013e1379c9a1ba0bd160d2f9b252
+          path: .eta-mu
+          persist-credentials: false
+
+      - name: Detect eta-mu app credentials
+        id: eta_mu_app_credentials
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        run: |
+          if [[ -n "${ETA_MU_APP_ID}" && -n "${ETA_MU_APP_PRIVATE_KEY}" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create eta-mu app token
+        id: eta_mu_token
+        if: ${{ steps.eta_mu_app_credentials.outputs.available == 'true' }}
+        continue-on-error: true
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ env.ETA_MU_APP_ID }}
+          private-key: ${{ env.ETA_MU_APP_PRIVATE_KEY }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: .eta-mu/packages/legacy/github/pnpm-lock.yaml
+
+      - name: Install eta-mu dependencies
+        run: pnpm --dir .eta-mu/packages/legacy/github install --frozen-lockfile --ignore-workspace
+
+      - name: Run eta-mu ensure-pr
+        id: ensure_pr
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ steps.eta_mu_token.conclusion == 'success' && steps.eta_mu_token.outputs.token != '' && steps.eta_mu_token.outputs.token || github.token }}
+        run: |
+          repo="${{ inputs.repo || github.repository }}"
+          patterns="${{ inputs.branch-patterns }}"
+          # Convert comma-separated patterns to --pattern flags
+          pattern_args=""
+          IFS=',' read -ra PATTERNS_ARR <<< "$patterns"
+          for pat in "${PATTERNS_ARR[@]}"; do
+            pattern_args="$pattern_args --pattern $pat"
+          done
+          pnpm --dir .eta-mu/packages/legacy/github dev ensure-pr \
+            --repo "$repo" \
+            --base "${{ inputs.base }}" \
+            $pattern_args
+
+      - name: Report results
+        if: always()
+        run: |
+          if [[ "${{ steps.ensure_pr.outcome }}" == "failure" ]]; then
+            echo "::warning title=ensure-pr soft failure::The ensure-pr step failed. Inspect logs for details."
+          fi

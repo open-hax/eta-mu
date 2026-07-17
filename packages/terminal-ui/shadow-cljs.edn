@@ -1,0 +1,27 @@
+{:source-paths ["src/cljs" "test/cljs"]
+ :dependencies []
+ :js-options {:js-provider :import}
+ :builds
+ {:terminal-ui
+  {:target :esm
+   :runtime :node
+   :output-dir "dist-cljs"
+   :modules {:index {:exports {:processTerminal eta-mu.terminal-ui.extern.terminal/process-terminal
+                               :terminalProtocol eta-mu.terminal-ui.extern.terminal/Terminal
+                               :userMessage eta-mu.terminal-ui.component.message/user-message
+                               :assistantMessage eta-mu.terminal-ui.component.message/assistant-message
+                               :thinking eta-mu.terminal-ui.component.message/thinking
+                               :toolCall eta-mu.terminal-ui.component.message/tool-call
+                               :toolResult eta-mu.terminal-ui.component.message/tool-result}}}
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :simple
+                      :source-map true}}
+
+  :test
+  {:target :node-test
+   :output-to "target/terminal-ui-test.cjs"
+   :ns-regexp "-test$"
+   :autorun false
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :none
+                      :source-map true}}}}

@@ -1,0 +1,6 @@
+{:contract/id "second_agent"
+ :contract/kind :agent
+ :enabled false
+ :trigger-kind :scheduled
+ :agent {:model "gemma4:27b"}
+ :prompts {:system "You are a second agent."}}

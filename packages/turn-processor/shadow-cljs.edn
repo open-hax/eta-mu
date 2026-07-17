@@ -1,0 +1,37 @@
+{:source-paths ["src/cljs" "test/cljs"]
+ :dependencies [[metosin/malli "0.16.4"]]
+ :js-options {:js-provider :import}
+ :builds
+ {:turn-processor
+  {:target :esm
+   :runtime :node
+   :output-dir "dist-cljs"
+   :modules {:index {:exports {:validateAgentMessage eta-mu.turn-processor.law.message/validate-agent-message
+                               :agentMessageSchema eta-mu.turn-processor.law.message/agent-message-schema
+                               :toolSchema eta-mu.turn-processor.law.tool/tool-schema
+                               :validateTool eta-mu.turn-processor.law.tool/validate-tool
+                               :agentContextSchema eta-mu.turn-processor.law.agent/agent-context-schema
+                               :validateAgentContext eta-mu.turn-processor.law.agent/validate-agent-context
+                               :runLoop eta-mu.turn-processor.infra.loop/run-loop
+                               :messagesToOpenai eta-mu.turn-processor.shape.message/messages->openai
+                               :messageToOpenai eta-mu.turn-processor.shape.message/message->openai
+                               :openaiToMessage eta-mu.turn-processor.shape.message/openai->message
+                               :openaiResponseToAssistantMessage eta-mu.turn-processor.shape.message/openai-response->assistant-message
+                               :openaiErrorMessage eta-mu.turn-processor.shape.message/openai-error-message
+                               :validateMessages eta-mu.turn-processor.shape.message/validate-messages
+                               :toolsToOpenai eta-mu.turn-processor.shape.tool/tools->openai
+                               :toolToOpenai eta-mu.turn-processor.shape.tool/tool->openai
+                               :openaiToTool eta-mu.turn-processor.shape.tool/openai->tool
+                               :validateTools eta-mu.turn-processor.shape.tool/validate-tools}}}
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :simple
+                      :source-map true}}
+
+  :test
+  {:target :node-test
+   :output-to "target/turn-processor-test.cjs"
+   :ns-regexp "-test$"
+   :autorun false
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :none
+                      :source-map true}}}}

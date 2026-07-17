@@ -1,110 +1,105 @@
 
-## Commands
-- `pnpm dev` - Start both frontend (8700) and backend (8787) in dev mode
-- `pnpm build` - Build both frontend and backend for production  
-- `pnpm start` - Start production backend server
-- `pnpm clean` - Clean all build artifacts
-- `cd packages/opencode-reactant && pnpm dev` - Frontend only
-- `cd services/agentd && pnpm dev` - Backend only
-- `npx shadow-cljs compile app` - Compile ClojureScript
-- `npx shadow-cljs release app` - Production frontend build
+## Clojure House Rules (eta-mu-sol constitution)
 
+### Architecture Paradigm: Categories vs. Contracts
+When modeling domains, you must strictly differentiate between the grammar of motion and the enforcement of that motion.
+- Categories: Describe the space of lawful possible transformations. They dictate "what kind of move this is" and define the state space, transition vocabulary, and general laws of composition for the runtime or a subsystem.
+- Contracts: Decide whether a particular runtime entity, event, or transition is admissible under current obligations. They dictate "whether you are allowed to count it as a valid move right now" by defining guards, admissibility checks, evidence requirements, delivery expectations, and side-effect constraints.
+
+
+### Zero Warnings
+`clj-kondo`, type checks, and tests must all pass with zero warnings. Warnings
+are failed contracts, not noise.
+
+### Namespace Architecture
+| Layer         | Pattern            | Rule                             |
+|---------------|--------------------|----------------------------------|
+| `domain.*`    | Business logic     | No I/O. Pure functions only.     |
+| `infra.*`     | Transport/DB/Queue | No domain policy.                |
+| `shape.*`     | Data morphisms     | Pure, domain-agnostic.           |
+| `law.*`       | Contracts/Malli    | No I/O. Validators only.         |
+
+### Clojure Construction Order
+Regardless of the kanban process, ClojureScript is **built in a fixed order**, because the
+order *is* the dependency DAG: each layer compiles against already-defined lower layers.
+
+```
+Discovery → ( Describe → specify → define → shape → extern → domain → infra )
+```
+
+- **Discovery** — survey what already exists before constructing. Opens every cycle and
+  recurs *inside* every step (see the anomaly rule below). Output: a named inventory of the
+  shapes in play, including the ones that are already there.
+- **Describe** — state the projection's intent in prose (a note, a kanban card body).
+- **specify** — pin acceptance criteria / exit signals (the kanban "Clarify & Scope" pass).
+- **define** — author the `law.*` that **describes** the shape (μ). A law is a description of
+  what a valid instance is, not the data and not the transform; that is why it has no
+  dependencies and comes first. (`define` and `shape` are complementary roles, not one
+  artifact moved between layers — the law describes; the shape is the morphism it describes.)
+- **shape** — `shape.*` pure morphisms that produce/consume the described shapes (parse,
+  enrich, (de)serialize). Depends only on `law`.
+- **extern** — `extern.*` raw JS / Node / browser / SDK boundaries, decoding foreign data
+  into defined shapes at the edge. Nothing above `extern` touches a raw host object.
+- **domain** — `domain.*` pure decisions over shaped data. Depends on `shape` + `law`.
+- **infra** — `infra.*` effect orchestration composing `extern` adapters and `domain`
+  decisions, returning CLJS data. Depends on everything below it.
+
+#### The anomaly rule (a surprise at every step)
+Every step is also a discovery step. You will keep finding shapes you didn't realize were
+already there — in this package or a sibling.
+
+> If the discovery does **not** invalidate the shape of your targeted projections, you
+> **describe the anomaly** (location + whether it's already-there reuse or a contradiction)
+> and **keep going**. If it **does** invalidate a target, stop and re-`describe` that projection.
+
+Anomalies are logged, not silently absorbed. A worked example of a Discovery pass and its
+anomaly log: `docs/rheos-chat-ui-shape-discovery.md`.
+
+### Modern ClojureScript
+Always use `^:async` metadata (ClojureScript ≥ 1.12.145). Never use
+`core.async` channels or Promise chains in new code.
+
+```clojure
+(defn ^:async fetch-data [url]
+  (await (js/fetch url)))
+
+(deftest ^:async fetch-test
+  (is (some? (await (fetch-data "https://example.com")))))
+```
+
+### Idioms
+- `when-let` over nested `let` + `if`
+- `->` / `->>` over nested `let` forms
+- No `utils` namespaces
+- No broad `:refer :all`
+- Custom macros registered in `.clj-kondo/config.edn` on day one
 ## Testing Gate
 - A task is not done while any relevant automated test suite is failing.
-- For coding-agent changes, run `pnpm --filter @open-hax/eta-mu-cli test` and resolve all failures before reporting completion.
-- For eta-mu extension changes, run `pnpm -C packages/eta-mu-extensions test` and resolve all failures before reporting completion.
+- For CLI changes, run `pnpm -C packages/eta-mu test` and `pnpm -C packages/eta-mu lint:kondo` — `packages/eta-mu` is the CLI now, not `packages/legacy/coding-agent`. (Only run the legacy coding-agent suite when a change actually touches that package.)
+- For eta-mu extension changes, run `pnpm -C packages/extensions test` and resolve all failures before reporting completion.
 - If a full suite cannot be run, state that the task is not complete and record the exact blocker instead of claiming done.
 
-### Frontend status checks (Chrome DevTools)
-- Open http://localhost:8700, launch DevTools (Cmd/Ctrl+Opt+I), and reload with "Disable cache" to avoid stale CLJS bundles.
-- Console: watch for red errors; enable "Pause on exceptions" to catch runtime ClojureScript issues. Warnings are okay if shadow-cljs hot reload stays connected.
-- Network: filter to `WS` to confirm the WebSocket to :8787 upgrades (101) and keeps exchanging frames; XHR/fetch calls should stay 200/304 (401 usually means missing backend env vars).
-- Application > Storage: clear local/session storage when UI state looks stuck before reloading.
-- Performance: use Performance panel (and React DevTools if installed) to confirm renders stay responsive during event bursts; persistent growth in detached nodes hints at leaks.
+## Board Operations
+
+Board state is the single source of truth for work. Treat it as a finite-state machine whose law is implemented in `packages/rheos/src/rheos/backend/law/fsm.cljs` and rendered for humans in `PROCESS.md`.
+
+- **Work from a card.** Never work off-board. Anchor every implementation slice on a kanban task and record the scoped plan on the card before moving to implementation.
+- **Move cards with the Rheos CLI.** Run commands from the **repo root** so the board resolves correctly:
+  - `eta-mu kanban list` — current board.
+  - `eta-mu kanban count` — column counts.
+  - `eta-mu kanban comment <uuid> "note"` — append provenance to a card.
+  - `eta-mu kanban frontmatter <uuid> status <new-status>` — lawful status change.
+  - `node packages/rheos/dist/cli.cjs status-update <uuid> --to <status>` — FSM-enforced move (also runs build-gate when required).
+- **No direct frontmatter edits.** The file watcher treats hand-edited frontmatter as drift and stamps a `drift: true` indicator on the card. Use the CLI so the ledger records a `write-id` and the provenance is auditable.
+- **Walk lawful hops.** There are no shortcut edges. To move a card multiple columns forward, step through each lawful transition in order. The direct `in_progress → review` edge exists only when the build-gate passes.
+- **Regenerate snapshots when needed.** The web UI and `kanban/.kanban/board.json` are generated snapshots; the source of truth is the task files plus the ledger in `kanban/.events/ledger.edn`. If a snapshot is stale, regenerate it from the CLI or the web UI.
 
 ## Code Style
-- **TypeScript**: ES modules, camelCase functions, async/await, Zod validation, Fastify server
-- **ClojureScript**: Reagent components, kebab-case functions, atoms for state, Tailwind CSS
+- **TypeScript** (legacy only): ES modules, camelCase functions, async/await, Zod validation, Fastify server
+- **ClojureScript** (all new code): Reagent components, kebab-case functions, atoms for state, Tailwind CSS
 - **Imports**: Use ES6 imports, no default exports, explicit file extensions (.js)
-- **Types**: Strict TypeScript enabled, avoid `any`, use Zod schemas
+- **Types**: Strict TypeScript enabled for legacy TS; ClojureScript uses Malli schemas for validation
 - **Naming**: camelCase for TS, kebab-case for CLJS, descriptive variable names
 - **Error handling**: Try/catch only when necessary, proper error logging via bus events
 - **Formatting**: Consistent indentation, no unnecessary destructuring, single-responsibility functions
-
-## Architecture
-- Event-driven with WebSocket communication between frontend/backend
-- GitHub API via Octokit, Git operations via simple-git
-- Frontend: Reagent + Shadow-CLJS, Backend: Fastify + TypeScript
-- State management: atoms in ClojureScript, event bus in TypeScript
-
-### 🔗 Cross-Repository Integration
-- **[CROSS_REFERENCES.md](./CROSS_REFERENCES.md)** - Complete cross-references to all related repositories
-- **[Workspace AGENTS.md](../../AGENTS.md)** - Main workspace documentation
-- **[Repository Index](../../REPOSITORY_INDEX.md)** - Complete repository overview
-
-### Related Repositories
-- **[promethean](../../promethean/)**: Agent orchestration and AI enhancement
-- **[agent-shell](../../agent-shell/)**: Development workflow and agent integration
-- **[open-hax/codex](../../open-hax/codex/)**: Authentication patterns
-- **[moofone/codex-ts-sdk](../../moofone/codex-ts-sdk/)**: TypeScript SDK integration
-- **[stt](../../stt/)**: Web development patterns and components
-- **[opencode-hub](../../opencode-hub/)**: Package management and distribution
-- **[clojure-mcp](../../clojure-mcp/)**: ClojureScript development patterns
-- **[dotfiles](../../dotfiles/)**: Development environment setup
-
-## Knowledge Graph (self-documenting)
-- Root: `AGENTS.md` (this file) links operational conventions and connects all docs.
-- Workspace docs: [Workspace AGENTS](../../AGENTS.md) ↔ [Repository Index](../../REPOSITORY_INDEX.md) ↔ [CROSS_REFERENCES.md](./CROSS_REFERENCES.md).
-- Backend/agentd: [spec/agentd-tests.md](./spec/agentd-tests.md) → vitest harness/tests; [spec/run-readiness.md](./spec/run-readiness.md) → install/run checklist; [spec/pm2-ecosystem.md](./spec/pm2-ecosystem.md) → PM2 setup.
-- Frontend/opencode-reactant: [packages/opencode-reactant/README.md](./packages/opencode-reactant/README.md) ↔ [DEVELOPMENT.md](./packages/opencode-reactant/DEVELOPMENT.md) ↔ [CROSS_REFERENCES.md](./packages/opencode-reactant/CROSS_REFERENCES.md).
-- Notes: [docs/notes/*](./docs/notes/) hold dated investigations; treat as append-only references.
-- Memories: [.serena/memories/*.md](./.serena/memories/) capture conventions, error-handling plans, and suggested commands.
-
-Use this graph bidirectionally: when adding a new document, link it here and back to its nearest neighbors (component, spec, or guide) to keep the graph consistent.
-
-
-## RELEVANT SKILLS
-These skills are configured for this directory's technology stack and workflow.
-
-### clojure-namespace-architect
-Resolves Clojure namespace-path mismatches and classpath errors with definitive path conversion
-
-### clojure-quality
-Auto-fix Clojure delimiters and validate syntax with OpenCode tools.
-
-### clojure-syntax-rescue
-Protocol to recover from Clojure/Script syntax errors, specifically bracket mismatches and EOF errors.
-
-### create-pm2-clj-config
-Create new pm2-clj ecosystem configuration files from scratch or templates for PM2 process management
-
-### create-pm2-ecosystem
-Create new PM2 ecosystem configuration files for the clobber-based system with proper defapp definitions
-
-### git-safety-check
-Protocol to ensure safe git operations and avoid detached HEAD or dirty commits.
-
-### github-integration
-Perform GitHub operations across all tracked repositories in orgs/**, including issue/PR management, repository synchronization, and automation workflows
-
-### pm2-process-management
-Start, stop, restart, and manage PM2 processes using the ecosystem-based configuration system
-
-### render-pm2-clj-config
-Render pm2-clj ecosystem files to JSON for validation and debugging without starting processes
-
-### submodule-ops
-Make safe, consistent changes in a workspace with many git submodules under orgs/**
-
-### testing-general
-Apply testing best practices, choose appropriate test types, and establish reliable test coverage across the codebase
-
-### work-on-in_progress-task
-Execute the best next work for a task currently in `in_progress`.
-
-### work-on-todo-task
-Execute the best next work for a task currently in `todo`.
-
-### workspace-lint
-Lint all TypeScript and markdown files across the entire workspace, including all submodules under orgs/**
 

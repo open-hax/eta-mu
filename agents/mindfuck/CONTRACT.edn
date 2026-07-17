@@ -2,7 +2,7 @@
 ;; Actor: mindfuck
 ;; The heart of the eta-mu runtime.
 ;; All other contracts in this system reference this actor.
-;; Schema: spec/contracts-v1.edn
+;; Schema: kanban/contracts-v1.edn (repo-relative)
 ;; ============================================================
 
 {:actor/id     "mindfuck"

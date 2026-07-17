@@ -1,0 +1,17 @@
+{:cap/id :cap/kanban-orchestrator
+ ;; The orchestrator's COMPLETE toolset — read-only project inspection + board
+ ;; reads + board mutation, all from the rheos-kanban MCP server. Deliberately no
+ ;; write/edit/bash tool: the board is its only write surface.
+ :cap/tools [:mcp.rheos-kanban.project_glob
+             :mcp.rheos-kanban.project_grep
+             :mcp.rheos-kanban.project_read
+             :mcp.rheos-kanban.kanban_read_board
+             :mcp.rheos-kanban.kanban_search_tasks
+             :mcp.rheos-kanban.kanban_read_task
+             :mcp.rheos-kanban.kanban_update_status]
+ :cap/user-surfaces
+ [{:surface/id :workspace/kanban
+   :surface/label "Kanban"
+   :surface/kind :board
+   :surface/routes ["/kanban"]
+   :surface/description "The board the orchestrator works; mutations stream back live via the event ledger."}]}

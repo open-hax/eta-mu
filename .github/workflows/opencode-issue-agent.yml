@@ -1,10 +1,6 @@
 name: OpenCode Kimi Issue Agent
 
 on:
-  issues:
-    types: [opened, reopened, edited]
-  schedule:
-    - cron: "23 10 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -37,6 +33,12 @@ jobs:
           use_github_token: true
           prompt: |
             You are the Kimi issue agent for this repository. Triage the triggering GitHub issue.
+
+            Kanban context:
+            - Check whether the issue body contains an `openhax-kanban-sync` marker.
+            - If it does, treat the synced markdown Kanban card as task intent and preserve status/priority labels unless the issue clearly moved.
+            - If the repository has a kanban/ directory or docs/agent-workflows.md, use it to understand workflow vocabulary.
+            - Do not create duplicate issues for work already represented by a synced Kanban issue.
 
             Goals:
             - Decide whether the issue is actionable, duplicate, irrelevant, spam, or needs more information.
@@ -76,6 +78,12 @@ jobs:
           use_github_token: true
           prompt: |
             Perform a daily maintenance sweep of this repository's open GitHub issues.
+
+            Kanban context:
+            - Prioritize issues with the `kanban` label or an `openhax-kanban-sync` marker.
+            - Use `status:*` and `priority:*` labels to understand current task state.
+            - Do not duplicate synced Kanban issues; update/comment on the existing issue instead.
+            - If a synced issue appears stale, recommend the next Kanban status transition rather than inventing a new workflow.
 
             Scope:
             - Use the GitHub API or gh CLI with GITHUB_TOKEN to inspect open issues, excluding pull requests.

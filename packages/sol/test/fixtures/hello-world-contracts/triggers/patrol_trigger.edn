@@ -1,0 +1,15 @@
+{:contract/kind :trigger
+ :contract/id "patrol_trigger"
+ :enabled true
+
+ ;; Trigger agreement: discord_automation may run the patrol action after
+ ;; observing the schedule-generated patrol event.
+ ;; NOTE: Pipeline contracts removed. Use :actions/run-steps with
+ ;; :action/with {:steps [...]} for composed action sequences.
+ :trigger/kind :event
+ :trigger/listener "discord_automation"
+ :trigger/events [:schedule/patrol]
+ :trigger/action :actions/run-pipeline
+ :trigger/with {:pipeline-id "patrol_pipeline"}
+ :data {:context {:channelId "{{defaultChannels}}"
+                  :patrol true}}}

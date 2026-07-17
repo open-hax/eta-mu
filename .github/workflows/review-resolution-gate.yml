@@ -1,0 +1,63 @@
+name: Review Resolution Gate
+
+on:
+  workflow_call:
+    inputs:
+      repo:
+        description: "Repository in owner/name format (defaults to calling repo)"
+        required: false
+        type: string
+        default: ""
+      pr:
+        description: "Pull request number"
+        required: true
+        type: number
+      strict:
+        description: "Block on ALL unresolved review threads (not just tracked actors)"
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  review-resolution-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+
+      - name: Checkout eta-mu logic
+        uses: actions/checkout@v4
+        with:
+          repository: open-hax/eta-mu
+          ref: 92beede072dd013e1379c9a1ba0bd160d2f9b252
+          path: .eta-mu
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: .eta-mu/packages/legacy/github/pnpm-lock.yaml
+
+      - name: Install eta-mu dependencies
+        run: pnpm --dir .eta-mu/packages/legacy/github install --frozen-lockfile --ignore-workspace
+
+      - name: Enforce review resolution
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ETA_MU_REVIEW_ACTORS: ${{ vars.ETA_MU_REVIEW_ACTORS }}
+        run: |
+          strict_flag=""
+          if [ "${{ inputs.strict }}" = "true" ]; then
+            strict_flag="--strict"
+          fi
+          pnpm --dir .eta-mu/packages/legacy/github dev review-gate \
+            --repo "${{ inputs.repo || github.repository }}" \
+            --pr "${{ inputs.pr }}" \
+            $strict_flag

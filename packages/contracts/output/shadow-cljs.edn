@@ -1,0 +1,48 @@
+{:source-paths ["src/cljs" "test/cljs"]
+ :dependencies [[metosin/malli "0.16.4"]]
+ :js-options {:js-provider :import}
+ :builds
+ {:output-contracts
+  {:target :esm
+   :runtime :node
+   :output-dir "dist-cljs"
+   :modules {:index {:exports {:compileAgentOutputContract eta-mu.contracts.output.shape.edn/compile-agent-output-contract
+                               :parseEdnForm eta-mu.contracts.output.shape.edn/parse-edn-form
+                               :validateMarkdownResponse eta-mu.contracts.output.domain.validate/validate-markdown-response
+                               :toFailureReport eta-mu.contracts.output.domain.validate/to-failure-report
+                               :buildReviewMessages eta-mu.contracts.output.domain.review/build-review-messages
+                               :buildStubReviewReport eta-mu.contracts.output.domain.review/build-stub-review-report
+                               :buildGptReviewMessages eta-mu.contracts.output.domain.review/build-gpt-review-messages
+                               :buildGptReviewReportPure eta-mu.contracts.output.domain.review/build-gpt-review-report-pure
+                               :compileRepairPrompt eta-mu.contracts.output.domain.repair/compile-repair-prompt
+                               :generateCandidate eta-mu.contracts.output.infra.generate/generate-candidate
+                               :buildGenerationMessages eta-mu.contracts.output.domain.generate/build-generation-messages
+                               :buildGenerationMessagesForAttempt eta-mu.contracts.output.domain.generate/build-generation-messages-for-attempt
+                               :writeRunArtifacts eta-mu.contracts.output.infra.artifacts/write-run-artifacts!
+                               :writeReviewArtifacts eta-mu.contracts.output.infra.artifacts/write-review-artifacts!
+                               :writeGenerationArtifacts eta-mu.contracts.output.infra.artifacts/write-generation-artifacts!
+                               :writeRepairAttemptArtifacts eta-mu.contracts.output.infra.artifacts/write-repair-attempt-artifacts!
+                               :parseMarkdownAst eta-mu.contracts.output.shape.markdown/parse-markdown-ast
+                               :extractMarkdownSections eta-mu.contracts.output.shape.markdown/extract-markdown-sections
+                               :nodeText eta-mu.contracts.output.shape.markdown/node-text
+                               :countSemanticItems eta-mu.contracts.output.shape.markdown/count-semantic-items}}}
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :simple
+                      :source-map true}}
+
+  :cli
+  {:target :node-script
+   :output-to "dist-cli/index.cjs"
+   :main eta-mu.contracts.output.infra.cli/main
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :simple
+                      :source-map true}}
+
+  :test
+  {:target :node-test
+   :output-to "target/cljs-test.cjs"
+   :ns-regexp "-test$"
+   :autorun false
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :none
+                      :source-map true}}}}

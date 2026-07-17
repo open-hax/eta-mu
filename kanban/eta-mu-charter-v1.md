@@ -1,8 +1,8 @@
 ---
 uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-eta-mu-charter-v1-md"
 title: "eta-mu charter v1"
-status: incoming
-priority: P3
+status: "rejected"
+priority: "P3"
 labels: ["specs", "migrated-spec"]
 created_at: "2026-05-29T04:29:39.349Z"
 source: "orgs/open-hax/eta-mu/specs/eta-mu-charter-v1.md"
@@ -147,19 +147,19 @@ This package belongs to the extracted substrate line and should stay aligned wit
 ### Radar and signal satellites
 
 - `packages/signal-contracts`
-- `packages/signal-radar-core`
-- `packages/signal-source-utils`
-- `packages/signal-watchlists`
+- `packages/signal-radar-core` *(deleted in the 2026-06 reorg)*
+- `packages/signal-source-utils` *(deleted in the 2026-06 reorg)*
+- `packages/signal-watchlists` *(deleted in the 2026-06 reorg)*
 
-These are currently housed here, but they are not the long-term definition of `eta-mu`.
+These were housed here, but they are not the long-term definition of `eta-mu`.
 Current migration intent points toward normalization into an `eta-mu-radar` line under `open-hax`.
 
 ### Absorbed OpenHax legacy satellites
 
-- `packages/opencode-reactant`
-- `services/agentd`
-- `shared/js/opencode-events`
-- `packages/kanban`
+- `packages/opencode-reactant` *(deleted in the 2026-06 reorg)*
+- `services/agentd` *(deleted in the 2026-06 reorg)*
+- `shared/js/opencode-events` *(deleted in the 2026-06 reorg)*
+- `packages/kanban` *(now `packages/legacy/kanban`, superseded by `packages/rheos`)*
 
 These are absorbed legacy or transitional surfaces.
 They may remain temporarily, but they are not the canonical answer to "what is eta-mu?"

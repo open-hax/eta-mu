@@ -1,0 +1,29 @@
+{
+  "name": "@eta-mu/contracts-output",
+  "version": "0.1.0",
+  "description": "Output contract validation and review for eta-mu responses",
+  "private": false,
+  "type": "module",
+  "files": [
+    "dist-cljs",
+    "dist-cli",
+    "README.md"
+  ],
+  "bin": {
+    "output-contract-gate": "dist-cli/index.cjs"
+  },
+  "scripts": {
+    "build": "shadow-cljs release output-contracts && shadow-cljs release cli",
+    "clean": "rm -rf dist-cljs target .shadow-cljs",
+    "test": "shadow-cljs compile test && node target/cljs-test.cjs",
+    "test:coverage": "shadow-cljs compile test && c8 --reporter=text --reporter=lcov --reporter=json-summary node target/cljs-test.cjs",
+    "lint:kondo": "clj-kondo --lint src/cljs test/cljs",
+    "watch": "shadow-cljs watch test"
+  },
+  "devDependencies": {
+    "c8": "^10.1.2",
+    "shadow-cljs": "^3.4.11",
+    "source-map-support": "^0.5.21"
+  },
+  "license": "GPL-3.0-or-later"
+}

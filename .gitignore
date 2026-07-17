@@ -1,13 +1,15 @@
 # Build artifacts
 dist/
+dist-dev/
 dist-cljs/
 build/
 lib/
-!packages/eta-mu-extensions/lib/
-!packages/eta-mu-extensions/lib/**
-!packages/eta-mu-extensions/src/eta_mu/build/
-!packages/eta-mu-extensions/src/eta_mu/build/**
+!packages/extensions/lib/
+!packages/extensions/lib/**
+!packages/extensions/src/eta_mu/build/
+!packages/extensions/src/eta_mu/build/**
 *.tsbuildinfo
+**/coverage/
 
 # Dependencies
 node_modules/
@@ -33,16 +35,34 @@ node_modules/
 # Shadow-CLJS build caches
 **/.shadow-cljs/
 
+# Runtime/build caches
+**/.cache/
+
+# Nested worktrees / standalone prototypes
+/alpha/
+
 # Local tool state
 **/.cpcache/
 **/.serena/
-**/.clj-kondo/.cache/
+**/.clj-kondo/.cache
+**/.clj-kondo/imports
 **/.lsp/
-packages/opencode-reactant/resources/public/js/main.js.map
 
 # Playwright artifacts
-packages/kanban/test-results/
-packages/kanban/playwright-report/
+packages/legacy/kanban/test-results/
+packages/legacy/kanban/playwright-report/
 
 
 **/target/
+
+# TypeScript line-count baseline (local state)
+.ts-line-count-baseline
+
+# Generated OpenCode host artifacts
+.opencode/
+
+# Core dumps
+core
+
+packages/eta-mu/dist-cli/
+packages/eta-mu/*.tgz

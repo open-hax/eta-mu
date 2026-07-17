@@ -1,4 +1,41 @@
 {
-  "tasksDir": ".",
-  "boardFile": ".kanban/board.json"
+  "defaultProject": "eta-mu",
+  "projects": [
+    {
+      "id": "eta-mu",
+      "title": "eta-mu",
+      "tasksDir": ".",
+      "boardFile": ".kanban/board.json",
+      "fsm": "promethean"
+    },
+    {
+      "id": "epiphany",
+      "title": "Epiphany",
+      "tasksDir": "../../epiphany/docs/kanban",
+      "fsm": "promethean"
+    },
+    {
+      "id": "proxx",
+      "title": "Proxx",
+      "tasksDir": "../../proxx/kanban",
+      "fsm": "promethean"
+    },
+    {
+      "id": "truth",
+      "title": "Gates of Truth",
+      "tasksDir": "../../Truth/kanban/tasks",
+      "fsm": "promethean"
+    },
+    {
+      "id": "bitch-tracker",
+      "title": "Bitch Tracker",
+      "tasksDir": "../../bitch-tracker/kanban"
+    },
+    {
+      "id": "muse",
+      "title": "Muse",
+      "tasksDir": "../../muse/docs/kanban",
+      "fsm": "promethean"
+    }
+  ]
 }

@@ -1,0 +1,35 @@
+{:source-paths ["src/cljs" "test/cljs" "test-e2e/cljs" "../turn-processor/src/cljs" "../terminal-ui/src/cljs"]
+ :dependencies [[metosin/malli "0.16.4"]]
+ :js-options {:js-provider :import}
+ :builds
+ {:cli
+  {:target :node-script
+   :output-to "dist-cli/index.cjs"
+   :main eta-mu.infra.cli.main/main
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :simple
+                      :source-map true}}
+
+  :test
+  {:target :node-test
+   :output-to "target/eta-mu-test.cjs"
+   :ns-regexp "-test$"
+   :autorun false
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :none
+                      :source-map true}}
+
+  ;; Separate build so the e2e suite (spawns the built CLI as a real child
+  ;; process against a mock HTTP server) never runs as part of the fast
+  ;; `:test` build/autorun path. e2e namespaces end in `-e2e` (not `-test`),
+  ;; so `:test`'s ns-regexp above never picks them up. Requires
+  ;; `dist-cli/index.cjs` to already be built; see the `test:e2e` script,
+  ;; which builds first.
+  :e2e-test
+  {:target :node-test
+   :output-to "target/eta-mu-e2e-test.cjs"
+   :ns-regexp "-e2e$"
+   :autorun false
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :none
+                      :source-map true}}}}

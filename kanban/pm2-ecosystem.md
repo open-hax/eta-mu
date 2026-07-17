@@ -1,13 +1,17 @@
 ---
 uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-pm2-ecosystem-md"
 title: "PM2 Ecosystem Setup"
-status: incoming
-priority: P3
+status: "rejected"
+priority: "P3"
 labels: ["specs", "migrated-spec"]
 created_at: "2026-05-29T04:29:39.348Z"
 source: "orgs/open-hax/eta-mu/specs/pm2-ecosystem.md"
 category: "specs"
 ---
+
+> **Historical (2026-07-10):** this document references packages deleted in the monorepo
+> reorganization (`services/agentd`, `packages/opencode-reactant`, `packages/signal-*`,
+> pre-reorg `packages/kanban`). Retained as a decision/planning record; do not treat paths as current.
 
 > Source: `orgs/open-hax/eta-mu/specs/pm2-ecosystem.md`
 > Migrated-to-kanban: `orgs/open-hax/eta-mu/kanban/pm2-ecosystem.md`

@@ -1,12 +1,13 @@
 ---
-uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-contract-runtime-v2-spec-md"
-title: "Contract Runtime v2 Spec"
-status: incoming
-priority: P3
-labels: ["specs", "migrated-spec"]
-created_at: "2026-05-29T04:29:39.347Z"
-source: "orgs/open-hax/eta-mu/specs/contract-runtime-v2-spec.md"
 category: "specs"
+labels: ["specs", "migrated-spec"]
+write-id: "1783813710841-0.e5497a0zljpwrq0blcp"
+source: "orgs/open-hax/eta-mu/specs/contract-runtime-v2-spec.md"
+title: "Contract Runtime v2 Spec"
+priority: "P3"
+status: "done"
+uuid: "orgs-open-hax-eta-mu-kanban-orgs-open-hax-eta-mu-specs-contract-runtime-v2-spec-md"
+created_at: "2026-05-29T04:29:39.347Z"
 ---
 
 > Source: `orgs/open-hax/eta-mu/specs/contract-runtime-v2-spec.md`
@@ -21,7 +22,6 @@ Schema: `spec/contracts-v1.edn`
 Actor source: `agents/mindfuck/CONTRACT.edn`
 
 ---
-
 ## What Changes
 
 The existing `contract_runtime.cljs` discovers `CONTRACT.edn` files from
@@ -40,7 +40,6 @@ v2 replaces this with:
 The existing `opmf_contract_gate.cljs` remains active. The new runtime
 detects its presence at session start and skips re-registering the
 output-gate fulfillment to avoid double-firing.
-
 ---
 
 ## Directory Convention
@@ -60,7 +59,6 @@ Contents:
 | `CONTRACT.sha` | JSON map: `{ "<absolute-path>": { "sha": "...", "loaded-at": <epoch-ms> } }` — one entry per loaded CONTRACT.edn |
 
 ---
-
 ## Bootstrap Sequence (`session_start`)
 
 1. Resolve `ctx` cwd
@@ -74,7 +72,6 @@ Contents:
    - If present → compare SHA; if source changed, append new sections only — never reorder or remove existing
 5. Load `PRINCIPLE.edn` into session as the constitutional base system prompt
 6. Initialise session atom (see **State** section)
-
 ---
 
 ## Contract Discovery (before-hook on path-bearing tool calls)
@@ -99,7 +96,6 @@ Contents:
 4. Contracts held in session atom under `:loaded` (see **State** section)
 
 ---
-
 ## TTL Policy
 
 Default TTL: **300 000 ms (5 min)**.
@@ -117,7 +113,6 @@ Override by placing a CONTRACT.edn anywhere in the walk path containing:
 ```
 
 Resolution: **nearest wins** (leaf path overrides root).
-
 ---
 
 ## Contract Dispatch
@@ -138,7 +133,6 @@ The old opmf lisp prompt works unchanged if placed in a `CONTRACT.edn` —
 unrecognised s-expression blocks fall through to the system prompt as text.
 
 ---
-
 ## PRINCIPLE.edn
 
 The constitutional layer of every eta-mu session.
@@ -160,7 +154,6 @@ on every `session_start`.
 - `:safety`
 - `:license`
 - `:output-shape`
-
 ---
 
 ## Policy Execution
@@ -184,7 +177,6 @@ Severity behaviour:
 | `:note` | Silent annotation. Append to session `:policy-log`. |
 
 ---
-
 ## Fulfillment Execution
 
 Fulfillments run in an **after hook** on the tool call result.
@@ -215,7 +207,6 @@ If `:inject-feedback? true`, the runtime injects `:feedback` as a user message o
 
 All fulfillment verdicts emit a `:verdict-record` (schema: `spec/contracts-v1.edn`) and
 append to `STATE-DIR/fulfillment-scores.jsonl` for backward compatibility.
-
 ---
 
 ## Integration with `opmf_contract_gate`
@@ -229,7 +220,6 @@ When `opmf_contract_gate.cljs` is retired, the CONTRACT.edn fulfillment takes ov
 automatically with no other changes required.
 
 ---
-
 ## State
 
 ```clojure
@@ -253,7 +243,6 @@ Session atom shape (in-memory only, not persisted between sessions):
  :ttl-ms    300000
  :policy-log [<violation> ...]}
 ```
-
 ---
 
 ## Backward Compatibility
@@ -266,7 +255,6 @@ Session atom shape (in-memory only, not persisted between sessions):
 | `opmf_contract_gate.cljs` | Remains active until explicitly retired. Double-fire guard at session_start. |
 
 ---
-
 ## Implementation Order
 
 1. `.ημ/` dir creation + `CONTRACT.sha` read/write helpers
@@ -278,3 +266,4 @@ Session atom shape (in-memory only, not persisted between sessions):
 7. Actor system-prompt merge
 8. Unknown-block→system-prompt fallthrough
 9. Retire `opmf_contract_gate.cljs` guard
+---

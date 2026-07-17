@@ -1,0 +1,6 @@
+{:contract/kind :mcp-server
+ :contract/id "rheos_kanban"
+ :mcp-server/id "rheos-kanban"
+ :mcp-server/transport :http
+ :mcp-server/url "http://127.0.0.1:8792/mcp"
+ :enabled true}

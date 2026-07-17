@@ -1,0 +1,141 @@
+name: Kanban Sync to GitHub Issues
+
+on:
+  workflow_call:
+    inputs:
+      repo:
+        description: "Repository in owner/name format (defaults to calling repo)"
+        required: false
+        type: string
+        default: ""
+      tasks-dir:
+        description: "Path to kanban tasks directory"
+        required: false
+        type: string
+        default: "kanban"
+      dry-run:
+        description: "Print sync plan without creating/updating issues"
+        required: false
+        type: boolean
+        default: false
+      max-writes:
+        description: "Maximum number of GitHub API writes per run"
+        required: false
+        type: number
+        default: 50
+      write-delay-ms:
+        description: "Delay between GitHub API writes (ms)"
+        required: false
+        type: number
+        default: 1000
+      close-done:
+        description: "Close issues for done tasks"
+        required: false
+        type: boolean
+        default: true
+      close-rejected:
+        description: "Close issues for rejected tasks"
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      ETA_MU_APP_ID:
+        required: false
+      ETA_MU_APP_PRIVATE_KEY:
+        required: false
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (do not create/update issues)"
+        required: false
+        default: "false"
+        type: boolean
+  schedule:
+    - cron: "0 */6 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  kanban-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+
+      - name: Checkout eta-mu logic
+        uses: actions/checkout@v4
+        with:
+          repository: open-hax/eta-mu
+          ref: main
+          path: .eta-mu
+          persist-credentials: false
+
+      - name: Detect eta-mu app credentials
+        id: eta_mu_app_credentials
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        run: |
+          if [[ -n "${ETA_MU_APP_ID}" && -n "${ETA_MU_APP_PRIVATE_KEY}" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create eta-mu app token
+        id: eta_mu_token
+        if: ${{ steps.eta_mu_app_credentials.outputs.available == 'true' }}
+        continue-on-error: true
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ env.ETA_MU_APP_ID }}
+          private-key: ${{ env.ETA_MU_APP_PRIVATE_KEY }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: .eta-mu/pnpm-lock.yaml
+
+      - name: Install eta-mu dependencies
+        run: cd .eta-mu/packages/kanban && npm install --legacy-peer-deps
+
+      - name: Build eta-mu kanban
+        run: pnpm --dir .eta-mu --filter @open-hax/kanban-legacy build
+
+      - name: Run kanban sync
+        env:
+          GITHUB_TOKEN: ${{ steps.eta_mu_token.conclusion == 'success' && steps.eta_mu_token.outputs.token != '' && steps.eta_mu_token.outputs.token || github.token }}
+        run: |
+          repo="${{ inputs.repo || github.repository }}"
+          dry_run="${{ inputs.dry-run || github.event.inputs.dry_run }}"
+          close_done="${{ inputs.close-done }}"
+          close_rejected="${{ inputs.close-rejected }}"
+          tasks_dir="${{ inputs.tasks-dir }}"
+          
+          args="--repo $repo --tasks-dir ${{ github.workspace }}/$tasks_dir"
+          
+          if [ "$dry_run" = "true" ]; then
+            args="$args --dry-run"
+          fi
+          if [ "$close_done" = "false" ]; then
+            args="$args --no-close-done"
+          fi
+          if [ "$close_rejected" = "false" ]; then
+            args="$args --no-close-rejected"
+          fi
+          args="$args --max-writes ${{ inputs.max-writes || 50 }}"
+          args="$args --write-delay-ms ${{ inputs.write-delay-ms || 1000 }}"
+          
+          pnpm --dir .eta-mu --filter @open-hax/kanban-legacy exec node dist/cli.js sync github $args

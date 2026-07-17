@@ -1,0 +1,106 @@
+{:http {:port 9633},
+ ;; Classpath (paths + JVM deps) comes from deps.edn. katamorph + event-ledger
+ ;; are git-ref deps there — no "../katamorph/src/cljs" sibling source-paths.
+ :deps true,
+ :nrepl {:port 4501},
+ :js-options {:js-provider :import},
+ :builds
+ {:app
+  {:target :esm,
+   :output-dir "dist",
+   :modules
+   {:app
+     {:exports
+      {:solPlugin open-hax.sol.plugin/sol-plugin,
+       :config open-hax.sol.infra.config/config-js,
+       :bootstrap open-hax.sol.bootstrap/bootstrap!,
+       :start open-hax.sol.infra.core/start!,
+       :registerAppRoutes open-hax.sol.infra.core/register-app-routes!,
+       :registerWsRoutes open-hax.sol.infra.core/register-ws-routes!}}},
+   :js-options
+   {:js-provider :import,
+    :keep-as-import
+     #{"node:fs/promises"
+       "node:fs"
+       "node:path"
+       "node:url"
+       "@open-hax/eta-mu-cli"
+       "@modelcontextprotocol/sdk/client/index.js"
+       "@modelcontextprotocol/sdk/client/streamableHttp.js"
+       "typebox"
+       "fastify"
+       "ws"}},
+    :compiler-options
+    {:output-feature-set :es-next,
+     :optimizations :simple,
+     :source-map true,
+     :infer-externs false,
+     :macros {:open-hax.sol.macros true},
+     :warnings {:infer-warning false}}},
+  :server-dev
+  {:target :esm,
+   :runtime :node,
+   :output-dir "dist-dev",
+   :modules {:server {:init-fn open-hax.sol.entrypoint/init}},
+   :js-options
+   {:js-provider :import,
+    :keep-as-import
+     #{"node:fs/promises"
+       "node:fs"
+       "node:path"
+       "node:url"
+       "@open-hax/eta-mu-cli"
+       "@modelcontextprotocol/sdk/client/index.js"
+       "@modelcontextprotocol/sdk/client/streamableHttp.js"
+       "typebox"
+       "fastify"
+       "ws"}},
+    :devtools
+    {:autoload true,
+     :preloads [shadow.cljs.devtools.client.node-esm],
+     :ignore-warnings true,
+     :before-load-async open-hax.sol.bootstrap/stop-http-before-load!,
+     :after-load-async open-hax.sol.bootstrap/start-http-after-load!},
+   :compiler-options
+   {:output-feature-set :es-next,
+    :optimizations :none,
+    :source-map true,
+    :infer-externs false,
+    :macros {:open-hax.sol.macros true},
+    :warnings {:infer-warning false}}},
+  :server
+  {:target :esm,
+   :runtime :node,
+   :output-dir "dist",
+   :modules {:server {:init-fn open-hax.sol.entrypoint/init}},
+   :js-options
+   {:js-provider :import,
+    :keep-as-import
+     #{"node:fs/promises"
+       "node:fs"
+       "node:path"
+       "node:url"
+       "@open-hax/eta-mu-cli"
+       "@modelcontextprotocol/sdk/client/index.js"
+       "@modelcontextprotocol/sdk/client/streamableHttp.js"
+       "typebox"
+       "fastify"
+       "ws"}},
+    :compiler-options
+    {:output-feature-set :es-next,
+     :optimizations :none,
+     :source-map true,
+     :infer-externs false,
+     :macros {:open-hax.sol.macros true},
+     :warnings {:infer-warning false}}},
+  :test
+  {:target :node-test,
+   :output-to "target/test/test.cjs",
+    :ns-regexp "open-hax\\.sol\\..*-test$",
+   :autorun true,
+   :js-options {:resolve {"@open-hax/eta-mu-cli" {:target :file
+                                                      :file "test/js/eta_mu_cli_test_stub.cjs"}}},
+   :compiler-options
+   {:output-feature-set :es-next,
+    :macros {:open-hax.sol.macros true},
+    :infer-externs false}}}}

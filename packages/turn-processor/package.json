@@ -1,0 +1,28 @@
+{
+  "name": "@eta-mu/turn-processor",
+  "version": "0.1.0",
+  "description": "Pure agent turn processor: state, tool orchestration, and message flow",
+  "type": "module",
+  "private": false,
+  "files": [
+    "dist-cljs",
+    "README.md"
+  ],
+  "main": "./dist-cljs/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist-cljs/index.js"
+    }
+  },
+  "scripts": {
+    "build": "shadow-cljs release turn-processor",
+    "clean": "rm -rf dist-cljs target .shadow-cljs",
+    "test": "shadow-cljs compile test && node target/turn-processor-test.cjs",
+    "lint:kondo": "clj-kondo --lint src/cljs test/cljs",
+    "watch": "shadow-cljs watch turn-processor"
+  },
+  "devDependencies": {
+    "shadow-cljs": "^3.4.11"
+  },
+  "license": "GPL-3.0-or-later"
+}

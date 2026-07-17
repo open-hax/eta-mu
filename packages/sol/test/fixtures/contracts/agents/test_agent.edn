@@ -1,0 +1,11 @@
+{:contract/id "test_agent"
+ :contract/kind :agent
+ :enabled true
+ :trigger-kind :manual
+ :agent {:role :role/developer
+         :model "gpt-4o"
+         :thinking :medium}
+ :prompts {:system "You are a test agent."
+           :task "Do test things."}
+ :actor {:capabilities [:cap/read]}
+ :data {:last_mode nil}}
