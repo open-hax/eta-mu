@@ -1,3 +1,9 @@
+;; STALE 2026-07-17: this test's subject namespace, eta-mu.platform.target.opencode,
+;; has never existed in this repo (speculative stub for unported upstream work;
+;; eta-mu.platform.runtime.opencode requires it too and is likewise unbuildable).
+;; Quarantined out of the node-test compile path until the opencode target
+;; compiler lands. See coverage.yml gate history (red on this since 2026-07-12).
+
 (ns eta-mu.platform.target-opencode-test
   "End-to-end tests for the OpenCode target compiler."
   (:require-macros [eta-mu.platform.dsl :as platform])
