@@ -199,11 +199,143 @@
                        :reasons (mapv :reason votes-in))))
             by-finding))))
 
+(defn run-gate!
+  "Run one gate command, returning {:cmd :exit :tail}."
+  [{:keys [cmd dir]}]
+  (println (str "  [gate  ] " cmd))
+  (let [proc (p/process ["bash" "-lc" cmd] {:dir (or dir ".") :out :string :err :string :in ""})
+        res (deref proc 600000 ::timeout)]
+    (if (= res ::timeout)
+      (do (p/destroy-tree proc) {:cmd cmd :exit 124 :tail "gate timeout after 600s"})
+      (let [out (str (:out res) "\n" (:err res))]
+        {:cmd cmd :exit (:exit res)
+         :tail (let [t (str/trim out)] (subs t (max 0 (- (count t) 3000))))}))))
+
+(defn card-fsm!
+  "Move a kanban card through the Rheos FSM. Returns true on acceptance."
+  [repo uuid to]
+  (let [proc (p/process ["node" "packages/rheos/dist/cli.cjs" "status-update" uuid "--to" to]
+                        {:dir repo :out :string :err :string :in ""})
+        res (deref proc 900000 ::timeout)]
+    (if (= res ::timeout)
+      (do (p/destroy-tree proc) (println (str "  [fsm   ] " uuid " -> " to " TIMEOUT")) false)
+      (let [ok (zero? (:exit res))]
+        (println (str "  [fsm   ] " uuid " -> " to (if ok "" (str " REJECTED: " (subs (str (:err res)) 0 (min 200 (count (str (:err res)))))))))
+        ok))))
+
+(defn git-commit!
+  "Path-scoped commit inside repo. Returns true when a commit was created."
+  [repo paths message]
+  (let [add (p/process (into ["git" "add" "--"] paths) {:dir repo :out :string :err :string :in ""})
+        add-res (deref add 60000 ::timeout)]
+    (if (or (= add-res ::timeout) (not (zero? (:exit add-res))))
+      (do (println "  [commit] git add failed") false)
+      (let [commit (p/process ["git" "commit" "-m" message] {:dir repo :out :string :err :string :in ""})
+            res (deref commit 60000 ::timeout)]
+        (if (or (= res ::timeout) (not (zero? (:exit res))))
+          (do (println (str "  [commit] nothing committed: " (subs (str (:out commit)) 0 (min 200 (count (str (:out commit))))))) false)
+          (do (println (str "  [commit] " message)) true))))))
+
+(defn implement-prompt [wf stage attempt gate-failures]
+  (let [repo (get-in wf [:vars :repo])
+        packet (:stage/packet stage)]
+    (str "You are implementing a kanban card in the eta-mu repo (" repo ").\n\n"
+         "Card: read " (:stage/card stage) " in full — its Scope and Definition of done are your contract.\n"
+         "Repo constitution: read " repo "/AGENTS.md.\n"
+         (when-let [r (:stage/read-first stage)]
+           (str "Read these files before writing: " (str/join ", " (map #(str repo "/" %) r)) ".\n"))
+         "\nWork packet authority:\n"
+         "- writable paths: " (str/join ", " (:write packet)) "\n"
+         "- read-only context: " (str/join ", " (:read packet)) "\n"
+         "- forbidden: " (str/join ", " (:forbid packet)) "\n"
+         (when (seq (:stage/extra-instructions stage))
+           (str "\n" (:stage/extra-instructions stage) "\n"))
+         (when (and (> attempt 1) (seq gate-failures))
+           (str "\nATTEMPT " attempt ": the previous attempt failed these gates. Fix them.\n"
+                (str/join "\n" (map (fn [g] (str "FAILED " (:cmd g) " (exit " (:exit g) ")\n" (:tail g))) gate-failures))))
+         "\nRun the gates before finishing: "
+         (str/join " && " (map :cmd (:stage/gates stage)))
+         "\nYour final message must be ONLY a JSON object {\"summary\": string, \"files-written\": [string], \"gates\": [{\"cmd\": string, \"exit\": number}], \"known-risks\": [string]}.")))
+
+(defn run-implement-stage [wf stage {:keys [journal-path cache limit]}]
+  (let [run-cfg (:run wf)
+        repo (get-in wf [:vars :repo])
+        uuid (:stage/uuid stage)
+        max-attempts (:stage/max-attempts stage 4)]
+    (println (str "== stage " (:stage/id stage) " [implement] :: card " (:stage/card stage)))
+    (when uuid
+      (when (= "breakdown" (:stage/from stage)) (card-fsm! repo uuid "ready") (card-fsm! repo uuid "todo"))
+      (when (= "blocked" (:stage/from stage)) (card-fsm! repo uuid "ready") (card-fsm! repo uuid "todo"))
+      (card-fsm! repo uuid "in_progress"))
+    (loop [attempt 1
+             gate-failures []]
+      (let [prompt (implement-prompt wf stage attempt gate-failures)
+            desc {:stage (:stage/id stage) :agent (:stage/agent stage) :attempt attempt}
+            label (str "implement:" (name (:stage/id stage)) ":attempt-" attempt)
+            result (dispatch! {:journal-path journal-path :cache cache
+                               :agent (:stage/agent stage) :model (:model run-cfg)
+                               :dir repo :timeout-ms (:agent-timeout-ms run-cfg)
+                               :label label :prompt prompt :desc desc})
+            gates (mapv run-gate! (:stage/gates stage))
+            failures (filterv #(not (zero? (:exit %))) gates)]
+        (println (str "  [gates ] attempt " attempt ": " (count failures) " failing of " (count gates)))
+        (cond
+          (empty? failures)
+          (let [review-cfg (:stage/review stage)
+                review-outcome (when review-cfg
+                                 (let [synth-wf {:vars {:repo repo
+                                                        :cards [{:key (name (:stage/id stage))
+                                                                 :path (str repo "/" (:stage/card stage))
+                                                                 :context (:stage/review-context stage)}]
+                                                        :lenses (mapv (fn [l] {:key l :prompt (get (:lens-prompts wf) l "")}) (:lenses review-cfg))}
+                                               :schemas (:schemas wf)
+                                               :run run-cfg}
+                                       map-stage {:stage/id :review :stage/kind :map-agent :stage/phase "Review"
+                                                  :stage/items {:cartesian [{:bind :card :from [:vars :cards]}
+                                                                            {:bind :lens :from [:vars :lenses]}]}
+                                                  :stage/agent "ultra-reviewer" :stage/schema :findings
+                                                  :stage/label "review:{card/key}:{lens/key}"
+                                                  :stage/prompt (:review-prompt wf)}
+                                       vote-stage {:stage/id :verify :stage/kind :vote-fan-out :stage/phase "Verify"
+                                                   :stage/over :review :stage/finding-path [:findings]
+                                                   :stage/agent "ultra-skeptic" :stage/schema :verdict
+                                                   :stage/votes (:votes review-cfg 2) :stage/quorum (:quorum review-cfg 2)
+                                                   :stage/label "verify:{finding/title|40}"
+                                                   :stage/prompt (:verify-prompt wf)}
+                                       reviews (run-map-agent-stage synth-wf map-stage {:journal-path journal-path :cache cache})
+                                       flat (run-vote-fan-out-stage synth-wf vote-stage reviews {:journal-path journal-path :cache cache})
+                                       confirmed (filter :survives flat)]
+                                   {:flat flat :confirmed confirmed}))]
+            (if (and review-outcome (seq (:confirmed review-outcome)))
+              (do (println (str "  [review] " (count (:confirmed review-outcome)) " confirmed findings — treating as gate failure"))
+                  (if (>= attempt max-attempts)
+                    {:status :failed-review :confirmed (:confirmed review-outcome) :attempts attempt}
+                    (recur (inc attempt)
+                           (mapv (fn [f] {:cmd (str "review-finding: " (:title f))
+                                          :exit 1
+                                          :tail (str (:file f) ": " (:detail f))})
+                                   (:confirmed review-outcome)))))
+              (let [committed (when-let [c (:stage/commit stage)]
+                                (git-commit! repo (:paths c) (:message c)))
+                    promoted (when uuid
+                               (and (card-fsm! repo uuid "review")
+                                    (card-fsm! repo uuid "document")
+                                    (card-fsm! repo uuid "done")))]
+                {:status :passed :attempts attempt :review review-outcome
+                 :committed (boolean committed) :promoted (boolean promoted)})))
+
+          (>= attempt max-attempts)
+          {:status :failed-gates :failures failures :attempts attempt}
+
+          :else
+          (recur (inc attempt) failures))))))
+
 (defn run-stage [wf stage stage-outputs opts]
   (case (:stage/kind stage)
     :map-agent (run-map-agent-stage wf stage opts)
     :vote-fan-out (let [prior (get stage-outputs (:stage/over stage))]
                     (run-vote-fan-out-stage wf stage prior opts))
+    :implement (run-implement-stage wf stage opts)
     :return stage
     (throw (ex-info (str "unknown stage kind: " (:stage/kind stage)) {:stage stage}))))
 
@@ -226,20 +358,27 @@
                                 {} (:stages wf))
           flat (vec (get stage-outputs :verify []))
           confirmed (vec (filter :survives flat))
-          result {:workflow/id (:workflow/id wf)
-                  :ημ/kind :ultra/run-result
-                  :finished-at (now-iso)
-                  :raw-findings (count flat)
-                  :confirmed confirmed
-                  :all flat}
+          implement-stages (into {} (filter (fn [[_ v]] (and (map? v) (:status v))) stage-outputs))
+          result (cond-> {:workflow/id (:workflow/id wf)
+                          :ημ/kind :ultra/run-result
+                          :finished-at (now-iso)}
+                   (seq implement-stages) (assoc :stages implement-stages)
+                   (or (seq flat) (empty? implement-stages))
+                   (assoc :raw-findings (count flat) :confirmed confirmed :all flat))
           result-file (str (io/file run-dir
                                     (str (str/replace (now-iso) ":" "-") "-result.edn")))]
       (spit result-file (with-out-str (pprint/pprint result)))
-      (println (str "\n== result :: " (count flat) " raw findings, "
-                    (count confirmed) " confirmed after skeptic votes"))
-      (doseq [f confirmed]
-        (println (str "  CONFIRMED [" (:severity f) "] " (:card f) "/" (:lens f)
-                      ": " (:title f) " (" (:file f) ")")))
+      (if (seq implement-stages)
+        (do (println (str "\n== result :: " (count implement-stages) " implement stages"))
+            (doseq [[k v] implement-stages]
+              (println (str "  " (name k) ": " (:status v)
+                            (when (:attempts v) (str " (" (:attempts v) " attempts)"))
+                            (when (:promoted v) " promoted")))))
+        (do (println (str "\n== result :: " (count flat) " raw findings, "
+                          (count confirmed) " confirmed after skeptic votes"))
+            (doseq [f confirmed]
+              (println (str "  CONFIRMED [" (:severity f) "] " (:card f) "/" (:lens f)
+                            ": " (:title f) " (" (:file f) ")")))))
       (println (str "result written: " result-file))
       result)))
 
