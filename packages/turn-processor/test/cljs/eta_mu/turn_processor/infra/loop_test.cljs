@@ -147,3 +147,161 @@
       (is (= :tool-result (:role (second result))))
       (is (true? (:is-error (second result))))
       (is (= "Tool missing not found" (-> result second :content first :text))))))
+
+(defn- text-assistant [text]
+  {:role :assistant
+   :content [{:type :text :text text}]
+   :api "test" :provider "test" :model "test"
+   :usage {:input 0 :output 0 :cache-read 0 :cache-write 0 :total-tokens 0}
+   :stop-reason :stop
+   :timestamp 0})
+
+(defn- counting-stream-fn [stream-calls messages]
+  (fn [_ _ _]
+    (let [next-message (nth messages @stream-calls)]
+      (swap! stream-calls inc)
+      (mock-stream next-message))))
+
+(deftest ^:async run-loop-steering-messages-test
+  (testing "steering messages are injected as a new turn instead of ending the agent"
+    (let [stream-calls (atom 0)
+          stream-fn (counting-stream-fn stream-calls [(text-assistant "first")
+                                                      (text-assistant "second")])
+          steering {:role :user :content "steer it" :timestamp 0}
+          steering-queue (atom [steering])
+          [emit events] (capture-emit)
+          context {:system-prompt "hello"
+                   :messages [{:role :user :content "hi" :timestamp 0}]}
+          config {:model {:id "test" :provider "test"}
+                  :convert-to-llm (fn [messages] messages)
+                  :get-steering-messages (fn [] (let [queued @steering-queue]
+                                                  (reset! steering-queue [])
+                                                  queued))}
+          result (await (loop/run-loop context config emit stream-fn))]
+      (is (= 2 @stream-calls))
+      (is (= [:assistant :user :assistant] (mapv :role result)))
+      (is (= "steer it" (:content (second result))))
+      (is (= 2 (count (filter #(= :turn_start (:type %)) @events))))
+      (is (some #(= :agent_end (:type %)) @events)))))
+
+(deftest ^:async run-loop-follow-up-messages-test
+  (testing "follow-up messages continue the loop when no steering is queued"
+    (let [stream-calls (atom 0)
+          stream-fn (counting-stream-fn stream-calls [(text-assistant "first")
+                                                      (text-assistant "second")])
+          follow-up {:role :user :content "and more" :timestamp 0}
+          follow-up-queue (atom [follow-up])
+          [emit events] (capture-emit)
+          context {:system-prompt "hello"
+                   :messages [{:role :user :content "hi" :timestamp 0}]}
+          config {:model {:id "test" :provider "test"}
+                  :convert-to-llm (fn [messages] messages)
+                  :get-steering-messages (fn [] [])
+                  :get-follow-up-messages (fn [] (let [queued @follow-up-queue]
+                                                   (reset! follow-up-queue [])
+                                                   queued))}
+          result (await (loop/run-loop context config emit stream-fn))]
+      (is (= 2 @stream-calls))
+      (is (= [:assistant :user :assistant] (mapv :role result)))
+      (is (= "and more" (:content (second result))))
+      (is (some #(= :agent_end (:type %)) @events)))))
+
+(deftest ^:async run-loop-abort-before-tool-execution-test
+  (testing "an abort signalled during streaming halts the loop before tools run"
+    (let [controller (js/AbortController.)
+          tool-call {:role :assistant
+                     :content [{:type :tool-call
+                                :id "call-1"
+                                :name "read"
+                                :arguments {:path "file.txt"}}]
+                     :api "test" :provider "test" :model "test"
+                     :usage {:input 0 :output 0 :cache-read 0 :cache-write 0 :total-tokens 0}
+                     :stop-reason :tool-use
+                     :timestamp 0}
+          stream #js {:next (fn [] (js/Promise.resolve #js {:done true}))
+                      :result (fn []
+                                (.abort controller)
+                                (js/Promise.resolve tool-call))}
+          tool-called? (atom false)
+          read-tool (test-tool "read" (fn [_id _args _signal _on-update]
+                                        (reset! tool-called? true)
+                                        (js/Promise.resolve {:content [{:type :text :text "contents"}]
+                                                             :details {}})))
+          [emit events] (capture-emit)
+          context {:system-prompt "hello"
+                   :messages [{:role :user :content "hi" :timestamp 0}]
+                   :tools [read-tool]}
+          config {:model {:id "test" :provider "test"}
+                  :convert-to-llm (fn [messages] messages)
+                  :abort-signal (.-signal controller)}
+          result (await (loop/run-loop context config emit (fn [_ _ _] stream)))]
+      (is (false? @tool-called?))
+      (is (not-any? #(= :tool_execution_start (:type %)) @events))
+      (is (some #(= :turn_end (:type %)) @events))
+      (is (some #(= :agent_end (:type %)) @events))
+      (is (= 1 (count result))))))
+
+(deftest ^:async run-loop-abort-after-tool-batch-test
+  (testing "an abort signalled inside a tool halts the loop before the next stream"
+    (let [controller (js/AbortController.)
+          stream-calls (atom 0)
+          tool-call {:role :assistant
+                     :content [{:type :tool-call
+                                :id "call-1"
+                                :name "read"
+                                :arguments {}}]
+                     :api "test" :provider "test" :model "test"
+                     :usage {:input 0 :output 0 :cache-read 0 :cache-write 0 :total-tokens 0}
+                     :stop-reason :tool-use
+                     :timestamp 0}
+          stream-fn (counting-stream-fn stream-calls [tool-call
+                                                      (text-assistant "never")])
+          read-tool (test-tool "read" (fn [_id _args _signal _on-update]
+                                        (.abort controller)
+                                        (js/Promise.resolve {:content [{:type :text :text "contents"}]
+                                                             :details {}})))
+          [emit events] (capture-emit)
+          context {:system-prompt "hello"
+                   :messages [{:role :user :content "hi" :timestamp 0}]
+                   :tools [read-tool]}
+          config {:model {:id "test" :provider "test"}
+                  :convert-to-llm (fn [messages] messages)
+                  :abort-signal (.-signal controller)}
+          result (await (loop/run-loop context config emit stream-fn))]
+      (is (= 1 @stream-calls))
+      (is (= [:assistant :tool-result] (mapv :role result)))
+      (is (some #(= :agent_end (:type %)) @events)))))
+
+(deftest ^:async run-loop-abort-signal-threaded-test
+  (testing "the abort signal reaches stream-fn options and tool execute"
+    (let [controller (js/AbortController.)
+          seen-options (atom nil)
+          seen-tool-signal (atom nil)
+          tool-call {:role :assistant
+                     :content [{:type :tool-call
+                                :id "call-1"
+                                :name "read"
+                                :arguments {}}]
+                     :api "test" :provider "test" :model "test"
+                     :usage {:input 0 :output 0 :cache-read 0 :cache-write 0 :total-tokens 0}
+                     :stop-reason :tool-use
+                     :timestamp 0}
+          stream-fn (fn [_ _ options]
+                      (reset! seen-options options)
+                      (mock-stream tool-call))
+          read-tool (test-tool "read" (fn [_id _args signal _on-update]
+                                        (reset! seen-tool-signal signal)
+                                        (.abort controller)
+                                        (js/Promise.resolve {:content [{:type :text :text "contents"}]
+                                                             :details {}
+                                                             :terminate true})))
+          [emit] (capture-emit)
+          context {:system-prompt "hello"
+                   :messages [{:role :user :content "hi" :timestamp 0}]
+                   :tools [read-tool]}
+          config {:model {:id "test" :provider "test"}
+                  :convert-to-llm (fn [messages] messages)
+                  :abort-signal (.-signal controller)}]
+      (await (loop/run-loop context config emit stream-fn))
+      (is (identical? (.-signal controller) (:signal @seen-options)))
+      (is (identical? (.-signal controller) @seen-tool-signal)))))

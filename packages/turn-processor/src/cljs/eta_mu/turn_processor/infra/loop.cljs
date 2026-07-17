@@ -55,11 +55,18 @@
                              :assistant-message-event event})))
             (recur)))))))
 
+(defn- signal-aborted?
+  "True when the abort signal (a JS AbortSignal) has fired."
+  [signal]
+  (boolean (and signal (.-aborted signal))))
+
 (defn- ^:async execute-tool!
   "Execute a single prepared tool call and return an ExecutedToolCallOutcome.
 
-  The tool is a map with an :execute function `(id args signal on-update)`."  
-  [prepared emit]
+  The tool is a map with an :execute function `(id args signal on-update)`.
+  The abort signal from the run-loop config is passed through so tools can
+  cancel in-flight work."
+  [prepared emit signal]
   (let [tool (:tool prepared)
         tool-call (:tool-call prepared)
         args (:args prepared)
@@ -68,7 +75,7 @@
       (let [result (await ((:execute tool)
                            (:id tool-call)
                            args
-                           nil
+                           signal
                            (fn [partial]
                              (swap! updates conj
                                     (emit! emit {:type :tool_execution_update
@@ -111,12 +118,12 @@
 (defn- ^:async execute-one!
   "Execute a single prepared tool call, emit lifecycle events, and return a
   finalized result."
-  [prepared emit after-tool-call context]
+  [prepared emit after-tool-call context signal]
   (emit! emit {:type :tool_execution_start
                :tool-call-id (get-in prepared [:tool-call :id])
                :tool-name (get-in prepared [:tool-call :name])
                :args (:args prepared)})
-  (let [executed (await (execute-tool! prepared emit))
+  (let [executed (await (execute-tool! prepared emit signal))
         finalized (turn/finalize-tool-result executed
                                              (:tool-call prepared)
                                              context
@@ -135,7 +142,8 @@
   [context assistant-message tool-calls tools config emit]
   (let [mode (turn/execution-mode tool-calls tools (:tool-execution config :parallel))
         before-tool-call (:before-tool-call config)
-        after-tool-call (:after-tool-call config)]
+        after-tool-call (:after-tool-call config)
+        signal (:abort-signal config)]
     (if (= mode :parallel)
       (let [preparations (await (js/Promise.all
                                   (clj->js
@@ -143,7 +151,7 @@
                                           tool-calls))))
             immediate-results (filter :is-error preparations)
             prepared (remove :is-error preparations)
-            finalized (await (js/Promise.all (clj->js (mapv #(execute-one! % emit after-tool-call context) prepared))))]
+            finalized (await (js/Promise.all (clj->js (mapv #(execute-one! % emit after-tool-call context signal) prepared))))]
         (concat immediate-results finalized))
       (loop [acc [] remaining tool-calls]
         (if (empty? remaining)
@@ -156,7 +164,7 @@
                               :tool-call-id (get-in prepared [:tool-call :id])
                               :tool-name (get-in prepared [:tool-call :name])
                               :args (:args prepared)})
-                  (let [executed (await (execute-tool! prepared emit))
+                  (let [executed (await (execute-tool! prepared emit signal))
                         finalized (turn/finalize-tool-result executed
                                                            (:tool-call prepared)
                                                            context
@@ -175,15 +183,21 @@
     context   — AgentContext map with :system-prompt, :messages, :tools
     config    — map with :model, :convert-to-llm, optional :tool-execution,
                 :before-tool-call, :after-tool-call, :get-steering-messages,
-                :get-follow-up-messages, :api-key
+                :get-follow-up-messages, :api-key, :base-url, :abort-signal
     emit      — async event sink (event -> promise)
     stream-fn — (model llm-context options) -> stream object
 
-  Returns the vector of new AgentMessages produced by the loop."  
+  :abort-signal is a JS AbortSignal. It is forwarded to stream-fn options (as
+  :signal) and to every tool :execute call, and the loop observes it at turn
+  boundaries: after a streamed assistant message the loop halts before any
+  tool execution, and after a tool batch it halts before the next stream.
+
+  Returns the vector of new AgentMessages produced by the loop."
   [context config emit stream-fn]
   (let [ctx (atom context)
         new-messages (atom [])
-        pending (atom [])]
+        pending (atom [])
+        signal (:abort-signal config)]
     (emit! emit {:type :agent_start})
     (emit! emit {:type :turn_start})
 
@@ -203,13 +217,14 @@
             llm-context {:system-prompt (:system-prompt @ctx)
                          :messages llm-messages
                          :tools (:tools @ctx)}
-            stream (stream-fn (:model config) llm-context {:api-key (:api-key config) :base-url (:base-url config)})
+            stream (stream-fn (:model config) llm-context {:api-key (:api-key config) :base-url (:base-url config) :signal signal})
             assistant (await (stream-final-message stream emit))]
         (update-context! ctx assistant)
         (update-new-messages! new-messages assistant)
 
         (if (or (= (:stop-reason assistant) :error)
-                (= (:stop-reason assistant) :aborted))
+                (= (:stop-reason assistant) :aborted)
+                (signal-aborted? signal))
           (do (emit! emit {:type :turn_end :message assistant :tool-results []})
               (emit! emit {:type :agent_end :messages @new-messages})
               (vec @new-messages))
@@ -223,7 +238,8 @@
                   (update-context! ctx message)
                   (update-new-messages! new-messages message))
                 (emit! emit {:type :turn_end :message assistant :tool-results result-messages})
-                (if (turn/should-terminate-batch finalized)
+                (if (or (turn/should-terminate-batch finalized)
+                        (signal-aborted? signal))
                   (do (emit! emit {:type :agent_end :messages @new-messages})
                       (vec @new-messages))
                   (recur false)))
