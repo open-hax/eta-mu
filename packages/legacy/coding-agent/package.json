@@ -8,9 +8,7 @@
     "configDir": ".\u03b7\u03bc"
   },
   "bin": {
-    "eta-mu": "dist/cli.js",
-    "eta-mu-beta": "dist/cli.js",
-    "pi": "dist/cli.js"
+    "eta-mu-beta": "dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -17,11 +17,7 @@
     "docs": "pnpm docs:cljs",
     "start": "pnpm --filter @open-hax/rheos start",
     "clean": "pnpm --recursive clean",
-    "install:all": "pnpm install && pnpm --recursive install",
-    "ts:count": "node scripts/ts-line-count.mjs",
-    "ts:count:global": "node scripts/ts-line-count.mjs --global",
-    "ts:count:json": "node scripts/ts-line-count.mjs --json",
-    "hooks:install": "ln -sf ../../scripts/pre-commit-ts-guard.sh .git/hooks/pre-commit"
+    "install:all": "pnpm install && pnpm --recursive install"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.5",

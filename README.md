@@ -8,9 +8,7 @@ This repo absorbs the active eta-mu surfaces that were previously scattered acro
 
 **TypeScript is DEPRECATED. All new code must be ClojureScript.**
 
-A pre-commit hook (`scripts/pre-commit-ts-guard.sh`, installed via `pnpm hooks:install`) enforces that the total TypeScript line count never increases. All remaining TypeScript lives under `packages/legacy/` and is being ported to CLJS over time; each legacy package has a `*-cljs-rewrite-inventory.md` doc under `docs/` tracking its port.
 
-Current inventory: ~172,800 lines of TypeScript (run `pnpm ts:count`, or `pnpm ts:count:global` / `pnpm ts:count:json`).
 
 ## Charter
 
@@ -93,7 +91,6 @@ pnpm lint               # node scripts/lint.mjs
 pnpm lint:kondo         # clj-kondo across all packages (--if-present)
 pnpm dev                # watch the Rheos package
 pnpm start              # start the Rheos package
-pnpm ts:count           # TypeScript line-count guard inventory
 pnpm hooks:install      # install the pre-commit TS-line-count guard
 ```
 

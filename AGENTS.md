@@ -94,27 +94,6 @@ Board state is the single source of truth for work. Treat it as a finite-state m
 - **Walk lawful hops.** There are no shortcut edges. To move a card multiple columns forward, step through each lawful transition in order. The direct `in_progress → review` edge exists only when the build-gate passes.
 - **Regenerate snapshots when needed.** The web UI and `kanban/.kanban/board.json` are generated snapshots; the source of truth is the task files plus the ledger in `kanban/.events/ledger.edn`. If a snapshot is stale, regenerate it from the CLI or the web UI.
 
-## TypeScript Deprecation Policy
-
-**TypeScript is DEPRECATED. All new code MUST be written in ClojureScript.**
-
-- No new `.ts` or `.tsx` files may be introduced.
-- Existing TypeScript is in `packages/legacy/` and will be migrated to CLJS over time.
-- A pre-commit hook enforces that total TypeScript line count never increases between commits.
-- If you must touch existing TS code, ensure net line count does not go up (refactor/delete more than you add).
-
-### Enforcement
-- **Pre-commit hook**: `scripts/pre-commit-ts-guard.sh` rejects commits that increase TS lines.
-- **Baseline file**: `.ts-line-count-baseline` tracks the last committed count (gitignored, local state).
-- **Manual check**: `node scripts/ts-line-count.mjs` — full report with global, per-project, per-file breakdown.
-- **Update baseline after intentional net-reducing TS changes**: run `node scripts/ts-line-count.mjs --global` to get the current total, then `echo <count> > .ts-line-count-baseline` (the guard script’s error message shows the same command). Do not update the baseline to hide a net increase; refactor or delete more TS than you add.
-- **Install hook**: `ln -sf ../../scripts/pre-commit-ts-guard.sh .git/hooks/pre-commit` (or use the symlink in `.git/modules/`).
-
-### Current TypeScript Inventory
-- **Global**: ~174,500 lines across 612 files
-- **Breakdown**: 99.5% in `packages/legacy/`, remainder in `packages/runtime/`, `packages/protocols/`, `packages/event-ledger/`
-- See `node scripts/ts-line-count.mjs` for full report.
-
 ## Code Style
 - **TypeScript** (legacy only): ES modules, camelCase functions, async/await, Zod validation, Fastify server
 - **ClojureScript** (all new code): Reagent components, kebab-case functions, atoms for state, Tailwind CSS

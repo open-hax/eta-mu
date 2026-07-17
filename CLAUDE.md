@@ -32,8 +32,6 @@ Repo-specific bearings for Claude Code sessions in `eta-mu`.
 - **TS baseline**: If you must touch legacy TypeScript and the net change is a
   decrease, update the baseline with:
   ```bash
-  node scripts/ts-line-count.mjs --global
-  # then write the printed count to .ts-line-count-baseline
   ```
   See `AGENTS.md` § **TypeScript Deprecation Policy** for details.
 
