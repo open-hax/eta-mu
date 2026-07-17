@@ -66,9 +66,8 @@ jobs:
         run: |
           node scripts/deploy-ci.mjs
 
-      - name: Build legacy pi host (extension smoke host)
-        working-directory: packages/legacy/coding-agent
-        run: pnpm build
+      - name: Build legacy pi host (extension smoke host, with its dep chain)
+        run: pnpm -r --filter "@open-hax/eta-mu-cli..." build
 
       - name: Smoke test — pi loads all extensions
         working-directory: packages/e2e
