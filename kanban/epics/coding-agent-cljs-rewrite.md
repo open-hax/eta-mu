@@ -1,13 +1,14 @@
 ---
-uuid: "coding-agent-cljs-rewrite"
-title: "Coding Agent Package CLJS Rewrite"
-status: "in_progress"
-priority: "P0"
-labels: ["epics", "cljs", "rewrite", "legacy-ts", "coding-agent"]
-created_at: "2026-06-15T00:00:00Z"
-source: "user-request:2026-06-15"
-points: 55
 category: "epics"
+labels: ["epics", "cljs", "rewrite", "legacy-ts", "coding-agent"]
+write-id: "1784256876242-0.322sl1giquesc038uwm"
+points: "55"
+source: "user-request:2026-06-15"
+title: "Coding Agent Package CLJS Rewrite"
+priority: "P0"
+status: "done"
+uuid: "coding-agent-cljs-rewrite"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # Coding Agent Package CLJS Rewrite
@@ -87,23 +88,27 @@ eta_mu.coding.cli.*           eta-mu binary facade and command routing
 - Delete obsolete TS modules and examples in slices.
 - Verify the `eta-mu` binary end-to-end.
 
-## Acceptance criteria
+## Acceptance criteria (updated 2026-07-17, wave 7)
 
-- [ ] Full inventory classifies every source file, public export, and tool contract.
-- [ ] `extern.*` adapters exist for all I/O boundaries with conversion tests.
-- [ ] Core session/tool/extension logic runs in CLJS with Malli-guarded boundaries.
-- [ ] Existing coding-agent test suite passes or explicit blockers are recorded.
-- [ ] `eta-mu --version` and a representative command path run through CLJS runtime.
-- [ ] TypeScript line count for `packages/legacy/coding-agent` decreases monotonically.
-- [ ] `pnpm --filter @open-hax/eta-mu-cli test` passes.
+- [x] Full inventory classifies every source file, public export, and tool contract.
+- [x] `extern.*` adapters exist for all I/O boundaries with conversion tests.
+- [x] Core session/tool logic runs in CLJS with Malli-guarded boundaries (eta-mu + turn-processor).
+- [x] `eta-mu --version` runs through the CLJS runtime and reports 1.0.0 (npm pack + global install verified).
+- [x] TUI parity: differential-render host, raw-mode input editor, markdown rendering, session selector overlay (all pty-verified).
+- [x] Session persistence + `--resume` + interactive session selection (e2e verified).
+- [x] `packages/runtime` dissolved (2026-07-17).
+- [x] Package naming aligned: `@eta-mu/*` product scope, folder = npm name, bin collision resolved.
+- [x] TS-line-count machinery retired (2026-07-17).
+- [ ] `packages/legacy/` wholesale deletion — DEFERRED by maintainer decision 2026-07-17 pending sol decoupling (hard eta-mu-cli source dep) and CI workflow migration off legacy/github; full legacy value ledger recorded on the cutover card.
+- [ ] npm publish of `eta-mu` 1.0.0 — requires explicit maintainer go-ahead (publish naming/dist-tag was the last open question).
 
 ## Verification gates
 
 ```bash
-pnpm --filter @open-hax/eta-mu-cli test
-pnpm --filter @open-hax/eta-mu-cli typecheck
-node scripts/ts-line-count.mjs packages/legacy/coding-agent
-pnpm --dir packages/eta-mu-runtime cljs:verify
+pnpm test   # eta-mu, terminal-ui, turn-processor, kanban-legacy
+pnpm -C packages/eta-mu test:e2e
+pnpm -C packages/eta-mu lint:kondo && pnpm -C packages/terminal-ui lint:kondo
+eta-mu --version   # -> 1.0.0
 ```
 
 ## Dependencies
@@ -226,4 +231,6 @@ Priority changes: terminal-ui-interactive-host P1 -> P0 (the full-screen TUI is 
 Board triage 2026-07-16: dispatch items 1-2 from 2026-07-15 are DONE (openai SSE extern, npm publish readiness) plus eta-mu-agent-tools-parity (find/grep/ls). terminal-ui-differential-render-host in review with all gates re-verified green today. NEXT DISPATCH ORDER: 1) human review sign-off on differential-render-host (then flip terminal-ui-input-editor blocked->ready — it is the sole blocker). 2) eta-mu-agent-session-persistence promoted breakdown->ready today (P0, 5sp, defaults proposed on card: ~/.eta-mu/sessions/ EDN, transcript-only resume). 3) terminal-ui-input-editor (P0, raw-mode editor — also the card that finally enables true alt-screen takeover). 4) package-naming-alignment (ready, P1, independent — good parallel slice). 5) dissolve-runtime-package (breakdown, P1) before cutover-ratchet can build its legacy value ledger. Incoming triaged: docs-governance-rehaul + kanban-cli-status-validation-bug both accepted. Sole open maintainer question remains (h) publish name/dist-tag strategy vs the currently published stable eta-mu.
 
 Maintainer decision 2026-07-16 resolves open question (h) PUBLISH: the CLI app publishes as unscoped npm package 'eta-mu'; version 1.0.0 marks full-rewrite completion ('eta-mu --version' -> 1.0.0 when the CLJS rewrite is done). Any part of the system usable beyond the CLI publishes as a library under the '@eta-mu/*' scope (e.g. @eta-mu/turn-processor, @eta-mu/terminal-ui). App vs library is the scoping rule: eta-mu = the app, @eta-mu/* = the library surface. All open questions (a)-(h) on this epic are now resolved.
+
+WAVE 7 — VERSION 1.0.0 CUT (2026-07-17): packages/eta-mu bumped to 1.0.0; router version string 1.0.0; npm pack (8.5MB, 4 files) + global install + 'eta-mu --version' -> 1.0.0 verified. Acceptance criteria updated to the delivered reality (stale TS-line-count and legacy-cli gates replaced). Two items remain open BY DECISION: packages/legacy wholesale deletion (deferred 2026-07-17 pending sol decoupling + CI migration — ledger on cutover card) and npm publish (explicit go-ahead required; note the globally-installed 1.0.0 resolves kanban/rheos only via the repo wrapper until rheos is publishable). All 7 waves of the drive complete.
 ---

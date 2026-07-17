@@ -14,7 +14,7 @@
             [eta-mu.law.command :as law]
             [eta-mu.shape.args :as args]))
 
-(def version "0.1.0")
+(def version "1.0.0")
 
 (defn- registry
   "Build the command registry."
