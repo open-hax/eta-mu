@@ -2,7 +2,8 @@
   (:require [clojure.string :as str]
             [cljs.test :refer [deftest is testing]]
             [eta-mu.infra.cli.tui-repl :as tui-repl]
-            [eta-mu.terminal-ui.extern.terminal :as terminal]))
+            [eta-mu.terminal-ui.extern.terminal :as terminal]
+            [eta-mu.terminal-ui.infra.host :as host]))
 
 (deftype FakeTerminal [buf]
   terminal/Terminal
@@ -72,6 +73,42 @@
             "the indicator should have been written at least once")
         (is (str/includes? output "Hello there")
             "the reply should still render after the indicator clears")))))
+
+(deftest tui-emit-thinking-indicator-survives-lifecycle-events-test
+  (testing "an :agent_start event does not clear the indicator; the first assistant delta does"
+    (let [term (fake-terminal)
+          state (host/new-state)
+          emit (tui-repl/tui-emit term state)]
+      (host/render! state term ["thinking..."])
+      (emit {:type :agent_start})
+      (is (seq (:frame @state))
+          "lifecycle bookkeeping must not erase the indicator during the model wait")
+      (emit {:type :message_update
+             :message {:role :assistant :content [{:type :text :text "Hello"}]}})
+      (is (empty? (:frame @state))
+          "the first real output clears the indicator"))))
+
+(deftest ^:async tui-repl-survives-persistence-failure-test
+  (testing "a law-gate throw from record-turn! warns and the REPL keeps running"
+    (let [term (fake-terminal)
+          inputs (atom ["hi" "/exit"])
+          get-input (fn [_prompt]
+                      (let [next (first @inputs)]
+                        (swap! inputs rest)
+                        (js/Promise.resolve next)))
+          session (atom {:messages []})]
+      (await (tui-repl/run-tui-repl {:system-prompt "sys" :messages [] :tools []}
+                                    {:model {:id "m" :provider "p"}
+                                     :convert-to-llm (fn [messages] messages)}
+                                    (assistant-stream "Hello there")
+                                    {:get-input get-input :term term :session session}))
+      (let [output @(.-buf term)]
+        (is (str/includes? output "Session persistence record-turn failed")
+            "the persistence failure should be reported, not thrown")
+        (is (str/includes? output "Hello there")
+            "the reply should still render")
+        (is (str/includes? output "Goodbye")
+            "the REPL should accept the next input and exit cleanly")))))
 
 (deftest ^:async tui-repl-clear-resets-context-test
   (testing "/clear resets messages and keeps the session running"

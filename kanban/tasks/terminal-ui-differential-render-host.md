@@ -1,7 +1,7 @@
 ---
 uuid: "terminal-ui-differential-render-host"
 title: "Terminal UI — Differential-Render Host"
-status: review
+status: "review"
 priority: "P0"
 labels: ["tasks", "cljs", "terminal-ui", "tui", "3sp"]
 created_at: "2026-07-16T00:00:00Z"
@@ -9,6 +9,7 @@ source: "kanban/tasks/terminal-ui-interactive-host.md"
 points: 3
 category: "tasks"
 ---
+
 # Terminal UI — Differential-Render Host
 
 > Parent epic: `kanban/epics/coding-agent-cljs-rewrite.md`
@@ -109,3 +110,9 @@ pnpm -C packages/eta-mu test
 pnpm -C packages/eta-mu test:e2e
 pnpm -C packages/eta-mu lint:kondo
 ```
+
+---
+Board triage 2026-07-16: re-verified all gates fresh on this checkout — terminal-ui 37 tests/87 assertions 0 failures, kondo 0 errors 0 warnings; eta-mu 116 tests/216 assertions 0 failures, test:e2e 3/24 green, kondo 0/0. Scope note is honest about the alt-screen deferral (raw-mode input conflict belongs to terminal-ui-input-editor). Recommend promoting to done at next human review pass; input-editor (P0) unblocks the moment this lands.
+
+Adversarial review wave 2 (opencode ultracode, quorum-2 skeptic votes). Findings against this card: 4 raw, 1 CONFIRMED + fixed: 'thinking...' indicator was cleared by run-loop's own :agent_start event instantly — tui-emit now clears the status frame only when an event produces real output (assistant delta, tool result, boxed turn_end); regression test tui-emit-thinking-indicator-survives-lifecycle-events-test. Refuted: printed-counter reset (skeptics verified reset on next turn path), js/process.stdout in repl (grandfathered, byte-identical pre-existing), DoD-3 pty artifact (comment-only accepted in prior round). Gates: eta-mu 137/271 + kondo 0/0 + e2e 4/47, terminal-ui 37/87 + kondo 0/0 — all green.
+---
