@@ -11,6 +11,7 @@
             [eta-mu.infra.cli.commands.git :as git]
             [eta-mu.infra.cli.commands.kanban :as kanban]
             [eta-mu.infra.cli.commands.sessions :as sessions]
+            [eta-mu.infra.cli.commands.sol :as sol]
             [eta-mu.law.command :as law]
             [eta-mu.shape.args :as args]))
 
@@ -32,6 +33,7 @@
                  :description "List and inspect persisted agent sessions"
                  :handler sessions/handle}
    "git"       (git/group)
+   "sol"       (sol/group)
    "contracts" {:name "contracts"
                 :description "Contract gate commands"
                 :subcommands {"output" {:name "output"
