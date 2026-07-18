@@ -3,7 +3,7 @@
   agent turns on sol's turn-processor stack.
 
   Lifecycle (start/stop/restart/status) follows the kanban precedent: a
-  child-process bridge that resolves @open-hax/sol's built server target
+  child-process bridge that resolves @eta-mu/sol's built server target
   (dist/server.js) and fails with a clear error when sol isn't built. The
   server is spawned detached through the shell (nohup) with its pid and log
   under <cwd>/.eta-mu-sol/ — pm2 remains an operator choice, not a CLI
@@ -70,15 +70,18 @@
 (defn resolve-server-path
   "Locate sol's built server bundle. $SOL_SERVER_PATH is authoritative when
   set; otherwise probe well-known workspace-relative locations (repo root or
-  packages/eta-mu as cwd). Returns nil when sol isn't built/installed."
+  packages/eta-mu as cwd), then fall back to node package resolution so the
+  published install finds its bundled sol dependency. Returns nil when sol
+  isn't built/installed."
   []
   (let [override (process/env "SOL_SERVER_PATH")]
     (if (seq override)
       (when (fs/file-exists? override) override)
       (let [cwd (process/cwd)]
-        (first (filter fs/file-exists?
-                       [(path/join cwd "packages" "sol" "dist" "server.js")
-                        (path/join cwd ".." "sol" "dist" "server.js")]))))))
+        (or (first (filter fs/file-exists?
+                           [(path/join cwd "packages" "sol" "dist" "server.js")
+                            (path/join cwd ".." "sol" "dist" "server.js")]))
+            (child/resolve-sol-server-path))))))
 
 (defn- state-dir [] (path/join (process/cwd) ".eta-mu-sol"))
 (defn- pid-file [] (path/join (state-dir) "sol.pid"))
@@ -110,10 +113,10 @@
 
 (defn- not-built
   []
-  (js/console.error (str "eta-mu sol: @open-hax/sol is not built or installed.\n"
-                         "  Looked for dist/server.js under packages/sol (cwd-anchored) "
-                         "and $SOL_SERVER_PATH.\n"
-                         "  Build it with: pnpm -C packages/sol build"))
+  (js/console.error (str "eta-mu sol: @eta-mu/sol is not built or installed.\n"
+                         "  Looked for dist/server.js via $SOL_SERVER_PATH, packages/sol "
+                         "(cwd-anchored), and node package resolution.\n"
+                         "  In the workspace, build it with: pnpm -C packages/sol build"))
   1)
 
 (defn- ^:async start-impl

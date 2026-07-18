@@ -1,4 +1,4 @@
-# @open-hax/rheos
+# @eta-mu/rheos
 
 Kanban board runtime and service shell for the eta-mu workspace. Rheos is a
 ClojureScript Fastify + React app that reads markdown kanban cards from disk,

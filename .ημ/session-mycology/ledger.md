@@ -43,3 +43,21 @@
   spore: none
   receipt-refs: none
   note: Epic card comment history is the real triage index — read it before individual cards; gates-first verification made review recommendation cheap
+- ts: 2026-07-18T15:12:00Z
+  session: /home/err/spaces/eta-mu (claude-code)
+  task: Fix global eta-mu kanban rheos resolution + router flag swallowing
+  p-efficiency: 0.75
+  p-friction: 0.5
+  p-skill-candidate: 0.75
+  spore: 20260718-151200-spawn-bridge-raw-argv.md
+  receipt-refs: 2026-07-18T15:10:00Z
+  note: Two stacked bugs hid behind one symptom; verifying passthrough with a flagged command exposed the second.
+- ts: 2026-07-18T20:35:00Z
+  session: /home/err/spaces/eta-mu (claude-code)
+  task: Publish eta-mu 1.1.1 + @eta-mu/{rheos,sol} with working kanban/sol from registry install
+  p-efficiency: 0.7
+  p-friction: 0.45
+  p-skill-candidate: 0.7
+  spore: 20260718-203500-shadow-esm-dep-audit.md
+  receipt-refs: 2026-07-18T20:32:00Z
+  note: grep for require() missed shadow-cljs ESM import shims; stale cljs-runtime files also lied about deps until a clean rebuild.

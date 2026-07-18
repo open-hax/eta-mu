@@ -1,4 +1,4 @@
-# AGENTS.md — `@open-hax/sol`
+# AGENTS.md — `@eta-mu/sol`
 
 Read the repository-root `AGENTS.md` first; this file only adds Sol-specific
 boundaries. The Clojure House Rules (categories vs. contracts, zero warnings,

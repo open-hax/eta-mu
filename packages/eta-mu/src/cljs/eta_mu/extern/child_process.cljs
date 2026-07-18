@@ -23,18 +23,64 @@
      (path/resolve base ".." relative)
      (path/resolve base ".." ".." relative)]))
 
+(defn- ancestor-dirs
+  "Return dir followed by each of its parents, filesystem root last."
+  [start]
+  (loop [dir start
+         acc []]
+    (let [acc (conj acc dir)
+          parent (path/dirname dir)]
+      (if (= parent dir)
+        acc
+        (recur parent acc)))))
+
+(defn- package-json-name
+  "Read the \"name\" field of a package.json, or nil if unreadable."
+  [pkg-json-path]
+  (try
+    (.-name (js/JSON.parse (.readFileSync fs pkg-json-path "utf8")))
+    (catch :default _ nil)))
+
+(defn workspace-package-root
+  "Find package-name inside the pnpm workspace containing dir, or nil.
+
+  Walks up from dir to the nearest ancestor holding a pnpm-workspace.yaml and
+  scans its packages/* entries for a package.json with a matching name. This
+  lets a globally installed binary locate private workspace packages (such as
+  the open-hax rheos kanban CLI) when invoked from anywhere inside the monorepo."
+  [dir package-name]
+  (some (fn [ancestor]
+          (when (.existsSync fs (path/join ancestor "pnpm-workspace.yaml"))
+            (let [pkgs-dir (path/join ancestor "packages")]
+              (when (.existsSync fs pkgs-dir)
+                (some (fn [entry]
+                        (let [pkg-root (path/join pkgs-dir entry)
+                              pkg-json (path/join pkg-root "package.json")]
+                          (when (and (.existsSync fs pkg-json)
+                                     (= package-name (package-json-name pkg-json)))
+                            pkg-root)))
+                      (js->clj (.readdirSync fs pkgs-dir)))))))
+        (ancestor-dirs dir)))
+
 (defn- resolve-package-root
   "Find the package root by locating package.json. Handles ESM packages that do not
-  export package.json."
+  export package.json, and falls back to cwd-anchored Node resolution plus a pnpm
+  workspace scan so global installs can find private workspace packages."
   [package-name]
   (or (try
         (when-let [resolved (js/require.resolve (str package-name "/package.json"))]
           (path/dirname resolved))
         (catch :default _ nil))
+      (try
+        (when-let [resolved (js/require.resolve (str package-name "/package.json")
+                                                #js {:paths #js [(js/process.cwd)]})]
+          (path/dirname resolved))
+        (catch :default _ nil))
       (some (fn [candidate]
               (let [pkg-json (path/join candidate "package.json")]
                 (when (.existsSync fs pkg-json) candidate)))
-            (candidate-package-roots package-name))))
+            (candidate-package-roots package-name))
+      (workspace-package-root (js/process.cwd) package-name)))
 
 (defn exec-capture
   "Execute a command with args, capture stdout/stderr, and return a promise of
@@ -95,10 +141,18 @@
                              (resolve 1)))))))
 
 (defn resolve-rheos-path
-  "Resolve the @open-hax/rheos dist/cli.cjs path, or nil if not installed."
+  "Resolve the @eta-mu/rheos dist/cli.cjs path, or nil if not installed."
   []
-  (when-let [root (resolve-package-root "@open-hax/rheos")]
+  (when-let [root (resolve-package-root "@eta-mu/rheos")]
     (let [candidate (path/join root "dist" "cli.cjs")]
+      (when (.existsSync fs candidate)
+        candidate))))
+
+(defn resolve-sol-server-path
+  "Resolve the installed open-hax sol dist/server.js path, or nil if not installed."
+  []
+  (when-let [root (resolve-package-root "@eta-mu/sol")]
+    (let [candidate (path/join root "dist" "server.js")]
       (when (.existsSync fs candidate)
         candidate))))
 

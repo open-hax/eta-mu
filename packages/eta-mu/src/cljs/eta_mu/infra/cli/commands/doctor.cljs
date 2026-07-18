@@ -17,7 +17,7 @@
         status-lines (when repo-root (await (git/status)))]
     (println "eta-mu doctor")
     (println "=============")
-    (println (status-line rheos "@open-hax/rheos (kanban delegate)"))
+    (println (status-line rheos "@eta-mu/rheos (kanban delegate)"))
     (println (status-line contracts "@eta-mu/contracts-output (contracts delegate)"))
     (println (str "repo: " (or repo-root "(not in a git repo)")))
     (when branch (println (str "branch: " branch)))

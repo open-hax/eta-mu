@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "sol", "turn-processor", "3sp"]
-write-id: "1784319440882-0.j69zsoqlr2fcmxiu84"
+write-id: "1784323539243-0.f8t0q65xcbq0ppghlg4"
 points: "3"
 source: "kanban/epics/sol-turn-processor-cutover.md"
 title: "Sol — Turn-Processor Session Adapter (IAgentSession over run-loop)"
 priority: "P0"
-status: "in_progress"
+status: "done"
 uuid: "sol-turn-processor-session-adapter"
 created_at: "2026-07-17T00:00:00Z"
 ---

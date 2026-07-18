@@ -1,0 +1,81 @@
+{:workflow/id :finish-sol-cutover,
+ :ημ/kind :ultra/run-result,
+ :finished-at "2026-07-18T02:06:33.222262957Z",
+ :stages
+ {:session-adapter {:status :skipped-done},
+  :settings-decoupling {:status :skipped-done},
+  :mcp-tools {:status :skipped-done},
+  :provider-swap {:status :skipped-done},
+  :sol-command
+  {:status :passed,
+   :attempts 2,
+   :review
+   {:flat
+    [{:title
+      "Idempotent start reports the requested port, not the running server's bound port (false success)",
+      :file
+      "packages/eta-mu/src/cljs/eta_mu/infra/cli/commands/sol.cljs",
+      :detail
+      "start-impl's already-running branch (lines 123-125) prints `(effective-port flags)` — the port resolved from the *current* flags/env — not the port the live pid actually bound. Reproduced against the built CLI: `SOL_PORT=8023 sol start` (binds 8023, health ok), then `SOL_PORT=8024 sol start` → prints `sol is already running (pid 697427, port 8024)` and exits 0, but nothing listens on 8024 (curl to 8024 refused). This is the same false-success class the card's own 2026-07-18 review fix addressed in the spawn path ('CLI reported/probed the flag port while the server bound the env/default port'), but the idempotent path still conflates 'a sol is running' with 'sol is running on the port you asked for'. The pidfile records only the pid; either record the bound port in the pidfile and report that, or health-probe the effective port in the already-running branch and warn/refuse on mismatch. Narrow edge (requires changing the effective port between starts) and status remains honest, so not a blocker, but it undermines the port-precedence story the fix just established.",
+      :severity "should-fix",
+      :card "sol-command",
+      :lens "correctness",
+      :survives false,
+      :reasons
+      ["The code reading is accurate (sol.cljs:124 prints (effective-port flags) in the already-running branch; the pidfile records only the pid), so the behavior exists and is in-scope. It is refuted as non-gating: the finding itself concedes 'not a blocker' and a 'narrow edge' requiring the operator to change the effective port between starts without 'sol restart' — the documented, card-delivered tool for changing ports. Exit 0 is correct idempotent ensure-running semantics (a sol process IS running; the requested end-state holds), and 'sol status' honestly health-probes the effective port (unreachable → exit 1), so no persistent false state is asserted. In the steady-state case exercised by the card's own manual verification (same SOL_PORT, line 128-129) the message is accurate. The analogy to the 2026-07-18 blocker is a severity mismatch: that bug defeated the primary advertised --port flag on every fresh start, whereas this requires an operator-error sequence on the idempotent path. All DoD items are met with green gates; the suggested fixes (bound-port in pidfile, health-probe in the already-running branch) are reasonable follow-up enhancements, not promotion blockers for this card."
+       "The claim is factually accurate — sol.cljs:124 does print (effective-port flags) in the already-running branch, and the pidfile (line 135) records only the pid, so a changed SOL_PORT between starts yields a misleading 'already running … port 8024' line with exit 0. However, this fails the promotion-gating bar on multiple grounds. (1) Exit-0 idempotence is correct and deliberate daemon semantics: `start` guarantees 'a sol is running', not 'sol is bound to the port you just resolved'; changing ports is exactly what `restart` exists for, and the card's reviewed manual-verification transcript (lines 128-129) shows this exact idempotent output shape — 'sol is already running (pid 532801, port 8017)' — accepted in review. (2) The finding is self-admittedly non-gating: 'Narrow edge … so not a blocker', severity should-fix. The skeptic bar requires a surviving finding to be real, in-scope, AND promotion-gating; the claimant concedes the third. (3) No functional harm results: the 2026-07-18 fix's contract (the spawned server binds exactly the reported/probed port) is intact on the spawn path it scoped — the already-running branch spawns nothing, so nothing binds the wrong port, no EADDRINUSE, no false health. `status` remains the honest source of truth: it health-probes the effective port and exits 1 with 'unreachable' on mismatch, so the false-success class the fix targeted (CLI claims healthy on a port nothing serves) does not occur. (4) The proposed remedies (record bound port in pidfile, or health-probe in the idempotent branch) are reasonable follow-up polish worth a card comment, but they extend state-schema and probe behavior beyond this card's delivered v1 surface. Refute as too-minor/non-gating; recommend logging a follow-up note on the card instead of blocking review→done."]}
+     {:title
+      "AGENT help text omits the --provider flag the command accepts",
+      :file
+      "packages/eta-mu/src/cljs/eta_mu/infra/cli/commands/sol.cljs",
+      :detail
+      "The group-help description for AGENT (line 252) advertises `[--model M] [--base-url U] [--api-key K] [--system S]`, while the runtime usage error in agent-impl (lines 184-186) and the card's implementation notes both include `--provider` (agent-impl reads `(get flags \"provider\")` at line 189). The DoD explicitly gates on `--help` text for the subcommands; the two usage strings in the same file should agree. One-word addition.",
+      :severity "nit",
+      :card "sol-command",
+      :lens "correctness",
+      :survives false,
+      :reasons
+      ["The observation is factually accurate — group help at sol.cljs:252 advertises only [--model M] [--base-url U] [--api-key K] [--system S] while agent-impl's usage error (lines 184-186) and flag read (line 189) include --provider, and the card's implementation notes confirm --provider is an accepted addition mirroring `eta-mu agent`. But it fails the promotion-gating bar on two grounds: (1) The card's Scope v1 flag list is exactly '--model, --base-url, --api-key, --system' — the four flags the group description advertises; --provider was a noted implementation addition, so the help text matches the scoped surface as written, and no DoD item gates on per-flag enumeration inside a description string (the DoD gates on the subcommand surface being listed, which the recorded `sol-help-lists-surface-e2e-test` verifies and passes). (2) The claimed severity is 'nit' — a cosmetic, one-word doc polish with zero functional impact: the flag works, the runtime usage error (the text users actually see on misuse) is correct, and all gates (151/331 unit, kondo 0/0, 7/71 e2e) are green. Real but in-scope-nit, not a review→done blocker; worth a drive-by fix, not a gate."
+       "The factual observation is accurate — line 252's group-help string omits --provider while agent-impl's usage error (lines 184-186) includes it and reads (get flags \"provider\") at line 189 — but the finding does not survive as promotion-gating. (1) The reviewer themselves classifies it as a nit, and it is a one-token omission in a descriptive help string, not a behavioral defect: the flag works, and the runtime usage error shown on bare invocation documents it. (2) The card's implementation notes explicitly record --provider as a deliberate, documented addition ('sol agent also accepts --provider (mirrors eta-mu agent)'), so the flag's existence is an accepted scope decision, not an oversight — only the help string lagged. (3) The DoD gate is that the command be 'described in --help, and --help text for the subcommands' — that gate is met: `sol --help` lists all five subcommands with accurate descriptions (verified in the card's manual-verification transcript and by sol-help-lists-surface-e2e-test), and nothing in the DoD requires exhaustive flag enumeration in the one-line group description. (4) All DoD checkboxes are checked with green gates (151/331 unit, kondo 0/0, 7/71 e2e). A cosmetic one-word help-text addition is a valid fix-forward suggestion but too minor to gate a review→done promotion."]}
+     {:title
+      "sol stop can SIGTERM an unrelated process: pidfile liveness is checked with kill -0 only, no process-identity verification",
+      :file
+      "packages/eta-mu/src/cljs/eta_mu/infra/cli/commands/sol.cljs",
+      :detail
+      "live-pid (lines 87-94) trusts any pidfile whose pid passes `kill -0`, and stop-impl (lines 149-166) then SIGTERMs it. Reproduced live during this review: a stale `.eta-mu-sol/sol.pid` at the repo root named pid 685792, which was a live process but not sol (nothing listening on the probed port; the last real sol server in sol.log was a different pid). `sol start` refused to start ('sol is already running (pid 685792, port 8177)'), `sol status` reported 'process: running' with health unreachable, and `sol stop` sent SIGTERM to that foreign pid and reported success. After any pid recycle (reboot, long uptime), `stop` kills an arbitrary process and `start` is blocked by a phantom. The card's claim 'clears stale pidfiles' only holds when the stale pid is dead. Before SIGTERM, verify identity — e.g. /proc/<pid>/cmdline contains the resolved server path, or record the launched port in the state dir and require a matching /health — and have start treat a non-sol pid as stale.",
+      :severity "should-fix",
+      :card "sol-command",
+      :lens "dod-coverage",
+      :survives false,
+      :reasons []}
+     {:title
+      "start/status report and probe the port resolved from current flags/env, not the port the running server actually bound",
+      :file
+      "packages/eta-mu/src/cljs/eta_mu/infra/cli/commands/sol.cljs",
+      :detail
+      "start-impl's already-running branch (line 124) prints `port <effective-port flags>` and status-impl (lines 168-179) health-probes health-url built from the *current* env/flags, while the state dir records only the pid. Observed live: with a server previously started under different env, `SOL_PORT=8177 sol start` printed 'sol is already running (pid 685792, port 8177)' and `sol status` probed 8177 and exited 1 ('health: unreachable') though the pid was alive. The port precedence contract is documented on the card, but the running server's actual bind port is recoverable at start time — recording it next to the pidfile (e.g. .eta-mu-sol/sol.port) would make 'already running' output and status probing honest instead of echoing whatever env happens to be set now.",
+      :severity "nit",
+      :card "sol-command",
+      :lens "dod-coverage",
+      :survives false,
+      :reasons []}
+     {:title
+      "stop waits only 10s for exit while sol's own shutdown drain grace defaults to 25s",
+      :file
+      "packages/eta-mu/src/cljs/eta_mu/infra/cli/commands/sol.cljs",
+      :detail
+      "stop-impl's wait loop (lines 153-161) gives up after 20x0.5s=10s and exits 1 with 'did not exit within 10s; pidfile kept'. But packages/sol/src/cljs/open_hax/sol/infra/config.cljs sets :shutdown-grace-ms default 25000 (SIGTERM drain, per the server log '[shutdown] received SIGTERM; draining Sol'). Under in-flight load sol may legitimately take >10s to exit, producing a false failure from `sol stop` (recoverable by re-running, but noisy and confusing for operators). Align the wait with the server's drain grace or document the mismatch on the card.",
+      :severity "nit",
+      :card "sol-command",
+      :lens "dod-coverage",
+      :survives false,
+      :reasons []}],
+    :confirmed ()},
+   :committed true,
+   :promoted true},
+  :verification
+  {:status :passed,
+   :attempts 1,
+   :review nil,
+   :committed true,
+   :promoted true}}}

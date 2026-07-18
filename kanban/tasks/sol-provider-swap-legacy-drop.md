@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "sol", "decoupling", "2sp"]
-write-id: "1784332990806-0.uzxd0rf5yefqfyahl9y"
+write-id: "1784335049832-0.6ga39gsrob33t93e6cu"
 points: "2"
 source: "kanban/epics/sol-turn-processor-cutover.md"
 title: "Sol — Provider Swap and Legacy Dependency Drop"
 priority: "P0"
-status: "in_progress"
+status: "done"
 uuid: "sol-provider-swap-legacy-drop"
 created_at: "2026-07-17T00:00:00Z"
 ---

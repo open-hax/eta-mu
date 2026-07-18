@@ -1,6 +1,6 @@
 # Sol
 
-`@open-hax/sol` is the eta-mu ClojureScript agent runtime backend: a Node 22 +
+`@eta-mu/sol` is the eta-mu ClojureScript agent runtime backend: a Node 22 +
 shadow-cljs + Fastify control plane. It owns HTTP/WebSocket transport, a minimal
 agent runtime (turns, sessions, runs), contract loading, an OpenAI-compatible
 surface, and Proxx-backed model access.

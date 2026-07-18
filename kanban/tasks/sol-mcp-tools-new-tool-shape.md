@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "sol", "mcp", "1sp"]
-write-id: "1784325681296-0.ljxd4a2yhl5pg1c8oi"
+write-id: "1784328148167-0.og76iqp7djqxx2l45h2"
 points: "1"
 source: "kanban/epics/sol-turn-processor-cutover.md"
 title: "Sol — MCP Tools on the New Tool Shape (drop legacy defineTool)"
 priority: "P1"
-status: "in_progress"
+status: "done"
 uuid: "sol-mcp-tools-new-tool-shape"
 created_at: "2026-07-17T00:00:00Z"
 ---

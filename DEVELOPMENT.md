@@ -39,10 +39,10 @@ dissolved 2026-07-17). Per-package CLJS suites are run with `--filter`
 
 ```bash
 # Start the default dev watcher (Rheos shadow-cljs watch, hot-reload)
-pnpm dev        # pnpm --filter @open-hax/rheos watch
+pnpm dev        # pnpm --filter @eta-mu/rheos watch
 
 # Start the built Rheos server
-pnpm start      # pnpm --filter @open-hax/rheos start
+pnpm start      # pnpm --filter @eta-mu/rheos start
 ```
 
 `pnpm dev` is an alias for the Rheos dev watcher. To iterate on any other
@@ -55,15 +55,15 @@ Each CLJS package has its own `shadow-cljs.edn` with `build`, `watch`, and
 
 ```bash
 # Watch + hot-reload a single package
-pnpm --filter @open-hax/rheos watch
-pnpm --filter @open-hax/sol watch
+pnpm --filter @eta-mu/rheos watch
+pnpm --filter @eta-mu/sol watch
 
 # Compile + run a package's test suite
-pnpm --filter @open-hax/rheos test
+pnpm --filter @eta-mu/rheos test
 pnpm --filter @open-hax/eta-mu-extensions test
 
 # Lint a package with clj-kondo
-pnpm --filter @open-hax/sol lint:kondo
+pnpm --filter @eta-mu/sol lint:kondo
 ```
 
 Inside `packages/rheos` you can also use the Babashka tasks defined in its
@@ -83,8 +83,8 @@ bb build    # shadow-cljs release server cli
 
 | Package | Filter name | Build | Watch / dev | Test |
 |---------|-------------|-------|-------------|------|
-| Rheos (Fastify + React app, `rheos` CLI) | `@open-hax/rheos` | `build` | `watch` | `test` |
-| sol (Knoxx-derived backend control plane) | `@open-hax/sol` | `build` | `watch` | `test` |
+| Rheos (Fastify + React app, `rheos` CLI) | `@eta-mu/rheos` | `build` | `watch` | `test` |
+| sol (Knoxx-derived backend control plane) | `@eta-mu/sol` | `build` | `watch` | `test` |
 | chat-ui (Reagent chat component lib) | `@open-hax/chat-ui` | `build` (lib) / `build:app` | `dev` | `test` |
 | extensions (Pi/OpenCode contract runtimes) | `@eta-mu/extensions` | `build` | `watch` | `test` |
 | event-ledger (append-only event store lib) | `@promethean-os/event-ledger` | `build` | `watch` | `test` |

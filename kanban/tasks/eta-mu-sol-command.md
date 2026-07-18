@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "eta-mu", "sol", "cli", "2sp"]
-write-id: "1784339017712-0.fyzj96zaqkawgym3srh"
+write-id: "1784340217575-0.onud2e7be0lo1h4j0b6"
 points: "2"
 source: "kanban/epics/sol-turn-processor-cutover.md"
 title: "eta-mu sol — CLI Surface for Sol Lifecycle and Agent Turns"
 priority: "P1"
-status: "in_progress"
+status: "done"
 uuid: "eta-mu-sol-command"
 created_at: "2026-07-17T00:00:00Z"
 ---

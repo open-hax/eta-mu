@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "sol", "settings", "2sp"]
-write-id: "1784324812614-0.88qbvicdjglj9926dv8"
+write-id: "1784325680236-0.hey6vky6kmupqlkrzx9"
 points: "2"
 source: "kanban/epics/sol-turn-processor-cutover.md"
 title: "Sol — Settings/Auth/Model Decoupling (kill SettingsManager, AuthStorage, ModelRegistry, ResourceLoader)"
 priority: "P0"
-status: "in_progress"
+status: "done"
 uuid: "sol-settings-model-decoupling"
 created_at: "2026-07-17T00:00:00Z"
 ---
