@@ -79,6 +79,7 @@
 
 (defn append-journal! [journal-path event]
   (locking journal-lock
+    (io/make-parents journal-path)
     (spit journal-path (str (json/generate-string (assoc event :ts (now-iso))) "\n") :append true)))
 
 (defn load-journal [journal-path]
@@ -248,6 +249,7 @@
          "- writable paths: " (str/join ", " (:write packet)) "\n"
          "- read-only context: " (str/join ", " (:read packet)) "\n"
          "- forbidden: " (str/join ", " (:forbid packet)) "\n"
+         "- NEVER delete or clean untracked files outside your writable paths (no git clean, no rm -rf of scratch dirs); the workflow journal lives under .ημ/runs/ and must survive your run.\n"
          (when (seq (:stage/extra-instructions stage))
            (str "\n" (:stage/extra-instructions stage) "\n"))
          (when (and (> attempt 1) (seq gate-failures))
@@ -257,18 +259,29 @@
          (str/join " && " (map :cmd (:stage/gates stage)))
          "\nYour final message must be ONLY a JSON object {\"summary\": string, \"files-written\": [string], \"gates\": [{\"cmd\": string, \"exit\": number}], \"known-risks\": [string]}.")))
 
+(defn- card-status
+  "Read a card file's frontmatter status, or nil."
+  [repo card-rel-path]
+  (try
+    (second (re-find #"(?m)^status:\s*\"?([a-z_]+)\"?"
+                     (slurp (str repo "/" card-rel-path))))
+    (catch Exception _ nil)))
+
 (defn run-implement-stage [wf stage {:keys [journal-path cache limit]}]
   (let [run-cfg (:run wf)
         repo (get-in wf [:vars :repo])
         uuid (:stage/uuid stage)
         max-attempts (:stage/max-attempts stage 4)]
     (println (str "== stage " (:stage/id stage) " [implement] :: card " (:stage/card stage)))
-    (when uuid
-      (when (= "breakdown" (:stage/from stage)) (card-fsm! repo uuid "ready") (card-fsm! repo uuid "todo"))
-      (when (= "blocked" (:stage/from stage)) (card-fsm! repo uuid "ready") (card-fsm! repo uuid "todo"))
-      (card-fsm! repo uuid "in_progress"))
-    (loop [attempt 1
-             gate-failures []]
+    (if (= "done" (card-status repo (:stage/card stage)))
+      (do (println (str "  [skip  ] card already done")) {:status :skipped-done})
+      (do
+        (when uuid
+          (when (= "breakdown" (:stage/from stage)) (card-fsm! repo uuid "ready") (card-fsm! repo uuid "todo"))
+          (when (= "blocked" (:stage/from stage)) (card-fsm! repo uuid "ready") (card-fsm! repo uuid "todo"))
+          (card-fsm! repo uuid "in_progress"))
+        (loop [attempt 1
+               gate-failures []]
       (let [prompt (implement-prompt wf stage attempt gate-failures)
             desc {:stage (:stage/id stage) :agent (:stage/agent stage) :attempt attempt}
             label (str "implement:" (name (:stage/id stage)) ":attempt-" attempt)
@@ -328,7 +341,7 @@
           {:status :failed-gates :failures failures :attempts attempt}
 
           :else
-          (recur (inc attempt) failures))))))
+          (recur (inc attempt) failures))))))))
 
 (defn run-stage [wf stage stage-outputs opts]
   (case (:stage/kind stage)
