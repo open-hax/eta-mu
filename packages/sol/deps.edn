@@ -2,7 +2,12 @@
  ;; katamorph + event-ledger are consumed from immutable git refs (open-hax
  ;; repos, tag v0.1.0), NOT the removed local packages/ copies — bump the
  ;; :git/sha + :git/tag to adopt a new release.
- :paths ["src/cljs" "test/cljs"]
+ ;; turn-processor + eta-mu are workspace siblings consumed as source paths:
+ ;; the provider adapter wires their run-loop/stream-fn/tools into sol's
+ ;; agent sessions.
+ :paths ["src/cljs" "test/cljs"
+         "../turn-processor/src/cljs"
+         "../eta-mu/src/cljs"]
 
  :deps
  {thheller/shadow-cljs          {:mvn/version "3.4.11"}

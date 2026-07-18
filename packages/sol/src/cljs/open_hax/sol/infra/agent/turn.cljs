@@ -83,32 +83,35 @@
     (string? (:type part)) (:type part)
     :else nil))
 
-(defn- content-part->provider-part
+(defn- content-part->input-part
+  "Project a sol ContentPart onto a turn-processor input content part (CLJS)."
   [part]
   (let [part-type (content-part-type part)
         text (:text part)
         url (:url part)
         data (:data part)
-        mime (:mimeType part)]
+        mime (or (:mimeType part) (:mime-type part))]
     (case part-type
       "text" (when (not (str/blank? (str text))) {:type "text" :text text})
       "image" (cond
-                (and (string? data) (not (str/blank? data))) {:type "image" :data data :mimeType (or mime "image/png")}
-                (and (string? url) (not (str/blank? url))) {:type "image_url" :image_url {:url url}}
+                (and (string? data) (not (str/blank? data))) {:type "image" :data data :mime-type (or mime "image/png")}
+                (and (string? url) (not (str/blank? url))) (cond-> {:type "image" :url url}
+                                                             mime (assoc :mime-type mime))
                 :else nil)
       "audio" (cond
-                (and (string? data) (not (str/blank? data))) {:type "audio" :data data :mimeType (or mime "audio/mpeg")}
-                (and (string? url) (not (str/blank? url))) {:type "audio" :data url :mimeType (or mime "audio/mpeg")}
+                (and (string? data) (not (str/blank? data))) {:type "audio" :data data :mime-type (or mime "audio/mpeg")}
+                (and (string? url) (not (str/blank? url))) (cond-> {:type "audio" :url url}
+                                                             mime (assoc :mime-type mime))
                 :else nil)
       nil)))
 
 (defn- build-user-content
   [message content-parts]
-  (let [parts (keep content-part->provider-part (or content-parts []))
+  (let [parts (keep content-part->input-part (or content-parts []))
         text (some-> message str str/trim not-empty)]
     (cond
-      (and (seq parts) text) (clj->js (conj (vec parts) {:type "text" :text text}))
-      (seq parts) (clj->js parts)
+      (and (seq parts) text) (conj (vec parts) {:type "text" :text text})
+      (seq parts) (vec parts)
       :else (or text ""))))
 
 (defn- last-assistant-text
@@ -141,12 +144,21 @@
       :token delta})))
 
 (defn stream-message-update!
-  "Forward an assistant text delta from a provider message_update event."
+  "Forward an assistant text delta from a run-loop message_update event. The
+   :assistant-message-event is the stream's raw JS event; the openai extern
+   carries the cumulative text-so-far on its :partial assistant message, which
+   the cumulative-diff branch below tokenizes correctly."
   [scope seen-text* event]
-  (let [ame (aget event "assistantMessageEvent")
+  (let [ame (:assistant-message-event event)
         ame-type (some-> ame (aget "type") str)]
     (when (= ame-type "text_delta")
-      (let [delta (str (or (aget ame "delta") (aget ame "text") ""))
+      (let [partial-message (aget ame "partial")
+            delta (str (or (aget ame "delta")
+                           (aget ame "text")
+                           (and partial-message
+                                (not (str/blank? (assistant-message-text partial-message)))
+                                (assistant-message-text partial-message))
+                           ""))
             seen @seen-text*]
         (if (and (seq seen) (str/starts-with? delta seen))
           ;; Provider resent the full message-so-far: emit only the new suffix.
@@ -159,15 +171,18 @@
             (swap! seen-text* str delta)))))))
 
 (defn stream-message-end!
-  "Flush any text not already streamed when the assistant message completes.
-   Covers providers that send only a terminal message with no incremental deltas."
+  "Flush any text not already streamed when an assistant message completes.
+   Covers providers that send only a terminal message with no incremental
+   deltas. Only :assistant message_end events carry reply text; user/tool
+   message_end events (follow-ups, tool results) must not broadcast."
   [scope seen-text* event]
-  (when-let [message (aget event "message")]
-    (let [full (str (or (assistant-message-text message) ""))
-          appended (text-delta/diff-appended-text @seen-text* full)]
-      (when (seq appended)
-        (broadcast-token! scope appended)
-        (reset! seen-text* full)))))
+  (when-let [message (:message event)]
+    (when (= :assistant (:role message))
+      (let [full (str (or (assistant-message-text message) ""))
+            appended (text-delta/diff-appended-text @seen-text* full)]
+        (when (seq appended)
+          (broadcast-token! scope appended)
+          (reset! seen-text* full))))))
 
 (defn- ^:async send-user-message-with-timeout!
   "Send content to the session and wait for agent_end. Resolves with the session.
@@ -186,17 +201,17 @@
                     (when-let [unsub @unsubscribe*] (unsub))
                     (f)))
         handler (fn [event]
-                  (let [event-type (some-> (aget event "type") str)]
+                  (let [event-type (:type event)]
                     (case event-type
                       ;; Token streaming is best-effort: a broadcast failure
                       ;; must never abort the turn.
-                      "message_update" (try (stream-message-update! scope seen-text* event)
-                                            (catch :default _ nil))
-                      "message_end" (try (stream-message-end! scope seen-text* event)
-                                         (catch :default _ nil))
-                      "agent_end" (settle! #(when-let [r @resolve*] (r session)))
-                      "error" (settle! #(when-let [r @reject*]
-                                          (r (js/Error. (str "Agent error: " (aget event "message"))))))
+                      :message_update (try (stream-message-update! scope seen-text* event)
+                                           (catch :default _ nil))
+                      :message_end (try (stream-message-end! scope seen-text* event)
+                                        (catch :default _ nil))
+                      :agent_end (settle! #(when-let [r @resolve*] (r session)))
+                      :error (settle! #(when-let [r @reject*]
+                                         (r (js/Error. (str "Agent error: " (:message event))))))
                       nil)))
         result-promise (js/Promise.
                         (fn [resolve reject]
@@ -310,7 +325,7 @@
                                      :session-id session-id
                                      :conversation-id conversation-id
                                      :model-id model-id
-                                     :parts-count (if (array? content) (.-length content) 1)
+                                     :parts-count (if (string? content) 1 (count content))
                                      :media-parts-count (count (or content-parts []))
                                      :omitted-count 0
                                      :content content})

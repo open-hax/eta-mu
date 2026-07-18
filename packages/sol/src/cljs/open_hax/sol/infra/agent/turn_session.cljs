@@ -11,8 +11,8 @@
    The run-loop arrives as :run-loop in the session deps (the
    `eta-mu.turn-processor.infra.loop/run-loop` signature). It is injected
    rather than required so this namespace carries no compile-time dependency
-   on the turn-processor classpath entry; the provider wiring hands the real
-   run-loop in. No `@open-hax/eta-mu-cli` import lives here."
+    on the turn-processor classpath entry; the provider wiring hands the real
+    run-loop in. No legacy CLI SDK import lives here."
   (:require [open-hax.sol.shape.agent :refer [IAgentSession]]))
 
 (defn- now-ms

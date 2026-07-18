@@ -49,15 +49,31 @@
                 "")))
        (str/join "\n")))
 
+(defn- content-item->media-part
+  "Preserve an MCP image/audio content item as a CLJS media part map (the
+   :details :content-parts contract the media materialization hook scans)."
+  [item]
+  (let [part-type (some-> (aget item "type") str str/lower-case)]
+    (when (contains? #{"image" "audio"} part-type)
+      {:type part-type
+       :url (some-> (aget item "url") str not-empty)
+       :data (some-> (aget item "data") str not-empty)
+       :mimeType (some-> (aget item "mimeType") str not-empty)})))
+
 (defn- mcp-result->tool-result
   [^js result]
   (let [content (when result (aget result "content"))
         text (content-items->text content)
+        media-parts (->> (js-array-seq content)
+                         (keep content-item->media-part)
+                         vec)
         is-error (and result (true? (aget result "isError")))]
     (when is-error
       (throw (js/Error. (or text "MCP tool returned an error"))))
     {:content [{:type :text :text text}]
-     :details {}}))
+     :details (if (seq media-parts)
+                {:content-parts media-parts}
+                {})}))
 
 ;; ── Client lifecycle ─────────────────────────────────────────────────────────
 

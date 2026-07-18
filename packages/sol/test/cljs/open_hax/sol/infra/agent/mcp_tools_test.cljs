@@ -45,7 +45,7 @@
           result (await ((:execute tool) "call-1" {:city "berlin"} nil nil))]
       (is (= {:content [{:type :text
                          :text "line one\n[image]\n[resource: file:///x]\nline two"}]
-              :details {}}
+              :details {:content-parts [{:type "image" :url nil :data nil :mimeType nil}]}}
              result))
       (is (= [{:method "tools/call"
                :params {:name "forecast" :arguments {:city "berlin"}}}]

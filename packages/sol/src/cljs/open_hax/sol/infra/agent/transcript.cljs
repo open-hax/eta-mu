@@ -3,8 +3,20 @@
   (:require [clojure.string :as str]
             [open-hax.sol.infra.agent.message :refer [sync-system-message]]
             [open-hax.sol.domain.agent.content :refer [nonblank assistant-content-parts session-message-text]]
-            [open-hax.sol.domain.text :refer [content-part-text]]
             [open-hax.sol.shape.agent :refer [messages]]))
+
+(defn- message-role
+  [message]
+  (if (map? message)
+    (some-> (:role message) name)
+    (some-> (aget message "role") str)))
+
+(defn- message-usage
+  [message]
+  (if (map? message)
+    (:usage message)
+    (when-let [raw-usage (aget message "usage")]
+      (js->clj raw-usage :keywordize-keys true))))
 
 (defn ^:export session->stored-messages
   "Exported simplified variant (no content-parts).  Used by tests and recovery."
@@ -12,16 +24,8 @@
   (let [msgs (when session (messages session))]
     (->> msgs
          (keep (fn [message]
-                 (let [role (some-> (aget message "role") str)
-                       content (aget message "content")
-                       text (cond
-                              (string? content) (nonblank content)
-                              (array? content) (->> (array-seq content)
-                                                    (map content-part-text)
-                                                    (remove str/blank?)
-                                                    (str/join "\n\n")
-                                                    nonblank)
-                              :else (some-> (aget message "text") nonblank))]
+                 (let [role (message-role message)
+                       text (some-> (session-message-text message) nonblank)]
                    (when (and (contains? #{"user" "assistant" "system"} role)
                               text)
                      {:role role
@@ -34,11 +38,11 @@
   (let [msgs (when session (messages session))]
     (->> msgs
          (keep (fn [message]
-                 (let [role (some-> (aget message "role") str)
-                       summary (some-> (aget message "summary") nonblank)
+                 (let [role (message-role message)
+                       summary (and (not (map? message))
+                                    (some-> (aget message "summary") nonblank))
                        text (some-> (session-message-text message) nonblank)
-                       usage (when-let [raw-usage (aget message "usage")]
-                               (js->clj raw-usage :keywordize-keys true))
+                       usage (message-usage message)
                        ;; Despite the name, assistant-content-parts extracts media parts from any
                        ;; pi message content array. We must persist user-side content parts too,
                        ;; otherwise restored sessions lose multimodal inputs.

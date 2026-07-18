@@ -27,13 +27,21 @@
   {:before (fn [] (reset! realtime/ws-clients* {}))
    :after  (fn [] (reset! realtime/ws-clients* {}))})
 
-(defn- text-delta-event [delta]
-  #js {:type "message_update"
-       :assistantMessageEvent #js {:type "text_delta" :delta delta}})
+(defn- text-delta-event
+  "A run-loop :message_update event as eta-mu.turn-processor.infra.loop emits
+   it: the raw :assistant-message-event is the openai-extern JS envelope whose
+   :partial is a CLJS assistant message carrying the cumulative text-so-far."
+  [text-so-far]
+  (let [partial {:role :assistant :content [{:type :text :text text-so-far}]}]
+    {:type :message_update
+     :message partial
+     :assistant-message-event #js {:type "text_delta" :partial partial}}))
 
-(defn- message-end-event [content]
-  #js {:type "message_end"
-       :message #js {:role "assistant" :content content}})
+(defn- message-end-event
+  "A run-loop :message_end event carrying the final CLJS assistant message."
+  [content]
+  {:type :message_end
+   :message {:role :assistant :content content}})
 
 (defn- tokens-from [received]
   (->> @received
