@@ -1,11 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "sol", "e2e", "1sp"]
+write-id: "1784340218493-0.6wciob42oj8b5lx7vl9"
 points: "1"
 source: "kanban/epics/sol-turn-processor-cutover.md"
 title: "Sol Cutover Verification and Cutover-Ratchet Unblock"
 priority: "P1"
-status: "blocked"
+status: "in_progress"
 uuid: "sol-cutover-verification"
 created_at: "2026-07-17T00:00:00Z"
 ---
