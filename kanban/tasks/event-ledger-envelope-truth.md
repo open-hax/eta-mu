@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "event-ledger", "contracts", "2sp"]
-write-id: "1784489226331-0.lsutu75dokpdkrzd4u"
+write-id: "1784491625266-0.cg9yf0t43cuwi7t3gwi"
 points: "2"
 source: "kanban/epics/katamorph-canonical-cutover.md"
 title: "Event-Ledger — fix the dist bug or descope to the envelope contract"
 priority: "P2"
-status: "ready"
+status: "done"
 uuid: "event-ledger-envelope-truth"
 created_at: "2026-07-19T00:00:00Z"
 ---
@@ -63,3 +63,7 @@ Either way:
 - [ ] README/package name drift corrected; export list truthful.
 - [ ] New tag pushed + coordinates commented; muse ANOMALY retirement path
       stated (card link or explicit deferral).
+
+---
+DONE 2026-07-19. DECISION: FIX (not descope) — both dist bugs were small once diagnosed, and the Mongo store is real load-bearing surface; descoping to envelope-only would have orphaned working watcher/bridge code. Root causes: (1) db/to-js used plain clj->js, whose key conversion is `name` — :event/type stored as "type" while every documented index/query uses "event/type"; fixed with :keyword-fn preserving namespaces. (2) assign-seq! read .-value from findOneAndUpdate — mongodb driver >= 6 returns the doc directly (includeResultMetadata default change), so ledger/seq was null; now handles both shapes. WHY TESTS MISSED IT: the old suite asserted on the RETURNED CLJS doc, never the INSERTED JS doc — new regression tests assert on the raw insertOne payload, plus scripts/dist-smoke.mjs round-trips through the committed dist/index.js itself (wired into npm test). Truth pass: README @promethean-os -> @open-hax throughout + standalone consume instructions; index.d.ts trimmed to actual ESM exports (5 over-claimed fns documented as CLJS-only); kondo config self-contained (broken ../../kondo-config path). Coordinates: io.github.open-hax/event-ledger {:git/tag "v0.3.0" :git/sha "f67c438d3c3b16ce9452a0c934f59101d1b95815"}. Consumers: sol bumped to v0.3.0 this session (gates green 97/368 + guard OK); MUSE ANOMALY RETIREMENT PATH: muse can now delete its hand-rolled append in boundaries/mongo/ledger.cljs and call the package (bump its deps.edn/package.json refs to v0.3.0) — follow-up belongs on muse's own board, noted here per DoD. Gates: event-ledger 33/125 0 fail + dist-smoke OK, kondo 0/0.
+---

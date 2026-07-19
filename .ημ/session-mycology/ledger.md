@@ -97,3 +97,12 @@
   spore: none
   receipt-refs: sol-katamorph-schema-cutover
   note: Writing the first-ever validation test for a schema kind exposed a latent invalid-ref bug (katamorph :policy children ref never resolved) — canon cutover work should sweep EVERY registry kind with at least one validate test, not just the kinds the consumer uses. Also — cwd drifts across Bash calls after cd; use absolute paths.
+- ts: 2026-07-19T04:15:00Z
+  session: /home/err/spaces/eta-mu
+  task: event-ledger v0.3.0 — fixed wire-format + driver>=6 seq bugs, truth pass
+  p-efficiency: 0.8
+  p-friction: 0.35
+  p-skill-candidate: 0.6
+  spore: none
+  receipt-refs: event-ledger-envelope-truth
+  note: Serialization bugs hide when tests assert on the RETURNED value instead of the WRITTEN artifact — always round-trip through the real boundary (raw insertOne payload, the committed dist). Also — mixing shadow-cljs release+compile builds can leave a stale cache producing phantom 'cljs$core$IFn undefined' test errors; rm -rf .shadow-cljs target and rebuild before diagnosing.

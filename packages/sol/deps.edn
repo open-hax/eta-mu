@@ -17,8 +17,8 @@
   refactor-nrepl/refactor-nrepl {:mvn/version "3.9.1"}
   io.github.open-hax/katamorph    {:git/tag "v0.2.0"
                                    :git/sha "305a5e49d834aca27566f739e8510f6b409fda78"}
-  io.github.open-hax/event-ledger {:git/tag "v0.2.0"
-                                   :git/sha "9e7fd430c26b245a3b120f5d2dee33fc8cb4a71f"}}
+  io.github.open-hax/event-ledger {:git/tag "v0.3.0"
+                                   :git/sha "f67c438d3c3b16ce9452a0c934f59101d1b95815"}}
 
  :aliases
  ;; Clojure-first mutation harness (mutation/knoxx/…) — mutates CLJS source

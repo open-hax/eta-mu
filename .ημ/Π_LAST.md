@@ -1,10 +1,10 @@
 # Π Last Snapshot
 
 - **Branch**: device/stealth
-- **Tag**: Π/device/stealth/20260719T194602Z
-- **Commit**: 6d9217c
-- **Files**: 22 staged (869 insertions, 2896 deletions)
-- **Summary**: katamorph v0.2.0 schema cutover, sol law/contract-kinds replaces local contracts.cljs, kanban epic + 6 cards for canonical cutover, session-mycology spore
-- **Tests**: sol 92/293 0-fail — all green
-- **Lint**: clj-kondo 0 errors / 0 warnings
+- **Tag**: Π/device/stealth/20260719T201023Z
+- **Commit**: (pending)
+- **Files**: 16 staged (374 insertions, 33 deletions)
+- **Summary**: sol models expansion, contract-guard lint script, provider-contracts fixture, kanban card updates
+- **Tests**: sol 97/368 0-fail — all green
+- **Lint**: clj-kondo 0 errors / 0 warnings, contract-guard OK
 - **Concurrent dirt**: none — all owned paths staged
