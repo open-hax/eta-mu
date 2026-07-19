@@ -1,13 +1,14 @@
 ---
-uuid: "kanban-cli-status-validation-bug"
-title: "eta-mu kanban update-status accepts non-FSM statuses (e.g. in_review)"
-status: "accepted"
-priority: "P2"
-labels: ["tasks", "kanban", "bug"]
-created_at: "2026-07-16T00:00:00Z"
-source: "user-report:2026-07-16"
-points: 1
 category: "tasks"
+labels: ["tasks", "kanban", "bug"]
+write-id: "1784485997083-0.x4dquzs22zhuheodb4p"
+points: "1"
+source: "user-report:2026-07-16"
+title: "eta-mu kanban update-status accepts non-FSM statuses (e.g. in_review)"
+priority: "P2"
+status: "ready"
+uuid: "kanban-cli-status-validation-bug"
+created_at: "2026-07-16T00:00:00Z"
 ---
 
 # eta-mu kanban update-status accepts non-FSM statuses
@@ -56,4 +57,6 @@ grep -rln 'status: "\?in_review"\?' kanban/         # should be empty after fix
 
 ---
 Triage 2026-07-16: accepted. Real FSM-integrity bug — update-status/frontmatter accepts statuses outside the canonical set (e.g. in_review), which silently corrupts board state. Small, well-bounded fix: validate against the FSM status list in the CLI before writing. Related known CLI wart: comment subcommand absorbs trailing flags into the comment text — fix both in one pass or card the second separately.
+
+Board triage 2026-07-19: bug is substantively FIXED by the rheos CLI cutover — eta-mu kanban frontmatter/update-status now routes through rheos.backend.law.fsm transition checks. Verified live: 'accepted -> in_review' rejected (Error: transition rejected: No transition from accepted to in_review); 'breakdown -> done' edge rejected. Status audit: all statuses on disk (done, rejected, icebox, accepted, testing, blocked, archived) are valid FSM states; zero in_review remnants. REMAINING for DoD: regression test for unknown-state rejection (fsm_test.cljs covers invalid edges between valid states, but no test for a non-FSM target like in_review) and non-zero-exit/no-write assertion at the tool layer. Moving to ready.
 ---

@@ -2,7 +2,7 @@
 (ns open-hax.sol.domain.contracts.loader
   (:require [clojure.string :as str]
             [cljs.reader :as reader]
-            [open-hax.sol.law.contracts :as v]
+            [open-hax.sol.law.contract-kinds :as v]
             ["node:fs" :as node-fs]
             ["node:fs/promises" :as fs]
             ["node:path" :as path]))

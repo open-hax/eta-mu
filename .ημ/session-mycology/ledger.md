@@ -61,3 +61,39 @@
   spore: 20260718-203500-shadow-esm-dep-audit.md
   receipt-refs: 2026-07-18T20:32:00Z
   note: grep for require() missed shadow-cljs ESM import shims; stale cljs-runtime files also lied about deps until a clean rebuild.
+- ts: 2026-07-19T00:05:00Z
+  session: /home/err/spaces/eta-mu
+  task: Board triage — closed sol epic, staged FSM bug card to ready, picked next work
+  p-efficiency: 0.8
+  p-friction: 0.35
+  p-skill-candidate: 0.5
+  spore: none
+  receipt-refs: board-triage-2026-07-19
+  note: eta-mu kanban frontmatter now enforces the rheos FSM — closing a card means walking valid edges (breakdown->ready->todo->in_progress->testing->review->document->done); direct-to-done is rejected. Also `kanban find <uuid>` returns full card JSON, not a matches wrapper.
+- ts: 2026-07-19T00:35:00Z
+  session: /home/err/spaces/eta-mu
+  task: Closed contracts-git-ref-extraction card + epic via gate re-run
+  p-efficiency: 0.85
+  p-friction: 0.2
+  p-skill-candidate: 0.4
+  spore: none
+  receipt-refs: contracts-git-ref-extraction-eta-mu-consumers
+  note: Cards in `testing` may carry stale package names in their gate commands (@open-hax/* -> @eta-mu/* rename); resolve names from package.json before declaring a filter miss a failure. Rheos dropped event-ledger for protocols' EDN event-admission — epic criteria can be satisfied by dep removal, not just git-ref.
+- ts: 2026-07-19T01:10:00Z
+  session: /home/err/spaces/eta-mu
+  task: Grokked katamorph intent across 4 repos; authored katamorph-canonical-cutover epic + 6 cards
+  p-efficiency: 0.8
+  p-friction: 0.5
+  p-skill-candidate: 0.75
+  spore: 20260719-011000-extraction-needs-adoption-cards.md
+  receipt-refs: katamorph-canonical-cutover
+  note: Extraction epics that card only removal (not consumer adoption + enforcement) guarantee schema drift — found 4 parallel copies of katamorph.schema.
+- ts: 2026-07-19T02:05:00Z
+  session: /home/err/spaces/eta-mu
+  task: Executed sol-katamorph-schema-cutover + katamorph-provider-contract (katamorph v0.2.0)
+  p-efficiency: 0.85
+  p-friction: 0.3
+  p-skill-candidate: 0.55
+  spore: none
+  receipt-refs: sol-katamorph-schema-cutover
+  note: Writing the first-ever validation test for a schema kind exposed a latent invalid-ref bug (katamorph :policy children ref never resolved) — canon cutover work should sweep EVERY registry kind with at least one validate test, not just the kinds the consumer uses. Also — cwd drifts across Bash calls after cd; use absolute paths.

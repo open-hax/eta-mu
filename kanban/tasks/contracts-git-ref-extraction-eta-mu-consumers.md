@@ -1,11 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "extraction", "katamorph", "event-ledger", "sol", "rheos"]
+write-id: "1784487697479-0.ws7c6fo7dd6abm59dj"
 points: "5"
 source: "kanban/epics/contracts-git-ref-extraction.md"
 title: "Rewire eta-mu consumers (sol, Rheos) to git-ref contracts + remove local copies"
 priority: "P1"
-status: "testing"
+status: "done"
 uuid: "contracts-git-ref-extraction-eta-mu-consumers"
 created_at: "2026-07-12T00:00:00Z"
 ---
@@ -102,4 +103,6 @@ VALIDATION (all vs baseline #2, checks ON, none disabled):
 - muse: test 124/286 0-fail; on @open-hax/event-ledger v0.2.0.
 - local packages/{katamorph,event-ledger} removed; pnpm workspace=26 projects, lock regenerated.
 UNCOMMITTED: all code changes are in working trees (eta-mu + muse), nothing git-committed yet — awaiting go-ahead to commit.
+
+VERIFICATION GATE RE-RUN 2026-07-19 (post-commit, tree at d30b77b + triage; packages renamed @open-hax/*->@eta-mu/* since baseline). All checks ON, none relaxed. sol (@eta-mu/sol): test PASS 88 tests/256 assertions 0 fail (suite grew from baseline 66/193 — no regression), lint:kondo 0 err/0 warn, build PASS 165 files 0 warn. Rheos (@eta-mu/rheos): test PASS 58/166 0 fail (= baseline #2), lint:kondo 0/0, build PASS server 96 + cli 100 files 0 warn. pnpm install --frozen-lockfile PASS (23 projects, lockfile up to date — baseline #2 lockfile-drift caveat resolved). packages/{katamorph,event-ledger} gone; git-ref deps live in sol/deps.edn (katamorph v0.1.0, event-ledger v0.2.0@9e7fd43). Residual reference sweep: sol/shadow-cljs.edn hits are comments only; deleted stale packages/rheos/package-lock.json (npm artifact referencing dead openplanner paths, no consumers — pnpm workspace). Gate met, closing.
 ---

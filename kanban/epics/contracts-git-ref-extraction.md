@@ -1,11 +1,12 @@
 ---
 category: "epics"
 labels: ["epics", "cljs", "extraction", "katamorph", "event-ledger", "contracts", "architecture"]
+write-id: "1784487761704-0.fe7l5eqzc36vlfnkr"
 points: "8"
 source: "planning-session:2026-07-12"
 title: "Extract katamorph + event-ledger to standalone git-ref repos"
 priority: "P1"
-status: "accepted"
+status: "done"
 uuid: "contracts-git-ref-extraction"
 created_at: "2026-07-12T00:00:00Z"
 ---
@@ -100,4 +101,6 @@ io.github.open-hax/event-ledger {:git/tag "v0.1.0" :git/sha "8ad4c2a8abcb52f6ab9
 
 ---
 Decision recorded 2026-07-12. muse portion DONE and verified (shadow-cljs compile test: 124 tests, 0 failures; compile daemon green; git deps resolve into ~/.gitlibs). Repos live: open-hax/katamorph @ 5098781 (v0.1.0), open-hax/event-ledger @ 8ad4c2a (v0.1.0). eta-mu sol/Rheos rewire + local-copy removal is the remaining slice (child task contracts-git-ref-extraction-eta-mu-consumers), deferred pending go-ahead.
+
+Board triage 2026-07-19: all acceptance criteria verified against current tree, closing epic. (1) sol consumes both contracts by immutable git ref in packages/sol/deps.edn (katamorph v0.1.0@5098781, event-ledger v0.2.0@9e7fd43); Rheos no longer consumes event-ledger at all — replaced by the EDN-file open-hax.records.edn.event-admission adapter (rheos/backend/infra/ledger.cljs), stronger than the criterion. (2) packages/{katamorph,event-ledger} deleted (commit e9807ed); pnpm install --frozen-lockfile clean, 23 workspace projects. (3) Gates re-run 2026-07-19: sol test 88/256 0 fail + lint 0/0 + build 0 warn; Rheos test 58/166 0 fail + lint 0/0 + build server+cli 0 warn. (4) No build-critical refs to removed dirs (sol shadow-cljs.edn hits are comments; stale packages/rheos/package-lock.json deleted this session). muse portion was already done and verified. Follow-up (muse schema drift reconciliation) explicitly deferred per epic notes. Child card contracts-git-ref-extraction-eta-mu-consumers closed done today.
 ---
