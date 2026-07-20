@@ -1,10 +1,10 @@
 # Π Last Snapshot
 
 - **Branch**: device/stealth
-- **Tag**: Π/device/stealth/20260720T170247Z
-- **Commit**: e6335cc
-- **Files**: 8 modified (60 insertions, 21 deletions)
-- **Summary**: kanban updates, fsm expansion, receipt-river append
-- **Tests**: sol 97/368 0-fail — all green
-- **Lint**: clj-kondo 0 errors / 0 warnings, contract-guard OK
+- **Tag**: Π/device/stealth/20260720T184810Z
+- **Commit**: 7f47a72
+- **Files**: 1 modified (62 insertions, 11 deletions)
+- **Summary**: kanban tool enhancements — compose-flags, list_projects, enriched schemas
+- **Tests**: pending (lint passed)
+- **Lint**: clj-kondo 0 errors / 0 warnings (from packages/rheos)
 - **Concurrent dirt**: none — all owned paths staged
