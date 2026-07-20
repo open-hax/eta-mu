@@ -1,14 +1,16 @@
 ---
-uuid: "agent-spawning"
-title: "Agent Spawning from Kanban Tasks"
-status: icebox
-priority: "P1"
-labels: ["epics", "cljs", "kanban", "sol", "agent-spawning"]
-created_at: "2026-06-08T00:00:00Z"
-source: "planning-session:2026-06-08"
-points: 13
 category: "epics"
+labels: ["epics", "cljs", "kanban", "sol", "agent-spawning"]
+write-id: "1784497563279-0.7ykw5cvxicq4i69zbl1"
+points: "13"
+source: "planning-session:2026-06-08"
+title: "Agent Spawning from Kanban Tasks"
+priority: "P1"
+status: "incoming"
+uuid: "agent-spawning"
+created_at: "2026-06-08T00:00:00Z"
 ---
+
 # Agent Spawning from Kanban Tasks
 
 ## Purpose

@@ -1,12 +1,14 @@
 ---
 uuid: "universal-agent-platform-dsl"
 title: "Universal Agent Platform DSL — Boundary + OpenCode Target"
-status: icebox
+status: "incoming"
 priority: "P0"
 labels: ["cljs", "opencode", "dsl", "boundary", "extensions"]
 created_at: "2026-07-11T13:00:00Z"
 category: "tasks"
+write-id: "1784497815234-0.tjqdasna696p2vlu4b"
 ---
+
 # Universal Agent Platform DSL — Boundary + OpenCode Target
 
 Build the ημ data-first agent platform DSL with strict JS boundaries and an OpenCode compiler target.
@@ -80,4 +82,6 @@ Starting implementation: μ0 wire primitives, μ2 result algebra, μ3 registry +
 Discovery: all 6 phases (μ0–μ5) are already implemented. μ5 OpenCode target at src/eta_mu/platform/target/opencode.cljs: compile-tool, compile-tools, compile-plugin, execute-tool! with boundary decode/validate/interpret/encode pipeline. Verification: 96 tests, 262 assertions, 0 failures, 0 errors, 0 compiler warnings. Acceptance criteria met. Card appears ready for review/done.
 
 Runtime fix: build-tool in opencode.cljs now coerces extension result objects to strings via result->string. OpenCode tool.execute requires Promise<string> but extensions returned #js {:content #js [{:type text :text}]}. Added wrap-execute with try-catch. All 96 tests pass, rebuilt dist/opencode/ output.
+
+we were doing this work in ~/spaces/muse, I think? We are movin such that eta-mu becomes a namespace package (mainly). It can depend on externally defined packages, but other packages should not define on eta-mu? Maybe?
 ---

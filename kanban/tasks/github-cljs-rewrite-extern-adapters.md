@@ -1,14 +1,16 @@
 ---
-uuid: "github-cljs-rewrite-extern-adapters"
-title: "GitHub CLJS Rewrite — Extern Adapters"
-status: icebox
-priority: "P0"
-labels: ["tasks", "cljs", "rewrite", "github"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/github-cljs-rewrite.md"
-points: 4
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "github"]
+write-id: "1784497625717-0.uaqwgt8cuqy9gyni4v"
+points: "4"
+source: "kanban/epics/github-cljs-rewrite.md"
+title: "GitHub CLJS Rewrite — Extern Adapters"
+priority: "P0"
+status: "incoming"
+uuid: "github-cljs-rewrite-extern-adapters"
+created_at: "2026-06-15T00:00:00Z"
 ---
+
 # GitHub CLJS Rewrite — Extern Adapters
 
 > Parent epic: `kanban/epics/github-cljs-rewrite.md`

@@ -12,7 +12,11 @@
       "id": "epiphany",
       "title": "Epiphany",
       "tasksDir": "../../epiphany/docs/kanban",
-      "fsm": "promethean"
+      "fsm": {
+        "extends": "promethean",
+        "buildGateCommands": ["clojure -M:unit-test"],
+        "cwd": "/home/err/spaces/epiphany"
+      }
     },
     {
       "id": "proxx",
