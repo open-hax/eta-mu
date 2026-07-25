@@ -338,14 +338,21 @@
                                               :exit 1
                                               :tail (str (:file f) ": " (:detail f))})
                                      (:confirmed review-outcome)))))
-                  (let [committed (when-let [c (:stage/commit stage)]
-                                    (git-commit! repo (:paths c) (:message c)))
-                        promoted (when uuid
-                                   (and (card-fsm! repo uuid "review")
-                                        (card-fsm! repo uuid "document")
-                                        (card-fsm! repo uuid "done")))]
-                    {:status :passed :attempts attempt :review review-outcome
-                     :committed (boolean committed) :promoted (boolean promoted)})))
+                  (let [commit-cfg (:stage/commit stage)
+                        committed (if commit-cfg
+                                    (git-commit! repo (:paths commit-cfg) (:message commit-cfg))
+                                    true)]
+                    (if-not committed
+                      (do
+                        (println "  [commit] commit failed; card promotion skipped")
+                        {:status :failed-commit :attempts attempt :review review-outcome
+                         :committed false :promoted false})
+                      (let [promoted (when uuid
+                                       (and (card-fsm! repo uuid "review")
+                                            (card-fsm! repo uuid "document")
+                                            (card-fsm! repo uuid "done")))]
+                        {:status :passed :attempts attempt :review review-outcome
+                         :committed (boolean commit-cfg) :promoted (boolean promoted)})))))
 
               (>= attempt max-attempts)
               {:status :failed-gates :failures failures :attempts attempt}

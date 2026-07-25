@@ -278,12 +278,10 @@
                   then https://api.openai.com/v1/chat/completions)
     :signal     — AbortSignal forwarded to fetch"
   [model llm-context options]
-  (let [explicit-base-url (:base-url options)
-        base-url (or explicit-base-url
+  (let [base-url (or (:base-url options)
                      (process/env "OPENAI_BASE_URL")
                      default-base-url)
-        custom-endpoint? (and explicit-base-url
-                              (not= explicit-base-url default-base-url))
+        custom-endpoint? (not= base-url default-base-url)
         auth-token (or (:api-key options)
                        (when-not custom-endpoint?
                          (or (process/env "OPENAI_AUTH_TOKEN")

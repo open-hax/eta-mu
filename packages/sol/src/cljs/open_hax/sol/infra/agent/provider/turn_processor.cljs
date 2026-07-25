@@ -5,7 +5,8 @@
    run through the turn-processor run-loop with `eta-mu.extern.openai`
    streaming; model and auth arrive as plain config resolved from sol's
    decoupled settings (no SDK singletons, no on-disk models.json)."
-  (:require [eta-mu.extern.openai :as openai]
+  (:require [clojure.string :as str]
+            [eta-mu.extern.openai :as openai]
             [eta-mu.infra.tools.registry :as tool-registry]
             [eta-mu.turn-processor.infra.loop :as loop]
             [eta-mu.turn-processor.shape.message :as shape.msg]
@@ -35,6 +36,94 @@
         provider-id (or (some-> (:provider model) str) "proxx")]
     (get auth provider-id)))
 
+(defn- part-type
+  [part]
+  (some-> (:type part) name keyword))
+
+(defn- data-url
+  [part default-mime-type]
+  (or (some-> (:url part) str str/trim not-empty)
+      (when-let [data (some-> (:data part) str str/trim not-empty)]
+        (str "data:" (or (:mime-type part) default-mime-type) ";base64," data))))
+
+(defn- openai-audio-format
+  [part]
+  (case (some-> (:mime-type part) str str/lower-case)
+    "audio/wav" "wav"
+    "audio/wave" "wav"
+    "audio/x-wav" "wav"
+    "audio/mpeg" "mp3"
+    "audio/mp3" "mp3"
+    (throw (ex-info "OpenAI audio input supports only WAV or MP3"
+                    {:mime-type (:mime-type part)}))))
+
+(defn- content-part->openai
+  [part]
+  (case (part-type part)
+    :text
+    {:type "text" :text (str (or (:text part) ""))}
+
+    :image
+    (if-let [url (data-url part "image/png")]
+      {:type "image_url" :image_url {:url url}}
+      (throw (ex-info "Image content must include :url or :data" {:part part})))
+
+    :audio
+    (if-let [data (some-> (:data part) str str/trim not-empty)]
+      {:type "input_audio"
+       :input_audio {:data data :format (openai-audio-format part)}}
+      (throw (ex-info "Audio content must be materialized to :data before projection"
+                      {:part part})))
+
+    nil))
+
+(defn- media-part?
+  [part]
+  (contains? #{:image :audio} (part-type part)))
+
+(defn- tool-result->openai
+  [message]
+  (let [content (vec (:content message))
+        media (->> content (filter media-part?) (keep content-part->openai) vec)]
+    (if (seq media)
+      (let [text (->> content
+                      (filter #(= :text (part-type %)))
+                      (map :text)
+                      (remove str/blank?)
+                      (str/join "\n"))]
+        [{:role "tool"
+          :tool_call_id (:tool-call-id message)
+          :content (if (seq text) text "(see attached media)")}
+         {:role "user"
+          :content (into [{:type "text" :text "Attached media from tool result:"}]
+                         media)}])
+      [(shape.msg/message->openai message)])))
+
+(defn messages->openai
+  "Project canonical turn messages to OpenAI chat-completions messages without
+   silently flattening image/audio parts. Tool-result media follows the
+   corresponding tool message as a user media message, matching the legacy
+   compatibility adapter."
+  [messages]
+  (->> messages
+       (mapcat
+        (fn [message]
+          (cond
+            (= :tool-result (:role message))
+            (tool-result->openai message)
+
+            (and (= :user (:role message))
+                 (vector? (:content message))
+                 (some media-part? (:content message)))
+            [{:role "user"
+              :content (->> (:content message)
+                            (keep content-part->openai)
+                            vec)}]
+
+            :else
+            [(shape.msg/message->openai message)])))
+       vec))
+
 (defn- create-session-impl!
   [config {:keys [model thinking-level system-prompt custom-tools
                   tool-name-allowlist materialize!]}]
@@ -44,7 +133,7 @@
         session (turn-session/make-session
                  {:run-loop loop/run-loop
                   :stream-fn openai/stream-chat
-                  :convert-to-llm shape.msg/messages->openai
+                  :convert-to-llm messages->openai
                   :model (select-keys model [:id :provider])
                   :api-key (:api-key credentials)
                   :base-url (:base-url credentials)

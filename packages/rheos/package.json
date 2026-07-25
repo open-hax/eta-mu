@@ -5,7 +5,8 @@
   "type": "module",
   "license": "GPL-3.0-or-later",
   "files": [
-    "dist"
+    "dist",
+    "resources/public"
   ],
   "bin": {
     "rheos": "dist/cli.cjs"

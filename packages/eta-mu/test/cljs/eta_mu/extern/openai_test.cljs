@@ -191,6 +191,34 @@
           (restore-env! "OPENAI_AUTH_TOKEN" saved-auth-token)
           (restore-env! "OPENAI_API_KEY" saved-api-key))))))
 
+(deftest ^:async stream-chat-env-custom-endpoint-does-not-leak-openai-credentials-test
+  (testing "a custom endpoint from OPENAI_BASE_URL never receives fallback OpenAI credentials"
+    (let [saved-base-url (aget js/process.env "OPENAI_BASE_URL")
+          saved-auth-token (aget js/process.env "OPENAI_AUTH_TOKEN")
+          saved-api-key (aget js/process.env "OPENAI_API_KEY")
+          request-options (atom nil)]
+      (try
+        (aset js/process.env "OPENAI_BASE_URL" "http://localhost:1234/v1/chat/completions")
+        (aset js/process.env "OPENAI_AUTH_TOKEN" "openai-secret-auth-token")
+        (aset js/process.env "OPENAI_API_KEY" "openai-secret-api-key")
+        (set! js/fetch
+              (fn [_url options]
+                (reset! request-options options)
+                (js/Promise.resolve
+                 (sse-response
+                  [{:choices [{:index 0 :delta {:content "Hi"} :finish_reason nil}]}
+                   {:choices [{:index 0 :delta {} :finish_reason "stop"}]}]))))
+        (let [stream (await (openai/stream-chat
+                             {:id "local-model" :provider "local"}
+                             {:system-prompt "sys" :messages [] :tools []}
+                             {}))]
+          (await (.result stream))
+          (is (nil? (aget (.-headers @request-options) "Authorization"))))
+        (finally
+          (restore-env! "OPENAI_BASE_URL" saved-base-url)
+          (restore-env! "OPENAI_AUTH_TOKEN" saved-auth-token)
+          (restore-env! "OPENAI_API_KEY" saved-api-key))))))
+
 (deftest ^:async stream-chat-forwards-abort-signal-test
   (testing "the supplied AbortSignal reaches the underlying fetch"
     (let [controller (js/AbortController.)

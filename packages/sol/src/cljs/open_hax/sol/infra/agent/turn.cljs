@@ -1,5 +1,5 @@
 (ns open-hax.sol.infra.agent.turn
-  "Minimal turn orchestrator for Sol."
+  "Turn orchestrator for Sol."
   (:require [clojure.string :as str]
             [open-hax.sol.domain.agent.content :as content]
             [open-hax.sol.domain.agent.text-delta :as text-delta]
@@ -13,7 +13,7 @@
             [open-hax.sol.infra.agent.session :refer [ensure-agent-session! prune-session-messages]]
             [open-hax.sol.infra.agent.session-store :as session-store]
             [open-hax.sol.infra.agent.transcript :as transcript]
-            [open-hax.sol.shape.agent :refer [subscribe! send-user-message!]]
+            [open-hax.sol.shape.agent :refer [abort! subscribe! send-user-message!]]
             [open-hax.sol.extern.agent-turn-node :as xturn-node]))
 
 (defonce conversation-access* (atom {}))
@@ -184,7 +184,7 @@
           (broadcast-token! scope appended)
           (reset! seen-text* full))))))
 
-(defn- ^:async send-user-message-with-timeout!
+(defn ^:async send-user-message-with-timeout!
   "Send content to the session and wait for agent_end. Resolves with the session.
    Streams assistant text deltas to the realtime WS as they arrive (scope carries
    :run-id/:conversation-id/:session-id). A timeout-ms of 0 or nil disables it."
@@ -213,22 +213,33 @@
                       :error (settle! #(when-let [r @reject*]
                                          (r (js/Error. (str "Agent error: " (:message event))))))
                       nil)))
+        timeout! (fn []
+                   (settle!
+                    (fn []
+                      (try
+                        (.catch (js/Promise.resolve (abort! session))
+                                (fn [_] nil))
+                        (catch :default _ nil))
+                      (when-let [r @reject*]
+                        (r (js/Error. (str "Agent turn timed out after " timeout-ms "ms")))))))
         result-promise (js/Promise.
                         (fn [resolve reject]
                           (reset! resolve* resolve)
                           (reset! reject* reject)
                           (reset! unsubscribe* (subscribe! session handler))
                           (when (and timeout-ms (pos? timeout-ms))
-                            (reset! timeout-id* (js/setTimeout
-                                                 (fn []
-                                                   (settle! (fn []
-                                                              (when-let [r @reject*]
-                                                                (r (js/Error. (str "Agent turn timed out after " timeout-ms "ms")))))))
-                                                 timeout-ms)))))]
-    (try
-      (await (send-user-message! session content))
-      (catch :default err
-        (settle! #(when-let [r @reject*] (r err)))))
+                            (reset! timeout-id* (js/setTimeout timeout! timeout-ms)))))
+        send-promise (try
+                       (send-user-message! session content)
+                       (catch :default err
+                         (settle! #(when-let [r @reject*] (r err)))
+                         nil))]
+    ;; Do not await the potentially hung turn before the timer-backed result.
+    ;; Its rejection still settles the same result promise if it wins the race.
+    (when send-promise
+      (.catch (js/Promise.resolve send-promise)
+              (fn [err]
+                (settle! #(when-let [r @reject*] (r err))))))
     (await result-promise)))
 
 (defn- run-event-payload
