@@ -65,6 +65,14 @@
   (doto (js/Error. "Tool execution aborted")
     (aset "name" "AbortError")))
 
+(defn- ^:async settle-start!
+  "Await a tool start operation and settle the outer abort race exactly once."
+  [start settle! resolve reject]
+  (try
+    (settle! resolve (await (start)))
+    (catch :default error
+      (settle! reject error))))
+
 (defn- race-with-abort
   "Start one tool operation and race its result against `signal`. This keeps
   the turn pump resumable even when a tool ignores the AbortSignal."
@@ -90,12 +98,7 @@
          ;; Cover an abort racing the listener registration.
          (if (signal-aborted? signal)
            (on-abort)
-           (try
-             (.then (js/Promise.resolve (start))
-                    (fn [value] (settle! resolve value))
-                    (fn [error] (settle! reject error)))
-             (catch :default error
-               (settle! reject error)))))))))
+           (settle-start! start settle! resolve reject)))))))
 
 (defn- ^:async execute-tool!
   "Execute a single prepared tool call and return an ExecutedToolCallOutcome.
@@ -202,14 +205,14 @@
             (if (:is-error prepared)
               (recur (conj acc prepared) (rest remaining))
               (do (emit! emit {:type :tool_execution_start
-                              :tool-call-id (get-in prepared [:tool-call :id])
-                              :tool-name (get-in prepared [:tool-call :name])
-                              :args (:args prepared)})
+                               :tool-call-id (get-in prepared [:tool-call :id])
+                               :tool-name (get-in prepared [:tool-call :name])
+                               :args (:args prepared)})
                   (let [executed (await (execute-tool! prepared emit signal))
                         finalized (turn/finalize-tool-result executed
-                                                           (:tool-call prepared)
-                                                           context
-                                                           after-tool-call)]
+                                                             (:tool-call prepared)
+                                                             context
+                                                             after-tool-call)]
                     (emit! emit {:type :tool_execution_end
                                  :tool-call-id (get-in finalized [:tool-call :id])
                                  :tool-name (get-in finalized [:tool-call :name])
