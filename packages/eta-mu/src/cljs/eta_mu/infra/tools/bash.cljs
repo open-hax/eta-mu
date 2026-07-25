@@ -5,22 +5,27 @@
             [eta-mu.extern.child-process :as cp]
             [eta-mu.law.tools :as law]))
 
-(defn- ^:async execute [_id args _signal _on-update]
+(defn- ^:async execute [_id args signal _on-update]
   (let [command (:command args)
         timeout-s (:timeout args)]
     (when-not (string? command)
       (throw (js/Error. "bash: command is required")))
     (let [timeout-ms (when (and (number? timeout-s) (pos? timeout-s)) (* timeout-s 1000))
-          {:keys [exit stdout stderr timed-out?]} (await (cp/exec-shell-capture command timeout-ms))
+          {:keys [exit stdout stderr timed-out? aborted?]}
+          (await (cp/exec-shell-capture command timeout-ms signal))
           combined (str stdout stderr)
           trunc (truncate/truncate-tail combined)
           suffix (cond
+                   aborted? "\n[Command aborted]"
                    timed-out? "\n[Command timed out]"
                    (not (zero? exit)) (str "\n[Exit code " exit "]")
                    :else nil)
           text (cond-> (:content trunc) suffix (str suffix))]
       {:content [{:type :text :text (if (seq text) text "(no output)")}]
-       :details {:exit exit :truncated (:truncated trunc) :timed-out? (boolean timed-out?)}})))
+       :details {:exit exit
+                 :truncated (:truncated trunc)
+                 :timed-out? (boolean timed-out?)
+                 :aborted? (boolean aborted?)}})))
 
 (def tool
   {:name "bash"
