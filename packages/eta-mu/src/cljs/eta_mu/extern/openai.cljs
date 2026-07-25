@@ -273,7 +273,9 @@
   `model` is a map `{:id string :provider string}`.
   `llm-context` is `{:system-prompt string :messages [...] :tools [...]}`.
   `options` may contain:
-    :api-key    — Bearer token (falls back to OPENAI_AUTH_TOKEN, then OPENAI_API_KEY)
+    :api-key    — Bearer token (custom endpoints may instead use
+                  OPENAI_BASE_URL_API_KEY; the default endpoint falls back to
+                  OPENAI_AUTH_TOKEN, then OPENAI_API_KEY)
     :base-url   — full endpoint URL (falls back to OPENAI_BASE_URL,
                   then https://api.openai.com/v1/chat/completions)
     :signal     — AbortSignal forwarded to fetch"
@@ -283,7 +285,10 @@
                      default-base-url)
         custom-endpoint? (not= base-url default-base-url)
         auth-token (or (:api-key options)
-                       (when-not custom-endpoint?
+                       (if custom-endpoint?
+                         ;; A custom endpoint must opt into its own credential;
+                         ;; never reuse ambient OpenAI secrets for it.
+                         (process/env "OPENAI_BASE_URL_API_KEY")
                          (or (process/env "OPENAI_AUTH_TOKEN")
                              (process/env "OPENAI_API_KEY"))))]
     (if (and (nil? auth-token) (= base-url default-base-url))
