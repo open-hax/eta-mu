@@ -41,13 +41,13 @@ from `agent-settings/provider-auth`, and a hardcoded
 
 ## Definition of done
 
-- [ ] A `:provider` contract EDN exists and loads through the contract
+- [x] A `:provider` contract EDN exists and loads through the contract
       loader (validated by katamorph).
-- [ ] `fetch-proxx-model-ids!` / `models-config` derive base-url, endpoint,
+- [x] `fetch-proxx-model-ids!` / `models-config` derive base-url, endpoint,
       auth env-var, and allowlist from the contract when present.
-- [ ] Existing env-only deployments keep working (contract absent → current
+- [x] Existing env-only deployments keep working (contract absent → current
       behavior; regression-tested).
-- [ ] Sol gates green (test / lint:kondo, 0 warnings).
+- [x] Sol gates green (test / lint:kondo, 0 warnings).
 
 ---
 DONE 2026-07-19. Sol's proxx provider config now resolves contract-first with explicit-env override: enrich-config loads the :provider contract (katamorph ProviderContract via the contract-kinds shim) and derives :proxx-base-url, :proxx-models-endpoint, :proxx-auth-token (read from the contract-NAMED env var, e.g. :auth/env), and :model-prefix-allowlist — an explicitly SET env var (PROXX_BASE_URL / PROXX_AUTH_TOKEN / KNOXX_MODEL_PREFIX_ALLOWLIST) still wins, and with no provider contract present behavior is byte-identical to before (regression-tested). Loader gained the providers contract class (class order, normalize aliases, structural inference on :provider/id); provider-settings-map emits the contract-named apiKey env var into models.json; proxx-models-url honors a contract-declared endpoint path. Fixture: test/fixtures/provider-contracts/providers/proxx.edn. Tests: 4 new deftests with env save/restore isolation (contract-drives-config, env-overrides-contract, absent-contract-unchanged, models.json apiKey rename). Gates: sol test 97/368 0 fail, kondo 0/0 + contract-guard OK, build 171 files 0 warn.

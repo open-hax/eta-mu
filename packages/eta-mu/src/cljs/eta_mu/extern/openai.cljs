@@ -252,18 +252,20 @@
 (defn- ^:async post-chat
   "POST to the chat-completions endpoint with `stream: true` and return the
   raw fetch Response (not yet read)."
-  [base-url auth-token model messages tools]
+  [base-url auth-token model messages tools signal]
   (let [body (cond-> {:model (:id model)
                          :messages (clj->js messages)
                          :stream true
                          :stream_options {:include_usage true}}
                  (seq tools) (assoc :tools (clj->js tools)))
         headers (cond-> {"Content-Type" "application/json"}
-                  auth-token (assoc "Authorization" (str "Bearer " auth-token)))]
-    (await (js/fetch base-url
-                     #js {:method "POST"
-                          :headers (clj->js headers)
-                          :body (js/JSON.stringify (clj->js body))}))))
+                  auth-token (assoc "Authorization" (str "Bearer " auth-token)))
+        request #js {:method "POST"
+                     :headers (clj->js headers)
+                     :body (js/JSON.stringify (clj->js body))}]
+    (when signal
+      (aset request "signal" signal))
+    (await (js/fetch base-url request))))
 
 (defn ^:async stream-chat
   "Create a turn-processor-compatible stream from an OpenAI-compatible chat-completions call.
@@ -273,14 +275,19 @@
   `options` may contain:
     :api-key    — Bearer token (falls back to OPENAI_AUTH_TOKEN, then OPENAI_API_KEY)
     :base-url   — full endpoint URL (falls back to OPENAI_BASE_URL,
-                  then https://api.openai.com/v1/chat/completions)"
+                  then https://api.openai.com/v1/chat/completions)
+    :signal     — AbortSignal forwarded to fetch"
   [model llm-context options]
-  (let [base-url (or (:base-url options)
+  (let [explicit-base-url (:base-url options)
+        base-url (or explicit-base-url
                      (process/env "OPENAI_BASE_URL")
                      default-base-url)
+        custom-endpoint? (and explicit-base-url
+                              (not= explicit-base-url default-base-url))
         auth-token (or (:api-key options)
-                       (process/env "OPENAI_AUTH_TOKEN")
-                       (process/env "OPENAI_API_KEY"))]
+                       (when-not custom-endpoint?
+                         (or (process/env "OPENAI_AUTH_TOKEN")
+                             (process/env "OPENAI_API_KEY"))))]
     (if (and (nil? auth-token) (= base-url default-base-url))
       (done-stream (shape.msg/openai-error-message (no-provider-configured-message model) {:model (:id model)}))
       (let [system-prompt (:system-prompt llm-context)
@@ -290,7 +297,8 @@
                        messages)
             tools (shape.tool/tools->openai (:tools llm-context))]
         (try
-          (let [response (await (post-chat base-url auth-token model messages tools))]
+          (let [response (await (post-chat base-url auth-token model messages tools
+                                           (:signal options)))]
             (if (.-ok response)
               (sse-stream response (:id model))
               (let [error (js->clj (await (.json response)) :keywordize-keys true)]

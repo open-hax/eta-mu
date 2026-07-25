@@ -15,6 +15,7 @@
             [open-hax.sol.infra.config :as runtime-config]
             [open-hax.sol.domain.models :as runtime-models]
             [open-hax.sol.domain.node.path :as path]
+            [open-hax.sol.extern.process :as process]
             [open-hax.sol.runtime.state :as runtime-state]))
 
 (defn- process-uptime-ms
@@ -88,7 +89,7 @@
   "Main entrypoint called by shadow-cljs."
   []
   (let [cfg (contract-runtime-deps/inject-deps!
-             (runtime-models/enrich-config (runtime-config/cfg)))
+             (runtime-models/enrich-config (runtime-config/cfg) process/env-var))
         base-dir (path/join (path/cwd) ".ημ" "sol")
         session-store (session-store/create-edn-session-store (path/join base-dir "sessions"))
         run-state-store (run-state/create-edn-run-state-store (path/join base-dir "runs"))]
@@ -123,7 +124,7 @@
              :uptimeMs (process-uptime-ms)})
   (let [{:keys [runtime]} (lifecycle/context)
         config (contract-runtime-deps/inject-deps!
-                (runtime-models/enrich-config (runtime-config/cfg)))]
+                (runtime-models/enrich-config (runtime-config/cfg) process/env-var))]
     (if runtime
       (do
         (lifecycle/remember-context! runtime config nil false)

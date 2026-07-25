@@ -288,60 +288,70 @@
             result (dispatch! {:journal-path journal-path :cache cache
                                :agent (:stage/agent stage) :model (:model run-cfg)
                                :dir repo :timeout-ms (:agent-timeout-ms run-cfg)
-                               :label label :prompt prompt :desc desc})
-            gates (mapv run-gate! (:stage/gates stage))
-            failures (filterv #(not (zero? (:exit %))) gates)]
-        (println (str "  [gates ] attempt " attempt ": " (count failures) " failing of " (count gates)))
-        (cond
-          (empty? failures)
-          (let [review-cfg (:stage/review stage)
-                review-outcome (when review-cfg
-                                 (let [synth-wf {:vars {:repo repo
-                                                        :cards [{:key (name (:stage/id stage))
-                                                                 :path (str repo "/" (:stage/card stage))
-                                                                 :context (:stage/review-context stage)}]
-                                                        :lenses (mapv (fn [l] {:key l :prompt (get (:lens-prompts wf) l "")}) (:lenses review-cfg))}
-                                               :schemas (:schemas wf)
-                                               :run run-cfg}
-                                       map-stage {:stage/id :review :stage/kind :map-agent :stage/phase "Review"
-                                                  :stage/items {:cartesian [{:bind :card :from [:vars :cards]}
-                                                                            {:bind :lens :from [:vars :lenses]}]}
-                                                  :stage/agent "ultra-reviewer" :stage/schema :findings
-                                                  :stage/label "review:{card/key}:{lens/key}"
-                                                  :stage/prompt (:review-prompt wf)}
-                                       vote-stage {:stage/id :verify :stage/kind :vote-fan-out :stage/phase "Verify"
-                                                   :stage/over :review :stage/finding-path [:findings]
-                                                   :stage/agent "ultra-skeptic" :stage/schema :verdict
-                                                   :stage/votes (:votes review-cfg 2) :stage/quorum (:quorum review-cfg 2)
-                                                   :stage/label "verify:{finding/title|40}"
-                                                   :stage/prompt (:verify-prompt wf)}
-                                       reviews (run-map-agent-stage synth-wf map-stage {:journal-path journal-path :cache cache})
-                                       flat (run-vote-fan-out-stage synth-wf vote-stage reviews {:journal-path journal-path :cache cache})
-                                       confirmed (filter :survives flat)]
-                                   {:flat flat :confirmed confirmed}))]
-            (if (and review-outcome (seq (:confirmed review-outcome)))
-              (do (println (str "  [review] " (count (:confirmed review-outcome)) " confirmed findings — treating as gate failure"))
-                  (if (>= attempt max-attempts)
-                    {:status :failed-review :confirmed (:confirmed review-outcome) :attempts attempt}
-                    (recur (inc attempt)
-                           (mapv (fn [f] {:cmd (str "review-finding: " (:title f))
-                                          :exit 1
-                                          :tail (str (:file f) ": " (:detail f))})
-                                   (:confirmed review-outcome)))))
-              (let [committed (when-let [c (:stage/commit stage)]
-                                (git-commit! repo (:paths c) (:message c)))
-                    promoted (when uuid
-                               (and (card-fsm! repo uuid "review")
-                                    (card-fsm! repo uuid "document")
-                                    (card-fsm! repo uuid "done")))]
-                {:status :passed :attempts attempt :review review-outcome
-                 :committed (boolean committed) :promoted (boolean promoted)})))
+                               :label label :prompt prompt :desc desc})]
+        (if (nil? result)
+          (do
+            (println (str "  [dispatch] attempt " attempt
+                          " produced no implementation result; gates skipped"))
+            (if (>= attempt max-attempts)
+              {:status :failed-dispatch :attempts attempt}
+              (recur (inc attempt)
+                     [{:cmd "implementation-dispatch"
+                       :exit 1
+                       :tail "Implementation agent returned no result; no gates or promotion ran."}])))
+          (let [gates (mapv run-gate! (:stage/gates stage))
+                failures (filterv #(not (zero? (:exit %))) gates)]
+            (println (str "  [gates ] attempt " attempt ": " (count failures) " failing of " (count gates)))
+            (cond
+              (empty? failures)
+              (let [review-cfg (:stage/review stage)
+                    review-outcome (when review-cfg
+                                     (let [synth-wf {:vars {:repo repo
+                                                            :cards [{:key (name (:stage/id stage))
+                                                                     :path (str repo "/" (:stage/card stage))
+                                                                     :context (:stage/review-context stage)}]
+                                                            :lenses (mapv (fn [l] {:key l :prompt (get (:lens-prompts wf) l "")}) (:lenses review-cfg))}
+                                                   :schemas (:schemas wf)
+                                                   :run run-cfg}
+                                           map-stage {:stage/id :review :stage/kind :map-agent :stage/phase "Review"
+                                                      :stage/items {:cartesian [{:bind :card :from [:vars :cards]}
+                                                                                {:bind :lens :from [:vars :lenses]}]}
+                                                      :stage/agent "ultra-reviewer" :stage/schema :findings
+                                                      :stage/label "review:{card/key}:{lens/key}"
+                                                      :stage/prompt (:review-prompt wf)}
+                                           vote-stage {:stage/id :verify :stage/kind :vote-fan-out :stage/phase "Verify"
+                                                       :stage/over :review :stage/finding-path [:findings]
+                                                       :stage/agent "ultra-skeptic" :stage/schema :verdict
+                                                       :stage/votes (:votes review-cfg 2) :stage/quorum (:quorum review-cfg 2)
+                                                       :stage/label "verify:{finding/title|40}"
+                                                       :stage/prompt (:verify-prompt wf)}
+                                           reviews (run-map-agent-stage synth-wf map-stage {:journal-path journal-path :cache cache})
+                                           flat (run-vote-fan-out-stage synth-wf vote-stage reviews {:journal-path journal-path :cache cache})
+                                           confirmed (filter :survives flat)]
+                                       {:flat flat :confirmed confirmed}))]
+                (if (and review-outcome (seq (:confirmed review-outcome)))
+                  (do (println (str "  [review] " (count (:confirmed review-outcome)) " confirmed findings — treating as gate failure"))
+                      (if (>= attempt max-attempts)
+                        {:status :failed-review :confirmed (:confirmed review-outcome) :attempts attempt}
+                        (recur (inc attempt)
+                               (mapv (fn [f] {:cmd (str "review-finding: " (:title f))
+                                              :exit 1
+                                              :tail (str (:file f) ": " (:detail f))})
+                                     (:confirmed review-outcome)))))
+                  (let [committed (when-let [c (:stage/commit stage)]
+                                    (git-commit! repo (:paths c) (:message c)))
+                        promoted (when uuid
+                                   (and (card-fsm! repo uuid "review")
+                                        (card-fsm! repo uuid "document")
+                                        (card-fsm! repo uuid "done")))]
+                    {:status :passed :attempts attempt :review review-outcome
+                     :committed (boolean committed) :promoted (boolean promoted)})))
 
-          (>= attempt max-attempts)
-          {:status :failed-gates :failures failures :attempts attempt}
+              (>= attempt max-attempts)
+              {:status :failed-gates :failures failures :attempts attempt}
 
-          :else
-          (recur (inc attempt) failures))))))))
+              :else
+              (recur (inc attempt) failures))))))))))
 
 (defn run-stage [wf stage stage-outputs opts]
   (case (:stage/kind stage)

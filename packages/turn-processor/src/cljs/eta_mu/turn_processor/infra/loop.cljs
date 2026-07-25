@@ -217,7 +217,11 @@
             llm-context {:system-prompt (:system-prompt @ctx)
                          :messages llm-messages
                          :tools (:tools @ctx)}
-            stream (stream-fn (:model config) llm-context {:api-key (:api-key config) :base-url (:base-url config) :signal signal})
+            stream (await (stream-fn (:model config)
+                                     llm-context
+                                     {:api-key (:api-key config)
+                                      :base-url (:base-url config)
+                                      :signal signal}))
             assistant (await (stream-final-message stream emit))]
         (update-context! ctx assistant)
         (update-new-messages! new-messages assistant)
@@ -254,4 +258,3 @@
                       (do (emit! emit {:type :turn_end :message assistant :tool-results []})
                           (emit! emit {:type :agent_end :messages @new-messages})
                           (vec @new-messages)))))))))))))
-

@@ -87,14 +87,25 @@
 (defn- pid-file [] (path/join (state-dir) "sol.pid"))
 (defn- log-file [] (path/join (state-dir) "sol.log"))
 
+(defn- ^:async sol-process?
+  "True when pid belongs to a Node process running this Sol server bundle."
+  [pid]
+  (when-let [server (resolve-server-path)]
+    (let [{:keys [exit stdout]}
+          (await (child/exec-capture "ps" ["-p" pid "-o" "command="]))]
+      (and (zero? exit)
+           (str/includes? stdout server)))))
+
 (defn- ^:async live-pid
-  "Return the pidfile's pid when it names a live process, else nil."
+  "Return the pidfile's pid only when it names this Sol server process."
   []
   (when (fs/file-exists? (pid-file))
     (let [pid (str/trim (fs/read-file (pid-file)))]
       (when (re-matches #"\d+" pid)
         (let [{:keys [exit]} (await (child/exec-capture "kill" ["-0" pid]))]
-          (when (zero? exit) pid))))))
+          (when (and (zero? exit)
+                     (await (sol-process? pid)))
+            pid))))))
 
 (defn- ^:async fetch-health
   "GET sol's /health via curl through the child-process boundary, retrying

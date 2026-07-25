@@ -15,7 +15,7 @@
       "fsm": {
         "extends": "promethean",
         "buildGateCommands": ["clojure -M:unit-test"],
-        "cwd": "/home/err/spaces/epiphany"
+        "cwd": "../../epiphany"
       }
     },
     {

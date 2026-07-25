@@ -474,8 +474,8 @@
       (some-> (model-contracts config) first :id)))
 
 (defn- env-var-set?
-  [env-name]
-  (some? (aget js/process.env env-name)))
+  [env-lookup env-name]
+  (some? (env-lookup env-name)))
 
 (declare enrich-config*)
 
@@ -488,31 +488,34 @@
    working unchanged when no provider contract is present.
 
    Keeps open-hax.sol.infra.config strictly env-only, while ensuring legacy
-   call sites continue to find these keys."
-  [config]
-  (let [proxx-contract (resolve-provider-contract config "proxx")]
-    (cond-> (enrich-config* config proxx-contract)
-      (and (:base-url proxx-contract)
-           (not (env-var-set? "PROXX_BASE_URL")))
-      (assoc :proxx-base-url (:base-url proxx-contract))
+   call sites continue to find these keys. Environment access is injected so
+   this domain namespace stays deterministic and host-independent."
+  ([config]
+   (enrich-config config (constantly nil)))
+  ([config env-lookup]
+   (let [proxx-contract (resolve-provider-contract config "proxx")]
+     (cond-> (enrich-config* config proxx-contract env-lookup)
+       (and (:base-url proxx-contract)
+            (not (env-var-set? env-lookup "PROXX_BASE_URL")))
+       (assoc :proxx-base-url (:base-url proxx-contract))
 
-      (and (:auth-env proxx-contract)
-           (not (env-var-set? "PROXX_AUTH_TOKEN")))
-      (assoc :proxx-auth-token
-             (or (some-> (aget js/process.env (:auth-env proxx-contract))
-                         str str/trim not-empty)
-                 (:proxx-auth-token config)))
+       (and (:auth-env proxx-contract)
+            (not (env-var-set? env-lookup "PROXX_AUTH_TOKEN")))
+       (assoc :proxx-auth-token
+              (or (some-> (env-lookup (:auth-env proxx-contract))
+                          str str/trim not-empty)
+                  (:proxx-auth-token config)))
 
-      (and (:models-endpoint proxx-contract)
-           (not (:proxx-models-endpoint config)))
-      (assoc :proxx-models-endpoint (:models-endpoint proxx-contract)))))
+       (and (:models-endpoint proxx-contract)
+            (not (:proxx-models-endpoint config)))
+       (assoc :proxx-models-endpoint (:models-endpoint proxx-contract))))))
 
 (defn- enrich-config*
-  [config proxx-contract]
+  [config proxx-contract env-lookup]
   (merge
    {:model-prefix-allowlist
     (or (some-> (or (:model-prefix-allowlist config)
-                    (aget js/process.env "KNOXX_MODEL_PREFIX_ALLOWLIST"))
+                    (env-lookup "KNOXX_MODEL_PREFIX_ALLOWLIST"))
                 parse-prefix-allowlist
                 not-empty)
         (not-empty (:prefix-allowlist proxx-contract))
@@ -527,17 +530,17 @@
     :agent-thinking-level
     (or (normalize-thinking-level
          (or (:agent-thinking-level config)
-             (aget js/process.env "KNOXX_THINKING_LEVEL")
+             (env-lookup "KNOXX_THINKING_LEVEL")
              "off"))
         "off")
 
     :reasoning-model-prefixes
     (or (:reasoning-model-prefixes config)
-        (aget js/process.env "KNOXX_REASONING_MODEL_PREFIXES")
+        (env-lookup "KNOXX_REASONING_MODEL_PREFIXES")
         "glm-")
 
     :responses-model-prefixes
     (or (:responses-model-prefixes config)
-        (aget js/process.env "KNOXX_RESPONSES_MODEL_PREFIXES")
+        (env-lookup "KNOXX_RESPONSES_MODEL_PREFIXES")
         "gpt-")}
    config))

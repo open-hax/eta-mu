@@ -49,12 +49,12 @@ construction with data, and re-implement `ensure-runtime!` /
 
 ## Definition of done
 
-- [ ] `ensure-runtime!` and `resolve-model` are re-implemented without any
+- [x] `ensure-runtime!` and `resolve-model` are re-implemented without any
       legacy SDK class; their behavior is covered by CLJS tests (fallback
       chain, env token resolution, compaction defaults).
-- [ ] A comment on this card records the ResourceLoader audit (what it
+- [x] A comment on this card records the ResourceLoader audit (what it
       loaded, and the replacement home for each item).
-- [ ] `pnpm --filter @open-hax/sol test` / `lint:kondo` green.
+- [x] `pnpm --filter @open-hax/sol test` / `lint:kondo` green.
 
 ## Verification
 
@@ -80,7 +80,10 @@ AUTH + REGISTRY REPLACEMENT: AuthStorage/.setRuntimeApiKey -> domain.agent.setti
 
 SESSION PERSISTENCE (runtimeDir bullet): :agent-dir stays sol's data dir (models.json only — auth.json died with AuthStorage). Sessions were never persisted under agent-dir (legacy SessionManager was .inMemory); sol's persisted session/run state lives in its own EDN store at .ημ/sol/sessions/ (infra/agent/session_store.cljs) because that store serves the /api/agent/* control plane (KnoxxRun wire shape + event ledgers), not turn-processor transcripts — that is why sol keeps its own store. eta-mu.infra.session EDN artifacts remain the CLI transcript format; adopting them is the provider-swap card's call.
 
-ANOMALY LOG (construction-order rule): domain/models.cljs enrich-config reads js/process.env directly (already-there, predates card; does not invalidate the new shapes — new env reads go through extern/process). infra/config.cljs env reads are the established config-assembly seam (unchanged).
+BOUNDARY FOLLOW-UP RESOLVED 2026-07-25: `domain/models.cljs` no longer reads
+`js/process.env`. `enrich-config` accepts an injected environment lookup;
+`infra/core.cljs` and `bootstrap.cljs` supply `extern.process/env-var`, and
+domain tests use deterministic lookup maps.
 
 INTERIM STATE: extern/create-session! no longer passes authStorage/modelRegistry/resourceLoader/settingsManager to legacy createAgentSession (resolved model now goes as clj->js data); legacy session construction is degraded until sol-provider-swap-legacy-drop wires the turn-processor adapter in.
 ---

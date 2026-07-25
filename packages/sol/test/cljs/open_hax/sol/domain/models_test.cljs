@@ -41,30 +41,18 @@
 
 ;; ── ProviderContract consumption (katamorph v0.2.0) ───────────────────────────
 
-(def ^:private provider-env-vars
-  ["PROXX_BASE_URL" "PROXX_AUTH_TOKEN" "PROXX_CONTRACT_TOKEN"
-   "KNOXX_MODEL_PREFIX_ALLOWLIST"])
-
-(defn- with-env
-  "Run f with exactly `overrides` set among the provider env vars; restore after."
-  [overrides f]
-  (let [saved (into {} (map (fn [n] [n (aget js/process.env n)]) provider-env-vars))]
-    (doseq [n provider-env-vars] (js-delete js/process.env n))
-    (doseq [[n v] overrides] (aset js/process.env n v))
-    (try
-      (f)
-      (finally
-        (doseq [n provider-env-vars] (js-delete js/process.env n))
-        (doseq [[n v] saved :when (some? v)] (aset js/process.env n v))))))
+(defn- env-lookup
+  [values]
+  (fn [name] (get values name)))
 
 (def ^:private contract-config
   {:contracts-dir "test/fixtures/provider-contracts"
    :proxx-base-url "http://proxx:8789"})
 
 (deftest provider-contract-drives-config-when-env-unset
-  (with-env {"PROXX_CONTRACT_TOKEN" "token-from-named-env"}
-    (fn []
-      (let [enriched (models/enrich-config contract-config)]
+  (let [enriched (models/enrich-config
+                  contract-config
+                  (env-lookup {"PROXX_CONTRACT_TOKEN" "token-from-named-env"}))]
         (testing "base-url comes from the :provider contract"
           (is (= "http://proxx-from-contract:8789" (:proxx-base-url enriched))))
         (testing "models endpoint comes from the contract"
@@ -74,30 +62,28 @@
         (testing "prefix allowlist comes from the contract"
           (is (= ["glm-5" "test-model"] (:model-prefix-allowlist enriched)))
           (is (models/allowlisted-model-id? enriched "test-model-x"))
-          (is (not (models/allowlisted-model-id? enriched "qwen3-x"))))))))
+          (is (not (models/allowlisted-model-id? enriched "qwen3-x"))))))
 
 (deftest explicitly-set-env-overrides-the-provider-contract
-  (with-env {"PROXX_BASE_URL" "http://from-env:9999"
-             "KNOXX_MODEL_PREFIX_ALLOWLIST" "envmodel"}
-    (fn []
-      (let [enriched (models/enrich-config
-                      (assoc contract-config :proxx-base-url "http://from-env:9999"))]
-        (is (= "http://from-env:9999" (:proxx-base-url enriched)))
-        (is (= ["envmodel"] (:model-prefix-allowlist enriched)))))))
+  (let [enriched (models/enrich-config
+                  (assoc contract-config :proxx-base-url "http://from-env:9999")
+                  (env-lookup {"PROXX_BASE_URL" "http://from-env:9999"
+                               "KNOXX_MODEL_PREFIX_ALLOWLIST" "envmodel"}))]
+    (is (= "http://from-env:9999" (:proxx-base-url enriched)))
+    (is (= ["envmodel"] (:model-prefix-allowlist enriched)))))
 
 (deftest absent-provider-contract-keeps-env-only-behavior
-  (with-env {}
-    (fn []
-      (let [enriched (models/enrich-config
-                      {:contracts-dir "test/fixtures/empty-contracts"
-                       :proxx-base-url "http://proxx:8789"})]
-        (is (= "http://proxx:8789" (:proxx-base-url enriched)))
-        (is (nil? (:proxx-models-endpoint enriched)))
-        (testing "built-in default allowlist applies"
-          (is (some #{"qwen3"} (:model-prefix-allowlist enriched))))))))
+  (let [enriched (models/enrich-config
+                  {:contracts-dir "test/fixtures/empty-contracts"
+                   :proxx-base-url "http://proxx:8789"}
+                  (env-lookup {}))]
+    (is (= "http://proxx:8789" (:proxx-base-url enriched)))
+    (is (nil? (:proxx-models-endpoint enriched)))
+    (testing "built-in default allowlist applies"
+      (is (some #{"qwen3"} (:model-prefix-allowlist enriched))))))
 
 (deftest provider-contract-renames-models-json-api-key
-  (with-env {}
-    (fn []
-      (let [data (models/models-config (models/enrich-config contract-config) ["glm-5"])]
-        (is (= "PROXX_CONTRACT_TOKEN" (get-in data [:providers :proxx :apiKey])))))))
+  (let [data (models/models-config
+              (models/enrich-config contract-config (env-lookup {}))
+              ["glm-5"])]
+    (is (= "PROXX_CONTRACT_TOKEN" (get-in data [:providers :proxx :apiKey])))))

@@ -59,3 +59,12 @@
              (settings/provider-auth {:proxx-base-url "http://proxx:8789"
                                       :provider-auth-tokens {:openrout.es "OPENROUTES_KEY"}}
                                      env))))))
+
+(deftest provider-auth-preserves-generic-proxx-settings
+  (let [env (fn [name] (get {"GENERIC_PROXX_KEY" "generic-token"} name))]
+    (is (= {"proxx" {:api-key "generic-token"
+                     :base-url "https://generic-proxx.example/v1/chat/completions"}}
+           (settings/provider-auth
+            {:provider-auth-tokens {"proxx" "GENERIC_PROXX_KEY"}
+             :provider-base-urls {"proxx" "https://generic-proxx.example"}}
+            env)))))

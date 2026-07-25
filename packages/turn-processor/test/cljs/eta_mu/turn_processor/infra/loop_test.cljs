@@ -55,6 +55,24 @@
       (is (some #(= :turn_end (:type %)) @events))
       (is (some #(= :agent_end (:type %)) @events)))))
 
+(deftest ^:async run-loop-awaits-async-stream-factory-test
+  (testing "run-loop awaits a Promise-returning stream factory before consuming it"
+    (let [assistant {:role :assistant
+                     :content [{:type :text :text "done"}]
+                     :api "test" :provider "test" :model "test"
+                     :usage {:input 0 :output 0 :cache-read 0 :cache-write 0 :total-tokens 0}
+                     :stop-reason :stop
+                     :timestamp 0}
+          stream-fn (fn [_ _ _]
+                      (js/Promise.resolve (mock-stream assistant)))
+          [emit] (capture-emit)
+          context {:system-prompt "hello"
+                   :messages [{:role :user :content "hi" :timestamp 0}]}
+          config {:model {:id "test" :provider "test"}
+                  :convert-to-llm (fn [messages] messages)}
+          result (await (loop/run-loop context config emit stream-fn))]
+      (is (= [assistant] result)))))
+
 (defn- stateful-stream-fn [final-messages]
   (let [index (atom -1)]
     (fn [_ _ _]

@@ -84,7 +84,6 @@
                       {:type :command
                        :commands (:buildGateCommands fsm-cfg)
                        :cwd (:cwd fsm-cfg)}))
-          (map? fsm-cfg) fsm-cfg
           :else default-fsm)))
 
 (defn- check-wip-limit [fsm to-status current-counts]

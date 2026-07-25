@@ -150,6 +150,25 @@
           (is (not (.existsSync fs (path/join dir ".eta-mu-sol" "sol.pid")))))
         (finally (js/process.chdir original-cwd))))))
 
+(deftest ^:async stop-does-not-signal-foreign-live-pid-test
+  (testing "a recycled pid owned by another process is stale, never signalled"
+    (let [dir (tmp-dir "foreign-pid")
+          server (path/join dir "server.js")
+          pid-path (path/join dir ".eta-mu-sol" "sol.pid")
+          original-cwd (js/process.cwd)
+          [exit-codes _] (stub-exit!)]
+      (.writeFileSync fs server "// fake sol server\n")
+      (aset js/process.env "SOL_SERVER_PATH" server)
+      (js/process.chdir dir)
+      (try
+        (.mkdirSync fs (path/join dir ".eta-mu-sol") #js {:recursive true})
+        (.writeFileSync fs pid-path (str (.-pid js/process) "\n"))
+        (let [output (with-out-str (await (sol/stop {:args [] :flags {}})))]
+          (is (= [0] @exit-codes))
+          (is (str/includes? output "sol is not running"))
+          (is (not (.existsSync fs pid-path))))
+        (finally (js/process.chdir original-cwd))))))
+
 (deftest ^:async status-when-not-running-test
   (testing "sol status with no live server reports not running and exits 1"
     (let [dir (tmp-dir "status")

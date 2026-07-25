@@ -6,7 +6,7 @@ points: "2"
 source: "kanban/epics/sol-turn-processor-cutover.md"
 title: "Sol — Provider Swap and Legacy Dependency Drop"
 priority: "P0"
-status: "done"
+status: "review"
 uuid: "sol-provider-swap-legacy-drop"
 created_at: "2026-07-17T00:00:00Z"
 ---
@@ -44,12 +44,12 @@ boundary namespaces, and remove `@open-hax/eta-mu-cli` from
 
 ## Definition of done
 
-- [ ] `git grep -c "eta-mu-cli" -- packages/sol` → 0.
-- [ ] sol gates green: `pnpm --filter @open-hax/sol test` / `lint:kondo`;
+- [x] `git grep -c "eta-mu-cli" -- packages/sol` → 0.
+- [x] sol gates green: `pnpm --filter @open-hax/sol test` / `lint:kondo`;
       repo root `pnpm build` / `pnpm test` green.
 - [ ] `sol-backend` restarts under pm2 with the new stack and answers a
       health check (recorded in a card comment).
-- [ ] A comment on `coding-agent-cljs-rewrite-cutover-ratchet` records
+- [x] A comment on `coding-agent-cljs-rewrite-cutover-ratchet` records
       that sol is no longer a legacy/coding-agent consumer.
 
 ## Verification
@@ -72,4 +72,8 @@ Scoped plan (implementation slice):
 Known behavior deltas to record at completion: bash/read tools run in process cwd (no workspace-root threading); thinking-level is accepted but not forwarded to the wire (stream-chat has no reasoning knob); multimodal parts are text placeholders on the wire per turn-processor stance.
 
 ATTEMPT 3 GATES GREEN 2026-07-17: turn-stream-test fixtures migrated to the CLJS run-loop event contract (:message_update with :assistant-message-event #js {:type text_delta :partial <cumulative cljs assistant message>}; :message_end with keyword :role :assistant) matching eta-mu.turn-processor.infra.loop + eta-mu.extern.openai. pnpm --filter @open-hax/sol test: 88 tests, 256 assertions, 0 failures. lint:kondo 0 errors 0 warnings. git grep eta-mu-cli -- packages/sol: 0 matches. Root pnpm build + pnpm test green. Ratchet-card comment recorded on coding-agent-cljs-rewrite-cutover-ratchet. PM2 CAVEAT (DoD item 3): the live pm2 sol-backend (id 3) runs from /home/err/devel/orgs/open-hax/eta-mu/packages/sol, a separate checkout that still carries the legacy stack; its /health answers ok but serves old code. Re-pointing pm2 at this workspace (pm2 delete + pm2 start packages/sol/ecosystem.config.cjs, needs a server-dev watch for dist-dev/server.js) is an operational decision left for the user — not claimed done here.
+
+REOPENED TO REVIEW 2026-07-25: the recorded PM2 caveat leaves the live-stack
+health proof incomplete. The card remains non-terminal until that operational
+cutover is explicitly performed and evidenced.
 ---

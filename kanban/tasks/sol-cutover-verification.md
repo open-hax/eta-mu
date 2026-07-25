@@ -6,7 +6,7 @@ points: "1"
 source: "kanban/epics/sol-turn-processor-cutover.md"
 title: "Sol Cutover Verification and Cutover-Ratchet Unblock"
 priority: "P1"
-status: "done"
+status: "review"
 uuid: "sol-cutover-verification"
 created_at: "2026-07-17T00:00:00Z"
 ---
@@ -51,3 +51,7 @@ bb scripts/ultra.bb run .ημ/workflows/review-sol-cutover.edn
 pm2 restart sol-backend && curl -s <sol health endpoint>
 git grep -c "eta-mu-cli" -- packages/sol  # → 0
 ```
+
+REOPENED TO REVIEW 2026-07-25: the review wave surfaced outstanding fixes and
+the three requested end-to-end artifacts are not recorded on this card. It
+remains non-terminal until those proofs exist and the ratchet is updated.

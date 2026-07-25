@@ -45,13 +45,13 @@ not a second definition site.
 
 ## Definition of done
 
-- [ ] `git grep -l "sol.law.contracts" -- packages/sol` → 0 (namespace gone).
-- [ ] Contract validation in sol's loader flows through `katamorph.schema`;
+- [x] `git grep -l "sol.law.contracts" -- packages/sol` → 0 (namespace gone).
+- [x] Contract validation in sol's loader flows through `katamorph.schema`;
       test fixtures under `test/fixtures/{contracts,model-contracts}/`
       still validate.
-- [ ] Any sol-only schemas live in a registry-merge namespace with a comment
+- [x] Any sol-only schemas live in a registry-merge namespace with a comment
       naming why they are not upstreamed.
-- [ ] Gates green: `pnpm --filter @eta-mu/sol test` and `lint:kondo`
+- [x] Gates green: `pnpm --filter @eta-mu/sol test` and `lint:kondo`
       (0 errors / 0 warnings), no checks relaxed.
 
 ## Verification

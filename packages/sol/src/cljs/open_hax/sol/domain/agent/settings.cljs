@@ -66,5 +66,6 @@
                            {}
                            provider-ids)]
     (assoc configured "proxx"
-           (entry (non-blank (:proxx-auth-token config))
-                  (models/provider-openai-base-url (:proxx-base-url config))))))
+           (merge (get configured "proxx")
+                  (entry (non-blank (:proxx-auth-token config))
+                         (models/provider-openai-base-url (:proxx-base-url config)))))))
