@@ -487,9 +487,9 @@
    contract tree), then the built-in default — so env-only deployments keep
    working unchanged when no provider contract is present.
 
-   Keeps open-hax.sol.infra.config strictly env-only, while ensuring legacy
-   call sites continue to find these keys. Environment access is injected so
-   this domain namespace stays deterministic and host-independent."
+   Sol-specific overrides use SOL_* names. The former KNOXX_* allowlist name
+   remains a lower-priority compatibility fallback. Environment access is
+   injected so this domain namespace stays deterministic and host-independent."
   ([config]
    (enrich-config config (constantly nil)))
   ([config env-lookup]
@@ -515,6 +515,7 @@
   (merge
    {:model-prefix-allowlist
     (or (some-> (or (:model-prefix-allowlist config)
+                    (env-lookup "SOL_MODEL_PREFIX_ALLOWLIST")
                     (env-lookup "KNOXX_MODEL_PREFIX_ALLOWLIST"))
                 parse-prefix-allowlist
                 not-empty)

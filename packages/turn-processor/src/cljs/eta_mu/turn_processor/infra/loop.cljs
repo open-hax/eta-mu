@@ -60,6 +60,43 @@
   [signal]
   (boolean (and signal (.-aborted signal))))
 
+(defn- tool-abort-error
+  []
+  (doto (js/Error. "Tool execution aborted")
+    (aset "name" "AbortError")))
+
+(defn- race-with-abort
+  "Start one tool operation and race its result against `signal`. This keeps
+  the turn pump resumable even when a tool ignores the AbortSignal."
+  [signal start]
+  (if (signal-aborted? signal)
+    (js/Promise.reject (tool-abort-error))
+    (js/Promise.
+     (fn [resolve reject]
+       (let [settled? (atom false)
+             listener* (atom nil)
+             cleanup! (fn []
+                        (when (and signal @listener*)
+                          (.removeEventListener signal "abort" @listener*)))
+             settle! (fn [f value]
+                       (when (compare-and-set! settled? false true)
+                         (cleanup!)
+                         (f value)))
+             on-abort (fn []
+                        (settle! reject (tool-abort-error)))]
+         (reset! listener* on-abort)
+         (when signal
+           (.addEventListener signal "abort" on-abort #js {:once true}))
+         ;; Cover an abort racing the listener registration.
+         (if (signal-aborted? signal)
+           (on-abort)
+           (try
+             (.then (js/Promise.resolve (start))
+                    (fn [value] (settle! resolve value))
+                    (fn [error] (settle! reject error)))
+             (catch :default error
+               (settle! reject error)))))))))
+
 (defn- ^:async execute-tool!
   "Execute a single prepared tool call and return an ExecutedToolCallOutcome.
 
@@ -72,17 +109,21 @@
         args (:args prepared)
         updates (atom [])]
     (try
-      (let [result (await ((:execute tool)
-                           (:id tool-call)
-                           args
-                           signal
-                           (fn [partial]
-                             (swap! updates conj
-                                    (emit! emit {:type :tool_execution_update
-                                                 :tool-call-id (:id tool-call)
-                                                 :tool-name (:name tool-call)
-                                                 :args args
-                                                 :partial-result partial})))))]
+      (let [result (await
+                    (race-with-abort
+                     signal
+                     (fn []
+                       ((:execute tool)
+                        (:id tool-call)
+                        args
+                        signal
+                        (fn [partial]
+                          (swap! updates conj
+                                 (emit! emit {:type :tool_execution_update
+                                              :tool-call-id (:id tool-call)
+                                              :tool-name (:name tool-call)
+                                              :args args
+                                              :partial-result partial})))))))]
         (await (js/Promise.all (clj->js @updates)))
         {:result result :is-error false})
       (catch :default e

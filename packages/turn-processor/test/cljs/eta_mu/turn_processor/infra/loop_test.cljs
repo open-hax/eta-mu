@@ -290,6 +290,37 @@
       (is (= [:assistant :tool-result] (mapv :role result)))
       (is (some #(= :agent_end (:type %)) @events)))))
 
+(deftest ^:async run-loop-abort-unblocks-signal-ignoring-tool-test
+  (testing "an abort settles the loop even when an in-flight tool never settles"
+    (let [controller (js/AbortController.)
+          stream-calls (atom 0)
+          tool-call {:role :assistant
+                     :content [{:type :tool-call
+                                :id "call-1"
+                                :name "hung"
+                                :arguments {}}]
+                     :api "test" :provider "test" :model "test"
+                     :usage {:input 0 :output 0 :cache-read 0 :cache-write 0 :total-tokens 0}
+                     :stop-reason :tool-use
+                     :timestamp 0}
+          stream-fn (counting-stream-fn stream-calls [tool-call
+                                                      (text-assistant "never")])
+          hung-tool (test-tool "hung" (fn [_id _args _signal _on-update]
+                                        (js/setTimeout #(.abort controller) 0)
+                                        (js/Promise. (fn [_resolve _reject]))))
+          [emit events] (capture-emit)
+          context {:system-prompt "hello"
+                   :messages [{:role :user :content "hi" :timestamp 0}]
+                   :tools [hung-tool]}
+          config {:model {:id "test" :provider "test"}
+                  :convert-to-llm (fn [messages] messages)
+                  :abort-signal (.-signal controller)}
+          result (await (loop/run-loop context config emit stream-fn))]
+      (is (= 1 @stream-calls))
+      (is (= [:assistant :tool-result] (mapv :role result)))
+      (is (true? (:is-error (second result))))
+      (is (some #(= :agent_end (:type %)) @events)))))
+
 (deftest ^:async run-loop-abort-signal-threaded-test
   (testing "the abort signal reaches stream-fn options and tool execute"
     (let [controller (js/AbortController.)

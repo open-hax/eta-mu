@@ -52,3 +52,32 @@
                        :url "https://example.invalid/audio.mp3"
                        :mime-type "audio/mpeg"}]
             :timestamp 1}])))))
+
+(deftest ^:async audio-url-is-materialized-before-projection
+  (testing "incoming URL-backed audio reaches OpenAI as base64 input_audio"
+    (let [seen (atom nil)
+          projected
+          (await
+           (provider/messages->openai!
+            (fn [part]
+              (reset! seen part)
+              (js/Promise.resolve
+               {:type "audio"
+                :data "bWF0ZXJpYWxpemVk"
+                :mimeType "audio/mpeg"}))
+            [{:role :user
+              :content [{:type :text :text "listen"}
+                        {:type :audio
+                         :url "https://example.invalid/audio.mp3"
+                         :mime-type "audio/mpeg"}]
+              :timestamp 1}]))]
+      (is (= {:type "audio"
+              :url "https://example.invalid/audio.mp3"
+              :mimeType "audio/mpeg"}
+             @seen))
+      (is (= [{:role "user"
+               :content [{:type "text" :text "listen"}
+                         {:type "input_audio"
+                          :input_audio {:data "bWF0ZXJpYWxpemVk"
+                                        :format "mp3"}}]}]
+             projected)))))

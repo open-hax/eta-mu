@@ -231,7 +231,8 @@
         add-res (deref add 60000 ::timeout)]
     (if (or (= add-res ::timeout) (not (zero? (:exit add-res))))
       (do (println "  [commit] git add failed") false)
-      (let [commit (p/process ["git" "commit" "-m" message] {:dir repo :out :string :err :string :in ""})
+      (let [commit (p/process (into ["git" "commit" "--only" "-m" message "--"] paths)
+                              {:dir repo :out :string :err :string :in ""})
             res (deref commit 60000 ::timeout)]
         (if (or (= res ::timeout) (not (zero? (:exit res))))
           (do (println (str "  [commit] nothing committed: " (subs (str (:out commit)) 0 (min 200 (count (str (:out commit))))))) false)
@@ -347,12 +348,16 @@
                         (println "  [commit] commit failed; card promotion skipped")
                         {:status :failed-commit :attempts attempt :review review-outcome
                          :committed false :promoted false})
-                      (let [promoted (when uuid
+                      (let [promoted (if uuid
                                        (and (card-fsm! repo uuid "review")
                                             (card-fsm! repo uuid "document")
-                                            (card-fsm! repo uuid "done")))]
-                        {:status :passed :attempts attempt :review review-outcome
-                         :committed (boolean commit-cfg) :promoted (boolean promoted)})))))
+                                            (card-fsm! repo uuid "done"))
+                                       true)]
+                        (if promoted
+                          {:status :passed :attempts attempt :review review-outcome
+                           :committed (boolean commit-cfg) :promoted (boolean uuid)}
+                          {:status :failed-promotion :attempts attempt :review review-outcome
+                           :committed (boolean commit-cfg) :promoted false}))))))
 
               (>= attempt max-attempts)
               {:status :failed-gates :failures failures :attempts attempt}
@@ -369,6 +374,27 @@
     :return stage
     (throw (ex-info (str "unknown stage kind: " (:stage/kind stage)) {:stage stage}))))
 
+(defn- failed-stage-output?
+  [output]
+  (and (map? output)
+       (keyword? (:status output))
+       (str/starts-with? (name (:status output)) "failed-")))
+
+(defn run-stages
+  "Run workflow stages in order, halting after the first failed stage so
+  dependent implementation stages cannot mutate state."
+  [wf opts]
+  (reduce (fn [outputs stage]
+            (if (= :return (:stage/kind stage))
+              outputs
+              (let [output (run-stage wf stage outputs opts)
+                    next-outputs (assoc outputs (:stage/id stage) output)]
+                (if (failed-stage-output? output)
+                  (reduced next-outputs)
+                  next-outputs))))
+          {}
+          (:stages wf)))
+
 (defn run-workflow [wf {:keys [fresh limit]}]
   (let [wf-id (name (:workflow/id wf))
         run-dir (io/file ".ημ" "runs" wf-id)
@@ -380,12 +406,7 @@
           opts {:journal-path journal-path :cache cache :limit limit}
           _ (println (str "workflow " wf-id " :: journal " (count journal) " events, "
                           (count cache) " cached results"))
-          stage-outputs (reduce (fn [outputs stage]
-                                  (if (= :return (:stage/kind stage))
-                                    outputs
-                                    (assoc outputs (:stage/id stage)
-                                           (run-stage wf stage outputs opts))))
-                                {} (:stages wf))
+          stage-outputs (run-stages wf opts)
           flat (vec (get stage-outputs :verify []))
           confirmed (vec (filter :survives flat))
           implement-stages (into {} (filter (fn [[_ v]] (and (map? v) (:status v))) stage-outputs))

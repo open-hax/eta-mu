@@ -68,9 +68,15 @@
   (let [enriched (models/enrich-config
                   (assoc contract-config :proxx-base-url "http://from-env:9999")
                   (env-lookup {"PROXX_BASE_URL" "http://from-env:9999"
-                               "KNOXX_MODEL_PREFIX_ALLOWLIST" "envmodel"}))]
+                               "SOL_MODEL_PREFIX_ALLOWLIST" "envmodel"}))]
     (is (= "http://from-env:9999" (:proxx-base-url enriched)))
     (is (= ["envmodel"] (:model-prefix-allowlist enriched)))))
+
+(deftest legacy-knoxx-prefix-env-remains-a-compatibility-fallback
+  (let [enriched (models/enrich-config
+                  contract-config
+                  (env-lookup {"KNOXX_MODEL_PREFIX_ALLOWLIST" "legacy-model"}))]
+    (is (= ["legacy-model"] (:model-prefix-allowlist enriched)))))
 
 (deftest absent-provider-contract-keeps-env-only-behavior
   (let [enriched (models/enrich-config

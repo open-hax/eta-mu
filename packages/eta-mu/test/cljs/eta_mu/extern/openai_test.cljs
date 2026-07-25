@@ -64,6 +64,14 @@
        :status status
        :json (fn [] (js/Promise.resolve (clj->js body)))})
 
+(defn- rejecting-sse-response
+  [error]
+  #js {:ok true
+       :status 200
+       :body #js {:getReader
+                  (fn []
+                    #js {:read (fn [] (js/Promise.reject error))})}})
+
 (defn- ^:async drain-events!
   "Drain a stream's `.next()` calls into a vector of `{:type :partial}` maps."
   [stream]
@@ -270,6 +278,41 @@
         (await (.result stream))
         (is (identical? (.-signal controller)
                         (.-signal @request-options)))))))
+
+(deftest ^:async stream-chat-mid-stream-abort-test
+  (testing "an AbortError from reader.read becomes an aborted assistant result"
+    (let [controller (js/AbortController.)
+          abort-error (js/Error. "The operation was aborted")]
+      (set! (.-name abort-error) "AbortError")
+      (set! js/fetch
+            (fn [_url _options]
+              (js/Promise.resolve (rejecting-sse-response abort-error))))
+      (let [stream (await (openai/stream-chat
+                           {:id "gpt-4o-mini" :provider "openai"}
+                           {:system-prompt "sys" :messages [] :tools []}
+                           {:api-key "test-key"
+                            :signal (.-signal controller)}))]
+        ;; Abort after fetch has returned and the stream object exists.
+        (.abort controller)
+        (is (false? (.-done (await (.next stream)))))
+        (is (true? (.-done (await (.next stream)))))
+        (let [final (await (.result stream))]
+          (is (= :assistant (:role final)))
+          (is (= :aborted (:stop-reason final))))))))
+
+(deftest ^:async stream-chat-reader-failure-test
+  (testing "a non-abort reader rejection becomes an error assistant result"
+    (let [network-error (js/Error. "socket reset")]
+      (set! js/fetch
+            (fn [_url _options]
+              (js/Promise.resolve (rejecting-sse-response network-error))))
+      (let [stream (await (openai/stream-chat
+                           {:id "gpt-4o-mini" :provider "openai"}
+                           {:system-prompt "sys" :messages [] :tools []}
+                           {:api-key "test-key"}))
+            final (await (.result stream))]
+        (is (= :error (:stop-reason final)))
+        (is (re-find #"socket reset" (:error-message final)))))))
 
 (deftest ^:async stream-chat-no-provider-configured-test
   (testing "stream-chat short-circuits with a clear error when no api key and no alternate base-url are set"

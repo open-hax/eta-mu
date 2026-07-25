@@ -185,7 +185,8 @@
           (reset! seen-text* full))))))
 
 (defn ^:async send-user-message-with-timeout!
-  "Send content to the session and wait for agent_end. Resolves with the session.
+  "Send content to the session and wait for the send Promise to settle after
+   the session has projected the turn into history. Resolves with the session.
    Streams assistant text deltas to the realtime WS as they arrive (scope carries
    :run-id/:conversation-id/:session-id). A timeout-ms of 0 or nil disables it."
   [session content timeout-ms scope]
@@ -209,7 +210,6 @@
                                            (catch :default _ nil))
                       :message_end (try (stream-message-end! scope seen-text* event)
                                         (catch :default _ nil))
-                      :agent_end (settle! #(when-let [r @resolve*] (r session)))
                       :error (settle! #(when-let [r @reject*]
                                          (r (js/Error. (str "Agent error: " (:message event))))))
                       nil)))
@@ -229,17 +229,20 @@
                           (reset! unsubscribe* (subscribe! session handler))
                           (when (and timeout-ms (pos? timeout-ms))
                             (reset! timeout-id* (js/setTimeout timeout! timeout-ms)))))
-        send-promise (try
-                       (send-user-message! session content)
+        send-attempt (try
+                       {:promise (send-user-message! session content)}
                        (catch :default err
-                         (settle! #(when-let [r @reject*] (r err)))
-                         nil))]
+                         {:error err}))]
     ;; Do not await the potentially hung turn before the timer-backed result.
-    ;; Its rejection still settles the same result promise if it wins the race.
-    (when send-promise
-      (.catch (js/Promise.resolve send-promise)
-              (fn [err]
-                (settle! #(when-let [r @reject*] (r err))))))
+    ;; TurnSession resolves this Promise only after appending the new messages,
+    ;; whereas :agent_end is emitted inside the loop before that projection.
+    (if-let [err (:error send-attempt)]
+      (settle! #(when-let [r @reject*] (r err)))
+      (-> (js/Promise.resolve (:promise send-attempt))
+          (.then (fn [_]
+                   (settle! #(when-let [r @resolve*] (r session)))))
+          (.catch (fn [err]
+                    (settle! #(when-let [r @reject*] (r err)))))))
     (await result-promise)))
 
 (defn- run-event-payload

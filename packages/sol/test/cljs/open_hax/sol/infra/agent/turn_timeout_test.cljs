@@ -34,3 +34,33 @@
       (is (re-find #"Agent turn timed out after 5ms" (.-message error)))
       (is @aborted?)
       (is @unsubscribed?))))
+
+(deftest ^:async agent-end-does-not-beat-session-history-projection
+  (testing "completion waits for send-user-message! after agent_end is emitted"
+    (let [history (atom [])
+          handler* (atom nil)
+          session (reify agent/IAgentSession
+                    (streaming? [_] true)
+                    (current-turn [_] nil)
+                    (messages [_] (seq @history))
+                    (subscribe! [_ handler]
+                      (reset! handler* handler)
+                      (fn [] nil))
+                    (send-user-message! [_ _content]
+                      (@handler* {:type :agent_end})
+                      (.then (js/Promise.resolve nil)
+                             (fn [_]
+                               (reset! history
+                                       [{:role :assistant
+                                         :content [{:type :text :text "ready"}]}]))))
+                    (follow-up! [_ _message] (js/Promise.resolve nil))
+                    (steer! [_ _message] (js/Promise.resolve nil))
+                    (set-thinking-level! [_ _level] nil)
+                    (set-active-tools! [_ _tool-names] nil)
+                    (abort! [_] (js/Promise.resolve nil)))]
+      (await (turn/send-user-message-with-timeout!
+              session "hello" 100
+              {:run-id "run"
+               :conversation-id "conversation"
+               :session-id "session"}))
+      (is (= "ready" (-> @history first :content first :text))))))

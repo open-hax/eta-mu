@@ -81,6 +81,59 @@
   [part]
   (contains? #{:image :audio} (part-type part)))
 
+(declare messages->openai)
+
+(defn- ^:async materialize-audio-part!
+  [materialize! part]
+  (if (and (= :audio (part-type part))
+           (nil? (some-> (:data part) str str/trim not-empty))
+           (some-> (:url part) str str/trim not-empty))
+    (do
+      (when-not materialize!
+        (throw (ex-info "Audio content must be materialized to :data before projection"
+                        {:part part})))
+      (let [materialized
+            (await (materialize!
+                    {:type "audio"
+                     :url (:url part)
+                     :mimeType (or (:mime-type part)
+                                   (:mimeType part)
+                                   "audio/mpeg")}))
+            data (some-> (:data materialized) str str/trim not-empty)]
+        (when-not data
+          (throw (ex-info "Audio materialization returned no data"
+                          {:part part})))
+        {:type :audio
+         :data data
+         :mime-type (or (:mimeType materialized)
+                        (:mime-type materialized)
+                        (:mime-type part)
+                        (:mimeType part)
+                        "audio/mpeg")}))
+    part))
+
+(defn- ^:async materialize-message-audio!
+  [materialize! message]
+  (if (vector? (:content message))
+    (let [parts (await
+                 (js/Promise.all
+                  (to-array
+                   (map #(materialize-audio-part! materialize! %)
+                        (:content message)))))]
+      (assoc message :content (vec (array-seq parts))))
+    message))
+
+(defn ^:async messages->openai!
+  "Materialize URL-backed audio, then project canonical messages to the
+  synchronous OpenAI wire shape."
+  [materialize! messages]
+  (let [hydrated (await
+                  (js/Promise.all
+                   (to-array
+                    (map #(materialize-message-audio! materialize! %)
+                         messages))))]
+    (messages->openai (vec (array-seq hydrated)))))
+
 (defn- tool-result->openai
   [message]
   (let [content (vec (:content message))
@@ -133,7 +186,8 @@
         session (turn-session/make-session
                  {:run-loop loop/run-loop
                   :stream-fn openai/stream-chat
-                  :convert-to-llm messages->openai
+                  :convert-to-llm (fn [messages]
+                                    (messages->openai! materialize! messages))
                   :model (select-keys model [:id :provider])
                   :api-key (:api-key credentials)
                   :base-url (:base-url credentials)

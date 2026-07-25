@@ -85,5 +85,6 @@ BOUNDARY FOLLOW-UP RESOLVED 2026-07-25: `domain/models.cljs` no longer reads
 `infra/core.cljs` and `bootstrap.cljs` supply `extern.process/env-var`, and
 domain tests use deterministic lookup maps.
 
-INTERIM STATE: extern/create-session! no longer passes authStorage/modelRegistry/resourceLoader/settingsManager to legacy createAgentSession (resolved model now goes as clj->js data); legacy session construction is degraded until sol-provider-swap-legacy-drop wires the turn-processor adapter in.
----
+### Interim state
+
+extern/create-session! no longer passes authStorage/modelRegistry/resourceLoader/settingsManager to legacy createAgentSession (resolved model now goes as clj->js data); legacy session construction is degraded until sol-provider-swap-legacy-drop wires the turn-processor adapter in.
