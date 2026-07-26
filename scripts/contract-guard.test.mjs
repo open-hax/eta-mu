@@ -1,32 +1,22 @@
 import assert from "node:assert/strict";
-import {
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import {
-  findContractRedefinitions,
-  guardDirectories,
-} from "./contract-guard.mjs";
+import { findContractRedefinitions, guardDirectories } from "./contract-guard.mjs";
 
 test("detects multiline definitions with metadata", () => {
   const source = "(def\n  ^:private\n  ModelContract\n  [:map])\n";
-  assert.deepEqual(
-    findContractRedefinitions(source, "fixture.cljs"),
-    ["fixture.cljs:3: (def ModelContract ...)"],
-  );
+  assert.deepEqual(findContractRedefinitions(source, "fixture.cljs"), [
+    "fixture.cljs:3: (def ModelContract ...)",
+  ]);
 });
 
 test("ignores definitions in comments, strings, quoted data, and discarded forms", () => {
   const source = [
     "; (def ModelContract [:map])",
-    "(def harmless \"(def ModelContract [:map])\")",
+    '(def harmless "(def ModelContract [:map])")',
     "'(def ModelContract [:map])",
     "(quote (def ModelContract [:map]))",
     "#_(def ModelContract [:map])",
@@ -36,13 +26,9 @@ test("ignores definitions in comments, strings, quoted data, and discarded forms
 });
 
 test("honors the reviewed allow marker on the preceding line", () => {
-  const source = [
-    ";; contract-guard: allow",
-    "(def",
-    "  ModelContract",
-    "  [:map])",
-    "",
-  ].join("\n");
+  const source = [";; contract-guard: allow", "(def", "  ModelContract", "  [:map])", ""].join(
+    "\n",
+  );
   assert.deepEqual(findContractRedefinitions(source, "fixture.cljs"), []);
 });
 
