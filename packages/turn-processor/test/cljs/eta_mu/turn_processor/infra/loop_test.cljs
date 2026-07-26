@@ -321,6 +321,55 @@
       (is (true? (:is-error (second result))))
       (is (some #(= :agent_end (:type %)) @events)))))
 
+(deftest ^:async run-loop-abort-during-steering-drain-test
+  (testing "an abort signalled while steering drains halts before another stream"
+    (let [controller (js/AbortController.)
+          stream-calls (atom 0)
+          stream-fn (counting-stream-fn stream-calls [(text-assistant "first")
+                                                      (text-assistant "never")])
+          [emit events] (capture-emit)
+          context {:system-prompt "hello"
+                   :messages [{:role :user :content "hi" :timestamp 0}]}
+          config {:model {:id "test" :provider "test"}
+                  :convert-to-llm (fn [messages] messages)
+                  :get-steering-messages (fn []
+                                           (.abort controller)
+                                           (js/Promise.resolve [{:role :user
+                                                                 :content "steer"
+                                                                 :timestamp 0}]))
+                  :abort-signal (.-signal controller)}
+          result (await (loop/run-loop context config emit stream-fn))]
+      (is (= 1 @stream-calls))
+      (is (= [:assistant] (mapv :role result)))
+      (is (some #(= :turn_end (:type %)) @events))
+      (is (some #(= :agent_end (:type %)) @events)))))
+
+(deftest ^:async run-loop-abort-during-follow-up-drain-test
+  (testing "an abort signalled while follow-ups drain halts before another stream"
+    (let [controller (js/AbortController.)
+          stream-calls (atom 0)
+          follow-up-calls (atom 0)
+          stream-fn (counting-stream-fn stream-calls [(text-assistant "first")
+                                                      (text-assistant "never")])
+          [emit events] (capture-emit)
+          context {:system-prompt "hello"
+                   :messages [{:role :user :content "hi" :timestamp 0}]}
+          config {:model {:id "test" :provider "test"}
+                  :convert-to-llm (fn [messages] messages)
+                  :get-steering-messages (fn [] (js/Promise.resolve []))
+                  :get-follow-up-messages (fn []
+                                            (swap! follow-up-calls inc)
+                                            (.abort controller)
+                                            (js/Promise.resolve [{:role :user
+                                                                  :content "follow up"
+                                                                  :timestamp 0}]))
+                  :abort-signal (.-signal controller)}
+          result (await (loop/run-loop context config emit stream-fn))]
+      (is (= 1 @stream-calls))
+      (is (= 1 @follow-up-calls))
+      (is (= [:assistant] (mapv :role result)))
+      (is (some #(= :agent_end (:type %)) @events)))))
+
 (deftest ^:async run-loop-abort-signal-threaded-test
   (testing "the abort signal reaches stream-fn options and tool execute"
     (let [controller (js/AbortController.)

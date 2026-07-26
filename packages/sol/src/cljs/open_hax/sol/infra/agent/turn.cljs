@@ -170,19 +170,42 @@
             (broadcast-token! scope delta)
             (swap! seen-text* str delta)))))))
 
+(defn- assistant-role?
+  "True for both role shapes in circulation. The run-loop carries keyword roles,
+   while the realtime session handler, transcript, and persisted-message schemas
+   all speak the string form — a terminal message in either shape must flush."
+  [role]
+  (contains? #{:assistant "assistant"} role))
+
 (defn stream-message-end!
   "Flush any text not already streamed when an assistant message completes.
    Covers providers that send only a terminal message with no incremental
-   deltas. Only :assistant message_end events carry reply text; user/tool
+   deltas. Only assistant message_end events carry reply text; user/tool
    message_end events (follow-ups, tool results) must not broadcast."
   [scope seen-text* event]
   (when-let [message (:message event)]
-    (when (= :assistant (:role message))
+    (when (assistant-role? (:role message))
       (let [full (str (or (assistant-message-text message) ""))
             appended (text-delta/diff-appended-text @seen-text* full)]
         (when (seq appended)
           (broadcast-token! scope appended)
           (reset! seen-text* full))))))
+
+(defn- ^:async settle-on-send!
+  "Settle the caller's result promise from the send promise.
+
+   Invoked WITHOUT await: awaiting the send in the caller would defeat the
+   timeout, because a hung stream or tool would never let the timer-backed
+   result promise win the race. Settling from here instead of from :agent_end
+   is also what keeps history correct — TurnSession resolves the send promise
+   only after appending the new messages, whereas :agent_end fires inside the
+   run-loop before that projection."
+  [send-promise settle! resolve* reject* session]
+  (try
+    (await send-promise)
+    (settle! #(when-let [r @resolve*] (r session)))
+    (catch :default err
+      (settle! #(when-let [r @reject*] (r err))))))
 
 (defn ^:async send-user-message-with-timeout!
   "Send content to the session and wait for the send Promise to settle after
@@ -238,11 +261,8 @@
     ;; whereas :agent_end is emitted inside the loop before that projection.
     (if-let [err (:error send-attempt)]
       (settle! #(when-let [r @reject*] (r err)))
-      (-> (js/Promise.resolve (:promise send-attempt))
-          (.then (fn [_]
-                   (settle! #(when-let [r @resolve*] (r session)))))
-          (.catch (fn [err]
-                    (settle! #(when-let [r @reject*] (r err)))))))
+      ;; Deliberately not awaited here — see settle-on-send!.
+      (settle-on-send! (:promise send-attempt) settle! resolve* reject* session))
     (await result-promise)))
 
 (defn- run-event-payload

@@ -60,6 +60,23 @@
   [signal]
   (boolean (and signal (.-aborted signal))))
 
+(defn- ^:async drain-continuation
+  "Drain the steering queue, then the follow-up queue, for the next turn.
+
+   Returns the messages to seed the next turn with, or nil when the loop should
+   stop — either both queues are empty or the abort signal fired. The signal is
+   observed before each drain and again after it, so an abort neither consumes
+   queued control messages nor buys one more provider stream."
+  [config signal]
+  (when-not (signal-aborted? signal)
+    (let [steering (when-let [f (:get-steering-messages config)] (await (f)))]
+      (cond
+        (signal-aborted? signal) nil
+        (seq steering) (vec steering)
+        :else (let [follow-up (when-let [f (:get-follow-up-messages config)] (await (f)))]
+                (when-not (signal-aborted? signal)
+                  (when (seq follow-up) (vec follow-up))))))))
+
 (defn- tool-abort-error
   []
   (doto (js/Error. "Tool execution aborted")
@@ -234,7 +251,8 @@
   :abort-signal is a JS AbortSignal. It is forwarded to stream-fn options (as
   :signal) and to every tool :execute call, and the loop observes it at turn
   boundaries: after a streamed assistant message the loop halts before any
-  tool execution, and after a tool batch it halts before the next stream.
+  tool execution, after a tool batch it halts before the next stream, and it
+  halts rather than draining the steering/follow-up queues into another turn.
 
   Returns the vector of new AgentMessages produced by the loop."
   [context config emit stream-fn]
@@ -291,14 +309,10 @@
                   (do (emit! emit {:type :agent_end :messages @new-messages})
                       (vec @new-messages))
                   (recur false)))
-              (let [steering (when-let [f (:get-steering-messages config)] (await (f)))]
-                (if (seq steering)
-                  (do (reset! pending steering)
+              (let [continuation (await (drain-continuation config signal))]
+                (if continuation
+                  (do (reset! pending continuation)
                       (recur false))
-                  (let [follow-up (when-let [f (:get-follow-up-messages config)] (await (f)))]
-                    (if (seq follow-up)
-                      (do (reset! pending follow-up)
-                          (recur false))
-                      (do (emit! emit {:type :turn_end :message assistant :tool-results []})
-                          (emit! emit {:type :agent_end :messages @new-messages})
-                          (vec @new-messages)))))))))))))
+                  (do (emit! emit {:type :turn_end :message assistant :tool-results []})
+                      (emit! emit {:type :agent_end :messages @new-messages})
+                      (vec @new-messages)))))))))))

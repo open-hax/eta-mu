@@ -132,12 +132,11 @@
 
 (defn- ^:async start-impl
   [flags]
-  (if-not (resolve-server-path)
-    (not-built)
+  (if-let [server (resolve-server-path)]
     (if-let [pid (await (live-pid))]
       (do (println (str "sol is already running (pid " pid ", port " (effective-port flags) ")"))
           0)
-      (let [server (resolve-server-path)]
+      (do
         (fs/mkdir (state-dir))
         (let [cmd (launch-command server (log-file) (effective-port flags))
               {:keys [exit stdout stderr]} (await (child/exec-shell-capture cmd 5000))
@@ -158,7 +157,8 @@
                         0)
                     (do (js/console.error (str "eta-mu sol start: server exited during "
                                                "startup — see log: " (log-file)))
-                        1))))))))))
+                        1))))))))
+    (not-built)))
 
 (defn- ^:async stop-impl
   []

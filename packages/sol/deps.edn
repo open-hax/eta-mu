@@ -1,7 +1,8 @@
 {;; Default classpath = the shadow-cljs build (shadow-cljs.edn uses :deps true).
- ;; katamorph + event-ledger are consumed from immutable git refs (open-hax
- ;; repos, tag v0.1.0), NOT the removed local packages/ copies — bump the
- ;; :git/sha + :git/tag to adopt a new release.
+ ;; katamorph + event-ledger are consumed from immutable git refs (the standalone
+ ;; open-hax repos, currently katamorph v0.2.0 and event-ledger v0.3.0), NOT the
+ ;; removed local packages/ copies — bump the :git/sha + :git/tag together to
+ ;; adopt a new release.
  ;; turn-processor + eta-mu are workspace siblings consumed as source paths:
  ;; the provider adapter wires their run-loop/stream-fn/tools into sol's
  ;; agent sessions.

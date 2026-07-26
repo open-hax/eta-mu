@@ -66,7 +66,7 @@ the eta-mu CLI as `eta-mu sol ...` (the way Rheos is exposed as
 - [ ] sol's agent sessions run on `@eta-mu/turn-processor`'s run-loop with
       the provider streamed through `packages/eta-mu`'s openai extern.
 - [ ] `eta-mu sol ...` drives sol lifecycle and runs an agent turn.
-- [ ] sol gates green (`pnpm --filter @open-hax/sol test` / `lint:kondo`);
+- [ ] sol gates green (`pnpm --filter @eta-mu/sol test` / `lint:kondo`);
       repo root build + test green; sol-backend restarts clean under pm2.
 - [ ] `coding-agent-cljs-rewrite-cutover-ratchet`'s sol blocker resolved
       on the card.

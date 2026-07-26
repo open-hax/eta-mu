@@ -54,13 +54,13 @@ construction with data, and re-implement `ensure-runtime!` /
       chain, env token resolution, compaction defaults).
 - [x] A comment on this card records the ResourceLoader audit (what it
       loaded, and the replacement home for each item).
-- [x] `pnpm --filter @open-hax/sol test` / `lint:kondo` green.
+- [x] `pnpm --filter @eta-mu/sol test` / `lint:kondo` green.
 
 ## Verification
 
 ```bash
-pnpm --filter @open-hax/sol test
-pnpm --filter @open-hax/sol lint:kondo
+pnpm --filter @eta-mu/sol test
+pnpm --filter @eta-mu/sol lint:kondo
 ```
 
 ---
@@ -85,6 +85,12 @@ BOUNDARY FOLLOW-UP RESOLVED 2026-07-25: `domain/models.cljs` no longer reads
 `infra/core.cljs` and `bootstrap.cljs` supply `extern.process/env-var`, and
 domain tests use deterministic lookup maps.
 
-### Interim state
+### Interim state (historical — resolved 2026-07-17)
 
 extern/create-session! no longer passes authStorage/modelRegistry/resourceLoader/settingsManager to legacy createAgentSession (resolved model now goes as clj->js data); legacy session construction is degraded until sol-provider-swap-legacy-drop wires the turn-processor adapter in.
+
+That interim window is closed: `sol-provider-swap-legacy-drop` landed the
+turn-processor adapter, so sol's sessions run on
+`open-hax.sol.infra.agent.provider.turn-processor` over
+`eta-mu.turn-processor.infra.loop` and the legacy session path is gone, not
+degraded.

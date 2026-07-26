@@ -58,14 +58,19 @@ agent runtime no longer needs the legacy SDK's session machinery at all.
       a grep assertion in the test or a card comment).
 - [ ] If run-loop needed an abort extension, it lands in
       `packages/turn-processor` with its own tests and green gates there.
-- [ ] `pnpm --filter @open-hax/sol test` / `lint:kondo` green;
+- [ ] `pnpm --filter @eta-mu/sol test` / `lint:kondo` green;
       `pnpm -C packages/turn-processor test` green.
 
 ## Verification
 
 ```bash
-pnpm --filter @open-hax/sol test
-pnpm --filter @open-hax/sol lint:kondo
+pnpm --filter @eta-mu/sol test
+pnpm --filter @eta-mu/sol lint:kondo
 pnpm -C packages/turn-processor test
-git grep -c "eta-mu-cli" -- packages/sol/src/cljs/open_hax/sol/infra/agent/turn_session.cljs || true  # → 0
+
+# No legacy runtime imports left in the adapter. `git grep` exits 1 on no match
+# and >1 on a real error, so assert the no-match exit explicitly rather than
+# swallowing every failure with `|| true`.
+git grep -q "eta-mu-cli" -- packages/sol/src/cljs/open_hax/sol/infra/agent/turn_session.cljs; \
+  test $? -eq 1 || { echo "legacy eta-mu-cli import still present (or grep failed)"; false; }
 ```

@@ -57,11 +57,11 @@ enforceable, not more documentation.
 
 ## Acceptance criteria
 
-- [ ] sol has no locally-defined duplicate of a katamorph-owned schema;
+- [x] sol has no locally-defined duplicate of a katamorph-owned schema;
       contract validation flows through `katamorph.schema`.
-- [ ] katamorph has a `ProviderContract` kind and a tagged release consumed
+- [x] katamorph has a `ProviderContract` kind and a tagged release consumed
       by sol.
-- [ ] A guard exists that fails a consumer's gate when it redefines a
+- [x] A guard exists that fails a consumer's gate when it redefines a
       katamorph-owned schema name.
 - [ ] A written decision reconciling the two capability shapes (muse vs
       katamorph), with follow-up cards if code moves.
@@ -78,4 +78,13 @@ enforceable, not more documentation.
 
 ---
 Progress 2026-07-19: cards 1+2 DONE in one coordinated katamorph v0.2.0 bump (305a5e4, tagged+pushed). sol-katamorph-schema-cutover: sol/law/contracts.cljs deleted, validation flows through katamorph.schema via new law/contract_kinds.cljs shim (class-string->kind + lenient fallback + deprecated pipeline leftover), all fixtures regression-swept, gates green. katamorph-provider-contract: ProviderContract shipped; follow-up sol-provider-contract-consumption (P2 1sp) added to READY. Bonus: fixed latent katamorph bug — :policy validation always threw invalid-ref (unresolved :unified/policy ref). Epic acceptance criteria 1+2 now met. Next: contract-redefinition-guard (P1, ready) — the enforcement piece.
+
+---
+
+Guard landed 2026-07-25: `contract-redefinition-guard` is done — `scripts/contract-guard.mjs` fails a
+consumer's lint gate when it redefines a katamorph-owned schema name, covered by
+`scripts/contract-guard.test.mjs`. Acceptance criterion 3 now met, so 1–3 are all
+checked. Remaining: criterion 4 (capability-shape decision, muse vs katamorph) and
+criterion 5 (event-ledger round-trip vs envelope descope).
+
 ---

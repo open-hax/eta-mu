@@ -42,14 +42,14 @@ sol already has a full `.clj-kondo/config.edn` that duplicates the shared `:lint
 
 - [ ] `packages/sol/.clj-kondo/config.edn` uses `:config-paths` and only preserves the `defroute` hook.
 - [ ] No shared `:lint-as`, `:linters`, or promise-chain `:hooks` entries remain duplicated locally.
-- [ ] `pnpm --filter @open-hax/sol lint:kondo` exits 0 with only warnings (no config-resolution errors).
+- [ ] `pnpm --filter @eta-mu/sol lint:kondo` exits 0 with only warnings (no config-resolution errors).
 - [ ] No source files under `packages/sol/src/cljs` or `packages/sol/test/cljs` are modified.
 
 ## Verification
 
 ```bash
 pnpm install
-pnpm --filter @open-hax/sol lint:kondo
+pnpm --filter @eta-mu/sol lint:kondo
 ```
 
 ---

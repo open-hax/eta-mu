@@ -1,12 +1,12 @@
 ---
 uuid: "universal-agent-platform-dsl"
 title: "Universal Agent Platform DSL — Boundary + OpenCode Target"
-status: "incoming"
+status: "in_progress"
 priority: "P0"
 labels: ["cljs", "opencode", "dsl", "boundary", "extensions"]
 created_at: "2026-07-11T13:00:00Z"
 category: "tasks"
-write-id: "1784497815234-0.tjqdasna696p2vlu4b"
+write-id: "1785023952469-0.vztllw1p635oihiwuz"
 ---
 
 # Universal Agent Platform DSL — Boundary + OpenCode Target
@@ -83,5 +83,14 @@ Discovery: all 6 phases (μ0–μ5) are already implemented. μ5 OpenCode target
 
 Runtime fix: build-tool in opencode.cljs now coerces extension result objects to strings via result->string. OpenCode tool.execute requires Promise<string> but extensions returned #js {:content #js [{:type text :text}]}. Added wrap-execute with try-catch. All 96 tests pass, rebuilt dist/opencode/ output.
 
-we were doing this work in ~/spaces/muse, I think? We are movin such that eta-mu becomes a namespace package (mainly). It can depend on externally defined packages, but other packages should not define on eta-mu? Maybe?
+### Open question — namespace-package direction
+
+Some of this work happened in `~/spaces/muse`. The direction under consideration
+is that `eta-mu` becomes primarily a namespace package: it may depend on
+externally defined packages, but other packages should not depend on `eta-mu`.
+
+This is **not a decided constraint** — it is an open question, recorded here so
+the dependency direction gets settled before further platform work lands.
+
+Status reconciled 2026-07-25 (PR #142 review closeout): the card read status: incoming while the body recorded all 6 phases (μ0–μ5) implemented and verified at 96 tests / 262 assertions, 0 failures. Moved incoming -> accepted -> breakdown -> ready -> todo -> in_progress to stop the record contradicting itself. Left at in_progress rather than review: the review gate runs a full monorepo pnpm build and did not converge in this session, and promoting an unrelated P0 card to review/done is the owner's call. The namespace-package note below is now recorded as an explicit open question rather than a tentative aside.
 ---

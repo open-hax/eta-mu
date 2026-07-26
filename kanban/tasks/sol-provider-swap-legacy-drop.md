@@ -45,7 +45,7 @@ boundary namespaces, and remove `@open-hax/eta-mu-cli` from
 ## Definition of done
 
 - [x] `git grep -c "eta-mu-cli" -- packages/sol` → 0.
-- [x] sol gates green: `pnpm --filter @open-hax/sol test` / `lint:kondo`;
+- [x] sol gates green: `pnpm --filter @eta-mu/sol test` / `lint:kondo`;
       repo root `pnpm build` / `pnpm test` green.
 - [ ] `sol-backend` restarts under pm2 with the new stack and answers a
       health check (recorded in a card comment).
@@ -56,7 +56,7 @@ boundary namespaces, and remove `@open-hax/eta-mu-cli` from
 
 ```bash
 pnpm install
-pnpm --filter @open-hax/sol test && pnpm --filter @open-hax/sol lint:kondo
+pnpm --filter @eta-mu/sol test && pnpm --filter @eta-mu/sol lint:kondo
 pnpm build && pnpm test
 pm2 restart sol-backend && pm2 describe sol-backend | head -20
 git grep -c "eta-mu-cli" -- packages/sol  # → 0

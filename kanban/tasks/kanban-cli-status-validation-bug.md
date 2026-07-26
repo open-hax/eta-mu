@@ -19,7 +19,7 @@ created_at: "2026-07-16T00:00:00Z"
 against the canonical FSM state list
 (`packages/rheos/src/rheos/backend/law/fsm.cljs` :states —
 `icebox incoming accepted breakdown blocked ready todo in_progress testing
-review document done rejected`). It happily accepted `in_review` (not a real
+review document done rejected archived`). It happily accepted `in_review` (not a real
 state, and not even a valid transition target from `review` back to itself)
 for three cards, silently writing invalid frontmatter that the Rheos-hosted
 board couldn't render or transition out of ("done" was unreachable from

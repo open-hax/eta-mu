@@ -15,7 +15,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "shadow-cljs release server cli",
+    "build": "shadow-cljs release server cli app",
     "watch": "shadow-cljs watch server-dev",
     "start": "node dist/server.js",
     "start:dev": "node dist-dev/server.js",

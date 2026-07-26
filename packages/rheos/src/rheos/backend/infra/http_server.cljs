@@ -335,6 +335,37 @@
             (recur (dec n)))
         :else (throw err)))))
 
+(defn- ^:async dir-exists?
+  [dir]
+  (try
+    (.isDirectory (await (fsp/stat dir)))
+    (catch :default _ false)))
+
+(defn- asset-root-candidates
+  "Directories that may hold the packaged static assets, most specific first.
+
+   `process.cwd()` covers running from the package directory — dev, the systemd
+   unit, and `npm start` inside the package. The entry script's parent covers an
+   installed @eta-mu/rheos, where the consumer's cwd is their own project root
+   and the assets live next to `dist/`."
+  []
+  (let [entry (aget js/process.argv 1)]
+    (cond-> [(js/process.cwd)]
+      entry (conj (path/resolve (path/dirname entry) "..")))))
+
+(defn- ^:async resolve-asset-root
+  "First candidate root that actually contains `segments`, else nil.
+
+   Returning nil rather than a missing path lets the caller skip the static
+   registration — @fastify/static throws when its :root does not exist."
+  [& segments]
+  (loop [[dir & more] (asset-root-candidates)]
+    (when dir
+      (let [candidate (apply path/join dir segments)]
+        (if (await (dir-exists? candidate))
+          candidate
+          (recur more))))))
+
 (defn ^:async start-http!
   "Create a fresh Fastify app, bind routes, and listen. Stored in `server-state`
    so the hot-reload hooks can close and recreate it without disturbing the
@@ -344,13 +375,16 @@
   ;; their own, so Fastify's default close() would leave the port held. Forcing
   ;; them closed lets stop-http! free the port deterministically before re-listen.
   (let [^js app (Fastify. #js {:logger true :forceCloseConnections true})
-        current-dir (js/process.cwd)
-        static-dir (path/join current-dir "resources" "public")
-        js-dir (path/join current-dir "dist" "web" "js")]
+        static-dir (await (resolve-asset-root "resources" "public"))
+        js-dir (await (resolve-asset-root "dist" "web" "js"))]
     (await (.register app fastifyCors))
     ;; serve HTML/CSS from resources/public and the release JS bundle at /js
-    (await (.register app fastifyStatic #js {:root static-dir :prefix "/"}))
-    (await (.register app fastifyStatic #js {:root js-dir :prefix "/js" :decorateReply false}))
+    (if static-dir
+      (await (.register app fastifyStatic #js {:root static-dir :prefix "/"}))
+      (js/console.warn "[rheos] no resources/public found; serving the API only"))
+    (if js-dir
+      (await (.register app fastifyStatic #js {:root js-dir :prefix "/js" :decorateReply false}))
+      (js/console.warn "[rheos] no dist/web/js found; run the `app` build to serve the UI bundle"))
     (register-routes app)
     (await (listen-with-retry! app host port 5 250))
     (reset! server-state app)

@@ -76,4 +76,5 @@ From a kanban task card, spawn an eta-mu agent in a chat context. Agent receives
 Add AC checkboxes. Decide: wait for sol or build KnoxxChatSession as interim (~50 lines). Knoxx is already running.
 
 Board audit 2026-07-11 — moved to ready. sol-extraction is done; packages/sol/ is running. Prerequisites (chat-ui-extraction, kanban-chat-integration) are done. Card was blocked on sol which now exists. Ready to implement.
+
 ---

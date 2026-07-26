@@ -55,7 +55,7 @@ contracts to drift.
 
 ## Verification gate
 
-- [ ] `pnpm --filter @open-hax/sol test` (shadow compile test) green.
+- [ ] `pnpm --filter @eta-mu/sol test` (shadow compile test) green.
 - [ ] Rheos `shadow-cljs compile test` green.
 - [ ] `packages/{katamorph,event-ledger}` gone; `pnpm install` clean.
 - [ ] `git status` shows no accidental sweep of pre-existing unrelated dirty

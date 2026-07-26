@@ -22,7 +22,7 @@ created_at: "2026-07-17T00:00:00Z"
 
 Rheos is reachable as `eta-mu kanban ...` through a child-process bridge
 (`infra/cli/commands/kanban.cljs` resolving the rheos CLI). Sol currently
-has no CLI entry at all (`@open-hax/sol` declares no bin). Give sol a
+has no CLI entry at all (`@eta-mu/sol` declares no bin). Give sol a
 first-class surface under the eta-mu router so operators drive it the same
 way they drive the board.
 
@@ -71,7 +71,7 @@ env, else 8001) so lifecycle commands can target a non-default port.
   All process/fs I/O stays behind the existing `eta-mu.extern.*` boundary —
   no new extern surface was added (the packet's writable paths excluded
   `extern/`; a future `extern.child-process/resolve-sol-path` +
-  `@open-hax/sol` devDependency is the natural follow-up).
+  `@eta-mu/sol` devDependency is the natural follow-up).
 - `sol agent` goes IN-PROCESS (the reason this comment exists): sol's agent
   sessions *are* the turn-processor run-loop over `eta-mu.extern.openai`
   streaming with the eta-mu tool registry — see
@@ -134,7 +134,7 @@ process: not running
 health: unreachable at http://127.0.0.1:8017/health
 1
 $ SOL_SERVER_PATH=/nope/missing.js ... sol start ; echo $?
-eta-mu sol: @open-hax/sol is not built or installed. ...
+eta-mu sol: @eta-mu/sol is not built or installed. ...
 1
 ```
 

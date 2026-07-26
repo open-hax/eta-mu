@@ -41,19 +41,23 @@ legacy import.
 
 ## Definition of done
 
-- [ ] No `@open-hax/eta-mu-cli` or `typebox` import remains in
+- [x] No `@open-hax/eta-mu-cli` or `typebox` import remains in
       `mcp_tools.cljs`.
-- [ ] A test (or fixture-level assertion) builds an MCP tool against a
+- [x] A test (or fixture-level assertion) builds an MCP tool against a
       fake server and executes it through the new shape, asserting id,
       description, text collapse, and error mapping.
-- [ ] `pnpm --filter @open-hax/sol test` / `lint:kondo` green.
+- [x] `pnpm --filter @eta-mu/sol test` / `lint:kondo` green.
 
 ## Verification
 
 ```bash
-pnpm --filter @open-hax/sol test
-pnpm --filter @open-hax/sol lint:kondo
-git grep -n "eta-mu-cli\|typebox" -- packages/sol/src/cljs/open_hax/sol/infra/agent/mcp_tools.cljs || true  # → 0
+pnpm --filter @eta-mu/sol test
+pnpm --filter @eta-mu/sol lint:kondo
+
+# No legacy imports left. `git grep` exits 1 on no match and >1 on a real
+# error, so assert the no-match exit rather than swallowing every failure.
+git grep -q "eta-mu-cli\|typebox" -- packages/sol/src/cljs/open_hax/sol/infra/agent/mcp_tools.cljs; \
+  test $? -eq 1 || { echo "legacy import still present (or grep failed)"; false; }
 ```
 
 ## Decision record (2026-07-17, implementation pass)

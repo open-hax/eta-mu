@@ -224,18 +224,28 @@
         (println (str "  [fsm   ] " uuid " -> " to (if ok "" (str " REJECTED: " (subs (str (:err res)) 0 (min 200 (count (str (:err res)))))))))
         ok))))
 
+(defn- process-tail
+  "Diagnostic tail from a *derefed* process result. babashka.process only
+   populates :out/:err after deref, so this must never be handed the raw
+   process record."
+  [res]
+  (if (= res ::timeout)
+    "timed out"
+    (let [text (str/trim (str (:err res) (:out res)))]
+      (subs text 0 (min 200 (count text))))))
+
 (defn git-commit!
   "Path-scoped commit inside repo. Returns true when a commit was created."
   [repo paths message]
   (let [add (p/process (into ["git" "add" "--"] paths) {:dir repo :out :string :err :string :in ""})
         add-res (deref add 60000 ::timeout)]
     (if (or (= add-res ::timeout) (not (zero? (:exit add-res))))
-      (do (println "  [commit] git add failed") false)
+      (do (println (str "  [commit] git add failed: " (process-tail add-res))) false)
       (let [commit (p/process (into ["git" "commit" "--only" "-m" message "--"] paths)
                               {:dir repo :out :string :err :string :in ""})
             res (deref commit 60000 ::timeout)]
         (if (or (= res ::timeout) (not (zero? (:exit res))))
-          (do (println (str "  [commit] nothing committed: " (subs (str (:out commit)) 0 (min 200 (count (str (:out commit))))))) false)
+          (do (println (str "  [commit] nothing committed: " (process-tail res))) false)
           (do (println (str "  [commit] " message)) true))))))
 
 (defn implement-prompt [wf stage attempt gate-failures]

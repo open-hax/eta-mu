@@ -257,12 +257,16 @@
                                 :where {:type "string" :description "clause DSL, e.g. \"points in 1,2 and meta.tier = core\" (supports = , ~ regex, in, contains; meta.* fields)"}}}
     :handler tool-kanban-read-board}
    {:name "kanban_search_tasks"
-    :description "Search/filter tasks across projects; returns compact rows (uuid/title/status/priority/board). Combine `q` (title substring) with `projects`/`status`/`priority`/`labels` to scope. All optional — omit `q` to list by filter alone."
+    :description "Search/filter tasks across projects; returns compact rows (uuid/title/status/priority/board). Combine `q` (title substring) with `projects`/`status`/`priority`/`labels`/`domain`/`org`/`tier`/`where` to scope. All optional — omit `q` to list by filter alone."
     :input-schema {:type "object"
                    :properties {:query {:type "string" :description "title substring (alias of q)"}
                                 :q {:type "string"}
                                 :projects {:type "string"} :project {:type "string"}
-                                :status {:type "string"} :priority {:type "string"} :labels {:type "string"}}}
+                                :status {:type "string"} :priority {:type "string"} :labels {:type "string"}
+                                ;; Same shared filter surface as kanban_read_board — both
+                                ;; funnel through `compose-flags`, so the schemas stay in parity.
+                                :domain {:type "string"} :org {:type "string"} :tier {:type "string"}
+                                :where {:type "string" :description "clause DSL, e.g. \"points in 1,2 and meta.tier = core\" (supports = , ~ regex, in, contains; meta.* fields)"}}}
     :handler tool-kanban-search-tasks}
    {:name "kanban_list_projects"
     :description "List the projects this board composes: id, title, default flag, and meta. Use it to discover valid project ids before scoping a kanban_read_board / kanban_search_tasks call."

@@ -68,9 +68,11 @@
 (deftest git-commit-is-path-scoped
   (testing "the commit command excludes unrelated entries already staged"
     (let [calls (atom [])]
+      ;; git-commit! uses the 3-arity (deref p timeout-ms default), which needs an
+      ;; IBlockingDeref — a delay is not one, so stub with a delivered promise.
       (with-redefs [p/process (fn [argv _opts]
                                (swap! calls conj argv)
-                               (delay {:exit 0 :out "" :err ""}))]
+                               (doto (promise) (deliver {:exit 0 :out "" :err ""})))]
         (is (true? (git-commit! "." ["src/a.clj" "test/a_test.clj"] "scoped")))
         (is (= ["git" "commit" "--only" "-m" "scoped" "--"
                 "src/a.clj" "test/a_test.clj"]
