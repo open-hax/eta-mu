@@ -1,0 +1,180 @@
+{:workflow/id :finish-sol-cutover
+ :workflow/version 1
+ :workflow/source {:provider :opencode
+                   :epic "kanban/epics/sol-turn-processor-cutover.md"
+                   :requested-by "user 2026-07-17: start an ultra code workflow to finish the epic"}
+
+ :meta {:name "finish-sol-cutover"
+        :description "Implement the sol-turn-processor-cutover epic: 6 cards, implement -> gates -> review-wave -> repair -> promote, sequentially."
+        :phases [{:title "Implement" :detail "per-card bounded packets"}
+                 {:title "Review" :detail "adversarial lenses per landed card"}]}
+
+ :run {:model "kimi-for-coding/k3"
+       :dir "/home/err/spaces/eta-mu"
+       :agent-timeout-ms 1800000
+       :max-concurrency 4}
+
+ :vars {:repo "/home/err/spaces/eta-mu"}
+
+ :lens-prompts {:correctness "Hunt for real correctness bugs: logic errors, race conditions, broken edge cases, error paths that swallow or misreport failures, async bugs in ^:async/await code."
+                :architecture-law "Audit against the repo constitution in AGENTS.md: I/O only behind extern.* namespaces; domain.*/law.* pure; law schemas enforced at boundaries; no utils namespaces; zero-warning contract; modern ^:async style (no promise chains/core.async)."
+                :dod-coverage "Verify every Definition-of-done checkbox on the card against the actual code and tests. For each DoD item, name the exact test or evidence that satisfies it, or flag it unmet."}
+
+ :review-prompt "You are reviewing a ClojureScript change in the eta-mu repo ({repo}) against its kanban card.\n\nCard: read {card/path} in full (including comment history — earlier reviews may have already fixed things; do not re-report fixed items).\nRepo rules: read {repo}/AGENTS.md.\n{card/context}\n\nYour lens: {lens/prompt}\n\nRead the actual source files (and tests) relevant to your lens. Report ONLY findings that would matter to a maintainer deciding whether to promote this card from review to done. Do not report style preferences the repo doesn't legislate. If the dod-coverage lens, also fill dodVerdict with the per-item evidence table."
+
+ :verify-prompt "A code reviewer claims the following about the eta-mu repo ({repo}), card {card/path}:\n\nTITLE: {finding/title}\nFILE: {finding/file}\nCLAIM: {finding/detail}\nSEVERITY CLAIMED: {finding/severity}\n\nSkeptic pass #{vote/n}: try to REFUTE this. Read the actual code and card (including comment history — the card may already document this as an accepted tradeoff or fixed item). Refute if: the claim is factually wrong, the behavior is deliberate and documented, it is out of the card's delivered scope, or it is too minor to gate a review promotion. Default to refuted=true if uncertain."
+
+ :schemas
+ {:findings {:type "object"
+             :additionalProperties false
+             :properties {:findings {:type "array"
+                                     :items {:type "object"
+                                             :additionalProperties false
+                                             :properties {:title {:type "string"}
+                                                          :file {:type "string"}
+                                                          :detail {:type "string"}
+                                                          :severity {:type "string" :enum ["blocker" "should-fix" "nit"]}}
+                                             :required ["title" "file" "detail" "severity"]}}
+                          :dodVerdict {:type "string"}}
+             :required ["findings" "dodVerdict"]}
+  :verdict {:type "object"
+            :additionalProperties false
+            :properties {:refuted {:type "boolean"}
+                         :reason {:type "string"}}
+            :required ["refuted" "reason"]}}
+
+ :stages
+ [{:stage/id :session-adapter
+   :stage/kind :implement
+   :stage/uuid "sol-turn-processor-session-adapter"
+   :stage/from "breakdown"
+   :stage/card "kanban/tasks/sol-turn-processor-session-adapter.md"
+   :stage/agent "ultra-implementer"
+   :stage/read-first ["packages/sol/src/cljs/open_hax/sol/shape/agent.cljs"
+                      "packages/sol/src/cljs/open_hax/sol/extern/eta_mu.cljs"
+                      "packages/turn-processor/src/cljs/eta_mu/turn_processor/infra/loop.cljs"
+                      "packages/eta-mu/src/cljs/eta_mu/infra/session.cljs"]
+   :stage/packet {:read ["packages/sol/**" "packages/turn-processor/**" "packages/eta-mu/**"]
+                  :write ["packages/sol/src/cljs/open_hax/sol/infra/agent/"
+                          "packages/sol/test/"
+                          "packages/turn-processor/src/cljs/eta_mu/turn_processor/infra/loop.cljs"
+                          "packages/turn-processor/test/"
+                          "kanban/tasks/sol-turn-processor-session-adapter.md"]
+                  :forbid ["packages/legacy/**"]}
+   :stage/gates [{:cmd "pnpm --filter @open-hax/sol test" :dir "/home/err/spaces/eta-mu"}
+                 {:cmd "pnpm --filter @open-hax/sol lint:kondo" :dir "/home/err/spaces/eta-mu"}
+                 {:cmd "pnpm -C packages/turn-processor test" :dir "/home/err/spaces/eta-mu"}]
+   :stage/max-attempts 4
+   :stage/review {:lenses ["correctness" "architecture-law"] :votes 2 :quorum 2}
+   :stage/review-context "Implementation UNCOMMITTED in the working tree of /home/err/spaces/eta-mu. Inspect with: git -C /home/err/spaces/eta-mu diff -- packages/sol packages/turn-processor. Judge against the card's delivered scope."
+   :stage/commit {:paths ["packages/sol" "packages/turn-processor" "kanban/tasks/sol-turn-processor-session-adapter.md"]
+                  :message "sol: turn-processor session adapter (IAgentSession over run-loop)"}}
+
+  {:stage/id :settings-decoupling
+   :stage/kind :implement
+   :stage/uuid "sol-settings-model-decoupling"
+   :stage/from "breakdown"
+   :stage/card "kanban/tasks/sol-settings-model-decoupling.md"
+   :stage/agent "ultra-implementer"
+   :stage/read-first ["packages/sol/src/cljs/open_hax/sol/infra/agent/provider/eta_mu.cljs"
+                      "packages/sol/src/cljs/open_hax/sol/extern/eta_mu.cljs"
+                      "packages/sol/src/cljs/open_hax/sol/domain/models.cljs"]
+   :stage/packet {:read ["packages/sol/**" "packages/eta-mu/**"]
+                  :write ["packages/sol/src/cljs/" "packages/sol/test/" "kanban/tasks/sol-settings-model-decoupling.md"]
+                  :forbid ["packages/legacy/**"]}
+   :stage/gates [{:cmd "pnpm --filter @open-hax/sol test" :dir "/home/err/spaces/eta-mu"}
+                 {:cmd "pnpm --filter @open-hax/sol lint:kondo" :dir "/home/err/spaces/eta-mu"}]
+   :stage/max-attempts 4
+   :stage/review {:lenses ["correctness" "dod-coverage"] :votes 2 :quorum 2}
+   :stage/review-context "Implementation UNCOMMITTED in the working tree of /home/err/spaces/eta-mu. Inspect with: git -C /home/err/spaces/eta-mu diff -- packages/sol. Judge against the card's delivered scope."
+   :stage/commit {:paths ["packages/sol" "kanban/tasks/sol-settings-model-decoupling.md"]
+                  :message "sol: settings/auth/model decoupling (settings.edn + env tokens + plain model config)"}}
+
+  {:stage/id :mcp-tools
+   :stage/kind :implement
+   :stage/uuid "sol-mcp-tools-new-tool-shape"
+   :stage/from "breakdown"
+   :stage/card "kanban/tasks/sol-mcp-tools-new-tool-shape.md"
+   :stage/agent "ultra-implementer"
+   :stage/read-first ["packages/sol/src/cljs/open_hax/sol/infra/agent/mcp_tools.cljs"
+                      "packages/eta-mu/src/cljs/eta_mu/law/tools.cljs"
+                      "packages/eta-mu/src/cljs/eta_mu/infra/tools/registry.cljs"]
+   :stage/packet {:read ["packages/sol/**" "packages/eta-mu/**" "packages/turn-processor/**"]
+                  :write ["packages/sol/src/cljs/open_hax/sol/infra/agent/mcp_tools.cljs"
+                          "packages/sol/test/"
+                          "kanban/tasks/sol-mcp-tools-new-tool-shape.md"]
+                  :forbid ["packages/legacy/**"]}
+   :stage/gates [{:cmd "pnpm --filter @open-hax/sol test" :dir "/home/err/spaces/eta-mu"}
+                 {:cmd "pnpm --filter @open-hax/sol lint:kondo" :dir "/home/err/spaces/eta-mu"}
+                 {:cmd "bash -c '! git grep -q \"eta-mu-cli\\|typebox\" -- packages/sol/src/cljs/open_hax/sol/infra/agent/mcp_tools.cljs'" :dir "/home/err/spaces/eta-mu"}]
+   :stage/max-attempts 3
+   :stage/review {:lenses ["correctness"] :votes 2 :quorum 2}
+   :stage/review-context "Implementation UNCOMMITTED in the working tree of /home/err/spaces/eta-mu. Inspect with: git -C /home/err/spaces/eta-mu diff -- packages/sol. Judge against the card's delivered scope."
+   :stage/commit {:paths ["packages/sol" "kanban/tasks/sol-mcp-tools-new-tool-shape.md"]
+                  :message "sol: MCP tools on the turn-processor/eta-mu tool shape (drop legacy defineTool)"}}
+
+  {:stage/id :provider-swap
+   :stage/kind :implement
+   :stage/uuid "sol-provider-swap-legacy-drop"
+   :stage/from "blocked"
+   :stage/card "kanban/tasks/sol-provider-swap-legacy-drop.md"
+   :stage/agent "ultra-implementer"
+   :stage/read-first ["packages/sol/src/cljs/open_hax/sol/infra/agent/provider/eta_mu.cljs"
+                      "packages/sol/src/cljs/open_hax/sol/infra/agent/runtime.cljs"
+                      "packages/sol/src/cljs/open_hax/sol/infra/agent/service.cljs"]
+   :stage/packet {:read ["packages/sol/**" "packages/eta-mu/**" "packages/turn-processor/**"]
+                  :write ["packages/sol/" "kanban/tasks/sol-provider-swap-legacy-drop.md"]
+                  :forbid ["packages/legacy/**"]}
+   :stage/gates [{:cmd "pnpm --filter @open-hax/sol test" :dir "/home/err/spaces/eta-mu"}
+                 {:cmd "pnpm --filter @open-hax/sol lint:kondo" :dir "/home/err/spaces/eta-mu"}
+                 {:cmd "bash -c '! git grep -q \"eta-mu-cli\" -- packages/sol'" :dir "/home/err/spaces/eta-mu"}
+                 {:cmd "pnpm build" :dir "/home/err/spaces/eta-mu"}]
+   :stage/max-attempts 4
+   :stage/review {:lenses ["correctness" "architecture-law"] :votes 2 :quorum 2}
+   :stage/review-context "Implementation UNCOMMITTED in the working tree of /home/err/spaces/eta-mu. Inspect with: git -C /home/err/spaces/eta-mu diff -- packages/sol. The legacy boundary namespaces (sol/extern/eta_mu.cljs, sol/infra/agent/provider/eta_mu.cljs) are deleted by this card. Judge against the card's delivered scope."
+   :stage/commit {:paths ["packages/sol" "kanban/tasks/sol-provider-swap-legacy-drop.md"]
+                  :message "sol: provider swap to turn-processor adapter; legacy boundary and eta-mu-cli dep dropped"}}
+
+  {:stage/id :sol-command
+   :stage/kind :implement
+   :stage/uuid "eta-mu-sol-command"
+   :stage/from "blocked"
+   :stage/card "kanban/tasks/eta-mu-sol-command.md"
+   :stage/agent "ultra-implementer"
+   :stage/read-first ["packages/eta-mu/src/cljs/eta_mu/infra/cli/router.cljs"
+                      "packages/eta-mu/src/cljs/eta_mu/infra/cli/commands/kanban.cljs"
+                      "packages/eta-mu/src/cljs/eta_mu/extern/child_process.cljs"]
+   :stage/packet {:read ["packages/eta-mu/**" "packages/sol/**"]
+                  :write ["packages/eta-mu/src/cljs/eta_mu/infra/cli/"
+                          "packages/eta-mu/test/cljs/eta_mu/infra/cli/"
+                          "packages/eta-mu/test-e2e/cljs/"
+                          "kanban/tasks/eta-mu-sol-command.md"]
+                  :forbid ["packages/legacy/**"]}
+   :stage/gates [{:cmd "pnpm -C packages/eta-mu test" :dir "/home/err/spaces/eta-mu"}
+                 {:cmd "pnpm -C packages/eta-mu lint:kondo" :dir "/home/err/spaces/eta-mu"}
+                 {:cmd "pnpm -C packages/eta-mu test:e2e" :dir "/home/err/spaces/eta-mu"}]
+   :stage/max-attempts 4
+   :stage/review {:lenses ["correctness" "dod-coverage"] :votes 2 :quorum 2}
+   :stage/review-context "Implementation UNCOMMITTED in the working tree of /home/err/spaces/eta-mu. Inspect with: git -C /home/err/spaces/eta-mu diff -- packages/eta-mu. Judge against the card's delivered scope."
+   :stage/commit {:paths ["packages/eta-mu" "kanban/tasks/eta-mu-sol-command.md"]
+                  :message "eta-mu sol: CLI surface for sol lifecycle and agent turns"}}
+
+  {:stage/id :verification
+   :stage/kind :implement
+   :stage/uuid "sol-cutover-verification"
+   :stage/from "blocked"
+   :stage/card "kanban/tasks/sol-cutover-verification.md"
+   :stage/agent "ultra-implementer"
+   :stage/read-first ["kanban/tasks/sol-cutover-verification.md"
+                      "kanban/tasks/coding-agent-cljs-rewrite-cutover-ratchet.md"]
+   :stage/extra-instructions "This is a verification card: produce the evidence, do not restructure code. Run an ultracode review wave over the sol decoupling by generating a single-card variant workflow (`.ημ/workflows/review-sol-cutover.edn`, model kimi-for-coding/k3) and running `bb scripts/ultra.bb run` on it; exercise `eta-mu sol agent` against a mock SSE server if the CLI is built; restart sol-backend under pm2 (pm2 restart sol-backend || pm2 start packages/sol/dist/server.js --name sol-backend) and record the health check; comment the evidence onto the card via `node packages/eta-mu/dist-cli/index.cjs kanban comment sol-cutover-verification \"...\"` and onto coding-agent-cljs-rewrite-cutover-ratchet recording that the sol blocker is resolved. If a proof is impossible in this environment, record the exact blocker instead of claiming success."
+   :stage/packet {:read ["packages/sol/**" "packages/eta-mu/**" ".ημ/**" "kanban/**"]
+                  :write [".ημ/workflows/" ".ημ/runs/" "kanban/tasks/sol-cutover-verification.md" "kanban/tasks/coding-agent-cljs-rewrite-cutover-ratchet.md"]
+                  :forbid ["packages/legacy/**"]}
+   :stage/gates [{:cmd "pnpm --filter @open-hax/sol test" :dir "/home/err/spaces/eta-mu"}
+                 {:cmd "bash -c '! git grep -q \"eta-mu-cli\" -- packages/sol'" :dir "/home/err/spaces/eta-mu"}]
+   :stage/max-attempts 3
+   :stage/commit {:paths [".ημ/workflows" ".ημ/runs" "kanban/tasks/sol-cutover-verification.md" "kanban/tasks/coding-agent-cljs-rewrite-cutover-ratchet.md"]
+                  :message "sol: cutover verification evidence + cutover-ratchet sol blocker resolved"}}]
+
+ :return {:report :per-stage-status}}

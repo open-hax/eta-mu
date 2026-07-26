@@ -15,13 +15,18 @@
 
 (defn- proxx-models-url
   [config]
-  (let [base (str (:proxx-base-url config))
-        base (str/trim base)
-        base (cond
-               (str/ends-with? base "/v1") base
-               (str/ends-with? base "/") (str base "v1")
-               :else (str base "/v1"))]
-    (str base "/models")))
+  (if-let [endpoint (some-> (:proxx-models-endpoint config) str str/trim not-empty)]
+    ;; contract-declared endpoint (ProviderContract :provider/models-endpoint)
+    ;; is a full path relative to the provider base-url
+    (let [base (-> (str (:proxx-base-url config)) str/trim (str/replace #"/+$" ""))]
+      (str base (if (str/starts-with? endpoint "/") endpoint (str "/" endpoint))))
+    (let [base (str (:proxx-base-url config))
+          base (str/trim base)
+          base (cond
+                 (str/ends-with? base "/v1") base
+                 (str/ends-with? base "/") (str base "v1")
+                 :else (str base "/v1"))]
+      (str base "/models"))))
 
 (defn ^:async fetch-proxx-model-ids!
   "Fetch available model ids from Proxx /v1/models.

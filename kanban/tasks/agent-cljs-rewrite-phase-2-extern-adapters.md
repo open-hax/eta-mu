@@ -1,15 +1,16 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "rewrite", "agent"]
-write-id: "1783693258835-0.p1dtibid4bxkc4u5rx"
+write-id: "1784497552725-0.xup0dgnx8r8s3s5yvo"
 points: "3"
 source: "kanban/epics/agent-cljs-rewrite.md"
 title: "Agent CLJS Rewrite — Boundary Adapters"
 priority: "P0"
-status: icebox
+status: "incoming"
 uuid: "agent-cljs-rewrite-phase-2-extern-adapters"
 created_at: "2026-06-15T00:00:00Z"
 ---
+
 # Agent CLJS Rewrite — Boundary Adapters
 
 > Parent epic: `kanban/epics/agent-cljs-rewrite.md`

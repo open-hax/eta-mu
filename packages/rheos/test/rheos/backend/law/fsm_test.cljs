@@ -11,6 +11,10 @@
     (is (= fsm/promethean-fsm result))
     (is (= 14 (count (:states result))))))
 
+(deftest resolve-fsm-unsupported-map-falls-back
+  (is (= fsm/default-fsm
+         (fsm/resolve-fsm {:fsm {:states ["not-a-supported-overlay"]}}))))
+
 (deftest evaluate-valid-transition
   (is (:allowed? (fsm/evaluate-transition fsm/default-fsm "incoming" "breakdown" {}))))
 

@@ -173,39 +173,65 @@
 
 ;; --- Network pump ---------------------------------------------------------
 
+(defn- abort-error?
+  [error signal]
+  (boolean
+   (or (and signal (.-aborted signal))
+       (= "AbortError" (some-> error .-name)))))
+
+(defn- ^:async read-next!
+  "Read one network chunk without allowing a rejected reader Promise to
+  escape the stream abstraction."
+  [reader signal]
+  (try
+    {:result (await (.read reader))}
+    (catch :default error
+      {:error error
+       :aborted? (abort-error? error signal)})))
+
 (defn- ^:async pull-network!
   "Read from the SSE reader until at least one event is queued or the
   network stream ends. Returns `true` if the network is exhausted."
-  [reader decoder acc-atom queue model-id buffer-atom]
+  [reader decoder acc-atom queue model-id buffer-atom signal
+   aborted-atom network-error-atom]
   (loop []
     (if (seq queue)
       false
-      (let [result (await (.read reader))]
-        (if (.-done result)
+      (let [{:keys [result error aborted?]} (await (read-next! reader signal))]
+        (if error
           (do
-            ;; best-effort: fold a trailing block with no terminating blank line
-            (when-let [payload (block->payload @buffer-atom)]
-              (let [chunk (payload->chunk payload)]
-                (when (and (map? chunk) (not= chunk ::done))
-                  (apply-chunk! acc-atom queue model-id chunk))))
+            (if aborted?
+              (reset! aborted-atom true)
+              (reset! network-error-atom error))
             true)
-          (let [text (.decode decoder (.-value result) #js {:stream true})
-                [blocks remainder] (split-sse-blocks (str @buffer-atom text))]
-            (reset! buffer-atom remainder)
-            (doseq [block blocks]
-              (when-let [payload (block->payload block)]
+          (if (.-done result)
+            (do
+              ;; best-effort: fold a trailing block with no terminating blank line
+              (when-let [payload (block->payload @buffer-atom)]
                 (let [chunk (payload->chunk payload)]
-                  (when (map? chunk) (apply-chunk! acc-atom queue model-id chunk)))))
-            (recur)))))))
+                  (when (and (map? chunk) (not= chunk ::done))
+                    (apply-chunk! acc-atom queue model-id chunk))))
+              true)
+            (let [text (.decode decoder (.-value result) #js {:stream true})
+                  [blocks remainder] (split-sse-blocks (str @buffer-atom text))]
+              (reset! buffer-atom remainder)
+              (doseq [block blocks]
+                (when-let [payload (block->payload block)]
+                  (let [chunk (payload->chunk payload)]
+                    (when (map? chunk) (apply-chunk! acc-atom queue model-id chunk)))))
+              (recur))))))))
 
 (defn- ^:async drain-events!
   "Pull from the network until `state`'s queue is non-empty or the network
   is exhausted. Returns `true` once the network is exhausted."
   [state]
-  (let [{:keys [reader decoder acc-atom queue model-id buffer-atom network-done-atom]} state]
+  (let [{:keys [reader decoder acc-atom queue model-id buffer-atom signal
+                network-done-atom aborted-atom network-error-atom]} state]
     (if @network-done-atom
       true
-      (let [done? (await (pull-network! reader decoder acc-atom queue model-id buffer-atom))]
+      (let [done? (await (pull-network! reader decoder acc-atom queue model-id
+                                        buffer-atom signal aborted-atom
+                                        network-error-atom))]
         (reset! network-done-atom done?)
         done?))))
 
@@ -213,12 +239,25 @@
   "Keep pulling from the network (discarding any queued events) until it is
   exhausted, then return the final accumulated AssistantMessage."
   [state]
-  (let [{:keys [queue model-id acc-atom network-done-atom]} state]
+  (let [{:keys [queue model-id acc-atom network-done-atom
+                aborted-atom network-error-atom]} state]
     (loop []
       (if @network-done-atom
-        (shape.msg/openai-response->assistant-message
-         (accumulator->response @acc-atom model-id)
-         {:api "openai" :provider "openai" :model model-id})
+        (cond
+          @aborted-atom
+          (assoc (partial-message @acc-atom model-id)
+                 :stop-reason :aborted)
+
+          @network-error-atom
+          (let [error @network-error-atom]
+            (shape.msg/openai-error-message
+             {:message (or (.-message error) (str error))}
+             {:model model-id}))
+
+          :else
+          (shape.msg/openai-response->assistant-message
+           (accumulator->response @acc-atom model-id)
+           {:api "openai" :provider "openai" :model model-id}))
         (do (await (drain-events! state))
             (.splice queue 0)
             (recur))))))
@@ -232,7 +271,7 @@
 (defn- sse-stream
   "Build a turn-processor-compatible stream that reads and parses SSE chunks
   from `response` as they arrive."
-  [response model-id]
+  [response model-id signal]
   (let [queue #js []
         state {:reader (.getReader (.-body response))
                :decoder (js/TextDecoder.)
@@ -240,7 +279,10 @@
                :queue queue
                :model-id model-id
                :buffer-atom (atom "")
-               :network-done-atom (atom false)}]
+               :signal signal
+               :network-done-atom (atom false)
+               :aborted-atom (atom false)
+               :network-error-atom (atom nil)}]
     ;; Seed a `:start` event up front so `message_start` fires immediately,
     ;; before the first real content/tool-call delta arrives.
     (.push queue (event "start" (partial-message (new-accumulator) model-id)))
@@ -252,18 +294,20 @@
 (defn- ^:async post-chat
   "POST to the chat-completions endpoint with `stream: true` and return the
   raw fetch Response (not yet read)."
-  [base-url auth-token model messages tools]
+  [base-url auth-token model messages tools signal]
   (let [body (cond-> {:model (:id model)
                          :messages (clj->js messages)
                          :stream true
                          :stream_options {:include_usage true}}
                  (seq tools) (assoc :tools (clj->js tools)))
         headers (cond-> {"Content-Type" "application/json"}
-                  auth-token (assoc "Authorization" (str "Bearer " auth-token)))]
-    (await (js/fetch base-url
-                     #js {:method "POST"
-                          :headers (clj->js headers)
-                          :body (js/JSON.stringify (clj->js body))}))))
+                  auth-token (assoc "Authorization" (str "Bearer " auth-token)))
+        request #js {:method "POST"
+                     :headers (clj->js headers)
+                     :body (js/JSON.stringify (clj->js body))}]
+    (when signal
+      (aset request "signal" signal))
+    (await (js/fetch base-url request))))
 
 (defn ^:async stream-chat
   "Create a turn-processor-compatible stream from an OpenAI-compatible chat-completions call.
@@ -271,16 +315,24 @@
   `model` is a map `{:id string :provider string}`.
   `llm-context` is `{:system-prompt string :messages [...] :tools [...]}`.
   `options` may contain:
-    :api-key    — Bearer token (falls back to OPENAI_AUTH_TOKEN, then OPENAI_API_KEY)
+    :api-key    — Bearer token (custom endpoints may instead use
+                  OPENAI_BASE_URL_API_KEY; the default endpoint falls back to
+                  OPENAI_AUTH_TOKEN, then OPENAI_API_KEY)
     :base-url   — full endpoint URL (falls back to OPENAI_BASE_URL,
-                  then https://api.openai.com/v1/chat/completions)"
+                  then https://api.openai.com/v1/chat/completions)
+    :signal     — AbortSignal forwarded to fetch"
   [model llm-context options]
   (let [base-url (or (:base-url options)
                      (process/env "OPENAI_BASE_URL")
                      default-base-url)
+        custom-endpoint? (not= base-url default-base-url)
         auth-token (or (:api-key options)
-                       (process/env "OPENAI_AUTH_TOKEN")
-                       (process/env "OPENAI_API_KEY"))]
+                       (if custom-endpoint?
+                         ;; A custom endpoint must opt into its own credential;
+                         ;; never reuse ambient OpenAI secrets for it.
+                         (process/env "OPENAI_BASE_URL_API_KEY")
+                         (or (process/env "OPENAI_AUTH_TOKEN")
+                             (process/env "OPENAI_API_KEY"))))]
     (if (and (nil? auth-token) (= base-url default-base-url))
       (done-stream (shape.msg/openai-error-message (no-provider-configured-message model) {:model (:id model)}))
       (let [system-prompt (:system-prompt llm-context)
@@ -290,9 +342,10 @@
                        messages)
             tools (shape.tool/tools->openai (:tools llm-context))]
         (try
-          (let [response (await (post-chat base-url auth-token model messages tools))]
+          (let [response (await (post-chat base-url auth-token model messages tools
+                                           (:signal options)))]
             (if (.-ok response)
-              (sse-stream response (:id model))
+              (sse-stream response (:id model) (:signal options))
               (let [error (js->clj (await (.json response)) :keywordize-keys true)]
                 (done-stream (shape.msg/openai-error-message
                               {:message (str "LLM API error: " (pr-str error))}

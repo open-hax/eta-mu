@@ -112,6 +112,36 @@
      :input (normalize-input-kind-seq (:model/input contract))
      :label (some-> (:model/label contract) str str/trim not-empty)}))
 
+(defn- normalize-provider-contract
+  [contract]
+  (when-let [provider-id (normalize-provider-id (:provider/id contract))]
+    {:id provider-id
+     :label (some-> (:provider/label contract) str str/trim not-empty)
+     :base-url (some-> (:provider/base-url contract) str str/trim not-empty)
+     :api-shape (some-> (:provider/api-shape contract) name str/trim not-empty)
+     :auth-mode (some-> (get-in contract [:provider/auth :auth/mode]) name)
+     :auth-env (some-> (get-in contract [:provider/auth :auth/env]) str str/trim not-empty)
+     :models-endpoint (some-> (:provider/models-endpoint contract) str str/trim not-empty)
+     :prefix-allowlist (normalize-string-seq (:provider/model-prefix-allowlist contract))}))
+
+(defn provider-contracts
+  [config]
+  (->> (contract-loader/load-all-contracts-sync config)
+       (filter #(= "providers" (:contractClass %)))
+       (map :contract)
+       (map normalize-provider-contract)
+       (remove nil?)
+       vec))
+
+(defn resolve-provider-contract
+  [config provider-id]
+  (let [wanted (normalize-provider-id provider-id)]
+    (when wanted
+      (some (fn [contract]
+              (when (= wanted (:id contract))
+                contract))
+            (provider-contracts config)))))
+
 (defn model-family-contracts
   [config]
   (->> (contract-loader/load-all-contracts-sync config)
@@ -311,7 +341,8 @@
 
 (defn- provider-settings-map
   [config]
-  (let [configured-base-urls (or (:provider-base-urls config) {})
+  (let [proxx-contract (resolve-provider-contract config "proxx")
+        configured-base-urls (or (:provider-base-urls config) {})
         configured-auth-tokens (or (:provider-auth-tokens config) {})
         configured-auth-headers (or (:provider-auth-headers config) {})
         configured-provider-ids (->> (concat (keys configured-base-urls)
@@ -336,7 +367,9 @@
                                      configured-provider-ids)]
     (merge
      {"proxx" {:baseUrl (provider-openai-base-url (:proxx-base-url config))
-                :apiKey "PROXX_AUTH_TOKEN"
+                ;; env-var NAME the runtime reads the key from — the contract
+                ;; may rename it (:provider/auth :auth/env); never a secret value
+                :apiKey (or (:auth-env proxx-contract) "PROXX_AUTH_TOKEN")
                 :authHeader true
                 :compat proxx-affinity-compat}}
      configured-providers)))
@@ -404,6 +437,34 @@
                               models-by-provider)]
      {:providers providers})))
 
+(defn chat-completions-url
+  "Compose the full OpenAI chat-completions endpoint from a normalized /v1
+   base URL (see provider-openai-base-url). Returns nil for a blank base."
+  [base-url]
+  (let [base (some-> base-url str str/trim not-empty)]
+    (when base
+      (str base "/chat/completions"))))
+
+(defn- provider-model-entry
+  [models-data provider-id model-id]
+  (let [provider-name (normalize-provider-id provider-id)
+        wanted (some-> model-id str str/trim not-empty)]
+    (when (and provider-name wanted)
+      (when-let [entry (some (fn [model]
+                               (when (= wanted (:id model))
+                                 model))
+                             (get-in models-data [:providers (keyword provider-name) :models]))]
+        (assoc entry :provider provider-name)))))
+
+(defn find-model
+  "Plain lookup over models.json data with the legacy ModelRegistry fallback
+   chain: explicit provider, then proxx, then the proxx fallback id. Returns
+   the model entry with its :provider attached, or nil when nothing matches."
+  [models-data provider-id model-id fallback-model-id]
+  (or (provider-model-entry models-data provider-id model-id)
+      (provider-model-entry models-data "proxx" model-id)
+      (provider-model-entry models-data "proxx" fallback-model-id)))
+
 (defn- default-model-from-contracts
   [config]
   (or (some->> (model-contracts config)
@@ -412,17 +473,54 @@
                          (:id contract)))))
       (some-> (model-contracts config) first :id)))
 
-(defn enrich-config
-  "Augment an env-only config map with derived model config fields.
+(defn- env-var-set?
+  [env-lookup env-name]
+  (some? (env-lookup env-name)))
 
-   Keeps open-hax.sol.infra.config strictly env-only, while ensuring legacy
-   call sites continue to find these keys."
-  [config]
+(declare enrich-config*)
+
+(defn enrich-config
+  "Augment an env-only config map with derived model/provider config fields.
+
+   Provider fields resolve contract-first: an explicitly SET env var wins,
+   then the :provider contract (katamorph ProviderContract, loaded from the
+   contract tree), then the built-in default — so env-only deployments keep
+   working unchanged when no provider contract is present.
+
+   Sol-specific overrides use SOL_* names. The former KNOXX_* allowlist name
+   remains a lower-priority compatibility fallback. Environment access is
+   injected so this domain namespace stays deterministic and host-independent."
+  ([config]
+   (enrich-config config (constantly nil)))
+  ([config env-lookup]
+   (let [proxx-contract (resolve-provider-contract config "proxx")]
+     (cond-> (enrich-config* config proxx-contract env-lookup)
+       (and (:base-url proxx-contract)
+            (not (env-var-set? env-lookup "PROXX_BASE_URL")))
+       (assoc :proxx-base-url (:base-url proxx-contract))
+
+       (and (:auth-env proxx-contract)
+            (not (env-var-set? env-lookup "PROXX_AUTH_TOKEN")))
+       (assoc :proxx-auth-token
+              (or (some-> (env-lookup (:auth-env proxx-contract))
+                          str str/trim not-empty)
+                  (:proxx-auth-token config)))
+
+       (and (:models-endpoint proxx-contract)
+            (not (:proxx-models-endpoint config)))
+       (assoc :proxx-models-endpoint (:models-endpoint proxx-contract))))))
+
+(defn- enrich-config*
+  [config proxx-contract env-lookup]
   (merge
    {:model-prefix-allowlist
-    (parse-prefix-allowlist
-     (or (:model-prefix-allowlist config)
-         (aget js/process.env "KNOXX_MODEL_PREFIX_ALLOWLIST")
+    (or (some-> (or (:model-prefix-allowlist config)
+                    (env-lookup "SOL_MODEL_PREFIX_ALLOWLIST")
+                    (env-lookup "KNOXX_MODEL_PREFIX_ALLOWLIST"))
+                parse-prefix-allowlist
+                not-empty)
+        (not-empty (:prefix-allowlist proxx-contract))
+        (parse-prefix-allowlist
          "glm-5,gpt-5,qwen3,gemma4:,gemma3:,deepseek,kimi-k2,nemotron,cogito,devstral,minimax,ministral,mistral-large"))
 
     :proxx-default-model
@@ -433,17 +531,17 @@
     :agent-thinking-level
     (or (normalize-thinking-level
          (or (:agent-thinking-level config)
-             (aget js/process.env "KNOXX_THINKING_LEVEL")
+             (env-lookup "KNOXX_THINKING_LEVEL")
              "off"))
         "off")
 
     :reasoning-model-prefixes
     (or (:reasoning-model-prefixes config)
-        (aget js/process.env "KNOXX_REASONING_MODEL_PREFIXES")
+        (env-lookup "KNOXX_REASONING_MODEL_PREFIXES")
         "glm-")
 
     :responses-model-prefixes
     (or (:responses-model-prefixes config)
-        (aget js/process.env "KNOXX_RESPONSES_MODEL_PREFIXES")
+        (env-lookup "KNOXX_RESPONSES_MODEL_PREFIXES")
         "gpt-")}
    config))

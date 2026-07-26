@@ -95,19 +95,53 @@
       (:wip-limits fsm {})
       {})))
 
-(defn- ^:async tool-kanban-read-board [{:keys [project]}]
-  (let [proj (projects/find-project project)
-        snapshot (await (compose/compose-snapshot (projects/all) (compose/parse-compose-query {})))]
-    (assoc (snapshot->summary snapshot)
-           :wip-limits (project->wip-limits proj))))
+(defn- compose-flags
+  "Build a parse-compose-query flag map from MCP tool args. Every key maps
+   straight onto the same query DSL the CLI (`cmd-compose`) and HTTP
+   (`handle-compose`) surfaces already use, so all three stay in parity.
 
-(defn- ^:async tool-kanban-search-tasks [{:keys [query]}]
-  (let [snap (await (compose/compose-snapshot (projects/all) (compose/parse-compose-query {:q query})))]
+   `project` (singular) is a convenience alias for `projects` scoping; `q`
+   and `query` are aliases for the title-substring filter."
+  [{:keys [project projects status priority labels q query domain org tier where]}]
+  (cond-> {}
+    (or projects project) (assoc "projects" (or projects project))
+    status       (assoc "status" status)
+    priority     (assoc "priority" priority)
+    labels       (assoc "labels" labels)
+    (or q query) (assoc "q" (or q query))
+    domain       (assoc "domain" domain)
+    org          (assoc "org" org)
+    tier         (assoc "tier" tier)
+    where        (assoc "where" where)))
+
+(defn- ^:async tool-kanban-read-board [{:keys [project] :as args}]
+  (let [snapshot (await (compose/compose-snapshot
+                         (projects/all)
+                         (compose/parse-compose-query (compose-flags args))))]
+    (assoc (snapshot->summary snapshot)
+           ;; WIP limits are per-project — only meaningful for a single-project
+           ;; view. Report them when a single `project` is named; a cross-project
+           ;; composition has no single WIP set.
+           :wip-limits (if project
+                         (project->wip-limits (projects/find-project project))
+                         {}))))
+
+(defn- ^:async tool-kanban-search-tasks [args]
+  (let [snap (await (compose/compose-snapshot
+                     (projects/all)
+                     (compose/parse-compose-query (compose-flags args))))]
     {:matches (->> (:columns snap)
                    (mapcat (fn [c] (mapv (fn [t] {:uuid (:uuid t) :title (:title t) :status (:status c)
                                                   :priority (:priority t) :board (:source-board t)})
                                          (:tasks c))))
                    vec)}))
+
+(defn- tool-kanban-list-projects [_]
+  {:projects (mapv (fn [p] {:id (:id p)
+                            :title (:title p)
+                            :default (= (:id p) (projects/default-id))
+                            :meta (:meta p)})
+                   (projects/all))})
 
 (defn- ^:async load-task [project uuid]
   (let [all (await (tasks/load-tasks (:tasks-dir project)))]
@@ -211,13 +245,33 @@
                    :required ["path"]}
     :handler tool-project-read}
    {:name "kanban_read_board"
-    :description "Read the composed board: columns, per-column counts, tasks (uuid/title/priority/board), and WIP limits."
-    :input-schema {:type "object" :properties {:project {:type "string"}}}
+    :description "Read the composed board (columns, counts, tasks, WIP limits). SCOPE IT: pass `project` (one id) or `projects` (comma-separated ids); with neither it composes EVERY project (epiphany, eta-mu, proxx, truth) and is very large. Also filters by status/priority/labels/q and meta (domain/org/tier) or a `where` clause — the same query DSL the CLI and HTTP compose surfaces use. Call kanban_list_projects first if you don't know the project ids."
+    :input-schema {:type "object"
+                   :properties {:project {:type "string" :description "single project id — scopes the board and reports that project's WIP limits"}
+                                :projects {:type "string" :description "comma-separated project ids to include (cross-project view)"}
+                                :status {:type "string" :description "comma-separated statuses, e.g. \"in_progress,review\""}
+                                :priority {:type "string" :description "comma-separated priorities, e.g. \"P0,P1\""}
+                                :labels {:type "string" :description "comma-separated labels (matched with AND)"}
+                                :q {:type "string" :description "title substring match"}
+                                :domain {:type "string"} :org {:type "string"} :tier {:type "string"}
+                                :where {:type "string" :description "clause DSL, e.g. \"points in 1,2 and meta.tier = core\" (supports = , ~ regex, in, contains; meta.* fields)"}}}
     :handler tool-kanban-read-board}
    {:name "kanban_search_tasks"
-    :description "Search tasks across all boards by text query. Returns matching tasks (uuid/title/status/board)."
-    :input-schema {:type "object" :properties {:query {:type "string"}} :required ["query"]}
+    :description "Search/filter tasks across projects; returns compact rows (uuid/title/status/priority/board). Combine `q` (title substring) with `projects`/`status`/`priority`/`labels`/`domain`/`org`/`tier`/`where` to scope. All optional — omit `q` to list by filter alone."
+    :input-schema {:type "object"
+                   :properties {:query {:type "string" :description "title substring (alias of q)"}
+                                :q {:type "string"}
+                                :projects {:type "string"} :project {:type "string"}
+                                :status {:type "string"} :priority {:type "string"} :labels {:type "string"}
+                                ;; Same shared filter surface as kanban_read_board — both
+                                ;; funnel through `compose-flags`, so the schemas stay in parity.
+                                :domain {:type "string"} :org {:type "string"} :tier {:type "string"}
+                                :where {:type "string" :description "clause DSL, e.g. \"points in 1,2 and meta.tier = core\" (supports = , ~ regex, in, contains; meta.* fields)"}}}
     :handler tool-kanban-search-tasks}
+   {:name "kanban_list_projects"
+    :description "List the projects this board composes: id, title, default flag, and meta. Use it to discover valid project ids before scoping a kanban_read_board / kanban_search_tasks call."
+    :input-schema {:type "object" :properties {}}
+    :handler tool-kanban-list-projects}
    {:name "kanban_read_task"
     :description "Read one task's full content (frontmatter + body + comments) by uuid."
     :input-schema {:type "object"
@@ -251,7 +305,8 @@
    "kanban-create-subtask" "kanban_create_subtask"
    "kanban-read-task" "kanban_read_task"
    "kanban-search-tasks" "kanban_search_tasks"
-   "kanban-read-board" "kanban_read_board"})
+   "kanban-read-board" "kanban_read_board"
+   "kanban-list-projects" "kanban_list_projects"})
 
 (def ^:private by-name (into {} (map (juxt :name identity)) tools))
 

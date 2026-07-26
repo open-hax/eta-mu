@@ -11,10 +11,11 @@
             [eta-mu.infra.cli.commands.git :as git]
             [eta-mu.infra.cli.commands.kanban :as kanban]
             [eta-mu.infra.cli.commands.sessions :as sessions]
+            [eta-mu.infra.cli.commands.sol :as sol]
             [eta-mu.law.command :as law]
             [eta-mu.shape.args :as args]))
 
-(def version "1.0.0")
+(def version "1.1.1")
 
 (defn- registry
   "Build the command registry."
@@ -32,6 +33,7 @@
                  :description "List and inspect persisted agent sessions"
                  :handler sessions/handle}
    "git"       (git/group)
+   "sol"       (sol/group)
    "contracts" {:name "contracts"
                 :description "Contract gate commands"
                 :subcommands {"output" {:name "output"
@@ -56,7 +58,8 @@
   "Parse process arguments and dispatch to the matched command."
   []
   (validate!)
-  (let [parsed (args/parse (drop 2 (process/argv)))
+  (let [tokens (vec (drop 2 (process/argv)))
+        parsed (args/parse tokens)
         reg (registry)
         descriptor (router/resolve-dispatch reg parsed)]
     (case (:type descriptor)
@@ -77,6 +80,7 @@
             (js/console.error (str "Internal error: command has no handler: " (str/join " " (:path descriptor))))
             (process/exit! 1))
           (await ((:handler (:command descriptor)) {:args (:args descriptor)
+                                                    :raw-args (router/raw-args-after-path tokens (:path descriptor))
                                                     :flags (:flags parsed)})))
 
       (do (js/console.error "Internal error: unknown dispatch descriptor")

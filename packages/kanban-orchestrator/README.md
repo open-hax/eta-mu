@@ -3,7 +3,7 @@
 Kanban board orchestrator agent, expressed as **contract data only**.
 
 This package contains no source code and no build step. It is a set of EDN
-contracts that teach a knoxx-style agent runtime (e.g. `@open-hax/sol`) about an
+contracts that teach a knoxx-style agent runtime (e.g. `@eta-mu/sol`) about an
 agent whose entire purpose is to drive work by **changing board state** — never
 by editing code. Point the runtime at this directory as an extra contract root
 and the orchestrator agent, its role, capability, actor, and the backing MCP
@@ -40,15 +40,15 @@ actual work, and every move is FSM-enforced.
 This package ships no `package.json` scripts and nothing to compile — there is
 nothing to build or test here. It is loaded, not built:
 
-1. A knoxx-style runtime (`@open-hax/sol`) is given this directory as an
+1. A knoxx-style runtime (`@eta-mu/sol`) is given this directory as an
    additional **contract root**; its contract loader reads the EDN files above.
 2. The `rheos-kanban` MCP server connection is wired **generically** by
    `@open-hax/mcp-contracts` — that loader teaches the runtime to accept
    `:mcp-server` contracts without knowing anything specific about this server.
-3. The `rheos-kanban` server itself is provided by `@open-hax/rheos`, which ships
+3. The `rheos-kanban` server itself is provided by `@eta-mu/rheos`, which ships
    an MCP-backed kanban server; this package only references it by URL/id.
 
-To exercise the orchestrator, run the host runtime (see `@open-hax/sol`) with
+To exercise the orchestrator, run the host runtime (see `@eta-mu/sol`) with
 this package's directory included among its contract roots, and ensure the
 `rheos-kanban` MCP server is reachable at the configured URL.
 

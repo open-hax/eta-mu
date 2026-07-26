@@ -46,6 +46,16 @@
   (-> (path/basename tasks-dir) str/lower-case
       (str/replace #"[^a-z0-9]+" "-") (str/replace #"^-|-$" "") (or "kanban")))
 
+(defn- resolve-fsm-config
+  "Resolve filesystem fields in an FSM overlay relative to the board config.
+
+   This keeps checked-in project gates portable across workspaces while leaving
+   string presets and FSM maps without a :cwd unchanged."
+  [config-dir fsm-config]
+  (if (and (map? fsm-config) (:cwd fsm-config))
+    (update fsm-config :cwd #(path/resolve config-dir %))
+    fsm-config))
+
 (defn resolve-configured-projects [loaded-config explicit-tasks-dir]
   (let [config-dir (:config-dir loaded-config)
         config (:config loaded-config)
@@ -62,11 +72,12 @@
                                    id (loop [candidate base-id suffix 2]
                                         (if (@seen candidate)
                                           (recur (str base-id "-" suffix) (inc suffix))
-                                          candidate))]
+                                          candidate))
+                                   fsm-config (or (:fsm project) (:fsm config))]
                                (swap! seen conj id)
                                {:id id :title (or (some-> (:title project) str/trim) id)
                                 :tasks-dir tasks-dir :meta (or (:meta project) (:meta config) {})
-                                :fsm (or (:fsm project) (:fsm config))}))
+                                :fsm (resolve-fsm-config config-dir fsm-config)}))
                            (:projects config) (range))
             default-id (or (when-let [d (:defaultProject config)]
                              (when (some #(= (:id %) d) projects) d))
@@ -77,5 +88,5 @@
                           (path/resolve (js/process.cwd) "docs/agile/tasks"))
             id (project-id-from-path tasks-dir)]
         {:projects [{:id id :title id :tasks-dir tasks-dir :meta (or (:meta config) {})
-                     :fsm (:fsm config)}]
+                     :fsm (resolve-fsm-config config-dir (:fsm config))}]
          :default-project-id id}))))

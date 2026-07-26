@@ -1,8 +1,14 @@
 {;; Default classpath = the shadow-cljs build (shadow-cljs.edn uses :deps true).
- ;; katamorph + event-ledger are consumed from immutable git refs (open-hax
- ;; repos, tag v0.1.0), NOT the removed local packages/ copies — bump the
- ;; :git/sha + :git/tag to adopt a new release.
- :paths ["src/cljs" "test/cljs"]
+ ;; katamorph + event-ledger are consumed from immutable git refs (the standalone
+ ;; open-hax repos, currently katamorph v0.2.0 and event-ledger v0.3.0), NOT the
+ ;; removed local packages/ copies — bump the :git/sha + :git/tag together to
+ ;; adopt a new release.
+ ;; turn-processor + eta-mu are workspace siblings consumed as source paths:
+ ;; the provider adapter wires their run-loop/stream-fn/tools into sol's
+ ;; agent sessions.
+ :paths ["src/cljs" "test/cljs"
+         "../turn-processor/src/cljs"
+         "../eta-mu/src/cljs"]
 
  :deps
  {thheller/shadow-cljs          {:mvn/version "3.4.11"}
@@ -10,10 +16,10 @@
   funcool/promesa               {:mvn/version "11.0.678"}
   cider/cider-nrepl             {:mvn/version "0.50.2"}
   refactor-nrepl/refactor-nrepl {:mvn/version "3.9.1"}
-  io.github.open-hax/katamorph    {:git/tag "v0.1.0"
-                                   :git/sha "509878193515b199ce8477b3c2d583f0d5b32ac8"}
-  io.github.open-hax/event-ledger {:git/tag "v0.2.0"
-                                   :git/sha "9e7fd430c26b245a3b120f5d2dee33fc8cb4a71f"}}
+  io.github.open-hax/katamorph    {:git/tag "v0.2.0"
+                                   :git/sha "305a5e49d834aca27566f739e8510f6b409fda78"}
+  io.github.open-hax/event-ledger {:git/tag "v0.3.0"
+                                   :git/sha "f67c438d3c3b16ce9452a0c934f59101d1b95815"}}
 
  :aliases
  ;; Clojure-first mutation harness (mutation/knoxx/…) — mutates CLJS source

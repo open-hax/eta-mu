@@ -42,14 +42,17 @@ sol already has a full `.clj-kondo/config.edn` that duplicates the shared `:lint
 
 - [ ] `packages/sol/.clj-kondo/config.edn` uses `:config-paths` and only preserves the `defroute` hook.
 - [ ] No shared `:lint-as`, `:linters`, or promise-chain `:hooks` entries remain duplicated locally.
-- [ ] `pnpm --filter @open-hax/sol lint:kondo` exits 0 with only warnings (no config-resolution errors).
+- [ ] `pnpm --filter @eta-mu/sol lint:kondo` exits 0 in full — the script now chains
+      `clj-kondo` with the contract guard, so the whole command must succeed, with no
+      clj-kondo errors and no config-resolution failure. (clj-kondo itself exits 2 on
+      warnings, so "exits 0 with only warnings" was never a satisfiable condition.)
 - [ ] No source files under `packages/sol/src/cljs` or `packages/sol/test/cljs` are modified.
 
 ## Verification
 
 ```bash
 pnpm install
-pnpm --filter @open-hax/sol lint:kondo
+pnpm --filter @eta-mu/sol lint:kondo
 ```
 
 ---
@@ -69,36 +72,26 @@ pnpm --filter @open-hax/sol lint:kondo
 
 ### Verification output
 
+Original run (2026-06-15, before the package rename and the sol lint cleanup)
+recorded 0 errors / 20 source warnings, so clj-kondo exited 2 — no
+config-resolution errors, which was the point being evidenced.
+
+Re-run 2026-07-25 under the current package name and lint script:
+
 ```text
-$ pnpm --filter @open-hax/sol lint:kondo
+$ pnpm --filter @eta-mu/sol lint:kondo
 
-> @open-hax/sol@ lint:kondo /home/err/devel/orgs/open-hax/eta-mu/packages/sol
-> clj-kondo --lint src/cljs test/cljs
+> @eta-mu/sol@0.1.1 lint:kondo /home/err/spaces/eta-mu/packages/sol
+> clj-kondo --lint src/cljs test/cljs && node ../../scripts/contract-guard.mjs src/cljs test/cljs
 
-src/cljs/open_hax/sol/bootstrap.cljs:21:8: warning: Unused private var open-hax.sol.bootstrap/env
-src/cljs/open_hax/sol/bootstrap.cljs:25:8: warning: Unused private var open-hax.sol.bootstrap/truthy?
-src/cljs/open_hax/sol/bootstrap.cljs:75:4: warning: unused binding runtime
-src/cljs/open_hax/sol/domain/agent/content.cljs:37:8: warning: Unused private var open-hax.sol.domain.agent.content/duplicate-normalized-text
-src/cljs/open_hax/sol/domain/agent/content.cljs:41:8: warning: Unused private var open-hax.sol.domain.agent.content/boundary-ended?
-src/cljs/open_hax/sol/domain/contracts/resolve.cljs:32:28: warning: unused binding actors
-src/cljs/open_hax/sol/domain/node/fs.cljs:10:14: warning: namespace clojure.string is required but never used
-src/cljs/open_hax/sol/infra/agent/policy.cljs:4:14: warning: namespace clojure.string is required but never used
-src/cljs/open_hax/sol/infra/agent/policy.cljs:6:8: warning: Unused private var open-hax.sol.infra.agent.policy/allowed-models
-src/cljs/open_hax/sol/infra/agent/session.cljs:123:12: warning: unused binding config
-src/cljs/open_hax/sol/infra/agent/session.cljs:123:19: warning: unused binding runtime
-src/cljs/open_hax/sol/infra/agent/session.cljs:123:67: warning: unused binding session-id
-src/cljs/open_hax/sol/infra/graceful_shutdown.cljs:7:14: warning: namespace open-hax.sol.runtime.state is required but never used
-src/cljs/open_hax/sol/infra/graceful_shutdown.cljs:41:8: warning: unused binding config
-src/cljs/open_hax/sol/infra/http.cljs:127:30: warning: unused binding context
-src/cljs/open_hax/sol/infra/routes/app.cljs:77:62: warning: unused binding provider
-src/cljs/open_hax/sol/law/contracts.cljs:371:30: warning: #'open-hax.sol.law.contracts/PipelineStep is deprecated
-src/cljs/open_hax/sol/law/contracts.cljs:463:17: warning: #'open-hax.sol.law.contracts/PipelineContract is deprecated
-src/cljs/open_hax/sol/shape/app_shapes.cljs:28:8: warning: Unused private var open-hax.sol.shape.app-shapes/extract-media-urls
-test/cljs/open_hax/sol/shape/app_shapes_test.cljs:2:43: warning: #'cljs.test/testing is referred but never used
-linting took 546ms, errors: 0, warnings: 20
+linting took 792ms, errors: 0, warnings: 0
+contract-guard OK (src/cljs, test/cljs)
+$ echo $?
+0
 ```
 
-The run produced only expected source-level warnings; no clj-kondo config-resolution errors were emitted. clj-kondo exited with status 2 because of the 20 source warnings, which is acceptable per the task instructions.
+The acceptance criterion is now fully met: the whole chained command exits 0,
+with no clj-kondo errors, no source warnings, and no config-resolution failure.
 
 ### Status
 

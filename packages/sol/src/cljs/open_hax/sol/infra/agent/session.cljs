@@ -1,11 +1,10 @@
 (ns open-hax.sol.infra.agent.session
   "Minimal in-process agent session registry for Sol."
   (:require [clojure.string :as str]
-            [open-hax.sol.domain.models :refer [normalize-thinking-level effective-thinking-level resolve-model-contract]]
-            [open-hax.sol.extern.eta-mu :as eta-mu-extern]
+            [open-hax.sol.domain.models :as models :refer [normalize-thinking-level effective-thinking-level resolve-model-contract]]
             [open-hax.sol.infra.agent.content-codec :as content-codec]
             [open-hax.sol.infra.agent.mcp-tools :as mcp-tools]
-            [open-hax.sol.infra.agent.provider.eta-mu :as eta-mu-provider]
+            [open-hax.sol.infra.agent.provider.turn-processor :as turn-processor-provider]
             [open-hax.sol.infra.http :refer [no-content?]]
             [open-hax.sol.shape.agent :refer [set-active-tools! set-thinking-level!]]))
 
@@ -59,14 +58,14 @@
   (vec (or (:tool-ids agent-spec) [])))
 
 (defn- effective-session-model
-  [config model-registry agent-spec model-id fallback-model-id]
+  [config models-data agent-spec model-id fallback-model-id]
   (let [contract-model-id (agent-spec-model agent-spec)
         effective-id (or contract-model-id model-id)
         resolved (resolve-model-contract config effective-id)]
-    (eta-mu-extern/find-model model-registry
-                              (or (:provider resolved) "proxx")
-                              effective-id
-                              fallback-model-id)))
+    (models/find-model models-data
+                       (or (:provider resolved) "proxx")
+                       effective-id
+                       fallback-model-id)))
 
 (defn- effective-session-thinking-level
   [config agent-spec model-id thinking-level]
@@ -80,29 +79,22 @@
                                   "off"))))
 
 (defn ^:async create-agent-session!
-  "Create a new eta-mu backed agent session from a normalized request map.
-   Returns the EtaMuSession record."
+  "Create a new turn-processor backed agent session from a normalized request
+   map. Returns the session record implementing IAgentSession."
   [{:keys [config runtime conversation-id model-id thinking-level session-id agent-spec]}]
-  (let [provider (eta-mu-provider/eta-mu-provider runtime config)
-        {:keys [auth-storage model-registry settings-manager loader runtime-dir]} (await (eta-mu-provider/ensure-runtime! provider))
-        model (effective-session-model config model-registry agent-spec model-id (:proxx-default-model config))]
+  (let [provider (turn-processor-provider/turn-processor-provider runtime config)
+        {:keys [models]} (await (turn-processor-provider/ensure-runtime! provider))
+        model (effective-session-model config models agent-spec model-id (:proxx-default-model config))]
     (when (no-content? model)
-      (throw (js/Error. (str "No eta-mu model configured for " (or (agent-spec-model agent-spec) model-id)))))
+      (throw (js/Error. (str "No agent model configured for " (or (agent-spec-model agent-spec) model-id)))))
     (let [effective-level (effective-session-thinking-level config agent-spec (:id model) thinking-level)
-          session-manager (eta-mu-extern/make-session-manager! (:workspace-root config) session-id)
           tool-ids (agent-spec-tool-ids agent-spec)
           custom-tools (await (mcp-tools/build-mcp-custom-tools! config tool-ids))
           tool-names (or (seq tool-ids)
                          ["read" "bash" "edit" "write"])
-          {:keys [session]} (await (eta-mu-extern/create-session!
-                                    {:workspace-root (:workspace-root config)
-                                     :runtime-dir runtime-dir
-                                     :auth-storage auth-storage
-                                     :model-registry model-registry
-                                     :loader loader
-                                     :settings-manager settings-manager
-                                     :session-manager session-manager
-                                     :model model
+          {:keys [session]} (await (turn-processor-provider/create-session!
+                                    provider
+                                    {:model model
                                      :thinking-level effective-level
                                      :system-prompt (agent-spec-system-prompt agent-spec)
                                      :custom-tools custom-tools
@@ -131,12 +123,4 @@
 (defn prune-session-messages
   [_agent-spec messages]
   (vec messages))
-
-(defn fetch-b64!
-  [url media-type]
-  (content-codec/fetch-b64! url media-type))
-
-(defn materialize!
-  [part]
-  (content-codec/materialize! part))
 

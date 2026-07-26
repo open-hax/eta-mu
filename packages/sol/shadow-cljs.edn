@@ -23,9 +23,8 @@
      #{"node:fs/promises"
        "node:fs"
        "node:path"
-       "node:url"
-       "@open-hax/eta-mu-cli"
-       "@modelcontextprotocol/sdk/client/index.js"
+        "node:url"
+        "@modelcontextprotocol/sdk/client/index.js"
        "@modelcontextprotocol/sdk/client/streamableHttp.js"
        "typebox"
        "fastify"
@@ -48,9 +47,8 @@
      #{"node:fs/promises"
        "node:fs"
        "node:path"
-       "node:url"
-       "@open-hax/eta-mu-cli"
-       "@modelcontextprotocol/sdk/client/index.js"
+        "node:url"
+        "@modelcontextprotocol/sdk/client/index.js"
        "@modelcontextprotocol/sdk/client/streamableHttp.js"
        "typebox"
        "fastify"
@@ -79,9 +77,8 @@
      #{"node:fs/promises"
        "node:fs"
        "node:path"
-       "node:url"
-       "@open-hax/eta-mu-cli"
-       "@modelcontextprotocol/sdk/client/index.js"
+        "node:url"
+        "@modelcontextprotocol/sdk/client/index.js"
        "@modelcontextprotocol/sdk/client/streamableHttp.js"
        "typebox"
        "fastify"
@@ -94,13 +91,11 @@
      :macros {:open-hax.sol.macros true},
      :warnings {:infer-warning false}}},
   :test
-  {:target :node-test,
-   :output-to "target/test/test.cjs",
-    :ns-regexp "open-hax\\.sol\\..*-test$",
-   :autorun true,
-   :js-options {:resolve {"@open-hax/eta-mu-cli" {:target :file
-                                                      :file "test/js/eta_mu_cli_test_stub.cjs"}}},
-   :compiler-options
+   {:target :node-test,
+    :output-to "target/test/test.cjs",
+     :ns-regexp "open-hax\\.sol\\..*-test$",
+    :autorun true,
+    :compiler-options
    {:output-feature-set :es-next,
     :macros {:open-hax.sol.macros true},
     :infer-externs false}}}}

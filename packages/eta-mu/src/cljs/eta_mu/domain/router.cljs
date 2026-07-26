@@ -60,6 +60,22 @@
             {:command cmd :path (conj path name) :remaining (rest remaining)})
           {:command last-cmd :path path :remaining remaining :unmatched name})))))
 
+(defn raw-args-after-path
+  "Return the raw tokens that follow the matched command path.
+
+  Consumes each path component in order, skipping interleaved flag tokens, and
+  returns everything after the last component with flags and ordering intact.
+  Spawn-bridge commands (e.g. kanban) need this because the parsed flag map
+  loses the order and arity information the child CLI expects."
+  [tokens path]
+  (loop [remaining tokens
+         to-match path]
+    (cond
+      (empty? to-match) (vec remaining)
+      (empty? remaining) []
+      (= (first remaining) (first to-match)) (recur (rest remaining) (rest to-match))
+      :else (recur (rest remaining) to-match))))
+
 (defn resolve-dispatch
   "Given a registry and parsed args, return a dispatch descriptor.
 

@@ -65,11 +65,25 @@
     "in_progress" 50 "testing" 40 "review" 40 "document" 40
     "done" 500 "rejected" 9999 "icebox" 9999 "incoming" 9999 "archived" 9999}})
 
-(defn resolve-fsm [board-config]
+(defn resolve-fsm
+  "Resolve a project's `:fsm` config into a concrete FSM map.
+
+   A map with `:extends \"promethean\"` overlays just the build-gate command
+   list (and optional :cwd) onto promethean-fsm, so a non-JS project can swap
+   in its own build/lint/test commands without redefining the whole FSM
+   in JSON (whose string values can't become the :command keyword the
+   built-in checks match on)."
+  [board-config]
   (let [fsm-cfg (:fsm board-config)]
     (cond (nil? fsm-cfg) default-fsm
           (= "promethean" fsm-cfg) promethean-fsm
-          (map? fsm-cfg) fsm-cfg
+          (and (map? fsm-cfg) (= "promethean" (:extends fsm-cfg)))
+          (cond-> promethean-fsm
+            (:buildGateCommands fsm-cfg)
+            (assoc-in [:checks :build-gate]
+                      {:type :command
+                       :commands (:buildGateCommands fsm-cfg)
+                       :cwd (:cwd fsm-cfg)}))
           :else default-fsm)))
 
 (defn- check-wip-limit [fsm to-status current-counts]

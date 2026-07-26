@@ -160,7 +160,7 @@
         (let [{:keys [server port requests]} (await (start-mock-server (turn-queue)))
               result (await (run-cli! entry-path tmp-dir
                                       {"OPENAI_BASE_URL" (str "http://127.0.0.1:" port "/v1/chat/completions")
-                                       "OPENAI_AUTH_TOKEN" "e2e-test-token"}
+                                       "OPENAI_BASE_URL_API_KEY" "e2e-test-token"}
                                       ["agent" "--model" "mock-model" "start"]))]
 
           (testing "the CLI process completes successfully"
@@ -221,7 +221,7 @@
               {:keys [server port requests]} (await (start-mock-server queue))
               result (await (run-cli! entry-path tmp-dir
                                       {"OPENAI_BASE_URL" (str "http://127.0.0.1:" port "/v1/chat/completions")
-                                       "OPENAI_AUTH_TOKEN" "e2e-test-token"}
+                                       "OPENAI_BASE_URL_API_KEY" "e2e-test-token"}
                                       ["agent" "--model" "mock-model" "start"]))]
 
           (testing "the CLI process completes successfully"
@@ -288,7 +288,7 @@
         (let [{:keys [server port]} (await (start-sse-mock-server sse-body))
               result (await (run-cli! entry-path tmp-dir
                                       {"OPENAI_BASE_URL" (str "http://127.0.0.1:" port "/v1/chat/completions")
-                                       "OPENAI_AUTH_TOKEN" "e2e-test-token"}
+                                       "OPENAI_BASE_URL_API_KEY" "e2e-test-token"}
                                       ["agent" "--model" "mock-model" "hi"]))]
 
           (testing "the CLI process completes successfully with the reassembled text"
@@ -296,3 +296,4 @@
             (is (str/includes? (:stdout result) "Hello, world!")))
 
           (await (stop-mock-server! server)))))))
+

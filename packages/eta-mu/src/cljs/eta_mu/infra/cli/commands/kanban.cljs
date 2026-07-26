@@ -109,9 +109,13 @@
         {:args args}))))
 
 (defn ^:async handle
-  "Bridge legacy kanban-legacy commands to the Rheos CLI."  [{:keys [args]}]
+  "Bridge legacy kanban-legacy commands to the Rheos CLI.
+
+  Uses :raw-args (flags and ordering intact) so Rheos flags like --query,
+  --to, and --text survive the router's flag parsing."
+  [{:keys [args raw-args]}]
   (if-let [rheos-path (child/resolve-rheos-path)]
-    (let [translation (try (translate-args args)
+    (let [translation (try (translate-args (or raw-args args))
                           (catch :default err
                             (js/console.error (str err))
                             (process/exit! 1)))
@@ -121,5 +125,8 @@
         (await (run-formatted rheos-path rheos-args formatter))
         (let [exit-code (await (child/spawn-inherit "node" (into [rheos-path] rheos-args)))]
           (process/exit! exit-code))))
-    (do (js/console.error "eta-mu kanban: @open-hax/rheos is not installed or built.")
+    (do (js/console.error
+          (str "eta-mu kanban: @eta-mu/rheos is not installed or built.\n"
+               "Run from inside the eta-mu workspace after building it:\n"
+               "  pnpm --filter @eta-mu/rheos build"))
         (process/exit! 1))))

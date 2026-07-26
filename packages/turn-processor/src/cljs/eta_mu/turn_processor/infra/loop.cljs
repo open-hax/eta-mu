@@ -55,27 +55,95 @@
                              :assistant-message-event event})))
             (recur)))))))
 
+(defn- signal-aborted?
+  "True when the abort signal (a JS AbortSignal) has fired."
+  [signal]
+  (boolean (and signal (.-aborted signal))))
+
+(defn- ^:async drain-continuation
+  "Drain the steering queue, then the follow-up queue, for the next turn.
+
+   Returns the messages to seed the next turn with, or nil when the loop should
+   stop — either both queues are empty or the abort signal fired. The signal is
+   observed before each drain and again after it, so an abort neither consumes
+   queued control messages nor buys one more provider stream."
+  [config signal]
+  (when-not (signal-aborted? signal)
+    (let [steering (when-let [f (:get-steering-messages config)] (await (f)))]
+      (cond
+        (signal-aborted? signal) nil
+        (seq steering) (vec steering)
+        :else (let [follow-up (when-let [f (:get-follow-up-messages config)] (await (f)))]
+                (when-not (signal-aborted? signal)
+                  (when (seq follow-up) (vec follow-up))))))))
+
+(defn- tool-abort-error
+  []
+  (doto (js/Error. "Tool execution aborted")
+    (aset "name" "AbortError")))
+
+(defn- ^:async settle-start!
+  "Await a tool start operation and settle the outer abort race exactly once."
+  [start settle! resolve reject]
+  (try
+    (settle! resolve (await (start)))
+    (catch :default error
+      (settle! reject error))))
+
+(defn- race-with-abort
+  "Start one tool operation and race its result against `signal`. This keeps
+  the turn pump resumable even when a tool ignores the AbortSignal."
+  [signal start]
+  (if (signal-aborted? signal)
+    (js/Promise.reject (tool-abort-error))
+    (js/Promise.
+     (fn [resolve reject]
+       (let [settled? (atom false)
+             listener* (atom nil)
+             cleanup! (fn []
+                        (when (and signal @listener*)
+                          (.removeEventListener signal "abort" @listener*)))
+             settle! (fn [f value]
+                       (when (compare-and-set! settled? false true)
+                         (cleanup!)
+                         (f value)))
+             on-abort (fn []
+                        (settle! reject (tool-abort-error)))]
+         (reset! listener* on-abort)
+         (when signal
+           (.addEventListener signal "abort" on-abort #js {:once true}))
+         ;; Cover an abort racing the listener registration.
+         (if (signal-aborted? signal)
+           (on-abort)
+           (settle-start! start settle! resolve reject)))))))
+
 (defn- ^:async execute-tool!
   "Execute a single prepared tool call and return an ExecutedToolCallOutcome.
 
-  The tool is a map with an :execute function `(id args signal on-update)`."  
-  [prepared emit]
+  The tool is a map with an :execute function `(id args signal on-update)`.
+  The abort signal from the run-loop config is passed through so tools can
+  cancel in-flight work."
+  [prepared emit signal]
   (let [tool (:tool prepared)
         tool-call (:tool-call prepared)
         args (:args prepared)
         updates (atom [])]
     (try
-      (let [result (await ((:execute tool)
-                           (:id tool-call)
-                           args
-                           nil
-                           (fn [partial]
-                             (swap! updates conj
-                                    (emit! emit {:type :tool_execution_update
-                                                 :tool-call-id (:id tool-call)
-                                                 :tool-name (:name tool-call)
-                                                 :args args
-                                                 :partial-result partial})))))]
+      (let [result (await
+                    (race-with-abort
+                     signal
+                     (fn []
+                       ((:execute tool)
+                        (:id tool-call)
+                        args
+                        signal
+                        (fn [partial]
+                          (swap! updates conj
+                                 (emit! emit {:type :tool_execution_update
+                                              :tool-call-id (:id tool-call)
+                                              :tool-name (:name tool-call)
+                                              :args args
+                                              :partial-result partial})))))))]
         (await (js/Promise.all (clj->js @updates)))
         {:result result :is-error false})
       (catch :default e
@@ -111,12 +179,12 @@
 (defn- ^:async execute-one!
   "Execute a single prepared tool call, emit lifecycle events, and return a
   finalized result."
-  [prepared emit after-tool-call context]
+  [prepared emit after-tool-call context signal]
   (emit! emit {:type :tool_execution_start
                :tool-call-id (get-in prepared [:tool-call :id])
                :tool-name (get-in prepared [:tool-call :name])
                :args (:args prepared)})
-  (let [executed (await (execute-tool! prepared emit))
+  (let [executed (await (execute-tool! prepared emit signal))
         finalized (turn/finalize-tool-result executed
                                              (:tool-call prepared)
                                              context
@@ -135,7 +203,8 @@
   [context assistant-message tool-calls tools config emit]
   (let [mode (turn/execution-mode tool-calls tools (:tool-execution config :parallel))
         before-tool-call (:before-tool-call config)
-        after-tool-call (:after-tool-call config)]
+        after-tool-call (:after-tool-call config)
+        signal (:abort-signal config)]
     (if (= mode :parallel)
       (let [preparations (await (js/Promise.all
                                   (clj->js
@@ -143,7 +212,7 @@
                                           tool-calls))))
             immediate-results (filter :is-error preparations)
             prepared (remove :is-error preparations)
-            finalized (await (js/Promise.all (clj->js (mapv #(execute-one! % emit after-tool-call context) prepared))))]
+            finalized (await (js/Promise.all (clj->js (mapv #(execute-one! % emit after-tool-call context signal) prepared))))]
         (concat immediate-results finalized))
       (loop [acc [] remaining tool-calls]
         (if (empty? remaining)
@@ -153,14 +222,14 @@
             (if (:is-error prepared)
               (recur (conj acc prepared) (rest remaining))
               (do (emit! emit {:type :tool_execution_start
-                              :tool-call-id (get-in prepared [:tool-call :id])
-                              :tool-name (get-in prepared [:tool-call :name])
-                              :args (:args prepared)})
-                  (let [executed (await (execute-tool! prepared emit))
+                               :tool-call-id (get-in prepared [:tool-call :id])
+                               :tool-name (get-in prepared [:tool-call :name])
+                               :args (:args prepared)})
+                  (let [executed (await (execute-tool! prepared emit signal))
                         finalized (turn/finalize-tool-result executed
-                                                           (:tool-call prepared)
-                                                           context
-                                                           after-tool-call)]
+                                                             (:tool-call prepared)
+                                                             context
+                                                             after-tool-call)]
                     (emit! emit {:type :tool_execution_end
                                  :tool-call-id (get-in finalized [:tool-call :id])
                                  :tool-name (get-in finalized [:tool-call :name])
@@ -175,15 +244,22 @@
     context   — AgentContext map with :system-prompt, :messages, :tools
     config    — map with :model, :convert-to-llm, optional :tool-execution,
                 :before-tool-call, :after-tool-call, :get-steering-messages,
-                :get-follow-up-messages, :api-key
+                :get-follow-up-messages, :api-key, :base-url, :abort-signal
     emit      — async event sink (event -> promise)
     stream-fn — (model llm-context options) -> stream object
 
-  Returns the vector of new AgentMessages produced by the loop."  
+  :abort-signal is a JS AbortSignal. It is forwarded to stream-fn options (as
+  :signal) and to every tool :execute call, and the loop observes it at turn
+  boundaries: after a streamed assistant message the loop halts before any
+  tool execution, after a tool batch it halts before the next stream, and it
+  halts rather than draining the steering/follow-up queues into another turn.
+
+  Returns the vector of new AgentMessages produced by the loop."
   [context config emit stream-fn]
   (let [ctx (atom context)
         new-messages (atom [])
-        pending (atom [])]
+        pending (atom [])
+        signal (:abort-signal config)]
     (emit! emit {:type :agent_start})
     (emit! emit {:type :turn_start})
 
@@ -203,13 +279,18 @@
             llm-context {:system-prompt (:system-prompt @ctx)
                          :messages llm-messages
                          :tools (:tools @ctx)}
-            stream (stream-fn (:model config) llm-context {:api-key (:api-key config) :base-url (:base-url config)})
+            stream (await (stream-fn (:model config)
+                                     llm-context
+                                     {:api-key (:api-key config)
+                                      :base-url (:base-url config)
+                                      :signal signal}))
             assistant (await (stream-final-message stream emit))]
         (update-context! ctx assistant)
         (update-new-messages! new-messages assistant)
 
         (if (or (= (:stop-reason assistant) :error)
-                (= (:stop-reason assistant) :aborted))
+                (= (:stop-reason assistant) :aborted)
+                (signal-aborted? signal))
           (do (emit! emit {:type :turn_end :message assistant :tool-results []})
               (emit! emit {:type :agent_end :messages @new-messages})
               (vec @new-messages))
@@ -223,19 +304,15 @@
                   (update-context! ctx message)
                   (update-new-messages! new-messages message))
                 (emit! emit {:type :turn_end :message assistant :tool-results result-messages})
-                (if (turn/should-terminate-batch finalized)
+                (if (or (turn/should-terminate-batch finalized)
+                        (signal-aborted? signal))
                   (do (emit! emit {:type :agent_end :messages @new-messages})
                       (vec @new-messages))
                   (recur false)))
-              (let [steering (when-let [f (:get-steering-messages config)] (await (f)))]
-                (if (seq steering)
-                  (do (reset! pending steering)
+              (let [continuation (await (drain-continuation config signal))]
+                (if continuation
+                  (do (reset! pending continuation)
                       (recur false))
-                  (let [follow-up (when-let [f (:get-follow-up-messages config)] (await (f)))]
-                    (if (seq follow-up)
-                      (do (reset! pending follow-up)
-                          (recur false))
-                      (do (emit! emit {:type :turn_end :message assistant :tool-results []})
-                          (emit! emit {:type :agent_end :messages @new-messages})
-                          (vec @new-messages)))))))))))))
-
+                  (do (emit! emit {:type :turn_end :message assistant :tool-results []})
+                      (emit! emit {:type :agent_end :messages @new-messages})
+                      (vec @new-messages)))))))))))

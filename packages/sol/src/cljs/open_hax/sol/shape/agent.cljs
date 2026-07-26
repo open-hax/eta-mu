@@ -41,12 +41,6 @@
    [:parent-run-id {:optional true} [:maybe :string]]
    [:spawn-kind {:optional true} [:maybe :string]]])
 
-(def AgentSpec
-  "Canonical agent specification shape used by agent runtime requests. Kept as
-   an alias during migration so older call sites can continue to refer to
-   AgentRequestSpec."
-  AgentRequestSpec)
-
 (def ChatBody
   [:map {:closed false}
    [:message :string]

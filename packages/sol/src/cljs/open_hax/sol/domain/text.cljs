@@ -284,6 +284,9 @@
   (cond
     (nil? part) ""
     (string? part) part
+    (map? part) (if (contains? #{:text "text" "output_text"} (:type part))
+                  (or (:text part) "")
+                  "")
     (= (aget part "type") "text") (or (aget part "text") "")
     (= (aget part "type") "output_text") (or (aget part "text") "")
     :else ""))
@@ -332,15 +335,20 @@
 
 (defn assistant-message-text
   [message]
-  (let [content (aget message "content")
+  (let [content (if (map? message)
+                  (:content message)
+                  (aget message "content"))
         merged (cond
                  (string? content) content
                  (array? content) (merge-part-texts (array-seq content) content-part-text)
+                 (vector? content) (merge-part-texts content content-part-text)
+                 (sequential? content) (merge-part-texts content content-part-text)
                  :else "")]
     (cond
       (not (str/blank? merged)) merged
-      (string? (aget message "text")) (aget message "text")
-      (string? (aget message "errorMessage")) (aget message "errorMessage")
+      (and (map? message) (string? (:error-message message))) (:error-message message)
+      (and (not (map? message)) (string? (aget message "text"))) (aget message "text")
+      (and (not (map? message)) (string? (aget message "errorMessage"))) (aget message "errorMessage")
       :else "")))
 
 (defn assistant-message-reasoning-text

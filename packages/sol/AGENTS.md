@@ -1,4 +1,4 @@
-# AGENTS.md — `@open-hax/sol`
+# AGENTS.md — `@eta-mu/sol`
 
 Read the repository-root `AGENTS.md` first; this file only adds Sol-specific
 boundaries. The Clojure House Rules (categories vs. contracts, zero warnings,
@@ -52,7 +52,7 @@ dependency DAG.
 ## Boundaries
 
 - Node and npm modules (`node:*`, `fastify`, `ws`, `typebox`,
-  `@modelcontextprotocol/sdk`, `@open-hax/eta-mu-cli`) are runtime imports via
+  `@modelcontextprotocol/sdk`) are runtime imports via
   `:keep-as-import`; do not let them leak above `extern/`.
 - The shadow build pulls sibling packages `../katamorph/src/cljs` and
   `../event-ledger/src` onto the source path. Treat those as read-only upstream
@@ -72,10 +72,12 @@ dependency DAG.
   dependencies — see the README's KNOXX_* section. Do not introduce new `KNOXX_*`
   names or new `knoxx.*` namespaces; new config should be `SOL_*` and new code
   `open-hax.sol.*`.
-- **eta-mu runtime / CLI**: Sol depends on `@open-hax/eta-mu-cli`
-  (`workspace:*`) as a kept import and provides an eta-mu provider adapter under
-  `infra/agent/provider/`. The `:test` build stubs the CLI via
-  `test/js/eta_mu_cli_test_stub.cjs`.
+- **eta-mu runtime**: Sol runs agent turns on the turn-processor run-loop
+  (`eta-mu.turn-processor.infra.loop`) with `eta-mu.extern.openai` streaming,
+  consumed as workspace source paths (`../turn-processor/src/cljs`,
+  `../eta-mu/src/cljs` in `deps.edn`). The provider adapter under
+  `infra/agent/provider/` wires them into `IAgentProviderAdapter`; sol no
+  longer consumes the legacy coding-agent CLI package.
 
 ## Verification
 

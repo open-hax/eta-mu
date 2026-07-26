@@ -1,5 +1,5 @@
 (ns open-hax.sol.infra.agent.turn
-  "Minimal turn orchestrator for Sol."
+  "Turn orchestrator for Sol."
   (:require [clojure.string :as str]
             [open-hax.sol.domain.agent.content :as content]
             [open-hax.sol.domain.agent.text-delta :as text-delta]
@@ -13,7 +13,7 @@
             [open-hax.sol.infra.agent.session :refer [ensure-agent-session! prune-session-messages]]
             [open-hax.sol.infra.agent.session-store :as session-store]
             [open-hax.sol.infra.agent.transcript :as transcript]
-            [open-hax.sol.shape.agent :refer [subscribe! send-user-message!]]
+            [open-hax.sol.shape.agent :refer [abort! subscribe! send-user-message!]]
             [open-hax.sol.extern.agent-turn-node :as xturn-node]))
 
 (defonce conversation-access* (atom {}))
@@ -83,32 +83,35 @@
     (string? (:type part)) (:type part)
     :else nil))
 
-(defn- content-part->provider-part
+(defn- content-part->input-part
+  "Project a sol ContentPart onto a turn-processor input content part (CLJS)."
   [part]
   (let [part-type (content-part-type part)
         text (:text part)
         url (:url part)
         data (:data part)
-        mime (:mimeType part)]
+        mime (or (:mimeType part) (:mime-type part))]
     (case part-type
       "text" (when (not (str/blank? (str text))) {:type "text" :text text})
       "image" (cond
-                (and (string? data) (not (str/blank? data))) {:type "image" :data data :mimeType (or mime "image/png")}
-                (and (string? url) (not (str/blank? url))) {:type "image_url" :image_url {:url url}}
+                (and (string? data) (not (str/blank? data))) {:type "image" :data data :mime-type (or mime "image/png")}
+                (and (string? url) (not (str/blank? url))) (cond-> {:type "image" :url url}
+                                                             mime (assoc :mime-type mime))
                 :else nil)
       "audio" (cond
-                (and (string? data) (not (str/blank? data))) {:type "audio" :data data :mimeType (or mime "audio/mpeg")}
-                (and (string? url) (not (str/blank? url))) {:type "audio" :data url :mimeType (or mime "audio/mpeg")}
+                (and (string? data) (not (str/blank? data))) {:type "audio" :data data :mime-type (or mime "audio/mpeg")}
+                (and (string? url) (not (str/blank? url))) (cond-> {:type "audio" :url url}
+                                                             mime (assoc :mime-type mime))
                 :else nil)
       nil)))
 
 (defn- build-user-content
   [message content-parts]
-  (let [parts (keep content-part->provider-part (or content-parts []))
+  (let [parts (keep content-part->input-part (or content-parts []))
         text (some-> message str str/trim not-empty)]
     (cond
-      (and (seq parts) text) (clj->js (conj (vec parts) {:type "text" :text text}))
-      (seq parts) (clj->js parts)
+      (and (seq parts) text) (conj (vec parts) {:type "text" :text text})
+      (seq parts) (vec parts)
       :else (or text ""))))
 
 (defn- last-assistant-text
@@ -141,12 +144,21 @@
       :token delta})))
 
 (defn stream-message-update!
-  "Forward an assistant text delta from a provider message_update event."
+  "Forward an assistant text delta from a run-loop message_update event. The
+   :assistant-message-event is the stream's raw JS event; the openai extern
+   carries the cumulative text-so-far on its :partial assistant message, which
+   the cumulative-diff branch below tokenizes correctly."
   [scope seen-text* event]
-  (let [ame (aget event "assistantMessageEvent")
+  (let [ame (:assistant-message-event event)
         ame-type (some-> ame (aget "type") str)]
     (when (= ame-type "text_delta")
-      (let [delta (str (or (aget ame "delta") (aget ame "text") ""))
+      (let [partial-message (aget ame "partial")
+            delta (str (or (aget ame "delta")
+                           (aget ame "text")
+                           (and partial-message
+                                (not (str/blank? (assistant-message-text partial-message)))
+                                (assistant-message-text partial-message))
+                           ""))
             seen @seen-text*]
         (if (and (seq seen) (str/starts-with? delta seen))
           ;; Provider resent the full message-so-far: emit only the new suffix.
@@ -158,19 +170,46 @@
             (broadcast-token! scope delta)
             (swap! seen-text* str delta)))))))
 
-(defn stream-message-end!
-  "Flush any text not already streamed when the assistant message completes.
-   Covers providers that send only a terminal message with no incremental deltas."
-  [scope seen-text* event]
-  (when-let [message (aget event "message")]
-    (let [full (str (or (assistant-message-text message) ""))
-          appended (text-delta/diff-appended-text @seen-text* full)]
-      (when (seq appended)
-        (broadcast-token! scope appended)
-        (reset! seen-text* full)))))
+(defn- assistant-role?
+  "True for both role shapes in circulation. The run-loop carries keyword roles,
+   while the realtime session handler, transcript, and persisted-message schemas
+   all speak the string form — a terminal message in either shape must flush."
+  [role]
+  (contains? #{:assistant "assistant"} role))
 
-(defn- ^:async send-user-message-with-timeout!
-  "Send content to the session and wait for agent_end. Resolves with the session.
+(defn stream-message-end!
+  "Flush any text not already streamed when an assistant message completes.
+   Covers providers that send only a terminal message with no incremental
+   deltas. Only assistant message_end events carry reply text; user/tool
+   message_end events (follow-ups, tool results) must not broadcast."
+  [scope seen-text* event]
+  (when-let [message (:message event)]
+    (when (assistant-role? (:role message))
+      (let [full (str (or (assistant-message-text message) ""))
+            appended (text-delta/diff-appended-text @seen-text* full)]
+        (when (seq appended)
+          (broadcast-token! scope appended)
+          (reset! seen-text* full))))))
+
+(defn- ^:async settle-on-send!
+  "Settle the caller's result promise from the send promise.
+
+   Invoked WITHOUT await: awaiting the send in the caller would defeat the
+   timeout, because a hung stream or tool would never let the timer-backed
+   result promise win the race. Settling from here instead of from :agent_end
+   is also what keeps history correct — TurnSession resolves the send promise
+   only after appending the new messages, whereas :agent_end fires inside the
+   run-loop before that projection."
+  [send-promise settle! resolve* reject* session]
+  (try
+    (await send-promise)
+    (settle! #(when-let [r @resolve*] (r session)))
+    (catch :default err
+      (settle! #(when-let [r @reject*] (r err))))))
+
+(defn ^:async send-user-message-with-timeout!
+  "Send content to the session and wait for the send Promise to settle after
+   the session has projected the turn into history. Resolves with the session.
    Streams assistant text deltas to the realtime WS as they arrive (scope carries
    :run-id/:conversation-id/:session-id). A timeout-ms of 0 or nil disables it."
   [session content timeout-ms scope]
@@ -186,34 +225,44 @@
                     (when-let [unsub @unsubscribe*] (unsub))
                     (f)))
         handler (fn [event]
-                  (let [event-type (some-> (aget event "type") str)]
+                  (let [event-type (:type event)]
                     (case event-type
                       ;; Token streaming is best-effort: a broadcast failure
                       ;; must never abort the turn.
-                      "message_update" (try (stream-message-update! scope seen-text* event)
-                                            (catch :default _ nil))
-                      "message_end" (try (stream-message-end! scope seen-text* event)
-                                         (catch :default _ nil))
-                      "agent_end" (settle! #(when-let [r @resolve*] (r session)))
-                      "error" (settle! #(when-let [r @reject*]
-                                          (r (js/Error. (str "Agent error: " (aget event "message"))))))
+                      :message_update (try (stream-message-update! scope seen-text* event)
+                                           (catch :default _ nil))
+                      :message_end (try (stream-message-end! scope seen-text* event)
+                                        (catch :default _ nil))
+                      :error (settle! #(when-let [r @reject*]
+                                         (r (js/Error. (str "Agent error: " (:message event))))))
                       nil)))
+        timeout! (fn []
+                   (settle!
+                    (fn []
+                      (try
+                        (.catch (js/Promise.resolve (abort! session))
+                                (fn [_] nil))
+                        (catch :default _ nil))
+                      (when-let [r @reject*]
+                        (r (js/Error. (str "Agent turn timed out after " timeout-ms "ms")))))))
         result-promise (js/Promise.
                         (fn [resolve reject]
                           (reset! resolve* resolve)
                           (reset! reject* reject)
                           (reset! unsubscribe* (subscribe! session handler))
                           (when (and timeout-ms (pos? timeout-ms))
-                            (reset! timeout-id* (js/setTimeout
-                                                 (fn []
-                                                   (settle! (fn []
-                                                              (when-let [r @reject*]
-                                                                (r (js/Error. (str "Agent turn timed out after " timeout-ms "ms")))))))
-                                                 timeout-ms)))))]
-    (try
-      (await (send-user-message! session content))
-      (catch :default err
-        (settle! #(when-let [r @reject*] (r err)))))
+                            (reset! timeout-id* (js/setTimeout timeout! timeout-ms)))))
+        send-attempt (try
+                       {:promise (send-user-message! session content)}
+                       (catch :default err
+                         {:error err}))]
+    ;; Do not await the potentially hung turn before the timer-backed result.
+    ;; TurnSession resolves this Promise only after appending the new messages,
+    ;; whereas :agent_end is emitted inside the loop before that projection.
+    (if-let [err (:error send-attempt)]
+      (settle! #(when-let [r @reject*] (r err)))
+      ;; Deliberately not awaited here — see settle-on-send!.
+      (settle-on-send! (:promise send-attempt) settle! resolve* reject* session))
     (await result-promise)))
 
 (defn- run-event-payload
@@ -310,7 +359,7 @@
                                      :session-id session-id
                                      :conversation-id conversation-id
                                      :model-id model-id
-                                     :parts-count (if (array? content) (.-length content) 1)
+                                     :parts-count (if (string? content) 1 (count content))
                                      :media-parts-count (count (or content-parts []))
                                      :omitted-count 0
                                      :content content})

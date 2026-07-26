@@ -2,7 +2,7 @@
 (ns open-hax.sol.domain.contracts.loader
   (:require [clojure.string :as str]
             [cljs.reader :as reader]
-            [open-hax.sol.law.contracts :as v]
+            [open-hax.sol.law.contract-kinds :as v]
             ["node:fs" :as node-fs]
             ["node:fs/promises" :as fs]
             ["node:path" :as path]))
@@ -11,7 +11,7 @@
 
 (def contract-class-order
   ["agents" "actors" "roles" "capabilities" "mcp_servers" "policies"
-   "generators" "schedules" "source_modes" "sources" "model_families" "models" "runtime_features" "ingest_sources" "actions" "triggers" "stores" "sub_agents" "cms"])
+   "generators" "schedules" "source_modes" "sources" "model_families" "models" "providers" "runtime_features" "ingest_sources" "actions" "triggers" "stores" "sub_agents" "cms"])
 
 ;; ── Predicates ─────────────────────────────────────────────────────────────
 
@@ -89,6 +89,7 @@
       ("runtime-feature" "runtime-features" "runtime_feature" "runtime_features" "runtime") "runtime_features"
       ("model-family" "model-families" "model_family" "model_families") "model_families"
       ("model" "models") "models"
+      ("provider" "providers") "providers"
       ("ingest-source" "ingest-sources" "ingest_source" "ingest_sources") "ingest_sources"
       ("cms" "cms-config" "cms-configs" "cms_config" "cms_configs"
        "cms-block-registry" "cms-block-registries" "cms-template-registry"
@@ -159,6 +160,8 @@
                           (when (= :mcp-server (:contract/kind raw)) "mcp_servers")
                           (when (= :mcp_server (:contract/kind raw)) "mcp_servers")
                           (when (:model/id raw) "models")
+                          (when (:provider/id raw) "providers")
+                          (when (= :provider (:contract/kind raw)) "providers")
                           (when (:generator/id raw) "generators")
                           (when (:schedule/id raw) "schedules")
                           (when (= :generator (:contract/kind raw)) "generators")
@@ -176,6 +179,7 @@
                           (:actor/id raw) (:role/id raw) (:cap/id raw)
                           (:mcp-server/id raw) (:mcp_server/id raw)
                           (:model/id raw) (:model-family/id raw)
+                          (:provider/id raw)
                           (:generator/id raw) (:schedule/id raw)
                           (:source-mode/id raw)
                           (:source/id raw)

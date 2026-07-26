@@ -81,3 +81,18 @@
   (testing "help for a group shows subcommands"
     (let [help (router/render-help test-registry ["git"])]
       (is (clojure.string/includes? help "STATUS")))))
+
+(deftest raw-args-after-path-test
+  (testing "flags after the command path survive with order intact"
+    (is (= ["search-tasks" "--query" "sol"]
+           (router/raw-args-after-path ["kanban" "search-tasks" "--query" "sol"] ["kanban"]))))
+  (testing "nested command paths are consumed"
+    (is (= ["--verbose"]
+           (router/raw-args-after-path ["git" "status" "--verbose"] ["git" "status"]))))
+  (testing "flags interleaved before path components are skipped"
+    (is (= ["read-board"]
+           (router/raw-args-after-path ["--quiet" "kanban" "read-board"] ["kanban"]))))
+  (testing "empty path returns all tokens"
+    (is (= ["kanban" "list"] (router/raw-args-after-path ["kanban" "list"] []))))
+  (testing "unconsumed path yields no args"
+    (is (= [] (router/raw-args-after-path ["kanban"] ["kanban" "missing"])))))

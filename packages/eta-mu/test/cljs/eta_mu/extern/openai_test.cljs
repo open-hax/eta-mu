@@ -1,8 +1,15 @@
 (ns eta-mu.extern.openai-test
   (:require [cljs.test :refer [deftest is testing use-fixtures]]
-            [eta-mu.extern.openai :as openai]))
+            [eta-mu.extern.openai :as openai]
+            [goog.object :as gobj]))
 
 (def ^:private original-fetch js/fetch)
+
+(defn- restore-env!
+  [key value]
+  (if value
+    (aset js/process.env key value)
+    (gobj/remove js/process.env key)))
 
 (use-fixtures :each
   {:before #(set! js/fetch original-fetch)
@@ -56,6 +63,14 @@
   #js {:ok false
        :status status
        :json (fn [] (js/Promise.resolve (clj->js body)))})
+
+(defn- rejecting-sse-response
+  [error]
+  #js {:ok true
+       :status 200
+       :body #js {:getReader
+                  (fn []
+                    #js {:read (fn [] (js/Promise.reject error))})}})
 
 (defn- ^:async drain-events!
   "Drain a stream's `.next()` calls into a vector of `{:type :partial}` maps."
@@ -158,6 +173,146 @@
           final (await (.result stream))]
       (is (= :assistant (:role final)))
       (is (= "Hi" (-> final :content first :text))))))
+
+(deftest ^:async stream-chat-custom-endpoint-does-not-leak-openai-credentials-test
+  (testing "an explicit custom endpoint never receives fallback OpenAI credentials"
+    (let [saved-auth-token (aget js/process.env "OPENAI_AUTH_TOKEN")
+          saved-api-key (aget js/process.env "OPENAI_API_KEY")
+          saved-base-url-api-key (aget js/process.env "OPENAI_BASE_URL_API_KEY")
+          request-options (atom nil)]
+      (try
+        (aset js/process.env "OPENAI_AUTH_TOKEN" "openai-secret-auth-token")
+        (aset js/process.env "OPENAI_API_KEY" "openai-secret-api-key")
+        (gobj/remove js/process.env "OPENAI_BASE_URL_API_KEY")
+        (set! js/fetch
+              (fn [_url options]
+                (reset! request-options options)
+                (js/Promise.resolve
+                 (sse-response
+                  [{:choices [{:index 0 :delta {:content "Hi"} :finish_reason nil}]}
+                   {:choices [{:index 0 :delta {} :finish_reason "stop"}]}]))))
+        (let [stream (await (openai/stream-chat
+                             {:id "local-model" :provider "local"}
+                             {:system-prompt "sys" :messages [] :tools []}
+                             {:base-url "http://localhost:1234/v1/chat/completions"}))]
+          (await (.result stream))
+          (is (nil? (aget (.-headers @request-options) "Authorization"))))
+        (finally
+          (restore-env! "OPENAI_AUTH_TOKEN" saved-auth-token)
+          (restore-env! "OPENAI_API_KEY" saved-api-key)
+          (restore-env! "OPENAI_BASE_URL_API_KEY" saved-base-url-api-key))))))
+
+(deftest ^:async stream-chat-env-custom-endpoint-does-not-leak-openai-credentials-test
+  (testing "a custom endpoint from OPENAI_BASE_URL never receives fallback OpenAI credentials"
+    (let [saved-base-url (aget js/process.env "OPENAI_BASE_URL")
+          saved-auth-token (aget js/process.env "OPENAI_AUTH_TOKEN")
+          saved-api-key (aget js/process.env "OPENAI_API_KEY")
+          saved-base-url-api-key (aget js/process.env "OPENAI_BASE_URL_API_KEY")
+          request-options (atom nil)]
+      (try
+        (aset js/process.env "OPENAI_BASE_URL" "http://localhost:1234/v1/chat/completions")
+        (aset js/process.env "OPENAI_AUTH_TOKEN" "openai-secret-auth-token")
+        (aset js/process.env "OPENAI_API_KEY" "openai-secret-api-key")
+        (gobj/remove js/process.env "OPENAI_BASE_URL_API_KEY")
+        (set! js/fetch
+              (fn [_url options]
+                (reset! request-options options)
+                (js/Promise.resolve
+                 (sse-response
+                  [{:choices [{:index 0 :delta {:content "Hi"} :finish_reason nil}]}
+                   {:choices [{:index 0 :delta {} :finish_reason "stop"}]}]))))
+        (let [stream (await (openai/stream-chat
+                             {:id "local-model" :provider "local"}
+                             {:system-prompt "sys" :messages [] :tools []}
+                             {}))]
+          (await (.result stream))
+          (is (nil? (aget (.-headers @request-options) "Authorization"))))
+        (finally
+          (restore-env! "OPENAI_BASE_URL" saved-base-url)
+          (restore-env! "OPENAI_AUTH_TOKEN" saved-auth-token)
+          (restore-env! "OPENAI_API_KEY" saved-api-key)
+          (restore-env! "OPENAI_BASE_URL_API_KEY" saved-base-url-api-key))))))
+
+(deftest ^:async stream-chat-env-custom-endpoint-uses-dedicated-credential-test
+  (testing "a custom endpoint can opt into its own dedicated credential"
+    (let [saved-base-url (aget js/process.env "OPENAI_BASE_URL")
+          saved-base-url-api-key (aget js/process.env "OPENAI_BASE_URL_API_KEY")
+          request-options (atom nil)]
+      (try
+        (aset js/process.env "OPENAI_BASE_URL" "http://localhost:1234/v1/chat/completions")
+        (aset js/process.env "OPENAI_BASE_URL_API_KEY" "custom-endpoint-key")
+        (set! js/fetch
+              (fn [_url options]
+                (reset! request-options options)
+                (js/Promise.resolve
+                 (sse-response
+                  [{:choices [{:index 0 :delta {:content "Hi"} :finish_reason nil}]}
+                   {:choices [{:index 0 :delta {} :finish_reason "stop"}]}]))))
+        (let [stream (await (openai/stream-chat
+                             {:id "local-model" :provider "local"}
+                             {:system-prompt "sys" :messages [] :tools []}
+                             {}))]
+          (await (.result stream))
+          (is (= "Bearer custom-endpoint-key"
+                 (aget (.-headers @request-options) "Authorization"))))
+        (finally
+          (restore-env! "OPENAI_BASE_URL" saved-base-url)
+          (restore-env! "OPENAI_BASE_URL_API_KEY" saved-base-url-api-key))))))
+
+(deftest ^:async stream-chat-forwards-abort-signal-test
+  (testing "the supplied AbortSignal reaches the underlying fetch"
+    (let [controller (js/AbortController.)
+          request-options (atom nil)]
+      (set! js/fetch
+            (fn [_url options]
+              (reset! request-options options)
+              (js/Promise.resolve
+               (sse-response
+                [{:choices [{:index 0 :delta {:content "Hi"} :finish_reason nil}]}
+                 {:choices [{:index 0 :delta {} :finish_reason "stop"}]}]))))
+      (let [stream (await (openai/stream-chat
+                           {:id "gpt-4o-mini" :provider "openai"}
+                           {:system-prompt "sys" :messages [] :tools []}
+                           {:api-key "test-key"
+                            :signal (.-signal controller)}))]
+        (await (.result stream))
+        (is (identical? (.-signal controller)
+                        (.-signal @request-options)))))))
+
+(deftest ^:async stream-chat-mid-stream-abort-test
+  (testing "an AbortError from reader.read becomes an aborted assistant result"
+    (let [controller (js/AbortController.)
+          abort-error (js/Error. "The operation was aborted")]
+      (set! (.-name abort-error) "AbortError")
+      (set! js/fetch
+            (fn [_url _options]
+              (js/Promise.resolve (rejecting-sse-response abort-error))))
+      (let [stream (await (openai/stream-chat
+                           {:id "gpt-4o-mini" :provider "openai"}
+                           {:system-prompt "sys" :messages [] :tools []}
+                           {:api-key "test-key"
+                            :signal (.-signal controller)}))]
+        ;; Abort after fetch has returned and the stream object exists.
+        (.abort controller)
+        (is (false? (.-done (await (.next stream)))))
+        (is (true? (.-done (await (.next stream)))))
+        (let [final (await (.result stream))]
+          (is (= :assistant (:role final)))
+          (is (= :aborted (:stop-reason final))))))))
+
+(deftest ^:async stream-chat-reader-failure-test
+  (testing "a non-abort reader rejection becomes an error assistant result"
+    (let [network-error (js/Error. "socket reset")]
+      (set! js/fetch
+            (fn [_url _options]
+              (js/Promise.resolve (rejecting-sse-response network-error))))
+      (let [stream (await (openai/stream-chat
+                           {:id "gpt-4o-mini" :provider "openai"}
+                           {:system-prompt "sys" :messages [] :tools []}
+                           {:api-key "test-key"}))
+            final (await (.result stream))]
+        (is (= :error (:stop-reason final)))
+        (is (re-find #"socket reset" (:error-message final)))))))
 
 (deftest ^:async stream-chat-no-provider-configured-test
   (testing "stream-chat short-circuits with a clear error when no api key and no alternate base-url are set"

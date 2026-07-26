@@ -4,6 +4,7 @@
             [open-hax.sol.domain.realtime :as realtime]
             [open-hax.sol.infra.config :as runtime-config]
             [open-hax.sol.domain.models :as runtime-models]
+            [open-hax.sol.extern.process :as process]
             [open-hax.sol.runtime.state :as runtime-state]))
 
 (defonce server* (atom nil))
@@ -14,11 +15,13 @@
 
 (defn config-js
   []
-  (clj->js (runtime-models/enrich-config (runtime-config/cfg))))
+  (clj->js (runtime-models/enrich-config (runtime-config/cfg) process/env-var)))
 
 (defn register-app-routes!
   [runtime app config]
-  (let [resolved-config (runtime-models/enrich-config (if (map? config) config (runtime-config/cfg)))]
+  (let [resolved-config (runtime-models/enrich-config
+                         (if (map? config) config (runtime-config/cfg))
+                         process/env-var)]
     (reset! runtime-state/config* resolved-config)
     (reset! runtime-state/runtime* runtime)
     (app-routes/register-routes! runtime app resolved-config)))
@@ -26,7 +29,7 @@
 (defn ^:async start!
   [runtime]
   (when-not @server*
-    (let [config (runtime-models/enrich-config (runtime-config/cfg))
+    (let [config (runtime-models/enrich-config (runtime-config/cfg) process/env-var)
           Fastify (js/require "fastify")
           app (Fastify #js {:logger #js {:stream (.-stderr js/process)}})]
       (reset! runtime-state/config* config)

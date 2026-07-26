@@ -1,13 +1,14 @@
 ---
-uuid: "coding-agent-cljs-rewrite-cutover-ratchet"
-title: "Coding Agent CLJS Rewrite — Legacy Retirement"
-status: "blocked"
-priority: "P0"
-labels: ["tasks", "cljs", "rewrite", "coding-agent", "3sp"]
-created_at: "2026-06-15T00:00:00Z"
-source: "kanban/epics/coding-agent-cljs-rewrite.md"
-points: 3
 category: "tasks"
+labels: ["tasks", "cljs", "rewrite", "coding-agent", "3sp"]
+write-id: "1784332660628-0.gsqkge0hjb0iylp0lq"
+points: "3"
+source: "kanban/epics/coding-agent-cljs-rewrite.md"
+title: "Coding Agent CLJS Rewrite — Legacy Retirement"
+priority: "P0"
+status: "blocked"
+uuid: "coding-agent-cljs-rewrite-cutover-ratchet"
+created_at: "2026-06-15T00:00:00Z"
 ---
 
 # Coding Agent CLJS Rewrite — Legacy Retirement (re-scoped from Cutover Ratchet)
@@ -67,5 +68,10 @@ Board triage 2026-07-15: re-scoped from 'in-place TS cutover ratchet' to 'legacy
 
 NOTES FROM RUNTIME DISSOLUTION (wave 5, now done): legacy/github and legacy/coding-agent are build-green but gutted of their runtime-batch integration — cli.ts now parses the model reply directly into EtaMuAgentDecision (parseAgentDecision, lenient local fn); runtime-batch.ts + its test deleted; index.ts re-exports cleaned; coding-agent's --version surface-result call inlined. The action-batch control-plane flow (buildPlanningContext/draftBatch/parseActionBatch/publishActionBatch) died with packages/runtime — when this card's legacy value ledger is applied, those rows are already resolved. legacy/github's own vitest: 16 green.
 
-LEGACY VALUE LEDGER (recovered from Claude session 9520e8cf Explore agent + verified against current tree): output-contract-gate=empty stub DELETED 2026-07-17; publication-components=no code consumers DELETED 2026-07-17; tui+agent=consumers are legacy-internal (coding-agent), parity delivered via terminal-ui/turn-processor; coding-agent=BLOCKED-BY-SOL (packages/sol hard source dep: sol/extern/eta_mu.cljs + sol/infra/agent/mcp_tools.cljs import @open-hax/eta-mu-cli; sol-backend runs in pm2) + parity gaps (print/RPC modes, export-html, skills, slash-commands, themes, compaction, eta-mu-beta bin); ai=BLOCKED-BY-MULTI-PROVIDER (only OpenAI slice ported; OAuth+model-discovery+pi-ai bin lacking, ai-cljs-rewrite epic icebox); github=BLOCKED-BY-CI-MIGRATION (release-and-publish, review-resolution-gate, auto-merge, ensure-pr-to-staging workflows invoke legacy/github dev commands; replacement github-cljs-rewrite epic icebox); kanban=BLOCKED-BY-CI (kanban-sync.yml runs @open-hax/kanban-legacy sync github) + superseded by rheos+eta-mu kanban; docs=BLOCKED-BY-CI (staging-pr/main-pr-gate run packages/legacy/docs tests). EXECUTED 2026-07-17: bin collision resolved (legacy/coding-agent bins eta-mu+pi removed, new packages/eta-mu is sole owner; eta-mu-beta remains legacy-only); ts-line-count machinery retired (scripts/ts-line-count.mjs, pre-commit-ts-guard.sh, .ts-line-count-baseline, root ts:count scripts, hooks:install, AGENTS.md TS deprecation policy section, README/CLAUDE refs); stale e2e dep on eta-mu-cli removed. REMAINING for full DoD: wholesale deletion of packages/legacy awaits sol decoupling + CI workflow migration (or explicit acceptance of those breaks). pnpm install + root test green.
+LEGACY VALUE LEDGER (recovered from Claude session 9520e8cf Explore agent + verified against current tree): output-contract-gate=empty stub DELETED 2026-07-17; publication-components=no code consumers DELETED 2026-07-17; tui=consumers are legacy-internal (coding-agent), parity delivered via terminal-ui; agent=consumers are legacy-internal (coding-agent), parity delivered via turn-processor; coding-agent=SOL-DEP-CLEARED 2026-07-17 (was BLOCKED-BY-SOL on a packages/sol hard source dep: sol/extern/eta_mu.cljs + sol/infra/agent/mcp_tools.cljs imported @open-hax/eta-mu-cli; cleared by sol-provider-swap-legacy-drop — see the 2026-07-17 record below) + parity gaps (print/RPC modes, export-html, skills, slash-commands, themes, compaction, eta-mu-beta bin); ai=BLOCKED-BY-MULTI-PROVIDER (only OpenAI slice ported; OAuth+model-discovery+pi-ai bin lacking, ai-cljs-rewrite epic icebox); github=BLOCKED-BY-CI-MIGRATION (release-and-publish, review-resolution-gate, auto-merge, ensure-pr-to-staging workflows invoke legacy/github dev commands; replacement github-cljs-rewrite epic icebox); kanban=BLOCKED-BY-CI (kanban-sync.yml runs @open-hax/kanban-legacy sync github) + superseded by rheos+eta-mu kanban; docs=BLOCKED-BY-CI (staging-pr/main-pr-gate run packages/legacy/docs tests). EXECUTED 2026-07-17: bin collision resolved (legacy/coding-agent bins eta-mu+pi removed, new packages/eta-mu is sole owner; eta-mu-beta remains legacy-only); ts-line-count machinery retired (scripts/ts-line-count.mjs, pre-commit-ts-guard.sh, .ts-line-count-baseline, root ts:count scripts, hooks:install, AGENTS.md TS deprecation policy section, README/CLAUDE refs); stale e2e dep on eta-mu-cli removed. REMAINING for full DoD: wholesale deletion of packages/legacy awaits CI workflow migration (or explicit acceptance of those breaks) — the sol dependency that was also blocking it cleared on 2026-07-17, see the record below. pnpm install + root test green.
+
+SOL DECOUPLING SCOPED 2026-07-17: new epic sol-turn-processor-cutover (kanban/epics/sol-turn-processor-cutover.md) with 6 task cards covering the full sol un-coupling: turn-processor session adapter (3sp), settings/model decoupling (2sp), MCP tool shape (1sp), provider swap + dependency drop (2sp), eta-mu sol command surface (2sp), cutover verification (1sp). When cards 1-4 land, sol is no longer a legacy/coding-agent consumer and this card's sol blocker clears (CI automation blockers remain).
+
+SOL DECOUPLING LANDED 2026-07-17 (sol-provider-swap-legacy-drop): sol is no longer a legacy/coding-agent consumer. Legacy boundary deleted (extern/eta_mu.cljs, infra/agent/provider/eta_mu.cljs + legacy test stubs), @open-hax/eta-mu-cli dropped from packages/sol/package.json and shadow-cljs keep-as-import/resolve, provider swapped to open-hax.sol.infra.agent.provider.turn-processor over eta-mu.turn-processor.infra.loop + eta-mu.extern.openai. Gates: pnpm --filter @open-hax/sol test green (88 tests, 256 assertions), lint:kondo zero warnings, git grep eta-mu-cli -- packages/sol -> 0. The BLOCKED-BY-SOL ledger row on coding-agent clears; CI automation blockers (github/docs/kanban workflows) remain.
+
 ---

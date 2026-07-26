@@ -1,0 +1,10 @@
+{:contract/kind :provider
+ :contract/id "proxx"
+ :provider/id :proxx
+ :provider/label "Proxx"
+ :provider/base-url "http://proxx-from-contract:8789"
+ :provider/api-shape :openai-chat
+ :provider/auth {:auth/mode :bearer
+                 :auth/env "PROXX_CONTRACT_TOKEN"}
+ :provider/models-endpoint "/v1/models"
+ :provider/model-prefix-allowlist ["glm-5" "test-model"]}

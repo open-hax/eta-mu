@@ -148,26 +148,67 @@
         filename (assoc :filename filename)
         size (assoc :size size)))))
 
+(defn- cljs-media-part
+  "Stored-shape projection of a turn-processor-law media content part
+   ({:type :image/:audio :data/:url :mime-type})."
+  [part]
+  (let [media-kind (some-> (:type part) name str/lower-case)
+        url (nonblank (:url part))
+        raw-data (nonblank (:data part))
+        mime-type (or (nonblank (:mime-type part))
+                      (nonblank (:mimeType part))
+                      (case media-kind
+                        "image" "image/png"
+                        "audio" "audio/wav"
+                        nil))
+        data (when raw-data
+               (if (str/starts-with? raw-data "data:")
+                 raw-data
+                 (str "data:" mime-type ";base64," raw-data)))]
+    (when (and (contains? #{"image" "audio"} media-kind)
+               (or url data))
+      (cond-> {:type media-kind}
+        url (assoc :url url)
+        data (assoc :data data)
+        mime-type (assoc :mimeType mime-type)
+        (nonblank (:filename part)) (assoc :filename (nonblank (:filename part)))
+        (number? (:size part)) (assoc :size (:size part))))))
+
 (defn assistant-content-parts
   [assistant-message]
   (let [content (when assistant-message
-                  (aget assistant-message "content"))]
-    (if (array? content)
+                  (if (map? assistant-message)
+                    (:content assistant-message)
+                    (aget assistant-message "content")))]
+    (cond
+      (array? content)
       (->> (array-seq content)
            (keep assistant-media-part)
            vec)
-      [])))
+
+      (sequential? content)
+      (->> content
+           (keep cljs-media-part)
+           vec)
+
+      :else [])))
 
 (defn session-message-text
   [message]
-  (let [content (aget message "content")]
+  (let [content (if (map? message)
+                  (:content message)
+                  (aget message "content"))]
     (cond
       (string? content) content
       (array? content) (->> (array-seq content)
                             (map content-part-text)
                             (remove str/blank?)
                             (str/join "\n\n"))
-      (string? (aget message "text")) (aget message "text")
+      (sequential? content) (->> content
+                                 (map content-part-text)
+                                 (remove str/blank?)
+                                 (str/join "\n\n"))
+      (and (not (map? message)) (string? (aget message "text"))) (aget message "text")
       :else "")))
 
 (defn content-part-label

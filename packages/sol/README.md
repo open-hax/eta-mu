@@ -1,6 +1,6 @@
 # Sol
 
-`@open-hax/sol` is the eta-mu ClojureScript agent runtime backend: a Node 22 +
+`@eta-mu/sol` is the eta-mu ClojureScript agent runtime backend: a Node 22 +
 shadow-cljs + Fastify control plane. It owns HTTP/WebSocket transport, a minimal
 agent runtime (turns, sessions, runs), contract loading, an OpenAI-compatible
 surface, and Proxx-backed model access.
@@ -28,7 +28,7 @@ src/cljs/open_hax/sol/
 │   └── node/                  # crypto, fs, path wrappers
 ├── infra/                     # config, core, http, http-server, lifecycle, graceful-shutdown
 │   ├── agent/                 # runner, runtime, service, session(-store), run-state, turn,
-│   │   ├── provider/          #   eta-mu provider adapter
+│   │   ├── provider/          #   turn-processor provider adapter
 │   │   └── stream/            #   provider-events, reducer, sinks
 │   └── routes/app.cljs        # the route table (register-routes!)
 ├── law/contracts.cljs         # contract/law helpers
@@ -46,15 +46,15 @@ matched by the `:test` build's `open-hax\.sol\..*-test$` regex.
 Defined in `shadow-cljs.edn` (nREPL `4501`, dev HTTP `9633`). Source-paths
 include sibling packages `../katamorph/src/cljs` and `../event-ledger/src`. All
 runtime builds are `:target :esm` with `:js-provider :import`; Node and npm
-modules (`node:*`, `fastify`, `ws`, `typebox`, `@modelcontextprotocol/sdk`,
-`@open-hax/eta-mu-cli`) stay runtime imports via `:keep-as-import`.
+modules (`node:*`, `fastify`, `ws`, `typebox`, `@modelcontextprotocol/sdk`)
+stay runtime imports via `:keep-as-import`.
 
 | Build | Target | Output | Notes |
 |-------|--------|--------|-------|
 | `:server` | `:esm` `:node` | `dist/server.js` | Production runtime; init-fn `open-hax.sol.entrypoint/init` |
 | `:server-dev` | `:esm` `:node` | `dist-dev/server.js` | Hot-reload dev; same init-fn, devtools before/after-load HTTP restart hooks |
 | `:app` | `:esm` | `dist/app.js` | Embeddable module; exports `solPlugin`, `config`, `bootstrap`, `start`, `registerAppRoutes`, `registerWsRoutes` |
-| `:test` | `:node-test` | `target/test/test.cjs` | Autorun node-test; ns-regexp `open-hax\.sol\..*-test$`; stubs `@open-hax/eta-mu-cli` |
+| `:test` | `:node-test` | `target/test/test.cjs` | Autorun node-test; ns-regexp `open-hax\.sol\..*-test$` |
 
 Startup path:
 
