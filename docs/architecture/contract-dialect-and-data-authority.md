@@ -47,7 +47,7 @@ Its engineering kernel separates:
 law    = admissibility and versioned contracts
 shape  = pure transformations
 extern = foreign capability invocation and decoding
- domain = Epiphany meaning and decisions
+domain = Epiphany meaning and decisions
 infra  = effect orchestration and adapter composition
 ```
 
@@ -244,7 +244,7 @@ Muse should compile implementations and exposures for a selected target. Katamor
 
 ## 7. Operational event and evidence contracts
 
-The operational event envelope should remain small and stable:
+The operational event envelope should remain small and stable. The canonical executable shape is owned by `open-hax/event-ledger`:
 
 ```clojure
 {:event/id ...
@@ -257,11 +257,24 @@ The operational event envelope should remain small and stable:
  :session/id ...
  :turn/id ...
  :delivery/mode ...
+ :delivery/id ...
+ :payload {...}
  :contracts [...]
- :payload {...}}
+ :expectations {...}}
 ```
 
+The current canonical Malli schema has no in-band envelope-version field. Compatibility is therefore enforced by importing or pinning a known `event-ledger` schema revision and by the versioned contract identifiers carried in `:contracts`; consumers must not claim to validate an envelope version that the schema does not expose.
+
 Payload meaning comes from versioned contract references. A receipt, session message, Rheos transition, mycology observation, and Epiphany review decision should not be merged into one giant optional schema.
+
+Older, legacy, or foreign envelopes must cross an explicit adapter boundary:
+
+1. validate the source envelope against its declared source schema where available;
+2. convert it into the canonical event-ledger fields;
+3. retain source schema/revision and conversion provenance in adapter records or referenced contracts;
+4. report unsupported or lossy conversion explicitly instead of silently accepting it.
+
+The OpenPlanner legacy bridge is one such compatibility adapter. It is not a second canonical envelope.
 
 ### Epiphany consumption of eta-mu ledgers
 
@@ -269,7 +282,7 @@ Add source adapters rather than making Epiphany the operational writer:
 
 ```text
 event-ledger stream
-  -> envelope/schema validation
+  -> canonical envelope/schema validation
   -> source-specific payload decoder
   -> Epiphany observation records
   -> extraction/correlation candidates
@@ -425,7 +438,7 @@ Prefer immutable Git dependencies or released artifacts for normal consumption. 
 
 ### Phase A — Freeze shared boundaries
 
-1. Canonicalize the operational event envelope in event-ledger.
+1. Canonicalize the operational event envelope in event-ledger and publish a pinned tag or immutable revision for each incompatible schema change.
 2. Remove eta-mu protocol copies and import/re-export the canonical schema.
 3. Define Katamorph resource identity, schema version, references, and extension registration.
 4. Complete the capability semantic/implementation/exposure/grant reconciliation.
@@ -476,7 +489,7 @@ The constellation needs cross-repository executable laws:
 
 1. **Schema ownership:** a canonical kind has one owning registry and no consumer-local redefinition.
 2. **Round trip:** canonical resource -> target projection -> observable host descriptor preserves declared semantics or reports explicit loss.
-3. **Event compatibility:** every producer/consumer validates the same envelope version.
+3. **Event compatibility:** every producer and consumer validates against the canonical event-ledger envelope schema revision it imports; payload compatibility is governed by versioned `:contracts` references, and older or foreign envelopes must pass through explicit adapters or fail clearly.
 4. **Idempotency:** replaying a durable request/event identity does not duplicate material records.
 5. **Authority:** derived projections cannot mutate or silently promote canonical observations.
 6. **Epistemic status:** observed, derived, provisional, accepted, rejected, stale, unavailable, corrupt, empty, and not-implemented remain distinguishable where material.
