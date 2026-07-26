@@ -1,12 +1,7 @@
 ---
 original_name: "2026.06.14.12.19.50.md"
-<<<<<<<< HEAD:docs/notes/design/eta-mu-init-experience-vision.md
 title: "Eta-Mu Init Experience Vision"
-summary: "Describes the desired first-run eta-mu init experience scanning a project and initializing ledgers, kanban, and agent integrations."
-========
-title: "Eta Mu Init Vision Script"
-summary: "Vision script for the `eta-mu init` experience: ledger, sentinel, fork tax, receipt river, session mycology, retrospective agent."
->>>>>>>> origin/device/yoga:docs/notes/design/eta-mu-init-vision-script.md
+summary: "Vision script for the `eta-mu init` experience: ledger, sentinel, fork tax, receipt river, session mycology, retrospective agent, and harness integration."
 category: "design"
 created: "2026-06-14"
 ---
@@ -42,7 +37,6 @@ The file sentinel records file changes to an immuatable ledger file``
 
 The ledger is regularly analyzed by statistical analysis
 All substantial related changes are automaticly commited with inteligent commit messages
-
 The event ledger is version controled separately from your code
 
 A kanban/ folder was created, and is being populated by a sol agent.
