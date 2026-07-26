@@ -25,23 +25,57 @@ import { pathToFileURL } from "node:url";
 
 // Every def name katamorph.schema owns (schemas + primitives), v0.2.0.
 export const OWNED = [
-  "ContractId", "ToolId", "ISODuration", "EvalOp", "PolicyOutcome",
-  "Severity", "EvalNode", "PolicyMatch", "FulfillmentMatch", "AgentSpec",
-  "ActorCapSpec", "ContextPolicy", "RuntimeSourceRef", "UiAction",
-  "SubAgentConfig", "AgentContract", "SubAgentContract", "ActorContract",
-  "RoleContract", "UserSurface", "CapabilityContract", "PolicyContract",
-  "PolicyGateContract", "FulfillmentContract", "StrategyContract",
-  "ActionContract", "StoreContract", "NamespaceFile", "TriggerContract",
-  "GeneratorContract", "ScheduleContract", "SourceEmission",
-  "SourceListener", "RuntimeSourceContract", "ModelFamilyContract",
-  "ModelContract", "McpServerContract", "SourceModeContract",
-  "RuntimeFeatureContract", "CmsContract", "ProviderContract",
+  "ContractId",
+  "ToolId",
+  "ISODuration",
+  "EvalOp",
+  "PolicyOutcome",
+  "Severity",
+  "EvalNode",
+  "PolicyMatch",
+  "FulfillmentMatch",
+  "AgentSpec",
+  "ActorCapSpec",
+  "ContextPolicy",
+  "RuntimeSourceRef",
+  "UiAction",
+  "SubAgentConfig",
+  "AgentContract",
+  "SubAgentContract",
+  "ActorContract",
+  "RoleContract",
+  "UserSurface",
+  "CapabilityContract",
+  "PolicyContract",
+  "PolicyGateContract",
+  "FulfillmentContract",
+  "StrategyContract",
+  "ActionContract",
+  "StoreContract",
+  "NamespaceFile",
+  "TriggerContract",
+  "GeneratorContract",
+  "ScheduleContract",
+  "SourceEmission",
+  "SourceListener",
+  "RuntimeSourceContract",
+  "ModelFamilyContract",
+  "ModelContract",
+  "McpServerContract",
+  "SourceModeContract",
+  "RuntimeFeatureContract",
+  "CmsContract",
+  "ProviderContract",
   "IngestSourceContract",
 ];
 
 const ALLOW_MARKER = /;.*contract-guard:\s*allow/;
 const OWNED_SET = new Set(OWNED);
-const OPEN_TO_CLOSE = new Map([["(", ")"], ["[", "]"], ["{", "}"]]);
+const OPEN_TO_CLOSE = new Map([
+  ["(", ")"],
+  ["[", "]"],
+  ["{", "}"],
+]);
 const CLOSERS = new Set(OPEN_TO_CLOSE.values());
 const READER_PREFIXES = new Set(["'", "`", "~", "~@", "@", "#'"]);
 
@@ -68,12 +102,12 @@ export function tokenizeClojure(source) {
       i += 1;
     } else if (ch === ";") {
       while (i < source.length && source[i] !== "\n") i += 1;
-    } else if (ch === "\"") {
+    } else if (ch === '"') {
       i += 1;
       while (i < source.length) {
         if (source[i] === "\\") {
           i += Math.min(2, source.length - i);
-        } else if (source[i] === "\"") {
+        } else if (source[i] === '"') {
           i += 1;
           break;
         } else {
@@ -102,8 +136,7 @@ export function tokenizeClojure(source) {
 
 function formEnd(tokens, start) {
   const first = tokens[start]?.value;
-  if (READER_PREFIXES.has(first) ||
-      (first?.startsWith("^") && first !== "^")) {
+  if (READER_PREFIXES.has(first) || (first?.startsWith("^") && first !== "^")) {
     return formEnd(tokens, start + 1);
   }
   if (first === "^") {
@@ -219,7 +252,7 @@ export function main(dirs) {
       "contract-guard FAILED — katamorph.schema is the canonical owner of " +
         "these contract schemas.\nDo not redefine them locally; extend " +
         "katamorph and bump the deps.edn git-ref instead\n" +
-        "(deliberate exception: comment marker `contract-guard: allow`).\n"
+        "(deliberate exception: comment marker `contract-guard: allow`).\n",
     );
     for (const v of violations) console.error("  " + v);
     return 1;

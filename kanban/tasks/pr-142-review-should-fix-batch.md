@@ -1,7 +1,7 @@
 ---
 category: "tasks"
 labels: ["tasks", "sol", "turn-processor", "rheos", "ultra", "cljs", "pr-142", "3sp"]
-write-id: "1785022956329-0.yzc60xdw38lc5m17uu4"
+write-id: "1785025865142-0.zaanfwevam5m5w603r"
 points: "3"
 source: "Codex/CodeRabbit review on PR #142"
 title: "PR #142: resolve remaining review findings and land the Sol cutover"
@@ -47,14 +47,15 @@ threads are unresolved. Verification of each open thread against `03eeab1` found
 
 ## Definition of done
 
-- [ ] Steering/follow-up abort guard landed with a covering loop test.
-- [ ] Rheos static roots resolve package-relative; `app` target in the build.
-- [ ] Review-body code nits fixed.
-- [ ] Kanban card doc hygiene swept.
-- [ ] Follow-up cards filed for out-of-scope residues.
-- [ ] Gates green: eta-mu, turn-processor, sol, rheos, extensions, `ultra_test.bb`.
-- [ ] All 15 review threads replied to and resolved; 0 unresolved remain.
-- [ ] PR #142 merged into `main`.
+- [x] Steering/follow-up abort guard landed with a covering loop test.
+- [x] Rheos static roots resolve package-relative; `app` target in the build.
+- [x] Review-body code nits fixed.
+- [x] Kanban card doc hygiene swept.
+- [x] Follow-up cards filed for out-of-scope residues.
+- [x] Gates green: eta-mu, turn-processor, sol, rheos, extensions, `ultra_test.bb`.
+- [x] All review threads replied to and resolved; 0 unresolved remain (20 across
+      two waves — 15 initially, plus 5 from CodeRabbit's post-quota-reset wave).
+- [x] PR #142 merged into `main` as merge commit `1656927`.
 
 ## Not in scope (carded separately)
 
@@ -70,3 +71,7 @@ threads are unresolved. Verification of each open thread against `03eeab1` found
 - `sol.cljs` `console.error`-vs-bus-event note — CLI entry point, no bus in scope.
 - `packages/sol/deps.edn` katamorph/event-ledger coordinates (CodeRabbit Major) —
   false positive; both repos resolve and the tag→sha pins are exact.
+
+---
+CLOSED 2026-07-26: PR #142 merged into main as merge commit 1656927. Two review waves closed out by hand after both bots hit usage limits — 20 threads total (15 initial, 5 from CodeRabbit after its quota reset), all replied to with the fixing commit or an evidenced rationale, all resolved. required_conversation_resolution was the sole merge blocker; 0 approvals are required and every required context was already green. Branch commits: e7a2b95 (residual findings) and 809e9cc (SIGKILL escalation + second wave). Two red gates found on the branch and fixed, neither part of the reviewed set: ultra_test.bb's git-commit-is-path-scoped stubbed p/process with a delay that cannot satisfy the 3-arity deref, so the test evidencing the path-scoped-commit fix was itself erroring; and sol lint:kondo carried 2 promise-chain warnings from d73f403, resolved by extracting settle-on-send! as an ^:async helper invoked without await so the timeout race is preserved. Declined with rationale: ledger rotation (append-only by design), console.error-vs-bus-event in the CLI entry point, the sol/deps.edn katamorph/event-ledger coordinates (false positive — both repos resolve, tag->sha pins exact), and CodeRabbit's claim that ai/github lack legacy ledger rows (both present). Follow-ups filed: ultra-workflow-failure-signalling, sol-turn-session-late-control-messages, kanban-comment-writer-setext-delimiter.
+---
