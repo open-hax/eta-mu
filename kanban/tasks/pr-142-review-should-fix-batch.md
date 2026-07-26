@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "sol", "turn-processor", "rheos", "ultra", "cljs", "pr-142", "3sp"]
-write-id: "1785025865142-0.zaanfwevam5m5w603r"
+write-id: "1785026783868-0.57hcsme2e3j4ekocuh"
 points: "3"
 source: "Codex/CodeRabbit review on PR #142"
 title: "PR #142: resolve remaining review findings and land the Sol cutover"
 priority: "P1"
-status: "in_progress"
+status: "done"
 uuid: "pr-142-review-should-fix-batch"
 created_at: "2026-07-25T00:00:00Z"
 ---
