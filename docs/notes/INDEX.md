@@ -12,6 +12,8 @@ This index classifies each note by topic and marks it as either:
   direction is current).
 - **historical** — brainstorming, transcripts, or one-off context that records
   how the thinking got here. Useful for lineage, not authoritative.
+- **decision candidate** — a bounded unresolved boundary that requires explicit
+  cross-repository review before it can govern implementation.
 
 Distilled, more durable write-ups live in [`../design/`](../design/). Notes
 that have been promoted there are marked below.
@@ -40,7 +42,7 @@ and the `.eta-mu/` ledger/state layout.
 | Note | Status | Summary |
 |------|--------|---------|
 | [dev/eta-mu-agents-md-improvement-plan.md](dev/eta-mu-agents-md-improvement-plan.md) | design intent | Acceptance criteria for improving `AGENTS.md`/`PROCESS.md`: FSM blocks invalid board moves across all surfaces (file edit, CLI, MCP, hooks); per-package `AGENTS.md`; sol/knoxx coexistence; `extern` boundary rule. |
-| [dev/katamorph-resources-fsm-contracts.md](dev/katamorph-resources-fsm-contracts.md) | design intent | `.eta-mu/` holds three kinds of things: resources, ledgers, state (projections). Kanban FSM as pure katamorph resources; drivers-as-resources (`:module`/`:driver`) as the bootstrap that makes katamorph a runtime. |
+| [dev/katamorph-resources-fsm-contracts.md](dev/katamorph-resources-fsm-contracts.md) | design intent | `.eta-mu/` holds three kinds of things: resources, ledgers, state (projections). Kanban FSM as pure katamorph resources; drivers-as-resources (`:module`/`:driver`) as the bootstrap that makes katamorph a runtime. Metadata conflict repaired 2026-07-26; source prose retained. |
 | [dev/eta-mu-kanban-agent-cli-draft.md](dev/eta-mu-kanban-agent-cli-draft.md) | design intent | Sketch of the (unimplemented) `eta-mu kanban agent` CLI: session registration, ledger-backed event/state EDN files, orchestrator self-assignment to tasks. |
 | [dev/eta-mu-orchestrator-prompt-draft.md](dev/eta-mu-orchestrator-prompt-draft.md) | historical | Stub system prompt for the "Eta Mu" orchestrator persona (mostly empty outline). |
 
@@ -50,8 +52,9 @@ Higher-level framing of how the workspace itself is composed.
 
 | Note | Status | Summary |
 |------|--------|---------|
-| [design/eta-mu-worlds-projections-ledger-design.md](design/eta-mu-worlds-projections-ledger-design.md) | historical | "Worlds & projections" framing for managing many repos/submodules — a manifest-defined working set. Perplexity transcript; vocabulary exploration, not a committed design. |
-| [design/eta-mu-init-experience-vision.md](design/eta-mu-init-experience-vision.md) | design intent | Vision script for `eta-mu init`: what the tool should *feel* like (event ledger, sentinel, fork tax, receipt river, session mycology, retrospective agent). Aspirational product narrative. |
+| [design/workspace-resources-ledgers-projections-synthesis.md](design/workspace-resources-ledgers-projections-synthesis.md) | design intent | Bounded current synthesis of workspace resources, append-only ledgers, rebuildable projections, worlds/task views, FSM interpretation, and responsible `eta-mu init` behavior. |
+| [design/eta-mu-worlds-projections-ledger-design.md](design/eta-mu-worlds-projections-ledger-design.md) | historical | "Worlds & projections" framing for managing many repos/submodules — a manifest-defined working set. Perplexity transcript; vocabulary exploration, not a committed design. Retained as source; its duplicate migration metadata still needs a non-destructive historical repair. |
+| [design/eta-mu-init-experience-vision.md](design/eta-mu-init-experience-vision.md) | design intent | Vision script for `eta-mu init`: what the tool should *feel* like (event ledger, sentinel, fork tax, receipt river, session mycology, retrospective agent). Metadata conflict repaired 2026-07-26; aspirational product narrative. |
 
 ## Tooling
 
@@ -81,8 +84,14 @@ declared capabilities, policies, and observations into OpenCode and other agent
 harnesses. Broken down from the large `clojurescript runtimes_compilers.md`
 Perplexity conversation export.
 
+The accepted constellation architecture assigns portable harness compilation to
+Muse. The reconciliation note below is the current bounded decision input; the
+older Keryx notes remain source material and do not independently authorize a
+second universal compiler.
+
 | Note | Status | Summary |
 |------|--------|---------|
+| [design/muse-keryx-runtime-compiler-reconciliation.md](design/muse-keryx-runtime-compiler-reconciliation.md) | decision candidate | Classifies Keryx material as Muse requirements/target adapter input, eta-mu-native implementation, or historical naming; requires actual-code inventory and cross-repository acceptance. |
 | [dev/opencode-plugins-cljs.md](dev/opencode-plugins-cljs.md) | design intent | How to write OpenCode plugins and tools almost entirely in ClojureScript, with thin JS shims only where the loader contract demands it. |
 | [dev/agent-dsl-macros-composition.md](dev/agent-dsl-macros-composition.md) | design intent | `deftool`, `defhook`, `defplugin` macros and a Hiccup-style vector DSL for composing agent capabilities without one huge file. |
 | [dev/opencode-edn-config.md](dev/opencode-edn-config.md) | design intent | `opencode.edn` as a project-side authoring layer that composes domain fragments and generates OpenCode JSON/plugin artifacts. |
@@ -132,3 +141,7 @@ agent orchestrato.md` Perplexity conversation export.
     `design/`, `dev/`, and `other/`.
 - Empty category directories (`empty/`, `infrastructure/`) are reserved for
   future notes; no files were placed there in this pass.
+- On 2026-07-26, two short note frontmatter conflicts were repaired without
+  rewriting source prose; two bounded synthesis notes were added. The long
+  worlds/projections transcript remains historical source and is not mass
+  normalized.
