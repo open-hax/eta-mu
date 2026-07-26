@@ -73,4 +73,5 @@ the eta-mu CLI as `eta-mu sol ...` (the way Rheos is exposed as
 
 ---
 Board triage 2026-07-19: all 6 child cards done (session-adapter, settings-model-decoupling, mcp-tools-new-tool-shape, provider-swap-legacy-drop, eta-mu-sol-command, cutover-verification). Acceptance criteria verified: git grep eta-mu-cli -- packages/sol -> 0 matches; sol runs on @eta-mu/turn-processor run-loop with eta-mu.extern.openai provider (commit 9b97958); eta-mu sol CLI surface landed (58019ae); cutover verification evidence + cutover-ratchet sol blocker resolved (d31fc99). Sol gates recorded green on child cards (88 tests / 256 assertions, kondo 0 warnings). Closing epic.
+
 ---

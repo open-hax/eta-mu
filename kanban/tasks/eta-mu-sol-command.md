@@ -153,4 +153,5 @@ node packages/eta-mu/dist-cli/index.cjs sol --help
 
 ---
 2026-07-18 review fix: sol start --port never reached the spawned server (sol binds SOL_PORT/PORT env only). start now spawns via launch-command, injecting the effective port as SOL_PORT=<port> into the nohup command line; start help text documents the precedence. Covered by launch-command unit test + sol-start-port-flag-e2e-test (fake server, env scrubbed). Gates: 151/331 unit, kondo 0/0, 7/71 e2e — all green; manual re-verify under review repro (ambient PORT=8000, --port 8991) bound 8991, health ok.
+
 ---

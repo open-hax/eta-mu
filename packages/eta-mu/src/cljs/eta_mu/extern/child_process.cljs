@@ -98,21 +98,62 @@
         (.on child "close" (fn [code] (resolve {:exit (or code 0) :stdout @stdout :stderr @stderr})))
         (.on child "error" (fn [err] (resolve {:exit 1 :stdout @stdout :stderr (.-message err)})))))))
 
-(defn- terminate-process-tree!
-  "Best-effort termination of child and descendants created by a shell command."
-  [child detached?]
+(def ^:private terminate-grace-ms
+  "How long a process tree gets to honour SIGTERM before SIGKILL."
+  2000)
+
+(defn- signal-tree!
+  "Send `sig` to the whole process group when detached, else to the child alone.
+   Returns true when the signal was delivered. ESRCH is success in disguise —
+   the process is already gone, which is the state we were asking for."
+  [^js child detached? sig]
   (let [pid (.-pid child)]
     (try
-      (if (= "win32" (.-platform js/process))
+      (if (and detached? pid)
+        (js/process.kill (- pid) sig)
+        (.kill child sig))
+      true
+      (catch :default err
+        (when-not (= "ESRCH" (.-code err))
+          (js/console.warn (str "[child_process] " sig " to pid " pid " failed: "
+                                (.-message err))))
+        false))))
+
+(defn- terminate-process-tree!
+  "Terminate a shell command's child and its descendants.
+
+   Escalates SIGTERM -> SIGKILL after a grace period: a process that ignores
+   SIGTERM or is wedged in an uninterruptible state would otherwise survive an
+   abort/timeout as an orphan, which would defeat the point of aborting. The
+   escalation timer is unref'd so it never holds a CLI process open, and it only
+   fires while `alive?` still reports the child as running. Delivery failures are
+   logged rather than swallowed."
+  [^js child detached? alive?]
+  (if (= "win32" (.-platform js/process))
+    (let [pid (.-pid child)]
+      (try
+        ;; taskkill /T /F is already tree-wide and forceful — nothing to escalate to.
         (.spawn cp "taskkill" #js ["/pid" (str pid) "/T" "/F"]
                 #js {"stdio" "ignore" "windowsHide" true})
-        (if (and detached? pid)
-          (js/process.kill (- pid) "SIGTERM")
-          (.kill child "SIGTERM")))
-      (catch :default _
-        (try
-          (.kill child "SIGTERM")
-          (catch :default _ nil))))))
+        (catch :default err
+          (js/console.warn (str "[child_process] taskkill for pid " pid " failed: "
+                                (.-message err))))))
+    (do
+      (when-not (signal-tree! child detached? "SIGTERM")
+        ;; The group signal failed (e.g. the child never became a group leader);
+        ;; fall back to signalling the child directly.
+        (signal-tree! child false "SIGTERM"))
+      (let [timer (js/setTimeout
+                   (fn []
+                     (when (alive?)
+                       (js/console.warn
+                        (str "[child_process] pid " (.-pid child) " ignored SIGTERM after "
+                             terminate-grace-ms "ms; escalating to SIGKILL"))
+                       (when-not (signal-tree! child detached? "SIGKILL")
+                         (signal-tree! child false "SIGKILL"))))
+                   terminate-grace-ms)]
+        (when (fn? (.-unref timer)) (.unref timer))
+        timer))))
 
 (defn exec-shell-capture
   "Execute a shell command string, capture stdout/stderr, and return a promise
@@ -149,9 +190,12 @@
                       (when (compare-and-set! settled? false true)
                         (cleanup!)
                         (resolve result)))
+            ;; The child is still running until close/error settled the promise;
+            ;; the SIGKILL escalation checks this so it never signals a reaped pid.
+            alive? (fn [] (not @settled?))
             abort! (fn []
                      (reset! aborted? true)
-                     (terminate-process-tree! child detached?))]
+                     (terminate-process-tree! child detached? alive?))]
         (.on (.-stdout child) "data" (fn [data] (swap! stdout str data)))
         (.on (.-stderr child) "data" (fn [data] (swap! stderr str data)))
         (.on child "close"
@@ -176,7 +220,7 @@
                   (js/setTimeout
                    (fn []
                      (reset! timed-out? true)
-                     (terminate-process-tree! child detached?))
+                     (terminate-process-tree! child detached? alive?))
                    timeout-ms)))
         (when signal
           (let [listener (fn [] (abort!))]

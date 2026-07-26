@@ -16,6 +16,30 @@
                     (js/JSON.stringify #js {:name pkg-name :version "0.0.0"}))
     {:root root :pkg-root pkg-root}))
 
+(defn- sleep-ms [ms]
+  (js/Promise. (fn [resolve] (js/setTimeout resolve ms))))
+
+(deftest ^:async abort-escalates-to-sigkill-test
+  (testing "a SIGTERM-ignoring process tree is reclaimed by the SIGKILL escalation"
+    ;; The shell ignores SIGTERM and loops, so only SIGKILL can end it early.
+    ;; It also self-exits after ~8s, so a regression fails the elapsed-time
+    ;; assertion instead of hanging the suite or leaking an orphan.
+    (let [controller (js/AbortController.)
+          command "trap '' TERM; for i in $(seq 1 40); do sleep 0.2; done"
+          started (js/Date.now)
+          run (child/exec-shell-capture command 0 (.-signal controller))]
+      (await (sleep-ms 300))
+      (.abort controller)
+      (let [{:keys [exit aborted?]} (await run)
+            elapsed (- (js/Date.now) started)]
+        (is (true? aborted?))
+        (is (= 130 exit))
+        ;; SIGTERM alone would leave it running until its own ~8s self-exit;
+        ;; escalation happens at terminate-grace-ms (2s).
+        (is (< elapsed 6000)
+            (str "aborted tree took " elapsed "ms to be reclaimed — "
+                 "SIGKILL escalation did not fire"))))))
+
 (deftest workspace-package-root-finds-package-test
   (testing "resolves a workspace package by name from a nested directory"
     (let [{:keys [root pkg-root]} (make-workspace! "rheos" "@eta-mu/rheos")

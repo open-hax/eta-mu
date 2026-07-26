@@ -93,4 +93,5 @@ This is **not a decided constraint** — it is an open question, recorded here s
 the dependency direction gets settled before further platform work lands.
 
 Status reconciled 2026-07-25 (PR #142 review closeout): the card read status: incoming while the body recorded all 6 phases (μ0–μ5) implemented and verified at 96 tests / 262 assertions, 0 failures. Moved incoming -> accepted -> breakdown -> ready -> todo -> in_progress to stop the record contradicting itself. Left at in_progress rather than review: the review gate runs a full monorepo pnpm build and did not converge in this session, and promoting an unrelated P0 card to review/done is the owner's call. The namespace-package note below is now recorded as an explicit open question rather than a tentative aside.
+
 ---
