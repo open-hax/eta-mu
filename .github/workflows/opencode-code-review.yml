@@ -1,17 +1,144 @@
-name: OpenCode Kimi PR Review
+name: OpenCode evidence PR review
 
 on:
-  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
-  group: opencode-kimi-review-${{ github.event.pull_request.number }}
+  group: opencode-evidence-review-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  review:
-    name: Review pull request with OpenCode
+  deterministic-evidence:
+    name: Produce deterministic review evidence
     if: ${{ github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout pull request
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up pnpm 10.14.0
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.14.0"
+          run_install: false
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Run deterministic gates
+        id: gates
+        continue-on-error: true
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set +e
+          evidence_dir="$GITHUB_WORKSPACE/.opencode/review-evidence"
+          log="$evidence_dir/deterministic.log"
+          statuses="$evidence_dir/statuses.env"
+          mkdir -p "$evidence_dir"
+          : > "$log"
+          : > "$statuses"
+
+          run_gate() {
+            local name="$1"
+            shift
+            {
+              echo
+              echo "===== ${name} ====="
+              printf 'command:'
+              printf ' %q' "$@"
+              echo
+            } >> "$log"
+            "$@" >> "$log" 2>&1
+            local code=$?
+            echo "${name}=${code}" >> "$statuses"
+            echo "${name}: exit ${code}" | tee -a "$log"
+            return 0
+          }
+
+          run_gate install pnpm install --frozen-lockfile
+          install_status="$(awk -F= '$1 == "install" {print $2}' "$statuses")"
+
+          if [[ "$install_status" == "0" ]]; then
+            run_gate lint pnpm lint
+            run_gate test pnpm test
+            run_gate build pnpm build
+          else
+            echo "lint=125" >> "$statuses"
+            echo "test=125" >> "$statuses"
+            echo "build=125" >> "$statuses"
+            echo "Dependency installation failed; lint, test, and build were not attempted." >> "$log"
+          fi
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const evidenceDir = path.join(process.env.GITHUB_WORKSPACE, '.opencode', 'review-evidence');
+          const statuses = Object.fromEntries(
+            fs.readFileSync(path.join(evidenceDir, 'statuses.env'), 'utf8')
+              .trim()
+              .split(/\n+/)
+              .filter(Boolean)
+              .map((line) => {
+                const [name, value] = line.split('=');
+                return [name, Number(value)];
+              }),
+          );
+          const attempted = Object.fromEntries(
+            Object.entries(statuses).map(([name, code]) => [name, code !== 125]),
+          );
+          const result = Object.values(statuses).every((code) => code === 0) ? 'success' : 'failure';
+          const summary = {
+            schema: 'open-hax.review-evidence/v1',
+            repository: process.env.GITHUB_REPOSITORY,
+            pull_request: Number(process.env.PR_NUMBER),
+            base_sha: process.env.PR_BASE_SHA,
+            head_sha: process.env.PR_HEAD_SHA,
+            generated_at: new Date().toISOString(),
+            result,
+            statuses,
+            attempted,
+            interpretation: 'Exit 125 means the gate was skipped because dependency installation failed.',
+          };
+          fs.writeFileSync(path.join(evidenceDir, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `result=${result}\n`);
+          NODE
+
+      - name: Upload deterministic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-evidence-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          path: .opencode/review-evidence
+          if-no-files-found: error
+          retention-days: 14
+
+  review:
+    name: Review pull request with OpenCode MiMo
+    needs: deterministic-evidence
+    if: ${{ always() && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     env:
       HAS_DISCORD_REVIEW_WEBHOOK_URL: ${{ secrets.DISCORD_REVIEW_WEBHOOK_URL != '' }}
     permissions:
@@ -20,31 +147,58 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - name: Checkout repository
+      - name: Checkout pull request
         uses: actions/checkout@v6
         with:
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Download deterministic evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: review-evidence-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          path: .opencode/review-evidence
+
+      - name: Verify OpenCode Zen credential
+        shell: bash
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          if [[ -z "$OPENCODE_API_KEY" ]]; then
+            echo "::error::The OPENCODE_API_KEY Actions secret is required for opencode/mimo-v2.5-free."
+            exit 1
+          fi
 
       - name: Capture review start time
         id: review_start
         run: echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
-      - name: Run OpenCode review
-        uses: anomalyco/opencode/github@latest
+      - name: Run evidence-first OpenCode review
+        uses: anomalyco/opencode/github@40e4d730cac33cc9e76659ae7acb16b3a6132b83
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          KIMI_API_KEY: ${{ secrets.KIMI_FOR_CODING_API_KEY }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
-          model: kimi-for-coding/k2p5
+          model: opencode/mimo-v2.5-free
+          agent: github-reviewer
+          share: false
           use_github_token: true
           prompt: |
-            Review this pull request as a senior maintainer.
-            Focus on correctness, security, maintainability, tests, and repo-specific conventions.
-            Check linked GitHub issues and any synced Kanban markers (`openhax-kanban-sync`) to understand the task intent.
-            If this repository has a kanban/ directory or docs/agent-workflows.md, use it as planning context and keep status/priority labels in mind.
-            Submit concrete findings as GitHub PR inline review comments on the exact changed lines whenever GitHub can attach them.
-            If there are no actionable findings, leave a short passing review summary instead of inventing comments.
-            Do not request cosmetic churn unless it prevents confusion or future defects.
+            Review pull request #${{ github.event.pull_request.number }} using the
+            evidence-first state machine in the github-reviewer agent.
+
+            Begin by reading:
+            - .opencode/review-evidence/summary.json
+            - .opencode/review-evidence/deterministic.log
+            - PROCESS.md
+            - .ημ/PRINCIPLE.edn
+            - linked task or issue material available in the pull-request context
+
+            Reconstruct the relevant invariants from complete files and repository contracts.
+            Attempt to disprove every candidate finding before publishing it. Publish inline
+            comments only for confirmed, changed-line defects meeting the agent's evidence
+            threshold. Put test gaps and unresolved questions in one concise non-blocking
+            summary. If no candidate survives validation, leave a short passing summary.
 
       - name: Send new inline review comments to Discord
         if: ${{ always() && env.HAS_DISCORD_REVIEW_WEBHOOK_URL == 'true' }}
@@ -80,7 +234,7 @@ jobs:
               return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
             };
             const embeds = fresh.map((comment) => ({
-              title: `${owner}/${repo}#${pr.number}: inline review comment`,
+              title: `${owner}/${repo}#${pr.number}: evidence review comment`,
               url: comment.html_url,
               color: 0x8b5cf6,
               description: truncate(comment.body, 3500),
@@ -99,8 +253,8 @@ jobs:
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({
-                  username: 'Kimi Code Review',
-                  content: `New inline review comment${chunk.length === 1 ? '' : 's'} on ${owner}/${repo}#${pr.number}`,
+                  username: 'MiMo Evidence Review',
+                  content: `New evidence-backed review comment${chunk.length === 1 ? '' : 's'} on ${owner}/${repo}#${pr.number}`,
                   embeds: chunk,
                   allowed_mentions: { parse: [] },
                 }),
