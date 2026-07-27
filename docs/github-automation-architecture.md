@@ -10,6 +10,7 @@ This document describes the centralized GitHub automation system owned by `open-
 - **Consumer repos** get thin wrapper workflows (10-30 lines each)
 - **All repos share** the same behavioral patterns: branch→PR→review→merge→release
 - **Review comments block merge** until explicitly resolved by a human
+- **Review truth comes from evidence and validation**, not raw model consensus
 
 ## Reusable Workflows (in `open-hax/eta-mu/.github/workflows/`)
 
@@ -58,6 +59,24 @@ This document describes the centralized GitHub automation system owned by `open-
 1. Detects changed packages using `detect-packages` command
 2. Creates GitHub release with tag based on timestamp
 3. Optionally publishes changed packages to npm
+
+### 5. `opencode-code-review.yml` reference implementation
+**Purpose**: Produce a bounded, evidence-first pull-request review with OpenCode and `opencode/mimo-v2.5-free`.
+
+**Triggers**: Non-draft, same-repository pull requests opened, updated, reopened, or marked ready.
+
+**Logic**:
+1. Run deterministic dependency, lint, test, and build gates and serialize their exit codes and logs.
+2. Invoke one read-only OpenCode primary agent.
+3. Map changed contracts and risk zones.
+4. Generate candidate defects and test gaps.
+5. Attempt to disprove every candidate.
+6. Publish only confirmed changed-line defects meeting the evidence threshold.
+7. Keep uncertain questions and test gaps in a non-blocking summary.
+
+The reviewer cannot edit files, execute shell commands, browse the web, or spawn subagents. This avoids same-model consensus theater and limits free-tier quota use. It requires the `OPENCODE_API_KEY` Actions secret and disables public session sharing.
+
+The first implementation is intentionally eta-mu-specific because its deterministic gates are pnpm workspace commands. Extract a reusable workflow only after the evidence schema and publication behavior pass the canary PR; consumer repositories may require different deterministic gate commands.
 
 ## CLI Commands (in `packages/eta-mu-github`)
 
@@ -139,12 +158,17 @@ All `open-hax/*` and `octave-commons/*` repos with existing `.github/workflows/`
 ### NPM Publishing
 The `release` command has a `--publish-npm` flag but the actual per-package `npm publish` logic is not yet implemented. To complete:
 1. Detect changed packages (done via `detect-packages`)
-2. Bump version in each changed package's `package.json`
+2. Bump version in each package's `package.json`
 3. Run `npm publish` (or `pnpm publish`) for each
 4. Handle workspace dependencies and versioning strategy
 
-### Kimi Inline Comments
-The `opencode-code-review.yml` prompt already instructs Kimi to "Submit concrete findings as GitHub PR inline review comments on the exact changed lines." If this is not working, the issue may be with the pinned opencode action version (`anomalyco/opencode/github@385cb69`). Consider updating to a newer version that supports inline review comments.
+### Evidence-review rollout
+Before adding thin wrappers to consumer repositories:
+1. Run the eta-mu canary against its own review-agent PR.
+2. Inspect the deterministic evidence artifact and verify environment failures are not misreported as code defects.
+3. Confirm inline findings attach to changed lines and satisfy the finding contract.
+4. Confirm a clean PR produces a short passing summary rather than synthetic criticism.
+5. Parameterize deterministic commands for JVM-only, npm, pnpm, and mixed workspaces.
 
 ### Branch Protection
 For the review gate to actually block merges, branch protection rules must require the `review-resolution-gate` check to pass before merging.
