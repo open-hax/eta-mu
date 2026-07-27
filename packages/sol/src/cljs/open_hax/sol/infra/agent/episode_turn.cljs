@@ -61,14 +61,62 @@
                           ledger-error))
           (throw error))))))
 
+(defn- persistence-failure
+  [request event-type error]
+  {:failure/kind :canonical-persistence
+   :event/type event-type
+   :run/id (:run-id request)
+   :session/id (:session-id request)
+   :conversation/id (:conversation-id request)
+   :error/message (error-message error)})
+
+(defn- ^:async report-persistence-failure!
+  "Report a canonical terminal append failure without rewriting successful local
+   execution as a failed run. Hosts may inject `:event-ledger-report-error!`;
+   the default is a structured console error. Reporter failure is itself logged
+   but never replaces the already-produced turn result."
+  [config request event-type error]
+  (let [failure (persistence-failure request event-type error)]
+    (try
+      (if-let [report! (:event-ledger-report-error! config)]
+        (await (report! failure))
+        (.error js/console
+                "[sol-event-ledger] canonical terminal persistence failed"
+                (clj->js failure)))
+      (catch :default report-error
+        (.error js/console
+                "[sol-event-ledger] persistence failure reporter failed"
+                (clj->js (assoc failure
+                                :report/error (error-message report-error))))))
+    failure))
+
+(defn- ^:async emit-completion-lifecycle!
+  [config episode request completed]
+  (try
+    (await (episode-ledger/emit! episode "sol.turn.completed" completed))
+    (try
+      (await (episode-ledger/emit! episode "sol.run.completed" completed))
+      true
+      (catch :default error
+        (await (report-persistence-failure!
+                config request "sol.run.completed" error))
+        false))
+    (catch :default error
+      (await (report-persistence-failure!
+              config request "sol.turn.completed" error))
+      false)))
+
 (defn ^:async send-agent-turn!
   "Execute one existing Sol turn while emitting a four-event canonical episode.
 
    With no configured appender the envelopes are still built and validated, so
-   current local-only deployments remain compatible. With an appender, any
-   canonical append failure is observable and prevents a false claim of
-   successful canonical persistence. `:turn-executor!` is an optional infra
-   injection used by conformance tests and alternate Sol hosts."
+   current local-only deployments remain compatible. Canonical start failures
+   remain blocking because execution has not begun. Execution failures remain
+   failures and attempt canonical failure events. Once execution succeeds,
+   terminal canonical append failures are reported separately and the produced
+   result is returned so Sol's local EDN/realtime projections stay truthful.
+   `:turn-executor!` and `:event-ledger-report-error!` are optional infra
+   injections used by conformance tests and alternate Sol hosts."
   [runtime config request]
   (let [request (normalized-request request)
         execute! (or (:turn-executor! config) turn/send-agent-turn!)
@@ -94,9 +142,5 @@
                      "completed"
                      (when-let [model (:model result)]
                        {:model model}))]
-      ;; Completion persistence is outside the execution-failure handler. If a
-      ;; terminal append fails, propagate it directly; never append a later
-      ;; `turn.failed` after `turn.completed` has already been accepted.
-      (await (episode-ledger/emit! episode "sol.turn.completed" completed))
-      (await (episode-ledger/emit! episode "sol.run.completed" completed))
+      (await (emit-completion-lifecycle! config episode request completed))
       result)))
