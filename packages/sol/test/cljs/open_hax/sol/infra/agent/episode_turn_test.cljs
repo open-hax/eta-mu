@@ -1,5 +1,5 @@
 (ns open-hax.sol.infra.agent.episode-turn-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [deftest is]]
             [open-hax.sol.infra.agent.episode-turn :as episode-turn]))
 
 (defn- sequential-id-fn
