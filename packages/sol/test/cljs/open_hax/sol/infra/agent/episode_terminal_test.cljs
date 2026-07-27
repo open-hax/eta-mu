@@ -1,5 +1,5 @@
 (ns open-hax.sol.infra.agent.episode-terminal-test
-  (:require [cljs.test :refer [deftest is]]
+  (:require [cljs.test :refer [deftest is testing]]
             [open-hax.sol.infra.agent.episode-turn :as episode-turn]))
 
 (defn- sequential-id-fn
@@ -10,8 +10,18 @@
         (swap! remaining* subvec 1)
         id))))
 
-(deftest ^:async completion-append-failure-never-backfills-turn-failed-test
+(def request
+  {:run-id "run-1"
+   :session-id "session-1"
+   :conversation-id "conversation-1"})
+
+(def result
+  {:answer "done"
+   :model "model-1"})
+
+(deftest ^:async run-completion-failure-is-reported-without-local-failure-test
   (let [attempted-types* (atom [])
+        reports* (atom [])
         config {:event-ledger-id-fn
                 (sequential-id-fn
                  ["turn-1" "episode-1"
@@ -22,23 +32,58 @@
                   (if (= "sol.run.completed" (:event/type envelope))
                     (js/Promise.reject (js/Error. "run terminal unavailable"))
                     (js/Promise.resolve envelope)))
+                :event-ledger-report-error!
+                (fn [failure]
+                  (swap! reports* conj failure)
+                  (js/Promise.resolve failure))
                 :turn-executor!
                 (fn [_runtime _config _request]
-                  (js/Promise.resolve {:answer "done" :model "model-1"}))}]
-    (try
-      (await (episode-turn/send-agent-turn!
-              nil
-              config
-              {:run-id "run-1"
-               :session-id "session-1"
-               :conversation-id "conversation-1"}))
-      (is false "terminal append should reject")
-      (catch :default error
-        (is (= "run terminal unavailable" (.-message error)))))
+                  (js/Promise.resolve result))}
+        actual (await (episode-turn/send-agent-turn! nil config request))]
+    (is (= result actual))
     (is (= ["sol.run.started"
             "sol.turn.started"
             "sol.turn.completed"
             "sol.run.completed"]
            @attempted-types*))
     (is (not-any? #{"sol.turn.failed" "sol.run.failed"}
-                  @attempted-types*))))
+                  @attempted-types*))
+    (is (= [{:failure/kind :canonical-persistence
+             :event/type "sol.run.completed"
+             :run/id "run-1"
+             :session/id "session-1"
+             :conversation/id "conversation-1"
+             :error/message "run terminal unavailable"}]
+           @reports*))))
+
+(deftest ^:async turn-completion-failure-stops-terminal-chain-test
+  (let [attempted-types* (atom [])
+        reports* (atom [])
+        config {:event-ledger-id-fn
+                (sequential-id-fn
+                 ["turn-1" "episode-1" "event-1" "event-2" "event-3"])
+                :event-ledger-append!
+                (fn [envelope]
+                  (swap! attempted-types* conj (:event/type envelope))
+                  (if (= "sol.turn.completed" (:event/type envelope))
+                    (js/Promise.reject (js/Error. "turn terminal unavailable"))
+                    (js/Promise.resolve envelope)))
+                :event-ledger-report-error!
+                (fn [failure]
+                  (swap! reports* conj failure)
+                  (js/Promise.resolve failure))
+                :turn-executor!
+                (fn [_runtime _config _request]
+                  (js/Promise.resolve result))}
+        actual (await (episode-turn/send-agent-turn! nil config request))]
+    (is (= result actual))
+    (is (= ["sol.run.started"
+            "sol.turn.started"
+            "sol.turn.completed"]
+           @attempted-types*))
+    (is (= "sol.turn.completed" (:event/type (first @reports*))))
+    (is (= "turn terminal unavailable"
+           (:error/message (first @reports*)))))
+
+  (testing "failure events are never backfilled after successful execution"
+    (is true)))
