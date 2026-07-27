@@ -5,11 +5,13 @@ on:
     paths:
       - "packages/axxium/**"
       - ".github/workflows/axxium-ci.yml"
+      - "pnpm-lock.yaml"
   push:
     branches: [main]
     paths:
       - "packages/axxium/**"
       - ".github/workflows/axxium-ci.yml"
+      - "pnpm-lock.yaml"
 
 permissions:
   contents: read
@@ -44,7 +46,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install workspace dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Install clj-kondo
         uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
