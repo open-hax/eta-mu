@@ -17,7 +17,9 @@ permission:
   task: deny
   webfetch: deny
   websearch: deny
-  external_directory: deny
+  external_directory:
+    "*": deny
+    "~/.agents/skills/**": allow
   todowrite: deny
   question: deny
 ---
