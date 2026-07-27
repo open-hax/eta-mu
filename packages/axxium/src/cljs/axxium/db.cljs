@@ -43,7 +43,7 @@
    CREATE TABLE IF NOT EXISTS actors (
      id TEXT PRIMARY KEY,
      entity_id TEXT NOT NULL REFERENCES entities(id),
-     org_id TEXT REFERENCES entities(id),
+     org_id TEXT,
      email TEXT,
      display_name TEXT,
      password_hash TEXT,
@@ -55,7 +55,75 @@
    );
 
    ALTER TABLE actors
-     ADD COLUMN IF NOT EXISTS org_id TEXT REFERENCES entities(id);
+     ADD COLUMN IF NOT EXISTS org_id TEXT;
+
+   DO $$
+   BEGIN
+     IF NOT EXISTS (
+       SELECT 1
+       FROM pg_constraint
+       WHERE conname = 'actors_org_id_fkey'
+         AND conrelid = 'actors'::regclass
+     ) THEN
+       ALTER TABLE actors
+         ADD CONSTRAINT actors_org_id_fkey
+         FOREIGN KEY (org_id) REFERENCES entities(id);
+     END IF;
+   END
+   $$;
+
+   DO $$
+   BEGIN
+     IF EXISTS (
+       SELECT 1
+       FROM actors a
+       LEFT JOIN entities organization ON organization.id = a.org_id
+       WHERE a.org_id IS NOT NULL
+         AND (organization.id IS NULL OR organization.kind <> 'org')
+     ) THEN
+       RAISE EXCEPTION 'actors.org_id contains a non-organization entity reference';
+     END IF;
+   END
+   $$;
+
+   CREATE OR REPLACE FUNCTION axxium_enforce_actor_org_id()
+   RETURNS trigger AS $$
+   BEGIN
+     IF NEW.org_id IS NOT NULL AND NOT EXISTS (
+       SELECT 1
+       FROM entities organization
+       WHERE organization.id = NEW.org_id
+         AND organization.kind = 'org'
+     ) THEN
+       RAISE EXCEPTION 'actors.org_id must reference an entity with kind org'
+         USING ERRCODE = '23514';
+     END IF;
+     RETURN NEW;
+   END;
+   $$ LANGUAGE plpgsql;
+
+   DROP TRIGGER IF EXISTS axxium_enforce_actor_org_id ON actors;
+   CREATE TRIGGER axxium_enforce_actor_org_id
+     BEFORE INSERT OR UPDATE OF org_id ON actors
+     FOR EACH ROW EXECUTE FUNCTION axxium_enforce_actor_org_id();
+
+   CREATE OR REPLACE FUNCTION axxium_protect_org_entity_kind()
+   RETURNS trigger AS $$
+   BEGIN
+     IF OLD.kind = 'org'
+        AND NEW.kind <> 'org'
+        AND EXISTS (SELECT 1 FROM actors WHERE org_id = OLD.id) THEN
+       RAISE EXCEPTION 'cannot change kind of an entity used as actor organization scope'
+         USING ERRCODE = '23514';
+     END IF;
+     RETURN NEW;
+   END;
+   $$ LANGUAGE plpgsql;
+
+   DROP TRIGGER IF EXISTS axxium_protect_org_entity_kind ON entities;
+   CREATE TRIGGER axxium_protect_org_entity_kind
+     BEFORE UPDATE OF kind ON entities
+     FOR EACH ROW EXECUTE FUNCTION axxium_protect_org_entity_kind();
 
    CREATE TABLE IF NOT EXISTS sessions (
      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -78,7 +146,8 @@
    CREATE INDEX IF NOT EXISTS idx_actors_email ON actors(email);
    CREATE INDEX IF NOT EXISTS idx_actors_org ON actors(org_id);
    CREATE INDEX IF NOT EXISTS idx_sessions_actor ON sessions(actor_id);
-   CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);")
+   CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);"
+  )
 
 (defn init-schema!
   "Initialize database schema. Idempotent."
