@@ -1,8 +1,8 @@
 {;; Default classpath = the shadow-cljs build (shadow-cljs.edn uses :deps true).
- ;; katamorph + event-ledger are consumed from immutable git refs (the standalone
- ;; open-hax repos, currently katamorph v0.2.0 and event-ledger v0.3.0), NOT the
- ;; removed local packages/ copies — bump the :git/sha + :git/tag together to
- ;; adopt a new release.
+ ;; katamorph + event-ledger are consumed from immutable git refs in the
+ ;; standalone open-hax repos, never from removed local packages/ copies.
+ ;; Katamorph is tagged; event-ledger is pinned to the merged principal-binding
+ ;; revision until the next package tag is cut.
  ;; turn-processor + eta-mu are workspace siblings consumed as source paths:
  ;; the provider adapter wires their run-loop/stream-fn/tools into sol's
  ;; agent sessions.
@@ -18,8 +18,7 @@
   refactor-nrepl/refactor-nrepl {:mvn/version "3.9.1"}
   io.github.open-hax/katamorph    {:git/tag "v0.2.0"
                                    :git/sha "305a5e49d834aca27566f739e8510f6b409fda78"}
-  io.github.open-hax/event-ledger {:git/tag "v0.3.0"
-                                   :git/sha "f67c438d3c3b16ce9452a0c934f59101d1b95815"}}
+  io.github.open-hax/event-ledger {:git/sha "ada7374b7f4e1c3b0ab4e6bbe996f10f06e9b93a"}}
 
  :aliases
  ;; Clojure-first mutation harness (mutation/knoxx/…) — mutates CLJS source
@@ -40,4 +39,4 @@
                 io.github.cognitect-labs/test-runner
                 {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
    :main-opts ["-m" "cognitect.test-runner"
-               "--namespace-regex" "^knoxx\\..*-test$"]}}}
+               "--namespace-regex" "^knoxx\..*-test$"]}}}
