@@ -50,8 +50,8 @@
    [:actor/capabilities [:vector Capability]]
    [:actor/roles {:optional true} [:vector :keyword]]
    [:actor/status [:enum :active :suspended :retired]]
-   [:actor/created-at :inst]
-   [:actor/updated-at :inst]])
+   [:actor/created-at inst?]
+   [:actor/updated-at inst?]])
 
 ;; ─── Entity (the pure identity) ────────────────────────────────────
 
@@ -64,7 +64,7 @@
    [:entity/kind [:enum :human :agent :service :automation :org]]
    [:entity/email {:optional true} Email]
    [:entity/display-name {:optional true} :string]
-   [:entity/created-at :inst]])
+   [:entity/created-at inst?]])
 
 ;; ─── Runtime Principal Binding ─────────────────────────────────────
 
@@ -91,8 +91,8 @@
    [:session/id :uuid]
    [:session/actor-id ActorId]
    [:session/token-hash :string]
-   [:session/expires-at :inst]
-   [:session/created-at :inst]])
+   [:session/expires-at inst?]
+   [:session/created-at inst?]])
 
 ;; ─── Auth Context ──────────────────────────────────────────────────
 
@@ -118,7 +118,7 @@
    [:client/redirect-uris [:vector :string]]
    [:client/grant-types [:vector :string]]
    [:client/scopes [:vector :string]]
-   [:client/created-at :inst]])
+   [:client/created-at inst?]])
 
 ;; ─── Registry ──────────────────────────────────────────────────────
 
