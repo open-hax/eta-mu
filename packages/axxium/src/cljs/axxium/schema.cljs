@@ -131,7 +131,10 @@
    :axxium/auth-context AuthContext
    :axxium/oauth-client OAuthClient})
 
-(mr/set-default-registry! registry)
+(mr/set-default-registry!
+ (mr/composite-registry
+  (m/default-schemas)
+  registry))
 
 (defn validate! [schema value]
   (when-not (m/validate schema value)
