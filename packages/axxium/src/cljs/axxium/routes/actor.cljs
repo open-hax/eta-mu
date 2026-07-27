@@ -1,7 +1,9 @@
 (ns axxium.routes.actor
   "Actor registry routes for Axxium."
-  (:require [axxium.db :as db]
-            [axxium.auth.session :as session]))
+  (:require [axxium.auth.session :as session]
+            [axxium.db :as db]
+            [axxium.extern.fastify :as fastify]
+            [axxium.infra.principal-binding :as principal-binding]))
 
 (defn- sanitize-actor [actor]
   (dissoc actor :password_hash))
@@ -16,8 +18,8 @@
                            "SELECT * FROM actors WHERE status = 'active' ORDER BY created_at DESC LIMIT $1 OFFSET $2"
                            [limit offset]))]
         (.send reply (clj->js {:ok true
-                                   :actors (map sanitize-actor actors)
-                                   :count (count actors)}))))))
+                              :actors (map sanitize-actor actors)
+                              :count (count actors)}))))))
 
 (defn- ^:async handle-get-actor [req reply]
   (let [ctx (await (session/resolve-auth-context req))]
@@ -28,7 +30,7 @@
         (if-not actor
           (.send (.code reply 404) (clj->js {:error "Actor not found"}))
           (.send reply (clj->js {:ok true
-                                     :actor (sanitize-actor actor)})))))))
+                                :actor (sanitize-actor actor)})))))))
 
 (defn- ^:async handle-get-me [req reply]
   (let [ctx (await (session/resolve-auth-context req))]
@@ -38,7 +40,7 @@
         (if-not actor
           (.send (.code reply 404) (clj->js {:error "Actor not found"}))
           (.send reply (clj->js {:ok true
-                                     :actor (sanitize-actor actor)})))))))
+                                :actor (sanitize-actor actor)})))))))
 
 (defn- ^:async handle-get-entity [req reply]
   (let [ctx (await (session/resolve-auth-context req))]
@@ -49,7 +51,27 @@
         (if-not entity
           (.send (.code reply 404) (clj->js {:error "Entity not found"}))
           (.send reply (clj->js {:ok true
-                                     :entity entity})))))))
+                                :entity entity})))))))
+
+(defn ^:async handle-get-runtime-binding
+  "Authenticated projection of one active actor/entity identity for runtime
+   event attribution. Does not return roles or capabilities."
+  [req reply]
+  (let [ctx (await (session/resolve-auth-context req))]
+    (if-not ctx
+      (fastify/send-json! reply 401 {:error "Unauthorized"})
+      (let [actor-id (fastify/request-param req "id")]
+        (try
+          (if-let [binding (await (principal-binding/resolve-runtime-binding actor-id))]
+            (fastify/send-json! reply 200 {:ok true :binding binding})
+            (fastify/send-json! reply 404 {:error "Runtime principal not found"}))
+          (catch :default error
+            (let [reason (:reason (ex-data error))]
+              (if (= :unsupported-principal-kind reason)
+                (fastify/send-json! reply 422
+                                    {:error "Unsupported runtime principal kind"
+                                     :code "unsupported_principal_kind"})
+                (throw error)))))))))
 
 (defn- ^:async handle-update-capabilities [req reply]
   (let [ctx (await (session/resolve-auth-context req))]
@@ -73,6 +95,7 @@
   "Register actor registry routes on the Fastify app."
   [app]
   (.get app "/api/actors" handle-list-actors)
+  (fastify/register-get! app "/api/actors/:id/runtime-binding" handle-get-runtime-binding)
   (.get app "/api/actors/:id" handle-get-actor)
   (.get app "/api/actors/me" handle-get-me)
   (.get app "/api/entities/:id" handle-get-entity)
