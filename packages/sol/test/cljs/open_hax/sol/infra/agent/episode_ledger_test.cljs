@@ -1,5 +1,5 @@
 (ns open-hax.sol.infra.agent.episode-ledger-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [deftest is]]
             [open-hax.event-ledger :as event-ledger]
             [open-hax.sol.infra.agent.episode-ledger :as episode-ledger]))
 
