@@ -44,9 +44,11 @@
    With no configured appender the envelopes are still built and validated, so
    current local-only deployments remain compatible. With an appender, any
    canonical append failure is observable and prevents a false claim of
-   successful canonical persistence."
+   successful canonical persistence. `:turn-executor!` is an optional infra
+   injection used by conformance tests and alternate Sol hosts."
   [runtime config request]
   (let [request (normalized-request request)
+        execute! (or (:turn-executor! config) turn/send-agent-turn!)
         episode (episode-ledger/create-episode
                  config
                  {:run-id (:run-id request)
@@ -63,7 +65,7 @@
             "sol.turn.started"
             (lifecycle-payload request "running" nil)))
     (try
-      (let [result (await (turn/send-agent-turn! runtime config request))
+      (let [result (await (execute! runtime config request))
             completed (lifecycle-payload
                        request
                        "completed"
