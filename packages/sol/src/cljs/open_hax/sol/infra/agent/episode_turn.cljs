@@ -82,12 +82,12 @@
         (await (report! failure))
         (.error js/console
                 "[sol-event-ledger] canonical terminal persistence failed"
-                (clj->js failure)))
+                failure))
       (catch :default report-error
         (.error js/console
                 "[sol-event-ledger] persistence failure reporter failed"
-                (clj->js (assoc failure
-                                :report/error (error-message report-error))))))
+                (assoc failure
+                       :report/error (error-message report-error)))))
     failure))
 
 (defn- ^:async emit-completion-lifecycle!
