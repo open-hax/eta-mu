@@ -1,0 +1,127 @@
+name: Muse review-context diagnostic
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/muse-review-context-diagnostic.yml"
+      - ".github/workflows/opencode-code-review.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: ${{ github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout Muse
+        uses: actions/checkout@v6
+        with:
+          repository: octave-commons/muse
+          ref: 76c57712a48ef48100259231a2e9d54069c2b14a
+          path: muse
+          persist-credentials: false
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: muse/package-lock.json
+
+      - name: Compile and capture diagnostics
+        id: compile
+        continue-on-error: true
+        working-directory: muse
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/muse-diagnostic" \
+                   .ημ/config/opencode/plugins \
+                   .ημ/config/opencode/permissions
+
+          cat > .ημ/config/opencode/plugins/review-observers.edn <<'EOF'
+          {:resource plugins.actors/plugin
+           :expose   [:muse/phases
+                      :phase/list_active
+                      :phase/list_idle
+                      :phase/tail
+                      :phase/head
+                      :phase/filter
+                      :phase/observations
+                      :phase/conclusions
+                      :actor/list
+                      :actor/mailbox
+                      :actor/monitor
+                      :task/status
+                      :task/list
+                      :agent/list]}
+          EOF
+
+          cat > .ημ/config/opencode/permissions/review-observers.edn <<'EOF'
+          {:permissions
+           [{:id      :review/allow-observers
+             :applies #{:muse_* :phase_* :actor_* :task_* :agent_*}
+             :policy  :allow}]}
+          EOF
+
+          cat > .ημ/config/opencode/root.edn <<'EOF'
+          {:eta-mu/opencode-version 1
+           :id                     :eta-mu/review-observers
+           :imports
+           ["../shared/profiles.edn"
+            "plugins/review-observers.edn"
+            "permissions/review-observers.edn"]
+           :profile :dev
+           :build ["shadow-cljs" "release" "opencode-plugin"]}
+          EOF
+
+          {
+            echo "=== versions ==="
+            node --version
+            npm --version
+            java -version
+            echo "=== npm ci ==="
+            npm ci --ignore-scripts --no-audit --no-fund
+            echo "=== shadow release ==="
+            npx shadow-cljs release opencode-plugin
+          } 2>&1 | tee "$RUNNER_TEMP/muse-diagnostic/compile.log"
+
+      - name: Collect diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/muse-diagnostic"
+          mkdir -p "$out/config" "$out/generated"
+          cp -a muse/.ημ/config/opencode/. "$out/config/"
+          for path in muse/.opencode muse/src/gen muse/target; do
+            if [[ -e "$path" ]]; then
+              cp -a "$path" "$out/generated/$(basename "$path")"
+            fi
+          done
+          printf '%s\n' "${{ steps.compile.outcome }}" > "$out/outcome.txt"
+          find "$out" -type f ! -name SHA256SUMS -print0 |
+            sort -z |
+            xargs -0 sha256sum > "$out/SHA256SUMS"
+
+      - name: Upload Muse diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: muse-review-context-diagnostic-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/muse-diagnostic
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Preserve compiler result
+        if: ${{ steps.compile.outcome == 'failure' }}
+        run: exit 1
