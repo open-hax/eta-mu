@@ -25,7 +25,7 @@
                  actual))
           (is (= [[binding/runtime-binding-sql
                    ["actor.agent.research"]]]
-                 @calls*))))))
+                 @calls*)))))))
 
 (deftest ^:async missing-active-actor-test
   (with-redefs [db/query-one
