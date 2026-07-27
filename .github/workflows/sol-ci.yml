@@ -59,6 +59,12 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
+      - name: Lint Sol source and tests
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir packages/sol lint 2>&1 | tee sol-lint.log
+
       - name: Detect eta-mu app credentials
         id: dependency-credentials
         env:
@@ -98,12 +104,6 @@ jobs:
 
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Lint Sol
-        shell: bash
-        run: |
-          set -o pipefail
-          pnpm --dir packages/sol lint 2>&1 | tee sol-lint.log
 
       - name: Test Sol
         shell: bash
