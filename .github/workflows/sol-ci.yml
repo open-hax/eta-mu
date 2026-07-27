@@ -1,0 +1,100 @@
+name: Sol CI
+
+on:
+  pull_request:
+    paths:
+      - "packages/sol/**"
+      - "packages/turn-processor/**"
+      - "packages/eta-mu/**"
+      - ".github/workflows/sol-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/sol/**"
+      - "packages/turn-processor/**"
+      - "packages/eta-mu/**"
+      - ".github/workflows/sol-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Java
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Clojure CLI
+        uses: DeLaGuardo/setup-clojure@13.2
+        with:
+          cli: 1.12.5.1654
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.14.0"
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Install clj-kondo
+        run: |
+          curl -sLO https://raw.githubusercontent.com/clj-kondo/clj-kondo/master/script/install-clj-kondo
+          chmod +x install-clj-kondo
+          sudo ./install-clj-kondo
+
+      - name: Lint Sol
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir packages/sol lint 2>&1 | tee sol-lint.log
+
+      - name: Test Sol
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir packages/sol test 2>&1 | tee sol-test.log
+          grep -q "0 failures, 0 errors" sol-test.log
+          if grep -E "(^|[[:space:]])WARNING([:[:space:]]|$)" sol-test.log; then
+            echo "Sol test compilation emitted warnings"
+            exit 1
+          fi
+
+      - name: Build Sol server
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir packages/sol build 2>&1 | tee sol-build.log
+          if grep -E "(^|[[:space:]])WARNING([:[:space:]]|$)" sol-build.log; then
+            echo "Sol server compilation emitted warnings"
+            exit 1
+          fi
+
+      - name: Upload Sol validation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sol-validation
+          path: |
+            sol-lint.log
+            sol-test.log
+            sol-build.log
+            packages/sol/.shadow-cljs/
+          if-no-files-found: ignore
