@@ -52,10 +52,11 @@ jobs:
           clj-kondo: 2025.10.23
 
       - name: Lint Axxium source and tests
+        working-directory: packages/axxium
         shell: bash
         run: |
           set -o pipefail
-          clj-kondo --lint packages/axxium/src/cljs packages/axxium/test/cljs 2>&1 | tee axxium-lint.log
+          clj-kondo --lint src/cljs test/cljs 2>&1 | tee ../../axxium-lint.log
 
       - name: Enforce JS boundary debt ratchet
         working-directory: packages/axxium
