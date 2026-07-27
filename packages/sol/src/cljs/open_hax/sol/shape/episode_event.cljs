@@ -15,27 +15,73 @@
   [value]
   (some-> value str str/trim not-empty))
 
+(defn- key-string
+  [key]
+  (if (keyword? key)
+    (if-let [key-ns (namespace key)]
+      (str key-ns "/" (name key))
+      (name key))
+    (str key)))
+
 (defn- first-value
   [m keys]
   (some (fn [key]
-          (when (contains? m key)
-            (get m key)))
+          (let [string-key (key-string key)]
+            (cond
+              (contains? m key) (get m key)
+              (contains? m string-key) (get m string-key)
+              :else nil)))
         keys))
 
 (defn- shaped-string
   [m keys]
   (nonblank-string (first-value (or m {}) keys)))
 
-(defn- principal-kind
-  [auth-context agent-spec]
-  (let [requested (some-> (shaped-string auth-context
-                                         [:principalKind :principal-kind :principal_kind
-                                          :actorKind :actor-kind :actor_kind])
+(defn- binding-source
+  [auth-context]
+  (let [auth-context (or auth-context {})
+        nested (first-value auth-context
+                            [:principal/binding
+                             :principalBinding
+                             :principal-binding
+                             :principal_binding
+                             :runtimeBinding
+                             :runtime-binding
+                             :runtime_binding])]
+    (if (map? nested) nested auth-context)))
+
+(defn- supplied-principal-kind
+  [auth-context]
+  (let [source (binding-source auth-context)
+        requested (some-> (or (shaped-string source
+                                              [:principal/kind
+                                               :principalKind
+                                               :principal-kind
+                                               :principal_kind])
+                              (shaped-string auth-context
+                                             [:auth/principal-kind
+                                              :auth/principalKind
+                                              :principalKind
+                                              :principal-kind
+                                              :principal_kind]))
                           str/lower-case)]
+    (when (contains? principal-kinds requested)
+      requested)))
+
+(defn- binding-version
+  [source]
+  (let [value (first-value source
+                           [:binding/version
+                            :bindingVersion
+                            :binding-version
+                            :binding_version])]
     (cond
-      (contains? principal-kinds requested) requested
-      (nonblank-string (:actor-id agent-spec)) "agent"
-      :else "service")))
+      (nil? value) 1
+      (= 1 value) 1
+      (= "1" (str value)) 1
+      :else
+      (throw (ex-info "Unsupported Axxium runtime binding version"
+                      {:binding/version value})))))
 
 (defn resource-ref
   "Project the governing actor/agent resource reference from an agent spec."
@@ -47,26 +93,51 @@
              (nonblank-string (:contract-revision agent-spec))))))
 
 (defn principal-binding
-  "Build PrincipalBindingV1 only when both Axxium actor and entity identities
-   are present. Missing identity is never fabricated from session/run IDs."
+  "Build the event-ledger PrincipalBindingV1 only from supplied Axxium identity.
+
+   Accepted input includes Axxium's canonical RuntimePrincipalBinding map,
+   a nested `:principal/binding`, Axxium `:auth/*` identity keys accompanied by
+   a supplied principal kind, and legacy transport aliases. Agent specs may add
+   a Katamorph resource reference but never fabricate principal identity/kind."
   [auth-context agent-spec]
-  (let [actor-id (or (shaped-string auth-context [:actorId :actor-id :actor_id])
-                     (nonblank-string (:actor-id agent-spec)))
-        entity-id (shaped-string auth-context
-                                 [:entityId :entity-id :entity_id
-                                  :principalEntityId :principal-entity-id
-                                  :principal_entity_id])
-        org-id (shaped-string auth-context
-                              [:orgId :org-id :org_id
-                               :tenantId :tenant-id :tenant_id])
+  (let [source (binding-source auth-context)
+        actor-id (or (shaped-string source
+                                    [:principal/actor-id
+                                     :actorId :actor-id :actor_id])
+                     (shaped-string auth-context
+                                    [:auth/actor-id
+                                     :actorId :actor-id :actor_id]))
+        entity-id (or (shaped-string source
+                                     [:principal/entity-id
+                                      :entityId :entity-id :entity_id
+                                      :principalEntityId :principal-entity-id
+                                      :principal_entity_id])
+                      (shaped-string auth-context
+                                     [:auth/entity-id
+                                      :entityId :entity-id :entity_id]))
+        org-id (or (shaped-string source
+                                  [:principal/org-id
+                                   :orgId :org-id :org_id
+                                   :tenantId :tenant-id :tenant_id])
+                   (shaped-string auth-context
+                                  [:auth/org-id
+                                   :orgId :org-id :org_id
+                                   :tenantId :tenant-id :tenant_id]))
+        principal-kind (supplied-principal-kind auth-context)
         actor-resource (resource-ref agent-spec)]
-    (when (and actor-id entity-id)
-      (cond-> {:binding/version 1
+    (when (and actor-id entity-id principal-kind)
+      (cond-> {:binding/version (binding-version source)
                :principal/actor-id actor-id
                :principal/entity-id entity-id
-               :principal/kind (principal-kind auth-context agent-spec)}
+               :principal/kind principal-kind}
         org-id (assoc :principal/org-id org-id)
         actor-resource (assoc :actor/resource actor-resource)))))
+
+(defn- transport-actor-kind
+  [auth-context agent-spec]
+  (or (supplied-principal-kind auth-context)
+      (when (nonblank-string (:actor-id agent-spec)) "agent")
+      "service"))
 
 (defn actor-descriptor
   "Build transport attribution. The actor descriptor may exist without a
@@ -74,14 +145,19 @@
    invented authenticated principal."
   [auth-context agent-spec node-id]
   (let [binding (principal-binding auth-context agent-spec)
+        source (binding-source auth-context)
         actor-id (or (:principal/actor-id binding)
-                     (shaped-string auth-context [:actorId :actor-id :actor_id])
+                     (shaped-string source
+                                    [:principal/actor-id
+                                     :actorId :actor-id :actor_id])
+                     (shaped-string auth-context
+                                    [:auth/actor-id
+                                     :actorId :actor-id :actor_id])
                      (nonblank-string (:actor-id agent-spec))
                      (nonblank-string node-id)
                      "sol.runtime")
-        actor-kind (if binding
-                     (:principal/kind binding)
-                     (principal-kind auth-context agent-spec))]
+        actor-kind (or (:principal/kind binding)
+                       (transport-actor-kind auth-context agent-spec))]
     (cond-> {:actor-id actor-id
              :actor-kind actor-kind}
       (nonblank-string node-id) (assoc :actor-node (nonblank-string node-id))
