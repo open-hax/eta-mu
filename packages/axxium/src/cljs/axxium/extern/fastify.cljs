@@ -1,6 +1,5 @@
 (ns axxium.extern.fastify
-  "Narrow Fastify JS boundary for Axxium routes."
-  (:require [clojure.walk :as walk]))
+  "Narrow Fastify JS boundary for Axxium routes.")
 
 (defn request-param
   [request name]
@@ -16,9 +15,3 @@
 (defn register-get!
   [app path handler]
   (.get app path handler))
-
-(defn keywordize-row
-  "Convert a JS database row when an extern caller receives one directly."
-  [value]
-  (when value
-    (walk/keywordize-keys (js->clj value))))
