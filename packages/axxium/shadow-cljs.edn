@@ -1,4 +1,4 @@
-{:source-paths ["src/cljs"]
+{:source-paths ["src/cljs" "test/cljs"]
  :dependencies
  [[metosin/malli "0.16.4"]
   [funcool/promesa "11.0.678"]]
@@ -17,7 +17,7 @@
       "@fastify/cookie"
       "@fastify/cors"
       "@fastify/static"
-      "bcrypt"
+      "bcryptjs"
       "jose"
       "pg"
       "node:crypto"
@@ -42,7 +42,7 @@
       "@fastify/cookie"
       "@fastify/cors"
       "@fastify/static"
-      "bcrypt"
+      "bcryptjs"
       "jose"
       "pg"
       "node:crypto"

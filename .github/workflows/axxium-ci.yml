@@ -1,0 +1,128 @@
+name: Axxium CI
+
+on:
+  pull_request:
+    paths:
+      - "packages/axxium/**"
+      - ".github/workflows/axxium-ci.yml"
+      - "pnpm-lock.yaml"
+  push:
+    branches: [main, staging]
+    paths:
+      - "packages/axxium/**"
+      - ".github/workflows/axxium-ci.yml"
+      - "pnpm-lock.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AXXIUM_TEST_DB: "true"
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_NAME: axxium
+      DB_USER: axxium
+      DB_PASSWORD: axxium
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: axxium
+          POSTGRES_USER: axxium
+          POSTGRES_PASSWORD: axxium
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U axxium -d axxium"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Set up Java
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: "10.14.0"
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install clj-kondo
+        uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
+        with:
+          clj-kondo: 2025.10.23
+
+      - name: Lint Axxium source and tests
+        working-directory: packages/axxium
+        shell: bash
+        run: |
+          set -o pipefail
+          clj-kondo --lint src/cljs test/cljs 2>&1 | tee ../../axxium-lint.log
+
+      - name: Enforce JS boundary debt ratchet
+        working-directory: packages/axxium
+        shell: bash
+        run: |
+          set -o pipefail
+          for invalid in 56oops 56.5 1e2; do
+            if node scripts/check-js-boundary.mjs "--max=${invalid}" >/dev/null 2>&1; then
+              echo "Malformed boundary maximum was accepted: ${invalid}"
+              exit 1
+            fi
+          done
+          node scripts/check-js-boundary.mjs --max=56 2>&1 | tee ../../axxium-boundary.log
+
+      - name: Test Axxium
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir packages/axxium test 2>&1 | tee axxium-test.log
+          grep -q "0 failures, 0 errors" axxium-test.log
+          if grep -E "(^|[[:space:]])WARNING([:[:space:]]|$)" axxium-test.log; then
+            echo "Axxium test compilation emitted warnings"
+            exit 1
+          fi
+
+      - name: Build Axxium server
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir packages/axxium build 2>&1 | tee axxium-build.log
+          if grep -E "(^|[[:space:]])WARNING([:[:space:]]|$)" axxium-build.log; then
+            echo "Axxium server compilation emitted warnings"
+            exit 1
+          fi
+
+      - name: Upload Axxium validation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: axxium-validation
+          path: |
+            axxium-lint.log
+            axxium-boundary.log
+            axxium-test.log
+            axxium-build.log
+          if-no-files-found: ignore
