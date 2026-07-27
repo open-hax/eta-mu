@@ -14,6 +14,10 @@
   "Axxium entity identifier — the underlying identity"
   [:string {:min 1 :max 256}])
 
+(def OrgId
+  "Optional organization/tenant entity identifier."
+  [:string {:min 1 :max 256}])
+
 (def Email
   [:and :string [:re #"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"]])
 
@@ -36,10 +40,11 @@
 
 (def Actor
   "An actor is an entity with capabilities, status, and attribution.
-   This is the shape that proxx, knoxx, and openplanner all agree on."
+   Organization scope is optional for backward compatibility."
   [:map
    [:actor/id ActorId]
    [:actor/entity-id EntityId]
+   [:actor/org-id {:optional true} OrgId]
    [:actor/email {:optional true} Email]
    [:actor/display-name {:optional true} :string]
    [:actor/capabilities [:vector Capability]]
@@ -60,6 +65,23 @@
    [:entity/display-name {:optional true} :string]
    [:entity/created-at :inst]])
 
+;; ─── Runtime Principal Binding ─────────────────────────────────────
+
+(def PrincipalKind
+  "Closed runtime-principal vocabulary shared with event-ledger."
+  [:enum "human" "agent" "service" "automation"])
+
+(def RuntimePrincipalBinding
+  "Immutable identity/scope projection for operational event attribution.
+   Roles and capabilities are deliberately absent because authorization is a
+   live Axxium decision, not historical envelope state."
+  [:map
+   [:binding/version [:= 1]]
+   [:principal/actor-id ActorId]
+   [:principal/entity-id EntityId]
+   [:principal/kind PrincipalKind]
+   [:principal/org-id {:optional true} OrgId]])
+
 ;; ─── Session ───────────────────────────────────────────────────────
 
 (def Session
@@ -74,11 +96,11 @@
 ;; ─── Auth Context ──────────────────────────────────────────────────
 
 (def AuthContext
-  "The auth context that gets attached to requests after verification.
-   This is what downstream services (proxx, knoxx, openplanner) receive."
+  "The auth context attached to requests after verification."
   [:map
    [:auth/actor-id ActorId]
    [:auth/entity-id EntityId]
+   [:auth/org-id {:optional true} OrgId]
    [:auth/capabilities [:vector Capability]]
    [:auth/roles {:optional true} [:vector :keyword]]
    [:auth/email {:optional true} Email]
@@ -103,6 +125,7 @@
   {:axxium/actor Actor
    :axxium/entity Entity
    :axxium/role Role
+   :axxium/runtime-principal-binding RuntimePrincipalBinding
    :axxium/session Session
    :axxium/auth-context AuthContext
    :axxium/oauth-client OAuthClient})
