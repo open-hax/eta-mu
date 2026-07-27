@@ -47,6 +47,8 @@
 (deftest inactive-and-missing-row-test
   (is (nil? (binding/row->runtime-binding nil)))
   (is (nil? (binding/row->runtime-binding
+             (dissoc base-row :actor_status))))
+  (is (nil? (binding/row->runtime-binding
              (assoc base-row :actor_status "suspended"))))
   (is (nil? (binding/row->runtime-binding
              (assoc base-row :actor_status "retired")))))
