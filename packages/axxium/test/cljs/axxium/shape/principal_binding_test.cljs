@@ -9,6 +9,15 @@
    :actor_status "active"
    :entity_kind "agent"})
 
+(deftest authoritative-entity-vocabulary-test
+  (doseq [kind [:human :agent :service :automation :org]]
+    (testing (name kind)
+      (is (schema/valid?
+           schema/Entity
+           {:entity/id (str "entity." (name kind))
+            :entity/kind kind
+            :entity/created-at (js/Date.)})))))
+
 (deftest runnable-principal-binding-test
   (doseq [[kind expected]
           [["human" "human"]
