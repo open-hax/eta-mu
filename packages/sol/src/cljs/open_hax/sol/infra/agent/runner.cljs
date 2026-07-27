@@ -12,11 +12,12 @@
      WS   /ws/stream?run_id=...   -> live run/token events
      GET  /api/agent/run/:id      -> current run state
      GET  /api/agent/run/:id/events -> ordered run event ledger"
-  (:require [open-hax.sol.infra.agent.run-state :as run-state]
+  (:require [open-hax.sol.extern.agent-runner :as xrunner]
+            [open-hax.sol.extern.agent-turn-node :as xturn-node]
+            [open-hax.sol.infra.agent.episode-turn :as episode-turn]
+            [open-hax.sol.infra.agent.run-state :as run-state]
             [open-hax.sol.infra.agent.turn :as agent-turns]
-            [open-hax.sol.runtime.state :as runtime-state]
-            [open-hax.sol.extern.agent-runner :as xrunner]
-            [open-hax.sol.extern.agent-turn-node :as xturn-node]))
+            [open-hax.sol.runtime.state :as runtime-state]))
 
 (defonce active-runs* (atom {}))
 
@@ -58,7 +59,7 @@
   [runtime config body]
   (let [run-id (:run-id body)]
     (try
-      (await (agent-turns/send-agent-turn! runtime config body))
+      (await (episode-turn/send-agent-turn! runtime config body))
       (catch :default err
         (record-async-spawn-error! body err))
       (finally
