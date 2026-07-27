@@ -7,7 +7,7 @@ on:
       - ".github/workflows/axxium-ci.yml"
       - "pnpm-lock.yaml"
   push:
-    branches: [main]
+    branches: [main, staging]
     paths:
       - "packages/axxium/**"
       - ".github/workflows/axxium-ci.yml"
@@ -20,6 +20,27 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      AXXIUM_TEST_DB: "true"
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_NAME: axxium
+      DB_USER: axxium
+      DB_PASSWORD: axxium
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: axxium
+          POSTGRES_USER: axxium
+          POSTGRES_PASSWORD: axxium
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U axxium -d axxium"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Check out repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
