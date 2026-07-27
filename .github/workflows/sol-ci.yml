@@ -7,13 +7,19 @@ on:
       - "packages/turn-processor/**"
       - "packages/eta-mu/**"
       - ".github/workflows/sol-ci.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
   push:
-    branches: [main]
+    branches: [main, staging]
     paths:
       - "packages/sol/**"
       - "packages/turn-processor/**"
       - "packages/eta-mu/**"
       - ".github/workflows/sol-ci.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
 
 permissions:
   contents: read
@@ -34,10 +40,11 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Set up Clojure CLI
+      - name: Set up Clojure CLI and clj-kondo
         uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
         with:
           cli: 1.12.5.1654
+          clj-kondo: 2025.10.23
 
       - name: Set up pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
@@ -50,6 +57,7 @@ jobs:
         with:
           node-version: "22"
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Detect eta-mu app credentials
         id: dependency-credentials
@@ -89,13 +97,7 @@ jobs:
           git config --global http.https://github.com/.extraheader "AUTHORIZATION: basic ${authorization}"
 
       - name: Install workspace dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Install clj-kondo
-        run: |
-          curl -sLO https://raw.githubusercontent.com/clj-kondo/clj-kondo/master/script/install-clj-kondo
-          chmod +x install-clj-kondo
-          sudo ./install-clj-kondo
+        run: pnpm install --frozen-lockfile
 
       - name: Lint Sol
         shell: bash
