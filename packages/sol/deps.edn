@@ -18,7 +18,8 @@
   refactor-nrepl/refactor-nrepl {:mvn/version "3.9.1"}
   io.github.open-hax/katamorph    {:git/tag "v0.2.0"
                                    :git/sha "305a5e49d834aca27566f739e8510f6b409fda78"}
-  io.github.open-hax/event-ledger {:git/sha "ada7374b7f4e1c3b0ab4e6bbe996f10f06e9b93a"}}
+  io.github.open-hax/event-ledger {:git/url "https://github.com/open-hax/event-ledger.git"
+                                   :git/sha "ada7374b7f4e1c3b0ab4e6bbe996f10f06e9b93a"}}
 
  :aliases
  ;; Clojure-first mutation harness (mutation/knoxx/…) — mutates CLJS source
@@ -39,4 +40,4 @@
                 io.github.cognitect-labs/test-runner
                 {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
    :main-opts ["-m" "cognitect.test-runner"
-               "--namespace-regex" "^knoxx\..*-test$"]}}}
+               "--namespace-regex" "^knoxx\\..*-test$"]}}}
