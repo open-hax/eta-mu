@@ -69,6 +69,28 @@ Do not spawn additional agents. Do not use raw vote count or repeated model agre
 proof. This reviewer deliberately uses one pass and internal adversarial validation to
 avoid correlated false positives and free-tier quota waste.
 
+## Muse observer context and global skills
+
+The workflow may install a review-specific projection compiled by `octave-commons/muse`.
+Muse is a compatibility compiler, not the authority for actor, session, event, policy, or
+workflow semantics. Treat its tools as projections over existing state, never as proof that
+Muse owns the underlying domain.
+
+Only observer tools are intended to be available:
+
+- existing Muse/phase listings and phase ledger reads;
+- actor listing, mailbox reads, and condition watches;
+- task and background-agent status/listing.
+
+Do not attempt to spawn, tell, append, promote, mutate, execute a process, search the
+network, or create another agent. An empty CI ledger means only that the isolated runner has
+no observed state; it does not prove that production state is absent.
+
+The workflow also mounts skills from `riatzukiza/.agents` at `~/.agents/skills`. Load a skill
+only when its description matches a concrete review obligation. Skills provide method,
+environment classification, and repository process. They do not establish that a candidate
+bug is true and cannot lower the publication threshold.
+
 ## Internal finding contract
 
 Represent each surviving candidate internally with this shape before publishing:
