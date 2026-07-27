@@ -174,7 +174,7 @@ jobs:
           cache: npm
           cache-dependency-path: .review-context/muse/package-lock.json
 
-      - name: Compile a read-only Muse review profile
+      - name: Compile and verify a read-only Muse review profile
         working-directory: .review-context/muse
         shell: bash
         run: |
@@ -201,9 +201,22 @@ jobs:
 
           cat > .ημ/config/opencode/permissions/review-observers.edn <<'EOF'
           {:permissions
-           [{:id      :review/allow-observers
-             :applies #{:muse_* :phase_* :actor_* :task_* :agent_*}
-             :policy  :allow}]}
+           [{:id :review/allow-observers
+             :applies #{:muse_phases
+                        :phase_list_active
+                        :phase_list_idle
+                        :phase_tail
+                        :phase_head
+                        :phase_filter
+                        :phase_observations
+                        :phase_conclusions
+                        :actor_list
+                        :actor_mailbox
+                        :actor_monitor
+                        :task_status
+                        :task_list
+                        :agent_list}
+             :policy :allow}]}
           EOF
 
           cat > .ημ/config/opencode/root.edn <<'EOF'
@@ -227,19 +240,44 @@ jobs:
           test -s .opencode/opencode.json
           test -s .opencode/package.json
 
-          node <<'NODE'
-          const fs = require('node:fs');
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { EtaMuActorsPlugin } from './.opencode/dist/eta-mu-actors.js';
+
+          const expected = [
+            'actor_list',
+            'actor_mailbox',
+            'actor_monitor',
+            'agent_list',
+            'muse_phases',
+            'phase_conclusions',
+            'phase_filter',
+            'phase_head',
+            'phase_list_active',
+            'phase_list_idle',
+            'phase_observations',
+            'phase_tail',
+            'task_list',
+            'task_status',
+          ].sort();
+
           const config = JSON.parse(fs.readFileSync('.opencode/opencode.json', 'utf8'));
-          const permission = config.permission ?? {};
-          const required = ['muse_*', 'phase_*', 'actor_*', 'task_*', 'agent_*'];
-          for (const name of required) {
-            if (permission[name] !== 'allow') throw new Error(`Missing allow permission for ${name}`);
+          const permissionNames = Object.keys(config.permission ?? {}).sort();
+          if (JSON.stringify(permissionNames) !== JSON.stringify(expected)) {
+            throw new Error(`Unexpected permission registry: ${JSON.stringify(permissionNames)}`);
           }
-          for (const forbidden of ['receipt_river', 'session_mycology', 'edn_ledger', 'websearch_openhax']) {
-            if (Object.hasOwn(permission, forbidden)) {
-              throw new Error(`Write/network-capable tool leaked into review profile: ${forbidden}`);
+          for (const name of permissionNames) {
+            if (config.permission[name] !== 'allow') {
+              throw new Error(`Observer permission is not allow: ${name}`);
             }
           }
+
+          const plugin = await EtaMuActorsPlugin({});
+          const runtimeNames = Object.keys(plugin.tool ?? {}).sort();
+          if (JSON.stringify(runtimeNames) !== JSON.stringify(expected)) {
+            throw new Error(`Unexpected runtime tool registry: ${JSON.stringify(runtimeNames)}`);
+          }
+          fs.writeFileSync('.opencode/exposed-tools.txt', `${runtimeNames.join('\n')}\n`);
           NODE
 
       - name: Assemble revision-bound review context
@@ -256,12 +294,13 @@ jobs:
           cp -a .review-context/muse/.opencode/plugins "$CONTEXT_OUT/muse/opencode/"
           cp .review-context/muse/.opencode/opencode.json "$CONTEXT_OUT/muse/opencode/opencode.json"
           cp .review-context/muse/.opencode/package.json "$CONTEXT_OUT/muse/opencode/package.json"
+          cp .review-context/muse/.opencode/exposed-tools.txt "$CONTEXT_OUT/metadata/exposed-tools.txt"
           tar --exclude=.git -C .review-context/agents -cf - . | tar -C "$CONTEXT_OUT/agents" -xf -
 
           printf '%s\n' "$MUSE_REVISION" > "$CONTEXT_OUT/metadata/muse-revision.txt"
           printf '%s\n' "$AGENTS_REVISION" > "$CONTEXT_OUT/metadata/agents-revision.txt"
           (cd "$CONTEXT_OUT/agents" && find skills -name SKILL.md -type f -print | sort) > "$CONTEXT_OUT/metadata/skills.txt"
-          find "$CONTEXT_OUT" -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > "$CONTEXT_OUT/SHA256SUMS"
+          (cd "$CONTEXT_OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
 
       - name: Upload review context
         uses: actions/upload-artifact@v4
@@ -308,10 +347,12 @@ jobs:
           name: review-context-${{ github.event.pull_request.head.sha }}
           path: .review-context
 
-      - name: Install the bounded review context
+      - name: Verify and install the bounded review context
         shell: bash
         run: |
           set -euo pipefail
+          (cd .review-context && sha256sum -c SHA256SUMS)
+
           rm -rf .opencode/dist .opencode/plugins
           mkdir -p .opencode
           cp -a .review-context/muse/opencode/dist .opencode/
@@ -328,7 +369,8 @@ jobs:
 
           skill_count="$(find "$HOME/.agents/skills" -name SKILL.md -type f | wc -l)"
           echo "Loaded ${skill_count} global skills from riatzukiza/.agents."
-          cat .review-context/metadata/skills.txt
+          echo "Muse observer registry:"
+          cat .review-context/metadata/exposed-tools.txt
 
       - name: Verify OpenCode Zen credential
         shell: bash
@@ -361,14 +403,15 @@ jobs:
             Begin by reading:
             - .opencode/review-evidence/summary.json
             - .opencode/review-evidence/deterministic.log
+            - .review-context/metadata/exposed-tools.txt
             - PROCESS.md
             - .ημ/PRINCIPLE.edn
             - linked task or issue material available in the pull-request context
 
             The project-local OpenCode configuration includes a review-safe Muse projection
-            compiled from octave-commons/muse. It exposes only observer tools for existing
-            Muse, phase, actor, task, and agent state. It does not expose spawn, tell,
-            append, promotion, mutation, network-search, or shell tools.
+            compiled from octave-commons/muse. It exposes only the exact observer registry in
+            exposed-tools.txt. It does not expose spawn, tell, append, promotion, mutation,
+            network-search, or shell tools.
 
             Global skills are mounted from the revision recorded in
             .review-context/metadata/agents-revision.txt. Load a skill only when its
