@@ -1,0 +1,83 @@
+(ns open-hax.sol.infra.agent.episode-turn
+  "Canonical event-ledger lifecycle wrapper for one Sol turn.
+
+   The wrapped turn remains responsible for Sol's existing EDN run projection,
+   session state, provider execution, and realtime broadcasts. This namespace
+   adds only the cross-runtime operational envelope owned by event-ledger."
+  (:require [open-hax.sol.extern.agent-turn-node :as xturn-node]
+            [open-hax.sol.infra.agent.episode-ledger :as episode-ledger]
+            [open-hax.sol.infra.agent.turn :as turn]))
+
+(defn- normalized-request
+  [request]
+  (let [session-id (turn/ensure-session-id (:session-id request))
+        conversation-id (or (:conversation-id request)
+                            (xturn-node/random-uuid!))
+        run-id (or (:run-id request)
+                   (xturn-node/random-uuid!))]
+    (assoc request
+           :session-id session-id
+           :conversation-id conversation-id
+           :run-id run-id)))
+
+(defn- lifecycle-payload
+  [request status extra]
+  (merge {:status status
+          :conversation_id (:conversation-id request)}
+         (when-let [model (:model request)]
+           {:model model})
+         (or extra {})))
+
+(defn- ^:async emit-failure-lifecycle!
+  [episode request error]
+  (let [payload (lifecycle-payload request "failed" {:error (str error)})]
+    (try
+      (await (episode-ledger/emit! episode "sol.turn.failed" payload))
+      (await (episode-ledger/emit! episode "sol.run.failed" payload))
+      nil
+      (catch :default ledger-error
+        ledger-error))))
+
+(defn ^:async send-agent-turn!
+  "Execute one existing Sol turn while emitting a four-event canonical episode.
+
+   With no configured appender the envelopes are still built and validated, so
+   current local-only deployments remain compatible. With an appender, any
+   canonical append failure is observable and prevents a false claim of
+   successful canonical persistence."
+  [runtime config request]
+  (let [request (normalized-request request)
+        episode (episode-ledger/create-episode
+                 config
+                 {:run-id (:run-id request)
+                  :session-id (:session-id request)
+                  :conversation-id (:conversation-id request)
+                  :agent-spec (:agent-spec request)
+                  :auth-context (:auth-context request)})]
+    (await (episode-ledger/emit!
+            episode
+            "sol.run.started"
+            (lifecycle-payload request "running" nil)))
+    (await (episode-ledger/emit!
+            episode
+            "sol.turn.started"
+            (lifecycle-payload request "running" nil)))
+    (try
+      (let [result (await (turn/send-agent-turn! runtime config request))
+            completed (lifecycle-payload
+                       request
+                       "completed"
+                       {:model (:model result)})]
+        (await (episode-ledger/emit! episode "sol.turn.completed" completed))
+        (await (episode-ledger/emit! episode "sol.run.completed" completed))
+        result)
+      (catch :default error
+        (let [ledger-error (await (emit-failure-lifecycle! episode request error))]
+          (if ledger-error
+            (throw (ex-info "Sol turn and canonical episode emission failed"
+                            {:run-id (:run-id request)
+                             :session-id (:session-id request)
+                             :turn-error (str error)
+                             :ledger-error (str ledger-error)}
+                            ledger-error))
+            (throw error)))))))
