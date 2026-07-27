@@ -24,9 +24,9 @@
 (defn row->runtime-binding
   "Project a joined active actor/entity row into RuntimePrincipalBinding.
 
-   Returns nil for nil rows. Suspended or retired rows are treated as absent.
-   Organization entities are identity containers, not runnable principals, and
-   therefore produce an explicit typed error rather than a silent remap."
+   Returns nil for nil, inactive, or status-indeterminate rows. Organization
+   entities are identity containers, not runnable principals, and therefore
+   produce an explicit typed error rather than a silent remap."
   [row]
   (when row
     (let [status (some-> (row-value row :status :actor_status) str str/lower-case)
@@ -36,7 +36,7 @@
                               str str/lower-case)
           org-id (nonblank (row-value row :org_id))]
       (cond
-        (and status (not= "active" status))
+        (not= "active" status)
         nil
 
         (nil? actor-id)
