@@ -250,17 +250,17 @@ jobs:
           AGENTS_REVISION=7fd3252e7663ad5e68be5e90429d126aa66c38c8
           CONTEXT_OUT="$RUNNER_TEMP/opencode-review-context"
           rm -rf "$CONTEXT_OUT"
-          mkdir -p "$CONTEXT_OUT/muse/.opencode" "$CONTEXT_OUT/agents" "$CONTEXT_OUT/metadata"
+          mkdir -p "$CONTEXT_OUT/muse/opencode" "$CONTEXT_OUT/agents" "$CONTEXT_OUT/metadata"
 
-          cp -a .review-context/muse/.opencode/dist "$CONTEXT_OUT/muse/.opencode/"
-          cp -a .review-context/muse/.opencode/plugins "$CONTEXT_OUT/muse/.opencode/"
-          cp .review-context/muse/.opencode/opencode.json "$CONTEXT_OUT/muse/.opencode/"
-          cp .review-context/muse/.opencode/package.json "$CONTEXT_OUT/muse/.opencode/"
+          cp -a .review-context/muse/.opencode/dist "$CONTEXT_OUT/muse/opencode/"
+          cp -a .review-context/muse/.opencode/plugins "$CONTEXT_OUT/muse/opencode/"
+          cp .review-context/muse/.opencode/opencode.json "$CONTEXT_OUT/muse/opencode/opencode.json"
+          cp .review-context/muse/.opencode/package.json "$CONTEXT_OUT/muse/opencode/package.json"
           tar --exclude=.git -C .review-context/agents -cf - . | tar -C "$CONTEXT_OUT/agents" -xf -
 
           printf '%s\n' "$MUSE_REVISION" > "$CONTEXT_OUT/metadata/muse-revision.txt"
           printf '%s\n' "$AGENTS_REVISION" > "$CONTEXT_OUT/metadata/agents-revision.txt"
-          find "$CONTEXT_OUT/agents/skills" -name SKILL.md -type f -print | sort > "$CONTEXT_OUT/metadata/skills.txt"
+          (cd "$CONTEXT_OUT/agents" && find skills -name SKILL.md -type f -print | sort) > "$CONTEXT_OUT/metadata/skills.txt"
           find "$CONTEXT_OUT" -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > "$CONTEXT_OUT/SHA256SUMS"
 
       - name: Upload review context
@@ -314,10 +314,10 @@ jobs:
           set -euo pipefail
           rm -rf .opencode/dist .opencode/plugins
           mkdir -p .opencode
-          cp -a .review-context/muse/.opencode/dist .opencode/
-          cp -a .review-context/muse/.opencode/plugins .opencode/
-          cp .review-context/muse/.opencode/opencode.json .opencode/opencode.json
-          cp .review-context/muse/.opencode/package.json .opencode/package.json
+          cp -a .review-context/muse/opencode/dist .opencode/
+          cp -a .review-context/muse/opencode/plugins .opencode/
+          cp .review-context/muse/opencode/opencode.json .opencode/opencode.json
+          cp .review-context/muse/opencode/package.json .opencode/package.json
           npm install --prefix .opencode --ignore-scripts --no-audit --no-fund
 
           rm -rf "$HOME/.agents"
