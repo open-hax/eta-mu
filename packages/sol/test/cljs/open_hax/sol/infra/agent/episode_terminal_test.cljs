@@ -1,5 +1,5 @@
 (ns open-hax.sol.infra.agent.episode-terminal-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [deftest is]]
             [open-hax.sol.infra.agent.episode-turn :as episode-turn]))
 
 (defn- sequential-id-fn
@@ -81,9 +81,8 @@
             "sol.turn.started"
             "sol.turn.completed"]
            @attempted-types*))
+    (is (not-any? #{"sol.run.completed" "sol.turn.failed" "sol.run.failed"}
+                  @attempted-types*))
     (is (= "sol.turn.completed" (:event/type (first @reports*))))
     (is (= "turn terminal unavailable"
-           (:error/message (first @reports*)))))
-
-  (testing "failure events are never backfilled after successful execution"
-    (is true)))
+           (:error/message (first @reports*))))))
