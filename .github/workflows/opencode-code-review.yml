@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deterministic-evidence:
+  deterministic_evidence:
     name: Produce deterministic review evidence
     if: ${{ github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
@@ -133,23 +133,19 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  prepare-review-context:
+  prepare_review_context:
     name: Compile Muse tools and stage skills
     if: ${{ github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
       contents: read
-    env:
-      MUSE_REVISION: 76c57712a48ef48100259231a2e9d54069c2b14a
-      AGENTS_REVISION: 7fd3252e7663ad5e68be5e90429d126aa66c38c8
-      CONTEXT_OUT: ${{ runner.temp }}/opencode-review-context
     steps:
       - name: Checkout Muse compatibility compiler
         uses: actions/checkout@v6
         with:
           repository: octave-commons/muse
-          ref: ${{ env.MUSE_REVISION }}
+          ref: 76c57712a48ef48100259231a2e9d54069c2b14a
           path: .review-context/muse
           persist-credentials: false
 
@@ -157,7 +153,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: riatzukiza/.agents
-          ref: ${{ env.AGENTS_REVISION }}
+          ref: 7fd3252e7663ad5e68be5e90429d126aa66c38c8
           path: .review-context/agents
           persist-credentials: false
 
@@ -247,6 +243,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          MUSE_REVISION=76c57712a48ef48100259231a2e9d54069c2b14a
+          AGENTS_REVISION=7fd3252e7663ad5e68be5e90429d126aa66c38c8
+          CONTEXT_OUT="$RUNNER_TEMP/opencode-review-context"
+
           rm -rf "$CONTEXT_OUT"
           mkdir -p "$CONTEXT_OUT/muse/.opencode" "$CONTEXT_OUT/agents" "$CONTEXT_OUT/metadata"
 
@@ -276,8 +276,8 @@ jobs:
 
   review:
     name: Review pull request with OpenCode MiMo
-    needs: [deterministic-evidence, prepare-review-context]
-    if: ${{ always() && needs.deterministic-evidence.result == 'success' && needs.prepare-review-context.result == 'success' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
+    needs: [deterministic_evidence, prepare_review_context]
+    if: ${{ always() && needs.deterministic_evidence.result == 'success' && needs.prepare_review_context.result == 'success' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
