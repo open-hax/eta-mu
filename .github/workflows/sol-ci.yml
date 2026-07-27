@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
 
@@ -35,37 +35,54 @@ jobs:
           java-version: "21"
 
       - name: Set up Clojure CLI
-        uses: DeLaGuardo/setup-clojure@13.2
+        uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
         with:
           cli: 1.12.5.1654
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
         with:
           version: "10.14.0"
           run_install: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
           cache: pnpm
 
+      - name: Detect eta-mu app credentials
+        id: dependency-credentials
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          if [[ -n "${ETA_MU_APP_ID}" && -n "${ETA_MU_APP_PRIVATE_KEY}" ]]; then
+            echo "available=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "available=false" >> "${GITHUB_OUTPUT}"
+          fi
+
       - name: Create cross-repository read token
         id: dependency-token
-        uses: actions/create-github-app-token@v1
+        if: steps.dependency-credentials.outputs.available == 'true'
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547
         with:
           app-id: ${{ secrets.ETA_MU_APP_ID }}
           private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-          owner: open-hax
 
       - name: Configure private Git dependency reads
         env:
           DEPENDENCY_TOKEN: ${{ steps.dependency-token.outputs.token }}
         shell: bash
         run: |
+          if [[ "${{ steps.dependency-credentials.outputs.available }}" != "true" ]]; then
+            echo "ETA_MU_APP_ID / ETA_MU_APP_PRIVATE_KEY are unavailable"
+            exit 1
+          fi
           if [[ -z "${DEPENDENCY_TOKEN}" ]]; then
-            echo "Missing eta-mu GitHub App token for private dependency reads"
+            echo "The eta-mu GitHub App did not mint a dependency token"
             exit 1
           fi
           authorization="$(printf 'x-access-token:%s' "${DEPENDENCY_TOKEN}" | base64 -w0)"
