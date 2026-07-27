@@ -51,6 +51,26 @@ jobs:
           node-version: "22"
           cache: pnpm
 
+      - name: Create cross-repository read token
+        id: dependency-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.ETA_MU_APP_ID }}
+          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          owner: open-hax
+
+      - name: Configure private Git dependency reads
+        env:
+          DEPENDENCY_TOKEN: ${{ steps.dependency-token.outputs.token }}
+        shell: bash
+        run: |
+          if [[ -z "${DEPENDENCY_TOKEN}" ]]; then
+            echo "Missing eta-mu GitHub App token for private dependency reads"
+            exit 1
+          fi
+          authorization="$(printf 'x-access-token:%s' "${DEPENDENCY_TOKEN}" | base64 -w0)"
+          git config --global http.https://github.com/.extraheader "AUTHORIZATION: basic ${authorization}"
+
       - name: Install workspace dependencies
         run: pnpm install --no-frozen-lockfile
 
@@ -86,6 +106,10 @@ jobs:
             echo "Sol server compilation emitted warnings"
             exit 1
           fi
+
+      - name: Remove private Git authorization
+        if: always()
+        run: git config --global --unset-all http.https://github.com/.extraheader || true
 
       - name: Upload Sol validation evidence
         if: always()
