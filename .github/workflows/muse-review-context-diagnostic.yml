@@ -30,6 +30,11 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      - name: Set up Clojure CLI 1.12.5.1654
+        uses: DeLaGuardo/setup-clojure@13.4
+        with:
+          cli: 1.12.5.1654
+
       - name: Set up Node 22
         uses: actions/setup-node@v4
         with:
@@ -89,6 +94,7 @@ jobs:
             node --version
             npm --version
             java -version
+            clojure -Sdescribe
             echo "=== npm ci ==="
             npm ci --ignore-scripts --no-audit --no-fund
             echo "=== shadow release ==="
