@@ -23,11 +23,20 @@ The requested replacement uses `opencode/mimo-v2.5-free` as a bounded GitHub rev
 Review quality is treated as the product of repository context, behavioral reasoning, and
 an explicit evidence threshold. Repeated same-model consensus is not treated as proof.
 
+The reviewer also needs the operator's portable process and compatibility surfaces without
+turning those surfaces into new semantic authorities. `octave-commons/muse` therefore
+compiles a restricted observer-only OpenCode plugin, while `riatzukiza/.agents` supplies the
+external skills tree. Muse remains a compiler/projection boundary; skills remain method and
+environment guidance rather than evidence.
+
 ## Scope
 
 - Keep centralized review logic in eta-mu, consistent with the GitHub automation ownership
   boundary.
 - Produce deterministic install/lint/test/build evidence before model review.
+- Compile a pinned Muse profile containing only existing-state observer tools.
+- Mount a pinned `riatzukiza/.agents` checkout at OpenCode's `~/.agents/skills` discovery
+  path.
 - Add one read-only OpenCode primary agent with a finite review state machine.
 - Require adversarial validation before a candidate can become a reportable finding.
 - Publish only changed-line, evidence-backed defects as inline comments.
@@ -35,27 +44,41 @@ an explicit evidence threshold. Repeated same-model consensus is not treated as 
 
 ## Acceptance
 
-- [ ] `.opencode/agents/github-reviewer.md` defines a read-only primary reviewer using
+- [x] `.opencode/agents/github-reviewer.md` defines a read-only primary reviewer using
       `opencode/mimo-v2.5-free`.
-- [ ] The workflow runs on non-draft, same-repository pull requests.
-- [ ] Deterministic gate results are serialized for the reviewer without converting every
+- [x] The workflow runs on non-draft, same-repository pull requests.
+- [x] Deterministic gate results are serialized for the reviewer without converting every
       environment failure into a bug claim.
-- [ ] The reviewer uses change mapping, contract auditing, semantic tracing, adversarial
+- [x] A pinned `octave-commons/muse` revision compiles a review profile exposing only Muse,
+      phase, actor, task, and agent observer projections.
+- [x] Write/network-capable multiplexed tools (`receipt_river`, `edn_ledger`,
+      `session_mycology`, web search) are absent from the review profile.
+- [x] A pinned `riatzukiza/.agents` revision is mounted as the external skill source and its
+      skill inventory is recorded in the review-context artifact.
+- [x] The reviewer uses change mapping, contract auditing, semantic tracing, adversarial
       validation, and final editorial filtering.
-- [ ] Inline findings require changed-line evidence, a failure trace, confirmed status, and
+- [x] Inline findings require changed-line evidence, a failure trace, confirmed status, and
       high confidence.
-- [ ] The workflow uses `OPENCODE_API_KEY`, disables public session sharing, and does not
+- [x] The workflow uses `OPENCODE_API_KEY`, disables public session sharing, and does not
       grant the model repository write or shell permissions.
-- [ ] Agent-workflow and centralized-automation documentation describe the new contract.
+- [x] Agent-workflow and centralized-automation documentation describe the new contract.
+- [ ] The canary run completes the MiMo stage and produces either evidence-backed comments
+      or a short passing summary.
 
 ## Verification
 
 - Review the workflow permissions and trigger predicates.
 - Validate the OpenCode agent frontmatter against current agent/permission syntax.
-- Let the pull request exercise the workflow against its own changed files.
-- Inspect the deterministic evidence artifact and any generated review output before merge.
+- Inspect the deterministic evidence artifact.
+- Inspect the revision-bound Muse/skills context artifact and verify the forbidden tools are
+  absent.
+- Configure the repository `OPENCODE_API_KEY` Actions secret.
+- Re-run the pull-request canary and inspect its generated review output before merge.
 
 ---
 
-Implementation started 2026-07-27 from a direct operator request. The slice is bounded to
-one review workflow, one primary agent contract, documentation, and this task card.
+Implementation started 2026-07-27 from a direct operator request. The first canary's
+deterministic stage passed and uploaded evidence. The model stage stopped at the explicit
+credential check because `OPENCODE_API_KEY` is not configured; OpenCode and MiMo were not
+invoked. A follow-up commit added the pinned Muse observer compilation and pinned global
+skills context so those layers can be validated independently of the missing model secret.
