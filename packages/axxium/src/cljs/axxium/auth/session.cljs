@@ -2,9 +2,9 @@
   "Session management for Axxium.
    Cookie-based sessions for browser clients,
    JWT bearer tokens for API clients."
-  (:require [axxium.config :as cfg]
+  (:require [axxium.auth.token :as token]
+            [axxium.config :as cfg]
             [axxium.db :as db]
-            [axxium.auth.token :as token]
             [clojure.string :as str]
             ["node:crypto" :as crypto]))
 
@@ -76,12 +76,18 @@
        (str/trim (subs auth-header 7)))
      cookie-token)))
 
+(defn actor->auth-context
+  "Project an authenticated actor row into the canonical request context."
+  [actor]
+  (cond-> {:auth/actor-id (:id actor)
+           :auth/entity-id (:entity_id actor)
+           :auth/email (:email actor)
+           :auth/capabilities (js->clj (:capabilities actor) :keywordize-keys true)
+           :auth/roles (js->clj (:roles actor) :keywordize-keys true)}
+    (:org_id actor) (assoc :auth/org-id (:org_id actor))))
+
 (defn ^:async resolve-auth-context
   "Resolve auth context from request. Returns promise of context map or nil."
   [req]
   (when-let [actor (await (verify-session (extract-auth-token req)))]
-    {:auth/actor-id (:id actor)
-     :auth/entity-id (:entity_id actor)
-     :auth/email (:email actor)
-     :auth/capabilities (js->clj (:capabilities actor) :keywordize-keys true)
-     :auth/roles (js->clj (:roles actor) :keywordize-keys true)}))
+    (actor->auth-context actor)))

@@ -4,14 +4,16 @@
   (:require [malli.core :as m]
             [malli.registry :as mr]))
 
-;; ─── Core Primitives ───────────────────────────────────────────────
-
 (def ActorId
   "Axxium actor identifier — URI-safe string"
   [:string {:min 1 :max 256}])
 
 (def EntityId
   "Axxium entity identifier — the underlying identity"
+  [:string {:min 1 :max 256}])
+
+(def OrgId
+  "Optional organization/tenant entity identifier."
   [:string {:min 1 :max 256}])
 
 (def Email
@@ -32,35 +34,46 @@
    [:role/name :string]
    [:role/capabilities [:vector Capability]]])
 
-;; ─── Actor ─────────────────────────────────────────────────────────
-
 (def Actor
   "An actor is an entity with capabilities, status, and attribution.
-   This is the shape that proxx, knoxx, and openplanner all agree on."
+   Organization scope is optional for backward compatibility."
   [:map
    [:actor/id ActorId]
    [:actor/entity-id EntityId]
+   [:actor/org-id {:optional true} OrgId]
    [:actor/email {:optional true} Email]
    [:actor/display-name {:optional true} :string]
    [:actor/capabilities [:vector Capability]]
    [:actor/roles {:optional true} [:vector :keyword]]
    [:actor/status [:enum :active :suspended :retired]]
-   [:actor/created-at :inst]
-   [:actor/updated-at :inst]])
-
-;; ─── Entity (the pure identity) ────────────────────────────────────
+   [:actor/created-at inst?]
+   [:actor/updated-at inst?]])
 
 (def Entity
   "An entity is the bare identity — just an ID and metadata.
-   Actors are entities with capabilities."
+   Actors are entities with capabilities. Automation is a first-class runnable
+   identity kind; organization entities remain non-runnable identity scopes."
   [:map
    [:entity/id EntityId]
-   [:entity/kind [:enum :human :agent :service :org]]
+   [:entity/kind [:enum :human :agent :service :automation :org]]
    [:entity/email {:optional true} Email]
    [:entity/display-name {:optional true} :string]
-   [:entity/created-at :inst]])
+   [:entity/created-at inst?]])
 
-;; ─── Session ───────────────────────────────────────────────────────
+(def PrincipalKind
+  "Closed runtime-principal vocabulary shared with event-ledger."
+  [:enum "human" "agent" "service" "automation"])
+
+(def RuntimePrincipalBinding
+  "Immutable identity/scope projection for operational event attribution.
+   The map is closed so mutable authorization fields cannot validate as part of
+   a historical event identity binding."
+  [:map {:closed true}
+   [:binding/version [:= 1]]
+   [:principal/actor-id ActorId]
+   [:principal/entity-id EntityId]
+   [:principal/kind PrincipalKind]
+   [:principal/org-id {:optional true} OrgId]])
 
 (def Session
   "Axxium session — the result of successful authentication"
@@ -68,23 +81,19 @@
    [:session/id :uuid]
    [:session/actor-id ActorId]
    [:session/token-hash :string]
-   [:session/expires-at :inst]
-   [:session/created-at :inst]])
-
-;; ─── Auth Context ──────────────────────────────────────────────────
+   [:session/expires-at inst?]
+   [:session/created-at inst?]])
 
 (def AuthContext
-  "The auth context that gets attached to requests after verification.
-   This is what downstream services (proxx, knoxx, openplanner) receive."
+  "The auth context attached to requests after verification."
   [:map
    [:auth/actor-id ActorId]
    [:auth/entity-id EntityId]
+   [:auth/org-id {:optional true} OrgId]
    [:auth/capabilities [:vector Capability]]
    [:auth/roles {:optional true} [:vector :keyword]]
    [:auth/email {:optional true} Email]
    [:auth/scopes {:optional true} [:vector :string]]])
-
-;; ─── OAuth Client ──────────────────────────────────────────────────
 
 (def OAuthClient
   "Registered OAuth client — proxx, knoxx, openplanner register themselves"
@@ -95,19 +104,21 @@
    [:client/redirect-uris [:vector :string]]
    [:client/grant-types [:vector :string]]
    [:client/scopes [:vector :string]]
-   [:client/created-at :inst]])
-
-;; ─── Registry ──────────────────────────────────────────────────────
+   [:client/created-at inst?]])
 
 (def registry
   {:axxium/actor Actor
    :axxium/entity Entity
    :axxium/role Role
+   :axxium/runtime-principal-binding RuntimePrincipalBinding
    :axxium/session Session
    :axxium/auth-context AuthContext
    :axxium/oauth-client OAuthClient})
 
-(mr/set-default-registry! registry)
+(mr/set-default-registry!
+ (mr/composite-registry
+  (m/default-schemas)
+  registry))
 
 (defn validate! [schema value]
   (when-not (m/validate schema value)
