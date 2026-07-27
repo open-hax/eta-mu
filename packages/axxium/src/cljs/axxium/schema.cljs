@@ -57,10 +57,11 @@
 
 (def Entity
   "An entity is the bare identity — just an ID and metadata.
-   Actors are entities with capabilities."
+   Actors are entities with capabilities. Automation is a first-class runnable
+   identity kind; organization entities remain non-runnable identity scopes."
   [:map
    [:entity/id EntityId]
-   [:entity/kind [:enum :human :agent :service :org]]
+   [:entity/kind [:enum :human :agent :service :automation :org]]
    [:entity/email {:optional true} Email]
    [:entity/display-name {:optional true} :string]
    [:entity/created-at :inst]])
