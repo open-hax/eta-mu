@@ -54,11 +54,11 @@ function scanFile(path) {
 function maxViolations(args) {
   const arg = args.find((value) => value.startsWith("--max="));
   if (!arg) return null;
-  const value = Number.parseInt(arg.slice("--max=".length), 10);
-  if (!Number.isInteger(value) || value < 0) {
+  const rawValue = arg.slice("--max=".length);
+  if (!/^\d+$/.test(rawValue)) {
     throw new Error(`Invalid boundary maximum: ${arg}`);
   }
-  return value;
+  return Number(rawValue);
 }
 
 function main() {
