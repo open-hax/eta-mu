@@ -38,6 +38,21 @@
       (catch :default ledger-error
         ledger-error))))
 
+(defn- ^:async execute-or-record-failure!
+  [execute! runtime config request episode]
+  (try
+    (await (execute! runtime config request))
+    (catch :default error
+      (let [ledger-error (await (emit-failure-lifecycle! episode request error))]
+        (if ledger-error
+          (throw (ex-info "Sol turn and canonical episode emission failed"
+                          {:run-id (:run-id request)
+                           :session-id (:session-id request)
+                           :turn-error (str error)
+                           :ledger-error (str ledger-error)}
+                          ledger-error))
+          (throw error))))))
+
 (defn ^:async send-agent-turn!
   "Execute one existing Sol turn while emitting a four-event canonical episode.
 
@@ -64,22 +79,15 @@
             episode
             "sol.turn.started"
             (lifecycle-payload request "running" nil)))
-    (try
-      (let [result (await (execute! runtime config request))
-            completed (lifecycle-payload
-                       request
-                       "completed"
-                       {:model (:model result)})]
-        (await (episode-ledger/emit! episode "sol.turn.completed" completed))
-        (await (episode-ledger/emit! episode "sol.run.completed" completed))
-        result)
-      (catch :default error
-        (let [ledger-error (await (emit-failure-lifecycle! episode request error))]
-          (if ledger-error
-            (throw (ex-info "Sol turn and canonical episode emission failed"
-                            {:run-id (:run-id request)
-                             :session-id (:session-id request)
-                             :turn-error (str error)
-                             :ledger-error (str ledger-error)}
-                            ledger-error))
-            (throw error)))))))
+    (let [result (await (execute-or-record-failure!
+                         execute! runtime config request episode))
+          completed (lifecycle-payload
+                     request
+                     "completed"
+                     {:model (:model result)})]
+      ;; Completion persistence is outside the execution-failure handler. If a
+      ;; terminal append fails, propagate it directly; never append a later
+      ;; `turn.failed` after `turn.completed` has already been accepted.
+      (await (episode-ledger/emit! episode "sol.turn.completed" completed))
+      (await (episode-ledger/emit! episode "sol.run.completed" completed))
+      result)))
