@@ -65,6 +65,12 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
+          for invalid in 56oops 56.5 1e2; do
+            if node scripts/check-js-boundary.mjs "--max=${invalid}" >/dev/null 2>&1; then
+              echo "Malformed boundary maximum was accepted: ${invalid}"
+              exit 1
+            fi
+          done
           node scripts/check-js-boundary.mjs --max=56 2>&1 | tee ../../axxium-boundary.log
 
       - name: Test Axxium
