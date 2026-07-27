@@ -20,6 +20,11 @@
            :conversation-id conversation-id
            :run-id run-id)))
 
+(defn- error-message
+  [error]
+  (or (some-> error .-message str)
+      (str error)))
+
 (defn- lifecycle-payload
   [request status extra]
   (merge {:status status
@@ -30,7 +35,10 @@
 
 (defn- ^:async emit-failure-lifecycle!
   [episode request error]
-  (let [payload (lifecycle-payload request "failed" {:error (str error)})]
+  (let [payload (lifecycle-payload
+                 request
+                 "failed"
+                 {:error (error-message error)})]
     (try
       (await (episode-ledger/emit! episode "sol.turn.failed" payload))
       (await (episode-ledger/emit! episode "sol.run.failed" payload))
@@ -48,8 +56,8 @@
           (throw (ex-info "Sol turn and canonical episode emission failed"
                           {:run-id (:run-id request)
                            :session-id (:session-id request)
-                           :turn-error (str error)
-                           :ledger-error (str ledger-error)}
+                           :turn-error (error-message error)
+                           :ledger-error (error-message ledger-error)}
                           ledger-error))
           (throw error))))))
 
@@ -84,7 +92,8 @@
           completed (lifecycle-payload
                      request
                      "completed"
-                     {:model (:model result)})]
+                     (when-let [model (:model result)]
+                       {:model model}))]
       ;; Completion persistence is outside the execution-failure handler. If a
       ;; terminal append fails, propagate it directly; never append a later
       ;; `turn.failed` after `turn.completed` has already been accepted.
