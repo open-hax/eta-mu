@@ -9,6 +9,12 @@
    :actor_status "active"
    :entity_kind "agent"})
 
+(def base-binding
+  {:binding/version 1
+   :principal/actor-id "actor.agent.research"
+   :principal/entity-id "entity.agent.research"
+   :principal/kind "agent"})
+
 (deftest authoritative-entity-vocabulary-test
   (doseq [kind [:human :agent :service :automation :org]]
     (testing (name kind)
@@ -17,6 +23,15 @@
            {:entity/id (str "entity." (name kind))
             :entity/kind kind
             :entity/created-at (js/Date.)})))))
+
+(deftest immutable-binding-schema-is-closed-test
+  (is (schema/valid? schema/RuntimePrincipalBinding base-binding))
+  (is (false? (schema/valid?
+               schema/RuntimePrincipalBinding
+               (assoc base-binding :principal/roles [:axxium/admin]))))
+  (is (false? (schema/valid?
+               schema/RuntimePrincipalBinding
+               (assoc base-binding :principal/capabilities [:axxium/write])))))
 
 (deftest runnable-principal-binding-test
   (doseq [[kind expected]
