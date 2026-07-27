@@ -97,6 +97,9 @@ jobs:
             clojure -Sdescribe
             echo "=== npm ci ==="
             npm ci --ignore-scripts --no-audit --no-fund
+            echo "=== generate entrypoint ==="
+            clojure -M -e "(require 'eta-mu.opencode.build) (eta-mu.opencode.build/generate-entrypoint {})"
+            test -s src/gen/eta_mu/gen/opencode_plugin.cljs
             echo "=== shadow release ==="
             npx shadow-cljs release opencode-plugin
           } 2>&1 | tee "$RUNNER_TEMP/muse-diagnostic/compile.log"
