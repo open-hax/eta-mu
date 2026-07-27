@@ -1,5 +1,6 @@
 (ns open-hax.sol.infra.agent.episode-ledger-test
   (:require [cljs.test :refer [deftest is testing]]
+            [open-hax.event-ledger :as event-ledger]
             [open-hax.sol.infra.agent.episode-ledger :as episode-ledger]))
 
 (defn- sequential-id-fn
@@ -79,7 +80,7 @@
         db {:name "ledger-db"}
         append! (episode-ledger/configured-appender
                  {:event-ledger-db db})]
-    (with-redefs [open-hax.event-ledger/append-event
+    (with-redefs [event-ledger/append-event
                   (fn [actual-db envelope]
                     (swap! calls* conj [actual-db envelope])
                     (js/Promise.resolve envelope))]
