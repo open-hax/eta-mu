@@ -33,6 +33,41 @@
            {:model model})
          (or extra {})))
 
+(defn- ^:async emit-start-lifecycle!
+  [episode request]
+  (await (episode-ledger/emit!
+          episode
+          "sol.run.started"
+          (lifecycle-payload request "running" nil)))
+  (try
+    (await (episode-ledger/emit!
+            episode
+            "sol.turn.started"
+            (lifecycle-payload request "running" nil)))
+    nil
+    (catch :default turn-start-error
+      (let [payload (lifecycle-payload
+                     request
+                     "failed"
+                     {:error (error-message turn-start-error)})
+            run-failure-error
+            (try
+              (await (episode-ledger/emit!
+                      episode
+                      "sol.run.failed"
+                      payload))
+              nil
+              (catch :default error
+                error))]
+        (if run-failure-error
+          (throw (ex-info "Sol turn start and canonical run termination failed"
+                          {:run-id (:run-id request)
+                           :session-id (:session-id request)
+                           :turn-start-error (error-message turn-start-error)
+                           :ledger-error (error-message run-failure-error)}
+                          run-failure-error))
+          (throw turn-start-error))))))
+
 (defn- ^:async emit-failure-lifecycle!
   [episode request error]
   (let [payload (lifecycle-payload
@@ -111,12 +146,14 @@
 
    With no configured appender the envelopes are still built and validated, so
    current local-only deployments remain compatible. Canonical start failures
-   remain blocking because execution has not begun. Execution failures remain
-   failures and attempt canonical failure events. Once execution succeeds,
-   terminal canonical append failures are reported separately and the produced
-   result is returned so Sol's local EDN/realtime projections stay truthful.
-   `:turn-executor!` and `:event-ledger-report-error!` are optional infra
-   injections used by conformance tests and alternate Sol hosts."
+   remain blocking because execution has not begun. If run start is accepted but
+   turn start fails, Sol attempts to close the accepted run before propagating
+   the start error. Execution failures remain failures and attempt canonical
+   failure events. Once execution succeeds, terminal canonical append failures
+   are reported separately and the produced result is returned so Sol's local
+   EDN/realtime projections stay truthful. `:turn-executor!` and
+   `:event-ledger-report-error!` are optional infra injections used by
+   conformance tests and alternate Sol hosts."
   [runtime config request]
   (let [request (normalized-request request)
         execute! (or (:turn-executor! config) turn/send-agent-turn!)
@@ -127,14 +164,7 @@
                   :conversation-id (:conversation-id request)
                   :agent-spec (:agent-spec request)
                   :auth-context (:auth-context request)})]
-    (await (episode-ledger/emit!
-            episode
-            "sol.run.started"
-            (lifecycle-payload request "running" nil)))
-    (await (episode-ledger/emit!
-            episode
-            "sol.turn.started"
-            (lifecycle-payload request "running" nil)))
+    (await (emit-start-lifecycle! episode request))
     (let [result (await (execute-or-record-failure!
                          execute! runtime config request episode))
           completed (lifecycle-payload
