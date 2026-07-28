@@ -83,6 +83,42 @@ jobs:
         with:
           cli: ${{ env.CLOJURE_TOOLS_VERSION }}
 
+      - name: Detect eta-mu app credentials
+        id: dependency-credentials
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          if [[ -n "${ETA_MU_APP_ID}" && -n "${ETA_MU_APP_PRIVATE_KEY}" ]]; then
+            echo "available=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "available=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Create cross-repository read token
+        id: dependency-token
+        if: steps.dependency-credentials.outputs.available == 'true'
+        continue-on-error: true
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547
+        with:
+          app-id: ${{ secrets.ETA_MU_APP_ID }}
+          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            katamorph
+            event-ledger
+
+      - name: Configure private Git dependency reads
+        if: steps.dependency-token.outputs.token != ''
+        env:
+          DEPENDENCY_TOKEN: ${{ steps.dependency-token.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          authorization="$(printf 'x-access-token:%s' "${DEPENDENCY_TOKEN}" | base64 -w0)"
+          git config --global http.https://github.com/.extraheader "AUTHORIZATION: basic ${authorization}"
+
       - name: Install, validate, test, and build
         id: validate
         continue-on-error: true
@@ -97,6 +133,10 @@ jobs:
             pnpm test
             pnpm build
           } 2>&1 | tee "$OUT/logs/validate.log"
+
+      - name: Remove private Git authorization
+        if: always()
+        run: git config --global --unset-all http.https://github.com/.extraheader || true
 
       - name: Collect generated outputs and portable toolchains
         if: always()
