@@ -59,11 +59,13 @@ environment guidance rather than evidence.
       validation, and final editorial filtering.
 - [x] Inline findings require changed-line evidence, a failure trace, confirmed status, and
       high confidence.
-- [x] The workflow uses `OPENCODE_API_KEY`, disables public session sharing, and does not
-      grant the model repository write or shell permissions.
+- [x] The free MiMo model uses OpenCode's anonymous public-provider path, public session
+      sharing is disabled, and the reviewer has no repository-write or shell permission.
+- [x] The workflow forces `github-reviewer` through inline OpenCode config because the pinned
+      GitHub action currently ignores its documented `agent` input.
 - [x] Agent-workflow and centralized-automation documentation describe the new contract.
-- [ ] The canary run completes the MiMo stage and produces either evidence-backed comments
-      or a short passing summary.
+- [ ] The canary run completes under the bounded `github-reviewer` agent and produces either
+      evidence-backed comments or a short passing summary without modifying the branch.
 
 ## Verification
 
@@ -72,13 +74,17 @@ environment guidance rather than evidence.
 - Inspect the deterministic evidence artifact.
 - Inspect the revision-bound Muse/skills context artifact and verify the forbidden tools are
   absent.
-- Configure the repository `OPENCODE_API_KEY` Actions secret.
+- Confirm the anonymous free-model path selects `github-reviewer`, not the built-in `build`
+  agent.
 - Re-run the pull-request canary and inspect its generated review output before merge.
 
 ---
 
 Implementation started 2026-07-27 from a direct operator request. The first canary's
-deterministic stage passed and uploaded evidence. The model stage stopped at the explicit
-credential check because `OPENCODE_API_KEY` is not configured; OpenCode and MiMo were not
-invoked. A follow-up commit added the pinned Muse observer compilation and pinned global
-skills context so those layers can be validated independently of the missing model secret.
+deterministic stage passed and uploaded evidence. A later run proved anonymous
+`opencode/mimo-v2.5-free` inference works, but also exposed two integration defects: the
+review-context artifact initially omitted hidden files, and the pinned OpenCode GitHub action
+ignored its `agent` input and fell back to the mutable built-in `build` agent. Commits
+`574f37f`, `fc40dd1`, and `e9146d4` preserve the full context, remove the false API-key gate,
+force the bounded reviewer through inline config, and complete the deterministic Clojure/build
+environment.
