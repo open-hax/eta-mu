@@ -16,6 +16,11 @@ directory and its parents, including `kanban/` and `.kanban/`, in this order:
 An explicit config path is parsed according to its `.edn` or `.json` extension.
 Loading JSON emits a deprecation warning.
 
+The eta-mu repository currently retains `openhax.kanban.json` as a deprecated
+compatibility mirror because `packages/legacy/kanban` still discovers that exact
+filename. Rheos selects `openhax.kanban.edn` first; the mirror may be removed only
+after the legacy consumer is migrated or retired.
+
 ## EDN shape
 
 Single-project example:
