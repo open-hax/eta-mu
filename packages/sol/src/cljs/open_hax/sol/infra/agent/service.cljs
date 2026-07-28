@@ -1,9 +1,9 @@
 (ns open-hax.sol.infra.agent.service
   "Small consumer-facing facade for Sol agent runtime operations."
-  (:require [open-hax.sol.infra.agent.runner :as runner]
+  (:require [open-hax.sol.infra.agent.episode-turn :as episode-turn]
+            [open-hax.sol.infra.agent.runner :as runner]
             [open-hax.sol.infra.agent.runtime :as runtime]
-            [open-hax.sol.infra.agent.session :as session]
-            [open-hax.sol.infra.agent.turn :as turn]))
+            [open-hax.sol.infra.agent.session :as session]))
 
 (defprotocol IAgentService
   (-start-turn! [svc turn-request])
@@ -15,7 +15,7 @@
 (defrecord SolAgentService [runtime config delegates]
   IAgentService
   (-start-turn! [_ turn-request]
-    ((or (:start-turn! delegates) turn/send-agent-turn!) runtime config turn-request))
+    ((or (:start-turn! delegates) episode-turn/send-agent-turn!) runtime config turn-request))
 
   (-queue-turn! [this turn-request]
     (if-let [queue-fn (:queue-turn! delegates)]
