@@ -37,8 +37,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
-      OUT: ${{ runner.temp }}/sandbox-export
-      DEPS_OUT: ${{ runner.temp }}/sandbox-deps
       CLOJURE_TOOLS_VERSION: "1.12.5.1654"
       BABASHKA_VERSION: "1.13.219"
 
@@ -53,6 +51,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export OUT="$RUNNER_TEMP/sandbox-export"
           rm -rf "$OUT"
           mkdir -p "$OUT"/{source,runtime,logs,toolchain,metadata}
           repo_name="${GITHUB_REPOSITORY#*/}"
@@ -90,6 +89,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export OUT="$RUNNER_TEMP/sandbox-export"
           {
             pnpm install --frozen-lockfile
             pnpm lint
@@ -102,6 +102,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export OUT="$RUNNER_TEMP/sandbox-export"
           paths_file="$RUNNER_TEMP/sandbox-runtime-paths"
           : > "$paths_file"
           find . -type d \( -name dist -o -name 'dist-*' -o -name target -o -name coverage -o -name reports \) \
@@ -142,7 +143,12 @@ jobs:
             "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "validation": "${{ steps.validate.outcome }}",
             "entrypoint": "pnpm test",
-            "network_required_after_restore": false
+            "network_required_after_restore": true,
+            "restore_requirements": [
+              "Node.js 22 and Java 21 must be installed on the restore host",
+              "Restore the bundled pnpm and Clojure toolchains or install the pinned versions",
+              "Restore the optional dependency-cache artifact or allow network access for dependency installation"
+            ]
           }
           EOF
           (cd "$OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
@@ -152,6 +158,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export DEPS_OUT="$RUNNER_TEMP/sandbox-deps"
           rm -rf "$DEPS_OUT"
           mkdir -p "$DEPS_OUT"
           store="$(pnpm store path 2>/dev/null || true)"
