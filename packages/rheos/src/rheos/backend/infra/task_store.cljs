@@ -128,8 +128,10 @@
   [source]
   (let [project (source->project source)
         tasks-dir (:tasks-dir project)
-        roots (or (seq (get-in project [:card-projection :paths]))
-                  [tasks-dir])
+        projection (:card-projection project)
+        roots (if (and projection (contains? projection :paths))
+                (:paths projection)
+                [tasks-dir])
         nested (await (js/Promise.all
                        (clj->js (mapv collect-markdown-files roots))))
         files (vec (distinct (apply concat nested)))

@@ -90,7 +90,7 @@
                   (:columns snapshot))})
 
 (defn- project->wip-limits [project]
-  (when-let [fsm (or (:fsm project) {})]
+  (let [fsm (:fsm project)]
     (if (map? fsm)
       (:wip-limits fsm {})
       {})))

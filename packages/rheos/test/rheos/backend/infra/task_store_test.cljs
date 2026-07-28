@@ -45,3 +45,16 @@
         (is (= ["real-card"] (mapv :uuid tasks))))
       (finally
         (await (.rm fsp root #js {:recursive true :force true}))))))
+
+
+(deftest ^:async explicit-empty-projection-scans-nothing
+  (let [root (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-empty-projection-")))
+        card-path (path/join root "would-be-legacy-card.md")]
+    (try
+      (await (.writeFile fsp card-path card-markdown "utf8"))
+      (let [tasks (await (task-store/load-tasks
+                          {:tasks-dir root
+                           :card-projection {:paths []}}))]
+        (is (empty? tasks)))
+      (finally
+        (await (.rm fsp root #js {:recursive true :force true}))))))
