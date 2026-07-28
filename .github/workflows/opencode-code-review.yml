@@ -307,6 +307,7 @@ jobs:
         with:
           name: review-context-${{ github.event.pull_request.head.sha }}
           path: ${{ runner.temp }}/opencode-review-context
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
 
