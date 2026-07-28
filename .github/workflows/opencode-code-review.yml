@@ -320,7 +320,6 @@ jobs:
     env:
       HAS_DISCORD_REVIEW_WEBHOOK_URL: ${{ secrets.DISCORD_REVIEW_WEBHOOK_URL != '' }}
     permissions:
-      id-token: write
       contents: read
       pull-requests: write
       issues: write
@@ -373,16 +372,6 @@ jobs:
           echo "Muse observer registry:"
           cat .review-context/metadata/exposed-tools.txt
 
-      - name: Verify OpenCode Zen credential
-        shell: bash
-        env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-        run: |
-          if [[ -z "$OPENCODE_API_KEY" ]]; then
-            echo "::error::The OPENCODE_API_KEY Actions secret is required for opencode/mimo-v2.5-free."
-            exit 1
-          fi
-
       - name: Capture review start time
         id: review_start
         run: echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
@@ -391,7 +380,6 @@ jobs:
         uses: anomalyco/opencode/github@40e4d730cac33cc9e76659ae7acb16b3a6132b83
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
           model: opencode/mimo-v2.5-free
           agent: github-reviewer
