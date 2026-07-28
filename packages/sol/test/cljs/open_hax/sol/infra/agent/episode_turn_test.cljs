@@ -127,6 +127,40 @@
         (is (= "ledger unavailable" (.-message error)))))
     (is (false? @executed?*))))
 
+(deftest ^:async rejected-turn-start-closes-accepted-run-test
+  (let [accepted-events* (atom [])
+        append-count* (atom 0)
+        executed?* (atom false)
+        turn-start-error (js/Error. "turn start rejected")
+        config {:event-ledger-id-fn
+                (sequential-id-fn
+                 ["turn-1" "episode-1"
+                  "event-1" "event-2" "event-3"])
+                :event-ledger-append!
+                (fn [envelope]
+                  (let [append-number (swap! append-count* inc)]
+                    (if (= 2 append-number)
+                      (js/Promise.reject turn-start-error)
+                      (do
+                        (swap! accepted-events* conj envelope)
+                        (js/Promise.resolve envelope)))))
+                :turn-executor!
+                (fn [_runtime _config _request]
+                  (reset! executed?* true)
+                  (js/Promise.resolve {:answer "should not run"}))}]
+    (try
+      (await (episode-turn/send-agent-turn! nil config turn-request))
+      (is false "turn-start append should reject")
+      (catch :default actual-error
+        (is (identical? turn-start-error actual-error))))
+    (is (false? @executed?*))
+    (is (= ["sol.run.started" "sol.run.failed"]
+           (mapv :event/type @accepted-events*)))
+    (is (= [nil "event-1"]
+           (mapv :causal/parent @accepted-events*)))
+    (is (= "turn start rejected"
+           (get-in (last @accepted-events*) [:payload :error])))))
+
 (deftest ^:async original-and-ledger-failures-are-both-observable-test
   (let [append-count* (atom 0)
         config {:event-ledger-id-fn
