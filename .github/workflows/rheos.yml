@@ -9,6 +9,9 @@ on:
       - "packages/rheos/**"
       - "openhax.kanban.edn"
       - "openhax.kanban.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
       - ".github/workflows/rheos.yml"
   push:
     branches: [main]
@@ -16,21 +19,23 @@ on:
       - "packages/rheos/**"
       - "openhax.kanban.edn"
       - "openhax.kanban.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
       - ".github/workflows/rheos.yml"
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
 
       - name: Install clj-kondo
-        run: |
-          curl -sLO https://raw.githubusercontent.com/clj-kondo/clj-kondo/master/script/install-clj-kondo
-          chmod +x install-clj-kondo
-          sudo ./install-clj-kondo
+        uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
+        with:
+          clj-kondo: 2025.10.23
 
       - name: Run clj-kondo
         working-directory: packages/rheos
@@ -50,7 +55,7 @@ jobs:
   test-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
 
@@ -59,17 +64,19 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
         with:
           version: "10.14.0"
           run_install: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: "20"
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Run Rheos tests
         run: pnpm -C packages/rheos test
