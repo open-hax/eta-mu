@@ -19,7 +19,23 @@ on:
       - ".github/workflows/rheos.yml"
 
 jobs:
-  test:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install clj-kondo
+        run: |
+          curl -sLO https://raw.githubusercontent.com/clj-kondo/clj-kondo/master/script/install-clj-kondo
+          chmod +x install-clj-kondo
+          sudo ./install-clj-kondo
+
+      - name: Run clj-kondo
+        run: clj-kondo --lint packages/rheos/src packages/rheos/test
+
+  test-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,17 +59,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Install clj-kondo
-        run: |
-          curl -sLO https://raw.githubusercontent.com/clj-kondo/clj-kondo/master/script/install-clj-kondo
-          chmod +x install-clj-kondo
-          sudo ./install-clj-kondo
-
       - name: Run Rheos tests
         run: pnpm -C packages/rheos test
-
-      - name: Run clj-kondo
-        run: pnpm -C packages/rheos lint:kondo
 
       - name: Build Rheos release targets
         run: pnpm -C packages/rheos build
