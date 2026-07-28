@@ -33,7 +33,18 @@ jobs:
           sudo ./install-clj-kondo
 
       - name: Run clj-kondo
-        run: clj-kondo --lint packages/rheos/src packages/rheos/test
+        shell: bash
+        run: |
+          set -o pipefail
+          clj-kondo --lint packages/rheos/src packages/rheos/test 2>&1 | tee rheos-kondo.log
+
+      - name: Upload clj-kondo diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: rheos-kondo-log
+          path: rheos-kondo.log
+          if-no-files-found: error
 
   test-build:
     runs-on: ubuntu-latest
