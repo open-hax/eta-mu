@@ -13,3 +13,11 @@
   [project-id]
   (let [pid (or project-id (default-id))]
     (first (filter #(= (:id %) pid) (all)))))
+
+(defn find-project-by-tasks-dir
+  "Resolve the configured project for an absolute task root.
+
+   This keeps legacy callers that still pass only a tasks-dir compatible while
+   card-projection configuration migrates toward passing the whole project map."
+  [tasks-dir]
+  (first (filter #(= (:tasks-dir %) tasks-dir) (all))))
