@@ -85,6 +85,10 @@ jobs:
         with:
           app-id: ${{ secrets.ETA_MU_APP_ID }}
           private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            katamorph
+            event-ledger
 
       - name: Configure private Git dependency reads
         env:
