@@ -258,6 +258,57 @@ file. Viable implementation candidates include:
 The storage ADR must test worktrees, branch switches, rebases, merges, clones,
 garbage collection, backup, and remote synchronization before selecting one.
 
+### Candidate review (2026-07-28)
+
+The ADR remains the accepting authority. This review only selects which candidate
+receives the local worktree/branch-switch spike.
+
+**Selected for the spike: repository-local state under the Git directory plus
+dedicated refs.**
+
+Git already supplies the two-tier scoping this design needs, without inventing an
+identity scheme:
+
+- `git rev-parse --git-common-dir` is shared by every worktree of a repository. It
+  is the natural home for committed event segments and for repository identity.
+- `git rev-parse --git-dir` resolves per worktree — a linked worktree gets its own
+  `.git/worktrees/<name>/` with its own `HEAD`, `index`, and `logs`. It is the
+  natural home for pending events. Worktree isolation then holds structurally
+  rather than by an ID field an implementation must remember to filter on, and
+  `git worktree remove` reclaims pending state as a side effect.
+
+Nothing under the Git directory is rewritten by `git checkout`, so the primary
+acceptance criterion — the active store is not rewritten merely by switching
+branches — holds by construction rather than by convention. Durable segments live
+under `refs/eta-mu/events/*`; because those are real refs, their objects survive
+`git gc`, and clone reconstruction is an explicit fetch refspec. This repository
+already carries precedent for tool state inside the Git directory.
+
+Known costs: a fetch/push refspec convention must be documented and configured, and
+state under the Git directory is invisible to ordinary code review.
+
+**Rejected as the active store: an external state directory keyed by repository
+identity.** Git exposes no stable repository UUID. Identity would have to be
+synthesized from something like the root-commit SHA plus a remote URL, which is
+ambiguous under fork, remote rename, and two clones of the same repository on one
+machine — precisely the ambiguity the worldline model exists to remove. It also
+splits backup across two locations and leaves a fresh clone with no state. Revisit
+only if the spike disqualifies the Git-directory layout.
+
+**Rejected as the active store, retained as an optional attribution index: Git
+notes.** Notes attach to commits, so pending events — which by definition have no
+commit yet — cannot be represented at all; notes therefore force a hybrid in which
+both mechanisms must be owned. Notes are also weakest at the operations this ADR
+must test: `refs/notes/*` is neither fetched nor pushed by default, and rebase
+drops notes unless `notes.rewriteRef` is configured. Post-hoc commit attribution is
+the one thing notes do well, and that is a thin optional layer over the selected
+layout.
+
+**Spike seam.** `rheos.backend.infra.ledger/get-ledger` is the whole storage seam
+today: it joins `<board-dir>/.events` and constructs an EDN event admission. The
+spike redirects that path to a Git-directory-derived location and then exercises
+branch switch, second worktree, rebase, merge, detached `HEAD`, and clone.
+
 ## Delivery passes
 
 ### Pass 1 — EDN config and projection discovery
