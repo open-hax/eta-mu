@@ -1,0 +1,53 @@
+name: Rheos
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - "packages/rheos/**"
+      - "openhax.kanban.edn"
+      - "openhax.kanban.json"
+      - ".github/workflows/rheos.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/rheos/**"
+      - "openhax.kanban.edn"
+      - "openhax.kanban.json"
+      - ".github/workflows/rheos.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10.14.0"
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run Rheos tests
+        run: pnpm -C packages/rheos test
+
+      - name: Run clj-kondo
+        run: pnpm -C packages/rheos lint:kondo
+
+      - name: Build Rheos release targets
+        run: pnpm -C packages/rheos build
