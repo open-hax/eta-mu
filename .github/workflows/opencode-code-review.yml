@@ -29,6 +29,11 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      - name: Set up Clojure CLI 1.12.5.1654
+        uses: DeLaGuardo/setup-clojure@13.4
+        with:
+          cli: 1.12.5.1654
+
       - name: Set up pnpm 10.14.0
         uses: pnpm/action-setup@v4
         with:
@@ -79,14 +84,16 @@ jobs:
           install_status="$(awk -F= '$1 == "install" {print $2}' "$statuses")"
 
           if [[ "$install_status" == "0" ]]; then
+            run_gate bootstrap_extensions pnpm --dir packages/extensions build
             run_gate lint pnpm lint
             run_gate test pnpm test
             run_gate build pnpm build
           else
+            echo "bootstrap_extensions=125" >> "$statuses"
             echo "lint=125" >> "$statuses"
             echo "test=125" >> "$statuses"
             echo "build=125" >> "$statuses"
-            echo "Dependency installation failed; lint, test, and build were not attempted." >> "$log"
+            echo "Dependency installation failed; bootstrap, lint, test, and build were not attempted." >> "$log"
           fi
 
           node <<'NODE'
@@ -319,6 +326,7 @@ jobs:
     timeout-minutes: 45
     env:
       HAS_DISCORD_REVIEW_WEBHOOK_URL: ${{ secrets.DISCORD_REVIEW_WEBHOOK_URL != '' }}
+      OPENCODE_CONFIG_CONTENT: '{"default_agent":"github-reviewer"}'
     permissions:
       contents: read
       pull-requests: write
@@ -364,8 +372,15 @@ jobs:
           rm -rf "$HOME/.agents"
           ln -s "$GITHUB_WORKSPACE/.review-context/agents" "$HOME/.agents"
           test -s "$HOME/.agents/skills/work-cycle/SKILL.md"
+          test -s .opencode/agents/github-reviewer.md
           test -s .opencode/plugins/eta-mu-actors.js
           test -s .opencode/opencode.json
+
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "::error::Review-context setup changed tracked files before model execution."
+            git status --short
+            exit 1
+          fi
 
           skill_count="$(find "$HOME/.agents/skills" -name SKILL.md -type f | wc -l)"
           echo "Loaded ${skill_count} global skills from riatzukiza/.agents."
@@ -382,7 +397,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: opencode/mimo-v2.5-free
-          agent: github-reviewer
           share: false
           use_github_token: true
           prompt: |
