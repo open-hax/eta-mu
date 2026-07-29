@@ -107,9 +107,10 @@
 
 (defn http-error
   [status code message]
-  (doto (ex-info (str status " " message) {:status status :code code})
-    (aset "statusCode" status)
-    (aset "code" code)))
+  (let [error (ex-info (str status " " message) {:status status :code code})]
+    (js/Object.assign error #js {:statusCode status
+                                 :code code})
+    error))
 
 (defn error-status
   [err default-status]
@@ -125,12 +126,12 @@
    (error-response! reply err default-status {}))
   ([reply err default-status _context]
    (let [status (error-status err default-status)
-          code (xfastify/error-code err)
-          payload (cond-> {:detail (error-message err)}
-                    code (assoc :error_code code))]
-      (when (>= status 500)
-        (js/console.error "[sol-http] error response" status code err))
-      (json-response! reply status payload))))
+         code (xfastify/error-code err)
+         payload (cond-> {:detail (error-message err)}
+                   code (assoc :error_code code))]
+     (when (>= status 500)
+       (js/console.error "[sol-http] error response" status code err))
+     (json-response! reply status payload))))
 
 (defn no-content?
   [x]
@@ -162,6 +163,7 @@
 (defn request-forward-body
   [request]
   (xfastify/forward-body request))
+
 (defn request-stream-body
   [request]
   (xfastify/stream-body-options request))
