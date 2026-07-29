@@ -18,6 +18,11 @@ on:
         required: false
         type: string
         default: "fix/*,feat/*,chore/*,docs/*,refactor/*,test/*,perf/*"
+      eta-mu-ref:
+        description: "eta-mu ref to source shared logic from"
+        required: false
+        type: string
+        default: "main"
     secrets:
       ETA_MU_APP_ID:
         required: false
@@ -32,7 +37,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: open-hax/eta-mu
-          ref: 92beede072dd013e1379c9a1ba0bd160d2f9b252
+          ref: ${{ inputs.eta-mu-ref }}
           path: .eta-mu
           persist-credentials: false
 

@@ -17,6 +17,16 @@ on:
         required: false
         type: string
         default: "SQUASH"
+      eta-mu-ref:
+        description: "eta-mu ref to source shared logic from"
+        required: false
+        type: string
+        default: "main"
+    secrets:
+      ETA_MU_APP_ID:
+        required: false
+      ETA_MU_APP_PRIVATE_KEY:
+        required: false
 
 jobs:
   auto-merge:
@@ -29,9 +39,33 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: open-hax/eta-mu
-          ref: 92beede072dd013e1379c9a1ba0bd160d2f9b252
+          ref: ${{ inputs.eta-mu-ref }}
           path: .eta-mu
           persist-credentials: false
+
+      - name: Detect eta-mu app credentials
+        id: eta_mu_app_credentials
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        run: |
+          if [[ -n "${ETA_MU_APP_ID}" && -n "${ETA_MU_APP_PRIVATE_KEY}" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create eta-mu app token
+        id: eta_mu_token
+        if: ${{ steps.eta_mu_app_credentials.outputs.available == 'true' }}
+        continue-on-error: true
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ env.ETA_MU_APP_ID }}
+          private-key: ${{ env.ETA_MU_APP_PRIVATE_KEY }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -50,7 +84,7 @@ jobs:
 
       - name: Enable auto-merge
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ steps.eta_mu_token.conclusion == 'success' && steps.eta_mu_token.outputs.token != '' && steps.eta_mu_token.outputs.token || github.token }}
         run: |
           pnpm --dir .eta-mu/packages/legacy/github dev auto-merge \
             --repo "${{ inputs.repo || github.repository }}" \
