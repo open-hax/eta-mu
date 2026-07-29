@@ -17,6 +17,8 @@
                              :killSignal kill-signal}
                       timeout-ms (assoc :timeout timeout-ms))
             child (.spawn cp "git" (clj->js args) (clj->js options))]
+        (.setEncoding (.-stdout child) "utf8")
+        (.setEncoding (.-stderr child) "utf8")
         (.on (.-stdout child) "data" #(swap! stdout str %))
         (.on (.-stderr child) "data" #(swap! stderr str %))
         (.on child "close"

@@ -45,6 +45,12 @@
                              ["**/cache/**"]
                              (glob/matches-any? "/repo/build/cache/file"
                                                 ["**/cache/**"])))
+    (is (glob/matches-any? "/repo/cache/a.edn"
+                           ["/repo/cache/?.edn"]))
+    (is (false? (glob/matches-any? "/repo/cache/ab.edn"
+                                   ["/repo/cache/?.edn"])))
+    (is (false? (glob/matches-any? "/repo/cache/.edn"
+                                   ["/repo/cache/?.edn"])))
     (is (false? (discovery/excluded? "/repo/src/cache.cljs"
                                      ["**/cache/**"]
                                      (glob/matches-any? "/repo/src/cache.cljs"

@@ -6,6 +6,7 @@
   [pattern]
   (let [escaped (-> pattern
                     (str/replace #"[.+^${}()|\[\]\\]" "\\$&")
+                    (str/replace "?" "[^/]")
                     (str/replace "**" "\u0000")
                     (str/replace "*" "[^/]*")
                     (str/replace "\u0000" ".*"))]

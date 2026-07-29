@@ -45,11 +45,12 @@
 
 (deftest ^:async porcelain-stdout-preservation-test
   (let [root (.mkdtempSync fs (path/join (.tmpdir os) "eta-mu-fork-tax-"))
-        file (path/join root "tracked.txt")]
+        filename "🔧-tracked.txt"
+        file (path/join root filename)]
     (try
       (is (zero? (:exit (await (git/exec-at root ["init" "--quiet"])))))
       (.writeFileSync fs file "first\n")
-      (is (zero? (:exit (await (git/exec-at root ["add" "tracked.txt"])))))
+      (is (zero? (:exit (await (git/exec-at root ["add" filename])))))
       (is (zero? (:exit
                   (await
                    (git/exec-at root
@@ -62,8 +63,8 @@
                                 ["status" "--porcelain=v1" "-z"]
                                 {:preserve-stdout? true}))]
         (is (zero? exit))
-        (is (str/starts-with? stdout " M tracked.txt\u0000"))
-        (is (= [{:status " M" :path "tracked.txt"}]
+        (is (str/starts-with? stdout (str " M " filename "\u0000")))
+        (is (= [{:status " M" :path filename}]
                (handoff/parse-porcelain-z stdout))))
       (finally
         (.rmSync fs root #js {:recursive true :force true})))))

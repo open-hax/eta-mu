@@ -12,9 +12,17 @@
 
 (defn- ^:async resolve-repo []
   (let [cwd (runtime/current-directory)
-        {:keys [exit stdout]} (await (git/exec-at cwd
-                                                 ["rev-parse" "--show-toplevel"]))]
-    (if (zero? exit) stdout cwd)))
+        {:keys [status stdout stderr]}
+        (await (git/exec-at cwd ["rev-parse" "--show-toplevel"]))]
+    (case status
+      :ok stdout
+      :not-a-repository cwd
+      (throw
+       (js/Error.
+        (str "Unable to resolve repository root ("
+             (name status)
+             "): "
+             stderr))))))
 
 (defn- schemas! []
   (println
