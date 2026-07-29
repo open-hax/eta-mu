@@ -62,13 +62,20 @@ export type GitHubSyncOperation =
       stateReason?: "completed" | "not_planned";
     };
 
+export interface GitHubSyncExcludedTask {
+  task: KanbanTask;
+  reason: string;
+}
+
 export interface GitHubSyncPlan {
   operations: GitHubSyncOperation[];
+  excludedTasks: GitHubSyncExcludedTask[];
   summary: {
     createLabels: number;
     createIssues: number;
     updateIssues: number;
     skippedClosedTasks: number;
+    excludedTasks: number;
   };
 }
 
@@ -80,6 +87,7 @@ export interface GitHubSyncResult {
 
 const uuidMarkerPrefix = "openhax-kanban-sync";
 const uuidMarkerPattern = /<!--\s*openhax-kanban-sync\s+uuid="([^"]+)"\s*-->/u;
+const statusMetadataPattern = /^- Status:\s*`([^`]+)`\s*$/imu;
 
 const defaultLabelColors: Record<string, string> = {
   kanban: "5319e7",
@@ -91,6 +99,10 @@ const defaultLabelColors: Record<string, string> = {
 
 const statusColor = "cfd3d7";
 const defaultTaskLabelColor = "ededed";
+const closedTaskStatuses = new Set(["done", "rejected"]);
+const metadataFilePatterns = [/^AGENTS\.md$/iu, /^CHANGELOG(?:\..*)?$/iu, /^CROSS_REFERENCES\.md$/iu];
+const timestampedMarkdownPattern = /^\d{4}-\d{2}-\d{2}(?:[-_].*)?\.md$/iu;
+const taskProjectionSegments = new Set(["tasks", "epics", "cards"]);
 
 const normalizeGitHubLabelName = (label: string): string =>
   label
@@ -101,6 +113,9 @@ const normalizeGitHubLabelName = (label: string): string =>
     .slice(0, 50);
 
 const unique = <T>(items: T[]): T[] => Array.from(new Set(items));
+
+const normalizedTaskPath = (task: KanbanTask): string =>
+  (task.relativePath ?? task.sourcePath).replace(/\\/gu, "/");
 
 export const extractTaskUuidFromIssue = (
   issue: Pick<GitHubIssueState, "body">,
@@ -113,6 +128,45 @@ export const extractTaskUuidFromIssue = (
 
   const legacyMatch = body.match(/^Kanban UUID:\s*(.+)$/imu);
   return legacyMatch?.[1]?.trim();
+};
+
+export const extractTaskStatusFromIssue = (
+  issue: Pick<GitHubIssueState, "body">,
+): string | undefined => issue.body?.match(statusMetadataPattern)?.[1]?.trim().toLowerCase();
+
+export const evaluateGitHubSyncEligibility = (
+  task: KanbanTask,
+): { eligible: true } | { eligible: false; reason: string } => {
+  if (task.syncGitHub === true) {
+    return { eligible: true };
+  }
+
+  if (task.syncGitHub === false) {
+    return { eligible: false, reason: "frontmatter sync_github is false" };
+  }
+
+  const sourcePath = normalizedTaskPath(task);
+  const segments = sourcePath.split("/").filter(Boolean);
+  const basename = segments.at(-1) ?? sourcePath;
+
+  if (metadataFilePatterns.some((pattern) => pattern.test(basename))) {
+    return { eligible: false, reason: `metadata file ${basename}` };
+  }
+
+  if (segments.includes(".ημ")) {
+    return { eligible: false, reason: "path is inside .ημ" };
+  }
+
+  const hasTaskProjectionSegment = segments.some((segment) => taskProjectionSegments.has(segment));
+  if (!hasTaskProjectionSegment && (segments.includes("docs") || segments.includes("notes"))) {
+    return { eligible: false, reason: "documentation or notes path" };
+  }
+
+  if (!hasTaskProjectionSegment && timestampedMarkdownPattern.test(basename)) {
+    return { eligible: false, reason: "timestamped note" };
+  }
+
+  return { eligible: true };
 };
 
 export const desiredIssueLabels = (task: KanbanTask): string[] =>
@@ -182,10 +236,46 @@ const desiredIssueState = (
   return { state: "open" };
 };
 
+const effectiveIssueState = (
+  task: KanbanTask,
+  issue: GitHubIssueState,
+  desiredState: ReturnType<typeof desiredIssueState>,
+): ReturnType<typeof desiredIssueState> => {
+  if (issue.state !== "closed" || desiredState.state !== "open") {
+    return desiredState;
+  }
+
+  const previousStatus = extractTaskStatusFromIssue(issue);
+  const explicitlyReactivated =
+    previousStatus !== undefined &&
+    closedTaskStatuses.has(previousStatus) &&
+    !closedTaskStatuses.has(task.status);
+
+  return explicitlyReactivated ? desiredState : { state: "closed" };
+};
+
 const sameLabels = (current: string[], desired: string[]): boolean => {
   const left = [...current].sort();
   const right = [...desired].sort();
   return left.length === right.length && left.every((label, index) => label === right[index]);
+};
+
+const assertUniqueTaskUuids = (tasks: KanbanTask[]): void => {
+  const tasksByUuid = new Map<string, KanbanTask>();
+
+  for (const task of tasks) {
+    const existing = tasksByUuid.get(task.uuid);
+    if (existing) {
+      throw new Error(
+        [
+          `Duplicate kanban UUID "${task.uuid}" in GitHub sync input:`,
+          `- ${normalizedTaskPath(existing)}`,
+          `- ${normalizedTaskPath(task)}`,
+        ].join("\n"),
+      );
+    }
+    tasksByUuid.set(task.uuid, task);
+  }
 };
 
 export const planGitHubIssueSync = (
@@ -194,6 +284,20 @@ export const planGitHubIssueSync = (
   options: GitHubSyncOptions,
 ): GitHubSyncPlan => {
   const operations: GitHubSyncOperation[] = [];
+  const excludedTasks: GitHubSyncExcludedTask[] = [];
+  const eligibleTasks: KanbanTask[] = [];
+
+  for (const task of tasks) {
+    const eligibility = evaluateGitHubSyncEligibility(task);
+    if (eligibility.eligible) {
+      eligibleTasks.push(task);
+    } else {
+      excludedTasks.push({ task, reason: eligibility.reason });
+    }
+  }
+
+  assertUniqueTaskUuids(eligibleTasks);
+
   const existingLabels = new Set(state.labels.map((label) => label.name.toLowerCase()));
   const issuesByUuid = new Map<string, GitHubIssueState>();
   let skippedClosedTasks = 0;
@@ -201,11 +305,17 @@ export const planGitHubIssueSync = (
   for (const issue of state.issues) {
     const uuid = extractTaskUuidFromIssue(issue);
     if (uuid) {
+      const existing = issuesByUuid.get(uuid);
+      if (existing) {
+        throw new Error(
+          `Duplicate GitHub issue UUID marker "${uuid}" on issues #${existing.number} and #${issue.number}.`,
+        );
+      }
       issuesByUuid.set(uuid, issue);
     }
   }
 
-  const desiredLabels = unique(tasks.flatMap(desiredIssueLabels));
+  const desiredLabels = unique(eligibleTasks.flatMap(desiredIssueLabels));
   if (options.manageLabels !== false) {
     for (const labelName of desiredLabels) {
       if (!existingLabels.has(labelName.toLowerCase())) {
@@ -214,7 +324,7 @@ export const planGitHubIssueSync = (
     }
   }
 
-  for (const task of tasks) {
+  for (const task of eligibleTasks) {
     const issue = issuesByUuid.get(task.uuid);
     const labels = desiredIssueLabels(task);
     const title = task.title;
@@ -231,11 +341,12 @@ export const planGitHubIssueSync = (
       continue;
     }
 
+    const stateToApply = effectiveIssueState(task, issue, desiredState);
     const currentLabels = issue.labels.map((label) => label.name);
     if (
       issue.title !== title ||
       (issue.body ?? "") !== body ||
-      issue.state !== desiredState.state ||
+      issue.state !== stateToApply.state ||
       !sameLabels(currentLabels, labels)
     ) {
       operations.push({
@@ -245,19 +356,21 @@ export const planGitHubIssueSync = (
         title,
         body,
         labels,
-        state: desiredState.state,
-        stateReason: desiredState.stateReason,
+        state: stateToApply.state,
+        stateReason: stateToApply.stateReason,
       });
     }
   }
 
   return {
     operations,
+    excludedTasks,
     summary: {
       createLabels: operations.filter((operation) => operation.type === "createLabel").length,
       createIssues: operations.filter((operation) => operation.type === "createIssue").length,
       updateIssues: operations.filter((operation) => operation.type === "updateIssue").length,
       skippedClosedTasks,
+      excludedTasks: excludedTasks.length,
     },
   };
 };
