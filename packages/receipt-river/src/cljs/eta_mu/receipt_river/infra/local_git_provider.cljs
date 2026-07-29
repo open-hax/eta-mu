@@ -12,14 +12,17 @@
             [eta-mu.receipt-river.extern.git :as git]
             [eta-mu.receipt-river.extern.runtime :as runtime]))
 
+(def ^:private max-enrichment-concurrency 4)
+
 (defn- stable-id [value]
   (crypto/short-sha256 value 24))
 
 (defn- marker [path]
   (let [git-path (fs/join path ".git")
-        bare? (and (fs/path-exists? (fs/join path "HEAD"))
-                   (fs/path-exists? (fs/join path "objects"))
-                   (fs/path-exists? (fs/join path "refs")))]
+        bare-structure? (and (fs/path-exists? (fs/join path "HEAD"))
+                             (fs/path-exists? (fs/join path "objects"))
+                             (fs/path-exists? (fs/join path "refs")))
+        bare? (and bare-structure? (git/bare-repository? path))]
     (cond
       bare? {:path path :bare? true}
       (not (fs/path-exists? git-path)) nil
@@ -93,6 +96,15 @@
      :worktree/path (when (not= :bare kind) worktree-path)
      :location/status :observed}))
 
+(defn- ^:async enrich-candidates [candidates]
+  (loop [batches (seq (partition-all max-enrichment-concurrency candidates))
+         rows []]
+    (if-let [batch (first batches)]
+      (recur (next batches)
+             (into rows
+                   (await (runtime/await-all (mapv enrich batch)))))
+      rows)))
+
 (defn- unsupported [operation]
   (throw (ex-info
           (str operation " is not implemented by the first local-Git provider slice")
@@ -104,19 +116,22 @@
         scans (mapv #(scan-root % exclusions) roots)
         candidates (->> scans (mapcat :candidates) distinct vec)
         observations (mapcat :observations scans)
-        rows (await (runtime/await-all (mapv enrich candidates)))]
+        rows (await (enrich-candidates candidates))]
     (discovery/inventory
      roots exclusions rows observations)))
+
+(defn- ^:async register* [path]
+  (if-let [candidate (marker path)]
+    (await (enrich candidate))
+    (throw (ex-info (str "Not a Git repository: " path)
+                    {:path path}))))
 
 (defrecord LocalGitProvider []
   provider/ArchaeologyProvider
   (discover-repositories [_ roots options]
     (discover* roots options))
   (register-repository [_ path]
-    (if-let [candidate (marker path)]
-      (enrich candidate)
-      (throw (ex-info (str "Not a Git repository: " path)
-                      {:path path}))))
+    (register* path))
   (list-references [_ _] (unsupported "list-references"))
   (find-path-history [_ _ _] (unsupported "find-path-history"))
   (read-object [_ _ _] (unsupported "read-object"))

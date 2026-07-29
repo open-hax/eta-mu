@@ -78,25 +78,30 @@
            (let [old-paths (get previous-paths repository-id #{})
                  added-paths (set/difference new-paths old-paths)
                  removed-paths (set/difference old-paths new-paths)
-                 retained-paths (set/intersection old-paths new-paths)]
-             (cond
-               (and (seq old-paths) (seq removed-paths))
-               (map (fn [new-path]
-                      {:observation/type :repository-moved
-                       :repository/id repository-id
-                       :previous-paths (vec (sort removed-paths))
-                       :path new-path})
-                    (sort added-paths))
-
-               (and (seq old-paths) (seq added-paths))
-               (map (fn [new-path]
-                      {:observation/type :repository-clone-added
-                       :repository/id repository-id
-                       :existing-paths (vec (sort retained-paths))
-                       :path new-path})
-                    (sort added-paths))
-
-               :else
+                 retained-paths (set/intersection old-paths new-paths)
+                 move-pairs (map vector
+                                 (sort removed-paths)
+                                 (sort added-paths))
+                 moved-paths (set (map second move-pairs))
+                 clone-paths (sort (set/difference added-paths moved-paths))
+                 existing-paths (-> retained-paths
+                                    (set/union moved-paths)
+                                    sort
+                                    vec)
+                 moves (map (fn [[old-path new-path]]
+                              {:observation/type :repository-moved
+                               :repository/id repository-id
+                               :previous-paths [old-path]
+                               :path new-path})
+                            move-pairs)
+                 clones (map (fn [new-path]
+                               {:observation/type :repository-clone-added
+                                :repository/id repository-id
+                                :existing-paths existing-paths
+                                :path new-path})
+                             clone-paths)]
+             (if (seq old-paths)
+               (concat moves clones)
                [])))
          current-paths)]
     (update current :observations into location-observations)))

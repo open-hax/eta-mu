@@ -6,6 +6,7 @@
             ["node:path" :as path]
             [eta-mu.receipt-river.archaeology.provider :as provider]
             [eta-mu.receipt-river.domain.discovery :as discovery]
+            [eta-mu.receipt-river.extern.git :as git]
             [eta-mu.receipt-river.extern.glob :as glob]
             [eta-mu.receipt-river.infra.local-git-provider :as local-git]))
 
@@ -105,6 +106,36 @@
              :path "/new/repo"}]
            (:observations result)))))
 
+(deftest simultaneous-move-and-clone-observation-test
+  (let [previous {:repositories [{:repository/id "r1"
+                                  :repository/path "/old/repo"}
+                                 {:repository/id "r1"
+                                  :repository/path "/retained/clone"}]}
+        current {:repositories [{:repository/id "r1"
+                                 :repository/path "/a-new/repo"}
+                                {:repository/id "r1"
+                                 :repository/path "/retained/clone"}
+                                {:repository/id "r1"
+                                 :repository/path "/z-new/clone"}]
+                 :observations []}
+        result (discovery/observe-moves previous current)]
+    (is (= [{:observation/type :repository-moved
+             :repository/id "r1"
+             :previous-paths ["/old/repo"]
+             :path "/a-new/repo"}
+            {:observation/type :repository-clone-added
+             :repository/id "r1"
+             :existing-paths ["/a-new/repo" "/retained/clone"]
+             :path "/z-new/clone"}]
+           (:observations result)))))
+
+(deftest signaled-git-close-is-failure-test
+  (is (= {:exit 1
+          :signal "SIGTERM"
+          :stdout "partial"
+          :stderr ""}
+         (git/close-result nil "SIGTERM" " partial\n" ""))))
+
 (deftest ^:async trailing-globstar-excludes-repository-root-test
   (let [root (.mkdtempSync fs (path/join (.tmpdir os)
                                          "eta-mu-discovery-exclude-"))
@@ -122,6 +153,41 @@
       (finally
         (.rmSync fs root #js {:recursive true :force true})))))
 
+(deftest ^:async repository-enrichment-has-bounded-concurrency-test
+  (let [root (.mkdtempSync fs (path/join (.tmpdir os)
+                                         "eta-mu-discovery-bounded-"))
+        in-flight (atom 0)
+        maximum-in-flight (atom 0)
+        delayed-git
+        (fn [_path _args]
+          (let [active (swap! in-flight inc)]
+            (swap! maximum-in-flight max active)
+            (js/Promise.
+             (fn [resolve _reject]
+               (js/setTimeout
+                (fn []
+                  (swap! in-flight dec)
+                  (resolve {:exit 0
+                            :signal nil
+                            :stdout "value"
+                            :stderr ""}))
+                5)))))]
+    (try
+      (doseq [index (range 9)]
+        (.mkdirSync fs
+                    (path/join root (str "repo-" index) ".git")
+                    #js {:recursive true}))
+      (with-redefs [git/exec-at delayed-git]
+        (let [inventory (await (provider/discover-repositories
+                                (local-git/local-git-provider)
+                                [root]
+                                {:exclude []}))]
+          (is (= 9 (count (:repositories inventory))))
+          (is (<= @maximum-in-flight 20))
+          (is (> @maximum-in-flight 5))))
+      (finally
+        (.rmSync fs root #js {:recursive true :force true})))))
+
 (deftest ^:async safe-filesystem-discovery-test
   (testing "normal, linked, submodule, bare, nested, and symlink shapes are inventoried safely"
     (let [root (.mkdtempSync fs (path/join (.tmpdir os) "eta-mu-discovery-"))
@@ -131,12 +197,17 @@
           submodule (path/join root "submodule")
           bare (path/join root "bare.git")
           fake-loose-repo (path/join bare "objects" "fake-loose-repo")
+          fake-bare (path/join root "not-a-bare-repository")
           cycle (path/join root "cycle")]
       (try
-        (doseq [directory [normal nested linked submodule
-                           (path/join bare "objects")
-                           (path/join bare "refs")
-                           (path/join fake-loose-repo ".git")]]
+        (doseq [directory [normal nested linked submodule]]
+          (.mkdirSync fs directory #js {:recursive true}))
+        (let [{:keys [exit stderr]}
+              (await (git/exec-at root ["init" "--bare" bare]))]
+          (is (zero? exit) stderr))
+        (doseq [directory [(path/join fake-loose-repo ".git")
+                           (path/join fake-bare "objects")
+                           (path/join fake-bare "refs")]]
           (.mkdirSync fs directory #js {:recursive true}))
         (.mkdirSync fs (path/join normal ".git"))
         (.mkdirSync fs (path/join nested ".git"))
@@ -144,7 +215,8 @@
                         "gitdir: /missing/.git/worktrees/linked\n")
         (.writeFileSync fs (path/join submodule ".git")
                         "gitdir: /missing/.git/modules/submodule\n")
-        (.writeFileSync fs (path/join bare "HEAD") "ref: refs/heads/main\n")
+        (.writeFileSync fs (path/join fake-bare "HEAD")
+                        "ref: refs/heads/main\n")
         (.symlinkSync fs root cycle "dir")
         (let [inventory (await (provider/discover-repositories
                                 (local-git/local-git-provider)
@@ -156,6 +228,8 @@
           (is (contains? kinds :submodule))
           (is (contains? kinds :bare))
           (is (= 5 (count (:repositories inventory))))
+          (is (not-any? #(= fake-bare (:repository/path %))
+                        (:repositories inventory)))
           (is (not-any? #(str/starts-with? (:repository/path %)
                                            (path/join bare "objects"))
                         (:repositories inventory)))
