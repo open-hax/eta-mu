@@ -144,6 +144,31 @@ describe("GitHub issue sync", () => {
     ]);
   });
 
+  it("ignores duplicate issue markers when their source tasks are excluded", () => {
+    const excludedTask = {
+      ...sampleTask,
+      uuid: "agents",
+      relativePath: "packages/foo/AGENTS.md",
+    };
+    const duplicateBody = buildIssueBody(excludedTask, { cwd: "/workspace" });
+    const state: GitHubRepoState = {
+      labels: [],
+      issues: [
+        { number: 73, title: "AGENTS", body: duplicateBody, state: "closed", labels: [] },
+        { number: 76, title: "AGENTS", body: duplicateBody, state: "closed", labels: [] },
+      ],
+    };
+
+    const plan = planGitHubIssueSync([excludedTask], state, {
+      repo: "open-hax/example",
+      dryRun: true,
+      cwd: "/workspace",
+    });
+
+    expect(plan.operations).toEqual([]);
+    expect(plan.summary.excludedTasks).toBe(1);
+  });
+
   it("allows explicit frontmatter opt-in for documentation", () => {
     const optedIn = {
       ...sampleTask,
