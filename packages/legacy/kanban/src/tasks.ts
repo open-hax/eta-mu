@@ -55,6 +55,26 @@ const normalizeStringArray = (value: unknown): string[] => {
   return [];
 };
 
+const normalizeBoolean = (value: unknown): boolean | undefined => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (["true", "yes", "1", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["false", "no", "0", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return undefined;
+};
+
 const parseInlineValue = (value: string): unknown => {
   const trimmedValue = value.trim();
   if (!trimmedValue) {
@@ -97,7 +117,7 @@ const parseFallbackFrontmatter = (
     }
 
     currentArrayKey = undefined;
-    const keyValueMatch = rawLine.match(/^\s*([A-Za-z0-9_]+):\s*(.*)$/u);
+    const keyValueMatch = rawLine.match(/^\s*([A-Za-z0-9_-]+):\s*(.*)$/u);
     if (!keyValueMatch) {
       continue;
     }
@@ -131,12 +151,17 @@ const parseTaskFile = (source: string): { data: Record<string, unknown>; content
   }
 };
 
+const ignoredDiscoveryDirectories = new Set([".eta-mu", ".ημ"]);
+
 const collectMarkdownFiles = async (directory: string): Promise<string[]> => {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = await Promise.all(
     entries.map(async (entry) => {
       const entryPath = path.join(directory, entry.name);
       if (entry.isDirectory()) {
+        if (ignoredDiscoveryDirectories.has(entry.name)) {
+          return [];
+        }
         return collectMarkdownFiles(entryPath);
       }
 
@@ -172,6 +197,9 @@ const taskSort = (left: KanbanTask, right: KanbanTask): number => {
   return left.title.localeCompare(right.title);
 };
 
+const normalizeRelativePath = (tasksDir: string, filePath: string): string =>
+  path.relative(tasksDir, filePath).split(path.sep).join("/");
+
 export const buildColumnTitle = (status: string): string => titleCase(status);
 
 export const loadTasks = async (tasksDir: string): Promise<KanbanTask[]> => {
@@ -182,6 +210,7 @@ export const loadTasks = async (tasksDir: string): Promise<KanbanTask[]> => {
       const parsed = parseTaskFile(source);
       const fileStats = await stat(filePath);
       const frontmatter = parsed.data;
+      const relativePath = normalizeRelativePath(tasksDir, filePath);
 
       const title =
         typeof frontmatter.title === "string"
@@ -195,7 +224,13 @@ export const loadTasks = async (tasksDir: string): Promise<KanbanTask[]> => {
       ];
 
       const uniqueLabels = Array.from(new Set(labels));
-      const uuid = typeof frontmatter.uuid === "string" ? frontmatter.uuid : slugify(title);
+      const uuid =
+        typeof frontmatter.uuid === "string" && frontmatter.uuid.trim()
+          ? frontmatter.uuid.trim()
+          : slugify(title);
+      const syncGitHub = normalizeBoolean(
+        frontmatter.sync_github ?? frontmatter.syncGitHub ?? frontmatter["sync-github"],
+      );
 
       return {
         uuid,
@@ -212,6 +247,8 @@ export const loadTasks = async (tasksDir: string): Promise<KanbanTask[]> => {
             : fileStats.mtime.toISOString(),
         content: parsed.content.trim(),
         sourcePath: filePath,
+        relativePath,
+        syncGitHub,
       } satisfies KanbanTask;
     }),
   );

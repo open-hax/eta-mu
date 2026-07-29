@@ -45,6 +45,11 @@ on:
         required: false
   workflow_dispatch:
     inputs:
+      tasks_dir:
+        description: "Path to kanban tasks directory"
+        required: false
+        default: "kanban"
+        type: string
       dry_run:
         description: "Dry run (do not create/update issues)"
         required: false
@@ -122,10 +127,11 @@ jobs:
           dry_run="${{ inputs.dry-run || github.event.inputs.dry_run }}"
           close_done="${{ inputs.close-done }}"
           close_rejected="${{ inputs.close-rejected }}"
-          tasks_dir="${{ inputs.tasks-dir }}"
-          
+          tasks_dir="${{ inputs.tasks-dir || github.event.inputs.tasks_dir }}"
+          tasks_dir="${tasks_dir:-kanban}"
+
           args="--repo $repo --tasks-dir ${{ github.workspace }}/$tasks_dir"
-          
+
           if [ "$dry_run" = "true" ]; then
             args="$args --dry-run"
           fi
@@ -137,5 +143,5 @@ jobs:
           fi
           args="$args --max-writes ${{ inputs.max-writes || 50 }}"
           args="$args --write-delay-ms ${{ inputs.write-delay-ms || 1000 }}"
-          
+
           pnpm --dir .eta-mu --filter @open-hax/kanban-legacy exec node dist/cli.js sync github $args
