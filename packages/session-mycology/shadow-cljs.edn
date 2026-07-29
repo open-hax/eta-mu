@@ -1,0 +1,24 @@
+{:source-paths ["src/cljs" "test/cljs"]
+ :js-options {:js-provider :import}
+ :builds
+ {:session-mycology
+  {:target :esm
+   :runtime :node
+   :output-dir "dist-cljs"
+   :modules
+   {:index
+    {:exports
+     {:buildEvent eta-mu.session-mycology.api/build-event
+      :schemaRegistry eta-mu.session-mycology.api/schema-registry
+      :currentSchemas eta-mu.session-mycology.api/current-schemas}}}
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :simple
+                      :source-map true}}
+  :test
+  {:target :node-test
+   :output-to "target/session-mycology-test.cjs"
+   :ns-regexp "-test$"
+   :autorun false
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :none
+                      :source-map true}}}}
