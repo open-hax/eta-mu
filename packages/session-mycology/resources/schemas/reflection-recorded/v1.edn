@@ -1,0 +1,18 @@
+{:schema/id :eta-mu.session-mycology/reflection-recorded
+ :schema/version 1
+ :schema/status :current
+ :schema/introduced-by
+ {:package/version "0.1.0"
+  :eta-mu/version "1.1.1"}
+ :schema/predecessors []
+ :schema/required [:repo :lesson]
+ :schema/optional [:session/id :task/id :receipt/refs]
+ :schema/semantics
+ {:lesson "A session-specific retrospective or reusable lesson."
+  :separation "A reflection is a Session Mycology event, not a Receipt River kind."}
+ :schema/examples
+ [{:repo "/repo"
+   :lesson "Keep protocol schemas in the package that emits them."}]
+ :schema/compatibility
+ {:reads-unversioned true
+  :writes-envelope true}}

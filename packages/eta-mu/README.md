@@ -4,6 +4,8 @@ Global `eta-mu` / `pi` CLI entry point and sub-command router. This is the
 `npm install -g eta-mu` binary: a coding agent with real tools (read, bash,
 edit, write, find, grep, ls) driven by an OpenAI-compatible chat-completions
 endpoint with SSE streaming, plus a kanban/git/contracts command surface.
+It is also the composition root and command router for the package-owned
+Receipt River, Session Mycology, and Fork Tax protocols.
 
 ## Status
 
@@ -89,8 +91,30 @@ eta-mu agent "do the thing"   # Single-turn, non-interactive
 eta-mu agent --plain          # Interactive REPL without the terminal-ui rendering
 eta-mu kanban                 # Delegate to Rheos
 eta-mu contracts output       # Delegate to output-contract-gate
-eta-mu git help               # Git workflow helpers
+eta-mu receipt schemas        # Receipt River schema registry
+eta-mu session schemas        # Session Mycology schema registry
+eta-mu fork-tax schemas       # Fork Tax schema registry
+eta-mu version --components   # Exact package/schema composition
 eta-mu --help                 # Show command help
+```
+
+The temporary compatibility paths `eta-mu git receipt ...`,
+`eta-mu git session ...`, and `eta-mu git fork-tax ...` invoke the same
+package handlers as the canonical commands. `receipt-river` and
+`session-mycology` are descriptive aliases. Agent-session inspection remains
+available as `eta-mu sessions`; the 1.1.1 `eta-mu session list|show` forms are
+also retained while `eta-mu session reflect|schemas` belongs to Session
+Mycology.
+
+Repository inventory begins from roots already on disk:
+
+```bash
+eta-mu receipt audit discover \
+  --root ~ \
+  --root /mnt/data \
+  --exclude ~/.cache \
+  --exclude '**/node_modules/**' \
+  --output repository-inventory.edn
 ```
 
 ### Agent tools
@@ -120,6 +144,9 @@ pnpm --dir packages/eta-mu test            # fast unit suite (no network, no chi
 pnpm --dir packages/eta-mu test:coverage   # unit suite + c8 coverage (text/lcov/json-summary)
 pnpm --dir packages/eta-mu test:e2e        # builds the CLI, then spawns it for real against a mock LLM server
 pnpm --dir packages/eta-mu lint:kondo
+pnpm -C packages/receipt-river test
+pnpm -C packages/session-mycology test
+pnpm -C packages/fork-tax test
 ```
 
 `test:e2e` is a real end-to-end test: it builds `dist-cli/index.cjs`, starts a

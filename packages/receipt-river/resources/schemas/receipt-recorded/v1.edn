@@ -1,0 +1,28 @@
+{:schema/id :eta-mu.receipt-river/receipt-recorded
+ :schema/version 1
+ :schema/status :current
+ :schema/introduced-by
+ {:package/version "0.1.0"
+  :eta-mu/version "1.1.1"}
+ :schema/predecessors []
+ :schema/required
+ [:ts :kind :repo :origin :owner :dod :pi :host :manifest :refs]
+ :schema/optional
+ [:note :tests :decisions :drift]
+ :schema/semantics
+ {:payload "The existing append-only Receipt River record, preserved as the payload of a versioned eta-mu event."
+  :historical-records "Unwrapped historical maps remain unversioned and are validated by the compatibility reader."}
+ :schema/examples
+ [{:ts "2026-07-29T00:00:00.000Z"
+   :kind :observation
+   :repo "/repo"
+   :origin "eta-mu"
+   :owner "receipt-river"
+   :dod "record the work"
+   :pi "eta-mu"
+   :host "local"
+   :manifest "none"
+   :refs "none"}]
+ :schema/compatibility
+ {:reads-unversioned true
+  :writes-envelope true}}
