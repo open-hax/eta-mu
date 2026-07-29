@@ -5,6 +5,12 @@
 
 (def ^:private default-timeout-ms 30000)
 
+(defn- git-environment []
+  (js/Object.assign #js {}
+                    (.-env js/process)
+                    #js {:LC_ALL "C"
+                         :LANGUAGE "C"}))
+
 (defn- result-status [exit stderr]
   (cond
     (zero? exit) :ok
@@ -24,7 +30,9 @@
             settled? (atom false)
             timer (atom nil)
             child (.spawn cp "git" (clj->js args)
-                          #js {:cwd cwd :stdio "pipe"})
+                          #js {:cwd cwd
+                               :env (git-environment)
+                               :stdio "pipe"})
             finish! (fn [result]
                       (when (compare-and-set! settled? false true)
                         (when @timer

@@ -10,6 +10,7 @@ const packageNames = process.argv[2]
   : ["receipt-river", "session-mycology", "fork-tax"];
 
 const forbiddenForms = [
+  ["Raw JavaScript escape hatch", /\bjs\*/],
   ["JavaScript global", /\bjs\//],
   ["JavaScript constructor helper", /\bjs-/],
   ["JavaScript literal", /#js\b/],

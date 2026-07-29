@@ -54,6 +54,21 @@
       (finally
         (.rmSync fs root #js {:recursive true :force true})))))
 
+(deftest ^:async git-subprocess-locale-test
+  (let [root (.mkdtempSync fs (path/join (.tmpdir os)
+                                         "eta-mu-session-locale-"))]
+    (try
+      (let [result (await
+                    (git/exec-at
+                     root
+                     ["-c"
+                      "alias.locale=!printf '%s|%s' \"$LC_ALL\" \"$LANGUAGE\""
+                      "locale"]))]
+        (is (= :ok (:status result)))
+        (is (= "C|C" (:stdout result))))
+      (finally
+        (.rmSync fs root #js {:recursive true :force true})))))
+
 (deftest ^:async git-timeout-test
   (let [root (.mkdtempSync fs (path/join (.tmpdir os) "eta-mu-session-timeout-"))]
     (try
