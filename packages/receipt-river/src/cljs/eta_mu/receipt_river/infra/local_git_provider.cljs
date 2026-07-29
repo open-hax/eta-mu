@@ -72,10 +72,11 @@
 (defn- ^:async enrich [candidate]
   (let [path (:path candidate)
         kind (discovery/git-marker-kind candidate)
-        [common-dir head root-commits remote toplevel]
+        [git-dir common-dir head root-commits remote toplevel]
         (await
          (runtime/await-all
-          [(git-value path ["rev-parse" "--path-format=absolute"
+          [(git-value path ["rev-parse" "--git-dir"])
+           (git-value path ["rev-parse" "--path-format=absolute"
                             "--git-common-dir"])
            (git-value path ["rev-parse" "HEAD"])
            (git-value path ["rev-list" "--max-parents=0" "HEAD"])
@@ -83,27 +84,32 @@
            (git-value path ["rev-parse" "--show-toplevel"])]))
         worktree-path (or toplevel path)
         identity-source (or remote root-commits common-dir path)]
-    {:repository/id (stable-id identity-source)
-     :repository/path path
-     :repository/kind kind
-     :repository/remote-status (if remote :configured :absent)
-     :clone/id (stable-id (or common-dir path))
-     :git/remote remote
-     :git/head head
-     :git/root-commits root-commits
-     :git/common-dir common-dir
-     :worktree/id (when (not= :bare kind) (stable-id worktree-path))
-     :worktree/path (when (not= :bare kind) worktree-path)
-     :location/status :observed}))
+    (if-not (discovery/verified-git-dir? candidate git-dir)
+      {:observation {:observation/type :unverified-git-marker
+                     :path path
+                     :marker/kind kind}}
+      {:row {:repository/id (stable-id identity-source)
+             :repository/path path
+             :repository/kind kind
+             :repository/remote-status (if remote :configured :absent)
+             :clone/id (stable-id (or common-dir path))
+             :git/remote remote
+             :git/head head
+             :git/root-commits root-commits
+             :git/common-dir common-dir
+             :worktree/id (when (not= :bare kind) (stable-id worktree-path))
+             :worktree/path (when (not= :bare kind) worktree-path)
+             :location/status :observed}})))
 
 (defn- ^:async enrich-candidates [candidates]
   (loop [batches (seq (partition-all max-enrichment-concurrency candidates))
-         rows []]
+         results []]
     (if-let [batch (first batches)]
       (recur (next batches)
-             (into rows
+             (into results
                    (await (runtime/await-all (mapv enrich batch)))))
-      rows)))
+      {:rows (vec (keep :row results))
+       :observations (vec (keep :observation results))})))
 
 (defn- unsupported [operation]
   (throw (ex-info
@@ -116,13 +122,17 @@
         scans (mapv #(scan-root % exclusions) roots)
         candidates (->> scans (mapcat :candidates) distinct vec)
         observations (mapcat :observations scans)
-        rows (await (enrich-candidates candidates))]
+        {:keys [rows]
+         enrichment-observations :observations} (await (enrich-candidates candidates))]
     (discovery/inventory
-     roots exclusions rows observations)))
+     roots exclusions rows (concat observations enrichment-observations))))
 
 (defn- ^:async register* [path]
   (if-let [candidate (marker path)]
-    (await (enrich candidate))
+    (let [{:keys [row]} (await (enrich candidate))]
+      (or row
+          (throw (ex-info (str "Not a Git repository: " path)
+                          {:path path}))))
     (throw (ex-info (str "Not a Git repository: " path)
                     {:path path}))))
 

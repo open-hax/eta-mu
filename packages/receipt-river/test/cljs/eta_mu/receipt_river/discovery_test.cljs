@@ -19,7 +19,29 @@
   (is (= :submodule
          (discovery/git-marker-kind {:git-marker :file
                                      :gitdir "gitdir: /repo/.git/modules/sub"})))
+  (is (= :submodule
+         (discovery/git-marker-kind {:git-marker :file
+                                     :gitdir "gitdir: ../.git/modules/sub"})))
+  (testing "a repository living under a directory named modules stays a worktree"
+    (is (= :linked-worktree
+           (discovery/git-marker-kind
+            {:git-marker :file
+             :gitdir "gitdir: /repo/modules/main/.git/worktrees/w1"}))))
   (is (= :bare (discovery/git-marker-kind {:bare? true}))))
+
+(deftest git-dir-verification-test
+  (testing "bare candidates are already confirmed by the structural Git probe"
+    (is (discovery/verified-git-dir? {:bare? true} nil)))
+  (testing "a failed probe never yields a repository row"
+    (is (not (discovery/verified-git-dir? {:git-marker :directory} nil)))
+    (is (not (discovery/verified-git-dir? {:git-marker :file} ""))))
+  (testing "a directory marker must resolve Git at the candidate itself"
+    (is (discovery/verified-git-dir? {:git-marker :directory} ".git\n"))
+    (is (not (discovery/verified-git-dir? {:git-marker :directory}
+                                          "/enclosing/repo/.git"))))
+  (testing "marker files resolve metadata elsewhere without escalating"
+    (is (discovery/verified-git-dir? {:git-marker :file}
+                                     "/repo/.git/worktrees/w1"))))
 
 (deftest relationship-projection-test
   (let [repositories [{:repository/id "r1" :git/common-dir "/repo/.git"
@@ -143,7 +165,9 @@
         excluded (path/join root "cache")]
     (try
       (doseq [repository [included excluded]]
-        (.mkdirSync fs (path/join repository ".git") #js {:recursive true}))
+        (let [{:keys [exit stderr]}
+              (await (git/exec-at root ["init" "-q" repository]))]
+          (is (zero? exit) stderr)))
       (let [inventory (await (provider/discover-repositories
                               (local-git/local-git-provider)
                               [root]
@@ -159,8 +183,11 @@
         in-flight (atom 0)
         maximum-in-flight (atom 0)
         delayed-git
-        (fn [_path _args]
-          (let [active (swap! in-flight inc)]
+        (fn [_path args]
+          (let [active (swap! in-flight inc)
+                stdout (if (= ["rev-parse" "--git-dir"] (vec args))
+                         ".git"
+                         "value")]
             (swap! maximum-in-flight max active)
             (js/Promise.
              (fn [resolve _reject]
@@ -169,7 +196,7 @@
                   (swap! in-flight dec)
                   (resolve {:exit 0
                             :signal nil
-                            :stdout "value"
+                            :stdout stdout
                             :stderr ""}))
                 5)))))]
     (try
@@ -183,7 +210,7 @@
                                 [root]
                                 {:exclude []}))]
           (is (= 9 (count (:repositories inventory))))
-          (is (<= @maximum-in-flight 20))
+          (is (<= @maximum-in-flight 24))
           (is (> @maximum-in-flight 5))))
       (finally
         (.rmSync fs root #js {:recursive true :force true})))))
@@ -195,26 +222,34 @@
           nested (path/join normal "nested")
           linked (path/join root "linked")
           submodule (path/join root "submodule")
+          submodule-gitdir (path/join normal ".git" "modules" "submodule")
           bare (path/join root "bare.git")
           fake-loose-repo (path/join bare "objects" "fake-loose-repo")
           fake-bare (path/join root "not-a-bare-repository")
+          fake-marker (path/join normal "empty-marker")
           cycle (path/join root "cycle")]
       (try
-        (doseq [directory [normal nested linked submodule]]
-          (.mkdirSync fs directory #js {:recursive true}))
+        (doseq [[cwd args] [[root ["init" "-q" normal]]
+                            [normal ["-c" "user.email=tests@eta-mu"
+                                     "-c" "user.name=eta-mu tests"
+                                     "commit" "--allow-empty" "-q" "-m" "root"]]
+                            [root ["init" "-q" nested]]
+                            [normal ["worktree" "add" "-q" linked]]
+                            [root ["init" "--bare" "-q" bare]]]]
+          (let [{:keys [exit stderr]} (await (git/exec-at cwd args))]
+            (is (zero? exit) stderr)))
+        (.mkdirSync fs (path/join normal ".git" "modules") #js {:recursive true})
         (let [{:keys [exit stderr]}
-              (await (git/exec-at root ["init" "--bare" bare]))]
+              (await (git/exec-at root ["init" "-q"
+                                        (str "--separate-git-dir="
+                                             submodule-gitdir)
+                                        submodule]))]
           (is (zero? exit) stderr))
         (doseq [directory [(path/join fake-loose-repo ".git")
                            (path/join fake-bare "objects")
-                           (path/join fake-bare "refs")]]
+                           (path/join fake-bare "refs")
+                           (path/join fake-marker ".git")]]
           (.mkdirSync fs directory #js {:recursive true}))
-        (.mkdirSync fs (path/join normal ".git"))
-        (.mkdirSync fs (path/join nested ".git"))
-        (.writeFileSync fs (path/join linked ".git")
-                        "gitdir: /missing/.git/worktrees/linked\n")
-        (.writeFileSync fs (path/join submodule ".git")
-                        "gitdir: /missing/.git/modules/submodule\n")
         (.writeFileSync fs (path/join fake-bare "HEAD")
                         "ref: refs/heads/main\n")
         (.symlinkSync fs root cycle "dir")
@@ -233,6 +268,12 @@
           (is (not-any? #(str/starts-with? (:repository/path %)
                                            (path/join bare "objects"))
                         (:repositories inventory)))
+          (testing "an empty .git directory inside a repository is not a repository"
+            (is (not-any? #(= fake-marker (:repository/path %))
+                          (:repositories inventory)))
+            (is (some #(and (= :unverified-git-marker (:observation/type %))
+                            (= fake-marker (:path %)))
+                      (:observations inventory))))
           (is (some #(= :symlink-not-followed (:observation/type %))
                     (:observations inventory))))
         (finally

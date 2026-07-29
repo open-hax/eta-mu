@@ -6,14 +6,40 @@
 (def default-excluded-dir-names
   #{".cache" ".git" "node_modules"})
 
+(defn submodule-gitdir?
+  "Recognize a submodule marker by its `.git/modules/` metadata structure rather
+  than by any ancestor directory that happens to be named `modules`."
+  [gitdir]
+  (let [target (-> (or gitdir "")
+                   (str/replace #"^gitdir:\s*" "")
+                   str/trim)]
+    (or (str/includes? target "/.git/modules/")
+        (str/starts-with? target ".git/modules/"))))
+
 (defn git-marker-kind
   [{:keys [git-marker bare? gitdir]}]
   (cond
     bare? :bare
     (= :directory git-marker) :repository
-    (and (= :file git-marker) (str/includes? (or gitdir "") "/modules/")) :submodule
+    (and (= :file git-marker) (submodule-gitdir? gitdir)) :submodule
     (= :file git-marker) :linked-worktree
     :else nil))
+
+(defn verified-git-dir?
+  "Confirm that a `git rev-parse --git-dir` probe found the candidate's own
+  metadata instead of failing or escalating to an enclosing repository.
+
+  Bare candidates are already confirmed structurally and by Git. A directory
+  marker is authoritative only when Git resolves the repository at the candidate
+  itself, which it reports as the relative `.git`. A `.git` file marker resolves
+  to metadata living elsewhere, and Git refuses to escalate past a marker file,
+  so a successful probe is conclusive."
+  [{:keys [git-marker bare?]} git-dir]
+  (cond
+    bare? true
+    (str/blank? git-dir) false
+    (= :directory git-marker) (= ".git" (str/trim git-dir))
+    :else true))
 
 (defn excluded?
   [path patterns glob-match?]
