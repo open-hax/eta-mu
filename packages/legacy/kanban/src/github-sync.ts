@@ -299,19 +299,15 @@ export const planGitHubIssueSync = (
   assertUniqueTaskUuids(eligibleTasks);
 
   const existingLabels = new Set(state.labels.map((label) => label.name.toLowerCase()));
-  const issuesByUuid = new Map<string, GitHubIssueState>();
+  const issuesByUuid = new Map<string, GitHubIssueState[]>();
   let skippedClosedTasks = 0;
 
   for (const issue of state.issues) {
     const uuid = extractTaskUuidFromIssue(issue);
     if (uuid) {
-      const existing = issuesByUuid.get(uuid);
-      if (existing) {
-        throw new Error(
-          `Duplicate GitHub issue UUID marker "${uuid}" on issues #${existing.number} and #${issue.number}.`,
-        );
-      }
-      issuesByUuid.set(uuid, issue);
+      const matchingIssues = issuesByUuid.get(uuid) ?? [];
+      matchingIssues.push(issue);
+      issuesByUuid.set(uuid, matchingIssues);
     }
   }
 
@@ -325,7 +321,15 @@ export const planGitHubIssueSync = (
   }
 
   for (const task of eligibleTasks) {
-    const issue = issuesByUuid.get(task.uuid);
+    const matchingIssues = issuesByUuid.get(task.uuid) ?? [];
+    if (matchingIssues.length > 1) {
+      throw new Error(
+        `Duplicate GitHub issue UUID marker "${task.uuid}" on issues ${matchingIssues
+          .map((issue) => `#${issue.number}`)
+          .join(" and ")}.`,
+      );
+    }
+    const issue = matchingIssues[0];
     const labels = desiredIssueLabels(task);
     const title = task.title;
     const body = buildIssueBody(task, { cwd: options.cwd });
