@@ -34,6 +34,7 @@ Ship alpha.
 title: Beta Task
 status: ready
 tags: [beta, sync]
+sync_github: true
 ---
 
 Ship beta.
@@ -45,16 +46,20 @@ Ship beta.
 
     expect(tasks).toHaveLength(2);
     expect(tasks[0]).toMatchObject({
+      uuid: "nested-beta",
       title: "Beta Task",
       status: "ready",
       priority: "P3",
       labels: ["beta", "sync"],
+      relativePath: "nested/beta.md",
+      syncGitHub: true,
     });
     expect(tasks[1]).toMatchObject({
       uuid: "alpha-1",
       status: "in_progress",
       priority: "P1",
       labels: ["alpha", "platform"],
+      relativePath: "alpha.md",
     });
   });
 
@@ -78,9 +83,29 @@ Still readable.
 
     expect(tasks).toHaveLength(1);
     expect(tasks[0]).toMatchObject({
+      uuid: "broken",
       title: "Broken Task",
       status: "todo",
     });
+  });
+
+  it("derives distinct path-qualified UUIDs for equal titles", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "openhax-kanban-uuid-"));
+    await mkdir(path.join(tempDir, "one"), { recursive: true });
+    await mkdir(path.join(tempDir, "two"), { recursive: true });
+
+    const source = `---
+title: Shared Title
+status: ready
+---
+
+Work.
+`;
+    await writeFile(path.join(tempDir, "one", "task.md"), source, "utf8");
+    await writeFile(path.join(tempDir, "two", "task.md"), source, "utf8");
+
+    const tasks = await loadTasks(tempDir);
+    expect(tasks.map((task) => task.uuid).sort()).toEqual(["one-task", "two-task"]);
   });
 });
 
