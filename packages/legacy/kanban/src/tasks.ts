@@ -151,12 +151,17 @@ const parseTaskFile = (source: string): { data: Record<string, unknown>; content
   }
 };
 
+const ignoredDiscoveryDirectories = new Set([".eta-mu", ".ημ"]);
+
 const collectMarkdownFiles = async (directory: string): Promise<string[]> => {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = await Promise.all(
     entries.map(async (entry) => {
       const entryPath = path.join(directory, entry.name);
       if (entry.isDirectory()) {
+        if (ignoredDiscoveryDirectories.has(entry.name)) {
+          return [];
+        }
         return collectMarkdownFiles(entryPath);
       }
 
@@ -195,9 +200,6 @@ const taskSort = (left: KanbanTask, right: KanbanTask): number => {
 const normalizeRelativePath = (tasksDir: string, filePath: string): string =>
   path.relative(tasksDir, filePath).split(path.sep).join("/");
 
-const pathQualifiedUuid = (relativePath: string): string =>
-  slugify(relativePath.replace(/\.md$/iu, ""));
-
 export const buildColumnTitle = (status: string): string => titleCase(status);
 
 export const loadTasks = async (tasksDir: string): Promise<KanbanTask[]> => {
@@ -225,7 +227,7 @@ export const loadTasks = async (tasksDir: string): Promise<KanbanTask[]> => {
       const uuid =
         typeof frontmatter.uuid === "string" && frontmatter.uuid.trim()
           ? frontmatter.uuid.trim()
-          : pathQualifiedUuid(relativePath);
+          : slugify(title);
       const syncGitHub = normalizeBoolean(
         frontmatter.sync_github ?? frontmatter.syncGitHub ?? frontmatter["sync-github"],
       );
