@@ -1,15 +1,15 @@
 (ns eta-mu.receipt-river.infra.cli
   "Receipt River command implementation owned by @eta-mu/receipt-river."
   (:require [clojure.string :as str]
-            ["node:fs" :as fs]
-            ["node:os" :as os]
-            ["node:path" :as path]
             [eta-mu.receipt-river.api :as api]
             [eta-mu.receipt-river.archaeology.provider :as provider]
             [eta-mu.receipt-river.domain.discovery :as discovery]
             [eta-mu.receipt-river.domain.event :as event]
             [eta-mu.receipt-river.domain.receipt :as receipt]
+            [eta-mu.receipt-river.extern.bus :as bus]
+            [eta-mu.receipt-river.extern.fs :as fs]
             [eta-mu.receipt-river.generated.registry :as registry]
+            [eta-mu.receipt-river.extern.runtime :as runtime]
             [eta-mu.receipt-river.infra.local-git-provider :as local-git]
             [eta-mu.receipt-river.extern.git :as git]
             [eta-mu.receipt-river.shape.edn :as edn]))
@@ -17,37 +17,39 @@
 (def ^:private default-tail 20)
 (def ^:private default-validate 200)
 (def ^:private max-lines 2000)
+(def ^:private discovery-usage
+  "Usage: eta-mu receipt audit discover [--root PATH] [--exclude GLOB] [--output FILE]")
 
 (defn- exit! [code]
-  (.exit js/process code))
+  (runtime/exit! code))
 
 (defn- clamp-lines [value fallback]
-  (let [number (js/Number value)]
-    (if (js/Number.isFinite number)
+  (let [number (when-not (nil? value) (js/Number value))]
+    (if (and (some? number) (js/Number.isFinite number))
       (js/Math.max 1 (js/Math.min max-lines (js/Math.trunc number)))
       fallback)))
 
 (defn- expand-home [value]
   (cond
-    (= value "~") (.homedir os)
-    (str/starts-with? value "~/") (path/join (.homedir os) (subs value 2))
+    (= value "~") (runtime/home-directory)
+    (str/starts-with? value "~/") (fs/join (runtime/home-directory) (subs value 2))
     :else value))
 
 (defn- absolute-path [value]
-  (path/resolve (expand-home value)))
+  (fs/resolve-path (expand-home value)))
 
 (defn- ^:async resolve-repo []
-  (let [{:keys [exit stdout]} (await (git/exec-at (.cwd js/process)
+  (let [{:keys [exit stdout]} (await (git/exec-at (runtime/current-directory)
                                                   ["rev-parse" "--show-toplevel"]))]
-    (if (zero? exit) stdout (.cwd js/process))))
+    (if (zero? exit) stdout (runtime/current-directory))))
 
 (defn- receipt-file [repo-root]
-  (path/join repo-root "receipts.edn"))
+  (fs/join repo-root "receipts.edn"))
 
 (defn- read-lines [file]
-  (if-not (.existsSync fs file)
+  (if-not (fs/path-exists? file)
     []
-    (->> (str/split-lines (.readFileSync fs file "utf8"))
+    (->> (str/split-lines (fs/read-text file))
          (filterv seq))))
 
 (defn- tail-lines [file n]
@@ -55,14 +57,17 @@
     (subvec lines (max 0 (- (count lines) n)))))
 
 (defn- validate-file [file n]
-  (if-not (.existsSync fs file)
+  (if-not (fs/path-exists? file)
     {:ok false
      :file file
      :count 0
      :failures [{:line-number 0 :errors ["file does not exist"]}]
      :last nil}
-    (let [rows (map-indexed #(api/validate-line %2 (inc %1))
-                            (tail-lines file n))
+    (let [all-lines (read-lines file)
+          tail (subvec all-lines (max 0 (- (count all-lines) n)))
+          offset (- (count all-lines) (count tail))
+          rows (map-indexed #(api/validate-line %2 (+ offset (inc %1)))
+                            tail)
           failures (remove :ok rows)]
       {:ok (empty? failures)
        :file file
@@ -87,19 +92,25 @@
             next-token (second remaining)]
         (cond
           (= token "--root")
-          (recur (subvec remaining 2) (update result :roots conj next-token))
+          (if (nil? next-token)
+            (throw (js/Error. "Invalid discovery argument: --root requires a value"))
+            (recur (subvec remaining 2) (update result :roots conj next-token)))
 
           (str/starts-with? token "--root=")
           (recur (subvec remaining 1) (update result :roots conj (subs token 7)))
 
           (= token "--exclude")
-          (recur (subvec remaining 2) (update result :exclude conj next-token))
+          (if (nil? next-token)
+            (throw (js/Error. "Invalid discovery argument: --exclude requires a value"))
+            (recur (subvec remaining 2) (update result :exclude conj next-token)))
 
           (str/starts-with? token "--exclude=")
           (recur (subvec remaining 1) (update result :exclude conj (subs token 10)))
 
           (= token "--output")
-          (recur (subvec remaining 2) (assoc result :output next-token))
+          (if (nil? next-token)
+            (throw (js/Error. "Invalid discovery argument: --output requires a value"))
+            (recur (subvec remaining 2) (assoc result :output next-token)))
 
           (str/starts-with? token "--output=")
           (recur (subvec remaining 1) (assoc result :output (subs token 9)))
@@ -110,19 +121,25 @@
 (defn- normalized-exclusion [value]
   (if (or (= value "~")
           (str/starts-with? value "~/")
-          (path/isAbsolute value))
+          (fs/absolute? value))
     (absolute-path value)
     value))
 
 (defn- read-previous-inventory [output-path]
-  (when (.existsSync fs output-path)
+  (when (fs/path-exists? output-path)
     (try
-      (edn/parse-line (.readFileSync fs output-path "utf8"))
-      (catch :default _ nil))))
+      (edn/parse-line (fs/read-text output-path))
+      (catch :default error
+        (bus/emit-error! :receipt-river/invalid-previous-inventory
+                         {:path output-path
+                          :exception/name (or (.-name error) "Error")
+                          :exception/message (.-message error)})
+        nil))))
 
 (defn- ^:async discover! [tokens]
   (let [{:keys [roots exclude output]} (parse-discovery-args tokens)
-        roots (mapv absolute-path (if (seq roots) roots [(str (.homedir os))]))
+        roots (mapv absolute-path
+                    (if (seq roots) roots [(runtime/current-directory)]))
         exclusions (mapv normalized-exclusion exclude)
         output-path (when output (absolute-path output))
         previous (when output-path (read-previous-inventory output-path))
@@ -136,13 +153,21 @@
         rendered (str (pr-str result) "\n")]
     (if output
       (do
-        (.mkdirSync fs (path/dirname output-path) #js {:recursive true})
-        (.writeFileSync fs output-path rendered "utf8")
+        (fs/make-directories! (fs/dirname output-path))
+        (fs/write-text! output-path rendered)
         (println (str "Wrote repository inventory to " output-path))
         (println (str "repositories: " (count (:repositories result))))
         (println (str "observations: " (count (:observations result)))))
       (print rendered))
     (exit! 0)))
+
+(defn- ^:async run-discovery! [tokens]
+  (try
+    (await (discover! tokens))
+    (catch :default error
+      (runtime/error! (.-message error))
+      (runtime/error! discovery-usage)
+      (exit! 1))))
 
 (defn- ^:async status! []
   (let [repo-root (await (resolve-repo))
@@ -150,7 +175,7 @@
         lines (read-lines file)]
     (println (str "repo: " repo-root))
     (println (str "file: " file))
-    (println (str "exists: " (if (.existsSync fs file) "yes" "no")))
+    (println (str "exists: " (if (fs/path-exists? file) "yes" "no")))
     (println (str "count: " (count lines)))
     (when-let [last-line (last lines)]
       (println (str "last: " last-line)))
@@ -160,7 +185,7 @@
   (let [repo-root (await (resolve-repo))
         file (receipt-file repo-root)
         n (clamp-lines (first args) default-tail)]
-    (if (.existsSync fs file)
+    (if (fs/path-exists? file)
       (doseq [line (tail-lines file n)] (println line))
       (println "No receipts yet."))
     (exit! 0)))
@@ -187,7 +212,7 @@
         kind (first args)
         note (str/join " " (rest args))]
     (when (str/blank? kind)
-      (js/console.error "Usage: eta-mu receipt append <kind> <note>")
+      (runtime/error! "Usage: eta-mu receipt append <kind> <note>")
       (exit! 1))
     (let [recorded-at (js/Date.)
           payload (receipt/build-payload {:kind kind :note note}
@@ -204,8 +229,8 @@
                     payload)
           file (receipt-file repo-root)
           line (edn/format-line envelope)]
-      (.mkdirSync fs (path/dirname file) #js {:recursive true})
-      (.appendFileSync fs file (str line "\n") "utf8")
+      (fs/make-directories! (fs/dirname file))
+      (fs/append-text! file (str line "\n"))
       (println (str "Appended receipt at " file))
       (println line)
       (exit! 0))))
@@ -221,11 +246,11 @@
       "append" (await (append! component-manifest remaining))
       "schemas" (do (println (pr-str (schema-summary))) (exit! 0))
       "audit" (if (= "discover" (first remaining))
-                (await (discover! (drop 2 raw-args)))
+                (await (run-discovery! (drop 2 raw-args)))
                 (do
-                  (js/console.error "Usage: eta-mu receipt audit discover [--root PATH] [--exclude GLOB] [--output FILE]")
+                  (runtime/error! discovery-usage)
                   (exit! 1)))
       (do
-        (js/console.error (str "Unknown receipt sub-command: " command))
-        (js/console.error "Usage: eta-mu receipt {status|tail|validate|append|schemas|audit discover}")
+        (runtime/error! (str "Unknown receipt sub-command: " command))
+        (runtime/error! "Usage: eta-mu receipt {status|tail|validate|append|schemas|audit discover}")
         (exit! 1)))))

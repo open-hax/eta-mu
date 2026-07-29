@@ -13,9 +13,9 @@
   ([value] (clean-field value "none"))
   ([value fallback]
    (let [s (-> (str (or value ""))
-               (.replace #"\r?\n+" " ")
-               (.replace #"\s+" " ")
-               (.trim))]
+               (str/replace #"\r?\n+" " ")
+               (str/replace #"\s+" " ")
+               str/trim)]
      (if (pos? (.-length s)) s fallback))))
 
 (defn normalize-kind
@@ -29,12 +29,13 @@
 (defn build-payload
   "Build the existing Receipt River record shape as a package-owned payload."
   [params repo-root recorded-at fallback-kind]
-  (let [record {:ts (clean-field (:ts params) recorded-at)
+  (let [owner (clean-field (:owner params) "receipt-river")
+        record {:ts (clean-field (:ts params) recorded-at)
                 :kind (normalize-kind (:kind params) fallback-kind)
                 :repo repo-root
                 :origin (clean-field (:origin params) "eta-mu")
-                :owner (clean-field (:owner params) "receipt-river")
-                :dod (clean-field (:dod params) (or (:owner params) "receipt-river"))
+                :owner owner
+                :dod (clean-field (:dod params) owner)
                 :pi (clean-field (:pi params) "eta-mu")
                 :host (clean-field (:host params) "local")
                 :manifest (clean-field (:manifest params) "none")

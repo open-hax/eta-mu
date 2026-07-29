@@ -9,7 +9,8 @@
    :event/producer :event/subject :event/payload])
 
 (defn- valid-timestamp? [value]
-  (or (instance? js/Date value)
+  (or (and (instance? js/Date value)
+           (not (js/Number.isNaN (.getTime value))))
       (and (string? value)
            (not (js/Number.isNaN (js/Date.parse value))))))
 

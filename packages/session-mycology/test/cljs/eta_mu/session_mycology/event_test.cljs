@@ -29,3 +29,11 @@
 (deftest registry-test
   (is (= 1 (get registry/current-versions
                 :eta-mu.session-mycology/reflection-recorded))))
+
+(deftest reflection-payload-law-test
+  (is (thrown-with-msg? js/Error #"Invalid session reflection payload"
+                        (reflection/build-payload
+                         {:repo "/repo" :lesson " \n "})))
+  (is (thrown-with-msg? js/Error #"Invalid session reflection payload"
+                        (reflection/build-payload
+                         {:repo 42 :lesson "A lesson."}))))

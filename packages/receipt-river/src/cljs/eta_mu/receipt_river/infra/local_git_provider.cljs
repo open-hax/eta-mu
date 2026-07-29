@@ -4,14 +4,14 @@
   Discovery never follows symlinks and records inaccessible paths as
   observations. Git metadata directories are recognized but never traversed."
   (:require [clojure.string :as str]
-            ["node:crypto" :as crypto]
             [eta-mu.receipt-river.archaeology.provider :as provider]
             [eta-mu.receipt-river.domain.discovery :as discovery]
+            [eta-mu.receipt-river.extern.crypto :as crypto]
             [eta-mu.receipt-river.extern.fs :as fs]
             [eta-mu.receipt-river.extern.git :as git]))
 
 (defn- stable-id [value]
-  (subs (.digest (.update (.createHash crypto "sha256") value) "hex") 0 24))
+  (crypto/short-sha256 value 24))
 
 (defn- marker [path]
   (let [git-path (fs/join path ".git")
@@ -64,13 +64,18 @@
 (defn- ^:async enrich [candidate]
   (let [path (:path candidate)
         kind (discovery/git-marker-kind candidate)
-        common-dir (await (git-value path ["rev-parse" "--path-format=absolute"
-                                           "--git-common-dir"]))
-        head (await (git-value path ["rev-parse" "HEAD"]))
-        root-commits (await (git-value path ["rev-list" "--max-parents=0" "HEAD"]))
-        remote (await (git-value path ["remote" "get-url" "origin"]))
-        worktree-path (or (await (git-value path ["rev-parse" "--show-toplevel"]))
-                          path)
+        [common-dir head root-commits remote toplevel]
+        (array-seq
+         (await
+          (js/Promise.all
+           (clj->js
+            [(git-value path ["rev-parse" "--path-format=absolute"
+                              "--git-common-dir"])
+             (git-value path ["rev-parse" "HEAD"])
+             (git-value path ["rev-list" "--max-parents=0" "HEAD"])
+             (git-value path ["remote" "get-url" "origin"])
+             (git-value path ["rev-parse" "--show-toplevel"])]))))
+        worktree-path (or toplevel path)
         identity-source (or remote root-commits common-dir path)]
     {:repository/id (stable-id identity-source)
      :repository/path path

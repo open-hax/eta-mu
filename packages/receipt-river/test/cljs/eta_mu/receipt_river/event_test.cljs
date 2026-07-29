@@ -1,9 +1,12 @@
 (ns eta-mu.receipt-river.event-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [cljs.test :refer [deftest is testing]]
             [eta-mu.receipt-river.api :as api]
             [eta-mu.receipt-river.domain.event :as event]
             [eta-mu.receipt-river.domain.receipt :as receipt]
+            [eta-mu.receipt-river.extern.bus :as bus]
             [eta-mu.receipt-river.generated.registry :as registry]
+            [eta-mu.receipt-river.law.receipt :as law]
             [eta-mu.receipt-river.shape.edn :as edn]))
 
 (def component-manifest
@@ -43,6 +46,38 @@
           record (-> (event/build-event metadata payload)
                      (assoc-in [:event/producer :package/version] "0.0.9"))]
       (is (:ok (api/validate-line (edn/format-line record) 1))))))
+
+(deftest payload-normalization-test
+  (let [payload (receipt/build-payload {:kind "observation"
+                                        :owner "  ledger\nkeeper  "}
+                                       "/repo"
+                                       "2026-07-29T00:00:00.000Z"
+                                       :observation)]
+    (is (= "ledger keeper" (:owner payload)))
+    (is (= (:owner payload) (:dod payload)))))
+
+(deftest invalid-date-object-test
+  (let [legacy {:ts (js/Date. "invalid")
+                :kind :observation
+                :repo "/repo"
+                :origin "pi"
+                :owner "receipt-river"
+                :dod "observe"
+                :pi "0.1.0"
+                :host "local"
+                :manifest "none"
+                :refs "none"}]
+    (is (seq (law/record-errors legacy)))))
+
+(deftest invalid-edn-emits-sanitized-bus-error-test
+  (let [emitted (atom nil)
+        secret-line "{definitely not edn SECRET-CONTENT"]
+    (with-redefs [bus/emit-error! #(reset! emitted [%1 %2])]
+      (is (false? (:ok (api/validate-line secret-line 17)))))
+    (is (= :receipt-river/invalid-edn (first @emitted)))
+    (is (= 17 (get-in @emitted [1 :line-number])))
+    (is (string? (get-in @emitted [1 :exception/message])))
+    (is (not (str/includes? (pr-str @emitted) "SECRET-CONTENT")))))
 
 (deftest historical-record-stays-unversioned-test
   (testing "shape compatibility does not retroactively assign a schema"

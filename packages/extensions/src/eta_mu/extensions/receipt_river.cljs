@@ -90,17 +90,20 @@
 
 (defn validate-edn-event [line line-number]
   (let [event (line->event line)
+        record (if (and event (map? (:event/payload event)))
+                 (:event/payload event)
+                 event)
         errors #js []]
     (when-not event
       (.push errors "invalid EDN event"))
-    (when event
+    (when record
       (doseq [k [:ts :kind :repo :origin :owner :dod :pi :host :manifest :refs]]
-        (when-not (get event k)
+        (when-not (get record k)
           (.push errors (str "missing required key: " (name k)))))
-      (when-let [kind (:kind event)]
+      (when-let [kind (:kind record)]
         (when (neg? (.indexOf KNOWN-KINDS (str kind)))
           (.push errors (str "unknown kind: " kind))))
-      (when-let [ts (:ts event)]
+      (when-let [ts (:ts record)]
         (when (js/Number.isNaN (js/Date.parse ts))
           (.push errors (str "invalid ts: " ts)))))
     #js {:ok (zero? (.-length errors))

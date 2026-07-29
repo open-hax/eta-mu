@@ -1,6 +1,7 @@
 (ns eta-mu.receipt-river.api
   "Authoritative programmatic API for Receipt River."
   (:require [eta-mu.receipt-river.domain.event :as event]
+            [eta-mu.receipt-river.extern.bus :as bus]
             [eta-mu.receipt-river.generated.registry :as registry]
             [eta-mu.receipt-river.law.receipt :as law]
             [eta-mu.receipt-river.shape.edn :as edn]))
@@ -26,6 +27,10 @@
        :errors errors
        :line line})
     (catch :default error
+      (bus/emit-error! :receipt-river/invalid-edn
+                       {:line-number line-number
+                        :exception/name (or (.-name error) "Error")
+                        :exception/message (.-message error)})
       {:ok false
        :line-number line-number
        :event nil

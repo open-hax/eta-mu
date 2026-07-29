@@ -1,6 +1,7 @@
 (ns eta-mu.infra.cli.router-test
   (:require [cljs.test :refer [deftest is testing]]
             [eta-mu.generated.component-manifest :as component-manifest]
+            [eta-mu.infra.cli.commands.sessions :as sessions]
             [eta-mu.infra.cli.router :as cli-router]))
 
 (deftest generated-component-manifest-test
@@ -33,3 +34,25 @@
                       (get-in registry ["git" :subcommands "fork-tax" :handler]))))
     (testing "persisted agent-session inspection remains available in plural form"
       (is (fn? (get-in registry ["sessions" :handler]))))))
+
+(deftest ^:async session-multiplexer-test
+  (let [calls (atom [])
+        protocol-stub (fn [context]
+                        (swap! calls conj [:protocol (:args context)])
+                        (js/Promise.resolve :protocol))
+        inspection-stub (fn [context]
+                          (swap! calls conj [:inspection (:args context)])
+                          (js/Promise.resolve :inspection))]
+    (with-redefs [cli-router/session-protocol-handler protocol-stub
+                  sessions/handle inspection-stub]
+      (doseq [subcommand ["reflect" "schemas"]]
+        (is (= :protocol
+               (await (cli-router/session-handler {:args [subcommand]})))))
+      (doseq [subcommand ["list" "show"]]
+        (is (= :inspection
+               (await (cli-router/session-handler {:args [subcommand]}))))))
+    (is (= [[:protocol ["reflect"]]
+            [:protocol ["schemas"]]
+            [:inspection ["list"]]
+            [:inspection ["show"]]]
+           @calls))))

@@ -15,4 +15,5 @@ Scope: implement only the first vertical slice from the 2026-07-29 user architec
 Implemented and verified. Package suites: receipt-river 8 tests/25 assertions, session-mycology 2/6, fork-tax 5/13; eta-mu unit 152/342; eta-mu e2e 7/71. Four clj-kondo gates and all release builds completed with zero warnings. CLI smokes passed for version --components, all schemas surfaces, git compatibility delegation, mixed historical/versioned receipt writing, Fork Tax dry-run, and provider-independent repository inventory.
 
 Durable home-wide inventory completed at .ημ/receipt-river/repository-inventory.edn: 138 repositories (43 normal, 5 linked worktrees, 5 bare, 85 submodules), 14 duplicate-clone groups, 4 shared-history groups, and 947 symlinks safely observed without traversal. Runtime/dependency caches are explicit exclusions in the corpus.
+
 ---

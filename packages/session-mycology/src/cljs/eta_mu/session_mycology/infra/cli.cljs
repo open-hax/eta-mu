@@ -1,31 +1,20 @@
 (ns eta-mu.session-mycology.infra.cli
   "Session Mycology command implementation owned by @eta-mu/session-mycology."
   (:require [clojure.string :as str]
-            ["node:child_process" :as cp]
-            ["node:fs" :as fs]
-            ["node:path" :as path]
             [eta-mu.session-mycology.domain.event :as event]
             [eta-mu.session-mycology.domain.reflection :as reflection]
+            [eta-mu.session-mycology.extern.git :as git]
+            [eta-mu.session-mycology.extern.runtime :as runtime]
             [eta-mu.session-mycology.generated.registry :as registry]))
 
 (defn- exit! [code]
-  (.exit js/process code))
-
-(defn- exec-git [args]
-  (js/Promise.
-   (fn [resolve _reject]
-     (let [stdout (atom "")
-           child (.spawn cp "git" (clj->js args)
-                         #js {:cwd (.cwd js/process) :stdio "pipe"})]
-       (.on (.-stdout child) "data" #(swap! stdout str %))
-       (.on child "close"
-            (fn [code]
-              (resolve {:exit (or code 0) :stdout (str/trim @stdout)})))
-       (.on child "error" #(resolve {:exit 1 :stdout ""}))))))
+  (runtime/exit! code))
 
 (defn- ^:async resolve-repo []
-  (let [{:keys [exit stdout]} (await (exec-git ["rev-parse" "--show-toplevel"]))]
-    (if (zero? exit) stdout (.cwd js/process))))
+  (let [cwd (runtime/current-directory)
+        {:keys [exit stdout]} (await (git/exec-at cwd
+                                                 ["rev-parse" "--show-toplevel"]))]
+    (if (zero? exit) stdout cwd)))
 
 (defn- schemas! []
   (println
@@ -39,7 +28,7 @@
   (let [repo-root (await (resolve-repo))
         lesson (str/join " " args)]
     (when (str/blank? lesson)
-      (js/console.error "Usage: eta-mu session reflect <lesson>")
+      (runtime/error! "Usage: eta-mu session reflect <lesson>")
       (exit! 1))
     (let [recorded-at (js/Date.)
           payload (reflection/build-payload {:repo repo-root :lesson lesson})
@@ -51,10 +40,10 @@
                      :producer {}
                      :subject {:repository/path repo-root}}
                     payload)
-          file (path/join repo-root ".ημ" "session-reflections.edn")
+          file (runtime/join-path repo-root ".ημ" "session-reflections.edn")
           line (pr-str envelope)]
-      (.mkdirSync fs (path/dirname file) #js {:recursive true})
-      (.appendFileSync fs file (str line "\n") "utf8")
+      (runtime/make-directories! (runtime/parent-directory file))
+      (runtime/append-text! file (str line "\n"))
       (println (str "Recorded reflection at " file))
       (println line)
       (exit! 0))))
@@ -67,6 +56,6 @@
       "reflect" (await (reflect! component-manifest remaining))
       "schemas" (schemas!)
       (do
-        (js/console.error (str "Unknown session sub-command: " command))
-        (js/console.error "Usage: eta-mu session {reflect|schemas}")
+        (runtime/error! (str "Unknown session sub-command: " command))
+        (runtime/error! "Usage: eta-mu session {reflect|schemas}")
         (exit! 1)))))

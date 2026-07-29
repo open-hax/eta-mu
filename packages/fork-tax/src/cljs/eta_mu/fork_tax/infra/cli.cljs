@@ -1,50 +1,41 @@
 (ns eta-mu.fork-tax.infra.cli
   "Fork Tax command implementation owned by @eta-mu/fork-tax."
   (:require [clojure.string :as str]
-            ["node:child_process" :as cp]
-            ["node:fs" :as fs]
-            ["node:path" :as path]
             [eta-mu.fork-tax.domain.event :as event]
             [eta-mu.fork-tax.domain.handoff :as handoff]
+            [eta-mu.fork-tax.extern.git :as git]
+            [eta-mu.fork-tax.extern.runtime :as runtime]
             [eta-mu.fork-tax.generated.registry :as registry]))
 
+(def ^:private local-git-timeout-ms 30000)
+(def ^:private network-git-timeout-ms 120000)
+
 (defn- exit! [code]
-  (.exit js/process code))
+  (runtime/exit! code))
 
-(defn- exec-git [cwd args]
-  (js/Promise.
-   (fn [resolve _reject]
-     (let [stdout (atom "")
-           stderr (atom "")
-           child (.spawn cp "git" (clj->js args) #js {:cwd cwd :stdio "pipe"})]
-       (.on (.-stdout child) "data" #(swap! stdout str %))
-       (.on (.-stderr child) "data" #(swap! stderr str %))
-       (.on child "close"
-            (fn [code]
-              (resolve {:exit (or code 0)
-                        :stdout (str/trim @stdout)
-                        :stderr (str/trim @stderr)})))
-       (.on child "error"
-            (fn [error]
-              (resolve {:exit 1 :stdout "" :stderr (.-message error)})))))))
-
-(defn- ^:async git-value [cwd args label]
-  (let [{:keys [exit stdout stderr]} (await (exec-git cwd args))]
-    (if (zero? exit)
-      stdout
-      (throw (js/Error. (str label " failed: " stderr))))))
+(defn- ^:async git-value
+  ([cwd args label]
+   (await (git-value cwd args label {})))
+  ([cwd args label options]
+   (let [{:keys [exit stdout stderr]} (await (git/exec-at cwd args options))]
+     (if (zero? exit)
+       stdout
+       (throw (js/Error. (str label " failed: " stderr)))))))
 
 (defn- ^:async collect-state []
-  (let [cwd (.cwd js/process)
-        root-result (await (exec-git cwd ["rev-parse" "--show-toplevel"]))]
+  (let [cwd (runtime/current-directory)
+        root-result (await (git/exec-at cwd ["rev-parse" "--show-toplevel"]))]
     (when-not (zero? (:exit root-result))
       (throw (js/Error. "Not inside a git repository.")))
     (let [repo-root (:stdout root-result)
           branch (await (git-value repo-root ["rev-parse" "--abbrev-ref" "HEAD"]
                                    "git branch"))
           sha (await (git-value repo-root ["rev-parse" "HEAD"] "git rev-parse"))
-          status (await (git-value repo-root ["status" "--porcelain=v1" "-z"]
-                                   "git status"))]
+          status (await
+                  (git-value repo-root
+                             ["status" "--porcelain=v1" "-z"]
+                             "git status"
+                             {:preserve-stdout? true}))]
       {:repo-root repo-root
        :branch branch
        :sha sha
@@ -71,8 +62,10 @@
             :current registry/current-versions}))
   (exit! 0))
 
-(defn- ^:async perform-git-write! [cwd args label]
-  (let [{:keys [exit stderr]} (await (exec-git cwd args))]
+(defn- ^:async perform-git-write! [cwd args label timeout-ms]
+  (let [{:keys [exit stderr]}
+        (await (git/exec-at cwd args {:timeout-ms timeout-ms
+                                     :kill-signal "SIGKILL"}))]
     (when-not (zero? exit)
       (throw (js/Error. (str label " failed: " stderr))))))
 
@@ -83,11 +76,13 @@
         all? (contains? flags "all")
         positional (take-while #(not (str/starts-with? % "--")) args)
         owned-paths (cond
-                      (seq positional) (mapv path/resolve positional)
+                      (seq positional) (mapv runtime/resolve-path positional)
                       all? nil
                       :else [])
         {:keys [repo-root branch sha entries]} (await (collect-state))
-        entries (mapv #(update % :path (fn [value] (path/resolve repo-root value)))
+        entries (mapv #(update % :path
+                               (fn [value]
+                                 (runtime/resolve-path repo-root value)))
                       entries)
         {:keys [owned concurrent blocked]}
         (handoff/partition-status entries (if (nil? owned-paths)
@@ -126,7 +121,7 @@
       (do (println "\nNo owned paths to stage. Aborting.") (exit! 1))
 
       :else
-      (let [eta-dir (path/join repo-root ".ημ")
+      (let [eta-dir (runtime/join-path repo-root ".ημ")
             event-record (event/build-event
                           {:event-id (random-uuid)
                            :recorded-at (js/Date. timestamp)
@@ -137,26 +132,33 @@
                           (handoff/event-payload plan))
             artifact-paths (handoff/build-manifest)
             paths-to-stage (concat artifact-paths (map :path owned))]
-        (.mkdirSync fs eta-dir #js {:recursive true})
-        (.writeFileSync fs (path/join eta-dir "Π_STATE.sexp")
-                        (handoff/build-state-sexp plan) "utf8")
-        (.writeFileSync fs (path/join eta-dir "Π_LAST.md")
-                        (handoff/build-last-md plan) "utf8")
-        (.writeFileSync fs (path/join eta-dir "Π_EVENT.edn")
-                        (str (pr-str event-record) "\n") "utf8")
+        (runtime/make-directories! eta-dir)
+        (runtime/write-text! (runtime/join-path eta-dir "Π_STATE.sexp")
+                             (handoff/build-state-sexp plan))
+        (runtime/write-text! (runtime/join-path eta-dir "Π_LAST.md")
+                             (handoff/build-last-md plan))
+        (runtime/write-text! (runtime/join-path eta-dir "Π_EVENT.edn")
+                             (str (pr-str event-record) "\n"))
         (await (perform-git-write! repo-root
                                    (into ["add" "--"] paths-to-stage)
-                                   "git add"))
+                                   "git add"
+                                   local-git-timeout-ms))
         (await (perform-git-write! repo-root
                                    ["commit" "-m" (handoff/commit-message tag-name)]
-                                   "git commit"))
+                                   "git commit"
+                                   local-git-timeout-ms))
         (await (perform-git-write! repo-root
                                    ["tag" "-a" tag-name "-m"
                                     (str "Π handoff " tag-name)]
-                                   "git tag"))
-        (await (perform-git-write! repo-root ["push"] "git push"))
+                                   "git tag"
+                                   local-git-timeout-ms))
+        (await (perform-git-write! repo-root
+                                   ["push"]
+                                   "git push"
+                                   network-git-timeout-ms))
         (await (perform-git-write! repo-root ["push" "origin" tag-name]
-                                   "git push tag"))
+                                   "git push tag"
+                                   network-git-timeout-ms))
         (println (str "\nΠ paid: " tag-name))
         (exit! 0)))))
 

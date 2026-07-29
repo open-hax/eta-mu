@@ -40,7 +40,7 @@
 (defn partition-status
   [entries owned-paths]
   (let [blocked? #(re-matches
-                   #".*(?:node_modules|\.shadow-cljs|target|dist|dist-cli|dist-dev|out|\.build)/.*"
+                   #"(?:^|.*/)(?:node_modules|\.shadow-cljs|target|dist|dist-cli|dist-dev|out|\.build)(?:/.*)?"
                    %)
         owned? #(some (partial under-path? %) owned-paths)
         grouped (group-by

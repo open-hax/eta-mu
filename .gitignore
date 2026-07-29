@@ -68,6 +68,7 @@ packages/eta-mu/dist-cli/
 packages/eta-mu/*.tgz
 
 # Generated ledger package registries and eta-mu composition manifest
+.ημ/receipt-river/repository-inventory.edn
 packages/receipt-river/src/cljs/eta_mu/receipt_river/generated/
 packages/session-mycology/src/cljs/eta_mu/session_mycology/generated/
 packages/fork-tax/src/cljs/eta_mu/fork_tax/generated/

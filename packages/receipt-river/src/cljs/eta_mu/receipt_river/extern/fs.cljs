@@ -1,5 +1,5 @@
 (ns eta-mu.receipt-river.extern.fs
-  "Raw Node filesystem boundary for repository discovery."
+  "Raw Node filesystem and path boundary for Receipt River."
   (:require ["node:fs" :as fs]
             ["node:path" :as path]))
 
@@ -21,6 +21,15 @@
 (defn read-text [value]
   (.readFileSync fs value "utf8"))
 
+(defn write-text! [value text]
+  (.writeFileSync fs value text "utf8"))
+
+(defn append-text! [value text]
+  (.appendFileSync fs value text "utf8"))
+
+(defn make-directories! [value]
+  (.mkdirSync fs value #js {:recursive true}))
+
 (defn realpath [value]
   (.realpathSync fs value))
 
@@ -30,5 +39,11 @@
 (defn resolve-path [& values]
   (.apply (.-resolve path) nil (into-array values)))
 
+(defn dirname [value]
+  (.dirname path value))
+
 (defn basename [value]
   (.basename path value))
+
+(defn absolute? [value]
+  (path/isAbsolute value))
