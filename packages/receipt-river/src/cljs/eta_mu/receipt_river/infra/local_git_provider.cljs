@@ -8,6 +8,7 @@
             [eta-mu.receipt-river.domain.discovery :as discovery]
             [eta-mu.receipt-river.extern.crypto :as crypto]
             [eta-mu.receipt-river.extern.fs :as fs]
+            [eta-mu.receipt-river.extern.glob :as glob]
             [eta-mu.receipt-river.extern.git :as git]))
 
 (defn- stable-id [value]
@@ -33,7 +34,9 @@
     ((fn walk! [path]
        (try
          (cond
-           (discovery/excluded? path exclusions)
+           (discovery/excluded? path
+                                exclusions
+                                (glob/matches-any? path exclusions))
            nil
 
            (fs/symbolic-link? path)

@@ -1,6 +1,7 @@
 (ns eta-mu.receipt-river.domain.discovery
   "Pure repository discovery classification and inventory projections."
-  (:require [clojure.string :as str]))
+  (:require [clojure.set :as set]
+            [clojure.string :as str]))
 
 (def default-excluded-dir-names
   #{".cache" ".git" "node_modules"})
@@ -14,24 +15,14 @@
     (= :file git-marker) :linked-worktree
     :else nil))
 
-(defn glob-pattern->regex
-  "Compile the small glob surface used by discovery exclusions."
-  [pattern]
-  (let [escaped (-> pattern
-                    (str/replace #"[.+^${}()|\[\]\\]" "\\$&")
-                    (str/replace "**" "\u0000")
-                    (str/replace "*" "[^/]*")
-                    (str/replace "\u0000" ".*"))]
-    (js/RegExp. (str "^" escaped "$"))))
-
 (defn excluded?
-  [path patterns]
+  [path patterns glob-match?]
   (boolean
-   (some (fn [pattern]
-           (or (= path pattern)
-               (str/starts-with? path (str pattern "/"))
-               (.test (glob-pattern->regex pattern) path)))
-         patterns)))
+   (or glob-match?
+       (some (fn [pattern]
+               (or (= path pattern)
+                   (str/starts-with? path (str pattern "/"))))
+             patterns))))
 
 (defn relationship-groups
   "Identify worktrees sharing object storage and distinct clones sharing a remote."
@@ -75,15 +66,37 @@
                                    [repository-id
                                     (set (map :repository/path repositories))]))
                             (into {}))
-        moved (keep (fn [repository]
-                      (let [old-paths (get previous-paths
-                                           (:repository/id repository))
-                            current-path (:repository/path repository)]
-                        (when (and (seq old-paths)
-                                   (not (contains? old-paths current-path)))
-                          {:observation/type :repository-moved
-                           :repository/id (:repository/id repository)
-                           :previous-paths (vec (sort old-paths))
-                           :path current-path})))
-                    (:repositories current))]
-    (update current :observations into moved)))
+        current-paths (->> (:repositories current)
+                           (group-by :repository/id)
+                           (map (fn [[repository-id repositories]]
+                                  [repository-id
+                                   (set (map :repository/path repositories))]))
+                           (into {}))
+        location-observations
+        (mapcat
+         (fn [[repository-id new-paths]]
+           (let [old-paths (get previous-paths repository-id #{})
+                 added-paths (set/difference new-paths old-paths)
+                 removed-paths (set/difference old-paths new-paths)
+                 retained-paths (set/intersection old-paths new-paths)]
+             (cond
+               (and (seq old-paths) (seq removed-paths))
+               (map (fn [new-path]
+                      {:observation/type :repository-moved
+                       :repository/id repository-id
+                       :previous-paths (vec (sort removed-paths))
+                       :path new-path})
+                    (sort added-paths))
+
+               (and (seq old-paths) (seq added-paths))
+               (map (fn [new-path]
+                      {:observation/type :repository-clone-added
+                       :repository/id repository-id
+                       :existing-paths (vec (sort retained-paths))
+                       :path new-path})
+                    (sort added-paths))
+
+               :else
+               [])))
+         current-paths)]
+    (update current :observations into location-observations)))

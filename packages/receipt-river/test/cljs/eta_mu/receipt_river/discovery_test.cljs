@@ -5,6 +5,7 @@
             ["node:path" :as path]
             [eta-mu.receipt-river.archaeology.provider :as provider]
             [eta-mu.receipt-river.domain.discovery :as discovery]
+            [eta-mu.receipt-river.extern.glob :as glob]
             [eta-mu.receipt-river.infra.local-git-provider :as local-git]))
 
 (deftest marker-classification-test
@@ -34,11 +35,57 @@
     (is (contains? types :shared-history))
     (is (contains? types :duplicate-clones))))
 
+(deftest exclusion-boundary-test
+  (testing "domain exclusion consumes a shaped host-match result"
+    (is (discovery/excluded? "/repo/node_modules/pkg"
+                             ["/repo/node_modules"]
+                             false))
+    (is (discovery/excluded? "/repo/build/cache/file"
+                             ["**/cache/**"]
+                             (glob/matches-any? "/repo/build/cache/file"
+                                                ["**/cache/**"])))
+    (is (false? (discovery/excluded? "/repo/src/cache.cljs"
+                                     ["**/cache/**"]
+                                     (glob/matches-any? "/repo/src/cache.cljs"
+                                                        ["**/cache/**"]))))))
+
 (deftest moved-repository-observation-test
   (let [previous {:repositories [{:repository/id "r1"
                                   :repository/path "/old/repo"}]}
         current {:repositories [{:repository/id "r1"
                                  :repository/path "/new/repo"}]
+                 :observations []}
+        result (discovery/observe-moves previous current)]
+    (is (= [{:observation/type :repository-moved
+             :repository/id "r1"
+             :previous-paths ["/old/repo"]
+             :path "/new/repo"}]
+           (:observations result)))))
+
+(deftest clone-added-observation-test
+  (let [previous {:repositories [{:repository/id "r1"
+                                  :repository/path "/existing/repo"}]}
+        current {:repositories [{:repository/id "r1"
+                                 :repository/path "/existing/repo"}
+                                {:repository/id "r1"
+                                 :repository/path "/new/clone"}]
+                 :observations []}
+        result (discovery/observe-moves previous current)]
+    (is (= [{:observation/type :repository-clone-added
+             :repository/id "r1"
+             :existing-paths ["/existing/repo"]
+             :path "/new/clone"}]
+           (:observations result)))))
+
+(deftest moved-repository-uses-disappeared-paths-test
+  (let [previous {:repositories [{:repository/id "r1"
+                                  :repository/path "/old/repo"}
+                                 {:repository/id "r1"
+                                  :repository/path "/retained/clone"}]}
+        current {:repositories [{:repository/id "r1"
+                                 :repository/path "/new/repo"}
+                                {:repository/id "r1"
+                                 :repository/path "/retained/clone"}]
                  :observations []}
         result (discovery/observe-moves previous current)]
     (is (= [{:observation/type :repository-moved
