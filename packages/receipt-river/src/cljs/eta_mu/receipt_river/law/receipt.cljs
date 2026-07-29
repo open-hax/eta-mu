@@ -1,8 +1,16 @@
 (ns eta-mu.receipt-river.law.receipt
   "Validation laws for versioned events and historical unversioned receipts."
-  (:require [eta-mu.receipt-river.domain.event :as event]
-            [eta-mu.receipt-river.domain.receipt :as receipt]
-            [eta-mu.receipt-river.generated.registry :as registry]))
+  (:require [eta-mu.receipt-river.generated.registry :as registry]))
+
+(def receipt-recorded-schema
+  :eta-mu.receipt-river/receipt-recorded)
+
+(def known-kinds
+  #{:push-truth :artifact-hash :test-run :build :decision :drift :catalog
+    :observation :field-impact :truth :refutation :adjudication})
+
+(def legacy-required-keys
+  [:ts :kind :repo :origin :owner :dod :pi :host :manifest :refs])
 
 (def envelope-required-keys
   [:event/id :event/type :event/recorded-at :event/schema
@@ -24,12 +32,12 @@
 (defn legacy-errors
   [record]
   (let [base (if (map? record)
-               (missing-errors record receipt/legacy-required-keys)
+               (missing-errors record legacy-required-keys)
                ["event is not a map"])]
     (cond-> base
       (and (map? record)
            (:kind record)
-           (not (contains? receipt/known-kinds (:kind record))))
+           (not (contains? known-kinds (:kind record))))
       (conj (str "unknown kind: " (:kind record)))
 
       (and (map? record) (:ts record) (not (valid-timestamp? (:ts record))))
@@ -46,7 +54,7 @@
       (not= :receipt-river/receipt-recorded (:event/type record))
       (conj (str "unexpected event type: " (:event/type record)))
 
-      (not= event/receipt-recorded-schema (:id schema))
+      (not= receipt-recorded-schema (:id schema))
       (conj (str "unexpected schema id: " (:id schema)))
 
       (nil? registered-schema)

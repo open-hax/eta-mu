@@ -6,6 +6,9 @@
 (defn current-directory []
   (.cwd js/process))
 
+(defn now-iso []
+  (.toISOString (js/Date.)))
+
 (defn resolve-path
   ([value]
    (path/resolve value))

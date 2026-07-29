@@ -44,12 +44,13 @@
                   {:observation/type :symlink-not-followed :path path})
 
            (fs/directory? path)
-           (do
-             (when-let [candidate (marker path)]
+           (let [candidate (marker path)]
+             (when candidate
                (swap! candidates conj candidate))
-             (doseq [name (fs/entries path)]
-               (when-not (contains? discovery/default-excluded-dir-names name)
-                 (walk! (fs/join path name)))))
+             (when-not (:bare? candidate)
+               (doseq [name (fs/entries path)]
+                 (when-not (contains? discovery/default-excluded-dir-names name)
+                   (walk! (fs/join path name))))))
 
            :else nil)
          (catch :default error

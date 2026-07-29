@@ -103,3 +103,8 @@
          (get-in registry/schemas
                  [[:eta-mu.receipt-river/receipt-recorded 1]
                   :schema/status]))))
+
+(deftest law-owns-receipt-contract-constants-test
+  (is (= law/known-kinds receipt/known-kinds))
+  (is (= law/legacy-required-keys receipt/legacy-required-keys))
+  (is (= law/receipt-recorded-schema event/receipt-recorded-schema)))

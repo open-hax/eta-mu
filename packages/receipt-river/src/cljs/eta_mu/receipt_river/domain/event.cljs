@@ -1,8 +1,9 @@
 (ns eta-mu.receipt-river.domain.event
   "Pure construction of Receipt River events."
-  (:require [eta-mu.receipt-river.generated.registry :as registry]))
+  (:require [eta-mu.receipt-river.generated.registry :as registry]
+            [eta-mu.receipt-river.law.receipt :as law]))
 
-(def receipt-recorded-schema :eta-mu.receipt-river/receipt-recorded)
+(def receipt-recorded-schema law/receipt-recorded-schema)
 
 (defn build-event
   "Wrap a package-owned payload in the shared eta-mu event envelope.

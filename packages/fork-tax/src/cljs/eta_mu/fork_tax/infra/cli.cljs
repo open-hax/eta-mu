@@ -88,7 +88,7 @@
         (handoff/partition-status entries (if (nil? owned-paths)
                                             [repo-root]
                                             owned-paths))
-        timestamp (handoff/now-iso)
+        timestamp (runtime/now-iso)
         tag-name (handoff/make-tag-name timestamp)
         plan {:repo-root repo-root
               :branch branch

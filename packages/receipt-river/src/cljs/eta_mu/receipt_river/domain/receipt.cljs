@@ -1,13 +1,11 @@
 (ns eta-mu.receipt-river.domain.receipt
   "Pure Receipt River payload construction and normalization."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [eta-mu.receipt-river.law.receipt :as law]))
 
-(def known-kinds
-  #{:push-truth :artifact-hash :test-run :build :decision :drift :catalog
-    :observation :field-impact :truth :refutation :adjudication})
+(def known-kinds law/known-kinds)
 
-(def legacy-required-keys
-  [:ts :kind :repo :origin :owner :dod :pi :host :manifest :refs])
+(def legacy-required-keys law/legacy-required-keys)
 
 (defn clean-field
   ([value] (clean-field value "none"))

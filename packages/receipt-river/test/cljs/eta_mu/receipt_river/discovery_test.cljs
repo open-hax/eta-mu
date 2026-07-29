@@ -1,5 +1,6 @@
 (ns eta-mu.receipt-river.discovery-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [cljs.test :refer [deftest is testing]]
             ["node:fs" :as fs]
             ["node:os" :as os]
             ["node:path" :as path]
@@ -102,11 +103,13 @@
           linked (path/join root "linked")
           submodule (path/join root "submodule")
           bare (path/join root "bare.git")
+          fake-loose-repo (path/join bare "objects" "fake-loose-repo")
           cycle (path/join root "cycle")]
       (try
         (doseq [directory [normal nested linked submodule
                            (path/join bare "objects")
-                           (path/join bare "refs")]]
+                           (path/join bare "refs")
+                           (path/join fake-loose-repo ".git")]]
           (.mkdirSync fs directory #js {:recursive true}))
         (.mkdirSync fs (path/join normal ".git"))
         (.mkdirSync fs (path/join nested ".git"))
@@ -126,6 +129,9 @@
           (is (contains? kinds :submodule))
           (is (contains? kinds :bare))
           (is (= 5 (count (:repositories inventory))))
+          (is (not-any? #(str/starts-with? (:repository/path %)
+                                           (path/join bare "objects"))
+                        (:repositories inventory)))
           (is (some #(= :symlink-not-followed (:observation/type %))
                     (:observations inventory))))
         (finally

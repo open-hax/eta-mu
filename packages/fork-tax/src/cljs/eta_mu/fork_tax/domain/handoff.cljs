@@ -2,13 +2,10 @@
   "Pure Fork Tax decisions and artifact generation."
   (:require [clojure.string :as str]))
 
-(defn now-iso []
-  (.toISOString (js/Date.)))
-
 (defn make-tag-name [timestamp]
   (str "Π-" (-> timestamp
-                 (.replace (js/RegExp. "\\.\\d{3}" "g") "")
-                 (.replace (js/RegExp. "[-:]" "g") ""))))
+                 (str/replace #"\.\d{3}" "")
+                 (str/replace #"[-:]" ""))))
 
 (defn commit-message [tag-name]
   (str "Π " tag-name))
