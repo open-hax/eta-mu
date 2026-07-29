@@ -1,6 +1,10 @@
 name: OpenCode Kimi Issue Agent
 
 on:
+  issues:
+    types: [opened, reopened, edited]
+  schedule:
+    - cron: "23 10 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -10,7 +14,7 @@ concurrency:
 jobs:
   issue-triage:
     name: Triage issue with OpenCode
-    if: ${{ github.event_name == 'issues' && github.event.issue.pull_request == null }}
+    if: ${{ github.event_name == 'issues' && github.event.issue.pull_request == null && github.actor != 'eta-mu-ai[bot]' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -19,14 +23,38 @@ jobs:
       issues: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
 
-      - name: Run OpenCode issue triage
-        uses: anomalyco/opencode/github@latest
+      - name: Detect eta-mu app credentials
+        id: eta_mu_app_credentials
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        run: |
+          if [[ -n "${ETA_MU_APP_ID}" && -n "${ETA_MU_APP_PRIVATE_KEY}" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create eta-mu app token
+        id: eta_mu_token
+        if: ${{ steps.eta_mu_app_credentials.outputs.available == 'true' }}
+        continue-on-error: true
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ env.ETA_MU_APP_ID }}
+          private-key: ${{ env.ETA_MU_APP_PRIVATE_KEY }}
+
+      - name: Run OpenCode issue triage
+        uses: anomalyco/opencode/github@77fc88c8ade8e5a620ebbe1197f3a572d29ae91a
+        env:
+          GITHUB_TOKEN: ${{ steps.eta_mu_token.conclusion == 'success' && steps.eta_mu_token.outputs.token != '' && steps.eta_mu_token.outputs.token || github.token }}
           KIMI_API_KEY: ${{ secrets.KIMI_FOR_CODING_API_KEY }}
         with:
           model: kimi-for-coding/k2p5
@@ -64,14 +92,38 @@ jobs:
       issues: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
 
-      - name: Run daily OpenCode issue sweep
-        uses: anomalyco/opencode/github@latest
+      - name: Detect eta-mu app credentials
+        id: eta_mu_app_credentials
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        run: |
+          if [[ -n "${ETA_MU_APP_ID}" && -n "${ETA_MU_APP_PRIVATE_KEY}" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create eta-mu app token
+        id: eta_mu_token
+        if: ${{ steps.eta_mu_app_credentials.outputs.available == 'true' }}
+        continue-on-error: true
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ env.ETA_MU_APP_ID }}
+          private-key: ${{ env.ETA_MU_APP_PRIVATE_KEY }}
+
+      - name: Run daily OpenCode issue sweep
+        uses: anomalyco/opencode/github@77fc88c8ade8e5a620ebbe1197f3a572d29ae91a
+        env:
+          GITHUB_TOKEN: ${{ steps.eta_mu_token.conclusion == 'success' && steps.eta_mu_token.outputs.token != '' && steps.eta_mu_token.outputs.token || github.token }}
           KIMI_API_KEY: ${{ secrets.KIMI_FOR_CODING_API_KEY }}
         with:
           model: kimi-for-coding/k2p5
