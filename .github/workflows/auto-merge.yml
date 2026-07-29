@@ -17,29 +17,58 @@ on:
         required: false
         type: string
         default: "SQUASH"
+    secrets:
+      ETA_MU_APP_ID:
+        required: false
+      ETA_MU_APP_PRIVATE_KEY:
+        required: false
 
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout target repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Checkout eta-mu logic
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: open-hax/eta-mu
-          ref: 92beede072dd013e1379c9a1ba0bd160d2f9b252
+          ref: c06308d940654ab51ae043cde20e10cc71f27b99
           path: .eta-mu
           persist-credentials: false
 
+      - name: Detect eta-mu app credentials
+        id: eta_mu_app_credentials
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        run: |
+          if [[ -n "${ETA_MU_APP_ID}" && -n "${ETA_MU_APP_PRIVATE_KEY}" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create eta-mu app token
+        id: eta_mu_token
+        if: ${{ steps.eta_mu_app_credentials.outputs.available == 'true' }}
+        continue-on-error: true
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ env.ETA_MU_APP_ID }}
+          private-key: ${{ env.ETA_MU_APP_PRIVATE_KEY }}
+
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
         with:
           version: 10.14.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
@@ -50,7 +79,7 @@ jobs:
 
       - name: Enable auto-merge
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ steps.eta_mu_token.conclusion == 'success' && steps.eta_mu_token.outputs.token != '' && steps.eta_mu_token.outputs.token || github.token }}
         run: |
           pnpm --dir .eta-mu/packages/legacy/github dev auto-merge \
             --repo "${{ inputs.repo || github.repository }}" \
