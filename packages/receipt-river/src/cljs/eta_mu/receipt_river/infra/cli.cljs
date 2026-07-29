@@ -8,7 +8,6 @@
             [eta-mu.receipt-river.domain.receipt :as receipt]
             [eta-mu.receipt-river.extern.bus :as bus]
             [eta-mu.receipt-river.extern.fs :as fs]
-            [eta-mu.receipt-river.generated.registry :as registry]
             [eta-mu.receipt-river.extern.runtime :as runtime]
             [eta-mu.receipt-river.infra.local-git-provider :as local-git]
             [eta-mu.receipt-river.extern.git :as git]
@@ -76,10 +75,10 @@
        :last (last rows)})))
 
 (defn- schema-summary []
-  {:package/name registry/package-name
-   :package/version registry/package-version
-   :schemas registry/schema-documents
-   :current registry/current-versions})
+  {:package/name api/package-name
+   :package/version api/package-version
+   :schemas api/schema-documents
+   :current api/current-schemas})
 
 (defn- parse-discovery-args
   "Parse repeated roots/exclusions without collapsing them into a flag map."

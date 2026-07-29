@@ -7,7 +7,7 @@
             [eta-mu.fork-tax.domain.event :as event]
             [eta-mu.fork-tax.domain.handoff :as handoff]
             [eta-mu.fork-tax.extern.git :as git]
-            [eta-mu.fork-tax.generated.registry :as registry]))
+            [eta-mu.fork-tax.law.handoff :as law]))
 
 (deftest tag-and-message-test
   (is (= "Π-20260709T121314Z"
@@ -102,7 +102,7 @@
                          #uuid "00000000-0000-0000-0000-000000000001"}]}
                 (handoff/event-payload plan))]
     (is (= :fork-tax/handoff-recorded (:event/type record)))
-    (is (= registry/package-version
+    (is (= law/package-version
            (get-in record [:event/producer :package/version])))
     (is (= 1 (get-in record [:event/schema :version])))
     (is (= 1 (count (:event/refs record))))))

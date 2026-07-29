@@ -1,11 +1,11 @@
 (ns eta-mu.fork-tax.infra.cli
   "Fork Tax command implementation owned by @eta-mu/fork-tax."
   (:require [clojure.string :as str]
+            [eta-mu.fork-tax.api :as api]
             [eta-mu.fork-tax.domain.event :as event]
             [eta-mu.fork-tax.domain.handoff :as handoff]
             [eta-mu.fork-tax.extern.git :as git]
-            [eta-mu.fork-tax.extern.runtime :as runtime]
-            [eta-mu.fork-tax.generated.registry :as registry]))
+            [eta-mu.fork-tax.extern.runtime :as runtime]))
 
 (def ^:private local-git-timeout-ms 30000)
 (def ^:private network-git-timeout-ms 120000)
@@ -58,10 +58,10 @@
 
 (defn- schemas! []
   (println
-   (pr-str {:package/name registry/package-name
-            :package/version registry/package-version
-            :schemas registry/schema-documents
-            :current registry/current-versions}))
+   (pr-str {:package/name api/package-name
+            :package/version api/package-version
+            :schemas api/schema-documents
+            :current api/current-schemas}))
   (exit! 0))
 
 (defn- ^:async perform-git-write! [cwd args label timeout-ms]

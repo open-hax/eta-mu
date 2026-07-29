@@ -2,12 +2,14 @@
   "Authoritative programmatic API for Receipt River."
   (:require [eta-mu.receipt-river.domain.event :as event]
             [eta-mu.receipt-river.extern.bus :as bus]
-            [eta-mu.receipt-river.generated.registry :as registry]
             [eta-mu.receipt-river.law.receipt :as law]
             [eta-mu.receipt-river.shape.edn :as edn]))
 
-(def schema-registry registry/schemas)
-(def current-schemas registry/current-versions)
+(def package-name law/package-name)
+(def package-version law/package-version)
+(def schema-documents law/schema-documents)
+(def schema-registry law/schemas)
+(def current-schemas law/current-versions)
 
 (defn build-event [metadata payload]
   (event/build-event metadata payload))

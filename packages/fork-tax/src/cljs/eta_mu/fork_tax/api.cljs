@@ -2,10 +2,13 @@
   "Authoritative programmatic API for Fork Tax."
   (:require [eta-mu.fork-tax.domain.event :as event]
             [eta-mu.fork-tax.domain.handoff :as handoff]
-            [eta-mu.fork-tax.generated.registry :as registry]))
+            [eta-mu.fork-tax.law.handoff :as law]))
 
-(def schema-registry registry/schemas)
-(def current-schemas registry/current-versions)
+(def package-name law/package-name)
+(def package-version law/package-version)
+(def schema-documents law/schema-documents)
+(def schema-registry law/schemas)
+(def current-schemas law/current-versions)
 
 (defn build-event [metadata payload]
   (event/build-event metadata payload))

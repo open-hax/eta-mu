@@ -1,8 +1,8 @@
 (ns eta-mu.session-mycology.domain.event
   "Pure construction of Session Mycology events."
-  (:require [eta-mu.session-mycology.generated.registry :as registry]))
+  (:require [eta-mu.session-mycology.law.reflection :as law]))
 
-(def reflection-recorded-schema :eta-mu.session-mycology/reflection-recorded)
+(def reflection-recorded-schema law/reflection-recorded-schema)
 
 (defn build-event
   [{:keys [event-id recorded-at component-manifest command producer subject
@@ -12,12 +12,12 @@
            :event/type :session-mycology/reflection-recorded
            :event/recorded-at recorded-at
            :event/schema {:id reflection-recorded-schema
-                          :version (get registry/current-versions
+                          :version (get law/current-versions
                                         reflection-recorded-schema)}
            :event/producer (merge
                             {:eta-mu/version (:eta-mu/version component-manifest)
-                             :package/name registry/package-name
-                             :package/version registry/package-version
+                             :package/name law/package-name
+                             :package/version law/package-version
                              :command command}
                             producer)
            :event/subject subject

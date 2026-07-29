@@ -5,7 +5,7 @@
             [eta-mu.session-mycology.domain.reflection :as reflection]
             [eta-mu.session-mycology.extern.git :as git]
             [eta-mu.session-mycology.extern.runtime :as runtime]
-            [eta-mu.session-mycology.generated.registry :as registry]))
+            [eta-mu.session-mycology.api :as api]))
 
 (defn- exit! [code]
   (runtime/exit! code))
@@ -27,10 +27,10 @@
 
 (defn- schemas! []
   (println
-   (pr-str {:package/name registry/package-name
-            :package/version registry/package-version
-            :schemas registry/schema-documents
-            :current registry/current-versions}))
+   (pr-str {:package/name api/package-name
+            :package/version api/package-version
+            :schemas api/schema-documents
+            :current api/current-schemas}))
   (exit! 0))
 
 (defn- ^:async reflect! [component-manifest args]

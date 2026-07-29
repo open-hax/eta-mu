@@ -3,11 +3,11 @@
 
   Wires the pure domain router to process I/O and command handlers."
   (:require [clojure.string :as str]
+            [eta-mu.domain.component-manifest :as component-manifest]
             [eta-mu.domain.router :as router]
             [eta-mu.extern.console :as console]
             [eta-mu.extern.process :as process]
             [eta-mu.fork-tax.infra.cli :as fork-tax]
-            [eta-mu.generated.component-manifest :as component-manifest]
             [eta-mu.infra.cli.commands.agent :as agent]
             [eta-mu.infra.cli.commands.contracts :as contracts]
             [eta-mu.infra.cli.commands.doctor :as doctor]

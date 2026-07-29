@@ -6,7 +6,6 @@
   "private": false,
   "files": [
     "dist-cli",
-    "resources",
     "README.md"
   ],
   "bin": {
@@ -14,16 +13,15 @@
     "pi": "dist-cli/index.cjs"
   },
   "scripts": {
-    "metadata": "node ../../scripts/generate-ledger-metadata.mjs",
-    "build": "pnpm metadata && shadow-cljs release cli",
-    "dev": "pnpm metadata && shadow-cljs compile cli && node dist-cli/index.cjs",
+    "build": "shadow-cljs release cli",
+    "dev": "shadow-cljs compile cli && node dist-cli/index.cjs",
     "prepublishOnly": "pnpm build",
     "clean": "rm -rf dist-cli target .shadow-cljs",
-    "test": "pnpm metadata && shadow-cljs compile test && node target/eta-mu-test.cjs",
-    "test:coverage": "pnpm metadata && shadow-cljs compile test && c8 --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.domain*.js' --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.extern*.js' --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.infra*.js' --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.law*.js' --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.shape*.js' --exclude '**/*_test.js' --reporter=text --reporter=lcov --reporter=json-summary node target/eta-mu-test.cjs",
+    "test": "shadow-cljs compile test && node target/eta-mu-test.cjs",
+    "test:coverage": "shadow-cljs compile test && c8 --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.domain*.js' --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.extern*.js' --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.infra*.js' --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.law*.js' --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.shape*.js' --exclude '**/*_test.js' --reporter=text --reporter=lcov --reporter=json-summary node target/eta-mu-test.cjs",
     "test:e2e": "pnpm build && shadow-cljs compile e2e-test && node target/eta-mu-e2e-test.cjs",
     "lint:kondo": "clj-kondo --lint src/cljs test/cljs test-e2e/cljs",
-    "watch": "pnpm metadata && shadow-cljs watch cli"
+    "watch": "shadow-cljs watch cli"
   },
   "dependencies": {
     "@eta-mu/fork-tax": "workspace:*",

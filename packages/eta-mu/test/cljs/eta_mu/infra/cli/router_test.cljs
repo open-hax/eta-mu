@@ -1,10 +1,10 @@
 (ns eta-mu.infra.cli.router-test
   (:require [cljs.test :refer [deftest is testing]]
-            [eta-mu.generated.component-manifest :as component-manifest]
+            [eta-mu.domain.component-manifest :as component-manifest]
             [eta-mu.infra.cli.commands.sessions :as sessions]
             [eta-mu.infra.cli.router :as cli-router]))
 
-(deftest generated-component-manifest-test
+(deftest cljs-component-manifest-test
   (let [manifest component-manifest/manifest]
     (is (= "1.1.1" (:eta-mu/version manifest)))
     (is (= {"@eta-mu/receipt-river" "0.1.0"

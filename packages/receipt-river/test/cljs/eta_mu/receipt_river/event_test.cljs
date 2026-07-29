@@ -5,7 +5,6 @@
             [eta-mu.receipt-river.domain.event :as event]
             [eta-mu.receipt-river.domain.receipt :as receipt]
             [eta-mu.receipt-river.extern.bus :as bus]
-            [eta-mu.receipt-river.generated.registry :as registry]
             [eta-mu.receipt-river.law.receipt :as law]
             [eta-mu.receipt-river.shape.edn :as edn]))
 
@@ -114,12 +113,25 @@
       (is (:ok result))
       (is (= {:status :unversioned} (:source/schema result))))))
 
-(deftest registry-is-generated-from-package-resource-test
-  (is (= "0.1.0" registry/package-version))
-  (is (= 1 (get registry/current-versions
+(deftest historical-nanosecond-timestamp-test
+  (let [legacy {:ts "2026-07-12T00:13:19.200387541Z"
+                :kind :observation
+                :repo "/repo"
+                :origin "pi"
+                :owner "receipt-river"
+                :dod "observe"
+                :pi "0.1.0"
+                :host "local"
+                :manifest "none"
+                :refs "none"}]
+    (is (:ok (api/validate-line (pr-str legacy) 92)))))
+
+(deftest law-owned-registry-test
+  (is (= "0.1.0" law/package-version))
+  (is (= 1 (get law/current-versions
                 :eta-mu.receipt-river/receipt-recorded)))
   (is (= :current
-         (get-in registry/schemas
+         (get-in law/schemas
                  [[:eta-mu.receipt-river/receipt-recorded 1]
                   :schema/status]))))
 

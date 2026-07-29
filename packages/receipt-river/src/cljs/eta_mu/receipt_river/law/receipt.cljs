@@ -1,9 +1,13 @@
 (ns eta-mu.receipt-river.law.receipt
-  "Validation laws for versioned events and historical unversioned receipts."
-  (:require [eta-mu.receipt-river.generated.registry :as registry]))
+  "Authoritative schema facts and validation laws for Receipt River.")
 
 (def receipt-recorded-schema
   :eta-mu.receipt-river/receipt-recorded)
+
+(def receipt-recorded-version 1)
+
+(def package-name "@eta-mu/receipt-river")
+(def package-version "0.1.0")
 
 (def known-kinds
   #{:push-truth :artifact-hash :test-run :build :decision :drift :catalog
@@ -16,8 +20,45 @@
   [:event/id :event/type :event/recorded-at :event/schema
    :event/producer :event/subject :event/payload])
 
+(def receipt-recorded-document
+  {:schema/id receipt-recorded-schema
+   :schema/version receipt-recorded-version
+   :schema/status :current
+   :schema/introduced-by
+   {:package/version package-version
+    :eta-mu/version "1.1.1"}
+   :schema/predecessors []
+   :schema/required legacy-required-keys
+   :schema/optional [:note :tests :decisions :drift]
+   :schema/semantics
+   {:payload
+    "The existing append-only Receipt River record, preserved as the payload of a versioned eta-mu event."
+    :historical-records
+    "Unwrapped historical maps remain unversioned and are validated by the compatibility reader."}
+   :schema/examples
+   [{:ts "2026-07-29T00:00:00.000Z"
+     :kind :observation
+     :repo "/repo"
+     :origin "eta-mu"
+     :owner "receipt-river"
+     :dod "record the work"
+     :pi "eta-mu"
+     :host "local"
+     :manifest "none"
+     :refs "none"}]
+   :schema/compatibility
+   {:reads-unversioned true
+    :writes-envelope true}})
+
+(def schema-documents [receipt-recorded-document])
+(def schemas
+  {[receipt-recorded-schema receipt-recorded-version]
+   receipt-recorded-document})
+(def current-versions
+  {receipt-recorded-schema receipt-recorded-version})
+
 (def ^:private iso-instant-pattern
-  #"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{3})?Z$")
+  #"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?Z$")
 
 (defn- leap-year? [year]
   (or (zero? (mod year 400))
@@ -78,7 +119,7 @@
   (let [schema (:event/schema record)
         producer (:event/producer record)
         payload (:event/payload record)
-        registered-schema (get registry/schemas [(:id schema) (:version schema)])
+        registered-schema (get schemas [(:id schema) (:version schema)])
         base (missing-errors record envelope-required-keys)]
     (cond-> base
       (not= :receipt-river/receipt-recorded (:event/type record))
@@ -90,7 +131,7 @@
       (nil? registered-schema)
       (conj (str "unsupported schema version: " (:version schema)))
 
-      (not= registry/package-name (:package/name producer))
+      (not= package-name (:package/name producer))
       (conj (str "unexpected producer package: " (:package/name producer)))
 
       (not (and (string? (:package/version producer))

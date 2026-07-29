@@ -1,7 +1,6 @@
 (ns eta-mu.receipt-river.domain.event
   "Pure construction of Receipt River events."
-  (:require [eta-mu.receipt-river.generated.registry :as registry]
-            [eta-mu.receipt-river.law.receipt :as law]))
+  (:require [eta-mu.receipt-river.law.receipt :as law]))
 
 (def receipt-recorded-schema law/receipt-recorded-schema)
 
@@ -17,11 +16,11 @@
            :event/type :receipt-river/receipt-recorded
            :event/recorded-at recorded-at
            :event/schema {:id receipt-recorded-schema
-                          :version (get registry/current-versions receipt-recorded-schema)}
+                          :version (get law/current-versions receipt-recorded-schema)}
            :event/producer (merge
                             {:eta-mu/version (:eta-mu/version component-manifest)
-                             :package/name registry/package-name
-                             :package/version registry/package-version
+                             :package/name law/package-name
+                             :package/version law/package-version
                              :command command}
                             producer)
            :event/subject subject

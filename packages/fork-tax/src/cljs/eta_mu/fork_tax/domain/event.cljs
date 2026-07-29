@@ -1,8 +1,8 @@
 (ns eta-mu.fork-tax.domain.event
   "Pure construction of Fork Tax events."
-  (:require [eta-mu.fork-tax.generated.registry :as registry]))
+  (:require [eta-mu.fork-tax.law.handoff :as law]))
 
-(def handoff-recorded-schema :eta-mu.fork-tax/handoff-recorded)
+(def handoff-recorded-schema law/handoff-recorded-schema)
 
 (defn build-event
   [{:keys [event-id recorded-at component-manifest command producer subject
@@ -12,12 +12,12 @@
            :event/type :fork-tax/handoff-recorded
            :event/recorded-at recorded-at
            :event/schema {:id handoff-recorded-schema
-                          :version (get registry/current-versions
+                          :version (get law/current-versions
                                         handoff-recorded-schema)}
            :event/producer (merge
                             {:eta-mu/version (:eta-mu/version component-manifest)
-                             :package/name registry/package-name
-                             :package/version registry/package-version
+                             :package/name law/package-name
+                             :package/version law/package-version
                              :command command}
                             producer)
            :event/subject subject
