@@ -6,6 +6,9 @@
 (defn current-directory []
   (.cwd js/process))
 
+(defn now-timestamp []
+  (.toISOString (js/Date.)))
+
 (defn join-path [& values]
   (.apply (.-join path) nil (into-array values)))
 

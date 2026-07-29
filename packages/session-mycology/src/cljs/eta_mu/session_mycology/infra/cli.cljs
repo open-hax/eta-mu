@@ -18,11 +18,12 @@
       :ok stdout
       :not-a-repository cwd
       (throw
-       (js/Error.
+       (ex-info
         (str "Unable to resolve repository root ("
              (name status)
              "): "
-             stderr))))))
+             stderr)
+        {:status status :stderr stderr})))))
 
 (defn- schemas! []
   (println
@@ -38,7 +39,7 @@
     (when (str/blank? lesson)
       (runtime/error! "Usage: eta-mu session reflect <lesson>")
       (exit! 1))
-    (let [recorded-at (js/Date.)
+    (let [recorded-at (runtime/now-timestamp)
           payload (reflection/build-payload {:repo repo-root :lesson lesson})
           envelope (event/build-event
                     {:event-id (random-uuid)

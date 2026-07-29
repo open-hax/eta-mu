@@ -15,7 +15,7 @@
 
 (def metadata
   {:event-id #uuid "00000000-0000-0000-0000-000000000001"
-   :recorded-at #inst "2026-07-29T00:00:00.000Z"
+   :recorded-at "2026-07-29T00:00:00.000Z"
    :component-manifest component-manifest
    :command "eta-mu receipt append"
    :producer {:session/id "session-1" :actor/id "actor-1"}
@@ -68,6 +68,25 @@
                 :manifest "none"
                 :refs "none"}]
     (is (seq (law/record-errors legacy)))))
+
+(deftest timestamp-representation-test
+  (testing "ISO strings and historical EDN instants remain valid"
+    (let [payload (receipt/build-payload {:kind "observation"}
+                                         "/repo"
+                                         "2026-07-29T00:00:00.000Z"
+                                         :observation)]
+      (is (empty? (law/record-errors
+                   (event/build-event metadata payload))))
+      (is (empty? (law/record-errors
+                   (event/build-event
+                    (assoc metadata
+                           :recorded-at
+                           #inst "2026-07-29T00:00:00.000Z")
+                    payload))))
+      (is (seq (law/record-errors
+                (event/build-event
+                 (assoc metadata :recorded-at "2026-99-99T00:00:00.000Z")
+                 payload)))))))
 
 (deftest invalid-edn-emits-sanitized-bus-error-test
   (let [emitted (atom nil)

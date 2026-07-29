@@ -8,6 +8,14 @@
 (defn home-directory []
   (.homedir os))
 
+(defn now-timestamp []
+  (.toISOString (js/Date.)))
+
+(defn ^:async await-all [promises]
+  (-> (await (js/Promise.all (to-array promises)))
+      array-seq
+      vec))
+
 (defn exit! [code]
   (.exit js/process code))
 

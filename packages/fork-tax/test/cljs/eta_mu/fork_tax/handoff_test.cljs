@@ -93,7 +93,7 @@
               :blocked []}
         record (event/build-event
                 {:event-id #uuid "00000000-0000-0000-0000-000000000003"
-                 :recorded-at #inst "2026-07-29T00:00:00.000Z"
+                 :recorded-at "2026-07-29T00:00:00.000Z"
                  :component-manifest {:eta-mu/version "1.1.1"}
                  :command "eta-mu fork-tax"
                  :producer {}

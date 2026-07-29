@@ -9,7 +9,8 @@
             [eta-mu.receipt-river.extern.crypto :as crypto]
             [eta-mu.receipt-river.extern.fs :as fs]
             [eta-mu.receipt-river.extern.glob :as glob]
-            [eta-mu.receipt-river.extern.git :as git]))
+            [eta-mu.receipt-river.extern.git :as git]
+            [eta-mu.receipt-river.extern.runtime :as runtime]))
 
 (defn- stable-id [value]
   (crypto/short-sha256 value 24))
@@ -57,7 +58,7 @@
            (swap! observations conj
                   {:observation/type :inaccessible
                    :path path
-                   :message (.-message error)}))))
+                   :message (ex-message error)}))))
      root)
     {:candidates @candidates :observations @observations}))
 
@@ -69,16 +70,14 @@
   (let [path (:path candidate)
         kind (discovery/git-marker-kind candidate)
         [common-dir head root-commits remote toplevel]
-        (array-seq
-         (await
-          (js/Promise.all
-           (clj->js
-            [(git-value path ["rev-parse" "--path-format=absolute"
-                              "--git-common-dir"])
-             (git-value path ["rev-parse" "HEAD"])
-             (git-value path ["rev-list" "--max-parents=0" "HEAD"])
-             (git-value path ["remote" "get-url" "origin"])
-             (git-value path ["rev-parse" "--show-toplevel"])]))))
+        (await
+         (runtime/await-all
+          [(git-value path ["rev-parse" "--path-format=absolute"
+                            "--git-common-dir"])
+           (git-value path ["rev-parse" "HEAD"])
+           (git-value path ["rev-list" "--max-parents=0" "HEAD"])
+           (git-value path ["remote" "get-url" "origin"])
+           (git-value path ["rev-parse" "--show-toplevel"])]))
         worktree-path (or toplevel path)
         identity-source (or remote root-commits common-dir path)]
     {:repository/id (stable-id identity-source)
@@ -95,8 +94,9 @@
      :location/status :observed}))
 
 (defn- unsupported [operation]
-  (throw (js/Error.
-          (str operation " is not implemented by the first local-Git provider slice"))))
+  (throw (ex-info
+          (str operation " is not implemented by the first local-Git provider slice")
+          {:operation operation})))
 
 (defn- ^:async discover*
   [roots options]
@@ -104,9 +104,9 @@
         scans (mapv #(scan-root % exclusions) roots)
         candidates (->> scans (mapcat :candidates) distinct vec)
         observations (mapcat :observations scans)
-        rows (await (js/Promise.all (clj->js (mapv enrich candidates))))]
+        rows (await (runtime/await-all (mapv enrich candidates)))]
     (discovery/inventory
-     roots exclusions (vec (array-seq rows)) observations)))
+     roots exclusions rows observations)))
 
 (defrecord LocalGitProvider []
   provider/ArchaeologyProvider
@@ -115,7 +115,8 @@
   (register-repository [_ path]
     (if-let [candidate (marker path)]
       (enrich candidate)
-      (throw (js/Error. (str "Not a Git repository: " path)))))
+      (throw (ex-info (str "Not a Git repository: " path)
+                      {:path path}))))
   (list-references [_ _] (unsupported "list-references"))
   (find-path-history [_ _ _] (unsupported "find-path-history"))
   (read-object [_ _ _] (unsupported "read-object"))

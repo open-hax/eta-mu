@@ -4,6 +4,7 @@
   Wires the pure domain router to process I/O and command handlers."
   (:require [clojure.string :as str]
             [eta-mu.domain.router :as router]
+            [eta-mu.extern.console :as console]
             [eta-mu.extern.process :as process]
             [eta-mu.fork-tax.infra.cli :as fork-tax]
             [eta-mu.generated.component-manifest :as component-manifest]
@@ -93,8 +94,8 @@
 (defn- validate!
   []
   (when-not (law/valid-registry? (command-registry))
-    (js/console.error "Internal error: command registry is invalid")
-    (js/console.error (str (law/explain-registry (command-registry))))
+    (console/error! "Internal error: command registry is invalid")
+    (console/error! (str (law/explain-registry (command-registry))))
     (process/exit! 1)))
 
 (defn ^:async dispatch
@@ -115,18 +116,18 @@
           (process/exit! 0))
 
       :error
-      (do (js/console.warn (str "Routing legacy/unknown command to agent: " (:message descriptor)))
+      (do (console/warn! (str "Routing legacy/unknown command to agent: " (:message descriptor)))
           (await (agent/handle {:args (:positional parsed) :flags (:flags parsed)})))
 
       :dispatch
       (do (when-not (:handler (:command descriptor))
-            (js/console.error (str "Internal error: command has no handler: " (str/join " " (:path descriptor))))
+            (console/error! (str "Internal error: command has no handler: " (str/join " " (:path descriptor))))
             (process/exit! 1))
           (await ((:handler (:command descriptor)) {:args (:args descriptor)
                                                     :raw-args (router/raw-args-after-path tokens (:path descriptor))
                                                     :flags (:flags parsed)})))
 
-      (do (js/console.error "Internal error: unknown dispatch descriptor")
+      (do (console/error! "Internal error: unknown dispatch descriptor")
           (process/exit! 1)))))
 
 (defn main

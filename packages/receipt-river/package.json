@@ -20,7 +20,7 @@
     "build": "pnpm metadata && shadow-cljs release receipt-river",
     "prepublishOnly": "pnpm build",
     "test": "pnpm metadata && shadow-cljs compile test && node target/receipt-river-test.cjs",
-    "lint:kondo": "clj-kondo --lint src/cljs test/cljs",
+    "lint:kondo": "clj-kondo --lint src/cljs test/cljs && node ../../scripts/check-ledger-extern-boundaries.mjs receipt-river",
     "watch": "pnpm metadata && shadow-cljs watch receipt-river",
     "clean": "rm -rf dist-cljs target .shadow-cljs"
   },

@@ -20,13 +20,15 @@
    (let [{:keys [exit stdout stderr]} (await (git/exec-at cwd args options))]
      (if (zero? exit)
        stdout
-       (throw (js/Error. (str label " failed: " stderr)))))))
+       (throw (ex-info (str label " failed: " stderr)
+                       {:label label :stderr stderr}))))))
 
 (defn- ^:async collect-state []
   (let [cwd (runtime/current-directory)
         root-result (await (git/exec-at cwd ["rev-parse" "--show-toplevel"]))]
     (when-not (zero? (:exit root-result))
-      (throw (js/Error. "Not inside a git repository.")))
+      (throw (ex-info "Not inside a git repository."
+                      {:result root-result})))
     (let [repo-root (:stdout root-result)
           branch (await (git-value repo-root ["rev-parse" "--abbrev-ref" "HEAD"]
                                    "git branch"))
@@ -67,7 +69,8 @@
         (await (git/exec-at cwd args {:timeout-ms timeout-ms
                                      :kill-signal "SIGKILL"}))]
     (when-not (zero? exit)
-      (throw (js/Error. (str label " failed: " stderr))))))
+      (throw (ex-info (str label " failed: " stderr)
+                      {:label label :stderr stderr})))))
 
 (defn ^:async pay!
   [{:keys [args flags component-manifest]}]
@@ -88,7 +91,7 @@
         (handoff/partition-status entries (if (nil? owned-paths)
                                             [repo-root]
                                             owned-paths))
-        timestamp (runtime/now-iso)
+        timestamp (runtime/now-timestamp)
         tag-name (handoff/make-tag-name timestamp)
         plan {:repo-root repo-root
               :branch branch
@@ -124,7 +127,7 @@
       (let [eta-dir (runtime/join-path repo-root ".ημ")
             event-record (event/build-event
                           {:event-id (random-uuid)
-                           :recorded-at (js/Date. timestamp)
+                           :recorded-at timestamp
                            :component-manifest component-manifest
                            :command "eta-mu fork-tax"
                            :producer {}

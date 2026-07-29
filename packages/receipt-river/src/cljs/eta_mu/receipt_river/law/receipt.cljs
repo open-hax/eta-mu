@@ -16,11 +16,41 @@
   [:event/id :event/type :event/recorded-at :event/schema
    :event/producer :event/subject :event/payload])
 
+(def ^:private iso-instant-pattern
+  #"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{3})?Z$")
+
+(defn- leap-year? [year]
+  (or (zero? (mod year 400))
+      (and (zero? (mod year 4))
+           (not (zero? (mod year 100))))))
+
+(defn- days-in-month [year month]
+  (case month
+    2 (if (leap-year? year) 29 28)
+    (4 6 9 11) 30
+    31))
+
+(defn- valid-iso-timestamp? [value]
+  (when (string? value)
+    (when-let [[_ year month day hour minute second]
+               (re-matches iso-instant-pattern value)]
+      (let [year (parse-long year)
+            month (parse-long month)
+            day (parse-long day)
+            hour (parse-long hour)
+            minute (parse-long minute)
+            second (parse-long second)]
+        (and (<= 1 month 12)
+             (<= 1 day (days-in-month year month))
+             (<= 0 hour 23)
+             (<= 0 minute 59)
+             (<= 0 second 59))))))
+
 (defn- valid-timestamp? [value]
-  (or (and (instance? js/Date value)
-           (not (js/Number.isNaN (.getTime value))))
-      (and (string? value)
-           (not (js/Number.isNaN (js/Date.parse value))))))
+  (or (and (inst? value)
+           (let [milliseconds (inst-ms value)]
+             (= milliseconds milliseconds)))
+      (boolean (valid-iso-timestamp? value))))
 
 (defn- missing-errors [value required]
   (into []

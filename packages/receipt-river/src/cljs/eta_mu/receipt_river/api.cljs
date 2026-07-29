@@ -27,13 +27,14 @@
        :errors errors
        :line line})
     (catch :default error
-      (bus/emit-error! :receipt-river/invalid-edn
-                       {:line-number line-number
-                        :exception/name (or (.-name error) "Error")
-                        :exception/message (.-message error)})
-      {:ok false
-       :line-number line-number
-       :event nil
-       :source/schema {:status :unreadable}
-       :errors [(str "invalid EDN: " (.-message error))]
-       :line line})))
+      (let [message (ex-message error)]
+        (bus/emit-error! :receipt-river/invalid-edn
+                         {:line-number line-number
+                          :exception/name "Error"
+                          :exception/message message})
+        {:ok false
+         :line-number line-number
+         :event nil
+         :source/schema {:status :unreadable}
+         :errors [(str "invalid EDN: " message)]
+         :line line}))))

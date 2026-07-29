@@ -20,7 +20,7 @@
     "build": "pnpm metadata && shadow-cljs release session-mycology",
     "prepublishOnly": "pnpm build",
     "test": "pnpm metadata && shadow-cljs compile test && node target/session-mycology-test.cjs",
-    "lint:kondo": "clj-kondo --lint src/cljs test/cljs",
+    "lint:kondo": "clj-kondo --lint src/cljs test/cljs && node ../../scripts/check-ledger-extern-boundaries.mjs session-mycology",
     "watch": "pnpm metadata && shadow-cljs watch session-mycology",
     "clean": "rm -rf dist-cljs target .shadow-cljs"
   },

@@ -16,7 +16,9 @@
 (defn assert-valid
   [payload]
   (when-not (m/validate reflection-payload payload)
-    (throw (js/Error.
+    (throw (ex-info
             (str "Invalid session reflection payload: "
-                 (pr-str (m/explain reflection-payload payload))))))
+                 (pr-str (m/explain reflection-payload payload)))
+            {:payload payload
+             :explanation (m/explain reflection-payload payload)})))
   payload)

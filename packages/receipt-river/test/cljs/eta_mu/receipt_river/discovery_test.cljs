@@ -51,6 +51,10 @@
                                    ["/repo/cache/?.edn"])))
     (is (false? (glob/matches-any? "/repo/cache/.edn"
                                    ["/repo/cache/?.edn"])))
+    (is (glob/matches-any? "/root/cache" ["**/cache/**"]))
+    (is (glob/matches-any? "/root/cache/repository" ["**/cache/**"]))
+    (is (glob/matches-any? "cache" ["**/cache/**"]))
+    (is (false? (glob/matches-any? "/root/cacheable" ["**/cache/**"])))
     (is (false? (discovery/excluded? "/repo/src/cache.cljs"
                                      ["**/cache/**"]
                                      (glob/matches-any? "/repo/src/cache.cljs"
@@ -100,6 +104,23 @@
              :previous-paths ["/old/repo"]
              :path "/new/repo"}]
            (:observations result)))))
+
+(deftest ^:async trailing-globstar-excludes-repository-root-test
+  (let [root (.mkdtempSync fs (path/join (.tmpdir os)
+                                         "eta-mu-discovery-exclude-"))
+        included (path/join root "included")
+        excluded (path/join root "cache")]
+    (try
+      (doseq [repository [included excluded]]
+        (.mkdirSync fs (path/join repository ".git") #js {:recursive true}))
+      (let [inventory (await (provider/discover-repositories
+                              (local-git/local-git-provider)
+                              [root]
+                              {:exclude ["**/cache/**"]}))]
+        (is (= [included]
+               (mapv :repository/path (:repositories inventory)))))
+      (finally
+        (.rmSync fs root #js {:recursive true :force true})))))
 
 (deftest ^:async safe-filesystem-discovery-test
   (testing "normal, linked, submodule, bare, nested, and symlink shapes are inventoried safely"

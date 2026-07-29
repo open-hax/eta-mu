@@ -14,7 +14,7 @@
                (str/replace #"\r?\n+" " ")
                (str/replace #"\s+" " ")
                str/trim)]
-     (if (pos? (.-length s)) s fallback))))
+     (if (seq s) s fallback))))
 
 (defn normalize-kind
   [value fallback]
@@ -22,7 +22,8 @@
         kind (keyword (if (str/starts-with? raw ":") (subs raw 1) raw))]
     (if (contains? known-kinds kind)
       kind
-      (throw (js/Error. (str "Unknown receipt kind: " kind))))))
+      (throw (ex-info (str "Unknown receipt kind: " kind)
+                      {:kind kind})))))
 
 (defn build-payload
   "Build the existing Receipt River record shape as a package-owned payload."

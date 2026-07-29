@@ -24,9 +24,9 @@
   (runtime/exit! code))
 
 (defn- clamp-lines [value fallback]
-  (let [number (when-not (nil? value) (js/Number value))]
-    (if (and (some? number) (js/Number.isFinite number))
-      (js/Math.max 1 (js/Math.min max-lines (js/Math.trunc number)))
+  (let [number (when (some? value) (parse-long value))]
+    (if (some? number)
+      (max 1 (min max-lines number))
       fallback)))
 
 (defn- expand-home [value]
@@ -93,7 +93,8 @@
         (cond
           (= token "--root")
           (if (nil? next-token)
-            (throw (js/Error. "Invalid discovery argument: --root requires a value"))
+            (throw (ex-info "Invalid discovery argument: --root requires a value"
+                            {:argument token}))
             (recur (subvec remaining 2) (update result :roots conj next-token)))
 
           (str/starts-with? token "--root=")
@@ -101,7 +102,8 @@
 
           (= token "--exclude")
           (if (nil? next-token)
-            (throw (js/Error. "Invalid discovery argument: --exclude requires a value"))
+            (throw (ex-info "Invalid discovery argument: --exclude requires a value"
+                            {:argument token}))
             (recur (subvec remaining 2) (update result :exclude conj next-token)))
 
           (str/starts-with? token "--exclude=")
@@ -109,14 +111,16 @@
 
           (= token "--output")
           (if (nil? next-token)
-            (throw (js/Error. "Invalid discovery argument: --output requires a value"))
+            (throw (ex-info "Invalid discovery argument: --output requires a value"
+                            {:argument token}))
             (recur (subvec remaining 2) (assoc result :output next-token)))
 
           (str/starts-with? token "--output=")
           (recur (subvec remaining 1) (assoc result :output (subs token 9)))
 
           :else
-          (throw (js/Error. (str "Unknown discovery argument: " token))))))))
+          (throw (ex-info (str "Unknown discovery argument: " token)
+                          {:argument token})))))))
 
 (defn- normalized-exclusion [value]
   (if (or (= value "~")
@@ -132,8 +136,8 @@
       (catch :default error
         (bus/emit-error! :receipt-river/invalid-previous-inventory
                          {:path output-path
-                          :exception/name (or (.-name error) "Error")
-                          :exception/message (.-message error)})
+                          :exception/name "Error"
+                          :exception/message (ex-message error)})
         nil))))
 
 (defn- ^:async discover! [tokens]
@@ -165,7 +169,7 @@
   (try
     (await (discover! tokens))
     (catch :default error
-      (runtime/error! (.-message error))
+      (runtime/error! (ex-message error))
       (runtime/error! discovery-usage)
       (exit! 1))))
 
@@ -214,10 +218,10 @@
     (when (str/blank? kind)
       (runtime/error! "Usage: eta-mu receipt append <kind> <note>")
       (exit! 1))
-    (let [recorded-at (js/Date.)
+    (let [recorded-at (runtime/now-timestamp)
           payload (receipt/build-payload {:kind kind :note note}
                                          repo-root
-                                         (.toISOString recorded-at)
+                                         recorded-at
                                          :observation)
           envelope (event/build-event
                     {:event-id (random-uuid)
