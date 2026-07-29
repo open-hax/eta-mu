@@ -224,7 +224,7 @@
           submodule (path/join root "submodule")
           submodule-gitdir (path/join normal ".git" "modules" "submodule")
           bare (path/join root "bare.git")
-          fake-loose-repo (path/join bare "objects" "fake-loose-repo")
+          nested-in-bare (path/join bare "objects" "nested-repository")
           fake-bare (path/join root "not-a-bare-repository")
           fake-marker (path/join normal "empty-marker")
           cycle (path/join root "cycle")]
@@ -235,7 +235,8 @@
                                      "commit" "--allow-empty" "-q" "-m" "root"]]
                             [root ["init" "-q" nested]]
                             [normal ["worktree" "add" "-q" linked]]
-                            [root ["init" "--bare" "-q" bare]]]]
+                            [root ["init" "--bare" "-q" bare]]
+                            [root ["init" "-q" nested-in-bare]]]]
           (let [{:keys [exit stderr]} (await (git/exec-at cwd args))]
             (is (zero? exit) stderr)))
         (.mkdirSync fs (path/join normal ".git" "modules") #js {:recursive true})
@@ -245,8 +246,7 @@
                                              submodule-gitdir)
                                         submodule]))]
           (is (zero? exit) stderr))
-        (doseq [directory [(path/join fake-loose-repo ".git")
-                           (path/join fake-bare "objects")
+        (doseq [directory [(path/join fake-bare "objects")
                            (path/join fake-bare "refs")
                            (path/join fake-marker ".git")]]
           (.mkdirSync fs directory #js {:recursive true}))
@@ -265,9 +265,13 @@
           (is (= 5 (count (:repositories inventory))))
           (is (not-any? #(= fake-bare (:repository/path %))
                         (:repositories inventory)))
-          (is (not-any? #(str/starts-with? (:repository/path %)
-                                           (path/join bare "objects"))
-                        (:repositories inventory)))
+          (testing "a bare object store is never traversed"
+            (is (not-any? #(str/starts-with? (:repository/path %)
+                                             (path/join bare "objects"))
+                          (:repositories inventory)))
+            (is (not-any? #(str/starts-with? (or (:path %) "")
+                                             (path/join bare "objects"))
+                          (:observations inventory))))
           (testing "an empty .git directory inside a repository is not a repository"
             (is (not-any? #(= fake-marker (:repository/path %))
                           (:repositories inventory)))
