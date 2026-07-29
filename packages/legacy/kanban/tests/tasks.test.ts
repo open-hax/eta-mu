@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -46,7 +46,7 @@ Ship beta.
 
     expect(tasks).toHaveLength(2);
     expect(tasks[0]).toMatchObject({
-      uuid: "nested-beta",
+      uuid: "beta-task",
       title: "Beta Task",
       status: "ready",
       priority: "P3",
@@ -83,29 +83,63 @@ Still readable.
 
     expect(tasks).toHaveLength(1);
     expect(tasks[0]).toMatchObject({
-      uuid: "broken",
+      uuid: "broken-task",
       title: "Broken Task",
       status: "todo",
     });
   });
 
-  it("derives distinct path-qualified UUIDs for equal titles", async () => {
+  it("preserves legacy fallback UUIDs when status folders change", async () => {
     const tempDir = await mkdtemp(path.join(os.tmpdir(), "openhax-kanban-uuid-"));
-    await mkdir(path.join(tempDir, "one"), { recursive: true });
-    await mkdir(path.join(tempDir, "two"), { recursive: true });
+    const incomingDir = path.join(tempDir, "incoming");
+    const doneDir = path.join(tempDir, "done");
+    await mkdir(incomingDir, { recursive: true });
+    await mkdir(doneDir, { recursive: true });
 
-    const source = `---
+    const incomingPath = path.join(incomingDir, "task.md");
+    const donePath = path.join(doneDir, "task.md");
+    await writeFile(
+      incomingPath,
+      `---
 title: Shared Title
+status: incoming
+---
+
+Work.
+`,
+      "utf8",
+    );
+
+    const beforeMove = await loadTasks(tempDir);
+    await rename(incomingPath, donePath);
+    const afterMove = await loadTasks(tempDir);
+
+    expect(beforeMove[0]?.uuid).toBe("shared-title");
+    expect(afterMove[0]?.uuid).toBe("shared-title");
+  });
+
+  it("ignores nested eta-mu tooling checkouts", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "openhax-kanban-checkout-"));
+    const taskDir = path.join(tempDir, "kanban", "tasks");
+    const toolingDir = path.join(tempDir, ".eta-mu", "kanban", "tasks");
+    await mkdir(taskDir, { recursive: true });
+    await mkdir(toolingDir, { recursive: true });
+
+    const taskSource = `---
+uuid: shared-task
+title: Shared Task
 status: ready
 ---
 
 Work.
 `;
-    await writeFile(path.join(tempDir, "one", "task.md"), source, "utf8");
-    await writeFile(path.join(tempDir, "two", "task.md"), source, "utf8");
+    await writeFile(path.join(taskDir, "shared.md"), taskSource, "utf8");
+    await writeFile(path.join(toolingDir, "shared.md"), taskSource, "utf8");
 
     const tasks = await loadTasks(tempDir);
-    expect(tasks.map((task) => task.uuid).sort()).toEqual(["one-task", "two-task"]);
+
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]?.relativePath).toBe("kanban/tasks/shared.md");
   });
 });
 
