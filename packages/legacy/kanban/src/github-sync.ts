@@ -100,7 +100,12 @@ const defaultLabelColors: Record<string, string> = {
 const statusColor = "cfd3d7";
 const defaultTaskLabelColor = "ededed";
 const closedTaskStatuses = new Set(["done", "rejected"]);
-const metadataFilePatterns = [/^AGENTS\.md$/iu, /^CHANGELOG(?:\..*)?$/iu, /^CROSS_REFERENCES\.md$/iu];
+const metadataFilePatterns = [
+  /^README(?:\..*)?$/iu,
+  /^AGENTS\.md$/iu,
+  /^CHANGELOG(?:\..*)?$/iu,
+  /^CROSS_REFERENCES\.md$/iu,
+];
 const timestampedMarkdownPattern = /^\d{4}-\d{2}-\d{2}(?:[-_].*)?\.md$/iu;
 const taskProjectionSegments = new Set(["tasks", "epics", "cards"]);
 
