@@ -19,6 +19,7 @@
   Create stub namespaces returning nil/empty to enter green phase,
   then implement to pass."
   (:require [cljs.test :refer [deftest is testing]]
+            [eta-mu.extensions.receipt-river :as receipt-river]
             [eta-mu.extensions.receipt-river.edn  :as rr-edn]
             [eta-mu.extensions.receipt-river.repo :as rr-repo]))
 
@@ -87,6 +88,21 @@
         back (rr-edn/parse-edn-event (rr-edn/edn-event e))]
     (is (= "fixed the thing" (:note back)))
     (is (= "42 pass 0 fail" (:tests back)))))
+
+(deftest versioned-envelope-remains-readable-by-active-extension
+  (let [envelope {:event/id #uuid "00000000-0000-0000-0000-000000000001"
+                  :event/type :receipt-river/receipt-recorded
+                  :event/recorded-at #inst "2026-07-29T00:00:00.000Z"
+                  :event/schema {:id :eta-mu.receipt-river/receipt-recorded
+                                 :version 1}
+                  :event/producer {:eta-mu/version "1.1.1"
+                                   :package/name "@eta-mu/receipt-river"
+                                   :package/version "0.1.0"}
+                  :event/subject {:repository/path "/repo"}
+                  :event/payload sample-event}
+        result (receipt-river/validate-edn-event (pr-str envelope) 1)]
+    (is (true? (aget result "ok")))
+    (is (= envelope (aget result "event")))))
 
 ;; ============================================================
 ;; Git repo root detection

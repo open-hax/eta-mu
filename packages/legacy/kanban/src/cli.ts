@@ -167,9 +167,14 @@ const printGitHubSyncPlan = (
   console.log(
     `- Skip done/rejected tasks without existing issues: ${result.plan.summary.skippedClosedTasks}`,
   );
+  console.log(`- Exclude non-task markdown: ${result.plan.summary.excludedTasks}`);
   if (!dryRun) {
     console.log(`- Applied operations: ${result.appliedOperations.length}`);
   }
+
+  result.plan.excludedTasks.forEach(({ task, reason }) => {
+    console.log(`  = skip ${task.relativePath ?? task.sourcePath}: ${reason}`);
+  });
 
   result.plan.operations.forEach((operation) => {
     switch (operation.type) {

@@ -80,6 +80,7 @@
   [value]
   (let [spec (maybe-cljs-map value)
         contract-id (spec-value spec :contract_id :contract-id :contractId :agent_id :agent-id :agentId)
+        contract-revision (spec-value spec :contract_revision :contract-revision :contractRevision)
         actor-id (spec-value spec :actor_id :actor-id :actorId)
         role (spec-value spec :role :role_slug :role-slug)
         system-prompt (spec-value-raw spec :system_prompt :system-prompt :systemPrompt)
@@ -98,8 +99,10 @@
                     (:runtimeSources spec))
         memory-hydration (memory-hydration-spec spec)
         context-policy (context-policy-spec spec)]
-    (when (or contract-id actor-id role system-prompt task-prompt model thinking-level (seq tool-policies) resource-policies (seq sources) memory-hydration context-policy)
+    (when (or contract-id contract-revision actor-id role system-prompt task-prompt model thinking-level
+              (seq tool-policies) resource-policies (seq sources) memory-hydration context-policy)
       {:contract-id contract-id
+       :contract-revision contract-revision
        :actor-id actor-id
        :role role
        :system-prompt system-prompt
@@ -206,11 +209,11 @@
                                                    "template-context"))
      :mode (or (body-value body "mode") "direct")
      :agent-spec (normalize-agent-spec (or (body-value body "agentId"
-                                                           "agent_id"
-                                                           "agent-id")
-                                            (body-value body "agentSpec"
-                                                        "agent_spec"
-                                                        "agent-spec")))
+                                                       "agent_id"
+                                                       "agent-id")
+                                        (body-value body "agentSpec"
+                                                    "agent_spec"
+                                                    "agent-spec")))
      :auth-context (maybe-cljs-map (body-value body "authContext"
                                                "auth_context"
                                                "auth-context"))}))

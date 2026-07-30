@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -34,6 +34,7 @@ Ship alpha.
 title: Beta Task
 status: ready
 tags: [beta, sync]
+sync_github: true
 ---
 
 Ship beta.
@@ -45,16 +46,20 @@ Ship beta.
 
     expect(tasks).toHaveLength(2);
     expect(tasks[0]).toMatchObject({
+      uuid: "beta-task",
       title: "Beta Task",
       status: "ready",
       priority: "P3",
       labels: ["beta", "sync"],
+      relativePath: "nested/beta.md",
+      syncGitHub: true,
     });
     expect(tasks[1]).toMatchObject({
       uuid: "alpha-1",
       status: "in_progress",
       priority: "P1",
       labels: ["alpha", "platform"],
+      relativePath: "alpha.md",
     });
   });
 
@@ -78,9 +83,63 @@ Still readable.
 
     expect(tasks).toHaveLength(1);
     expect(tasks[0]).toMatchObject({
+      uuid: "broken-task",
       title: "Broken Task",
       status: "todo",
     });
+  });
+
+  it("preserves legacy fallback UUIDs when status folders change", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "openhax-kanban-uuid-"));
+    const incomingDir = path.join(tempDir, "incoming");
+    const doneDir = path.join(tempDir, "done");
+    await mkdir(incomingDir, { recursive: true });
+    await mkdir(doneDir, { recursive: true });
+
+    const incomingPath = path.join(incomingDir, "task.md");
+    const donePath = path.join(doneDir, "task.md");
+    await writeFile(
+      incomingPath,
+      `---
+title: Shared Title
+status: incoming
+---
+
+Work.
+`,
+      "utf8",
+    );
+
+    const beforeMove = await loadTasks(tempDir);
+    await rename(incomingPath, donePath);
+    const afterMove = await loadTasks(tempDir);
+
+    expect(beforeMove[0]?.uuid).toBe("shared-title");
+    expect(afterMove[0]?.uuid).toBe("shared-title");
+  });
+
+  it("ignores nested eta-mu tooling checkouts", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "openhax-kanban-checkout-"));
+    const taskDir = path.join(tempDir, "kanban", "tasks");
+    const toolingDir = path.join(tempDir, ".eta-mu", "kanban", "tasks");
+    await mkdir(taskDir, { recursive: true });
+    await mkdir(toolingDir, { recursive: true });
+
+    const taskSource = `---
+uuid: shared-task
+title: Shared Task
+status: ready
+---
+
+Work.
+`;
+    await writeFile(path.join(taskDir, "shared.md"), taskSource, "utf8");
+    await writeFile(path.join(toolingDir, "shared.md"), taskSource, "utf8");
+
+    const tasks = await loadTasks(tempDir);
+
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]?.relativePath).toBe("kanban/tasks/shared.md");
   });
 });
 

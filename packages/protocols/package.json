@@ -11,7 +11,7 @@
   "scripts": {
     "compile:lib": "shadow-cljs compile lib",
     "compile:test": "shadow-cljs compile test",
-    "test": "node target/test.cjs",
+    "test": "shadow-cljs compile test && node target/test.cjs",
     "lint": "clj-kondo --lint src test",
     "lint:kondo": "clj-kondo --lint src test"
   },

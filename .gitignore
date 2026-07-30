@@ -66,3 +66,5 @@ core
 
 packages/eta-mu/dist-cli/
 packages/eta-mu/*.tgz
+
+.ημ/receipt-river/repository-inventory.edn
