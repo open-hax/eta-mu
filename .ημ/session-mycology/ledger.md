@@ -133,3 +133,12 @@
   spore: none
   receipt-refs: none
   note: A 'clean' working tree is not evidence the work is safe: git status showed nothing while a GitKraken auto-stash held the only copy of an epic and ten rescope records. Enumerate git stash list BEFORE concluding a repo is clean, and prove landed-ness by comparing blob hashes (git rev-parse stash@{0}:<path>) against main and every open PR branch rather than reading diffs. The ledger union was lossless only because main's log was a literal prefix of the stashed one — verify prefix-extension by byte comparison, do not assume it.
+- ts: 2026-07-30T22:44:57.182830641Z
+  session: /home/err/spaces/eta-mu/.claude/worktrees/agent-operating-standard
+  task: Verify packages/eta-mu has the receipts subcommands; retract findings made against the published binary
+  p-efficiency: 0.45
+  p-friction: 0.8
+  p-skill-candidate: 0.95
+  spore: none
+  receipt-refs: none
+  note: Produced a page of confident, plausible, false CLI findings because 'eta-mu' on PATH was the published npm build, not the workspace — same version number, different command surface. The binary did not error, it answered incorrectly. Before treating any CLI output as evidence: resolve the binary (readlink -f $(which x)), compare it to the source command registry, and build the tree. Also: a build inside a worktree with no node_modules exits 0 while emitting 163 undeclared-var warnings and producing a broken artifact — exit code 0 is not proof of a good build.
