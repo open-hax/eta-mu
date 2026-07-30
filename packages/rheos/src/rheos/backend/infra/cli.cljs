@@ -15,7 +15,9 @@
             [rheos.backend.infra.view-store :as views]
             [rheos.backend.infra.http-server :as http-server]))
 
-(defn- parse-args [args]
+(def ^:private boolean-flags #{"force-status" "verbose"})
+
+(defn parse-args [args]
   (let [args-vec (vec args)
         cmd (when (and (seq args-vec) (not (re-matches #"^--.*" (nth args-vec 0)))) (nth args-vec 0))
         sub (when (and (> (count args-vec) 1) (not (re-matches #"^--.*" (nth args-vec 1)))) (nth args-vec 1))
@@ -25,10 +27,22 @@
                   acc
                   (let [k (first remaining)
                         v (second remaining)
-                        flag-name (when (and k (re-matches #"^--.*" k)) (subs k 2))]
-                    (if flag-name
-                      (recur (drop 2 remaining) (assoc acc flag-name v))
-                      (recur (rest remaining) acc)))))]
+                        flag-name (when (and k (re-matches #"^--.*" k)) (subs k 2))
+                        next-is-flag? (and v (re-matches #"^--.*" v))]
+                    (cond
+                      (nil? flag-name)
+                      (recur (rest remaining) acc)
+
+                      (boolean-flags flag-name)
+                      (if (contains? #{"true" "false"} v)
+                        (recur (drop 2 remaining) (assoc acc flag-name (= "true" v)))
+                        (recur (rest remaining) (assoc acc flag-name true)))
+
+                      (or (nil? v) next-is-flag?)
+                      (recur (rest remaining) (assoc acc flag-name nil))
+
+                      :else
+                      (recur (drop 2 remaining) (assoc acc flag-name v))))))]
     {:command cmd
      :subcommand sub
      :flags flags}))
@@ -43,7 +57,7 @@
   (println "  openhax-kanban move <task-uuid> --to <status> [--project <id>]")
   (println "  openhax-kanban status-update <task-uuid> --to <status> [--project <id>]")
   (println "  openhax-kanban add-comment <task-uuid> --text <text> [--project <id>]")
-  (println "  openhax-kanban create --title <title> [--type <task|epic>] [--parent <uuid>] [--project <id>] [--priority <p>] [--points <n>] [--labels <l>] [--body-file <path>] [--dir <path>] [--uuid <id>]")
+  (println "  openhax-kanban create --title <title> [--type <task|epic>] [--parent <uuid>] [--project <id>] [--status <s>] [--force-status] [--priority <p>] [--points <n>] [--labels <l>] [--body-file <path>] [--dir <path>] [--uuid <id>]")
   (println "  openhax-kanban create-subtask <parent-uuid> --title <title> [--project <id>] [--status <s>] [--priority <p>]")
   (println "  openhax-kanban read-task <task-uuid> [--project <id>]")
   (println "  openhax-kanban search-tasks --query <text>")
@@ -79,7 +93,7 @@
       (println (js/JSON.stringify (clj->js snapshot) nil 2)))))
 
 (defn- cmd-board-list [project-state flags]
-  (let [verbose? (= "true" (:verbose flags))]
+  (let [verbose? (true? (:verbose flags))]
     (doseq [project (:projects project-state)]
       (let [default? (= (:id project) (:default-project-id project-state))]
         (println (str "[" (:id project) "]" (when default? " (default)") " " (:title project)))
@@ -186,8 +200,14 @@
   (let [flags (:flags parsed)
         project (find-project project-state (get-flag flags "project"))
         title (get-flag flags "title")]
-    (if (nil? title)
+    (cond
+      (nil? project)
+      (println "unknown project")
+
+      (nil? title)
       (println "usage: openhax-kanban create --title <title> [--type <task|epic>] [--parent <uuid>]")
+
+      :else
       (let [labels (when-let [l (get-flag flags "labels")]
                      (vec (filter seq (map str/trim (str/split l #",")))))
             body (await (read-body flags))
@@ -203,7 +223,7 @@
                             :body body
                             :dir (get-flag flags "dir")
                             :uuid (get-flag flags "uuid")
-                            :force-status? (some? (get-flag flags "force-status"))
+                            :force-status? (true? (get-flag flags "force-status"))
                             :source "cli"}))]
         (println (str "created " (:card-type result) " " (:uuid result)
                       " [" (:status result) "] " (:title result)))
