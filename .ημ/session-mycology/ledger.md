@@ -124,3 +124,12 @@
   spore: 20260726-010000-review-thread-closeout-verification.md
   receipt-refs: pr-142-review-should-fix-batch
   note: 14 of 15 "open" threads were already fixed in code — the merge was blocked purely by unresolved conversations, not by work. Verify each finding against the branch tip BEFORE planning fixes; the worktree was 6 commits behind, so agents had to read blobs via `git show origin/<branch>:<path>`. Two gates the bots' own fix commits left red (a test stubbing p/process with a delay that cannot satisfy 3-arity deref; 2 promise-chain kondo warnings) were invisible because neither `pnpm lint` nor sol's lint runs in CI — a review-fix commit's evidence test can itself be failing.
+- ts: 2026-07-30T22:32:19.953475303Z
+  session: /home/err/spaces/eta-mu/.claude/worktrees/agent-operating-standard
+  task: Recover stashed board history, prune dead worktrees, record the agent operating standard
+  p-efficiency: 0.72
+  p-friction: 0.6
+  p-skill-candidate: 0.85
+  spore: none
+  receipt-refs: none
+  note: A 'clean' working tree is not evidence the work is safe: git status showed nothing while a GitKraken auto-stash held the only copy of an epic and ten rescope records. Enumerate git stash list BEFORE concluding a repo is clean, and prove landed-ness by comparing blob hashes (git rev-parse stash@{0}:<path>) against main and every open PR branch rather than reading diffs. The ledger union was lossless only because main's log was a literal prefix of the stashed one — verify prefix-extension by byte comparison, do not assume it.
