@@ -20,6 +20,18 @@
    :producer {:session/id "session-1" :actor/id "actor-1"}
    :subject {:repository/id "repo-1" :repository/path "/repo"}})
 
+(def valid-legacy-record
+  {:ts "2026-07-01T00:00:00.000Z"
+   :kind :observation
+   :repo "/repo"
+   :origin "pi"
+   :owner "receipt-river"
+   :dod "observe"
+   :pi "0.1.0"
+   :host "local"
+   :manifest "none"
+   :refs "none"})
+
 (deftest version-stamped-event-test
   (testing "the package, application composition, and schema versions are distinct"
     (let [payload (receipt/build-payload {:kind "test-run" :note "green"}
@@ -56,17 +68,15 @@
     (is (= (:owner payload) (:dod payload)))))
 
 (deftest invalid-date-object-test
-  (let [legacy {:ts (js/Date. "invalid")
-                :kind :observation
-                :repo "/repo"
-                :origin "pi"
-                :owner "receipt-river"
-                :dod "observe"
-                :pi "0.1.0"
-                :host "local"
-                :manifest "none"
-                :refs "none"}]
+  (let [legacy (assoc valid-legacy-record :ts (js/Date. "invalid"))]
     (is (seq (law/record-errors legacy)))))
+
+(deftest nil-required-fields-test
+  (testing "required legacy keys cannot hide nil values"
+    (is (= ["missing required key: kind"]
+           (law/record-errors (assoc valid-legacy-record :kind nil))))
+    (is (= ["missing required key: ts"]
+           (law/record-errors (assoc valid-legacy-record :ts nil))))))
 
 (deftest timestamp-representation-test
   (testing "ISO strings and historical EDN instants remain valid"
@@ -99,32 +109,16 @@
 
 (deftest historical-record-stays-unversioned-test
   (testing "shape compatibility does not retroactively assign a schema"
-    (let [legacy {:ts "2026-07-01T00:00:00.000Z"
-                  :kind :observation
-                  :repo "/repo"
-                  :origin "pi"
-                  :owner "receipt-river"
-                  :dod "observe"
-                  :pi "0.1.0"
-                  :host "local"
-                  :manifest "none"
-                  :refs "none"}
-          result (api/validate-line (pr-str legacy) 1)]
+    (let [result (api/validate-line (pr-str valid-legacy-record) 1)]
       (is (:ok result))
       (is (= {:status :unversioned} (:source/schema result))))))
 
 (deftest historical-nanosecond-timestamp-test
-  (let [legacy {:ts "2026-07-12T00:13:19.200387541Z"
-                :kind :observation
-                :repo "/repo"
-                :origin "pi"
-                :owner "receipt-river"
-                :dod "observe"
-                :pi "0.1.0"
-                :host "local"
-                :manifest "none"
-                :refs "none"}]
-    (is (:ok (api/validate-line (pr-str legacy) 92)))))
+  (is (:ok
+       (api/validate-line
+        (pr-str (assoc valid-legacy-record
+                       :ts "2026-07-12T00:13:19.200387541Z"))
+        92))))
 
 (deftest law-owned-registry-test
   (is (= "0.1.0" law/package-version))
