@@ -4,7 +4,7 @@
   watch {:doc "Dev watch with hot-reload"
          :task (shell "shadow-cljs watch server-dev")}
   test {:doc "Run tests"
-        :task (shell "shadow-cljs compile test && node target/test.cjs")}
+        :task (shell "shadow-cljs compile test && node dist/test.cjs")}
   lint {:doc "Lint source with clj-kondo"
         :task (shell "clj-kondo --lint src test")}
   clean {:doc "Clean build artifacts"

@@ -1,0 +1,9 @@
+{:tasks
+ {test {:doc "Run every workspace unit-test suite"
+        :task (shell "bb scripts/test.bb")}
+  lint {:doc "clj-kondo across all CLJS packages, then the TypeScript-era checks"
+        :task (shell "bb scripts/lint.bb")}
+  kondo {:doc "clj-kondo only, skipping the TypeScript-era checks"
+         :task (shell "bb scripts/lint.bb --kondo-only")}
+  build {:doc "Recursive workspace build"
+         :task (shell "pnpm -r --no-bail build")}}}
