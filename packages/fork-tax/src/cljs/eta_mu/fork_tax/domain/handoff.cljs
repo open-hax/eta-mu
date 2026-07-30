@@ -62,38 +62,71 @@
    :concurrent (vec concurrent)
    :blocked (vec blocked)})
 
+(defn- escape-sexp [value]
+  (str/escape (str value)
+              {"\\" "\\\\"
+               "\"" "\\\""
+               "\n" "\\n"
+               "\r" "\\r"
+               "\t" "\\t"}))
+
+(defn- escape-html [value]
+  (str/escape (str value)
+              {"&" "&amp;"
+               "<" "&lt;"
+               ">" "&gt;"
+               "\"" "&quot;"
+               "'" "&#39;"}))
+
+(defn- markdown-value [value]
+  (-> value
+      str
+      (str/replace "\\" "\\\\")
+      (str/replace "\n" "\\n")
+      (str/replace "\r" "\\r")
+      (str/replace "\t" "\\t")
+      escape-html))
+
+(defn- markdown-code [value]
+  (str "<code>" (markdown-value value) "</code>"))
+
+(defn- sexp-paths [entries]
+  (str/join "\n"
+            (map #(str "    \"" (escape-sexp (:path %)) "\"")
+                 entries)))
+
+(defn- markdown-paths [entries]
+  (if (seq entries)
+    (str/join "\n"
+              (map #(str "- " (markdown-code (:path %))) entries))
+    "- none"))
+
 (defn build-state-sexp
   [{:keys [repo-root branch sha tag-name owned concurrent blocked timestamp]}]
   (str "(Π-state\n"
-       "  (repo \"" (str/escape repo-root {"\\" "\\\\" "\"" "\\\""}) "\")\n"
-       "  (branch \"" branch "\")\n"
-       "  (sha \"" sha "\")\n"
-       "  (tag \"" tag-name "\")\n"
-       "  (ts \"" timestamp "\")\n"
-       "  (owned\n" (str/join "\n" (map #(str "    \"" (:path %) "\"") owned)) ")\n"
-       "  (concurrent\n" (str/join "\n" (map #(str "    \"" (:path %) "\"") concurrent)) ")\n"
-       "  (blocked\n" (str/join "\n" (map #(str "    \"" (:path %) "\"") blocked)) "))\n"))
+       "  (repo \"" (escape-sexp repo-root) "\")\n"
+       "  (branch \"" (escape-sexp branch) "\")\n"
+       "  (sha \"" (escape-sexp sha) "\")\n"
+       "  (tag \"" (escape-sexp tag-name) "\")\n"
+       "  (ts \"" (escape-sexp timestamp) "\")\n"
+       "  (owned\n" (sexp-paths owned) ")\n"
+       "  (concurrent\n" (sexp-paths concurrent) ")\n"
+       "  (blocked\n" (sexp-paths blocked) "))\n"))
 
 (defn build-last-md
   [{:keys [repo-root branch sha tag-name owned concurrent blocked timestamp]}]
-  (str "# Π Handoff — " tag-name "\n\n"
-       "- **Repo:** `" repo-root "`\n"
-       "- **Branch:** `" branch "`\n"
-       "- **SHA:** `" sha "`\n"
-       "- **Tag:** `" tag-name "`\n"
-       "- **Timestamp:** " timestamp "\n\n"
+  (str "# Π Handoff — " (markdown-code tag-name) "\n\n"
+       "- **Repo:** " (markdown-code repo-root) "\n"
+       "- **Branch:** " (markdown-code branch) "\n"
+       "- **SHA:** " (markdown-code sha) "\n"
+       "- **Tag:** " (markdown-code tag-name) "\n"
+       "- **Timestamp:** " (markdown-code timestamp) "\n\n"
        "## Owned paths (staged)\n\n"
-       (if (seq owned)
-         (str/join "\n" (map #(str "- `" (:path %) "`") owned))
-         "- none") "\n\n"
+       (markdown-paths owned) "\n\n"
        "## Concurrent / unowned paths left untouched\n\n"
-       (if (seq concurrent)
-         (str/join "\n" (map #(str "- `" (:path %) "`") concurrent))
-         "- none") "\n\n"
+       (markdown-paths concurrent) "\n\n"
        "## Blocked / generated paths ignored\n\n"
-       (if (seq blocked)
-         (str/join "\n" (map #(str "- `" (:path %) "`") blocked))
-         "- none") "\n"))
+       (markdown-paths blocked) "\n"))
 
 (defn build-manifest []
   [".ημ/Π_STATE.sexp" ".ημ/Π_LAST.md" ".ημ/Π_EVENT.edn"])
