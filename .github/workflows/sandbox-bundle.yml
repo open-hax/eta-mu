@@ -134,10 +134,21 @@ jobs:
 
           mirror_repository() {
             local repository="$1"
-            git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${authorization}" \
-              clone --mirror \
-              "https://github.com/open-hax/${repository}.git" \
-              "$mirrors/${repository}.git"
+            local destination="$mirrors/${repository}.git"
+            local attempt
+            for attempt in 1 2 3; do
+              rm -rf "$destination"
+              if git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${authorization}" \
+                clone --mirror \
+                "https://github.com/open-hax/${repository}.git" \
+                "$destination"; then
+                return 0
+              fi
+              if [[ "$attempt" -eq 3 ]]; then
+                return 1
+              fi
+              sleep $((attempt * 5))
+            done
           }
 
           mirror_repository katamorph
