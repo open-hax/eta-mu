@@ -31,6 +31,14 @@
      :old-value (:old-value payload)
      :new-value (:new-value payload)
      :text (:text payload)
+     ;; task-created carries the card's identity so a fold can reconstruct a card
+     ;; that has no markdown file yet. `:card-type` rather than `:type` — `:type`
+     ;; is already the event type.
+     :title (:title payload)
+     :card-type (:card-type payload)
+     :parent (:parent payload)
+     :source-path (:source-path payload)
+     :body (:body payload)
      :write-id (:write-id payload)
      :correlation/status (:correlation/status payload)
      :protocol (:protocol payload)
@@ -109,6 +117,22 @@
 
 (defn generate-write-id []
   (str (.now js/Date) "-" (.toString (js/Math.random) 36) (.slice (.toString (js/Math.random) 36) 2 10)))
+
+(defn emit-task-created!
+  "Record a card's creation. The payload carries everything needed to reconstruct
+   the card without its markdown file — identity, placement in the hierarchy, the
+   status it entered at, and the authored body — so creation is a ledger fact
+   rather than something only the filesystem knows.
+
+   See [[rheos.backend.domain.task-create/create-task!]], the single caller."
+  [ledger board-id task-id {:keys [title card-type status parent source-path body]} write-id source]
+  (record!
+   ledger
+   (kanban-envelope board-id "task-created"
+                    {:task-id task-id :title title :card-type card-type
+                     :status status :parent parent :source-path source-path
+                     :body body :source (or source "cli") :agent "eta-mu"
+                     :write-id write-id})))
 
 (defn emit-file-changed!
   ([ledger board-id task-id write-id]

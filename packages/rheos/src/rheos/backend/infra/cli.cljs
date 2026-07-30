@@ -4,6 +4,7 @@
             ["node:fs/promises" :as fsp]
             [rheos.backend.domain.board :as board]
             [rheos.backend.domain.compose :as compose]
+            [rheos.backend.domain.task-create :as task-create]
             [rheos.backend.infra.agent-tools :as agent-tools]
             [rheos.backend.infra.config :as config]
             [rheos.backend.domain.events :as events]
@@ -42,6 +43,7 @@
   (println "  openhax-kanban move <task-uuid> --to <status> [--project <id>]")
   (println "  openhax-kanban status-update <task-uuid> --to <status> [--project <id>]")
   (println "  openhax-kanban add-comment <task-uuid> --text <text> [--project <id>]")
+  (println "  openhax-kanban create --title <title> [--type <task|epic>] [--parent <uuid>] [--project <id>] [--priority <p>] [--points <n>] [--labels <l>] [--body-file <path>] [--dir <path>] [--uuid <id>]")
   (println "  openhax-kanban create-subtask <parent-uuid> --title <title> [--project <id>] [--status <s>] [--priority <p>]")
   (println "  openhax-kanban read-task <task-uuid> [--project <id>]")
   (println "  openhax-kanban search-tasks --query <text>")
@@ -162,6 +164,51 @@
       (println "usage: openhax-kanban add-comment <task-uuid> --text <text>")
       (run-tool "kanban_add_comment" {:uuid uuid :text text :project project}))))
 
+(defn- ^:async read-body
+  "Card body from `--body-file <path>`, or stdin when the path is `-`.
+   `fsp/readFile` cannot take a bare fd, so stdin is drained as a stream."
+  [flags]
+  (when-let [body-file (get-flag flags "body-file")]
+    (if (= "-" body-file)
+      (await (js/Promise.
+              (fn [resolve reject]
+                (let [chunks (atom [])]
+                  (.setEncoding js/process.stdin "utf8")
+                  (.on js/process.stdin "data" (fn [chunk] (swap! chunks conj chunk)))
+                  (.on js/process.stdin "end" (fn [] (resolve (apply str @chunks))))
+                  (.on js/process.stdin "error" reject)))))
+      (await (.readFile fsp body-file "utf8")))))
+
+(defn- ^:async cmd-create
+  "Create a card through the one creation chokepoint. Root cards and children are
+   the same operation; `--parent` is optional."
+  [project-state parsed]
+  (let [flags (:flags parsed)
+        project (find-project project-state (get-flag flags "project"))
+        title (get-flag flags "title")]
+    (if (nil? title)
+      (println "usage: openhax-kanban create --title <title> [--type <task|epic>] [--parent <uuid>]")
+      (let [labels (when-let [l (get-flag flags "labels")]
+                     (vec (filter seq (map str/trim (str/split l #",")))))
+            body (await (read-body flags))
+            result (await (task-create/create-task!
+                           {:project project
+                            :title title
+                            :card-type (get-flag flags "type")
+                            :parent (get-flag flags "parent")
+                            :status (get-flag flags "status")
+                            :priority (get-flag flags "priority")
+                            :points (get-flag flags "points")
+                            :labels labels
+                            :body body
+                            :dir (get-flag flags "dir")
+                            :uuid (get-flag flags "uuid")
+                            :force-status? (some? (get-flag flags "force-status"))
+                            :source "cli"}))]
+        (println (str "created " (:card-type result) " " (:uuid result)
+                      " [" (:status result) "] " (:title result)))
+        (println (str "  " (:source-path result)))))))
+
 (defn- ^:async cmd-create-subtask [_ parsed]
   (let [parent (:subcommand parsed)
         title (get-flag (:flags parsed) "title")
@@ -249,6 +296,9 @@
 
       (= "add-comment" (:command parsed))
       (await (cmd-add-comment ps parsed))
+
+      (= "create" (:command parsed))
+      (await (cmd-create ps parsed))
 
       (= "create-subtask" (:command parsed))
       (await (cmd-create-subtask ps parsed))
