@@ -109,9 +109,18 @@ importers:
 
   packages/eta-mu:
     dependencies:
+      '@eta-mu/fork-tax':
+        specifier: workspace:*
+        version: link:../fork-tax
+      '@eta-mu/receipt-river':
+        specifier: workspace:*
+        version: link:../receipt-river
       '@eta-mu/rheos':
         specifier: workspace:*
         version: link:../rheos
+      '@eta-mu/session-mycology':
+        specifier: workspace:*
+        version: link:../session-mycology
       '@eta-mu/sol':
         specifier: workspace:*
         version: link:../sol
@@ -153,6 +162,12 @@ importers:
       source-map-support:
         specifier: ^0.5.21
         version: 0.5.21
+
+  packages/fork-tax:
+    devDependencies:
+      shadow-cljs:
+        specifier: ^3.4.11
+        version: 3.4.11
 
   packages/kanban-orchestrator: {}
 
@@ -468,6 +483,12 @@ importers:
         specifier: ^4.8.3
         version: 4.8.3
 
+  packages/receipt-river:
+    devDependencies:
+      shadow-cljs:
+        specifier: ^3.4.11
+        version: 3.4.11
+
   packages/rheos:
     dependencies:
       '@fastify/cors':
@@ -522,6 +543,12 @@ importers:
       ws:
         specifier: ^8.20.1
         version: 8.20.1
+
+  packages/session-mycology:
+    devDependencies:
+      shadow-cljs:
+        specifier: ^3.4.11
+        version: 3.4.11
 
   packages/sol:
     dependencies:

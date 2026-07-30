@@ -106,6 +106,15 @@
   spore: none
   receipt-refs: event-ledger-envelope-truth
   note: Serialization bugs hide when tests assert on the RETURNED value instead of the WRITTEN artifact — always round-trip through the real boundary (raw insertOne payload, the committed dist). Also — mixing shadow-cljs release+compile builds can leave a stale cache producing phantom 'cljs$core$IFn undefined' test errors; rm -rf .shadow-cljs target and rebuild before diagnosing.
+- ts: 2026-07-29T09:58:13.948426354Z
+  session: /home/err/spaces/eta-mu
+  task: Extract eta-mu ledger protocols into package-owned APIs
+  p-efficiency: 0.78
+  p-friction: 0.36
+  p-skill-candidate: 0.60
+  spore: none
+  receipt-refs: none
+  note: Preserve a colliding legacy leaf command by multiplexing only known protocol subcommands; generated schema registries kept version authority out of skills and the app router.
 - ts: 2026-07-26T01:00:00Z
   session: /home/err/spaces/eta-mu
   task: PR #142 review closeout — 20 threads across two waves, merged to main

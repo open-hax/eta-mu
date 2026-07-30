@@ -1,0 +1,29 @@
+{
+  "name": "@eta-mu/receipt-river",
+  "version": "0.1.0",
+  "description": "Receipt River records, validation, local archaeology, and projections",
+  "type": "module",
+  "private": false,
+  "files": [
+    "dist-cljs",
+    "README.md"
+  ],
+  "main": "./dist-cljs/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist-cljs/index.js"
+    }
+  },
+  "scripts": {
+    "build": "shadow-cljs release receipt-river",
+    "prepublishOnly": "pnpm build",
+    "test": "shadow-cljs compile test && node target/receipt-river-test.cjs",
+    "lint:kondo": "clj-kondo --lint src/cljs test/cljs && node ../../scripts/check-ledger-extern-boundaries.mjs receipt-river",
+    "watch": "shadow-cljs watch receipt-river",
+    "clean": "rm -rf dist-cljs target .shadow-cljs"
+  },
+  "devDependencies": {
+    "shadow-cljs": "^3.4.11"
+  },
+  "license": "GPL-3.0-or-later"
+}
