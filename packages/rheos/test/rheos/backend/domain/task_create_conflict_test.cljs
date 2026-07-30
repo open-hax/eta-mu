@@ -13,7 +13,7 @@
   (testing "the final write is exclusive, even when the existing file has another uuid"
     (let [dir (tmp-dir)
           tasks-dir (path/join dir "tasks")
-          target (path/join tasks-dir "collision-fixeduuid.md")
+          target (path/join tasks-dir "collision-ixeduuid.md")
           project {:id "test" :title "Test" :tasks-dir dir :meta {} :fsm :promethean}
           sentinel "existing card\n"]
       (try
