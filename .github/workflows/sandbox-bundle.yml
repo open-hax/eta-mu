@@ -77,6 +77,22 @@ jobs:
         with:
           cli: ${{ env.CLOJURE_TOOLS_VERSION }}
 
+      - name: Set up pinned Babashka
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/babashka-${BABASHKA_VERSION}-linux-amd64-static.tar.gz"
+          install_dir="$RUNNER_TEMP/babashka-bin"
+          curl -fsSL \
+            "https://github.com/babashka/babashka/releases/download/v${BABASHKA_VERSION}/babashka-${BABASHKA_VERSION}-linux-amd64-static.tar.gz" \
+            -o "$archive"
+          printf '%s  %s\n' "$BABASHKA_SHA256" "$archive" | sha256sum --check --strict -
+          rm -rf "$install_dir"
+          mkdir -p "$install_dir"
+          tar -xzf "$archive" -C "$install_dir"
+          echo "$install_dir" >> "$GITHUB_PATH"
+          "$install_dir/bb" --version
+
       - name: Detect eta-mu app credentials
         id: dependency-credentials
         env:
@@ -186,13 +202,12 @@ jobs:
             tar -czf "$OUT/toolchain/pnpm-home.tar.gz" -C "$(dirname "$PNPM_HOME")" "$(basename "$PNPM_HOME")"
           fi
           clojure_archive="$OUT/toolchain/clojure-tools-${CLOJURE_TOOLS_VERSION}.tar.gz"
+          babashka_source="$RUNNER_TEMP/babashka-${BABASHKA_VERSION}-linux-amd64-static.tar.gz"
           babashka_archive="$OUT/toolchain/babashka-${BABASHKA_VERSION}-linux-amd64-static.tar.gz"
           curl -fsSL \
             "https://download.clojure.org/install/clojure-tools-${CLOJURE_TOOLS_VERSION}.tar.gz" \
             -o "$clojure_archive"
-          curl -fsSL \
-            "https://github.com/babashka/babashka/releases/download/v${BABASHKA_VERSION}/babashka-${BABASHKA_VERSION}-linux-amd64-static.tar.gz" \
-            -o "$babashka_archive"
+          install -m 0644 "$babashka_source" "$babashka_archive"
           printf '%s  %s\n' "$CLOJURE_TOOLS_SHA256" "$clojure_archive" | sha256sum --check --strict -
           printf '%s  %s\n' "$BABASHKA_SHA256" "$babashka_archive" | sha256sum --check --strict -
 
@@ -204,6 +219,7 @@ jobs:
             pnpm --version
             java -version
             command -v clojure >/dev/null 2>&1 && clojure -Sdescribe || true
+            command -v bb >/dev/null 2>&1 && bb --version || true
           } > "$OUT/metadata/tool-versions.txt" 2>&1
 
           generated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -224,7 +240,7 @@ jobs:
               network_required_after_restore: true,
               restore_requirements: [
                 "Node.js 22 and Java 21 must be installed on the restore host",
-                "Restore the bundled pnpm and Clojure toolchains or install the pinned versions",
+                "Restore the bundled pnpm, Clojure, and Babashka toolchains or install the pinned versions",
                 "Restore the optional dependency-cache artifact or allow network access for dependency installation"
               ]
             }' > "$OUT/manifest.json"
