@@ -45,9 +45,22 @@
     (let [db (mock-db)
           record (um/->MongoUserManagement db)]
       (await (protocols/create-user record {:username "alice" :password "secret"}))
-      (let [result (await (protocols/authenticate record {:username "alice"}))]
+      ;; The password has to be supplied — omitting it used to make this assert
+      ;; success against a `user.login.failure`, which is what a green gate is for.
+      (let [result (await (protocols/authenticate record {:username "alice"
+                                                         :password "secret"}))]
         (is (= "user.login.success" (:event/type result)))
         (is (some? (get-in result [:payload :userId])))))))
+
+(deftest ^:async authenticate-wrong-password-test
+  (testing "Rejects a known user with the wrong password"
+    (let [db (mock-db)
+          record (um/->MongoUserManagement db)]
+      (await (protocols/create-user record {:username "alice" :password "secret"}))
+      (let [result (await (protocols/authenticate record {:username "alice"
+                                                          :password "wrong"}))]
+        (is (= "user.login.failure" (:event/type result)))
+        (is (= "invalid credentials" (get-in result [:payload :reason])))))))
 
 (deftest ^:async authenticate-failure-test
   (testing "Fails to authenticate with invalid user"
