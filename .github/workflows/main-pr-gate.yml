@@ -34,6 +34,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - uses: DeLaGuardo/setup-clojure@3fe9b3ae632c6758d0b7757b0838606ef4287b08
+        with:
+          bb: '1.13.219'
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
         with:
           version: '10.14.0'
