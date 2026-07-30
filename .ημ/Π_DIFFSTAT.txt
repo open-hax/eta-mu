@@ -1,5 +1,12 @@
- ".\316\267\316\274/\316\240_DIFFSTAT.txt"    |  223 ---
- ".\316\267\316\274/\316\240_LAST.md"         |   58 +-
- ".\316\267\316\274/\316\240_MANIFEST.sha256" | 1970 +-------------------------
- ".\316\267\316\274/\316\240_STATE.sexp"      |  164 +--
- 4 files changed, 39 insertions(+), 2376 deletions(-)
+Protocol source delta:
+  60 files changed, 2043 insertions(+), 602 deletions(-)
+
+Fork-tax artifacts refreshed:
+  .ημ/Π_STATE.sexp
+  .ημ/Π_LAST.md
+  .ημ/Π_DIFFSTAT.txt
+  .ημ/Π_MANIFEST.sha256
+
+Residual concurrent dirt intentionally excluded:
+  .github/workflows/*
+  kanban/.events/ledger.edn

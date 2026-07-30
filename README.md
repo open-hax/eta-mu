@@ -14,16 +14,38 @@ This repo absorbs the active eta-mu surfaces that were previously scattered acro
 
 - [`kanban/eta-mu-charter-v1.md`](kanban/eta-mu-charter-v1.md) — active working definition of eta-mu core, satellites, and the first living vault.
 
-## Constitutional Layer
+## Operational Protocols and Extension Adapters
 
-The canonical eta-mu-extensions package ([`packages/extensions`](packages/extensions/README.md), `@open-hax/eta-mu-extensions`) is the source of the constitutional layer for cybernetic governance. It declares 15 `:local` extensions in `manifest.edn`, including:
+Eta-mu's operational protocols are owned by three sibling packages:
+
+- [`packages/receipt-river`](packages/receipt-river/README.md) — `@eta-mu/receipt-river`
+- [`packages/session-mycology`](packages/session-mycology/README.md) — `@eta-mu/session-mycology`
+- [`packages/fork-tax`](packages/fork-tax/README.md) — `@eta-mu/fork-tax`
+
+They own their records, schema registries, readers, writers, validators, and
+domain projections. The unscoped [`eta-mu`](packages/eta-mu/README.md)
+application composes their versions and delegates CLI commands; it does not
+carry independent copies of their domain logic.
+
+The eta-mu-extensions package
+([`packages/extensions`](packages/extensions/README.md),
+`@open-hax/eta-mu-extensions`) still supplies the runtime adapters for the
+constitutional layer while migration proceeds. It declares 15 `:local`
+extensions in `manifest.edn`, including:
 
 - **receipt-river** — append-only audit ledger for agent decisions
 - **session-mycology** — per-turn retrospection with skill-spore incubation
 - **contract-runtime** / **contract-runtime-v2** — operational contract fulfillment evaluation
 - **opmf-contract-gate** — output-contract gate enforcement
 
-These are the source of truth for the `.ημ` contract runtimes consumed by pi, opencode, and other agent frameworks; the `~/.ημ` directory is the runtime home (conventionally symlinked to this package's build output). CLJS sources are under `packages/extensions/src/eta_mu/extensions/`, macros under `packages/extensions/lib/eta_mu/macros/`, and targets build to `dist/{pi,opencode,runtime}/`.
+For Receipt River and Session Mycology, these extension implementations are
+historical behavior sources and migration adapters, not schema authority.
+They remain intact in this first extraction wave and will become thin
+delegates after package API parity is complete. The `~/.ημ` directory is the
+runtime home (conventionally symlinked to this package's build output). CLJS
+sources are under `packages/extensions/src/eta_mu/extensions/`, macros under
+`packages/extensions/lib/eta_mu/macros/`, and targets build to
+`dist/{pi,opencode,runtime}/`.
 
 ```bash
 pnpm -C packages/extensions build      # release build to dist/
@@ -38,6 +60,9 @@ pnpm -C packages/extensions watch      # dev
 - [`packages/chat-ui`](packages/chat-ui/README.md) — `@open-hax/chat-ui`: backend-agnostic Helix/React chat UI components (ChatPanel, MessageBubble, ChatComposer) and the `IChatSession` protocol with sol/knoxx/mock backends; consumed by Rheos via shadow-cljs source path.
 - [`packages/contracts/output`](packages/contracts/output) — `@eta-mu/contracts-output`: CLJS output-contract gate (rewrite of `legacy/output-contract-gate`), shipped as a CLI binary and spawned by `eta-mu contracts output`.
 - [`packages/eta-mu`](packages/eta-mu/README.md) — `eta-mu`: the global CLI entry point and sub-command router (bins `eta-mu` and `pi`), shadow-cljs `:node-script` bundling the turn-processor agent loop; `npm install -g eta-mu` is the intended install path. **This supersedes `packages/legacy/coding-agent` as the CLI.**
+- [`packages/fork-tax`](packages/fork-tax/README.md) — `@eta-mu/fork-tax`: Fork Tax handoff plans, snapshot artifacts, owned/concurrent/blocked classifications, and versioned handoff events.
+- [`packages/receipt-river`](packages/receipt-river/README.md) — `@eta-mu/receipt-river`: receipt event construction/validation, historical unversioned compatibility, and provider-independent local repository discovery.
+- [`packages/session-mycology`](packages/session-mycology/README.md) — `@eta-mu/session-mycology`: session reflection and lesson events with explicit cross-protocol causal links.
 - [`packages/event-ledger`](packages/event-ledger/README.md) — `@promethean-os/event-ledger`: append-only MongoDB-backed CLJS event store (envelope schema, change-stream watchers, TTL config, REST adapter, legacy bridge).
 - [`packages/extensions`](packages/extensions/README.md) — `@open-hax/eta-mu-extensions`: **canonical** eta-mu constitutional-layer extension runtimes (15 `:local` extensions) compiled to pi/opencode/runtime targets via shadow-cljs. See the Constitutional Layer section above.
 - [`packages/e2e`](packages/e2e/README.md) — `@open-hax/eta-mu-e2e`: monorepo-wide end-to-end test harness for cross-package interactions (extension contracts, runtime ↔ coding integration, cross-package seams).

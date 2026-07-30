@@ -2,9 +2,10 @@
   "Agent session inspection command.
 
   Lists and shows the agent session artifacts persisted by `eta-mu agent`
-  under ~/.eta-mu/sessions/ ($ETA_MU_HOME overrides the home). Registered
-  top-level as `eta-mu session`; the unrelated session-mycology `reflect`
-  command stays under `eta-mu git session`."
+  under ~/.eta-mu/sessions/ ($ETA_MU_HOME overrides the home). Canonically
+  registered as `eta-mu sessions`; `eta-mu session` retains list/show as a
+  1.1.1 compatibility surface while routing protocol subcommands to the
+  Session Mycology package."
   (:require [clojure.pprint :as pprint]
             [clojure.string :as str]
             [eta-mu.extern.process :as process]
