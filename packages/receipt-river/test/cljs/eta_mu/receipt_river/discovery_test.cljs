@@ -44,20 +44,44 @@
                                      "/repo/.git/worktrees/w1"))))
 
 (deftest relationship-projection-test
-  (let [repositories [{:repository/id "r1" :git/common-dir "/repo/.git"
+  (let [repositories [{:repository/id "r1"
+                       :repository/path "/repo"
+                       :repository/kind :repository
+                       :clone/id "c0"
+                       :git/common-dir "/repo/.git"
                        :worktree/id "w1"}
-                      {:repository/id "r1" :git/common-dir "/repo/.git"
+                      {:repository/id "r1"
+                       :repository/path "/worktree"
+                       :repository/kind :linked-worktree
+                       :clone/id "c0"
+                       :git/common-dir "/repo/.git"
                        :worktree/id "w2"}
-                      {:repository/id "r2" :clone/id "c1"
+                      {:repository/id "r2"
                        :repository/path "/clone"
-                       :git/common-dir "/clone/.git"}
-                      {:repository/id "r2" :clone/id "c2"
+                       :repository/kind :repository
+                       :clone/id "c1"
+                       :git/common-dir "/clone/.git"
+                       :worktree/id "w3"}
+                      {:repository/id "r2"
+                       :repository/path "/clone-worktree"
+                       :repository/kind :linked-worktree
+                       :clone/id "c1"
+                       :git/common-dir "/clone/.git"
+                       :worktree/id "w4"}
+                      {:repository/id "r2"
                        :repository/path "/copy"
-                       :git/common-dir "/copy/.git"}]
-        types (set (map :relationship/type
-                        (discovery/relationship-groups repositories)))]
-    (is (contains? types :shared-history))
-    (is (contains? types :duplicate-clones))))
+                       :repository/kind :repository
+                       :clone/id "c2"
+                       :git/common-dir "/copy/.git"
+                       :worktree/id "w5"}]
+        relationships (discovery/relationship-groups repositories)
+        shared (first (filter #(= :shared-history (:relationship/type %))
+                              relationships))
+        clones (first (filter #(= :duplicate-clones (:relationship/type %))
+                              relationships))]
+    (is (= ["w1" "w2"] (:worktrees shared)))
+    (is (= ["c1" "c2"] (:clones clones)))
+    (is (= ["/clone" "/copy"] (:locations clones)))))
 
 (deftest exclusion-boundary-test
   (testing "domain exclusion consumes a shaped host-match result"
@@ -111,6 +135,32 @@
              :path "/new/clone"}]
            (:observations result)))))
 
+(deftest worktree-added-observation-test
+  (let [previous {:repositories [{:repository/id "r1"
+                                  :repository/path "/repo"
+                                  :repository/kind :repository
+                                  :clone/id "c1"
+                                  :worktree/id "w1"}]}
+        current {:repositories [{:repository/id "r1"
+                                 :repository/path "/repo"
+                                 :repository/kind :repository
+                                 :clone/id "c1"
+                                 :worktree/id "w1"}
+                                {:repository/id "r1"
+                                 :repository/path "/linked"
+                                 :repository/kind :linked-worktree
+                                 :clone/id "c1"
+                                 :worktree/id "w2"}]
+                 :observations []}
+        result (discovery/observe-moves previous current)]
+    (is (= [{:observation/type :repository-worktree-added
+             :repository/id "r1"
+             :clone/id "c1"
+             :worktree/id "w2"
+             :existing-paths ["/repo"]
+             :path "/linked"}]
+           (:observations result)))))
+
 (deftest moved-repository-uses-disappeared-paths-test
   (let [previous {:repositories [{:repository/id "r1"
                                   :repository/path "/old/repo"}
@@ -141,14 +191,10 @@
                                  :repository/path "/z-new/clone"}]
                  :observations []}
         result (discovery/observe-moves previous current)]
-    (is (= [{:observation/type :repository-moved
+    (is (= [{:observation/type :repository-location-change-ambiguous
              :repository/id "r1"
              :previous-paths ["/old/repo"]
-             :path "/a-new/repo"}
-            {:observation/type :repository-clone-added
-             :repository/id "r1"
-             :existing-paths ["/a-new/repo" "/retained/clone"]
-             :path "/z-new/clone"}]
+             :paths ["/a-new/repo" "/z-new/clone"]}]
            (:observations result)))))
 
 (deftest signaled-git-close-is-failure-test
@@ -157,6 +203,23 @@
           :stdout "partial"
           :stderr ""}
          (git/close-result nil "SIGTERM" " partial\n" ""))))
+
+(deftest ^:async git-timeout-test
+  (let [root (.mkdtempSync fs (path/join (.tmpdir os)
+                                         "eta-mu-receipt-git-timeout-"))]
+    (try
+      (let [init-result (await (git/exec-at root
+                                            ["init" "--quiet"]
+                                            {:timeout-ms 5000}))]
+        (is (zero? (:exit init-result)) (:stderr init-result)))
+      (let [result (await (git/exec-at root
+                                       ["hash-object" "--stdin"]
+                                       {:timeout-ms 25}))]
+        (is (= :timeout (:status result)))
+        (is (= 25 (:timeout-ms result)))
+        (is (= "SIGKILL" (:signal result))))
+      (finally
+        (.rmSync fs root #js {:recursive true :force true})))))
 
 (deftest ^:async trailing-globstar-excludes-repository-root-test
   (let [root (.mkdtempSync fs (path/join (.tmpdir os)
