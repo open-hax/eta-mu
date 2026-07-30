@@ -96,7 +96,7 @@
 (defn- missing-errors [value required]
   (into []
         (keep (fn [key]
-                (when-not (contains? value key)
+                (when (nil? (get value key))
                   (str "missing required key: " (name key)))))
         required))
 
