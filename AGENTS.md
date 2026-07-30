@@ -111,11 +111,11 @@ context-gathering, and writing them is not closeout — both are part of the tur
 Board state is the single source of truth for work. Treat it as a finite-state machine whose law is implemented in `packages/rheos/src/rheos/backend/law/fsm.cljs` and rendered for humans in `PROCESS.md`.
 
 - **Work from a card.** Never work off-board. Anchor every implementation slice on a kanban task and record the scoped plan on the card before moving to implementation.
-- **Move cards with the Rheos CLI.** Run commands from the **repo root** so the board resolves correctly:
-  - `eta-mu kanban list` — current board.
-  - `eta-mu kanban count` — column counts.
-  - `eta-mu kanban comment <uuid> "note"` — append provenance to a card.
-  - `eta-mu kanban frontmatter <uuid> status <new-status>` — lawful status change.
+- **Move cards with the Rheos CLI.** Run commands from the **repo root** so the board resolves correctly. Use **`eta-mu-beta`**, not `eta-mu` — the bare name is a volta shim to the *published* build, which carries a different command surface at the same version number. See `DEVELOPMENT.md` § *Running the CLI*. Rebuild first: `pnpm -C packages/eta-mu build`.
+  - `eta-mu-beta kanban list` — current board.
+  - `eta-mu-beta kanban count` — column counts.
+  - `eta-mu-beta kanban comment <uuid> "note"` — append provenance to a card.
+  - `eta-mu-beta kanban frontmatter <uuid> status <new-status>` — lawful status change.
   - `node packages/rheos/dist/cli.cjs status-update <uuid> --to <status>` — FSM-enforced move (also runs build-gate when required).
 - **No direct frontmatter edits.** The file watcher treats hand-edited frontmatter as drift and stamps a `drift: true` indicator on the card. Use the CLI so the ledger records a `write-id` and the provenance is auditable.
 - **Walk lawful hops.** There are no shortcut edges. To move a card multiple columns forward, step through each lawful transition in order. The direct `in_progress → review` edge exists only when the build-gate passes.

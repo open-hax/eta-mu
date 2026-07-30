@@ -48,7 +48,17 @@ worktree has no build at all, and the global shim is the only thing that answers
 - `packages/eta-mu/package.json` — version `1.1.1`, `bin: {eta-mu, pi} → dist-cli/index.cjs`.
 - npm `eta-mu` latest — also `1.1.1`. Same version, different surface, never republished
   from the current source.
-- No link exists: volta's global list has no local-linked `eta-mu`.
+- A global `eta-mu-beta` **already existed and was dead.** It was a bare symlink in
+  pnpm's global bin pointing at `/home/err/devel/orgs/open-hax/eta-mu/packages/coding-agent/dist/cli.js`
+  — the pre-move repo layout, dated 2026-05-01. It has dangled since the workspace moved
+  to `/home/err/spaces/eta-mu`, so `eta-mu-beta` reported `command not found`. Repaired
+  2026-07-30 to point at `packages/eta-mu/dist-cli/index.cjs`. This is the second
+  absolute-path integration found broken by that move; the systemd unit for the Rheos
+  board server was the first.
+- `pnpm link --global` on `packages/eta-mu` does **not** win: `/home/err/.volta/bin`
+  precedes `/home/err/.local/share/pnpm` on `PATH`, so the volta shim keeps answering to
+  the bare `eta-mu` name. Attempted and reverted; a distinct binary name is the fix, not
+  a PATH fight.
 - Building inside a fresh worktree **without** an installed dep tree silently produces a
   broken artifact: 163 `:undeclared-var` warnings on `await` and a `dist-cli` whose
   `receipt` / `session` / `fork-tax` handlers throw
@@ -56,12 +66,24 @@ worktree has no build at all, and the global shim is the only thing that answers
   The same build from the installed root emits **zero** warnings and works. A worktree
   build is not a build.
 
+## Decision (owner, 2026-07-30)
+
+Two names, two jobs. **`eta-mu` stays the published build** so behaviour in every other
+repository on the machine remains predictable. **`eta-mu-beta` is the global entry point
+to this working tree**, because the latest work should be reachable from anywhere. No PATH
+reordering, no shadowing.
+
 ## Scope
 
-- [ ] Decide the canonical dev invocation and write it in `DEVELOPMENT.md` and `CLAUDE.md`:
-      a link (`pnpm link --global` / a volta-compatible equivalent), or an explicit
-      `node packages/eta-mu/dist-cli/index.cjs`, or a repo-root `bb`/`pnpm` task. Pick one
-      and make it the only documented path.
+- [x] Canonical dev invocation decided and documented in `DEVELOPMENT.md`
+      (§ *Running the CLI: `eta-mu` vs `eta-mu-beta`*): `eta-mu-beta` symlinks to
+      `packages/eta-mu/dist-cli/index.cjs`; rebuild before trusting it.
+- [ ] Make `eta-mu-beta` a first-class, reproducible install rather than a hand-run `ln`:
+      a documented one-liner is the floor, a repo task or a private
+      `bin`-declaring package that `pnpm link --global` can own is better. It must be
+      re-creatable from the repo after a machine rebuild or another workspace move.
+- [ ] Teach `CLAUDE.md` the same rule, so agents stop citing `eta-mu` output as evidence
+      about this repo.
 - [ ] `eta-mu version` must distinguish a local build from a published install — surface
       the git SHA and dirty flag, not just the package version. Two programs must never
       report the same identity.

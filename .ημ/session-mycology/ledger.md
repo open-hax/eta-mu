@@ -142,3 +142,12 @@
   spore: none
   receipt-refs: none
   note: Produced a page of confident, plausible, false CLI findings because 'eta-mu' on PATH was the published npm build, not the workspace — same version number, different command surface. The binary did not error, it answered incorrectly. Before treating any CLI output as evidence: resolve the binary (readlink -f $(which x)), compare it to the source command registry, and build the tree. Also: a build inside a worktree with no node_modules exits 0 while emitting 163 undeclared-var warnings and producing a broken artifact — exit code 0 is not proof of a good build.
+- ts: 2026-07-30T22:51:28.016759133Z
+  session: /home/err/spaces/eta-mu/.claude/worktrees/agent-operating-standard
+  task: Split the CLI identity: eta-mu stays published, eta-mu-beta links to the working tree
+  p-efficiency: 0.8
+  p-friction: 0.45
+  p-skill-candidate: 0.8
+  spore: none
+  receipt-refs: none
+  note: pnpm link --global lost the PATH race to volta, so the fix was a second binary name rather than a PATH fight. Found the owner's existing global eta-mu-beta symlink had been dangling since the workspace moved out of ~/devel/orgs — the second absolute-path integration broken by that move after the Rheos systemd unit. AGENTS.md was itself telling agents to run bare 'eta-mu kanban', i.e. the published build; corrected to eta-mu-beta.

@@ -48,6 +48,51 @@ pnpm start      # pnpm --filter @eta-mu/rheos start
 `pnpm dev` is an alias for the Rheos dev watcher. To iterate on any other
 package, watch that package directly (next section).
 
+## Running the CLI: `eta-mu` vs `eta-mu-beta`
+
+**`eta-mu` is not this repo.** It resolves through a volta shim to the *published*
+npm build. That is deliberate — it keeps behaviour predictable in every other
+repository on the machine — but it means the published binary and this working tree
+can report the **same version** (`1.1.1`) while exposing **different commands**.
+Source registers top-level `receipt`, `receipt-river`, `session`,
+`session-mycology`, and `fork-tax`; the published build only has them under `git`.
+
+**`eta-mu-beta` is this repo.** It is a global symlink to the local build:
+
+```bash
+# Rebuild after changing CLI sources — the symlink target is a build artifact
+pnpm -C packages/eta-mu build
+
+# eta-mu-beta then runs the current tree, from any working directory
+eta-mu-beta help
+eta-mu-beta receipt append decision "…"
+```
+
+The link, once per machine:
+
+```bash
+ln -sfn "$PWD/packages/eta-mu/dist-cli/index.cjs" \
+        "$(pnpm bin --global)/eta-mu-beta"
+```
+
+Rules:
+
+- **Never cite `eta-mu` output as evidence about this repo.** Use `eta-mu-beta`, or
+  `node packages/eta-mu/dist-cli/index.cjs` directly. A stale binary does not error —
+  it answers, incorrectly.
+- **Rebuild before trusting `eta-mu-beta`.** `dist-cli/` is gitignored, so a fresh
+  clone has no build and the symlink dangles.
+- **Build only from the repo root's installed dependency tree.** `pnpm build` inside a
+  git worktree with no `node_modules` exits `0` while emitting 163 `:undeclared-var`
+  warnings on `await` and producing a `dist-cli` whose `receipt`, `session`, and
+  `fork-tax` throw at runtime. The same build from the root emits zero warnings.
+  Check the warning count, not just the exit code.
+- **The link breaks if the repo moves.** It held an absolute path into `~/devel/orgs/`
+  and silently dangled from the move until 2026-07-30. After relocating the
+  workspace, re-run the `ln` above.
+
+Tracked as `link-local-eta-mu-cli-for-development`.
+
 ## shadow-cljs workflow per package
 
 Each CLJS package has its own `shadow-cljs.edn` with `build`, `watch`, and
