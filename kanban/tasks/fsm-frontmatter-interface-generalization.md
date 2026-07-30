@@ -1,14 +1,15 @@
 ---
-uuid: "fsm-frontmatter-interface-generalization"
-title: "FSM: frontmatter-as-interface (per-field ports)"
-status: "rejected"
-priority: "P2"
-labels: ["tasks", "cljs", "fsm", "kanban", "reconciliation"]
-created_at: "2026-06-17T00:00:00Z"
-source: "kanban/epics/fsm-engine.md"
-points: 5
 category: "tasks"
+labels: ["tasks", "cljs", "fsm", "kanban", "reconciliation"]
 parent: "fsm-engine"
+write-id: "1785355409599-0.h7fu9vnd4qhnswb38pr"
+points: "5"
+source: "kanban/epics/fsm-engine.md"
+title: "FSM: frontmatter-as-interface (per-field ports)"
+priority: "P2"
+status: "rejected"
+uuid: "fsm-frontmatter-interface-generalization"
+created_at: "2026-06-17T00:00:00Z"
 ---
 
 # FSM: frontmatter-as-interface (per-field ports)
@@ -26,3 +27,7 @@ status path is solid.
 - [ ] At least one non-status port demonstrated (e.g. `:harness` or `:assignee`).
 - [ ] Unit tests: multi-key diff dispatches to the correct subscribers.
 - [ ] Zero clj-kondo warnings; Rheos tests pass.
+
+---
+Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](../epics/workflow-dsl-kanban-reference.md). Preserve the per-field port and subscription insight, including Kanban owning :status, but treat frontmatter as a Markdown command/projection adapter rather than the universal workflow interface or accepted source of truth.
+---

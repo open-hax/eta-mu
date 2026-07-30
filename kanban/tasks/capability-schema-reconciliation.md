@@ -1,7 +1,7 @@
 ---
 category: "tasks"
 labels: ["tasks", "cljs", "katamorph", "muse", "capabilities", "design", "3sp"]
-write-id: "1784489225148-0.ygmqtnfrloi6uhw7ph"
+write-id: "1785360487094-0.imdluuh1m5qeoz47gbb"
 points: "3"
 source: "kanban/epics/katamorph-canonical-cutover.md"
 title: "Capability Schema Reconciliation — muse capability vs katamorph CapabilityContract"
@@ -60,3 +60,9 @@ converge under katamorph as canon.
 - [ ] The iceboxed `universal-agent-platform-dsl` epic is annotated with a
       pointer to the decision (its capability thesis is either adopted or
       superseded — said out loud).
+
+---
+2026-07-29 scope correction from user intent: Knoxx remains deliberately iceboxed and is not an implementation target. This decision pass will establish Katamorph as the owner of portable admissibility schemas, and Muse as the existing Keryx-shaped assembly/translation layer for OpenCode, Claude, MCP, Sol, and CLI projections. Discovery will inventory model/provider/model-family/agent/MCP/hook reinvention across eta-mu, verify the current Sol/turn-processor boundary, reconcile executable capability vs grant capability semantics, and cut only upstream-first follow-up slices. No Knoxx migration work is in scope.
+
+2026-07-29 decision: keep two linked facets, not one overloaded schema. Katamorph capability is the portable grant/grouping used by roles and actors. Muse executable capability is the implementation descriptor with input/output/effects/handler linkage. Portable grants may reference executable capability identities, but handlers and host adapters remain Muse-owned. Knoxx is explicitly descoped. Decision record and per-consumer migration order: spaces/muse/docs/design/contract-ownership-and-host-translation.md. No schema code moves in this slice; follow-up work proceeds under the upstream Muse/Katamorph translation slice before any downstream migration.
+---

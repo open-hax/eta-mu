@@ -6,7 +6,7 @@ priority: "P0"
 labels: ["cljs", "opencode", "dsl", "boundary", "extensions"]
 created_at: "2026-07-11T13:00:00Z"
 category: "tasks"
-write-id: "1785023952469-0.vztllw1p635oihiwuz"
+write-id: "1785363543475-0.pjng2uf96mjgmttbfj"
 ---
 
 # Universal Agent Platform DSL — Boundary + OpenCode Target
@@ -94,4 +94,13 @@ the dependency direction gets settled before further platform work lands.
 
 Status reconciled 2026-07-25 (PR #142 review closeout): the card read status: incoming while the body recorded all 6 phases (μ0–μ5) implemented and verified at 96 tests / 262 assertions, 0 failures. Moved incoming -> accepted -> breakdown -> ready -> todo -> in_progress to stop the record contradicting itself. Left at in_progress rather than review: the review gate runs a full monorepo pnpm build and did not converge in this session, and promoting an unrelated P0 card to review/done is the owner's call. The namespace-package note below is now recorded as an explicit open question rather than a tentative aside.
 
+2026-07-29 user resolved the recorded namespace/package question: Muse is the place that interprets portable contracts across host worlds; Keryx names that herald/translation responsibility, not a second competing package yet. Live verification found packages/extensions has only mu0-mu4: eta-mu.platform.target.opencode never existed, its speculative test is quarantined as .stale, and the current gate is 94 tests/257 assertions. Muse contains the actual working declaration pipeline and OpenCode/Claude/MCP boundaries (143 tests/354 assertions). Continuation is therefore upstream-first in Muse: consume Katamorph contracts, produce an inspectable host-neutral assembly, and prove one OpenCode projection. Knoxx remains out of scope.
+
+2026-07-29 upstream proof completed in spaces/muse, not packages/extensions and not Knoxx. Muse now imports Katamorph namespace resources, validates and assembles them by qualified identity, and projects provider/model-family/model/default-model/remote-MCP declarations into OpenCode settings; raw host settings remain ordered explicit overrides. Unsupported API shapes/transports/references fail before rendering. Evidence: Muse 149 tests / 364 assertions, daemon compile 0 warnings, clj-kondo 0 findings. Architecture and reinvention inventory: spaces/muse/docs/design/contract-ownership-and-host-translation.md. This confirms Muse performs the Keryx role; the historical μ5 target in this card was never present in packages/extensions, so further host-target work belongs in Muse.
+
+Evidence addendum: the same Muse projection now also translates Katamorph agent declarations, resolving portable agent model references to the target provider/model id. Final Muse evidence for this slice is 150 tests / 365 assertions, daemon compile 0 warnings, clj-kondo 0 findings.
+
+2026-07-29 continuation scope: extract provider/model-family/model/default/agent reference resolution from the OpenCode target into a target-neutral Muse agent catalog. The resolved catalog will preserve full Katamorph definitions plus qualified resolved links, fail unknown or ambiguous references before target projection, and become the reusable input for future OpenCode, Sol, and eta-mu agent adapters. This slice refactors only Muse and related docs/tests; Knoxx remains out of scope.
+
+2026-07-29 continuation result: spaces/muse now has eta-mu.shape.agent-catalog/resolve-catalog between Katamorph assembly and target projection. It preserves original definitions, qualifies provider/family/model/agent links under :resolved/*, applies one portable default model, filters disabled resources, and rejects missing providers/families/models or multiple defaults before a host is selected. OpenCode and the daemon now consume this catalog explicitly. Evidence: 153 tests / 374 assertions; daemon compile 0 warnings; clj-kondo 0 findings. Docs updated at spaces/muse/docs/design/contract-ownership-and-host-translation.md. Knoxx untouched.
 ---

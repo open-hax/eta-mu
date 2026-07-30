@@ -1,14 +1,15 @@
 ---
-uuid: "fsm-event-cascade-derivation"
-title: "FSM: event derivation cascade"
-status: "rejected"
-priority: "P1"
-labels: ["tasks", "cljs", "fsm", "kanban", "reconciliation"]
-created_at: "2026-06-17T00:00:00Z"
-source: "kanban/epics/fsm-engine.md"
-points: 5
 category: "tasks"
+labels: ["tasks", "cljs", "fsm", "kanban", "reconciliation"]
 parent: "fsm-engine"
+write-id: "1785355407990-0.kpctb9ywu50sxj16ig"
+points: "5"
+source: "kanban/epics/fsm-engine.md"
+title: "FSM: event derivation cascade"
+priority: "P1"
+status: "rejected"
+uuid: "fsm-event-cascade-derivation"
+created_at: "2026-06-17T00:00:00Z"
 ---
 
 # FSM: event derivation cascade
@@ -28,3 +29,7 @@ workflow transition request: `fs.changed` → `doc.frontmatter-updated` →
 - [ ] Triggers are composable data, not hardcoded control flow.
 - [ ] Unit tests for each derivation step and the status-key predicate.
 - [ ] Zero clj-kondo warnings; Rheos tests pass.
+
+---
+Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](../epics/workflow-dsl-kanban-reference.md). Preserve composable trigger, predicate, and derivation semantics as Workflow DSL primitives. Filesystem change detection is one Rheos projection-ingress adapter, not the workflow core.
+---
