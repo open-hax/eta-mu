@@ -64,34 +64,52 @@ Three separate gaps produced that outcome:
 | `agent-turn-loop-standard-and-skills` | write the turn loop down; update the global `receipt-river` and `session-mycology` skills to it and route them through the packages |
 | `eta-mu-install-skills-command` | `eta-mu install skills` with a global / project scope picker |
 | `ledger-cli-surface-documentation` | CLI help explains the three ledgers; `eta-mu git` gets real docs and a skill |
+| `link-local-eta-mu-cli-for-development` | `eta-mu` on `PATH` must be this working tree, not a stale published build wearing the same version |
 
 Static-analysis parity with `../Truth` and `../epiphany` is tracked separately under
 the `eta-mu-quality-ratchet` epic as `clojure-static-analysis-parity` — it shares the
 "enforce mechanically instead of by convention" motive but none of the ledger surface.
 
-## Field evidence — `create-subtask`, 2026-07-30
+## Field evidence — the stale-binary trap, 2026-07-30
 
-The four child cards below were first created with
-`eta-mu kanban create-subtask agent-operating-standard --title ... --status incoming`.
-All four were then deleted and hand-written, because the CLI output is not usable on this
-board. Observed, on top of what `rheos-cli-create-card` (review) already records:
+The dominant finding of this session was not a board bug. It was that **`eta-mu` on `PATH`
+is not this repo.**
 
-- **Random UUID identity.** Cards were stamped `uuid: "bc474e41-e5dc-44f4-a169-48a10854ca64"`.
-  Every other card on this board uses a semantic kebab-case uuid, and cards reference each
-  other by it.
-- **Wrong directory.** Task-shaped children of an epic landed in `kanban/epics/`, because
-  the path is `dirname(parent-source-path)`. The filename was the full title slugified —
-  `document-the-ledger-cli-surface-help-text-eta-mu-git-docs-and-a-git-skill.md`.
-- **`labels: [""]`** — an empty-string label, not an empty list.
-- **No `category`, `type`, or `points` keys** were written at all.
-- **Zero ledger events.** The ledger sat at 2724 events before and after four card
-  creations, confirming the `rheos-cli-create-card` finding that `create-subtask` emits no
-  `task-created` event and only registers a watcher CLI event.
+`which eta-mu` resolves through a volta shim to the **published** `eta-mu@1.1.1` from npm.
+The workspace source is also version `1.1.1`, and the two have **different command
+surfaces**: source registers top-level `receipt`, `receipt-river`, `session`,
+`session-mycology`, and `fork-tax` (`infra/cli/router.cljs`, `command-registry`), while the
+published build exposes those only under the `git` group. The local package has never been
+published from this state and has never been linked, so every CLI invocation in this
+session silently exercised an older program that reports the same version number.
 
-This belongs on `rheos-cli-create-card`, which is at status `review` on the
-`feat/rheos-card-creation` branch. It is recorded here instead of commented onto that card
-precisely to avoid a cross-branch board edit — which is the failure mode this epic exists
-to fix.
+Cost of the trap, measured in this session: four child cards were first created with
+`eta-mu kanban create-subtask`, judged unusable, deleted, and hand-written — on evidence
+that was entirely an artifact of the stale binary. Re-run against a correct local build
+(`pnpm -C packages/eta-mu build`, then `node packages/eta-mu/dist-cli/index.cjs`),
+`create-subtask` is **fine**:
+
+| Claim from the stale binary | Truth on a correct local build |
+|---|---|
+| random UUID (`bc474e41-…`) | semantic kebab-case uuid — `temp-verify-create-subtask-shape` |
+| task children land in `kanban/epics/` | land in `kanban/tasks/` |
+| `labels: [""]`, no `category`/`type` | writes `type: "task"`, `category: "tasks"`, `parent`, `write-id`, `created_at` |
+| zero ledger events for four creations | emits `kanban.task-created` with `:write-id`, `:card-type`, `:source-path`; ledger 2724 → 2725 |
+| empty body | writes a title heading |
+
+Residual, genuinely observed on the correct build:
+
+- `create-subtask` does not write `labels`, `points`, or `source`; the hand-written cards
+  here add them.
+- There is still no verb for creating a **root** card — `rheos-cli-create-card` (review, on
+  `feat/rheos-card-creation`) owns that, and its "current state" section should be
+  re-verified against a fresh build before it merges, since two of the defects it lists are
+  not reproducible on `main`.
+- `openhax.kanban.json` now warns that JSON board config is deprecated in favour of
+  `openhax.kanban.edn` — the `feature/rheos-edn-config` work, PR #158.
+
+**Lesson for the standard:** no CLI observation counts as evidence unless it came from a
+build of the working tree. Carded as `link-local-eta-mu-cli-for-development`.
 
 ## Constraints
 

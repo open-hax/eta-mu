@@ -30,29 +30,54 @@ back to hand-editing ledger files.
 
 ## Current state
 
+All verified against a build of the current tree, not the stale global binary — see
+`link-local-eta-mu-cli-for-development`.
+
 - Help is rendered by `render-help` at
   `packages/eta-mu/src/cljs/eta_mu/domain/router.cljs:30-44`, called from
-  `packages/eta-mu/src/cljs/eta_mu/infra/cli/router.cljs:83` and `:115`. Current output
-  lists `GIT` with three subcommands and one-line blurbs: `FORK-TAX`, `RECEIPT`,
-  `SESSION`. Nothing says what a ledger is or where it lives.
+  `packages/eta-mu/src/cljs/eta_mu/infra/cli/router.cljs:83` and `:115`. A correct build
+  lists top-level `RECEIPT`, `RECEIPT-RIVER`, `SESSION`, `SESSION-MYCOLOGY`, `SESSIONS`,
+  and `FORK-TAX`, plus the `GIT` group. **Nothing says what a ledger is or where it lives.**
+- **Leaf verbs are absent from the help tree.** `eta-mu receipt --help` and
+  `eta-mu receipt append --help` both render a self-referential stub —
+  `COMMANDS / RECEIPT  Receipt River operations` — listing the group as its own only
+  subcommand. The real verb list is only discoverable by triggering an error:
+  `eta-mu receipt bogus` prints
+  `Usage: eta-mu receipt {status|tail|validate|append|schemas|audit discover}`.
+  That usage string lives at `packages/receipt-river/src/cljs/eta_mu/receipt_river/infra/cli.cljs:258`,
+  unreachable from help. `append`'s own usage (`<kind> <note>`, `:218`) is likewise
+  error-only. Same shape under `eta-mu git receipt --help`.
 - `eta-mu git` is defined at
   `packages/eta-mu/src/cljs/eta_mu/infra/cli/commands/git.cljs:4-17` and registered at
   `packages/eta-mu/src/cljs/eta_mu/infra/cli/router.cljs:71-73`.
 - The only documentation is `packages/eta-mu/README.md:101-105`, which calls
   `eta-mu git receipt|session|fork-tax` "temporary compatibility paths" for the canonical
-  top-level commands.
+  top-level commands. That wording is **accurate for source** — top-level really is
+  canonical — but it is misleading in practice while the published binary only has the
+  `git` forms.
+- **JSON output is contaminated.** Invoked with a cwd outside the package, the built CLI
+  prints `no "source-map-support" (run "npm install source-map-support --save-dev" …)` to
+  **stdout** ahead of the payload, so `eta-mu kanban read-task` and `read-board` fail
+  `JSON.parse` for any consumer that does not filter it. Diagnostics belong on stderr.
 - **No skill** mentions `eta-mu git`. The existing git skills (`resolve-git-conflicts`,
   `github-integration`) are about general git, not this surface.
 
 ## Scope
 
-- [ ] Decide and record whether `eta-mu git *` is canonical or genuinely deprecated in
-      favour of the top-level `receipt` / `session` / `fork-tax` commands. Documenting it
-      as "temporary" while it is the discoverable grouping is the actual problem.
+- [ ] Register the leaf verbs in the help tree so `eta-mu receipt --help` lists
+      `status|tail|validate|append|schemas|audit discover` with their arguments, and
+      `eta-mu receipt append --help` prints `<kind> <note>`. Today both render a stub that
+      lists the group as its own subcommand, and the usage strings are reachable only by
+      typing something wrong.
+- [ ] Move the `source-map-support` notice (and any other diagnostic) off stdout so
+      JSON-emitting commands stay machine-parseable.
 - [ ] Help text names the three ledgers, their on-disk paths
       (`receipts.edn`, `.ημ/session-mycology/ledger.md`, `kanban/.events/ledger.edn`),
       and the command that writes each.
-- [ ] Per-command `--help` for each `git` subcommand.
+- [ ] Resolve the `eta-mu git *` story: top-level commands are canonical in source, so
+      either republish so that is true of the installed CLI too, or stop calling the `git`
+      forms "temporary" while they are the only ones a user's binary has. Depends on
+      `link-local-eta-mu-cli-for-development`.
 - [ ] A skill for the surface, consistent with the updated `receipt-river` and
       `session-mycology` skills — one story, not three.
 - [ ] Update `packages/eta-mu/README.md` and `DEVELOPMENT.md` to match whichever
