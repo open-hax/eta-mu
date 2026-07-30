@@ -7,7 +7,7 @@ on:
       - ".github/workflows/axxium-ci.yml"
       - "pnpm-lock.yaml"
   push:
-    branches: [main, staging]
+    branches: [main]
     paths:
       - "packages/axxium/**"
       - ".github/workflows/axxium-ci.yml"
