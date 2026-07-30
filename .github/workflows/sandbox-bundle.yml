@@ -9,14 +9,6 @@ on:
         default: false
         type: boolean
   pull_request:
-    paths:
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "deps.edn"
-      - "packages/**"
-      - "scripts/**"
-      - ".github/workflows/sandbox-bundle.yml"
   push:
     branches:
       - "**"
@@ -38,7 +30,9 @@ jobs:
     timeout-minutes: 90
     env:
       CLOJURE_TOOLS_VERSION: "1.12.5.1654"
+      CLOJURE_TOOLS_SHA256: "dc86cc56bc372fcef07bd87f44693eeb4b61cf5f44347883878364d03b5fb342"
       BABASHKA_VERSION: "1.13.219"
+      BABASHKA_SHA256: "9ac1fe988d7001625b30ef3e3307e67f8545505a7cb49a4aa179f578115a3e09"
 
     steps:
       - name: Check out full repository history
@@ -108,16 +102,30 @@ jobs:
           repositories: |
             katamorph
             event-ledger
+          permission-contents: read
 
-      - name: Configure private Git dependency reads
+      - name: Mirror private Git dependencies
         if: steps.dependency-token.outputs.token != ''
         env:
           DEPENDENCY_TOKEN: ${{ steps.dependency-token.outputs.token }}
         shell: bash
         run: |
           set -euo pipefail
+          mirrors="$RUNNER_TEMP/private-git-mirrors"
+          rm -rf "$mirrors"
+          mkdir -p "$mirrors"
           authorization="$(printf 'x-access-token:%s' "${DEPENDENCY_TOKEN}" | base64 -w0)"
-          git config --global http.https://github.com/.extraheader "AUTHORIZATION: basic ${authorization}"
+
+          mirror_repository() {
+            local repository="$1"
+            git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${authorization}" \
+              clone --mirror \
+              "https://github.com/open-hax/${repository}.git" \
+              "$mirrors/${repository}.git"
+          }
+
+          mirror_repository katamorph
+          mirror_repository event-ledger
 
       - name: Install, validate, test, and build
         id: validate
@@ -126,6 +134,27 @@ jobs:
         run: |
           set -euo pipefail
           export OUT="$RUNNER_TEMP/sandbox-export"
+          mirrors="$RUNNER_TEMP/private-git-mirrors"
+
+          remove_mirror_rewrites() {
+            git config --global --unset-all \
+              "url.file://$mirrors/katamorph.git.insteadOf" || true
+            git config --global --unset-all \
+              "url.file://$mirrors/event-ledger.git.insteadOf" || true
+          }
+          trap remove_mirror_rewrites EXIT
+
+          if [[ -d "$mirrors/katamorph.git" ]]; then
+            git config --global \
+              "url.file://$mirrors/katamorph.git.insteadOf" \
+              "https://github.com/open-hax/katamorph.git"
+          fi
+          if [[ -d "$mirrors/event-ledger.git" ]]; then
+            git config --global \
+              "url.file://$mirrors/event-ledger.git.insteadOf" \
+              "https://github.com/open-hax/event-ledger.git"
+          fi
+
           {
             pnpm install --frozen-lockfile
             pnpm --dir packages/extensions build
@@ -134,12 +163,10 @@ jobs:
             pnpm build
           } 2>&1 | tee "$OUT/logs/validate.log"
 
-      - name: Remove private Git authorization
-        if: always()
-        run: git config --global --unset-all http.https://github.com/.extraheader || true
-
       - name: Collect generated outputs and portable toolchains
         if: always()
+        env:
+          VALIDATION_OUTCOME: ${{ steps.validate.outcome }}
         shell: bash
         run: |
           set -euo pipefail
@@ -158,12 +185,16 @@ jobs:
           if [[ -n "${PNPM_HOME:-}" && -d "$PNPM_HOME" ]]; then
             tar -czf "$OUT/toolchain/pnpm-home.tar.gz" -C "$(dirname "$PNPM_HOME")" "$(basename "$PNPM_HOME")"
           fi
+          clojure_archive="$OUT/toolchain/clojure-tools-${CLOJURE_TOOLS_VERSION}.tar.gz"
+          babashka_archive="$OUT/toolchain/babashka-${BABASHKA_VERSION}-linux-amd64-static.tar.gz"
           curl -fsSL \
             "https://download.clojure.org/install/clojure-tools-${CLOJURE_TOOLS_VERSION}.tar.gz" \
-            -o "$OUT/toolchain/clojure-tools-${CLOJURE_TOOLS_VERSION}.tar.gz"
+            -o "$clojure_archive"
           curl -fsSL \
             "https://github.com/babashka/babashka/releases/download/v${BABASHKA_VERSION}/babashka-${BABASHKA_VERSION}-linux-amd64-static.tar.gz" \
-            -o "$OUT/toolchain/babashka-${BABASHKA_VERSION}-linux-amd64-static.tar.gz"
+            -o "$babashka_archive"
+          printf '%s  %s\n' "$CLOJURE_TOOLS_SHA256" "$clojure_archive" | sha256sum --check --strict -
+          printf '%s  %s\n' "$BABASHKA_SHA256" "$babashka_archive" | sha256sum --check --strict -
 
           for file in package.json pnpm-lock.yaml pnpm-workspace.yaml deps.edn shadow-cljs.edn; do
             [[ -f "$file" ]] && cp "$file" "$OUT/metadata/$file"
@@ -175,23 +206,28 @@ jobs:
             command -v clojure >/dev/null 2>&1 && clojure -Sdescribe || true
           } > "$OUT/metadata/tool-versions.txt" 2>&1
 
-          cat > "$OUT/manifest.json" <<EOF
-          {
-            "sandbox_bundle_version": 1,
-            "repository": "${GITHUB_REPOSITORY}",
-            "revision": "${GITHUB_SHA}",
-            "ref": "${GITHUB_REF}",
-            "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "validation": "${{ steps.validate.outcome }}",
-            "entrypoint": "pnpm test",
-            "network_required_after_restore": true,
-            "restore_requirements": [
-              "Node.js 22 and Java 21 must be installed on the restore host",
-              "Restore the bundled pnpm and Clojure toolchains or install the pinned versions",
-              "Restore the optional dependency-cache artifact or allow network access for dependency installation"
-            ]
-          }
-          EOF
+          generated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          jq -n \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg revision "$GITHUB_SHA" \
+            --arg ref "$GITHUB_REF" \
+            --arg generated_at "$generated_at" \
+            --arg validation "$VALIDATION_OUTCOME" \
+            '{
+              sandbox_bundle_version: 1,
+              repository: $repository,
+              revision: $revision,
+              ref: $ref,
+              generated_at: $generated_at,
+              validation: $validation,
+              entrypoint: "pnpm test",
+              network_required_after_restore: true,
+              restore_requirements: [
+                "Node.js 22 and Java 21 must be installed on the restore host",
+                "Restore the bundled pnpm and Clojure toolchains or install the pinned versions",
+                "Restore the optional dependency-cache artifact or allow network access for dependency installation"
+              ]
+            }' > "$OUT/manifest.json"
           (cd "$OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
 
       - name: Package optional dependency cache
