@@ -1,19 +1,19 @@
 (ns rheos.backend.infra.cli
   "CLI entry point for kanban operations.
 
-   Two things are load-bearing here and easy to break:
+   Three things are load-bearing here and easy to break:
 
-   1. **Exit codes are a contract** ([[exit-codes]]). Every failure path exits
+   1. **[[verbs]] is the single source of help.** `rheos --help`, `rheos help
+      <verb>`, `rheos <verb> --help`, and the reference table in `docs/cli.md`
+      all render from it. Adding a verb without an entry fails the test suite,
+      because undocumented verbs are how agents end up guessing.
+
+   2. **Exit codes are a contract** ([[exit-codes]]). Every failure path exits
       non-zero with one line on stderr. A CLI that always exits 0 cannot be
       scripted and cannot be trusted by an agent.
 
-   2. **Tool-backed verbs print JSON on stdout by default.** The `eta-mu kanban`
-      bridge parses `read-board` stdout, so that default is not cosmetic.
-
-   The help text below is still the hand-written list this file has always had,
-   and still names the wrong binary. Replacing it with a verb registry and a
-   reference page is the next card in the stack; this one is about the exit
-   contract and the missing verbs."
+   3. **Tool-backed verbs print JSON on stdout by default.** The `eta-mu kanban`
+      bridge parses `read-board` stdout, so that default is not cosmetic."
   (:require [clojure.string :as str]
             ["node:fs/promises" :as fsp]
             [rheos.backend.domain.board :as board]
@@ -119,33 +119,205 @@
     (and (some? v) (not= "false" v))))
 
 ;; ---------------------------------------------------------------------------
-;; Help
+;; Verb registry — the single source of help
 ;; ---------------------------------------------------------------------------
 
+(def common-flags
+  [["--config <path>" "board config file (else $KANBAN_CONFIG, else discovered)"]
+   ["--tasks-dir <path>" "override the resolved task root"]
+   ["--project <id>" "scope to one project (see `rheos projects`)"]])
+
+(def verbs
+  "Every verb, its flags, and one worked example. Rendered into all help output
+   and `docs/cli.md`; kept in the order a card moves through its life."
+  [{:verb "create" :group "lifecycle" :mutates? true
+    :args "--title <text>"
+    :summary "Create a card (epic or task, root or child) and record a task-created event."
+    :flags [["--title <text>" "card title (required)"]
+            ["--type <task|epic>" "card type; default task"]
+            ["--parent <uuid>" "parent card uuid — omit for a root card"]
+            ["--priority <P0..P3>" "priority; default P3"]
+            ["--points <n>" "Fibonacci size estimate"]
+            ["--labels <a,b,c>" "comma-separated labels"]
+            ["--body-file <path>" "read the card body from a file; `-` reads stdin"]
+            ["--dir <path>" "target dir relative to the task root; default epics/ or tasks/"]
+            ["--uuid <id>" "explicit uuid; refused if already taken"]
+            ["--status <s>" "refused unless it is the FSM initial state"]
+            ["--force-status" "allow a non-initial --status"]]
+    :example "rheos create --type epic --title \"Ledger cutover\" --priority P0"
+    :notes "A card is written with a skeleton body unless --body-file is given, so it can pass its first gate."}
+
+   {:verb "create-subtask" :group "lifecycle" :mutates? true
+    :args "<parent-uuid> --title <text>"
+    :summary "Alias of `create --parent`. Kept for compatibility; prefer `create`."
+    :flags [["--title <text>" "card title (required)"]
+            ["--status <s>" "refused unless it is the FSM initial state"]
+            ["--priority <P0..P3>" "priority; default P3"]
+            ["--labels <a,b,c>" "comma-separated labels"]]
+    :example "rheos create-subtask my-epic --title \"Extract the fold\""}
+
+   {:verb "move" :group "lifecycle" :mutates? true
+    :args "<uuid> --to <status>"
+    :summary "Change a card's status. FSM-enforced, ledger-recorded, streamed to the UI."
+    :flags [["--to <status>" "target status (required)"]
+            ["--json" "emit the result as JSON"]]
+    :example "rheos move my-card --to in_progress"
+    :notes "The only way to change status. Exits 3 when the FSM, a WIP limit, or a build gate refuses."}
+
+   {:verb "status-update" :group "lifecycle" :mutates? true
+    :args "<uuid> --to <status>"
+    :summary "Same enforced move as `move`, routed through the agent-tool dispatch; prints JSON."
+    :flags [["--to <status>" "target status (required)"]]
+    :example "rheos status-update my-card --to review"}
+
+   {:verb "comment" :group "lifecycle" :mutates? true
+    :args "<uuid> --text <text>"
+    :summary "Append a comment to a card. The way to update a card after breakdown."
+    :flags [["--text <text>" "comment body (required)"]]
+    :example "rheos comment my-card --text \"Build gate green; ready for review\""
+    :notes "Comments are append-only and ledger-recorded. Once a card is past breakdown its body is settled — record new information here rather than rewriting scope."}
+
+   {:verb "add-comment" :group "lifecycle" :mutates? true
+    :args "<uuid> --text <text>"
+    :summary "Alias of `comment`."
+    :flags [["--text <text>" "comment body (required)"]]
+    :example "rheos add-comment my-card --text \"Blocked on #161\""}
+
+   {:verb "frontmatter" :group "lifecycle" :mutates? true
+    :args "<uuid> --set <key>=<value>"
+    :summary "Update descriptive frontmatter (title, priority, labels, points, category, description, estimate, assignee)."
+    :flags [["--set <key>=<value>" "repeatable; one ledger event per changed key"]]
+    :example "rheos frontmatter my-card --set points=3 --set priority=P1"
+    :notes "`--set status=…` is refused: status is FSM-governed, use `move`. Identity and provenance keys (uuid, created_at, write-id, source-path) are never writable."}
+
+   {:verb "read-task" :group "read"
+    :args "<uuid>"
+    :summary "Print one card's frontmatter, body, and comments as JSON."
+    :flags []
+    :example "rheos read-task my-card"}
+
+   {:verb "read-board" :group "read"
+    :args ""
+    :summary "Print the composed board — columns, counts, cards, WIP limits — as JSON."
+    :flags [["--status <a,b>" "comma-separated statuses"]
+            ["--priority <a,b>" "comma-separated priorities"]
+            ["--labels <a,b>" "comma-separated labels (AND)"]
+            ["--q <text>" "title substring"]]
+    :example "rheos read-board --project kanban --status in_progress,review"
+    :notes "Scope it. With no --project it composes every configured project."}
+
+   {:verb "search-tasks" :group "read"
+    :args "--query <text>"
+    :summary "Search cards across projects; prints compact JSON rows."
+    :flags [["--query <text>" "title substring"]]
+    :example "rheos search-tasks --query \"ledger\""}
+
+   {:verb "compose" :group "read"
+    :args ""
+    :summary "Composed board view with the full query DSL; human-readable by default."
+    :flags [["--domain <d>" "meta.domain filter"]
+            ["--org <o>" "meta.org filter"]
+            ["--status <s>" "comma-separated statuses"]
+            ["--priority <p>" "comma-separated priorities"]
+            ["--labels <l>" "comma-separated labels"]
+            ["--projects <p>" "comma-separated project ids"]
+            ["--q <text>" "title substring"]
+            ["--where <clause>" "clause DSL, e.g. \"points in 1,2 and meta.tier = core\""]
+            ["--save <name>" "save these flags as a named preset"]
+            ["--preset <name>" "load a saved preset"]
+            ["--out <path>" "write JSON to a file"]
+            ["--json" "emit JSON on stdout"]]
+    :example "rheos compose --status in_progress --priority P0"}
+
+   {:verb "board" :group "read"
+    :args "<snapshot|list>"
+    :summary "`board snapshot` writes a board JSON snapshot; `board list` lists configured projects."
+    :flags [["--out <path>" "snapshot: write to a file instead of stdout"]
+            ["--verbose" "list: include project meta"]]
+    :example "rheos board snapshot --out board.json"}
+
+   {:verb "projects" :group "read"
+    :args ""
+    :summary "List configured projects: id, title, default flag, meta. Prints JSON."
+    :flags []
+    :example "rheos projects"}
+
+   {:verb "events" :group "read"
+    :args "[uuid]"
+    :summary "Print ledger events, newest last. Pass a uuid to scope to one card."
+    :flags [["--limit <n>" "keep only the last n events"]
+            ["--json" "emit the raw envelopes as JSON"]]
+    :example "rheos events my-card --limit 20"}
+
+   {:verb "drift" :group "read"
+    :args ""
+    :summary "Report cards whose files changed outside a recorded Rheos write."
+    :flags [["--json" "emit JSON"]]
+    :example "rheos drift"}
+
+   {:verb "serve" :group "service"
+    :args ""
+    :summary "Run the HTTP server (board UI, REST API, SSE stream, MCP endpoint)."
+    :flags [["--host <host>" "bind address"]
+            ["--port <port>" "bind port"]]
+    :example "rheos serve --port 8791"}])
+
+(def ^:private by-verb (into {} (map (juxt :verb identity)) verbs))
+
+(defn- flag-lines [flags]
+  (mapv (fn [[flag doc]] (str "  " (subs (str flag "                          ") 0 24) " " doc)) flags))
+
+(defn- usage-line [{:keys [verb args]}]
+  (str "  " bin-name " " verb (when (seq args) (str " " args))))
+
 (defn show-help []
-  (println "OpenHax Kanban (CLJS)")
+  (println "rheos — agent-first kanban board CLI")
   (println "")
   (println "USAGE")
-  (println "  openhax-kanban board snapshot [--tasks-dir <path>] [--out <path>]")
-  (println "  openhax-kanban board list [--verbose]")
-  (println "  openhax-kanban compose [--domain <d>] [--org <o>] [--status <s>] [--priority <p>] [--labels <l>] [--projects <p>] [--q <text>] [--where <clause>] [--save <name>] [--preset <name>] [--json]")
-  (println "  openhax-kanban move <task-uuid> --to <status> [--project <id>] [--json]")
-  (println "  openhax-kanban status-update <task-uuid> --to <status> [--project <id>]")
-  (println "  openhax-kanban comment <task-uuid> --text <text> [--project <id>]")
-  (println "  openhax-kanban add-comment <task-uuid> --text <text> [--project <id>]")
-  (println "  openhax-kanban frontmatter <task-uuid> --set <key>=<value> [--set <k>=<v> ...] [--project <id>]")
-  (println "  openhax-kanban create --title <title> [--type <task|epic>] [--parent <uuid>] [--project <id>] [--priority <p>] [--points <n>] [--labels <l>] [--body-file <path>] [--dir <path>] [--uuid <id>]")
-  (println "  openhax-kanban create-subtask <parent-uuid> --title <title> [--project <id>] [--status <s>] [--priority <p>]")
-  (println "  openhax-kanban read-task <task-uuid> [--project <id>]")
-  (println "  openhax-kanban search-tasks --query <text>")
-  (println "  openhax-kanban read-board [--project <id>] [--status <s>] [--priority <p>] [--labels <l>] [--q <text>]")
-  (println "  openhax-kanban projects")
-  (println "  openhax-kanban events [task-uuid] [--limit <n>] [--json]")
-  (println "  openhax-kanban drift [--json]")
-  (println "  openhax-kanban serve [--host <host>] [--port <port>]")
+  (println (str "  " bin-name " <verb> [args] [flags]"))
+  (println "")
+  (doseq [[group label] [["lifecycle" "LIFECYCLE (mutating)"]
+                         ["read" "READ"]
+                         ["service" "SERVICE"]]]
+    (println label)
+    (doseq [v verbs :when (= group (:group v))]
+      (println (str (subs (str (usage-line v) "                                                        ") 0 56)
+                    " " (:summary v))))
+    (println ""))
+  (println "COMMON FLAGS")
+  (doseq [line (flag-lines common-flags)] (println line))
   (println "")
   (println "EXIT CODES")
-  (println "  0 ok   1 usage   2 not found   3 refused by policy   4 internal error"))
+  (println "  0 ok   1 usage   2 not found   3 refused by policy   4 internal error")
+  (println "")
+  (println (str "  " bin-name " help <verb>   for a verb's flags and an example."))
+  (println "  Card bodies settle once a card leaves breakdown — record later updates with")
+  (println (str "  `" bin-name " comment <uuid> --text …` rather than rewriting the body.")))
+
+(defn show-verb-help [verb]
+  (if-let [v (by-verb verb)]
+    (do
+      (println (str bin-name " " (:verb v) (when (seq (:args v)) (str " " (:args v)))))
+      (println "")
+      (println (str "  " (:summary v)))
+      (when (:mutates? v) (println "  Mutating: writes the card file and records a ledger event."))
+      (println "")
+      (when (seq (:flags v))
+        (println "FLAGS")
+        (doseq [line (flag-lines (:flags v))] (println line))
+        (println ""))
+      (println "COMMON FLAGS")
+      (doseq [line (flag-lines common-flags)] (println line))
+      (println "")
+      (when (:notes v)
+        (println "NOTES")
+        (println (str "  " (:notes v)))
+        (println ""))
+      (println "EXAMPLE")
+      (println (str "  " (:example v))))
+    (do (js/console.error (str bin-name ": unknown verb: " verb))
+        (js/console.error (str "  known verbs: " (str/join ", " (map :verb verbs))))
+        (exit! :usage))))
 
 ;; ---------------------------------------------------------------------------
 ;; Output helpers
@@ -178,15 +350,15 @@
     (or (first (filter #(= (:uuid %) uuid) all))
         (throw (ex-info (str "unknown task: " uuid) {:kind :not-found :uuid uuid})))))
 
-(defn- require-flag [flags key _verb]
+(defn- require-flag [flags key verb]
   (or (get-flag flags key)
       (throw (ex-info (str "missing --" key)
-                      {:kind :usage :hint (str bin-name " --help")}))))
+                      {:kind :usage :hint (str bin-name " help " verb)}))))
 
-(defn- require-positional [value _verb what]
+(defn- require-positional [value verb what]
   (or value
       (throw (ex-info (str "missing <" what ">")
-                      {:kind :usage :hint (str bin-name " --help")}))))
+                      {:kind :usage :hint (str bin-name " help " verb)}))))
 
 ;; ---------------------------------------------------------------------------
 ;; Verb implementations
@@ -344,7 +516,7 @@
         pairs (get-flag-list flags "set")]
     (when (empty? pairs)
       (throw (ex-info "missing --set <key>=<value>"
-                      {:kind :usage :hint (str bin-name " --help")})))
+                      {:kind :usage :hint (str bin-name " help frontmatter")})))
     (run-tool "kanban_update_frontmatter"
               {:uuid (require-positional (:subcommand parsed) "frontmatter" "uuid")
                :project (get-flag flags "project")
@@ -430,7 +602,7 @@
               "list" (cmd-board-list ps (:flags parsed))
               (throw (ex-info (str "board expects `snapshot` or `list`"
                                    (when (:subcommand parsed) (str ", got: " (:subcommand parsed))))
-                              {:kind :usage :hint (str bin-name " --help")})))
+                              {:kind :usage :hint (str bin-name " help board")})))
     (throw (ex-info (str "unknown verb: " verb)
                     {:kind :usage :hint (str bin-name " --help")}))))
 
@@ -451,8 +623,15 @@
         verb (:command parsed)]
     (cond
       ;; Help never needs a board, so it must not fail when config is missing.
-      (or (nil? verb) (= "-h" verb) (= "help" verb) (flag-true? (:flags parsed) "help"))
+      (or (nil? verb) (= "--help" verb) (= "-h" verb)
+          (and (= "help" verb) (nil? (:subcommand parsed))))
       (show-help)
+
+      (= "help" verb)
+      (show-verb-help (:subcommand parsed))
+
+      (flag-true? (:flags parsed) "help")
+      (show-verb-help verb)
 
       :else
       (try

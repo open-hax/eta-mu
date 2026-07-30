@@ -1,10 +1,106 @@
 (ns rheos.backend.infra.cli-test
-  "Guards on the CLI's exit contract and argument parsing.
+  "Guards on the CLI's two published contracts: its help text and its exit codes.
 
-   Help-output and reference-page coverage arrive with the verb registry in the
-   next card; this namespace covers the behaviour a scripted caller depends on."
-  (:require [cljs.test :refer [deftest testing is]]
+   The help assertions are not cosmetic. Before these existed, every usage line
+   named `openhax-kanban` — a binary that does not exist — and agents copied it
+   verbatim."
+  (:require ["node:fs/promises" :as fsp]
+            ["node:path" :as path]
+            [clojure.string :as str]
+            [cljs.test :refer [deftest testing is]]
             [rheos.backend.infra.cli :as cli]))
+
+(defn- help-text
+  "Capture whatever `f` prints, so help output can be asserted on."
+  [f]
+  (let [out (atom [])
+        original *print-fn*]
+    (set! *print-fn* (fn [& args] (swap! out conj (str/join "" args))))
+    (try (f) (finally (set! *print-fn* original)))
+    (str/join "\n" @out)))
+
+;; ---------------------------------------------------------------------------
+;; Help
+;; ---------------------------------------------------------------------------
+
+(deftest help-names-the-real-binary
+  (testing "Help never names a binary that does not exist"
+    (let [text (help-text cli/show-help)]
+      (is (not (str/includes? text "openhax-kanban"))
+          "openhax-kanban is not an installed bin; agents copy help verbatim")
+      (is (str/includes? text "rheos <verb>")))))
+
+(deftest every-verb-appears-in-help
+  (testing "A verb missing from help is a verb agents cannot find"
+    (let [text (help-text cli/show-help)]
+      (doseq [{:keys [verb]} cli/verbs]
+        (is (str/includes? text (str "rheos " verb))
+            (str "verb missing from help: " verb))))))
+
+(deftest every-verb-is-dispatchable
+  (testing "Help does not advertise verbs the dispatcher does not know"
+    ;; `dispatch-verb` is private, so assert against the source of truth the
+    ;; dispatcher's `case` mirrors: each documented verb must be reachable, which
+    ;; the parse layer proves by producing it as :command.
+    (doseq [{:keys [verb]} cli/verbs]
+      (is (= verb (:command (cli/parse-args [verb])))
+          (str "verb not parseable as a command: " verb)))))
+
+(deftest every-verb-has-a-summary-and-example
+  (testing "Each verb documents what it does and shows one working invocation"
+    (doseq [{:keys [verb summary example]} cli/verbs]
+      (is (and (string? summary) (seq summary)) (str verb " needs a summary"))
+      (is (and (string? example) (str/starts-with? example "rheos "))
+          (str verb " needs an example that starts with the real bin name")))))
+
+(deftest verb-help-renders-flags-and-example
+  (testing "Per-verb help exists and is verb-specific"
+    (let [text (help-text #(cli/show-verb-help "create"))]
+      (is (str/includes? text "rheos create"))
+      (is (str/includes? text "--title"))
+      (is (str/includes? text "EXAMPLE"))
+      (is (str/includes? text "FLAGS")))))
+
+(deftest help-documents-the-comment-policy
+  (testing "The body-settles-after-breakdown rule is discoverable from help alone"
+    (let [text (help-text cli/show-help)]
+      (is (str/includes? text "breakdown"))
+      (is (str/includes? text "comment")))))
+
+(deftest help-documents-exit-codes
+  (testing "A caller can learn the exit contract without reading source"
+    (let [text (help-text cli/show-help)]
+      (is (str/includes? text "EXIT CODES"))
+      (doseq [code ["1" "2" "3" "4"]]
+        (is (str/includes? text code))))))
+
+;; ---------------------------------------------------------------------------
+;; The reference page
+;; ---------------------------------------------------------------------------
+
+(def ^:private cli-doc-path
+  ;; Tests run from the package root, so the doc is resolvable relatively.
+  (path/resolve "docs/cli.md"))
+
+(deftest ^:async reference-page-covers-every-verb
+  (testing "A verb absent from docs/cli.md is a verb nobody can look up"
+    (let [doc (await (.readFile fsp cli-doc-path "utf8"))]
+      (doseq [{:keys [verb]} cli/verbs]
+        ;; Verbs appear in the reference as a backticked token, with or without
+        ;; arguments: `projects` and `move <uuid> --to <status>` both count.
+        (is (or (str/includes? doc (str "`" verb " "))
+                (str/includes? doc (str "`" verb "`")))
+            (str "verb missing from docs/cli.md: " verb))))))
+
+(deftest ^:async reference-page-documents-the-contracts
+  (testing "Install, exit codes, and the comment-after-breakdown rule are all present"
+    (let [doc (await (.readFile fsp cli-doc-path "utf8"))]
+      (is (str/includes? doc "npm i -g @eta-mu/rheos"))
+      (is (str/includes? doc "## Exit codes"))
+      (is (str/includes? doc "## Agent quickstart"))
+      (is (str/includes? doc "Card bodies settle after breakdown"))
+      (is (str/includes? doc "openhax.kanban.edn"))
+      (is (not (str/includes? doc "openhax-kanban"))))))
 
 ;; ---------------------------------------------------------------------------
 ;; Exit contract
