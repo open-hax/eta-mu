@@ -79,6 +79,33 @@ Always use `^:async` metadata (ClojureScript ≥ 1.12.145). Never use
 - For eta-mu extension changes, run `pnpm -C packages/extensions test` and resolve all failures before reporting completion.
 - If a full suite cannot be run, state that the task is not complete and record the exact blocker instead of claiming done.
 
+## Session and Turn Discipline
+
+The ledgers are the project's memory across sessions. Reading them is not optional
+context-gathering, and writing them is not closeout — both are part of the turn.
+
+- **Open every session by reading the ledgers.** `.ημ/session-mycology/ledger.md` and the
+  spores under `.ημ/session-mycology/spores/`, plus the Receipt River at `receipts.edn`.
+  Recover recorded context before asking the user to restate known intent.
+- **Commit at the end of every turn.** Every turn, not every task. A turn that ends with
+  uncommitted work has not ended — it has been abandoned mid-write.
+- **Run `session-mycology` at the end of every turn.** Score the friction, log the turn,
+  and incubate at most one spore when the friction was real and reusable.
+- **Work in a git worktree.** Implementation happens on a branch in its own worktree, not
+  in the primary tree. Push before removing the worktree, and remove it once its branch is
+  pushed — never leave worktrees registered under a session temp path that will be
+  garbage-collected.
+- **Leave the tree clean.** No dangling files, no dirty primary working tree, no stashes
+  left for the user to reconcile. When cleaning up dirt you did not create, prove each
+  file's content is landed elsewhere (compare blob hashes against every candidate branch)
+  before removing anything.
+- **You own the ledger churn you cause.** Any `eta-mu kanban` or Rheos CLI invocation
+  rewrites `kanban/.events/ledger.edn`. That diff is yours to commit on the branch whose
+  work produced it.
+- **Delegate scoped implementation to subagents.** Keep the main context on intent and
+  synthesis; push file-reading, surveys, and scoped edits outward. Use the smallest model
+  that can do the job — Sonnet for coding subagents, Haiku for exploration and research.
+
 ## Board Operations
 
 Board state is the single source of truth for work. Treat it as a finite-state machine whose law is implemented in `packages/rheos/src/rheos/backend/law/fsm.cljs` and rendered for humans in `PROCESS.md`.
