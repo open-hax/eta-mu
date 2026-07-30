@@ -83,6 +83,25 @@
     (is (= [".ημ/Π_STATE.sexp" ".ημ/Π_LAST.md" ".ημ/Π_EVENT.edn"]
            (handoff/build-manifest)))))
 
+(deftest artifact-escaping-test
+  (let [plan {:repo-root "/repo/<unsafe>&"
+              :branch "feature/\"quoted\"\nnext"
+              :sha "abc\\def"
+              :tag-name "Π-`tag`"
+              :timestamp "2026-07-29T00:00:00.000Z"
+              :owned [{:path "src/\"quoted\"\\file\n.cljs"}]
+              :concurrent []
+              :blocked []}
+        sexp (handoff/build-state-sexp plan)
+        markdown (handoff/build-last-md plan)]
+    (is (str/includes? sexp "feature/\\\"quoted\\\"\\nnext"))
+    (is (str/includes? sexp "src/\\\"quoted\\\"\\\\file\\n.cljs"))
+    (is (str/includes? markdown "<code>/repo/&lt;unsafe&gt;&amp;</code>"))
+    (is (str/includes? markdown "<code>Π-`tag`</code>"))
+    (is (str/includes? markdown
+                       "src/&quot;quoted&quot;\\\\file\\n.cljs"))
+    (is (not (str/includes? markdown "- `src/")))))
+
 (deftest version-stamped-handoff-test
   (let [plan {:repo-root "/repo"
               :branch "main"
