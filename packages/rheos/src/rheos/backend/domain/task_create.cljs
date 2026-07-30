@@ -62,12 +62,6 @@
     (.isDirectory (await (.stat fsp dir-path)))
     (catch :default _ false)))
 
-(defn- ^:async file-exists? [file-path]
-  (try
-    (await (.access fsp file-path))
-    true
-    (catch :default _ false)))
-
 (defn- within?
   "Is `candidate` inside `root` (or root itself)?"
   [root candidate]
@@ -109,13 +103,28 @@
                  {:dir resolved :paths (vec paths)})))
     resolved))
 
-(defn- ^:async unique-path
-  "`<dir>/<slug>.md`, disambiguated with a uuid prefix if that name is taken."
+(defn- card-file-path
+  "Choose one deterministic path for an exclusive create.
+
+   A card whose uuid is the title slug owns `<slug>.md`. A deliberate or
+   collision-derived uuid gets a suffix path. We never probe and then overwrite:
+   the write itself decides whether this creation wins."
   [dir slug uuid]
-  (let [candidate (path/join dir (str slug ".md"))]
-    (if (await (file-exists? candidate))
-      (path/join dir (str slug "-" (subs uuid 0 (min 8 (count uuid))) ".md"))
-      candidate)))
+  (if (= slug uuid)
+    (path/join dir (str slug ".md"))
+    (let [suffix (subs uuid (max 0 (- (count uuid) 8)))]
+      (path/join dir (str slug "-" suffix ".md")))))
+
+(defn- ^:async write-card-exclusive!
+  [file-path raw]
+  (try
+    (await (.writeFile fsp file-path raw #js {:encoding "utf8" :flag "wx"}))
+    (catch :default e
+      (if (= "EEXIST" (.-code e))
+        (refuse! :refused
+                 (str "a card file already exists at " file-path)
+                 {:path file-path :cause :create-conflict})
+        (throw e)))))
 
 (defn frontmatter-pairs
   "Frontmatter as an ordered pair sequence, not a map.
@@ -157,7 +166,7 @@
       (refuse! :usage (str "unknown card type: " card-type
                            " (expected one of " (str/join ", " (sort card-types)) ")")
                {:card-type card-type}))
-    (let [existing (await (tasks/load-tasks project))
+    (let [existing (await (tasks/load-tasks (:tasks-dir project)))
           by-uuid (into {} (map (juxt :uuid identity)) existing)
           slug (slugify title card-type)
           ;; Default the uuid to the title slug. Cards are addressed by uuid on
@@ -183,7 +192,7 @@
                       "or pass --force-status if you mean it.")
                  {:status card-status :initial-state expected-status}))
       (let [card-dir (await (resolve-card-dir project card-type dir))
-            file-path (await (unique-path card-dir slug card-uuid))
+            file-path (card-file-path card-dir slug card-uuid)
             write-id (events/generate-write-id)
             card-body (if (str/blank? body) (body-template title) (str/trim body))
             raw (str (content-parser/serialize-frontmatter
@@ -202,7 +211,7 @@
                      "\n\n" card-body "\n")]
         (await (.mkdir fsp card-dir #js {:recursive true}))
         (watcher/register-cli-event! write-id card-uuid)
-        (await (.writeFile fsp file-path raw "utf8"))
+        (await (write-card-exclusive! file-path raw))
         (await (events/emit-task-created!
                 (ledger/get-ledger (:tasks-dir project))
                 (:id project) card-uuid
