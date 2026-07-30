@@ -31,6 +31,7 @@ jobs:
     env:
       CLOJURE_TOOLS_VERSION: "1.12.5.1654"
       CLOJURE_TOOLS_SHA256: "dc86cc56bc372fcef07bd87f44693eeb4b61cf5f44347883878364d03b5fb342"
+      CLJ_KONDO_VERSION: "2025.10.23"
       BABASHKA_VERSION: "1.13.219"
       BABASHKA_SHA256: "9ac1fe988d7001625b30ef3e3307e67f8545505a7cb49a4aa179f578115a3e09"
 
@@ -72,10 +73,11 @@ jobs:
           version: "10.14.0"
           run_install: false
 
-      - name: Set up pinned Clojure CLI
-        uses: DeLaGuardo/setup-clojure@3fe9b3ae632c6758d0b7757b0838606ef4287b08
+      - name: Set up pinned Clojure CLI and clj-kondo
+        uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
         with:
           cli: ${{ env.CLOJURE_TOOLS_VERSION }}
+          clj-kondo: ${{ env.CLJ_KONDO_VERSION }}
 
       - name: Set up pinned Babashka
         shell: bash
@@ -231,6 +233,7 @@ jobs:
             java -version
             command -v clojure >/dev/null 2>&1 && clojure -Sdescribe || true
             command -v bb >/dev/null 2>&1 && bb --version || true
+            command -v clj-kondo >/dev/null 2>&1 && clj-kondo --version || true
           } > "$OUT/metadata/tool-versions.txt" 2>&1
 
           generated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
