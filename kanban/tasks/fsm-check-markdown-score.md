@@ -27,4 +27,5 @@ Implement the `markdown-score` transition check for `incoming -> breakdown`.
 
 ---
 Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](../epics/workflow-dsl-kanban-reference.md). This card is genuinely obsolete as an authoritative transition gate: headers, length, and code-block heuristics do not establish readiness. Any surviving implementation is advisory lint evidence only.
+
 ---

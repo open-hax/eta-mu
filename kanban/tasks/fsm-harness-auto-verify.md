@@ -26,4 +26,5 @@ Auto-verify known harnesses and warn on unknown ones.
 
 ---
 Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](../epics/workflow-dsl-kanban-reference.md). Preserve provenance verification through runtime manifests, capabilities, signed or causal receipts, attestations, and evidence contracts. The hardcoded harness-name list remains rejected.
+
 ---

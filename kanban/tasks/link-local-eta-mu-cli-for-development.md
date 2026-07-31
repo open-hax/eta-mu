@@ -5,19 +5,20 @@ parent: "agent-operating-standard"
 type: "task"
 points: "5"
 source: "user-request:2026-07-30"
-title: "eta-mu on PATH must be this working tree, not a stale published build"
+title: "eta-mu-beta must run this working tree, not a stale published build"
 priority: "P0"
 status: "incoming"
 uuid: "link-local-eta-mu-cli-for-development"
 created_at: "2026-07-30T18:45:00Z"
 ---
 
-# eta-mu on PATH must be this working tree, not a stale published build
+# eta-mu-beta must run this working tree, not a stale published build
 
 ## Outcome
 
-Running `eta-mu` while working in this repo runs **this repo**. If it cannot, it says so
-loudly instead of quietly answering as a different program with the same version number.
+Running `eta-mu-beta` while working in this repo runs **this repo**. If it cannot, it
+says so loudly instead of quietly answering as a different program with the same version
+number. Bare `eta-mu` remains the published build by design.
 
 ## Why
 
@@ -84,13 +85,13 @@ reordering, no shadowing.
       re-creatable from the repo after a machine rebuild or another workspace move.
 - [ ] Teach `CLAUDE.md` the same rule, so agents stop citing `eta-mu` output as evidence
       about this repo.
-- [ ] `eta-mu version` must distinguish a local build from a published install — surface
-      the git SHA and dirty flag, not just the package version. Two programs must never
-      report the same identity.
-- [ ] `eta-mu doctor` reports which binary is answering, whether it was built from the
-      current tree, and whether `dist-cli` is stale relative to `src/cljs`.
-- [ ] Fail loudly on a missing build: no `dist-cli` should print a build instruction, not
-      resolve through a global shim.
+- [ ] `eta-mu-beta version` must distinguish a local build from a published install —
+      surface the git SHA and dirty flag, not just the package version. Two programs must
+      never report the same identity.
+- [ ] `eta-mu-beta doctor` reports which binary is answering, whether it was built from
+      the current tree, and whether `dist-cli` is stale relative to `src/cljs`.
+- [ ] Fail loudly on a missing build: a missing `dist-cli` should print a build instruction,
+      not resolve through a different global command.
 - [ ] Do not let `Unknown command: <x>` fall through to the agent handler and surface as an
       API-key error. Unknown commands must report themselves as unknown commands.
 - [ ] Worktree ergonomics: either make `pnpm build` refuse to run without an installed dep
@@ -100,8 +101,9 @@ reordering, no shadowing.
 
 ## Done when
 
-An agent cannot mistake the published CLI for the working tree's, and a build that would
-produce a broken binary fails instead of succeeding quietly.
+An agent cannot mistake bare `eta-mu` for the working tree, `eta-mu-beta` is reproducible
+and self-identifying, and a build that would produce a broken binary fails instead of
+succeeding quietly.
 
 ## Notes
 

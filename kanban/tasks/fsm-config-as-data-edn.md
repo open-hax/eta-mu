@@ -30,4 +30,5 @@ mutable surface.
 
 ---
 Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](../epics/workflow-dsl-kanban-reference.md). Preserve portable, versioned workflow resources and trigger/action contracts; split Katamorph declarations from Rheos runtime bindings instead of absorbing all board and runtime concerns into one universal config.
+
 ---

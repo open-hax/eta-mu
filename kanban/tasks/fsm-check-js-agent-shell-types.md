@@ -27,4 +27,5 @@ Implement the three extensible check runtimes described in the FSM epic.
 
 ---
 Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](../epics/workflow-dsl-kanban-reference.md). Preserve extensible execution, but replace host-shaped js, agent, and shell check types with semantic capability, action, guard, and evidence references whose implementations and grants are injected per runtime.
+
 ---

@@ -19,8 +19,8 @@ created_at: "2026-07-30T18:05:00Z"
 Every event appended to `kanban/.events/ledger.edn` carries the git ref and HEAD SHA it
 was written under. The board becomes a projection *filtered by git context*: checking out
 a branch shows the board as that branch's work leaves it, and two branches appending
-concurrently produce a log that can be attributed and reconciled rather than one that
-silently interleaves.
+concurrently produce a log whose complete records can be attributed and reconciled rather
+than silently interleaved.
 
 ## Why
 
@@ -48,23 +48,32 @@ branches each appended their own 100 events from the same base.
 
 - [ ] Extend the event envelope with git provenance — at minimum the ref name and HEAD
       SHA at append time. Decide and record whether the worktree path belongs there too.
+- [ ] Make the ledger append boundary atomic or serialized for concurrent writers. Each
+      append must preserve one complete, individually parseable EDN record; two writers
+      must never interleave bytes within a record.
 - [ ] Read git state through a new `extern.*` namespace, not inline in `domain.*`;
       the boundary check in `scripts/check-ledger-extern-boundaries.mjs` must stay green.
+      Git discovery failure is data, not a failed precondition: non-git directories,
+      empty repositories, and detached HEAD append successfully with unknown provenance
+      (retaining a HEAD SHA where one exists).
 - [ ] Treat provenance as absent-not-invalid for the 2552 pre-existing events. Do **not**
-      rewrite history to backfill.
+      rewrite history to backfill. The default branch-scoped projection includes these
+      legacy events once as a shared baseline; it does not attribute them to any branch.
 - [ ] Fold/projection reads a git context and scopes the board to it, with an explicit
-      escape hatch for "show me every branch".
-- [ ] Detached HEAD, a fresh repo with no commits, and a non-git directory must all
-      append successfully with provenance recorded as unknown.
-- [ ] Unit tests for: append under a named branch, append under detached HEAD, projection
-      filtered by ref, and a divergent two-branch log being detected rather than merged.
+      escape hatch for "show me every branch". The escape hatch also includes the shared
+      provenance-unknown baseline once.
+- [ ] Unit tests for: append under a named branch; append under detached HEAD, an empty
+      repository, and a non-git directory; two divergent concurrent writers preserving
+      complete parseable records; legacy unknown events included as shared baseline;
+      projection filtered by ref; and a divergent two-branch log being detected rather
+      than merged.
 - [ ] Zero clj-kondo warnings; `pnpm -C packages/rheos test` green.
 
 ## Done when
 
 Appending an event on a branch and then checking out `main` no longer shows that event in
-the default board projection, and a divergent (non-prefix) ledger is reported as
-divergence instead of being silently unioned.
+the default board projection, concurrent writers cannot corrupt record boundaries, and a
+divergent (non-prefix) ledger is reported as divergence instead of being silently unioned.
 
 ## Open questions
 

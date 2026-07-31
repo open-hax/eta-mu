@@ -160,4 +160,5 @@ Pluggable checks:
 Bounced back to breakdown: epic is marked todo but enforcement is already live; remaining scope (pluggable checks markdown-score/agent-review/code-review, js/agent/shell check types, harness auto-verify) is too large and undefined for a single card. Splitting into incoming subtasks. --tasks-dir /home/err/devel/orgs/open-hax/eta-mu/kanban
 
 Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](workflow-dsl-kanban-reference.md). This card remains rejected in its stated form, not as a conceptual rejection of FSMs. Its reconciliation, resource-data, ledger-fold, and per-field workflow invariants move to the successor; Kanban remains an FSM and becomes the reference workflow.
+
 ---

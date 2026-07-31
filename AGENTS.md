@@ -95,10 +95,11 @@ context-gathering, and writing them is not closeout — both are part of the tur
   in the primary tree. Push before removing the worktree, and remove it once its branch is
   pushed — never leave worktrees registered under a session temp path that will be
   garbage-collected.
-- **Leave the tree clean.** No dangling files, no dirty primary working tree, no stashes
-  left for the user to reconcile. When cleaning up dirt you did not create, prove each
-  file's content is landed elsewhere (compare blob hashes against every candidate branch)
-  before removing anything.
+- **Leave worktrees clean and stash state explicit.** No dangling files or dirty primary
+  working tree. A reviewed stash may remain intentionally preserved; do not remove it
+  unless every contained change is proven landed elsewhere and deletion is explicitly
+  authorized by the owner. Never destroy unfamiliar stash state merely to satisfy a
+  cleanliness rule.
 - **You own the ledger churn you cause.** Any `eta-mu kanban` or Rheos CLI invocation
   rewrites `kanban/.events/ledger.edn`. That diff is yours to commit on the branch whose
   work produced it.

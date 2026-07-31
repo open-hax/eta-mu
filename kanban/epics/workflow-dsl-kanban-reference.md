@@ -185,4 +185,5 @@ causal-parent, Git, worktree, and worldline attribution.
 
 ---
 Created from the 2026-07-29 intent-recovery pass. This epic is the canonical successor to fsm-engine: workflow is the reusable abstraction; the Promethean Kanban lifecycle remains an FSM and becomes the first Rheos-interpreted reference workflow. Predecessors remain rejected only in their stated package/mechanism boundaries.
+
 ---

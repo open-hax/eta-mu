@@ -26,4 +26,5 @@ Implement the `code-review` transition check for `review -> done`.
 
 ---
 Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](../epics/workflow-dsl-kanban-reference.md). Preserve code review as a reusable action or contract consuming commits, diffs, CI evidence, and reviewer authority. It is not a generic agent boolean embedded in the FSM engine.
+
 ---

@@ -32,4 +32,5 @@ single in-flight lock per task-id, and emit pending/accepted/rejected.
 
 ---
 Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](../epics/workflow-dsl-kanban-reference.md). Split this card into workflow category validation, Katamorph contract adjudication, and executor serialization/concurrency policy. A declared edge and an admissible move are separate questions; reject-all concurrency is not universal law.
+
 ---

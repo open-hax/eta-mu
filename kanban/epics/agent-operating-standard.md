@@ -64,7 +64,7 @@ Three separate gaps produced that outcome:
 | `agent-turn-loop-standard-and-skills` | write the turn loop down; update the global `receipt-river` and `session-mycology` skills to it and route them through the packages |
 | `eta-mu-install-skills-command` | `eta-mu install skills` with a global / project scope picker |
 | `ledger-cli-surface-documentation` | CLI help explains the three ledgers; `eta-mu git` gets real docs and a skill |
-| `link-local-eta-mu-cli-for-development` | `eta-mu` on `PATH` must be this working tree, not a stale published build wearing the same version |
+| `link-local-eta-mu-cli-for-development` | `eta-mu-beta` is the working-tree entry point; bare `eta-mu` remains the published build |
 
 Static-analysis parity with `../Truth` and `../epiphany` is tracked separately under
 the `eta-mu-quality-ratchet` epic as `clojure-static-analysis-parity` — it shares the
@@ -80,8 +80,8 @@ The workspace source is also version `1.1.1`, and the two have **different comma
 surfaces**: source registers top-level `receipt`, `receipt-river`, `session`,
 `session-mycology`, and `fork-tax` (`infra/cli/router.cljs`, `command-registry`), while the
 published build exposes those only under the `git` group. The local package has never been
-published from this state and has never been linked, so every CLI invocation in this
-session silently exercised an older program that reports the same version number.
+published from this state. Bare `eta-mu` therefore exercised an older program that reports
+the same version number; `eta-mu-beta` is now the explicit working-tree entry point.
 
 Cost of the trap, measured in this session: four child cards were first created with
 `eta-mu kanban create-subtask`, judged unusable, deleted, and hand-written — on evidence

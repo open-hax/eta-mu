@@ -32,4 +32,5 @@ to diff frontmatter changes (`prev-fm`).
 
 ---
 Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](../epics/workflow-dsl-kanban-reference.md). The accepted-state fold invariant survives, but this card is superseded operationally by rheos-canonical-task-fold-and-snapshots under rheos-ledger-authoritative-projections. Compose with that broader work instead of rebuilding a status-only fold.
+
 ---

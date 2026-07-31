@@ -30,4 +30,5 @@ workflow-blessed status and appends the rejection reasons to the card body.
 
 ---
 Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](../epics/workflow-dsl-kanban-reference.md). Preserve reconciliation to the accepted fixpoint, reframed as a typed rejection/conflict event followed by canonical projection rematerialization. Appending reasons to card bodies is not universal controller behavior.
+
 ---

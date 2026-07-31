@@ -30,4 +30,5 @@ status path is solid.
 
 ---
 Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](../epics/workflow-dsl-kanban-reference.md). Preserve the per-field port and subscription insight, including Kanban owning :status, but treat frontmatter as a Markdown command/projection adapter rather than the universal workflow interface or accepted source of truth.
+
 ---

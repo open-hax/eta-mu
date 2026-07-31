@@ -27,4 +27,5 @@ Implement the `agent-review` transition check for `breakdown -> ready`.
 
 ---
 Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](../epics/workflow-dsl-kanban-reference.md). Preserve agent review as a referenced workflow action that emits typed evidence and verdict events. Do not hardwire generic prose metrics as an authoritative FSM gate.
+
 ---

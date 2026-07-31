@@ -48,14 +48,16 @@ them from no branch at all.
 ## Scope
 
 - [ ] Update the global `receipt-river` skill: read at session start, append through
-      `eta-mu receipt ...`, never hand-edit `receipts.edn`.
+      `eta-mu-beta receipt ...` from the repository root, never hand-edit `receipts.edn`.
 - [ ] Update the global `session-mycology` skill: read ledger + spores at session start,
-      run the retrospective at **every** turn end via `eta-mu session ...`, keep the
-      "no promotion in the session that created the spore" rule.
+      run the retrospective at **every** turn end via `eta-mu-beta session ...` from the
+      repository root, and keep the "no promotion in the session that created the spore"
+      rule.
 - [ ] Both skills state the commit-every-turn and worktree rules, and point at
       `AGENTS.md` as the repo-side authority rather than restating it divergently.
-- [ ] Verify each documented command actually exists and runs before shipping the skill —
-      no skill may reference a verb the CLI does not have.
+- [ ] Verify each documented command against a fresh build of this tree through
+      `eta-mu-beta` before shipping the skill — no skill may reference a verb the local CLI
+      does not have.
 - [ ] Reconcile with the `fork-tax` and `fork-tax-concurrent-agent-guardrails` skills so
       the three do not give conflicting staging advice.
 

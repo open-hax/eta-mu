@@ -32,4 +32,5 @@ workflow transition request: `fs.changed` → `doc.frontmatter-updated` →
 
 ---
 Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](../epics/workflow-dsl-kanban-reference.md). Preserve composable trigger, predicate, and derivation semantics as Workflow DSL primitives. Filesystem change detection is one Rheos projection-ingress adapter, not the workflow core.
+
 ---
