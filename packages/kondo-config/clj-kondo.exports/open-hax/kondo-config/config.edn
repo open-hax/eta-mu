@@ -52,6 +52,12 @@
                                         js
                                         await]}
            :promise-chain/prefer-async-workflow {:level :warning}
+           ;; Construction order (law → shape → extern → domain → infra). Shipped
+           ;; at :info so a package adopting this config does not fail on debt it
+           ;; has not paid yet; a package that has paid raises them to :error in
+           ;; its own .clj-kondo/config.edn and keeps them there.
+           :layer-boundary/upward-require {:level :info}
+           :layer-boundary/host-require {:level :info}
            :fn-length/long {:level :warning}
            :fn-length/too-long {:level :error}
            :file-length/long {:level :warning}
@@ -61,7 +67,9 @@
            :discouraged-var {shadow.cljs.modern/js-await {:message "js-await is deprecated; use bare (await ...) inside ^:async fn."}
                              js-await* {:message "js-await* is deprecated; use bare (await ...) inside ^:async fn."}}}
  :unresolved-namespace {:exclude [js]}
- :hooks {:analyze-call {cljs.core/ns hooks.promise-chain/check-ns
+ ;; cljs.core/ns takes one hook: hooks.layer-boundaries/check-ns runs the layer
+ ;; gate and then delegates to hooks.promise-chain/check-ns.
+ :hooks {:analyze-call {cljs.core/ns hooks.layer-boundaries/check-ns
                         cljs.core/-> hooks.promise-chain/check
                         cljs.core/->> hooks.promise-chain/check
                         cljs.core/do hooks.promise-chain/check
