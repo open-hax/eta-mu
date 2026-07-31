@@ -1,10 +1,10 @@
-(ns rheos.backend.domain.task-edit-test
+(ns rheos.backend.infra.task-edit-test
   (:require ["node:fs/promises" :as fsp]
             ["node:os" :as os]
             ["node:path" :as path]
             [cljs.test :refer [deftest testing is]]
-            [rheos.backend.domain.task-edit :as task-edit]
             [rheos.backend.domain.events :as events]
+            [rheos.backend.infra.task-edit :as task-edit]
             [rheos.backend.shape.content-parser :as content-parser]
             [rheos.backend.infra.watcher :as watcher]))
 

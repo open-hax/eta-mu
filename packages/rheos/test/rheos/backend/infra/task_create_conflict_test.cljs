@@ -1,9 +1,9 @@
-(ns rheos.backend.domain.task-create-conflict-test
+(ns rheos.backend.infra.task-create-conflict-test
   (:require ["node:fs/promises" :as fsp]
             ["node:os" :as os]
             ["node:path" :as path]
             [cljs.test :refer [deftest is testing]]
-            [rheos.backend.domain.task-create :as task-create]))
+            [rheos.backend.infra.task-create :as task-create]))
 
 (defn- tmp-dir []
   (path/join (.tmpdir os)
