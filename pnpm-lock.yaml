@@ -366,10 +366,10 @@ importers:
         specifier: ^22.0.1
         version: 22.0.1
       '@open-hax/eta-mu-ai':
-        specifier: workspace:*
+        specifier: ^0.70.7
         version: link:../ai
       '@open-hax/eta-mu-cli':
-        specifier: workspace:*
+        specifier: ^0.70.16
         version: link:../coding-agent
       dotenv:
         specifier: ^17.2.3
