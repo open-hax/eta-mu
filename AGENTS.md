@@ -1,6 +1,10 @@
 
 ## Clojure House Rules (eta-mu-sol constitution)
 
+> **Roadmap:** [`ROADMAP.md`](ROADMAP.md) is the constellation hub — the seam,
+> the ownership table, the sequencing rule, and the drift ledger. Every sibling
+> repo carries a satellite `ROADMAP.md` summarising its own slice.
+
 ### Architecture Paradigm: Categories vs. Contracts
 When modeling domains, you must strictly differentiate between the grammar of motion and the enforcement of that motion.
 - Categories: Describe the space of lawful possible transformations. They dictate "what kind of move this is" and define the state space, transition vocabulary, and general laws of composition for the runtime or a subsystem.
