@@ -140,6 +140,30 @@ jobs:
           const minTasks = Number(process.env.MIN_TASKS ?? '1');
           const errors = [];
 
+          if (typeof snapshot['generated-at'] !== 'string' || snapshot['generated-at'].trim() === '') {
+            errors.push('snapshot generated-at is not a non-empty string');
+          }
+          if (!Array.isArray(snapshot.columns)) {
+            errors.push('snapshot columns is not an array');
+          }
+          for (const [index, column] of columns.entries()) {
+            const columnName = typeof column.status === 'string' && column.status.trim() !== ''
+              ? column.status
+              : `<column ${index}>`;
+            for (const field of ['status', 'title']) {
+              if (typeof column[field] !== 'string' || column[field].trim() === '') {
+                errors.push(`${columnName} has invalid ${field}`);
+              }
+            }
+            if (!Array.isArray(column.tasks)) {
+              errors.push(`${columnName} has non-array tasks`);
+            }
+            if (!Number.isInteger(column['task-count'])) {
+              errors.push(`${columnName} task-count is not an integer`);
+            } else if (column['task-count'] !== (Array.isArray(column.tasks) ? column.tasks.length : 0)) {
+              errors.push(`${columnName} task-count ${column['task-count']} does not match ${Array.isArray(column.tasks) ? column.tasks.length : 0} tasks`);
+            }
+          }
           if (!Number.isInteger(snapshot['total-tasks'])) {
             errors.push('snapshot total-tasks is not an integer');
           } else if (snapshot['total-tasks'] !== tasks.length) {
@@ -151,13 +175,15 @@ jobs:
 
           const seen = new Map();
           for (const task of tasks) {
-            for (const field of ['uuid', 'title', 'status', 'priority', 'source-path']) {
+            for (const field of ['uuid', 'title', 'slug', 'status', 'priority', 'created-at', 'content', 'source-path']) {
               if (typeof task[field] !== 'string' || task[field].trim() === '') {
                 errors.push(`task ${task.uuid ?? '<unknown>'} has invalid ${field}`);
               }
             }
             if (!Array.isArray(task.labels)) {
               errors.push(`task ${task.uuid ?? '<unknown>'} has non-array labels`);
+            } else if (task.labels.some((label) => typeof label !== 'string' || label.trim() === '')) {
+              errors.push(`task ${task.uuid ?? '<unknown>'} has invalid labels`);
             }
             if (typeof task.uuid === 'string') {
               const prior = seen.get(task.uuid);
