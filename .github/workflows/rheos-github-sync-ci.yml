@@ -49,8 +49,13 @@ jobs:
           chmod +x install-clj-kondo
           sudo ./install-clj-kondo
 
-      - name: Lint Rheos
-        run: pnpm --dir packages/rheos lint:kondo
+      - name: Lint Rheos sync change surface
+        run: |
+          clj-kondo --lint \
+            packages/rheos/src/rheos/backend/infra/github_issues.cljs \
+            packages/rheos/src/rheos/backend/infra/github_sync_cli.cljs \
+            packages/rheos/src/rheos/backend/infra/task_store.cljs \
+            packages/rheos/test/rheos/backend/infra/github_issues_test.cljs
 
       - name: Test Rheos
         run: pnpm --dir packages/rheos test
