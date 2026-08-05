@@ -1,0 +1,222 @@
+name: Rheos Board Check
+
+on:
+  workflow_call:
+    inputs:
+      eta-mu-ref:
+        description: "Exact eta-mu ref containing both this workflow and the Rheos implementation"
+        required: true
+        type: string
+      tasks-dir:
+        description: "Board task root in the calling repository"
+        required: false
+        default: "kanban"
+        type: string
+      min-tasks:
+        description: "Minimum number of tasks expected in the Rheos snapshot"
+        required: false
+        default: 1
+        type: number
+      fail-on-drift:
+        description: "Fail when Rheos reports recorded drift events"
+        required: false
+        default: true
+        type: boolean
+      artifact-name:
+        description: "Name for the board snapshot and drift report artifact"
+        required: false
+        default: "rheos-board-check"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  board-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Checkout matching eta-mu implementation
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: open-hax/eta-mu
+          ref: ${{ inputs.eta-mu-ref }}
+          path: .eta-mu
+          persist-credentials: false
+
+      - name: Verify eta-mu checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .eta-mu/packages/rheos/package.json
+          echo "eta-mu ref: ${{ inputs.eta-mu-ref }}"
+          echo "eta-mu commit: $(git -C .eta-mu rev-parse HEAD)"
+
+      - name: Setup Java
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.14.0
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: .eta-mu/pnpm-lock.yaml
+
+      - name: Install eta-mu workspace
+        run: pnpm --dir .eta-mu install --frozen-lockfile
+
+      - name: Build Rheos CLI
+        run: pnpm --dir .eta-mu/packages/rheos exec shadow-cljs release cli
+
+      - name: Resolve board path
+        id: board
+        shell: bash
+        env:
+          TASKS_DIR: ${{ inputs.tasks-dir }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$TASKS_DIR" || "$TASKS_DIR" = /* ]]; then
+            echo "::error::tasks-dir must be a non-empty path relative to the calling repository"
+            exit 1
+          fi
+
+          workspace="$(realpath "$GITHUB_WORKSPACE")"
+          tasks_path="$(realpath "$GITHUB_WORKSPACE/$TASKS_DIR")"
+          case "$tasks_path" in
+            "$workspace"/*) ;;
+            *)
+              echo "::error::tasks-dir escapes the calling repository: $TASKS_DIR"
+              exit 1
+              ;;
+          esac
+
+          if [[ "$tasks_path" == "$workspace/.eta-mu"* ]]; then
+            echo "::error::tasks-dir must target the calling repository, not the eta-mu checkout"
+            exit 1
+          fi
+          if [[ ! -d "$tasks_path" ]]; then
+            echo "::error::Rheos board directory does not exist: $tasks_path"
+            exit 1
+          fi
+
+          echo "tasks-path=$tasks_path" >> "$GITHUB_OUTPUT"
+          echo "Board root: $tasks_path"
+
+      - name: Generate Rheos board snapshot
+        env:
+          TASKS_PATH: ${{ steps.board.outputs.tasks-path }}
+          SNAPSHOT_PATH: ${{ runner.temp }}/rheos-board-check/board.json
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$SNAPSHOT_PATH")"
+          node .eta-mu/packages/rheos/dist/cli.cjs board snapshot \
+            --tasks-dir "$TASKS_PATH" \
+            --out "$SNAPSHOT_PATH"
+
+      - name: Validate Rheos snapshot
+        env:
+          SNAPSHOT_PATH: ${{ runner.temp }}/rheos-board-check/board.json
+          MIN_TASKS: ${{ inputs.min-tasks }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const snapshot = JSON.parse(fs.readFileSync(process.env.SNAPSHOT_PATH, 'utf8'));
+          const columns = Array.isArray(snapshot.columns) ? snapshot.columns : [];
+          const tasks = columns.flatMap((column) => Array.isArray(column.tasks) ? column.tasks : []);
+          const minTasks = Number(process.env.MIN_TASKS ?? '1');
+          const errors = [];
+
+          if (!Number.isInteger(snapshot['total-tasks'])) {
+            errors.push('snapshot total-tasks is not an integer');
+          } else if (snapshot['total-tasks'] !== tasks.length) {
+            errors.push(`snapshot total-tasks ${snapshot['total-tasks']} does not match ${tasks.length} projected tasks`);
+          }
+          if (tasks.length < minTasks) {
+            errors.push(`snapshot contains ${tasks.length} tasks; expected at least ${minTasks}`);
+          }
+
+          const seen = new Map();
+          for (const task of tasks) {
+            for (const field of ['uuid', 'title', 'status', 'priority', 'source-path']) {
+              if (typeof task[field] !== 'string' || task[field].trim() === '') {
+                errors.push(`task ${task.uuid ?? '<unknown>'} has invalid ${field}`);
+              }
+            }
+            if (!Array.isArray(task.labels)) {
+              errors.push(`task ${task.uuid ?? '<unknown>'} has non-array labels`);
+            }
+            if (typeof task.uuid === 'string') {
+              const prior = seen.get(task.uuid);
+              if (prior) {
+                errors.push(`duplicate task uuid ${task.uuid}: ${prior} and ${task['source-path']}`);
+              } else {
+                seen.set(task.uuid, task['source-path']);
+              }
+            }
+          }
+
+          if (errors.length > 0) {
+            for (const error of errors) console.error(`::error::${error}`);
+            process.exit(1);
+          }
+
+          const counts = Object.fromEntries(columns.map((column) => [column.status, column['task-count']]));
+          console.log(`Validated ${tasks.length} Rheos tasks`);
+          console.log(`Status counts: ${JSON.stringify(counts)}`);
+          NODE
+
+      - name: Check Rheos drift ledger
+        env:
+          TASKS_PATH: ${{ steps.board.outputs.tasks-path }}
+          DRIFT_PATH: ${{ runner.temp }}/rheos-board-check/drift.txt
+          FAIL_ON_DRIFT: ${{ inputs.fail-on-drift }}
+        run: |
+          set -euo pipefail
+          node .eta-mu/packages/rheos/dist/cli.cjs drift \
+            --tasks-dir "$TASKS_PATH" | tee "$DRIFT_PATH"
+
+          if [[ "$FAIL_ON_DRIFT" = "true" ]] && ! grep -Fxq "No drift detected." "$DRIFT_PATH"; then
+            echo "::error::Rheos reported recorded board drift"
+            exit 1
+          fi
+
+      - name: Publish board summary
+        if: always()
+        env:
+          SNAPSHOT_PATH: ${{ runner.temp }}/rheos-board-check/board.json
+          ETA_MU_REF: ${{ inputs.eta-mu-ref }}
+          TASKS_DIR: ${{ inputs.tasks-dir }}
+        run: |
+          {
+            echo "## Rheos board check"
+            echo
+            echo "- eta-mu ref: \`$ETA_MU_REF\`"
+            echo "- board root: \`$TASKS_DIR\`"
+            if [[ -f "$SNAPSHOT_PATH" ]]; then
+              node -e 'const s=require(process.env.SNAPSHOT_PATH); console.log(`- tasks: ${s["total-tasks"]}`)'
+            fi
+            echo "- GitHub Issues writes: disabled"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Rheos evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ runner.temp }}/rheos-board-check/
+          if-no-files-found: warn
+          retention-days: 14
