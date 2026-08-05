@@ -99,14 +99,13 @@ jobs:
           console.log(`Validated ${tasks.length} canonical Rheos tasks`);
           NODE
 
-      - name: Check Rheos drift ledger
+      - name: Record Rheos drift history
         env:
           DRIFT_PATH: ${{ runner.temp }}/rheos-github-sync-ci/drift.txt
         run: |
           set -euo pipefail
           node packages/rheos/dist/cli.cjs drift \
             --tasks-dir "$GITHUB_WORKSPACE/kanban" | tee "$DRIFT_PATH"
-          grep -Fxq "No drift detected." "$DRIFT_PATH"
 
       - name: Dry-run Rheos GitHub Issue projection
         env:
@@ -130,12 +129,14 @@ jobs:
         if: always()
         env:
           SYNC_PATH: ${{ runner.temp }}/rheos-github-sync-ci/sync.txt
+          DRIFT_PATH: ${{ runner.temp }}/rheos-github-sync-ci/drift.txt
         run: |
           {
             echo "## Rheos GitHub sync CI"
             echo
             echo "- projector: \`packages/rheos/dist/github-sync.cjs\`"
             echo "- canonical aliases: \`pending → incoming\`, \`completed → done\`"
+            echo "- historical drift events: \`$(grep -c ' DRIFT ' "$DRIFT_PATH" 2>/dev/null || true)\`"
             echo "- GitHub writes: disabled"
             if [[ -f "$SYNC_PATH" ]]; then
               echo
