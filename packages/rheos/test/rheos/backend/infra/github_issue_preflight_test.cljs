@@ -26,7 +26,7 @@
         [(issue 3 "alpha")
          (issue 2 "alpha")
          (issue 9 "zeta")
-         (issue 8 "zeta")]))))
+         (issue 8 "zeta")])))
   (is (nil?
        (preflight/assert-no-duplicate-uuid-claims!
         [(issue 3 "stale")
