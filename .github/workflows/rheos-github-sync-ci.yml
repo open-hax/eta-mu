@@ -3,6 +3,7 @@ name: Rheos GitHub Sync CI
 on:
   pull_request:
     paths:
+      - ".github/workflows/eta-mu-kanban-sync.yml"
       - ".github/workflows/kanban-sync.yml"
       - ".github/workflows/rheos-github-sync-ci.yml"
       - "packages/rheos/**"
