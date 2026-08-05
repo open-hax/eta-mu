@@ -59,9 +59,15 @@
         (throw (js/Error. "Missing --repo owner/name.")))
       (when (str/blank? token)
         (throw (js/Error. "Missing GITHUB_TOKEN or GH_TOKEN.")))
-      (let [repo-state (await (github/load-repo-state! token repo))
-            _ (preflight/assert-no-duplicate-uuid-claims! (:issues repo-state))
-            all-tasks (await (tasks/load-tasks tasks-dir))
+      (let [all-tasks (await (tasks/load-tasks tasks-dir))
+            eligible-uuids (->> all-tasks
+                                (filter github/eligible-task?)
+                                (map :uuid)
+                                set)
+            repo-state (await (github/load-repo-state! token repo))
+            _ (preflight/assert-no-duplicate-uuid-claims!
+               (:issues repo-state)
+               eligible-uuids)
             result (await (github/sync!
                            all-tasks
                            {:token token
