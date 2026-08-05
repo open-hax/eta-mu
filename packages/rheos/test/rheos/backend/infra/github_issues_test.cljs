@@ -59,8 +59,8 @@
                                       {:cwd "/repo"})]
     (testing "done -> incoming reopens"
       (is (= "open" (:state (first (:operations managed-plan))))))
-    (testing "manually closed active issue stays closed"
-      (is (= "closed" (:state (first (:operations manual-plan)))))))
+    (testing "manually closed active issue stays closed without a synthetic update"
+      (is (empty? (:operations manual-plan))))))
 
 (deftest skips-new-closed-tasks
   (let [plan (github/plan-sync [(task "a" "done")]
