@@ -20,12 +20,12 @@
   (js/Promise. (fn [resolve _] (js/setTimeout resolve ms))))
 
 (defn- normalize-label [label]
-  (-> label
-      str/trim
-      (str/replace #"\s+" "-")
-      (str/replace #"[^\p{L}\p{N}_.:/-]+" "-")
-      (str/replace #"^-+|-+$" "")
-      (subs 0 (min 50 (count (str/replace (str/replace (str/replace (str/trim label) #"\s+" "-") #"[^\p{L}\p{N}_.:/-]+" "-") #"^-+|-+$" ""))))))
+  (let [normalized (-> label
+                       str/trim
+                       (str/replace #"\s+" "-")
+                       (str/replace #"[^A-Za-z0-9_.:/-]+" "-")
+                       (str/replace #"^-+|-+$" ""))]
+    (subs normalized 0 (min 50 (count normalized)))))
 
 (defn desired-labels [task]
   (->> (concat ["kanban" (str "status:" (:status task))]
@@ -56,8 +56,8 @@
 
 (defn eligible-task? [task]
   (let [source (normalized-source-path task)
-        segments (vec (filter seq (str/split source #"/")))
-        basename (str/upper-case (or (last segments) source))
+        segments (vec (map str/lower-case (filter seq (str/split source #"/"))))
+        basename (str/upper-case (or (last (str/split source #"/")) source))
         projected? (some projection-segments segments)]
     (cond
       (contains? metadata-files basename) false
@@ -251,7 +251,8 @@
         operations (:operations plan)
         limit (or max-writes 50)
         selected (vec (take limit operations))]
-    (when-not dry-run
+    (if dry-run
+      (assoc plan :applied-operations [] :deferred-operations 0)
       (loop [remaining selected applied []]
         (if-let [operation (first remaining)]
           (do
@@ -261,6 +262,4 @@
             (recur (rest remaining) (conj applied operation)))
           (assoc plan
                  :applied-operations applied
-                 :deferred-operations (- (count operations) (count applied))))))
-    (when dry-run
-      (assoc plan :applied-operations [] :deferred-operations 0))))
+                 :deferred-operations (- (count operations) (count applied))))))))
