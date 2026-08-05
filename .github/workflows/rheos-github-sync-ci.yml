@@ -119,7 +119,7 @@ jobs:
             --write-delay-ms 0 \
             --close-done true \
             --close-rejected true | tee "$SYNC_PATH"
-          grep -Fxq "- Applied operations: 0" "$SYNC_PATH"
+          grep -Fxq -- "- Applied operations: 0" "$SYNC_PATH"
 
       - name: Publish evidence summary
         if: always()
