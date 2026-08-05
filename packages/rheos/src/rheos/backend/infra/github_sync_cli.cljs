@@ -1,6 +1,7 @@
 (ns rheos.backend.infra.github-sync-cli
   "Standalone CLI for projecting Rheos tasks to GitHub Issues."
   (:require [clojure.string :as str]
+            [rheos.backend.infra.github-issue-preflight :as preflight]
             [rheos.backend.infra.github-issues :as github]
             [rheos.backend.infra.task-store :as tasks]))
 
@@ -56,7 +57,11 @@
         (throw (js/Error. "Missing --tasks-dir.")))
       (when (str/blank? repo)
         (throw (js/Error. "Missing --repo owner/name.")))
-      (let [all-tasks (await (tasks/load-tasks tasks-dir))
+      (when (str/blank? token)
+        (throw (js/Error. "Missing GITHUB_TOKEN or GH_TOKEN.")))
+      (let [repo-state (await (github/load-repo-state! token repo))
+            _ (preflight/assert-no-duplicate-uuid-claims! (:issues repo-state))
+            all-tasks (await (tasks/load-tasks tasks-dir))
             result (await (github/sync!
                            all-tasks
                            {:token token
