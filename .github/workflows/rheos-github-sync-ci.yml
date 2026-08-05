@@ -52,9 +52,11 @@ jobs:
       - name: Lint Rheos sync change surface
         run: |
           clj-kondo --lint \
+            packages/rheos/src/rheos/backend/infra/github_issue_preflight.cljs \
             packages/rheos/src/rheos/backend/infra/github_issues.cljs \
             packages/rheos/src/rheos/backend/infra/github_sync_cli.cljs \
             packages/rheos/src/rheos/backend/infra/task_store.cljs \
+            packages/rheos/test/rheos/backend/infra/github_issue_preflight_test.cljs \
             packages/rheos/test/rheos/backend/infra/github_issues_test.cljs
 
       - name: Test Rheos
