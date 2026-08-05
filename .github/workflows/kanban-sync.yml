@@ -47,23 +47,6 @@ on:
         required: false
         default: true
         type: boolean
-  workflow_dispatch:
-    inputs:
-      eta_mu_ref:
-        description: "Exact eta-mu implementation ref"
-        required: false
-        default: "main"
-        type: string
-      tasks_dir:
-        description: "Board task root"
-        required: false
-        default: "kanban"
-        type: string
-      dry_run:
-        description: "Plan without mutating GitHub Issues"
-        required: false
-        default: true
-        type: boolean
 
 permissions:
   contents: read
@@ -82,7 +65,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: open-hax/eta-mu
-          ref: ${{ inputs.eta-mu-ref || inputs.eta_mu_ref || github.sha }}
+          ref: ${{ inputs.eta-mu-ref }}
           path: .eta-mu
           persist-credentials: false
 
@@ -91,6 +74,7 @@ jobs:
         run: |
           set -euo pipefail
           test -f .eta-mu/packages/rheos/package.json
+          echo "eta-mu ref: ${{ inputs.eta-mu-ref }}"
           echo "eta-mu commit: $(git -C .eta-mu rev-parse HEAD)"
 
       - name: Setup Java
@@ -122,7 +106,7 @@ jobs:
         id: board
         shell: bash
         env:
-          TASKS_DIR: ${{ inputs.tasks-dir || inputs.tasks_dir || 'kanban' }}
+          TASKS_DIR: ${{ inputs.tasks-dir }}
         run: |
           set -euo pipefail
           if [[ -z "$TASKS_DIR" || "$TASKS_DIR" = /* ]]; then
@@ -131,7 +115,12 @@ jobs:
           fi
 
           workspace="$(realpath "$GITHUB_WORKSPACE")"
-          tasks_path="$(realpath "$GITHUB_WORKSPACE/$TASKS_DIR")"
+          candidate="$GITHUB_WORKSPACE/$TASKS_DIR"
+          if [[ ! -d "$candidate" ]]; then
+            echo "::error::Rheos board directory does not exist: $candidate"
+            exit 1
+          fi
+          tasks_path="$(realpath "$candidate")"
           case "$tasks_path" in
             "$workspace"/*) ;;
             *)
@@ -142,10 +131,6 @@ jobs:
 
           if [[ "$tasks_path" == "$workspace/.eta-mu"* ]]; then
             echo "::error::tasks-dir must target the calling repository"
-            exit 1
-          fi
-          if [[ ! -d "$tasks_path" ]]; then
-            echo "::error::Rheos board directory does not exist: $tasks_path"
             exit 1
           fi
 
@@ -192,7 +177,7 @@ jobs:
         env:
           TASKS_PATH: ${{ steps.board.outputs.tasks-path }}
           DRIFT_PATH: ${{ runner.temp }}/rheos-github-sync/drift.txt
-          FAIL_ON_DRIFT: ${{ inputs.fail-on-drift || true }}
+          FAIL_ON_DRIFT: ${{ inputs.fail-on-drift }}
         run: |
           set -euo pipefail
           node .eta-mu/packages/rheos/dist/cli.cjs drift \
@@ -208,11 +193,11 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_REPO: ${{ inputs.repo || github.repository }}
           TASKS_PATH: ${{ steps.board.outputs.tasks-path }}
-          DRY_RUN: ${{ inputs.dry-run || inputs.dry_run || false }}
-          MAX_WRITES: ${{ inputs.max-writes || 50 }}
-          WRITE_DELAY_MS: ${{ inputs.write-delay-ms || 1000 }}
-          CLOSE_DONE: ${{ inputs.close-done || true }}
-          CLOSE_REJECTED: ${{ inputs.close-rejected || true }}
+          DRY_RUN: ${{ inputs.dry-run }}
+          MAX_WRITES: ${{ inputs.max-writes }}
+          WRITE_DELAY_MS: ${{ inputs.write-delay-ms }}
+          CLOSE_DONE: ${{ inputs.close-done }}
+          CLOSE_REJECTED: ${{ inputs.close-rejected }}
           SYNC_PATH: ${{ runner.temp }}/rheos-github-sync/sync.txt
         run: |
           set -euo pipefail
@@ -230,7 +215,7 @@ jobs:
         if: always()
         env:
           TARGET_REPO: ${{ inputs.repo || github.repository }}
-          DRY_RUN: ${{ inputs.dry-run || inputs.dry_run || false }}
+          DRY_RUN: ${{ inputs.dry-run }}
           SYNC_PATH: ${{ runner.temp }}/rheos-github-sync/sync.txt
         run: |
           {
