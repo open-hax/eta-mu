@@ -42,11 +42,6 @@ on:
         required: false
         default: true
         type: boolean
-      fail-on-drift:
-        description: "Refuse projection when Rheos reports board drift"
-        required: false
-        default: true
-        type: boolean
 
 permissions:
   contents: read
@@ -173,20 +168,14 @@ jobs:
           console.log(`Validated ${tasks.length} canonical Rheos tasks`);
           NODE
 
-      - name: Check Rheos drift ledger
+      - name: Record Rheos drift history
         env:
           TASKS_PATH: ${{ steps.board.outputs.tasks-path }}
           DRIFT_PATH: ${{ runner.temp }}/rheos-github-sync/drift.txt
-          FAIL_ON_DRIFT: ${{ inputs.fail-on-drift }}
         run: |
           set -euo pipefail
           node .eta-mu/packages/rheos/dist/cli.cjs drift \
             --tasks-dir "$TASKS_PATH" | tee "$DRIFT_PATH"
-
-          if [[ "$FAIL_ON_DRIFT" = "true" ]] && ! grep -Fxq "No drift detected." "$DRIFT_PATH"; then
-            echo "::error::Rheos reported board drift; refusing GitHub Issue projection"
-            exit 1
-          fi
 
       - name: Project Rheos tasks to GitHub Issues
         env:
@@ -217,6 +206,7 @@ jobs:
           TARGET_REPO: ${{ inputs.repo || github.repository }}
           DRY_RUN: ${{ inputs.dry-run }}
           SYNC_PATH: ${{ runner.temp }}/rheos-github-sync/sync.txt
+          DRIFT_PATH: ${{ runner.temp }}/rheos-github-sync/drift.txt
         run: |
           {
             echo "## Rheos GitHub Issue sync"
@@ -224,6 +214,7 @@ jobs:
             echo "- repository: \`$TARGET_REPO\`"
             echo "- dry run: \`$DRY_RUN\`"
             echo "- canonical aliases: \`pending → incoming\`, \`completed → done\`"
+            echo "- historical drift events: \`$(grep -c ' DRIFT ' "$DRIFT_PATH" 2>/dev/null || true)\`"
             if [[ -f "$SYNC_PATH" ]]; then
               echo
               echo '```text'
