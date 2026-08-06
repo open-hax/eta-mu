@@ -1,0 +1,159 @@
+name: Rheos GitHub Sync CI
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/eta-mu-kanban-sync.yml"
+      - ".github/workflows/kanban-sync.yml"
+      - ".github/workflows/rheos-github-sync-ci.yml"
+      - "packages/rheos/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  rheos-github-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout eta-mu
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Java
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.14.0
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install clj-kondo
+        run: |
+          curl -sLO https://raw.githubusercontent.com/clj-kondo/clj-kondo/master/script/install-clj-kondo
+          chmod +x install-clj-kondo
+          sudo ./install-clj-kondo
+
+      - name: Lint Rheos sync change surface
+        run: |
+          clj-kondo --lint \
+            packages/rheos/src/rheos/backend/infra/github_issue_preflight.cljs \
+            packages/rheos/src/rheos/backend/infra/github_issues.cljs \
+            packages/rheos/src/rheos/backend/infra/github_sync_cli.cljs \
+            packages/rheos/src/rheos/backend/infra/task_store.cljs \
+            packages/rheos/test/rheos/backend/infra/github_issue_preflight_test.cljs \
+            packages/rheos/test/rheos/backend/infra/github_issues_test.cljs
+
+      - name: Test Rheos
+        run: pnpm --dir packages/rheos test
+
+      - name: Release-build Rheos including GitHub projector
+        run: pnpm --dir packages/rheos build
+
+      - name: Generate canonical eta-mu board snapshot
+        env:
+          SNAPSHOT_PATH: ${{ runner.temp }}/rheos-github-sync-ci/board.json
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$SNAPSHOT_PATH")"
+          node packages/rheos/dist/cli.cjs board snapshot \
+            --tasks-dir "$GITHUB_WORKSPACE/kanban" \
+            --out "$SNAPSHOT_PATH"
+
+      - name: Validate canonical status aliases and UUIDs
+        env:
+          SNAPSHOT_PATH: ${{ runner.temp }}/rheos-github-sync-ci/board.json
+        run: |
+          node <<'NODE'
+          const snapshot = require(process.env.SNAPSHOT_PATH);
+          const tasks = snapshot.columns.flatMap((column) => column.tasks);
+          const seen = new Map();
+          const errors = [];
+
+          for (const task of tasks) {
+            const prior = seen.get(task.uuid);
+            if (prior) errors.push(`duplicate task uuid ${task.uuid}: ${prior} and ${task['source-path']}`);
+            else seen.set(task.uuid, task['source-path']);
+            if (task.status === 'pending' || task.status === 'completed') {
+              errors.push(`noncanonical status ${task.status} survived normalization for ${task.uuid}`);
+            }
+          }
+
+          if (errors.length) {
+            for (const error of errors) console.error(`::error::${error}`);
+            process.exit(1);
+          }
+          console.log(`Validated ${tasks.length} canonical Rheos tasks`);
+          NODE
+
+      - name: Record Rheos drift history
+        env:
+          DRIFT_PATH: ${{ runner.temp }}/rheos-github-sync-ci/drift.txt
+        run: |
+          set -euo pipefail
+          node packages/rheos/dist/cli.cjs drift \
+            --tasks-dir "$GITHUB_WORKSPACE/kanban" | tee "$DRIFT_PATH"
+
+      - name: Dry-run Rheos GitHub Issue projection
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SYNC_PATH: ${{ runner.temp }}/rheos-github-sync-ci/sync.txt
+        run: |
+          set -euo pipefail
+          test -f packages/rheos/dist/github-sync.cjs
+          node packages/rheos/dist/github-sync.cjs \
+            --repo "$GITHUB_REPOSITORY" \
+            --tasks-dir "$GITHUB_WORKSPACE/kanban" \
+            --cwd "$GITHUB_WORKSPACE" \
+            --dry-run true \
+            --max-writes 50 \
+            --write-delay-ms 0 \
+            --close-done true \
+            --close-rejected true | tee "$SYNC_PATH"
+          grep -Fxq -- "- Applied operations: 0" "$SYNC_PATH"
+
+      - name: Publish evidence summary
+        if: always()
+        env:
+          SYNC_PATH: ${{ runner.temp }}/rheos-github-sync-ci/sync.txt
+          DRIFT_PATH: ${{ runner.temp }}/rheos-github-sync-ci/drift.txt
+        run: |
+          {
+            echo "## Rheos GitHub sync CI"
+            echo
+            echo "- projector: \`packages/rheos/dist/github-sync.cjs\`"
+            echo "- canonical aliases: \`pending → incoming\`, \`completed → done\`"
+            echo "- historical drift events: \`$(grep -c ' DRIFT ' "$DRIFT_PATH" 2>/dev/null || true)\`"
+            echo "- GitHub writes: disabled"
+            if [[ -f "$SYNC_PATH" ]]; then
+              echo
+              echo '```text'
+              cat "$SYNC_PATH"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Rheos sync evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: rheos-github-sync-ci
+          path: ${{ runner.temp }}/rheos-github-sync-ci/
+          if-no-files-found: warn
+          retention-days: 14
