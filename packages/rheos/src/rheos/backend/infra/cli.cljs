@@ -167,11 +167,21 @@
         task (subs (or (:task-id e) "?") 0 30)]
     (str ts " [" src "] " typ " " task)))
 
-(defn- find-project [project-state pid]
-  (if pid
-    (or (first (filter #(= (:id %) pid) (:projects project-state)))
-        (throw (ex-info (str "unknown project: " pid) {:kind :not-found :project pid})))
-    (first (:projects project-state))))
+(defn- find-project
+  "The project a verb acts on. An explicit `--project` must exist; without one,
+   the configured default wins.
+
+   Falling back to `(first (:projects …))` made `move`, `events`, `drift`, and
+   `board snapshot` depend on project ordering rather than on
+   `:default-project-id` — which `board list` has always printed as `(default)`,
+   so the CLI could name one project as the default and act on another."
+  [project-state pid]
+  (let [by-id (fn [id] (first (filter #(= (:id %) id) (:projects project-state))))]
+    (if pid
+      (or (by-id pid)
+          (throw (ex-info (str "unknown project: " pid) {:kind :not-found :project pid})))
+      (or (by-id (:default-project-id project-state))
+          (first (:projects project-state))))))
 
 (defn- ^:async load-task-or-fail [project uuid]
   ;; `load-tasks` takes the tasks directory, not the project map. Passing the
