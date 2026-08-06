@@ -51,11 +51,25 @@ because a developer's machine does not need `actions/checkout`.
 ## Commands
 
 ```bash
-scripts/workflows.bb list          # workflow resources and their gates
-scripts/workflows.bb show rheos    # one resource, expanded
-scripts/workflows.bb emit          # project onto both targets
-scripts/workflows.bb check         # committed YAML still matches its resource?
+eta-mu workflows list          # workflow resources and their gates
+eta-mu workflows show rheos    # one resource, expanded
+eta-mu workflows emit          # project onto both targets
+eta-mu workflows check         # committed YAML still matches its resource?
 ```
+
+`workflows` is a **shipped tool**, not a script in this repo. It lives in
+`packages/eta-mu/commands/` and is packaged with eta-mu, so a global install
+carries it into every project. What is project-local is the *data* — the
+resources in this directory. eta-mu supplies the projector; the project
+supplies the workflows.
+
+Command scopes, nearest wins:
+
+| Scope | Location |
+|---|---|
+| shipped | `<eta-mu package>/commands/` |
+| user | `~/.config/eta-mu/commands/` |
+| project | `<repo>/contracts/commands/` |
 
 Generated YAML **is committed** — GitHub reads `.github/workflows` from the
 repo. `check` is what keeps the committed artifact honest, and compares

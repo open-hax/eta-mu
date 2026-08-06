@@ -1,7 +1,13 @@
-;; Command resources — CLI subcommands declared as data.
+;; Shipped command resources — tools that travel with eta-mu.
 ;;
-;; eta-mu discovers these at startup and dispatches to their scripts, so adding
-;; a subcommand needs no rebuild of the eta-mu binary.
+;; This directory is packaged (package.json `files`), so a global
+;; `npm i -g eta-mu` carries these commands into every project. That is the
+;; distinction that matters: `workflows` is a tool, not a property of whichever
+;; repository happens to be checked out. Its script resolves against the
+;; installed package, never against the working directory.
+;;
+;; Project-local commands live in `<repo>/contracts/commands/` and override
+;; these by name; per-person ones live in `~/.config/eta-mu/commands/`.
 ;;
 ;; The boundary is data in, data out. The script receives an EDN context in
 ;; `ETA_MU_CONTEXT` and owns its own stdio; argv is exactly what the user typed.
@@ -21,7 +27,7 @@
    :command/name "workflows"
    :command/summary "Project workflow resources onto GitHub Actions and local gates"
    :command/runtime :bb
-   :command/script "scripts/workflows.bb"
+   :command/script "commands/workflows.bb"
    :command/doc
    "Reads katamorph workflow resources from contracts/workflows/ and emits both
     .github/workflows/*.yml and the local gate plan.

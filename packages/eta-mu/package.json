@@ -6,6 +6,7 @@
   "private": false,
   "files": [
     "dist-cli",
+    "commands",
     "README.md"
   ],
   "bin": {

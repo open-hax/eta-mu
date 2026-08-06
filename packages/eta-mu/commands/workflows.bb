@@ -41,7 +41,19 @@
        (catch Exception e (die! (str "cannot read " f ": " (.getMessage e))))))
 
 (defn load-registry [root]
-  (read-edn (io/file root contracts-dir "resources.edn")))
+  (let [f (io/file root contracts-dir "resources.edn")]
+    (when-not (.exists f)
+      ;; This tool ships with eta-mu and runs in every project, so "no resources
+      ;; here" is an ordinary situation, not a crash. Say what is missing and
+      ;; what it would contain.
+      (println (str "No workflow resources in " (.getPath (io/file root contracts-dir)) "\n"))
+      (println "This project declares no workflows. To start one:")
+      (println "  mkdir -p" contracts-dir)
+      (println "  # resources.edn  — the action registry: one pin per action")
+      (println "  # ci.edn         — {:namespace :your.ci :resources [{:contract/kind :workflow ...}]}")
+      (println "\neta-mu carries the projector; the project supplies the resources.")
+      (System/exit 0))
+    (read-edn f)))
 
 (defn load-workflows [root]
   (let [dir (io/file root contracts-dir)
