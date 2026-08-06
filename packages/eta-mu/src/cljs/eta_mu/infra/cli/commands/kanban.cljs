@@ -11,9 +11,12 @@
             [eta-mu.extern.process :as process]))
 
 (def ^:private rheos-commands
+  "Native Rheos verbs, passed through untouched. Legacy names that collide with a
+   native verb but use positional arguments (`comment`, `frontmatter`) are
+   deliberately absent — they are translated below instead."
   #{"board" "compose" "move" "status-update" "add-comment"
-    "create-subtask" "read-task" "search-tasks" "read-board"
-    "events" "drift" "serve"})
+    "create" "create-subtask" "read-task" "search-tasks" "read-board"
+    "projects" "events" "drift" "serve"})
 
 (defn- rheos-command? [s]
   (contains? rheos-commands s))
@@ -94,10 +97,12 @@
         (let [[_ uuid key value & more] args]
           (when (or (nil? uuid) (nil? key) (nil? value))
             (throw (js/Error. "usage: eta-mu kanban frontmatter <uuid> <key> <value>")))
+          ;; `status` is FSM-governed and has its own verb; everything else now
+          ;; routes to Rheos's `frontmatter --set`, which enforces the mutable-key
+          ;; law. This used to throw and tell callers to edit markdown by hand.
           (case key
             "status" {:args (into ["status-update" uuid "--to" value] more)}
-            (throw (js/Error. (str "frontmatter key not supported by Rheos: " key
-                                    "; use status-update or edit the markdown directly")))))
+            {:args (into ["frontmatter" uuid "--set" (str key "=" value)] more)}))
 
         (= "open" cmd)
         (throw (js/Error. "eta-mu kanban open is not supported by Rheos. Open the task markdown directly."))
