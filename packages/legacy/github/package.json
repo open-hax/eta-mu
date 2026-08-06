@@ -15,8 +15,8 @@
     "dev": "tsx src/cli.ts"
   },
   "dependencies": {
-    "@open-hax/eta-mu-ai": "workspace:*",
-    "@open-hax/eta-mu-cli": "workspace:*",
+    "@open-hax/eta-mu-ai": "^0.70.7",
+    "@open-hax/eta-mu-cli": "^0.70.16",
     "@octokit/rest": "^22.0.1",
     "dotenv": "^17.2.3"
   },
