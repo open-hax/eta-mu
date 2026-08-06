@@ -76,7 +76,7 @@ A reportable inline finding must:
 
 Test gaps and unresolved questions belong in one concise non-blocking summary. If no candidate survives validation, the agent leaves a short passing summary instead of inventing comments.
 
-The workflow requires the `OPENCODE_API_KEY` Actions secret for OpenCode Zen. Inline review comments are mirrored to Discord by the workflow's final notification step.
+The reviewer runs `opencode/mimo-v2.5-free` over OpenCode's anonymous public-provider path, so no `OPENCODE_API_KEY` secret is required — when no OpenCode credential is connected, OpenCode supplies the public credential and disables only models with a non-zero input cost. Inline review comments are mirrored to Discord by the workflow's final notification step.
 
 ## CodeRabbit and review gates
 

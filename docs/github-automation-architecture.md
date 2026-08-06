@@ -81,7 +81,7 @@ This document describes the centralized GitHub automation system owned by `open-
 
 The Muse projection intentionally omits write/network-capable multiplexed tools such as `receipt_river`, `edn_ledger`, `session_mycology`, and web search. It also omits actor/agent spawn, actor tell, task execution/control, and phase recording. Observer tools do not make Muse the owner of actor, event, policy, session, or workflow semantics.
 
-The reviewer cannot edit files, execute shell commands, browse the web, or spawn subagents. Skills provide process and environment adaptation, but never count as defect evidence. This avoids same-model consensus theater and limits free-tier quota use. The workflow requires the `OPENCODE_API_KEY` Actions secret and disables public session sharing.
+The reviewer cannot edit files, execute shell commands, browse the web, or spawn subagents. Skills provide process and environment adaptation, but never count as defect evidence. This avoids same-model consensus theater and limits free-tier quota use. The workflow needs no OpenCode credential — `opencode/mimo-v2.5-free` uses the anonymous public-provider path — and disables public session sharing.
 
 The initial pins are explicit inside the workflow so review runs are revision-bound:
 
