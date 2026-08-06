@@ -2,7 +2,7 @@
 category: "epics"
 labels: "rheos, cli, lifecycle, docs, distribution, agents"
 type: "epic"
-write-id: "1786026255896-0.bcsvhnjj3o8jh0ggia4"
+write-id: "1786049720787-0.liy9o1y0f19comce84d"
 points: "13"
 title: "Rheos CLI — full card lifecycle authority, docs, and agent distribution"
 priority: "P0"
@@ -130,4 +130,39 @@ Board binding for the open Rheos CLI work, recorded 2026-08-06:
 | #176 | `rheos-github-issue-sync` | none — card gap, being created | bundle job failing |
 
 Merge order is #167 → #168 → #169. Nothing in this epic merges out of stack order.
+
+Board state after the #158 revival, 2026-08-06:
+
+| PR | State | Notes |
+|---|---|---|
+| #167 | **merged** (5c5d507) | uuid path traversal + empty-frontmatter no-op fixed in review |
+| #176 | **merged** | legacy workflow-scoping test retargeted at the Rheos workflow |
+| #172 | **merged** | layer-boundary ratchet cards |
+| #168 | ready, all 6 threads resolved | `rheos move` was broken for every card — `load-task-or-fail` passed the project map to `load-tasks`; also CLI writes mislabelled as `agent` in the ledger, `--limit` NaN, and `:default-project-id` ignored |
+| #158 | **revived**, all 3 threads resolved | main merged (74 commits), config normalization moved to `shape.config`, symlink escape closed, watcher scoped to the card projection |
+| #169 | unblocked by #158 | its EDN docs are now true — verified the built CLI loads `openhax.kanban.edn` and warns on the JSON mirror |
+
+Merge order: #168 → #158 → #169.
+
+Both #168 and #158 are MERGEABLE with zero unresolved threads and verified locally (rheos 101 and 107 tests respectively, clj-kondo 0/0, all release targets building). Neither can merge yet: GitHub Actions is degraded and jobs are failing at `Set up job` with 'Failed to resolve action download info' / Service Unavailable / Bad Gateway. No code failures.
+
+Stack reconciled 2026-08-06 (second pass). #167 and #168 are on `main`; the remaining order is **#158 → #169**, unchanged in intent — #169 documents EDN config as preferred, which is only true once #158 lands.
+
+Both remaining PRs had fallen back into CONFLICTING when main advanced. Both resolved and pushed:
+
+**#169** — one conflict in `cli.cljs`: main still carried the hardcoded `openhax-kanban` help block that this PR exists to delete. Took the registry rendering, then verified the registry covers all 16 verbs the dispatch table actually handles before accepting it. rheos 110 tests / 403 assertions, kondo 0/0, 4 release targets clean, built CLI renders `rheos` in every usage line.
+
+**#158** — a real reconciliation, not a side-pick. `load-tasks` was in direct tension: #158 made a project map a valid argument (to carry `:card-projection`), while #168 made a project map *throw*, because passing one had `readdir` fail, the collector swallow it, and `rheos move` report `unknown task` for cards on disk. Kept #158s capability and #168s fail-loud discipline: a map or a non-empty string is accepted, and anything resolving no tasks-dir throws `:kind :usage`. Mains guard test asserted the map is refused, so it was rewritten to guard the same hazard — the silent `[]` — under the new contract rather than deleted. Every caller still passes the string form; `source->project` resolves it back through the project registry so a configured projection still applies. rheos 116 tests / 329 assertions, kondo 0/0, built CLI loads the EDN board.
+
+Blocking both: GitHub Actions is degraded, not the code. `main-lint` is a bare `echo` and it "failed" after 6m19s; CodeQL Analyze ran 1h8m and 1h24m before failing. Treat those as infrastructure until a completed run says otherwise.
+
+Stack complete 2026-08-06. Merge order held: #167 → #168 → #158 → #169, all on `main`.
+
+Merged on local gate evidence during the GitHub Actions critical outage (incident 15:22Z), not on CI. `pnpm gates` mirrors the workflows and ran green on each branch before merge: #158 6/6, #169 4/4.
+
+Review closed rather than waived. #158: 15 threads, three real containment defects each reproduced by a failing test first — a symlink under a projected root loading cards from outside the task root, a not-yet-created path below an escaping symlink passing containment, and the watcher scanning everything for a board that projected nothing. #169: 4 threads, an unknown verb reporting a config error instead of usage exit 1, `help <unknown>` writing two stderr lines against its own one-line contract, and `--tier` read by compose but absent from the registry.
+
+Two findings declined with reasons rather than silently: the `law.fsm` layering point is real but belongs to `eta-mu-quality-ratchet-layer-boundary-rheos`, which ships the enforcement; and CodeRabbit asked #169 to strip its EDN documentation on the grounds that EDN is unimplemented — stale, since #158 had landed, and following it would have documented a format precedence the code does not implement.
+
+One defect of my own, caught and fixed: the `entry-kind` helper from the #158 fix emitted an `:infer-warning` on `isSymbolicLink` in two build targets. It reached main because nothing gates it — the rheos CI job runs test + lint:kondo only, and rheos-github-sync builds rheos but ignores compiler warnings, while sol and axxium fail on any WARNING. Fixed in #178; the local rheos gate now checks build warnings and is deliberately stricter than CI until CI catches up.
 ---

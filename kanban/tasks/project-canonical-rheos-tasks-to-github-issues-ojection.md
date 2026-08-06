@@ -1,12 +1,12 @@
 ---
-uuid: "rheos-github-issue-projection"
-title: "Project canonical Rheos tasks to GitHub Issues"
-status: "incoming"
-type: "task"
-priority: "P1"
-points: "8"
 category: "tasks"
-write-id: "1786026522818-0.znue8j4451e0rfy8i7c"
+type: "task"
+write-id: "1786029518260-0.4uin24roxfi0krg67yr"
+points: "8"
+title: "Project canonical Rheos tasks to GitHub Issues"
+priority: "P1"
+status: "incoming"
+uuid: "rheos-github-issue-projection"
 created_at: "2026-08-06T14:28:42.818Z"
 ---
 
@@ -65,3 +65,11 @@ fact so the projection has an owner and a place for its follow-ups.
 The natural parent epic is `rheos-ledger-authoritative-projections`, which is
 still unmerged on `feature/rheos-edn-config` (PR #158). Re-parent this card if
 and when that epic lands on `main`.
+
+---
+Merged to main (PR #176) on 2026-08-06. The card was written after the fact — this PR was the only open one with no board record — so it lands `incoming` while its work is already on main.
+
+Gate fixed on the way in: `bundle` was failing because `packages/legacy/kanban/tests/kanban-sync-workflow.test.ts` still asserted the TypeScript-era interpolation in `.github/workflows/kanban-sync.yml`, which this PR replaced. The test now tracks the guard as written and covers both containment refusals, which it never did before.
+
+Follow-up owned here: reconcile status with reality, and re-parent under `rheos-ledger-authoritative-projections` if #158 lands.
+---

@@ -4,7 +4,7 @@ One page for where the parts are going and in what order. Every repo in the
 constellation carries a short `ROADMAP.md` summarising the slice that affects it
 and pointing back here. **This file is the hub; those are satellites.**
 
-Last surveyed: 2026-08-06.
+Last surveyed: 2026-08-06 (second pass, after #167/#168/#172/#176 merged).
 
 ## How to use this
 
@@ -102,9 +102,11 @@ upstream-first.
   vs katamorph's `CapabilityContract`. *"A capability is the primitive."*
   **Blocks anything that groups capabilities**, including
   `knoxx:knoxx-mcp-consent-permission-groups`.
-- `eta-mu:rheos-cli-card-lifecycle-authority` (breakdown) — three PRs in review
-  as one ordered stack: #167 create → #168 exit contract → #169 docs. They must
-  merge in that order; each is based on the one before, not on `main`.
+- `eta-mu:rheos-cli-card-lifecycle-authority` (breakdown) — the stack is two
+  thirds landed. **#167 (create) and #168 (exit contract) are on `main`.**
+  The remaining order is **#158 → #169**: #169 documents EDN config as the
+  preferred form, which is only true once #158 lands, so merging #169 first
+  would put a false claim on `main`.
 - `knoxx:knoxx-decouple-into-katamorph-contracts` — knoxx internal compliance +
   actor awareness. Explicitly not extraction.
 
@@ -121,8 +123,16 @@ is `done`. Moved to Done below.
   tooling slices. Rides on PR #170, so neither the epic nor `AGENTS.md`'s new
   section is on `main` yet.
 - `rheos-github-issue-projection` — GitHub Issues as a projection of canonical
-  Rheos tasks (PR #176). Its natural parent epic,
-  `rheos-ledger-authoritative-projections`, is still unmerged on #158.
+  Rheos tasks. **PR #176 merged 2026-08-06**, but the card sits `incoming`
+  because it was written after the fact and never passed a gate. Its natural
+  parent epic, `rheos-ledger-authoritative-projections`, is still unmerged on
+  #158; re-parent the card if and when that lands.
+- `ledger-event-id-not-unique` (incoming) — `:event/id` collides by
+  construction: a drift pair shares id *and* timestamp, differing only in
+  `:event/type`. Any fold, dedup, or snapshot keyed on it silently drops half of
+  every pair. This is load-bearing for #158's ledger-authoritative design, where
+  the ledger becomes the thing cards project *from*. Two ledger merges on
+  2026-08-06 were resolved by whole-line union for exactly this reason.
 
 ### Blocked or deferred
 
@@ -242,9 +252,11 @@ Not decisions yet. Flagged so they stop being re-derived.
    together" but "has either been used *without* the other".
 
    The count this page carried until 2026-08-06 — *"143 files in eta-mu require
-   it"* — does not survive checking. `git grep -l katamorph` finds **56** files,
-   and 25 of those are kanban cards; files with an actual require or import are
-   **6**, twelve of the remainder being prose in `packages/sol`. The conclusion
+   it"* — does not survive checking. `git grep -l katamorph` finds **58** files
+   (56 on the first 2026-08-06 pass; the total moves whenever a card mentions
+   the word, so it is a poor number to quote), and most of those are kanban
+   cards; files with an actual require or import are **6**, and that number held
+   across both 2026-08-06 passes. The conclusion
    is unchanged (eta-mu is the consumer, knoxx and openplanner are not) but the
    evidence is an order of magnitude smaller than stated, so the argument is
    weaker than it read. Re-derive before leaning on it:
@@ -266,9 +278,17 @@ Not decisions yet. Flagged so they stop being re-derived.
   with the correction left visible, because a page that quietly rewrites itself
   gives no signal about how often it drifts. Two survey dates apart, that is
   roughly one bad claim per month.
-- **This file is not on `main`.** It rides on PR #167 together with the
-  `CLAUDE.md` banner that points at it. Until that merges, a `main` checkout has
-  no hub — check before citing it to someone.
+- The **second** 2026-08-06 pass, run the same day after four PRs merged, found
+  three more: the stack order, the `#176` status, and this page's own location.
+  All three went stale within hours of the first pass — not from neglect, but
+  because they described *in-flight* state. The lesson is narrower than "survey
+  more often": claims about merge status and file location expire on merge, so
+  either check them at read time or do not write them down.
+- **This file is now on `main`** (via #167, merged 2026-08-06), together with
+  the `CLAUDE.md` banner that points at it. The line above said the opposite
+  until the second 2026-08-06 pass — a claim about its own location is exactly
+  the kind that rots the moment the PR carrying it merges. Prefer claims that
+  survive their own merge.
 - Satellites summarise; they do not restate. When they disagree with this file,
   this file is wrong until proven otherwise, because it is the one that gets
   read least often.

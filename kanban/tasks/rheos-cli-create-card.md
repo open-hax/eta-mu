@@ -3,11 +3,11 @@ category: "tasks"
 labels: "rheos, cli, lifecycle, create, ledger"
 parent: "rheos-cli-card-lifecycle-authority"
 type: "task"
-write-id: "1786026244746-0.x6mg8z7tvj8lj92wnm"
+write-id: "1786050440652-0.dfizigmdkdtogwos5hz"
 points: "5"
 title: "Rheos CLI card creation with a ledger-visible task-created event"
 priority: "P0"
-status: "review"
+status: "done"
 uuid: "rheos-cli-create-card"
 created_at: "2026-07-30T00:00:00Z"
 ---
@@ -97,4 +97,25 @@ Implemented. New domain/task_create.cljs is the single creation chokepoint; even
 Implemented on PR #167 (`feat/rheos-card-creation`) — https://github.com/open-hax/eta-mu/pull/167
 
 CodeRabbit found a confirmed path traversal: `--uuid` reached the card file name unvalidated, and `card-file-name` keeps the last 8 characters, so separators survived truncation and `path/join` normalized the write outside the card directory. Fixed in f838964 with `check-uuid!` (domain refusal) plus `resolve-card-path` (infra containment re-check). Suite 85 tests / 264 assertions, clj-kondo 0/0.
+
+Merged to main as 5c5d507 (PR #167) on 2026-08-06.
+
+Landed with two review fixes beyond the original scope:
+- `check-uuid!` + `resolve-card-path` close a confirmed path traversal — `--uuid` reached the card file name unvalidated and `card-file-name` keeps the last 8 characters, so separators survived truncation.
+- `update-frontmatter!` no longer rewrites a task file for an empty update, which previously stamped a write-id and woke the watcher while emitting no ledger event.
+
+Also hardened `.github/workflows/rheos.yml` to match `axxium-ci`/`sol-ci`: pinned checkout with persist-credentials off, `--frozen-lockfile`, and clj-kondo pinned to 2025.10.23 via setup-clojure.
+
+Final: 85 tests / 264 assertions, clj-kondo 0/0, all 8 review threads resolved.
+
+Acceptance-criteria reconciliation, raised in review on #177.
+
+This card is `done` while one of its acceptance criteria — "folding the ledger from empty reproduces the created cards uuid, type, parent, initial status, and body" — is explicitly not delivered. The implementation note already says so: the event now *carries* the payload a fold would need, but the fold itself was left to another card. Closing with the criterion still listed makes the card read as if replay were proven.
+
+Recording it plainly rather than editing the body, which settled at breakdown:
+
+- **Delivered here:** the `task-created` event carries uuid, title, card-type, status, parent, source-path, and the authored body — everything a reconstruction needs.
+- **Not delivered here:** the fold that consumes it. That is `rheos-canonical-task-fold-and-snapshots`, which is on `main` as of #158 and sits in `incoming`.
+
+So the criterion is not abandoned, it is reassigned, and the successor card exists and is reachable. Anyone auditing this cards `done` status should read the criterion as "the event is sufficient for replay", not "replay is proven" — the proof belongs to the fold card and should be written there.
 ---
