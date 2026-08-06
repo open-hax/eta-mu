@@ -217,6 +217,7 @@
     :summary "Composed board view with the full query DSL; human-readable by default."
     :flags [["--domain <d>" "meta.domain filter"]
             ["--org <o>" "meta.org filter"]
+            ["--tier <t>" "meta.tier filter"]
             ["--status <s>" "comma-separated statuses"]
             ["--priority <p>" "comma-separated priorities"]
             ["--labels <l>" "comma-separated labels"]
@@ -294,6 +295,16 @@
   (println "  Card bodies settle once a card leaves breakdown — record later updates with")
   (println (str "  `" bin-name " comment <uuid> --text …` rather than rewriting the body.")))
 
+(defn- unknown-verb!
+  "The one refusal for a verb that is not in [[verbs]].
+
+   One line, through `fail!`, like every other failure — a caller parsing stderr
+   should not have to special-case this path. The known-verb list stays in the
+   message rather than on a second line."
+  [verb]
+  (fail! :usage (str "unknown verb: " verb
+                     " — known verbs: " (str/join ", " (map :verb verbs)))))
+
 (defn show-verb-help [verb]
   (if-let [v (by-verb verb)]
     (do
@@ -315,9 +326,7 @@
         (println ""))
       (println "EXAMPLE")
       (println (str "  " (:example v))))
-    (do (js/console.error (str bin-name ": unknown verb: " verb))
-        (js/console.error (str "  known verbs: " (str/join ", " (map :verb verbs))))
-        (exit! :usage))))
+    (unknown-verb! verb)))
 
 ;; ---------------------------------------------------------------------------
 ;; Output helpers
@@ -665,6 +674,13 @@
 
       (flag-true? (:flags parsed) "help")
       (show-verb-help verb)
+
+      ;; Reject an unknown verb *before* `run` touches the board. `run` loads
+      ;; config first, so `rheos unknown-verb --config missing.edn` used to
+      ;; report the config error and never mention the verb — a usage mistake
+      ;; surfacing as an environment problem, with the wrong exit code.
+      (nil? (by-verb verb))
+      (unknown-verb! verb)
 
       :else
       (try

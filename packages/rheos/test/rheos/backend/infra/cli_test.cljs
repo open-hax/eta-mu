@@ -185,3 +185,17 @@
     (let [{:keys [command flags]} (cli/parse-args ["move" "--help"])]
       (is (= "move" command))
       (is (= "true" (get flags "help"))))))
+
+(deftest compose-registry-covers-the-flags-compose-actually-reads
+  ;; `parse-compose-query` reads these keys directly. A flag it honours but the
+  ;; registry omits is invisible in help, which is the failure the registry
+  ;; exists to prevent.
+  (let [compose-flags (->> cli/verbs
+                           (filter #(= "compose" (:verb %)))
+                           first :flags
+                           (map #(first (str/split (first %) #" ")))
+                           set)]
+    (doseq [f ["--domain" "--org" "--tier" "--status" "--priority" "--labels"
+               "--projects" "--q" "--where"]]
+      (is (contains? compose-flags f)
+          (str "compose reads " f " but the registry does not declare it")))))
