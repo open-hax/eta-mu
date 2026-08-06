@@ -21,6 +21,7 @@
             [rheos.backend.infra.task-edit :as task-edit]
             [rheos.backend.infra.task-store :as tasks]
             [rheos.backend.infra.transition :as transition]
+            [rheos.backend.law.frontmatter :as law-frontmatter]
             [rheos.backend.shape.content-parser :as content-parser]))
 
 (defn- env [k default] (or (aget js/process.env k) default))
@@ -34,7 +35,8 @@
   (let [abs (path/resolve project-root (or rel "."))]
     (if (or (= abs project-root) (.startsWith abs (str project-root path/sep)))
       abs
-      (throw (js/Error. (str "path escapes project root: " rel))))))
+      (throw (ex-info (str "path escapes project root: " rel)
+                      {:kind :refused :path rel})))))
 
 (defn- ^:async exec-file
   "Run `cmd args` under the project root, resolving with stdout. ripgrep exits 1
@@ -147,41 +149,75 @@
 
 (defn- ^:async tool-kanban-read-task [{:keys [uuid project]}]
   (let [proj (projects/find-project project)]
-    (when-not proj (throw (js/Error. (str "unknown project: " project))))
+    (when-not proj (throw (ex-info (str "unknown project: " project)
+                                   {:kind :not-found :project project})))
     (let [task (await (load-task proj uuid))]
-      (when-not task (throw (js/Error. (str "unknown task: " uuid))))
+      (when-not task (throw (ex-info (str "unknown task: " uuid)
+                                   {:kind :not-found :uuid uuid})))
       (let [raw (await (.readFile fsp (:source-path task) "utf8"))
             parsed (content-parser/parse-task-content raw)]
         {:uuid uuid :frontmatter (:frontmatter parsed) :sections (:sections parsed)
          :source-path (:source-path task)}))))
 
-(defn- ^:async tool-kanban-update-status [{:keys [uuid status project]}]
+(defn- ^:async tool-kanban-update-status [{:keys [uuid status project source]}]
   (let [proj (projects/find-project project)]
-    (when-not proj (throw (js/Error. (str "unknown project: " project))))
+    (when-not proj (throw (ex-info (str "unknown project: " project)
+                                   {:kind :not-found :project project})))
     (let [task (await (load-task proj uuid))]
-      (when-not task (throw (js/Error. (str "unknown task: " uuid))))
-      (let [result (await (transition/move-task! {:project proj :task task :new-status status :source "agent"}))]
+      (when-not task (throw (ex-info (str "unknown task: " uuid)
+                                   {:kind :not-found :uuid uuid})))
+      (let [result (await (transition/move-task! {:project proj :task task :new-status status :source (or source "agent")}))]
         (if (:ok result)
           {:ok true :uuid uuid :from (:from result) :to (:to result)}
-          (throw (js/Error. (str "transition rejected: " (:reason result)))))))))
+          (throw (ex-info (str "transition rejected: " (:reason result))
+                          {:kind :refused :uuid uuid :from (:from result) :to status})))))))
 
-(defn- ^:async tool-kanban-add-comment [{:keys [uuid text project]}]
-  (when (empty? text) (throw (js/Error. "missing comment text")))
+(defn- ^:async tool-kanban-add-comment [{:keys [uuid text project source]}]
+  (when (empty? text) (throw (ex-info "missing comment text" {:kind :usage})))
   (let [proj (projects/find-project project)]
-    (when-not proj (throw (js/Error. (str "unknown project: " project))))
+    (when-not proj (throw (ex-info (str "unknown project: " project)
+                                   {:kind :not-found :project project})))
     (let [task (await (load-task proj uuid))]
-      (when-not task (throw (js/Error. (str "unknown task: " uuid))))
-      (await (task-edit/append-comment! {:project proj :task task :text text :source "agent"}))
+      (when-not task (throw (ex-info (str "unknown task: " uuid)
+                                   {:kind :not-found :uuid uuid})))
+      (await (task-edit/append-comment! {:project proj :task task :text text :source (or source "agent")}))
       {:ok true :uuid uuid :comment text})))
+
+(defn- ^:async tool-kanban-update-frontmatter
+  "Update descriptive frontmatter, enforcing the same closed key set the HTTP
+   PATCH handler enforces ([[rheos.backend.law.frontmatter/mutable-keys]]).
+   `:status` is refused here and routed to the FSM, so there stays exactly one
+   way to change a card's status."
+  [{:keys [uuid project updates source]}]
+  (when (empty? updates) (throw (ex-info "no frontmatter updates given" {:kind :usage})))
+  (let [keyworded (into {} (map (fn [[k v]] [(keyword (name k)) v])) updates)]
+    (when (law-frontmatter/status-update? keyworded)
+      (throw (ex-info "status is FSM-governed — use `rheos move <uuid> --to <status>`"
+                      {:kind :usage :key "status"})))
+    (when-let [bad (seq (law-frontmatter/disallowed-keys keyworded))]
+      (throw (ex-info (law-frontmatter/disallowed-keys-message bad)
+                      {:kind :usage :keys (vec (map name bad))})))
+    (let [proj (projects/find-project project)]
+      (when-not proj (throw (ex-info (str "unknown project: " project)
+                                     {:kind :not-found :project project})))
+      (let [task (await (load-task proj uuid))]
+        (when-not task (throw (ex-info (str "unknown task: " uuid)
+                                       {:kind :not-found :uuid uuid})))
+        (let [result (await (task-edit/update-frontmatter!
+                             {:project proj :task task
+                              :updates (into {} (map (fn [[k v]] [(name k) v])) keyworded)
+                              :source (or source "agent")}))]
+          {:ok true :uuid uuid :frontmatter (:frontmatter result)})))))
 
 (defn- ^:async tool-kanban-create-task
   "Create a card. Both this and `kanban_create_subtask` delegate to the one
    creation chokepoint, so a root card and a child card are the same operation
    and both land in the ledger."
   [{:keys [title project parent parent-uuid type card-type status priority points
-           labels body dir uuid force-status]}]
+           labels body dir uuid force-status source]}]
   (let [proj (projects/find-project project)]
-    (when-not proj (throw (js/Error. (str "unknown project: " project))))
+    (when-not proj (throw (ex-info (str "unknown project: " project)
+                                   {:kind :not-found :project project})))
     (await (task-create/create-task!
             {:project proj
              :title title
@@ -195,7 +231,7 @@
              :dir dir
              :uuid uuid
              :force-status? (true? force-status)
-             :source "agent"}))))
+             :source (or source "agent")}))))
 
 (defn- ^:async tool-kanban-create-subtask [args]
   (await (tool-kanban-create-task (assoc args :parent (or (:parent-uuid args) (:parent args))))))
@@ -272,6 +308,13 @@
                    :properties {:uuid {:type "string"} :text {:type "string"} :project {:type "string"}}
                    :required ["uuid" "text"]}
     :handler tool-kanban-add-comment}
+   {:name "kanban_update_frontmatter"
+    :description "Update a card's descriptive frontmatter (title, priority, labels, points, category, description, estimate, assignee). Ledger-recorded, one event per changed key. `status` is refused — it is FSM-governed, use kanban_update_status."
+    :input-schema {:type "object"
+                   :properties {:uuid {:type "string"} :project {:type "string"}
+                                :updates {:type "object" :description "key -> value map of frontmatter fields to set"}}
+                   :required ["uuid" "updates"]}
+    :handler tool-kanban-update-frontmatter}
    {:name "kanban_create_task"
     :description "Create a card and record a task-created ledger event. Works for root cards and children alike — pass `parent` only for a child. The card enters at the project FSM's initial state; use kanban_update_status to advance it. Pass `body` to author the card's markdown, otherwise a skeleton (Outcome / Scope / Acceptance criteria) is written so the card can pass its first gate."
     :input-schema {:type "object"
@@ -302,6 +345,7 @@
   {"kanban-status-update" "kanban_update_status"
    "kanban-add-comment" "kanban_add_comment"
    "kanban-create-task" "kanban_create_task"
+   "kanban-update-frontmatter" "kanban_update_frontmatter"
    "kanban-create-subtask" "kanban_create_subtask"
    "kanban-read-task" "kanban_read_task"
    "kanban-search-tasks" "kanban_search_tasks"
@@ -315,4 +359,4 @@
   [name args]
   (if-let [tool (or (by-name name) (by-name (aliases name)))]
     (await ((:handler tool) args))
-    (throw (js/Error. (str "unknown tool: " name)))))
+    (throw (ex-info (str "unknown tool: " name) {:kind :usage :tool name}))))

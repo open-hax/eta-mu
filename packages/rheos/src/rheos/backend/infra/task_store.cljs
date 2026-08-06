@@ -98,7 +98,19 @@
    (case (:priority task) "P0" 0 "P1" 1 "P2" 2 "P3" 3 4)
    (str/lower-case (:title task))])
 
-(defn ^:async load-tasks [tasks-dir]
+(defn ^:async load-tasks
+  "Every task under `tasks-dir`, sorted. `tasks-dir` is a path string, not a
+   project map.
+
+   The argument is checked because getting it wrong used to be invisible:
+   `readdir` throws on a map, [[collect-markdown-files]] catches everything and
+   returns `[]`, and the caller reads that as \"the board has no cards\". A CLI
+   verb shipped with exactly that mistake and reported `unknown task` for cards
+   that existed. Fail where the mistake is, not five frames later."
+  [tasks-dir]
+  (when-not (and (string? tasks-dir) (seq tasks-dir))
+    (throw (ex-info (str "load-tasks expects a tasks directory path, got: " (pr-str tasks-dir))
+                    {:kind :usage :tasks-dir tasks-dir})))
   (let [files (await (collect-markdown-files tasks-dir))
         tasks-raw (await (js/Promise.all
                            (clj->js (mapv #(parse-task-file % tasks-dir) files))))
