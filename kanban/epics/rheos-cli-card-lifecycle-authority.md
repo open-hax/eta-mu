@@ -2,7 +2,7 @@
 category: "epics"
 labels: "rheos, cli, lifecycle, docs, distribution, agents"
 type: "epic"
-write-id: "1786026255896-0.bcsvhnjj3o8jh0ggia4"
+write-id: "1786034410986-0.ztbrdt547786ubuyp7t"
 points: "13"
 title: "Rheos CLI — full card lifecycle authority, docs, and agent distribution"
 priority: "P0"
@@ -130,4 +130,19 @@ Board binding for the open Rheos CLI work, recorded 2026-08-06:
 | #176 | `rheos-github-issue-sync` | none — card gap, being created | bundle job failing |
 
 Merge order is #167 → #168 → #169. Nothing in this epic merges out of stack order.
+
+Board state after the #158 revival, 2026-08-06:
+
+| PR | State | Notes |
+|---|---|---|
+| #167 | **merged** (5c5d507) | uuid path traversal + empty-frontmatter no-op fixed in review |
+| #176 | **merged** | legacy workflow-scoping test retargeted at the Rheos workflow |
+| #172 | **merged** | layer-boundary ratchet cards |
+| #168 | ready, all 6 threads resolved | `rheos move` was broken for every card — `load-task-or-fail` passed the project map to `load-tasks`; also CLI writes mislabelled as `agent` in the ledger, `--limit` NaN, and `:default-project-id` ignored |
+| #158 | **revived**, all 3 threads resolved | main merged (74 commits), config normalization moved to `shape.config`, symlink escape closed, watcher scoped to the card projection |
+| #169 | unblocked by #158 | its EDN docs are now true — verified the built CLI loads `openhax.kanban.edn` and warns on the JSON mirror |
+
+Merge order: #168 → #158 → #169.
+
+Both #168 and #158 are MERGEABLE with zero unresolved threads and verified locally (rheos 101 and 107 tests respectively, clj-kondo 0/0, all release targets building). Neither can merge yet: GitHub Actions is degraded and jobs are failing at `Set up job` with 'Failed to resolve action download info' / Service Unavailable / Bad Gateway. No code failures.
 ---
