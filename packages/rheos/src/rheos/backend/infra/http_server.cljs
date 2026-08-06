@@ -415,7 +415,9 @@
     (when config-path (js/console.log "Config:" config-path))
     ;; Start file watchers for all projects
     (doseq [project (:projects resolved)]
-      (watcher/start-watcher! (:id project) (:tasks-dir project)))
+      (watcher/start-watcher! (:id project)
+                              (:tasks-dir project)
+                              (get-in project [:card-projection :paths])))
     (await (start-http! host port))))
 
 (defn ^:async ^:dev/before-load-async stop-http-before-load!

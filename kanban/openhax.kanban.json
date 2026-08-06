@@ -40,6 +40,16 @@
       "title": "Muse",
       "tasksDir": "../../muse/docs/kanban",
       "fsm": "promethean"
+    },
+    {
+      "id": "fork-tales-v2",
+      "title": "Fork Tales v2",
+      "tasksDir": "../../fork_tales_v2/docs/kanban",
+      "fsm": {
+        "extends": "promethean",
+        "buildGateCommands": ["clojure -M:test"],
+        "cwd": "../../fork_tales_v2"
+      }
     }
   ]
 }
