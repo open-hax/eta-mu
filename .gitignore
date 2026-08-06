@@ -61,6 +61,13 @@ packages/legacy/kanban/playwright-report/
 # Generated OpenCode host artifacts
 .opencode/
 
+# Bounded review context, downloaded into the workspace by the MiMo reviewer.
+# Its contents are checksum-verified against SHA256SUMS, so it is expected dirt
+# rather than drift — but the workspace-clean guard in
+# .github/workflows/opencode-code-review.yml counts untracked files, so it has
+# to be ignored or that guard fails on the reviewer's own artifact.
+.review-context/
+
 # Core dumps
 core
 

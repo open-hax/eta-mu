@@ -1,4 +1,4 @@
-# Agent Workflows: Kanban → GitHub → Kimi → Review Gates
+# Agent Workflows: Kanban → GitHub → OpenCode → Review Gates
 
 This repository participates in the shared OpenHax / Octave Commons automation stack. Agents working here should understand the following workflow before opening or reviewing PRs.
 
@@ -13,9 +13,9 @@ Mirrored events include:
 - pull request reviews
 - releases
 - pushes to `main`, `master`, `dev`, and `device/**`
-- selected workflow completions for OpenCode/Kimi review workflows
+- selected workflow completions for OpenCode review workflows
 
-Do not print or copy webhook URLs, bot tokens, GitHub tokens, Kimi keys, or other secrets into logs, issues, PR comments, or commits.
+Do not print or copy webhook URLs, bot tokens, GitHub tokens, provider keys, or other secrets into logs, issues, PR comments, or commits.
 
 ## Kimi issue agent
 
@@ -30,18 +30,53 @@ Kimi may:
 
 Kimi must not close ambiguous issues or make broad/destructive changes.
 
-## Kimi PR code review
+## MiMo evidence-first PR review
 
-`.github/workflows/opencode-code-review.yml` runs OpenCode with Kimi For Coding on pull requests.
+`.github/workflows/opencode-code-review.yml` reviews non-draft, same-repository pull requests with the project-local `github-reviewer` OpenCode agent and the `opencode/mimo-v2.5-free` model.
 
-Kimi should:
+The workflow has three bounded stages:
 
-- review correctness, security, maintainability, tests, and repository conventions;
-- submit concrete findings as GitHub PR inline review comments on exact changed lines whenever GitHub can attach them;
-- leave a short passing summary when there are no actionable findings;
-- treat linked Kanban/GitHub issues as the source of task intent.
+1. **Deterministic evidence** — install from the committed lockfile, then run the repository lint, test, and build gates. Exit codes and logs are serialized under `.opencode/review-evidence/`. A failed environment or dependency install is evidence about the run, not automatically evidence of a code defect.
+2. **Review-context compilation** — check out pinned revisions of `octave-commons/muse` and `riatzukiza/.agents`. Muse compiles a review-specific OpenCode projection containing only observer tools; the `.agents` repository is packaged as the global skill source. Both revisions and the skill inventory are recorded in the context artifact.
+3. **One model review pass** — map the change, reconstruct relevant contracts and invariants, generate candidate findings, attempt to disprove each candidate, and publish only findings that survive the evidence threshold.
 
-Inline PR review comments are mirrored to Discord by `.github/workflows/code-review-comments-discord.yml`.
+### Muse observer projection
+
+Muse remains the compatibility/compiler boundary. The workflow does not treat its bootstrap actor implementation as canonical runtime authority.
+
+The review projection exposes only existing-state observers:
+
+- Muse/phase listings and phase ledger reads;
+- actor lists, mailbox reads, and condition watches;
+- task and background-agent status/listing.
+
+It does not expose actor or agent spawning, message sending, task execution, ledger append, receipt mutation, skill promotion, web search, or shell access. Multiplexed tools such as `receipt_river`, `edn_ledger`, and `session_mycology` are omitted because their action schemas include writes even when some actions are read-only.
+
+### Global skills
+
+The workflow mounts the pinned `riatzukiza/.agents` checkout at `~/.agents`, which is OpenCode's external skill discovery location. Skills provide process, environment classification, and domain-specific method. They do not count as evidence and cannot lower the finding threshold.
+
+The reviewer is deliberately read-only:
+
+- file edits are denied;
+- shell execution is denied;
+- web access is denied;
+- subagent spawning is denied;
+- session sharing is disabled;
+- GitHub write permission exists only so the OpenCode integration can publish the final review.
+
+A reportable inline finding must:
+
+- be introduced or exposed by changed code;
+- attach to a changed line;
+- identify supporting repository context;
+- provide an independently plausible failure trace;
+- survive adversarial validation;
+- be marked confirmed with confidence of at least `0.85`.
+
+Test gaps and unresolved questions belong in one concise non-blocking summary. If no candidate survives validation, the agent leaves a short passing summary instead of inventing comments.
+
+The reviewer runs `opencode/mimo-v2.5-free` over OpenCode's anonymous public-provider path, so no `OPENCODE_API_KEY` secret is required — when no OpenCode credential is connected, OpenCode supplies the public credential and disables only models with a non-zero input cost. Inline review comments are mirrored to Discord by the workflow's final notification step.
 
 ## CodeRabbit and review gates
 
@@ -50,7 +85,7 @@ CodeRabbit may add inline review comments. Repositories with branch protection e
 Agent rules:
 
 1. Do not merge while actionable inline review threads remain unresolved.
-2. Resolve CodeRabbit/Kimi comments by patching the code or explicitly explaining why no change is needed.
+2. Resolve CodeRabbit/OpenCode comments by patching the code or explicitly explaining why no change is needed.
 3. Prefer small targeted commits over broad rewrites.
 4. Re-run or wait for required checks after pushing fixes.
 
