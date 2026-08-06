@@ -1,5 +1,9 @@
 # eta-mu
 
+> **Roadmap:** [`ROADMAP.md`](ROADMAP.md) is the constellation hub — the seam,
+> the ownership table, the sequencing rule, and the drift ledger. Every sibling
+> repo carries a satellite `ROADMAP.md` summarising its own slice.
+
 Canonical eta-mu monorepo.
 
 This repo absorbs the active eta-mu surfaces that were previously scattered across multiple repos and workspace paths, including the former `open-hax/openhax` monorepo. It is a **ClojureScript-first** pnpm workspace: the active code lives in CLJS packages, and the remaining TypeScript is legacy and being migrated.

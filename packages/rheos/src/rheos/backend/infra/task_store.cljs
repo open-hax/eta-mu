@@ -47,7 +47,10 @@
     (vec (distinct (filter seq (mapv str/trim items))))))
 
 (defn- normalize-status [status]
-  (-> (or status "incoming") str/lower-case str/trim))
+  (case (-> (or status "incoming") str/lower-case str/trim)
+    "pending" "incoming"
+    "completed" "done"
+    (-> (or status "incoming") str/lower-case str/trim)))
 
 (defn- ^:async parse-task-file [file-path _tasks-dir]
   (try

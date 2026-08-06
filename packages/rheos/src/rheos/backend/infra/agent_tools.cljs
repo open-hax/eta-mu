@@ -15,14 +15,12 @@
   (:require ["node:child_process" :as cp]
             ["node:fs/promises" :as fsp]
             ["node:path" :as path]
-            [clojure.string :as str]
             [rheos.backend.domain.compose :as compose]
-            [rheos.backend.domain.events :as events]
-            [rheos.backend.domain.task-edit :as task-edit]
-            [rheos.backend.domain.transition :as transition]
             [rheos.backend.infra.projects :as projects]
+            [rheos.backend.infra.task-create :as task-create]
+            [rheos.backend.infra.task-edit :as task-edit]
             [rheos.backend.infra.task-store :as tasks]
-            [rheos.backend.infra.watcher :as watcher]
+            [rheos.backend.infra.transition :as transition]
             [rheos.backend.shape.content-parser :as content-parser]))
 
 (defn- env [k default] (or (aget js/process.env k) default))
@@ -176,47 +174,31 @@
       (await (task-edit/append-comment! {:project proj :task task :text text :source "agent"}))
       {:ok true :uuid uuid :comment text})))
 
-(defn- slugify [title]
-  (-> title
-      str/lower-case
-      (str/replace #"[^a-z0-9]+" "-")
-      (str/replace #"^-+|-+$" "")
-      (or "subtask")))
-
-(defn- ^:async file-exists? [file-path]
-  (try
-    (await (.access fsp file-path))
-    true
-    (catch :default _ false)))
-
-(defn- ^:async unique-file-path [dir slug uuid]
-  (let [candidate (path/join dir (str slug ".md"))]
-    (if (await (file-exists? candidate))
-      (path/join dir (str slug "-" (subs uuid 0 8) ".md"))
-      candidate)))
-
-(defn- ^:async tool-kanban-create-subtask [{:keys [parent-uuid title project status priority labels]}]
+(defn- ^:async tool-kanban-create-task
+  "Create a card. Both this and `kanban_create_subtask` delegate to the one
+   creation chokepoint, so a root card and a child card are the same operation
+   and both land in the ledger."
+  [{:keys [title project parent parent-uuid type card-type status priority points
+           labels body dir uuid force-status]}]
   (let [proj (projects/find-project project)]
     (when-not proj (throw (js/Error. (str "unknown project: " project))))
-    (let [parent (await (load-task proj parent-uuid))]
-      (when-not parent (throw (js/Error. (str "unknown parent task: " parent-uuid))))
-      (let [sub-uuid (str (random-uuid))
-            sub-slug (slugify title)
-            parent-dir (path/dirname (:source-path parent))
-            file-path (await (unique-file-path parent-dir sub-slug sub-uuid))
-            subtask {:uuid sub-uuid
-                     :title title
-                     :status (or status "incoming")
-                     :priority (or priority "P3")
-                     :labels (vec (or labels []))
-                     :created_at (.toISOString (new js/Date))
-                     :parent parent-uuid}
-            write-id (events/generate-write-id)
-            raw (-> (content-parser/serialize-task-content {:frontmatter subtask :sections []})
-                    (content-parser/inject-write-id write-id))]
-        (watcher/register-cli-event! write-id sub-uuid)
-        (await (.writeFile fsp file-path raw "utf8"))
-         {:ok true :uuid sub-uuid :title title :source-path file-path}))))
+    (await (task-create/create-task!
+            {:project proj
+             :title title
+             :card-type (or card-type type "task")
+             :parent (or parent parent-uuid)
+             :status status
+             :priority priority
+             :points points
+             :labels (vec (or labels []))
+             :body body
+             :dir dir
+             :uuid uuid
+             :force-status? (true? force-status)
+             :source "agent"}))))
+
+(defn- ^:async tool-kanban-create-subtask [args]
+  (await (tool-kanban-create-task (assoc args :parent (or (:parent-uuid args) (:parent args))))))
 
 ;; ---------------------------------------------------------------------------
 ;; Tool registry — name, description, JSON-Schema input, handler
@@ -290,18 +272,36 @@
                    :properties {:uuid {:type "string"} :text {:type "string"} :project {:type "string"}}
                    :required ["uuid" "text"]}
     :handler tool-kanban-add-comment}
+   {:name "kanban_create_task"
+    :description "Create a card and record a task-created ledger event. Works for root cards and children alike — pass `parent` only for a child. The card enters at the project FSM's initial state; use kanban_update_status to advance it. Pass `body` to author the card's markdown, otherwise a skeleton (Outcome / Scope / Acceptance criteria) is written so the card can pass its first gate."
+    :input-schema {:type "object"
+                   :properties {:title {:type "string"}
+                                :type {:type "string" :enum ["task" "epic"] :description "card type; default \"task\""}
+                                :parent {:type "string" :description "parent card uuid — omit for a root card"}
+                                :project {:type "string"}
+                                :status {:type "string" :description "refused unless it is the FSM initial state; pass force-status to override"}
+                                :force-status {:type "boolean"}
+                                :priority {:type "string"} :points {:type "string"}
+                                :labels {:type "array" :items {:type "string"}}
+                                :body {:type "string" :description "card markdown below the frontmatter"}
+                                :dir {:type "string" :description "target directory relative to the project task root"}
+                                :uuid {:type "string" :description "explicit uuid; refused if already taken"}}
+                   :required ["title"]}
+    :handler tool-kanban-create-task}
    {:name "kanban_create_subtask"
-    :description "Create a new task file linked to a parent task. The subtask starts in 'incoming'."
+    :description "Create a card linked to a parent task. Thin alias of kanban_create_task with a required parent; prefer kanban_create_task."
     :input-schema {:type "object"
                    :properties {:parent-uuid {:type "string"} :title {:type "string"}
                                 :project {:type "string"} :status {:type "string"}
-                                :priority {:type "string"} :labels {:type "array" :items {:type "string"}}}
+                                :priority {:type "string"} :body {:type "string"}
+                                :labels {:type "array" :items {:type "string"}}}
                    :required ["parent-uuid" "title"]}
     :handler tool-kanban-create-subtask}])
 
 (def ^:private aliases
   {"kanban-status-update" "kanban_update_status"
    "kanban-add-comment" "kanban_add_comment"
+   "kanban-create-task" "kanban_create_task"
    "kanban-create-subtask" "kanban_create_subtask"
    "kanban-read-task" "kanban_read_task"
    "kanban-search-tasks" "kanban_search_tasks"

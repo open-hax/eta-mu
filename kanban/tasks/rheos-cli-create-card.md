@@ -3,7 +3,7 @@ category: "tasks"
 labels: "rheos, cli, lifecycle, create, ledger"
 parent: "rheos-cli-card-lifecycle-authority"
 type: "task"
-write-id: "1785439699898-0.xnq40jqn68wq82qgki"
+write-id: "1786026244746-0.x6mg8z7tvj8lj92wnm"
 points: "5"
 title: "Rheos CLI card creation with a ledger-visible task-created event"
 priority: "P0"
@@ -93,4 +93,8 @@ exist yet.
 
 ---
 Implemented. New domain/task_create.cljs is the single creation chokepoint; events.cljs gains emit-task-created! carrying uuid, title, card-type, status, parent, source-path, and the authored body. CLI verb: rheos create --title/--type/--parent/--priority/--points/--labels/--body-file/--dir/--uuid/--status/--force-status; --body-file - reads stdin. create-subtask and kanban_create_subtask are now thin aliases; kanban_create_task added to the MCP registry. Initial status comes from the resolved FSM :initial-state (refused otherwise unless --force-status). uuid defaults to the title slug rather than a v4 so cards stay addressable; collision appends a short suffix. Placement: epics/ or tasks/ by type when present, --dir override, refused if it escapes the task root or falls outside a configured :card-projection. Empty bodies replaced with an Outcome/Scope/Acceptance skeleton. 14 tests in test/rheos/backend/domain/task_create_test.cljs. Verified end to end on a scratch board: create epic + child, ledger shows task-created, full incoming->in_progress walk. NOT done from this card's scope: ledger-replay reconstruction of a card from the event (the event now carries the payload for it; the fold itself belongs to rheos-canonical-task-fold-and-snapshots).
+
+Implemented on PR #167 (`feat/rheos-card-creation`) — https://github.com/open-hax/eta-mu/pull/167
+
+CodeRabbit found a confirmed path traversal: `--uuid` reached the card file name unvalidated, and `card-file-name` keeps the last 8 characters, so separators survived truncation and `path/join` normalized the write outside the card directory. Fixed in f838964 with `check-uuid!` (domain refusal) plus `resolve-card-path` (infra containment re-check). Suite 85 tests / 264 assertions, clj-kondo 0/0.
 ---

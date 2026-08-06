@@ -2,7 +2,7 @@
 category: "epics"
 labels: "rheos, cli, lifecycle, docs, distribution, agents"
 type: "epic"
-write-id: "1785439733789-0.ex6lu5rqmlk2i81iok"
+write-id: "1786026255896-0.bcsvhnjj3o8jh0ggia4"
 points: "13"
 title: "Rheos CLI — full card lifecycle authority, docs, and agent distribution"
 priority: "P0"
@@ -118,4 +118,16 @@ Triage 2026-07-30: carded from a read of packages/rheos/src (cli.cljs, agent_too
 Pass 1 and pass 3 (partly) landed 2026-07-30: rheos-cli-create-card, rheos-cli-lifecycle-verb-completeness, and rheos-cli-documentation-and-help are at testing. Verification: rheos 100 tests / 346 assertions green (was 70 tests), clj-kondo 0 warnings on src+test, full release build (server+cli+app) 0 warnings, eta-mu 165 tests / 360 assertions green after updating the bridge test that asserted the old throw-on-frontmatter behaviour. Epic acceptance criteria now met: a root epic and a standalone task are both creatable with rheos alone; help names rheos and every listed verb runs; every failure path exits non-zero with one stderr line and no stack trace. Still open: (a) ledger replay reconstructing a created card - the task-created event now carries uuid/title/card-type/status/parent/source-path/body, but the fold belongs to rheos-canonical-task-fold-and-snapshots; (b) rheos-card-body-lock-after-breakdown, which still has the open ready-gate question about whether a review bounce re-opens the body; (c) rheos-cli-agent-release-archive - note the triage correction recorded there, npm i -g @eta-mu/rheos already works and is now documented, so the archive is the no-registry fallback rather than the only fix. Promotion to review runs the promethean build gate (repo-wide pnpm build/lint/test) which has NOT been run; cards were left at testing rather than walked around that gate.
 
 Root test gate was fixed as a prerequisite (it did not run rheos). package.json test now calls scripts/test.mjs, a new runner covering all 11 workspace suites with a summary and no early bail; it previously chained only eta-mu, terminal-ui, turn-processor, and kanban-legacy, silently excluding rheos, sol, extensions, protocols, chat-ui, and axxium. scripts/lint.mjs gained a clj-kondo step across all 11 CLJS packages; the lint gate previously ran only Biome, tsc, extension path validation, and a kanban frontmatter check, so the canonical language had zero static coverage. That exclusion was hiding two real defects in @open-hax/protocols: authenticate-success-test created a user with a password then authenticated without one and asserted success (it was asserting user.login.success against an actual user.login.failure - the implementation was correct, the test was wrong), and its test script ran node target/test.cjs with no compile step, so it executed whatever bundle was on disk. Both fixed; added authenticate-wrong-password-test for the branch that had no real coverage. protocols now 50 tests / 123 assertions green. NOT done: .github/workflows/main-pr-gate.yml has not been reconciled with scripts/test.mjs and may duplicate or diverge from it - worth its own card. @eta-mu/e2e stays out of the default test gate (own workflow) with the exclusion commented in the script rather than silent.
+
+Board binding for the open Rheos CLI work, recorded 2026-08-06:
+
+| PR | Branch | Child card | State |
+|---|---|---|---|
+| #167 | `feat/rheos-card-creation` | `rheos-cli-create-card` | review, security fix pushed, CI running |
+| #168 | `feat/rheos-cli-exit-contract` | `rheos-cli-lifecycle-verb-completeness` | review, needs rebase on #167 |
+| #169 | `docs/rheos-cli-reference` | `rheos-cli-documentation-and-help` | review, needs rebase on #168 |
+| #158 | `feature/rheos-edn-config` | (carries its own epic + 5 cards, unmerged) | 89 behind main, CONFLICTING — triage |
+| #176 | `rheos-github-issue-sync` | none — card gap, being created | bundle job failing |
+
+Merge order is #167 → #168 → #169. Nothing in this epic merges out of stack order.
 ---

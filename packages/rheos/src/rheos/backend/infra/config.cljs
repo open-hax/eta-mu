@@ -111,7 +111,15 @@
   (or (= root candidate)
       (str/starts-with? candidate (str root path/sep))))
 
-(defn- resolve-card-projection [tasks-dir projection]
+(defn- resolve-card-projection
+  "Resolve projection paths against the project's task root, refusing any that
+   escape it.
+
+   The escape check belongs here rather than only at the write: a projection
+   path is where the board *looks*, so one pointing outside the task root makes
+   every card written there invisible to the board while the config still reads
+   as valid."
+  [tasks-dir projection]
   (when projection
     (let [paths (:paths projection)]
       (when-not (sequential? paths)
@@ -127,6 +135,23 @@
                                  {:tasks-dir tasks-dir :path relative-path})))
                        resolved))
                    paths)))))
+
+(defn- project-card-config
+  "The card-placement half of a project: where each card type lands
+   (`:card-dirs`) and which paths the board scans (`:card-projection`). A
+   project-level value wins over the board-level default.
+
+   Keys are read in kebab-case only. [[parse-config-content]] pushes every
+   config — EDN and legacy JSON alike — through [[normalize-config]] first, so
+   `cardDirs` from a JSON board has already become `:card-dirs` by the time it
+   reaches here."
+  [config project tasks-dir]
+  (let [card-dirs (or (:card-dirs project) (:card-dirs config))
+        projection (or (:card-projection project) (:card-projection config))]
+    (cond-> {}
+      card-dirs (assoc :card-dirs card-dirs)
+      projection (assoc :card-projection
+                        (resolve-card-projection tasks-dir projection)))))
 
 (defn resolve-configured-projects [loaded-config explicit-tasks-dir]
   (let [config-dir (:config-dir loaded-config)
@@ -149,16 +174,15 @@
                           (if (@seen candidate)
                             (recur (str base-id "-" suffix) (inc suffix))
                             candidate))
-                     fsm-config (or (:fsm project) (:fsm config))
-                     projection (or (:card-projection project)
-                                    (:card-projection config))]
+                     fsm-config (or (:fsm project) (:fsm config))]
                  (swap! seen conj id)
-                 {:id id
-                  :title (or (some-> (:title project) str str/trim) id)
-                  :tasks-dir tasks-dir
-                  :card-projection (resolve-card-projection tasks-dir projection)
-                  :meta (or (:meta project) (:meta config) {})
-                  :fsm (resolve-fsm-config config-dir fsm-config)}))
+                 (merge
+                  {:id id
+                   :title (or (some-> (:title project) str str/trim) id)
+                   :tasks-dir tasks-dir
+                   :meta (or (:meta project) (:meta config) {})
+                   :fsm (resolve-fsm-config config-dir fsm-config)}
+                  (project-card-config config project tasks-dir))))
              (:projects config)
              (range))
             default-id (or (when-let [d (:default-project config)]
@@ -170,11 +194,11 @@
                             (path/resolve config-dir (:tasks-dir config)))
                           (path/resolve (js/process.cwd) "docs/agile/tasks"))
             id (project-id-from-path tasks-dir)]
-        {:projects [{:id id
-                     :title id
-                     :tasks-dir tasks-dir
-                     :card-projection
-                     (resolve-card-projection tasks-dir (:card-projection config))
-                     :meta (or (:meta config) {})
-                     :fsm (resolve-fsm-config config-dir (:fsm config))}]
+        {:projects [(merge
+                     {:id id
+                      :title id
+                      :tasks-dir tasks-dir
+                      :meta (or (:meta config) {})
+                      :fsm (resolve-fsm-config config-dir (:fsm config))}
+                     (project-card-config config {} tasks-dir))]
          :default-project-id id}))))

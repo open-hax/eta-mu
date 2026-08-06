@@ -40,11 +40,21 @@ const getAgentDir = (): string | undefined => {
   return undefined;
 };
 
+// The local workspace build of @open-hax/eta-mu-cli exposes setSystemPrompt and
+// setAppendSystemPrompt on ResourceLoader; the published 0.70.16 tarball does not
+// declare them. The runtime accepts both, so widen the type here rather than pin
+// this package to an unpublished API. Drop this once the CLI republishes with the
+// setters in its declarations.
+type MutableResourceLoader = ResourceLoader & {
+  setSystemPrompt?: (prompt: string | undefined) => void;
+  setAppendSystemPrompt?: (prompts: string[]) => void;
+};
+
 const createResourceLoader = async (
   systemPrompt: string | undefined,
   cwd: string,
   modelRegistry: ModelRegistry,
-): Promise<ResourceLoader> => {
+): Promise<MutableResourceLoader> => {
   const agentDir = getAgentDir();
   let appendPrompts: string[] = []; // mutated by setAppendSystemPrompt
   // Create runtime that can queue provider registrations
