@@ -1,13 +1,13 @@
 ---
-uuid: "github-actions-as-a-muse-projection-target-from-katamorph-workflow-contracts"
-title: "GitHub Actions as a Muse projection target from Katamorph workflow contracts"
-status: "incoming"
-type: "epic"
-priority: "P2"
-points: "13"
-labels: "katamorph, muse, workflow, dsl, ci, architecture"
 category: "epics"
-write-id: "1786051740829-0.5slqlywrh13v7wlseh9"
+labels: "katamorph, muse, workflow, dsl, ci, architecture"
+type: "epic"
+write-id: "1786058365805-0.72bw9h78mphf4dhxmtg"
+points: "13"
+title: "GitHub Actions as a Muse projection target from Katamorph workflow contracts"
+priority: "P2"
+status: "incoming"
+uuid: "github-actions-as-a-muse-projection-target-from-katamorph-workflow-contracts"
 created_at: "2026-08-06T21:29:00.829Z"
 ---
 
@@ -165,3 +165,26 @@ an EDN declaration plus an action registry. Semantic diff across all four jobs:
 Raised 2026-08-06. Sibling of `workflow-dsl-kanban-reference`, which owns the
 Rheos/Kanban interpreter of the same language — this card is the *other* target
 of that vocabulary and should not fork it.
+
+---
+--text
+
+The bare `--text` comment above is an artifact of the `eta-mu kanban` flag bug — the bridge consumed the flag name as its own value. Left in place rather than edited out: the ledger is append-only, and a card projection that quietly disagrees with it is worse than a visible piece of noise. Written here through `rheos comment` instead.
+
+Status update, raised in review on #181 — this card describes its gap as open, and it is not.
+
+**Slice 1 is done upstream.** `katamorph.schema/WorkflowContract` exists as of open-hax/katamorph#2, filling the hole this card identified: the registry advertised `{:id :registry/workflows :kind :workflow}` with no schema behind it. Read the "gap this fills in Katamorph" section as historical.
+
+Four decisions settled while implementing, none obvious from the card:
+
+- `:job/needs` is first-class — no other kind carries a DAG.
+- `:job/matrix` is deliberately **not** `StrategyContract`. The card flagged the collision; the resolution is a separate key, since `StrategyContract` means a retry policy.
+- Permissions are `[:map-of keyword? keyword?]`, capability-shaped, matching `CapabilityContract`.
+- No expression language. `${{ }}` travels as an opaque string — what katamorph cannot interpret it also cannot silently mangle.
+
+**Slices 2-5 shipped differently than proposed; do not read the card as the plan.** It suggested a Muse `shape/target/github_actions.cljs`. Still the right long-term home, but `packages/eta-mu` cannot consume katamorph without switching shadow-cljs to `:deps true` — too much blast radius. So the projector ships as an nbb command with eta-mu and redeclares no schema. Revisit when eta-mu can consume katamorph directly.
+
+Shipped on #181: workflow resources under `contracts/workflows/`, projection to both GitHub Actions YAML and a local gate plan, `eta-mu workflows` and `eta-mu gates` as shipped commands, nbb bundled at a pinned version. The action registry closed the drift this card measured.
+
+**Honest state of the last slice:** six of eight workflows carry `:workflow/emit false` — their resource owns the gate, the committed YAML still owns what CI runs. Converting those is the remainder, `sol-ci` last for its GitHub App token and private git mirrors.
+---

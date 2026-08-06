@@ -322,13 +322,27 @@
               (do (println (str "  DRIFT    " path " — committed YAML differs from its resource")) :drift)
               :else
               (do (println (str "  ok       " (:contract/id wf))) nil)))
-          [(let [path (path/join root gate-plan-path)]
-             (if (exists? path) nil
-                 (do (println "  MISSING  gate plan — run `emit`") :missing)))]))
+          ;; The gate plan is not merely present-or-absent. `eta-mu gates` reads
+          ;; it as the sole definition of what runs, so a plan left stale by a
+          ;; resource change means the runner silently executes obsolete
+          ;; commands and path filters while `check` reports success.
+          [(let [path (path/join root gate-plan-path)
+                 expected (->local-gates workflows)]
+             (cond
+               (not (exists? path))
+               (do (println "  MISSING  gate plan — run `emit`") :missing)
+
+               (not= expected (:gates (edn/read-string (read-text path))))
+               (do (println "  DRIFT    gate plan — committed plan differs from its resources")
+                   :drift)
+
+               :else
+               (do (println (str "  ok       gate plan (" (count expected) " gates)")) nil)))]))
         bad (remove nil? problems)]
     (println)
-    (println "Compared semantically (parsed YAML), not byte-for-byte — comments and")
-    (println "key order are not part of the contract.")
+    (println "YAML is compared semantically (parsed), not byte-for-byte — comments")
+    (println "and key order are not part of the contract. The gate plan is compared as")
+    (println "an EDN value, since it is generated whole and has no hand-written parts.")
     (when (seq bad)
       (println (str "\n" (count bad) " workflow(s) differ from their resource. Run `emit`.")))
     (js/process.exit (if (seq bad) 1 0))))

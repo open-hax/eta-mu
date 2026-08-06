@@ -32,7 +32,13 @@
      :on/branches ["main"]
      :on/paths ["packages/legacy/docs/**"
                 "packages/legacy/github/**"
-                ".github/workflows/*.yml"]}]
+                ".github/workflows/*.yml"
+                ;; A change to the declaration, the action registry, or the
+                ;; projector changes what this workflow *is*. Without these a
+                ;; contract edit merges without ever running the workflow it
+                ;; rewrote.
+                "contracts/workflows/**"
+                "packages/eta-mu/commands/workflows.cljs"]}]
 
    :workflow/jobs
    [{:job/id "main-lint"
@@ -104,7 +110,9 @@
                 "package.json"
                 "pnpm-lock.yaml"
                 "pnpm-workspace.yaml"
-                ".github/workflows/rheos.yml"]}
+                ".github/workflows/rheos.yml"
+                "contracts/workflows/**"
+                "packages/eta-mu/commands/workflows.cljs"]}
     {:on/event :pull-request
      :on/paths ["packages/rheos/**"
                 "packages/protocols/**"
@@ -115,7 +123,9 @@
                 "package.json"
                 "pnpm-lock.yaml"
                 "pnpm-workspace.yaml"
-                ".github/workflows/rheos.yml"]}]
+                ".github/workflows/rheos.yml"
+                "contracts/workflows/**"
+                "packages/eta-mu/commands/workflows.cljs"]}]
 
    :workflow/jobs
    [{:job/id "test"

@@ -9,6 +9,8 @@ on:
       - packages/legacy/docs/**
       - packages/legacy/github/**
       - .github/workflows/*.yml
+      - contracts/workflows/**
+      - packages/eta-mu/commands/workflows.cljs
 jobs:
   main-lint:
     name: main-lint

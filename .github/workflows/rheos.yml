@@ -18,6 +18,8 @@ on:
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
       - .github/workflows/rheos.yml
+      - contracts/workflows/**
+      - packages/eta-mu/commands/workflows.cljs
   pull_request:
     paths:
       - packages/rheos/**
@@ -30,6 +32,8 @@ on:
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
       - .github/workflows/rheos.yml
+      - contracts/workflows/**
+      - packages/eta-mu/commands/workflows.cljs
 jobs:
   test:
     name: Rheos tests and lint
