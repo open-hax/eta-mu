@@ -3,6 +3,7 @@ category: "tasks"
 labels: "cli, dev-workflow, versioning, volta, pnpm, release, trap"
 parent: "agent-operating-standard"
 type: "task"
+write-id: "1786050654835-0.sxglba9t2sdpkqu63m7"
 points: "5"
 source: "user-request:2026-07-30"
 title: "eta-mu-beta must run this working tree, not a stale published build"
@@ -109,3 +110,15 @@ succeeding quietly.
 
 This is P0 despite being "just tooling": it silently corrupts evidence. Every CLI-derived
 claim in this epic's first draft had to be retracted because of it.
+
+---
+Evidence from 2026-08-06, which turned two of these checkboxes from predictions into observations. Review on #170 asked whether the "Done when" is overclaimed — it is not (every box is unchecked and the card sits `incoming`), but it was stated without proof. Here is the proof.
+
+**A worktree with no `node_modules` really does emit a broken build at exit 0.** Measured in `.claude/worktrees/agent-operating-standard`: `pnpm -C packages/rheos build` produced **276 `Use of undeclared Var` warnings** and exited 0. The same command in the installed primary tree: **0 warnings**. So the "worktree ergonomics" item is not hypothetical, and the number in this card (163) is version-dependent — do not treat it as a constant.
+
+**`eta-mu-beta` really was stale.** The symlink resolved to a `dist-cli/index.cjs` built 2026-07-30 while the branch had moved well past it. Nothing in its output said so, which is exactly what the `version`/`doctor` items on this card exist to fix.
+
+**A partial mitigation now exists upstream of this card.** `pnpm gates` (`scripts/ci-gates.bb`) preflights `node_modules` and exits **2** — setup, distinct from 1 for a real gate failure — rather than letting every pnpm gate fail on its first step. That covers the *gate runner*; it does not cover `pnpm build`, which still needs to refuse. Treat the preflight as prior art for the shape, not as the item being done.
+
+The reproducible-install item is the one with no progress: `eta-mu-beta` is still a hand-run `ln` to an ignored `dist-cli`, so a fresh checkout has no local entry point at all.
+---

@@ -3,6 +3,7 @@ category: "tasks"
 labels: "ledger, git, provenance, branch, projection, cljs"
 parent: "agent-operating-standard"
 type: "task"
+write-id: "1786050655160-0.sg268itfgkildb2q65"
 points: "8"
 source: "user-request:2026-07-30"
 title: "Ledger events record the branch and HEAD they ran under"
@@ -90,3 +91,15 @@ divergent (non-prefix) ledger is reported as divergence instead of being silentl
 - `fsm-ledger-fold-accepted-state` and `fsm-event-cascade-derivation` (both rejected)
   covered fold-as-source-of-truth; their invariants moved to
   `workflow-dsl-kanban-reference`.
+
+---
+Two contract gaps raised in review on #170, both worth settling before implementation.
+
+**Atomic append is unspecified.** The outcome promises two branches appending concurrently can be attributed and reconciled, but the current writer is Nodes `fs.appendFile`, which gives no ordering or atomicity guarantee across processes. Two agents in two worktrees appending at once can interleave *within* a line and produce an unparseable record — and this ledger is already read line-by-line. Decide the guarantee (O_APPEND with single-writer-per-line, a lock file, or a serialized writer), write it down, and cover it with a divergent-two-writer test that asserts record integrity rather than just event count.
+
+**Legacy events have no branch policy.** The card treats preexisting events as provenance-unknown but never says what a branch-scoped projection does with them: include, exclude, or mark ambiguous. Every event written before this lands is in that category, so the default decides whether the board looks empty on day one. State the compatibility rule and test it before implementing the default projection.
+
+**Non-Git fallback belongs in the adapter contract.** The card requires appends to succeed outside a repo, in an empty repo, and under detached HEAD. Make the `extern.*` Git adapter return an explicit unknown-provenance value in those cases rather than treating Git discovery failure as a failed precondition — otherwise the ledger stops accepting writes in exactly the environments where it is least recoverable.
+
+Related and already owned here: the `eta-mu-beta version` item on `link-local-eta-mu-cli-for-development` covers the sibling complaint that receipts record `command: "eta-mu receipt append"` and version 1.1.1 regardless of which binary ran. Provenance in the receipt envelope and provenance in the ledger event want the same answer — git SHA plus dirty state — so settle them together.
+---
