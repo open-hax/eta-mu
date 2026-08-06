@@ -30,7 +30,9 @@
     "@eta-mu/rheos": "workspace:*",
     "@eta-mu/session-mycology": "workspace:*",
     "@eta-mu/sol": "workspace:*",
-    "get-east-asian-width": "^1.3.0"
+    "get-east-asian-width": "^1.3.0",
+    "nbb": "1.5.211",
+    "yaml": "2.9.0"
   },
   "devDependencies": {
     "@eta-mu/contracts-output": "workspace:*",

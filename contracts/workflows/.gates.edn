@@ -1,50 +1,49 @@
 ;; Generated from contracts/workflows/ by scripts/workflows.bb.
-;; Read by scripts/ci-gates.bb. Do not edit.
+;; Read by the gate runner. Do not edit.
 {:namespace :eta-mu.ci.gates,
  :gates
- [#:gate{:id "eta-mu-lint",
-         :workflow "main-pr-gate",
-         :job "eta-mu-lint",
-         :check "eta-mu-lint",
-         :paths
-         ["packages/legacy/docs/"
-          "packages/legacy/github/"
-          ".github/workflows/"],
-         :steps
-         [#:step{:run "pnpm --dir packages/extensions build"}
-          #:step{:run "pnpm lint"}]}
-  #:gate{:id "main-tests",
-         :workflow "main-pr-gate",
-         :job "main-tests",
-         :check "main-tests",
-         :paths
-         ["packages/legacy/docs/"
-          "packages/legacy/github/"
-          ".github/workflows/"],
-         :steps
-         [#:step{:run
-                 "node --test packages/legacy/docs/tests/*.test.cjs"}]}
-  #:gate{:id "rheos",
-         :workflow "rheos",
-         :job "test",
-         :check "Rheos tests and lint",
-         :paths
-         ["packages/rheos/"
-          "packages/protocols/"
-          "packages/chat-ui/"
-          "openhax.kanban.edn"
-          "openhax.kanban.json"
-          "kanban/openhax.kanban"
-          "package.json"
-          "pnpm-lock.yaml"
-          "pnpm-workspace.yaml"
-          ".github/workflows/rheos.yml"],
-         :steps
-         [{:step/run "pnpm --dir packages/rheos test",
-           :step/name "Test",
-           :gate/expect "0 failures, 0 errors"}
-          #:step{:run "pnpm --dir packages/rheos lint:kondo",
-                 :name "Lint"}
-          {:step/run "pnpm --dir packages/rheos build",
-           :step/name "Build Rheos release targets",
-           :gate/no-warning true}]}]}
+ [{:gate/id "eta-mu-lint",
+   :gate/workflow "main-pr-gate",
+   :gate/job "eta-mu-lint",
+   :gate/check "eta-mu-lint",
+   :gate/paths
+   ["packages/legacy/docs/"
+    "packages/legacy/github/"
+    ".github/workflows/"],
+   :gate/steps
+   [{:step/run "pnpm --dir packages/extensions build"}
+    {:step/run "pnpm lint"}]}
+  {:gate/id "main-tests",
+   :gate/workflow "main-pr-gate",
+   :gate/job "main-tests",
+   :gate/check "main-tests",
+   :gate/paths
+   ["packages/legacy/docs/"
+    "packages/legacy/github/"
+    ".github/workflows/"],
+   :gate/steps
+   [{:step/run "node --test packages/legacy/docs/tests/*.test.cjs"}]}
+  {:gate/id "rheos",
+   :gate/workflow "rheos",
+   :gate/job "test",
+   :gate/check "Rheos tests and lint",
+   :gate/paths
+   ["packages/rheos/"
+    "packages/protocols/"
+    "packages/chat-ui/"
+    "openhax.kanban.edn"
+    "openhax.kanban.json"
+    "kanban/openhax.kanban"
+    "package.json"
+    "pnpm-lock.yaml"
+    "pnpm-workspace.yaml"
+    ".github/workflows/rheos.yml"],
+   :gate/steps
+   [{:step/run "pnpm --dir packages/rheos test",
+     :step/name "Test",
+     :gate/expect "0 failures, 0 errors"}
+    {:step/run "pnpm --dir packages/rheos lint:kondo",
+     :step/name "Lint"}
+    {:step/run "pnpm --dir packages/rheos build",
+     :step/name "Build Rheos release targets",
+     :gate/no-warning true}]}]}

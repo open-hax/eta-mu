@@ -26,8 +26,8 @@
    :contract/id "workflows"
    :command/name "workflows"
    :command/summary "Project workflow resources onto GitHub Actions and local gates"
-   :command/runtime :bb
-   :command/script "commands/workflows.bb"
+   :command/runtime :nbb
+   :command/script "commands/workflows.cljs"
    :command/doc
    "Reads katamorph workflow resources from contracts/workflows/ and emits both
     .github/workflows/*.yml and the local gate plan.

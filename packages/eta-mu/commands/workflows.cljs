@@ -1,5 +1,8 @@
-#!/usr/bin/env bb
 ;; Project workflow resources onto their targets.
+;;
+;; Runs under the nbb bundled with eta-mu at a pinned version, resolved from the
+;; package's node_modules rather than from PATH. A tool that ships everywhere
+;; must not inherit whatever interpreter the machine happens to have.
 ;;
 ;; Reads katamorph workflow resources from contracts/workflows/ and emits:
 ;;
@@ -18,56 +21,77 @@
 ;;   scripts/workflows.bb emit [--target github-actions|local-gates|all] [--dry-run]
 ;;   scripts/workflows.bb check          # generated == committed?
 
-(require '[clj-yaml.core :as yaml]
-         '[clojure.edn :as edn]
-         '[clojure.string :as str]
-         '[clojure.java.io :as io]
-         '[babashka.process :as p])
+(ns eta-mu.commands.workflows
+  (:require ["yaml" :as yaml]
+            ["node:fs" :as fs]
+            ["node:path" :as path]
+            ["node:child_process" :as cp]
+            [clojure.edn :as edn]
+            [clojure.string :as str]
+            [cljs.pprint :as pp]))
 
 (def contracts-dir "contracts/workflows")
 (def workflows-dir ".github/workflows")
 (def gate-plan-path (str contracts-dir "/.gates.edn"))
 
-(defn- die! [& msg] (println (str/join " " msg)) (System/exit 2))
+(defn- die! [& msg]
+  (println (str/join " " msg))
+  (js/process.exit 2))
 
-(defn repo-root []
-  (let [{:keys [out exit]} (p/sh "git" "rev-parse" "--show-toplevel")]
-    (if (zero? exit) (str/trim out) (die! "not inside a git repository"))))
+(defn- pad
+  "Left-justify `s` to `n` columns. nbb has no `format`, and the alignment here
+   is the whole point of the listing output."
+  [s n]
+  (let [s (str s)]
+    (str s (apply str (repeat (max 0 (- n (count s))) " ")))))
+
+(defn- exists? [p] (fs/existsSync p))
+(defn- read-text [p] (fs/readFileSync p "utf8"))
+(defn- write-text! [p s] (fs/writeFileSync p s "utf8"))
+
+(defn repo-root
+  "Nearest ancestor holding a .git entry. Walked rather than shelled out to git:
+   this runs on every invocation and a subprocess for a directory test is a tax."
+  []
+  (loop [dir (path/resolve (js/process.cwd))]
+    (cond
+      (exists? (path/join dir ".git")) dir
+      (= dir (path/dirname dir)) (die! "not inside a git repository")
+      :else (recur (path/dirname dir)))))
 
 ;; ── Loading ─────────────────────────────────────────────────────────────────
 
 (defn- read-edn [f]
-  (try (edn/read-string (slurp f))
-       (catch Exception e (die! (str "cannot read " f ": " (.getMessage e))))))
+  (try (edn/read-string (read-text f))
+       (catch :default e (die! (str "cannot read " f ": " (.-message e))))))
 
 (defn load-registry [root]
-  (let [f (io/file root contracts-dir "resources.edn")]
-    (when-not (.exists f)
+  (let [f (path/join root contracts-dir "resources.edn")]
+    (when-not (exists? f)
       ;; This tool ships with eta-mu and runs in every project, so "no resources
       ;; here" is an ordinary situation, not a crash. Say what is missing and
       ;; what it would contain.
-      (println (str "No workflow resources in " (.getPath (io/file root contracts-dir)) "\n"))
+      (println (str "No workflow resources in " (path/join root contracts-dir) "\n"))
       (println "This project declares no workflows. To start one:")
       (println "  mkdir -p" contracts-dir)
       (println "  # resources.edn  — the action registry: one pin per action")
       (println "  # ci.edn         — {:namespace :your.ci :resources [{:contract/kind :workflow ...}]}")
       (println "\neta-mu carries the projector; the project supplies the resources.")
-      (System/exit 0))
+      (js/process.exit 0))
     (read-edn f)))
 
 (defn load-workflows [root]
-  (let [dir (io/file root contracts-dir)
-        files (->> (file-seq dir)
-                   (filter #(and (.isFile %)
-                                 (str/ends-with? (.getName %) ".edn")
-                                 (not= "resources.edn" (.getName %))
-                                 (not (str/starts-with? (.getName %) "."))))
+  (let [dir (path/join root contracts-dir)
+        names (->> (if (exists? dir) (vec (fs/readdirSync dir)) [])
+                   (filter #(and (str/ends-with? % ".edn")
+                                 (not= "resources.edn" %)
+                                 (not (str/starts-with? % "."))))
                    sort)]
-    (vec (mapcat (fn [f]
-                   (let [{:keys [resources]} (read-edn f)]
-                     (map #(assoc % ::source (.getName f))
+    (vec (mapcat (fn [n]
+                   (let [{:keys [resources]} (read-edn (path/join dir n))]
+                     (map #(assoc % ::source n)
                           (filter #(= :workflow (:contract/kind %)) resources))))
-                 files))))
+                 names))))
 
 ;; ── Step expansion ──────────────────────────────────────────────────────────
 
@@ -217,62 +241,70 @@
 ;; ── Emit / check ────────────────────────────────────────────────────────────
 
 (defn- yaml-str [data]
-  (str "# Generated from contracts/workflows/ by scripts/workflows.bb — do not edit.\n"
-       "# Edit the workflow resource and run `eta-mu workflows emit`.\n"
-       (yaml/generate-string data :dumper-options {:flow-style :block})))
+  (str "# Generated from contracts/workflows/ by `eta-mu workflows emit` — do not edit.\n"
+       "# Edit the workflow resource and re-emit.\n"
+       ;; Keys are left unquoted, matching every hand-written workflow in this
+       ;; repo and GitHub's own examples. Worth knowing why that is safe: under
+       ;; YAML 1.1 a bare `on` is boolean true, which is why some generators
+       ;; quote it. GitHub parses 1.2, where it is the string "on".
+       ;; `lineWidth 0` disables wrapping — a folded `run:` command is a
+       ;; different command.
+       (.stringify yaml (clj->js data) #js {:lineWidth 0})))
 
-(defn- semantic= [a b]
-  (= (yaml/parse-string a) (yaml/parse-string b)))
+(defn- semantic=
+  "Do two YAML documents mean the same thing? Comments and key order are not
+   part of the contract, so this compares parsed values, never bytes."
+  [a b]
+  (= (js->clj (.parse yaml a)) (js->clj (.parse yaml b))))
 
 (defn cmd-emit [root registry workflows {:keys [target dry-run]}]
   (let [targets (if (= "all" target) #{"github-actions" "local-gates"} #{target})]
     (when (targets "github-actions")
       (doseq [wf workflows]
-        (let [path (io/file root workflows-dir (str (:contract/id wf) ".yml"))
+        (let [path (path/join root workflows-dir (str (:contract/id wf) ".yml"))
               text (yaml-str (->github-actions registry wf))
-              existing (when (.exists path) (slurp path))
+              existing (when (exists? path) (read-text path))
               same (and existing (semantic= existing text))]
-          (println (format "  %-16s %s%s" (:contract/id wf) (.getPath path)
-                           (cond same " (unchanged)"
-                                 existing " (CHANGED)"
-                                 :else " (new)")))
-          (when-not dry-run (spit path text)))))
+          (println (str "  " (pad (:contract/id wf) 16) " " path
+                        (cond same " (unchanged)"
+                              existing " (CHANGED)"
+                              :else " (new)")))
+          (when-not dry-run (write-text! path text)))))
     (when (targets "local-gates")
-      (let [path (io/file root gate-plan-path)
+      (let [path (path/join root gate-plan-path)
             plan {:namespace :eta-mu.ci.gates
                   :gates (->local-gates workflows)}]
-        (println (format "  %-16s %s (%d gates)" "local-gates" (.getPath path)
-                         (count (:gates plan))))
+        (println (str "  " (pad "local-gates" 16) " " path
+                      " (" (count (:gates plan)) " gates)"))
         (when-not dry-run
-          (spit path (str ";; Generated from contracts/workflows/ by scripts/workflows.bb.\n"
-                          ";; Read by scripts/ci-gates.bb. Do not edit.\n"
-                          (with-out-str (clojure.pprint/pprint plan)))))))))
+          (write-text! path (str ";; Generated from contracts/workflows/ by scripts/workflows.bb.\n"
+                          ";; Read by the gate runner. Do not edit.\n"
+                          (with-out-str (pp/pprint plan)))))))))
 
 (defn cmd-check [root registry workflows]
   (let [problems
         (doall
          (concat
           (for [wf workflows
-                :let [path (io/file root workflows-dir (str (:contract/id wf) ".yml"))
+                :let [path (path/join root workflows-dir (str (:contract/id wf) ".yml"))
                       text (yaml-str (->github-actions registry wf))]]
             (cond
-              (not (.exists path))
-              (do (println (format "  MISSING  %s — never emitted" (.getPath path))) :missing)
-              (not (semantic= (slurp path) text))
-              (do (println (format "  DRIFT    %s — committed YAML differs from its resource"
-                                   (.getPath path))) :drift)
+              (not (exists? path))
+              (do (println (str "  MISSING  " path " — never emitted")) :missing)
+              (not (semantic= (read-text path) text))
+              (do (println (str "  DRIFT    " path " — committed YAML differs from its resource")) :drift)
               :else
-              (do (println (format "  ok       %s" (:contract/id wf))) nil)))
-          [(let [path (io/file root gate-plan-path)]
-             (if (.exists path) nil
+              (do (println (str "  ok       " (:contract/id wf))) nil)))
+          [(let [path (path/join root gate-plan-path)]
+             (if (exists? path) nil
                  (do (println "  MISSING  gate plan — run `emit`") :missing)))]))
         bad (remove nil? problems)]
     (println)
     (println "Compared semantically (parsed YAML), not byte-for-byte — comments and")
     (println "key order are not part of the contract.")
     (when (seq bad)
-      (println (format "\n%d workflow(s) differ from their resource. Run `emit`." (count bad))))
-    (System/exit (if (seq bad) 1 0))))
+      (println (str "\n" (count bad) " workflow(s) differ from their resource. Run `emit`.")))
+    (js/process.exit (if (seq bad) 1 0))))
 
 ;; ── Main ────────────────────────────────────────────────────────────────────
 
@@ -288,18 +320,17 @@
     (check-references! expanded)
     (case cmd
       "list"
-      (do (println (format "%d workflow resource(s) in %s\n" (count expanded) contracts-dir))
+      (do (println (str (count expanded) " workflow resource(s) in " contracts-dir "\n"))
           (doseq [wf expanded]
-            (println (format "  %-16s %-28s %d job(s), %d gate(s)  [%s]"
-                             (:contract/id wf)
-                             (:workflow/name wf)
-                             (count (:workflow/jobs wf))
-                             (count (filter :job/gate (:workflow/jobs wf)))
-                             (::source wf)))))
+            (println (str "  " (pad (:contract/id wf) 16)
+                          " " (pad (:workflow/name wf) 28)
+                          " " (count (:workflow/jobs wf)) " job(s), "
+                          (count (filter :job/gate (:workflow/jobs wf))) " gate(s)  ["
+                          (::source wf) "]"))))
 
       "show"
       (if-let [wf (first (filter #(= (second args) (:contract/id %)) expanded))]
-        (clojure.pprint/pprint (dissoc wf ::source))
+        (pp/pprint (dissoc wf ::source))
         (die! (str "unknown workflow: " (second args)
                    "\n  known: " (str/join ", " (map :contract/id expanded)))))
 
@@ -314,4 +345,4 @@
 
       (die! (str "unknown command: " cmd "\n  known: list, show, emit, check")))))
 
-(apply -main *command-line-args*)
+(apply -main (vec (drop 3 (.-argv js/process))))

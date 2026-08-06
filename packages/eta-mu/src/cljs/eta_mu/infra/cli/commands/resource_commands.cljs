@@ -99,6 +99,18 @@
                (read-dir :project root
                          (and root (path/join root project-dir))))))
 
+(defn- bundled-runtime
+  "Path to a runtime bundled with eta-mu, or nil.
+
+   nbb is a pinned npm dependency, so a shipped command runs the interpreter
+   eta-mu was tested against rather than whatever the machine happens to have
+   on PATH. The globally installed nbb on this workspace was 1.3.204 while the
+   pinned one is 1.5.211 — precisely the drift bundling removes."
+  [runtime]
+  (when-let [root (bundle-root)]
+    (let [p (path/join root "node_modules" ".bin" runtime)]
+      (when (fs/existsSync p) p))))
+
 (defn- script-path
   "A command's script resolves against the root of the scope that declared it,
    so a shipped tool finds its own script wherever eta-mu is installed."
@@ -117,7 +129,10 @@
    instead would put eta-mu inside every extension's argument parser."
   [root resource {:keys [args raw-args flags version]}]
   (let [script (script-path resource)
-        runtime (name (:command/runtime resource))]
+        runtime-name (name (:command/runtime resource))
+        ;; Bundled first, PATH only as a fallback — a developer running from a
+        ;; source checkout may have neither installed locally.
+        runtime (or (bundled-runtime runtime-name) runtime-name)]
     (if-not (fs/existsSync script)
       (do (console/error! (str "eta-mu: " (:command/name resource)
                                " declares a script that does not exist: " script))
@@ -138,8 +153,12 @@
                (str "eta-mu: cannot run " runtime " for " (:command/name resource)
                     ": " (.-message (.-error result))
                     (when (= "ENOENT" (.-code (.-error result)))
-                      (str "\n  " runtime " is not on PATH. Command resources with"
-                           " :command/runtime :" runtime " need it installed."))))
+                      (str "\n  " runtime-name " was not found bundled with eta-mu"
+                           " or on PATH."
+                           (when (= "nbb" runtime-name)
+                             " nbb is a pinned dependency; a broken install is the likely cause.")
+                           (when (= "bb" runtime-name)
+                             " bb is a native binary and cannot be bundled — install Babashka.")))))
               (process/exit! 4))
 
           :else

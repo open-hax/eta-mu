@@ -59,7 +59,11 @@ eta-mu workflows check         # committed YAML still matches its resource?
 
 `workflows` is a **shipped tool**, not a script in this repo. It lives in
 `packages/eta-mu/commands/` and is packaged with eta-mu, so a global install
-carries it into every project. What is project-local is the *data* — the
+carries it into every project. It runs under the **nbb bundled with eta-mu at a
+pinned version**, resolved from the package's `node_modules` rather than from
+PATH — a tool that ships everywhere must not inherit whatever interpreter the
+machine happens to have. (The global nbb on the machine this was built on was
+1.3.204; the pinned one is 1.5.211.) What is project-local is the *data* — the
 resources in this directory. eta-mu supplies the projector; the project
 supplies the workflows.
 
