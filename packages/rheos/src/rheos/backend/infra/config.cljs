@@ -56,6 +56,25 @@
     (update fsm-config :cwd #(path/resolve config-dir %))
     fsm-config))
 
+(defn- resolve-card-projection
+  "Resolve projection paths relative to the project's task root."
+  [tasks-dir projection]
+  (when projection
+    (update projection :paths
+            (fn [paths]
+              (mapv #(path/resolve tasks-dir %) (or paths []))))))
+
+(defn- project-card-config
+  [config project tasks-dir]
+  (let [card-dirs (or (:cardDirs project) (:card-dirs project)
+                      (:cardDirs config) (:card-dirs config))
+        projection (or (:cardProjection project) (:card-projection project)
+                       (:cardProjection config) (:card-projection config))]
+    (cond-> {}
+      card-dirs (assoc :card-dirs card-dirs)
+      projection (assoc :card-projection
+                        (resolve-card-projection tasks-dir projection)))))
+
 (defn resolve-configured-projects [loaded-config explicit-tasks-dir]
   (let [config-dir (:config-dir loaded-config)
         config (:config loaded-config)
@@ -75,9 +94,11 @@
                                           candidate))
                                    fsm-config (or (:fsm project) (:fsm config))]
                                (swap! seen conj id)
-                               {:id id :title (or (some-> (:title project) str/trim) id)
-                                :tasks-dir tasks-dir :meta (or (:meta project) (:meta config) {})
-                                :fsm (resolve-fsm-config config-dir fsm-config)}))
+                               (merge
+                                {:id id :title (or (some-> (:title project) str/trim) id)
+                                 :tasks-dir tasks-dir :meta (or (:meta project) (:meta config) {})
+                                 :fsm (resolve-fsm-config config-dir fsm-config)}
+                                (project-card-config config project tasks-dir))))
                            (:projects config) (range))
             default-id (or (when-let [d (:defaultProject config)]
                              (when (some #(= (:id %) d) projects) d))
@@ -87,6 +108,8 @@
                           (when (:tasksDir config) (path/resolve config-dir (:tasksDir config)))
                           (path/resolve (js/process.cwd) "docs/agile/tasks"))
             id (project-id-from-path tasks-dir)]
-        {:projects [{:id id :title id :tasks-dir tasks-dir :meta (or (:meta config) {})
-                     :fsm (resolve-fsm-config config-dir (:fsm config))}]
+        {:projects [(merge
+                     {:id id :title id :tasks-dir tasks-dir :meta (or (:meta config) {})
+                      :fsm (resolve-fsm-config config-dir (:fsm config))}
+                     (project-card-config config {} tasks-dir))]
          :default-project-id id}))))
