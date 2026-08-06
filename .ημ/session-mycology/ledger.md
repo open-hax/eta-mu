@@ -124,3 +124,12 @@
   spore: 20260726-010000-review-thread-closeout-verification.md
   receipt-refs: pr-142-review-should-fix-batch
   note: 14 of 15 "open" threads were already fixed in code — the merge was blocked purely by unresolved conversations, not by work. Verify each finding against the branch tip BEFORE planning fixes; the worktree was 6 commits behind, so agents had to read blobs via `git show origin/<branch>:<path>`. Two gates the bots' own fix commits left red (a test stubbing p/process with a delay that cannot satisfy 3-arity deref; 2 promise-chain kondo warnings) were invisible because neither `pnpm lint` nor sol's lint runs in CI — a review-fix commit's evidence test can itself be failing.
+- ts: 2026-08-06T19:05:00Z
+  session: /home/err/spaces/eta-mu
+  task: Second-pass PR sweep — verify 5 PR/card bindings, unblock #158/#169/#170, fix #157 guard, correct roadmap
+  p-efficiency: 0.7
+  p-friction: 0.55
+  p-skill-candidate: 0.85
+  spore: 20260806-190500-worktree-cwd-write-targeting.md
+  receipt-refs: 2026-08-06T19:05:19.774Z
+  note: Persistent shell cwd silently retargeted a build and a board write into another worktree; both reported success, and the misread became a false claim about the primary tree's install state.
