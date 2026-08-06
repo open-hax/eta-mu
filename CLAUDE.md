@@ -27,6 +27,12 @@ Repo-specific bearings for Claude Code sessions in `eta-mu`.
   `pnpm -C packages/extensions test`. Never report a task done while a relevant
   suite is failing.
 - **Lint**: `clj-kondo`, type checks, and tests must pass with **zero warnings**.
+- **Gates without CI**: `pnpm gates` runs the gates GitHub Actions runs, locally,
+  selecting them by the same path filters the workflows use. `--all` runs
+  everything, `--list` shows the mapping, `--audit` checks the mirrored job names
+  still exist. It scrubs provider env vars so gates see CI's empty environment —
+  without that, an exported `OPENAI_API_KEY` fails a test that asserts the
+  no-key path. Use it when Actions is degraded, or before pushing.
 - **Receipts**: Use `receipt-river` skill  to append observations, decisions, test
   runs, and build results. The ledger is the source of truth for significant
   state transitions.
