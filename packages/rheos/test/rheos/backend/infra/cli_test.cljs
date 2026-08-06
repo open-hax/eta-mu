@@ -36,6 +36,24 @@
     (is (= "false" (get (:flags (cli/parse-args ["board" "list" "--verbose" "false"]))
                         "verbose")))))
 
+(deftest force-status-is-a-presence-flag
+  ;; Carried over from the create-verb tests this branch superseded. Those
+  ;; asserted `true?`/`false?` against a parser that returned real booleans;
+  ;; boolean flags are strings here and are read through `flag-true?`, so the
+  ;; coverage is kept and the expectations restated in the new convention.
+  (testing "--force-status among other options leaves the ones after it intact"
+    (let [{:keys [command flags]}
+          (cli/parse-args ["create" "--title" "Forced" "--status" "in_progress"
+                           "--force-status" "--priority" "P0"])]
+      (is (= "create" command))
+      (is (= "Forced" (get flags "title")))
+      (is (= "in_progress" (get flags "status")))
+      (is (= "true" (get flags "force-status")))
+      (is (= "P0" (get flags "priority")))))
+  (testing "an explicit false is preserved rather than read as presence"
+    (is (= "false" (get (:flags (cli/parse-args ["create" "--force-status" "false"]))
+                        "force-status")))))
+
 (deftest repeated-flags-collect
   (testing "`--set` repeats collect into a vector so multi-key updates work"
     (let [{:keys [flags]} (cli/parse-args ["frontmatter" "c" "--set" "points=3"

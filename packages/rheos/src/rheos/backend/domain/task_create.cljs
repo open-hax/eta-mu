@@ -1,30 +1,30 @@
 (ns rheos.backend.domain.task-create
-  "The single creation chokepoint for cards.
+  "Every decision a card creation makes: its identity, the status it enters at,
+   where it is allowed to land, and the bytes of its file.
 
    Sibling of [[rheos.backend.domain.task-edit]] (frontmatter + comments) and
-   [[rheos.backend.domain.transition]] (status moves): all three own one write
-   path each, and every one of them records a ledger event. Creation used to be
-   the exception — the subtask tool wrote a file and told nobody — which meant a
-   card's existence was known only to the filesystem. It is a ledger fact now.
+   [[rheos.backend.domain.transition]] (status moves): all three decide one write
+   path each, and [[rheos.backend.infra.task-create]] performs this one — the
+   single creation chokepoint — recording a ledger event for it. Creation used to
+   be the exception — the subtask tool wrote a file and told nobody — which meant
+   a card's existence was known only to the filesystem. It is a ledger fact now.
 
    Root cards and child cards are the same operation; `:parent` is just optional."
-  (:require ["node:fs/promises" :as fsp]
-            ["node:path" :as path]
-            [clojure.string :as str]
-            [rheos.backend.domain.events :as events]
-            [rheos.backend.infra.ledger :as ledger]
-            [rheos.backend.infra.task-store :as tasks]
-            [rheos.backend.infra.watcher :as watcher]
+  (:require [clojure.string :as str]
             [rheos.backend.law.fsm :as fsm]
             [rheos.backend.shape.content-parser :as content-parser]))
 
 (def card-types #{"task" "epic"})
 
-(def ^:private conventional-dirs {"epic" "epics" "task" "tasks"})
+(def conventional-dirs
+  "Where each card type lives by convention, relative to the task root. Whether
+   the directory is actually there is the orchestration's probe to make."
+  {"epic" "epics" "task" "tasks"})
 
-(defn- refuse!
+(defn refuse!
   "Throw a classified failure. `kind` is what the CLI maps to an exit code:
-   `:usage`, `:not-found`, or `:refused`."
+   `:usage`, `:not-found`, or `:refused`. Public because the orchestration in
+   [[rheos.backend.infra.task-create]] refuses in the same vocabulary."
   [kind message data]
   (throw (ex-info message (assoc data :kind kind))))
 
@@ -57,46 +57,57 @@
        "## Acceptance criteria\n\n"
        "- _TODO_"))
 
-(defn- ^:async dir-exists? [dir-path]
-  (try
-    (.isDirectory (await (.stat fsp dir-path)))
-    (catch :default _ false)))
+(defn check-request!
+  "Validate what can be judged without looking at the board, and return the
+   effective card type. Refuses a blank title or a type outside [[card-types]]."
+  [{:keys [title card-type]}]
+  (when (str/blank? title)
+    (refuse! :usage "a card needs a --title" {}))
+  (let [card-type (or card-type "task")]
+    (when-not (card-types card-type)
+      (refuse! :usage (str "unknown card type: " card-type
+                           " (expected one of " (str/join ", " (sort card-types)) ")")
+               {:card-type card-type}))
+    card-type))
 
-(defn- ^:async file-exists? [file-path]
-  (try
-    (await (.access fsp file-path))
-    true
-    (catch :default _ false)))
+(def uuid-pattern
+  "The characters a card uuid may be spelled with.
 
-(defn- within?
-  "Is `candidate` inside `root` (or root itself)?"
-  [root candidate]
-  (or (= root candidate)
-      (str/starts-with? candidate (str root path/sep))))
+   A uuid is not just an identifier: [[card-file-name]] puts its last eight
+   characters into a file name, so it is also a path component. Anchoring the
+   first character to alphanumeric rules out both a leading dot and a bare `..`,
+   and omitting the separators rules out escaping the card directory."
+  #"^[a-zA-Z0-9][a-zA-Z0-9._-]*$")
 
-(defn ^:async resolve-card-dir
-  "Where a new card of `card-type` belongs, in precedence order:
+(defn check-uuid!
+  "Refuse a uuid that cannot safely become part of a file name, and return it
+   trimmed. `nil` or blank means \"derive one from the title\" and is allowed
+   through — [[slugify]] produces the derived form and is safe by construction.
 
-   1. an explicit `dir` (resolved against the project's tasks-dir, and refused if
-      it escapes it);
-   2. the project's `:card-dirs` config for this type;
-   3. the conventional `<tasks-dir>/epics` or `<tasks-dir>/tasks`, when it exists;
-   4. the tasks-dir itself.
+   Only an explicitly requested uuid reaches this check, and only a caller who
+   passed `--uuid` can fail it."
+  [uuid]
+  (when-let [requested (some-> uuid str/trim not-empty)]
+    (when-not (re-matches uuid-pattern requested)
+      (refuse! :usage
+               (str "invalid uuid '" requested "': a uuid becomes part of the card's "
+                    "file name, so it must start with a letter or digit and contain "
+                    "only letters, digits, '.', '-' and '_'")
+               {:uuid requested}))
+    requested))
 
-   When the project configures `:card-projection {:paths [...]}`, the result must
-   fall inside one of those paths — otherwise the card would be written somewhere
-   the board never scans, and would silently not exist."
-  [project card-type dir]
-  (let [tasks-dir (:tasks-dir project)
-        configured (get-in project [:card-dirs (keyword card-type)])
-        conventional (get conventional-dirs card-type)
-        resolved (cond
-                   dir (path/resolve tasks-dir dir)
-                   configured (path/resolve tasks-dir configured)
-                   (and conventional
-                        (await (dir-exists? (path/join tasks-dir conventional))))
-                   (path/join tasks-dir conventional)
-                   :else tasks-dir)]
+(defn check-card-dir!
+  "Refuse a card directory the board would never scan, and return it otherwise.
+
+   `resolved` is the already-resolved absolute directory and `dir` the request as
+   written (for the message); `within?` is the caller's containment predicate,
+   because what it means for one path to be inside another is a host question.
+   The policy is this namespace's: a card must land inside the project's task
+   root, and — when the project configures `:card-projection {:paths [...]}` —
+   inside one of those paths, otherwise the card would be written somewhere the
+   board never scans and would silently not exist."
+  [project resolved dir within?]
+  (let [tasks-dir (:tasks-dir project)]
     (when-not (within? tasks-dir resolved)
       (refuse! :refused (str "card directory escapes the project task root: " dir)
                {:tasks-dir tasks-dir :dir resolved}))
@@ -109,13 +120,53 @@
                  {:dir resolved :paths (vec paths)})))
     resolved))
 
-(defn- ^:async unique-path
-  "`<dir>/<slug>.md`, disambiguated with a uuid prefix if that name is taken."
-  [dir slug uuid]
-  (let [candidate (path/join dir (str slug ".md"))]
-    (if (await (file-exists? candidate))
-      (path/join dir (str slug "-" (subs uuid 0 (min 8 (count uuid))) ".md"))
-      candidate)))
+(defn decide-card
+  "Decide a new card's identity and entry status against `existing`, every card
+   already on the board.
+
+   Refuses, rather than guessing, when: an explicit uuid is not spellable as a
+   file name; the uuid is already taken; a named `:parent` does not exist; or an
+   explicit `:status` is not the FSM's initial state (pass `:force-status?` to
+   override deliberately).
+
+   Returns `{:slug … :uuid … :status …}`."
+  [{:keys [project title card-type parent status uuid force-status? existing]}]
+  (let [by-uuid (into {} (map (juxt :uuid identity)) existing)
+        slug (slugify title card-type)
+        ;; Default the uuid to the title slug. Cards are addressed by uuid on
+        ;; every CLI call, so a readable `rheos-cli-create-card` beats a random
+        ;; v4 — which is what makes the difference between an agent citing a
+        ;; card and an agent pasting a hex blob. A random suffix only appears
+        ;; when the slug is taken.
+        card-uuid (or (check-uuid! uuid)
+                      (if (get by-uuid slug)
+                        (str slug "-" (subs (str (random-uuid)) 0 8))
+                        slug))
+        expected-status (initial-status project)
+        card-status (or (some-> status str/trim not-empty) expected-status)]
+    (when (get by-uuid card-uuid)
+      (refuse! :refused (str "a card with uuid '" card-uuid "' already exists")
+               {:uuid card-uuid}))
+    (when (and parent (not (get by-uuid parent)))
+      (refuse! :not-found (str "unknown parent task: " parent) {:parent parent}))
+    (when (and (not= card-status expected-status) (not force-status?))
+      (refuse! :refused
+               (str "a new card must start at the FSM initial state '" expected-status
+                    "', not '" card-status "'. Create it and then `rheos move`, "
+                    "or pass --force-status if you mean it.")
+               {:status card-status :initial-state expected-status}))
+    {:slug slug :uuid card-uuid :status card-status}))
+
+(defn card-file-name
+  "One deterministic file name for an exclusive create.
+
+   A card whose uuid is the title slug owns `<slug>.md`. A deliberate or
+   collision-derived uuid gets a suffix name. We never probe and then overwrite:
+   the write itself decides whether this creation wins."
+  [slug uuid]
+  (if (= slug uuid)
+    (str slug ".md")
+    (str slug "-" (subs uuid (max 0 (- (count uuid) 8))) ".md")))
 
 (defn frontmatter-pairs
   "Frontmatter as an ordered pair sequence, not a map.
@@ -137,77 +188,14 @@
     true          (conj [:write-id write-id])
     true          (conj [:created_at created-at])))
 
-(defn ^:async create-task!
-  "Create a card and record a `task-created` ledger event.
+(defn render-card
+  "The bytes of a new card file, plus the body they contain — the `task-created`
+   event carries the body, so a fold can rebuild a card that has no file yet.
 
-   Refuses, rather than guessing, when: the title is blank; the card type is
-   unknown; the uuid is already taken; a named `:parent` does not exist; or an
-   explicit `:status` is not the FSM's initial state (pass `:force-status?` to
-   override deliberately).
-
-   Returns `{:ok true :uuid … :title … :status … :source-path … :card-type …}`."
-  [{:keys [project title card-type parent status priority points labels body
-           dir uuid source force-status?]}]
-  (when-not project
-    (refuse! :not-found "unknown project" {}))
-  (when (str/blank? title)
-    (refuse! :usage "a card needs a --title" {}))
-  (let [card-type (or card-type "task")]
-    (when-not (card-types card-type)
-      (refuse! :usage (str "unknown card type: " card-type
-                           " (expected one of " (str/join ", " (sort card-types)) ")")
-               {:card-type card-type}))
-    (let [existing (await (tasks/load-tasks project))
-          by-uuid (into {} (map (juxt :uuid identity)) existing)
-          slug (slugify title card-type)
-          ;; Default the uuid to the title slug. Cards are addressed by uuid on
-          ;; every CLI call, so a readable `rheos-cli-create-card` beats a random
-          ;; v4 — which is what makes the difference between an agent citing a
-          ;; card and an agent pasting a hex blob. A random suffix only appears
-          ;; when the slug is taken.
-          card-uuid (or (some-> uuid str/trim not-empty)
-                        (if (get by-uuid slug)
-                          (str slug "-" (subs (str (random-uuid)) 0 8))
-                          slug))
-          expected-status (initial-status project)
-          card-status (or (some-> status str/trim not-empty) expected-status)]
-      (when (get by-uuid card-uuid)
-        (refuse! :refused (str "a card with uuid '" card-uuid "' already exists")
-                 {:uuid card-uuid}))
-      (when (and parent (not (get by-uuid parent)))
-        (refuse! :not-found (str "unknown parent task: " parent) {:parent parent}))
-      (when (and (not= card-status expected-status) (not force-status?))
-        (refuse! :refused
-                 (str "a new card must start at the FSM initial state '" expected-status
-                      "', not '" card-status "'. Create it and then `rheos move`, "
-                      "or pass --force-status if you mean it.")
-                 {:status card-status :initial-state expected-status}))
-      (let [card-dir (await (resolve-card-dir project card-type dir))
-            file-path (await (unique-path card-dir slug card-uuid))
-            write-id (events/generate-write-id)
-            card-body (if (str/blank? body) (body-template title) (str/trim body))
-            raw (str (content-parser/serialize-frontmatter
-                      (frontmatter-pairs
-                       {:uuid card-uuid
-                        :title title
-                        :status card-status
-                        :card-type card-type
-                        :priority (or priority "P3")
-                        :points points
-                        :labels (vec (or labels []))
-                        :parent parent
-                        :category (path/basename card-dir)
-                        :write-id write-id
-                        :created-at (.toISOString (new js/Date))}))
-                     "\n\n" card-body "\n")]
-        (await (.mkdir fsp card-dir #js {:recursive true}))
-        (watcher/register-cli-event! write-id card-uuid)
-        (await (.writeFile fsp file-path raw "utf8"))
-        (await (events/emit-task-created!
-                (ledger/get-ledger (:tasks-dir project))
-                (:id project) card-uuid
-                {:title title :card-type card-type :status card-status
-                 :parent parent :source-path file-path :body card-body}
-                write-id source))
-        {:ok true :uuid card-uuid :title title :status card-status
-         :card-type card-type :parent parent :source-path file-path}))))
+   Returns `{:raw … :body …}`."
+  [{:keys [title body] :as card}]
+  (let [card-body (if (str/blank? body) (body-template title) (str/trim body))]
+    {:body card-body
+     :raw (str (content-parser/serialize-frontmatter
+                (frontmatter-pairs (update card :priority #(or % "P3"))))
+               "\n\n" card-body "\n")}))

@@ -32,13 +32,7 @@ function cljsFiles(directory) {
 const violations = [];
 
 for (const packageName of packageNames) {
-  const sourceRoot = path.join(
-    repositoryRoot,
-    "packages",
-    packageName,
-    "src",
-    "cljs",
-  );
+  const sourceRoot = path.join(repositoryRoot, "packages", packageName, "src", "cljs");
   if (!fs.existsSync(sourceRoot)) {
     violations.push(`${packageName}: source root does not exist`);
     continue;

@@ -13,7 +13,7 @@
             [rheos.backend.infra.config :as config]
             [rheos.backend.shape.content-parser :as content-parser]
              [rheos.backend.domain.events :as events]
-             [rheos.backend.domain.task-edit :as task-edit]
+             [rheos.backend.infra.task-edit :as task-edit]
              [rheos.backend.infra.chat-proxy :as chat-proxy]
              [rheos.backend.infra.ledger :as ledger]
              [rheos.backend.law.frontmatter :as law-frontmatter]
@@ -21,7 +21,7 @@
             [rheos.backend.infra.mcp :as mcp]
             [rheos.backend.infra.projects :as projects]
             [rheos.backend.infra.task-store :as tasks]
-            [rheos.backend.domain.transition :as transition]
+            [rheos.backend.infra.transition :as transition]
             [rheos.backend.infra.watcher :as watcher]))
 
 (defonce server-state (atom nil))

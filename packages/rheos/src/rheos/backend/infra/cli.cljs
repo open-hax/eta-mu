@@ -18,14 +18,14 @@
             ["node:fs/promises" :as fsp]
             [rheos.backend.domain.board :as board]
             [rheos.backend.domain.compose :as compose]
-            [rheos.backend.domain.task-create :as task-create]
             [rheos.backend.infra.agent-tools :as agent-tools]
             [rheos.backend.infra.config :as config]
             [rheos.backend.domain.events :as events]
             [rheos.backend.infra.ledger :as ledger]
             [rheos.backend.infra.projects :as projects]
+            [rheos.backend.infra.task-create :as task-create]
             [rheos.backend.infra.task-store :as tasks]
-            [rheos.backend.domain.transition :as transition]
+            [rheos.backend.infra.transition :as transition]
             [rheos.backend.infra.view-store :as views]
             [rheos.backend.infra.http-server :as http-server]))
 
@@ -134,7 +134,7 @@
   (println "  openhax-kanban comment <task-uuid> --text <text> [--project <id>]")
   (println "  openhax-kanban add-comment <task-uuid> --text <text> [--project <id>]")
   (println "  openhax-kanban frontmatter <task-uuid> --set <key>=<value> [--set <k>=<v> ...] [--project <id>]")
-  (println "  openhax-kanban create --title <title> [--type <task|epic>] [--parent <uuid>] [--project <id>] [--priority <p>] [--points <n>] [--labels <l>] [--body-file <path>] [--dir <path>] [--uuid <id>]")
+  (println "  openhax-kanban create --title <title> [--type <task|epic>] [--parent <uuid>] [--project <id>] [--status <s>] [--force-status] [--priority <p>] [--points <n>] [--labels <l>] [--body-file <path>] [--dir <path>] [--uuid <id>]")
   (println "  openhax-kanban create-subtask <parent-uuid> --title <title> [--project <id>] [--status <s>] [--priority <p>]")
   (println "  openhax-kanban read-task <task-uuid> [--project <id>]")
   (println "  openhax-kanban search-tasks --query <text>")
