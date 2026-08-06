@@ -1,0 +1,165 @@
+;; CI workflow resources.
+;;
+;; A katamorph namespace file: `:namespace` plus a vector of `:resources`, the
+;; same shape as `katamorph/examples/hello-world.edn` and knoxx's
+;; `contracts/namespaces/*.edn`. Each resource here is `:contract/kind :workflow`
+;; — the resource kind katamorph's registry has always advertised
+;; (`{:id :registry/workflows :kind :workflow}`) and now has a schema for.
+;;
+;; These declarations name no host. `scripts/workflows.bb` projects them to two
+;; targets today:
+;;
+;;   :github-actions -> .github/workflows/*.yml
+;;   :local-gates    -> the gate plan scripts/ci-gates.bb runs
+;;
+;; That is the point. The gate runner and the CI workflow stopped being two
+;; hand-maintained descriptions of the same thing that drift apart — a drift
+;; `ci-gates.bb --audit` had to be written to detect, and which it found on its
+;; first run.
+
+{:namespace :eta-mu.ci
+
+ :resources
+ [{:contract/kind :workflow
+   :contract/id "main-pr-gate"
+   :workflow/name "eta-mu-main-pr-gate"
+   :workflow/doc
+   "Legacy TypeScript and workflow-file gate. Two of its four jobs are
+    deliberate no-ops: services/ was removed and nothing replaced them, but the
+    named checks are still required, so they stay as passing placeholders."
+   :workflow/triggers
+   [{:on/event :pull-request
+     :on/branches ["main"]
+     :on/paths ["packages/legacy/docs/**"
+                "packages/legacy/github/**"
+                ".github/workflows/*.yml"]}]
+
+   :workflow/jobs
+   [{:job/id "main-lint"
+     :job/name "main-lint"
+     :job/runner :ubuntu-latest
+     :job/timeout-minutes 15
+     :job/permissions {}
+     :job/steps
+     [{:step/use :checkout}
+      {:step/run "echo \"services/ removed; no deploy scripts to lint in current layout\""}]}
+
+    {:job/id "eta-mu-lint"
+     :job/name "eta-mu-lint"
+     :job/runner :ubuntu-latest
+     :job/timeout-minutes 20
+     :job/permissions {}
+     :job/gate {:gate/id "eta-mu-lint"
+                :gate/check "eta-mu-lint"
+                :gate/paths ["packages/legacy/docs/" "packages/legacy/github/" ".github/workflows/"]}
+     :job/steps
+     [{:step/use :checkout}
+      {:step/use :jvm}
+      {:step/use :bb-and-kondo}
+      {:step/use :node-pnpm-20}
+      {:step/run "pnpm install --no-frozen-lockfile"}
+      {:step/run "pnpm --dir packages/extensions build" :step/gate true}
+      {:step/run "pnpm lint" :step/gate true}]}
+
+    {:job/id "main-tests"
+     :job/name "main-tests"
+     :job/runner :ubuntu-latest
+     :job/timeout-minutes 15
+     :job/permissions {}
+     :job/gate {:gate/id "main-tests"
+                :gate/check "main-tests"
+                :gate/paths ["packages/legacy/docs/" "packages/legacy/github/" ".github/workflows/"]}
+     :job/steps
+     [{:step/use :checkout}
+      {:step/action :setup-node
+       :step/with {:node-version 22 :package-manager-cache false}}
+      {:step/run "node --test packages/legacy/docs/tests/*.test.cjs" :step/gate true}]}
+
+    {:job/id "main-build"
+     :job/name "main-build"
+     :job/runner :ubuntu-latest
+     :job/timeout-minutes 30
+     :job/permissions {}
+     :job/steps
+     [{:step/use :checkout}
+      {:step/run "echo \"services/ removed; no docker compose build in current layout\""}]}]}
+
+  {:contract/kind :workflow
+   :contract/id "rheos"
+   :workflow/name "rheos"
+   :workflow/doc
+   "Rheos package gate. The path filters include both board config files
+    because they carry each project's FSM and build-gate commands — a change
+    there alters what Rheos enforces without touching packages/rheos/**."
+   :workflow/permissions {:contents :read}
+   :workflow/triggers
+   [{:on/event :push
+     :on/branches ["main"]
+     :on/paths ["packages/rheos/**"
+                "packages/protocols/**"
+                "packages/chat-ui/**"
+                "openhax.kanban.edn"
+                "openhax.kanban.json"
+                "kanban/openhax.kanban.*"
+                "package.json"
+                "pnpm-lock.yaml"
+                "pnpm-workspace.yaml"
+                ".github/workflows/rheos.yml"]}
+    {:on/event :pull-request
+     :on/paths ["packages/rheos/**"
+                "packages/protocols/**"
+                "packages/chat-ui/**"
+                "openhax.kanban.edn"
+                "openhax.kanban.json"
+                "kanban/openhax.kanban.*"
+                "package.json"
+                "pnpm-lock.yaml"
+                "pnpm-workspace.yaml"
+                ".github/workflows/rheos.yml"]}]
+
+   :workflow/jobs
+   [{:job/id "test"
+     :job/name "Rheos tests and lint"
+     :job/runner :ubuntu-latest
+     ;; The gate declaration. This is what makes one resource serve both
+     ;; targets: GitHub reads the steps, the local runner reads the gated
+     ;; subset plus the path filters it should select on.
+     :job/gate {:gate/id "rheos"
+                :gate/check "Rheos tests and lint"
+                :gate/paths ["packages/rheos/" "packages/protocols/" "packages/chat-ui/"
+                             "openhax.kanban.edn" "openhax.kanban.json"
+                             "kanban/openhax.kanban" "package.json"
+                             "pnpm-lock.yaml" "pnpm-workspace.yaml"
+                             ".github/workflows/rheos.yml"]}
+     :job/steps
+     [{:step/use :checkout}
+      {:step/use :jvm}
+      {:step/use :node-pnpm}
+      {:step/use :pnpm-cache}
+      {:step/name "Install dependencies"
+       :step/run "pnpm install --frozen-lockfile"}
+      {:step/use :clj-kondo}
+      {:step/name "Test"
+       :step/run "pnpm --dir packages/rheos test"
+       :step/gate true
+       :gate/expect "0 failures, 0 errors"}
+      {:step/name "Lint"
+       :step/run "pnpm --dir packages/rheos lint:kondo"
+       :step/gate true}
+      ;; A green test run does not prove the release targets compile — the CLI,
+      ;; github-sync, and app builds reach code the tests never load.
+      {:step/name "Build Rheos release targets"
+       :step/run "pnpm --dir packages/rheos build"
+       :step/gate true
+       ;; Stricter than GitHub runs it today: the local gate fails on any
+       ;; compiler WARNING, because an :infer-warning reached main on
+       ;; 2026-08-06 with nothing to stop it. Tracked as
+       ;; `rheos-ci-does-not-gate-build-warnings`; when the workflow adopts the
+       ;; same check this key stops being a divergence.
+       :gate/no-warning true}
+      {:step/name "Upload shadow-cljs logs"
+       :step/if "failure()"
+       :step/action :upload-artifact
+       :step/with {:name "rheos-shadow-cljs-logs"
+                   :path "packages/rheos/.shadow-cljs/"
+                   :if-no-files-found "ignore"}}]}]}]}

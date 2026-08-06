@@ -24,6 +24,7 @@
 
 (require '[babashka.process :as p]
          '[clj-yaml.core :as yaml]
+         '[clojure.edn :as edn]
          '[clojure.string :as str]
          '[clojure.java.io :as io])
 
@@ -31,7 +32,9 @@
 ;; Gate definitions — mirrored from .github/workflows
 ;; ---------------------------------------------------------------------------
 
-(def gates
+(def mirrored-gates
+  "Gates still hand-mirrored from .github/workflows. Each is a candidate for
+   declaration as a workflow resource; whatever is declared is generated instead."
   [{:name "rheos"
     :workflow "rheos.yml" :job "test" :check "Rheos tests and lint"
     :paths ["packages/rheos/" "packages/protocols/" "packages/chat-ui/"
@@ -136,6 +139,48 @@
 ;; ---------------------------------------------------------------------------
 ;; Plumbing
 ;; ---------------------------------------------------------------------------
+
+;; ---------------------------------------------------------------------------
+;; Resource-derived gates
+;; ---------------------------------------------------------------------------
+;;
+;; Gates below are hand-mirrored from the workflows. Gates declared as workflow
+;; *resources* in contracts/workflows/ are generated instead, and those win —
+;; a resource-derived gate cannot drift from its workflow, because both are
+;; projections of one declaration.
+;;
+;; Migration is per-gate rather than all-at-once: whatever is declared is
+;; generated, the rest stay mirrored, and `--list` says which is which. When
+;; every gate is resource-derived, `--audit` has nothing left to check and goes.
+
+(def gate-plan-path "contracts/workflows/.gates.edn")
+
+(defn- resource-gates
+  "Gates projected from workflow resources, keyed by name. Empty when the plan
+   has not been emitted — the runner must work in a fresh checkout."
+  [root]
+  (let [f (io/file root gate-plan-path)]
+    (if-not (.exists f)
+      {}
+      (into {}
+            (for [g (:gates (edn/read-string (slurp f)))]
+              [(:gate/id g)
+               {:name (:gate/id g)
+                :workflow (:gate/workflow g)
+                :check (:gate/check g)
+                :from-resource true
+                :paths (vec (:gate/paths g))
+                :steps (mapv (fn [s]
+                               (cond-> {:cmd ["bash" "-c" (:step/run s)]}
+                                 (:gate/expect s) (assoc :expect (:gate/expect s))
+                                 (:gate/no-warning s) (assoc :no-warning true)))
+                             (:gate/steps g))}])))))
+
+(defn- merge-gates
+  "Resource-derived gates replace their hand-mirrored namesakes."
+  [root]
+  (let [derived (resource-gates root)]
+    (mapv #(or (derived (:name %)) %) mirrored-gates)))
 
 ;; ---------------------------------------------------------------------------
 ;; Environment scrubbing
@@ -324,7 +369,7 @@
   (println "Auditing each gate against the workflow it mirrors.\n")
   (let [problems
         (doall
-         (for [g gates]
+         (for [g mirrored-gates]
            (let [f (io/file root ".github/workflows" (:workflow g))]
              (cond
                (not (.exists f))
@@ -372,7 +417,8 @@
                                 (range (count args))))
         only (set (for [[i a] (map-indexed vector args) :when (= a "--only")]
                     (nth args (inc i) nil)))
-        root (repo-root)]
+        root (repo-root)
+        gates (merge-gates root)]
 
     (when (flag? "--audit") (audit root) (System/exit 0))
 
@@ -393,8 +439,12 @@
       (when (flag? "--list")
         (println "Would run:\n")
         (doseq [g chosen]
-          (println (format "  %-20s mirrors %s (%s :: %s)"
-                           (:name g) (:check g) (:workflow g) (:job g)))
+          (println (format "  %-20s %s %s"
+                           (:name g)
+                           (if (:from-resource g) "FROM RESOURCE" "mirrors      ")
+                           (if (:from-resource g)
+                             (str (:workflow g) " (contracts/workflows/)")
+                             (str (:check g) " (" (:workflow g) " :: " (:job g) ")"))))
           (doseq [s (:steps g)] (println (format "      %s" (str/join " " (:cmd s))))))
         (System/exit 0))
 
