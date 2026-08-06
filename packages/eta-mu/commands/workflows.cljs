@@ -210,6 +210,15 @@
 
 ;; ── Target: local gates ─────────────────────────────────────────────────────
 
+(defn emitting?
+  "Does this resource own its workflow file?
+
+   A resource may declare a gate while its YAML stays hand-written — the
+   half-step that lets the gate mirror die before the riskier YAML conversion
+   is attempted. `:workflow/emit false` says so explicitly."
+  [wf]
+  (not (false? (:workflow/emit wf))))
+
 (defn ->local-gate
   "The gate plan for one job, or nil when the job declares no `:job/gate`.
 
@@ -218,18 +227,33 @@
    uploads — and running those locally would be noise, not verification."
   [wf j]
   (when-let [g (:job/gate j)]
-    {:gate/id (:gate/id g)
-     :gate/workflow (:contract/id wf)
-     :gate/job (:job/id j)
-     :gate/check (:gate/check g)
-     :gate/paths (vec (:gate/paths g))
-     :gate/steps (vec (keep (fn [s]
+    (cond-> {:gate/id (:gate/id g)
+             :gate/workflow (:contract/id wf)
+             :gate/job (:job/id j)
+             :gate/check (:gate/check g)
+             ;; `:gate/always` is how a workflow with no path filter says so —
+             ;; distinct from "no paths declared yet", which would silently
+             ;; stop selecting the gate.
+             :gate/paths (if (:gate/always g) :always (vec (:gate/paths g)))}
+      (:gate/needs-repos g) (assoc :gate/needs-repos (vec (:gate/needs-repos g)))
+      true (merge)
+      true (assoc :gate/steps
+                  (vec (keep (fn [s]
                               (when (:step/gate s)
                                 (cond-> {:step/run (:step/run s)}
                                   (:step/name s) (assoc :step/name (:step/name s))
                                   (:gate/expect s) (assoc :gate/expect (:gate/expect s))
                                   (:gate/no-warning s) (assoc :gate/no-warning true))))
-                            (:job/steps j)))}))
+                             (:job/steps j)))))))
+
+(defn emitting?
+  "Does this resource own its workflow file?
+
+   A resource may declare a gate while its YAML stays hand-written — the
+   half-step that lets the gate mirror die before the riskier YAML conversion
+   is attempted. `:workflow/emit false` says so explicitly."
+  [wf]
+  (not (false? (:workflow/emit wf))))
 
 (defn ->local-gates [workflows]
   (vec (for [wf workflows
@@ -261,6 +285,9 @@
   (let [targets (if (= "all" target) #{"github-actions" "local-gates"} #{target})]
     (when (targets "github-actions")
       (doseq [wf workflows]
+        (when-not (emitting? wf)
+          (println (str "  " (pad (:contract/id wf) 16) " (skipped — :workflow/emit false)")))) 
+      (doseq [wf (filter emitting? workflows)]
         (let [path (path/join root workflows-dir (str (:contract/id wf) ".yml"))
               text (yaml-str (->github-actions registry wf))
               existing (when (exists? path) (read-text path))
@@ -285,7 +312,7 @@
   (let [problems
         (doall
          (concat
-          (for [wf workflows
+          (for [wf (filter emitting? workflows)
                 :let [path (path/join root workflows-dir (str (:contract/id wf) ".yml"))
                       text (yaml-str (->github-actions registry wf))]]
             (cond

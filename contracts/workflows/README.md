@@ -9,7 +9,7 @@ repo's GitHub Actions workflows and its local CI gate runner.
 |---|---|
 | `resources.edn` | The resource registry: every action, pinned exactly once, plus reusable toolchain step sequences |
 | `ci.edn` | Workflow resources — a katamorph namespace file (`:namespace` + `:resources`) |
-| `.gates.edn` | **Generated.** The local gate plan, read by `scripts/ci-gates.bb` |
+| `.gates.edn` | **Generated.** The local gate plan, read by `eta-mu gates` |
 
 ## The shape
 
@@ -41,7 +41,7 @@ now has a schema in `katamorph.schema/WorkflowContract`.
 ```text
 contracts/workflows/*.edn
   ├── :github-actions ──> .github/workflows/<id>.yml
-  └── :local-gates    ──> .gates.edn ──> scripts/ci-gates.bb
+  └── :local-gates    ──> .gates.edn ──> eta-mu gates
 ```
 
 `:step/gate true` marks the steps that are real verification rather than CI
@@ -91,7 +91,7 @@ discouraged.
 
 ## Migration is per-gate
 
-`scripts/ci-gates.bb` still hand-mirrors most gates. Whatever is declared as a
+`eta-mu gates` still hand-mirrors most gates. Whatever is declared as a
 resource is generated and wins; the rest stay mirrored, and `--list` marks
 which is which. When every gate is resource-derived, `--audit` — which exists
 only to detect drift between the mirror and the workflows — has nothing left to

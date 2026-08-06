@@ -46,4 +46,98 @@
      :step/name "Lint"}
     {:step/run "pnpm --dir packages/rheos build",
      :step/name "Build Rheos release targets",
-     :gate/no-warning true}]}]}
+     :gate/no-warning true}]}
+  {:gate/id "eta-mu-cljs",
+   :gate/workflow "coverage",
+   :gate/job "eta-mu-cljs",
+   :gate/check "eta-mu CLI + turn-processor + terminal-ui",
+   :gate/paths :always,
+   :gate/steps
+   [{:step/run "pnpm --dir packages/turn-processor test",
+     :gate/expect "0 failures, 0 errors"}
+    {:step/run "pnpm --dir packages/turn-processor lint:kondo"}
+    {:step/run "pnpm --dir packages/terminal-ui test",
+     :gate/expect "0 failures, 0 errors"}
+    {:step/run "pnpm --dir packages/terminal-ui lint:kondo"}
+    {:step/run "pnpm --dir packages/eta-mu test",
+     :gate/expect "0 failures, 0 errors"}
+    {:step/run "pnpm --dir packages/eta-mu lint:kondo"}
+    {:step/run "pnpm --dir packages/eta-mu test:e2e"}]}
+  {:gate/id "ts-packages",
+   :gate/workflow "coverage",
+   :gate/job "ts-packages",
+   :gate/check "TS package tests",
+   :gate/paths :always,
+   :gate/steps
+   [{:step/run "pnpm --dir packages/legacy/github test"}
+    {:step/run "node --test packages/legacy/docs/tests/*.test.cjs"}]}
+  {:gate/id "sol",
+   :gate/workflow "sol-ci",
+   :gate/job "verify",
+   :gate/check "Sol CI",
+   :gate/paths
+   ["packages/sol/"
+    "packages/turn-processor/"
+    "packages/eta-mu/"
+    ".github/workflows/sol-ci.yml"
+    "package.json"
+    "pnpm-lock.yaml"
+    "pnpm-workspace.yaml"],
+   :gate/needs-repos ["katamorph" "event-ledger"],
+   :gate/steps
+   [{:step/run "pnpm --dir packages/sol lint"}
+    {:step/run "pnpm --dir packages/sol test",
+     :gate/expect "0 failures, 0 errors",
+     :gate/no-warning true}
+    {:step/run "pnpm --dir packages/sol build",
+     :gate/no-warning true}]}
+  {:gate/id "axxium",
+   :gate/workflow "axxium-ci",
+   :gate/job "verify",
+   :gate/check "Axxium CI",
+   :gate/paths
+   ["packages/axxium/"
+    ".github/workflows/axxium-ci.yml"
+    "pnpm-lock.yaml"],
+   :gate/steps
+   [{:step/run
+     "cd packages/axxium && clj-kondo --lint src/cljs test/cljs"}
+    {:step/run
+     "cd packages/axxium && set -o pipefail && for invalid in 56oops 56.5 1e2; do if node scripts/check-js-boundary.mjs \"--max=${invalid}\" >/dev/null 2>&1; then echo \"Malformed boundary maximum was accepted: ${invalid}\"; exit 1; fi; done && node scripts/check-js-boundary.mjs --max=56",
+     :step/name "Enforce JS boundary debt ratchet"}
+    {:step/run "pnpm --dir packages/axxium test",
+     :gate/expect "0 failures, 0 errors",
+     :gate/no-warning true}
+    {:step/run "pnpm --dir packages/axxium build",
+     :gate/no-warning true}]}
+  {:gate/id "extensions",
+   :gate/workflow "eta-mu-extensions-tests",
+   :gate/job "test",
+   :gate/check "eta-mu-extensions-tests",
+   :gate/paths
+   ["packages/extensions/"
+    "packages/e2e/"
+    ".github/workflows/eta-mu-extensions-tests.yml"],
+   :gate/steps
+   [{:step/run "pnpm --dir packages/extensions build"}
+    {:step/run "pnpm --dir packages/extensions validate-paths"}
+    {:step/run
+     "cd packages/extensions && pnpm exec shadow-cljs compile node-test && node target/test.cjs",
+     :gate/expect "0 failures, 0 errors"}]}
+  {:gate/id "rheos-github-sync",
+   :gate/workflow "rheos-github-sync-ci",
+   :gate/job "rheos-github-sync",
+   :gate/check "rheos-github-sync",
+   :gate/paths
+   ["packages/rheos/"
+    ".github/workflows/kanban-sync.yml"
+    ".github/workflows/eta-mu-kanban-sync.yml"
+    ".github/workflows/rheos-github-sync-ci.yml"],
+   :gate/steps
+   [{:step/run "pnpm --dir packages/rheos test",
+     :gate/expect "0 failures, 0 errors"}
+    {:step/run "pnpm --dir packages/rheos build"}
+    {:step/run
+     "node packages/rheos/dist/cli.cjs board snapshot --tasks-dir \"$PWD/kanban\" --out /tmp/eta-mu-gates-snapshot.json"}
+    {:step/run
+     "node packages/rheos/dist/cli.cjs drift --tasks-dir \"$PWD/kanban\""}]}]}
