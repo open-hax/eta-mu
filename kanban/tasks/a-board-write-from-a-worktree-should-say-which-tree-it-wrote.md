@@ -91,10 +91,13 @@ that one is *which build answered*, this one is *which tree it wrote to*.
 ---
 Scope refinement, observed while creating this card: `rheos create` **already** reports the absolute path it wrote —
 
-    created task <uuid> [incoming] <title>
-      /home/err/spaces/eta-mu/kanban/tasks/<uuid>.md
+```text
+created task <uuid> [incoming] <title>
+  /home/err/spaces/eta-mu/kanban/tasks/<uuid>.md
+```
 
 so the pattern this card wants already exists and does not need designing. The gap is that `comment` does not; its payload is `{"ok": true, "uuid": …, "comment": …}` with no path, which is the exact call that misrouted. Treat this as "bring the other mutating verbs up to what `create` already does", which makes it smaller than the 5 points suggest — re-size at breakdown.
 
 Worktree detection is still open and is the real design question, since `create` reports its path but would happily report a worktree path just as confidently.
+
 ---

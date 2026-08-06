@@ -48,25 +48,33 @@ form.
 what makes an outage read as a broken build. Distinguishing them:
 
 ```bash
-# What actually happened, per job — not what `gh pr checks` summarised
+# Classify from the JOB conclusion. This is the authoritative field —
+# `cancelled` and `timed_out` are platform, `failure` is the code's problem.
 gh run view <run-id> --json jobs \
   --jq '.jobs[]|"\(.name) \(.conclusion) \(.startedAt) \(.completedAt)"'
 
-# Which step failed. Empty output on a red job means nothing failed -> cancelled
+# Then, separately, which steps actually failed. `skipped` and steps with no
+# conclusion are NOT failures — excluding only "success" would count them and
+# make a cancelled job look like it had failing steps.
 gh run view <run-id> --json jobs \
-  --jq '.jobs[]|.steps[]|select(.conclusion!="success")|"\(.number) \(.name) -> \(.conclusion)"'
+  --jq '.jobs[]|.steps[]|select(.conclusion=="failure")|"\(.number) \(.name)"'
 
-# Is the platform accepting work at all?
-gh api repos/<owner>/<repo>/actions/runs \
-  --jq '.workflow_runs[:5][]|"\(.created_at) \(.status) \(.name)"'
+# Is the platform accepting work at all? Ask about the specific push, not the
+# five most recent runs — unrelated activity easily pushes yours off the end.
+gh api -X GET repos/<owner>/<repo>/actions/runs \
+  -f event=push -f branch=<branch> -f head_sha=<sha> --paginate \
+  --jq '.workflow_runs[]|"\(.created_at) \(.status)/\(.conclusion) \(.name)"'
 ```
 
 Three signals, any one of which means "platform, not code":
 
-1. A job whose conclusion is `cancelled`, or which has no non-success step.
+1. A job whose **conclusion** is `cancelled` or `timed_out`. Classify on the
+   job, not on its steps — a cancelled job usually has no failing step, but so
+   does a job that was skipped, so "no failing steps" alone proves nothing.
 2. A trivial job (echo-only, no-op) taking minutes or failing.
-3. No runs created for a push whose branch has workflow triggers, while Actions
-   reports `enabled: true`.
+3. No runs created for the specific `head_sha` of a push whose branch has
+   workflow triggers, while Actions reports `enabled: true`. Query by
+   `head_sha`, not by recency.
 
 ## Scope
 

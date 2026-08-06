@@ -1,14 +1,15 @@
 ---
-uuid: "rheos-canonical-task-fold-and-snapshots"
-title: "Rheos canonical task fold and EDN snapshots"
-status: incoming
-type: task
-priority: P0
-points: 5
-labels: rheos, ledger, fold, snapshots
-category: tasks
-parent: "rheos-ledger-authoritative-projections"
+category: "tasks"
+labels: "rheos, ledger, fold, snapshots"
 dependency: "rheos-event-store-git-worldline-adr"
+parent: "rheos-ledger-authoritative-projections"
+type: "task"
+write-id: "1786050440954-0.07c7ehdiqhr43ouy5pnn"
+points: "5"
+title: "Rheos canonical task fold and EDN snapshots"
+priority: "P0"
+status: "incoming"
+uuid: "rheos-canonical-task-fold-and-snapshots"
 ---
 
 # Rheos canonical task fold and EDN snapshots
@@ -44,3 +45,11 @@ lifecycle events, with disposable EDN checkpoints for faster replay.
 - Existing card imports retain source path/hash and import provenance.
 - Tests cover multi-hop status history, comments, body/frontmatter changes, archive,
   deletion, snapshot resume, and invalid event ordering.
+
+---
+Inherits an acceptance criterion from `rheos-cli-create-card` (done, PR #167), raised in review on #177.
+
+That card closed with "folding the ledger from empty reproduces the created cards uuid, type, parent, initial status, and body" unmet — the `task-created` event carries the full payload, but nothing folds it back into a card. This card owns that proof.
+
+Concretely, it should assert: create a card through `rheos create`, discard the markdown, fold the ledger from empty, and get back the same uuid, type, parent, initial status, and body. Until that test exists, ledger-authoritative projection is a design claim rather than a demonstrated property.
+---

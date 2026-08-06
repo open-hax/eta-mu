@@ -3,7 +3,7 @@ category: "tasks"
 labels: "rheos, cli, lifecycle, create, ledger"
 parent: "rheos-cli-card-lifecycle-authority"
 type: "task"
-write-id: "1786029510631-0.coxh0f4j29080uojvg"
+write-id: "1786050440652-0.dfizigmdkdtogwos5hz"
 points: "5"
 title: "Rheos CLI card creation with a ledger-visible task-created event"
 priority: "P0"
@@ -107,4 +107,15 @@ Landed with two review fixes beyond the original scope:
 Also hardened `.github/workflows/rheos.yml` to match `axxium-ci`/`sol-ci`: pinned checkout with persist-credentials off, `--frozen-lockfile`, and clj-kondo pinned to 2025.10.23 via setup-clojure.
 
 Final: 85 tests / 264 assertions, clj-kondo 0/0, all 8 review threads resolved.
+
+Acceptance-criteria reconciliation, raised in review on #177.
+
+This card is `done` while one of its acceptance criteria — "folding the ledger from empty reproduces the created cards uuid, type, parent, initial status, and body" — is explicitly not delivered. The implementation note already says so: the event now *carries* the payload a fold would need, but the fold itself was left to another card. Closing with the criterion still listed makes the card read as if replay were proven.
+
+Recording it plainly rather than editing the body, which settled at breakdown:
+
+- **Delivered here:** the `task-created` event carries uuid, title, card-type, status, parent, source-path, and the authored body — everything a reconstruction needs.
+- **Not delivered here:** the fold that consumes it. That is `rheos-canonical-task-fold-and-snapshots`, which is on `main` as of #158 and sits in `incoming`.
+
+So the criterion is not abandoned, it is reassigned, and the successor card exists and is reachable. Anyone auditing this cards `done` status should read the criterion as "the event is sufficient for replay", not "replay is proven" — the proof belongs to the fold card and should be written there.
 ---

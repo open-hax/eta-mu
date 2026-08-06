@@ -23,6 +23,7 @@
 ;;   scripts/ci-gates.bb --audit         # check the mirrored path filters still match the workflows
 
 (require '[babashka.process :as p]
+         '[clj-yaml.core :as yaml]
          '[clojure.string :as str]
          '[clojure.java.io :as io])
 
@@ -34,7 +35,9 @@
   [{:name "rheos"
     :workflow "rheos.yml" :job "test" :check "Rheos tests and lint"
     :paths ["packages/rheos/" "packages/protocols/" "packages/chat-ui/"
-            "pnpm-lock.yaml" ".github/workflows/rheos.yml"]
+            "openhax.kanban.edn" "openhax.kanban.json" "kanban/openhax.kanban"
+            "package.json" "pnpm-lock.yaml" "pnpm-workspace.yaml"
+            ".github/workflows/rheos.yml"]
     ;; `:no-warning` on the build is STRICTER THAN CI, deliberately. The rheos
     ;; job runs only test + lint:kondo, and the one CI job that does build rheos
     ;; ignores compiler warnings — so a shadow-cljs :infer-warning reaches main
@@ -86,6 +89,18 @@
     :workflow "axxium-ci.yml" :job "verify" :check "Axxium CI"
     :paths ["packages/axxium/" ".github/workflows/axxium-ci.yml" "pnpm-lock.yaml"]
     :steps [{:cmd ["bash" "-c" "cd packages/axxium && clj-kondo --lint src/cljs test/cljs"]}
+            ;; The JS-boundary debt ratchet, from axxium-ci.yml. Omitting it let a
+            ;; branch pass `--only axxium` while exceeding the boundary maximum,
+            ;; or while accepting a malformed --max. Both halves are mirrored:
+            ;; malformed maxima must be rejected, then the ratchet must hold.
+            {:cmd ["bash" "-c"
+                   (str "cd packages/axxium && set -o pipefail && "
+                        "for invalid in 56oops 56.5 1e2; do "
+                        "  if node scripts/check-js-boundary.mjs \"--max=${invalid}\" >/dev/null 2>&1; then "
+                        "    echo \"Malformed boundary maximum was accepted: ${invalid}\"; exit 1; "
+                        "  fi; "
+                        "done && "
+                        "node scripts/check-js-boundary.mjs --max=56")]}
             {:cmd ["pnpm" "--dir" "packages/axxium" "test"] :expect "0 failures, 0 errors" :no-warning true}
             {:cmd ["pnpm" "--dir" "packages/axxium" "build"] :no-warning true}]}
 
@@ -158,14 +173,37 @@
   (let [{:keys [out exit]} (apply p/sh args)]
     (when (zero? exit) (str/trim out))))
 
+(defn- die! [& msg]
+  (println (str/join " " msg))
+  (System/exit 2))
+
 (defn repo-root []
   (or (sh-out "git" "rev-parse" "--show-toplevel")
-      (do (println "not inside a git repository") (System/exit 2))))
+      (die! "not inside a git repository")))
 
-(defn changed-files [base]
-  (let [mb (or (sh-out "git" "merge-base" base "HEAD") base)
-        tracked (or (sh-out "git" "diff" "--name-only" mb "HEAD") "")
-        dirty (or (sh-out "git" "status" "--porcelain") "")
+(defn changed-files
+  "Paths this branch touches relative to `base`, plus anything currently dirty.
+
+   Every git call is checked. An unresolvable base used to fall through to an
+   empty set: no path-based gates were selected, the `:always` gates ran, and the
+   run exited 0 — so a typo'd `--base` reported success having verified nothing
+   about the branch. Reporting green without looking is the one answer this tool
+   must never give by accident, so a git failure here exits 2 (setup) instead.
+
+   An *empty* diff is still fine — `sh-out` returns \"\" on success and nil only
+   on a nonzero exit, so a branch with no changes is not confused with a broken
+   command."
+  [base]
+  (when-not (sh-out "git" "rev-parse" "--verify" "--quiet" (str base "^{commit}"))
+    (die! (str "cannot resolve base ref: " base)
+          "\n  Pass a ref that exists with --base, or fetch it first."))
+  (let [mb (or (sh-out "git" "merge-base" base "HEAD")
+               (die! (str "no merge base between " base " and HEAD")
+                     "\n  Unrelated histories? Try --all to run every gate."))
+        tracked (or (sh-out "git" "diff" "--name-only" mb "HEAD")
+                    (die! (str "git diff failed against " mb)))
+        dirty (or (sh-out "git" "status" "--porcelain")
+                  (die! "git status failed"))
         dirty-paths (->> (str/split-lines dirty)
                          (remove str/blank?)
                          (map #(str/trim (subs % 2))))]
@@ -227,21 +265,99 @@
 ;; Audit — do the mirrored path filters still match the workflows?
 ;; ---------------------------------------------------------------------------
 
-(defn audit [root]
-  (println "Checking each gate's workflow file still exists and its job is present.\n")
-  (doseq [g gates]
-    (let [f (io/file root ".github/workflows" (:workflow g))]
-      (cond
-        (not (.exists f))
-        (println (format "  MISSING  %-20s %s (workflow gone — gate is stale)" (:name g) (:workflow g)))
+(defn- workflow-pr-paths
+  "The `pull_request.paths` filter a workflow declares, as a set. `nil` means the
+   workflow has no path filter and therefore runs on every PR."
+  [f]
+  (let [on (or (get (yaml/parse-string (slurp f)) :on)
+               (get (yaml/parse-string (slurp f)) true))
+        pr (:pull_request on)]
+    (when (and (map? pr) (:paths pr))
+      (set (map str (:paths pr))))))
 
-        (not (str/includes? (slurp f) (str (:job g) ":")))
-        (println (format "  DRIFT    %-20s job '%s' not found in %s" (:name g) (:job g) (:workflow g)))
+(defn- literal-prefix
+  "The part of a path filter before any glob metacharacter, with trailing
+   separators and dots trimmed.
 
-        :else
-        (println (format "  ok       %-20s %s :: %s" (:name g) (:workflow g) (:job g))))))
-  (println "\nThis only checks the workflow and job still exist. It does NOT verify the")
-  (println "commands still match — read the workflow when a gate starts disagreeing with CI."))
+   `packages/rheos/**` -> `packages/rheos`
+   `.github/workflows/*.yml` -> `.github/workflows`
+   `kanban/openhax.kanban.*` -> `kanban/openhax.kanban`
+   `openhax.kanban.edn` -> `openhax.kanban.edn`  (no glob, so it stays literal)"
+  [pattern]
+  (-> (str pattern)
+      (str/replace #"^\./" "")
+      (str/split #"[*?\[]" 2)
+      first
+      (str/replace #"[/.]+$" "")))
+
+(defn- covered?
+  "Does some entry in `prefixes` select everything `p` selects? Prefix-vs-prefix,
+   since a gate entry is a directory prefix and a workflow entry is a glob."
+  [prefixes p]
+  (boolean (some #(or (= % p)
+                      (str/starts-with? p (str % "/"))
+                      (str/starts-with? % (str p "/")))
+                 prefixes)))
+
+(defn- path-drift
+  "Where a gate's `:paths` and its workflow's `pull_request.paths` disagree.
+
+   Mirrored selection is the whole premise: a branch should run locally what CI
+   would have run for it. If CI watches a path the gate does not, the gate
+   silently stops covering those changes, and nothing else here would notice."
+  [gate f]
+  (when-not (= :always (:paths gate))
+    (when-let [wf (workflow-pr-paths f)]
+      (let [gate-prefixes (map literal-prefix (:paths gate))
+            wf-prefixes (map literal-prefix wf)
+            missing (sort (distinct (remove #(covered? gate-prefixes %) wf-prefixes)))
+            extra (sort (distinct (remove #(covered? wf-prefixes %) gate-prefixes)))]
+        (when (or (seq missing) (seq extra))
+          {:missing missing :extra extra})))))
+
+(defn audit
+  "Check each gate still matches the workflow it mirrors, and exit nonzero if not.
+
+   Reporting drift and exiting 0 would make this safe to ignore in a script,
+   which defeats the point of having it."
+  [root]
+  (println "Auditing each gate against the workflow it mirrors.\n")
+  (let [problems
+        (doall
+         (for [g gates]
+           (let [f (io/file root ".github/workflows" (:workflow g))]
+             (cond
+               (not (.exists f))
+               (do (println (format "  MISSING  %-20s %s (workflow gone — gate is stale)"
+                                    (:name g) (:workflow g)))
+                   :missing)
+
+               (not (str/includes? (slurp f) (str (:job g) ":")))
+               (do (println (format "  DRIFT    %-20s job '%s' not found in %s"
+                                    (:name g) (:job g) (:workflow g)))
+                   :job)
+
+               :else
+               (if-let [{:keys [missing extra]} (path-drift g f)]
+                 (do (println (format "  PATHS    %-20s %s" (:name g) (:workflow g)))
+                     (when (seq missing)
+                       (println (format "             in the workflow, not in the gate: %s"
+                                        (str/join ", " missing))))
+                     (when (seq extra)
+                       (println (format "             in the gate, not in the workflow: %s"
+                                        (str/join ", " extra))))
+                     :paths)
+                 (do (println (format "  ok       %-20s %s :: %s"
+                                      (:name g) (:workflow g) (:job g)))
+                     nil))))))
+        bad (remove nil? problems)]
+    (println)
+    (println "Checked: workflow exists, job name present, and pull_request.paths match.")
+    (println "NOT checked: that the commands still match — read the workflow when a")
+    (println "gate starts disagreeing with CI.")
+    (when (seq bad)
+      (println (format "\n%d gate(s) drifted from their workflow." (count bad))))
+    (System/exit (if (seq bad) 1 0))))
 
 ;; ---------------------------------------------------------------------------
 ;; Main

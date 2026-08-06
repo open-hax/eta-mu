@@ -38,7 +38,7 @@ The config is `{}`, but the implementation falls back to the ambient
 `OPENAI_API_KEY`. On a workspace where that is exported, the guard never fires,
 `fetch` is called, and the test fails with:
 
-```
+```text
 FAIL in (stream-chat-no-provider-configured-test)
 expected: (re-find #"No API key configured" (:error-message final))
   actual: (not (re-find #"No API key configured" "fetch should not be called"))

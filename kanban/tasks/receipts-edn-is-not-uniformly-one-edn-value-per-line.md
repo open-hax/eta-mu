@@ -23,7 +23,7 @@ exception.
 
 Validating the ledger during a merge on 2026-08-06:
 
-```
+```text
 receipts.edn lines: 155 unparseable: 6
   [102 Invalid number: 2026-07-12T053333Z]
   [103 Invalid token: branch:]
@@ -32,7 +32,7 @@ receipts.edn lines: 155 unparseable: 6
 
 Lines 102–107 are a single human-readable fork-tax block, not EDN maps:
 
-```
+```text
 [2026-07-12T053333Z] :fork-tax
   branch: device/yoga
   tag: Π/2026-07-12T053333Z/device-yoga
