@@ -1,13 +1,13 @@
 ---
-uuid: "git-delivered-cards-write-false-invalid-drift-verdicts-into-the-ledger"
-title: "Git-delivered cards write false invalid drift verdicts into the ledger"
-status: "incoming"
-type: "task"
-priority: "P1"
-points: "3"
-labels: "rheos, ledger, watcher, drift"
 category: "tasks"
-write-id: "1786050712783-0.uel1v4qc59nbxz7tf5"
+labels: "rheos, ledger, watcher, drift"
+type: "task"
+write-id: "1786051309213-0.qcm5o5week5te9cll5"
+points: "3"
+title: "Git-delivered cards write false invalid drift verdicts into the ledger"
+priority: "P1"
+status: "incoming"
+uuid: "git-delivered-cards-write-false-invalid-drift-verdicts-into-the-ledger"
 created_at: "2026-08-06T21:11:52.783Z"
 ---
 
@@ -100,3 +100,22 @@ Ten false positives is already enough to teach people to ignore the signal.
 Raised by CodeRabbit on PR #170 against `kanban/.events/ledger.edn`. The bot's
 observation was right and its causal story was wrong; the correction is
 recorded above so the reproduction starts from the real trigger.
+
+---
+Live confirmation, minutes after this card was written.
+
+Merging the last four PRs and checking out `main` produced **78 ledger events with no human action at all** — 39 `kanban.drift-detected` plus 39 `kanban.drift-protocol-rerun`, of which **4 carry `invalid`**. Nobody edited a card; git moved files and the watcher fired.
+
+```text
+39  kanban.drift-detected
+39  kanban.drift-protocol-rerun
+ 4  of those verdicts: invalid
+```
+
+This settles two things the card left open:
+
+1. **The trigger is confirmed as git file movement**, not card creation — the same session that produced them created exactly one card through the CLI.
+2. **The volume is worse than the 10-in-339 sample suggested.** A single merge session added 78 events, so the ratio is a function of how much branch activity happens, not a fixed background rate. Under the ledger-authoritative design this is the dominant source of ledger growth.
+
+Also worth noting for whoever picks this up: the watcher is the board server running as a systemd user unit on 8791, so this fires whenever that service is up — which is to say, normally, and invisibly. Reproducing it needs the service running, not just a test harness.
+---
