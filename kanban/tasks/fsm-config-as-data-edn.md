@@ -1,14 +1,15 @@
 ---
-uuid: "fsm-config-as-data-edn"
-title: "FSM: absorb .kanban config into .eta-mu edn"
-status: "rejected"
-priority: "P1"
-labels: ["tasks", "cljs", "fsm", "kanban", "reconciliation", "config-as-data"]
-created_at: "2026-06-17T00:00:00Z"
-source: "kanban/epics/fsm-engine.md"
-points: 5
 category: "tasks"
+labels: ["tasks", "cljs", "fsm", "kanban", "reconciliation", "config-as-data"]
 parent: "fsm-engine"
+write-id: "1785355407594-0.riw8d8ba1rqhjcu7hwo"
+points: "5"
+source: "kanban/epics/fsm-engine.md"
+title: "FSM: absorb .kanban config into .eta-mu edn"
+priority: "P1"
+status: "rejected"
+uuid: "fsm-config-as-data-edn"
+created_at: "2026-06-17T00:00:00Z"
 ---
 
 # FSM: absorb .kanban config into .eta-mu edn
@@ -26,3 +27,8 @@ mutable surface.
 - [ ] Migration note + back-compat path for existing boards.
 - [ ] Unit tests: config load and FSM attach.
 - [ ] Zero clj-kondo warnings; Rheos tests pass.
+
+---
+Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](../epics/workflow-dsl-kanban-reference.md). Preserve portable, versioned workflow resources and trigger/action contracts; split Katamorph declarations from Rheos runtime bindings instead of absorbing all board and runtime concerns into one universal config.
+
+---

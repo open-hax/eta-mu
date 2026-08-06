@@ -1,13 +1,14 @@
 ---
-uuid: "fsm-engine"
-title: "Config-Driven FSM Engine"
-status: "rejected"
-priority: "P1"
-labels: ["epics", "cljs", "fsm", "kanban", "pluggable-checks"]
-created_at: "2026-06-08T00:00:00Z"
-source: "planning-session:2026-06-08"
-points: 13
 category: "epics"
+labels: ["epics", "cljs", "fsm", "kanban", "pluggable-checks"]
+write-id: "1785355407177-0.rtuq4ive3uz7s6dbgl"
+points: "13"
+source: "planning-session:2026-06-08"
+title: "Config-Driven FSM Engine"
+priority: "P1"
+status: "rejected"
+uuid: "fsm-engine"
+created_at: "2026-06-08T00:00:00Z"
 ---
 
 # Config-Driven FSM Engine
@@ -157,4 +158,7 @@ Pluggable checks:
 
 ---
 Bounced back to breakdown: epic is marked todo but enforcement is already live; remaining scope (pluggable checks markdown-score/agent-review/code-review, js/agent/shell check types, harness auto-verify) is too large and undefined for a single card. Splitting into incoming subtasks. --tasks-dir /home/err/devel/orgs/open-hax/eta-mu/kanban
+
+Rescope record 2026-07-29. Successor: [Workflow DSL — Katamorph language, Rheos interpreter, Kanban reference workflow](workflow-dsl-kanban-reference.md). This card remains rejected in its stated form, not as a conceptual rejection of FSMs. Its reconciliation, resource-data, ledger-fold, and per-field workflow invariants move to the successor; Kanban remains an FSM and becomes the reference workflow.
+
 ---

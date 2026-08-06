@@ -83,16 +83,44 @@ Always use `^:async` metadata (ClojureScript ≥ 1.12.145). Never use
 - For eta-mu extension changes, run `pnpm -C packages/extensions test` and resolve all failures before reporting completion.
 - If a full suite cannot be run, state that the task is not complete and record the exact blocker instead of claiming done.
 
+## Session and Turn Discipline
+
+The ledgers are the project's memory across sessions. Reading them is not optional
+context-gathering, and writing them is not closeout — both are part of the turn.
+
+- **Open every session by reading the ledgers.** `.ημ/session-mycology/ledger.md` and the
+  spores under `.ημ/session-mycology/spores/`, plus the Receipt River at `receipts.edn`.
+  Recover recorded context before asking the user to restate known intent.
+- **Commit at the end of every turn.** Every turn, not every task. A turn that ends with
+  uncommitted work has not ended — it has been abandoned mid-write.
+- **Run `session-mycology` at the end of every turn.** Score the friction, log the turn,
+  and incubate at most one spore when the friction was real and reusable.
+- **Work in a git worktree.** Implementation happens on a branch in its own worktree, not
+  in the primary tree. Push before removing the worktree, and remove it once its branch is
+  pushed — never leave worktrees registered under a session temp path that will be
+  garbage-collected.
+- **Leave worktrees clean and stash state explicit.** No dangling files or dirty primary
+  working tree. A reviewed stash may remain intentionally preserved; do not remove it
+  unless every contained change is proven landed elsewhere and deletion is explicitly
+  authorized by the owner. Never destroy unfamiliar stash state merely to satisfy a
+  cleanliness rule.
+- **You own the ledger churn you cause.** Any `eta-mu kanban` or Rheos CLI invocation
+  rewrites `kanban/.events/ledger.edn`. That diff is yours to commit on the branch whose
+  work produced it.
+- **Delegate scoped implementation to subagents.** Keep the main context on intent and
+  synthesis; push file-reading, surveys, and scoped edits outward. Use the smallest model
+  that can do the job — Sonnet for coding subagents, Haiku for exploration and research.
+
 ## Board Operations
 
 Board state is the single source of truth for work. Treat it as a finite-state machine whose law is implemented in `packages/rheos/src/rheos/backend/law/fsm.cljs` and rendered for humans in `PROCESS.md`.
 
 - **Work from a card.** Never work off-board. Anchor every implementation slice on a kanban task and record the scoped plan on the card before moving to implementation.
-- **Move cards with the Rheos CLI.** Run commands from the **repo root** so the board resolves correctly:
-  - `eta-mu kanban list` — current board.
-  - `eta-mu kanban count` — column counts.
-  - `eta-mu kanban comment <uuid> "note"` — append provenance to a card.
-  - `eta-mu kanban frontmatter <uuid> status <new-status>` — lawful status change.
+- **Move cards with the Rheos CLI.** Run commands from the **repo root** so the board resolves correctly. Use **`eta-mu-beta`**, not `eta-mu` — the bare name is a volta shim to the *published* build, which carries a different command surface at the same version number. See `DEVELOPMENT.md` § *Running the CLI*. Rebuild first: `pnpm -C packages/eta-mu build`.
+  - `eta-mu-beta kanban list` — current board.
+  - `eta-mu-beta kanban count` — column counts.
+  - `eta-mu-beta kanban comment <uuid> "note"` — append provenance to a card.
+  - `eta-mu-beta kanban frontmatter <uuid> status <new-status>` — lawful status change.
   - `node packages/rheos/dist/cli.cjs status-update <uuid> --to <status>` — FSM-enforced move (also runs build-gate when required).
 - **No direct frontmatter edits.** The file watcher treats hand-edited frontmatter as drift and stamps a `drift: true` indicator on the card. Use the CLI so the ledger records a `write-id` and the provenance is auditable.
 - **Walk lawful hops.** There are no shortcut edges. To move a card multiple columns forward, step through each lawful transition in order. The direct `in_progress → review` edge exists only when the build-gate passes.

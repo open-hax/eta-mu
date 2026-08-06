@@ -124,3 +124,30 @@
   spore: 20260726-010000-review-thread-closeout-verification.md
   receipt-refs: pr-142-review-should-fix-batch
   note: 14 of 15 "open" threads were already fixed in code — the merge was blocked purely by unresolved conversations, not by work. Verify each finding against the branch tip BEFORE planning fixes; the worktree was 6 commits behind, so agents had to read blobs via `git show origin/<branch>:<path>`. Two gates the bots' own fix commits left red (a test stubbing p/process with a delay that cannot satisfy 3-arity deref; 2 promise-chain kondo warnings) were invisible because neither `pnpm lint` nor sol's lint runs in CI — a review-fix commit's evidence test can itself be failing.
+- ts: 2026-07-30T22:32:19.953475303Z
+  session: /home/err/spaces/eta-mu/.claude/worktrees/agent-operating-standard
+  task: Recover stashed board history, prune dead worktrees, record the agent operating standard
+  p-efficiency: 0.72
+  p-friction: 0.6
+  p-skill-candidate: 0.85
+  spore: none
+  receipt-refs: none
+  note: A 'clean' working tree is not evidence the work is safe: git status showed nothing while a GitKraken auto-stash held the only copy of an epic and ten rescope records. Enumerate git stash list BEFORE concluding a repo is clean, and prove landed-ness by comparing blob hashes (git rev-parse stash@{0}:<path>) against main and every open PR branch rather than reading diffs. The ledger union was lossless only because main's log was a literal prefix of the stashed one — verify prefix-extension by byte comparison, do not assume it.
+- ts: 2026-07-30T22:44:57.182830641Z
+  session: /home/err/spaces/eta-mu/.claude/worktrees/agent-operating-standard
+  task: Verify packages/eta-mu has the receipts subcommands; retract findings made against the published binary
+  p-efficiency: 0.45
+  p-friction: 0.8
+  p-skill-candidate: 0.95
+  spore: none
+  receipt-refs: none
+  note: Produced a page of confident, plausible, false CLI findings because 'eta-mu' on PATH was the published npm build, not the workspace — same version number, different command surface. The binary did not error, it answered incorrectly. Before treating any CLI output as evidence: resolve the binary (readlink -f $(which x)), compare it to the source command registry, and build the tree. Also: a build inside a worktree with no node_modules exits 0 while emitting 163 undeclared-var warnings and producing a broken artifact — exit code 0 is not proof of a good build.
+- ts: 2026-07-30T22:51:28.016759133Z
+  session: /home/err/spaces/eta-mu/.claude/worktrees/agent-operating-standard
+  task: Split the CLI identity: eta-mu stays published, eta-mu-beta links to the working tree
+  p-efficiency: 0.8
+  p-friction: 0.45
+  p-skill-candidate: 0.8
+  spore: none
+  receipt-refs: none
+  note: pnpm link --global lost the PATH race to volta, so the fix was a second binary name rather than a PATH fight. Found the owner's existing global eta-mu-beta symlink had been dangling since the workspace moved out of ~/devel/orgs — the second absolute-path integration broken by that move after the Rheos systemd unit. AGENTS.md was itself telling agents to run bare 'eta-mu kanban', i.e. the published build; corrected to eta-mu-beta.
