@@ -248,7 +248,6 @@
              ;; those are, and the check silently widens to all of them.
              :gate/emitting (emitting? wf)}
       (:gate/needs-repos g) (assoc :gate/needs-repos (vec (:gate/needs-repos g)))
-      true (merge)
       true (assoc :gate/steps
                   (vec (keep (fn [s]
                               (when (:step/gate s)
@@ -257,15 +256,6 @@
                                   (:gate/expect s) (assoc :gate/expect (:gate/expect s))
                                   (:gate/no-warning s) (assoc :gate/no-warning true))))
                              (:job/steps j)))))))
-
-(defn emitting?
-  "Does this resource own its workflow file?
-
-   A resource may declare a gate while its YAML stays hand-written — the
-   half-step that lets the gate mirror die before the riskier YAML conversion
-   is attempted. `:workflow/emit false` says so explicitly."
-  [wf]
-  (not (false? (:workflow/emit wf))))
 
 (defn ->local-gates [workflows]
   (vec (for [wf workflows
