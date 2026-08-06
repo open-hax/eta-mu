@@ -3,7 +3,7 @@ category: "tasks"
 labels: "rheos, cli, lifecycle, exit-codes, json"
 parent: "rheos-cli-card-lifecycle-authority"
 type: "task"
-write-id: "1785439733436-0.yroi9liunk885tiruc"
+write-id: "1786026255003-0.cg9ltlces0cnb46cqu1"
 points: "5"
 title: "Rheos CLI lifecycle verb completeness and machine-usable exit contract"
 priority: "P0"
@@ -93,4 +93,8 @@ optional `--json`.
 Implemented. Exit contract: 0 ok, 1 usage, 2 not found, 3 refused by policy, 4 internal; main wraps every path so no promise rejection escapes, diagnostics are a single 'rheos: <msg>' line on stderr, stack traces only under RHEOS_DEBUG=1. Failures are classified with ex-info :kind at the throw site in agent_tools and task_create rather than mapped from message strings. Verified: unknown verb 1, unknown task 2, missing --title 1, unknown project 2, bad parent 2, malformed --set 1, illegal FSM move 3, duplicate uuid 3, non-initial create status 3. New verbs: frontmatter <uuid> --set k=v (repeatable, routed through task-edit/update-frontmatter! and enforcing law/frontmatter mutable-keys; --set status=... refused and redirected to move) and projects. New kanban_update_frontmatter MCP tool. Flag parser fixed: boolean flags (--json/--verbose/--force/--force-status/--help) no longer swallow the following flag, and repeated flags collect into a vector; --verbose on board list actually works now (it read a keyword key against a string-keyed map before). --json added to move/compose/events/drift/create; tool-backed verbs keep JSON-by-default because the eta-mu bridge parses read-board stdout. eta-mu bridge: create and projects pass through, and legacy 'kanban frontmatter <uuid> <key> <value>' now translates to Rheos instead of throwing 'edit the markdown directly'. NOT done: --json is not on every verb (board list, read-task, search-tasks, read-board, status-update, add-comment, frontmatter already emit JSON or plain lists); no delete verb (documented as move --to rejected/archived).
 
 Build gate verified green 2026-07-30 at this tree state: pnpm build exit 0, pnpm lint exit 0 (11/11 clj-kondo, Biome, tsc, extension paths, kanban markdown), pnpm test exit 0 (11/11 suites: contract-guard, eta-mu, rheos, sol, terminal-ui, turn-processor, extensions, protocols, chat-ui, axxium, kanban-legacy). rheos-cli-create-card was promoted through the FSM's own in_progress->review build gate, which shelled out to all three commands and allowed the transition (verified in the ledger). This card was moved testing->review citing that run rather than re-running an identical monorepo gate three times; same tree, same commit, same evidence. Say so if you want each card gated independently.
+
+Implemented on PR #168 (`feat/rheos-cli-exit-contract`) — https://github.com/open-hax/eta-mu/pull/168
+
+Stack position 2 of 3; base is #167, not main. Currently CONFLICTING against its base and must be rebased once #167 lands.
 ---
