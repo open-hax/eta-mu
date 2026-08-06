@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+> **Roadmap:** [`ROADMAP.md`](ROADMAP.md) is the constellation hub — the seam,
+> the ownership table, the sequencing rule, and the drift ledger. Every sibling
+> repo carries a satellite `ROADMAP.md` summarising its own slice.
+
 Repo-specific bearings for Claude Code sessions in `eta-mu`.
 
 ## Quick orientation
