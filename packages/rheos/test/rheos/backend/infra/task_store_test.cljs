@@ -94,3 +94,43 @@
             "a project map carrying the same tasks-dir")
         (finally
           (await (.rm fsp dir #js {:recursive true :force true})))))))
+
+(deftest ^:async projection-walk-refuses-a-symlink-escaping-the-task-root
+  ;; `is-file?`/`is-directory?` used `fs.stat`, which follows symlinks, and the
+  ;; recursive walk applied no containment of its own — containment was only
+  ;; enforced on the *configured* roots. So a symlink planted inside a projected
+  ;; root pulled cards in from anywhere the process could read.
+  (let [base (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-symlink-")))
+        root (path/join base "board")
+        cards (path/join root "tasks")
+        outside (path/join base "outside")]
+    (try
+      (await (.mkdir fsp cards #js {:recursive true}))
+      (await (.mkdir fsp outside #js {:recursive true}))
+      (await (write-card! cards "inside" "Inside"))
+      (await (write-card! outside "escaped" "Escaped"))
+      (await (.symlink fsp outside (path/join cards "link") "dir"))
+      (let [uuids (set (map :uuid (await (task-store/load-tasks
+                                          {:tasks-dir root
+                                           :card-projection {:paths [cards]}}))))]
+        (is (contains? uuids "inside"))
+        (is (not (contains? uuids "escaped"))
+            "a symlink inside a projected root must not pull in cards from outside the task root"))
+      (finally
+        (await (.rm fsp base #js {:recursive true :force true}))))))
+
+(deftest ^:async projection-walk-survives-a-symlink-cycle
+  ;; A directory symlink pointing at its own ancestor makes the recursive walk
+  ;; loop until the process dies. Skipping links removes the cycle entirely.
+  (let [base (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-cycle-")))
+        cards (path/join base "tasks")]
+    (try
+      (await (.mkdir fsp cards #js {:recursive true}))
+      (await (write-card! cards "only" "Only"))
+      (await (.symlink fsp cards (path/join cards "loop") "dir"))
+      (let [uuids (set (map :uuid (await (task-store/load-tasks
+                                          {:tasks-dir base
+                                           :card-projection {:paths [cards]}}))))]
+        (is (= #{"only"} uuids) "a cyclic directory symlink must not hang or duplicate cards"))
+      (finally
+        (await (.rm fsp base #js {:recursive true :force true}))))))

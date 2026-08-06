@@ -120,9 +120,13 @@
   (let [root (path/resolve "/board")
         cards (path/join root "tasks")
         guides (path/join root "docs")]
-    (testing "no projection means the whole task root is the board"
-      (is (watcher/projected? nil (path/join guides "a-guide.md")))
-      (is (watcher/projected? [] (path/join guides "a-guide.md"))))
+    (testing "no projection at all means the whole task root is the board"
+      (is (watcher/projected? nil (path/join guides "a-guide.md"))))
+    (testing "an explicit empty projection scans nothing, matching the loader"
+      ;; `{:paths []}` is a board that projects no cards. The loader gives itself
+      ;; no roots to walk in that case, so the watcher must not walk everything.
+      (is (not (watcher/projected? [] (path/join guides "a-guide.md"))))
+      (is (not (watcher/projected? [] (path/join cards "card.md")))))
     (testing "a file inside a projected root is a card file"
       (is (watcher/projected? [cards] (path/join cards "card.md")))
       (is (watcher/projected? [cards] (path/join cards "nested" "card.md"))))

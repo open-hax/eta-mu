@@ -91,20 +91,66 @@
       (.isFile stat))
     (catch :default _ false)))
 
-(defn- ^:async collect-markdown-files [entry-path]
+(defn- ^:async entry-kind
+  "`:file`, `:dir`, `:link`, or nil — read with `lstat`, so a symlink reports as
+   a link rather than as whatever it points at."
+  [full-path]
+  (try
+    (let [st (await (.lstat fsp full-path))]
+      (cond
+        (.isSymbolicLink st) :link
+        (.isDirectory st) :dir
+        (.isFile st) :file
+        :else nil))
+    (catch :default _ nil)))
+
+(declare collect-entry)
+
+(defn- ^:async collect-below
+  "Markdown files below `dir`, one level at a time."
+  [dir]
+  (try
+    (let [names (await (.readdir fsp dir))
+          nested (await
+                  (js/Promise.all
+                   (clj->js
+                    (mapv #(collect-entry (path/join dir %)) names))))]
+      (vec (apply concat nested)))
+    (catch :default err
+      (js/console.error "collect error:" dir (.-message err))
+      [])))
+
+(defn- ^:async collect-entry
+  "One discovered entry, classified with `lstat`.
+
+   Symlinks are **skipped, not followed**. The walk enforces no containment of
+   its own — that check happens in `shape.config` against the *configured*
+   projection roots — so a link planted underneath a projected root would
+   otherwise pull cards in from anywhere the process can read, and a link back
+   to an ancestor would recurse until the process died. Neither is hypothetical:
+   `stat` follows links, and this walk used it."
+  [entry-path]
+  (let [kind (await (entry-kind entry-path))]
+    (case kind
+      :file (if (str/ends-with? entry-path ".md") [entry-path] [])
+      :dir (await (collect-below entry-path))
+      [])))
+
+(defn- ^:async collect-markdown-files
+  "Markdown files at or under a configured projection root.
+
+   The root itself is resolved with `stat`, so it may legitimately be a symlink —
+   `shape.config` has already resolved it and checked it stays inside the task
+   root. Everything discovered *below* it goes through [[collect-entry]], which
+   does not follow links."
+  [entry-path]
   (try
     (cond
       (await (is-file? entry-path))
       (if (str/ends-with? entry-path ".md") [entry-path] [])
 
       (await (is-directory? entry-path))
-      (let [names (await (.readdir fsp entry-path))
-            nested (await
-                    (js/Promise.all
-                     (clj->js
-                      (mapv #(collect-markdown-files (path/join entry-path %))
-                            names))))]
-        (vec (apply concat nested)))
+      (await (collect-below entry-path))
 
       :else [])
     (catch :default err

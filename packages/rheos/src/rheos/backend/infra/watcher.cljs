@@ -13,8 +13,16 @@
 (defn projected?
   "Is `file-path` a file the board would actually scan?
 
-   `projection-paths` is a project's resolved `:card-projection` roots; empty or
-   absent means the whole task root is the board, which is the default.
+   `projection-paths` is a project's resolved `:card-projection` roots.
+
+   `nil` — no `:card-projection` configured — means the whole task root is the
+   board, which is the legacy default. An **explicit empty** list is not the
+   same thing: it means the board projects nothing, and it must scan nothing.
+   The loader already draws that distinction (`{:paths []}` gives it no roots to
+   walk), and the call site passes `(get-in project [:card-projection :paths])`,
+   so absent and empty arrive here distinguishable. Collapsing them with
+   `empty?` made the watcher scan the entire task root for a board that had
+   asked for none of it.
 
    Without this the watcher and the loader disagree: the loader honours the
    projection, the watcher walks the entire task root, and any markdown holding
@@ -22,7 +30,7 @@
    quotes card frontmatter as an example then appends drift events to the
    authoritative ledger for a card that is not on the board."
   [projection-paths file-path]
-  (or (empty? projection-paths)
+  (or (nil? projection-paths)
       (let [resolved (path/resolve file-path)]
         (boolean
          (some (fn [root]

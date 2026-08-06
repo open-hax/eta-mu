@@ -55,4 +55,5 @@ Rejected as active store, retained as an optional attribution index: Git notes. 
 Spike seam: rheos.backend.infra.ledger/get-ledger is the entire storage seam today (it joins <board-dir>/.events). Redirect that path to a Git-directory-derived location, then exercise branch switch, second worktree, rebase, merge, detached HEAD, and clone.
 
 Full review recorded in docs/notes/design/rheos-ledger-authority-and-branch-projections.md.
+
 ---

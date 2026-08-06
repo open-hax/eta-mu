@@ -12,6 +12,10 @@ on:
       - "packages/chat-ui/**"
       - "openhax.kanban.edn"
       - "openhax.kanban.json"
+      # The per-board config. It carries each project's FSM and build-gate
+      # commands, so a change here alters what Rheos enforces without touching
+      # packages/rheos/** — and used to skip this workflow entirely.
+      - "kanban/openhax.kanban.*"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -23,6 +27,10 @@ on:
       - "packages/chat-ui/**"
       - "openhax.kanban.edn"
       - "openhax.kanban.json"
+      # The per-board config. It carries each project's FSM and build-gate
+      # commands, so a change here alters what Rheos enforces without touching
+      # packages/rheos/** — and used to skip this workflow entirely.
+      - "kanban/openhax.kanban.*"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"

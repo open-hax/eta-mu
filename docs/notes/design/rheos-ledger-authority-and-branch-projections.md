@@ -139,6 +139,23 @@ fold(pending events owned by the active worktree/worldline)
 Changing branches therefore changes the visible fold without checking out or
 merging a mutable canonical ledger file.
 
+#### Rollover when the checked-out branch changes
+
+That statement holds for the committed half only. The pending half is scoped to
+the **worktree**, not to the branch — so switching a worktree from branch A to
+branch B leaves pending events authored against A still visible, now folded on
+top of B. The fold would silently mix them.
+
+Pending events therefore carry the `:base-commit` they were authored against,
+and a pending event is visible only when its `:base-commit` is reachable from
+the current `HEAD`. A branch switch does not delete anything; it simply stops
+matching, and the events become visible again if the original branch is checked
+out. Nothing is lost, and nothing leaks across a switch.
+
+This must be tested directly: one worktree, cards moved on branch A, `checkout`
+B, and an assertion that the A-authored pending events are absent from B's fold
+and present again after checking A back out.
+
 ### Merge and divergence
 
 A Git merge makes both ancestor histories visible. If their accepted task events
@@ -271,15 +288,39 @@ identity scheme:
 
 - `git rev-parse --git-common-dir` is shared by every worktree of a repository. It
   is the natural home for committed event segments and for repository identity.
-- `git rev-parse --git-dir` resolves per worktree — a linked worktree gets its own
-  `.git/worktrees/<name>/` with its own `HEAD`, `index`, and `logs`. It is the
+- `git rev-parse --git-dir` resolves per worktree — a *linked* worktree gets its
+  own `.git/worktrees/<name>/` with its own `HEAD`, `index`, and `logs`. It is the
   natural home for pending events. Worktree isolation then holds structurally
   rather than by an ID field an implementation must remember to filter on, and
   `git worktree remove` reclaims pending state as a side effect.
 
-Nothing under the Git directory is rewritten by `git checkout`, so the primary
-acceptance criterion — the active store is not rewritten merely by switching
-branches — holds by construction rather than by convention. Durable segments live
+**The main worktree is the exception, and it breaks the structural claim.**
+`--git-dir` is per-worktree only for linked worktrees; in the main worktree it
+returns the common directory. Measured in this repository:
+
+```text
+main worktree     --git-dir        /…/eta-mu/.git
+                  --git-common-dir /…/eta-mu/.git          <- identical
+linked worktree   --git-dir        /…/eta-mu/.git/worktrees/edn-config
+                  --git-common-dir /…/eta-mu/.git
+```
+
+So a naive `--git-dir` placement puts the main worktree's pending events in the
+shared common directory, where they sit beside repository-wide state and are
+visible to every worktree — the precise collision the scoping was meant to rule
+out. The main worktree needs an explicit pending path of its own, e.g.
+`$GIT_COMMON_DIR/eta-mu/pending/main/`, chosen by comparing `--git-dir` against
+`--git-common-dir` rather than by assuming they differ. Coverage must include
+the main worktree and a linked worktree together, since testing only linked
+worktrees would never expose this.
+
+`git checkout` does not rewrite the **application-managed** paths this design
+uses — `refs/eta-mu/events/*` and the per-worktree pending directories — so the
+primary acceptance criterion, that the active store is not rewritten merely by
+switching branches, holds for them by construction. It does rewrite ordinary
+Git-directory state such as `HEAD` and the index; the guarantee is about the
+paths this design owns, not about the Git directory as a whole, and the tests
+should assert against those paths directly. Durable segments live
 under `refs/eta-mu/events/*`; because those are real refs, their objects survive
 `git gc`, and clone reconstruction is an explicit fetch refspec. This repository
 already carries precedent for tool state inside the Git directory.

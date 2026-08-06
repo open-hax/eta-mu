@@ -77,13 +77,35 @@
     fsm-config))
 
 (defn- real-path
-  "`p` with symlinks resolved, or `p` unchanged when it is not on disk.
+  "`p` with symlinks resolved — resolving as much of it as exists.
 
-   A path that does not exist cannot be a symlink, and a projection directory
-   is allowed to be created after the config names it — so a missing path is
-   not an error here, it just has nothing to resolve."
+   A projection directory is allowed to be created after the config names it,
+   so a missing leaf is not an error. But returning the *lexical* path in that
+   case is wrong, and was a hole: only the leaf is unknown, while its ancestors
+   are on disk and may well be symlinks. Given `tasks/linked/new-cards` where
+   `tasks/linked` points outside the task root, the lexical fallback answered
+   with a path that looked contained, so the containment check passed and every
+   card later written there landed outside the root.
+
+   So: walk up to the nearest ancestor that does exist, resolve that, and
+   re-attach the missing suffix. Only a genuinely-absent path is tolerated —
+   anything else (a permission error, say) is rethrown rather than silently
+   downgraded to \"not on disk\"."
   [p]
-  (try (.realpathSync fs p) (catch :default _ p)))
+  (loop [current (path/resolve p) suffix []]
+    (let [resolved (try (.realpathSync fs current)
+                        (catch :default e
+                          (when-not (= "ENOENT" (.-code e)) (throw e))
+                          nil))]
+      (cond
+        resolved (apply path/join resolved suffix)
+
+        ;; Reached the filesystem root without finding anything that exists.
+        ;; Nothing to resolve; the lexical path is all there is.
+        (= current (path/dirname current)) (path/resolve p)
+
+        :else (recur (path/dirname current)
+                     (into [(path/basename current)] suffix))))))
 
 (defn- within-root?
   "Is `candidate` inside `root`, after both have their symlinks resolved?
@@ -116,6 +138,17 @@
       (assoc projection
              :paths
              (mapv (fn [relative-path]
+                     ;; Refuse absolute paths outright. `path/resolve` ignores
+                     ;; `tasks-dir` when the second argument is absolute, so one
+                     ;; that happens to sit inside the root passes containment
+                     ;; and yields a config that only works on the machine it
+                     ;; was written on. Containment is a safety check; this is a
+                     ;; portability one, and the two are not the same.
+                     (when (path/isAbsolute (str relative-path))
+                       (throw (ex-info
+                               (str "card projection path must be relative to the task root: "
+                                    relative-path)
+                               {:tasks-dir tasks-dir :path relative-path})))
                      (let [resolved (path/resolve tasks-dir (str relative-path))]
                        (when-not (within-root? tasks-dir resolved)
                          (throw (ex-info

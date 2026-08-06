@@ -1,5 +1,8 @@
 (ns rheos.backend.infra.config-test
-  (:require ["node:path" :as path]
+  (:require ["node:fs" :as fs]
+            ["node:fs/promises" :as fsp]
+            ["node:os" :as os]
+            ["node:path" :as path]
             [cljs.test :refer [deftest is testing]]
             [rheos.backend.infra.config :as config]))
 
@@ -60,3 +63,49 @@
                            :card-projection {:paths ["../docs"]}}}]
       (is (thrown? js/Error
                    (config/resolve-configured-projects loaded nil))))))
+
+(deftest ^:async rejects-a-nonexistent-path-below-an-escaping-symlink
+  ;; `real-path` fell back to the lexical candidate whenever the path did not
+  ;; exist yet, so containment was checked against a path the filesystem never
+  ;; confirmed. A symlink under the task root pointing outside it, plus a
+  ;; not-yet-created child, resolved to something that *looked* contained —
+  ;; and every card later written there would live outside the task root.
+  (let [base (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-cfg-link-")))
+        tasks (path/join base "kanban")
+        outside (path/join base "elsewhere")]
+    (try
+      (await (.mkdir fsp tasks #js {:recursive true}))
+      (await (.mkdir fsp outside #js {:recursive true}))
+      (await (.symlink fsp outside (path/join tasks "linked") "dir"))
+      (let [loaded {:config-dir base
+                    :config {:tasks-dir "kanban"
+                             :card-projection {:paths ["linked/new-cards"]}}}]
+        (is (thrown? js/Error (config/resolve-configured-projects loaded nil))
+            "a path below an in-root symlink that leaves the root must be refused even before it exists"))
+      (finally
+        (await (.rm fsp base #js {:recursive true :force true}))))))
+
+(deftest ^:async allows-a-nonexistent-path-that-stays-inside-the-root
+  ;; The guard must not reject ordinary not-yet-created projection dirs.
+  (let [base (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-cfg-new-")))
+        tasks (path/join base "kanban")]
+    (try
+      (await (.mkdir fsp tasks #js {:recursive true}))
+      (let [loaded {:config-dir base
+                    :config {:tasks-dir "kanban"
+                             :card-projection {:paths ["not-created-yet"]}}}
+            project (first (:projects (config/resolve-configured-projects loaded nil)))]
+        (is (= [(path/join (.realpathSync fs tasks) "not-created-yet")]
+               (get-in project [:card-projection :paths]))))
+      (finally
+        (await (.rm fsp base #js {:recursive true :force true}))))))
+
+(deftest rejects-an-absolute-card-projection-path
+  ;; An absolute path inside the task root passes containment but pins the
+  ;; config to one machine. Refuse it at the config boundary.
+  (testing "even one that would land inside the task root"
+    (let [loaded {:config-dir (path/resolve "/workspace/eta-mu")
+                  :config {:tasks-dir "kanban"
+                           :card-projection
+                           {:paths [(path/resolve "/workspace/eta-mu/kanban/tasks")]}}}]
+      (is (thrown? js/Error (config/resolve-configured-projects loaded nil))))))
