@@ -174,7 +174,11 @@
     (first (:projects project-state))))
 
 (defn- ^:async load-task-or-fail [project uuid]
-  (let [all (await (tasks/load-tasks project))]
+  ;; `load-tasks` takes the tasks directory, not the project map. Passing the
+  ;; map made `readdir` throw, `collect-markdown-files` swallow it and return
+  ;; `[]`, and every lookup here report `unknown task` — so `rheos move`
+  ;; exited 2 for cards that exist.
+  (let [all (await (tasks/load-tasks (:tasks-dir project)))]
     (or (first (filter #(= (:uuid %) uuid) all))
         (throw (ex-info (str "unknown task: " uuid) {:kind :not-found :uuid uuid})))))
 
@@ -192,8 +196,16 @@
 ;; Verb implementations
 ;; ---------------------------------------------------------------------------
 
-(defn- ^:async run-tool [tool-name args]
-  (print-json (await (agent-tools/dispatch tool-name args))))
+(defn- ^:async run-tool
+  "Dispatch a registered tool and print its result as JSON.
+
+   `:source \"cli\"` is stamped here rather than left to the handlers. They
+   default to `\"agent\"` — correct when the MCP server calls them, wrong for a
+   CLI invocation, and the ledger has no other way to tell the two apart. The
+   direct-call verbs (`move`, `create`) already recorded `\"cli\"`, so without
+   this the same board carries both labels for the same human action."
+  [tool-name args]
+  (print-json (await (agent-tools/dispatch tool-name (assoc args :source "cli")))))
 
 (defn- ^:async cmd-board-snapshot [project-state flags]
   (let [project (find-project project-state (get-flag flags "project"))
@@ -378,10 +390,18 @@
         project (find-project project-state (get-flag flags "project"))
         ledger (ledger/get-ledger (:tasks-dir project))
         task-id (:subcommand parsed)
-        limit (get-flag flags "limit")
+        limit (when-let [raw (get-flag flags "limit")]
+                ;; `parseInt` yields NaN for `--limit abc`, and `take-last` on
+                ;; NaN returns nothing — a silently empty result where the
+                ;; caller asked a malformed question. Refuse instead.
+                (let [n (js/parseInt raw 10)]
+                  (when-not (and (js/Number.isInteger n) (pos? n))
+                    (throw (ex-info (str "--limit expects a positive integer, got: " raw)
+                                    {:kind :usage :limit raw})))
+                  n))
         filter-spec (if task-id {:task-id task-id} {})
         evts (await (events/query-events ledger filter-spec))
-        result (if limit (vec (take-last (js/parseInt limit) evts)) evts)]
+        result (if limit (vec (take-last limit evts)) evts)]
     (if (flag-true? flags "json")
       (print-json result)
       (doseq [evt result] (println (format-event evt))))))

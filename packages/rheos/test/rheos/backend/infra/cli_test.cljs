@@ -63,6 +63,16 @@
     (is (= "points=3" (get (:flags (cli/parse-args ["frontmatter" "c" "--set" "points=3"]))
                            "set")))))
 
+(deftest limit-must-be-a-positive-integer
+  (testing "`--limit abc` parses to a value the events verb has to refuse"
+    ;; parseInt yields NaN and take-last on NaN returns nothing, so an
+    ;; unvalidated limit answers a malformed question with silence.
+    (is (js/Number.isNaN (js/parseInt (get (:flags (cli/parse-args ["events" "--limit" "abc"]))
+                                           "limit")
+                                      10))))
+  (testing "a well-formed limit still parses"
+    (is (= 5 (js/parseInt (get (:flags (cli/parse-args ["events" "--limit" "5"])) "limit") 10)))))
+
 (deftest values-may-start-with-dashes
   (testing "A non-boolean flag consumes its next token even if it looks like a flag"
     (is (= "--not-a-flag"
