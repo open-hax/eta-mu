@@ -274,6 +274,19 @@
           (doseq [s (:steps g)] (println (format "      %s" (str/join " " (:cmd s))))))
         (System/exit 0))
 
+      ;; A worktree created without `pnpm install` fails the first step of every
+      ;; gate that shells out to pnpm, which reads as three separate code
+      ;; failures. It is a setup problem, so it exits 2 (distinct from 1 = a gate
+      ;; failed) and says what to run.
+      (when-not (.exists (io/file root "node_modules"))
+        (println "No node_modules in" (str root))
+        (println)
+        (println "  Every pnpm gate would fail on its first step and look like a code failure.")
+        (println "  This is the usual state of a freshly created worktree.")
+        (println)
+        (println "  Fix:  pnpm install --frozen-lockfile")
+        (System/exit 2))
+
       (let [removed (second (scrubbed-env nil))]
         (when (seq removed)
           (println (format "Scrubbing %d provider variable(s) so gates see CI's empty environment:"
