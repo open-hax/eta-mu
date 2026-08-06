@@ -68,3 +68,10 @@ packages/eta-mu/dist-cli/
 packages/eta-mu/*.tgz
 
 .ημ/receipt-river/repository-inventory.edn
+
+# Agent worktrees live inside the repo (AGENTS.md § Session and Turn Discipline).
+# Only a personal global gitignore was covering these, so a contributor without
+# it would commit a whole nested checkout. They also carry their own biome.json,
+# which biome treats as a nested root config — see the "!.claude/**" exclusion
+# in biome.json.
+.claude/worktrees/

@@ -17,7 +17,9 @@
       "package.json",
       "!**/dist/**",
       "!**/target/**",
-      "!**/.shadow-cljs/**"
+      "!**/.shadow-cljs/**",
+      "!.claude/**",
+      "!**/node_modules/**"
     ]
   },
   "formatter": {
