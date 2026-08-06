@@ -59,10 +59,17 @@
     :workflow "sol-ci.yml" :job "verify" :check "Sol CI"
     :paths ["packages/sol/" "packages/turn-processor/" "packages/eta-mu/"
             ".github/workflows/sol-ci.yml" "package.json" "pnpm-lock.yaml" "pnpm-workspace.yaml"]
-    ;; Sol resolves katamorph/event-ledger through private git mirrors that CI
-    ;; builds from an app credential. Without it the failure is environmental,
-    ;; so it is reported as SKIPPED rather than counted as a code failure.
-    :needs-env ["ETA_MU_APP_ID" "ETA_MU_APP_PRIVATE_KEY"]
+    ;; packages/sol/deps.edn is the only deps.edn in the workspace that reaches
+    ;; outside it: katamorph and event-ledger are private repos consumed as
+    ;; immutable git refs. eta-mu is public, and a workflow's default
+    ;; GITHUB_TOKEN only covers the repo it runs in, so CI mints a scoped
+    ;; GitHub App token to read those two.
+    ;;
+    ;; None of that applies locally — a developer's git credential helper
+    ;; usually already has access. So check what actually matters (can we read
+    ;; the repos?) rather than for CI's specific credential, which would skip a
+    ;; gate that can perfectly well run.
+    :needs-repos ["katamorph" "event-ledger"]
     :steps [{:cmd ["pnpm" "--dir" "packages/sol" "lint"]}
             {:cmd ["pnpm" "--dir" "packages/sol" "test"] :expect "0 failures, 0 errors" :no-warning true}
             {:cmd ["pnpm" "--dir" "packages/sol" "build"] :no-warning true}]}
@@ -162,8 +169,16 @@
   (or (= :always (:paths gate))
       (boolean (some (fn [p] (some #(str/starts-with? % p) files)) (:paths gate)))))
 
-(defn missing-env [gate]
-  (seq (remove #(seq (str (System/getenv %))) (:needs-env gate))))
+(defn unreadable-repos
+  "Which of a gate's private dependency repos this machine cannot read. Uses the
+   ambient git credentials — the point is whether the build could resolve them,
+   not whether CI's app credential happens to be exported here."
+  [gate]
+  (seq (remove (fn [r]
+                 (zero? (:exit (p/sh {:continue true}
+                                     "git" "ls-remote"
+                                     (str "https://github.com/open-hax/" r ".git") "HEAD"))))
+               (:needs-repos gate))))
 
 (defn run-step [{:keys [cmd expect no-warning]} root env]
   (let [started (System/currentTimeMillis)
@@ -184,12 +199,14 @@
      :warn warn}))
 
 (defn run-gate [gate root]
-  (if-let [miss (missing-env gate)]
+  (if-let [miss (unreadable-repos gate)]
     {:gate gate :status :skipped
-     :reason (str "missing " (str/join ", " miss) " — needed for private dependency mirrors")}
+     :reason (str "cannot read private dep repo(s): " (str/join ", " miss)
+                  " — check `gh auth status` / your git credential helper")}
     (loop [[s & more] (:steps gate)
            done []
-           env (first (scrubbed-env (:needs-env gate)))]
+           ;; git needs its credential helper, which lives outside the scrub set
+           env (first (scrubbed-env nil))]
       (if-not s
         {:gate gate :status :passed :steps done}
         (let [r (run-step s root env)]
