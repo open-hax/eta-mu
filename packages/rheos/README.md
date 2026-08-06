@@ -51,34 +51,34 @@ The HTTP server listens per `rheos.backend.infra.config` (config + flags).
 
 ## CLI
 
-The package installs a `rheos` bin (`dist/cli.cjs`). Subcommands:
+The package installs a `rheos` bin (`dist/cli.cjs`) that owns a card's whole
+lifecycle: `create`, `move`, `comment`, `frontmatter`, plus the read verbs and
+`serve`.
 
-```
-rheos board snapshot [--tasks-dir <path>] [--out <path>]
-rheos board list [--verbose]
-rheos compose [--domain ...] [--status ...] [--q <text>] [--save <name>] [--preset <name>]
-rheos move <task-uuid> --to <status> [--project <id>]
-rheos status-update <task-uuid> --to <status> [--project <id>]
-rheos add-comment <task-uuid> --text <text> [--project <id>]
-rheos create-subtask <parent-uuid> --title <title> [--project <id>] [--status <s>] [--priority <p>]
-rheos read-task <task-uuid> [--project <id>]
-rheos search-tasks --query <text>
-rheos read-board [--project <id>]
-rheos events [task-uuid] [--limit <n>]
-rheos drift
-rheos serve [--host <host>] [--port <port>]
+**→ [`docs/cli.md`](docs/cli.md) is the reference**: install, agent quickstart,
+every verb, the exit-code contract, config resolution, and the
+surface-ownership table. A test asserts it covers every verb in the CLI's verb
+registry — the same registry `rheos --help` renders from — so a new verb cannot
+ship undocumented.
+
+```bash
+npm i -g @eta-mu/rheos     # Node 22
+rheos --help               # every verb
+rheos help create          # one verb's flags and a worked example
 ```
 
-`move`, `status-update`, `add-comment`, `create-subtask`, `read-task`,
-`search-tasks`, and `read-board` route through the same agent-tool dispatch
-(`kanban_*` tools) the MCP server exposes, so CLI and server resolve projects
-identically. `serve` boots the HTTP server in-process.
+Mutating verbs route through the same domain chokepoints the HTTP handlers and
+MCP tools use — `transition/move-task!` for status, `task-edit` for comments and
+frontmatter, `task-create` for creation — so the CLI, server, MCP, and UI cannot
+diverge. Every mutation appends to the project ledger and publishes to the SSE
+stream. `serve` boots the HTTP server in-process.
 
-Config is loaded from `--config <path>` or `$KANBAN_CONFIG`, falling back to
-`openhax.kanban.json` / `kanban.json` in the working directory; tasks-dir
-resolution falls back to `docs/agile/tasks`. Projects are read from the
-`projects` array of that config (each with `tasksDir`, optional `id`/`title`/
-`fsm`), or a single default project derived from the tasks dir.
+Failures exit non-zero: `1` usage, `2` not found, `3` refused by policy (FSM,
+WIP, build gate), `4` internal.
+
+Config comes from `--config <path>`, `$KANBAN_CONFIG`, or discovery walking up
+from the working directory. **EDN is preferred** (`openhax.kanban.edn`);
+`openhax.kanban.json` / `kanban.json` still load with a deprecation warning.
 
 ## HTTP / MCP surface
 
@@ -99,7 +99,9 @@ and `@fastify/static` serving the built web UI from `dist/web`):
 CLJS source lives under `src/rheos/`, split into a backend service and a browser
 UI, each using a domain / law / shape / infra layering:
 
-- `rheos.backend.domain` — `board`, `compose`, `events`, `task-edit`, `transition`
+- `rheos.backend.domain` — `board`, `compose`, `events`, `task-create`,
+  `task-edit`, `transition` (the last three are the write chokepoints: creation,
+  frontmatter/comments, status)
 - `rheos.backend.law` — `frontmatter`, `fsm` (legal-transition rules)
 - `rheos.backend.shape` — `content-parser`, `kanban` (markdown card parsing)
 - `rheos.backend.infra` — `http-server`, `cli`, `mcp`, `config`, `projects`,
