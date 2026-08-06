@@ -30,6 +30,8 @@ export interface KanbanTask {
   createdAt: string;
   content: string;
   sourcePath: string;
+  relativePath?: string;
+  syncGitHub?: boolean;
 }
 
 export interface KanbanColumnSnapshot {

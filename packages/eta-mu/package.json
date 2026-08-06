@@ -24,7 +24,10 @@
     "watch": "shadow-cljs watch cli"
   },
   "dependencies": {
+    "@eta-mu/fork-tax": "workspace:*",
+    "@eta-mu/receipt-river": "workspace:*",
     "@eta-mu/rheos": "workspace:*",
+    "@eta-mu/session-mycology": "workspace:*",
     "@eta-mu/sol": "workspace:*",
     "get-east-asian-width": "^1.3.0"
   },

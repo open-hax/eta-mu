@@ -1,0 +1,25 @@
+{:source-paths ["src/cljs" "test/cljs"]
+ :js-options {:js-provider :import}
+ :builds
+ {:receipt-river
+  {:target :esm
+   :runtime :node
+   :output-dir "dist-cljs"
+   :modules
+   {:index
+    {:exports
+     {:buildEvent eta-mu.receipt-river.api/build-event
+      :validateLine eta-mu.receipt-river.api/validate-line
+      :schemaRegistry eta-mu.receipt-river.api/schema-registry
+      :currentSchemas eta-mu.receipt-river.api/current-schemas}}}
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :simple
+                      :source-map true}}
+  :test
+  {:target :node-test
+   :output-to "target/receipt-river-test.cjs"
+   :ns-regexp "-test$"
+   :autorun false
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :none
+                      :source-map true}}}}

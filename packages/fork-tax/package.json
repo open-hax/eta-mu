@@ -1,0 +1,29 @@
+{
+  "name": "@eta-mu/fork-tax",
+  "version": "0.1.0",
+  "description": "Fork Tax handoff planning, snapshot manifests, payment outcomes, and verification",
+  "type": "module",
+  "private": false,
+  "files": [
+    "dist-cljs",
+    "README.md"
+  ],
+  "main": "./dist-cljs/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist-cljs/index.js"
+    }
+  },
+  "scripts": {
+    "build": "shadow-cljs release fork-tax",
+    "prepublishOnly": "pnpm build",
+    "test": "shadow-cljs compile test && node target/fork-tax-test.cjs",
+    "lint:kondo": "clj-kondo --lint src/cljs test/cljs && node ../../scripts/check-ledger-extern-boundaries.mjs fork-tax",
+    "watch": "shadow-cljs watch fork-tax",
+    "clean": "rm -rf dist-cljs target .shadow-cljs"
+  },
+  "devDependencies": {
+    "shadow-cljs": "^3.4.11"
+  },
+  "license": "GPL-3.0-or-later"
+}

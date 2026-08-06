@@ -1,0 +1,25 @@
+{:source-paths ["src/cljs" "test/cljs"]
+ :js-options {:js-provider :import}
+ :builds
+ {:fork-tax
+  {:target :esm
+   :runtime :node
+   :output-dir "dist-cljs"
+   :modules
+   {:index
+    {:exports
+     {:buildEvent eta-mu.fork-tax.api/build-event
+      :partitionStatus eta-mu.fork-tax.api/partition-status
+      :schemaRegistry eta-mu.fork-tax.api/schema-registry
+      :currentSchemas eta-mu.fork-tax.api/current-schemas}}}
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :simple
+                      :source-map true}}
+  :test
+  {:target :node-test
+   :output-to "target/fork-tax-test.cjs"
+   :ns-regexp "-test$"
+   :autorun false
+   :compiler-options {:output-feature-set :es-next
+                      :optimizations :none
+                      :source-map true}}}}
