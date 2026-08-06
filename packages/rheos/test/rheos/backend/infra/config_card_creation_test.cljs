@@ -1,5 +1,7 @@
 (ns rheos.backend.infra.config-card-creation-test
-  (:require ["node:path" :as path]
+  (:require ["node:fs" :as fs]
+            ["node:os" :as os]
+            ["node:path" :as path]
             [cljs.test :refer [deftest is testing]]
             [rheos.backend.infra.config :as config]))
 
@@ -79,3 +81,47 @@
       (is (thrown-with-msg?
            ExceptionInfo #"card projection path escapes task root"
            (config/resolve-configured-projects loaded nil))))))
+
+(deftest card-projection-may-not-escape-through-a-symlink
+  (testing "a symlink under the task root pointing outside it is refused"
+    ;; `path/resolve` never touches the filesystem, so a lexical check accepts
+    ;; this: the path sits under the task root and only its target is outside.
+    ;; `collect-markdown-files` follows symlinks, so the board would have loaded
+    ;; whatever the link pointed at.
+    (let [base (path/join (.tmpdir os) (str "rheos-symlink-test-" (.now js/Date) "-" (rand-int 100000)))
+          tasks-dir (path/join base "kanban")
+          outside (path/join base "outside")
+          link (path/join tasks-dir "sneaky")]
+      (.mkdirSync fs tasks-dir #js {:recursive true})
+      (.mkdirSync fs outside #js {:recursive true})
+      (try
+        (.symlinkSync fs outside link)
+        (let [loaded {:config-dir base
+                      :config (config/parse-config-content
+                               "openhax.kanban.edn"
+                               (pr-str {:tasks-dir "kanban"
+                                        :card-projection {:paths ["sneaky"]}}))}]
+          (is (thrown-with-msg?
+               ExceptionInfo #"card projection path escapes task root"
+               (config/resolve-configured-projects loaded nil))))
+        (catch :default e
+          ;; A platform without symlink permission cannot exercise this.
+          (when-not (= "EPERM" (.-code e)) (throw e)))
+        (finally
+          (.rmSync fs base #js {:recursive true :force true}))))))
+
+(deftest card-projection-accepts-a-real-directory-under-the-task-root
+  (testing "resolving symlinks does not reject an ordinary contained path"
+    (let [base (path/join (.tmpdir os) (str "rheos-realpath-test-" (.now js/Date) "-" (rand-int 100000)))
+          tasks-dir (path/join base "kanban")]
+      (.mkdirSync fs (path/join tasks-dir "cards") #js {:recursive true})
+      (try
+        (let [loaded {:config-dir base
+                      :config (config/parse-config-content
+                               "openhax.kanban.edn"
+                               (pr-str {:tasks-dir "kanban"
+                                        :card-projection {:paths ["cards"]}}))}
+              project (first (:projects (config/resolve-configured-projects loaded nil)))]
+          (is (= 1 (count (get-in project [:card-projection :paths])))))
+        (finally
+          (.rmSync fs base #js {:recursive true :force true}))))))

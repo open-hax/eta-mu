@@ -1,53 +1,22 @@
 (ns rheos.backend.infra.config
-  "Config loading and project resolution for Rheos boards."
-  (:require ["node:fs/promises" :as fsp]
+  "Find a board config file, read it, and resolve the projects it declares.
+
+   Decoding belongs to [[rheos.backend.shape.config]] — this namespace owns the
+   filesystem: where to look, what to read, and turning declared paths into
+   resolved ones."
+  (:require ["node:fs" :as fs]
+            ["node:fs/promises" :as fsp]
             ["node:path" :as path]
-            [cljs.reader :as reader]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [rheos.backend.shape.config :as shape-config]))
 
-(def default-config-names
-  ["openhax.kanban.edn" "kanban.edn"
-   "openhax.kanban.json" "kanban.json"])
-
-(defn- normalize-key [k]
-  (if (or (keyword? k) (string? k))
-    (-> (name k)
-        (str/replace #"([a-z0-9])([A-Z])" "$1-$2")
-        str/lower-case
-        keyword)
-    k))
-
-(defn normalize-config
-  "Normalize EDN and legacy JSON config into one kebab-case Clojure shape."
-  [value]
-  (cond
-    (map? value)
-    (into {} (map (fn [[k v]] [(normalize-key k) (normalize-config v)]) value))
-
-    (vector? value)
-    (mapv normalize-config value)
-
-    (sequential? value)
-    (mapv normalize-config value)
-
-    :else value))
-
-(defn config-format [config-path]
-  (let [lower (str/lower-case (str config-path))]
-    (cond
-      (str/ends-with? lower ".edn") :edn
-      (str/ends-with? lower ".json") :json
-      :else :unknown)))
-
-(defn parse-config-content
-  "Parse one config file by extension and return the normalized config map."
-  [config-path raw]
-  (normalize-config
-   (case (config-format config-path)
-     :edn (reader/read-string raw)
-     :json (js->clj (js/JSON.parse raw) :keywordize-keys true)
-     (throw (ex-info (str "Unsupported Rheos config format: " config-path)
-                     {:config-path config-path})))))
+;; Re-exported so existing callers and tests keep one import. The definitions
+;; live in the shape layer; these are the names this namespace has always
+;; published.
+(def default-config-names shape-config/default-config-names)
+(def config-format shape-config/config-format)
+(def normalize-config shape-config/normalize-config)
+(def parse-config-content shape-config/parse-config-content)
 
 (defn- ^:async try-paths [paths]
   (when (seq paths)
@@ -107,9 +76,28 @@
     (update fsm-config :cwd #(path/resolve config-dir %))
     fsm-config))
 
-(defn- within-root? [root candidate]
-  (or (= root candidate)
-      (str/starts-with? candidate (str root path/sep))))
+(defn- real-path
+  "`p` with symlinks resolved, or `p` unchanged when it is not on disk.
+
+   A path that does not exist cannot be a symlink, and a projection directory
+   is allowed to be created after the config names it — so a missing path is
+   not an error here, it just has nothing to resolve."
+  [p]
+  (try (.realpathSync fs p) (catch :default _ p)))
+
+(defn- within-root?
+  "Is `candidate` inside `root`, after both have their symlinks resolved?
+
+   Comparing lexical paths is not enough. `path/resolve` never touches the
+   filesystem, so a symlink sitting *under* the task root but pointing outside
+   it produces a path that looks contained and is not — and
+   `collect-markdown-files` follows symlinks through `stat`, so the board would
+   quietly load cards from wherever it led."
+  [root candidate]
+  (let [root* (real-path root)
+        candidate* (real-path candidate)]
+    (or (= root* candidate*)
+        (str/starts-with? candidate* (str root* path/sep)))))
 
 (defn- resolve-card-projection
   "Resolve projection paths against the project's task root, refusing any that
