@@ -376,8 +376,13 @@ jobs:
           test -s .opencode/plugins/eta-mu-actors.js
           test -s .opencode/opencode.json
 
+          # The reviewer must read the PR's tree, not a tree its own setup edited.
+          # This counts untracked files too, deliberately: an unexpected file can
+          # steer a review as easily as a modified one. Everything this step
+          # legitimately creates (.opencode/, .review-context/) is gitignored, so
+          # anything reported here is genuinely unaccounted for.
           if [[ -n "$(git status --porcelain)" ]]; then
-            echo "::error::Review-context setup changed tracked files before model execution."
+            echo "::error::Review-context setup left the working tree dirty before model execution."
             git status --short
             exit 1
           fi
