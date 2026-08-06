@@ -115,3 +115,23 @@
         (finally
           (unsub)
           (await (.rm fsp dir #js {:recursive true :force true})))))))
+
+(deftest projected-narrows-what-counts-as-a-card-file
+  (let [root (path/resolve "/board")
+        cards (path/join root "tasks")
+        guides (path/join root "docs")]
+    (testing "no projection means the whole task root is the board"
+      (is (watcher/projected? nil (path/join guides "a-guide.md")))
+      (is (watcher/projected? [] (path/join guides "a-guide.md"))))
+    (testing "a file inside a projected root is a card file"
+      (is (watcher/projected? [cards] (path/join cards "card.md")))
+      (is (watcher/projected? [cards] (path/join cards "nested" "card.md"))))
+    (testing "a file outside every projected root is not"
+      ;; A design note quoting card frontmatter as an example still contains a
+      ;; `uuid: "..."` line, and used to appear in the ledger as drift for a
+      ;; card that was never on the board.
+      (is (not (watcher/projected? [cards] (path/join guides "a-guide.md")))))
+    (testing "a sibling whose name merely starts the same is not inside it"
+      (is (not (watcher/projected? [cards] (str cards "-archive/card.md")))))
+    (testing "any one of several projected roots is enough"
+      (is (watcher/projected? [cards guides] (path/join guides "a-guide.md"))))))
