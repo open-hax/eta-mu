@@ -2,7 +2,7 @@
 category: "epics"
 labels: "rheos, cli, lifecycle, docs, distribution, agents"
 type: "epic"
-write-id: "1786034410986-0.ztbrdt547786ubuyp7t"
+write-id: "1786043108032-0.64h8dmq07poscejvpxg"
 points: "13"
 title: "Rheos CLI — full card lifecycle authority, docs, and agent distribution"
 priority: "P0"
@@ -145,4 +145,14 @@ Board state after the #158 revival, 2026-08-06:
 Merge order: #168 → #158 → #169.
 
 Both #168 and #158 are MERGEABLE with zero unresolved threads and verified locally (rheos 101 and 107 tests respectively, clj-kondo 0/0, all release targets building). Neither can merge yet: GitHub Actions is degraded and jobs are failing at `Set up job` with 'Failed to resolve action download info' / Service Unavailable / Bad Gateway. No code failures.
+
+Stack reconciled 2026-08-06 (second pass). #167 and #168 are on `main`; the remaining order is **#158 → #169**, unchanged in intent — #169 documents EDN config as preferred, which is only true once #158 lands.
+
+Both remaining PRs had fallen back into CONFLICTING when main advanced. Both resolved and pushed:
+
+**#169** — one conflict in `cli.cljs`: main still carried the hardcoded `openhax-kanban` help block that this PR exists to delete. Took the registry rendering, then verified the registry covers all 16 verbs the dispatch table actually handles before accepting it. rheos 110 tests / 403 assertions, kondo 0/0, 4 release targets clean, built CLI renders `rheos` in every usage line.
+
+**#158** — a real reconciliation, not a side-pick. `load-tasks` was in direct tension: #158 made a project map a valid argument (to carry `:card-projection`), while #168 made a project map *throw*, because passing one had `readdir` fail, the collector swallow it, and `rheos move` report `unknown task` for cards on disk. Kept #158s capability and #168s fail-loud discipline: a map or a non-empty string is accepted, and anything resolving no tasks-dir throws `:kind :usage`. Mains guard test asserted the map is refused, so it was rewritten to guard the same hazard — the silent `[]` — under the new contract rather than deleted. Every caller still passes the string form; `source->project` resolves it back through the project registry so a configured projection still applies. rheos 116 tests / 329 assertions, kondo 0/0, built CLI loads the EDN board.
+
+Blocking both: GitHub Actions is degraded, not the code. `main-lint` is a bare `echo` and it "failed" after 6m19s; CodeQL Analyze ran 1h8m and 1h24m before failing. Treat those as infrastructure until a completed run says otherwise.
 ---
