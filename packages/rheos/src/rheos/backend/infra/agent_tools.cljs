@@ -16,11 +16,11 @@
             ["node:fs/promises" :as fsp]
             ["node:path" :as path]
             [rheos.backend.domain.compose :as compose]
-            [rheos.backend.domain.task-create :as task-create]
-            [rheos.backend.domain.task-edit :as task-edit]
-            [rheos.backend.domain.transition :as transition]
             [rheos.backend.infra.projects :as projects]
+            [rheos.backend.infra.task-create :as task-create]
+            [rheos.backend.infra.task-edit :as task-edit]
             [rheos.backend.infra.task-store :as tasks]
+            [rheos.backend.infra.transition :as transition]
             [rheos.backend.law.frontmatter :as law-frontmatter]
             [rheos.backend.shape.content-parser :as content-parser]))
 
@@ -159,20 +159,20 @@
         {:uuid uuid :frontmatter (:frontmatter parsed) :sections (:sections parsed)
          :source-path (:source-path task)}))))
 
-(defn- ^:async tool-kanban-update-status [{:keys [uuid status project]}]
+(defn- ^:async tool-kanban-update-status [{:keys [uuid status project source]}]
   (let [proj (projects/find-project project)]
     (when-not proj (throw (ex-info (str "unknown project: " project)
                                    {:kind :not-found :project project})))
     (let [task (await (load-task proj uuid))]
       (when-not task (throw (ex-info (str "unknown task: " uuid)
                                    {:kind :not-found :uuid uuid})))
-      (let [result (await (transition/move-task! {:project proj :task task :new-status status :source "agent"}))]
+      (let [result (await (transition/move-task! {:project proj :task task :new-status status :source (or source "agent")}))]
         (if (:ok result)
           {:ok true :uuid uuid :from (:from result) :to (:to result)}
           (throw (ex-info (str "transition rejected: " (:reason result))
                           {:kind :refused :uuid uuid :from (:from result) :to status})))))))
 
-(defn- ^:async tool-kanban-add-comment [{:keys [uuid text project]}]
+(defn- ^:async tool-kanban-add-comment [{:keys [uuid text project source]}]
   (when (empty? text) (throw (ex-info "missing comment text" {:kind :usage})))
   (let [proj (projects/find-project project)]
     (when-not proj (throw (ex-info (str "unknown project: " project)
@@ -180,7 +180,7 @@
     (let [task (await (load-task proj uuid))]
       (when-not task (throw (ex-info (str "unknown task: " uuid)
                                    {:kind :not-found :uuid uuid})))
-      (await (task-edit/append-comment! {:project proj :task task :text text :source "agent"}))
+      (await (task-edit/append-comment! {:project proj :task task :text text :source (or source "agent")}))
       {:ok true :uuid uuid :comment text})))
 
 (defn- ^:async tool-kanban-update-frontmatter
@@ -188,7 +188,7 @@
    PATCH handler enforces ([[rheos.backend.law.frontmatter/mutable-keys]]).
    `:status` is refused here and routed to the FSM, so there stays exactly one
    way to change a card's status."
-  [{:keys [uuid project updates]}]
+  [{:keys [uuid project updates source]}]
   (when (empty? updates) (throw (ex-info "no frontmatter updates given" {:kind :usage})))
   (let [keyworded (into {} (map (fn [[k v]] [(keyword (name k)) v])) updates)]
     (when (law-frontmatter/status-update? keyworded)
@@ -206,7 +206,7 @@
         (let [result (await (task-edit/update-frontmatter!
                              {:project proj :task task
                               :updates (into {} (map (fn [[k v]] [(name k) v])) keyworded)
-                              :source "agent"}))]
+                              :source (or source "agent")}))]
           {:ok true :uuid uuid :frontmatter (:frontmatter result)})))))
 
 (defn- ^:async tool-kanban-create-task
@@ -214,7 +214,7 @@
    creation chokepoint, so a root card and a child card are the same operation
    and both land in the ledger."
   [{:keys [title project parent parent-uuid type card-type status priority points
-           labels body dir uuid force-status]}]
+           labels body dir uuid force-status source]}]
   (let [proj (projects/find-project project)]
     (when-not proj (throw (ex-info (str "unknown project: " project)
                                    {:kind :not-found :project project})))
@@ -231,7 +231,7 @@
              :dir dir
              :uuid uuid
              :force-status? (true? force-status)
-             :source "agent"}))))
+             :source (or source "agent")}))))
 
 (defn- ^:async tool-kanban-create-subtask [args]
   (await (tool-kanban-create-task (assoc args :parent (or (:parent-uuid args) (:parent args))))))

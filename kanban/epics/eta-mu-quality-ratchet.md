@@ -63,6 +63,29 @@ Recent work proved the CLJS runtime path and added a 90% runtime line/statement 
 6. `kanban/tasks/eta-mu-quality-ratchet-coverage-expansion.md`
    - Expand meaningful coverage gates beyond `packages/eta-mu-runtime` while avoiding noisy shadow-cljs branch/function false precision.
 
+### Layer boundary ratchet (added 2026-07-31)
+
+Task 4 wired CLJS boundary checks into the package gates. The layer-boundary linter that
+came out of that (`packages/kondo-config`, `hooks/layer_boundaries.clj`) now reports every
+violation of the `law.* → shape.* → extern.* → domain.* → infra.*` construction order at the
+`:require` that causes it. It ships at `:info` repo-wide — printed on every lint run, never
+fatal — and each package pays its own share and then raises the level to `:error`.
+
+Backlog at time of carding: **27 findings** — 17 host requires, 8 upward-to-infra, 2
+domain-to-extern.
+
+7. `kanban/tasks/eta-mu-quality-ratchet-layer-boundary-sol.md` (17 findings, 8sp)
+   - Largest concentration in the repo. Dominated by a `domain/node/*` wrapper family that belongs in `extern.*`.
+
+8. `kanban/tasks/eta-mu-quality-ratchet-layer-boundary-rheos.md` (8 findings, 3sp)
+   - 3 backend (including a `law.*` namespace requiring `node:child_process`) and 5 UI.
+
+9. `kanban/tasks/eta-mu-quality-ratchet-layer-boundary-terminal-ui.md` (1 finding, 1sp)
+   - A `shape.*` host require. Smallest slice; proves the `:error` ratchet end to end.
+
+10. `kanban/tasks/eta-mu-quality-ratchet-layer-boundary-eta-mu.md` (1 finding, 1sp)
+    - One `domain → extern` require in `domain/session.cljs`.
+
 ## Acceptance criteria
 
 - [ ] A baseline report names every current lint, warning, coverage, and test gate plus known blockers.
@@ -72,6 +95,7 @@ Recent work proved the CLJS runtime path and added a 90% runtime line/statement 
 - [ ] Full test-suite failures are reproducible, classified, and either fixed or recorded with a narrow blocker.
 - [ ] Coverage gates cover the CLJS runtime and at least one additional high-value package/surface.
 - [ ] CI and PR workflow require OpenCode review and expose quality summaries.
+- [ ] Every package with `:layer-boundary/*` findings has cleared them and raised both linters to `:error`, so the construction order cannot regress silently.
 
 ## Verification map
 

@@ -18,14 +18,14 @@
             ["node:fs/promises" :as fsp]
             [rheos.backend.domain.board :as board]
             [rheos.backend.domain.compose :as compose]
-            [rheos.backend.domain.task-create :as task-create]
             [rheos.backend.infra.agent-tools :as agent-tools]
             [rheos.backend.infra.config :as config]
             [rheos.backend.domain.events :as events]
             [rheos.backend.infra.ledger :as ledger]
             [rheos.backend.infra.projects :as projects]
+            [rheos.backend.infra.task-create :as task-create]
             [rheos.backend.infra.task-store :as tasks]
-            [rheos.backend.domain.transition :as transition]
+            [rheos.backend.infra.transition :as transition]
             [rheos.backend.infra.view-store :as views]
             [rheos.backend.infra.http-server :as http-server]))
 
@@ -339,14 +339,28 @@
         task (subs (or (:task-id e) "?") 0 30)]
     (str ts " [" src "] " typ " " task)))
 
-(defn- find-project [project-state pid]
-  (if pid
-    (or (first (filter #(= (:id %) pid) (:projects project-state)))
-        (throw (ex-info (str "unknown project: " pid) {:kind :not-found :project pid})))
-    (first (:projects project-state))))
+(defn- find-project
+  "The project a verb acts on. An explicit `--project` must exist; without one,
+   the configured default wins.
+
+   Falling back to `(first (:projects …))` made `move`, `events`, `drift`, and
+   `board snapshot` depend on project ordering rather than on
+   `:default-project-id` — which `board list` has always printed as `(default)`,
+   so the CLI could name one project as the default and act on another."
+  [project-state pid]
+  (let [by-id (fn [id] (first (filter #(= (:id %) id) (:projects project-state))))]
+    (if pid
+      (or (by-id pid)
+          (throw (ex-info (str "unknown project: " pid) {:kind :not-found :project pid})))
+      (or (by-id (:default-project-id project-state))
+          (first (:projects project-state))))))
 
 (defn- ^:async load-task-or-fail [project uuid]
-  (let [all (await (tasks/load-tasks project))]
+  ;; `load-tasks` takes the tasks directory, not the project map. Passing the
+  ;; map made `readdir` throw, `collect-markdown-files` swallow it and return
+  ;; `[]`, and every lookup here report `unknown task` — so `rheos move`
+  ;; exited 2 for cards that exist.
+  (let [all (await (tasks/load-tasks (:tasks-dir project)))]
     (or (first (filter #(= (:uuid %) uuid) all))
         (throw (ex-info (str "unknown task: " uuid) {:kind :not-found :uuid uuid})))))
 
@@ -364,8 +378,16 @@
 ;; Verb implementations
 ;; ---------------------------------------------------------------------------
 
-(defn- ^:async run-tool [tool-name args]
-  (print-json (await (agent-tools/dispatch tool-name args))))
+(defn- ^:async run-tool
+  "Dispatch a registered tool and print its result as JSON.
+
+   `:source \"cli\"` is stamped here rather than left to the handlers. They
+   default to `\"agent\"` — correct when the MCP server calls them, wrong for a
+   CLI invocation, and the ledger has no other way to tell the two apart. The
+   direct-call verbs (`move`, `create`) already recorded `\"cli\"`, so without
+   this the same board carries both labels for the same human action."
+  [tool-name args]
+  (print-json (await (agent-tools/dispatch tool-name (assoc args :source "cli")))))
 
 (defn- ^:async cmd-board-snapshot [project-state flags]
   (let [project (find-project project-state (get-flag flags "project"))
@@ -550,10 +572,18 @@
         project (find-project project-state (get-flag flags "project"))
         ledger (ledger/get-ledger (:tasks-dir project))
         task-id (:subcommand parsed)
-        limit (get-flag flags "limit")
+        limit (when-let [raw (get-flag flags "limit")]
+                ;; `parseInt` yields NaN for `--limit abc`, and `take-last` on
+                ;; NaN returns nothing — a silently empty result where the
+                ;; caller asked a malformed question. Refuse instead.
+                (let [n (js/parseInt raw 10)]
+                  (when-not (and (js/Number.isInteger n) (pos? n))
+                    (throw (ex-info (str "--limit expects a positive integer, got: " raw)
+                                    {:kind :usage :limit raw})))
+                  n))
         filter-spec (if task-id {:task-id task-id} {})
         evts (await (events/query-events ledger filter-spec))
-        result (if limit (vec (take-last (js/parseInt limit) evts)) evts)]
+        result (if limit (vec (take-last limit evts)) evts)]
     (if (flag-true? flags "json")
       (print-json result)
       (doseq [evt result] (println (format-event evt))))))
