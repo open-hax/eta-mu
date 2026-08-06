@@ -96,7 +96,9 @@
    a link rather than as whatever it points at."
   [full-path]
   (try
-    (let [st (await (.lstat fsp full-path))]
+    ;; ^js: `isSymbolicLink` is not in the externs shadow infers from, so the
+    ;; call compiles to a munged name under :advanced without the hint.
+    (let [^js st (await (.lstat fsp full-path))]
       (cond
         (.isSymbolicLink st) :link
         (.isDirectory st) :dir
