@@ -9,7 +9,9 @@
    :gate/paths
    ["packages/legacy/docs/"
     "packages/legacy/github/"
-    ".github/workflows/"],
+    ".github/workflows/"
+    "contracts/workflows/ci.edn"],
+   :gate/emitting true,
    :gate/steps
    [{:step/run "pnpm --dir packages/extensions build"}
     {:step/run "pnpm lint"}]}
@@ -20,7 +22,9 @@
    :gate/paths
    ["packages/legacy/docs/"
     "packages/legacy/github/"
-    ".github/workflows/"],
+    ".github/workflows/"
+    "contracts/workflows/ci.edn"],
+   :gate/emitting true,
    :gate/steps
    [{:step/run "node --test packages/legacy/docs/tests/*.test.cjs"}]}
   {:gate/id "rheos",
@@ -37,7 +41,9 @@
     "package.json"
     "pnpm-lock.yaml"
     "pnpm-workspace.yaml"
-    ".github/workflows/rheos.yml"],
+    ".github/workflows/rheos.yml"
+    "contracts/workflows/ci.edn"],
+   :gate/emitting true,
    :gate/steps
    [{:step/run "pnpm --dir packages/rheos test",
      :step/name "Test",
@@ -52,6 +58,7 @@
    :gate/job "eta-mu-cljs",
    :gate/check "eta-mu CLI + turn-processor + terminal-ui",
    :gate/paths :always,
+   :gate/emitting false,
    :gate/steps
    [{:step/run "pnpm --dir packages/turn-processor test",
      :gate/expect "0 failures, 0 errors"}
@@ -68,6 +75,7 @@
    :gate/job "ts-packages",
    :gate/check "TS package tests",
    :gate/paths :always,
+   :gate/emitting false,
    :gate/steps
    [{:step/run "pnpm --dir packages/legacy/github test"}
     {:step/run "node --test packages/legacy/docs/tests/*.test.cjs"}]}
@@ -82,7 +90,9 @@
     ".github/workflows/sol-ci.yml"
     "package.json"
     "pnpm-lock.yaml"
-    "pnpm-workspace.yaml"],
+    "pnpm-workspace.yaml"
+    "contracts/workflows/packages.edn"],
+   :gate/emitting false,
    :gate/needs-repos ["katamorph" "event-ledger"],
    :gate/steps
    [{:step/run "pnpm --dir packages/sol lint"}
@@ -98,7 +108,9 @@
    :gate/paths
    ["packages/axxium/"
     ".github/workflows/axxium-ci.yml"
-    "pnpm-lock.yaml"],
+    "pnpm-lock.yaml"
+    "contracts/workflows/packages.edn"],
+   :gate/emitting false,
    :gate/steps
    [{:step/run
      "cd packages/axxium && clj-kondo --lint src/cljs test/cljs"}
@@ -117,7 +129,9 @@
    :gate/paths
    ["packages/extensions/"
     "packages/e2e/"
-    ".github/workflows/eta-mu-extensions-tests.yml"],
+    ".github/workflows/eta-mu-extensions-tests.yml"
+    "contracts/workflows/packages.edn"],
+   :gate/emitting false,
    :gate/steps
    [{:step/run "pnpm --dir packages/extensions build"}
     {:step/run "pnpm --dir packages/extensions validate-paths"}
@@ -132,7 +146,9 @@
    ["packages/rheos/"
     ".github/workflows/kanban-sync.yml"
     ".github/workflows/eta-mu-kanban-sync.yml"
-    ".github/workflows/rheos-github-sync-ci.yml"],
+    ".github/workflows/rheos-github-sync-ci.yml"
+    "contracts/workflows/packages.edn"],
+   :gate/emitting false,
    :gate/steps
    [{:step/run "pnpm --dir packages/rheos test",
      :gate/expect "0 failures, 0 errors"}

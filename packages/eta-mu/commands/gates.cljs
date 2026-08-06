@@ -60,6 +60,7 @@
                   :workflow (:gate/workflow g)
                   :check (:gate/check g)
                   :paths (:gate/paths g)
+                  :emitting (:gate/emitting g)
                   :needs-repos (:gate/needs-repos g)
                   :steps (mapv (fn [st]
                                  (cond-> {:cmd ["bash" "-c" (:step/run st)]}
@@ -137,11 +138,20 @@
                      "\n  Unrelated histories? Try --all to run every gate."))
         tracked (or (sh-out "git" "diff" "--name-only" mb "HEAD")
                     (die! (str "git diff failed against " mb)))
-        dirty (or (sh-out "git" "status" "--porcelain")
+        ;; `-z` because a rename is reported as `R  old -> new` in the default
+        ;; format, which reads as one nonsense path — and the *destination* is
+        ;; the one a gate needs to select on. With -z the two sides arrive as
+        ;; separate NUL-terminated fields.
+        dirty (or (sh-out "git" "status" "--porcelain=v1" "-z")
                   (die! "git status failed"))
-        dirty-paths (->> (str/split-lines dirty)
+        dirty-paths (->> (str/split dirty #"\u0000")
                          (remove str/blank?)
-                         (map #(str/trim (subs % 2))))]
+                         ;; Fields alternate: an entry, then for R/C a second
+                         ;; field holding the original path. Both are real
+                         ;; paths; only the status-prefixed one needs trimming.
+                         (map #(if (re-find #"^[ MADRCU?!]{2} " %)
+                                 (str/trim (subs % 3))
+                                 (str/trim %))))]
     (->> (concat (str/split-lines tracked) dirty-paths)
          (remove str/blank?)
          set)))
@@ -239,12 +249,23 @@
          (for [g plan-gates
                :let [wf-file (path/join root ".github" "workflows"
                                         (str (:workflow g) ".yml"))]
-               :when (and (not= :always (:paths g)) (exists? wf-file))]
+               ;; An emitting workflow cannot drift from its gate — both are
+               ;; projections of one declaration — so checking it would report
+               ;; noise. The plan carries :gate/emitting for exactly this.
+               :when (and (not (:emitting g))
+                          (not= :always (:paths g))
+                          (exists? wf-file))]
            (let [wf (workflow-pr-paths wf-file)]
              (if-not wf
                (do (println (str "  ok       " (pad (:name g) 20) " no path filter"))
                    nil)
-               (let [gate-p (map literal-prefix (:paths g))
+               (let [;; The declaration path is appended by the projector so a
+                     ;; gate re-runs when its own definition changes. It is a
+                     ;; local-selection concern and has no business in a
+                     ;; workflow's trigger filter, so it is not drift.
+                     declared (remove #(str/starts-with? (str %) "contracts/workflows/")
+                                      (:paths g))
+                     gate-p (map literal-prefix declared)
                      wf-p (map literal-prefix wf)
                      missing (sort (distinct (remove #(covered? gate-p %) wf-p)))
                      extra (sort (distinct (remove #(covered? wf-p %) gate-p)))]
@@ -357,6 +378,12 @@
         (when (seq skipped)
           (println "\nSkipped gates were NOT verified — do not read them as green."))
 
-        (js/process.exit (if (seq failed) 1 0))))))
+        ;; Exit codes: 1 a gate failed, 3 nothing failed but something went
+        ;; unverified. A run where the only selected gate was skipped must not
+        ;; exit 0 — "green" has to mean verified, or the tool is worthless
+        ;; exactly when it matters.
+        (js/process.exit (cond (seq failed) 1
+                               (seq skipped) 3
+                               :else 0))))))
 
 (apply -main (vec (drop 3 (.-argv js/process))))

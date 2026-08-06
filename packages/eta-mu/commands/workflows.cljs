@@ -234,7 +234,19 @@
              ;; `:gate/always` is how a workflow with no path filter says so —
              ;; distinct from "no paths declared yet", which would silently
              ;; stop selecting the gate.
-             :gate/paths (if (:gate/always g) :always (vec (:gate/paths g)))}
+             ;;
+             ;; The resource file that declares the gate is appended
+             ;; automatically. Editing a gate's command changes what the gate
+             ;; *is*, so the gate has to select on it — and doing this here
+             ;; rather than in each declaration means a new gate cannot forget.
+             :gate/paths (if (:gate/always g)
+                           :always
+                           (vec (distinct (conj (vec (:gate/paths g))
+                                                (str contracts-dir "/" (::source wf))))))
+             ;; `audit` compares path filters only for workflows whose YAML is
+             ;; still hand-written. Without this the plan cannot tell which
+             ;; those are, and the check silently widens to all of them.
+             :gate/emitting (emitting? wf)}
       (:gate/needs-repos g) (assoc :gate/needs-repos (vec (:gate/needs-repos g)))
       true (merge)
       true (assoc :gate/steps
@@ -281,7 +293,13 @@
   [a b]
   (= (js->clj (.parse yaml a)) (js->clj (.parse yaml b))))
 
+(def known-targets #{"github-actions" "local-gates" "all"})
+
 (defn cmd-emit [root registry workflows {:keys [target dry-run]}]
+  (when-not (known-targets target)
+    ;; Selecting no target and exiting 0 reads as "emitted successfully".
+    (die! (str "unknown --target " (pr-str target)
+               "\n  known: " (str/join ", " (sort known-targets)))))
   (let [targets (if (= "all" target) #{"github-actions" "local-gates"} #{target})]
     (when (targets "github-actions")
       (doseq [wf workflows]
@@ -296,7 +314,10 @@
                         (cond same " (unchanged)"
                               existing " (CHANGED)"
                               :else " (new)")))
-          (when-not dry-run (write-text! path text)))))
+          ;; A project declaring its first workflow has no .github/workflows yet.
+          (when-not dry-run
+            (fs/mkdirSync (path/dirname path) #js {:recursive true})
+            (write-text! path text)))))
     (when (targets "local-gates")
       (let [path (path/join root gate-plan-path)
             plan {:namespace :eta-mu.ci.gates
@@ -304,6 +325,7 @@
         (println (str "  " (pad "local-gates" 16) " " path
                       " (" (count (:gates plan)) " gates)"))
         (when-not dry-run
+          (fs/mkdirSync (path/dirname path) #js {:recursive true})
           (write-text! path (str ";; Generated from contracts/workflows/ by scripts/workflows.bb.\n"
                           ";; Read by the gate runner. Do not edit.\n"
                           (with-out-str (pp/pprint plan)))))))))

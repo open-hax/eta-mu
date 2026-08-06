@@ -91,3 +91,13 @@
 
 (deftest context-tolerates-missing-flags
   (is (= {} (:command/flags (cr/context-for {:args []})))))
+
+(deftest non-string-fields-are-refused
+  ;; `42` is not a script path. Accepting one let the resource validate, reach
+  ;; path/resolve, and throw there — a crash instead of a reported rejection.
+  (doseq [[k v] [[:command/script 42] [:command/name 42] [:command/summary 42]
+                 [:command/script true] [:command/name []] [:command/summary {}]]]
+    (is (not (cr/valid? (assoc ok k v)))
+        (str k " = " (pr-str v) " must be refused")))
+  (testing "and the message says why"
+    (is (some #(re-find #"non-string" %) (cr/problems (assoc ok :command/script 42))))))

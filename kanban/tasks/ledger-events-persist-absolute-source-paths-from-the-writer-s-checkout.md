@@ -1,13 +1,13 @@
 ---
-uuid: "ledger-events-persist-absolute-source-paths-from-the-writer-s-checkout"
-title: "Ledger events persist absolute source paths from the writer's checkout"
-status: "incoming"
-type: "task"
-priority: "P2"
-points: "3"
-labels: "rheos, ledger, portability"
 category: "tasks"
-write-id: "1786058382580-0.hae6eozj5gt9yf9c2aj"
+labels: "rheos, ledger, portability"
+type: "task"
+write-id: "1786059223060-0.q48zygzmpik2ef1c73s"
+points: "3"
+title: "Ledger events persist absolute source paths from the writer's checkout"
+priority: "P2"
+status: "incoming"
+uuid: "ledger-events-persist-absolute-source-paths-from-the-writer-s-checkout"
 created_at: "2026-08-06T23:19:42.580Z"
 ---
 
@@ -62,3 +62,20 @@ directory layout and username of whoever created each card.
 
 Raised by CodeRabbit on PR #181 against `kanban/.events/ledger.edn`. Unrelated
 to that PR's changes — it is how the writer has always behaved.
+
+---
+Acceptance criteria widened, raised in review on #181.
+
+The scope named `task-edit`, `transition`, and the drift events as writers to audit, but the criteria only required a `task-created` test — so the card could pass while every other event still carried an absolute path. That is the failure mode the card exists to prevent, reproduced in its own definition.
+
+Each path-carrying writer needs its own assertion:
+
+- `kanban.task-created` — `:source-path`
+- `kanban.task-edit` / frontmatter and comment writes
+- `kanban.status-change` via `transition`
+- `kanban.drift-detected` and `kanban.drift-protocol-rerun`
+
+And one criterion that covers the class rather than the instances: **no event appended after this change has a value matching `^/`**, asserted over a freshly written ledger. Enumerating writers catches the four that exist; the regex catches the fifth someone adds later.
+
+Historical events keep their absolute paths — the ledger is append-only — so the assertion is scoped to events written after the change, and a reader must still tolerate both forms.
+---

@@ -187,4 +187,5 @@ Four decisions settled while implementing, none obvious from the card:
 Shipped on #181: workflow resources under `contracts/workflows/`, projection to both GitHub Actions YAML and a local gate plan, `eta-mu workflows` and `eta-mu gates` as shipped commands, nbb bundled at a pinned version. The action registry closed the drift this card measured.
 
 **Honest state of the last slice:** six of eight workflows carry `:workflow/emit false` — their resource owns the gate, the committed YAML still owns what CI runs. Converting those is the remainder, `sol-ci` last for its GitHub App token and private git mirrors.
+
 ---

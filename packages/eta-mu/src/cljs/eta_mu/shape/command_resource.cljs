@@ -29,7 +29,14 @@
    ecosystem wants nbb."
   #{:bb :nbb})
 
-(defn- blank? [s] (or (nil? s) (and (string? s) (str/blank? s))))
+(defn- missing-text?
+  "Is `s` anything other than a non-blank string?
+
+   `42` is not a script path. Accepting one lets the resource validate, reach
+   `path/resolve`, and throw there — turning a reportable rejection into a
+   crash with no mention of which resource caused it."
+  [s]
+  (not (and (string? s) (not (str/blank? s)))))
 
 (defn problems
   "Why `resource` is not a usable command resource. Empty when it is.
@@ -44,14 +51,14 @@
     (and (map? resource) (not= :command (:contract/kind resource)))
     (conj (str "expected :contract/kind :command, got " (pr-str (:contract/kind resource))))
 
-    (and (map? resource) (blank? (:command/name resource)))
-    (conj "missing :command/name")
+    (and (map? resource) (missing-text? (:command/name resource)))
+    (conj "missing or non-string :command/name")
 
-    (and (map? resource) (blank? (:command/summary resource)))
-    (conj "missing :command/summary — a command nobody can describe is a command nobody will find")
+    (and (map? resource) (missing-text? (:command/summary resource)))
+    (conj "missing or non-string :command/summary — a command nobody can describe is a command nobody will find")
 
-    (and (map? resource) (blank? (:command/script resource)))
-    (conj "missing :command/script")
+    (and (map? resource) (missing-text? (:command/script resource)))
+    (conj "missing or non-string :command/script")
 
     (and (map? resource) (not (contains? runtimes (:command/runtime resource))))
     (conj (str "unknown :command/runtime " (pr-str (:command/runtime resource))

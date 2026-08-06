@@ -161,8 +161,17 @@
                              " bb is a native binary and cannot be bundled — install Babashka.")))))
               (process/exit! 4))
 
+          ;; Node reports `status` as null and sets `signal` when a child is
+          ;; killed. `(or status 0)` therefore turned every signalled death —
+          ;; SIGKILL from an OOM, SIGINT from the user — into a clean success.
+          (nil? (.-status result))
+          (do (console/error!
+               (str "eta-mu: " (:command/name resource) " terminated by signal "
+                    (or (.-signal result) "unknown")))
+              (process/exit! 4))
+
           :else
-          (process/exit! (or (.-status result) 0)))))))
+          (process/exit! (.-status result)))))))
 
 (defn registry-entries
   "Registry entries for every usable command resource, keyed by name.
