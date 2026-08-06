@@ -356,10 +356,13 @@
           (first (:projects project-state))))))
 
 (defn- ^:async load-task-or-fail [project uuid]
-  ;; `load-tasks` takes the tasks directory, not the project map. Passing the
-  ;; map made `readdir` throw, `collect-markdown-files` swallow it and return
-  ;; `[]`, and every lookup here report `unknown task` — so `rheos move`
-  ;; exited 2 for cards that exist.
+  ;; Pass the tasks directory, not the project map. `load-tasks` now accepts
+  ;; either — it resolves a bare tasks-dir back through the project registry, so
+  ;; a configured `:card-projection` still applies — but this call stays on the
+  ;; string form because that is what the regression was: passing the map made
+  ;; `readdir` throw, `collect-markdown-files` swallow it and return `[]`, and
+  ;; every lookup here report `unknown task`, so `rheos move` exited 2 for cards
+  ;; that exist.
   (let [all (await (tasks/load-tasks (:tasks-dir project)))]
     (or (first (filter #(= (:uuid %) uuid) all))
         (throw (ex-info (str "unknown task: " uuid) {:kind :not-found :uuid uuid})))))

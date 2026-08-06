@@ -1,5 +1,8 @@
 name: rheos
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: ["main"]
@@ -7,14 +10,30 @@ on:
       - "packages/rheos/**"
       - "packages/protocols/**"
       - "packages/chat-ui/**"
+      - "openhax.kanban.edn"
+      - "openhax.kanban.json"
+      # The per-board config. It carries each project's FSM and build-gate
+      # commands, so a change here alters what Rheos enforces without touching
+      # packages/rheos/** — and used to skip this workflow entirely.
+      - "kanban/openhax.kanban.*"
+      - "package.json"
       - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
       - ".github/workflows/rheos.yml"
   pull_request:
     paths:
       - "packages/rheos/**"
       - "packages/protocols/**"
       - "packages/chat-ui/**"
+      - "openhax.kanban.edn"
+      - "openhax.kanban.json"
+      # The per-board config. It carries each project's FSM and build-gate
+      # commands, so a change here alters what Rheos enforces without touching
+      # packages/rheos/** — and used to skip this workflow entirely.
+      - "kanban/openhax.kanban.*"
+      - "package.json"
       - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
       - ".github/workflows/rheos.yml"
 
 jobs:
@@ -63,6 +82,11 @@ jobs:
 
       - name: Lint
         run: pnpm --dir packages/rheos lint:kondo
+
+      # A green test run does not prove the release targets compile — the CLI,
+      # github-sync, and app builds reach code the tests never load.
+      - name: Build Rheos release targets
+        run: pnpm --dir packages/rheos build
 
       - name: Upload shadow-cljs logs
         if: failure()
