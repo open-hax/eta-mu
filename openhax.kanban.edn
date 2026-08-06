@@ -1,0 +1,7 @@
+{:tasks-dir "./kanban"
+ :board-file "kanban/.kanban/board.json"
+ :fsm :promethean
+ :meta
+ {:chat
+  {:backend :sol
+   :model "gemma4:31b"}}}

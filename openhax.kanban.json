@@ -1,4 +1,5 @@
 {
+  "deprecated": "Compatibility mirror; use openhax.kanban.edn",
   "tasksDir": "./kanban",
   "boardFile": "kanban/.kanban/board.json",
   "fsm": "promethean",
