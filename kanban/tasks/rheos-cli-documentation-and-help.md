@@ -3,7 +3,7 @@ category: "tasks"
 labels: "rheos, cli, docs, agents"
 parent: "rheos-cli-card-lifecycle-authority"
 type: "task"
-write-id: "1785439733062-0.rd84zhm6ij855cywio"
+write-id: "1786026255457-0.o5aptghipbtpe5xhg8"
 points: "3"
 title: "Rheos CLI documentation: correct help output, full verb reference, agent quickstart"
 priority: "P0"
@@ -85,4 +85,8 @@ and nothing it reads there is false.
 Implemented. cli.cljs now renders all help from one verbs registry (verb/group/args/summary/flags/example/notes/mutates?), so show-help, rheos help <verb>, and rheos <verb> --help cannot drift from each other. Every openhax-kanban string is gone; banner is 'rheos — agent-first kanban board CLI'. New packages/rheos/docs/cli.md: install, agent quickstart walking a card create->breakdown->size->ready->in_progress->comment, config resolution incl. EDN preference, exit-code table, full verb reference grouped lifecycle/read/service, the body-settles-after-breakdown policy, and a surface-ownership table (CLI vs HTTP vs MCP vs UI). README CLI section trimmed to a pointer. Tests assert: no openhax-kanban in help, every registry verb appears in help AND in docs/cli.md, every verb has a summary and a rheos-prefixed example, per-verb help renders flags and an example, help states the exit codes and the comment policy. Adding a verb without documenting it now fails the suite. NOT done: the docs are hand-written and test-checked, not generated from the registry.
 
 Build gate verified green 2026-07-30 at this tree state: pnpm build exit 0, pnpm lint exit 0 (11/11 clj-kondo, Biome, tsc, extension paths, kanban markdown), pnpm test exit 0 (11/11 suites: contract-guard, eta-mu, rheos, sol, terminal-ui, turn-processor, extensions, protocols, chat-ui, axxium, kanban-legacy). rheos-cli-create-card was promoted through the FSM's own in_progress->review build gate, which shelled out to all three commands and allowed the transition (verified in the ledger). This card was moved testing->review citing that run rather than re-running an identical monorepo gate three times; same tree, same commit, same evidence. Say so if you want each card gated independently.
+
+Implemented on PR #169 (`docs/rheos-cli-reference`) — https://github.com/open-hax/eta-mu/pull/169
+
+Stack position 3 of 3; base is #168 → #167 → main. Merge last.
 ---

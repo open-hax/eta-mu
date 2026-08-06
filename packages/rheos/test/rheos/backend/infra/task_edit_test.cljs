@@ -1,10 +1,10 @@
-(ns rheos.backend.domain.task-edit-test
+(ns rheos.backend.infra.task-edit-test
   (:require ["node:fs/promises" :as fsp]
             ["node:os" :as os]
             ["node:path" :as path]
             [cljs.test :refer [deftest testing is]]
-            [rheos.backend.domain.task-edit :as task-edit]
             [rheos.backend.domain.events :as events]
+            [rheos.backend.infra.task-edit :as task-edit]
             [rheos.backend.shape.content-parser :as content-parser]
             [rheos.backend.infra.watcher :as watcher]))
 
@@ -41,6 +41,29 @@
           (is (re-find #"priority: \"P0\"" raw))
           (is (pos? (count (filter #(= "frontmatter" (:type %)) @captured))))
           (is (some #(= "P0" (:new-value %)) @captured)))
+        (finally
+          (unsub)
+          (await (.rm fsp dir #js {:recursive true :force true})))))))
+
+(deftest ^:async update-frontmatter-with-no-updates-writes-nothing
+  (testing "An empty update leaves the file byte-identical and emits no event"
+    (let [dir (tmp-dir)
+          _ (await (.mkdir fsp dir #js {:recursive true}))
+          _ (await (write-task! dir "t1" "Task One"))
+          project {:id "test" :title "Test" :tasks-dir dir :meta {}}
+          task {:uuid "t1" :source-path (path/join dir "t1.md")
+                :frontmatter {:uuid "t1" :priority "P3"}}
+          before (await (.readFile fsp (:source-path task) "utf8"))
+          captured (atom [])
+          unsub (events/subscribe! #(swap! captured conj %))]
+      (try
+        (let [result (await (task-edit/update-frontmatter!
+                             {:project project :task task :updates {} :source "test"}))
+              after (await (.readFile fsp (:source-path task) "utf8"))]
+          (is (:ok result))
+          (is (:noop result) "an empty update reports itself as a no-op")
+          (is (= before after) "the file is not rewritten with a fresh write-id")
+          (is (empty? @captured) "and nothing is recorded that did not happen"))
         (finally
           (unsub)
           (await (.rm fsp dir #js {:recursive true :force true})))))))

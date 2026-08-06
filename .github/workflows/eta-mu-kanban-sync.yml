@@ -1,0 +1,41 @@
+name: Eta-mu Rheos GitHub Issue Sync
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Plan without mutating GitHub Issues"
+        required: false
+        default: false
+        type: boolean
+      max_writes:
+        description: "Maximum GitHub API writes in this run"
+        required: false
+        default: 50
+        type: number
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: eta-mu-rheos-github-issue-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    uses: ./.github/workflows/kanban-sync.yml
+    permissions:
+      contents: read
+      issues: write
+    with:
+      eta-mu-ref: ${{ github.sha }}
+      repo: ${{ github.repository }}
+      tasks-dir: kanban
+      dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+      max-writes: ${{ github.event_name == 'workflow_dispatch' && inputs.max_writes || 50 }}
+      write-delay-ms: 1000
+      close-done: true
+      close-rejected: true

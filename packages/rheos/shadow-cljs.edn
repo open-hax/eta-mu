@@ -28,6 +28,13 @@
         :main rheos.backend.infra.cli/main
         :compiler-options {:optimizations :simple}}
 
+  ;; Dedicated projector executable keeps the GitHub write boundary explicit while
+  ;; consuming the same canonical task loader and shapes as the Rheos CLI/server.
+  :github-sync {:target :node-script
+                :output-to "dist/github-sync.cjs"
+                :main rheos.backend.infra.github-sync-cli/main
+                :compiler-options {:optimizations :simple}}
+
   :server-dev {:target :esm
                :runtime :node
                :output-dir "dist-dev"

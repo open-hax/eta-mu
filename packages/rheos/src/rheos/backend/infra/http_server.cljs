@@ -13,7 +13,7 @@
             [rheos.backend.infra.config :as config]
             [rheos.backend.shape.content-parser :as content-parser]
              [rheos.backend.domain.events :as events]
-             [rheos.backend.domain.task-edit :as task-edit]
+             [rheos.backend.infra.task-edit :as task-edit]
              [rheos.backend.infra.chat-proxy :as chat-proxy]
              [rheos.backend.infra.ledger :as ledger]
              [rheos.backend.law.frontmatter :as law-frontmatter]
@@ -21,7 +21,7 @@
             [rheos.backend.infra.mcp :as mcp]
             [rheos.backend.infra.projects :as projects]
             [rheos.backend.infra.task-store :as tasks]
-            [rheos.backend.domain.transition :as transition]
+            [rheos.backend.infra.transition :as transition]
             [rheos.backend.infra.watcher :as watcher]))
 
 (defonce server-state (atom nil))
@@ -415,7 +415,9 @@
     (when config-path (js/console.log "Config:" config-path))
     ;; Start file watchers for all projects
     (doseq [project (:projects resolved)]
-      (watcher/start-watcher! (:id project) (:tasks-dir project)))
+      (watcher/start-watcher! (:id project)
+                              (:tasks-dir project)
+                              (get-in project [:card-projection :paths])))
     (await (start-http! host port))))
 
 (defn ^:async ^:dev/before-load-async stop-http-before-load!
