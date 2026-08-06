@@ -35,8 +35,16 @@
     :workflow "rheos.yml" :job "test" :check "Rheos tests and lint"
     :paths ["packages/rheos/" "packages/protocols/" "packages/chat-ui/"
             "pnpm-lock.yaml" ".github/workflows/rheos.yml"]
+    ;; `:no-warning` on the build is STRICTER THAN CI, deliberately. The rheos
+    ;; job runs only test + lint:kondo, and the one CI job that does build rheos
+    ;; ignores compiler warnings — so a shadow-cljs :infer-warning reaches main
+    ;; unchallenged, which is exactly how one did on 2026-08-06. sol and axxium
+    ;; already fail on any WARNING; rheos should too. Tracked as
+    ;; `rheos-ci-does-not-gate-build-warnings`; when CI catches up this stops
+    ;; being an intentional divergence and becomes a plain mirror.
     :steps [{:cmd ["pnpm" "--dir" "packages/rheos" "test"] :expect "0 failures, 0 errors"}
-            {:cmd ["pnpm" "--dir" "packages/rheos" "lint:kondo"]}]}
+            {:cmd ["pnpm" "--dir" "packages/rheos" "lint:kondo"]}
+            {:cmd ["pnpm" "--dir" "packages/rheos" "build"] :no-warning true}]}
 
    {:name "eta-mu-cljs"
     :workflow "coverage.yml" :job "eta-mu-cljs" :check "eta-mu CLI + turn-processor + terminal-ui"
