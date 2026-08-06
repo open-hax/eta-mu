@@ -116,7 +116,11 @@
    (case (:priority task) "P0" 0 "P1" 1 "P2" 2 "P3" 3 4)
    (str/lower-case (:title task))])
 
-(defn- source->project [source]
+(defn- source->project
+  "Normalize `load-tasks`' argument. A project map passes through; a tasks-dir
+   string is resolved through the shared registry so a configured project keeps
+   its `:card-projection`."
+  [source]
   (if (map? source)
     source
     (or (projects/find-project-by-tasks-dir source)
@@ -125,12 +129,26 @@
 (defn ^:async load-tasks
   "Load materialized card projections for a project.
 
-   A project with `:card-projection {:paths [...]}` scans only those resolved paths.
-   Passing a bare tasks-dir preserves recursive legacy discovery; configured callers
-   are resolved through the shared project registry during the migration."
+   `source` is either a project map or a bare tasks-dir string. A project with
+   `:card-projection {:paths [...]}` scans only those resolved paths; a bare
+   tasks-dir preserves recursive legacy discovery.
+
+   The resolved tasks-dir is checked because getting it wrong used to be
+   invisible: `readdir` throws on a bad argument, [[collect-markdown-files]]
+   catches everything and returns `[]`, and the caller reads that as \"the board
+   has no cards\". A CLI verb shipped with exactly that mistake and reported
+   `unknown task` for cards that existed. Fail where the mistake is, not five
+   frames later — accepting a project map here does not make an unusable one
+   silent."
   [source]
+  (when-not (or (map? source) (and (string? source) (seq source)))
+    (throw (ex-info (str "load-tasks expects a project map or a tasks directory path, got: " (pr-str source))
+                    {:kind :usage :source source})))
   (let [project (source->project source)
         tasks-dir (:tasks-dir project)
+        _ (when-not (and (string? tasks-dir) (seq tasks-dir))
+            (throw (ex-info (str "load-tasks resolved no tasks directory from: " (pr-str source))
+                            {:kind :usage :source source :tasks-dir tasks-dir})))
         projection (:card-projection project)
         roots (if (and projection (contains? projection :paths))
                 (:paths projection)

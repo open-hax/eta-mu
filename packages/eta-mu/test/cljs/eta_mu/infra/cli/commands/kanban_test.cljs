@@ -57,9 +57,26 @@
     (let [result (kanban/translate-args ["frontmatter" "abc-123" "status" "in_progress"])]
       (is (= ["status-update" "abc-123" "--to" "in_progress"] (:args result))))))
 
-(deftest translate-frontmatter-unsupported-test
-  (testing "legacy frontmatter for non-status keys throws"
-    (is (thrown? js/Error (kanban/translate-args ["frontmatter" "abc-123" "priority" "P0"])))))
+(deftest translate-frontmatter-non-status-test
+  (testing "legacy frontmatter for non-status keys maps to Rheos frontmatter --set"
+    ;; This used to throw and tell callers to edit the markdown by hand; Rheos now
+    ;; owns descriptive frontmatter, so the bridge routes to it.
+    (let [result (kanban/translate-args ["frontmatter" "abc-123" "priority" "P0"])]
+      (is (= ["frontmatter" "abc-123" "--set" "priority=P0"] (:args result))))))
+
+(deftest translate-frontmatter-missing-args-test
+  (testing "legacy frontmatter still requires uuid, key, and value"
+    (is (thrown? js/Error (kanban/translate-args ["frontmatter" "abc-123" "priority"])))))
+
+(deftest passthrough-create-test
+  (testing "native Rheos create passes through untouched"
+    (let [result (kanban/translate-args ["create" "--title" "New card"])]
+      (is (= ["create" "--title" "New card"] (:args result)))
+      (is (nil? (:formatter result))))))
+
+(deftest passthrough-projects-test
+  (testing "native Rheos projects passes through untouched"
+    (is (= ["projects"] (:args (kanban/translate-args ["projects"]))))))
 
 (deftest translate-open-throws-test
   (testing "legacy open is not supported"
