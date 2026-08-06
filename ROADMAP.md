@@ -4,7 +4,7 @@ One page for where the parts are going and in what order. Every repo in the
 constellation carries a short `ROADMAP.md` summarising the slice that affects it
 and pointing back here. **This file is the hub; those are satellites.**
 
-Last surveyed: 2026-08-04.
+Last surveyed: 2026-08-06.
 
 ## How to use this
 
@@ -88,6 +88,8 @@ Every "make X comply" card on this roadmap should therefore ship an
 - `eta-mu:katamorph-provider-contract` — `ProviderContract` kind, tagged.
 - `eta-mu:contract-redefinition-guard` — a consumer's gate fails if it redefines
   a katamorph-owned schema name.
+- `eta-mu:event-ledger-envelope-truth` — card closed. Check whether muse still
+  carries its ANOMALY workaround before assuming the consumer side is finished.
 
 Two extractions out of knoxx have already succeeded. The path works; it runs
 upstream-first.
@@ -100,11 +102,27 @@ upstream-first.
   vs katamorph's `CapabilityContract`. *"A capability is the primitive."*
   **Blocks anything that groups capabilities**, including
   `knoxx:knoxx-mcp-consent-permission-groups`.
-- `eta-mu:event-ledger-envelope-truth` — fix the dist bug or descope to the
-  envelope contract; muse carries an ANOMALY workaround until then.
-- `eta-mu:rheos-cli-card-lifecycle-authority` (breakdown).
+- `eta-mu:rheos-cli-card-lifecycle-authority` (breakdown) — three PRs in review
+  as one ordered stack: #167 create → #168 exit contract → #169 docs. They must
+  merge in that order; each is based on the one before, not on `main`.
 - `knoxx:knoxx-decouple-into-katamorph-contracts` — knoxx internal compliance +
   actor awareness. Explicitly not extraction.
+
+`eta-mu:event-ledger-envelope-truth` was listed here until 2026-08-06; its card
+is `done`. Moved to Done below.
+
+### Open on the board, not yet on this page
+
+- `eta-mu-quality-ratchet` gained four **layer-boundary** slices (#172, merged
+  2026-08-06): 27 findings at `:info`, one card per package — sol 17, rheos 8,
+  terminal-ui 1, eta-mu 1 — each ending in that package raising both linters to
+  `:error`. Start with terminal-ui: one finding, and it proves the mechanism.
+- `agent-operating-standard` (P0, incoming) — session/turn discipline plus five
+  tooling slices. Rides on PR #170, so neither the epic nor `AGENTS.md`'s new
+  section is on `main` yet.
+- `rheos-github-issue-projection` — GitHub Issues as a projection of canonical
+  Rheos tasks (PR #176). Its natural parent epic,
+  `rheos-ledger-authoritative-projections`, is still unmerged on #158.
 
 ### Blocked or deferred
 
@@ -201,7 +219,8 @@ Remaining work is `axxium` and removing stale comments.
 Not decisions yet. Flagged so they stop being re-derived.
 
 1. **Is there a charter?** `eta-mu/kanban/eta-mu-charter-v1.md` exists — 257
-   lines, dated 2026-04-05, body says *"active working charter"*, frontmatter
+   lines, `created_at: 2026-05-29` (this page said 2026-04-05 until 2026-08-06;
+   the frontmatter disagrees), body says *"active working charter"*, frontmatter
    says **`status: rejected`** and `labels: [specs, migrated-spec]`. It also
    names `pi/` as the contract kernel's canonical home, which katamorph's
    extraction has superseded. So: a real draft, partly stale, formally
@@ -220,9 +239,19 @@ Not decisions yet. Flagged so they stop being re-derived.
    independent; what couples them is **composition** — a system uses all three —
    and composition is where coupling belongs. Keeping them separate therefore
    costs nothing today. The test for merging any two is not "are they used
-   together" but "has either been used *without* the other". By that test
-   katamorph clearly earns its own repo: 143 files in eta-mu require it, 2 in
-   muse, 0 in knoxx, 0 in openplanner.
+   together" but "has either been used *without* the other".
+
+   The count this page carried until 2026-08-06 — *"143 files in eta-mu require
+   it"* — does not survive checking. `git grep -l katamorph` finds **56** files,
+   and 25 of those are kanban cards; files with an actual require or import are
+   **6**, twelve of the remainder being prose in `packages/sol`. The conclusion
+   is unchanged (eta-mu is the consumer, knoxx and openplanner are not) but the
+   evidence is an order of magnitude smaller than stated, so the argument is
+   weaker than it read. Re-derive before leaning on it:
+
+   ```bash
+   git grep -lE "\[katamorph|katamorph\." -- '*.cljs' '*.cljc' '*.clj' | wc -l
+   ```
 4. **Which packages are products?** `proxx`, `uxx`, `voxx-clj`, `epiphany`,
    `lakeraven`, `axxium` are already separate repos. openplanner's packages need
    the same call, one at a time.
@@ -231,6 +260,15 @@ Not decisions yet. Flagged so they stop being re-derived.
 
 - Anything asserted here should be checkable in one command. If a claim goes
   stale, fix it or delete it — a roadmap nobody trusts is worse than none.
+- The 2026-08-06 survey ran that rule against this page and three claims failed:
+  a card listed In flight that was `done`, a katamorph file count off by ~24×,
+  and a charter date the frontmatter contradicts. All three are corrected above
+  with the correction left visible, because a page that quietly rewrites itself
+  gives no signal about how often it drifts. Two survey dates apart, that is
+  roughly one bad claim per month.
+- **This file is not on `main`.** It rides on PR #167 together with the
+  `CLAUDE.md` banner that points at it. Until that merges, a `main` checkout has
+  no hub — check before citing it to someone.
 - Satellites summarise; they do not restate. When they disagree with this file,
   this file is wrong until proven otherwise, because it is the one that gets
   read least often.
