@@ -45,6 +45,29 @@
           (unsub)
           (await (.rm fsp dir #js {:recursive true :force true})))))))
 
+(deftest ^:async update-frontmatter-with-no-updates-writes-nothing
+  (testing "An empty update leaves the file byte-identical and emits no event"
+    (let [dir (tmp-dir)
+          _ (await (.mkdir fsp dir #js {:recursive true}))
+          _ (await (write-task! dir "t1" "Task One"))
+          project {:id "test" :title "Test" :tasks-dir dir :meta {}}
+          task {:uuid "t1" :source-path (path/join dir "t1.md")
+                :frontmatter {:uuid "t1" :priority "P3"}}
+          before (await (.readFile fsp (:source-path task) "utf8"))
+          captured (atom [])
+          unsub (events/subscribe! #(swap! captured conj %))]
+      (try
+        (let [result (await (task-edit/update-frontmatter!
+                             {:project project :task task :updates {} :source "test"}))
+              after (await (.readFile fsp (:source-path task) "utf8"))]
+          (is (:ok result))
+          (is (:noop result) "an empty update reports itself as a no-op")
+          (is (= before after) "the file is not rewritten with a fresh write-id")
+          (is (empty? @captured) "and nothing is recorded that did not happen"))
+        (finally
+          (unsub)
+          (await (.rm fsp dir #js {:recursive true :force true})))))))
+
 (deftest ^:async update-frontmatter-injects-write-id
   (testing "Frontmatter update injects write-id and watcher can correlate"
     (let [dir (tmp-dir)

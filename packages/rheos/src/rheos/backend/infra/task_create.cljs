@@ -51,6 +51,22 @@
                    :else tasks-dir)]
     (task-create/check-card-dir! project resolved dir within?)))
 
+(defn- resolve-card-path
+  "The absolute path a new card is written to, refused unless it is a direct
+   child of the already-checked `card-dir`.
+
+   [[rheos.backend.domain.task-create/check-uuid!]] is what stops a crafted uuid
+   from reaching the file name in the first place; this re-checks the path the
+   name actually resolves to, so no future change to naming can quietly reopen
+   the escape that `path/join` normalization would otherwise permit."
+  [card-dir file-name]
+  (let [file-path (path/resolve card-dir file-name)]
+    (when-not (= card-dir (path/dirname file-path))
+      (task-create/refuse! :refused
+                           (str "card file name escapes its directory: " file-name)
+                           {:dir card-dir :file-name file-name :path file-path}))
+    file-path))
+
 (defn- ^:async write-card-exclusive!
   [file-path raw]
   (try
@@ -85,7 +101,8 @@
         card-uuid (:uuid decision)
         card-status (:status decision)
         card-dir (await (resolve-card-dir project card-type dir))
-        file-path (path/join card-dir (task-create/card-file-name (:slug decision) card-uuid))
+        file-path (resolve-card-path
+                   card-dir (task-create/card-file-name (:slug decision) card-uuid))
         write-id (events/generate-write-id)
         card (task-create/render-card {:uuid card-uuid
                                        :title title

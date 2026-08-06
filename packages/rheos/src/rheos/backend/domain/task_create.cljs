@@ -70,6 +70,32 @@
                {:card-type card-type}))
     card-type))
 
+(def uuid-pattern
+  "The characters a card uuid may be spelled with.
+
+   A uuid is not just an identifier: [[card-file-name]] puts its last eight
+   characters into a file name, so it is also a path component. Anchoring the
+   first character to alphanumeric rules out both a leading dot and a bare `..`,
+   and omitting the separators rules out escaping the card directory."
+  #"^[a-zA-Z0-9][a-zA-Z0-9._-]*$")
+
+(defn check-uuid!
+  "Refuse a uuid that cannot safely become part of a file name, and return it
+   trimmed. `nil` or blank means \"derive one from the title\" and is allowed
+   through — [[slugify]] produces the derived form and is safe by construction.
+
+   Only an explicitly requested uuid reaches this check, and only a caller who
+   passed `--uuid` can fail it."
+  [uuid]
+  (when-let [requested (some-> uuid str/trim not-empty)]
+    (when-not (re-matches uuid-pattern requested)
+      (refuse! :usage
+               (str "invalid uuid '" requested "': a uuid becomes part of the card's "
+                    "file name, so it must start with a letter or digit and contain "
+                    "only letters, digits, '.', '-' and '_'")
+               {:uuid requested}))
+    requested))
+
 (defn check-card-dir!
   "Refuse a card directory the board would never scan, and return it otherwise.
 
@@ -98,9 +124,10 @@
   "Decide a new card's identity and entry status against `existing`, every card
    already on the board.
 
-   Refuses, rather than guessing, when: the uuid is already taken; a named
-   `:parent` does not exist; or an explicit `:status` is not the FSM's initial
-   state (pass `:force-status?` to override deliberately).
+   Refuses, rather than guessing, when: an explicit uuid is not spellable as a
+   file name; the uuid is already taken; a named `:parent` does not exist; or an
+   explicit `:status` is not the FSM's initial state (pass `:force-status?` to
+   override deliberately).
 
    Returns `{:slug … :uuid … :status …}`."
   [{:keys [project title card-type parent status uuid force-status? existing]}]
@@ -111,7 +138,7 @@
         ;; v4 — which is what makes the difference between an agent citing a
         ;; card and an agent pasting a hex blob. A random suffix only appears
         ;; when the slug is taken.
-        card-uuid (or (some-> uuid str/trim not-empty)
+        card-uuid (or (check-uuid! uuid)
                       (if (get by-uuid slug)
                         (str slug "-" (subs (str (random-uuid)) 0 8))
                         slug))

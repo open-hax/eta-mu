@@ -25,7 +25,7 @@ Cards referenced as `repo:card-uuid`. Board locations:
 From `muse/docs/design/contract-ownership-and-host-translation.md` — the
 recovered intent, and the thing to keep in your head:
 
-```
+```text
 Katamorph contracts
   → Muse assembly
   → target-neutral resolved agent catalog
