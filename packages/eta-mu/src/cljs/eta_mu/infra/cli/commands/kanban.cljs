@@ -21,6 +21,13 @@
 (defn- rheos-command? [s]
   (contains? rheos-commands s))
 
+(defn- flag?
+  "Does this argument open Rheos's own flag syntax rather than being a legacy
+   positional value? `comment` and `frontmatter` accept both spellings, because
+   `eta-mu kanban help <verb>` prints Rheos's help and documents the flag one."
+  [s]
+  (boolean (and (string? s) (str/starts-with? s "--"))))
+
 (defn- fmt-counts [json]
   (let [data (js->clj (js/JSON.parse json) :keywordize-keys true)
         cols (filterv #(pos? (:count %)) (:columns data))]
@@ -89,20 +96,36 @@
 
         (= "comment" cmd)
         (let [[_ uuid text & more] args]
-          (when (or (nil? uuid) (nil? text))
+          (when (nil? uuid)
             (throw (js/Error. "usage: eta-mu kanban comment <uuid> <text>")))
-          {:args (into ["add-comment" uuid "--text" text] more)})
+          (if (flag? text)
+            ;; Native Rheos form. `eta-mu kanban help comment` prints Rheos's
+            ;; help, which documents `--text <text>`, so this is the syntax the
+            ;; tool tells callers to use. Binding it positionally made `--text`
+            ;; itself the comment body and left the real text as a trailing
+            ;; positional Rheos ignores — a comment silently replaced by the name
+            ;; of its own flag, reported as `"ok": true`.
+            {:args (into ["add-comment" uuid text] (remove nil? more))}
+            (do (when (nil? text)
+                  (throw (js/Error. "usage: eta-mu kanban comment <uuid> <text>")))
+                {:args (into ["add-comment" uuid "--text" text] more)})))
 
         (= "frontmatter" cmd)
         (let [[_ uuid key value & more] args]
-          (when (or (nil? uuid) (nil? key) (nil? value))
+          (when (nil? uuid)
             (throw (js/Error. "usage: eta-mu kanban frontmatter <uuid> <key> <value>")))
-          ;; `status` is FSM-governed and has its own verb; everything else now
-          ;; routes to Rheos's `frontmatter --set`, which enforces the mutable-key
-          ;; law. This used to throw and tell callers to edit markdown by hand.
-          (case key
-            "status" {:args (into ["status-update" uuid "--to" value] more)}
-            {:args (into ["frontmatter" uuid "--set" (str key "=" value)] more)}))
+          (if (flag? key)
+            ;; Native Rheos form: `frontmatter <uuid> --set key=value`.
+            {:args (into ["frontmatter" uuid key] (remove nil? (cons value more)))}
+            (do
+              (when (or (nil? key) (nil? value))
+                (throw (js/Error. "usage: eta-mu kanban frontmatter <uuid> <key> <value>")))
+              ;; `status` is FSM-governed and has its own verb; everything else now
+              ;; routes to Rheos's `frontmatter --set`, which enforces the mutable-key
+              ;; law. This used to throw and tell callers to edit markdown by hand.
+              (case key
+                "status" {:args (into ["status-update" uuid "--to" value] more)}
+                {:args (into ["frontmatter" uuid "--set" (str key "=" value)] more)}))))
 
         (= "open" cmd)
         (throw (js/Error. "eta-mu kanban open is not supported by Rheos. Open the task markdown directly."))
