@@ -6,7 +6,8 @@
             [clojure.string :as str]
             [rheos.backend.domain.events :as events]
             [rheos.backend.infra.ledger :as ledger]
-            [rheos.backend.law.fsm :as fsm]))
+            [rheos.backend.law.fsm :as fsm]
+            [rheos.backend.shape.content-parser :as content-parser]))
 
 (defn- md? [^js p] (.endsWith p ".md"))
 
@@ -42,17 +43,38 @@
 (defonce watchers (atom {}))
 (defonce pending-writes (atom {}))
 
-(defn- extract-write-id [content]
-  (let [match (re-find #"write-id:\s*\"([^\"]+)\"" content)]
-    (when match (nth match 1))))
+(defn card-fields
+  "Read `uuid`, `write-id`, and `status` out of a card's frontmatter.
 
-(defn- extract-uuid [content]
-  (let [match (re-find #"uuid:\s*\"([^\"]+)\"" content)]
-    (when match (nth match 1))))
+   This parses the frontmatter block with the same reader the rest of the board
+   uses rather than regexing the raw file, and the distinction is not cosmetic.
+   The regexes this replaced required a *double-quoted* scalar
+   (`status: \"incoming\"`), which only cards the CLI had written ever carry.
+   Hand-authored and normalized cards use plain YAML (`status: incoming`) —
+   68 of this repo's 282 cards at the time of writing — and every one of them
+   read back as `nil` and was then recorded in the authoritative ledger as an
+   FSM violation.
 
-(defn- extract-status [content]
-  (let [match (re-find #"status:\s*\"([^\"]+)\"" content)]
-    (when match (nth match 1))))
+   Scanning the raw file was the second half of the defect: a `status: \"done\"`
+   quoted anywhere in a card's *prose* would satisfy the regex and be reported
+   as that card's status."
+  [raw]
+  (let [{:keys [frontmatter]} (content-parser/parse-frontmatter raw)]
+    (select-keys frontmatter [:uuid :write-id :status])))
+
+(defn status-verdict
+  "Classify a card's parsed `status` against the FSM.
+
+   Three outcomes, not two. A status that is absent or unparseable is
+   `\"unknown\"` — the watcher failed to read the card, which is not the same
+   claim as the card holding a status the FSM forbids. Collapsing those two into
+   `\"invalid\"` is what let a read failure be published as a verdict about the
+   card's contents."
+  [status]
+  (cond
+    (str/blank? status) "unknown"
+    (some #(= status %) (:states fsm/promethean-fsm)) "valid"
+    :else "invalid"))
 
 (defn expect-write!
   "Register an expected file write so the watcher can correlate the resulting
@@ -84,23 +106,17 @@
     (js/Promise.resolve nil)
     (try
       (let [content (await (.readFile fsp file-path "utf8"))
-            write-id (extract-write-id content)
-            uuid (extract-uuid content)
+            {:keys [uuid write-id status]} (card-fields content)
             ledger (ledger/get-ledger tasks-dir)]
         (when uuid
-          (if-let [info (correlate-write write-id)]
-            (if (= (:task-id info) uuid)
-              (events/emit-file-changed! ledger board-id uuid write-id "correlated")
-              (do
-                (events/emit-drift-detected! ledger board-id uuid write-id)
-                (let [status (extract-status content)
-                      valid? (and status (some #(= status %) (:states fsm/promethean-fsm)))]
-                  (events/emit-drift-protocol-rerun! ledger board-id uuid status (if valid? "valid" "invalid")))))
+          ;; Only consume the pending registration once the file has proven it is
+          ;; a card; a uuid-less file must not spend another card's write-id.
+          (if (= (:task-id (correlate-write write-id)) uuid)
+            (events/emit-file-changed! ledger board-id uuid write-id "correlated")
             (do
               (events/emit-drift-detected! ledger board-id uuid write-id)
-              (let [status (extract-status content)
-                    valid? (and status (some #(= status %) (:states fsm/promethean-fsm)))]
-                (events/emit-drift-protocol-rerun! ledger board-id uuid status (if valid? "valid" "invalid")))))))
+              (events/emit-drift-protocol-rerun! ledger board-id uuid status
+                                                 (status-verdict status))))))
       (catch :default err
         (js/console.error "Watcher error:" file-path (.-message err))))))
 
