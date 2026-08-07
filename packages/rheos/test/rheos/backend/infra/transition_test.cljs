@@ -27,13 +27,18 @@
     (.writeFile fsp file-path raw "utf8")))
 
 (defn- ^:async ledger-lines
-  "Number of events on disk, 0 when the ledger has not been created."
+  "Number of events on disk, 0 when the ledger has not been created.
+
+   Only a missing file counts as zero. Swallowing any other read failure would
+   let these tests report 'no event was appended' when they simply could not
+   look — the refusal assertions would then pass without evidence."
   [dir]
   (let [ledger-path (path/join dir ".events" "ledger.edn")]
     (try
       (let [raw (await (.readFile fsp ledger-path "utf8"))]
         (count (remove #(= "" %) (.split (str raw) "\n"))))
-      (catch :default _ 0))))
+      (catch :default error
+        (if (= "ENOENT" (.-code error)) 0 (throw error))))))
 
 (defn- ^:async with-card
   "Run `f` against a temp board holding one card at `status`, then assert on the

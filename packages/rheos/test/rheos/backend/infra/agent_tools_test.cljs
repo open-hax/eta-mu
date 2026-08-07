@@ -83,8 +83,59 @@
       (is (not= before after))
       (is (re-find #"status: \"ready\"" after)))))
 
-(deftest refused-maps-to-a-non-zero-exit
-  (testing "the `:kind` a refusal throws is the one the CLI turns into exit 3"
+;; ---------------------------------------------------------------------------
+;; The exit code a scripted caller actually observes
+;; ---------------------------------------------------------------------------
+
+(defn- ^:async run-cli!
+  "Drive [[cli/main]] end to end against a temp board holding one card at
+   `status`, and return the exit code it left on the process.
+
+   `main` reads `process.argv` and writes `process.exitCode` — the only way to
+   prove a refusal reaches a caller as a non-zero exit is to go through both.
+   Both globals are restored, and `exitCode` is reset to 0, or a passing suite
+   would inherit this test's failure code."
+  [status argv-tail]
+  (let [dir (tmp-dir)
+        _ (await (.mkdir fsp dir #js {:recursive true}))
+        _ (await (write-task! dir "t1" status))
+        config-path (path/join dir "board.edn")
+        _ (await (.writeFile fsp config-path
+                             (str "{:tasks-dir \"" dir "\" :fsm :promethean}") "utf8"))
+        saved-argv js/process.argv
+        saved-projects {:projects (projects/all) :default-project-id (projects/default-id)}]
+    (set! (.-exitCode js/process) 0)
+    (set! (.-argv js/process)
+          (clj->js (concat ["node" "rheos"] argv-tail ["--config" config-path])))
+    (try
+      (await (cli/main))
+      {:exit-code (.-exitCode js/process)
+       :after (await (.readFile fsp (path/join dir "t1.md") "utf8"))}
+      (finally
+        (set! (.-argv js/process) saved-argv)
+        (set! (.-exitCode js/process) 0)
+        (projects/set-projects! saved-projects)
+        (await (.rm fsp dir #js {:recursive true :force true}))))))
+
+(deftest ^:async status-update-exits-non-zero-on-a-refusal
+  (testing "a refused move reaches the caller as exit 3, not a silent success"
+    (let [{:keys [exit-code after]}
+          (await (run-cli! "review" ["status-update" "t1" "--to" "in_review"]))]
+      (is (= 3 exit-code)
+          "exit 0 here is indistinguishable from a completed move")
+      (is (= (:refused cli/exit-codes) exit-code)
+          "and it is the published `:refused` code, not an incidental non-zero")
+      (is (re-find #"status: \"review\"" after)
+          "the card still holds its real status"))))
+
+(deftest ^:async status-update-exits-zero-on-a-legal-move
+  (testing "the exit assertion above would pass on a CLI that always failed"
+    (let [{:keys [exit-code after]}
+          (await (run-cli! "breakdown" ["status-update" "t1" "--to" "ready"]))]
+      (is (= 0 exit-code))
+      (is (re-find #"status: \"ready\"" after)))))
+
+(deftest exit-codes-cover-refusal
+  (testing "the published mapping the tests above depend on"
     (is (= 3 (:refused cli/exit-codes)))
-    (is (pos? (:refused cli/exit-codes))
-        "a refusal that exits 0 is indistinguishable from a completed move")))
+    (is (pos? (:refused cli/exit-codes)))))
