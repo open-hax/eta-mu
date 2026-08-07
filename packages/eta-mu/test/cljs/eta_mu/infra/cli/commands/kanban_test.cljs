@@ -52,6 +52,37 @@
     (let [result (kanban/translate-args ["comment" "abc-123" "progress note"])]
       (is (= ["add-comment" "abc-123" "--text" "progress note"] (:args result))))))
 
+(deftest translate-comment-native-flag-form-test
+  (testing "the --text form documented by `kanban help comment` reaches Rheos intact"
+    ;; Binding `--text` positionally made the flag name itself the comment body
+    ;; and left the real text as a trailing positional Rheos ignores, so the card
+    ;; recorded the string "--text" while the CLI reported `"ok": true`.
+    (let [result (kanban/translate-args ["comment" "abc-123" "--text" "progress note"])]
+      (is (= ["add-comment" "abc-123" "--text" "progress note"] (:args result)))
+      (is (not= "--text" (last (:args result)))))))
+
+(deftest translate-comment-both-spellings-agree-test
+  (testing "positional and flag spellings produce the same Rheos invocation"
+    (is (= (:args (kanban/translate-args ["comment" "abc-123" "a note"]))
+           (:args (kanban/translate-args ["comment" "abc-123" "--text" "a note"]))))))
+
+(deftest translate-comment-native-form-keeps-trailing-flags-test
+  (testing "flags after the comment text survive translation"
+    (let [result (kanban/translate-args
+                  ["comment" "abc-123" "--text" "a note" "--project" "p1"])]
+      (is (= ["add-comment" "abc-123" "--text" "a note" "--project" "p1"]
+             (:args result))))))
+
+(deftest translate-comment-missing-text-test
+  (testing "a bare uuid is still a usage error in both spellings"
+    (is (thrown? js/Error (kanban/translate-args ["comment" "abc-123"])))))
+
+(deftest translate-frontmatter-native-flag-form-test
+  (testing "the --set form documented by `kanban help frontmatter` passes through"
+    (let [result (kanban/translate-args
+                  ["frontmatter" "abc-123" "--set" "priority=P0"])]
+      (is (= ["frontmatter" "abc-123" "--set" "priority=P0"] (:args result))))))
+
 (deftest translate-frontmatter-status-test
   (testing "legacy frontmatter status maps to status-update --to"
     (let [result (kanban/translate-args ["frontmatter" "abc-123" "status" "in_progress"])]

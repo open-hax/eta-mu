@@ -171,3 +171,12 @@
   spore: none
   receipt-refs: none
   note: pnpm link --global lost the PATH race to volta, so the fix was a second binary name rather than a PATH fight. Found the owner's existing global eta-mu-beta symlink had been dangling since the workspace moved out of ~/devel/orgs — the second absolute-path integration broken by that move after the Rheos systemd unit. AGENTS.md was itself telling agents to run bare 'eta-mu kanban', i.e. the published build; corrected to eta-mu-beta.
+- ts: 2026-08-07T01:32:18.677209583Z
+  session: /home/err/spaces/eta-mu
+  task: P1 drift-verdict card: corrected its diagnosis, fixed the real parse bug, plus a silent comment-CLI data-loss bug (PR #182)
+  p-efficiency: 0.8
+  p-friction: 0.45
+  p-skill-candidate: 0.85
+  spore: none
+  receipt-refs: 2026-08-07T01:20:08.455Z
+  note: Card's 'live confirmation' proved the trigger (git) but not the mechanism (assumed race, actually a quoted-only YAML regex; 68/282 cards unparseable). Proved new tests catch it by restoring pre-fix logic behind the same signatures. Detours: kanban comment --text silently stored the flag name; worktree needed node_modules symlinks; FSM build gate does not scrub provider env vars unlike pnpm gates; pnpm test rewrites checked-in models.generated.ts from live network.
