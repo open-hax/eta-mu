@@ -180,3 +180,12 @@
   spore: none
   receipt-refs: 2026-08-07T01:20:08.455Z
   note: Card's 'live confirmation' proved the trigger (git) but not the mechanism (assumed race, actually a quoted-only YAML regex; 68/282 cards unparseable). Proved new tests catch it by restoring pre-fix logic behind the same signatures. Detours: kanban comment --text silently stored the flag name; worktree needed node_modules symlinks; FSM build gate does not scrub provider env vars unlike pnpm gates; pnpm test rewrites checked-in models.generated.ts from live network.
+- ts: 2026-08-07T02:32:50.893224312Z
+  session: /home/err/spaces/eta-mu
+  task: Board walk: closed the FSM status-validation card's remaining DoD with three-layer regression tests (PR #183)
+  p-efficiency: 0.75
+  p-friction: 0.4
+  p-skill-candidate: 0.8
+  spore: none
+  receipt-refs: none
+  note: Falsified most new tests by bypassing the FSM verdict in move-task! and matching the failures to the bug's real signature — but skipped that check on the exit-code test, which is exactly the one that turned out to assert a constant (:refused -> 3) instead of the behaviour that sets it. CodeRabbit caught it. Also: the comment --text fix merged in #182 was not in force because eta-mu-beta symlinks to an unrebuilt dist-cli, so the bug reproduced on main and corrupted a card; the receipt claiming it fixed made it less likely to be doubted. Carded the two out-of-scope defects found (build gate rewrites models.generated.ts; merged != shipped for dist-cli).
