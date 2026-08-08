@@ -33,7 +33,7 @@ Interpretation: the presence of the merged operating-standard material is implem
 
 PR #183 has merged as `8e584a550ccb7d85f6223adbd5b178072a6750ce`.
 
-It adds enforcement at three layers for invalid FSM targets:
+It pins existing refusal behavior with regression coverage at three layers for invalid FSM targets:
 
 - the FSM law must never offer a target outside the state set;
 - the write path must refuse without mutating the card or appending a ledger event;
