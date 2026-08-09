@@ -1,0 +1,19 @@
+#!/usr/bin/env nbb
+
+(ns clio.test-runner
+  (:require [cljs.test :as test]
+            [clio.domain.canonicalize-test]
+            [clio.domain.schema-test]
+            [clio.external.js.process :as process]
+            [clio.infra.ledger-test]))
+
+(defmethod test/report [:cljs.test/default :end-run-tests]
+  [_]
+  (let [counters (:report-counters (test/get-current-env))]
+    (when-not (test/successful? counters)
+      (process/exit! 1))))
+
+(test/run-tests
+ 'clio.domain.schema-test
+ 'clio.domain.canonicalize-test
+ 'clio.infra.ledger-test)
