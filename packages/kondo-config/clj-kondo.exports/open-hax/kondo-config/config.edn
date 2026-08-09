@@ -58,6 +58,7 @@
            ;; its own .clj-kondo/config.edn and keeps them there.
            :layer-boundary/upward-require {:level :info}
            :layer-boundary/host-require {:level :info}
+           :layer-boundary/js-star-interop {:level :info}
            :fn-length/long {:level :warning}
            :fn-length/too-long {:level :error}
            :file-length/long {:level :warning}
@@ -70,6 +71,7 @@
  ;; cljs.core/ns takes one hook: hooks.layer-boundaries/check-ns runs the layer
  ;; gate and then delegates to hooks.promise-chain/check-ns.
  :hooks {:analyze-call {cljs.core/ns hooks.layer-boundaries/check-ns
+                        cljs.core/js* hooks.layer-boundaries/check-js-star
                         cljs.core/-> hooks.promise-chain/check
                         cljs.core/->> hooks.promise-chain/check
                         cljs.core/do hooks.promise-chain/check

@@ -9,6 +9,7 @@ onlyBuiltDependencies:
   - '@parcel/watcher'
   - canvas
   - esbuild
+  - fs-ext-extra-prebuilt
   - koffi
   - msgpackr-extract
   - protobufjs
