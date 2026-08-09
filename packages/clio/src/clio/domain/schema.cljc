@@ -193,16 +193,18 @@
     (fail! :clio.schema/invalid-identity
            "Event identity, stream sequence, or causal ids are invalid"
            {:event event}))
-  (let [{:keys [schema/id schema/form]} (resolve-event-schema revisions event)]
-    (when-not (= id (:event/type event))
+  (let [resolved (resolve-event-schema revisions event)
+        schema-id (:schema/id resolved)
+        schema-form (:schema/form resolved)]
+    (when-not (= schema-id (:event/type event))
       (fail! :clio.schema/type-mismatch
              "Event type must equal its schema id"
              {:event/type (:event/type event)
-              :schema/id id}))
-    (when-not (m/validate form event)
+              :schema/id schema-id}))
+    (when-not (m/validate schema-form event)
       (fail! :clio.schema/invalid-event
              "Event does not match its historical Malli schema"
-             {:schema/id id
-              :explain (m/explain form event)
+             {:schema/id schema-id
+              :explain (m/explain schema-form event)
               :event event})))
   event)
