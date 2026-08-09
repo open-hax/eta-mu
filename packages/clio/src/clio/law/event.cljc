@@ -2,7 +2,7 @@
   (:require [clojure.string :as str]))
 
 (def uuid-pattern
-  #"(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+  #"(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
 (defn uuid-string?
   [value]
@@ -21,8 +21,12 @@
 
 (defn event-identity-valid?
   [event]
-  (and (uuid-string? (:event/id event))
-       (non-blank-string? (:event/stream event))
-       (positive-int? (:event/seq event))
-       (vector? (:event/causes event))
-       (every? uuid-string? (:event/causes event))))
+  (let [event-id (:event/id event)
+        causes (:event/causes event)]
+    (and (uuid-string? event-id)
+         (non-blank-string? (:event/stream event))
+         (positive-int? (:event/seq event))
+         (vector? causes)
+         (every? uuid-string? causes)
+         (= (count causes) (count (set causes)))
+         (not (some #{event-id} causes)))))
