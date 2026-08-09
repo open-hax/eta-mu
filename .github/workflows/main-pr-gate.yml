@@ -12,6 +12,8 @@ on:
       - 'scripts/test.bb'
       - 'scripts/lint.bb'
       - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
       - '.github/workflows/*.yml'
 
 jobs:
