@@ -1,8 +1,7 @@
 (ns clio.extern.js.fs
   (:refer-clojure :exclude [exists?])
-  (:require ["node:fs" :as fs]
-            ["node:path" :as node-path]
-            [clio.shape.edn :as edn]))
+  (:require ["fs-ext-extra-prebuilt" :as fs-ext]
+            ["node:fs" :as fs]))
 
 (defn exists?
   [path]
@@ -38,6 +37,11 @@
   (fs/renameSync from to)
   to)
 
+(defn hard-link!
+  [from to]
+  (fs/linkSync from to)
+  to)
+
 (defn delete-if-exists!
   [path]
   (when (exists? path)
@@ -56,225 +60,75 @@
     (vec (fs/readdirSync path))
     []))
 
-(defn- sleep-ms!
-  [milliseconds]
-  (let [buffer (js/SharedArrayBuffer. 4)
-        view (js/Int32Array. buffer)]
-    (js/Atomics.wait view 0 0 milliseconds))
-  nil)
+(defn- native-constant
+  [name]
+  (aget (.-constants fs-ext) name))
 
-(defn- create-exclusive-with-content!
-  [path content]
-  (fs/writeFileSync path content #js {:flag "wx"})
-  path)
-
-(defn- try-create-lock!
-  [lock-path record-text]
-  (try
-    (create-exclusive-with-content! lock-path record-text)
-    :acquired
-    (catch :default cause
-      (if (= "EEXIST" (.-code cause))
-        :busy
-        (throw cause)))))
-
-(defn- random-token
+(defn- windows?
   []
-  (str (js/Date.now) "-" (js/Math.random)))
+  (= "win32" (.-platform js/process)))
 
-(defn- proc-stat-start-time
-  "The start time (in clock ticks since boot, /proc/<pid>/stat field 22) of
-   pid, or nil where the process is gone or /proc does not exist (macOS,
-   Windows). The comm field is parenthesized and may itself contain spaces,
-   so fields are split only after its closing paren."
-  [pid]
-  (try
-    (let [stat (fs/readFileSync (str "/proc/" pid "/stat") "utf8")
-          after-comm (.substring stat (inc (.lastIndexOf stat ")")))
-          fields (.split (.trim after-comm) #"\s+")]
-      (aget fields 19))
-    (catch :default _ nil)))
-
-(defn- own-start-time
-  []
-  (proc-stat-start-time (.-pid js/process)))
-
-(defn- lock-record-text
-  [token]
-  (pr-str {:lock/pid (.-pid js/process)
-           :lock/started (own-start-time)
-           :lock/token token}))
-
-(defn- lock-identity
-  "The ownership record plus inode identity (dev+ino) of the lock file at
-   lock-path, or nil if it no longer exists (already released by its owner or
-   reclaimed by a contender). The inode distinguishes 'the same lock file I
-   inspected' from 'a fresh lock a contender created at this path after
-   reclaiming the one I inspected'. An unparseable record reads as nil, which
-   callers treat as unknown ownership and fall back to age on."
-  [lock-path]
-  (try
-    (let [stat (fs/statSync lock-path)
-          record (try (edn/read-one (read-text lock-path))
-                      (catch :default _ nil))]
-      {:lock/dev (.-dev stat)
-       :lock/ino (.-ino stat)
-       :lock/mtime-ms (.getTime (.-mtime stat))
-       :lock/record record})
-    (catch :default cause
-      (if (= "ENOENT" (.-code cause))
-        nil
-        (throw cause)))))
-
-(defn- process-alive?
-  "Whether pid names a live process, checked without sending it a real
-   signal. `kill(pid, 0)` only validates that the target exists and is
-   signalable; a thrown ESRCH means no such process, any other error (most
-   commonly EPERM, a process we lack permission to signal) means it exists."
-  [pid]
-  (try
-    (.kill js/process pid 0)
-    true
-    (catch :default cause
-      (not= "ESRCH" (.-code cause)))))
-
-(defn- owner-alive?
-  "Whether the lock's recorded owner still exists. pid liveness is necessary
-   but not sufficient: a crashed writer's pid can be reused by an unrelated
-   long-lived process before the orphaned lock is inspected, and kill(pid, 0)
-   would then report that process as the owner, blocking reclamation for its
-   whole lifetime. Where /proc exists, the start time recorded at lock
-   creation disambiguates — a reused pid belongs to a process started at a
-   different time. Where /proc does not exist (or an older lock record
-   carries no start time), falls back to pid liveness alone."
-  [{:lock/keys [pid started]}]
-  (let [current (proc-stat-start-time pid)]
-    (if (and started current)
-      (= started current)
-      (process-alive? pid))))
-
-(defn- reclaimable-identity
-  "The identity of lock-path's lock if it may be reclaimed right now, else
-   nil. A lock whose recorded owner process is still alive is never
-   reclaimable, no matter its age — an overrun read+validate phase in a live
-   writer must not let a contender in. A lock the PID record can't establish
-   liveness for (missing/corrupt, e.g. between another reclaimer's rename and
-   its own recreate) falls back to the age-based safety net rather than
-   waiting on it forever. The returned identity is what a reclaimer must
-   re-verify at the destructive step — see try-reclaim-stale-lock!."
-  [lock-path stale-after-ms]
-  (when-let [identity (lock-identity lock-path)]
-    (let [record (:lock/record identity)]
-      (if (:lock/pid record)
-        (when-not (owner-alive? record)
-          identity)
-        (when (> (- (js/Date.now) (:lock/mtime-ms identity)) stale-after-ms)
-          identity)))))
-
-(defn- try-reclaim-stale-lock!
-  "Attempt to claim reclamation of a stale lock by atomically renaming it
-   aside — then verify the renamed file is still the exact lock that was
-   inspected (same dev+ino, same ownership token) before deleting it.
-
-   Renaming is atomic at the OS level: when two contenders race on the same
-   stale lock, at most one rename succeeds and the other gets ENOENT. The
-   identity check closes the subtler race that raw rename-aside leaves open:
-   the loser of that race, acting on its earlier staleness observation, would
-   otherwise rename aside and delete the *fresh* lock the winner went on to
-   create, letting both processes enter the critical section. On mismatch the
-   file is renamed back untouched and reclamation aborts. (In the vanishing
-   gap where a third party creates a lock while one is renamed aside, the
-   rename-back can displace it — displaced holders are caught by the
-   lock-owned? commit fence in infra.ledger, so at most one process ever
-   commits.)"
-  [lock-path expected]
-  (let [claim-path (str lock-path ".reclaim-" (random-token))]
-    (try
-      (fs/renameSync lock-path claim-path)
-      (let [actual (lock-identity claim-path)]
-        (if (and (= (:lock/dev actual) (:lock/dev expected))
-                 (= (:lock/ino actual) (:lock/ino expected))
-                 (= (get-in actual [:lock/record :lock/token])
-                    (get-in expected [:lock/record :lock/token])))
-          (do (delete-if-exists! claim-path) true)
-          (do
-            (try (fs/renameSync claim-path lock-path)
-                 (catch :default _))
-            false)))
-      (catch :default cause
-        (if (= "ENOENT" (.-code cause))
-          false
-          (throw cause))))))
-
-(defn- canonical-lock-path
-  "Resolve path's containing directory to its real filesystem location before
-   deriving the lock path, so two callers reaching the same ledger through
-   different symlinked directory paths contend for one lock file instead of
-   two independent ones. A hard link to the same file under a different name
-   within the same real directory is a known residual gap this does not
-   cover — that needs inode identity (dev+ino), not a path string."
-  [path]
-  (str (fs/realpathSync (node-path/dirname path))
-       node-path/sep
-       (node-path/basename path)
-       ".lock"))
+(defn- acquire-native-lock!
+  [fd]
+  (if (windows?)
+    ;; Lock the complete 64-bit byte range. LockFileEx permits locking beyond
+    ;; EOF, so future appends remain covered by the same kernel lock.
+    (fs-ext/lockFileExSync
+     fd
+     (native-constant "LOCKFILE_EXCLUSIVE_LOCK")
+     0 0 0xffffffff 0xffffffff)
+    (do
+      ;; flock is tied to the open file description, so separate descriptors
+      ;; in this process still exclude one another. fcntl adds POSIX record
+      ;; locking for filesystems such as NFS that participate in fcntl locks.
+      ;; Every Clio writer takes both in this order.
+      (fs-ext/flockSync fd "ex")
+      (fs-ext/fcntlSync fd "setlkw" (native-constant "F_WRLCK") 0 0))))
 
 (defn acquire-lock!
-  "Acquire an inter-process lock by exclusively creating `<path>.lock` holding
-   this process's pid and a fresh ownership token. Returns plain Clojure data;
-   no file handle crosses the extern boundary.
+  "Open the ledger itself and hold an OS-backed exclusive lock on its inode.
 
-   A lock is reclaimed, rather than waited out, once its recorded owner
-   process is confirmed dead (crashed, killed, or lost power between creating
-   the lock and its `finally` releasing it) — see `reclaimable-identity`. Liveness,
-   not age, decides this: an overrun read+validate phase in a writer that is
-   still alive must never let a contender in, no matter how long it runs.
-   Reclamation itself is race-safe: see `try-reclaim-stale-lock!`. The
-   ownership token additionally lets a caller whose lock was reclaimed detect
-   it (`lock-owned?`) instead of blindly assuming it still holds the critical
-   section, and prevents `release-lock!` from deleting a different owner's
-   lock."
-  ([path]
-   (acquire-lock! path {:attempts 200 :delay-ms 25 :stale-after-ms 60000}))
-  ([path {:keys [attempts delay-ms stale-after-ms] :or {stale-after-ms 60000}}]
-   (let [lock-path (canonical-lock-path path)
-         token (random-token)
-         record-text (lock-record-text token)]
-     (loop [remaining attempts]
-       (case (try-create-lock! lock-path record-text)
-         :acquired
-         {:lock/path lock-path :lock/token token}
+   The descriptor stays open for the entire read/validate/append critical
+   section. The kernel releases the lock automatically if the process exits,
+   is killed, or crashes; there is no stale lockfile, lease, PID record,
+   reclamation path, or fencing token to race. Hard-link and symlink aliases
+   reach the same inode and therefore the same lock.
 
-          :busy
-          (let [identity (reclaimable-identity lock-path stale-after-ms)]
-            (cond
-              identity
-              (do
-                (try-reclaim-stale-lock! lock-path identity)
-                (recur remaining))
+   Unix takes flock plus a whole-file blocking fcntl write lock. flock gives
+   open-file-description exclusion (including separate descriptors in one
+   process); fcntl provides the network-filesystem coordination path used by
+   NFS implementations that support POSIX record locking. Windows uses an
+   exclusive LockFileEx range covering the full file address space."
+  [path]
+  (let [fd (fs/openSync path "a+")]
+    (try
+      (acquire-native-lock! fd)
+      {:lock/path path :lock/fd fd}
+      (catch :default cause
+        (fs/closeSync fd)
+        (throw cause)))))
 
-              (pos? remaining)
-              (do
-                (sleep-ms! delay-ms)
-                (recur (dec remaining)))
+(defn read-locked-text
+  "Read the entire locked ledger through the descriptor that owns the lock.
+   This intentionally avoids opening and closing a second descriptor while a
+   POSIX fcntl lock is held."
+  [{:lock/keys [fd]}]
+  (let [size (.-size (fs/fstatSync fd))
+        buffer (js/Buffer.alloc size)
+        bytes-read (if (zero? size)
+                     0
+                     (fs/readSync fd buffer 0 size 0))]
+    (.toString buffer "utf8" 0 bytes-read)))
 
-              :else
-              (throw
-               (ex-info "Timed out acquiring file lock"
-                        {:clio/error :clio.extern.fs/lock-timeout
-                         :lock/path lock-path})))))))))
-
-(defn lock-owned?
-  "Whether lock still holds the exact token it was acquired with, i.e. this
-   caller has not been reclaimed as a stale owner by a contender."
-  [{:lock/keys [path token]}]
-  (= token (get-in (lock-identity path) [:lock/record :lock/token])))
+(defn append-locked-text!
+  "Append through the descriptor that owns the kernel lock."
+  [{:lock/keys [fd path]} text]
+  (fs/appendFileSync fd text "utf8")
+  path)
 
 (defn release-lock!
-  "Delete the lock only if it still holds this caller's token. If the lock was
-   reclaimed as stale while this caller held it, the file now belongs to a
-   different owner and must not be deleted out from under them."
-  [lock]
-  (when (lock-owned? lock)
-    (delete-if-exists! (:lock/path lock)))
+  "Close the owning descriptor. Kernel file locks are released by close even
+   when the holder is unwinding from an exception."
+  [{:lock/keys [fd]}]
+  (fs/closeSync fd)
   nil)
