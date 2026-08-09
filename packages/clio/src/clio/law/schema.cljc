@@ -1,5 +1,6 @@
 (ns clio.law.schema
-  (:require [malli.core :as m]))
+  (:require [malli.core :as m]
+            [malli.registry :as mr]))
 
 (def uuid-string-schema
   [:string {:min 36 :max 36}])
@@ -74,7 +75,8 @@
    contract resolve against the same revision that supplied the event schema."
   [catalog schema-id event]
   (let [schema-form (get catalog schema-id)
-        compiled (m/schema schema-form {:registry catalog})]
+        registry (mr/composite-registry m/default-registry catalog)
+        compiled (m/schema schema-form {:registry registry})]
     (when-not (m/validate compiled event)
       (throw
        (ex-info "Event does not match its historical Malli schema"
