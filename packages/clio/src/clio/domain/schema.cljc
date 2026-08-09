@@ -104,12 +104,14 @@
    a literal value is compared (`:enum`/`:=`/`:not=`/comparators), not a
    labeled entry's own label, and not a properties map (`{:closed true}`).
 
-   Two refinements follow Malli's own resolution rules rather than the shape
+   Three refinements follow Malli's own resolution rules rather than the shape
    of the data. A local `:registry` property is semantic, not presentation:
    its values are sub-schemas the form compiles against, so they are walked
    like children. Its keys also *shadow* the catalog for the subtree they
    scope, so a bare keyword resolved by a local definition is not a catalog
-   dependency at all."
+   dependency at all. And the head of a vector form is a schema position
+   whenever it names a registered schema rather than a Malli construct:
+   `[:counter/amount {:min 0}]` is that schema with properties applied."
   [catalog schema-form]
   (letfn [(local-registry [node]
             (when (sequential? node)
@@ -128,20 +130,25 @@
                     from-registry (into #{}
                                         (mapcat #(walk % scope))
                                         (vals registry))
-                    head (first node)]
+                    head (first node)
+                    ;; A head naming a registered schema is itself a schema
+                    ;; position. It can never collide with a construct keyword:
+                    ;; catalog-tree rejects unqualified ids, and every Malli
+                    ;; construct keyword is unqualified.
+                    from-head (walk head scope)]
                 (cond
                   (contains? literal-position-types head)
                   from-registry
 
                   (contains? labeled-entry-types head)
-                  (into from-registry
+                  (into (into from-registry from-head)
                         (mapcat (fn [entry]
                                   (when (vector? entry)
                                     (walk (entry-schema-position entry) scope))))
                         (schema-children node))
 
                   :else
-                  (into from-registry
+                  (into (into from-registry from-head)
                         (mapcat #(walk % scope))
                         (schema-children node))))
 

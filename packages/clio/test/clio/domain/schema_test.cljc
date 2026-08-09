@@ -356,3 +356,49 @@
     (is (not= (get-in v1 [:schema/hashes :counter/added])
               (get-in v2 [:schema/hashes :counter/added]))
         "a :multi branch's child schema is a reference even when its dispatch value is not")))
+
+(deftest leaf-hash-follows-head-position-schema-references
+  ;; Malli's vector syntax is [type properties & children], and a registered
+  ;; schema id is a legal type: [:counter/amount {:min 0}] is that schema with
+  ;; properties applied. The head is therefore a schema position whenever it
+  ;; names a catalog entry rather than a Malli construct.
+  (let [base {:counter/amount :int
+              :counter/added
+              (schema-law/event-schema
+               :counter/added
+               [:map {:closed true}
+                [:amount [:counter/amount {:min 0}]]])}
+        changed {:counter/amount [:int {:max 10}]
+                 :counter/added
+                 (schema-law/event-schema
+                  :counter/added
+                  [:map {:closed true}
+                   [:amount [:counter/amount {:min 0}]]])}
+        v1 (schema/materialize fake-hash base)
+        v2 (schema/materialize fake-hash changed)]
+    (is (not= (get-in v1 [:schema/hashes :counter/added])
+              (get-in v2 [:schema/hashes :counter/added]))
+        "a catalog id in head position is a reference")))
+
+(deftest leaf-hash-ignores-head-position-ids-shadowed-by-a-local-registry
+  ;; Head position is a schema position, so it obeys the same local-registry
+  ;; scope every other schema position does.
+  (let [base {:local/value :boolean
+              :counter/added
+              (schema-law/event-schema
+               :counter/added
+               [:map {:closed true}
+                [:amount [:schema {:registry {:local/value :int}}
+                          [:local/value {:min 0}]]]])}
+        changed {:local/value [:enum true false]
+                 :counter/added
+                 (schema-law/event-schema
+                  :counter/added
+                  [:map {:closed true}
+                   [:amount [:schema {:registry {:local/value :int}}
+                             [:local/value {:min 0}]]]])}
+        v1 (schema/materialize fake-hash base)
+        v2 (schema/materialize fake-hash changed)]
+    (is (= (get-in v1 [:schema/hashes :counter/added])
+           (get-in v2 [:schema/hashes :counter/added]))
+        "a shadowed catalog id in head position is not a reference")))
