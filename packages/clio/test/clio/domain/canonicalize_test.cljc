@@ -12,16 +12,14 @@
     (apply str (take 64 (cycle token)))))
 
 (def catalog
-  (shape/merge-catalogs
-   shape/core-catalog
-   {:counter/opened
-    (shape/event-schema
-     :counter/opened
-     [:map {:closed true} [:amount :int]])
+  {:counter/opened
+   (shape/event-schema
+    :counter/opened
+    [:map {:closed true} [:amount :int]])
+   :counter/added
+   (shape/event-schema
     :counter/added
-    (shape/event-schema
-     :counter/added
-     [:map {:closed true} [:amount :int]])}))
+    [:map {:closed true} [:amount :int]])})
 
 (def revision
   (schema/materialize fake-hash catalog))
@@ -74,20 +72,65 @@
     (catch #?(:clj Exception :cljs :default) cause
       (:clio/error (ex-data cause)))))
 
+(defn without-index
+  [values index]
+  (into (subvec values 0 index)
+        (subvec values (inc index))))
+
+(defn permutations
+  [values]
+  (if (empty? values)
+    [[]]
+    (mapcat
+     (fn [index]
+       (let [head (nth values index)]
+         (map #(into [head] %)
+              (permutations (without-index values index)))))
+     (range (count values)))))
+
+(defn assignments
+  [item-count ledger-count]
+  (if (zero? item-count)
+    [[]]
+    (for [prefix (assignments (dec item-count) ledger-count)
+          ledger-index (range ledger-count)]
+      (conj prefix ledger-index))))
+
+(defn distribute
+  [ordered-events assignment ledger-count]
+  (reduce
+   (fn [ledgers [event ledger-index]]
+     (update ledgers ledger-index conj event))
+   (vec (repeat ledger-count []))
+   (map vector ordered-events assignment)))
+
 (deftest projection-is-invariant-under-physical-partitioning
-  (let [layouts
-        [[[e1 e2 e3 e4]]
-         [[e3 e1] [e4 e2]]
-         [[e4 e2 e2] [e3] [e1 e3]]]
-        canonical (mapv #(canonicalize/canonicalize [revision] %) layouts)
-        ids (mapv :canonical/event-ids canonical)
-        states (mapv #(projection/state % {} apply-counter) canonical)]
-    (testing "all physical layouts yield one logical replay order"
-      (is (apply = ids)))
-    (testing "all physical layouts yield one projection"
-      (is (apply = states))
-      (is (= {"counter:a" 5 "counter:b" 10}
-             (first states))))))
+  (let [events [e1 e2 e3 e4]
+        expected (canonicalize/canonicalize [revision] [events])
+        expected-ids (:canonical/event-ids expected)
+        expected-state (projection/state expected {} apply-counter)
+        layouts
+        (for [ordered (permutations events)
+              assignment (assignments (count events) 3)]
+          (distribute ordered assignment 3))]
+    (testing "every ordering and assignment of the fixture across three ledgers converges"
+      (is
+       (every?
+        (fn [layout]
+          (let [canonical (canonicalize/canonicalize [revision] layout)]
+            (and (= expected-ids (:canonical/event-ids canonical))
+                 (= expected-state
+                    (projection/state canonical {} apply-counter)))))
+        layouts)))
+    (testing "exact duplicates across physical ledgers also collapse"
+      (let [canonical
+            (canonicalize/canonicalize
+             [revision]
+             [[e4 e2 e2] [e3] [e1 e3]])]
+        (is (= expected-ids (:canonical/event-ids canonical)))
+        (is (= expected-state
+               (projection/state canonical {} apply-counter)))))
+    (is (= {"counter:a" 5 "counter:b" 10} expected-state))))
 
 (deftest missing-causal-parent-is-refused
   (let [orphan
