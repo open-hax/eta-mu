@@ -1,5 +1,6 @@
 (ns clio.extern.js.process
-  (:require ["node:child_process" :as child-process]))
+  (:require [promesa.core :as p]
+            ["node:child_process" :as child-process]))
 
 (defn exit!
   [code]
@@ -47,6 +48,5 @@
 
 (defn ^:async run-concurrently!
   [commands]
-  (.then (js/Promise.all (clj->js (mapv run-command! commands)))
-         (fn [results]
-           (vec (array-seq results)))))
+  (p/let [results (js/Promise.all (clj->js (mapv run-command! commands)))]
+    (mapv #(aget results %) (range (.-length results)))))
