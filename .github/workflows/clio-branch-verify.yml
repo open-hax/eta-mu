@@ -1,4 +1,5 @@
 name: Clio branch verification
+# one-shot verification target: final Clio source for PR 280
 
 on:
   push:
