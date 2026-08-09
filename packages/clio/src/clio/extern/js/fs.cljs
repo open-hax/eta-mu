@@ -60,6 +60,16 @@
     (js/Atomics.wait view 0 0 milliseconds))
   nil)
 
+(defn- try-create-lock!
+  [lock-path]
+  (try
+    (create-exclusive! lock-path)
+    :acquired
+    (catch :default cause
+      (if (= "EEXIST" (.-code cause))
+        :busy
+        (throw cause)))))
+
 (defn acquire-lock!
   "Acquire an inter-process lock by exclusively creating `<path>.lock`.
    Returns plain Clojure data; no file handle crosses the extern boundary."
@@ -68,15 +78,19 @@
   ([path {:keys [attempts delay-ms]}]
    (let [lock-path (str path ".lock")]
      (loop [remaining attempts]
-       (try
-         (create-exclusive! lock-path)
+       (case (try-create-lock! lock-path)
+         :acquired
          {:lock/path lock-path}
-         (catch :default cause
-           (if (and (= "EEXIST" (.-code cause)) (pos? remaining))
-             (do
-               (sleep-ms! delay-ms)
-               (recur (dec remaining)))
-             (throw cause))))))))
+
+         :busy
+         (if (pos? remaining)
+           (do
+             (sleep-ms! delay-ms)
+             (recur (dec remaining)))
+           (throw
+            (ex-info "Timed out acquiring file lock"
+                     {:clio/error :clio.extern.fs/lock-timeout
+                      :lock/path lock-path}))))))))
 
 (defn release-lock!
   [{:lock/keys [path]}]
