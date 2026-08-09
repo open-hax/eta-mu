@@ -20,14 +20,34 @@
         (sort-by pr-str)
         vec)])
 
+(defn- finite?
+  "##Inf/##-Inf are portable reader literals recognized by both Clojure and
+   ClojureScript, so this needs no runtime-specific interop and stays inside
+   shape.*'s host-free boundary."
+  [value]
+  (and (= value value) ; excludes NaN, which is never equal to itself
+       (not= value ##Inf)
+       (not= value ##-Inf)))
+
 (defn- canonical-number
   [value]
-  (if (and (integer? value)
-           (<= (- max-safe-integer) value max-safe-integer))
+  (cond
+    (and (integer? value)
+         (<= (- max-safe-integer) value max-safe-integer))
     [:number :safe-integer (str value)]
+
+    (and (not (integer? value)) (finite? value))
+    ;; A committed event's payload may legitimately contain non-integer data
+    ;; (a schema can declare :double); the decimal string of a finite double
+    ;; is the same value on both runtimes for ordinary literals. NaN/Infinity
+    ;; have no portable decimal form and stay rejected, as do unsafe integers,
+    ;; which is the narrower restriction schema-identity hashing depends on.
+    [:number :real (str value)]
+
+    :else
     (throw
      (ex-info
-      "Schema identity only permits cross-runtime-safe integer numbers; encode other numeric metadata as an explicit string"
+      "Only cross-runtime-safe integers and finite real numbers are portable; encode other numeric metadata as an explicit string"
       {:clio/error :clio.canonical/non-portable-number
        :value value}))))
 
