@@ -72,7 +72,7 @@
                    :else
                    (reject
                     (ex-info "Timed out waiting for path"
-                             {:path path :timeout-ms timeout-ms})))))]
+                             {:path path :timeout-ms timeout-ms}))))]
          (poll))))))
 
 (defn- native-constant
@@ -90,10 +90,10 @@
 (defn- acquire-unix-lock!
   [fd]
   ;; flock gives open-file-description exclusion on local filesystems, which
-  ;; also protects separate descriptors in one Node process. Some NFS mounts
-  ;; do not implement flock, so an unsupported-flock error is deliberately not
-  ;; fatal. The mandatory whole-file F_SETLKW below is the Unix authority and
-  ;; the path used by NFS implementations that support POSIX record locking.
+  ;; also protects separate descriptors in one process. Some NFS mounts do not
+  ;; implement flock, so unsupported-flock errors deliberately fall through.
+  ;; The mandatory whole-file F_SETLKW below is the Unix authority and the path
+  ;; used by NFS implementations that support POSIX record locking.
   (try
     (fs-ext/flockSync fd "ex")
     (catch :default cause
@@ -104,8 +104,6 @@
 (defn- acquire-native-lock!
   [fd]
   (if (windows?)
-    ;; Lock the complete 64-bit byte range. LockFileEx permits locking beyond
-    ;; EOF, so future appends remain covered by the same kernel lock.
     (fs-ext/lockFileExSync
      fd
      (native-constant "LOCKFILE_EXCLUSIVE_LOCK")
@@ -122,9 +120,8 @@
    reach the same inode and therefore the same lock.
 
    Unix uses a whole-file blocking fcntl write lock as the mandatory lock,
-   with flock as an additional local-filesystem guard when the filesystem
-   supports it. Windows uses an exclusive LockFileEx range covering the full
-   file address space."
+   with flock as an additional local-filesystem guard when supported. Windows
+   uses an exclusive LockFileEx range covering the full file address space."
   [path]
   (let [fd (fs/openSync path "a+")]
     (try
@@ -135,9 +132,7 @@
         (throw cause)))))
 
 (defn read-locked-text
-  "Read the locked ledger through the same descriptor that owns the lock.
-   Supplying the fd keeps Node from opening a second descriptor while the
-   POSIX record lock is held."
+  "Read the locked ledger through the same descriptor that owns the lock."
   [{:lock/keys [fd]}]
   (fs/readFileSync fd "utf8"))
 
@@ -148,8 +143,7 @@
   path)
 
 (defn release-lock!
-  "Close the owning descriptor. Kernel file locks are released by close even
-   when the holder is unwinding from an exception."
+  "Close the owning descriptor. Kernel file locks are released by close."
   [{:lock/keys [fd]}]
   (fs/closeSync fd)
   nil)
