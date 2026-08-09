@@ -1,11 +1,11 @@
 (ns clio.infra.ledger-test
-  (:require [clio.external.js.fs :as fs]
+  (:require [cljs.test :refer [deftest is testing]]
+            [clio.external.js.fs :as fs]
             [clio.external.js.runtime :as host]
             [clio.infra.ledger :as ledger]
             [clio.infra.projection :as projection]
             [clio.infra.runtime :as runtime]
-            [clio.shape.schema :as shape]
-            [clojure.test :refer [deftest is testing]]))
+            [clio.shape.schema :as shape]))
 
 (def catalog
   (shape/merge-catalogs
