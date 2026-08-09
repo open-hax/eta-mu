@@ -114,14 +114,35 @@
 
    {:name "eta-mu-lint"
     :workflow "main-pr-gate.yml" :job "eta-mu-lint" :check "eta-mu-lint"
-    :paths ["packages/legacy/docs/" "packages/legacy/github/" ".github/workflows/"]
+    ;; GitHub Actions has no per-job path filter — the whole workflow triggers
+    ;; or not as a unit on `on.pull_request.paths`, so every gate mirroring one
+    ;; of this workflow's jobs must list that whole path set, not just the
+    ;; subset its own job happens to care about.
+    :paths ["packages/legacy/docs/" "packages/legacy/github/" "packages/clio/"
+            "packages/kondo-config/" "scripts/test.bb" "scripts/lint.bb"
+            "pnpm-lock.yaml" "package.json" "pnpm-workspace.yaml"
+            ".github/workflows/"]
     :steps [{:cmd ["pnpm" "--dir" "packages/extensions" "build"]}
             {:cmd ["pnpm" "lint"]}]}
 
    {:name "main-tests"
     :workflow "main-pr-gate.yml" :job "main-tests" :check "main-tests"
-    :paths ["packages/legacy/docs/" "packages/legacy/github/" ".github/workflows/"]
+    :paths ["packages/legacy/docs/" "packages/legacy/github/" "packages/clio/"
+            "packages/kondo-config/" "scripts/test.bb" "scripts/lint.bb"
+            "pnpm-lock.yaml" "package.json" "pnpm-workspace.yaml"
+            ".github/workflows/"]
     :steps [{:cmd ["bash" "-c" "node --test packages/legacy/docs/tests/*.test.cjs"]}]}
+
+   {:name "clio"
+    :workflow "main-pr-gate.yml" :job "clio" :check "clio-nbb-shadow-lint"
+    :paths ["packages/legacy/docs/" "packages/legacy/github/" "packages/clio/"
+            "packages/kondo-config/" "scripts/test.bb" "scripts/lint.bb"
+            "pnpm-lock.yaml" "package.json" "pnpm-workspace.yaml"
+            ".github/workflows/"]
+    :steps [{:cmd ["pnpm" "--dir" "packages/clio" "lint"]}
+            {:cmd ["pnpm" "--dir" "packages/clio" "test"] :expect "0 failures, 0 errors"}
+            {:cmd ["bb" "scripts/lint.bb" "--only" "clio" "--kondo-only"]}
+            {:cmd ["bb" "scripts/test.bb" "--only" "clio"] :expect "0 failures, 0 errors"}]}
 
    {:name "rheos-github-sync"
     :workflow "rheos-github-sync-ci.yml" :job "rheos-github-sync" :check "rheos-github-sync"
