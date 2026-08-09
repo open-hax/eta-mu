@@ -1,6 +1,6 @@
 (ns clio.infra.runtime
   (:require [clio.domain.schema :as schema]
-            [clio.external.js.crypto :as crypto]
+            [clio.extern.js.crypto :as crypto]
             [clio.infra.event :as event]
             [clio.infra.ledger :as ledger]
             [clio.infra.schema-store :as schema-store]))
