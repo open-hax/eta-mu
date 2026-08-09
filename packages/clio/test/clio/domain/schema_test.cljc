@@ -1,6 +1,6 @@
 (ns clio.domain.schema-test
   (:require [clio.domain.schema :as schema]
-            [clio.shape.schema :as shape]
+            [clio.law.schema :as schema-law]
             #?(:clj [clojure.test :refer [deftest is testing]]
                :cljs [cljs.test :refer [deftest is testing]])))
 
@@ -10,31 +10,37 @@
     (apply str (take 64 (cycle token)))))
 
 (def catalog-v1
-  {:counter/added
-   (shape/event-schema
+  {:counter/amount
+   :int
+
+   :counter/added
+   (schema-law/event-schema
     :counter/added
     [:map {:closed true}
-     [:amount :int]])
+     [:amount :counter/amount]])
 
    :counter/subtracted
-   (shape/event-schema
+   (schema-law/event-schema
     :counter/subtracted
     [:map {:closed true}
-     [:amount :int]])})
+     [:amount :counter/amount]])})
 
 (def catalog-v2
-  {:counter/added
-   (shape/event-schema
+  {:counter/amount
+   :int
+
+   :counter/added
+   (schema-law/event-schema
     :counter/added
     [:map {:closed true}
-     [:amount :int]
+     [:amount :counter/amount]
      [:unit :keyword]])
 
    :counter/subtracted
-   (shape/event-schema
+   (schema-law/event-schema
     :counter/subtracted
     [:map {:closed true}
-     [:amount :int]])})
+     [:amount :counter/amount]])})
 
 (defn event
   [revision schema-id data]
@@ -67,7 +73,7 @@
       (is (= (get-in v1 [:schema/hashes :counter/subtracted])
              (get-in v2 [:schema/hashes :counter/subtracted]))))
 
-    (testing "a changed event keeps validating against its exact old schema"
+    (testing "historical validation resolves qualified refs from that revision"
       (is (= (event v1 :counter/added {:amount 3})
              (schema/validate-event!
               [v1 v2]
