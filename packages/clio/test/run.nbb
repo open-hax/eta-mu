@@ -7,6 +7,7 @@
             [clio.extern.js.process :as process]
             [clio.infra.kernel-lock-test]
             [clio.infra.ledger-test]
+            [clio.lint-extern-boundary-test]
             [clio.shape.canonical-test]
             [clio.shape.edn-test]))
 
@@ -18,6 +19,7 @@
 (test/run-tests
  'clio.domain.schema-test
  'clio.domain.canonicalize-test
+ 'clio.lint-extern-boundary-test
  'clio.infra.kernel-lock-test
  'clio.infra.ledger-test
  'clio.shape.canonical-test

@@ -4,39 +4,25 @@
    The boundary is a property of the *forms* a file contains, not of its text:
    a `js/` sequence inside a docstring, comment, or string literal performs no
    interop and must not fail the package lint. Every check here therefore runs
-   over parsed source."
-  (:require [clojure.java.io :as io]
-            [clojure.string :as str]
+   over parsed source.
+
+   The policy is runtime-neutral and carries no filesystem access, so the same
+   rules are verified under Babashka, NBB, and Shadow CLJS. Walking a directory
+   tree and choosing an exit code belong to the host entrypoint,
+   `scripts/lint_extern_boundary.bb`."
+  (:require [clojure.string :as str]
             [edamame.core :as edamame]))
 
-(defn package-root
-  "The package directory containing `file`, found by walking up to the nearest
-   ancestor holding a package.json."
-  [file]
-  (loop [dir (.getParentFile (.getAbsoluteFile (io/file file)))]
-    (cond
-      (nil? dir) nil
-      (.isFile (io/file dir "package.json")) dir
-      :else (recur (.getParentFile dir)))))
+(defn source-path?
+  [path]
+  (boolean (re-find #"\.(?:clj|cljc|cljs|nbb)$" path)))
 
-(defn scan-roots
-  [root]
-  [(io/file root "src" "clio")
-   (io/file root "test" "clio")
-   (io/file root "bin")])
-
-(defn source-file?
-  [file]
-  (and (.isFile file)
-       (re-find #"\.(?:clj|cljc|cljs|nbb)$" (.getName file))))
-
-(defn extern-js-file?
-  [file]
-  (let [separator java.io.File/separator]
-    (str/includes? (.getCanonicalPath file)
-                   (str separator "extern"
-                        separator "js"
-                        separator))))
+(defn extern-js-path?
+  "Is this path inside the one namespace family allowed to touch the host?
+   Windows separators are normalized rather than consulted, so the predicate
+   stays free of any host filesystem API."
+  [path]
+  (str/includes? (str/replace path "\\" "/") "/extern/js/"))
 
 (defn- without-shebang
   "A .nbb entrypoint starts with a `#!/usr/bin/env nbb` line, which the Clojure
@@ -82,7 +68,10 @@
    (when-let [m (meta form)] (js-markers m))
    (cond
      (tagged-literal? form) (js-markers (:form form))
-     (reader-conditional? form) (js-markers (:form form))
+     ;; A preserved reader conditional is an opaque ReaderConditional on the
+     ;; JVM and needs naming; on ClojureScript edamame yields a map-like value
+     ;; whose :form the map branch below already reaches.
+     #?@(:clj [(reader-conditional? form) (js-markers (:form form))])
      (map? form) (mapcat js-markers (mapcat identity form))
      (coll? form) (mapcat js-markers form)
      :else nil)))
@@ -112,37 +101,9 @@
      (map #(str "host require " (pr-str %)) (host-requires (first forms)))
      (distinct (mapcat js-markers forms)))))
 
-(defn violations
-  [file]
-  (when-not (extern-js-file? file)
-    (source-violations (slurp file))))
-
-(defn findings
-  [roots]
-  (let [files (->> roots
-                   (filter #(.isDirectory %))
-                   (mapcat file-seq)
-                   (filter source-file?)
-                   sort)]
-    (for [file files
-          violation (violations file)]
-      {:file (.getPath file)
-       :violation violation})))
-
-(def ^:private this-file
-  "`*file*` is only bound while this namespace is being loaded, so the path has
-   to be captured here rather than read inside -main."
-  *file*)
-
-(defn -main
-  [& _args]
-  (let [found (findings (scan-roots (package-root this-file)))]
-    (if (seq found)
-      (do
-        (binding [*out* *err*]
-          (println "Clio JS boundary violations:")
-          (doseq [{:keys [file violation]} found]
-            (println " -" file ":" violation))
-          (println "Move JS/Node access behind clio.extern.js.* and return Clojure data."))
-        (System/exit 1))
-      (println "Clio extern.js boundary: clean"))))
+(defn file-violations
+  "Boundary violations for one file, given its path and contents. Files inside
+   the extern.js boundary are exempt by construction."
+  [path text]
+  (when-not (extern-js-path? path)
+    (source-violations text)))

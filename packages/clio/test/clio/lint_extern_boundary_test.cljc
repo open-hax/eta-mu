@@ -3,7 +3,8 @@
    source held as a string, so this file itself stays boundary-clean while
    describing sources that are not."
   (:require [clio.lint-extern-boundary :as boundary]
-            [clojure.test :refer [deftest is testing]]))
+            #?(:clj [clojure.test :refer [deftest is testing]]
+               :cljs [cljs.test :refer [deftest is testing]])))
 
 (defn- violations
   [source]
@@ -55,7 +56,23 @@
             "(ns clio.law.example)\n(def config {:a [1 {:b #js {:deep true}}]})\n")))))
 
 (deftest extern-js-namespaces-are-exempt-by-path
-  (is (boundary/extern-js-file?
-       (java.io.File. "/tmp/clio/src/clio/extern/js/fs.cljs")))
-  (is (not (boundary/extern-js-file?
-            (java.io.File. "/tmp/clio/src/clio/law/event.cljc")))))
+  (testing "on either separator, without consulting a host filesystem API"
+    (is (boundary/extern-js-path? "/tmp/clio/src/clio/extern/js/fs.cljs"))
+    (is (boundary/extern-js-path? "C:\\clio\\src\\clio\\extern\\js\\fs.cljs"))
+    (is (not (boundary/extern-js-path? "/tmp/clio/src/clio/law/event.cljc")))))
+
+(deftest only-clojure-source-extensions-are-scanned
+  (is (boundary/source-path? "fs.cljs"))
+  (is (boundary/source-path? "event.cljc"))
+  (is (boundary/source-path? "clio.nbb"))
+  (is (not (boundary/source-path? "clio.mjs")))
+  (is (not (boundary/source-path? "README.md"))))
+
+(deftest an-extern-path-is-exempt-from-file-violations
+  (is (nil? (boundary/file-violations
+             "/tmp/clio/src/clio/extern/js/fs.cljs"
+             "(ns clio.extern.js.fs)\n(defn f [] (js/console.log \"x\"))\n")))
+  (is (= ["js/ interop js/console.log"]
+         (boundary/file-violations
+          "/tmp/clio/src/clio/law/event.cljc"
+          "(ns clio.law.event)\n(defn f [] (js/console.log \"x\"))\n"))))

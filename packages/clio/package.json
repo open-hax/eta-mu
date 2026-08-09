@@ -21,7 +21,7 @@
   "scripts": {
     "test": "pnpm run test:bb && pnpm run test:nbb && pnpm run test:shadow",
     "test:bb": "bb test/run.bb",
-    "test:nbb": "nbb -cp test test/run.nbb",
+    "test:nbb": "nbb -cp test:scripts test/run.nbb",
     "test:shadow": "pnpm dlx shadow-cljs@3.4.11 compile test",
     "lint": "pnpm run lint:kondo",
     "lint:kondo": "clj-kondo --lint src test bin scripts && bb scripts/lint_extern_boundary.bb",
