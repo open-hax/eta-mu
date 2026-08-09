@@ -4,7 +4,7 @@ Lockfile is up to date, resolution step is skipped
 Progress: resolved 1, reused 0, downloaded 0, added 0
 Packages: +957
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Progress: resolved 957, reused 951, downloaded 0, added 415
+Progress: resolved 957, reused 951, downloaded 0, added 412
 Progress: resolved 957, reused 951, downloaded 0, added 957, done
 .../node_modules/fs-ext-extra-prebuilt install$ node ./install.js
 .../node_modules/fs-ext-extra-prebuilt install: Using prebuilt binary: fs-ext-linux-x64-node-22.0.0.node
@@ -28,10 +28,10 @@ devDependencies:
 + tsx 4.21.0
 + typescript 5.9.3
 
- WARN  Failed to create bin at /home/runner/work/eta-mu/eta-mu/packages/legacy/agent/node_modules/.bin/pi-ai. ENOENT: no such file or directory, open '/home/runner/work/eta-mu/eta-mu/packages/legacy/agent/node_modules/@open-hax/eta-mu-ai/dist/cli.js'
  WARN  Failed to create bin at /home/runner/work/eta-mu/eta-mu/packages/eta-mu/node_modules/.bin/rheos. ENOENT: no such file or directory, open '/home/runner/work/eta-mu/eta-mu/packages/eta-mu/node_modules/@eta-mu/rheos/dist/cli.cjs'
- WARN  Failed to create bin at /home/runner/work/eta-mu/eta-mu/packages/legacy/coding-agent/node_modules/.bin/openhax-kanban. ENOENT: no such file or directory, open '/home/runner/work/eta-mu/eta-mu/packages/legacy/coding-agent/node_modules/@open-hax/kanban-legacy/dist/cli.js'
+ WARN  Failed to create bin at /home/runner/work/eta-mu/eta-mu/packages/legacy/agent/node_modules/.bin/pi-ai. ENOENT: no such file or directory, open '/home/runner/work/eta-mu/eta-mu/packages/legacy/agent/node_modules/@open-hax/eta-mu-ai/dist/cli.js'
  WARN  Failed to create bin at /home/runner/work/eta-mu/eta-mu/packages/legacy/coding-agent/node_modules/.bin/pi-ai. ENOENT: no such file or directory, open '/home/runner/work/eta-mu/eta-mu/packages/legacy/coding-agent/node_modules/@open-hax/eta-mu-ai/dist/cli.js'
+ WARN  Failed to create bin at /home/runner/work/eta-mu/eta-mu/packages/legacy/coding-agent/node_modules/.bin/openhax-kanban. ENOENT: no such file or directory, open '/home/runner/work/eta-mu/eta-mu/packages/legacy/coding-agent/node_modules/@open-hax/kanban-legacy/dist/cli.js'
  WARN  Failed to create bin at /home/runner/work/eta-mu/eta-mu/packages/legacy/github/node_modules/.bin/pi-ai. ENOENT: no such file or directory, open '/home/runner/work/eta-mu/eta-mu/packages/legacy/github/node_modules/@open-hax/eta-mu-ai/dist/cli.js'
  WARN  Failed to create bin at /home/runner/work/eta-mu/eta-mu/packages/legacy/github/node_modules/.bin/eta-mu-beta. ENOENT: no such file or directory, open '/home/runner/work/eta-mu/eta-mu/packages/legacy/github/node_modules/@open-hax/eta-mu-cli/dist/cli.js'
 Done in 3.3s using pnpm v10.14.0
@@ -45,15 +45,9 @@ STATUS install 0
 > @eta-mu/clio@0.1.0 lint:kondo /home/runner/work/eta-mu/eta-mu/packages/clio
 > clj-kondo --lint src test bin && bb scripts/lint_extern_boundary.bb
 
-src/clio/extern/js/process.cljs:51:11: error: Unresolved symbol: results
-test/clio/infra/kernel_lock_test.cljs:30:23: error: Unresolved symbol: _
-test/clio/infra/kernel_lock_test.cljs:31:23: error: Unresolved symbol: blocked-ms
-test/clio/infra/kernel_lock_test.cljs:38:23: error: Unresolved symbol: holder-result
-test/clio/infra/ledger_test.cljs:179:23: error: Unresolved symbol: results
-linting took 265ms, errors: 5, warnings: 0
- ELIFECYCLE  Command failed with exit code 3.
- ELIFECYCLE  Command failed with exit code 3.
-STATUS lint 3
+linting took 271ms, errors: 0, warnings: 0
+Clio extern.js boundary: clean
+STATUS lint 0
 ===== test-nbb =====
 
 > @eta-mu/clio@0.1.0 test:nbb /home/runner/work/eta-mu/eta-mu/packages/clio
@@ -74,28 +68,28 @@ Downloading: org/clojure/core.specs.alpha/0.4.74/core.specs.alpha-0.4.74.pom fro
 Downloading: org/clojure/pom.contrib/1.2.0/pom.contrib-1.2.0.pom from central
 Downloading: metosin/malli/0.16.4/malli-0.16.4.pom from clojars
 Downloading: borkdude/edamame/1.4.27/edamame-1.4.27.pom from clojars
-Downloading: mvxcvi/arrangement/2.1.0/arrangement-2.1.0.pom from clojars
 Downloading: fipp/fipp/0.6.26/fipp-0.6.26.pom from clojars
+Downloading: mvxcvi/arrangement/2.1.0/arrangement-2.1.0.pom from clojars
 Downloading: borkdude/dynaload/0.3.5/dynaload-0.3.5.pom from clojars
-Downloading: org/clojure/test.check/1.1.1/test.check-1.1.1.pom from central
-Downloading: org/clojure/pom.contrib/1.1.0/pom.contrib-1.1.0.pom from central
 Downloading: org/clojure/core.rrb-vector/0.1.2/core.rrb-vector-0.1.2.pom from central
 Downloading: org/clojure/tools.reader/1.3.4/tools.reader-1.3.4.pom from central
+Downloading: org/clojure/test.check/1.1.1/test.check-1.1.1.pom from central
 Downloading: org/clojure/pom.contrib/0.2.2/pom.contrib-0.2.2.pom from central
+Downloading: org/clojure/pom.contrib/1.1.0/pom.contrib-1.1.0.pom from central
+Downloading: org/clojure/core.specs.alpha/0.4.74/core.specs.alpha-0.4.74.jar from central
 Downloading: org/clojure/clojure/1.12.5/clojure-1.12.5.jar from central
 Downloading: org/clojure/spec.alpha/0.5.238/spec.alpha-0.5.238.jar from central
-Downloading: org/clojure/core.specs.alpha/0.4.74/core.specs.alpha-0.4.74.jar from central
 Downloading: fipp/fipp/0.6.26/fipp-0.6.26.jar from clojars
 Downloading: mvxcvi/arrangement/2.1.0/arrangement-2.1.0.jar from clojars
 Downloading: borkdude/dynaload/0.3.5/dynaload-0.3.5.jar from clojars
 Downloading: borkdude/edamame/1.4.27/edamame-1.4.27.jar from clojars
-Downloading: org/clojure/core.rrb-vector/0.1.2/core.rrb-vector-0.1.2.jar from central
 Downloading: metosin/malli/0.16.4/malli-0.16.4.jar from clojars
+Downloading: org/clojure/core.rrb-vector/0.1.2/core.rrb-vector-0.1.2.jar from central
 Downloading: org/clojure/tools.reader/1.3.4/tools.reader-1.3.4.jar from central
 Downloading: org/clojure/test.check/1.1.1/test.check-1.1.1.jar from central
 Extracting dependencies...
 Done.
-(node:2558) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+(node:2600) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
 (Use `node --trace-deprecation ...` to show where the warning was created)
 
 Testing clio.domain.schema-test
@@ -229,10 +223,10 @@ Retrieving com/bhauman/cljs-test-display/0.1.1/cljs-test-display-0.1.1.pom from 
 Retrieving borkdude/edamame/1.6.42/edamame-1.6.42.pom from https://repo.clojars.org/
 Retrieving org/clojure/tools.reader/1.5.2/tools.reader-1.5.2.pom from https://repo1.maven.org/maven2/
 Retrieving funcool/promesa/11.0.678/promesa-11.0.678.pom from https://repo.clojars.org/
+Retrieving org/clojure/data.json/2.5.2/data.json-2.5.2.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/tools.reader/1.6.0/tools.reader-1.6.0.jar from https://repo1.maven.org/maven2/
-Retrieving org/clojure/data.json/2.5.2/data.json-2.5.2.jar from Retrievinghttps://repo1.maven.org/maven2/ 
-org/clojure/clojure/1.12.4/clojure-1.12.4.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/tools.cli/1.1.230/tools.cli-1.1.230.jar from https://repo1.maven.org/maven2/
+Retrieving org/clojure/clojure/1.12.4/clojure-1.12.4.jar from https://repo1.maven.org/maven2/
 Retrieving com/cognitect/transit-clj/1.0.333/transit-clj-1.0.333.jar from https://repo1.maven.org/maven2/
 Retrieving com/cognitect/transit-java/1.0.371/transit-java-1.0.371.jar from https://repo1.maven.org/maven2/
 Retrieving com/fasterxml/jackson/core/jackson-core/2.14.2/jackson-core-2.14.2.jar from https://repo1.maven.org/maven2/
@@ -248,26 +242,26 @@ Retrieving org/clojure/tools.analyzer.jvm/1.3.3/tools.analyzer.jvm-1.3.3.jar fro
 Retrieving org/clojure/tools.analyzer/1.2.0/tools.analyzer-1.2.0.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/core.memoize/1.1.266/core.memoize-1.1.266.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/core.cache/1.1.234/core.cache-1.1.234.jar from https://repo1.maven.org/maven2/
-Retrieving org/clojure/data.priority-map/1.2.0/data.priority-map-1.2.0.jar from https://repo1.maven.org/maven2/
 Retrieving org/ow2/asm/asm/9.2/asm-9.2.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/clojurescript/1.12.145/clojurescript-1.12.145.jar from https://repo1.maven.org/maven2/
-Retrieving com/google/javascript/closure-compiler/v20250407/closure-compiler-v20250407.jar from https://repo1.maven.org/maven2/
+Retrieving org/clojure/data.priority-map/1.2.0/data.priority-map-1.2.0.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/google-closure-library/0.0-20250515-f04e4c0e/google-closure-library-0.0-20250515-f04e4c0e.jar from https://repo1.maven.org/maven2/
+Retrieving com/google/javascript/closure-compiler/v20250407/closure-compiler-v20250407.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/google-closure-library-third-party/0.0-20250515-f04e4c0e/google-closure-library-third-party-0.0-20250515-f04e4c0e.jar from https://repo1.maven.org/maven2/
 Retrieving commons-io/commons-io/2.20.0/commons-io-2.20.0.jar from https://repo1.maven.org/maven2/
 Retrieving org/apache/commons/commons-fileupload2-core/2.0.0-M4/commons-fileupload2-core-2.0.0-M4.jar from https://repo1.maven.org/maven2/
 Retrieving commons-codec/commons-codec/1.15/commons-codec-1.15.jar from https://repo1.maven.org/maven2/
+Retrieving thheller/shadow-cljs/3.4.11/shadow-cljs-3.4.11-aot.jar from https://repo.clojars.org/
 Retrieving nrepl/nrepl/1.3.1/nrepl-1.3.1.jar from https://repo.clojars.org/
-Retrieving thheller/shadow-client/1.4.0/shadow-client-1.4.0.jar from https://repo.clojars.org/
 Retrieving cider/piggieback/0.6.0/piggieback-0.6.0.jar from https://repo.clojars.org/
 Retrieving thheller/shadow-util/0.7.0/shadow-util-0.7.0.jar from https://repo.clojars.org/
+Retrieving thheller/shadow-client/1.4.0/shadow-client-1.4.0.jar from https://repo.clojars.org/
 Retrieving thheller/shadow-cljsjs/0.0.22/shadow-cljsjs-0.0.22.jar from https://repo.clojars.org/
 Retrieving com/thheller/shadow-http/0.1.8/shadow-http-0.1.8.jar from https://repo.clojars.org/
 Retrieving hiccup/hiccup/1.0.5/hiccup-1.0.5.jar from https://repo.clojars.org/
 Retrieving ring/ring-core/1.15.3/ring-core-1.15.3.jar from https://repo.clojars.org/
 Retrieving org/ring-clojure/ring-core-protocols/1.15.3/ring-core-protocols-1.15.3.jar from https://repo.clojars.org/
 Retrieving org/ring-clojure/ring-websocket-protocols/1.15.3/ring-websocket-protocols-1.15.3.jar from https://repo.clojars.org/
-Retrieving thheller/shadow-cljs/3.4.11/shadow-cljs-3.4.11-aot.jar from https://repo.clojars.org/
 Retrieving ring/ring-codec/1.3.0/ring-codec-1.3.0.jar from https://repo.clojars.org/
 Retrieving crypto-random/crypto-random/1.2.1/crypto-random-1.2.1.jar from https://repo.clojars.org/
 Retrieving crypto-equality/crypto-equality/1.0.1/crypto-equality-1.0.1.jar from https://repo.clojars.org/
@@ -295,6 +289,6 @@ Testing clio.shape.edn-test
 Ran 26 tests containing 60 assertions.
 0 failures, 0 errors.
 ===============================================
-[:test] Build completed. (105 files, 104 compiled, 0 warnings, 18.63s)
+[:test] Build completed. (105 files, 104 compiled, 0 warnings, 19.14s)
 STATUS test-shadow 0
-HEAD 23c5f41ee707944f4e7320ad6014d259be67351a
+HEAD ebc01319f8c523095451bd0bd5214f36931dd45d
