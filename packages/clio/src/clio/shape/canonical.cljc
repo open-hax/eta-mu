@@ -23,19 +23,18 @@
         vec)])
 
 (defn- finite?
-  "##Inf/##-Inf are portable reader literals recognized by both Clojure and
-   ClojureScript, so this needs no runtime-specific interop and stays inside
-   shape.*'s host-free boundary."
+  "True only for numbers strictly between the portable infinity sentinels.
+   Ordered comparison rejects NaN without relying on host-specific NaN
+   equality behavior."
   [value]
-  (and (= value value) ; excludes NaN, which is never equal to itself
-       (not= value ##Inf)
-       (not= value ##-Inf)))
+  (and (< ##-Inf value)
+       (< value ##Inf)))
 
 (defn- non-portable!
   [value]
   (throw
    (ex-info
-    "Only cross-runtime-safe integers and exactly representable finite real numbers are portable; encode other numeric metadata as an explicit string"
+    "Only cross-runtime-safe integers and finite IEEE-754 real numbers are portable; encode JVM-only exact numeric values as explicit strings"
     {:clio/error :clio.canonical/non-portable-number
      :value value})))
 
@@ -67,15 +66,15 @@
   [value]
   (zero? (mod value 1)))
 
-(defn- exact-double-coercion?
-  "ClojureScript numbers already are IEEE-754 doubles. On the JVM, ratios,
-   BigDecimals, and other exact numeric types may lose information when
-   coerced to double. Accept them only when the shared double is exactly the
-   same numeric value; this rejects overflow, underflow, and rounding aliases
-   before they can collapse distinct values onto one canonical identity."
-  [_value _d]
-  #?(:clj (and (finite? _d) (== _value _d))
-     :cljs true))
+(defn- jvm-only-exact-real?
+  "Ratios and BigDecimals carry exact semantics that JavaScript numbers do
+   not have. Even values such as 1/2 can be represented by a double, but
+   preserving that one case would make canonical identity depend on a lossy
+   type erasure rule. Treat the JVM-only exact-real families as outside the
+   shared numeric domain instead."
+  [_value]
+  #?(:clj (or (ratio? _value) (decimal? _value))
+     :cljs false))
 
 (defn- real-decomposition
   "Sign, mantissa, and binary exponent of a finite nonzero double, as
@@ -93,16 +92,15 @@
         :else {:sign (if negative? -1 1) :mantissa m :exponent e}))))
 
 (defn- canonical-real
-  "Encode a finite, non-integer-valued number by its exact IEEE 754
-   decomposition rather than its decimal string, because the decimal string
-   is host-decided: JVM renders 1e-7 as \"1.0E-7\" where JavaScript renders
-   \"1e-7\". JVM-only exact numeric types are admitted only when their double
-   coercion is exact; otherwise two distinct exact values could hash as the
-   same JavaScript number. -0.0 canonicalizes to +0.0 because (= -0.0 0.0)
-   holds on both runtimes and zero has no decomposition."
+  "Encode a finite shared real number by its exact IEEE-754 decomposition
+   rather than its decimal string, because decimal rendering is host-decided.
+   JVM-only exact numeric types are rejected before this point. A defensive
+   post-coercion finite check prevents any future numeric type from feeding
+   infinity into the normalization loop. -0.0 canonicalizes to +0.0 because
+   (= -0.0 0.0) holds on both runtimes and zero has no decomposition."
   [value]
   (let [d (double value)]
-    (when-not (exact-double-coercion? value d)
+    (when-not (finite? d)
       (non-portable! value))
     (if (zero? d)
       [:number :real 1 "0" 0]
@@ -127,30 +125,34 @@
     (not (finite? value))
     (non-portable! value)
 
-    ;; A floating/decimal number with a zero fractional part denotes an
-    ;; integer; ClojureScript's integer? already routed its twin to the
-    ;; safe-integer branch, so this must encode identically. JVM Double 1e20
-    ;; lands here beyond the safe range and is refused, matching
-    ;; ClojureScript's integer? refusal above.
+    ;; Ratios and BigDecimals are JVM-only exact-real types. JavaScript has no
+    ;; corresponding value category, so erasing them to a double would permit
+    ;; distinct exact values to collapse onto one canonical identity.
+    (jvm-only-exact-real? value)
+    (non-portable! value)
+
+    ;; A floating number with a zero fractional part denotes an integer;
+    ;; ClojureScript's integer? already routed its twin to the safe-integer
+    ;; branch, so this must encode identically. JVM Double 1e20 lands here
+    ;; beyond the safe range and is refused, matching ClojureScript above.
     (integer-valued? value)
     (if (<= (- max-safe-integer) value max-safe-integer)
       [:number :safe-integer (integer-digits value)]
       (non-portable! value))
 
-    ;; A committed event's payload may legitimately contain non-integer data
-    ;; (a schema can declare :double). Plain doubles are the shared floating
-    ;; representation. JVM ratios/BigDecimals are accepted only when their
-    ;; conversion to that shared representation is exact.
+    ;; A committed event payload may legitimately contain :double data. Plain
+    ;; finite floating-point values are the real-number representation shared
+    ;; by ClojureScript and the JVM side of this kernel.
     :else
     (canonical-real value)))
 
 (defn canonical-form
   "Convert supported Clojure data into a deterministically ordered semantic
    form suitable for cross-runtime hashing. Equal sequential collections share
-   one representation. Numbers are encoded so the same EDN text hashes
-   identically on both runtimes: safe integers by their digits, finite reals
-   by exact IEEE 754 decomposition; unsafe integers, lossy JVM-only numeric
-   values, and NaN/Infinity are rejected rather than being assigned ambiguous
+   one representation. Numbers are encoded so the same shared value hashes
+   identically on both runtimes: safe integers by their digits, finite shared
+   reals by exact IEEE-754 decomposition; unsafe integers, JVM-only exact-real
+   types, and NaN/Infinity are rejected rather than assigned ambiguous
    cross-runtime identities."
   [value]
   (cond
