@@ -41,6 +41,12 @@
     (fs/unlinkSync path))
   path)
 
+(defn remove-tree!
+  [path]
+  (when (exists? path)
+    (fs/rmSync path #js {:recursive true :force true}))
+  path)
+
 (defn list-files
   [path]
   (if (exists? path)
