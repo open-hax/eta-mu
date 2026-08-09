@@ -5,6 +5,7 @@
             [clio.domain.canonicalize-test]
             [clio.domain.schema-test]
             [clio.extern.js.process :as process]
+            [clio.infra.kernel-lock-test]
             [clio.infra.ledger-test]
             [clio.shape.canonical-test]
             [clio.shape.edn-test]))
@@ -17,6 +18,7 @@
 (test/run-tests
  'clio.domain.schema-test
  'clio.domain.canonicalize-test
+ 'clio.infra.kernel-lock-test
  'clio.infra.ledger-test
  'clio.shape.canonical-test
  'clio.shape.edn-test)
