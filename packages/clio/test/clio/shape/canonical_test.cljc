@@ -28,7 +28,7 @@
          (error-code #(canonical/canonical-edn {:inf ##Inf})))))
 
 #?(:clj
-   (deftest jvm-exact-numerics-must-survive-double-coercion
+   (deftest jvm-only-exact-reals-are-refused
      (let [huge (reduce *' 1 (repeat 400 10))
            huge-ratio (/ huge 3)
            tiny-ratio (/ 1 huge)]
@@ -38,18 +38,19 @@
               (error-code #(canonical/canonical-edn huge-ratio))))
        (is (= :clio.canonical/non-portable-number
               (error-code #(canonical/canonical-edn tiny-ratio))))
-       ;; The rule is about information loss generally, not only range: two
-       ;; distinct exact JVM values must never inherit one JS double identity.
+       ;; JVM Ratio/BigDecimal semantics do not exist in JavaScript. Reject the
+       ;; family instead of deciding portability by a coercive numeric equality
+       ;; test that can erase exact type/value distinctions.
        (is (= :clio.canonical/non-portable-number
               (error-code #(canonical/canonical-edn (/ 1 3)))))
-       ;; Exactly representable ratios remain valid and share the same
-       ;; canonical identity as the corresponding JavaScript double.
-       (is (= (canonical/canonical-edn (/ 1 2))
-              (canonical/canonical-edn 0.5))))))
+       (is (= :clio.canonical/non-portable-number
+              (error-code #(canonical/canonical-edn (/ 1 2)))))
+       (is (= :clio.canonical/non-portable-number
+              (error-code #(canonical/canonical-edn (bigdec "0.5"))))))))
 
 (deftest finite-real-numbers-are-portable
   ;; A valid event schema can permit :double data; canonical-edn must not
-  ;; reject an ordinary decimal literal committed as event payload.
+  ;; reject an ordinary floating-point value committed as event payload.
   (is (some? (canonical/canonical-edn {:amount 1.5})))
   (is (not= (canonical/canonical-edn {:amount 1.5})
             (canonical/canonical-edn {:amount 1}))))
