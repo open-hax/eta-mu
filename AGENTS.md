@@ -16,12 +16,13 @@ When modeling domains, you must strictly differentiate between the grammar of mo
 are failed contracts, not noise.
 
 ### Namespace Architecture
-| Layer         | Pattern            | Rule                             |
-|---------------|--------------------|----------------------------------|
-| `domain.*`    | Business logic     | No I/O. Pure functions only.     |
-| `infra.*`     | Transport/DB/Queue | No domain policy.                |
-| `shape.*`     | Data morphisms     | Pure, domain-agnostic.           |
-| `law.*`       | Contracts/Malli    | No I/O. Validators only.         |
+| Layer      | Pattern            | Rule                                                                          |
+|------------|--------------------|-------------------------------------------------------------------------------|
+| `domain.*` | Business logic     | No I/O. Pure functions only.                                                  |
+| `infra.*`  | Transport/DB/Queue | No domain policy, effectual composition of domain logic                       |
+| `shape.*`  | Data morphisms     | Pure, domain-agnostic.                                                        |
+| `law.*`    | Contracts/Malli    | No I/O. Validators only.                                                      |
+| `extern.*` | js boundary layer  | wrap js data type logic in functions that take clj data-types as input output |
 
 ### Clojure Construction Order
 Regardless of the kanban process, ClojureScript is **built in a fixed order**, because the
