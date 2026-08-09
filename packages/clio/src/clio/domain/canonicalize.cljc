@@ -92,9 +92,18 @@
     [(:event/stream event) (:event/seq event) id]))
 
 (defn- topo-order
+  "Kahn's algorithm with a `ready` set ordered by `tie-key` so the next event
+   to emit is always the current minimum. Sorting the whole shrinking ready
+   set on every pop (as a plain set + `sort-by` would) is O(n log n) per
+   event; keeping `ready` as a sorted-set of tie-keys makes both the min
+   lookup and each insert/remove O(log n), so a history with many
+   graph-incomparable events (e.g. thousands of independent single-event
+   streams) stays O(n log n) overall instead of O(n^2 log n)."
   [by-id {:keys [parents children]}]
   (let [indegree (into {} (map (fn [[id parent-ids]] [id (count parent-ids)])) parents)
-        ready (into #{} (keep (fn [[id degree]] (when (zero? degree) id))) indegree)]
+        ready (into (sorted-set)
+                    (keep (fn [[id degree]] (when (zero? degree) (tie-key by-id id))))
+                    indegree)]
     (loop [indegree indegree
            ready ready
            order []]
@@ -107,7 +116,8 @@
                   (->> indegree
                        (keep (fn [[id degree]] (when (pos? degree) id)))
                        vec)}))
-        (let [id (first (sort-by #(tie-key by-id %) ready))
+        (let [key (first ready)
+              id (peek key)
               child-ids (get children id #{})
               [next-indegree next-ready]
               (reduce
@@ -116,8 +126,8 @@
                        degrees (assoc degrees child-id degree)]
                    [degrees
                     (cond-> candidates
-                      (zero? degree) (conj child-id))]))
-               [indegree (disj ready id)]
+                      (zero? degree) (conj (tie-key by-id child-id)))]))
+               [indegree (disj ready key)]
                child-ids)]
           (recur next-indegree next-ready (conj order id)))))))
 
