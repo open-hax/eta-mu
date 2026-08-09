@@ -5,7 +5,9 @@ on:
     branches: [feat/clio-event-sourcing-kernel]
     paths:
       - "packages/clio/**"
+      - "!packages/clio/kernel-lock-verification.txt"
       - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
       - ".github/workflows/clio-kernel-verify.yml"
 
 jobs:
