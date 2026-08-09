@@ -13,9 +13,10 @@
    [:schema/hash hash-schema]])
 
 (def bootstrap-schema
-  "The deliberately small invariant needed to discover the historical schema
-   that validates the rest of an event. Full event envelopes are versioned in
-   the Merkle catalog; this bootstrap is the reader's stable foothold."
+  "The deliberately small, fixed protocol foothold needed to discover the
+   historical event schema. It is not itself an event schema and therefore does
+   not belong to the addressable Merkle catalog. Complete event-envelope changes
+   are versioned because event-schema emits the envelope into every catalog leaf."
   [:map
    [:event/id uuid-string-schema]
    [:event/schema schema-ref-schema]
@@ -36,9 +37,6 @@
    [:event/subject [:string {:min 1}]]
    [:event/at [:string {:min 1}]]
    [:event/data data-schema]])
-
-(def core-catalog
-  {:clio.event/bootstrap bootstrap-schema})
 
 (defn merge-catalogs
   [& catalogs]
