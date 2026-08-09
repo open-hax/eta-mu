@@ -1,4 +1,4 @@
 {:verification/status :running
- :verification/tested-commit "f2ce45b0f12734d1a326eef1b8848e7350e17f48"
- :verification/phase :setup-pnpm
- :verification/at "2026-08-09T06:21:02Z"}
+ :verification/tested-commit "ea96101292a4cbd16f0169c714b884976736fc95"
+ :verification/phase :setup-java
+ :verification/at "2026-08-09T06:23:53Z"}
