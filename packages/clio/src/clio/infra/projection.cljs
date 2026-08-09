@@ -1,8 +1,8 @@
 (ns clio.infra.projection
   (:require [clio.domain.projection :as projection]
-            [clio.external.js.crypto :as crypto]
-            [clio.external.js.fs :as fs]
-            [clio.external.js.runtime :as runtime]
+            [clio.extern.js.crypto :as crypto]
+            [clio.extern.js.fs :as fs]
+            [clio.extern.js.runtime :as runtime]
             [clio.infra.ledger :as ledger]
             [clio.shape.canonical :as canonical]))
 
