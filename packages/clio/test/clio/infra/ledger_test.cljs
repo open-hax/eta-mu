@@ -8,16 +8,14 @@
             [clio.shape.schema :as shape]))
 
 (def catalog
-  (shape/merge-catalogs
-   shape/core-catalog
-   {:counter/opened
-    (shape/event-schema
-     :counter/opened
-     [:map {:closed true} [:amount :int]])
+  {:counter/opened
+   (shape/event-schema
+    :counter/opened
+    [:map {:closed true} [:amount :int]])
+   :counter/added
+   (shape/event-schema
     :counter/added
-    (shape/event-schema
-     :counter/added
-     [:map {:closed true} [:amount :int]])}))
+    [:map {:closed true} [:amount :int]])})
 
 (defn apply-counter
   [state event]
