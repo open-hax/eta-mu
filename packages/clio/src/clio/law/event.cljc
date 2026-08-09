@@ -16,7 +16,7 @@
 
 (defn positive-int?
   [value]
-  (and (int? value)
+  (and (integer? value)
        (pos? value)))
 
 (defn event-identity-valid?
