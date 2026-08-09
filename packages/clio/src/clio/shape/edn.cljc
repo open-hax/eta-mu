@@ -1,8 +1,17 @@
 (ns clio.shape.edn
   (:require [edamame.core :as edamame]))
 
+(def ^:private edn-only-opts
+  "edamame defaults to Clojure's full reader (fn literals, deref, var-quote,
+   syntax-quote/unquote, read-eval, regex, ...). None of those are EDN, and a
+   ledger/schema-snapshot file should only ever contain what `pr-str` on plain
+   data produces, so disable the Clojure-only extensions edamame layers on
+   top of `:all true` by default."
+  {:all false})
+
 (defn read-one
-  "Read exactly one EDN form, enforcing true end-of-input.
+  "Read exactly one EDN form, enforcing true end-of-input and rejecting
+   Clojure-only reader literals that are not part of EDN.
 
    `clojure.edn`/`cljs.reader` read-string stops at the end of the first form
    and never reports how much of the string it consumed, so wrapping the text
@@ -14,7 +23,7 @@
    content instead of quietly dropping it."
   [text]
   (let [forms (try
-                (edamame/parse-string-all text)
+                (edamame/parse-string-all text edn-only-opts)
                 (catch #?(:clj Exception :cljs :default) cause
                   (throw
                    (ex-info "Expected exactly one EDN form"
