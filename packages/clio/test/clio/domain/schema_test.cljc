@@ -105,3 +105,27 @@
                                (apply str (repeat 64 "e")))]
         (is (= :clio.schema/hash-mismatch
                (error-code #(schema/validate-event! [v1 v2] tampered))))))))
+
+(deftest leaf-hash-tracks-transitively-referenced-schemas
+  ;; :counter/added's own form is byte-identical across these two catalogs; only
+  ;; the schema it references by bare qualified keyword (:counter/amount)
+  ;; changes. A leaf hash computed from schema-form alone would be blind to
+  ;; that and wrongly report the two revisions as carrying the same contract.
+  (let [referenced-v1 {:counter/amount :int
+                        :counter/added
+                        (schema-law/event-schema
+                         :counter/added
+                         [:map {:closed true} [:amount :counter/amount]])}
+        referenced-v2 {:counter/amount [:and :int [:>= 0]]
+                       :counter/added
+                       (schema-law/event-schema
+                        :counter/added
+                        [:map {:closed true} [:amount :counter/amount]])}
+        v1 (schema/materialize fake-hash referenced-v1)
+        v2 (schema/materialize fake-hash referenced-v2)]
+    (is (= (get-in referenced-v1 [:counter/added])
+           (get-in referenced-v2 [:counter/added]))
+        "sanity check: the referencing schema's own form did not change")
+    (is (not= (get-in v1 [:schema/hashes :counter/added])
+              (get-in v2 [:schema/hashes :counter/added]))
+        "the referencING schema's leaf hash must move when what it references does")))

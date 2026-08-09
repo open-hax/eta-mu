@@ -48,17 +48,51 @@
   [path schema-name]
   (keyword (str/join "." path) schema-name))
 
+(defn- referenced-schema-ids
+  "Every catalog schema id that schema-form points at directly. Malli
+   represents a reference to another registered schema either explicitly as
+   `[:ref :other/schema]` or as the bare qualified keyword itself resolved
+   against the registry, so any qualified keyword present in the same catalog
+   is treated as a direct reference."
+  [catalog schema-form]
+  (letfn [(walk [node]
+            (cond
+              (and (keyword? node) (contains? catalog node)) #{node}
+              (map? node) (into #{} (mapcat walk (mapcat identity node)))
+              (sequential? node) (into #{} (mapcat walk node))
+              :else #{}))]
+    (walk schema-form)))
+
+(defn- reference-closure
+  "Every catalog schema id schema-id transitively depends on, excluding
+   itself. A leaf hash over schema-form alone is blind to edits made to a
+   schema it references by id — the form text is unchanged, but what it
+   validates against has changed. Folding this closure's forms into the leaf
+   preimage keeps the leaf hash sound under `:ref`/bare-keyword composition."
+  [catalog schema-id]
+  (loop [visited #{} pending (list schema-id)]
+    (if-let [[id & more] (seq pending)]
+      (if (contains? visited id)
+        (recur visited more)
+        (recur (conj visited id)
+               (into more (referenced-schema-ids catalog (get catalog id)))))
+      (disj visited schema-id))))
+
 (declare merkleize-node)
 
 (defn- merkleize-schemas
-  [hash-fn path schemas]
+  [hash-fn catalog path schemas]
   (into
    (sorted-map)
    (map (fn [[schema-name schema-form]]
           (let [id (schema-id path schema-name)
+                closure
+                (->> (reference-closure catalog id)
+                     sort
+                     (mapv (fn [ref-id] [ref-id (get catalog ref-id)])))
                 hash (hash-fn
                       (canonical/canonical-edn
-                       [:schema id schema-form]))]
+                       [:schema id schema-form closure]))]
             [schema-name
              {:schema/id id
               :schema/form schema-form
@@ -66,18 +100,18 @@
    schemas))
 
 (defn- merkleize-children
-  [hash-fn children]
+  [hash-fn catalog children]
   (into
    (sorted-map)
    (map (fn [[segment child]]
-          [segment (merkleize-node hash-fn child)]))
+          [segment (merkleize-node hash-fn catalog child)]))
    children))
 
 (defn merkleize-node
-  [hash-fn node]
+  [hash-fn catalog node]
   (let [path (:namespace/path node)
-        schemas (merkleize-schemas hash-fn path (:namespace/schemas node))
-        children (merkleize-children hash-fn (:namespace/children node))
+        schemas (merkleize-schemas hash-fn catalog path (:namespace/schemas node))
+        children (merkleize-children hash-fn catalog (:namespace/children node))
         preimage
         [:namespace
          path
@@ -106,7 +140,7 @@
    involved: the root is a Merkle hash over namespace structure and schema data,
    while each schema also receives its own stable leaf hash."
   [hash-fn catalog]
-  (let [tree (->> catalog catalog-tree (merkleize-node hash-fn))]
+  (let [tree (->> catalog catalog-tree (merkleize-node hash-fn catalog))]
     {:schema/root (:merkle/hash tree)
      :schema/catalog catalog
      :schema/hashes (collect-schema-hashes tree)
