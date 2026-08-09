@@ -148,7 +148,8 @@ Reusable code follows the repository construction order:
 law -> shape -> extern -> domain -> infra
 ```
 
-- `clio.law.*` — runtime-neutral predicates and invariants (`.cljc`).
+- `clio.law.*` — runtime-neutral predicates and invariants, including the
+  ledger admission contract (`.cljc`).
 - `clio.shape.*` — runtime-neutral Malli/canonical data shapes (`.cljc`).
 - `clio.domain.*` — runtime-neutral schema Merkle logic, canonicalization, and
   projection folds (`.cljc`).
@@ -170,7 +171,11 @@ That boundary lint reads *forms*, not text: it parses every source file with
 edamame — preserving both branches of a reader conditional and keeping `#js`
 as a tagged literal — and reports only reader-level positions. A `js/` sequence
 inside a comment, docstring, or string literal performs no interop and is not a
-finding. The rules are runtime-neutral and carry no filesystem access, so they
+finding, and neither is a quoted symbol: `(def marker 'js/console)` is data,
+not host access. (Syntax-quote rides along with that exemption, because
+edamame expands it into `quote` leaves this scanner cannot tell apart from a
+hand-written one — a documented gap, pinned by a test.) The rules are
+runtime-neutral and carry no filesystem access, so they
 live in `scripts/clio/lint_extern_boundary.cljc` and the package suite verifies
 them on the same three runtimes as the kernel. Directory traversal and the exit
 code stay in the Babashka entrypoint, `scripts/lint_extern_boundary.bb`, beside
@@ -206,6 +211,13 @@ descriptor — including process exit or crash — releases the kernel lock, so
 Clio has no stale lockfile, lease timeout, PID-reclamation protocol, or
 application-level fencing race. Symlink and hard-link aliases therefore contend
 on the same underlying file identity rather than on path-derived lock names.
+
+Whether a candidate event may join a partition is a law, not transport.
+`clio.law.ledger/append-admission` classifies it against the events already
+present — `:appendable`, `:already-present`, `:id-collision`, or
+`:stream-slot-conflict` — and `clio.infra.ledger` only turns that verdict into
+an error or a write. Laws 2 and 4 above are the contract it restates, so a
+second ledger transport inherits them instead of reimplementing them.
 
 `append-event!` never brings a ledger into being. The lock open carries no
 `O_CREAT`, and the path is checked by name first, so a misspelled, deleted, or
