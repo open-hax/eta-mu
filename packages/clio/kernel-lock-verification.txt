@@ -4,7 +4,7 @@ Lockfile is up to date, resolution step is skipped
 Progress: resolved 1, reused 0, downloaded 0, added 0
 Packages: +957
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Progress: resolved 957, reused 951, downloaded 0, added 404
+Progress: resolved 957, reused 951, downloaded 0, added 397
 Progress: resolved 957, reused 951, downloaded 0, added 957, done
 .../node_modules/fs-ext-extra-prebuilt install$ node ./install.js
 .../node_modules/fs-ext-extra-prebuilt install: Using prebuilt binary: fs-ext-linux-x64-node-22.0.0.node
@@ -28,8 +28,8 @@ devDependencies:
 + tsx 4.21.0
 + typescript 5.9.3
 
- WARN  Failed to create bin at /home/runner/work/eta-mu/eta-mu/packages/eta-mu/node_modules/.bin/rheos. ENOENT: no such file or directory, open '/home/runner/work/eta-mu/eta-mu/packages/eta-mu/node_modules/@eta-mu/rheos/dist/cli.cjs'
  WARN  Failed to create bin at /home/runner/work/eta-mu/eta-mu/packages/legacy/agent/node_modules/.bin/pi-ai. ENOENT: no such file or directory, open '/home/runner/work/eta-mu/eta-mu/packages/legacy/agent/node_modules/@open-hax/eta-mu-ai/dist/cli.js'
+ WARN  Failed to create bin at /home/runner/work/eta-mu/eta-mu/packages/eta-mu/node_modules/.bin/rheos. ENOENT: no such file or directory, open '/home/runner/work/eta-mu/eta-mu/packages/eta-mu/node_modules/@eta-mu/rheos/dist/cli.cjs'
  WARN  Failed to create bin at /home/runner/work/eta-mu/eta-mu/packages/legacy/coding-agent/node_modules/.bin/pi-ai. ENOENT: no such file or directory, open '/home/runner/work/eta-mu/eta-mu/packages/legacy/coding-agent/node_modules/@open-hax/eta-mu-ai/dist/cli.js'
  WARN  Failed to create bin at /home/runner/work/eta-mu/eta-mu/packages/legacy/coding-agent/node_modules/.bin/openhax-kanban. ENOENT: no such file or directory, open '/home/runner/work/eta-mu/eta-mu/packages/legacy/coding-agent/node_modules/@open-hax/kanban-legacy/dist/cli.js'
  WARN  Failed to create bin at /home/runner/work/eta-mu/eta-mu/packages/legacy/github/node_modules/.bin/pi-ai. ENOENT: no such file or directory, open '/home/runner/work/eta-mu/eta-mu/packages/legacy/github/node_modules/@open-hax/eta-mu-ai/dist/cli.js'
@@ -48,7 +48,10 @@ STATUS install 0
 src/clio/extern/js/fs.cljs:68:15: error: Mismatched bracket: found an opening [ and a closing ) on line 75
 src/clio/extern/js/fs.cljs:75:69: error: Mismatched bracket: found an opening [ on line 68 and a closing )
 src/clio/extern/js/process.cljs:50:3: warning: Prefer async/await workflow over promise chains (.then/.catch/.finally)
-linting took 260ms, errors: 2, warnings: 1
+test/clio/infra/kernel_lock_test.cljs:29:15: warning: Prefer async/await workflow over promise chains (.then/.catch/.finally)
+test/clio/infra/kernel_lock_test.cljs:40:15: warning: Prefer async/await workflow over promise chains (.then/.catch/.finally)
+test/clio/infra/kernel_lock_test.cljs:45:15: warning: Prefer async/await workflow over promise chains (.then/.catch/.finally)
+linting took 263ms, errors: 2, warnings: 4
  ELIFECYCLE  Command failed with exit code 3.
  ELIFECYCLE  Command failed with exit code 3.
 STATUS lint 3
@@ -69,26 +72,26 @@ Successfully installed clojure tools!
 Downloading: org/clojure/clojure/1.12.5/clojure-1.12.5.pom from central
 Downloading: metosin/malli/0.16.4/malli-0.16.4.pom from clojars
 Downloading: fipp/fipp/0.6.26/fipp-0.6.26.pom from clojars
-Downloading: mvxcvi/arrangement/2.1.0/arrangement-2.1.0.pom from clojars
-Downloading: org/clojure/spec.alpha/0.5.238/spec.alpha-0.5.238.pom from central
 Downloading: org/clojure/core.specs.alpha/0.4.74/core.specs.alpha-0.4.74.pom from central
-Downloading: org/clojure/pom.contrib/1.2.0/pom.contrib-1.2.0.pom from central
+Downloading: org/clojure/spec.alpha/0.5.238/spec.alpha-0.5.238.pom from central
+Downloading: mvxcvi/arrangement/2.1.0/arrangement-2.1.0.pom from clojars
 Downloading: borkdude/dynaload/0.3.5/dynaload-0.3.5.pom from clojars
-Downloading: borkdude/edamame/1.4.27/edamame-1.4.27.pom from clojars
+Downloading: org/clojure/pom.contrib/1.2.0/pom.contrib-1.2.0.pom from central
 Downloading: org/clojure/test.check/1.1.1/test.check-1.1.1.pom from central
 Downloading: org/clojure/core.rrb-vector/0.1.2/core.rrb-vector-0.1.2.pom from central
-Downloading: org/clojure/tools.reader/1.3.4/tools.reader-1.3.4.pom from central
-Downloading: org/clojure/pom.contrib/1.1.0/pom.contrib-1.1.0.pom from central
+Downloading: borkdude/edamame/1.4.27/edamame-1.4.27.pom from clojars
 Downloading: org/clojure/pom.contrib/0.2.2/pom.contrib-0.2.2.pom from central
-Downloading: org/clojure/clojure/1.12.5/clojure-1.12.5.jar from central
+Downloading: org/clojure/pom.contrib/1.1.0/pom.contrib-1.1.0.pom from central
+Downloading: org/clojure/tools.reader/1.3.4/tools.reader-1.3.4.pom from central
 Downloading: org/clojure/core.specs.alpha/0.4.74/core.specs.alpha-0.4.74.jar from central
-Downloading: fipp/fipp/0.6.26/fipp-0.6.26.jar from clojars
+Downloading: org/clojure/clojure/1.12.5/clojure-1.12.5.jar from central
 Downloading: org/clojure/spec.alpha/0.5.238/spec.alpha-0.5.238.jar from central
-Downloading: mvxcvi/arrangement/2.1.0/arrangement-2.1.0.jar from clojars
+Downloading: fipp/fipp/0.6.26/fipp-0.6.26.jar from clojars
 Downloading: borkdude/dynaload/0.3.5/dynaload-0.3.5.jar from clojars
-Downloading: metosin/malli/0.16.4/malli-0.16.4.jar from clojars
-Downloading: borkdude/edamame/1.4.27/edamame-1.4.27.jar from clojars
+Downloading: mvxcvi/arrangement/2.1.0/arrangement-2.1.0.jar from clojars
 Downloading: org/clojure/core.rrb-vector/0.1.2/core.rrb-vector-0.1.2.jar from central
+Downloading: borkdude/edamame/1.4.27/edamame-1.4.27.jar from clojars
+Downloading: metosin/malli/0.16.4/malli-0.16.4.jar from clojars
 Downloading: org/clojure/tools.reader/1.3.4/tools.reader-1.3.4.jar from central
 Downloading: org/clojure/test.check/1.1.1/test.check-1.1.1.jar from central
 Extracting dependencies...
@@ -119,12 +122,12 @@ clojure.core/defn         - <built-in>
 clio.extern.js.process    - /home/runner/work/eta-mu/eta-mu/packages/clio/src/clio/extern/js/process.cljs:48:1 
 clio.extern.js.process    - /home/runner/work/eta-mu/eta-mu/packages/clio/src/clio/extern/js/process.cljs:48:1 
 
-file:///home/runner/.cache/pnpm/dlx/9e202dd677f7b9d62315b6b77847b9566298d104a42ccd3edf6dabf3b8f3a5da/19fe85bcf89-a47/node_modules/.pnpm/nbb@1.3.201/node_modules/nbb/lib/nbb_main.js:13
+file:///home/runner/.cache/pnpm/dlx/9e202dd677f7b9d62315b6b77847b9566298d104a42ccd3edf6dabf3b8f3a5da/19fe85d8aae-9f7/node_modules/.pnpm/nbb@1.3.201/node_modules/nbb/lib/nbb_main.js:13
 return k.v?k.v():k.call(null)}):null).then(function(k){$APP.l($APP.l(d)?null!=k:d)&&$APP.by.l($APP.B([k]));return k}).catch(function(k){$APP.Nfa(k,b);$APP.l($APP.cy.g(b))&&console.error(k);throw Error($APP.hm(k));})})):console.error("Usage: nbb \x3cscript\x3e or nbb -e \x3cexpr\x3e.")})();
                                                                                                                                                                                                    ^
 
 Error: Could not resolve symbol: array-seq
-    at file:///home/runner/.cache/pnpm/dlx/9e202dd677f7b9d62315b6b77847b9566298d104a42ccd3edf6dabf3b8f3a5da/19fe85bcf89-a47/node_modules/.pnpm/nbb@1.3.201/node_modules/nbb/lib/nbb_main.js:13:196
+    at file:///home/runner/.cache/pnpm/dlx/9e202dd677f7b9d62315b6b77847b9566298d104a42ccd3edf6dabf3b8f3a5da/19fe85d8aae-9f7/node_modules/.pnpm/nbb@1.3.201/node_modules/nbb/lib/nbb_main.js:13:196
 
 Node.js v22.23.1
  ELIFECYCLE  Command failed with exit code 1.
@@ -244,15 +247,15 @@ Retrieving org/clojure/clojure/1.6.0/clojure-1.6.0.pom from https://repo1.maven.
 Retrieving com/bhauman/cljs-test-display/0.1.1/cljs-test-display-0.1.1.pom from https://repo.clojars.org/
 Retrieving borkdude/edamame/1.6.42/edamame-1.6.42.pom from https://repo.clojars.org/
 Retrieving org/clojure/tools.reader/1.5.2/tools.reader-1.5.2.pom from https://repo1.maven.org/maven2/
-Retrieving org/clojure/data.json/2.5.2/data.json-2.5.2.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/clojure/1.12.4/clojure-1.12.4.jar from https://repo1.maven.org/maven2/
+Retrieving org/clojure/data.json/2.5.2/data.json-2.5.2.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/tools.cli/1.1.230/tools.cli-1.1.230.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/tools.reader/1.6.0/tools.reader-1.6.0.jar from https://repo1.maven.org/maven2/
 Retrieving com/cognitect/transit-clj/1.0.333/transit-clj-1.0.333.jar from https://repo1.maven.org/maven2/
 Retrieving com/cognitect/transit-java/1.0.371/transit-java-1.0.371.jar from https://repo1.maven.org/maven2/
+Retrieving com/googlecode/json-simple/json-simple/1.1.1/json-simple-1.1.1.jar from https://repo1.maven.org/maven2/
 Retrieving com/fasterxml/jackson/core/jackson-core/2.14.2/jackson-core-2.14.2.jar from https://repo1.maven.org/maven2/
 Retrieving org/msgpack/msgpack/0.6.12/msgpack-0.6.12.jar from https://repo1.maven.org/maven2/
-Retrieving com/googlecode/json-simple/json-simple/1.1.1/json-simple-1.1.1.jar from https://repo1.maven.org/maven2/
 Retrieving org/javassist/javassist/3.18.1-GA/javassist-3.18.1-GA.jar from https://repo1.maven.org/maven2/
 Retrieving javax/xml/bind/jaxb-api/2.4.0-b180830.0359/jaxb-api-2.4.0-b180830.0359.jar from https://repo1.maven.org/maven2/
 Retrieving javax/activation/javax.activation-api/1.2.0/javax.activation-api-1.2.0.jar from https://repo1.maven.org/maven2/
@@ -261,30 +264,30 @@ Retrieving com/cognitect/transit-js/0.8.874/transit-js-0.8.874.jar from https://
 Retrieving org/clojure/core.async/1.9.865/core.async-1.9.865.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/tools.analyzer.jvm/1.3.3/tools.analyzer.jvm-1.3.3.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/tools.analyzer/1.2.0/tools.analyzer-1.2.0.jar from https://repo1.maven.org/maven2/
-Retrieving org/clojure/core.memoize/1.1.266/core.memoize-1.1.266.jar from https://repo1.maven.org/maven2/
+Retrieving org/clojure/core.cache/1.1.234/core.cache-1.1.234.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/data.priority-map/1.2.0/data.priority-map-1.2.0.jar from https://repo1.maven.org/maven2/
 Retrieving org/ow2/asm/asm/9.2/asm-9.2.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/clojurescript/1.12.145/clojurescript-1.12.145.jar from https://repo1.maven.org/maven2/
-Retrieving org/clojure/core.cache/1.1.234/core.cache-1.1.234.jar from https://repo1.maven.org/maven2/
+Retrieving org/clojure/core.memoize/1.1.266/core.memoize-1.1.266.jar from https://repo1.maven.org/maven2/
+Retrieving com/google/javascript/closure-compiler/v20250407/closure-compiler-v20250407.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/google-closure-library/0.0-20250515-f04e4c0e/google-closure-library-0.0-20250515-f04e4c0e.jar from https://repo1.maven.org/maven2/
 Retrieving org/clojure/google-closure-library-third-party/0.0-20250515-f04e4c0e/google-closure-library-third-party-0.0-20250515-f04e4c0e.jar from https://repo1.maven.org/maven2/
-Retrieving com/google/javascript/closure-compiler/v20250407/closure-compiler-v20250407.jar from https://repo1.maven.org/maven2/
-Retrieving commons-codec/commons-codec/1.15/commons-codec-1.15.jar from https://repo1.maven.org/maven2/
 Retrieving commons-io/commons-io/2.20.0/commons-io-2.20.0.jar from https://repo1.maven.org/maven2/
 Retrieving org/apache/commons/commons-fileupload2-core/2.0.0-M4/commons-fileupload2-core-2.0.0-M4.jar from https://repo1.maven.org/maven2/
+Retrieving commons-codec/commons-codec/1.15/commons-codec-1.15.jar from https://repo1.maven.org/maven2/
 Retrieving thheller/shadow-cljs/3.4.11/shadow-cljs-3.4.11-aot.jar from https://repo.clojars.org/
-Retrieving thheller/shadow-client/1.4.0/shadow-client-1.4.0.jar from https://repo.clojars.org/
+Retrieving nrepl/nrepl/1.3.1/nrepl-1.3.1.jar from https://repo.clojars.org/
 Retrieving cider/piggieback/0.6.0/piggieback-0.6.0.jar from https://repo.clojars.org/
 Retrieving thheller/shadow-util/0.7.0/shadow-util-0.7.0.jar from https://repo.clojars.org/
-Retrieving nrepl/nrepl/1.3.1/nrepl-1.3.1.jar from https://repo.clojars.org/
+Retrieving thheller/shadow-client/1.4.0/shadow-client-1.4.0.jar from https://repo.clojars.org/
 Retrieving thheller/shadow-cljsjs/0.0.22/shadow-cljsjs-0.0.22.jar from https://repo.clojars.org/
 Retrieving com/thheller/shadow-http/0.1.8/shadow-http-0.1.8.jar from https://repo.clojars.org/
 Retrieving hiccup/hiccup/1.0.5/hiccup-1.0.5.jar from https://repo.clojars.org/
 Retrieving ring/ring-core/1.15.3/ring-core-1.15.3.jar from https://repo.clojars.org/
 Retrieving org/ring-clojure/ring-core-protocols/1.15.3/ring-core-protocols-1.15.3.jar from https://repo.clojars.org/
 Retrieving org/ring-clojure/ring-websocket-protocols/1.15.3/ring-websocket-protocols-1.15.3.jar from https://repo.clojars.org/
-Retrieving crypto-random/crypto-random/1.2.1/crypto-random-1.2.1.jar from https://repo.clojars.org/
 Retrieving ring/ring-codec/1.3.0/ring-codec-1.3.0.jar from https://repo.clojars.org/
+Retrieving crypto-random/crypto-random/1.2.1/crypto-random-1.2.1.jar from https://repo.clojars.org/
 Retrieving crypto-equality/crypto-equality/1.0.1/crypto-equality-1.0.1.jar from https://repo.clojars.org/
 Retrieving expound/expound/0.9.0/expound-0.9.0.jar from https://repo.clojars.org/
 Retrieving fipp/fipp/0.6.27/fipp-0.6.27.jar from https://repo.clojars.org/
@@ -311,4 +314,4 @@ clio/extern/js/fs.cljs [line 75, col 70] Unmatched delimiter ).
 
  ELIFECYCLE  Command failed with exit code 1.
 STATUS test-shadow 1
-HEAD 6da8c1af53e09d3e1c2cd7203eedf44ffa5fcca3
+HEAD bcfae3281a75680b9427e0e74a429185445893f8
