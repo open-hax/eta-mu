@@ -40,13 +40,12 @@
        (.on process "error" reject)
        (.on process "close"
             (fn [code signal]
-              (resolve
-               (clj->js {:exit-code code
-                         :signal signal
-                         :stdout @stdout
-                         :stderr @stderr})))))))))
+              (resolve {:exit-code code
+                        :signal signal
+                        :stdout @stdout
+                        :stderr @stderr}))))))))
 
 (defn ^:async run-concurrently!
   [commands]
   (let [results (await (js/Promise.all (clj->js (mapv run-command! commands))))]
-    (js->clj results :keywordize-keys true)))
+    (vec (array-seq results))))
