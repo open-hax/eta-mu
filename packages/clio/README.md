@@ -70,7 +70,7 @@ Malli forms:
 
 ```clojure
 {:post/published
- (clio.shape.schema/event-schema
+ (clio.law.schema/event-schema
   :post/published
   [:map {:closed true}
    [:post/id :string]
@@ -121,25 +121,24 @@ stable bootstrap convention.
 Reusable code follows the repository construction order:
 
 ```text
-law -> shape -> external -> domain -> infra
+law -> shape -> extern -> domain -> infra
 ```
 
 - `clio.law.*` — runtime-neutral predicates and invariants (`.cljc`).
 - `clio.shape.*` — runtime-neutral Malli/canonical data shapes (`.cljc`).
 - `clio.domain.*` — runtime-neutral schema Merkle logic, canonicalization, and
   projection folds (`.cljc`).
-- `clio.external.js.*` — the only Clio namespace family that touches Node/JS
+- `clio.extern.js.*` — the only Clio namespace family that touches Node/JS
   libraries or builtins. Functions accept Clojure data and return Clojure data;
   Node handles and JS option objects stay inside the boundary (`.cljs`).
 - `clio.infra.*` — NBB/Node orchestration over the pure kernel and boundary
   functions (`.cljs`).
 - `bin/*.nbb` and `test/*.nbb` — thin NBB executable entrypoints only.
 
-The shared clj-kondo construction-order hook recognizes `external` as the
-explicit spelling of the existing `extern` boundary, and Clio promotes boundary
-findings to errors. A Clio-specific boundary lint additionally refuses raw
-`js/`, `#js`, or string host requires in production source outside
-`clio.external.js.*`.
+The shared clj-kondo construction-order hook recognizes `extern`, and Clio
+promotes boundary findings to errors. A Clio-specific boundary lint
+additionally refuses raw `js/`, `#js`, `js*`, or string host requires in
+production source outside `clio.extern.js.*`.
 
 Reusable runtime-specific code is `.cljs`, rather than `.nbb`, so the same
 namespace implementation can be loaded by NBB and compiled by Shadow CLJS. The
