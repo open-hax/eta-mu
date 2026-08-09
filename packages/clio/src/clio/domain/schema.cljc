@@ -92,13 +92,15 @@
 
 (defn- collect-schema-hashes
   [node]
-  (into
-   (into {}
-         (map (fn [[_ schema]]
-                [(:schema/id schema) (:merkle/hash schema)]))
-         (:namespace/schemas node))
-   (mapcat (comp seq collect-schema-hashes val))
-   (:namespace/children node)))
+  (let [local
+        (into {}
+              (map (fn [[_ schema]]
+                     [(:schema/id schema) (:merkle/hash schema)]))
+              (:namespace/schemas node))
+        descendants
+        (mapcat (comp seq collect-schema-hashes val)
+                (:namespace/children node))]
+    (into local descendants)))
 
 (defn materialize
   "Derive an automatic schema revision. No manually maintained version number is
@@ -145,37 +147,38 @@
   [revisions schema-id schema-hash]
   (->> revisions
        (filter #(= schema-hash (get-in % [:schema/hashes schema-id])))
+       (sort-by :schema/root)
        vec))
 
 (defn resolve-event-schema
+  "Resolve an event through its recorded whole-catalog root, then report every
+   other known catalog revision carrying the exact same schema leaf. An unknown
+   root is refused even if its claimed leaf hash happens to be familiar: leaf
+   compatibility is not a substitute for source-revision provenance."
   [revisions event]
   (let [{:schema/keys [root id hash]} (:event/schema event)
-        by-root (revision-index revisions)]
-    (if-let [revision (get by-root root)]
-      (let [known-hash (get-in revision [:schema/hashes id])]
-        (when-not known-hash
-          (fail! :clio.schema/unknown-schema
-                 "Event references a schema absent from its catalog revision"
-                 {:schema/root root :schema/id id}))
-        (when-not (= hash known-hash)
-          (fail! :clio.schema/hash-mismatch
-                 "Event schema leaf hash does not match its catalog revision"
-                 {:schema/root root
-                  :schema/id id
-                  :event/schema-hash hash
-                  :known/schema-hash known-hash}))
-        {:revision revision
-         :schema/id id
-         :schema/form (get-in revision [:schema/catalog id])})
-      (let [compatible (compatible-revisions revisions id hash)]
-        (case (count compatible)
-          0 (fail! :clio.schema/unknown-revision
-                   "Schema root is unknown and no identical schema leaf is known"
-                   {:schema/root root :schema/id id :schema/hash hash})
-          {:revision (first compatible)
-           :compatible/revisions compatible
-           :schema/id id
-           :schema/form (get-in (first compatible) [:schema/catalog id])}))))
+        by-root (revision-index revisions)
+        revision (get by-root root)]
+    (when-not revision
+      (fail! :clio.schema/unknown-revision
+             "Event references a schema revision that is not available"
+             {:schema/root root :schema/id id :schema/hash hash}))
+    (let [known-hash (get-in revision [:schema/hashes id])]
+      (when-not known-hash
+        (fail! :clio.schema/unknown-schema
+               "Event references a schema absent from its catalog revision"
+               {:schema/root root :schema/id id}))
+      (when-not (= hash known-hash)
+        (fail! :clio.schema/hash-mismatch
+               "Event schema leaf hash does not match its catalog revision"
+               {:schema/root root
+                :schema/id id
+                :event/schema-hash hash
+                :known/schema-hash known-hash}))
+      {:revision revision
+       :compatible/revisions (compatible-revisions revisions id hash)
+       :schema/id id
+       :schema/form (get-in revision [:schema/catalog id])})))
 
 (defn validate-event!
   "Validate the bootstrap, semantic identity laws, then the exact historical
