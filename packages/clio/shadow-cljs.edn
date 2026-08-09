@@ -1,0 +1,8 @@
+{:source-paths ["src" "test"]
+ :repositories {"clojars" {:url "https://repo.clojars.org/"}}
+ :dependencies [[metosin/malli "0.16.4"]]
+ :builds
+ {:test {:target :node-test
+         :output-to "target/test.cjs"
+         :ns-regexp "-test$"
+         :autorun true}}}
