@@ -1,9 +1,9 @@
 (ns clio.infra.schema-store
-  (:require [cljs.reader :as reader]
-            [clio.domain.schema :as schema]
-            [clio.external.js.crypto :as crypto]
-            [clio.external.js.fs :as fs]
-            [clio.external.js.runtime :as runtime]
+  (:require [clio.domain.schema :as schema]
+            [clio.extern.js.crypto :as crypto]
+            [clio.extern.js.fs :as fs]
+            [clio.extern.js.runtime :as runtime]
+            [clio.shape.edn :as edn]
             [clojure.string :as str]))
 
 (defn- fail!
@@ -13,6 +13,15 @@
 (defn revision-path
   [directory root]
   (str directory "/" root ".edn"))
+
+(defn- read-snapshot
+  [path]
+  (try
+    (edn/read-one (fs/read-text path))
+    (catch :default cause
+      (fail! :clio.schema-store/invalid-edn
+             "Schema snapshot must contain exactly one readable EDN form"
+             {:path path :cause (str cause)}))))
 
 (defn- write-edn-atomically!
   [path value]
@@ -34,7 +43,7 @@
         snapshot {:schema/root root
                   :schema/catalog (:schema/catalog revision)}]
     (if (fs/exists? path)
-      (let [old (reader/read-string (fs/read-text path))]
+      (let [old (read-snapshot path)]
         (when-not (= snapshot old)
           (fail! :clio.schema-store/root-collision
                  "Persisted schema root has different contents"
@@ -47,7 +56,7 @@
 (defn- load-revision-file
   [directory filename]
   (let [path (str directory "/" filename)
-        snapshot (reader/read-string (fs/read-text path))
+        snapshot (read-snapshot path)
         materialized (schema/materialize crypto/sha256 (:schema/catalog snapshot))]
     (when-not (= (:schema/root snapshot) (:schema/root materialized))
       (fail! :clio.schema-store/corrupt-snapshot
