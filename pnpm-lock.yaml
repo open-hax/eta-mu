@@ -83,6 +83,8 @@ importers:
         specifier: ^3.4.10
         version: 3.4.11
 
+  packages/clio: {}
+
   packages/contracts/output:
     devDependencies:
       c8:
