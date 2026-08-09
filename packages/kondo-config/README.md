@@ -34,19 +34,19 @@ clj-kondo.exports/open-hax/kondo-config/
 
 ### The layer-boundary hook (`hooks/layer_boundaries.clj`)
 
-`ns hooks.layer-boundaries` reads each `ns` form's `:require` clauses and enforces the `law → shape → extern → domain → infra` construction order from `AGENTS.md`, so a layer violation is a lint finding at the require that causes it instead of something a reviewer has to notice:
+`ns hooks.layer-boundaries` reads each `ns` form's `:require` clauses and enforces the `law → shape → extern/external → domain → infra` construction order from `AGENTS.md`, so a layer violation is a lint finding at the require that causes it instead of something a reviewer has to notice. `external` is the explicit spelling used by packages such as Clio; it is semantically the same foreign-boundary layer as the established `extern` name.
 
-| layer    | may require                          |
-|----------|--------------------------------------|
-| `law`    | nothing (validators only)            |
-| `shape`  | `law`                                |
-| `extern` | `law`, `shape`                       |
-| `domain` | `law`, `shape`                       |
-| `infra`  | everything below it                  |
+| layer               | may require                                   |
+|---------------------|-----------------------------------------------|
+| `law`               | nothing (validators only)                     |
+| `shape`             | `law`                                         |
+| `extern`/`external` | `law`, `shape`, either boundary spelling      |
+| `domain`            | `law`, `shape`                                |
+| `infra`             | everything below it                           |
 
-Each layer may also require its own siblings. A **host require** — a string libspec such as `"node:fs/promises"`, `"chokidar"`, or `"fastify"` — is legal only in `extern.*` and `infra.*`, the layers allowed to touch the host at all; anywhere else it is a `:layer-boundary/host-require`. A require pointing up the order is a `:layer-boundary/upward-require`. Two types, so a package can tune them apart.
+Each layer may also require its own siblings. A **host require** — a string libspec such as `"node:fs/promises"`, `"chokidar"`, or `"fastify"` — is legal only in `extern.*`, `external.*`, and `infra.*`, the layers allowed to touch the host at all; anywhere else it is a `:layer-boundary/host-require`. A require pointing up the order is a `:layer-boundary/upward-require`. Two types, so a package can tune them apart.
 
-A namespace's layer is its last layer-named segment (`rheos.backend.domain.task-create` → `domain`). Namespaces with no layer segment are skipped, and so are `*-test` ones: a test is not part of the construction DAG, and a fixture that needs a temp directory to exercise a pure decision is not a violation. For a genuine false positive — a `domain` that means a DNS domain — turn it off for that namespace:
+A namespace's layer is its last layer-named segment (`rheos.backend.domain.task-create` → `domain`, `clio.external.js.fs` → `external`). Namespaces with no layer segment are skipped, and so are `*-test` ones: a test is not part of the construction DAG, and a fixture that needs a temp directory to exercise a pure decision is not a violation. For a genuine false positive — a `domain` that means a DNS domain — turn it off for that namespace:
 
 ```clojure
 :config-in-ns {your.dns.domain.parser
