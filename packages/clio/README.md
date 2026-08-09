@@ -66,7 +66,10 @@ change event-schema identity automatically.
 ## Content-derived schema revisions
 
 An event-schema catalog is plain Clojure data mapping qualified schema ids to
-Malli forms:
+Malli forms. `clio.law.schema/event-schema` is a Clojure function you call
+while *authoring* that map in code — the CLI's `catalog-file` argument is read
+as plain EDN, never evaluated, so a `catalog.edn` file cannot itself contain a
+function call. Build the catalog in Clojure/ClojureScript:
 
 ```clojure
 {:post/published
@@ -75,6 +78,27 @@ Malli forms:
   [:map {:closed true}
    [:post/id :string]
    [:text :string]])}
+```
+
+then serialize the *evaluated* result — the map `event-schema` returns, with
+the full envelope already expanded — as what `catalog.edn` actually contains:
+
+```clojure
+{:post/published
+ [:map {:closed true}
+  [:event/id [:string {:min 36 :max 36}]]
+  [:event/schema [:map {:closed true}
+                  [:schema/root [:string {:min 64 :max 64}]]
+                  [:schema/id :keyword]
+                  [:schema/hash [:string {:min 64 :max 64}]]]]
+  [:event/type [:= :post/published]]
+  [:event/stream [:string {:min 1}]]
+  [:event/seq [:int {:min 1}]]
+  [:event/causes [:vector [:string {:min 36 :max 36}]]]
+  [:event/actor [:string {:min 1}]]
+  [:event/subject [:string {:min 1}]]
+  [:event/at [:string {:min 1}]]
+  [:event/data [:map {:closed true} [:post/id :string] [:text :string]]]]}
 ```
 
 Clio derives a Merkle tree from the **logical namespace hierarchy and schema
