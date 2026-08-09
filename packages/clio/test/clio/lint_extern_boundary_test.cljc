@@ -106,3 +106,15 @@
     ;; Asserted rather than wished away: if a future reader implementation
     ;; preserves syntax-quote, this test fails and the gap gets revisited.
     (is (= [] (violations "(ns clio.law.example)\n(def body `(js/console.log 1))\n")))))
+
+(deftest metadata-on-a-quoted-form-is-still-inspected
+  ;; The reader attaches a type hint to the quote form itself, so exempting
+  ;; the payload must not exempt the node. Both rules hold on one node: the
+  ;; hint is reported, the quoted symbol is not.
+  (testing "a host type hint decorating a quoted form"
+    (is (= ["js/ interop js/Date"]
+           (violations "(ns clio.law.example)\n(def marker ^js/Date 'foo)\n"))))
+
+  (testing "and the quoted payload under that hint stays exempt"
+    (is (= ["js/ interop js/Date"]
+           (violations "(ns clio.law.example)\n(def marker ^js/Date 'js/console)\n")))))

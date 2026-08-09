@@ -78,22 +78,25 @@
 
    Quoted payloads are skipped: a quoted symbol is data and reaches no host
    object, so flagging it would fail valid source for the same reason scanning
-   comments and strings did."
+   comments and strings did. Metadata is examined first and unconditionally:
+   the reader attaches a type hint to the quote form itself, and a hint is host
+   interop whatever it decorates. The exemption is to skip the payload, not to
+   skip the node."
   [form]
-  (if (quoted? form)
-    nil
-    (concat
-     (when-let [marker (js-marker form)] [marker])
-     (when-let [m (meta form)] (js-markers m))
-     (cond
-       (tagged-literal? form) (js-markers (:form form))
-       ;; A preserved reader conditional is an opaque ReaderConditional on the
-       ;; JVM and needs naming; on ClojureScript edamame yields a map-like value
-       ;; whose :form the map branch below already reaches.
-       #?@(:clj [(reader-conditional? form) (js-markers (:form form))])
-       (map? form) (mapcat js-markers (mapcat identity form))
-       (coll? form) (mapcat js-markers form)
-       :else nil))))
+  (concat
+   (when-let [m (meta form)] (js-markers m))
+   (when-not (quoted? form)
+     (concat
+      (when-let [marker (js-marker form)] [marker])
+      (cond
+        (tagged-literal? form) (js-markers (:form form))
+        ;; A preserved reader conditional is an opaque ReaderConditional on the
+        ;; JVM and needs naming; on ClojureScript edamame yields a map-like value
+        ;; whose :form the map branch below already reaches.
+        #?@(:clj [(reader-conditional? form) (js-markers (:form form))])
+        (map? form) (mapcat js-markers (mapcat identity form))
+        (coll? form) (mapcat js-markers form)
+        :else nil)))))
 
 (defn require-clauses
   [ns-form]
