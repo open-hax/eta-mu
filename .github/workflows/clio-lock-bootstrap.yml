@@ -1,0 +1,59 @@
+name: Clio lock bootstrap
+
+on:
+  push:
+    branches: ["feat/clio-event-sourcing-kernel"]
+    paths:
+      - ".github/workflows/clio-lock-bootstrap.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: "10.14.0"
+          run_install: false
+
+      - name: Add dependency-free Clio workspace importer
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("pnpm-lock.yaml")
+          text = path.read_text()
+          entry = "  packages/clio: {}\n\n"
+          marker = "  packages/contracts/output:\n"
+
+          if entry not in text:
+              if marker not in text:
+                  raise SystemExit("lockfile importer marker not found")
+              text = text.replace(marker, entry + marker, 1)
+              path.write_text(text)
+          PY
+
+      - name: Make pnpm prove the lockfile is frozen-valid
+        run: pnpm install --lockfile-only --frozen-lockfile --ignore-scripts
+
+      - name: Commit verified lockfile
+        shell: bash
+        run: |
+          git diff --check
+          if git diff --quiet -- pnpm-lock.yaml; then
+            echo "pnpm-lock.yaml already contains the Clio importer"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git commit -m "chore(clio): register workspace lock importer"
+          git push origin HEAD:feat/clio-event-sourcing-kernel
