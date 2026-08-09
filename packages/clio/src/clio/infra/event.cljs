@@ -1,6 +1,6 @@
 (ns clio.infra.event
   (:require [clio.domain.schema :as schema]
-            [clio.external.js.runtime :as runtime]))
+            [clio.extern.js.runtime :as runtime]))
 
 (defn make-event
   "Create a new event under the current content-derived schema revision. Callers
