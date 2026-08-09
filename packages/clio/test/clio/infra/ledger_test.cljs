@@ -1,11 +1,14 @@
 (ns clio.infra.ledger-test
   (:require [cljs.test :refer [deftest is testing]]
             [clio.extern.js.fs :as fs]
+            [clio.extern.js.process :as process]
             [clio.extern.js.runtime :as host]
+            [clio.infra.event :as event]
             [clio.infra.ledger :as ledger]
             [clio.infra.projection :as projection]
             [clio.infra.runtime :as runtime]
-            [clio.law.schema :as schema-law]))
+            [clio.law.schema :as schema-law]
+            [clojure.string :as str]))
 
 (def catalog
   {:counter/opened
@@ -133,83 +136,53 @@
       (finally
         (fs/remove-tree! directory)))))
 
-(deftest file-lock-is-exclusive
+(deftest ^:async concurrent-processes-lock-the-ledger-inode
   (let [directory (str "/tmp/clio-" (host/random-uuid))
-        ledger-file (str directory "/events.edn")]
+        schema-directory (str directory "/schemas")
+        ledger-file (str directory "/events.edn")
+        ledger-alias (str directory "/events-hardlink.edn")]
     (try
       (fs/ensure-dir! directory)
-      (let [lock (fs/acquire-lock! ledger-file)]
-        (try
-          (is (= :clio.extern.fs/lock-timeout
-                 (error-code
-                  #(fs/acquire-lock! ledger-file {:attempts 0 :delay-ms 0}))))
-          (finally
-            (fs/release-lock! lock))))
-      (finally
-        (fs/remove-tree! directory)))))
-
-(def ^:private unreachable-pid
-  "Beyond Linux's default pid_max; kill(pid, 0) against it always raises
-   ESRCH, standing in for a writer that has actually crashed. Reclaim is now
-   gated on liveness, not age, so a lock naming this process's own (live)
-   pid — as a real fs/acquire-lock! call would write — could never be
-   reclaimed no matter how stale-after-ms is tuned."
-  2147483647)
-
-(defn- plant-dead-lock!
-  [ledger-file token]
-  (fs/write-text! (str ledger-file ".lock")
-                   (pr-str {:lock/pid unreachable-pid :lock/token token})))
-
-(deftest orphaned-lock-is-reclaimed-once-stale
-  (let [directory (str "/tmp/clio-" (host/random-uuid))
-        ledger-file (str directory "/events.edn")]
-    (try
-      (fs/ensure-dir! directory)
-      ;; Simulate a writer that crashed after creating the lock and never
-      ;; reached its `finally` to release it.
-      (plant-dead-lock! ledger-file "dead")
-      (let [reclaimed
-            (fs/acquire-lock! ledger-file {:attempts 20 :delay-ms 5 :stale-after-ms 5})]
-        (is (some? reclaimed))
-        (fs/release-lock! reclaimed))
-      (finally
-        (fs/remove-tree! directory)))))
-
-(deftest reclaimed-owner-cannot-release-the-new-owners-lock
-  (let [directory (str "/tmp/clio-" (host/random-uuid))
-        ledger-file (str directory "/events.edn")]
-    (try
-      (fs/ensure-dir! directory)
-      (plant-dead-lock! ledger-file "dead")
-      (let [original {:lock/path (str ledger-file ".lock") :lock/token "dead"}
-            reclaimed
-            (fs/acquire-lock! ledger-file {:attempts 20 :delay-ms 5 :stale-after-ms 5})]
-        (is (not (fs/lock-owned? original))
-            "the original owner must observe that it no longer holds the lock")
-        (is (fs/lock-owned? reclaimed))
-        (fs/release-lock! original)
-        (is (fs/exists? (:lock/path reclaimed))
-            "releasing a reclaimed lock must not delete the new owner's lock")
-        (fs/release-lock! reclaimed))
-      (finally
-        (fs/remove-tree! directory)))))
-
-(deftest a-live-owners-lock-is-never-reclaimed-regardless-of-age
-  (let [directory (str "/tmp/clio-" (host/random-uuid))
-        ledger-file (str directory "/events.edn")]
-    (try
-      (fs/ensure-dir! directory)
-      (let [lock (fs/acquire-lock! ledger-file)]
-        (try
-          ;; stale-after-ms 0 means every attempt sees the lock as "old
-          ;; enough"; liveness must still refuse to reclaim it, since this
-          ;; process (the real owner) is alive for the whole test.
-          (is (= :clio.extern.fs/lock-timeout
-                 (error-code
-                  #(fs/acquire-lock! ledger-file
-                                     {:attempts 3 :delay-ms 1 :stale-after-ms 0}))))
-          (finally
-            (fs/release-lock! lock))))
+      (ledger/create-ledger! ledger-file)
+      (fs/hard-link! ledger-file ledger-alias)
+      (let [rt (runtime/open schema-directory catalog)
+            revision (:schema/current rt)
+            event-a
+            (event/make-event
+             revision :counter/opened
+             {:event/stream "counter:race"
+              :event/seq 1
+              :event/actor "worker:a"
+              :event/subject "counter:race"
+              :event/data {:amount 1}})
+            event-b
+            (event/make-event
+             revision :counter/opened
+             {:event/stream "counter:race"
+              :event/seq 1
+              :event/actor "worker:b"
+              :event/subject "counter:race"
+              :event/data {:amount 2}})
+            worker (str (process/cwd) "/test/clio/infra/append_worker.nbb")
+            start-at (+ (process/now-ms) 3000)
+            command
+            (fn [path event]
+              {:command "pnpm"
+               :cwd (process/cwd)
+               :args ["dlx" "nbb@1.3.201" worker path (pr-str event) (pr-str start-at)]})
+            results
+            (await
+             (process/run-concurrently!
+              [(command ledger-file event-a)
+               (command ledger-alias event-b)]))
+            exit-codes (sort (map :exit-code results))
+            output (str/join "\n" (map :stdout results))]
+        (testing "only one colliding process commits"
+          (is (= [0 1] exit-codes))
+          (is (str/includes? output ":clio.ledger/concurrent-stream-write")))
+        (testing "hard-link aliases share one authoritative inode lock"
+          (is (= 1 (count (ledger/read-ledger ledger-file))))
+          (is (= (ledger/read-ledger ledger-file)
+                 (ledger/read-ledger ledger-alias)))))
       (finally
         (fs/remove-tree! directory)))))
