@@ -181,6 +181,17 @@ This keeps appends genuinely append-only. A complete logical history can be the
 union of any number of such ledgers. Exact duplicated events across files are
 harmless.
 
+`append-event!` serializes its complete read → validate → collision-check →
+append critical section with an **OS-backed lock on the ledger inode itself**.
+The same locked file descriptor is used for the read and append. On Unix the
+mandatory lock is a blocking whole-file POSIX `fcntl(F_SETLKW)` write lock;
+`flock` is an additional local-filesystem guard when supported. On Windows the
+adapter uses an exclusive `LockFileEx` range covering the file address space.
+Closing the descriptor — including process exit or crash — releases the kernel
+lock, so Clio has no stale lockfile, lease timeout, PID-reclamation protocol, or
+application-level fencing race. Symlink and hard-link aliases therefore contend
+on the same underlying file identity rather than on path-derived lock names.
+
 `clio.domain.canonicalize/canonicalize` performs:
 
 ```text
@@ -245,6 +256,11 @@ projection. Separate cases cover duplicated physical copies, schema-root/leaf
 version behavior, historical validation, UUID collisions, missing parents,
 competing stream revisions, causal cycles, append retry idempotence, and atomic
 projection replacement.
+
+The locking tests include real child processes and hard-link aliases: one test
+proves a contender blocks while another process holds the inode lock; another
+starts colliding appenders through different names for the same inode and proves
+that only one stream-slot write commits.
 
 PR-time verification runs in `main-pr-gate.yml`'s `clio` job; there is no
 package-local CI receipt file.
