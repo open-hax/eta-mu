@@ -1,19 +1,19 @@
 (ns clio.infra.ledger-test
   (:require [cljs.test :refer [deftest is testing]]
-            [clio.external.js.fs :as fs]
-            [clio.external.js.runtime :as host]
+            [clio.extern.js.fs :as fs]
+            [clio.extern.js.runtime :as host]
             [clio.infra.ledger :as ledger]
             [clio.infra.projection :as projection]
             [clio.infra.runtime :as runtime]
-            [clio.shape.schema :as shape]))
+            [clio.law.schema :as schema-law]))
 
 (def catalog
   {:counter/opened
-   (shape/event-schema
+   (schema-law/event-schema
     :counter/opened
     [:map {:closed true} [:amount :int]])
    :counter/added
-   (shape/event-schema
+   (schema-law/event-schema
     :counter/added
     [:map {:closed true} [:amount :int]])})
 
@@ -25,6 +25,14 @@
     :counter/added (update state (:event/stream event) +
                            (get-in event [:event/data :amount]))
     state))
+
+(defn error-code
+  [f]
+  (try
+    (f)
+    nil
+    (catch :default cause
+      (:clio/error (ex-data cause)))))
 
 (deftest append-and-projection-are-idempotent
   (let [directory (str "/tmp/clio-" (host/random-uuid))
@@ -77,5 +85,65 @@
           (is (= {"counter:a" 15}
                  (:projection/state second-projection)))
           (is (fs/exists? projection-file))))
+      (finally
+        (fs/remove-tree! directory)))))
+
+(deftest ledger-lines-accept-exactly-one-edn-form
+  (let [directory (str "/tmp/clio-" (host/random-uuid))
+        ledger-file (str directory "/events.edn")]
+    (try
+      (fs/ensure-dir! directory)
+      (fs/write-text! ledger-file "{:a 1} {:b 2}\n")
+      (is (= :clio.ledger/invalid-edn
+             (error-code #(ledger/read-ledger ledger-file))))
+      (finally
+        (fs/remove-tree! directory)))))
+
+(deftest append-repairs-a-missing-record-delimiter
+  (let [directory (str "/tmp/clio-" (host/random-uuid))
+        schema-directory (str directory "/schemas")
+        ledger-file (str directory "/events.edn")]
+    (try
+      (fs/ensure-dir! directory)
+      (ledger/create-ledger! ledger-file)
+      (let [rt (runtime/open schema-directory catalog)
+            first-write
+            (runtime/append!
+             rt ledger-file :counter/opened
+             {:event/stream "counter:a"
+              :event/seq 1
+              :event/actor "user:alice"
+              :event/subject "counter:a"
+              :event/data {:amount 1}})
+            first-event (:event first-write)
+            without-newline
+            (subs (fs/read-text ledger-file)
+                  0
+                  (dec (count (fs/read-text ledger-file))))]
+        (fs/write-text! ledger-file without-newline)
+        (runtime/append!
+         rt ledger-file :counter/added
+         {:event/stream "counter:a"
+          :event/seq 2
+          :event/causes [(:event/id first-event)]
+          :event/actor "user:alice"
+          :event/subject "counter:a"
+          :event/data {:amount 2}})
+        (is (= 2 (count (ledger/read-ledger ledger-file)))))
+      (finally
+        (fs/remove-tree! directory)))))
+
+(deftest file-lock-is-exclusive
+  (let [directory (str "/tmp/clio-" (host/random-uuid))
+        ledger-file (str directory "/events.edn")]
+    (try
+      (fs/ensure-dir! directory)
+      (let [lock (fs/acquire-lock! ledger-file)]
+        (try
+          (is (= :clio.extern.fs/lock-timeout
+                 (error-code
+                  #(fs/acquire-lock! ledger-file {:attempts 0 :delay-ms 0}))))
+          (finally
+            (fs/release-lock! lock))))
       (finally
         (fs/remove-tree! directory)))))
