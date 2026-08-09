@@ -8,7 +8,8 @@
             [clio.infra.projection :as projection]
             [clio.infra.runtime :as runtime]
             [clio.law.schema :as schema-law]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [promesa.core :as p]))
 
 (def catalog
   {:counter/opened
@@ -173,26 +174,26 @@
               (fn [path event]
                 {:command "pnpm"
                  :cwd (process/cwd)
-                 :args ["dlx" "nbb@1.3.201" worker path (pr-str event) (pr-str start-at)]})]
-          (-> (process/run-concurrently!
-               [(command ledger-file event-a)
-                (command ledger-alias event-b)])
-              (.then
-               (fn [results]
-                 (let [exit-codes (sort (map :exit-code results))
-                       output (str/join "\n" (map :stdout results))]
-                   (testing "only one colliding process commits"
-                     (is (= [0 1] exit-codes))
-                     (is (str/includes? output ":clio.ledger/concurrent-stream-write")))
-                   (testing "hard-link aliases share one authoritative inode lock"
-                     (is (= 1 (count (ledger/read-ledger ledger-file))))
-                     (is (= (ledger/read-ledger ledger-file)
-                            (ledger/read-ledger ledger-alias))))
-                   (finish))))
-              (.catch
-               (fn [cause]
-                 (is false (str "concurrent append probe failed: " cause))
-                 (finish)))))
+                 :args ["dlx" "nbb@1.3.201" worker path (pr-str event) (pr-str start-at)]})
+              workflow
+              (p/let [results
+                      (process/run-concurrently!
+                       [(command ledger-file event-a)
+                        (command ledger-alias event-b)])]
+                (let [exit-codes (sort (map :exit-code results))
+                      output (str/join "\n" (map :stdout results))]
+                  (testing "only one colliding process commits"
+                    (is (= [0 1] exit-codes))
+                    (is (str/includes? output ":clio.ledger/concurrent-stream-write")))
+                  (testing "hard-link aliases share one authoritative inode lock"
+                    (is (= 1 (count (ledger/read-ledger ledger-file))))
+                    (is (= (ledger/read-ledger ledger-file)
+                           (ledger/read-ledger ledger-alias))))
+                  (finish)))]
+          (p/catch workflow
+                   (fn [cause]
+                     (is false (str "concurrent append probe failed: " cause))
+                     (finish))))
         (catch :default cause
           (is false (str "concurrent append setup failed: " cause))
           (finish))))))
