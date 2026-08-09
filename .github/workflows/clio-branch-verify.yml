@@ -80,30 +80,12 @@ jobs:
           version: "10.14.0"
           run_install: false
 
-      - name: Record Node setup phase
-        shell: bash
-        run: |
-          at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          cat > packages/clio/verification.edn <<EOF
-          {:verification/status :running
-           :verification/tested-commit "${GITHUB_SHA}"
-           :verification/phase :setup-node
-           :verification/at "${at}"}
-          EOF
-          git add packages/clio/verification.edn
-          git commit -m "test(clio): record node setup phase"
-          git push origin HEAD:feat/clio-event-sourcing-kernel
-
-      - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: "22"
-
       - name: Run phased verification
         shell: bash
         run: |
           set -euo pipefail
           : > packages/clio/verification.log
+          node_version="$(node --version)"
 
           record() {
             local status="$1"
@@ -117,7 +99,7 @@ jobs:
            :verification/phase :${phase}
            :verification/phase-outcome :${outcome}
            :verification/at "${at}"
-           :verification/runtime {:node "22" :java "21" :pnpm "10.14.0" :bb "1.13.219" :clj-kondo "2025.10.23"}}
+           :verification/runtime {:node "${node_version}" :java "21" :pnpm "10.14.0" :bb "1.13.219" :clj-kondo "2025.10.23"}}
           EOF
             git add packages/clio/verification.edn packages/clio/verification.log
             git commit -m "test(clio): verification ${phase} ${outcome}"
