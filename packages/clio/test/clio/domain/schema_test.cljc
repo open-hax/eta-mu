@@ -10,35 +10,31 @@
     (apply str (take 64 (cycle token)))))
 
 (def catalog-v1
-  (shape/merge-catalogs
-   shape/core-catalog
-   {:counter/added
-    (shape/event-schema
-     :counter/added
-     [:map {:closed true}
-      [:amount :int]])
+  {:counter/added
+   (shape/event-schema
+    :counter/added
+    [:map {:closed true}
+     [:amount :int]])
 
+   :counter/subtracted
+   (shape/event-schema
     :counter/subtracted
-    (shape/event-schema
-     :counter/subtracted
-     [:map {:closed true}
-      [:amount :int]])}))
+    [:map {:closed true}
+     [:amount :int]])})
 
 (def catalog-v2
-  (shape/merge-catalogs
-   shape/core-catalog
-   {:counter/added
-    (shape/event-schema
-     :counter/added
-     [:map {:closed true}
-      [:amount :int]
-      [:unit :keyword]])
+  {:counter/added
+   (shape/event-schema
+    :counter/added
+    [:map {:closed true}
+     [:amount :int]
+     [:unit :keyword]])
 
+   :counter/subtracted
+   (shape/event-schema
     :counter/subtracted
-    (shape/event-schema
-     :counter/subtracted
-     [:map {:closed true}
-      [:amount :int]])}))
+    [:map {:closed true}
+     [:amount :int]])})
 
 (defn event
   [revision schema-id data]
