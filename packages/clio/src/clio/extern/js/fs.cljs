@@ -82,14 +82,33 @@
         nil
         (throw cause)))))
 
+(defn- try-reclaim-stale-lock!
+  "Attempt to claim reclamation of a stale lock by atomically renaming it
+   aside. Renaming is atomic at the OS level: when two contenders race on the
+   same stale lock, at most one rename succeeds and the other gets ENOENT.
+   Without this, two contenders could both decide the lock is stale, both
+   unconditionally delete it, and both believe they hold the fresh lock each
+   then creates — the exact ownership race an unconditional delete permits."
+  [lock-path]
+  (let [claim-path (str lock-path ".reclaim-" (js/Math.random))]
+    (try
+      (fs/renameSync lock-path claim-path)
+      (delete-if-exists! claim-path)
+      true
+      (catch :default cause
+        (if (= "ENOENT" (.-code cause))
+          false
+          (throw cause))))))
+
 (defn acquire-lock!
   "Acquire an inter-process lock by exclusively creating `<path>.lock`.
    Returns plain Clojure data; no file handle crosses the extern boundary.
 
    A lock older than `stale-after-ms` is assumed orphaned by a writer that
    crashed, was killed, or lost power between creating the lock and its
-   `finally` releasing it, and is reclaimed by deleting it and retrying
-   acquisition rather than waiting out the attempt budget."
+   `finally` releasing it, and reclamation is attempted rather than waiting
+   out the attempt budget. Reclamation itself is race-safe: see
+   `try-reclaim-stale-lock!`."
   ([path]
    (acquire-lock! path {:attempts 200 :delay-ms 25 :stale-after-ms 60000}))
   ([path {:keys [attempts delay-ms stale-after-ms] :or {stale-after-ms 60000}}]
@@ -104,7 +123,7 @@
            (cond
              (and age-ms (> age-ms stale-after-ms))
              (do
-               (delete-if-exists! lock-path)
+               (try-reclaim-stale-lock! lock-path)
                (recur remaining))
 
              (pos? remaining)
