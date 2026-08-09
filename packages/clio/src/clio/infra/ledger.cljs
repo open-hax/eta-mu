@@ -44,12 +44,25 @@
                     "\n")]
     (fs/append-locked-text! lock (str delimiter (pr-str event) "\n"))))
 
+(defn- require-ledger-path!
+  "A caller naming an explicit partition file means it to exist. Treating a
+   misspelled, deleted, or unmounted path as an empty ledger would let
+   canonicalization silently produce a plausible but incomplete history, and
+   would let an append open a fresh ledger while the intended one stays
+   behind. `create-ledger!` is the only path that brings a ledger into being."
+  [path]
+  (when-not (fs/exists? path)
+    (fail! :clio.ledger/missing-file
+           "Ledger file does not exist"
+           {:path path})))
+
 (defn append-event!
   "Append one validated event while holding an OS-backed exclusive lock on
    the ledger inode. Exact retries are idempotent. Causal parents may live in
    other physical ledger files; complete-history causality is checked when
    ledgers are unioned."
   [revisions path event]
+  (require-ledger-path! path)
   (let [lock (fs/acquire-lock! path)]
     (try
       (schema/validate-event! revisions event)
@@ -82,17 +95,6 @@
               :appended))))
       (finally
         (fs/release-lock! lock)))))
-
-(defn- require-ledger-path!
-  "A caller unioning explicit partition files means every named path to
-   exist. Treating a misspelled, deleted, or unmounted path as an empty
-   ledger would let canonicalization silently produce a plausible but
-   incomplete history."
-  [path]
-  (when-not (fs/exists? path)
-    (fail! :clio.ledger/missing-file
-           "Ledger file does not exist"
-           {:path path})))
 
 (defn read-ledgers
   [paths]

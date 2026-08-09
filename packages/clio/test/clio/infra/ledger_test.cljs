@@ -38,6 +38,16 @@
     (catch :default cause
       (:clio/error (ex-data cause)))))
 
+(defn error-message
+  "The message of whatever f throws. Host errors such as ENOENT carry no
+   :clio/error, so error-code cannot see them."
+  [f]
+  (try
+    (f)
+    nil
+    (catch :default cause
+      (ex-message cause))))
+
 (deftest append-and-projection-are-idempotent
   (let [directory (str "/tmp/clio-" (host/random-uuid))
         schema-directory (str directory "/schemas")
@@ -198,3 +208,63 @@
         (catch :default cause
           (is false (str "concurrent append setup failed: " cause))
           (finish))))))
+
+(deftest append-refuses-to-create-a-missing-ledger
+  ;; `a+` would create the file, so a misspelled or deleted ledger path would
+  ;; quietly become a fresh empty history while the intended ledger stayed
+  ;; behind. `create-ledger!` is the only creation path.
+  (let [directory (str "/tmp/clio-" (host/random-uuid))
+        schema-directory (str directory "/schemas")
+        missing-file (str directory "/typo-events.edn")]
+    (try
+      (fs/ensure-dir! directory)
+      (let [rt (runtime/open schema-directory catalog)]
+        (testing "the append is refused by name"
+          (is (= :clio.ledger/missing-file
+                 (error-code
+                  #(runtime/append!
+                    rt missing-file :counter/opened
+                    {:event/stream "counter:a"
+                     :event/seq 1
+                     :event/actor "user:alice"
+                     :event/subject "counter:a"
+                     :event/data {:amount 1}})))))
+        (testing "and the ledger is still absent afterwards"
+          (is (not (fs/exists? missing-file)))))
+      (finally
+        (fs/remove-tree! directory)))))
+
+(deftest acquiring-a-lock-refuses-to-create-a-missing-ledger
+  ;; The same guarantee one layer down: the lock open carries no O_CREAT, so
+  ;; even a caller bypassing clio.infra.ledger cannot conjure a ledger.
+  (let [directory (str "/tmp/clio-" (host/random-uuid))
+        missing-file (str directory "/absent.edn")]
+    (try
+      (fs/ensure-dir! directory)
+      (is (str/includes? (str (error-message #(fs/acquire-lock! missing-file)))
+                         "ENOENT")
+          "the open fails at the syscall rather than creating the ledger")
+      (is (not (fs/exists? missing-file)))
+      (finally
+        (fs/remove-tree! directory)))))
+
+(deftest a-locked-ledger-refuses-path-based-reads
+  ;; A POSIX record lock is released when the process closes ANY descriptor
+  ;; for the file, so a path-based read inside a critical section would drop
+  ;; the lock silently. The guard turns that into a loud failure.
+  (let [directory (str "/tmp/clio-" (host/random-uuid))
+        ledger-file (str directory "/events.edn")]
+    (try
+      (fs/ensure-dir! directory)
+      (fs/create-exclusive! ledger-file)
+      (let [lock (fs/acquire-lock! ledger-file)]
+        (testing "while the lock is held"
+          (is (= :clio.fs/locked-path-read
+                 (error-code #(fs/read-text ledger-file))))
+          (testing "the lock-owning descriptor still reads"
+            (is (= "" (fs/read-locked-text lock)))))
+        (fs/release-lock! lock))
+      (testing "and the path reads normally once released"
+        (is (= "" (fs/read-text ledger-file))))
+      (finally
+        (fs/remove-tree! directory)))))

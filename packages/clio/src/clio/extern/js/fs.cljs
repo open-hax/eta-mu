@@ -18,8 +18,26 @@
     (fs/closeSync fd))
   path)
 
+(def ^:private locked-paths
+  "Ledger paths this process currently holds a kernel lock on.
+
+   A POSIX record lock is released when the process closes *any* descriptor
+   for that file, not only the one that took the lock. So opening a locked
+   ledger a second time by path and closing it drops the lock silently — no
+   error, no signal, just an unserialized critical section. read-text refuses
+   such a path rather than letting that happen.
+
+   The guard keys on the path while the lock keys on the inode, so a hard-link
+   alias reaching the same inode under another name is not caught. Callers
+   inside a critical section must use read-locked-text regardless."
+  (atom #{}))
+
 (defn read-text
   [path]
+  (when (contains? @locked-paths path)
+    (throw (ex-info
+            "Path is locked by this process; read through read-locked-text"
+            {:path path :clio/error :clio.fs/locked-path-read})))
   (fs/readFileSync path "utf8"))
 
 (defn append-text!
@@ -92,8 +110,10 @@
   ;; flock gives open-file-description exclusion on local filesystems, which
   ;; also protects separate descriptors in one process. Some NFS mounts do not
   ;; implement flock, so unsupported-flock errors deliberately fall through.
-  ;; The mandatory whole-file F_SETLKW below is the Unix authority and the path
-  ;; used by NFS implementations that support POSIX record locking.
+  ;; The whole-file F_SETLKW below is the authoritative Unix lock and the path
+  ;; used by NFS implementations that support POSIX record locking. It is an
+  ;; advisory lock — "mandatory locking" is an unrelated, effectively dead
+  ;; POSIX feature, not what F_SETLKW does.
   (try
     (fs-ext/flockSync fd "ex")
     (catch :default cause
@@ -111,7 +131,7 @@
     (acquire-unix-lock! fd)))
 
 (defn acquire-lock!
-  "Open the ledger itself and hold an OS-backed exclusive lock on its inode.
+  "Open an existing ledger and hold an OS-backed exclusive lock on its inode.
 
    The descriptor stays open for the entire read/validate/append critical
    section. The kernel releases the lock automatically if the process exits,
@@ -119,13 +139,25 @@
    reclamation path, or fencing token to race. Hard-link and symlink aliases
    reach the same inode and therefore the same lock.
 
-   Unix uses a whole-file blocking fcntl write lock as the mandatory lock,
-   with flock as an additional local-filesystem guard when supported. Windows
-   uses an exclusive LockFileEx range covering the full file address space."
+   Unix uses a whole-file blocking fcntl write lock as the authoritative
+   advisory lock, with flock as an additional local-filesystem guard when
+   supported. Windows uses an exclusive LockFileEx range covering the full
+   file address space.
+
+   Two consequences of the POSIX record lock shape are load-bearing. It is
+   released when this process closes *any* descriptor for the file, so every
+   read inside the critical section must go through read-locked-text; see
+   locked-paths, which refuses the path-based read outright. And the open uses
+   the numeric O_APPEND|O_RDWR flags rather than \"a+\": both \"a\" and \"a+\"
+   imply O_CREAT, which would let a misspelled or deleted ledger be created
+   here and appended to as an empty history. create-ledger! is the only
+   creation path; an absent ledger fails with ENOENT."
   [path]
-  (let [fd (fs/openSync path "a+")]
+  (let [flags (bit-or (.-O_APPEND (.-constants fs)) (.-O_RDWR (.-constants fs)))
+        fd (fs/openSync path flags)]
     (try
       (acquire-native-lock! fd)
+      (swap! locked-paths conj path)
       {:lock/path path :lock/fd fd}
       (catch :default cause
         (fs/closeSync fd)
@@ -144,6 +176,7 @@
 
 (defn release-lock!
   "Close the owning descriptor. Kernel file locks are released by close."
-  [{:lock/keys [fd]}]
+  [{:lock/keys [fd path]}]
+  (swap! locked-paths disj path)
   (fs/closeSync fd)
   nil)
