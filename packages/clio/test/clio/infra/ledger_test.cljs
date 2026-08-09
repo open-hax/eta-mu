@@ -174,7 +174,8 @@
               (fn [path event]
                 {:command "pnpm"
                  :cwd (process/cwd)
-                 :args ["dlx" "nbb@1.3.201" worker path (pr-str event) (pr-str start-at)]})
+                 ;; The workspace nbb; see kernel-lock-test.
+                 :args ["exec" "nbb" worker path (pr-str event) (pr-str start-at)]})
               workflow
               (p/let [results
                       (process/run-concurrently!

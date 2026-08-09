@@ -24,7 +24,10 @@
               (process/run-command!
                {:command "pnpm"
                 :cwd (process/cwd)
-                :args ["dlx" "nbb@1.3.201"
+                ;; The workspace nbb, not `pnpm dlx`: the child must run the
+                ;; lockfile-pinned binary the parent suite runs, without a
+                ;; registry fetch inside a timing assertion.
+                :args ["exec" "nbb"
                        holder-script ledger-file ready-file (pr-str hold-ms)]})
               workflow
               (p/let [_ (fs/wait-for-exists! ready-file 10000)
