@@ -33,3 +33,29 @@
   (is (some? (canonical/canonical-edn {:amount 1.5})))
   (is (not= (canonical/canonical-edn {:amount 1.5})
             (canonical/canonical-edn {:amount 1}))))
+
+(deftest number-encodings-are-runtime-independent
+  ;; These literals are pinned exactly: they were computed identically on the
+  ;; JVM (bb) and on JavaScript (nbb), where host printing would otherwise
+  ;; decide the form — (str 1.0) is "1.0" on the JVM but "1" in ClojureScript,
+  ;; and 1e-7 prints "1.0E-7" vs "1e-7".
+  (is (= "[:number :real 1 \"6755399441055744\" -52]"
+         (canonical/canonical-edn 1.5)))
+  (is (= "[:number :real 1 \"7205759403792794\" -56]"
+         (canonical/canonical-edn 0.1)))
+  (is (= "[:number :real 1 \"7555786372591432\" -76]"
+         (canonical/canonical-edn 1e-7)))
+  (is (= "[:number :real -1 \"6192449487634432\" -51]"
+         (canonical/canonical-edn -2.75)))
+  ;; An integer-valued double denotes an integer on both runtimes; -0.0
+  ;; canonicalizes to +0.0 since (= -0.0 0.0) holds everywhere.
+  (is (= "[:number :safe-integer \"1\"]"
+         (canonical/canonical-edn 1.0)))
+  (is (= "[:number :safe-integer \"0\"]"
+         (canonical/canonical-edn -0.0)))
+  (is (= "[:number :safe-integer \"9007199254740991\"]"
+         (canonical/canonical-edn 9007199254740991.0)))
+  ;; 1e20 is integer-valued on ClojureScript but a Double on the JVM; both
+  ;; runtimes must refuse it rather than disagreeing.
+  (is (= :clio.canonical/non-portable-number
+         (error-code #(canonical/canonical-edn {:too-big 1e20})))))
