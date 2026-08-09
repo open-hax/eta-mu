@@ -148,6 +148,19 @@
       (finally
         (fs/remove-tree! directory)))))
 
+(def ^:private unreachable-pid
+  "Beyond Linux's default pid_max; kill(pid, 0) against it always raises
+   ESRCH, standing in for a writer that has actually crashed. Reclaim is now
+   gated on liveness, not age, so a lock naming this process's own (live)
+   pid — as a real fs/acquire-lock! call would write — could never be
+   reclaimed no matter how stale-after-ms is tuned."
+  2147483647)
+
+(defn- plant-dead-lock!
+  [ledger-file token]
+  (fs/write-text! (str ledger-file ".lock")
+                   (pr-str {:lock/pid unreachable-pid :lock/token token})))
+
 (deftest orphaned-lock-is-reclaimed-once-stale
   (let [directory (str "/tmp/clio-" (host/random-uuid))
         ledger-file (str directory "/events.edn")]
@@ -155,7 +168,7 @@
       (fs/ensure-dir! directory)
       ;; Simulate a writer that crashed after creating the lock and never
       ;; reached its `finally` to release it.
-      (fs/acquire-lock! ledger-file)
+      (plant-dead-lock! ledger-file "dead")
       (let [reclaimed
             (fs/acquire-lock! ledger-file {:attempts 20 :delay-ms 5 :stale-after-ms 5})]
         (is (some? reclaimed))
@@ -168,9 +181,8 @@
         ledger-file (str directory "/events.edn")]
     (try
       (fs/ensure-dir! directory)
-      ;; The original owner is merely slow, not dead: it keeps its lock value
-      ;; around after a contender reclaims and re-acquires the same path.
-      (let [original (fs/acquire-lock! ledger-file)
+      (plant-dead-lock! ledger-file "dead")
+      (let [original {:lock/path (str ledger-file ".lock") :lock/token "dead"}
             reclaimed
             (fs/acquire-lock! ledger-file {:attempts 20 :delay-ms 5 :stale-after-ms 5})]
         (is (not (fs/lock-owned? original))
@@ -180,5 +192,24 @@
         (is (fs/exists? (:lock/path reclaimed))
             "releasing a reclaimed lock must not delete the new owner's lock")
         (fs/release-lock! reclaimed))
+      (finally
+        (fs/remove-tree! directory)))))
+
+(deftest a-live-owners-lock-is-never-reclaimed-regardless-of-age
+  (let [directory (str "/tmp/clio-" (host/random-uuid))
+        ledger-file (str directory "/events.edn")]
+    (try
+      (fs/ensure-dir! directory)
+      (let [lock (fs/acquire-lock! ledger-file)]
+        (try
+          ;; stale-after-ms 0 means every attempt sees the lock as "old
+          ;; enough"; liveness must still refuse to reclaim it, since this
+          ;; process (the real owner) is alive for the whole test.
+          (is (= :clio.extern.fs/lock-timeout
+                 (error-code
+                  #(fs/acquire-lock! ledger-file
+                                     {:attempts 3 :delay-ms 1 :stale-after-ms 0}))))
+          (finally
+            (fs/release-lock! lock))))
       (finally
         (fs/remove-tree! directory)))))
