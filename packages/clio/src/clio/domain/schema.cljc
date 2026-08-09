@@ -49,11 +49,19 @@
   (keyword (str/join "." path) schema-name))
 
 (def ^:private literal-position-types
-  "Malli constructs whose children are literal values compared for equality,
-   never sub-schemas — a qualified keyword appearing among them (e.g. the
-   :flags/enabled in [:enum :flags/enabled] or [:= :flags/enabled]) is data
-   being matched, not a reference to a registered schema of that id."
-  #{:enum := :const :fn :re})
+  "Malli constructs whose children are literal values compared against, never
+   sub-schemas — a qualified keyword appearing among them (e.g. the
+   :flags/enabled in [:enum :flags/enabled] or [:not= :flags/enabled]) is data
+   being matched, not a reference to a registered schema of that id. Every
+   comparator belongs here, not only equality."
+  #{:enum := :not= :> :>= :< :<= :const :fn :re})
+
+(def ^:private labeled-entry-types
+  "Malli constructs whose children are labeled entries rather than bare
+   sub-schemas. The leading label is data — a :map key, an :orn/:catn/:altn
+   branch name, a :multi dispatch value — so only an entry's trailing schema
+   position is a schema position."
+  #{:map :orn :catn :altn :multi})
 
 (defn- schema-properties
   "The properties map of a Malli vector form, if it carries one. A properties
@@ -65,13 +73,17 @@
   (when (map? (second node))
     (second node)))
 
-(defn- map-entry-schema-position
-  "A :map child is `[key]`, `[key schema]`, or `[key opts schema]` — the
-   schema, if present, is always the last element; `key` and `opts` are
-   never schema positions."
+(defn- entry-schema-position
+  "A labeled entry is `[label]`, `[label schema]`, or `[label opts schema]` —
+   the schema, if present, is always the last element; `label` and `opts` are
+   never schema positions. A two-element entry whose tail is a map carries
+   options rather than a schema, because a bare map is never itself a valid
+   Malli schema."
   [entry]
   (when (and (vector? entry) (> (count entry) 1))
-    (last entry)))
+    (let [tail (last entry)]
+      (when-not (and (= 2 (count entry)) (map? tail))
+        tail))))
 
 (defn- schema-children
   "The children of a Malli vector form after its type keyword, with a leading
@@ -89,37 +101,55 @@
    `[:ref :other/schema]` or as the bare qualified keyword itself resolved
    against the registry, so a qualified keyword present in the same catalog
    is treated as a reference — but only where a schema can appear, not where
-   a literal value is compared (`:enum`/`:=`/`:const`) or a properties map
-   (`{:closed true}`, a `:map` entry's own `key`/`opts`). One property is
-   semantic rather than presentation: a local `:registry` definition's values
-   are sub-schemas the form compiles against, so they are walked like
-   children."
+   a literal value is compared (`:enum`/`:=`/`:not=`/comparators), not a
+   labeled entry's own label, and not a properties map (`{:closed true}`).
+
+   Two refinements follow Malli's own resolution rules rather than the shape
+   of the data. A local `:registry` property is semantic, not presentation:
+   its values are sub-schemas the form compiles against, so they are walked
+   like children. Its keys also *shadow* the catalog for the subtree they
+   scope, so a bare keyword resolved by a local definition is not a catalog
+   dependency at all."
   [catalog schema-form]
-  (letfn [(walk [node]
+  (letfn [(local-registry [node]
+            (when (sequential? node)
+              (:registry (schema-properties node))))
+          (walk [node shadowed]
             (cond
-              (and (keyword? node) (contains? catalog node)) #{node}
+              (keyword? node)
+              (if (and (contains? catalog node)
+                       (not (contains? shadowed node)))
+                #{node}
+                #{})
 
-              (and (sequential? node) (seq node)
-                   (contains? literal-position-types (first node)))
-              #{}
+              (and (sequential? node) (seq node))
+              (let [registry (local-registry node)
+                    scope (into shadowed (keys registry))
+                    from-registry (into #{}
+                                        (mapcat #(walk % scope))
+                                        (vals registry))
+                    head (first node)]
+                (cond
+                  (contains? literal-position-types head)
+                  from-registry
 
-              (and (sequential? node) (seq node) (= :map (first node)))
-              (into (registry-references walk node)
-                    (mapcat
-                     (fn [entry]
-                       (when (vector? entry)
-                         (walk (map-entry-schema-position entry)))))
-                    (schema-children node))
+                  (contains? labeled-entry-types head)
+                  (into from-registry
+                        (mapcat (fn [entry]
+                                  (when (vector? entry)
+                                    (walk (entry-schema-position entry) scope))))
+                        (schema-children node))
 
-              (sequential? node) (into (registry-references walk node)
-                                       (mapcat walk (schema-children node)))
-              (map? node) (into #{} (mapcat walk (mapcat identity node)))
-              :else #{}))
-          (registry-references [walk node]
-            (if (and (sequential? node) (seq node))
-              (into #{} (mapcat walk (vals (:registry (schema-properties node)))))
-              #{}))]
-    (walk schema-form)))
+                  :else
+                  (into from-registry
+                        (mapcat #(walk % scope))
+                        (schema-children node))))
+
+              (map? node)
+              (into #{} (mapcat #(walk % shadowed)) (mapcat identity node))
+
+              :else #{}))]
+    (walk schema-form #{})))
 
 (defn- reference-closure
   "Every catalog schema id schema-id transitively depends on, excluding

@@ -221,3 +221,138 @@
     (is (not= (get-in v1 [:schema/hashes :counter/added])
               (get-in v2 [:schema/hashes :counter/added]))
         "a catalog id referenced through a local :registry is a dependency")))
+
+(deftest leaf-hash-ignores-catalog-ids-shadowed-by-a-local-registry
+  ;; Malli resolves :local/value against the form's own :registry, so the
+  ;; catalog entry of the same name is not part of the effective validator.
+  ;; Changing that shadowed catalog entry must not move the leaf hash.
+  (let [base {:local/value :boolean
+              :counter/added
+              (schema-law/event-schema
+               :counter/added
+               [:map {:closed true}
+                [:amount [:schema {:registry {:local/value :int}}
+                          :local/value]]])}
+        changed {:local/value [:enum true false]
+                 :counter/added
+                 (schema-law/event-schema
+                  :counter/added
+                  [:map {:closed true}
+                   [:amount [:schema {:registry {:local/value :int}}
+                             :local/value]]])}
+        v1 (schema/materialize fake-hash base)
+        v2 (schema/materialize fake-hash changed)]
+    (is (= (get-in v1 [:schema/hashes :counter/added])
+           (get-in v2 [:schema/hashes :counter/added]))
+        "a catalog id shadowed by a local :registry definition is not a reference")))
+
+(deftest leaf-hash-follows-catalog-ids-outside-a-local-registry-scope
+  ;; A local registry shadows only the subtree it scopes. The same keyword
+  ;; used as a sibling of that subtree still resolves against the catalog.
+  (let [base {:local/value :boolean
+              :counter/added
+              (schema-law/event-schema
+               :counter/added
+               [:map {:closed true}
+                [:amount [:tuple
+                          [:schema {:registry {:local/value :int}} :local/value]
+                          :local/value]]])}
+        changed {:local/value [:enum true false]
+                 :counter/added
+                 (schema-law/event-schema
+                  :counter/added
+                  [:map {:closed true}
+                   [:amount [:tuple
+                             [:schema {:registry {:local/value :int}} :local/value]
+                             :local/value]]])}
+        v1 (schema/materialize fake-hash base)
+        v2 (schema/materialize fake-hash changed)]
+    (is (not= (get-in v1 [:schema/hashes :counter/added])
+              (get-in v2 [:schema/hashes :counter/added]))
+        "local registry shadowing is lexically scoped to the form that declares it")))
+
+(deftest leaf-hash-ignores-comparator-literals-that-look-like-schema-ids
+  ;; :not= compares its child against a literal value, exactly as := does.
+  (let [base {:flags/enabled :boolean
+              :counter/added
+              (schema-law/event-schema
+               :counter/added
+               [:map {:closed true} [:amount [:not= :flags/enabled]]])}
+        changed {:flags/enabled [:enum true false]
+                 :counter/added
+                 (schema-law/event-schema
+                  :counter/added
+                  [:map {:closed true} [:amount [:not= :flags/enabled]]])}
+        v1 (schema/materialize fake-hash base)
+        v2 (schema/materialize fake-hash changed)]
+    (is (= (get-in v1 [:schema/hashes :counter/added])
+           (get-in v2 [:schema/hashes :counter/added]))
+        "a :not= literal keyword is not a reference")))
+
+(deftest leaf-hash-ignores-branch-labels-that-look-like-schema-ids
+  ;; An :orn branch label is data naming the branch, not a schema position,
+  ;; even when the catalog happens to define a schema of that id.
+  (let [base {:flags/enabled :boolean
+              :counter/added
+              (schema-law/event-schema
+               :counter/added
+               [:map {:closed true}
+                [:amount [:orn [:flags/enabled :int] [:absent :nil]]]])}
+        changed {:flags/enabled [:enum true false]
+                 :counter/added
+                 (schema-law/event-schema
+                  :counter/added
+                  [:map {:closed true}
+                   [:amount [:orn [:flags/enabled :int] [:absent :nil]]]])}
+        v1 (schema/materialize fake-hash base)
+        v2 (schema/materialize fake-hash changed)]
+    (is (= (get-in v1 [:schema/hashes :counter/added])
+           (get-in v2 [:schema/hashes :counter/added]))
+        "an :orn branch label is not a reference")))
+
+(deftest leaf-hash-follows-branch-children-under-literal-looking-labels
+  ;; The inverse hazard of the label rule: a branch labeled :enum must not be
+  ;; mistaken for an [:enum ...] literal construct, which would silently drop
+  ;; the branch's real child and make an INCOMPATIBLE revision look compatible.
+  (let [base {:shared/value :boolean
+              :counter/added
+              (schema-law/event-schema
+               :counter/added
+               [:map {:closed true}
+                [:amount [:orn [:enum :shared/value] [:absent :nil]]]])}
+        changed {:shared/value [:enum true false]
+                 :counter/added
+                 (schema-law/event-schema
+                  :counter/added
+                  [:map {:closed true}
+                   [:amount [:orn [:enum :shared/value] [:absent :nil]]]])}
+        v1 (schema/materialize fake-hash base)
+        v2 (schema/materialize fake-hash changed)]
+    (is (not= (get-in v1 [:schema/hashes :counter/added])
+              (get-in v2 [:schema/hashes :counter/added]))
+        "a labeled branch's child schema is still a reference")))
+
+(deftest leaf-hash-follows-multi-branch-children
+  ;; :multi entries are labeled by dispatch value; only the trailing schema
+  ;; position is a schema.
+  (let [base {:flags/enabled :boolean
+              :shared/value :boolean
+              :counter/added
+              (schema-law/event-schema
+               :counter/added
+               [:map {:closed true}
+                [:amount [:multi {:dispatch :kind}
+                          [:flags/enabled [:map [:v :shared/value]]]]]])}
+        changed {:flags/enabled :boolean
+                 :shared/value [:enum true false]
+                 :counter/added
+                 (schema-law/event-schema
+                  :counter/added
+                  [:map {:closed true}
+                   [:amount [:multi {:dispatch :kind}
+                             [:flags/enabled [:map [:v :shared/value]]]]]])}
+        v1 (schema/materialize fake-hash base)
+        v2 (schema/materialize fake-hash changed)]
+    (is (not= (get-in v1 [:schema/hashes :counter/added])
+              (get-in v2 [:schema/hashes :counter/added]))
+        "a :multi branch's child schema is a reference even when its dispatch value is not")))
