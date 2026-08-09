@@ -2,7 +2,7 @@
   (:require [clio.domain.canonicalize :as canonicalize]
             [clio.domain.projection :as projection]
             [clio.domain.schema :as schema]
-            [clio.shape.schema :as shape]
+            [clio.law.schema :as schema-law]
             #?(:clj [clojure.test :refer [deftest is testing]]
                :cljs [cljs.test :refer [deftest is testing]])))
 
@@ -13,11 +13,11 @@
 
 (def catalog
   {:counter/opened
-   (shape/event-schema
+   (schema-law/event-schema
     :counter/opened
     [:map {:closed true} [:amount :int]])
    :counter/added
-   (shape/event-schema
+   (schema-law/event-schema
     :counter/added
     [:map {:closed true} [:amount :int]])})
 
