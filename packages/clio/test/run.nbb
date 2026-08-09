@@ -8,10 +8,9 @@
             [clio.infra.ledger-test]))
 
 (defmethod test/report [:cljs.test/default :end-run-tests]
-  [_]
-  (let [counters (:report-counters (test/get-current-env))]
-    (when-not (test/successful? counters)
-      (process/exit! 1))))
+  [summary]
+  (when-not (test/successful? summary)
+    (process/exit! 1)))
 
 (test/run-tests
  'clio.domain.schema-test
