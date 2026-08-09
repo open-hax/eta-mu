@@ -1,4 +1,4 @@
 {:verification/status :running
  :verification/tested-commit "ea96101292a4cbd16f0169c714b884976736fc95"
- :verification/phase :setup-java
- :verification/at "2026-08-09T06:23:53Z"}
+ :verification/phase :setup-clojure-tools
+ :verification/at "2026-08-09T06:23:55Z"}
