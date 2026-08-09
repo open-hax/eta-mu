@@ -47,5 +47,6 @@
 
 (defn ^:async run-concurrently!
   [commands]
-  (let [results (await (js/Promise.all (clj->js (mapv run-command! commands))))]
-    (vec (array-seq results))))
+  (.then (js/Promise.all (clj->js (mapv run-command! commands)))
+         (fn [results]
+           (vec (array-seq results)))))
