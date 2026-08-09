@@ -173,3 +173,26 @@
     (is (= (get-in v1 [:schema/hashes :counter/added])
            (get-in v2 [:schema/hashes :counter/added]))
         "a keyword in a :map entry's options map is not a reference")))
+
+(deftest leaf-hash-ignores-non-map-properties-that-look-like-schema-ids
+  ;; :flags/enabled sits in :vector's own properties map here (not a :map
+  ;; entry), never a schema position. Any Malli construct can carry a leading
+  ;; properties map — a bare map is never itself a valid schema position for
+  ;; any construct, so this generalizes beyond :map specifically.
+  (let [base {:flags/enabled :boolean
+              :counter/added
+              (schema-law/event-schema
+               :counter/added
+               [:map {:closed true}
+                [:amounts [:vector {:title :flags/enabled} :int]]])}
+        changed {:flags/enabled [:enum true false]
+                 :counter/added
+                 (schema-law/event-schema
+                  :counter/added
+                  [:map {:closed true}
+                   [:amounts [:vector {:title :flags/enabled} :int]]])}
+        v1 (schema/materialize fake-hash base)
+        v2 (schema/materialize fake-hash changed)]
+    (is (= (get-in v1 [:schema/hashes :counter/added])
+           (get-in v2 [:schema/hashes :counter/added]))
+        "a keyword in any construct's properties map is not a reference")))

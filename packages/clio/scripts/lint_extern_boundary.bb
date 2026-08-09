@@ -7,13 +7,15 @@
 (def package-root
   (-> (io/file *file*) .getAbsoluteFile .getParentFile .getParentFile))
 
-(def source-root
-  (io/file package-root "src" "clio"))
+(def scan-roots
+  [(io/file package-root "src" "clio")
+   (io/file package-root "test" "clio")
+   (io/file package-root "bin")])
 
 (defn source-file?
   [file]
   (and (.isFile file)
-       (re-find #"\.(?:clj|cljc|cljs)$" (.getName file))))
+       (re-find #"\.(?:clj|cljc|cljs|nbb)$" (.getName file))))
 
 (defn extern-js-file?
   [file]
@@ -23,9 +25,18 @@
                         separator "js"
                         separator))))
 
+(defn- without-shebang
+  "A .nbb entrypoint starts with a `#!/usr/bin/env nbb` line, which the Clojure
+   reader cannot parse — drop it before reading the ns form."
+  [text]
+  (if (str/starts-with? text "#!")
+    (if-let [idx (str/index-of text "\n")] (subs text idx) "")
+    text))
+
 (defn read-first-form
-  [file]
-  (with-open [reader (java.io.PushbackReader. (io/reader file))]
+  [text]
+  (with-open [reader (java.io.PushbackReader.
+                      (io/reader (java.io.StringReader. text)))]
     (read {:eof nil} reader)))
 
 (defn require-clauses
@@ -55,13 +66,17 @@
   [file]
   (when-not (extern-js-file? file)
     (let [text (slurp file)
-          ns-form (read-first-form file)]
+          ns-form (read-first-form (without-shebang text))]
       (concat
        (map #(str "host require " (pr-str %)) (host-requires ns-form))
        (raw-js-markers text)))))
 
 (defn -main []
-  (let [files (->> (file-seq source-root) (filter source-file?) sort)
+  (let [files (->> scan-roots
+                   (filter #(.isDirectory %))
+                   (mapcat file-seq)
+                   (filter source-file?)
+                   sort)
         findings
         (for [file files
               violation (violations file)]

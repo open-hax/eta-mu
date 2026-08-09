@@ -63,6 +63,19 @@
   (when (and (vector? entry) (> (count entry) 1))
     (last entry)))
 
+(defn- schema-children
+  "The children of a Malli vector form after its type keyword, with a leading
+   properties map skipped. A properties map ({:title ...}, {:closed true}) is
+   always distinguishable from a child schema this way: a bare map is never
+   itself a valid Malli schema, in any position, for any construct — so
+   whichever construct this is, if the first thing after its type keyword is
+   a map, that map is properties, not something to walk for references."
+  [node]
+  (let [children (rest node)]
+    (if (and (seq children) (map? (first children)))
+      (rest children)
+      children)))
+
 (defn- referenced-schema-ids
   "Every catalog schema id that schema-form points at directly, found by
    walking only positions Malli treats as sub-schemas. Malli represents a
@@ -70,7 +83,7 @@
    `[:ref :other/schema]` or as the bare qualified keyword itself resolved
    against the registry, so a qualified keyword present in the same catalog
    is treated as a reference — but only where a schema can appear, not where
-   a literal value is compared (`:enum`/`:=`/`:const`) or option maps
+   a literal value is compared (`:enum`/`:=`/`:const`) or a properties map
    (`{:closed true}`, a `:map` entry's own `key`/`opts`)."
   [catalog schema-form]
   (letfn [(walk [node]
@@ -85,16 +98,11 @@
               (into #{}
                     (mapcat
                      (fn [entry]
-                       ;; A non-vector element here is :map's own optional
-                       ;; options map ({:closed true}, or a :title/:description
-                       ;; that could itself hold an unrelated qualified
-                       ;; keyword) — never a schema position, so it is skipped
-                       ;; entirely rather than walked.
                        (when (vector? entry)
                          (walk (map-entry-schema-position entry)))))
-                    (rest node))
+                    (schema-children node))
 
-              (sequential? node) (into #{} (mapcat walk node))
+              (sequential? node) (into #{} (mapcat walk (schema-children node)))
               (map? node) (into #{} (mapcat walk (mapcat identity node)))
               :else #{}))]
     (walk schema-form)))
