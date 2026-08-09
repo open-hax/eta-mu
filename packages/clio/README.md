@@ -158,6 +158,8 @@ law -> shape -> extern -> domain -> infra
 - `clio.infra.*` — NBB/Node orchestration over the pure kernel and boundary
   functions (`.cljs`).
 - `bin/*.nbb` and `test/*.nbb` — thin NBB executable entrypoints only.
+- `bin/clio.mjs` — the published npm executable. It is a launcher, not logic:
+  see [Consuming from npm](#consuming-from-npm).
 
 The shared clj-kondo construction-order hook recognizes `extern`, and Clio
 promotes boundary findings to errors. A Clio-specific boundary lint
@@ -218,24 +220,27 @@ union -> historical-schema validation -> UUID dedupe
 The returned DAG preserves parent/child relationships separately from the replay
 vector so callers do not have to infer causality from vector adjacency.
 
-## NBB
+## CLI
+
+Installed from npm, the entrypoint is `clio`; inside this repository it is
+`nbb bin/clio.nbb`. Every command below is shown in the installed form.
 
 Create an append-only ledger:
 
 ```bash
-pnpm dlx nbb@1.3.201 bin/clio.nbb new events.edn
+npx clio new events.edn
 ```
 
 Inspect a catalog's automatically derived revision:
 
 ```bash
-pnpm dlx nbb@1.3.201 bin/clio.nbb schema-root catalog.edn
+npx clio schema-root catalog.edn
 ```
 
 Append an event using a catalog and persistent schema-history directory:
 
 ```bash
-pnpm dlx nbb@1.3.201 bin/clio.nbb append \
+npx clio append \
   .clio/schemas catalog.edn events-a.edn :counter/opened \
   '{:event/stream "counter:a"
     :event/seq 1
@@ -247,9 +252,37 @@ pnpm dlx nbb@1.3.201 bin/clio.nbb append \
 Canonicalize arbitrarily partitioned ledgers:
 
 ```bash
-pnpm dlx nbb@1.3.201 bin/clio.nbb canonicalize \
+npx clio canonicalize \
   .clio/schemas events-a.edn events-b.edn events-c.edn
 ```
+
+## Consuming from npm
+
+The published tarball is source plus the descriptors needed to build and run
+it — `src`, `bin`, `nbb.edn`, `deps.edn`, and this README.
+
+**As a CLI.** `npm install @eta-mu/clio` exposes `clio`. The manifest's bin
+target is `bin/clio.mjs`, a Node launcher rather than `bin/clio.nbb` directly,
+because npm installs a bin as a symlink in the consumer's `node_modules/.bin`
+and nbb discovers `nbb.edn` — and therefore this package's classpath — by
+walking up from the script path it is given, without resolving symlinks. The
+launcher hands nbb the real entrypoint path and the `nbb` this package depends
+on, and inherits the caller's working directory so ledger and catalog arguments
+stay relative to the user. Resolving the Malli dependency on first run needs a
+JVM available, as it does for any nbb project.
+
+**As a ClojureScript library.** Add the installed `src` tree to your source
+paths. `deps.edn` in the package root records the Maven libraries that source
+actually requires — the same versions this repository builds and tests against:
+
+| Dependency | Version |
+| --- | --- |
+| `metosin/malli` | 0.16.4 |
+| `borkdude/edamame` | 1.6.42 |
+| `funcool/promesa` | 11.0.678 |
+
+Under Shadow CLJS, add them to `:dependencies`; under NBB, note that edamame and
+promesa are bundled with nbb, so only Malli needs declaring, as `nbb.edn` shows.
 
 ## Verification
 
