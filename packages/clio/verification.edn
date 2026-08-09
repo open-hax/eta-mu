@@ -1,3 +1,4 @@
 {:verification/status :running
- :verification/tested-commit "b41f785e300fb4dc5fbdaf12544feef5ea36b1f7"
- :verification/at "2026-08-09T05:50:18Z"}
+ :verification/tested-commit "f88857b43211af01dd74bb2c905f6fabf3253e2f"
+ :verification/phase :setup
+ :verification/at "2026-08-09T06:12:06Z"}
