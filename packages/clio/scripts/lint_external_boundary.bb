@@ -17,10 +17,11 @@
 
 (defn external-js-file?
   [file]
-  (str/includes? (.getCanonicalPath file)
-                 (str io/file-separator "external"
-                      io/file-separator "js"
-                      io/file-separator)))
+  (let [separator java.io.File/separator]
+    (str/includes? (.getCanonicalPath file)
+                   (str separator "external"
+                        separator "js"
+                        separator))))
 
 (defn read-first-form
   [file]
