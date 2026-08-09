@@ -183,7 +183,8 @@ harmless.
 
 `append-event!` serializes its complete read → validate → collision-check →
 append critical section with an **OS-backed advisory lock on the ledger inode
-itself**. Every Clio writer participates in this lock protocol. The same locked
+itself**. Every Clio writer participates in this lock protocol; external writers
+must take the same advisory lock if they mutate the same ledger. The same locked
 file descriptor is used for the read and append. On Unix the mandatory lock is a
 blocking whole-file POSIX `fcntl(F_SETLKW)` write lock; `flock` is an additional
 local-filesystem guard when supported. On Windows the adapter uses an exclusive
