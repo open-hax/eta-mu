@@ -17,3 +17,10 @@
          (error-code #(edn/read-one "{:a 1} {:b 2}"))))
   (is (= :clio.edn/expected-one-form
          (error-code #(edn/read-one "")))))
+
+(deftest a-stray-delimiter-cannot-smuggle-trailing-content
+  ;; A synthetic `[ ... ]` wrapper around raw text is unsound: an unescaped
+  ;; `]` inside malformed input closes the wrapper early, and a reader that
+  ;; only checks "did I get exactly one form back" never sees what follows.
+  (is (= :clio.edn/expected-one-form
+         (error-code #(edn/read-one "{:a 1}] ignored")))))

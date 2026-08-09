@@ -1,12 +1,25 @@
 (ns clio.shape.edn
-  (:require #?(:clj [clojure.edn :as reader]
-               :cljs [cljs.reader :as reader])))
+  (:require [edamame.core :as edamame]))
 
 (defn read-one
-  "Read exactly one EDN form. Wrapping the input in a vector makes trailing
-   forms observable instead of letting read-string silently ignore them."
+  "Read exactly one EDN form, enforcing true end-of-input.
+
+   `clojure.edn`/`cljs.reader` read-string stops at the end of the first form
+   and never reports how much of the string it consumed, so wrapping the text
+   in a synthetic `[ ... ]` to make a second form observable is unsound: a
+   stray unescaped delimiter anywhere in malformed or tampered input can close
+   that wrapper early, after which everything past it is silently unread and
+   undetected. edamame tracks real reader position and balances delimiters
+   across the whole input, so `parse-string-all` throws on any trailing
+   content instead of quietly dropping it."
   [text]
-  (let [forms (reader/read-string (str "[\n" text "\n]"))]
+  (let [forms (try
+                (edamame/parse-string-all text)
+                (catch #?(:clj Exception :cljs :default) cause
+                  (throw
+                   (ex-info "Expected exactly one EDN form"
+                            {:clio/error :clio.edn/expected-one-form
+                             :cause (str cause)}))))]
     (when-not (= 1 (count forms))
       (throw
        (ex-info "Expected exactly one EDN form"
