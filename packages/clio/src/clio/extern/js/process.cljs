@@ -43,7 +43,7 @@
               (resolve {:exit-code code
                         :signal signal
                         :stdout @stdout
-                        :stderr @stderr}))))))))
+                        :stderr @stderr})))))))
 
 (defn ^:async run-concurrently!
   [commands]
