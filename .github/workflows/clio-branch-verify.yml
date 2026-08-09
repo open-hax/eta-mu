@@ -60,26 +60,6 @@ jobs:
           bb: "1.13.219"
           clj-kondo: "2025.10.23"
 
-      - name: Record pnpm setup phase
-        shell: bash
-        run: |
-          at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          cat > packages/clio/verification.edn <<EOF
-          {:verification/status :running
-           :verification/tested-commit "${GITHUB_SHA}"
-           :verification/phase :setup-pnpm
-           :verification/at "${at}"}
-          EOF
-          git add packages/clio/verification.edn
-          git commit -m "test(clio): record pnpm setup phase"
-          git push origin HEAD:feat/clio-event-sourcing-kernel
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
-        with:
-          version: "10.14.0"
-          run_install: false
-
       - name: Run phased verification
         shell: bash
         run: |
@@ -132,6 +112,7 @@ jobs:
             fi
           }
 
+          run_phase setup-pnpm 2m bash -lc 'corepack enable && corepack prepare pnpm@10.14.0 --activate && pnpm --version'
           run_phase frozen-install 6m pnpm install --frozen-lockfile
           run_phase package-lint 3m pnpm --dir packages/clio lint
           run_phase package-test 8m pnpm --dir packages/clio test
