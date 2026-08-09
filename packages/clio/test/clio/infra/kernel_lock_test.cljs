@@ -2,7 +2,8 @@
   (:require [cljs.test :refer [async deftest is testing]]
             [clio.extern.js.fs :as fs]
             [clio.extern.js.process :as process]
-            [clio.extern.js.runtime :as host]))
+            [clio.extern.js.runtime :as host]
+            [promesa.core :as p]))
 
 (deftest kernel-lock-excludes-hard-link-contenders
   (async done
@@ -24,28 +25,26 @@
                {:command "pnpm"
                 :cwd (process/cwd)
                 :args ["dlx" "nbb@1.3.201"
-                       holder-script ledger-file ready-file (pr-str hold-ms)]})]
-          (-> (fs/wait-for-exists! ready-file 10000)
-              (.then
-               (fn [_]
-                 (let [started (process/now-ms)
-                       contender (fs/acquire-lock! ledger-alias)
-                       blocked-ms (- (process/now-ms) started)]
-                   (try
-                     (testing "a hard-link alias resolves to the same kernel lock"
-                       (is (>= blocked-ms 1000)))
-                     (finally
-                       (fs/release-lock! contender)))
-                   holder)))
-              (.then
-               (fn [holder-result]
-                 (testing "the lock holder exits cleanly"
-                   (is (zero? (:exit-code holder-result))))
-                 (finish)))
-              (.catch
-               (fn [cause]
-                 (is false (str "kernel lock probe failed: " cause))
-                 (finish)))))
+                       holder-script ledger-file ready-file (pr-str hold-ms)]})
+              workflow
+              (p/let [_ (fs/wait-for-exists! ready-file 10000)
+                      blocked-ms
+                      (let [started (process/now-ms)
+                            contender (fs/acquire-lock! ledger-alias)]
+                        (try
+                          (- (process/now-ms) started)
+                          (finally
+                            (fs/release-lock! contender))))
+                      holder-result holder]
+                (testing "a hard-link alias resolves to the same kernel lock"
+                  (is (>= blocked-ms 1000)))
+                (testing "the lock holder exits cleanly"
+                  (is (zero? (:exit-code holder-result))))
+                (finish))]
+          (p/catch workflow
+                   (fn [cause]
+                     (is false (str "kernel lock probe failed: " cause))
+                     (finish))))
         (catch :default cause
           (is false (str "kernel lock setup failed: " cause))
           (finish))))))
