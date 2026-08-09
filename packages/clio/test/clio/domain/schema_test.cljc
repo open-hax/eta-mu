@@ -53,21 +53,53 @@
    :event/at "2026-08-09T00:00:00.000Z"
    :event/data data})
 
+(defn error-code
+  [f]
+  (try
+    (f)
+    nil
+    (catch #?(:clj Exception :cljs :default) cause
+      (:clio/error (ex-data cause)))))
+
 (deftest schema-version-is-derived-from-structure
   (let [v1 (schema/materialize fake-hash catalog-v1)
         v2 (schema/materialize fake-hash catalog-v2)]
     (testing "a changed schema changes the whole-catalog root"
       (is (not= (:schema/root v1) (:schema/root v2))))
+
     (testing "an unchanged schema keeps its leaf identity across roots"
       (is (= (get-in v1 [:schema/hashes :counter/subtracted])
              (get-in v2 [:schema/hashes :counter/subtracted]))))
+
     (testing "a changed event keeps validating against its exact old schema"
       (is (= (event v1 :counter/added {:amount 3})
              (schema/validate-event!
               [v1 v2]
               (event v1 :counter/added {:amount 3})))))
-    (testing "an unchanged leaf is sufficient when an unrelated root is unknown"
+
+    (testing "the changed current shape is independently enforced"
+      (is (= :clio.schema/invalid-event
+             (error-code
+              #(schema/validate-event!
+                [v1 v2]
+                (event v2 :counter/added {:amount 3}))))))
+
+    (testing "an unchanged leaf reports compatibility across multiple known roots"
+      (let [old (event v1 :counter/subtracted {:amount 2})
+            resolved (schema/resolve-event-schema [v2 v1] old)]
+        (is (= #{(:schema/root v1) (:schema/root v2)}
+               (into #{} (map :schema/root) (:compatible/revisions resolved))))))
+
+    (testing "leaf compatibility never fabricates provenance for an unknown root"
       (let [old (event v1 :counter/subtracted {:amount 2})
             moved (assoc-in old [:event/schema :schema/root]
                             (apply str (repeat 64 "f")))]
-        (is (= moved (schema/validate-event! [v2] moved)))))))
+        (is (= :clio.schema/unknown-revision
+               (error-code #(schema/validate-event! [v1 v2] moved))))))
+
+    (testing "a known root cannot lie about its schema leaf"
+      (let [old (event v1 :counter/subtracted {:amount 2})
+            tampered (assoc-in old [:event/schema :schema/hash]
+                               (apply str (repeat 64 "e")))]
+        (is (= :clio.schema/hash-mismatch
+               (error-code #(schema/validate-event! [v1 v2] tampered))))))))
