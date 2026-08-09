@@ -164,6 +164,14 @@ promotes boundary findings to errors. A Clio-specific boundary lint
 additionally refuses raw `js/`, `#js`, `js*`, or string host requires in
 production source outside `clio.extern.js.*`.
 
+That boundary lint reads *forms*, not text: it parses every source file with
+edamame — preserving both branches of a reader conditional and keeping `#js`
+as a tagged literal — and reports only reader-level positions. A `js/` sequence
+inside a comment, docstring, or string literal performs no interop and is not a
+finding. The rules live in `scripts/clio/lint_extern_boundary.clj` so the test
+suite exercises them directly; `scripts/lint_extern_boundary.bb` is the
+entrypoint.
+
 Reusable runtime-specific code is `.cljs`, rather than `.nbb`, so the same
 namespace implementation can be loaded by NBB and compiled by Shadow CLJS. The
 `.nbb` files contain executable wiring, not a second implementation.
@@ -250,7 +258,10 @@ pnpm --dir packages/clio lint
 pnpm --dir packages/clio test
 ```
 
-The test suite runs under both NBB and Shadow CLJS. Its partition-invariance
+The kernel suite runs under both NBB and Shadow CLJS. A third Babashka runner
+(`test/run.bb`) covers what only a JVM runtime can pin: that canonical encoding
+is byte-identical across hosts, and the JVM-side boundary lint. Its
+partition-invariance
 fixture exhaustively checks all 24 permutations of four causally related events
 across all `3^4 = 81` assignments to three physical ledgers: 1,944 distinct
 physical layouts must converge to the same canonical event-id vector and the same
