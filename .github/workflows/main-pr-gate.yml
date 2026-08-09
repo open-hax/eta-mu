@@ -7,6 +7,11 @@ on:
     paths:
       - 'packages/legacy/docs/**'
       - 'packages/legacy/github/**'
+      - 'packages/clio/**'
+      - 'packages/kondo-config/**'
+      - 'scripts/test.bb'
+      - 'scripts/lint.bb'
+      - 'pnpm-lock.yaml'
       - '.github/workflows/*.yml'
 
 jobs:
@@ -48,6 +53,36 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm --dir packages/extensions build
       - run: pnpm lint
+
+  clio:
+    name: clio-nbb-shadow-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions: {}
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
+        with:
+          bb: '1.13.219'
+          clj-kondo: '2025.10.23'
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: '10.14.0'
+          run_install: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir packages/clio lint
+      - run: pnpm --dir packages/clio test
+      - run: bb scripts/lint.bb --only clio --kondo-only
+      - run: bb scripts/test.bb --only clio
 
   main-tests:
     name: main-tests
