@@ -147,6 +147,23 @@
            (error-code
             #(canonicalize/canonicalize [revision] [[e1 e2 competitor]]))))))
 
+(deftest stream-gap-is-refused
+  (let [gap
+        (event "88888888-8888-4888-8888-888888888888"
+               :counter/added "counter:a" 3 [(:event/id e1)] 3)]
+    (is (= :clio.canonicalize/stream-gap
+           (error-code #(canonicalize/canonicalize [revision] [[e1 gap]]))))))
+
+(deftest stream-predecessor-must-be-causal
+  (let [unrelated
+        (event "99999999-9999-4999-8999-999999999999"
+               :counter/opened "counter:z" 1 [] 0)
+        broken
+        (assoc e2 :event/causes [(:event/id unrelated)])]
+    (is (= :clio.canonicalize/stream-predecessor-not-causal
+           (error-code
+            #(canonicalize/canonicalize [revision] [[e1 unrelated broken]]))))))
+
 (deftest uuid-collision-is-refused
   (let [impostor (assoc-in e2 [:event/data :amount] 99)]
     (is (= :clio.canonicalize/id-collision
