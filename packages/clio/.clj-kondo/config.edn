@@ -1,0 +1,3 @@
+{:config-paths ["../../kondo-config/clj-kondo.exports/open-hax/kondo-config"]
+ :linters {:layer-boundary/upward-require {:level :error}
+           :layer-boundary/host-require {:level :error}}}
