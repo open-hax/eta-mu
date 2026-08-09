@@ -73,8 +73,8 @@
    coerced to double. Accept them only when the shared double is exactly the
    same numeric value; this rejects overflow, underflow, and rounding aliases
    before they can collapse distinct values onto one canonical identity."
-  [value d]
-  #?(:clj (and (finite? d) (== value d))
+  [_value _d]
+  #?(:clj (and (finite? _d) (== _value _d))
      :cljs true))
 
 (defn- real-decomposition
