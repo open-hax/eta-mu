@@ -36,6 +36,29 @@
   (let [result (fsm/evaluate-transition fsm/default-fsm "incoming" "done" {})]
     (is (not (:allowed? result)))))
 
+(deftest evaluate-rejects-a-status-outside-the-state-set
+  ;; The `in_review` bug: a status that is not an FSM state at all was written
+  ;; to three cards, stranding them where `done` was unreachable. No state may
+  ;; reach a target outside `:states`, and no state may offer one.
+  (doseq [fsm-def [fsm/default-fsm fsm/promethean-fsm]
+          from (:states fsm-def)
+          bogus ["in_review" "IN_PROGRESS" "" "done "]]
+    (let [result (fsm/evaluate-transition fsm-def from bogus {})]
+      (is (not (:allowed? result))
+          (str "'" from "' -> '" bogus "' must be refused"))
+      (is (re-find #"No transition" (:reason result))))
+    (is (not (some #(= bogus %) (fsm/valid-targets fsm-def from)))
+        (str "'" bogus "' must never be offered as a target from '" from "'"))))
+
+(deftest evaluate-rejects-a-source-outside-the-state-set
+  ;; A card already holding a bogus status must not be able to move anywhere —
+  ;; that is what made the three `in_review` cards unrecoverable via the FSM.
+  (doseq [to (:states fsm/promethean-fsm)]
+    (is (not (:allowed? (fsm/evaluate-transition fsm/promethean-fsm
+                                                 "in_review" to {})))
+        (str "'in_review' -> '" to "' must be refused")))
+  (is (empty? (fsm/valid-targets fsm/promethean-fsm "in_review"))))
+
 (deftest evaluate-wip-under-limit
   (is (:allowed? (fsm/evaluate-transition fsm/default-fsm
                                            "ready" "in_progress"
