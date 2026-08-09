@@ -1,3 +1,8 @@
 {:config-paths ["../../kondo-config/clj-kondo.exports/open-hax/kondo-config"]
  :linters {:layer-boundary/upward-require {:level :error}
-           :layer-boundary/host-require {:level :error}}}
+           :layer-boundary/host-require {:level :error}
+           :layer-boundary/js-star-interop {:level :error}}
+ :config-in-ns {clio.extern.js.crypto {:linters {:layer-boundary/js-star-interop {:level :off}}}
+                clio.extern.js.fs {:linters {:layer-boundary/js-star-interop {:level :off}}}
+                clio.extern.js.process {:linters {:layer-boundary/js-star-interop {:level :off}}}
+                clio.extern.js.runtime {:linters {:layer-boundary/js-star-interop {:level :off}}}}}

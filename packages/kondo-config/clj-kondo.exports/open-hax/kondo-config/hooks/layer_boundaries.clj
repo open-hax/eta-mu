@@ -116,3 +116,14 @@
                  (catch Exception _ nil))]
     (api/reg-finding! f))
   (promise-chain/check-ns ctx))
+
+(defn check-js-star
+  "Flag every `js*` special-form call. `:config-in-ns` turns this off for the
+   namespaces a package designates as its extern.js.* boundary, so raw JS
+   interop stays reported everywhere else without this hook needing to know
+   which namespace it is currently analyzing."
+  [{:keys [node]}]
+  (api/reg-finding!
+   (finding node :layer-boundary/js-star-interop
+            "raw `js*` interop must stay behind extern.js.*; decode foreign data there and return Clojure values."))
+  {:node node})
