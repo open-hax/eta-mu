@@ -1,0 +1,77 @@
+name: Clio branch verification
+
+on:
+  push:
+    branches: ["feat/clio-event-sourcing-kernel"]
+    paths:
+      - ".github/workflows/clio-branch-verify.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Set up Java
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Babashka and clj-kondo
+        uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
+        with:
+          bb: "1.13.219"
+          clj-kondo: "2025.10.23"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: "10.14.0"
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+
+      - name: Verify frozen workspace lock
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint Clio
+        run: pnpm --dir packages/clio lint
+
+      - name: Test Clio under NBB and Shadow CLJS
+        run: pnpm --dir packages/clio test
+
+      - name: Prove root gates select Clio
+        shell: bash
+        run: |
+          bb scripts/lint.bb --only clio --kondo-only
+          bb scripts/test.bb --only clio
+
+      - name: Record verification receipt
+        shell: bash
+        run: |
+          verified_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          cat > packages/clio/verification.edn <<EOF
+          {:verification/status :passed
+           :verification/tested-commit "${GITHUB_SHA}"
+           :verification/at "${verified_at}"
+           :verification/runtime {:node "22" :java "21" :pnpm "10.14.0" :bb "1.13.219" :clj-kondo "2025.10.23"}
+           :verification/commands ["pnpm install --frozen-lockfile"
+                                   "pnpm --dir packages/clio lint"
+                                   "pnpm --dir packages/clio test"
+                                   "bb scripts/lint.bb --only clio --kondo-only"
+                                   "bb scripts/test.bb --only clio"]}
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/clio/verification.edn
+          git commit -m "test(clio): record branch verification receipt"
+          git push origin HEAD:feat/clio-event-sourcing-kernel
