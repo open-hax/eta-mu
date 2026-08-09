@@ -34,34 +34,37 @@
 
 (defn append-event!
   "Append one validated event. Exact retries are idempotent. This local write
-   gate intentionally does not require causal parents to share the same physical
-   file; global completeness/conflicts are checked when ledgers are unioned."
+   gate validates every existing local record but intentionally does not require
+   causal parents to share the same physical file; global completeness/conflicts
+   are checked when ledgers are unioned."
   [revisions path event]
   (schema/validate-event! revisions event)
-  (let [events (read-ledger path)
-        old-by-id (some #(when (= (:event/id %) (:event/id event)) %) events)
-        old-slot (some #(when (and (= (:event/stream %) (:event/stream event))
-                                   (= (:event/seq %) (:event/seq event)))
-                          %)
-                       events)]
-    (cond
-      (= old-by-id event)
-      :already-present
+  (let [events (read-ledger path)]
+    (doseq [existing events]
+      (schema/validate-event! revisions existing))
+    (let [old-by-id (some #(when (= (:event/id %) (:event/id event)) %) events)
+          old-slot (some #(when (and (= (:event/stream %) (:event/stream event))
+                                     (= (:event/seq %) (:event/seq event)))
+                            %)
+                         events)]
+      (cond
+        (= old-by-id event)
+        :already-present
 
-      old-by-id
-      (fail! :clio.ledger/id-collision
-             "Ledger already contains different data for this event id"
-             {:old old-by-id :new event})
+        old-by-id
+        (fail! :clio.ledger/id-collision
+               "Ledger already contains different data for this event id"
+               {:old old-by-id :new event})
 
-      old-slot
-      (fail! :clio.ledger/concurrent-stream-write
-             "Ledger already contains a different event at this stream revision"
-             {:old old-slot :new event})
+        old-slot
+        (fail! :clio.ledger/concurrent-stream-write
+               "Ledger already contains a different event at this stream revision"
+               {:old old-slot :new event})
 
-      :else
-      (do
-        (fs/append-text! path (str (pr-str event) "\n"))
-        :appended))))
+        :else
+        (do
+          (fs/append-text! path (str (pr-str event) "\n"))
+          :appended)))))
 
 (defn read-ledgers
   [paths]
