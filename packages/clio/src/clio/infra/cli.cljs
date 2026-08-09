@@ -1,11 +1,12 @@
 (ns clio.infra.cli
-  (:require [cljs.reader :as reader]
-            [clio.domain.schema :as schema]
-            [clio.external.js.crypto :as crypto]
-            [clio.external.js.fs :as fs]
+  (:require [clio.domain.schema :as schema]
+            [clio.extern.js.crypto :as crypto]
+            [clio.extern.js.fs :as fs]
             [clio.infra.ledger :as ledger]
             [clio.infra.runtime :as runtime]
-            [clio.infra.schema-store :as schema-store]))
+            [clio.infra.schema-store :as schema-store]
+            [clio.law.cli :as cli-law]
+            [clio.shape.edn :as edn]))
 
 (defn- usage []
   (println "clio new <ledger.edn>")
@@ -14,53 +15,46 @@
   (println "clio canonicalize <schema-dir> <ledger.edn> [ledger.edn ...]"))
 
 (defn- read-edn-file [path]
-  (reader/read-string (fs/read-text path)))
+  (edn/read-one (fs/read-text path)))
 
-(defn- command-new [[path & extra]]
-  (when (or (nil? path) (seq extra))
-    (throw (ex-info "new expects exactly one ledger path"
-                    {:clio/error :clio.cli/invalid-arguments})))
+(defn- command-new [[path]]
   (ledger/create-ledger! path)
   (prn {:ledger/path path :ledger/created? true}))
 
-(defn- command-schema-root [[catalog-file & extra]]
-  (when (or (nil? catalog-file) (seq extra))
-    (throw (ex-info "schema-root expects exactly one catalog path"
-                    {:clio/error :clio.cli/invalid-arguments})))
-  (let [catalog (read-edn-file catalog-file)
+(defn- command-schema-root [[catalog-file]]
+  (let [catalog (-> catalog-file read-edn-file
+                    (cli-law/validate! cli-law/catalog {:input :catalog}))
         revision (schema/materialize crypto/sha256 catalog)]
     (prn {:schema/root (:schema/root revision)
           :schema/hashes (:schema/hashes revision)})))
 
-(defn- command-append [[schema-dir catalog-file ledger-file schema-id-edn event-edn & extra]]
-  (when (or (some nil? [schema-dir catalog-file ledger-file schema-id-edn event-edn])
-            (seq extra))
-    (throw (ex-info "append expects schema-dir, catalog, ledger, schema id, and event EDN"
-                    {:clio/error :clio.cli/invalid-arguments})))
-  (let [catalog (read-edn-file catalog-file)
-        schema-id (reader/read-string schema-id-edn)
-        event-data (reader/read-string event-edn)
+(defn- command-append [[schema-dir catalog-file ledger-file schema-id-edn event-edn]]
+  (let [catalog (-> catalog-file read-edn-file
+                    (cli-law/validate! cli-law/catalog {:input :catalog}))
+        schema-id (-> schema-id-edn edn/read-one
+                      (cli-law/validate! cli-law/schema-id {:input :schema-id}))
+        event-data (-> event-edn edn/read-one
+                       (cli-law/validate! cli-law/event-data {:input :event-data}))
         rt (runtime/open schema-dir catalog)
         result (runtime/append! rt ledger-file schema-id event-data)]
     (prn (select-keys result [:append/result :event]))))
 
 (defn- command-canonicalize [[schema-dir & ledger-files]]
-  (when (or (nil? schema-dir) (empty? ledger-files))
-    (throw (ex-info "canonicalize expects a schema directory and at least one ledger"
-                    {:clio/error :clio.cli/invalid-arguments})))
   (let [revisions (schema-store/load-revisions schema-dir)
         canonical (ledger/canonicalize-files revisions ledger-files)]
     (prn (select-keys canonical [:canonical/event-ids :canonical/events]))))
 
 (defn -main [& args]
-  (let [[command & command-args] args]
+  (let [[command-name & command-args] args
+        command (some-> command-name keyword)]
+    (when-not command
+      (usage)
+      (throw
+       (ex-info "Missing Clio command"
+                {:clio/error :clio.cli/missing-command})))
+    (cli-law/validate-command-args! command command-args)
     (case command
-      "new" (command-new command-args)
-      "schema-root" (command-schema-root command-args)
-      "append" (command-append command-args)
-      "canonicalize" (command-canonicalize command-args)
-      (do
-        (usage)
-        (throw (ex-info "unknown clio command"
-                        {:clio/error :clio.cli/unknown-command
-                         :command command}))))))
+      :new (command-new command-args)
+      :schema-root (command-schema-root command-args)
+      :append (command-append command-args)
+      :canonicalize (command-canonicalize command-args))))
