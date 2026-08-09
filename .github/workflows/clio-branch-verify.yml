@@ -18,6 +18,21 @@ jobs:
       - name: Check out feature branch
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
+      - name: Record verifier start
+        shell: bash
+        run: |
+          started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          cat > packages/clio/verification.edn <<EOF
+          {:verification/status :running
+           :verification/tested-commit "${GITHUB_SHA}"
+           :verification/at "${started_at}"}
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/clio/verification.edn
+          git commit -m "test(clio): mark branch verification running"
+          git push origin HEAD:feat/clio-event-sourcing-kernel
+
       - name: Set up Java
         uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
         with:
