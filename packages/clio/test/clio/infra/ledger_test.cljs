@@ -1,5 +1,5 @@
 (ns clio.infra.ledger-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [async deftest is testing]]
             [clio.extern.js.fs :as fs]
             [clio.extern.js.process :as process]
             [clio.extern.js.runtime :as host]
@@ -136,53 +136,63 @@
       (finally
         (fs/remove-tree! directory)))))
 
-(deftest ^:async concurrent-processes-lock-the-ledger-inode
-  (let [directory (str "/tmp/clio-" (host/random-uuid))
-        schema-directory (str directory "/schemas")
-        ledger-file (str directory "/events.edn")
-        ledger-alias (str directory "/events-hardlink.edn")]
-    (try
-      (fs/ensure-dir! directory)
-      (ledger/create-ledger! ledger-file)
-      (fs/hard-link! ledger-file ledger-alias)
-      (let [rt (runtime/open schema-directory catalog)
-            revision (:schema/current rt)
-            event-a
-            (event/make-event
-             revision :counter/opened
-             {:event/stream "counter:race"
-              :event/seq 1
-              :event/actor "worker:a"
-              :event/subject "counter:race"
-              :event/data {:amount 1}})
-            event-b
-            (event/make-event
-             revision :counter/opened
-             {:event/stream "counter:race"
-              :event/seq 1
-              :event/actor "worker:b"
-              :event/subject "counter:race"
-              :event/data {:amount 2}})
-            worker (str (process/cwd) "/test/clio/infra/append_worker.nbb")
-            start-at (+ (process/now-ms) 3000)
-            command
-            (fn [path event]
-              {:command "pnpm"
-               :cwd (process/cwd)
-               :args ["dlx" "nbb@1.3.201" worker path (pr-str event) (pr-str start-at)]})
-            results
-            (await
-             (process/run-concurrently!
-              [(command ledger-file event-a)
-               (command ledger-alias event-b)]))
-            exit-codes (sort (map :exit-code results))
-            output (str/join "\n" (map :stdout results))]
-        (testing "only one colliding process commits"
-          (is (= [0 1] exit-codes))
-          (is (str/includes? output ":clio.ledger/concurrent-stream-write")))
-        (testing "hard-link aliases share one authoritative inode lock"
-          (is (= 1 (count (ledger/read-ledger ledger-file))))
-          (is (= (ledger/read-ledger ledger-file)
-                 (ledger/read-ledger ledger-alias)))))
-      (finally
-        (fs/remove-tree! directory)))))
+(deftest concurrent-processes-lock-the-ledger-inode
+  (async done
+    (let [directory (str "/tmp/clio-" (host/random-uuid))
+          schema-directory (str directory "/schemas")
+          ledger-file (str directory "/events.edn")
+          ledger-alias (str directory "/events-hardlink.edn")
+          finish (fn []
+                   (fs/remove-tree! directory)
+                   (done))]
+      (try
+        (fs/ensure-dir! directory)
+        (ledger/create-ledger! ledger-file)
+        (fs/hard-link! ledger-file ledger-alias)
+        (let [rt (runtime/open schema-directory catalog)
+              revision (:schema/current rt)
+              event-a
+              (event/make-event
+               revision :counter/opened
+               {:event/stream "counter:race"
+                :event/seq 1
+                :event/actor "worker:a"
+                :event/subject "counter:race"
+                :event/data {:amount 1}})
+              event-b
+              (event/make-event
+               revision :counter/opened
+               {:event/stream "counter:race"
+                :event/seq 1
+                :event/actor "worker:b"
+                :event/subject "counter:race"
+                :event/data {:amount 2}})
+              worker (str (process/cwd) "/test/clio/infra/append_worker.nbb")
+              start-at (+ (process/now-ms) 3000)
+              command
+              (fn [path event]
+                {:command "pnpm"
+                 :cwd (process/cwd)
+                 :args ["dlx" "nbb@1.3.201" worker path (pr-str event) (pr-str start-at)]})]
+          (-> (process/run-concurrently!
+               [(command ledger-file event-a)
+                (command ledger-alias event-b)])
+              (.then
+               (fn [results]
+                 (let [exit-codes (sort (map :exit-code results))
+                       output (str/join "\n" (map :stdout results))]
+                   (testing "only one colliding process commits"
+                     (is (= [0 1] exit-codes))
+                     (is (str/includes? output ":clio.ledger/concurrent-stream-write")))
+                   (testing "hard-link aliases share one authoritative inode lock"
+                     (is (= 1 (count (ledger/read-ledger ledger-file))))
+                     (is (= (ledger/read-ledger ledger-file)
+                            (ledger/read-ledger ledger-alias))))
+                   (finish))))
+              (.catch
+               (fn [cause]
+                 (is false (str "concurrent append probe failed: " cause))
+                 (finish)))))
+        (catch :default cause
+          (is false (str "concurrent append setup failed: " cause))
+          (finish))))))
