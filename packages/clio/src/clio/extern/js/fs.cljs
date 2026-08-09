@@ -1,4 +1,5 @@
 (ns clio.extern.js.fs
+  (:refer-clojure :exclude [exists?])
   (:require ["node:fs" :as fs]))
 
 (defn exists?
@@ -50,7 +51,7 @@
 (defn list-files
   [path]
   (if (exists? path)
-    (vec (array-seq (fs/readdirSync path)))
+    (vec (fs/readdirSync path))
     []))
 
 (defn- sleep-ms!
@@ -70,12 +71,28 @@
         :busy
         (throw cause)))))
 
+(defn- lock-age-ms
+  "Milliseconds since lock-path was last written, or nil if it no longer
+   exists (already released by its owner or reclaimed by a contender)."
+  [lock-path]
+  (try
+    (- (js/Date.now) (.getTime (.-mtime (fs/statSync lock-path))))
+    (catch :default cause
+      (if (= "ENOENT" (.-code cause))
+        nil
+        (throw cause)))))
+
 (defn acquire-lock!
   "Acquire an inter-process lock by exclusively creating `<path>.lock`.
-   Returns plain Clojure data; no file handle crosses the extern boundary."
+   Returns plain Clojure data; no file handle crosses the extern boundary.
+
+   A lock older than `stale-after-ms` is assumed orphaned by a writer that
+   crashed, was killed, or lost power between creating the lock and its
+   `finally` releasing it, and is reclaimed by deleting it and retrying
+   acquisition rather than waiting out the attempt budget."
   ([path]
-   (acquire-lock! path {:attempts 200 :delay-ms 25}))
-  ([path {:keys [attempts delay-ms]}]
+   (acquire-lock! path {:attempts 200 :delay-ms 25 :stale-after-ms 60000}))
+  ([path {:keys [attempts delay-ms stale-after-ms] :or {stale-after-ms 60000}}]
    (let [lock-path (str path ".lock")]
      (loop [remaining attempts]
        (case (try-create-lock! lock-path)
@@ -83,14 +100,23 @@
          {:lock/path lock-path}
 
          :busy
-         (if (pos? remaining)
-           (do
-             (sleep-ms! delay-ms)
-             (recur (dec remaining)))
-           (throw
-            (ex-info "Timed out acquiring file lock"
-                     {:clio/error :clio.extern.fs/lock-timeout
-                      :lock/path lock-path}))))))))
+         (let [age-ms (lock-age-ms lock-path)]
+           (cond
+             (and age-ms (> age-ms stale-after-ms))
+             (do
+               (delete-if-exists! lock-path)
+               (recur remaining))
+
+             (pos? remaining)
+             (do
+               (sleep-ms! delay-ms)
+               (recur (dec remaining)))
+
+             :else
+             (throw
+              (ex-info "Timed out acquiring file lock"
+                       {:clio/error :clio.extern.fs/lock-timeout
+                        :lock/path lock-path})))))))))
 
 (defn release-lock!
   [{:lock/keys [path]}]

@@ -147,3 +147,18 @@
             (fs/release-lock! lock))))
       (finally
         (fs/remove-tree! directory)))))
+
+(deftest orphaned-lock-is-reclaimed-once-stale
+  (let [directory (str "/tmp/clio-" (host/random-uuid))
+        ledger-file (str directory "/events.edn")]
+    (try
+      (fs/ensure-dir! directory)
+      ;; Simulate a writer that crashed after creating the lock and never
+      ;; reached its `finally` to release it.
+      (fs/acquire-lock! ledger-file)
+      (let [reclaimed
+            (fs/acquire-lock! ledger-file {:attempts 20 :delay-ms 5 :stale-after-ms 5})]
+        (is (some? reclaimed))
+        (fs/release-lock! reclaimed))
+      (finally
+        (fs/remove-tree! directory)))))
