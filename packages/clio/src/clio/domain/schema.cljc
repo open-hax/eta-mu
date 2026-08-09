@@ -1,9 +1,8 @@
 (ns clio.domain.schema
   (:require [clio.law.event :as event-law]
+            [clio.law.schema :as schema-law]
             [clio.shape.canonical :as canonical]
-            [clio.shape.schema :as shape]
-            [clojure.string :as str]
-            [malli.core :as m]))
+            [clojure.string :as str]))
 
 (defn- fail!
   [type message data]
@@ -142,8 +141,8 @@
 
 (defn compatible-revisions
   "Return every known revision in which schema-id has exactly schema-hash. This
-   is what lets an unchanged event shape remain valid across unrelated catalog
-   changes without a manual version bump."
+   lets an unchanged event shape remain valid across unrelated catalog changes
+   without a manual version bump."
   [revisions schema-id schema-hash]
   (->> revisions
        (filter #(= schema-hash (get-in % [:schema/hashes schema-id])))
@@ -151,10 +150,8 @@
        vec))
 
 (defn resolve-event-schema
-  "Resolve an event through its recorded whole-catalog root, then report every
-   other known catalog revision carrying the exact same schema leaf. An unknown
-   root is refused even if its claimed leaf hash happens to be familiar: leaf
-   compatibility is not a substitute for source-revision provenance."
+  "Resolve through the event's recorded whole-catalog root, then report every
+   other known catalog revision carrying the exact same schema leaf."
   [revisions event]
   (let [{:schema/keys [root id hash]} (:event/schema event)
         by-root (revision-index revisions)
@@ -181,30 +178,24 @@
        :schema/form (get-in revision [:schema/catalog id])})))
 
 (defn validate-event!
-  "Validate the bootstrap, semantic identity laws, then the exact historical
-   Malli event schema selected by content-derived schema metadata."
+  "Resolve an event's historical contract, then apply the laws that decide
+   whether this event is admissible."
   [revisions event]
-  (when-not (m/validate shape/bootstrap-schema event)
-    (fail! :clio.schema/invalid-bootstrap
-           "Event does not contain a readable schema bootstrap"
-           {:explain (m/explain shape/bootstrap-schema event)
-            :event event}))
+  (schema-law/validate-bootstrap! event)
   (when-not (event-law/event-identity-valid? event)
     (fail! :clio.schema/invalid-identity
            "Event identity, stream sequence, or causal ids are invalid"
            {:event event}))
   (let [resolved (resolve-event-schema revisions event)
         schema-id (:schema/id resolved)
-        schema-form (:schema/form resolved)]
+        revision (:revision resolved)]
     (when-not (= schema-id (:event/type event))
       (fail! :clio.schema/type-mismatch
              "Event type must equal its schema id"
              {:event/type (:event/type event)
               :schema/id schema-id}))
-    (when-not (m/validate schema-form event)
-      (fail! :clio.schema/invalid-event
-             "Event does not match its historical Malli schema"
-             {:schema/id schema-id
-              :explain (m/explain schema-form event)
-              :event event})))
+    (schema-law/validate-event-form!
+     (:schema/catalog revision)
+     schema-id
+     event))
   event)
