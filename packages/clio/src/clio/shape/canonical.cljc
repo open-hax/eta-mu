@@ -35,7 +35,7 @@
   [value]
   (throw
    (ex-info
-    "Only cross-runtime-safe integers and finite real numbers are portable; encode other numeric metadata as an explicit string"
+    "Only cross-runtime-safe integers and exactly representable finite real numbers are portable; encode other numeric metadata as an explicit string"
     {:clio/error :clio.canonical/non-portable-number
      :value value})))
 
@@ -67,6 +67,16 @@
   [value]
   (zero? (mod value 1)))
 
+(defn- exact-double-coercion?
+  "ClojureScript numbers already are IEEE-754 doubles. On the JVM, ratios,
+   BigDecimals, and other exact numeric types may lose information when
+   coerced to double. Accept them only when the shared double is exactly the
+   same numeric value; this rejects overflow, underflow, and rounding aliases
+   before they can collapse distinct values onto one canonical identity."
+  [value d]
+  #?(:clj (and (finite? d) (== value d))
+     :cljs true))
+
 (defn- real-decomposition
   "Sign, mantissa, and binary exponent of a finite nonzero double, as
    value = sign x mantissa x 2^exponent with mantissa an integer in
@@ -86,11 +96,14 @@
   "Encode a finite, non-integer-valued number by its exact IEEE 754
    decomposition rather than its decimal string, because the decimal string
    is host-decided: JVM renders 1e-7 as \"1.0E-7\" where JavaScript renders
-   \"1e-7\", so the same schema or event hashed to different values depending
-   on which runtime evaluated this .cljc encoder. -0.0 canonicalizes to +0.0:
-   (= -0.0 0.0) holds on both runtimes and zero has no decomposition."
+   \"1e-7\". JVM-only exact numeric types are admitted only when their double
+   coercion is exact; otherwise two distinct exact values could hash as the
+   same JavaScript number. -0.0 canonicalizes to +0.0 because (= -0.0 0.0)
+   holds on both runtimes and zero has no decomposition."
   [value]
   (let [d (double value)]
+    (when-not (exact-double-coercion? value d)
+      (non-portable! value))
     (if (zero? d)
       [:number :real 1 "0" 0]
       (let [{:keys [sign mantissa exponent]} (real-decomposition d)]
@@ -125,8 +138,9 @@
       (non-portable! value))
 
     ;; A committed event's payload may legitimately contain non-integer data
-    ;; (a schema can declare :double); ratios and JVM BigDecimals coerce
-    ;; through double, the only floating point both runtimes share.
+    ;; (a schema can declare :double). Plain doubles are the shared floating
+    ;; representation. JVM ratios/BigDecimals are accepted only when their
+    ;; conversion to that shared representation is exact.
     :else
     (canonical-real value)))
 
@@ -135,8 +149,9 @@
    form suitable for cross-runtime hashing. Equal sequential collections share
    one representation. Numbers are encoded so the same EDN text hashes
    identically on both runtimes: safe integers by their digits, finite reals
-   by exact IEEE 754 decomposition; unsafe integers and NaN/Infinity are
-   rejected rather than hashing differently in Clojure and ClojureScript."
+   by exact IEEE 754 decomposition; unsafe integers, lossy JVM-only numeric
+   values, and NaN/Infinity are rejected rather than being assigned ambiguous
+   cross-runtime identities."
   [value]
   (cond
     (nil? value) [:nil]
