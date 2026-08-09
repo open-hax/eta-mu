@@ -82,9 +82,28 @@
   []
   (str (js/Date.now) "-" (js/Math.random)))
 
+(defn- proc-stat-start-time
+  "The start time (in clock ticks since boot, /proc/<pid>/stat field 22) of
+   pid, or nil where the process is gone or /proc does not exist (macOS,
+   Windows). The comm field is parenthesized and may itself contain spaces,
+   so fields are split only after its closing paren."
+  [pid]
+  (try
+    (let [stat (fs/readFileSync (str "/proc/" pid "/stat") "utf8")
+          after-comm (.substring stat (inc (.lastIndexOf stat ")")))
+          fields (.split (.trim after-comm) #"\s+")]
+      (aget fields 19))
+    (catch :default _ nil)))
+
+(defn- own-start-time
+  []
+  (proc-stat-start-time (.-pid js/process)))
+
 (defn- lock-record-text
   [token]
-  (pr-str {:lock/pid (.-pid js/process) :lock/token token}))
+  (pr-str {:lock/pid (.-pid js/process)
+           :lock/started (own-start-time)
+           :lock/token token}))
 
 (defn- lock-identity
   "The ownership record plus inode identity (dev+ino) of the lock file at
@@ -119,6 +138,21 @@
     (catch :default cause
       (not= "ESRCH" (.-code cause)))))
 
+(defn- owner-alive?
+  "Whether the lock's recorded owner still exists. pid liveness is necessary
+   but not sufficient: a crashed writer's pid can be reused by an unrelated
+   long-lived process before the orphaned lock is inspected, and kill(pid, 0)
+   would then report that process as the owner, blocking reclamation for its
+   whole lifetime. Where /proc exists, the start time recorded at lock
+   creation disambiguates — a reused pid belongs to a process started at a
+   different time. Where /proc does not exist (or an older lock record
+   carries no start time), falls back to pid liveness alone."
+  [{:lock/keys [pid started]}]
+  (let [current (proc-stat-start-time pid)]
+    (if (and started current)
+      (= started current)
+      (process-alive? pid))))
+
 (defn- reclaimable-identity
   "The identity of lock-path's lock if it may be reclaimed right now, else
    nil. A lock whose recorded owner process is still alive is never
@@ -130,11 +164,12 @@
    re-verify at the destructive step — see try-reclaim-stale-lock!."
   [lock-path stale-after-ms]
   (when-let [identity (lock-identity lock-path)]
-    (if-let [pid (get-in identity [:lock/record :lock/pid])]
-      (when-not (process-alive? pid)
-        identity)
-      (when (> (- (js/Date.now) (:lock/mtime-ms identity)) stale-after-ms)
-        identity))))
+    (let [record (:lock/record identity)]
+      (if (:lock/pid record)
+        (when-not (owner-alive? record)
+          identity)
+        (when (> (- (js/Date.now) (:lock/mtime-ms identity)) stale-after-ms)
+          identity)))))
 
 (defn- try-reclaim-stale-lock!
   "Attempt to claim reclamation of a stale lock by atomically renaming it
