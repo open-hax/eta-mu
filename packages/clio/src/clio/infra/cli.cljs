@@ -22,19 +22,19 @@
   (prn {:ledger/path path :ledger/created? true}))
 
 (defn- command-schema-root [[catalog-file]]
-  (let [catalog (-> catalog-file read-edn-file
-                    (cli-law/validate! cli-law/catalog {:input :catalog}))
+  (let [catalog-value (read-edn-file catalog-file)
+        catalog (cli-law/validate! cli-law/catalog catalog-value {:input :catalog})
         revision (schema/materialize crypto/sha256 catalog)]
     (prn {:schema/root (:schema/root revision)
           :schema/hashes (:schema/hashes revision)})))
 
 (defn- command-append [[schema-dir catalog-file ledger-file schema-id-edn event-edn]]
-  (let [catalog (-> catalog-file read-edn-file
-                    (cli-law/validate! cli-law/catalog {:input :catalog}))
-        schema-id (-> schema-id-edn edn/read-one
-                      (cli-law/validate! cli-law/schema-id {:input :schema-id}))
-        event-data (-> event-edn edn/read-one
-                       (cli-law/validate! cli-law/event-data {:input :event-data}))
+  (let [catalog-value (read-edn-file catalog-file)
+        schema-id-value (edn/read-one schema-id-edn)
+        event-data-value (edn/read-one event-edn)
+        catalog (cli-law/validate! cli-law/catalog catalog-value {:input :catalog})
+        schema-id (cli-law/validate! cli-law/schema-id schema-id-value {:input :schema-id})
+        event-data (cli-law/validate! cli-law/event-data event-data-value {:input :event-data})
         rt (runtime/open schema-dir catalog)
         result (runtime/append! rt ledger-file schema-id event-data)]
     (prn (select-keys result [:append/result :event]))))
