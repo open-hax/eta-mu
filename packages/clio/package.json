@@ -8,8 +8,8 @@
     "test": "pnpm run test:nbb && pnpm run test:shadow",
     "test:nbb": "pnpm dlx nbb@1.3.201 test/run.nbb",
     "test:shadow": "pnpm dlx shadow-cljs@3.4.11 compile test",
-    "lint": "clj-kondo --lint src test bin",
-    "lint:kondo": "clj-kondo --lint src test bin",
+    "lint": "pnpm run lint:kondo",
+    "lint:kondo": "clj-kondo --lint src test bin && bb scripts/lint_external_boundary.bb",
     "clean": "rm -rf target .nbb"
   }
 }
