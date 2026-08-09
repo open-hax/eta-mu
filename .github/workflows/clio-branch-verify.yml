@@ -41,37 +41,104 @@ jobs:
           node-version: "22"
 
       - name: Verify frozen workspace lock
-        run: pnpm install --frozen-lockfile
+        id: install
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm install --frozen-lockfile 2>&1 | tee /tmp/clio-install.log
 
       - name: Lint Clio
-        run: pnpm --dir packages/clio lint
+        id: lint
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir packages/clio lint 2>&1 | tee /tmp/clio-lint.log
 
       - name: Test Clio under NBB and Shadow CLJS
-        run: pnpm --dir packages/clio test
-
-      - name: Prove root gates select Clio
+        id: test
+        continue-on-error: true
         shell: bash
         run: |
-          bb scripts/lint.bb --only clio --kondo-only
-          bb scripts/test.bb --only clio
+          set -o pipefail
+          pnpm --dir packages/clio test 2>&1 | tee /tmp/clio-test.log
 
-      - name: Record verification receipt
+      - name: Prove root lint gate selects Clio
+        id: root_lint
+        continue-on-error: true
         shell: bash
+        run: |
+          set -o pipefail
+          bb scripts/lint.bb --only clio --kondo-only 2>&1 | tee /tmp/clio-root-lint.log
+
+      - name: Prove root test gate selects Clio
+        id: root_test
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          bb scripts/test.bb --only clio 2>&1 | tee /tmp/clio-root-test.log
+
+      - name: Record verification receipt and bounded diagnostics
+        if: always()
+        shell: bash
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          LINT_OUTCOME: ${{ steps.lint.outcome }}
+          TEST_OUTCOME: ${{ steps.test.outcome }}
+          ROOT_LINT_OUTCOME: ${{ steps.root_lint.outcome }}
+          ROOT_TEST_OUTCOME: ${{ steps.root_test.outcome }}
         run: |
           verified_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          status=passed
+          for outcome in "$INSTALL_OUTCOME" "$LINT_OUTCOME" "$TEST_OUTCOME" "$ROOT_LINT_OUTCOME" "$ROOT_TEST_OUTCOME"; do
+            if [[ "$outcome" != "success" ]]; then status=failed; fi
+          done
+
           cat > packages/clio/verification.edn <<EOF
-          {:verification/status :passed
+          {:verification/status :${status}
            :verification/tested-commit "${GITHUB_SHA}"
            :verification/at "${verified_at}"
            :verification/runtime {:node "22" :java "21" :pnpm "10.14.0" :bb "1.13.219" :clj-kondo "2025.10.23"}
-           :verification/commands ["pnpm install --frozen-lockfile"
-                                   "pnpm --dir packages/clio lint"
-                                   "pnpm --dir packages/clio test"
-                                   "bb scripts/lint.bb --only clio --kondo-only"
-                                   "bb scripts/test.bb --only clio"]}
+           :verification/outcomes {:frozen-install :${INSTALL_OUTCOME}
+                                   :package-lint :${LINT_OUTCOME}
+                                   :package-test :${TEST_OUTCOME}
+                                   :root-lint :${ROOT_LINT_OUTCOME}
+                                   :root-test :${ROOT_TEST_OUTCOME}}}
           EOF
+
+          {
+            for pair in \
+              "frozen-install:/tmp/clio-install.log" \
+              "package-lint:/tmp/clio-lint.log" \
+              "package-test:/tmp/clio-test.log" \
+              "root-lint:/tmp/clio-root-lint.log" \
+              "root-test:/tmp/clio-root-test.log"; do
+              name="${pair%%:*}"
+              file="${pair#*:}"
+              echo "===== ${name} ====="
+              if [[ -f "$file" ]]; then tail -n 160 "$file"; else echo "no log produced"; fi
+              echo
+            done
+          } > packages/clio/verification.log
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add packages/clio/verification.edn
+          git add packages/clio/verification.edn packages/clio/verification.log
           git commit -m "test(clio): record branch verification receipt"
           git push origin HEAD:feat/clio-event-sourcing-kernel
+
+      - name: Fail when any verification command failed
+        if: always()
+        shell: bash
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          LINT_OUTCOME: ${{ steps.lint.outcome }}
+          TEST_OUTCOME: ${{ steps.test.outcome }}
+          ROOT_LINT_OUTCOME: ${{ steps.root_lint.outcome }}
+          ROOT_TEST_OUTCOME: ${{ steps.root_test.outcome }}
+        run: |
+          for outcome in "$INSTALL_OUTCOME" "$LINT_OUTCOME" "$TEST_OUTCOME" "$ROOT_LINT_OUTCOME" "$ROOT_TEST_OUTCOME"; do
+            if [[ "$outcome" != "success" ]]; then exit 1; fi
+          done
