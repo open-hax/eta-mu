@@ -27,6 +27,26 @@
   (is (= :clio.canonical/non-portable-number
          (error-code #(canonical/canonical-edn {:inf ##Inf})))))
 
+#?(:clj
+   (deftest jvm-exact-numerics-must-survive-double-coercion
+     (let [huge (reduce *' 1 (repeat 400 10))
+           huge-ratio (/ huge 3)
+           tiny-ratio (/ 1 huge)]
+       ;; Overflow used to coerce to +Inf and make real-decomposition loop
+       ;; forever; underflow used to collapse a nonzero ratio onto zero.
+       (is (= :clio.canonical/non-portable-number
+              (error-code #(canonical/canonical-edn huge-ratio))))
+       (is (= :clio.canonical/non-portable-number
+              (error-code #(canonical/canonical-edn tiny-ratio))))
+       ;; The rule is about information loss generally, not only range: two
+       ;; distinct exact JVM values must never inherit one JS double identity.
+       (is (= :clio.canonical/non-portable-number
+              (error-code #(canonical/canonical-edn (/ 1 3)))))
+       ;; Exactly representable ratios remain valid and share the same
+       ;; canonical identity as the corresponding JavaScript double.
+       (is (= (canonical/canonical-edn (/ 1 2))
+              (canonical/canonical-edn 0.5))))))
+
 (deftest finite-real-numbers-are-portable
   ;; A valid event schema can permit :double data; canonical-edn must not
   ;; reject an ordinary decimal literal committed as event payload.
