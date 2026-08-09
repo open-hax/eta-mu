@@ -2,6 +2,7 @@
   (:require [clio.domain.canonicalize :as canonicalize]
             [clio.domain.schema :as schema]
             [clio.extern.js.fs :as fs]
+            [clio.law.ledger :as ledger-law]
             [clio.shape.edn :as edn]
             [clojure.string :as str]))
 
@@ -70,26 +71,25 @@
             events (parse-ledger-text path existing-text)]
         (doseq [existing events]
           (schema/validate-event! revisions existing))
-        (let [old-by-id (some #(when (= (:event/id %) (:event/id event)) %) events)
-              old-slot (some #(when (and (= (:event/stream %) (:event/stream event))
-                                         (= (:event/seq %) (:event/seq event)))
-                                %)
-                             events)]
-          (cond
-            (= old-by-id event)
+        ;; The admission decision is a law, not transport; this namespace only
+        ;; carries its verdict back across the boundary as an error or a write.
+        (let [{:admission/keys [verdict conflict]}
+              (ledger-law/append-admission events event)]
+          (case verdict
+            :already-present
             :already-present
 
-            old-by-id
+            :id-collision
             (fail! :clio.ledger/id-collision
                    "Ledger already contains different data for this event id"
-                   {:old old-by-id :new event})
+                   {:old conflict :new event})
 
-            old-slot
+            :stream-slot-conflict
             (fail! :clio.ledger/concurrent-stream-write
                    "Ledger already contains a different event at this stream revision"
-                   {:old old-slot :new event})
+                   {:old conflict :new event})
 
-            :else
+            :appendable
             (do
               (append-record! lock existing-text event)
               :appended))))
