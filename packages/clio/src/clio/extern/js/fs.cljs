@@ -68,6 +68,24 @@
   []
   (= "win32" (.-platform js/process)))
 
+(defn- unsupported-flock?
+  [cause]
+  (contains? #{"ENOSYS" "ENOTSUP" "EOPNOTSUPP"} (.-code cause)))
+
+(defn- acquire-unix-lock!
+  [fd]
+  ;; flock gives open-file-description exclusion on local filesystems, which
+  ;; also protects separate descriptors in one Node process. Some NFS mounts
+  ;; do not implement flock, so an unsupported-flock error is deliberately not
+  ;; fatal. The mandatory whole-file F_SETLKW below is the Unix authority and
+  ;; the path used by NFS implementations that support POSIX record locking.
+  (try
+    (fs-ext/flockSync fd "ex")
+    (catch :default cause
+      (when-not (unsupported-flock? cause)
+        (throw cause))))
+  (fs-ext/fcntlSync fd "setlkw" (native-constant "F_WRLCK") 0 0))
+
 (defn- acquire-native-lock!
   [fd]
   (if (windows?)
@@ -77,13 +95,7 @@
      fd
      (native-constant "LOCKFILE_EXCLUSIVE_LOCK")
      0 0 0xffffffff 0xffffffff)
-    (do
-      ;; flock is tied to the open file description, so separate descriptors
-      ;; in this process still exclude one another. fcntl adds POSIX record
-      ;; locking for filesystems such as NFS that participate in fcntl locks.
-      ;; Every Clio writer takes both in this order.
-      (fs-ext/flockSync fd "ex")
-      (fs-ext/fcntlSync fd "setlkw" (native-constant "F_WRLCK") 0 0))))
+    (acquire-unix-lock! fd)))
 
 (defn acquire-lock!
   "Open the ledger itself and hold an OS-backed exclusive lock on its inode.
@@ -94,11 +106,10 @@
    reclamation path, or fencing token to race. Hard-link and symlink aliases
    reach the same inode and therefore the same lock.
 
-   Unix takes flock plus a whole-file blocking fcntl write lock. flock gives
-   open-file-description exclusion (including separate descriptors in one
-   process); fcntl provides the network-filesystem coordination path used by
-   NFS implementations that support POSIX record locking. Windows uses an
-   exclusive LockFileEx range covering the full file address space."
+   Unix uses a whole-file blocking fcntl write lock as the mandatory lock,
+   with flock as an additional local-filesystem guard when the filesystem
+   supports it. Windows uses an exclusive LockFileEx range covering the full
+   file address space."
   [path]
   (let [fd (fs/openSync path "a+")]
     (try
@@ -109,16 +120,11 @@
         (throw cause)))))
 
 (defn read-locked-text
-  "Read the entire locked ledger through the descriptor that owns the lock.
-   This intentionally avoids opening and closing a second descriptor while a
-   POSIX fcntl lock is held."
+  "Read the locked ledger through the same descriptor that owns the lock.
+   Supplying the fd keeps Node from opening a second descriptor while the
+   POSIX record lock is held."
   [{:lock/keys [fd]}]
-  (let [size (.-size (fs/fstatSync fd))
-        buffer (js/Buffer.alloc size)
-        bytes-read (if (zero? size)
-                     0
-                     (fs/readSync fd buffer 0 size 0))]
-    (.toString buffer "utf8" 0 bytes-read)))
+  (fs/readFileSync fd "utf8"))
 
 (defn append-locked-text!
   "Append through the descriptor that owns the kernel lock."
