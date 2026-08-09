@@ -3,7 +3,8 @@
             [clio.domain.projection :as projection]
             [clio.domain.schema :as schema]
             [clio.shape.schema :as shape]
-            [clojure.test :refer [deftest is testing]]))
+            #?(:clj [clojure.test :refer [deftest is testing]]
+               :cljs [cljs.test :refer [deftest is testing]])))
 
 (defn fake-hash
   [text]
