@@ -170,9 +170,11 @@ That boundary lint reads *forms*, not text: it parses every source file with
 edamame — preserving both branches of a reader conditional and keeping `#js`
 as a tagged literal — and reports only reader-level positions. A `js/` sequence
 inside a comment, docstring, or string literal performs no interop and is not a
-finding. The rules live in `scripts/clio/lint_extern_boundary.clj` so the test
-suite exercises them directly; `scripts/lint_extern_boundary.bb` is the
-entrypoint.
+finding. The rules are runtime-neutral and carry no filesystem access, so they
+live in `scripts/clio/lint_extern_boundary.cljc` and the package suite verifies
+them on the same three runtimes as the kernel. Directory traversal and the exit
+code stay in the Babashka entrypoint, `scripts/lint_extern_boundary.bb`, beside
+this repository's other build gates.
 
 Reusable runtime-specific code is `.cljs`, rather than `.nbb`, so the same
 namespace implementation can be loaded by NBB and compiled by Shadow CLJS. The
@@ -195,14 +197,28 @@ harmless.
 append critical section with an **OS-backed advisory lock on the ledger inode
 itself**. Every Clio writer participates in this lock protocol; external writers
 must take the same advisory lock if they mutate the same ledger. The same locked
-file descriptor is used for the read and append. On Unix the mandatory lock is a
-blocking whole-file POSIX `fcntl(F_SETLKW)` write lock; `flock` is an additional
-local-filesystem guard when supported. On Windows the adapter uses an exclusive
-`LockFileEx` range covering the file address space. Closing the descriptor —
-including process exit or crash — releases the kernel lock, so Clio has no stale
-lockfile, lease timeout, PID-reclamation protocol, or application-level fencing
-race. Symlink and hard-link aliases therefore contend on the same underlying file
-identity rather than on path-derived lock names.
+file descriptor is used for the read and append. On Unix the authoritative lock
+is a blocking whole-file POSIX `fcntl(F_SETLKW)` write lock — advisory, not the
+unrelated and effectively dead POSIX *mandatory locking* feature; `flock` is an
+additional local-filesystem guard when supported. On Windows the adapter uses
+an exclusive `LockFileEx` range covering the file address space. Closing the
+descriptor — including process exit or crash — releases the kernel lock, so
+Clio has no stale lockfile, lease timeout, PID-reclamation protocol, or
+application-level fencing race. Symlink and hard-link aliases therefore contend
+on the same underlying file identity rather than on path-derived lock names.
+
+`append-event!` never brings a ledger into being. The lock open carries no
+`O_CREAT`, and the path is checked by name first, so a misspelled, deleted, or
+unmounted ledger fails with `:clio.ledger/missing-file` instead of quietly
+becoming a fresh empty history while the intended ledger stays behind.
+`create-ledger!` — the CLI's `new` — is the only creation path.
+
+A POSIX record lock is released when the process closes *any* descriptor for
+that file, not only the one that took the lock. Path-based `read-text` would
+therefore drop a held lock silently, so `clio.extern.js.fs` tracks the paths
+this process has locked and refuses that read outright; callers inside a
+critical section use `read-locked-text`. The guard keys on the path while the
+lock keys on the inode, so a hard-link alias under another name is not caught.
 
 `clio.domain.canonicalize/canonicalize` performs:
 
@@ -292,8 +308,9 @@ pnpm --dir packages/clio test
 ```
 
 The kernel suite runs under both NBB and Shadow CLJS. A third Babashka runner
-(`test/run.bb`) covers what only a JVM runtime can pin: that canonical encoding
-is byte-identical across hosts, and the JVM-side boundary lint. Its
+(`test/run.bb`) pins what only a JVM runtime can: that canonical encoding is
+byte-identical across hosts. The boundary-lint rules are runtime-neutral and run
+under all three. Its
 partition-invariance
 fixture exhaustively checks all 24 permutations of four causally related events
 across all `3^4 = 81` assignments to three physical ledgers: 1,944 distinct
