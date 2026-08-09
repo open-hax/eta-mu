@@ -129,3 +129,24 @@
     (is (not= (get-in v1 [:schema/hashes :counter/added])
               (get-in v2 [:schema/hashes :counter/added]))
         "the referencING schema's leaf hash must move when what it references does")))
+
+(deftest leaf-hash-ignores-literal-values-that-look-like-schema-ids
+  ;; :flags/enabled below is a literal value compared for equality, not a
+  ;; reference to a schema of that id, even though the catalog happens to
+  ;; define one. Changing the unrelated :flags/enabled schema must not move
+  ;; :counter/added's leaf hash.
+  (let [base {:flags/enabled :boolean
+              :counter/added
+              (schema-law/event-schema
+               :counter/added
+               [:map {:closed true} [:amount [:enum :flags/enabled]]])}
+        changed {:flags/enabled [:enum true false]
+                 :counter/added
+                 (schema-law/event-schema
+                  :counter/added
+                  [:map {:closed true} [:amount [:enum :flags/enabled]]])}
+        v1 (schema/materialize fake-hash base)
+        v2 (schema/materialize fake-hash changed)]
+    (is (= (get-in v1 [:schema/hashes :counter/added])
+           (get-in v2 [:schema/hashes :counter/added]))
+        "a literal keyword matching a catalog schema id is not a reference")))

@@ -48,18 +48,50 @@
   [path schema-name]
   (keyword (str/join "." path) schema-name))
 
+(def ^:private literal-position-types
+  "Malli constructs whose children are literal values compared for equality,
+   never sub-schemas — a qualified keyword appearing among them (e.g. the
+   :flags/enabled in [:enum :flags/enabled] or [:= :flags/enabled]) is data
+   being matched, not a reference to a registered schema of that id."
+  #{:enum := :const :fn :re})
+
+(defn- map-entry-schema-position
+  "A :map child is `[key]`, `[key schema]`, or `[key opts schema]` — the
+   schema, if present, is always the last element; `key` and `opts` are
+   never schema positions."
+  [entry]
+  (when (and (vector? entry) (> (count entry) 1))
+    (last entry)))
+
 (defn- referenced-schema-ids
-  "Every catalog schema id that schema-form points at directly. Malli
-   represents a reference to another registered schema either explicitly as
+  "Every catalog schema id that schema-form points at directly, found by
+   walking only positions Malli treats as sub-schemas. Malli represents a
+   reference to another registered schema either explicitly as
    `[:ref :other/schema]` or as the bare qualified keyword itself resolved
-   against the registry, so any qualified keyword present in the same catalog
-   is treated as a direct reference."
+   against the registry, so a qualified keyword present in the same catalog
+   is treated as a reference — but only where a schema can appear, not where
+   a literal value is compared (`:enum`/`:=`/`:const`) or option maps
+   (`{:closed true}`, a `:map` entry's own `key`/`opts`)."
   [catalog schema-form]
   (letfn [(walk [node]
             (cond
               (and (keyword? node) (contains? catalog node)) #{node}
-              (map? node) (into #{} (mapcat walk (mapcat identity node)))
+
+              (and (sequential? node) (seq node)
+                   (contains? literal-position-types (first node)))
+              #{}
+
+              (and (sequential? node) (seq node) (= :map (first node)))
+              (into #{}
+                    (mapcat
+                     (fn [entry]
+                       (if (vector? entry)
+                         (walk (map-entry-schema-position entry))
+                         (walk entry)))) ; the optional :map options map
+                    (rest node))
+
               (sequential? node) (into #{} (mapcat walk node))
+              (map? node) (into #{} (mapcat walk (mapcat identity node)))
               :else #{}))]
     (walk schema-form)))
 
