@@ -86,13 +86,22 @@
   [token]
   (pr-str {:lock/pid (.-pid js/process) :lock/token token}))
 
-(defn- read-lock-record
-  "The {:lock/pid :lock/token} record currently written into lock-path, or nil
-   if it no longer exists (already released by its owner or reclaimed by a
-   contender)."
+(defn- lock-identity
+  "The ownership record plus inode identity (dev+ino) of the lock file at
+   lock-path, or nil if it no longer exists (already released by its owner or
+   reclaimed by a contender). The inode distinguishes 'the same lock file I
+   inspected' from 'a fresh lock a contender created at this path after
+   reclaiming the one I inspected'. An unparseable record reads as nil, which
+   callers treat as unknown ownership and fall back to age on."
   [lock-path]
   (try
-    (edn/read-one (read-text lock-path))
+    (let [stat (fs/statSync lock-path)
+          record (try (edn/read-one (read-text lock-path))
+                      (catch :default _ nil))]
+      {:lock/dev (.-dev stat)
+       :lock/ino (.-ino stat)
+       :lock/mtime-ms (.getTime (.-mtime stat))
+       :lock/record record})
     (catch :default cause
       (if (= "ENOENT" (.-code cause))
         nil
@@ -110,43 +119,53 @@
     (catch :default cause
       (not= "ESRCH" (.-code cause)))))
 
-(defn- lock-age-ms
-  "Milliseconds since lock-path was last written, or nil if it no longer
-   exists (already released by its owner or reclaimed by a contender)."
-  [lock-path]
-  (try
-    (- (js/Date.now) (.getTime (.-mtime (fs/statSync lock-path))))
-    (catch :default cause
-      (if (= "ENOENT" (.-code cause))
-        nil
-        (throw cause)))))
-
-(defn- reclaimable?
-  "Whether lock-path may be reclaimed right now. A lock whose recorded owner
-   process is still alive is never reclaimable, no matter its age — an
-   overrun read+validate phase in a live writer must not let a contender in.
-   A lock the PID record can't establish liveness for (missing/corrupt,
-   e.g. between another reclaimer's rename and its own recreate) falls back
-   to the age-based safety net rather than waiting on it forever."
+(defn- reclaimable-identity
+  "The identity of lock-path's lock if it may be reclaimed right now, else
+   nil. A lock whose recorded owner process is still alive is never
+   reclaimable, no matter its age — an overrun read+validate phase in a live
+   writer must not let a contender in. A lock the PID record can't establish
+   liveness for (missing/corrupt, e.g. between another reclaimer's rename and
+   its own recreate) falls back to the age-based safety net rather than
+   waiting on it forever. The returned identity is what a reclaimer must
+   re-verify at the destructive step — see try-reclaim-stale-lock!."
   [lock-path stale-after-ms]
-  (if-let [record (read-lock-record lock-path)]
-    (not (process-alive? (:lock/pid record)))
-    (let [age-ms (lock-age-ms lock-path)]
-      (boolean (and age-ms (> age-ms stale-after-ms))))))
+  (when-let [identity (lock-identity lock-path)]
+    (if-let [pid (get-in identity [:lock/record :lock/pid])]
+      (when-not (process-alive? pid)
+        identity)
+      (when (> (- (js/Date.now) (:lock/mtime-ms identity)) stale-after-ms)
+        identity))))
 
 (defn- try-reclaim-stale-lock!
   "Attempt to claim reclamation of a stale lock by atomically renaming it
-   aside. Renaming is atomic at the OS level: when two contenders race on the
-   same stale lock, at most one rename succeeds and the other gets ENOENT.
-   Without this, two contenders could both decide the lock is stale, both
-   unconditionally delete it, and both believe they hold the fresh lock each
-   then creates — the exact ownership race an unconditional delete permits."
-  [lock-path]
-  (let [claim-path (str lock-path ".reclaim-" (js/Math.random))]
+   aside — then verify the renamed file is still the exact lock that was
+   inspected (same dev+ino, same ownership token) before deleting it.
+
+   Renaming is atomic at the OS level: when two contenders race on the same
+   stale lock, at most one rename succeeds and the other gets ENOENT. The
+   identity check closes the subtler race that raw rename-aside leaves open:
+   the loser of that race, acting on its earlier staleness observation, would
+   otherwise rename aside and delete the *fresh* lock the winner went on to
+   create, letting both processes enter the critical section. On mismatch the
+   file is renamed back untouched and reclamation aborts. (In the vanishing
+   gap where a third party creates a lock while one is renamed aside, the
+   rename-back can displace it — displaced holders are caught by the
+   lock-owned? commit fence in infra.ledger, so at most one process ever
+   commits.)"
+  [lock-path expected]
+  (let [claim-path (str lock-path ".reclaim-" (random-token))]
     (try
       (fs/renameSync lock-path claim-path)
-      (delete-if-exists! claim-path)
-      true
+      (let [actual (lock-identity claim-path)]
+        (if (and (= (:lock/dev actual) (:lock/dev expected))
+                 (= (:lock/ino actual) (:lock/ino expected))
+                 (= (get-in actual [:lock/record :lock/token])
+                    (get-in expected [:lock/record :lock/token])))
+          (do (delete-if-exists! claim-path) true)
+          (do
+            (try (fs/renameSync claim-path lock-path)
+                 (catch :default _))
+            false)))
       (catch :default cause
         (if (= "ENOENT" (.-code cause))
           false
@@ -172,7 +191,7 @@
 
    A lock is reclaimed, rather than waited out, once its recorded owner
    process is confirmed dead (crashed, killed, or lost power between creating
-   the lock and its `finally` releasing it) — see `reclaimable?`. Liveness,
+   the lock and its `finally` releasing it) — see `reclaimable-identity`. Liveness,
    not age, decides this: an overrun read+validate phase in a writer that is
    still alive must never let a contender in, no matter how long it runs.
    Reclamation itself is race-safe: see `try-reclaim-stale-lock!`. The
@@ -191,29 +210,30 @@
          :acquired
          {:lock/path lock-path :lock/token token}
 
-         :busy
-         (cond
-           (reclaimable? lock-path stale-after-ms)
-           (do
-             (try-reclaim-stale-lock! lock-path)
-             (recur remaining))
+          :busy
+          (let [identity (reclaimable-identity lock-path stale-after-ms)]
+            (cond
+              identity
+              (do
+                (try-reclaim-stale-lock! lock-path identity)
+                (recur remaining))
 
-           (pos? remaining)
-           (do
-             (sleep-ms! delay-ms)
-             (recur (dec remaining)))
+              (pos? remaining)
+              (do
+                (sleep-ms! delay-ms)
+                (recur (dec remaining)))
 
-           :else
-           (throw
-            (ex-info "Timed out acquiring file lock"
-                     {:clio/error :clio.extern.fs/lock-timeout
-                      :lock/path lock-path}))))))))
+              :else
+              (throw
+               (ex-info "Timed out acquiring file lock"
+                        {:clio/error :clio.extern.fs/lock-timeout
+                         :lock/path lock-path})))))))))
 
 (defn lock-owned?
   "Whether lock still holds the exact token it was acquired with, i.e. this
    caller has not been reclaimed as a stale owner by a contender."
   [{:lock/keys [path token]}]
-  (= token (:lock/token (read-lock-record path))))
+  (= token (get-in (lock-identity path) [:lock/record :lock/token])))
 
 (defn release-lock!
   "Delete the lock only if it still holds this caller's token. If the lock was
