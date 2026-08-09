@@ -1,0 +1,14 @@
+#!/usr/bin/env nbb
+
+(ns clio.infra.lock-holder
+  (:require [clio.extern.js.fs :as fs]
+            [clio.extern.js.process :as process]))
+
+(let [[ledger-file ready-file hold-ms-text] *command-line-args*
+      hold-ms (js/parseInt hold-ms-text 10)
+      lock (fs/acquire-lock! ledger-file)]
+  (try
+    (fs/write-text! ready-file "locked\n")
+    (process/sleep-until! (+ (process/now-ms) hold-ms))
+    (finally
+      (fs/release-lock! lock))))
