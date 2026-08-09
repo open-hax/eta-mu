@@ -4,8 +4,10 @@
   (:require [cljs.test :as test]
             [clio.domain.canonicalize-test]
             [clio.domain.schema-test]
-            [clio.external.js.process :as process]
-            [clio.infra.ledger-test]))
+            [clio.extern.js.process :as process]
+            [clio.infra.ledger-test]
+            [clio.shape.canonical-test]
+            [clio.shape.edn-test]))
 
 (defmethod test/report [:cljs.test/default :end-run-tests]
   [summary]
@@ -15,4 +17,6 @@
 (test/run-tests
  'clio.domain.schema-test
  'clio.domain.canonicalize-test
- 'clio.infra.ledger-test)
+ 'clio.infra.ledger-test
+ 'clio.shape.canonical-test
+ 'clio.shape.edn-test)
