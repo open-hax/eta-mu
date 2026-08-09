@@ -46,6 +46,6 @@
               (fs/release-lock! contender))))
         (let [holder-result (await holder)]
           (testing "the lock holder exits cleanly"
-            (is (zero? (.-exit-code holder-result))))))
+            (is (zero? (:exit-code holder-result))))))
       (finally
         (fs/remove-tree! directory)))))
