@@ -60,6 +60,21 @@
     (vec (fs/readdirSync path))
     []))
 
+(defn ^:async wait-for-exists!
+  [path timeout-ms]
+  (let [deadline (+ (js/Date.now) timeout-ms)]
+    (js/Promise.
+     (fn [resolve reject]
+       (letfn [(poll []
+                 (cond
+                   (exists? path) (resolve true)
+                   (< (js/Date.now) deadline) (js/setTimeout poll 20)
+                   :else
+                   (reject
+                    (ex-info "Timed out waiting for path"
+                             {:path path :timeout-ms timeout-ms})))))]
+         (poll))))))
+
 (defn- native-constant
   [name]
   (aget (.-constants fs-ext) name))
