@@ -85,9 +85,13 @@
               (into #{}
                     (mapcat
                      (fn [entry]
-                       (if (vector? entry)
-                         (walk (map-entry-schema-position entry))
-                         (walk entry)))) ; the optional :map options map
+                       ;; A non-vector element here is :map's own optional
+                       ;; options map ({:closed true}, or a :title/:description
+                       ;; that could itself hold an unrelated qualified
+                       ;; keyword) — never a schema position, so it is skipped
+                       ;; entirely rather than walked.
+                       (when (vector? entry)
+                         (walk (map-entry-schema-position entry)))))
                     (rest node))
 
               (sequential? node) (into #{} (mapcat walk node))
@@ -263,5 +267,15 @@
     (schema-law/validate-event-form!
      (:schema/catalog revision)
      schema-id
-     event))
+     event)
+    ;; A Malli event schema can admit values canonical-form has no portable
+    ;; encoding for (:uuid, :inst, :any, ...); catching that here means an
+    ;; uncomputable event never reaches the ledger, instead of committing and
+    ;; only discovering the problem the first time infra.projection hashes it.
+    (try
+      (canonical/canonical-form event)
+      (catch #?(:clj Exception :cljs :default) cause
+        (fail! :clio.schema/non-canonical-event
+               "Event data contains a value with no portable canonical encoding"
+               {:event event :cause (ex-message cause)}))))
   event)

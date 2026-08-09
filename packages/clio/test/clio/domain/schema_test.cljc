@@ -150,3 +150,26 @@
     (is (= (get-in v1 [:schema/hashes :counter/added])
            (get-in v2 [:schema/hashes :counter/added]))
         "a literal keyword matching a catalog schema id is not a reference")))
+
+(deftest leaf-hash-ignores-map-options-that-look-like-schema-ids
+  ;; :flags/enabled sits in a :map entry's OPTIONS map ({:title ...}) here,
+  ;; never a schema position, even though the catalog happens to define a
+  ;; schema of that id. Changing the unrelated :flags/enabled schema must not
+  ;; move :counter/added's leaf hash.
+  (let [base {:flags/enabled :boolean
+              :counter/added
+              (schema-law/event-schema
+               :counter/added
+               [:map {:closed true}
+                [:amount {:title :flags/enabled} :int]])}
+        changed {:flags/enabled [:enum true false]
+                 :counter/added
+                 (schema-law/event-schema
+                  :counter/added
+                  [:map {:closed true}
+                   [:amount {:title :flags/enabled} :int]])}
+        v1 (schema/materialize fake-hash base)
+        v2 (schema/materialize fake-hash changed)]
+    (is (= (get-in v1 [:schema/hashes :counter/added])
+           (get-in v2 [:schema/hashes :counter/added]))
+        "a keyword in a :map entry's options map is not a reference")))
