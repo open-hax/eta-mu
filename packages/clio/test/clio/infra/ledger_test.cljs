@@ -162,3 +162,23 @@
         (fs/release-lock! reclaimed))
       (finally
         (fs/remove-tree! directory)))))
+
+(deftest reclaimed-owner-cannot-release-the-new-owners-lock
+  (let [directory (str "/tmp/clio-" (host/random-uuid))
+        ledger-file (str directory "/events.edn")]
+    (try
+      (fs/ensure-dir! directory)
+      ;; The original owner is merely slow, not dead: it keeps its lock value
+      ;; around after a contender reclaims and re-acquires the same path.
+      (let [original (fs/acquire-lock! ledger-file)
+            reclaimed
+            (fs/acquire-lock! ledger-file {:attempts 20 :delay-ms 5 :stale-after-ms 5})]
+        (is (not (fs/lock-owned? original))
+            "the original owner must observe that it no longer holds the lock")
+        (is (fs/lock-owned? reclaimed))
+        (fs/release-lock! original)
+        (is (fs/exists? (:lock/path reclaimed))
+            "releasing a reclaimed lock must not delete the new owner's lock")
+        (fs/release-lock! reclaimed))
+      (finally
+        (fs/remove-tree! directory)))))

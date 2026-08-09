@@ -1,6 +1,7 @@
 (ns clio.extern.js.fs
   (:refer-clojure :exclude [exists?])
-  (:require ["node:fs" :as fs]))
+  (:require ["node:fs" :as fs]
+            ["node:path" :as node-path]))
 
 (defn exists?
   [path]
@@ -61,14 +62,33 @@
     (js/Atomics.wait view 0 0 milliseconds))
   nil)
 
+(defn- create-exclusive-with-content!
+  [path content]
+  (fs/writeFileSync path content #js {:flag "wx"})
+  path)
+
 (defn- try-create-lock!
-  [lock-path]
+  [lock-path token]
   (try
-    (create-exclusive! lock-path)
+    (create-exclusive-with-content! lock-path token)
     :acquired
     (catch :default cause
       (if (= "EEXIST" (.-code cause))
         :busy
+        (throw cause)))))
+
+(defn- random-token
+  []
+  (str (js/Date.now) "-" (js/Math.random)))
+
+(defn- current-lock-token
+  "The token currently written into lock-path, or nil if it no longer exists."
+  [lock-path]
+  (try
+    (read-text lock-path)
+    (catch :default cause
+      (if (= "ENOENT" (.-code cause))
+        nil
         (throw cause)))))
 
 (defn- lock-age-ms
@@ -100,23 +120,41 @@
           false
           (throw cause))))))
 
+(defn- canonical-lock-path
+  "Resolve path's containing directory to its real filesystem location before
+   deriving the lock path, so two callers reaching the same ledger through
+   different symlinked directory paths contend for one lock file instead of
+   two independent ones. A hard link to the same file under a different name
+   within the same real directory is a known residual gap this does not
+   cover — that needs inode identity (dev+ino), not a path string."
+  [path]
+  (str (fs/realpathSync (node-path/dirname path))
+       node-path/sep
+       (node-path/basename path)
+       ".lock"))
+
 (defn acquire-lock!
-  "Acquire an inter-process lock by exclusively creating `<path>.lock`.
-   Returns plain Clojure data; no file handle crosses the extern boundary.
+  "Acquire an inter-process lock by exclusively creating `<path>.lock` holding
+   a fresh ownership token. Returns plain Clojure data; no file handle crosses
+   the extern boundary.
 
    A lock older than `stale-after-ms` is assumed orphaned by a writer that
    crashed, was killed, or lost power between creating the lock and its
    `finally` releasing it, and reclamation is attempted rather than waiting
    out the attempt budget. Reclamation itself is race-safe: see
-   `try-reclaim-stale-lock!`."
+   `try-reclaim-stale-lock!`. The ownership token additionally lets a caller
+   whose lock was reclaimed detect it (`lock-owned?`) instead of blindly
+   assuming it still holds the critical section, and prevents `release-lock!`
+   from deleting a different owner's lock."
   ([path]
    (acquire-lock! path {:attempts 200 :delay-ms 25 :stale-after-ms 60000}))
   ([path {:keys [attempts delay-ms stale-after-ms] :or {stale-after-ms 60000}}]
-   (let [lock-path (str path ".lock")]
+   (let [lock-path (canonical-lock-path path)
+         token (random-token)]
      (loop [remaining attempts]
-       (case (try-create-lock! lock-path)
+       (case (try-create-lock! lock-path token)
          :acquired
-         {:lock/path lock-path}
+         {:lock/path lock-path :lock/token token}
 
          :busy
          (let [age-ms (lock-age-ms lock-path)]
@@ -137,7 +175,17 @@
                        {:clio/error :clio.extern.fs/lock-timeout
                         :lock/path lock-path})))))))))
 
+(defn lock-owned?
+  "Whether lock still holds the exact token it was acquired with, i.e. this
+   caller has not been reclaimed as a stale owner by a contender."
+  [{:lock/keys [path token]}]
+  (= token (current-lock-token path)))
+
 (defn release-lock!
-  [{:lock/keys [path]}]
-  (delete-if-exists! path)
+  "Delete the lock only if it still holds this caller's token. If the lock was
+   reclaimed as stale while this caller held it, the file now belongs to a
+   different owner and must not be deleted out from under them."
+  [lock]
+  (when (lock-owned? lock)
+    (delete-if-exists! (:lock/path lock)))
   nil)

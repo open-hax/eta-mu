@@ -73,13 +73,29 @@
 
             :else
             (do
+              (when-not (fs/lock-owned? lock)
+                (fail! :clio.ledger/lock-lost
+                       "Lock was reclaimed as stale before the write completed; refusing to append"
+                       {:path path}))
               (append-record! path existing-text event)
               :appended))))
       (finally
         (fs/release-lock! lock)))))
 
+(defn- require-ledger-path!
+  "A caller unioning explicit partition files means every named path to
+   exist. Treating a misspelled, deleted, or unmounted path as an empty
+   ledger would let canonicalization silently produce a plausible but
+   incomplete history."
+  [path]
+  (when-not (fs/exists? path)
+    (fail! :clio.ledger/missing-file
+           "Ledger file does not exist"
+           {:path path})))
+
 (defn read-ledgers
   [paths]
+  (doseq [path paths] (require-ledger-path! path))
   (mapv read-ledger paths))
 
 (defn canonicalize-files
