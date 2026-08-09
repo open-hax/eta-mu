@@ -196,3 +196,28 @@
     (is (= (get-in v1 [:schema/hashes :counter/added])
            (get-in v2 [:schema/hashes :counter/added]))
         "a keyword in any construct's properties map is not a reference")))
+
+(deftest leaf-hash-follows-local-registry-references
+  ;; Malli's :registry option is semantic: the local definition's value is a
+  ;; sub-schema the form compiles against, so changing the catalog entry it
+  ;; points at must change the event schema's leaf hash even though the rest
+  ;; of the properties map is not walked.
+  (let [base {:shared/value :boolean
+              :counter/added
+              (schema-law/event-schema
+               :counter/added
+               [:map {:closed true}
+                [:amount [:schema {:registry {:local/value :shared/value}}
+                          :local/value]]])}
+        changed {:shared/value [:enum true false]
+                 :counter/added
+                 (schema-law/event-schema
+                  :counter/added
+                  [:map {:closed true}
+                   [:amount [:schema {:registry {:local/value :shared/value}}
+                             :local/value]]])}
+        v1 (schema/materialize fake-hash base)
+        v2 (schema/materialize fake-hash changed)]
+    (is (not= (get-in v1 [:schema/hashes :counter/added])
+              (get-in v2 [:schema/hashes :counter/added]))
+        "a catalog id referenced through a local :registry is a dependency")))

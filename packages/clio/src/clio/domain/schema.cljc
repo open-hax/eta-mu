@@ -55,6 +55,16 @@
    being matched, not a reference to a registered schema of that id."
   #{:enum := :const :fn :re})
 
+(defn- schema-properties
+  "The properties map of a Malli vector form, if it carries one. A properties
+   map ({:title ...}, {:closed true}) is always distinguishable from a child
+   schema this way: a bare map is never itself a valid Malli schema, in any
+   position, for any construct — so whichever construct this is, if the first
+   thing after its type keyword is a map, that map is properties."
+  [node]
+  (when (map? (second node))
+    (second node)))
+
 (defn- map-entry-schema-position
   "A :map child is `[key]`, `[key schema]`, or `[key opts schema]` — the
    schema, if present, is always the last element; `key` and `opts` are
@@ -65,11 +75,7 @@
 
 (defn- schema-children
   "The children of a Malli vector form after its type keyword, with a leading
-   properties map skipped. A properties map ({:title ...}, {:closed true}) is
-   always distinguishable from a child schema this way: a bare map is never
-   itself a valid Malli schema, in any position, for any construct — so
-   whichever construct this is, if the first thing after its type keyword is
-   a map, that map is properties, not something to walk for references."
+   properties map skipped — see schema-properties."
   [node]
   (let [children (rest node)]
     (if (and (seq children) (map? (first children)))
@@ -84,7 +90,10 @@
    against the registry, so a qualified keyword present in the same catalog
    is treated as a reference — but only where a schema can appear, not where
    a literal value is compared (`:enum`/`:=`/`:const`) or a properties map
-   (`{:closed true}`, a `:map` entry's own `key`/`opts`)."
+   (`{:closed true}`, a `:map` entry's own `key`/`opts`). One property is
+   semantic rather than presentation: a local `:registry` definition's values
+   are sub-schemas the form compiles against, so they are walked like
+   children."
   [catalog schema-form]
   (letfn [(walk [node]
             (cond
@@ -95,16 +104,21 @@
               #{}
 
               (and (sequential? node) (seq node) (= :map (first node)))
-              (into #{}
+              (into (registry-references walk node)
                     (mapcat
                      (fn [entry]
                        (when (vector? entry)
                          (walk (map-entry-schema-position entry)))))
                     (schema-children node))
 
-              (sequential? node) (into #{} (mapcat walk (schema-children node)))
+              (sequential? node) (into (registry-references walk node)
+                                       (mapcat walk (schema-children node)))
               (map? node) (into #{} (mapcat walk (mapcat identity node)))
-              :else #{}))]
+              :else #{}))
+          (registry-references [walk node]
+            (if (and (sequential? node) (seq node))
+              (into #{} (mapcat walk (vals (:registry (schema-properties node)))))
+              #{}))]
     (walk schema-form)))
 
 (defn- reference-closure
