@@ -23,7 +23,7 @@ Any review loop where the acknowledgement precedes the implementation. The plan 
 
 Two sub-patterns worth naming separately:
 
-- **Verify the reviewer, not just the code.** Every one of the 16 findings got reproduced in isolation before acknowledgement. That caught one that did not reproduce at all — Codex claimed `:orn`/`:catn`/`:altn`/`:multi` branch labels leaked into a dependency walk; they never did, because element 0 of every vector was already consumed as the type-keyword position. But the probe that disproved it also exposed the *inverse* defect: a branch labeled `:enum` was parsed as an `[:enum ...]` literal and its real child schema silently dropped, hiding a dependency and making an **incompatible** revision report as compatible. Disputing well requires the same evidence as agreeing well, and produces better findings than either party had.
+- **Verify the reviewer, not just the code.** Every one of the 16 findings had a reproduction *attempted* in isolation before acknowledgement — which is the point, because one of them would not reproduce. Codex claimed `:orn`/`:catn`/`:altn`/`:multi` branch labels leaked into a dependency walk; they never did, because element 0 of every vector was already consumed as the type-keyword position. But the probe that disproved it also exposed the *inverse* defect: a branch labeled `:enum` was parsed as an `[:enum ...]` literal and its real child schema silently dropped, hiding a dependency and making an **incompatible** revision report as compatible. Disputing well requires the same evidence as agreeing well, and produces better findings than either party had.
 - **A merged PR still receives findings.** #280 merged at 23:24:33; Codex posted two more at 23:25:59. The branch was deleted on merge, so nothing could be pushed to it. I then committed the receipt onto that dead branch out of habit and had to cherry-pick it onto the follow-up.
 
 ## Candidate skill outline
@@ -45,5 +45,6 @@ Two sub-patterns worth naming separately:
 Treat the acknowledgement as a testable claim. Reproduce first, plan second, and pick the cheapest falsifier for the plan's riskiest assumption *before* writing it down — for packaging, that means `npm pack` into a throwaway consumer, not reading `files`. When the falsifier fires, correct the thread explicitly and let the correction carry the evidence. Ship the honest narrower fix with the gap documented where the code lives and pinned by a test, so a future runtime change fails loudly instead of leaving the gap to be rediscovered. After a review round, confirm the PR is still open before choosing where commits land.
 
 ## Receipt refs
-- 2026-08-09T22:56:48.517Z
-- 2026-08-09T23:2x (round two + #280 merge / #282 follow-up entries)
+- 2026-08-09T22:56:48.517Z — round one
+- 2026-08-09T23:19:22.783Z — round two
+- 2026-08-09T23:36:03.841Z — #280 merge and the #282 follow-up
