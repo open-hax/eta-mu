@@ -59,22 +59,44 @@
     (tagged-literal? node) (when (= 'js (:tag node)) "#js literal")
     :else nil))
 
+(defn- quoted?
+  "Is this form `(quote x)` — a symbol or structure held as data?
+
+   Known gap: syntax-quote is covered by this too, and not by choice. edamame
+   expands a syntax-quoted form into `concat`/`list` machinery whose leaves are
+   ordinary `(quote sym)` forms, indistinguishable from a hand-written quote,
+   so a macro emitting `js/console.log` is not reported here. The clj-kondo
+   `:layer-boundary/js-star-interop` hook still covers `js*`, and Clio defines
+   no macros; closing the rest would mean re-reading source as text, which is
+   the failure this scanner exists to avoid."
+  [form]
+  (and (seq? form) (= 'quote (first form)) (= 2 (count form))))
+
 (defn js-markers
   "Every boundary violation reachable from form, walking collections, metadata,
-   tagged-literal payloads, and both branches of preserved reader conditionals."
+   tagged-literal payloads, and both branches of preserved reader conditionals.
+
+   Quoted payloads are skipped: a quoted symbol is data and reaches no host
+   object, so flagging it would fail valid source for the same reason scanning
+   comments and strings did. Metadata is examined first and unconditionally:
+   the reader attaches a type hint to the quote form itself, and a hint is host
+   interop whatever it decorates. The exemption is to skip the payload, not to
+   skip the node."
   [form]
   (concat
-   (when-let [marker (js-marker form)] [marker])
    (when-let [m (meta form)] (js-markers m))
-   (cond
-     (tagged-literal? form) (js-markers (:form form))
-     ;; A preserved reader conditional is an opaque ReaderConditional on the
-     ;; JVM and needs naming; on ClojureScript edamame yields a map-like value
-     ;; whose :form the map branch below already reaches.
-     #?@(:clj [(reader-conditional? form) (js-markers (:form form))])
-     (map? form) (mapcat js-markers (mapcat identity form))
-     (coll? form) (mapcat js-markers form)
-     :else nil)))
+   (when-not (quoted? form)
+     (concat
+      (when-let [marker (js-marker form)] [marker])
+      (cond
+        (tagged-literal? form) (js-markers (:form form))
+        ;; A preserved reader conditional is an opaque ReaderConditional on the
+        ;; JVM and needs naming; on ClojureScript edamame yields a map-like value
+        ;; whose :form the map branch below already reaches.
+        #?@(:clj [(reader-conditional? form) (js-markers (:form form))])
+        (map? form) (mapcat js-markers (mapcat identity form))
+        (coll? form) (mapcat js-markers form)
+        :else nil)))))
 
 (defn require-clauses
   [ns-form]

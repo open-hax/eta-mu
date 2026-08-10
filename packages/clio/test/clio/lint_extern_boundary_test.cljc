@@ -76,3 +76,45 @@
          (boundary/file-violations
           "/tmp/clio/src/clio/law/event.cljc"
           "(ns clio.law.event)\n(defn f [] (js/console.log \"x\"))\n"))))
+
+(deftest quoted-symbols-are-data-not-interop
+  (testing "a quoted js-namespaced symbol reaches no host object"
+    (is (= [] (violations "(ns clio.law.example)\n(def marker 'js/console)\n"))))
+
+  (testing "a quoted js* symbol is likewise data"
+    (is (= [] (violations "(ns clio.law.example)\n(def marker 'foo/js*)\n"))))
+
+  (testing "and so is a quoted collection of forms"
+    (is (= [] (violations
+               "(ns clio.law.example)\n(def forms '[(js/console.log 1) #js {:a 1}])\n")))))
+
+(deftest quoting-does-not-launder-real-interop
+  (testing "the same symbol unquoted is still a violation"
+    (is (= ["js/ interop js/console"]
+           (violations "(ns clio.law.example)\n(def marker js/console)\n"))))
+
+  (testing "a quote elsewhere in the file does not disarm the rest of it"
+    (is (= ["js/ interop js/console.log"]
+           (violations
+            (str "(ns clio.law.example)\n"
+                 "(def marker 'js/console)\n"
+                 "(defn f [] (js/console.log \"x\"))\n")))))
+
+  (testing "but a syntax-quoted form is a known gap, pinned so it stays known"
+    ;; edamame expands syntax-quote into concat/list machinery whose leaves are
+    ;; ordinary (quote sym) forms, so this scanner cannot see the difference.
+    ;; Asserted rather than wished away: if a future reader implementation
+    ;; preserves syntax-quote, this test fails and the gap gets revisited.
+    (is (= [] (violations "(ns clio.law.example)\n(def body `(js/console.log 1))\n")))))
+
+(deftest metadata-on-a-quoted-form-is-still-inspected
+  ;; The reader attaches a type hint to the quote form itself, so exempting
+  ;; the payload must not exempt the node. Both rules hold on one node: the
+  ;; hint is reported, the quoted symbol is not.
+  (testing "a host type hint decorating a quoted form"
+    (is (= ["js/ interop js/Date"]
+           (violations "(ns clio.law.example)\n(def marker ^js/Date 'foo)\n"))))
+
+  (testing "and the quoted payload under that hint stays exempt"
+    (is (= ["js/ interop js/Date"]
+           (violations "(ns clio.law.example)\n(def marker ^js/Date 'js/console)\n")))))
