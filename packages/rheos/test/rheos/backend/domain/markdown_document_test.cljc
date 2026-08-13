@@ -24,6 +24,18 @@
     (is (= "alpha" (get-in document [:document/frontmatter/data :custom-field])))
     (is (= "# Finding A\n\nEvidence." (:document/body document)))))
 
+(deftest accepts-closing-delimiter-at-eof
+  (let [document (markdown/parse "---\ntitle: Empty body\n---")]
+    (is (:document/frontmatter-present? document))
+    (is (= "title: Empty body" (:document/frontmatter/raw document)))
+    (is (= "" (:document/body document)))))
+
+(deftest accepts-crlf-frontmatter
+  (let [document (markdown/parse "---\r\ntitle: Windows\r\n---\r\nBody")]
+    (is (:document/frontmatter-present? document))
+    (is (= "title: Windows" (:document/frontmatter/raw document)))
+    (is (= "Body" (:document/body document)))))
+
 (deftest markdown-without-frontmatter-remains-unchanged
   (let [raw "# Plain document\n\nNo metadata."
         document (markdown/parse raw)]
