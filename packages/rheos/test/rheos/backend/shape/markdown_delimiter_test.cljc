@@ -22,7 +22,8 @@
     (is (= "title: Spaced" (:document/frontmatter/raw document)))
     (is (= "" (:document/body document)))))
 
-(deftest crlf-is-accepted
-  (let [document (markdown/parse "---\r\ntitle: Windows\r\n---\r\nBody")]
+(deftest mixed-line-endings-are-accepted
+  (let [document (markdown/parse "---\r\ntitle: Mixed\n---\nBody")]
     (is (:document/frontmatter-present? document))
+    (is (= "title: Mixed" (:document/frontmatter/raw document)))
     (is (= "Body" (:document/body document)))))
