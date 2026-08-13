@@ -32,5 +32,13 @@ The aggravating factor is evidential, not mechanical: the receipt and the closed
 
 Additions to the better path: after pulling or switching branches, rebuild `dist-cli` before invoking any mutating verb, and probe once with a disposable value before sending real content to a mutation surface — the probe here cost one line to clean up; the real comment would have cost a paragraph. Do not let a receipt asserting "fixed" substitute for observing the fixed behaviour in the binary you are about to run. Carded as `a-merged-fix-to-a-mutation-surface-is-not-in-force-until-dist-cli-is-rebuilt` (incoming), which is where the durable enforcement belongs.
 
+## Third sighting, 2026-08-09 — the consumer's copy is a third artifact
+
+The first two sightings were about a *stale* artifact answering for the working tree. The published package is a third artifact again, and it can be wrong while both source and local build are right.
+
+`@eta-mu/clio`'s manifest listed only `src` and the README, so every CLI command its own README documented was absent from the tarball. Adding `bin`, `nbb.edn`, and a `bin` mapping looked sufficient from the manifest. It was not: `npm pack` into an empty project outside the monorepo failed with `Could not find namespace: clio.extern.js.process`, because npm installs a bin as a symlink under the consumer's `node_modules/.bin` and nbb walks up from the *unresolved* script path to find `nbb.edn`. The `#!/usr/bin/env nbb` line also picked a global nbb 1.3.204 over the declared 1.3.201. Nothing in the repository could have shown this — the in-repo invocation works, because in the repo the script path is real.
+
+Addition to the better path: when a change claims a package ships or exposes something, verify from the consumer's position — `npm pack --pack-destination`, install the tarball into a scratch project outside the workspace, and run the advertised commands there. `files`, `bin`, and `exports` are claims about a tarball, and reading them is not testing them.
+
 ## Receipt refs
 - 2026-08-07T02:28:38.522Z
