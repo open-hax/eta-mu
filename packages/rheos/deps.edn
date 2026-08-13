@@ -1,0 +1,10 @@
+{:paths ["src" "test"
+         "../protocols/src"
+         "../chat-ui/src"]
+
+ :deps
+ {thheller/shadow-cljs         {:mvn/version "3.4.10"}
+  lilactown/helix              {:mvn/version "0.2.2"}
+  metosin/malli                {:mvn/version "0.16.4"}
+  io.github.open-hax/katamorph {:git/url "https://github.com/open-hax/katamorph.git"
+                                 :git/sha "708f1bb6ecc6221cd8d9bbd0ba7559537bdd46a6"}}}
