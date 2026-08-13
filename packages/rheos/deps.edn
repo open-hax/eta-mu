@@ -6,5 +6,9 @@
  {thheller/shadow-cljs         {:mvn/version "3.4.10"}
   lilactown/helix              {:mvn/version "0.2.2"}
   metosin/malli                {:mvn/version "0.16.4"}
-  io.github.open-hax/katamorph {:git/url "https://github.com/open-hax/katamorph.git"
-                                 :git/sha "708f1bb6ecc6221cd8d9bbd0ba7559537bdd46a6"}}}
+  ;; Katamorph owns the condition kernel; Rheos consumes it. Pinned by sha the
+  ;; way packages/sol/deps.edn is, and awaiting the same treatment: sol carries
+  ;; :git/tag alongside, which is what keeps a pin resolvable after the branch
+  ;; it came from is gone. This sha is open-hax/katamorph#7, so it needs
+  ;; re-pinning to a tagged main commit before this merges.
+  io.github.open-hax/katamorph {:git/sha "e6b925ffdea66ce73d85de21cf18336cdf80fa07"}}}
