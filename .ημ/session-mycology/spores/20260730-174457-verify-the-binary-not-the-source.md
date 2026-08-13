@@ -25,5 +25,20 @@ Any question of the form 'does this package/repo have X' answered by running a g
 ## Better path
 Answer capability questions from SOURCE first: find the command registry and read it. Then, to test behaviour, resolve what would actually run — readlink -f $(which <cli>), compare against the package bin and version, and state which one you are exercising. Build from the installed root and invoke the artifact by path (node packages/<pkg>/dist-cli/index.cjs), never the bare name. Treat exit code 0 as insufficient: grep the build log for warning counts, because a worktree build lacking node_modules exited 0 with 163 undeclared-var warnings and produced a binary that threw at runtime. When a finding is retracted, append a :refutation receipt rather than editing the earlier one.
 
+## Second sighting, 2026-08-06 — the sharper form
+The original framing was "the stale artifact answers capability questions wrongly." The stronger version: **a merged, verified, receipted fix is not in force until the artifact is rebuilt.** PR #182 fixed `eta-mu kanban comment --text` silently recording the literal string `--text` while returning `ok: true`. It merged. The next session, on `main`, the first comment attempt reproduced it exactly and corrupted a card. The fix was correct; `eta-mu-beta` symlinks to `packages/eta-mu/dist-cli/index.cjs`, a gitignored build artifact that `git pull` does not touch. `pnpm -C packages/rheos build && pnpm -C packages/eta-mu build` made it bind correctly.
+
+The aggravating factor is evidential, not mechanical: the receipt and the closed card both said the bug was fixed, so an agent reading the ledger would reasonably stop suspecting it — the record actively argues against re-testing. Same trap for every mutation verb, not just `comment`.
+
+Additions to the better path: after pulling or switching branches, rebuild `dist-cli` before invoking any mutating verb, and probe once with a disposable value before sending real content to a mutation surface — the probe here cost one line to clean up; the real comment would have cost a paragraph. Do not let a receipt asserting "fixed" substitute for observing the fixed behaviour in the binary you are about to run. Carded as `a-merged-fix-to-a-mutation-surface-is-not-in-force-until-dist-cli-is-rebuilt` (incoming), which is where the durable enforcement belongs.
+
+## Third sighting, 2026-08-09 — the consumer's copy is a third artifact
+
+The first two sightings were about a *stale* artifact answering for the working tree. The published package is a third artifact again, and it can be wrong while both source and local build are right.
+
+`@eta-mu/clio`'s manifest listed only `src` and the README, so every CLI command its own README documented was absent from the tarball. Adding `bin`, `nbb.edn`, and a `bin` mapping looked sufficient from the manifest. It was not: `npm pack` into an empty project outside the monorepo failed with `Could not find namespace: clio.extern.js.process`, because npm installs a bin as a symlink under the consumer's `node_modules/.bin` and nbb walks up from the *unresolved* script path to find `nbb.edn`. The `#!/usr/bin/env nbb` line also picked a global nbb 1.3.204 over the declared 1.3.201. Nothing in the repository could have shown this — the in-repo invocation works, because in the repo the script path is real.
+
+Addition to the better path: when a change claims a package ships or exposes something, verify from the consumer's position — `npm pack --pack-destination`, install the tarball into a scratch project outside the workspace, and run the advertised commands there. `files`, `bin`, and `exports` are claims about a tarball, and reading them is not testing them.
+
 ## Receipt refs
-- none
+- 2026-08-07T02:28:38.522Z

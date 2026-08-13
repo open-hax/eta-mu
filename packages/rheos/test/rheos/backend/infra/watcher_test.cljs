@@ -5,6 +5,7 @@
             [cljs.test :refer [deftest testing is]]
             [rheos.backend.infra.watcher :as watcher]
             [rheos.backend.domain.events :as events]
+            [rheos.backend.law.fsm :as fsm]
             [rheos.backend.shape.content-parser :as content-parser]))
 
 (defn- tmp-dir []
@@ -115,6 +116,140 @@
         (finally
           (unsub)
           (await (.rm fsp dir #js {:recursive true :force true})))))))
+
+;; A card the way git delivers one: plain YAML, no write-id. Nothing here is
+;; malformed — `status: incoming` is the shape hand-authored and normalized
+;; cards carry, and `write-task!` above (quoted, CLI-shaped) is the reason this
+;; class of card went unnoticed by every test in this file.
+(defn- write-git-delivered-task! [dir uuid status]
+  (let [file-path (path/join dir (str uuid ".md"))
+        raw (str "---\n"
+                 "uuid: " uuid "\n"
+                 "title: A card that arrived through git\n"
+                 "status: " status "\n"
+                 "priority: P1\n"
+                 "---\n\n# A card that arrived through git\n\nBody")]
+    (.writeFile fsp file-path raw "utf8")))
+
+(deftest ^:async unquoted-frontmatter-status-is-read-not-rejected
+  (testing "A git-delivered card with plain YAML frontmatter is valid, not invalid"
+    (let [dir (tmp-dir)
+          _ (await (.mkdir fsp dir #js {:recursive true}))
+          _ (await (write-git-delivered-task! dir "g1" "incoming"))
+          captured (atom [])
+          unsub (events/subscribe! #(swap! captured conj %))]
+      (try
+        (await (watcher/handle-file-event! "test" dir (path/join dir "g1.md") "add"))
+        (let [verdicts (filter #(= "drift-protocol-rerun" (:type %)) @captured)]
+          (is (= 1 (count verdicts)))
+          (is (= "incoming" (:status (first verdicts)))
+              "the status is on the card in valid YAML; the watcher must read it")
+          (is (= "valid" (:result (first verdicts))))
+          (is (not (some #(= "invalid" (:result %)) verdicts))))
+        (finally
+          (unsub)
+          (await (.rm fsp dir #js {:recursive true :force true})))))))
+
+(deftest ^:async every-fsm-status-survives-git-delivery
+  (testing "No FSM status is recorded as invalid when git lands the card"
+    (let [dir (tmp-dir)
+          _ (await (.mkdir fsp dir #js {:recursive true}))
+          captured (atom [])
+          unsub (events/subscribe! #(swap! captured conj %))]
+      (try
+        (doseq [status (:states fsm/promethean-fsm)]
+          (await (write-git-delivered-task! dir (str "g-" status) status))
+          (await (watcher/handle-file-event! "test" dir (path/join dir (str "g-" status ".md")) "add")))
+        (let [verdicts (filter #(= "drift-protocol-rerun" (:type %)) @captured)]
+          (is (= (count (:states fsm/promethean-fsm)) (count verdicts)))
+          (is (every? #(= "valid" (:result %)) verdicts)
+              (str "recorded non-valid verdicts: "
+                   (pr-str (remove #(= "valid" (:result %)) verdicts)))))
+        (finally
+          (unsub)
+          (await (.rm fsp dir #js {:recursive true :force true})))))))
+
+(deftest ^:async unreadable-status-is-unknown-not-invalid
+  (testing "A card with no status is an unknown, not an FSM violation"
+    (let [dir (tmp-dir)
+          _ (await (.mkdir fsp dir #js {:recursive true}))
+          file-path (path/join dir "g2.md")
+          _ (await (.writeFile fsp file-path
+                               "---\nuuid: g2\ntitle: No status at all\n---\n\nBody" "utf8"))
+          captured (atom [])
+          unsub (events/subscribe! #(swap! captured conj %))]
+      (try
+        (await (watcher/handle-file-event! "test" dir file-path "add"))
+        (let [verdicts (filter #(= "drift-protocol-rerun" (:type %)) @captured)]
+          (is (= 1 (count verdicts)))
+          (is (= "unknown" (:result (first verdicts)))
+              "failing to read a status is not a claim about the card's contents"))
+        (finally
+          (unsub)
+          (await (.rm fsp dir #js {:recursive true :force true})))))))
+
+(deftest ^:async genuine-out-of-band-edit-still-drifts
+  (testing "The fix does not silence real drift"
+    (let [dir (tmp-dir)
+          _ (await (.mkdir fsp dir #js {:recursive true}))
+          file-path (path/join dir "g3.md")
+          _ (await (.writeFile fsp file-path
+                               (str "---\nuuid: g3\ntitle: Edited behind the tool\n"
+                                    "status: not_a_real_state\n---\n\nBody") "utf8"))
+          captured (atom [])
+          unsub (events/subscribe! #(swap! captured conj %))]
+      (try
+        (await (watcher/handle-file-event! "test" dir file-path "change"))
+        (is (some #(and (= "drift-detected" (:type %)) (= "g3" (:task-id %))) @captured)
+            "an uncorrelated write is still drift")
+        (is (some #(and (= "drift-protocol-rerun" (:type %))
+                        (= "invalid" (:result %))
+                        (= "not_a_real_state" (:status %)))
+                  @captured)
+            "a status outside the FSM is still a genuine violation")
+        (finally
+          (unsub)
+          (await (.rm fsp dir #js {:recursive true :force true})))))))
+
+(deftest ^:async status-quoted-in-prose-is-not-the-cards-status
+  (testing "Frontmatter is the only place a status is read from"
+    (let [dir (tmp-dir)
+          _ (await (.mkdir fsp dir #js {:recursive true}))
+          file-path (path/join dir "g4.md")
+          ;; A card whose body documents FSM frontmatter — the old whole-file
+          ;; regex reported the prose example as this card's status.
+          _ (await (.writeFile fsp file-path
+                               (str "---\nuuid: g4\ntitle: Card about cards\n"
+                                    "status: incoming\n---\n\n"
+                                    "Set the field like this:\n\n"
+                                    "    status: \"done\"\n") "utf8"))
+          captured (atom [])
+          unsub (events/subscribe! #(swap! captured conj %))]
+      (try
+        (await (watcher/handle-file-event! "test" dir file-path "add"))
+        (let [verdict (first (filter #(= "drift-protocol-rerun" (:type %)) @captured))]
+          (is (= "incoming" (:status verdict))
+              "a status quoted in the body must not be read as the card's status")
+          (is (= "valid" (:result verdict))))
+        (finally
+          (unsub)
+          (await (.rm fsp dir #js {:recursive true :force true})))))))
+
+(deftest status-verdict-separates-unreadable-from-forbidden
+  (testing "unknown, valid, and invalid are three distinct outcomes"
+    (is (= "unknown" (watcher/status-verdict nil)))
+    (is (= "unknown" (watcher/status-verdict "")))
+    (is (= "unknown" (watcher/status-verdict "   ")))
+    (is (= "invalid" (watcher/status-verdict "not_a_real_state")))
+    (doseq [s (:states fsm/promethean-fsm)]
+      (is (= "valid" (watcher/status-verdict s))))))
+
+(deftest card-fields-reads-plain-and-quoted-yaml-alike
+  (testing "Both frontmatter dialects on this board parse identically"
+    (let [quoted "---\nuuid: \"a\"\nstatus: \"incoming\"\nwrite-id: \"w1\"\n---\n\nBody"
+          plain "---\nuuid: a\nstatus: incoming\nwrite-id: w1\n---\n\nBody"]
+      (is (= {:uuid "a" :status "incoming" :write-id "w1"} (watcher/card-fields quoted)))
+      (is (= (watcher/card-fields quoted) (watcher/card-fields plain))))))
 
 (deftest projected-narrows-what-counts-as-a-card-file
   (let [root (path/resolve "/board")

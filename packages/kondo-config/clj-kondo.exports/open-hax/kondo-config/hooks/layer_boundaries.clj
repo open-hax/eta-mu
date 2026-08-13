@@ -5,15 +5,14 @@
    Each layer may require the layers below it and its own siblings, and nothing
    above:
 
-     law     — no dependencies. Validators only.
-     shape   — law. Pure, domain-agnostic morphisms.
-     extern  — law, shape. The only place raw JS/Node/browser/SDK boundaries live.
-     domain  — law, shape. Pure decisions over shaped data.
-     infra   — everything. Effect orchestration.
+     law    — no dependencies. Validators only.
+     shape  — law. Pure, domain-agnostic morphisms.
+     extern — law, shape. The only place raw JS/Node/browser/SDK boundaries live.
+     domain — law, shape. Pure decisions over shaped data.
+     infra  — everything. Effect orchestration.
 
    A host require (a string libspec such as \"node:fs/promises\", \"chokidar\",
-   or \"fastify\") is therefore legal only in `extern.*` and `infra.*`: those are
-   the layers allowed to touch the host at all.
+   or \"fastify\") is therefore legal only in `extern.*` and `infra.*`.
 
    Two finding types, so a package can tune them apart:
 
@@ -21,15 +20,9 @@
      :layer-boundary/host-require   — a host module required from a pure layer
 
    The layer of a namespace is its last segment named after a layer, so
-   `rheos.backend.domain.task-create` is `domain` and `open-hax.sol.extern.fetch`
-   is `extern`. A namespace with no layer segment is not checked, and neither is
-   a `*-test` one: a test is not part of the construction DAG, and a fixture that
-   needs a temp directory to exercise a pure decision is not a layer violation.
-   Silence a false positive (a `domain` that means a DNS domain, say) per
-   namespace:
-
-     :config-in-ns {your.dns.domain.parser
-                    {:linters {:layer-boundary/host-require {:level :off}}}}
+   `rheos.backend.domain.task-create` is `domain` and
+   `open-hax.sol.extern.fetch` is `extern`. A namespace with no layer segment is
+   not checked, and neither is a `*-test` one.
 
    `cljs.core/ns` takes exactly one analyze-call hook, so this one also runs the
    promise-chain ns check that used to be wired there directly."
@@ -37,7 +30,8 @@
             [clojure.string :as str]
             [hooks.promise-chain :as promise-chain]))
 
-(def ^:private layers #{"law" "shape" "extern" "domain" "infra"})
+(def ^:private layers
+  #{"law" "shape" "extern" "domain" "infra"})
 
 (def ^:private allowed-below
   {"law"    #{"law"}
@@ -46,7 +40,8 @@
    "domain" #{"law" "shape" "domain"}
    "infra"  #{"law" "shape" "extern" "domain" "infra"}})
 
-(def ^:private host-layers #{"extern" "infra"})
+(def ^:private host-layers
+  #{"extern" "infra"})
 
 (def ^:private depends-on
   {"law"    "nothing — a law is a description, so it has no dependencies"
@@ -118,7 +113,17 @@
 
 (defn check-ns [{:keys [node] :as ctx}]
   (doseq [f (try (layer-findings node)
-                 ;; A malformed ns form is the ns linter's business, not ours.
                  (catch Exception _ nil))]
     (api/reg-finding! f))
   (promise-chain/check-ns ctx))
+
+(defn check-js-star
+  "Flag every `js*` special-form call. `:config-in-ns` turns this off for the
+   namespaces a package designates as its extern.js.* boundary, so raw JS
+   interop stays reported everywhere else without this hook needing to know
+   which namespace it is currently analyzing."
+  [{:keys [node]}]
+  (api/reg-finding!
+   (finding node :layer-boundary/js-star-interop
+            "raw `js*` interop must stay behind extern.js.*; decode foreign data there and return Clojure values."))
+  {:node node})

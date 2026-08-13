@@ -9,12 +9,43 @@
    :gate/paths
    ["packages/legacy/docs/"
     "packages/legacy/github/"
+    "packages/clio/"
+    "packages/kondo-config/"
+    "scripts/test.bb"
+    "scripts/lint.bb"
+    "pnpm-lock.yaml"
+    "package.json"
+    "pnpm-workspace.yaml"
     ".github/workflows/"
     "contracts/workflows/ci.edn"],
    :gate/emitting true,
    :gate/steps
    [{:step/run "pnpm --dir packages/extensions build"}
     {:step/run "pnpm lint"}]}
+  {:gate/id "clio",
+   :gate/workflow "main-pr-gate",
+   :gate/job "clio",
+   :gate/check "clio-nbb-shadow-lint",
+   :gate/paths
+   ["packages/legacy/docs/"
+    "packages/legacy/github/"
+    "packages/clio/"
+    "packages/kondo-config/"
+    "scripts/test.bb"
+    "scripts/lint.bb"
+    "pnpm-lock.yaml"
+    "package.json"
+    "pnpm-workspace.yaml"
+    ".github/workflows/"
+    "contracts/workflows/ci.edn"],
+   :gate/emitting true,
+   :gate/steps
+   [{:step/run "pnpm --dir packages/clio lint"}
+    {:step/run "pnpm --dir packages/clio test",
+     :gate/expect "0 failures, 0 errors"}
+    {:step/run "bb scripts/lint.bb --only clio --kondo-only"}
+    {:step/run "bb scripts/test.bb --only clio",
+     :gate/expect "0 failures, 0 errors"}]}
   {:gate/id "main-tests",
    :gate/workflow "main-pr-gate",
    :gate/job "main-tests",
@@ -22,6 +53,13 @@
    :gate/paths
    ["packages/legacy/docs/"
     "packages/legacy/github/"
+    "packages/clio/"
+    "packages/kondo-config/"
+    "scripts/test.bb"
+    "scripts/lint.bb"
+    "pnpm-lock.yaml"
+    "package.json"
+    "pnpm-workspace.yaml"
     ".github/workflows/"
     "contracts/workflows/ci.edn"],
    :gate/emitting true,

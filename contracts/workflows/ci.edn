@@ -32,6 +32,13 @@
      :on/branches ["main"]
      :on/paths ["packages/legacy/docs/**"
                 "packages/legacy/github/**"
+                "packages/clio/**"
+                "packages/kondo-config/**"
+                "scripts/test.bb"
+                "scripts/lint.bb"
+                "pnpm-lock.yaml"
+                "package.json"
+                "pnpm-workspace.yaml"
                 ".github/workflows/*.yml"
                 ;; A change to the declaration, the action registry, or the
                 ;; projector changes what this workflow *is*. Without these a
@@ -57,7 +64,14 @@
      :job/permissions {}
      :job/gate {:gate/id "eta-mu-lint"
                 :gate/check "eta-mu-lint"
-                :gate/paths ["packages/legacy/docs/" "packages/legacy/github/" ".github/workflows/"]}
+                ;; GitHub Actions triggers this workflow as a unit, not one
+                ;; job at a time. Every local gate for the workflow therefore
+                ;; selects on the complete pull_request path set.
+                :gate/paths ["packages/legacy/docs/" "packages/legacy/github/"
+                             "packages/clio/" "packages/kondo-config/"
+                             "scripts/test.bb" "scripts/lint.bb"
+                             "pnpm-lock.yaml" "package.json" "pnpm-workspace.yaml"
+                             ".github/workflows/"]}
      :job/steps
      [{:step/use :checkout}
       {:step/use :jvm}
@@ -67,6 +81,33 @@
       {:step/run "pnpm --dir packages/extensions build" :step/gate true}
       {:step/run "pnpm lint" :step/gate true}]}
 
+    {:job/id "clio"
+     :job/name "clio-nbb-shadow-lint"
+     :job/runner :ubuntu-latest
+     :job/timeout-minutes 20
+     :job/permissions {}
+     :job/gate {:gate/id "clio"
+                :gate/check "clio-nbb-shadow-lint"
+                :gate/paths ["packages/legacy/docs/" "packages/legacy/github/"
+                             "packages/clio/" "packages/kondo-config/"
+                             "scripts/test.bb" "scripts/lint.bb"
+                             "pnpm-lock.yaml" "package.json" "pnpm-workspace.yaml"
+                             ".github/workflows/"]}
+     :job/steps
+     [{:step/use :checkout}
+      {:step/use :jvm}
+      {:step/use :bb-and-kondo}
+      {:step/use :node-pnpm}
+      {:step/run "pnpm install --frozen-lockfile"}
+      {:step/run "pnpm --dir packages/clio lint" :step/gate true}
+      {:step/run "pnpm --dir packages/clio test"
+       :step/gate true
+       :gate/expect "0 failures, 0 errors"}
+      {:step/run "bb scripts/lint.bb --only clio --kondo-only" :step/gate true}
+      {:step/run "bb scripts/test.bb --only clio"
+       :step/gate true
+       :gate/expect "0 failures, 0 errors"}]}
+
     {:job/id "main-tests"
      :job/name "main-tests"
      :job/runner :ubuntu-latest
@@ -74,7 +115,11 @@
      :job/permissions {}
      :job/gate {:gate/id "main-tests"
                 :gate/check "main-tests"
-                :gate/paths ["packages/legacy/docs/" "packages/legacy/github/" ".github/workflows/"]}
+                :gate/paths ["packages/legacy/docs/" "packages/legacy/github/"
+                             "packages/clio/" "packages/kondo-config/"
+                             "scripts/test.bb" "scripts/lint.bb"
+                             "pnpm-lock.yaml" "package.json" "pnpm-workspace.yaml"
+                             ".github/workflows/"]}
      :job/steps
      [{:step/use :checkout}
       {:step/action :setup-node
