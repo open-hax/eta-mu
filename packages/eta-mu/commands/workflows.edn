@@ -1,0 +1,35 @@
+;; Shipped command resources — tools that travel with eta-mu.
+;;
+;; This directory is packaged (package.json `files`), so a global
+;; `npm i -g eta-mu` carries these commands into every project. That is the
+;; distinction that matters: `workflows` is a tool, not a property of whichever
+;; repository happens to be checked out. Its script resolves against the
+;; installed package, never against the working directory.
+;;
+;; Project-local commands live in `<repo>/contracts/commands/` and override
+;; these by name; per-person ones live in `~/.config/eta-mu/commands/`.
+;;
+;; The boundary is data in, data out. The script receives an EDN context in
+;; `ETA_MU_CONTEXT` and owns its own stdio; argv is exactly what the user typed.
+;; It gets no in-process handle on eta-mu — anything it needs from eta-mu it
+;; asks for by shelling back to `eta-mu ...`, which already has a published exit
+;; contract. There is deliberately no injected context object to version.
+;;
+;; :command/runtime picks the interpreter. `bb` for repository tooling —
+;; effectively instant, carries clj-yaml. `nbb` for extensions that need Node or
+;; npm interop, at roughly 100ms startup.
+
+{:namespace :eta-mu.commands
+
+ :resources
+ [{:contract/kind :command
+   :contract/id "workflows"
+   :command/name "workflows"
+   :command/summary "Project workflow resources onto GitHub Actions and local gates"
+   :command/runtime :nbb
+   :command/script "commands/workflows.cljs"
+   :command/doc
+   "Reads katamorph workflow resources from contracts/workflows/ and emits both
+    .github/workflows/*.yml and the local gate plan.
+
+    Subcommands: list, show <id>, emit [--target ...] [--dry-run], check."}]}

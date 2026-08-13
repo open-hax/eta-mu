@@ -1,0 +1,19 @@
+;; Shipped command resource for the gate runner.
+;;
+;; Carries no gates of its own — it reads contracts/workflows/.gates.edn,
+;; projected from the project's workflow resources. That is what makes it a
+;; tool rather than a copy of one repository's CI.
+
+{:namespace :eta-mu.commands
+
+ :resources
+ [{:contract/kind :command
+   :contract/id "gates"
+   :command/name "gates"
+   :command/summary "Run this project's CI gates locally"
+   :command/runtime :nbb
+   :command/script "commands/gates.cljs"
+   :command/doc
+   "Runs the gates a branch's changed paths select, from the gate plan emitted
+    by `eta-mu workflows emit`. Flags: --all, --list, --only <id>, --base <ref>,
+    --audit."}]}
