@@ -1,80 +1,21 @@
 (ns rheos.backend.infra.task-store
-  "Task loading from projected Markdown files with YAML frontmatter parsing."
+  "Markdown discovery plus the legacy Kanban task projection."
   (:require ["node:fs/promises" :as fsp]
             ["node:path" :as path]
             [clojure.string :as str]
+            [rheos.backend.domain.kanban-projection :as kanban]
+            [rheos.backend.domain.markdown-document :as markdown]
             [rheos.backend.infra.projects :as projects]
             [rheos.backend.shape.kanban :as shape]))
 
 (def status-index
   (into {} (map-indexed (fn [i s] [s i]) shape/StatusOrder)))
 
-(defn- parse-yaml-simple [yaml-str]
-  (let [lines (str/split-lines yaml-str)]
-    (reduce (fn [acc line]
-              (cond
-                (re-matches #"^(\w[\w_-]*):\s*\"(.*)\"\s*" line)
-                (let [[_ k v] (re-matches #"^(\w[\w_-]*):\s*\"(.*)\"\s*" line)]
-                  (assoc acc (keyword k) v))
-
-                (re-matches #"^(\w[\w_-]*):\s*(.+)\s*" line)
-                (let [[_ k v] (re-matches #"^(\w[\w_-]*):\s*(.+)\s*" line)]
-                  (assoc acc (keyword k) (str/trim v)))
-
-                (re-matches #"^(\w[\w_-]*):\s*$" line)
-                (let [[_ k] (re-matches #"^(\w[\w_-]*):\s*$" line)]
-                  (assoc acc (keyword k) ""))
-
-                :else acc))
-            {}
-            lines)))
-
-(defn- parse-frontmatter [raw]
-  (let [match (re-matches #"---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)" raw)]
-    (if match
-      (let [yaml-str (nth match 1)
-            content (nth match 2)
-            parsed (parse-yaml-simple yaml-str)]
-        {:frontmatter parsed :content content})
-      {:frontmatter {} :content raw})))
-
-(defn- normalize-labels [labels tags]
-  (let [raw (or labels tags [])
-        items (cond
-                (string? raw) (str/split raw #",")
-                (vector? raw) raw
-                :else [])]
-    (vec (distinct (filter seq (mapv str/trim items))))))
-
-(defn- normalize-status [status]
-  (case (-> (or status "incoming") str/lower-case str/trim)
-    "pending" "incoming"
-    "completed" "done"
-    (-> (or status "incoming") str/lower-case str/trim)))
-
-(defn- ^:async parse-task-file [file-path _tasks-dir]
+(defn- ^:async read-document-file [file-path]
   (try
-    (let [raw (await (.readFile fsp file-path "utf8"))
-          {:keys [frontmatter content]} (parse-frontmatter raw)
-          title (or (:title frontmatter) (path/basename file-path ".md"))
-          priority (-> (or (:priority frontmatter) "P3") str/upper-case str/trim)
-          labels (normalize-labels (:labels frontmatter) (:tags frontmatter))
-          uuid (or (:uuid frontmatter)
-                   (:slug frontmatter)
-                   (-> title str/lower-case (str/replace #"[^a-z0-9]+" "-")))
-          status (normalize-status (:status frontmatter))
-          created-at (or (:created_at frontmatter)
-                         (:createdAt frontmatter)
-                         (.toISOString (new js/Date)))]
-      {:uuid uuid
-       :title title
-       :slug (or (:slug frontmatter) uuid)
-       :status status
-       :priority priority
-       :labels labels
-       :created-at created-at
-       :content content
-       :source-path file-path})
+    (let [raw (await (.readFile fsp file-path "utf8"))]
+      (assoc (markdown/parse raw)
+             :document/source-path file-path))
     (catch :default err
       (js/console.error "Parse error:" file-path (.-message err))
       nil)))
@@ -165,47 +106,64 @@
    (str/lower-case (:title task))])
 
 (defn- source->project
-  "Normalize `load-tasks`' argument. A project map passes through; a tasks-dir
-   string is resolved through the shared registry so a configured project keeps
-   its `:card-projection`."
+  "Normalize a loader source. A project map passes through; a tasks-dir string
+   is resolved through the shared registry so configured projections survive."
   [source]
   (if (map? source)
     source
     (or (projects/find-project-by-tasks-dir source)
         {:tasks-dir source})))
 
+(defn- resolve-source [source caller]
+  (when-not (or (map? source) (and (string? source) (seq source)))
+    (throw (ex-info (str caller " expects a project map or a tasks directory path, got: " (pr-str source))
+                    {:kind :usage :source source})))
+  (let [project (source->project source)
+        tasks-dir (:tasks-dir project)]
+    (when-not (and (string? tasks-dir) (seq tasks-dir))
+      (throw (ex-info (str caller " resolved no tasks directory from: " (pr-str source))
+                      {:kind :usage :source source :tasks-dir tasks-dir})))
+    (let [projection (:card-projection project)
+          roots (if (and projection (contains? projection :paths))
+                  (:paths projection)
+                  [tasks-dir])]
+      {:project project
+       :tasks-dir tasks-dir
+       :roots roots})))
+
+(defn- ^:async load-documents* [{:keys [roots]}]
+  (let [nested (await (js/Promise.all
+                       (clj->js (mapv collect-markdown-files roots))))
+        files (vec (distinct (apply concat nested)))
+        documents-raw (await (js/Promise.all
+                              (clj->js (mapv read-document-file files))))]
+    (filterv some? (vec documents-raw))))
+
+(defn ^:async load-documents
+  "Load Markdown documents losslessly from the same configured roots Rheos uses
+   for card projections.
+
+   Frontmatter interpretation may be partial, but the exact frontmatter payload,
+   body, and source path remain available to profile/reaction consumers."
+  [source]
+  (await (load-documents* (resolve-source source "load-documents"))))
+
+(defn- document->task [document]
+  (let [source-path (:document/source-path document)]
+    (kanban/task document
+                 {:fallback-title (path/basename source-path ".md")
+                  :fallback-created-at (.toISOString (new js/Date))
+                  :source-path source-path})))
+
 (defn ^:async load-tasks
   "Load materialized card projections for a project.
 
-   `source` is either a project map or a bare tasks-dir string. A project with
-   `:card-projection {:paths [...]}` scans only those resolved paths; a bare
-   tasks-dir preserves recursive legacy discovery.
-
-   The resolved tasks-dir is checked because getting it wrong used to be
-   invisible: `readdir` throws on a bad argument, [[collect-markdown-files]]
-   catches everything and returns `[]`, and the caller reads that as \"the board
-   has no cards\". A CLI verb shipped with exactly that mistake and reported
-   `unknown task` for cards that existed. Fail where the mistake is, not five
-   frames later — accepting a project map here does not make an unusable one
-   silent."
+   The filesystem boundary now loads lossless Markdown documents first. Kanban
+   fields and defaults are a projection over those documents, not the ingest
+   representation itself. Existing project/card-projection discovery behavior is
+   preserved."
   [source]
-  (when-not (or (map? source) (and (string? source) (seq source)))
-    (throw (ex-info (str "load-tasks expects a project map or a tasks directory path, got: " (pr-str source))
-                    {:kind :usage :source source})))
-  (let [project (source->project source)
-        tasks-dir (:tasks-dir project)
-        _ (when-not (and (string? tasks-dir) (seq tasks-dir))
-            (throw (ex-info (str "load-tasks resolved no tasks directory from: " (pr-str source))
-                            {:kind :usage :source source :tasks-dir tasks-dir})))
-        projection (:card-projection project)
-        roots (if (and projection (contains? projection :paths))
-                (:paths projection)
-                [tasks-dir])
-        nested (await (js/Promise.all
-                       (clj->js (mapv collect-markdown-files roots))))
-        files (vec (distinct (apply concat nested)))
-        tasks-raw (await (js/Promise.all
-                          (clj->js
-                           (mapv #(parse-task-file % tasks-dir) files))))
-        tasks (filterv some? (vec tasks-raw))]
+  (let [resolved (resolve-source source "load-tasks")
+        documents (await (load-documents* resolved))
+        tasks (mapv document->task documents)]
     (vec (sort-by task-sort-key tasks))))
