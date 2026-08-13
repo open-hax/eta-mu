@@ -1,11 +1,8 @@
 (ns rheos.backend.law.condition
-  (:require [rheos.backend.law.condition.basic :as basic]
-            [rheos.backend.law.condition.membership :as membership]))
+  (:require [katamorph.condition :as shared]))
 
-(defn match-leaf? [context condition]
-  (case (:condition/op condition)
-    :eq (basic/equal? context condition)
-    :not-eq (membership/not-equal? context condition)
-    :exists (basic/exists? context condition)
-    :in (membership/in? context condition)
-    false))
+(defn match? [context condition-value]
+  (shared/match? context condition-value))
+
+(defn match-leaf? [context condition-value]
+  (shared/match? context condition-value))

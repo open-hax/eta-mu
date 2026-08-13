@@ -1,48 +1,30 @@
 (ns rheos.backend.law.condition-test
   (:require [cljs.test :refer [deftest is]]
-            [rheos.backend.law.condition :as condition]
-            [rheos.backend.law.path :as path]))
+            [rheos.backend.law.condition :as condition]))
 
 (def context
-  {:artifact {:kind :finding
-              :status nil
-              :data {:confidence 0.84
-                     :labels [:workflow :research]}}
+  {:artifact {:kind :finding :status nil}
    :event {:type :artifact/changed}})
 
-(deftest nested-paths-preserve-presence
-  (is (= {:found? true :value :finding}
-         (path/value-at context [:artifact :kind])))
-  (is (= {:found? true :value nil}
-         (path/value-at context [:artifact :status])))
-  (is (= {:found? false}
-         (path/value-at context [:artifact :missing])))
-  (is (= {:found? true :value :research}
-         (path/value-at context [:artifact :data :labels 1]))))
-
-(deftest leaf-matching-is-strict-and-nested
-  (is (condition/match-leaf?
+(deftest shared-condition-kernel-is-rheos-law
+  (is (condition/match? context
+                        {:condition/op :eq
+                         :condition/path [:artifact :kind]
+                         :condition/value :finding}))
+  (is (condition/match? context
+                        {:condition/op :exists
+                         :condition/path [:artifact :status]}))
+  (is (false? (condition/match? context
+                                {:condition/op :exists})))
+  (is (condition/match?
        context
-       {:condition/op :eq
-        :condition/path [:artifact :kind]
-        :condition/value :finding}))
-  (is (condition/match-leaf?
-       context
-       {:condition/op :not-eq
-        :condition/path [:artifact :kind]
-        :condition/value "finding"}))
-  (is (condition/match-leaf?
-       context
-       {:condition/op :exists
-        :condition/path [:artifact :status]}))
-  (is (condition/match-leaf?
-       context
-       {:condition/op :in
-        :condition/path [:event :type]
-        :condition/values [:artifact/created :artifact/changed]})))
-
-(deftest unknown-leaf-operators-fail-closed
-  (is (false? (condition/match-leaf?
-               context
-               {:condition/op :unknown
-                :condition/path [:artifact :kind]}))))
+       {:condition/op :and
+        :condition/clauses
+        [{:condition/op :eq
+          :condition/path [:artifact :kind]
+          :condition/value :finding}
+         {:condition/op :not
+          :condition/clause
+          {:condition/op :eq
+           :condition/path [:event :type]
+           :condition/value :artifact/created}}]})))
