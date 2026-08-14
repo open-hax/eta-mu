@@ -53,6 +53,18 @@ test('addedRightLines indexes only added lines on the PR head side', () => {
   assert.deepEqual([...addedRightLines(patch)], [11, 12]);
 });
 
+test('addedRightLines treats +++ and --- prefixes as diff content inside hunks', () => {
+  const patch = [
+    '@@ -20,4 +20,5 @@',
+    ' context',
+    '---',
+    '+++i',
+    '+tail',
+  ].join('\n');
+
+  assert.deepEqual([...addedRightLines(patch)], [21, 22]);
+});
+
 test('validateEnvelope accepts a clean approval', () => {
   const value = envelope();
   assert.equal(validateEnvelope(value, new Map()), value);
