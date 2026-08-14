@@ -395,14 +395,16 @@ jobs:
       - name: Test deterministic review publisher
         run: node --test .github/scripts/publish-opencode-review.test.cjs
 
-      - name: Create eta-mu GitHub App token
-        id: eta_mu_token
+      - name: Create eta-mu GitHub App token for OpenCode
+        id: eta_mu_opencode_token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.ETA_MU_APP_ID }}
           private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          # OpenCode revokes the installation token it receives when the action exits.
+          skip-token-revoke: true
 
       - name: Capture review start time
         id: review_start
@@ -411,7 +413,7 @@ jobs:
       - name: Run evidence-first OpenCode review
         uses: anomalyco/opencode/github@40e4d730cac33cc9e76659ae7acb16b3a6132b83
         env:
-          GITHUB_TOKEN: ${{ steps.eta_mu_token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.eta_mu_opencode_token.outputs.token }}
         with:
           model: opencode/mimo-v2.5-free
           share: false
@@ -451,12 +453,21 @@ jobs:
             to its changed line. Test gaps and unresolved questions belong only in the review
             summary. If no confirmed finding survives validation, return an APPROVE envelope.
 
+      - name: Create eta-mu GitHub App token for review publication
+        id: eta_mu_publish_token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.ETA_MU_APP_ID }}
+          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
       - name: Publish actual GitHub pull request review
         uses: actions/github-script@v7
         env:
           REVIEW_STARTED_AT: ${{ steps.review_start.outputs.started_at }}
         with:
-          github-token: ${{ steps.eta_mu_token.outputs.token }}
+          github-token: ${{ steps.eta_mu_publish_token.outputs.token }}
           script: |
             const { publishReview } = require('./.github/scripts/publish-opencode-review.cjs');
             await publishReview({
@@ -473,7 +484,7 @@ jobs:
           DISCORD_REVIEW_WEBHOOK_URL: ${{ secrets.DISCORD_REVIEW_WEBHOOK_URL }}
           REVIEW_STARTED_AT: ${{ steps.review_start.outputs.started_at }}
         with:
-          github-token: ${{ steps.eta_mu_token.outputs.token }}
+          github-token: ${{ steps.eta_mu_publish_token.outputs.token }}
           script: |
             const webhookUrl = process.env.DISCORD_REVIEW_WEBHOOK_URL;
             const startedAt = new Date(process.env.REVIEW_STARTED_AT || 0);
