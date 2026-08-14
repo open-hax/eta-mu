@@ -9,7 +9,7 @@
 (deftest preserves-frontmatter-and-body
   (let [document (markdown/parse "---\ntitle: Finding A\n---\n# Finding A")]
     (is (law/valid? document))
-    (is (= "Finding A" (get-in document [:document/frontmatter/data :title])))
+    (is (= "Finding A" (get-in document [:document/frontmatter-data :title])))
     (is (= "# Finding A" (:document/body document)))))
 
 (deftest plain-markdown-remains-unchanged

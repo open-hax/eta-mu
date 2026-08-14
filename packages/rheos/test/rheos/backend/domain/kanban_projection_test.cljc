@@ -5,7 +5,7 @@
                      [rheos.backend.domain.kanban-projection :as kanban])))
 
 (deftest projects-historical-kanban-fields
-  (let [document {:document/frontmatter/data
+  (let [document {:document/frontmatter-data
                   {:title "Review evidence"
                    :status "completed"
                    :priority "p1"
@@ -25,7 +25,7 @@
     (is (= "Body" (:content task)))))
 
 (deftest projection-defaults-are-explicit-inputs
-  (let [document {:document/frontmatter/data {}
+  (let [document {:document/frontmatter-data {}
                   :document/body "Body"}
         task (kanban/task document
                           {:fallback-title "No Metadata"

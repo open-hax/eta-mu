@@ -22,7 +22,7 @@
 
 (defn task
   [document {:keys [fallback-title fallback-created-at source-path]}]
-  (let [frontmatter (:document/frontmatter/data document)
+  (let [frontmatter (:document/frontmatter-data document)
         title (or (:title frontmatter) fallback-title)
         priority (-> (or (:priority frontmatter) "P3") str/upper-case str/trim)
         labels (normalize-labels (:labels frontmatter) (:tags frontmatter))

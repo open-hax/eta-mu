@@ -38,11 +38,11 @@
   (if-let [[frontmatter-raw body] (split-frontmatter raw)]
     {:document/format :markdown
      :document/frontmatter-present? true
-     :document/frontmatter/raw frontmatter-raw
-     :document/frontmatter/data (frontmatter/parse-flat frontmatter-raw)
+     :document/frontmatter-raw frontmatter-raw
+     :document/frontmatter-data (frontmatter/parse-flat frontmatter-raw)
      :document/body body}
     {:document/format :markdown
      :document/frontmatter-present? false
-     :document/frontmatter/raw nil
-     :document/frontmatter/data {}
+     :document/frontmatter-raw nil
+     :document/frontmatter-data {}
      :document/body raw}))
