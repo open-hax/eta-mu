@@ -53,7 +53,8 @@ test('addedRightLines indexes only added lines on the PR head side', () => {
 });
 
 test('validateEnvelope accepts a clean approval', () => {
-  assert.equal(validateEnvelope(envelope(), new Map()), envelope().event);
+  const value = envelope();
+  assert.equal(validateEnvelope(value, new Map()), value);
 });
 
 test('validateEnvelope accepts a non-blocking inline review comment', () => {
