@@ -3,6 +3,59 @@ name: OpenCode evidence PR review
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_call:
+    inputs:
+      model:
+        description: OpenCode provider/model the reviewer runs.
+        required: false
+        type: string
+        default: opencode/mimo-v2.5-free
+      opencode_version:
+        description: Pinned opencode-ai npm version for the review runner.
+        required: false
+        type: string
+        default: 1.18.18
+      muse_revision:
+        description: Pinned octave-commons/muse commit used to compile the review observer projection.
+        required: false
+        type: string
+        default: f26538bd6c5ec3ef6084be9d2424d5b1daef648c
+      agents_revision:
+        description: Pinned riatzukiza/.agents commit mounted as global skills.
+        required: false
+        type: string
+        default: 7fd3252e7663ad5e68be5e90429d126aa66c38c8
+      setup_eta_mu_toolchain:
+        description: Install Java/Clojure/pnpm/Node before gates. Callers with their own toolchain disable this and provide evidence_gates_script.
+        required: false
+        type: boolean
+        default: true
+      evidence_gates_script:
+        description: Bash snippet of run_gate invocations producing deterministic evidence. Runs in the checked-out pull request.
+        required: false
+        type: string
+        default: |
+          run_gate install pnpm install --frozen-lockfile
+          install_status="$(awk -F= '$1 == "install" {print $2}' "$statuses")"
+          if [[ "$install_status" == "0" ]]; then
+            run_gate bootstrap_extensions pnpm --dir packages/extensions build
+            run_gate lint pnpm lint
+            run_gate test pnpm test
+            run_gate build pnpm build
+          else
+            echo "bootstrap_extensions=125" >> "$statuses"
+            echo "lint=125" >> "$statuses"
+            echo "test=125" >> "$statuses"
+            echo "build=125" >> "$statuses"
+            echo "Dependency installation failed; bootstrap, lint, test, and build were not attempted." >> "$log"
+          fi
+    secrets:
+      ETA_MU_APP_ID:
+        required: true
+      ETA_MU_APP_PRIVATE_KEY:
+        required: true
+      DISCORD_REVIEW_WEBHOOK_URL:
+        required: false
 
 concurrency:
   group: opencode-evidence-review-${{ github.event.pull_request.number }}
@@ -24,17 +77,20 @@ jobs:
           persist-credentials: false
 
       - name: Set up Java 21
+        if: ${{ inputs.setup_eta_mu_toolchain != false }}
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
 
       - name: Set up Clojure CLI 1.12.5.1654
+        if: ${{ inputs.setup_eta_mu_toolchain != false }}
         uses: DeLaGuardo/setup-clojure@13.4
         with:
           cli: 1.12.5.1654
 
       - name: Set up pnpm 10.14.0
+        if: ${{ inputs.setup_eta_mu_toolchain != false }}
         uses: pnpm/action-setup@v4
         with:
           version: "10.14.0"
@@ -44,7 +100,41 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: pnpm
+
+      - name: Stage pull request diff and context
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          evidence_dir="$GITHUB_WORKSPACE/.opencode/review-evidence"
+          mkdir -p "$evidence_dir"
+
+          git diff --find-renames "${PR_BASE_SHA}...HEAD" > "$evidence_dir/pr.diff" || true
+          if [[ ! -s "$evidence_dir/pr.diff" ]]; then
+            git diff --find-renames "${PR_BASE_SHA}" HEAD > "$evidence_dir/pr.diff"
+          fi
+          bytes="$(wc -c < "$evidence_dir/pr.diff")"
+          if [[ "$bytes" -gt 300000 ]]; then
+            head -c 300000 "$evidence_dir/pr.diff" > "$evidence_dir/pr.diff.truncated"
+            mv "$evidence_dir/pr.diff.truncated" "$evidence_dir/pr.diff"
+            printf '\n[eta-mu review] diff truncated at 300000 bytes (was %s).\n' "$bytes" >> "$evidence_dir/pr.diff"
+          fi
+
+          jq -r '
+            "# Pull request context",
+            "",
+            "- Number: #\(.pull_request.number)",
+            "- Title: \(.pull_request.title)",
+            "- Author: \(.pull_request.user.login)",
+            "- Branches: \(.pull_request.head.ref) -> \(.pull_request.base.ref)",
+            "- Head SHA: \(.pull_request.head.sha)",
+            "- Draft: \(.pull_request.draft)",
+            "",
+            "## Body",
+            "",
+            (.pull_request.body // "(no body)")
+          ' "$GITHUB_EVENT_PATH" > "$evidence_dir/pr-context.md"
 
       - name: Run deterministic gates
         id: gates
@@ -54,6 +144,7 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          EVIDENCE_GATES_SCRIPT: ${{ inputs.evidence_gates_script || '' }}
         run: |
           set +e
           evidence_dir="$GITHUB_WORKSPACE/.opencode/review-evidence"
@@ -80,20 +171,23 @@ jobs:
             return 0
           }
 
-          run_gate install pnpm install --frozen-lockfile
-          install_status="$(awk -F= '$1 == "install" {print $2}' "$statuses")"
-
-          if [[ "$install_status" == "0" ]]; then
-            run_gate bootstrap_extensions pnpm --dir packages/extensions build
-            run_gate lint pnpm lint
-            run_gate test pnpm test
-            run_gate build pnpm build
+          if [[ -n "${EVIDENCE_GATES_SCRIPT//[[:space:]]/}" ]]; then
+            eval "$EVIDENCE_GATES_SCRIPT"
           else
-            echo "bootstrap_extensions=125" >> "$statuses"
-            echo "lint=125" >> "$statuses"
-            echo "test=125" >> "$statuses"
-            echo "build=125" >> "$statuses"
-            echo "Dependency installation failed; bootstrap, lint, test, and build were not attempted." >> "$log"
+            run_gate install pnpm install --frozen-lockfile
+            install_status="$(awk -F= '$1 == "install" {print $2}' "$statuses")"
+            if [[ "$install_status" == "0" ]]; then
+              run_gate bootstrap_extensions pnpm --dir packages/extensions build
+              run_gate lint pnpm lint
+              run_gate test pnpm test
+              run_gate build pnpm build
+            else
+              echo "bootstrap_extensions=125" >> "$statuses"
+              echo "lint=125" >> "$statuses"
+              echo "test=125" >> "$statuses"
+              echo "build=125" >> "$statuses"
+              echo "Dependency installation failed; bootstrap, lint, test, and build were not attempted." >> "$log"
+            fi
           fi
 
           node <<'NODE'
@@ -151,7 +245,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: octave-commons/muse
-          ref: 76c57712a48ef48100259231a2e9d54069c2b14a
+          ref: ${{ inputs.muse_revision || 'f26538bd6c5ec3ef6084be9d2424d5b1daef648c' }}
           path: .review-context/muse
           persist-credentials: false
 
@@ -159,7 +253,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: riatzukiza/.agents
-          ref: 7fd3252e7663ad5e68be5e90429d126aa66c38c8
+          ref: ${{ inputs.agents_revision || '7fd3252e7663ad5e68be5e90429d126aa66c38c8' }}
           path: .review-context/agents
           persist-credentials: false
 
@@ -223,6 +317,14 @@ jobs:
                         :task_status
                         :task_list
                         :agent_list}
+             :policy :allow}
+            {:id :review/allow-review-pipeline
+             :applies #{:review_begin
+                        :review_record_evidence
+                        :review_propose_finding
+                        :review_classify_finding
+                        :review_status
+                        :review_submit}
              :policy :allow}]}
           EOF
 
@@ -231,6 +333,7 @@ jobs:
            :id                     :eta-mu/review-observers
            :imports
            ["../shared/profiles.edn"
+            "../shared/plugins/review-pipeline.edn"
             "plugins/review-observers.edn"
             "permissions/review-observers.edn"]
            :profile :dev
@@ -264,6 +367,12 @@ jobs:
             'phase_list_idle',
             'phase_observations',
             'phase_tail',
+            'review_begin',
+            'review_classify_finding',
+            'review_propose_finding',
+            'review_record_evidence',
+            'review_status',
+            'review_submit',
             'task_list',
             'task_status',
           ].sort();
@@ -291,8 +400,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MUSE_REVISION=76c57712a48ef48100259231a2e9d54069c2b14a
-          AGENTS_REVISION=7fd3252e7663ad5e68be5e90429d126aa66c38c8
+          MUSE_REVISION="${{ inputs.muse_revision || 'f26538bd6c5ec3ef6084be9d2424d5b1daef648c' }}"
+          AGENTS_REVISION="${{ inputs.agents_revision || '7fd3252e7663ad5e68be5e90429d126aa66c38c8' }}"
           CONTEXT_OUT="$RUNNER_TEMP/opencode-review-context"
           rm -rf "$CONTEXT_OUT"
           mkdir -p "$CONTEXT_OUT/muse/opencode" "$CONTEXT_OUT/agents" "$CONTEXT_OUT/metadata"
@@ -326,7 +435,6 @@ jobs:
     timeout-minutes: 45
     env:
       HAS_DISCORD_REVIEW_WEBHOOK_URL: ${{ secrets.DISCORD_REVIEW_WEBHOOK_URL != '' }}
-      OPENCODE_CONFIG_CONTENT: '{"default_agent":"github-reviewer"}'
     permissions:
       contents: read
       pull-requests: read
@@ -394,67 +502,40 @@ jobs:
       - name: Test deterministic review publisher
         run: node --test .github/scripts/publish-opencode-review.test.cjs
 
-      - name: Create eta-mu GitHub App token for OpenCode
-        id: eta_mu_opencode_token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          app-id: ${{ secrets.ETA_MU_APP_ID }}
-          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
-          permission-contents: read
-          permission-issues: write
-          permission-metadata: read
-          permission-pull-requests: read
-          # OpenCode revokes the installation token it receives when the action exits.
-          skip-token-revoke: true
+      - name: Install pinned OpenCode CLI
+        run: npm install --global opencode-ai@${{ inputs.opencode_version || '1.18.18' }}
 
       - name: Capture review start time
         id: review_start
         run: echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Run evidence-first OpenCode review
-        uses: anomalyco/opencode/github@40e4d730cac33cc9e76659ae7acb16b3a6132b83
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ steps.eta_mu_opencode_token.outputs.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REVIEW_MODEL: ${{ inputs.model || 'opencode/mimo-v2.5-free' }}
+        run: |
+          set -o pipefail
+          sed "s/{{PR_NUMBER}}/${PR_NUMBER}/g" .github/prompts/evidence-review.md > "$RUNNER_TEMP/review-prompt.md"
+
+          # The model runs read-only inside the checked-out PR. It has no GitHub
+          # token at all: publication is the deterministic publisher's job.
+          opencode run \
+            --agent github-reviewer \
+            --model "$REVIEW_MODEL" \
+            "$(cat "$RUNNER_TEMP/review-prompt.md")" \
+            2> "$RUNNER_TEMP/opencode-stderr.log" \
+            | tee .opencode/review-evidence/model-response.txt
+
+      - name: Upload model response
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          model: opencode/mimo-v2.5-free
-          share: false
-          use_github_token: true
-          prompt: |
-            Review pull request #${{ github.event.pull_request.number }} using the
-            evidence-first state machine in the github-reviewer agent.
-
-            Begin by reading:
-            - .opencode/review-evidence/summary.json
-            - .opencode/review-evidence/deterministic.log
-            - .review-context/metadata/exposed-tools.txt
-            - PROCESS.md
-            - .ημ/PRINCIPLE.edn
-            - linked task or issue material available in the pull-request context
-
-            The project-local OpenCode configuration includes a review-safe Muse projection
-            compiled from octave-commons/muse. It exposes only the exact observer registry in
-            exposed-tools.txt. It does not expose spawn, tell, append, promotion, mutation,
-            network-search, or shell tools.
-
-            Global skills are mounted from the revision recorded in
-            .review-context/metadata/agents-revision.txt. Load a skill only when its
-            description matches a concrete review need. Skills teach process and environment
-            adaptation; they do not prove a defect and they do not override the evidence
-            threshold.
-
-            Reconstruct the relevant invariants from complete files and repository contracts.
-            Attempt to disprove every candidate finding before returning the review decision.
-
-            Important interaction contract: you do not publish GitHub issue comments or
-            review comments yourself. Do not simulate an inline comment with headings, quoted
-            prose, file names, or line numbers. Your final response must be only the
-            ETA_MU_REVIEW_V1_BEGIN / ETA_MU_REVIEW_V1_END JSON envelope defined by the
-            github-reviewer agent. A deterministic publisher will validate that envelope and
-            submit one actual GitHub Pull Request Review, with each confirmed finding attached
-            to its changed line. Test gaps and unresolved questions belong only in the review
-            summary. If no confirmed finding survives validation, return an APPROVE envelope.
+          name: review-model-response-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          path: |
+            .opencode/review-evidence/model-response.txt
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Create eta-mu GitHub App token for review publication
         id: eta_mu_publish_token
@@ -464,14 +545,13 @@ jobs:
           private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
-          permission-issues: write
           permission-metadata: read
           permission-pull-requests: write
 
       - name: Publish actual GitHub pull request review
         uses: actions/github-script@v7
         env:
-          REVIEW_STARTED_AT: ${{ steps.review_start.outputs.started_at }}
+          REVIEW_SUBMISSION_FILE: .opencode/review-evidence/submission.json
         with:
           github-token: ${{ steps.eta_mu_publish_token.outputs.token }}
           script: |
@@ -480,7 +560,7 @@ jobs:
               github,
               context,
               core,
-              startedAt: process.env.REVIEW_STARTED_AT,
+              submissionFile: process.env.REVIEW_SUBMISSION_FILE,
             });
 
       - name: Send new inline review comments to Discord

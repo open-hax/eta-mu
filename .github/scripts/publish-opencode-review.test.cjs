@@ -2,10 +2,11 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const {
-  BEGIN,
-  END,
-  parseEnvelope,
+  readSubmission,
   addedRightLines,
   validateEnvelope,
   publishReview,
@@ -21,22 +22,28 @@ function envelope(overrides = {}) {
   };
 }
 
-test('parseEnvelope extracts the machine review from an OpenCode issue comment footer', () => {
-  const body = [
-    'transient wrapper text',
-    BEGIN,
-    JSON.stringify(envelope()),
-    END,
-    '[github run](/open-hax/eta-mu/actions/runs/123)',
-  ].join('\n');
+function tempSubmissionFile(contents) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'eta-mu-review-'));
+  const file = path.join(dir, 'submission.json');
+  fs.writeFileSync(file, contents);
+  return file;
+}
 
-  assert.deepEqual(parseEnvelope(body), envelope());
+test('readSubmission reads the machine-written review submission', () => {
+  const value = envelope();
+  const file = tempSubmissionFile(`${JSON.stringify(value, null, 2)}\n`);
+  assert.deepEqual(readSubmission({ submissionFile: file }), value);
 });
 
-test('parseEnvelope rejects prose pretending to be an inline comment', () => {
+test('readSubmission requires the review_submit artifact', () => {
+  assert.throws(() => readSubmission({}), /submissionFile is required/);
   assert.throws(
-    () => parseEnvelope('**Inline comment:** line 12 is broken'),
-    /ETA_MU_REVIEW_V1_BEGIN/,
+    () => readSubmission({ submissionFile: '/does/not/exist.json' }),
+    /review_submit/,
+  );
+  assert.throws(
+    () => readSubmission({ submissionFile: tempSubmissionFile('{broken') }),
+    /not valid JSON/,
   );
 });
 
@@ -145,21 +152,12 @@ test('publishReview sends a finding through pulls.createReview as an inline comm
     ],
   });
 
-  const listComments = async () => {};
   const listFiles = async () => {};
   let createReviewInput;
-  let deleteCommentInput;
   const info = [];
 
   const github = {
     rest: {
-      issues: {
-        listComments,
-        deleteComment: async (input) => {
-          deleteCommentInput = input;
-          return { data: {} };
-        },
-      },
       pulls: {
         listFiles,
         createReview: async (input) => {
@@ -174,21 +172,6 @@ test('publishReview sends a finding through pulls.createReview as an inline comm
       },
     },
     paginate: async (operation) => {
-      if (operation === listComments) {
-        return [
-          {
-            id: 9001,
-            created_at: '2026-08-14T14:35:05Z',
-            updated_at: '2026-08-14T14:35:06Z',
-            body: [
-              BEGIN,
-              JSON.stringify(value),
-              END,
-              '[github run](/open-hax/eta-mu/actions/runs/123)',
-            ].join('\n'),
-          },
-        ];
-      }
       if (operation === listFiles) {
         return [
           {
@@ -221,11 +204,13 @@ test('publishReview sends a finding through pulls.createReview as an inline comm
     info: (message) => info.push(message),
   };
 
+  const submissionFile = tempSubmissionFile(`${JSON.stringify(value, null, 2)}\n`);
+
   const review = await publishReview({
     github,
     context,
     core,
-    startedAt: '2026-08-14T14:35:04Z',
+    submissionFile,
   });
 
   assert.deepEqual(createReviewInput, {
@@ -243,11 +228,6 @@ test('publishReview sends a finding through pulls.createReview as an inline comm
         body: findingBody,
       },
     ],
-  });
-  assert.deepEqual(deleteCommentInput, {
-    owner: 'open-hax',
-    repo: 'eta-mu',
-    comment_id: 9001,
   });
   assert.deepEqual(review, {
     id: 42,

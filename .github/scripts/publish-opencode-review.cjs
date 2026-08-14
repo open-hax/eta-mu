@@ -1,26 +1,34 @@
 'use strict';
 
-const BEGIN = 'ETA_MU_REVIEW_V1_BEGIN';
-const END = 'ETA_MU_REVIEW_V1_END';
+const fs = require('node:fs');
+
 const SCHEMA = 'open-hax.github-review/v1';
 const EVENTS = new Set(['APPROVE', 'COMMENT', 'REQUEST_CHANGES']);
 const SEVERITIES = new Set(['critical', 'high', 'medium', 'low']);
 
-function parseEnvelope(body) {
-  const text = String(body || '');
-  const begin = text.indexOf(BEGIN);
-  const end = text.indexOf(END, begin + BEGIN.length);
-  if (begin < 0 || end < 0 || end <= begin) {
-    throw new Error(`OpenCode response must contain ${BEGIN} ... ${END}`);
+/**
+ * Read the machine-written review submission. The reviewer never emits text
+ * for this pipeline to parse: it drives the review state machine through
+ * schema-validated Muse tool calls, and `review_submit` writes this file.
+ * Nothing here scans model output.
+ */
+function readSubmission({ submissionFile }) {
+  if (!submissionFile) {
+    throw new Error('submissionFile is required: the reviewer publishes by writing a submission file, not by returning text.');
   }
-
-  const payload = text.slice(begin + BEGIN.length, end).trim();
-  if (!payload) throw new Error('Review envelope is empty.');
-
+  let text;
   try {
-    return JSON.parse(payload);
+    text = fs.readFileSync(submissionFile, 'utf8');
   } catch (error) {
-    throw new Error(`Review envelope is not valid JSON: ${error.message}`);
+    throw new Error(
+      `Cannot read review submission ${submissionFile}: ${error.message}. ` +
+        'The reviewer must finish by calling review_submit.',
+    );
+  }
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(`Review submission ${submissionFile} is not valid JSON: ${error.message}`);
   }
 }
 
@@ -58,6 +66,11 @@ function addedRightLines(patch) {
   return added;
 }
 
+/**
+ * Defensive re-validation of the submission envelope. The review tools already
+ * enforce every one of these laws at call time; this pass exists because the
+ * submission crosses a process boundary and provider output is untrusted input.
+ */
 function validateEnvelope(envelope, changedLines) {
   if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope)) {
     throw new Error('Review envelope must be a JSON object.');
@@ -138,33 +151,6 @@ function validateEnvelope(envelope, changedLines) {
   return envelope;
 }
 
-async function findRunComment({ github, context, startedAt }) {
-  const { owner, repo } = context.repo;
-  const pr = context.payload.pull_request;
-  if (!pr) throw new Error('Pull request payload is unavailable.');
-
-  const started = new Date(startedAt || 0).getTime();
-  const runMarker = `/actions/runs/${context.runId}`;
-  const comments = await github.paginate(github.rest.issues.listComments, {
-    owner,
-    repo,
-    issue_number: pr.number,
-    per_page: 100,
-  });
-
-  const matches = comments
-    .filter((comment) => new Date(comment.created_at).getTime() >= started)
-    .filter((comment) => String(comment.body || '').includes(runMarker))
-    .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
-
-  if (matches.length !== 1) {
-    throw new Error(
-      `Expected exactly one OpenCode run comment containing ${runMarker}; found ${matches.length}.`,
-    );
-  }
-  return matches[0];
-}
-
 async function changedLineIndex({ github, context }) {
   const { owner, repo } = context.repo;
   const pr = context.payload.pull_request;
@@ -178,13 +164,12 @@ async function changedLineIndex({ github, context }) {
   return new Map(files.map((file) => [file.filename, addedRightLines(file.patch)]));
 }
 
-async function publishReview({ github, context, core, startedAt }) {
+async function publishReview({ github, context, core, submissionFile }) {
   const { owner, repo } = context.repo;
   const pr = context.payload.pull_request;
   if (!pr) throw new Error('Pull request payload is unavailable.');
 
-  const runComment = await findRunComment({ github, context, startedAt });
-  const envelope = parseEnvelope(runComment.body);
+  const envelope = readSubmission({ submissionFile });
   const changedLines = await changedLineIndex({ github, context });
   validateEnvelope(envelope, changedLines);
 
@@ -205,26 +190,17 @@ async function publishReview({ github, context, core, startedAt }) {
     comments,
   });
 
-  await github.rest.issues.deleteComment({
-    owner,
-    repo,
-    comment_id: runComment.id,
-  });
-
   core.info(
-    `Submitted ${envelope.event} review ${review.data.html_url || review.data.id} with ${comments.length} inline comment(s); removed temporary OpenCode issue comment ${runComment.id}.`,
+    `Submitted ${envelope.event} review ${review.data.html_url || review.data.id} with ${comments.length} inline comment(s).`,
   );
   return review.data;
 }
 
 module.exports = {
-  BEGIN,
-  END,
   SCHEMA,
-  parseEnvelope,
+  readSubmission,
   addedRightLines,
   validateEnvelope,
-  findRunComment,
   changedLineIndex,
   publishReview,
 };
