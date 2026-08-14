@@ -41,12 +41,12 @@ function addedRightLines(patch) {
     if (oldLine === null || newLine === null) continue;
     if (row.startsWith('\\ No newline at end of file')) continue;
 
-    if (row.startsWith('+') && !row.startsWith('+++')) {
+    if (row.startsWith('+')) {
       added.add(newLine);
       newLine += 1;
       continue;
     }
-    if (row.startsWith('-') && !row.startsWith('---')) {
+    if (row.startsWith('-')) {
       oldLine += 1;
       continue;
     }
