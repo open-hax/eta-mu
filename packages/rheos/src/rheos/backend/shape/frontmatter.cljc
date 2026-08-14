@@ -7,7 +7,7 @@
   (let [value (str/trim raw)]
     (cond
       (empty? value) unsupported
-      (#{{"|" "|-" "|+" ">" ">-" ">+"}} value) unsupported
+      (#{"|" "|-" "|+" ">" ">-" ">+"} value) unsupported
       (or (str/starts-with? value "[")
           (str/starts-with? value "{")) unsupported
       :else (str/replace value #"^\"|\"$" ""))))
