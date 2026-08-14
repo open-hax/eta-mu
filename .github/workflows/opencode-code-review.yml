@@ -19,7 +19,7 @@ on:
         description: Pinned octave-commons/muse commit used to compile the review observer projection.
         required: false
         type: string
-        default: a9d31f3560c2b5a9c6157a6c981560450046e22e
+        default: 1105e6194ca45f9394ee32c09d41bbda9f0fc092
       agents_revision:
         description: Pinned riatzukiza/.agents commit mounted as global skills.
         required: false
@@ -245,7 +245,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: octave-commons/muse
-          ref: ${{ inputs.muse_revision || 'a9d31f3560c2b5a9c6157a6c981560450046e22e' }}
+          ref: ${{ inputs.muse_revision || '1105e6194ca45f9394ee32c09d41bbda9f0fc092' }}
           path: .review-context/muse
           persist-credentials: false
 
@@ -400,7 +400,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MUSE_REVISION="${{ inputs.muse_revision || 'a9d31f3560c2b5a9c6157a6c981560450046e22e' }}"
+          MUSE_REVISION="${{ inputs.muse_revision || '1105e6194ca45f9394ee32c09d41bbda9f0fc092' }}"
           AGENTS_REVISION="${{ inputs.agents_revision || '7fd3252e7663ad5e68be5e90429d126aa66c38c8' }}"
           CONTEXT_OUT="$RUNNER_TEMP/opencode-review-context"
           rm -rf "$CONTEXT_OUT"
