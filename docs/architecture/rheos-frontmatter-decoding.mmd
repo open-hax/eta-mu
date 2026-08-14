@@ -1,0 +1,8 @@
+flowchart LR
+  Source[Markdown source] --> Split[Lossless frontmatter split]
+  Split --> Raw[Raw frontmatter authority]
+  Raw --> Flat[Flat compatibility decoder]
+  Flat -->|supported scalar| Data[Partial Clojure data view]
+  Flat -->|nested / structural YAML| Omit[Omit rather than misrepresent]
+  Flat --> Provenance[decoder id + partial status + capabilities]
+  Raw --> Future[Future complete YAML decoder]
