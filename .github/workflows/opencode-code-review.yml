@@ -51,9 +51,12 @@ on:
           fi
     secrets:
       ETA_MU_APP_ID:
-        required: true
+        # Optional so evidence/compile jobs still run in organizations where the
+        # app secrets are not visible; the review job then fails fast with an
+        # explicit operator instruction instead of a plan-time error.
+        required: false
       ETA_MU_APP_PRIVATE_KEY:
-        required: true
+        required: false
       DISCORD_REVIEW_WEBHOOK_URL:
         required: false
 
@@ -478,10 +481,15 @@ jobs:
           set -euo pipefail
           (cd .review-context && sha256sum -c SHA256SUMS)
 
-          rm -rf .opencode/dist .opencode/plugins .opencode/agents
+          # Remove only the exact artifact paths this step owns. Caller
+          # repositories may track their own files under .opencode/; deleting
+          # whole directories would dirty the PR tree and trip the guard below
+          # (correctly — but for the wrong reason).
+          rm -rf .opencode/dist/eta-mu-actors.js .opencode/plugins/eta-mu-actors.js .opencode/agents/github-reviewer.md
           cp -a .review-context/muse/opencode/dist .opencode/
-          cp -a .review-context/muse/opencode/plugins .opencode/
-          cp -a .review-context/muse/opencode/agents .opencode/
+          mkdir -p .opencode/plugins .opencode/agents
+          cp -a .review-context/muse/opencode/plugins/. .opencode/plugins/
+          cp -a .review-context/muse/opencode/agents/. .opencode/agents/
           cp .review-context/muse/opencode/opencode.json .opencode/opencode.json
           cp .review-context/muse/opencode/package.json .opencode/package.json
           npm install --prefix .opencode --ignore-scripts --no-audit --no-fund
@@ -513,6 +521,18 @@ jobs:
 
       - name: Test deterministic review publisher
         run: node --test .review-context/machinery/publish-opencode-review.test.cjs
+
+      - name: Require eta-mu app credentials
+        shell: bash
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        run: |
+          if [[ -z "$ETA_MU_APP_ID" || -z "$ETA_MU_APP_PRIVATE_KEY" ]]; then
+            echo "::error::ETA_MU_APP_ID / ETA_MU_APP_PRIVATE_KEY are not visible to this repository."
+            echo "::error::Operator action required: create the eta-mu GitHub App credentials as organization secrets with access to this repository, then re-run this workflow."
+            exit 1
+          fi
 
       - name: Install pinned OpenCode CLI
         run: npm install --global opencode-ai@${{ inputs.opencode_version || '1.18.18' }}
