@@ -20,8 +20,10 @@
   (let [raw (str "---\n"
                  "nested:\n"
                  "  arbitrary: true\n"
-                 "note: |\n"
+                 "note: |2\n"
                  "  multi line\n"
+                 "folded: >+2\n"
+                 "  folded line\n"
                  "tags: [one, two]\n"
                  "status: ready\n"
                  "---\n"
@@ -30,11 +32,13 @@
         decoded (:document/frontmatter/data document)]
     (testing "raw source remains authoritative"
       (is (.contains (:document/frontmatter/raw document) "  arbitrary: true"))
-      (is (.contains (:document/frontmatter/raw document) "note: |"))
+      (is (.contains (:document/frontmatter/raw document) "note: |2"))
+      (is (.contains (:document/frontmatter/raw document) "folded: >+2"))
       (is (.contains (:document/frontmatter/raw document) "tags: [one, two]")))
     (testing "ambiguous structural values are omitted from the partial view"
       (is (not (contains? decoded :nested)))
       (is (not (contains? decoded :note)))
+      (is (not (contains? decoded :folded)))
       (is (not (contains? decoded :tags)))
       (is (= "ready" (:status decoded))))))
 
