@@ -12,7 +12,7 @@
                  "---\n"
                  "Body")
         document (markdown/parse raw)]
-    (is (.contains (:document/frontmatter-raw document) "  ---"))
+    (is (re-find #"  ---" (:document/frontmatter-raw document)))
     (is (= "ready" (get-in document [:document/frontmatter-data :status])))
     (is (= "Body" (:document/body document)))))
 
@@ -27,4 +27,11 @@
     (is (:document/frontmatter-present? document))
     (is (= "title: Mixed" (:document/frontmatter-raw document)))
     (is (= "Mixed" (get-in document [:document/frontmatter-data :title])))
+    (is (= "Body" (:document/body document)))))
+
+(deftest empty-frontmatter-is-portable
+  (let [document (markdown/parse "---\n---\nBody")]
+    (is (:document/frontmatter-present? document))
+    (is (= "" (:document/frontmatter-raw document)))
+    (is (= {} (:document/frontmatter-data document)))
     (is (= "Body" (:document/body document)))))
