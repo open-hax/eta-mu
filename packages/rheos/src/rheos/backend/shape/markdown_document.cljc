@@ -28,7 +28,7 @@
         (let [{line :line end :end next :next} (line-at raw offset)]
           (cond
             (delimiter? line)
-            [(subs raw start (content-end raw offset))
+            [(subs raw start (max start (content-end raw offset)))
              (subs raw (or next end))]
 
             next (recur next)
