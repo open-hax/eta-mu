@@ -597,15 +597,17 @@ jobs:
               return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
             };
             const embeds = fresh.map((comment) => ({
-              title: `${owner}/${repo}#${pr.number}: evidence review comment`,
+              // Discord rejects embeds whose total size exceeds 6000 chars; the
+              // description cap must leave room for title, fields, and footer.
+              title: truncate(`${owner}/${repo}#${pr.number}: evidence review comment`, 256),
               url: comment.html_url,
               color: 0x8b5cf6,
-              description: truncate(comment.body, 3500),
+              description: truncate(comment.body, 1500),
               fields: [
-                { name: 'Author', value: comment.user?.login || 'unknown', inline: true },
-                { name: 'File', value: truncate(comment.path || 'unknown', 1024), inline: true },
+                { name: 'Author', value: truncate(comment.user?.login || 'unknown', 100), inline: true },
+                { name: 'File', value: truncate(comment.path || 'unknown', 200), inline: true },
                 { name: 'Line', value: String(comment.line || comment.original_line || 'n/a'), inline: true },
-                { name: 'PR', value: pr.html_url, inline: false },
+                { name: 'PR', value: truncate(pr.html_url, 200), inline: false },
               ],
               timestamp: comment.created_at,
             }));
