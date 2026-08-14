@@ -28,7 +28,8 @@
         labels (normalize-labels (:labels frontmatter) (:tags frontmatter))
         uuid (or (:uuid frontmatter) (:slug frontmatter) (slugify title))
         status (normalize-status (:status frontmatter))
-        created-at (or (:created_at frontmatter)
+        created-at (or (:created-at frontmatter)
+                       (:created_at frontmatter)
                        (:createdAt frontmatter)
                        fallback-created-at)]
     {:uuid uuid
