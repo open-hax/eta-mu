@@ -392,6 +392,18 @@ jobs:
           echo "Muse observer registry:"
           cat .review-context/metadata/exposed-tools.txt
 
+      - name: Test deterministic review publisher
+        run: node --test .github/scripts/publish-opencode-review.test.cjs
+
+      - name: Create eta-mu GitHub App token
+        id: eta_mu_token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.ETA_MU_APP_ID }}
+          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
       - name: Capture review start time
         id: review_start
         run: echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
@@ -399,7 +411,7 @@ jobs:
       - name: Run evidence-first OpenCode review
         uses: anomalyco/opencode/github@40e4d730cac33cc9e76659ae7acb16b3a6132b83
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.eta_mu_token.outputs.token }}
         with:
           model: opencode/mimo-v2.5-free
           share: false
@@ -428,10 +440,31 @@ jobs:
             threshold.
 
             Reconstruct the relevant invariants from complete files and repository contracts.
-            Attempt to disprove every candidate finding before publishing it. Publish inline
-            comments only for confirmed, changed-line defects meeting the agent's evidence
-            threshold. Put test gaps and unresolved questions in one concise non-blocking
-            summary. If no candidate survives validation, leave a short passing summary.
+            Attempt to disprove every candidate finding before returning the review decision.
+
+            Important interaction contract: you do not publish GitHub issue comments or
+            review comments yourself. Do not simulate an inline comment with headings, quoted
+            prose, file names, or line numbers. Your final response must be only the
+            ETA_MU_REVIEW_V1_BEGIN / ETA_MU_REVIEW_V1_END JSON envelope defined by the
+            github-reviewer agent. A deterministic publisher will validate that envelope and
+            submit one actual GitHub Pull Request Review, with each confirmed finding attached
+            to its changed line. Test gaps and unresolved questions belong only in the review
+            summary. If no confirmed finding survives validation, return an APPROVE envelope.
+
+      - name: Publish actual GitHub pull request review
+        uses: actions/github-script@v7
+        env:
+          REVIEW_STARTED_AT: ${{ steps.review_start.outputs.started_at }}
+        with:
+          github-token: ${{ steps.eta_mu_token.outputs.token }}
+          script: |
+            const { publishReview } = require('./.github/scripts/publish-opencode-review.cjs');
+            await publishReview({
+              github,
+              context,
+              core,
+              startedAt: process.env.REVIEW_STARTED_AT,
+            });
 
       - name: Send new inline review comments to Discord
         if: ${{ always() && env.HAS_DISCORD_REVIEW_WEBHOOK_URL == 'true' }}
@@ -440,7 +473,7 @@ jobs:
           DISCORD_REVIEW_WEBHOOK_URL: ${{ secrets.DISCORD_REVIEW_WEBHOOK_URL }}
           REVIEW_STARTED_AT: ${{ steps.review_start.outputs.started_at }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.eta_mu_token.outputs.token }}
           script: |
             const webhookUrl = process.env.DISCORD_REVIEW_WEBHOOK_URL;
             const startedAt = new Date(process.env.REVIEW_STARTED_AT || 0);
