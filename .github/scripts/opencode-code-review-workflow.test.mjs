@@ -139,7 +139,8 @@ test("both pull-request jobs explicitly checkout and guard the event head", () =
 });
 
 test("toolchain setup defaults on when the input is absent and honors an explicit false", () => {
-  const expected = "${{ toJSON(inputs.setup_eta_mu_toolchain) != 'false' }}";
+  const expected =
+    "${{ !contains(toJSON(inputs), '\"setup_eta_mu_toolchain\"') || inputs.setup_eta_mu_toolchain }}";
   for (const name of [
     "Set up Java 21",
     "Set up Clojure CLI 1.12.5.1654",
@@ -150,10 +151,19 @@ test("toolchain setup defaults on when the input is absent and honors an explici
     assert.doesNotMatch(condition, /github\.event_name/);
   }
 
-  const setupEnabled = (input) => JSON.stringify(input) !== "false";
-  assert.equal(setupEnabled(undefined), true, "direct pull_request input is absent");
-  assert.equal(setupEnabled(true), true, "workflow_call default or explicit true installs");
-  assert.equal(setupEnabled(false), false, "workflow_call explicit false opts out");
+  const setupEnabled = (inputs) =>
+    !("setup_eta_mu_toolchain" in inputs) || inputs.setup_eta_mu_toolchain;
+  assert.equal(setupEnabled({}), true, "direct pull_request input key is absent");
+  assert.equal(
+    setupEnabled({ setup_eta_mu_toolchain: true }),
+    true,
+    "workflow_call default or explicit true installs",
+  );
+  assert.equal(
+    setupEnabled({ setup_eta_mu_toolchain: false }),
+    false,
+    "workflow_call explicit false opts out",
+  );
 });
 
 test("artifact names do not claim an unverified head revision", () => {

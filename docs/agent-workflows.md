@@ -49,8 +49,8 @@ Deterministic Java, Clojure, and pnpm setup is enabled when a direct
 `pull_request` trigger has no reusable-workflow inputs and by the
 `workflow_call` default. A reusable caller may explicitly set
 `setup_eta_mu_toolchain: false` when its evidence script supplies a compatible
-toolchain; the workflow detects that explicit boolean independently of the
-inherited event name.
+toolchain; the workflow distinguishes an absent input key from a present
+boolean before applying its value, independently of the inherited event name.
 
 For draft or fork pull requests, that same stable job runs and reports the
 review as explicitly not applicable. Those events are outside the workflow's
