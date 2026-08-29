@@ -21,7 +21,12 @@
   (is (compose-condition/match-clause? {:title "infra-proxy"}
                                        [:title :regex "infra-.*"]))
   (is (false? (compose-condition/match-clause? {:title "frontend"}
-                                               [:title :regex "infra-.*"]))))
+                                               [:title :regex "infra-.*"])))
+  (testing "contains preserves normalized scalar metadata matching"
+    (is (compose-condition/match-clause? {:domain :music}
+                                         [:domain :contains "mus"]))
+    (is (compose-condition/match-clause? {:rank 1234}
+                                         [:rank :contains "23"]))))
 
 (deftest status-and-label-helpers-preserve-compose-behavior
   (is (compose-condition/match-any? :todo ["ready" "todo"]))
