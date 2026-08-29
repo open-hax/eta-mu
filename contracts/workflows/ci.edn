@@ -181,6 +181,7 @@
      ;; subset plus the path filters it should select on.
      :job/gate {:gate/id "rheos"
                 :gate/check "Rheos tests and lint"
+                :gate/needs-repos ["katamorph"]
                 :gate/paths ["packages/rheos/" "packages/protocols/" "packages/chat-ui/"
                              "openhax.kanban.edn" "openhax.kanban.json"
                              "kanban/openhax.kanban" "package.json"
