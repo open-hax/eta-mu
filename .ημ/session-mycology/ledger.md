@@ -252,3 +252,12 @@
   spore: none
   receipt-refs: 2026-08-29T21:59:55.923Z
   note: Rehydrating from the exact merged main after scratch loss preserved canonical ledger history. The current-tree Rheos source, exact pinned Katamorph dependency, and live GitHub planner proved 23 lawful board events, 287 valid cards, no duplicate issue markers, and six scoped updates before publication. The full projector also exposed 69 unrelated stale updates, so the safe boundary is to apply only the six audited operations after merge and rerun the planner. No new spore; the existing worktree-cwd-write-targeting, review-thread-closeout-verification, and separate-evidence-retention-from-terminal-truth spores already cover the reusable lessons.
+- ts: 2026-08-29T23:10:41Z
+  session: /workspace/scratch/8d4eacbf051e/eta-sc2129
+  task: Repair ShellCheck SC2129 in the reusable review-resolution gate
+  p-efficiency: 0.88
+  p-friction: 0.46
+  p-skill-candidate: 0.58
+  spore: none
+  receipt-refs: 2026-08-29T23:10:27.371Z
+  note: The one-file grouped redirect was proven by the same pinned actionlint/ShellCheck command before and after the change. A connector create request can succeed even when its response cannot be serialized, while the public listing remains briefly stale; duplicate preflight after convergence caught the retry-created issue and allowed #302 to be deprojected and closed without corrupting canonical #301. No new spore; the existing review closeout and worktree targeting spores already cover the broader verification discipline.
