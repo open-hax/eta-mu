@@ -45,6 +45,13 @@ gate**. Configure that job as the required check in callers. It runs under
 `always()` and fails closed unless deterministic execution, context compilation,
 and review publication all succeeded.
 
+Deterministic Java, Clojure, and pnpm setup is enabled when a direct
+`pull_request` trigger has no reusable-workflow inputs and by the
+`workflow_call` default. A reusable caller may explicitly set
+`setup_eta_mu_toolchain: false` when its evidence script supplies a compatible
+toolchain; the workflow detects that explicit boolean independently of the
+inherited event name.
+
 For draft or fork pull requests, that same stable job runs and reports the
 review as explicitly not applicable. Those events are outside the workflow's
 supported review boundary, so their intentionally skipped prerequisites do not

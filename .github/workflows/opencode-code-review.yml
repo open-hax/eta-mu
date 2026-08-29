@@ -134,20 +134,20 @@ jobs:
           fi
 
       - name: Set up Java 21
-        if: ${{ github.event_name != 'workflow_call' || inputs.setup_eta_mu_toolchain }}
+        if: ${{ toJSON(inputs.setup_eta_mu_toolchain) != 'false' }}
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "21"
 
       - name: Set up Clojure CLI 1.12.5.1654
-        if: ${{ github.event_name != 'workflow_call' || inputs.setup_eta_mu_toolchain }}
+        if: ${{ toJSON(inputs.setup_eta_mu_toolchain) != 'false' }}
         uses: DeLaGuardo/setup-clojure@3fe9b3ae632c6758d0b7757b0838606ef4287b08 # 13.4
         with:
           cli: 1.12.5.1654
 
       - name: Set up pnpm 10.14.0
-        if: ${{ github.event_name != 'workflow_call' || inputs.setup_eta_mu_toolchain }}
+        if: ${{ toJSON(inputs.setup_eta_mu_toolchain) != 'false' }}
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: "10.14.0"

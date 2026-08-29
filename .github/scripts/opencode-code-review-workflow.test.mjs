@@ -138,15 +138,22 @@ test("both pull-request jobs explicitly checkout and guard the event head", () =
   assert.match(namedStep("review", "Verify exact and clean review checkout").run, /git rev-parse HEAD/);
 });
 
-test("direct pull-request runs install the default deterministic toolchain", () => {
-  const expected = "${{ github.event_name != 'workflow_call' || inputs.setup_eta_mu_toolchain }}";
+test("toolchain setup defaults on when the input is absent and honors an explicit false", () => {
+  const expected = "${{ toJSON(inputs.setup_eta_mu_toolchain) != 'false' }}";
   for (const name of [
     "Set up Java 21",
     "Set up Clojure CLI 1.12.5.1654",
     "Set up pnpm 10.14.0",
   ]) {
-    assert.equal(namedStep("deterministic_evidence", name).if, expected);
+    const condition = namedStep("deterministic_evidence", name).if;
+    assert.equal(condition, expected);
+    assert.doesNotMatch(condition, /github\.event_name/);
   }
+
+  const setupEnabled = (input) => JSON.stringify(input) !== "false";
+  assert.equal(setupEnabled(undefined), true, "direct pull_request input is absent");
+  assert.equal(setupEnabled(true), true, "workflow_call default or explicit true installs");
+  assert.equal(setupEnabled(false), false, "workflow_call explicit false opts out");
 });
 
 test("artifact names do not claim an unverified head revision", () => {
