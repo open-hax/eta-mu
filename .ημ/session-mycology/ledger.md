@@ -234,3 +234,12 @@
   spore: 20260829-183528-separate-evidence-retention-from-terminal-truth.md
   receipt-refs: 2026-08-29T17:55:47Z, 2026-08-29T18:13:52Z, 2026-08-29T18:18:48Z, 2026-08-29T18:22:25Z, 2026-08-29T18:24:16Z, 2026-08-29T18:26:30Z, 2026-08-29T18:35:28Z
   note: The old wrapper proved that artifact retention and caller truth can diverge; exact-head evidence likewise needs an observed HEAD, not a copied expected value. The repair separates command collection, deterministic summary, review publication, and one terminal verdict, while preserving a known tracked generator side effect only after proving and restoring its clean baseline. Executable tests run the workflow's embedded scripts and are falsified with targeted mutations. One incubating spore recorded; no promotion in this session.
+- ts: 2026-08-29T20:54:59Z
+  session: /workspace/scratch/b068bebfe603/eta-mu-pr299
+  task: Close every exact-head review finding on eta-mu PR #299 before it becomes constellation review authority
+  p-efficiency: 0.88
+  p-friction: 0.56
+  p-skill-candidate: 0.62
+  spore: none
+  receipt-refs: 2026-08-29T20:31:12Z, 2026-08-29T20:34:02Z, 2026-08-29T20:46:52Z
+  note: Executable tests reproduced the undefined default helper, caller/event head mismatch, and missing pull-request-context paths before repair. Fresh exact-head review caught the non-PR neutrality hole after the first patch, so the better path is to enumerate eligible, intentionally unsupported, and malformed event classes in the terminal contract. No new spore; the existing separate-evidence-retention-from-terminal-truth and review-thread-closeout-verification spores cover the reusable pattern.
