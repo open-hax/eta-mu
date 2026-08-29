@@ -40,6 +40,24 @@ The workflow has three bounded stages:
 2. **Review-context compilation** — check out pinned revisions of `octave-commons/muse` and `riatzukiza/.agents`. Muse compiles a review-specific OpenCode projection containing only observer tools; the `.agents` repository is packaged as the global skill source. Both revisions and the skill inventory are recorded in the context artifact.
 3. **One model review pass** — map the change, reconstruct relevant contracts and invariants, generate candidate findings, attempt to disprove each candidate, and publish only findings that survive the evidence threshold.
 
+The reusable workflow has one stable terminal check, **OpenCode evidence review
+gate**. Configure that job as the required check in callers. It runs under
+`always()` and fails closed unless deterministic execution, context compilation,
+and review publication all succeeded.
+
+Deterministic command failures do not suppress their evidence or the review
+attempt. The command step records every exit, the summary reports
+`result: failure`, and artifacts are uploaded; the model may still inspect that
+failure. The terminal check is what makes the reusable caller red. This split is
+intentional: retaining diagnostics must never turn a failed gate green.
+
+Evidence schema `open-hax.review-evidence/v2` distinguishes the event's
+`expected_head_sha` from the independently observed `executed_sha` and
+`completion_sha`. Both deterministic execution and model review explicitly
+check out the pull-request head and require the same clean revision before and
+after their work. `head_sha` is populated only after those values agree; run-ID
+artifact names avoid claiming an exact revision before that proof exists.
+
 ### Muse observer projection
 
 Muse remains the compatibility/compiler boundary. The workflow does not treat its bootstrap actor implementation as canonical runtime authority.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 name: OpenCode evidence PR review
 
 on:
@@ -70,14 +71,67 @@ jobs:
     if: ${{ github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    outputs:
+      result: ${{ steps.gates.outputs.result }}
+      expected_sha: ${{ steps.gates.outputs.expected_sha }}
+      executed_sha: ${{ steps.gates.outputs.executed_sha }}
+      completion_sha: ${{ steps.gates.outputs.completion_sha }}
+      exact_head: ${{ steps.gates.outputs.exact_head }}
+      clean: ${{ steps.gates.outputs.clean }}
     permissions:
       contents: read
     steps:
       - name: Checkout pull request
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Verify exact and clean pull request checkout
+        id: checkout_guard
+        continue-on-error: true
+        shell: bash
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          evidence_dir="$GITHUB_WORKSPACE/.opencode/review-evidence"
+
+          expected_sha="$PR_HEAD_SHA"
+          executed_sha="$(git rev-parse HEAD)"
+          checkout_status="$(git status --porcelain --untracked-files=all)"
+          exact_head=false
+          clean=false
+          [[ "$executed_sha" == "$expected_sha" ]] && exact_head=true
+          [[ -z "$checkout_status" ]] && clean=true
+
+          {
+            echo "expected_sha=$expected_sha"
+            echo "executed_sha=$executed_sha"
+            echo "exact_head=$exact_head"
+            echo "clean=$clean"
+          } >> "$GITHUB_OUTPUT"
+
+          mkdir -p "$evidence_dir"
+          printf '%s\n' "$checkout_status" > "$evidence_dir/checkout-status.txt"
+          jq -n \
+            --arg expected_sha "$expected_sha" \
+            --arg executed_sha "$executed_sha" \
+            --argjson exact_head "$exact_head" \
+            --argjson clean "$clean" \
+            '{expected_sha: $expected_sha, executed_sha: $executed_sha, exact_head: $exact_head, clean: $clean}' \
+            > "$evidence_dir/checkout.json"
+
+          if [[ "$exact_head" != true ]]; then
+            echo "::error::Expected pull-request head $expected_sha but checkout executed $executed_sha."
+            exit 1
+          fi
+          if [[ "$clean" != true ]]; then
+            echo "::error::Pull-request checkout was dirty before deterministic execution."
+            printf '%s\n' "$checkout_status"
+            exit 1
+          fi
 
       - name: Set up Java 21
         if: ${{ inputs.setup_eta_mu_toolchain != false }}
@@ -105,6 +159,7 @@ jobs:
           node-version: "22"
 
       - name: Stage pull request diff and context
+        if: ${{ steps.checkout_guard.outputs.exact_head == 'true' && steps.checkout_guard.outputs.clean == 'true' }}
         shell: bash
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -140,7 +195,8 @@ jobs:
           ' "$GITHUB_EVENT_PATH" > "$evidence_dir/pr-context.md"
 
       - name: Run deterministic gates
-        id: gates
+        id: gate_commands
+        if: ${{ always() }}
         continue-on-error: true
         shell: bash
         env:
@@ -148,6 +204,8 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           EVIDENCE_GATES_SCRIPT: ${{ inputs.evidence_gates_script || '' }}
+          CHECKOUT_EXACT_HEAD: ${{ steps.checkout_guard.outputs.exact_head }}
+          CHECKOUT_CLEAN: ${{ steps.checkout_guard.outputs.clean }}
         run: |
           set +e
           evidence_dir="$GITHUB_WORKSPACE/.opencode/review-evidence"
@@ -174,7 +232,10 @@ jobs:
             return 0
           }
 
-          if [[ -n "${EVIDENCE_GATES_SCRIPT//[[:space:]]/}" ]]; then
+          if [[ "$CHECKOUT_EXACT_HEAD" != "true" || "$CHECKOUT_CLEAN" != "true" ]]; then
+            echo "checkout_guard=1" >> "$statuses"
+            echo "Deterministic commands were not executed because the checkout was not the exact clean pull-request head." >> "$log"
+          elif [[ -n "${EVIDENCE_GATES_SCRIPT//[[:space:]]/}" ]]; then
             eval "$EVIDENCE_GATES_SCRIPT"
           else
             run_gate install pnpm install --frozen-lockfile
@@ -193,45 +254,112 @@ jobs:
             fi
           fi
 
+      - name: Summarize deterministic evidence
+        id: gates
+        if: ${{ always() }}
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CHECKOUT_EXPECTED_SHA: ${{ steps.checkout_guard.outputs.expected_sha }}
+          CHECKOUT_EXECUTED_SHA: ${{ steps.checkout_guard.outputs.executed_sha }}
+          CHECKOUT_EXACT_HEAD: ${{ steps.checkout_guard.outputs.exact_head }}
+          CHECKOUT_CLEAN: ${{ steps.checkout_guard.outputs.clean }}
+          GATE_STEP_OUTCOME: ${{ steps.gate_commands.outcome }}
+        run: |
+          set -euo pipefail
+          evidence_dir="$GITHUB_WORKSPACE/.opencode/review-evidence"
+          mkdir -p "$evidence_dir"
+          completion_sha="$(git rev-parse HEAD 2>/dev/null || true)"
+          completion_status="$(git status --porcelain --untracked-files=all | grep -v -e '^?? \.opencode/review-evidence/' || true)"
+          completion_clean=false
+          [[ -z "$completion_status" ]] && completion_clean=true
+          printf '%s\n' "$completion_status" > "$evidence_dir/completion-status.txt"
+          export COMPLETION_SHA="$completion_sha"
+          export COMPLETION_CLEAN="$completion_clean"
+
           node <<'NODE'
           const fs = require('node:fs');
           const path = require('node:path');
           const evidenceDir = path.join(process.env.GITHUB_WORKSPACE, '.opencode', 'review-evidence');
-          const statuses = Object.fromEntries(
-            fs.readFileSync(path.join(evidenceDir, 'statuses.env'), 'utf8')
-              .trim()
-              .split(/\n+/)
-              .filter(Boolean)
-              .map((line) => {
-                const [name, value] = line.split('=');
-                return [name, Number(value)];
-              }),
-          );
+          const statusesPath = path.join(evidenceDir, 'statuses.env');
+          const errors = [];
+          const statuses = {};
+          if (!fs.existsSync(statusesPath)) {
+            errors.push('deterministic statuses.env is missing');
+          } else {
+            for (const line of fs.readFileSync(statusesPath, 'utf8').trim().split(/\n+/).filter(Boolean)) {
+              const match = /^([A-Za-z0-9_.-]+)=([0-9]+)$/.exec(line);
+              if (!match) {
+                errors.push(`malformed deterministic status: ${line}`);
+                continue;
+              }
+              const [, name, rawCode] = match;
+              if (Object.hasOwn(statuses, name)) {
+                errors.push(`duplicate deterministic status: ${name}`);
+                continue;
+              }
+              statuses[name] = Number(rawCode);
+            }
+          }
+          if (Object.keys(statuses).length === 0) {
+            errors.push('no deterministic gate statuses were recorded');
+          }
           const attempted = Object.fromEntries(
             Object.entries(statuses).map(([name, code]) => [name, code !== 125]),
           );
-          const result = Object.values(statuses).every((code) => code === 0) ? 'success' : 'failure';
+          const shaPattern = /^[0-9a-f]{40}$/i;
+          const expectedHeadSha = process.env.CHECKOUT_EXPECTED_SHA || process.env.PR_HEAD_SHA || '';
+          const executedSha = process.env.CHECKOUT_EXECUTED_SHA || '';
+          const completionSha = process.env.COMPLETION_SHA || '';
+          const exactHead = shaPattern.test(expectedHeadSha)
+            && shaPattern.test(executedSha)
+            && shaPattern.test(completionSha)
+            && expectedHeadSha === executedSha
+            && expectedHeadSha === completionSha
+            && process.env.CHECKOUT_EXACT_HEAD === 'true';
+          const clean = process.env.CHECKOUT_CLEAN === 'true' && process.env.COMPLETION_CLEAN === 'true';
+          if (!exactHead) errors.push('expected, executed, and completion revisions are not one exact pull-request head');
+          if (!clean) errors.push('checkout was not clean across deterministic execution');
+          if (process.env.GATE_STEP_OUTCOME !== 'success') {
+            errors.push(`deterministic command step outcome was ${process.env.GATE_STEP_OUTCOME || 'missing'}`);
+          }
+          const result = errors.length === 0 && Object.values(statuses).every((code) => code === 0)
+            ? 'success'
+            : 'failure';
           const summary = {
-            schema: 'open-hax.review-evidence/v1',
+            schema: 'open-hax.review-evidence/v2',
             repository: process.env.GITHUB_REPOSITORY,
             pull_request: Number(process.env.PR_NUMBER),
             base_sha: process.env.PR_BASE_SHA,
-            head_sha: process.env.PR_HEAD_SHA,
+            expected_head_sha: expectedHeadSha,
+            executed_sha: executedSha || null,
+            completion_sha: completionSha || null,
+            head_sha: exactHead ? executedSha : null,
+            exact_head: exactHead,
+            clean_checkout: clean,
             generated_at: new Date().toISOString(),
             result,
             statuses,
             attempted,
+            errors,
             interpretation: 'Exit 125 means the gate was skipped because dependency installation failed.',
           };
           fs.writeFileSync(path.join(evidenceDir, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`);
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `result=${result}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `expected_sha=${expectedHeadSha}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `executed_sha=${executedSha}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `completion_sha=${completionSha}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `exact_head=${exactHead}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `clean=${clean}\n`);
           NODE
 
       - name: Upload deterministic evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: review-evidence-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          name: review-evidence-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: .opencode/review-evidence
           if-no-files-found: error
           retention-days: 14
@@ -434,7 +562,7 @@ jobs:
       - name: Upload review context
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: review-context-${{ github.event.pull_request.head.sha }}
+          name: review-context-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/opencode-review-context
           include-hidden-files: true
           if-no-files-found: error
@@ -446,6 +574,12 @@ jobs:
     if: ${{ always() && needs.deterministic_evidence.result == 'success' && needs.prepare_review_context.result == 'success' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    outputs:
+      expected_sha: ${{ steps.review_completion.outputs.expected_sha }}
+      executed_sha: ${{ steps.review_completion.outputs.executed_sha }}
+      completion_sha: ${{ steps.review_completion.outputs.completion_sha }}
+      exact_head: ${{ steps.review_completion.outputs.exact_head }}
+      clean: ${{ steps.review_completion.outputs.clean }}
     env:
       HAS_DISCORD_REVIEW_WEBHOOK_URL: ${{ secrets.DISCORD_REVIEW_WEBHOOK_URL != '' }}
     permissions:
@@ -455,8 +589,39 @@ jobs:
       - name: Checkout pull request
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Verify exact and clean review checkout
+        id: review_checkout
+        shell: bash
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          expected_sha="$PR_HEAD_SHA"
+          executed_sha="$(git rev-parse HEAD)"
+          checkout_status="$(git status --porcelain --untracked-files=all)"
+          exact_head=false
+          clean=false
+          [[ "$executed_sha" == "$expected_sha" ]] && exact_head=true
+          [[ -z "$checkout_status" ]] && clean=true
+          {
+            echo "expected_sha=$expected_sha"
+            echo "executed_sha=$executed_sha"
+            echo "exact_head=$exact_head"
+            echo "clean=$clean"
+          } >> "$GITHUB_OUTPUT"
+          if [[ "$exact_head" != true ]]; then
+            echo "::error::Expected pull-request head $expected_sha but review checkout executed $executed_sha."
+            exit 1
+          fi
+          if [[ "$clean" != true ]]; then
+            echo "::error::Pull-request checkout was dirty before review execution."
+            printf '%s\n' "$checkout_status"
+            exit 1
+          fi
 
       - name: Set up Node 22
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -466,13 +631,13 @@ jobs:
       - name: Download deterministic evidence
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: review-evidence-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          name: review-evidence-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: .opencode/review-evidence
 
       - name: Download Muse tools and global skills
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: review-context-${{ github.event.pull_request.head.sha }}
+          name: review-context-${{ github.run_id }}-${{ github.run_attempt }}
           path: .review-context
 
       - name: Verify and install the bounded review context
@@ -510,9 +675,12 @@ jobs:
           # The reviewer must read the PR's tree, not a tree its own setup edited.
           # This counts untracked files too, deliberately: an unexpected file can
           # steer a review as easily as a modified one. The only tolerated entries
-          # are the review context this step installs (.opencode/, .review-context/),
-          # which caller repositories are not required to gitignore.
-          if git status --porcelain | grep -v -e '^?? \.opencode/' -e '^?? \.review-context/' | grep -q .; then
+          # are deterministic evidence and the review context this step installs
+          # (.opencode/review-evidence/, .review-context/), which caller
+          # repositories are not required to gitignore.
+          if git status --porcelain --untracked-files=all \
+            | grep -v -e '^?? \.opencode/review-evidence/' -e '^?? \.review-context/' \
+            | grep -q .; then
             echo "::error::Review-context setup left the working tree dirty before model execution."
             git status --short
             exit 1
@@ -563,15 +731,56 @@ jobs:
             2> "$RUNNER_TEMP/opencode-stderr.log" \
             | tee .opencode/review-evidence/model-response.txt
 
-      - name: Upload model response
+      - name: Upload review attempt artifacts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: review-model-response-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          name: review-attempt-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             .opencode/review-evidence/model-response.txt
+            .opencode/review-evidence/submission.json
+            ${{ runner.temp }}/opencode-stderr.log
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Verify review remained revision-bound
+        id: review_completion
+        if: ${{ always() }}
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.review_checkout.outputs.expected_sha }}
+          EXECUTED_SHA: ${{ steps.review_checkout.outputs.executed_sha }}
+          INITIAL_EXACT_HEAD: ${{ steps.review_checkout.outputs.exact_head }}
+          INITIAL_CLEAN: ${{ steps.review_checkout.outputs.clean }}
+        run: |
+          set -euo pipefail
+          completion_sha="$(git rev-parse HEAD)"
+          unexpected_status="$(git status --porcelain --untracked-files=all \
+            | grep -v -e '^?? \.opencode/review-evidence/' -e '^?? \.review-context/' || true)"
+          exact_head=false
+          clean=false
+          if [[ "$INITIAL_EXACT_HEAD" == true && "$EXPECTED_SHA" == "$EXECUTED_SHA" && "$EXPECTED_SHA" == "$completion_sha" ]]; then
+            exact_head=true
+          fi
+          if [[ "$INITIAL_CLEAN" == true && -z "$unexpected_status" ]]; then
+            clean=true
+          fi
+          {
+            echo "expected_sha=$EXPECTED_SHA"
+            echo "executed_sha=$EXECUTED_SHA"
+            echo "completion_sha=$completion_sha"
+            echo "exact_head=$exact_head"
+            echo "clean=$clean"
+          } >> "$GITHUB_OUTPUT"
+          if [[ "$exact_head" != true ]]; then
+            echo "::error::Review execution moved away from exact pull-request head $EXPECTED_SHA."
+            exit 1
+          fi
+          if [[ "$clean" != true ]]; then
+            echo "::error::Review execution modified the pull-request tree."
+            printf '%s\n' "$unexpected_status"
+            exit 1
+          fi
 
       - name: Create eta-mu GitHub App token for review publication
         id: eta_mu_publish_token
@@ -664,3 +873,66 @@ jobs:
                 throw new Error(`Discord webhook failed: ${response.status} ${await response.text()}`);
               }
             }
+
+  review_gate:
+    name: OpenCode evidence review gate
+    needs: [deterministic_evidence, prepare_review_context, review]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Enforce truthful reusable review result
+        shell: bash
+        env:
+          DETERMINISTIC_JOB_RESULT: ${{ needs.deterministic_evidence.result }}
+          DETERMINISTIC_OUTPUT_RESULT: ${{ needs.deterministic_evidence.outputs.result }}
+          DETERMINISTIC_EXPECTED_SHA: ${{ needs.deterministic_evidence.outputs.expected_sha }}
+          DETERMINISTIC_EXECUTED_SHA: ${{ needs.deterministic_evidence.outputs.executed_sha }}
+          DETERMINISTIC_COMPLETION_SHA: ${{ needs.deterministic_evidence.outputs.completion_sha }}
+          DETERMINISTIC_EXACT_HEAD: ${{ needs.deterministic_evidence.outputs.exact_head }}
+          DETERMINISTIC_CLEAN: ${{ needs.deterministic_evidence.outputs.clean }}
+          CONTEXT_JOB_RESULT: ${{ needs.prepare_review_context.result }}
+          REVIEW_JOB_RESULT: ${{ needs.review.result }}
+          REVIEW_EXPECTED_SHA: ${{ needs.review.outputs.expected_sha }}
+          REVIEW_EXECUTED_SHA: ${{ needs.review.outputs.executed_sha }}
+          REVIEW_COMPLETION_SHA: ${{ needs.review.outputs.completion_sha }}
+          REVIEW_EXACT_HEAD: ${{ needs.review.outputs.exact_head }}
+          REVIEW_CLEAN: ${{ needs.review.outputs.clean }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const failures = [];
+          const requiredSuccess = {
+            deterministic_job: process.env.DETERMINISTIC_JOB_RESULT,
+            deterministic_output: process.env.DETERMINISTIC_OUTPUT_RESULT,
+            context_job: process.env.CONTEXT_JOB_RESULT,
+            review_job: process.env.REVIEW_JOB_RESULT,
+          };
+          for (const [name, value] of Object.entries(requiredSuccess)) {
+            if (value !== 'success') failures.push(`${name}=${value || 'missing'}`);
+          }
+
+          const shaPattern = /^[0-9a-f]{40}$/i;
+          const revisions = [
+            ['deterministic', process.env.DETERMINISTIC_EXPECTED_SHA, process.env.DETERMINISTIC_EXECUTED_SHA, process.env.DETERMINISTIC_COMPLETION_SHA],
+            ['review', process.env.REVIEW_EXPECTED_SHA, process.env.REVIEW_EXECUTED_SHA, process.env.REVIEW_COMPLETION_SHA],
+          ];
+          for (const [name, expected, executed, completion] of revisions) {
+            if (![expected, executed, completion].every((sha) => shaPattern.test(sha || ''))
+                || expected !== executed
+                || expected !== completion) {
+              failures.push(`${name}_revision_binding=invalid`);
+            }
+          }
+          if (process.env.DETERMINISTIC_EXACT_HEAD !== 'true') failures.push('deterministic_exact_head=false_or_missing');
+          if (process.env.DETERMINISTIC_CLEAN !== 'true') failures.push('deterministic_clean=false_or_missing');
+          if (process.env.REVIEW_EXACT_HEAD !== 'true') failures.push('review_exact_head=false_or_missing');
+          if (process.env.REVIEW_CLEAN !== 'true') failures.push('review_clean=false_or_missing');
+
+          if (failures.length > 0) {
+            for (const failure of failures) console.error(`::error::OpenCode evidence review gate: ${failure}`);
+            process.exit(1);
+          }
+          console.log('OpenCode evidence review gate passed with successful dependencies and exact clean revision binding.');
+          NODE
