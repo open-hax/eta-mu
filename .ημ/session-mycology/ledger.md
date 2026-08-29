@@ -216,3 +216,12 @@
   spore: 20260813-082341-resolve-generated-artifact-conflicts-at-the-source.md
   receipt-refs: pr-181-main-merge-conflicts
   note: Translated main's direct CI edits into #181's declarative workflow source, then regenerated instead of selecting conflict sides.
+- ts: 2026-08-29T15:04:51Z
+  session: /workspace/scratch/8d4eacbf051e/worktrees/eta-tranche-completion
+  task: Complete eta-mu PR tranche #281, #284, #285, and #287 through review closeout and merge
+  p-efficiency: 0.91
+  p-friction: 0.24
+  p-skill-candidate: 0.55
+  spore: none
+  receipt-refs: 2026-08-29T14:58:40Z, 2026-08-29T15:04:51Z
+  note: Exact-head patch verification plus reply-before-resolve made the three stale conversation blockers mechanical; dependency order and base-SHA refreshes prevented the stacked PR from landing into its former feature branch. No new spore: the existing review-thread-closeout-verification spore already captures this reusable pattern.
