@@ -89,14 +89,15 @@ jobs:
           git config --global http.https://github.com/.extraheader "AUTHORIZATION: basic ${authorization}"
 
       - name: Lint Rheos sync change surface
+        working-directory: packages/rheos
         run: |
           clj-kondo --lint \
-            packages/rheos/src/rheos/backend/infra/github_issue_preflight.cljs \
-            packages/rheos/src/rheos/backend/infra/github_issues.cljs \
-            packages/rheos/src/rheos/backend/infra/github_sync_cli.cljs \
-            packages/rheos/src/rheos/backend/infra/task_store.cljs \
-            packages/rheos/test/rheos/backend/infra/github_issue_preflight_test.cljs \
-            packages/rheos/test/rheos/backend/infra/github_issues_test.cljs
+            src/rheos/backend/infra/github_issue_preflight.cljs \
+            src/rheos/backend/infra/github_issues.cljs \
+            src/rheos/backend/infra/github_sync_cli.cljs \
+            src/rheos/backend/infra/task_store.cljs \
+            test/rheos/backend/infra/github_issue_preflight_test.cljs \
+            test/rheos/backend/infra/github_issues_test.cljs
 
       - name: Test Rheos
         run: pnpm --dir packages/rheos test
