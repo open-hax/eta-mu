@@ -76,8 +76,9 @@ function addGeneratedOutputs(directory) {
   return generatedOutputPaths.map((relativePath) => path.join(directory, relativePath));
 }
 
-function guardEnvironment(directory, output, expectedSha) {
+function guardEnvironment(directory, output, expectedSha, eventHeadSha = expectedSha) {
   return {
+    EVENT_PR_HEAD_SHA: eventHeadSha,
     GITHUB_OUTPUT: output,
     GITHUB_WORKSPACE: directory,
     PR_HEAD_SHA: expectedSha,
@@ -141,6 +142,7 @@ test("a required reusable head input drives both exact checkout guards", () => {
   assert.equal(input.required, true);
   assert.equal(input.type, "string");
   const expectedRef = "${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}";
+  const eventHead = "${{ github.event.pull_request.head.sha }}";
 
   for (const jobId of ["deterministic_evidence", "review"]) {
     const checkout = namedStep(jobId, "Checkout pull request");
@@ -154,10 +156,40 @@ test("a required reusable head input drives both exact checkout guards", () => {
   ]) {
     const guard = namedStep(jobId, name);
     assert.equal(guard.env.PR_HEAD_SHA ?? guard.env.EXPECTED_SHA, expectedRef);
+    assert.equal(guard.env.EVENT_PR_HEAD_SHA, eventHead);
     assert.match(guard.run, /git rev-parse HEAD/);
     assert.match(guard.run, /git cat-file -e "\$\{expected_sha\}\^\{commit\}"/);
+    assert.match(guard.run, /event_head_matches/);
     assert.match(guard.run, /\^\[0-9a-f\]\{40\}\$/);
     assert.match(guard.run, /\^\[0-9a-f\]\{64\}\$/);
+  }
+});
+
+test("both checkout guards reject a valid caller SHA that is not the event PR head", (t) => {
+  for (const [jobId, name] of [
+    ["deterministic_evidence", "Verify exact and clean pull request checkout"],
+    ["review", "Verify exact and clean review checkout"],
+  ]) {
+    const { directory, sha: eventHeadSha } = makeRepository(t);
+    fs.writeFileSync(path.join(directory, "other.txt"), "caller-selected revision\n");
+    execFileSync("git", ["add", "other.txt"], { cwd: directory });
+    execFileSync("git", ["commit", "-qm", "other revision"], { cwd: directory });
+    const callerSha = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: directory,
+      encoding: "utf8",
+    }).trim();
+    const output = path.join(directory, `${jobId}-guard-output`);
+    const result = runScript(
+      namedStep(jobId, name).run,
+      directory,
+      guardEnvironment(directory, output, callerSha, eventHeadSha),
+    );
+    assert.notEqual(result.status, 0, `${jobId} accepted a non-event caller revision`);
+    const values = parseOutput(output);
+    assert.equal(values.expected_sha, callerSha);
+    assert.equal(values.event_head_sha, eventHeadSha);
+    assert.equal(values.event_head_matches, "false");
+    assert.equal(values.exact_head, "false");
   }
 });
 
@@ -215,6 +247,45 @@ test("default deterministic gates mirror private Git dependencies without persis
   assert.match(gates, /trap remove_mirror_rewrites EXIT/);
 });
 
+test("the default reusable evidence script executes every declared gate", (t) => {
+  const { directory } = makeRepository(t);
+  addGeneratedOutputs(directory);
+  const fakeBin = path.join(directory, "fake-bin");
+  const fakePnpm = path.join(fakeBin, "pnpm");
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(fakePnpm, "#!/bin/sh\nexit 0\n");
+  fs.chmodSync(fakePnpm, 0o755);
+  const runnerTemp = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-review-runner-"));
+  t.after(() => fs.rmSync(runnerTemp, { recursive: true, force: true }));
+
+  const result = runScript(
+    namedStep("deterministic_evidence", "Run deterministic gates").run,
+    directory,
+    {
+      CHECKOUT_CLEAN: "true",
+      CHECKOUT_EXACT_HEAD: "true",
+      EVIDENCE_GATES_SCRIPT:
+        workflow.on.workflow_call.inputs.evidence_gates_script.default,
+      GITHUB_WORKSPACE: directory,
+      PATH: `${fakeBin}:${process.env.PATH}`,
+      RUNNER_TEMP: runnerTemp,
+    },
+  );
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.deepEqual(
+    parseOutput(path.join(directory, ".opencode/review-evidence/statuses.env")),
+    {
+      install: "0",
+      bootstrap_extensions: "0",
+      lint: "0",
+      test: "0",
+      generated_outputs_baseline: "0",
+      build: "0",
+      generated_outputs_restore: "0",
+    },
+  );
+});
+
 test("artifact names do not claim an unverified head revision", () => {
   for (const name of [
     namedStep("deterministic_evidence", "Upload deterministic evidence").with.name,
@@ -238,15 +309,19 @@ test("deterministic checkout guard records independently executed SHA", (t) => {
   );
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(parseOutput(output), {
+    event_head_sha: sha,
     expected_sha: sha,
     executed_sha: sha,
     expected_commit: "true",
+    event_head_matches: "true",
     exact_head: "true",
     clean: "true",
   });
   const evidence = JSON.parse(
     fs.readFileSync(path.join(directory, ".opencode/review-evidence/checkout.json"), "utf8"),
   );
+  assert.equal(evidence.event_head_sha, sha);
+  assert.equal(evidence.event_head_matches, true);
   assert.equal(evidence.executed_sha, sha);
   assert.equal(evidence.exact_head, true);
 });

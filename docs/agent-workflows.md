@@ -50,7 +50,9 @@ Every reusable caller must pass `pr_head_sha` as the immutable
 deterministic command environment, evidence summary, and review bind to that
 input. Direct `pull_request` execution uses the same event-head value without a
 reusable input. A missing reusable input is a workflow contract error; a
-non-commit or mismatched value fails the checkout guards.
+non-commit or mismatched value fails the checkout guards. Both guards also
+compare the selected revision with the event's actual pull-request head, so a
+valid stale or merge commit supplied by a caller cannot become review authority.
 
 Deterministic Java, Clojure, Babashka, clj-kondo, and pnpm setup is enabled when a direct
 `pull_request` trigger has no reusable-workflow inputs and by the

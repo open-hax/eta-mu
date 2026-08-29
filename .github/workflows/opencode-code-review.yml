@@ -46,7 +46,7 @@ on:
             run_gate bootstrap_extensions pnpm --dir packages/extensions build
             run_gate lint pnpm lint
             run_gate test pnpm test
-            run_gate_preserving_generated_catalog build pnpm build
+            run_gate_preserving_generated_outputs build pnpm build
           else
             echo "bootstrap_extensions=125" >> "$statuses"
             echo "lint=125" >> "$statuses"
@@ -97,27 +97,35 @@ jobs:
         continue-on-error: true
         shell: bash
         env:
+          EVENT_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_HEAD_SHA: ${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           evidence_dir="$GITHUB_WORKSPACE/.opencode/review-evidence"
 
+          event_head_sha="$EVENT_PR_HEAD_SHA"
           expected_sha="$PR_HEAD_SHA"
           executed_sha="$(git rev-parse HEAD)"
           checkout_status="$(git status --porcelain --untracked-files=all)"
           expected_commit=false
+          event_head_matches=false
           exact_head=false
           clean=false
           if [[ "$expected_sha" =~ ^[0-9a-f]{40}$ || "$expected_sha" =~ ^[0-9a-f]{64}$ ]]; then
             git cat-file -e "${expected_sha}^{commit}" 2>/dev/null && expected_commit=true
           fi
-          [[ "$expected_commit" == true && "$executed_sha" == "$expected_sha" ]] && exact_head=true
+          if [[ "$event_head_sha" =~ ^[0-9a-f]{40}$ || "$event_head_sha" =~ ^[0-9a-f]{64}$ ]]; then
+            [[ "$expected_sha" == "$event_head_sha" ]] && event_head_matches=true
+          fi
+          [[ "$expected_commit" == true && "$event_head_matches" == true && "$executed_sha" == "$expected_sha" ]] && exact_head=true
           [[ -z "$checkout_status" ]] && clean=true
 
           {
+            echo "event_head_sha=$event_head_sha"
             echo "expected_sha=$expected_sha"
             echo "executed_sha=$executed_sha"
             echo "expected_commit=$expected_commit"
+            echo "event_head_matches=$event_head_matches"
             echo "exact_head=$exact_head"
             echo "clean=$clean"
           } >> "$GITHUB_OUTPUT"
@@ -125,16 +133,22 @@ jobs:
           mkdir -p "$evidence_dir"
           printf '%s\n' "$checkout_status" > "$evidence_dir/checkout-status.txt"
           jq -n \
+            --arg event_head_sha "$event_head_sha" \
             --arg expected_sha "$expected_sha" \
             --arg executed_sha "$executed_sha" \
             --argjson expected_commit "$expected_commit" \
+            --argjson event_head_matches "$event_head_matches" \
             --argjson exact_head "$exact_head" \
             --argjson clean "$clean" \
-            '{expected_sha: $expected_sha, executed_sha: $executed_sha, expected_commit: $expected_commit, exact_head: $exact_head, clean: $clean}' \
+            '{event_head_sha: $event_head_sha, expected_sha: $expected_sha, executed_sha: $executed_sha, expected_commit: $expected_commit, event_head_matches: $event_head_matches, exact_head: $exact_head, clean: $clean}' \
             > "$evidence_dir/checkout.json"
 
           if [[ "$expected_commit" != true ]]; then
             echo "::error::Expected pull-request revision is not an available immutable commit: $expected_sha"
+            exit 1
+          fi
+          if [[ "$event_head_matches" != true ]]; then
+            echo "::error::Caller-selected pull-request head $expected_sha does not match event head $event_head_sha."
             exit 1
           fi
           if [[ "$exact_head" != true ]]; then
@@ -758,29 +772,41 @@ jobs:
         id: review_checkout
         shell: bash
         env:
+          EVENT_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_HEAD_SHA: ${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
+          event_head_sha="$EVENT_PR_HEAD_SHA"
           expected_sha="$PR_HEAD_SHA"
           executed_sha="$(git rev-parse HEAD)"
           checkout_status="$(git status --porcelain --untracked-files=all)"
           expected_commit=false
+          event_head_matches=false
           exact_head=false
           clean=false
           if [[ "$expected_sha" =~ ^[0-9a-f]{40}$ || "$expected_sha" =~ ^[0-9a-f]{64}$ ]]; then
             git cat-file -e "${expected_sha}^{commit}" 2>/dev/null && expected_commit=true
           fi
-          [[ "$expected_commit" == true && "$executed_sha" == "$expected_sha" ]] && exact_head=true
+          if [[ "$event_head_sha" =~ ^[0-9a-f]{40}$ || "$event_head_sha" =~ ^[0-9a-f]{64}$ ]]; then
+            [[ "$expected_sha" == "$event_head_sha" ]] && event_head_matches=true
+          fi
+          [[ "$expected_commit" == true && "$event_head_matches" == true && "$executed_sha" == "$expected_sha" ]] && exact_head=true
           [[ -z "$checkout_status" ]] && clean=true
           {
+            echo "event_head_sha=$event_head_sha"
             echo "expected_sha=$expected_sha"
             echo "executed_sha=$executed_sha"
             echo "expected_commit=$expected_commit"
+            echo "event_head_matches=$event_head_matches"
             echo "exact_head=$exact_head"
             echo "clean=$clean"
           } >> "$GITHUB_OUTPUT"
           if [[ "$expected_commit" != true ]]; then
             echo "::error::Expected review revision is not an available immutable commit: $expected_sha"
+            exit 1
+          fi
+          if [[ "$event_head_matches" != true ]]; then
+            echo "::error::Caller-selected review head $expected_sha does not match event head $event_head_sha."
             exit 1
           fi
           if [[ "$exact_head" != true ]]; then

@@ -10,7 +10,7 @@ write-id: "1788028459318-0.rzb2druu4iow48j5kdn"
 ---
 
 ---
-Acceptance: in a disposable same-repository fixture caller pinned to the merged reusable-workflow revision, run one deterministic gate that exits non-zero; prove the summary artifact records result=failure plus expected/executed/completion SHAs, the review attempt artifact remains downloadable, and the stable OpenCode evidence review gate concludes failure. Then run a zero-exit control at a clean head with exact SHA equality and prove that same named terminal job succeeds. Record caller PR, exact heads, workflow run IDs, artifact names, and required-check configuration; do not weaken or bypass the production workflow.
+Acceptance: in a disposable same-repository fixture caller pinned to the merged reusable-workflow revision, run one deterministic gate that exits non-zero; prove the summary artifact records result=failure plus expected/executed/completion SHAs, the review attempt artifact remains downloadable, and the stable OpenCode evidence review gate concludes failure. Then run a zero-exit control at a clean head with exact SHA equality and prove that same-named terminal job succeeds. Record caller PR, exact heads, workflow run IDs, artifact names, and required-check configuration; do not weaken or bypass the production workflow.
 
 GitHub issue: https://github.com/open-hax/eta-mu/issues/297
 
