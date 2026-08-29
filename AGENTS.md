@@ -16,13 +16,13 @@ When modeling domains, you must strictly differentiate between the grammar of mo
 are failed contracts, not noise.
 
 ### Namespace Architecture
-| Layer      | Pattern            | Rule                                                                          |
-|------------|--------------------|-------------------------------------------------------------------------------|
-| `domain.*` | Business logic     | No I/O. Pure functions only.                                                  |
-| `infra.*`  | Transport/DB/Queue | No domain policy, effectual composition of domain logic                       |
-| `shape.*`  | Data morphisms     | Pure, domain-agnostic.                                                        |
-| `law.*`    | Contracts/Malli    | No I/O. Validators only.                                                      |
-| `extern.*` | js boundary layer  | wrap js data type logic in functions that take clj data-types as input output |
+| Layer      | Pattern             | Rule                                                                                                                              |
+|------------|---------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| `domain.*` | Business logic      | No I/O. Pure functions only.                                                                                                      |
+| `infra.*`  | Transport/DB/Queue  | No domain policy; effectful composition of domain logic.                                                                          |
+| `shape.*`  | Data morphisms      | Pure, domain-agnostic.                                                                                                            |
+| `law.*`    | Contracts/Malli     | No I/O. Validators only.                                                                                                          |
+| `extern.*` | JavaScript boundary | Own raw JavaScript, Node, browser, and SDK operations. Decode foreign values at the edge; expose only defined CLJS data upward. |
 
 ### Clojure Construction Order
 Regardless of the kanban process, ClojureScript is **built in a fixed order**, because the
@@ -135,4 +135,3 @@ Board state is the single source of truth for work. Treat it as a finite-state m
 - **Naming**: camelCase for TS, kebab-case for CLJS, descriptive variable names
 - **Error handling**: Try/catch only when necessary, proper error logging via bus events
 - **Formatting**: Consistent indentation, no unnecessary destructuring, single-responsibility functions
-
