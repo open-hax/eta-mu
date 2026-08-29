@@ -82,6 +82,7 @@ jobs:
       completion_sha: ${{ steps.gates.outputs.completion_sha }}
       exact_head: ${{ steps.gates.outputs.exact_head }}
       clean: ${{ steps.gates.outputs.clean }}
+      artifact_name: ${{ steps.deterministic_artifact_name.outputs.name }}
     permissions:
       contents: read
     steps:
@@ -421,10 +422,12 @@ jobs:
               run_gate test pnpm test
               run_gate_preserving_generated_outputs build pnpm build
             else
-              echo "bootstrap_extensions=125" >> "$statuses"
-              echo "lint=125" >> "$statuses"
-              echo "test=125" >> "$statuses"
-              echo "build=125" >> "$statuses"
+              {
+                echo "bootstrap_extensions=125"
+                echo "lint=125"
+                echo "test=125"
+                echo "build=125"
+              } >> "$statuses"
               echo "Dependency installation failed; bootstrap, lint, test, and build were not attempted." >> "$log"
             fi
           fi
@@ -530,11 +533,21 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `clean=${clean}\n`);
           NODE
 
+      - name: Bind deterministic artifact name
+        id: deterministic_artifact_name
+        if: always()
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: printf 'name=review-evidence-%s-%s-%s\n' "$PR_NUMBER" "$RUN_ID" "$RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+
       - name: Upload deterministic evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: review-evidence-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ steps.deterministic_artifact_name.outputs.name }}
           path: .opencode/review-evidence
           if-no-files-found: error
           retention-days: 14
@@ -544,6 +557,8 @@ jobs:
     if: ${{ github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    outputs:
+      artifact_name: ${{ steps.context_artifact_name.outputs.name }}
     permissions:
       contents: read
     steps:
@@ -732,12 +747,22 @@ jobs:
           printf '%s\n' "$MUSE_REVISION" > "$CONTEXT_OUT/metadata/muse-revision.txt"
           printf '%s\n' "$AGENTS_REVISION" > "$CONTEXT_OUT/metadata/agents-revision.txt"
           (cd "$CONTEXT_OUT/agents" && find skills -name SKILL.md -type f -print | sort) > "$CONTEXT_OUT/metadata/skills.txt"
-          (cd "$CONTEXT_OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+          sums_file="$RUNNER_TEMP/opencode-review-context.SHA256SUMS"
+          (cd "$CONTEXT_OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > "$sums_file"
+          mv "$sums_file" "$CONTEXT_OUT/SHA256SUMS"
+
+      - name: Bind review-context artifact name
+        id: context_artifact_name
+        shell: bash
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: printf 'name=review-context-%s-%s\n' "$RUN_ID" "$RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
 
       - name: Upload review context
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: review-context-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ steps.context_artifact_name.outputs.name }}
           path: ${{ runner.temp }}/opencode-review-context
           include-hidden-files: true
           if-no-files-found: error
@@ -827,13 +852,13 @@ jobs:
       - name: Download deterministic evidence
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: review-evidence-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ needs.deterministic_evidence.outputs.artifact_name }}
           path: .opencode/review-evidence
 
       - name: Download Muse tools and global skills
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: review-context-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ needs.prepare_review_context.outputs.artifact_name }}
           path: .review-context
 
       - name: Verify and install the bounded review context
@@ -909,23 +934,29 @@ jobs:
         id: review_start
         run: echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
-      - name: Run evidence-first OpenCode review
-        shell: bash
+      - name: Run bounded evidence-first OpenCode review
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REVIEW_MODEL: ${{ inputs.model || 'opencode/mimo-v2.5-free' }}
-        run: |
-          set -o pipefail
-          sed "s/{{PR_NUMBER}}/${PR_NUMBER}/g" .review-context/machinery/evidence-review.md > "$RUNNER_TEMP/review-prompt.md"
+          REVIEW_PROMPT_FILE: .review-context/machinery/evidence-review.md
+          REVIEW_EVIDENCE_DIR: ${{ github.workspace }}/.opencode/review-evidence
+        run: node .github/scripts/run-opencode-review-recovery.mjs
 
-          # The model runs read-only inside the checked-out PR. It has no GitHub
-          # token at all: publication is the deterministic publisher's job.
-          opencode run \
-            --agent github-reviewer \
-            --model "$REVIEW_MODEL" \
-            "$(cat "$RUNNER_TEMP/review-prompt.md")" \
-            2> "$RUNNER_TEMP/opencode-stderr.log" \
-            | tee .opencode/review-evidence/model-response.txt
+      - name: Validate final review submission
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          REVIEW_SUBMISSION_FILE: .opencode/review-evidence/submission.json
+        with:
+          script: |
+            const {
+              readSubmission,
+              changedLineIndex,
+              validateEnvelope,
+            } = require('./.review-context/machinery/publish-opencode-review.cjs');
+            const envelope = readSubmission({ submissionFile: process.env.REVIEW_SUBMISSION_FILE });
+            const changedLines = await changedLineIndex({ github, context });
+            validateEnvelope(envelope, changedLines);
+            core.info('Final review submission is schema-valid and bound to reviewable pull-request lines.');
 
       - name: Upload review attempt artifacts
         if: always()
@@ -933,9 +964,12 @@ jobs:
         with:
           name: review-attempt-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            .opencode/review-evidence/model-response.txt
+            .opencode/review-evidence/model-response-attempt-1.txt
+            .opencode/review-evidence/model-response-attempt-2.txt
+            .opencode/review-evidence/opencode-stderr-attempt-1.log
+            .opencode/review-evidence/opencode-stderr-attempt-2.log
+            .opencode/review-evidence/recovery.json
             .opencode/review-evidence/submission.json
-            ${{ runner.temp }}/opencode-stderr.log
           if-no-files-found: warn
           retention-days: 14
 

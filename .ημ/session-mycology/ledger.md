@@ -261,3 +261,12 @@
   spore: none
   receipt-refs: 2026-08-29T23:10:27.371Z
   note: The one-file grouped redirect was proven by the same pinned actionlint/ShellCheck command before and after the change. A connector create request can succeed even when its response cannot be serialized, while the public listing remains briefly stale; duplicate preflight after convergence caught the retry-created issue and allowed #302 to be deprojected and closed without corrupting canonical #301. No new spore; the existing review closeout and worktree targeting spores already cover the broader verification discipline.
+- ts: 2026-08-29T23:48:49Z
+  session: /workspace/scratch/8d4eacbf051e/eta-mu-post300
+  task: Preserve review prerequisites and recover one omitted review submission
+  p-efficiency: 0.84
+  p-friction: 0.67
+  p-skill-candidate: 0.76
+  spore: none
+  receipt-refs: 2026-08-29T23:48:49Z
+  note: A failed-job rerun is not a fresh upstream attempt: names recomputed from github.run_attempt can strand immutable successful evidence. Passing the uploaded names through needs outputs preserves that causality. The provider omission path is distinct and receives exactly one in-job retry only for an absent tool artifact; malformed or repeated omissions remain red. The existing separate-evidence-retention-from-terminal-truth spore already covers this reusable pattern, so no duplicate spore was incubated.
