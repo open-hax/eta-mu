@@ -82,6 +82,7 @@
     ".github/workflows/rheos.yml"
     "contracts/workflows/ci.edn"],
    :gate/emitting true,
+   :gate/needs-repos ["katamorph"],
    :gate/steps
    [{:step/run "pnpm --dir packages/rheos test",
      :step/name "Test",

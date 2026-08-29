@@ -181,6 +181,7 @@
      ;; subset plus the path filters it should select on.
      :job/gate {:gate/id "rheos"
                 :gate/check "Rheos tests and lint"
+                :gate/needs-repos ["katamorph"]
                 :gate/paths ["packages/rheos/" "packages/protocols/" "packages/chat-ui/"
                              "openhax.kanban.edn" "openhax.kanban.json"
                              "kanban/openhax.kanban" "package.json"
@@ -194,6 +195,11 @@
       {:step/name "Install dependencies"
        :step/run "pnpm install --frozen-lockfile"}
       {:step/use :clj-kondo}
+      ;; packages/rheos/deps.edn resolves katamorph from a private repo, so the
+      ;; classpath cannot be built until this job holds a read token. Every step
+      ;; below runs shadow-cljs, which resolves deps before compiling, so the
+      ;; grant has to land here rather than beside any one of them.
+      {:step/use :private-git-deps}
       {:step/name "Test"
        :step/run "pnpm --dir packages/rheos test"
        :step/gate true
@@ -212,6 +218,9 @@
        ;; `rheos-ci-does-not-gate-build-warnings`; when the workflow adopts the
        ;; same check this key stops being a divergence.
        :gate/no-warning true}
+      {:step/name "Remove private Git authorization"
+       :step/if "always()"
+       :step/run "git config --global --unset-all http.https://github.com/.extraheader || true"}
       {:step/name "Upload shadow-cljs logs"
        :step/if "failure()"
        :step/action :upload-artifact

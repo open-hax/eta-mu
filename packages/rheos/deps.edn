@@ -1,0 +1,12 @@
+{:paths ["src" "test"
+         "../protocols/src"
+         "../chat-ui/src"]
+
+ :deps
+ {thheller/shadow-cljs         {:mvn/version "3.4.10"}
+  lilactown/helix              {:mvn/version "0.2.2"}
+  metosin/malli                {:mvn/version "0.16.4"}
+  ;; Katamorph owns the condition kernel; Rheos consumes it. Pin the immutable
+  ;; mainline merge of open-hax/katamorph#7 until the next package tag includes
+  ;; the kernel.
+  io.github.open-hax/katamorph {:git/sha "be7cc332d865cfedc57b55b10cab3c9f2bd41fc4"}}}

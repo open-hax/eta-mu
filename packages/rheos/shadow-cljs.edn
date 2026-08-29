@@ -1,9 +1,4 @@
-{ :source-paths ["src" "test"
-                "../protocols/src"
-                "../chat-ui/src"]
- :repositories {"clojars" {:url "https://repo.clojars.org/"}}
- :dependencies [[lilactown/helix "0.2.2"]
-                [metosin/malli "0.16.4"]]
+{:deps true
  :nrepl {:port 8799}
  ;; Unique watch HTTP port. The shadow default (9630) is held by knoxx's
  ;; backend watch, so pin Rheos's own port so hot-reload attaches cleanly.
