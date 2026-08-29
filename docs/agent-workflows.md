@@ -40,6 +40,60 @@ The workflow has three bounded stages:
 2. **Review-context compilation** — check out pinned revisions of `octave-commons/muse` and `riatzukiza/.agents`. Muse compiles a review-specific OpenCode projection containing only observer tools; the `.agents` repository is packaged as the global skill source. Both revisions and the skill inventory are recorded in the context artifact.
 3. **One model review pass** — map the change, reconstruct relevant contracts and invariants, generate candidate findings, attempt to disprove each candidate, and publish only findings that survive the evidence threshold.
 
+The reusable workflow has one stable terminal check, **OpenCode evidence review
+gate**. Configure that job as the required check in callers. It runs under
+`always()` and fails closed unless deterministic execution, context compilation,
+and review publication all succeeded.
+
+Every reusable caller must pass `pr_head_sha` as the immutable
+`${{ github.event.pull_request.head.sha }}` value. Both workflow checkouts,
+deterministic command environment, evidence summary, and review bind to that
+input. Direct `pull_request` execution uses the same event-head value without a
+reusable input. A missing reusable input is a workflow contract error; a
+non-commit or mismatched value fails the checkout guards. Both guards also
+compare the selected revision with the event's actual pull-request head, so a
+valid stale or merge commit supplied by a caller cannot become review authority.
+
+Deterministic Java, Clojure, Babashka, clj-kondo, and pnpm setup is enabled when a direct
+`pull_request` trigger has no reusable-workflow inputs and by the
+`workflow_call` default. A reusable caller may explicitly set
+`setup_eta_mu_toolchain: false` when its evidence script supplies a compatible
+toolchain; the workflow distinguishes an absent input key from a present
+boolean before applying its value, independently of the inherited event name.
+Default eta-mu gates use the repository GitHub App to mirror the pinned
+Katamorph and event-ledger repositories into runner-temporary storage. Bounded
+`insteadOf` rewrites exist only for deterministic execution and are removed by
+an exit trap; missing credentials remain a recorded deterministic failure.
+
+For draft or fork pull requests, that same stable job runs and reports the
+review as explicitly not applicable. Those events are outside the workflow's
+supported review boundary, so their intentionally skipped prerequisites do not
+block branch protection. Eligible non-draft, same-repository runs retain the
+fail-closed behavior. A reusable call from `push`, `merge_group`, or any other
+event without a pull-request payload is a caller contract failure, not an
+unsupported pull request, and the terminal gate fails closed.
+
+Deterministic command failures do not suppress their evidence or the review
+attempt. The command step records every exit, the summary reports
+`result: failure`, and artifacts are uploaded; the model may still inspect that
+failure. The terminal check is what makes the reusable caller red. This split is
+intentional: retaining diagnostics must never turn a failed gate green.
+
+Eta-mu's build refreshes explicit tracked generated outputs: the legacy model
+catalog plus the contracts CLI bundle and source map. The default gate requires
+every listed path to match `HEAD` before the build, archives changed bytes and
+SHA-256 evidence under their repository-relative paths, and restores the exact
+checked-out bytes afterward. The build exit remains authoritative, and every
+other tracked or untracked mutation still fails the clean-tree proof. A missing
+or already dirty listed path is never restored or hidden.
+
+Evidence schema `open-hax.review-evidence/v2` distinguishes the event's
+`expected_head_sha` from the independently observed `executed_sha` and
+`completion_sha`. Both deterministic execution and model review explicitly
+check out the pull-request head and require the same clean revision before and
+after their work. `head_sha` is populated only after those values agree; run-ID
+artifact names avoid claiming an exact revision before that proof exists.
+
 ### Muse observer projection
 
 Muse remains the compatibility/compiler boundary. The workflow does not treat its bootstrap actor implementation as canonical runtime authority.

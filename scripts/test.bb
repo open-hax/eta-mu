@@ -1,4 +1,5 @@
 #!/usr/bin/env bb
+;; SPDX-License-Identifier: GPL-3.0-or-later
 ;; Eta-mu test gate.
 ;;
 ;; Runs every workspace unit-test suite and reports one summary.
@@ -34,7 +35,9 @@
 
    Deliberately excluded:
      @eta-mu/e2e — browser/server suite, run by .github/workflows/e2e.yml"
-  [{:label "contract-guard" :cmd ["node" "--test" "scripts/contract-guard.test.mjs"]}
+  [{:label "review-workflow"
+    :cmd ["node" "--test" ".github/scripts/opencode-code-review-workflow.test.mjs"]}
+   {:label "contract-guard" :cmd ["node" "--test" "scripts/contract-guard.test.mjs"]}
    {:label "eta-mu" :pkg "eta-mu"}
    {:label "clio" :pkg "@eta-mu/clio"}
    {:label "rheos" :pkg "@eta-mu/rheos"}
