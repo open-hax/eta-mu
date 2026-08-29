@@ -63,9 +63,10 @@ jobs:
           restore-keys: ${{ runner.os }}-pnpm-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Install clj-kondo
+      - name: Install Clojure CLI and clj-kondo
         uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
         with:
+          cli: 1.12.5.1654
           clj-kondo: 2025.10.23
       - name: Detect eta-mu app credentials
         id: dependency-credentials

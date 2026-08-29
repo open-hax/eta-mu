@@ -47,9 +47,10 @@
     :step/with {:distribution "temurin" :java-version "21"}}]
 
   :clj-kondo
-  [{:step/name "Install clj-kondo"
+  [{:step/name "Install Clojure CLI and clj-kondo"
     :step/action :setup-clojure
-    :step/with {:clj-kondo "2025.10.23"}}]
+    :step/with {:cli "1.12.5.1654"
+                :clj-kondo "2025.10.23"}}]
 
   :bb-and-kondo
   [{:step/action :setup-clojure
