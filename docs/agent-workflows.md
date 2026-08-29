@@ -57,6 +57,12 @@ attempt. The command step records every exit, the summary reports
 failure. The terminal check is what makes the reusable caller red. This split is
 intentional: retaining diagnostics must never turn a failed gate green.
 
+Eta-mu's build refreshes the tracked legacy model catalog from live provider
+metadata. The default gate requires that catalog to match `HEAD` before the
+build, archives any regenerated version as review evidence, and restores the
+checked-out bytes afterward. The build exit remains authoritative, and every
+other tracked or untracked mutation still fails the clean-tree proof.
+
 Evidence schema `open-hax.review-evidence/v2` distinguishes the event's
 `expected_head_sha` from the independently observed `executed_sha` and
 `completion_sha`. Both deterministic execution and model review explicitly

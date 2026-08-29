@@ -42,7 +42,7 @@ on:
             run_gate bootstrap_extensions pnpm --dir packages/extensions build
             run_gate lint pnpm lint
             run_gate test pnpm test
-            run_gate build pnpm build
+            run_gate_preserving_generated_catalog build pnpm build
           else
             echo "bootstrap_extensions=125" >> "$statuses"
             echo "lint=125" >> "$statuses"
@@ -232,6 +232,48 @@ jobs:
             return 0
           }
 
+          run_gate_preserving_generated_catalog() {
+            local name="$1"
+            shift
+            local catalog_path="packages/legacy/ai/src/models.generated.ts"
+            local baseline_snapshot="$RUNNER_TEMP/models.generated.ts.before"
+            local generated_dir="$evidence_dir/generated"
+            local baseline_clean=false
+
+            if [[ -f "$catalog_path" ]] && git diff --quiet HEAD -- "$catalog_path"; then
+              baseline_clean=true
+              cp "$catalog_path" "$baseline_snapshot"
+              echo "generated_catalog_baseline=0" >> "$statuses"
+            else
+              echo "generated_catalog_baseline=1" >> "$statuses"
+              echo "Generated model catalog was missing or dirty before the build gate." >> "$log"
+            fi
+
+            run_gate "$name" "$@"
+
+            if [[ "$baseline_clean" == true ]]; then
+              if [[ ! -f "$catalog_path" ]] || ! cmp -s "$baseline_snapshot" "$catalog_path"; then
+                mkdir -p "$generated_dir"
+                if [[ -f "$catalog_path" ]]; then
+                  cp "$catalog_path" "$generated_dir/models.generated.ts"
+                  sha256sum "$generated_dir/models.generated.ts" > "$generated_dir/models.generated.ts.sha256"
+                else
+                  printf '%s\n' "build removed $catalog_path" > "$generated_dir/models.generated.ts.missing"
+                fi
+              fi
+
+              cp "$baseline_snapshot" "$catalog_path"
+              if git diff --quiet HEAD -- "$catalog_path"; then
+                echo "generated_catalog_restore=0" >> "$statuses"
+              else
+                echo "generated_catalog_restore=1" >> "$statuses"
+                echo "Generated model catalog could not be restored to the checked-out revision." >> "$log"
+              fi
+            else
+              echo "generated_catalog_restore=125" >> "$statuses"
+            fi
+          }
+
           if [[ "$CHECKOUT_EXACT_HEAD" != "true" || "$CHECKOUT_CLEAN" != "true" ]]; then
             echo "checkout_guard=1" >> "$statuses"
             echo "Deterministic commands were not executed because the checkout was not the exact clean pull-request head." >> "$log"
@@ -244,7 +286,7 @@ jobs:
               run_gate bootstrap_extensions pnpm --dir packages/extensions build
               run_gate lint pnpm lint
               run_gate test pnpm test
-              run_gate build pnpm build
+              run_gate_preserving_generated_catalog build pnpm build
             else
               echo "bootstrap_extensions=125" >> "$statuses"
               echo "lint=125" >> "$statuses"
@@ -344,7 +386,7 @@ jobs:
             statuses,
             attempted,
             errors,
-            interpretation: 'Exit 125 means the gate was skipped because dependency installation failed.',
+            interpretation: 'Exit 125 means the gate was skipped because a required prerequisite failed.',
           };
           fs.writeFileSync(path.join(evidenceDir, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`);
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `result=${result}\n`);

@@ -58,6 +58,15 @@ function makeRepository(t) {
   return { directory, sha };
 }
 
+function addGeneratedCatalog(directory, content = "checked-in catalog\n") {
+  const catalog = path.join(directory, "packages/legacy/ai/src/models.generated.ts");
+  fs.mkdirSync(path.dirname(catalog), { recursive: true });
+  fs.writeFileSync(catalog, content);
+  execFileSync("git", ["add", "packages/legacy/ai/src/models.generated.ts"], { cwd: directory });
+  execFileSync("git", ["commit", "-qm", "add generated catalog"], { cwd: directory });
+  return catalog;
+}
+
 function guardEnvironment(directory, output, expectedSha) {
   return {
     GITHUB_OUTPUT: output,
@@ -294,6 +303,79 @@ test("deterministic summary fails closed when status output is missing", (t) => 
   );
   assert.equal(summary.result, "failure");
   assert.match(summary.errors.join("\n"), /statuses\.env is missing/);
+});
+
+test("build gate archives and restores its tracked generated catalog side effect", (t) => {
+  const { directory } = makeRepository(t);
+  const catalog = addGeneratedCatalog(directory);
+  const runnerTemp = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-review-runner-"));
+  t.after(() => fs.rmSync(runnerTemp, { recursive: true, force: true }));
+  const result = runScript(
+    namedStep("deterministic_evidence", "Run deterministic gates").run,
+    directory,
+    {
+      CHECKOUT_CLEAN: "true",
+      CHECKOUT_EXACT_HEAD: "true",
+      EVIDENCE_GATES_SCRIPT:
+        "run_gate_preserving_generated_catalog build bash -c 'printf regenerated > packages/legacy/ai/src/models.generated.ts'",
+      GITHUB_WORKSPACE: directory,
+      RUNNER_TEMP: runnerTemp,
+    },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.readFileSync(catalog, "utf8"), "checked-in catalog\n");
+  assert.equal(
+    fs.readFileSync(
+      path.join(directory, ".opencode/review-evidence/generated/models.generated.ts"),
+      "utf8",
+    ),
+    "regenerated",
+  );
+  assert.deepEqual(
+    parseOutput(path.join(directory, ".opencode/review-evidence/statuses.env")),
+    {
+      generated_catalog_baseline: "0",
+      build: "0",
+      generated_catalog_restore: "0",
+    },
+  );
+  assert.equal(
+    execFileSync("git", ["diff", "--name-only"], { cwd: directory, encoding: "utf8" }),
+    "",
+  );
+});
+
+test("build gate never hides a generated catalog mutation that predates the build", (t) => {
+  const { directory } = makeRepository(t);
+  const catalog = addGeneratedCatalog(directory);
+  fs.writeFileSync(catalog, "unexpected prior mutation\n");
+  const runnerTemp = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-review-runner-"));
+  t.after(() => fs.rmSync(runnerTemp, { recursive: true, force: true }));
+  const result = runScript(
+    namedStep("deterministic_evidence", "Run deterministic gates").run,
+    directory,
+    {
+      CHECKOUT_CLEAN: "true",
+      CHECKOUT_EXACT_HEAD: "true",
+      EVIDENCE_GATES_SCRIPT: "run_gate_preserving_generated_catalog build bash -c true",
+      GITHUB_WORKSPACE: directory,
+      RUNNER_TEMP: runnerTemp,
+    },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.readFileSync(catalog, "utf8"), "unexpected prior mutation\n");
+  assert.deepEqual(
+    parseOutput(path.join(directory, ".opencode/review-evidence/statuses.env")),
+    {
+      generated_catalog_baseline: "1",
+      build: "0",
+      generated_catalog_restore: "125",
+    },
+  );
+  assert.match(
+    execFileSync("git", ["diff", "--name-only"], { cwd: directory, encoding: "utf8" }),
+    /models\.generated\.ts/,
+  );
 });
 
 test("review completion permits only review artifacts and preserves revision", (t) => {
