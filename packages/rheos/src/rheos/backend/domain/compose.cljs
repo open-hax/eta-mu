@@ -2,41 +2,10 @@
   "Board composition — query DSL for filtering across multiple boards."
   (:require [clojure.string :as str]
             [rheos.backend.domain.board :as board]
+            [rheos.backend.domain.compose-condition :as compose-condition]
             [rheos.backend.domain.events :as events]
             [rheos.backend.infra.ledger :as ledger]
             [rheos.backend.infra.task-store :as tasks]))
-
-(defn- normalize-value [v]
-  (cond
-    (keyword? v) (name v)
-    :else (str v)))
-
-(defn- apply-operator [field-value op test-value]
-  (let [fv (normalize-value field-value)
-        tv (normalize-value test-value)]
-    (case op
-      :=  (= fv tv)
-      :in (if (vector? test-value)
-            (some #(= fv (normalize-value %)) test-value)
-            (= fv tv))
-      :contains (cond
-                  (vector? field-value) (some #(= (normalize-value %) tv) field-value)
-                  (string? fv) (str/includes? fv tv)
-                  :else false)
-      :regex (try (boolean (re-matches (re-pattern tv) fv)) (catch :default _ false))
-      false)))
-
-(defn- match-where [task [field op value]]
-  (let [field-key (if (keyword? field) field (keyword field))]
-    (apply-operator (get task field-key) op value)))
-
-(defn- match-meta-where [meta [field op value]]
-  (let [field-name (name field)
-        key (if (str/starts-with? field-name "meta.")
-              (keyword (subs field-name 5))
-              (keyword field-name))
-        meta-val (get meta key)]
-    (apply-operator meta-val op value)))
 
 (defn parse-where-clause [clause]
   (let [clause (str/trim clause)]
@@ -63,19 +32,20 @@
   (str/starts-with? (name (first clause)) "meta."))
 
 (defn- filter-task [task {:keys [status priority labels where-clauses]}]
-  (and (or (empty? status) (some #(= (:status task) %) status))
-       (or (empty? priority) (some #(= (:priority task) %) priority))
-       (or (empty? labels) (every? (fn [label] (some #(= % label) (:labels task))) labels))
+  (and (compose-condition/match-any? (:status task) status)
+       (compose-condition/match-any? (:priority task) priority)
+       (compose-condition/contains-all? (:labels task) labels)
        (every? (fn [clause]
                  (or (meta-clause? clause)
-                     (match-where task clause)))
+                     (compose-condition/match-clause? task clause)))
                (or where-clauses []))))
 
 (defn- filter-projects [projects {:keys [across where-clauses]}]
-  (let [meta-clauses (filter #(str/starts-with? (name (first %)) "meta.") where-clauses)]
+  (let [meta-clauses (filter meta-clause? where-clauses)]
     (filterv (fn [project]
                (and (or (empty? across) (some #(= (:id project) %) across))
-                    (every? #(match-meta-where (:meta project) %) meta-clauses)))
+                    (every? #(compose-condition/match-clause? (:meta project) %)
+                            meta-clauses)))
              projects)))
 
 (defn ^:async compose-snapshot [projects query]
