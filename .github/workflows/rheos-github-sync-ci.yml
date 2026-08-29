@@ -44,27 +44,70 @@ jobs:
       - name: Install workspace
         run: pnpm install --frozen-lockfile
 
-      - name: Install clj-kondo
+      - name: Install Clojure CLI and clj-kondo
+        uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360 # v13.4
+        with:
+          cli: 1.12.5.1654
+          clj-kondo: 2025.10.23
+
+      - name: Detect eta-mu app credentials
+        id: dependency-credentials
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
         run: |
-          curl -sLO https://raw.githubusercontent.com/clj-kondo/clj-kondo/master/script/install-clj-kondo
-          chmod +x install-clj-kondo
-          sudo ./install-clj-kondo
+          if [[ -n "${ETA_MU_APP_ID}" && -n "${ETA_MU_APP_PRIVATE_KEY}" ]]; then
+            echo "available=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "available=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Create cross-repository read token
+        id: dependency-token
+        if: steps.dependency-credentials.outputs.available == 'true'
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        with:
+          app-id: ${{ secrets.ETA_MU_APP_ID }}
+          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: katamorph
+
+      - name: Configure private Git dependency reads
+        env:
+          DEPENDENCY_TOKEN: ${{ steps.dependency-token.outputs.token }}
+          CREDENTIALS_AVAILABLE: ${{ steps.dependency-credentials.outputs.available }}
+        run: |
+          if [[ "${CREDENTIALS_AVAILABLE}" != "true" ]]; then
+            echo "ETA_MU_APP_ID / ETA_MU_APP_PRIVATE_KEY are unavailable"
+            exit 1
+          fi
+          if [[ -z "${DEPENDENCY_TOKEN}" ]]; then
+            echo "The eta-mu GitHub App did not mint a dependency token"
+            exit 1
+          fi
+          authorization="$(printf 'x-access-token:%s' "${DEPENDENCY_TOKEN}" | base64 -w0)"
+          git config --global http.https://github.com/.extraheader "AUTHORIZATION: basic ${authorization}"
 
       - name: Lint Rheos sync change surface
+        working-directory: packages/rheos
         run: |
           clj-kondo --lint \
-            packages/rheos/src/rheos/backend/infra/github_issue_preflight.cljs \
-            packages/rheos/src/rheos/backend/infra/github_issues.cljs \
-            packages/rheos/src/rheos/backend/infra/github_sync_cli.cljs \
-            packages/rheos/src/rheos/backend/infra/task_store.cljs \
-            packages/rheos/test/rheos/backend/infra/github_issue_preflight_test.cljs \
-            packages/rheos/test/rheos/backend/infra/github_issues_test.cljs
+            src/rheos/backend/infra/github_issue_preflight.cljs \
+            src/rheos/backend/infra/github_issues.cljs \
+            src/rheos/backend/infra/github_sync_cli.cljs \
+            src/rheos/backend/infra/task_store.cljs \
+            test/rheos/backend/infra/github_issue_preflight_test.cljs \
+            test/rheos/backend/infra/github_issues_test.cljs
 
       - name: Test Rheos
         run: pnpm --dir packages/rheos test
 
       - name: Release-build Rheos including GitHub projector
         run: pnpm --dir packages/rheos build
+
+      - name: Remove private Git authorization
+        if: always()
+        run: git config --global --unset-all http.https://github.com/.extraheader || true
 
       - name: Generate canonical eta-mu board snapshot
         env:
