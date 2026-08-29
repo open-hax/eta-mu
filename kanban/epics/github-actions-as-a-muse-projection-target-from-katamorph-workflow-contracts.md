@@ -1,13 +1,13 @@
 ---
-uuid: "github-actions-as-a-muse-projection-target-from-katamorph-workflow-contracts"
-title: "GitHub Actions as a Muse projection target from Katamorph workflow contracts"
-status: "incoming"
-type: "epic"
-priority: "P2"
-points: "13"
-labels: "katamorph, muse, workflow, dsl, ci, architecture"
 category: "epics"
-write-id: "1786051740829-0.5slqlywrh13v7wlseh9"
+labels: "katamorph, muse, workflow, dsl, ci, architecture"
+type: "epic"
+write-id: "1786609403042-0.p8rtbeoo43mzarwp86h"
+points: "13"
+title: "GitHub Actions as a Muse projection target from Katamorph workflow contracts"
+priority: "P2"
+status: "incoming"
+uuid: "github-actions-as-a-muse-projection-target-from-katamorph-workflow-contracts"
 created_at: "2026-08-06T21:29:00.829Z"
 ---
 
@@ -165,3 +165,30 @@ an EDN declaration plus an action registry. Semantic diff across all four jobs:
 Raised 2026-08-06. Sibling of `workflow-dsl-kanban-reference`, which owns the
 Rheos/Kanban interpreter of the same language — this card is the *other* target
 of that vocabulary and should not fork it.
+
+---
+--text
+
+The bare `--text` comment above is an artifact of the `eta-mu kanban` flag bug — the bridge consumed the flag name as its own value. Left in place rather than edited out: the ledger is append-only, and a card projection that quietly disagrees with it is worse than a visible piece of noise. Written here through `rheos comment` instead.
+
+Status update, raised in review on #181 — this card describes its gap as open, and it is not.
+
+**Slice 1 is done upstream.** `katamorph.schema/WorkflowContract` exists as of open-hax/katamorph#2, filling the hole this card identified: the registry advertised `{:id :registry/workflows :kind :workflow}` with no schema behind it. Read the "gap this fills in Katamorph" section as historical.
+
+Four decisions settled while implementing, none obvious from the card:
+
+- `:job/needs` is first-class — no other kind carries a DAG.
+- `:job/matrix` is deliberately **not** `StrategyContract`. The card flagged the collision; the resolution is a separate key, since `StrategyContract` means a retry policy.
+- Permissions are `[:map-of keyword? keyword?]`, capability-shaped, matching `CapabilityContract`.
+- No expression language. `${{ }}` travels as an opaque string — what katamorph cannot interpret it also cannot silently mangle.
+
+**Slices 2-5 shipped differently than proposed; do not read the card as the plan.** It suggested a Muse `shape/target/github_actions.cljs`. Still the right long-term home, but `packages/eta-mu` cannot consume katamorph without switching shadow-cljs to `:deps true` — too much blast radius. So the projector ships as an nbb command with eta-mu and redeclares no schema. Revisit when eta-mu can consume katamorph directly.
+
+Shipped on #181: workflow resources under `contracts/workflows/`, projection to both GitHub Actions YAML and a local gate plan, `eta-mu workflows` and `eta-mu gates` as shipped commands, nbb bundled at a pinned version. The action registry closed the drift this card measured.
+
+**Honest state of the last slice:** six of eight workflows carry `:workflow/emit false` — their resource owns the gate, the committed YAML still owns what CI runs. Converting those is the remainder, `sol-ci` last for its GitHub App token and private git mirrors.
+
+Merge-resolution plan for main@0a009f46: preserve main's Clio CI obligations and broadened trigger paths by adding them to contracts/workflows/ci.edn, re-emit main-pr-gate.yml and .gates.edn, preserve #181's intentional deletion of scripts/ci-gates.bb, regenerate pnpm-lock.yaml so eta-mu nbb 1.5.211 and Clio nbb 1.3.201 both remain, then run workflow checks and relevant zero-warning test/lint gates. Evidence: PR #181 makes workflow resources the source of truth and replaces the local mirror with eta-mu gates; main commits b3f57ab, 7699497, and 30aff693 establish the Clio job, workspace path coverage, and local-gate obligation.
+
+Merge from main resolved by intent. Preserved main's Clio PR job and complete workflow trigger coverage in the authoritative contracts/workflows/ci.edn; regenerated main-pr-gate.yml and .gates.edn (10 gates); kept #181's intentional scripts/ci-gates.bb deletion; regenerated pnpm-lock.yaml with both intentional NBB generations (eta-mu 1.5.211/import-meta-resolve 4.2.0 and Clio 1.3.201/import-meta-resolve 2.2.2). Evidence: PR #181 contract/projection outcome plus main commits b3f57ab, 7699497, 30aff693. Verification: workflows check clean; pnpm install --frozen-lockfile clean; eta-mu 174 tests/391 assertions and compile 0 warnings; eta-mu clj-kondo 0 errors/0 warnings; Clio bb 23/57, NBB 54/112, Shadow 54/112, all zero failures, Shadow compile 0 warnings; Clio clj-kondo 0 errors/0 warnings and extern boundary clean; exact root Clio lint/test wrappers pass. Anomalies: NBB/Node fs.Stats deprecation and pnpm-dlx Shadow installation notice reproduce main's existing toolchain; actionlint unavailable locally.
+---

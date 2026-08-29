@@ -1,0 +1,159 @@
+;; Package gate resources.
+;;
+;; These six workflows still have hand-written YAML — several carry machinery a
+;; faithful transcription must not get wrong (GitHub App tokens for private git
+;; mirrors, artifact uploads, cache keys). So each is declared here with
+;; `:workflow/emit false`: the resource is authoritative for its **gate**, the
+;; committed YAML remains authoritative for what CI runs, and `emit` leaves the
+;; file alone.
+;;
+;; That is a deliberate half-step, not an accident. It removes the gate mirror
+;; from the runner — which is the thing that drifted — while leaving the riskier
+;; YAML conversion for a change that can be reviewed on its own. Flipping one to
+;; `:workflow/emit true` is then a small, isolated diff.
+;;
+;; While a workflow is non-emitting its path filters can still drift from the
+;; resource, so `eta-mu gates --audit` checks exactly those and nothing else. It
+;; has nothing left to say once every workflow emits.
+
+{:namespace :eta-mu.ci.packages
+
+ :resources
+ [{:contract/kind :workflow
+   :contract/id "coverage"
+   :workflow/name "coverage"
+   :workflow/emit false
+   :workflow/doc "Package test suites. Runs on every PR — no path filter."
+   :workflow/triggers [{:on/event :pull-request}]
+   :workflow/jobs
+   [{:job/id "eta-mu-cljs"
+     :job/name "eta-mu CLI + turn-processor + terminal-ui"
+     :job/gate {:gate/id "eta-mu-cljs"
+                :gate/check "eta-mu CLI + turn-processor + terminal-ui"
+                :gate/always true}
+     :job/steps
+     [{:step/run "pnpm --dir packages/turn-processor test" :step/gate true
+       :gate/expect "0 failures, 0 errors"}
+      {:step/run "pnpm --dir packages/turn-processor lint:kondo" :step/gate true}
+      {:step/run "pnpm --dir packages/terminal-ui test" :step/gate true
+       :gate/expect "0 failures, 0 errors"}
+      {:step/run "pnpm --dir packages/terminal-ui lint:kondo" :step/gate true}
+      {:step/run "pnpm --dir packages/eta-mu test" :step/gate true
+       :gate/expect "0 failures, 0 errors"}
+      {:step/run "pnpm --dir packages/eta-mu lint:kondo" :step/gate true}
+      {:step/run "pnpm --dir packages/eta-mu test:e2e" :step/gate true}]}
+
+    {:job/id "ts-packages"
+     :job/name "TS package tests"
+     :job/gate {:gate/id "ts-packages"
+                :gate/check "TS package tests"
+                :gate/always true}
+     :job/steps
+     [{:step/run "pnpm --dir packages/legacy/github test" :step/gate true}
+      {:step/run "node --test packages/legacy/docs/tests/*.test.cjs" :step/gate true}]}]}
+
+  {:contract/kind :workflow
+   :contract/id "sol-ci"
+   :workflow/name "Sol CI"
+   :workflow/emit false
+   :workflow/doc
+   "Sol is the only package whose deps.edn reaches outside the workspace —
+    katamorph and event-ledger are private repos consumed as immutable git refs.
+    eta-mu is public and a workflow's default GITHUB_TOKEN covers only its own
+    repo, so CI mints a scoped GitHub App token to read those two. None of that
+    applies locally, where a developer's git credential helper usually already
+    has access — hence :gate/needs-repos rather than a check for CI's credential,
+    which would skip a gate that can perfectly well run."
+   :workflow/triggers
+   [{:on/event :pull-request
+     :on/paths ["packages/sol/**" "packages/turn-processor/**" "packages/eta-mu/**"
+                ".github/workflows/sol-ci.yml" "package.json" "pnpm-lock.yaml"
+                "pnpm-workspace.yaml"]}]
+   :workflow/jobs
+   [{:job/id "verify"
+     :job/name "Sol CI"
+     :job/gate {:gate/id "sol"
+                :gate/check "Sol CI"
+                :gate/needs-repos ["katamorph" "event-ledger"]
+                :gate/paths ["packages/sol/" "packages/turn-processor/" "packages/eta-mu/"
+                             ".github/workflows/sol-ci.yml" "package.json"
+                             "pnpm-lock.yaml" "pnpm-workspace.yaml"]}
+     :job/steps
+     [{:step/run "pnpm --dir packages/sol lint" :step/gate true}
+      {:step/run "pnpm --dir packages/sol test" :step/gate true
+       :gate/expect "0 failures, 0 errors" :gate/no-warning true}
+      {:step/run "pnpm --dir packages/sol build" :step/gate true :gate/no-warning true}]}]}
+
+  {:contract/kind :workflow
+   :contract/id "axxium-ci"
+   :workflow/name "Axxium CI"
+   :workflow/emit false
+   :workflow/triggers
+   [{:on/event :pull-request
+     :on/paths ["packages/axxium/**" ".github/workflows/axxium-ci.yml" "pnpm-lock.yaml"]}]
+   :workflow/jobs
+   [{:job/id "verify"
+     :job/name "Axxium CI"
+     :job/gate {:gate/id "axxium"
+                :gate/check "Axxium CI"
+                :gate/paths ["packages/axxium/" ".github/workflows/axxium-ci.yml"
+                             "pnpm-lock.yaml"]}
+     :job/steps
+     [{:step/run "cd packages/axxium && clj-kondo --lint src/cljs test/cljs"
+       :step/gate true}
+      ;; The JS-boundary debt ratchet. Both halves matter: a malformed --max
+      ;; must be rejected, and then the ratchet must hold.
+      {:step/name "Enforce JS boundary debt ratchet"
+       :step/gate true
+       :step/run
+       "cd packages/axxium && set -o pipefail && for invalid in 56oops 56.5 1e2; do if node scripts/check-js-boundary.mjs \"--max=${invalid}\" >/dev/null 2>&1; then echo \"Malformed boundary maximum was accepted: ${invalid}\"; exit 1; fi; done && node scripts/check-js-boundary.mjs --max=56"}
+      {:step/run "pnpm --dir packages/axxium test" :step/gate true
+       :gate/expect "0 failures, 0 errors" :gate/no-warning true}
+      {:step/run "pnpm --dir packages/axxium build" :step/gate true :gate/no-warning true}]}]}
+
+  {:contract/kind :workflow
+   :contract/id "eta-mu-extensions-tests"
+   :workflow/name "eta-mu-extensions-tests"
+   :workflow/emit false
+   :workflow/triggers
+   [{:on/event :pull-request
+     :on/paths ["packages/extensions/**" "packages/e2e/**"
+                ".github/workflows/eta-mu-extensions-tests.yml"]}]
+   :workflow/jobs
+   [{:job/id "test"
+     :job/name "eta-mu-extensions-tests"
+     :job/gate {:gate/id "extensions"
+                :gate/check "eta-mu-extensions-tests"
+                :gate/paths ["packages/extensions/" "packages/e2e/"
+                             ".github/workflows/eta-mu-extensions-tests.yml"]}
+     :job/steps
+     [{:step/run "pnpm --dir packages/extensions build" :step/gate true}
+      {:step/run "pnpm --dir packages/extensions validate-paths" :step/gate true}
+      {:step/run "cd packages/extensions && pnpm exec shadow-cljs compile node-test && node target/test.cjs"
+       :step/gate true :gate/expect "0 failures, 0 errors"}]}]}
+
+  {:contract/kind :workflow
+   :contract/id "rheos-github-sync-ci"
+   :workflow/name "Rheos GitHub Sync CI"
+   :workflow/emit false
+   :workflow/triggers
+   [{:on/event :pull-request
+     :on/paths ["packages/rheos/**" ".github/workflows/kanban-sync.yml"
+                ".github/workflows/eta-mu-kanban-sync.yml"
+                ".github/workflows/rheos-github-sync-ci.yml"]}]
+   :workflow/jobs
+   [{:job/id "rheos-github-sync"
+     :job/name "rheos-github-sync"
+     :job/gate {:gate/id "rheos-github-sync"
+                :gate/check "rheos-github-sync"
+                :gate/paths ["packages/rheos/" ".github/workflows/kanban-sync.yml"
+                             ".github/workflows/eta-mu-kanban-sync.yml"
+                             ".github/workflows/rheos-github-sync-ci.yml"]}
+     :job/steps
+     [{:step/run "pnpm --dir packages/rheos test" :step/gate true
+       :gate/expect "0 failures, 0 errors"}
+      {:step/run "pnpm --dir packages/rheos build" :step/gate true}
+      {:step/run "node packages/rheos/dist/cli.cjs board snapshot --tasks-dir \"$PWD/kanban\" --out /tmp/eta-mu-gates-snapshot.json"
+       :step/gate true}
+      {:step/run "node packages/rheos/dist/cli.cjs drift --tasks-dir \"$PWD/kanban\""
+       :step/gate true}]}]}]}

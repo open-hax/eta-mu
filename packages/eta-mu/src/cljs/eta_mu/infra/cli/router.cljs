@@ -13,6 +13,7 @@
             [eta-mu.infra.cli.commands.doctor :as doctor]
             [eta-mu.infra.cli.commands.git :as git]
             [eta-mu.infra.cli.commands.kanban :as kanban]
+            [eta-mu.infra.cli.commands.resource-commands :as resource-commands]
             [eta-mu.infra.cli.commands.sessions :as sessions]
             [eta-mu.infra.cli.commands.sol :as sol]
             [eta-mu.law.command :as law]
@@ -38,8 +39,10 @@
     (await (session-protocol-handler context))
     (await (sessions/handle context))))
 
-(defn command-registry
-  "Build the command registry."
+(declare command-registry)
+
+(defn built-in-command-registry
+  "Build the compiled-in command registry."
   []
   {"agent"     {:name "agent"
                 :description "Start the agent (default; REPL if no prompt)"
@@ -91,6 +94,18 @@
                              (println version))
                            (process/exit! 0))}})
 
+(defn command-registry
+  "Built-in commands, plus any declared as command resources on disk.
+
+   Built-ins win every name conflict. Resource-declared commands are what make
+   a new subcommand possible without rebuilding this binary — which is the
+   whole point of them — but they must never be able to redefine `kanban` or
+   `receipt` by being loaded at the wrong moment."
+  []
+  (let [built-in (built-in-command-registry)]
+    (merge (resource-commands/registry-entries (keys built-in) version)
+           built-in)))
+
 (defn- validate!
   []
   (when-not (law/valid-registry? (command-registry))
@@ -123,9 +138,12 @@
       (do (when-not (:handler (:command descriptor))
             (console/error! (str "Internal error: command has no handler: " (str/join " " (:path descriptor))))
             (process/exit! 1))
-          (await ((:handler (:command descriptor)) {:args (:args descriptor)
-                                                    :raw-args (router/raw-args-after-path tokens (:path descriptor))
-                                                    :flags (:flags parsed)})))
+          (await ((:handler (:command descriptor))
+                  {:args (:args descriptor)
+                   ;; Resource commands re-parse for themselves, so they need the
+                   ;; tokens as typed — flags included — not the router's split.
+                   :raw-args (router/raw-args-after-path tokens (:path descriptor))
+                   :flags (:flags parsed)})))
 
       (do (console/error! "Internal error: unknown dispatch descriptor")
           (process/exit! 1)))))

@@ -10,7 +10,7 @@
     "build": "pnpm -r --no-bail build",
     "test": "bb scripts/test.bb",
     "typecheck": "pnpm --filter @open-hax/eta-mu-docs typecheck && pnpm --filter @open-hax/kanban-legacy exec tsc -p tsconfig.json --noEmit",
-    "gates": "bb scripts/ci-gates.bb",
+    "gates": "eta-mu gates",
     "lint": "bb scripts/lint.bb",
     "lint:fix": "node scripts/lint.mjs --fix",
     "lint:kondo": "pnpm -r --no-bail --if-present lint:kondo",

@@ -1,0 +1,78 @@
+;; Workflow resource registry.
+;;
+;; Every action a workflow may reference, pinned exactly once, plus the
+;; toolchain fragments that YAML cannot factor out. `:step/action` in a workflow
+;; resource resolves through here — an action not named here is refused, which
+;; is what makes "same action, five different pins" unrepresentable rather than
+;; merely discouraged.
+;;
+;; Measured on this repo before this file existed: 8 actions carried more than
+;; one pin, `actions/checkout` alone had 5 distinct refs mixing floating tags
+;; (v4, v6) with three SHAs, across 274 steps in 23 workflows.
+
+{:namespace :eta-mu.workflows.resources
+
+ ;; ── Actions ────────────────────────────────────────────────────────────────
+ ;; One pin per action. A comment records the human-readable version so the SHA
+ ;; is auditable without a lookup.
+ :actions
+ {:checkout        {:action/uses "actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+                    :action/version "v4"}
+  :setup-java      {:action/uses "actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9"
+                    :action/version "v4"}
+  :setup-clojure   {:action/uses "DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360"
+                    :action/version "13.4"}
+  :setup-pnpm      {:action/uses "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1"
+                    :action/version "v4"}
+  :setup-node      {:action/uses "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+                    :action/version "v4"}
+  :cache           {:action/uses "actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830"
+                    :action/version "v4"}
+  :upload-artifact {:action/uses "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+                    :action/version "v4"}}
+
+ ;; ── Toolchains ─────────────────────────────────────────────────────────────
+ ;; A named sequence of steps. This is the composite-action idea, kept as data:
+ ;; the same preamble appears in most jobs in this repo and is the single
+ ;; largest source of duplication (36 checkouts, 23 setup-node, 18 pnpm).
+ :toolchains
+ {:checkout
+  [{:step/action :checkout
+    :step/with {:persist-credentials false}}]
+
+  :jvm
+  [{:step/action :setup-java
+    :step/with {:distribution "temurin" :java-version "21"}}]
+
+  :clj-kondo
+  [{:step/name "Install clj-kondo"
+    :step/action :setup-clojure
+    :step/with {:clj-kondo "2025.10.23"}}]
+
+  :bb-and-kondo
+  [{:step/action :setup-clojure
+    :step/with {:bb "1.13.219" :clj-kondo "2025.10.23"}}]
+
+  ;; pnpm before node, so setup-node can see the package manager.
+  :node-pnpm
+  [{:step/action :setup-pnpm
+    :step/with {:version "10.14.0" :run_install false}}
+   {:step/action :setup-node
+    :step/with {:node-version "22"}}]
+
+  :node-pnpm-20
+  [{:step/action :setup-pnpm
+    :step/with {:version "10.14.0" :run_install false}}
+   {:step/action :setup-node
+    :step/with {:node-version 20}}]
+
+  ;; The pnpm store cache. Two steps that only work together: the first
+  ;; publishes the store path as an output, the second keys a cache on it.
+  :pnpm-cache
+  [{:step/name "Get pnpm store path"
+    :step/id "pnpm-cache"
+    :step/run "echo \"store=$(pnpm store path)\" >> \"$GITHUB_OUTPUT\""}
+   {:step/action :cache
+    :step/with {:path "${{ steps.pnpm-cache.outputs.store }}"
+                :key "${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}"
+                :restore-keys "${{ runner.os }}-pnpm-"}}]}}

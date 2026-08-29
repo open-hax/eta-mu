@@ -18,7 +18,7 @@ clj-kondo.exports/open-hax/kondo-config/
 ### What `config.edn` provides
 
 - **`:lint-as`** — treats `shadow.cljs.modern/js-await` and `js-await*` as `let`, and `helix.core/defnc` as `defn`.
-- **`:linters` levels** — sets levels for the workspace's structural linters:
+- **`:linters` levels — sets levels for the workspace's structural linters:
   - `:fn-length/long` (warning), `:fn-length/too-long` (error)
   - `:file-length/long` (warning), `:file-length/too-long` (error)
   - `:complexity/high` (warning), `:complexity/too-complex` (error)

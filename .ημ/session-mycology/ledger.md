@@ -189,3 +189,30 @@
   spore: none
   receipt-refs: none
   note: Falsified most new tests by bypassing the FSM verdict in move-task! and matching the failures to the bug's real signature — but skipped that check on the exit-code test, which is exactly the one that turned out to assert a constant (:refused -> 3) instead of the behaviour that sets it. CodeRabbit caught it. Also: the comment --text fix merged in #182 was not in force because eta-mu-beta symlinks to an unrebuilt dist-cli, so the bug reproduced on main and corrupted a card; the receipt claiming it fixed made it less likely to be doubted. Carded the two out-of-scope defects found (build gate rewrites models.generated.ts; merged != shipped for dist-cli).
+- ts: 2026-08-09T23:38:03Z
+  session: /home/err/spaces/eta-mu
+  task: PR #280 clio review-resolution, two rounds of 16 bot findings; merged, then follow-up PR #282 for two post-merge findings
+  p-efficiency: 0.75
+  p-friction: 0.5
+  p-skill-candidate: 0.85
+  spore: 20260809-233803-an-acknowledged-plan-is-a-hypothesis.md
+  receipt-refs: 2026-08-09T22:56:48.517Z
+  note: Reproduced all 16 findings before acknowledging; one did not reproduce (orn/catn/altn/multi labels never leaked) but the probe exposed the inverse unsound defect, a branch labeled :enum dropping its real child. Two acknowledged plans were falsified by building the artifact — npm bin cannot be a .nbb because npm symlinks bins and nbb walks the unresolved path for nbb.edn; edamame expands syntax-quote into (quote sym) leaves so the quote/syntax-quote distinction does not survive parsing. Both corrected on-thread with evidence rather than silently substituted. Mechanical trap: #280 merged 90s before the last two findings landed, and I committed the receipt onto the deleted branch before cherry-picking it onto #282.
+- ts: 2026-08-13T08:01:03Z
+  session: /home/err/spaces/eta-mu
+  task: Resolve the kanban ledger merge conflict and audit Clio/Rheos integration
+  p-efficiency: 0.85
+  p-friction: 0.35
+  p-skill-candidate: 0.45
+  spore: none
+  receipt-refs: 2026-08-09T23:36:03.841Z
+  note: A lossless append-log merge is base plus both independently appended tails in event-time order; Clio's generic partition kernel is present, but Rheos still writes the monolithic tracked ledger and treats checkout changes as drift.
+- ts: 2026-08-13T08:23:49.006500480Z
+  session: /home/err/spaces/eta-mu
+  task: Resolve PR #181 conflicts after merging main
+  p-efficiency: 0.82
+  p-friction: 0.58
+  p-skill-candidate: 0.82
+  spore: 20260813-082341-resolve-generated-artifact-conflicts-at-the-source.md
+  receipt-refs: pr-181-main-merge-conflicts
+  note: Translated main's direct CI edits into #181's declarative workflow source, then regenerated instead of selecting conflict sides.
