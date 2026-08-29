@@ -1,8 +1,10 @@
 (ns rheos.backend.shape.frontmatter-test
-  #?(:clj (:require [clojure.test :refer [deftest is testing]]
+  #?(:clj (:require [clojure.string :as str]
+                    [clojure.test :refer [deftest is testing]]
                     [rheos.backend.law.markdown-document :as law]
                     [rheos.backend.shape.markdown-document :as markdown])
-     :cljs (:require [cljs.test :refer-macros [deftest is testing]]
+     :cljs (:require [clojure.string :as str]
+                     [cljs.test :refer-macros [deftest is testing]]
                      [rheos.backend.law.markdown-document :as law]
                      [rheos.backend.shape.markdown-document :as markdown])))
 
@@ -31,10 +33,10 @@
         document (markdown/parse raw)
         decoded (:document/frontmatter-data document)]
     (testing "raw source remains authoritative"
-      (is (.contains (:document/frontmatter-raw document) "  arbitrary: true"))
-      (is (.contains (:document/frontmatter-raw document) "note: |2"))
-      (is (.contains (:document/frontmatter-raw document) "folded: >+2"))
-      (is (.contains (:document/frontmatter-raw document) "tags: [one, two]")))
+      (is (str/includes? (:document/frontmatter-raw document) "  arbitrary: true"))
+      (is (str/includes? (:document/frontmatter-raw document) "note: |2"))
+      (is (str/includes? (:document/frontmatter-raw document) "folded: >+2"))
+      (is (str/includes? (:document/frontmatter-raw document) "tags: [one, two]")))
     (testing "ambiguous structural values are omitted from the partial view"
       (is (not (contains? decoded :nested)))
       (is (not (contains? decoded :note)))
