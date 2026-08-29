@@ -1,7 +1,7 @@
 ---
 category: "epics"
 labels: ["epics", "cljs", "kanban", "rewrite", "openplanner-protocols"]
-write-id: "1783700388205-0.2tej6ym34fn50rpg9ma"
+write-id: "1788040471962-0.0sy7ect2y8x6of1pq23"
 points: "55"
 source: "planning-session:2026-06-08"
 title: "Kanban CLJS Rewrite: Server, CLI, Frontend"
@@ -58,4 +58,6 @@ Verification across owned sets: clj-kondo 0/0, Rheos `pnpm test` 58/164 green, c
 **Remaining for PR #134 to merge clean:** commit + push the working-tree edits (this batch did not commit/push) — touches `packages/rheos/{src,package.json}`, `packages/chat-ui/{src,package.json}`, `pnpm-lock.yaml`, `packages/legacy/github/src/pi-agent.ts`, `.github/workflows/{staging-pr,main-pr-gate}.yml`. Then re-run CI on the PR. Non-blocking follow-ups recorded on the card: decide whether frontmatter handler should 400 vs. drop unknown keys (board client may echo read-only fields), SHA-pin the remaining ~12 workflows still on tag pins, and revisit DOMPurify allow-list config if specific markdown elements need gating.
 
 2026-07-10: added sidebar comment editor (POST /api/task/:uuid/comment) to close the remaining UI editor gap. Frontmatter editor was already present. The potential routing of Rheos subcommands through the legacy eta-mu kanban dispatcher is deferred as a future bridge task if needed. @open-hax/rheos build, test, and lint all pass. Moving to done.
+
+Discovery artifact for the Rheos plus chat-ui construction-order pass: docs/rheos-chat-ui-shape-discovery.md, tracked by kanban/tasks/rheos-chat-ui-shape-discovery.md and merged in PR #134.
 ---

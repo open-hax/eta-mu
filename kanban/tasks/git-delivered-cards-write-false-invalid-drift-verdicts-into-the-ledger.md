@@ -2,11 +2,11 @@
 category: "tasks"
 labels: "rheos, ledger, watcher, drift"
 type: "task"
-write-id: "1786065520254-0.1yjdqnp9en8sl8rx8fo"
+write-id: "1788040499322-0.3zd77udtkemx96yf96"
 points: "3"
 title: "Git-delivered cards write false invalid drift verdicts into the ledger"
 priority: "P1"
-status: "review"
+status: "done"
 uuid: "git-delivered-cards-write-false-invalid-drift-verdicts-into-the-ledger"
 created_at: "2026-08-06T21:11:52.783Z"
 ---
@@ -138,4 +138,6 @@ Acceptance criteria met: tests land cards the way git does (plain YAML, no write
 Evidence: 138 rheos tests / 476 assertions green, and the new tests fail against the pre-fix logic; clj-kondo 0 warnings; 9/9 local gates pass.
 
 Found while working this card: `eta-mu kanban comment <uuid> --text "..."` silently recorded the literal string `--text` as the comment body and reported `"ok": true`. That is fixed in the same branch — this comment is written with the fixed build.
+
+Closure audit 2026-08-29: acceptance is complete. PR #182 head 7cf493fb7da83abeb13b983096c77979d6e788ba merged as f685aa7aecf74e536c267531298220b5eaf53254. Current watcher uses the shared frontmatter parser and distinct unknown, valid, and invalid verdicts; tests cover plain-YAML git-shaped arrivals across every FSM state, absent status as unknown, genuine out-of-band drift, prose isolation, and quoted/plain parity. Exact-head Actions run 31138369120 passed Rheos test, lint, and release build; CodeQL, GitHub sync CI, sandbox bundle, Sol CI, coverage, OpenCode review, and CodeRabbit also passed. Historical nil plus invalid entries remain unchanged as required, and no post-fix occurrence was found.
 ---

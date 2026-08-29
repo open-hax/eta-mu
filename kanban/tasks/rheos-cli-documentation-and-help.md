@@ -3,7 +3,7 @@ category: "tasks"
 labels: "rheos, cli, docs, agents"
 parent: "rheos-cli-card-lifecycle-authority"
 type: "task"
-write-id: "1786026255457-0.o5aptghipbtpe5xhg8"
+write-id: "1788040500552-0.yb9x6eeh72mw08ea6n1"
 points: "3"
 title: "Rheos CLI documentation: correct help output, full verb reference, agent quickstart"
 priority: "P0"
@@ -89,4 +89,6 @@ Build gate verified green 2026-07-30 at this tree state: pnpm build exit 0, pnpm
 Implemented on PR #169 (`docs/rheos-cli-reference`) — https://github.com/open-hax/eta-mu/pull/169
 
 Stack position 3 of 3; base is #168 → #167 → main. Merge last.
+
+Closure audit blocker 2026-08-29: keep open. The literal acceptance criterion says no openhax-kanban occurrence may remain in packages/rheos/src or README, but current packages/rheos/src/rheos/backend/infra/github_issues.cljs contains the managed marker string openhax-kanban-sync twice. Help, docs, dispatch, and historical PR #169 evidence otherwise pass. Resolve by explicitly narrowing the contract to binary-name references with matching regression coverage, or by a compatible marker migration; do not close against the current literal criterion.
 ---

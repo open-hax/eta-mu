@@ -3,7 +3,7 @@ category: "tasks"
 labels: "rheos, cli, lifecycle, exit-codes, json"
 parent: "rheos-cli-card-lifecycle-authority"
 type: "task"
-write-id: "1786026255003-0.cg9ltlces0cnb46cqu1"
+write-id: "1788040501870-0.svnc8ce0b7dulc0n8up"
 points: "5"
 title: "Rheos CLI lifecycle verb completeness and machine-usable exit contract"
 priority: "P0"
@@ -97,4 +97,6 @@ Build gate verified green 2026-07-30 at this tree state: pnpm build exit 0, pnpm
 Implemented on PR #168 (`feat/rheos-cli-exit-contract`) — https://github.com/open-hax/eta-mu/pull/168
 
 Stack position 2 of 3; base is #167, not main. Currently CONFLICTING against its base and must be rebased once #167 lands.
+
+Closure audit blocker 2026-08-29: keep open. The issue requires a frontmatter-change ledger event, while current emit-frontmatter-change! writes event type kanban.frontmatter with payload type frontmatter and tests pin that spelling. The card also records that json support on every verb was not completed, and the current registry advertises the json flag only on a subset. Narrow command examples and exact-head PR #168 gates pass, but the declared contract is not fully met.
 ---

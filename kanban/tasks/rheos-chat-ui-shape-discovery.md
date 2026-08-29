@@ -1,14 +1,16 @@
 ---
-uuid: "rheos-chat-ui-shape-discovery"
-title: "Discovery: Rheos + chat-ui latent shapes and reuse map"
-status: icebox
-priority: "P1"
-labels: ["tasks", "rheos", "chat-ui", "cljs", "discovery", "shape", "law", "3sp"]
-created_at: "2026-06-16T00:00:00Z"
-source: "construction-order discovery pass after PR #134"
-points: 3
 category: "tasks"
+labels: ["tasks", "rheos", "chat-ui", "cljs", "discovery", "shape", "law", "3sp"]
+write-id: "1788040488001-0.lndxgigzdanzeqoj1c"
+points: "3"
+source: "construction-order discovery pass after PR #134"
+title: "Discovery: Rheos + chat-ui latent shapes and reuse map"
+priority: "P1"
+status: "done"
+uuid: "rheos-chat-ui-shape-discovery"
+created_at: "2026-06-16T00:00:00Z"
 ---
+
 # Discovery: Rheos + chat-ui latent shapes and reuse map
 
 Discovery phase of the Clojure Construction Order (`AGENTS.md` → "Clojure Construction
@@ -37,3 +39,7 @@ log, and a reuse map of shapes that already exist in sibling packages.
 3. **shape:** centralize Task (de)serialize + camelCase mapping; canonicalize frontmatter aliases; unify chat `SessionState`/`StreamConnection`.
 4. **extern:** name the unfenced `extern.browser.*` / `extern.fs` / `extern.process` boundaries.
 5. **domain/infra:** push I/O out of `domain.*` (compose/events/task-edit/transition) into `infra.*` — resolves the reviewers' standing purity note and the PR-134 frontmatter-whitelist / status-FSM should-fixes fall out of slice 1.
+
+---
+Closure audit 2026-08-29: acceptance is complete. Discovery artifact docs/rheos-chat-ui-shape-discovery.md was implemented in d7477c7b21f1f0b50ad7e71c2a5f38453497cb0c and merged by PR #134 as ec489dae6b566df6ddd93d8c0ec6a3ec97a5a144. Current AGENTS.md and epic kanban-cljs-rewrite both link the artifact; the epic link was restored lawfully as a Rheos comment in this branch.
+---
