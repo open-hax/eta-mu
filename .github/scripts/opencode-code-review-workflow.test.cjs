@@ -93,6 +93,7 @@ function finalGateEnvironment(sha, overrides = {}) {
     DETERMINISTIC_EXPECTED_SHA: sha,
     DETERMINISTIC_JOB_RESULT: "success",
     DETERMINISTIC_OUTPUT_RESULT: "success",
+    ELIGIBLE_REVIEW_EVENT: "true",
     REVIEW_CLEAN: "true",
     REVIEW_COMPLETION_SHA: sha,
     REVIEW_EXACT_HEAD: "true",
@@ -125,6 +126,17 @@ test("both pull-request jobs explicitly checkout and guard the event head", () =
   }
   assert.match(namedStep("deterministic_evidence", "Verify exact and clean pull request checkout").run, /git rev-parse HEAD/);
   assert.match(namedStep("review", "Verify exact and clean review checkout").run, /git rev-parse HEAD/);
+});
+
+test("direct pull-request runs install the default deterministic toolchain", () => {
+  const expected = "${{ github.event_name != 'workflow_call' || inputs.setup_eta_mu_toolchain }}";
+  for (const name of [
+    "Set up Java 21",
+    "Set up Clojure CLI 1.12.5.1654",
+    "Set up pnpm 10.14.0",
+  ]) {
+    assert.equal(namedStep("deterministic_evidence", name).if, expected);
+  }
 });
 
 test("artifact names do not claim an unverified head revision", () => {
@@ -372,5 +384,24 @@ test("terminal gate passes only the complete successful exact-head tuple", (t) =
     const result = runScript(script, directory, finalGateEnvironment(sha, mutation));
     assert.notEqual(result.status, 0, JSON.stringify(mutation));
     assert.match(result.stderr, /::error::OpenCode evidence review gate/);
+  }
+});
+
+test("terminal gate treats unsupported pull requests as explicitly not applicable", (t) => {
+  const { directory, sha } = makeRepository(t);
+  const script = namedStep("review_gate", "Enforce truthful reusable review result").run;
+  for (const mutation of [
+    { ELIGIBLE_REVIEW_EVENT: "false" },
+    { ELIGIBLE_REVIEW_EVENT: "" },
+  ]) {
+    const result = runScript(script, directory, finalGateEnvironment(sha, {
+      ...mutation,
+      CONTEXT_JOB_RESULT: "skipped",
+      DETERMINISTIC_JOB_RESULT: "skipped",
+      DETERMINISTIC_OUTPUT_RESULT: "",
+      REVIEW_JOB_RESULT: "skipped",
+    }));
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /not applicable to draft or fork pull requests/);
   }
 });

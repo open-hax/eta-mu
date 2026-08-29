@@ -6,7 +6,7 @@ priority: "P0"
 labels: [""]
 created_at: "2026-08-29T17:59:19.886Z"
 parent: "github-actions-as-a-muse-projection-target-from-katamorph-workflow-contracts"
-write-id: "1788026970050-0.ywbvv5firmmrkdvzooq"
+write-id: "1788027514182-0.c3cb8yo0kpchyl1u969"
 ---
 
 ---
@@ -15,4 +15,6 @@ Scoped plan: reproduce run 33266077981; checkout the event PR head explicitly an
 Hosted controlled red-path proof is deliberately split to ready card 164c2de7-7495-4738-94e1-a81167edefb0 and GitHub issue #297; this implementation PR carries executable local falsification plus hosted green production gates.
 
 GitHub issue: https://github.com/open-hax/eta-mu/issues/298
+
+Implementation PR: https://github.com/open-hax/eta-mu/pull/299 at exact published head c4746e65c7afeadcdedd98c143a260e295f02d90; remote tree d35a67f9c61f224838d95efff8728660ef4ac506 matched the local committed tree byte-for-byte before review.
 ---

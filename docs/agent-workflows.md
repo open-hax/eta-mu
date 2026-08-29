@@ -45,6 +45,12 @@ gate**. Configure that job as the required check in callers. It runs under
 `always()` and fails closed unless deterministic execution, context compilation,
 and review publication all succeeded.
 
+For draft or fork pull requests, that same stable job runs and reports the
+review as explicitly not applicable. Those events are outside the workflow's
+supported review boundary, so their intentionally skipped prerequisites do not
+block branch protection. Eligible non-draft, same-repository runs retain the
+fail-closed behavior.
+
 Deterministic command failures do not suppress their evidence or the review
 attempt. The command step records every exit, the summary reports
 `result: failure`, and artifacts are uploaded; the model may still inspect that
