@@ -33,7 +33,7 @@
         (let [{line :line end :end next :next} (line-at raw offset)]
           (cond
             (delimiter? line)
-            [(subs raw start (content-end raw offset))
+            [(subs raw start (max start (content-end raw offset)))
              (subs raw (or next end))]
 
             next (recur next)
@@ -43,12 +43,12 @@
   (if-let [[frontmatter-raw body] (split-frontmatter raw)]
     {:document/format :markdown
      :document/frontmatter-present? true
-     :document/frontmatter/raw frontmatter-raw
-     :document/frontmatter/data (frontmatter/parse-flat frontmatter-raw)
-     :document/frontmatter/decoding partial-decoding
+     :document/frontmatter-raw frontmatter-raw
+     :document/frontmatter-data (frontmatter/parse-flat frontmatter-raw)
+     :document/frontmatter-decoding partial-decoding
      :document/body body}
     {:document/format :markdown
      :document/frontmatter-present? false
-     :document/frontmatter/raw nil
-     :document/frontmatter/data {}
+     :document/frontmatter-raw nil
+     :document/frontmatter-data {}
      :document/body raw}))

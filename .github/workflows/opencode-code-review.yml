@@ -3,6 +3,62 @@ name: OpenCode evidence PR review
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_call:
+    inputs:
+      model:
+        description: OpenCode provider/model the reviewer runs.
+        required: false
+        type: string
+        default: opencode/mimo-v2.5-free
+      opencode_version:
+        description: Pinned opencode-ai npm version for the review runner.
+        required: false
+        type: string
+        default: 1.18.18
+      muse_revision:
+        description: Pinned octave-commons/muse commit used to compile the review observer projection.
+        required: false
+        type: string
+        default: 3510440a01bac8c8ecbe8d5b8d08eb4a5cd46cac
+      agents_revision:
+        description: Pinned riatzukiza/.agents commit mounted as global skills.
+        required: false
+        type: string
+        default: 7fd3252e7663ad5e68be5e90429d126aa66c38c8
+      setup_eta_mu_toolchain:
+        description: Install Java/Clojure/pnpm/Node before gates. Callers with their own toolchain disable this and provide evidence_gates_script.
+        required: false
+        type: boolean
+        default: true
+      evidence_gates_script:
+        description: Bash snippet of run_gate invocations producing deterministic evidence. Runs in the checked-out pull request.
+        required: false
+        type: string
+        default: |
+          run_gate install pnpm install --frozen-lockfile
+          install_status="$(awk -F= '$1 == "install" {print $2}' "$statuses")"
+          if [[ "$install_status" == "0" ]]; then
+            run_gate bootstrap_extensions pnpm --dir packages/extensions build
+            run_gate lint pnpm lint
+            run_gate test pnpm test
+            run_gate build pnpm build
+          else
+            echo "bootstrap_extensions=125" >> "$statuses"
+            echo "lint=125" >> "$statuses"
+            echo "test=125" >> "$statuses"
+            echo "build=125" >> "$statuses"
+            echo "Dependency installation failed; bootstrap, lint, test, and build were not attempted." >> "$log"
+          fi
+    secrets:
+      ETA_MU_APP_ID:
+        # Optional so evidence/compile jobs still run in organizations where the
+        # app secrets are not visible; the review job then fails fast with an
+        # explicit operator instruction instead of a plan-time error.
+        required: false
+      ETA_MU_APP_PRIVATE_KEY:
+        required: false
+      DISCORD_REVIEW_WEBHOOK_URL:
+        required: false
 
 concurrency:
   group: opencode-evidence-review-${{ github.event.pull_request.number }}
@@ -18,33 +74,70 @@ jobs:
       contents: read
     steps:
       - name: Checkout pull request
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Java 21
-        uses: actions/setup-java@v4
+        if: ${{ inputs.setup_eta_mu_toolchain != false }}
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "21"
 
       - name: Set up Clojure CLI 1.12.5.1654
-        uses: DeLaGuardo/setup-clojure@13.4
+        if: ${{ inputs.setup_eta_mu_toolchain != false }}
+        uses: DeLaGuardo/setup-clojure@3fe9b3ae632c6758d0b7757b0838606ef4287b08 # 13.4
         with:
           cli: 1.12.5.1654
 
       - name: Set up pnpm 10.14.0
-        uses: pnpm/action-setup@v4
+        if: ${{ inputs.setup_eta_mu_toolchain != false }}
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: "10.14.0"
           run_install: false
 
       - name: Set up Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
-          cache: pnpm
+
+      - name: Stage pull request diff and context
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          evidence_dir="$GITHUB_WORKSPACE/.opencode/review-evidence"
+          mkdir -p "$evidence_dir"
+
+          git diff --find-renames "${PR_BASE_SHA}...HEAD" > "$evidence_dir/pr.diff" || true
+          if [[ ! -s "$evidence_dir/pr.diff" ]]; then
+            git diff --find-renames "${PR_BASE_SHA}" HEAD > "$evidence_dir/pr.diff"
+          fi
+          bytes="$(wc -c < "$evidence_dir/pr.diff")"
+          if [[ "$bytes" -gt 300000 ]]; then
+            head -c 300000 "$evidence_dir/pr.diff" > "$evidence_dir/pr.diff.truncated"
+            mv "$evidence_dir/pr.diff.truncated" "$evidence_dir/pr.diff"
+            printf '\n[eta-mu review] diff truncated at 300000 bytes (was %s).\n' "$bytes" >> "$evidence_dir/pr.diff"
+          fi
+
+          jq -r '
+            "# Pull request context",
+            "",
+            "- Number: #\(.pull_request.number)",
+            "- Title: \(.pull_request.title)",
+            "- Author: \(.pull_request.user.login)",
+            "- Branches: \(.pull_request.head.ref) -> \(.pull_request.base.ref)",
+            "- Head SHA: \(.pull_request.head.sha)",
+            "- Draft: \(.pull_request.draft)",
+            "",
+            "## Body",
+            "",
+            (.pull_request.body // "(no body)")
+          ' "$GITHUB_EVENT_PATH" > "$evidence_dir/pr-context.md"
 
       - name: Run deterministic gates
         id: gates
@@ -54,6 +147,7 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          EVIDENCE_GATES_SCRIPT: ${{ inputs.evidence_gates_script || '' }}
         run: |
           set +e
           evidence_dir="$GITHUB_WORKSPACE/.opencode/review-evidence"
@@ -80,20 +174,23 @@ jobs:
             return 0
           }
 
-          run_gate install pnpm install --frozen-lockfile
-          install_status="$(awk -F= '$1 == "install" {print $2}' "$statuses")"
-
-          if [[ "$install_status" == "0" ]]; then
-            run_gate bootstrap_extensions pnpm --dir packages/extensions build
-            run_gate lint pnpm lint
-            run_gate test pnpm test
-            run_gate build pnpm build
+          if [[ -n "${EVIDENCE_GATES_SCRIPT//[[:space:]]/}" ]]; then
+            eval "$EVIDENCE_GATES_SCRIPT"
           else
-            echo "bootstrap_extensions=125" >> "$statuses"
-            echo "lint=125" >> "$statuses"
-            echo "test=125" >> "$statuses"
-            echo "build=125" >> "$statuses"
-            echo "Dependency installation failed; bootstrap, lint, test, and build were not attempted." >> "$log"
+            run_gate install pnpm install --frozen-lockfile
+            install_status="$(awk -F= '$1 == "install" {print $2}' "$statuses")"
+            if [[ "$install_status" == "0" ]]; then
+              run_gate bootstrap_extensions pnpm --dir packages/extensions build
+              run_gate lint pnpm lint
+              run_gate test pnpm test
+              run_gate build pnpm build
+            else
+              echo "bootstrap_extensions=125" >> "$statuses"
+              echo "lint=125" >> "$statuses"
+              echo "test=125" >> "$statuses"
+              echo "build=125" >> "$statuses"
+              echo "Dependency installation failed; bootstrap, lint, test, and build were not attempted." >> "$log"
+            fi
           fi
 
           node <<'NODE'
@@ -132,7 +229,7 @@ jobs:
 
       - name: Upload deterministic evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: review-evidence-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
           path: .opencode/review-evidence
@@ -148,34 +245,34 @@ jobs:
       contents: read
     steps:
       - name: Checkout Muse compatibility compiler
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: octave-commons/muse
-          ref: 76c57712a48ef48100259231a2e9d54069c2b14a
+          ref: ${{ inputs.muse_revision || '3510440a01bac8c8ecbe8d5b8d08eb4a5cd46cac' }}
           path: .review-context/muse
           persist-credentials: false
 
       - name: Checkout global agent skills
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: riatzukiza/.agents
-          ref: 7fd3252e7663ad5e68be5e90429d126aa66c38c8
+          ref: ${{ inputs.agents_revision || '7fd3252e7663ad5e68be5e90429d126aa66c38c8' }}
           path: .review-context/agents
           persist-credentials: false
 
       - name: Set up Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "21"
 
       - name: Set up Clojure CLI 1.12.5.1654
-        uses: DeLaGuardo/setup-clojure@13.4
+        uses: DeLaGuardo/setup-clojure@3fe9b3ae632c6758d0b7757b0838606ef4287b08 # 13.4
         with:
           cli: 1.12.5.1654
 
       - name: Set up Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
           cache: npm
@@ -223,6 +320,14 @@ jobs:
                         :task_status
                         :task_list
                         :agent_list}
+             :policy :allow}
+            {:id :review/allow-review-pipeline
+             :applies #{:review_begin
+                        :review_record_evidence
+                        :review_propose_finding
+                        :review_classify_finding
+                        :review_status
+                        :review_submit}
              :policy :allow}]}
           EOF
 
@@ -231,6 +336,7 @@ jobs:
            :id                     :eta-mu/review-observers
            :imports
            ["../shared/profiles.edn"
+            "../shared/plugins/review-pipeline.edn"
             "plugins/review-observers.edn"
             "permissions/review-observers.edn"]
            :profile :dev
@@ -264,6 +370,12 @@ jobs:
             'phase_list_idle',
             'phase_observations',
             'phase_tail',
+            'review_begin',
+            'review_classify_finding',
+            'review_propose_finding',
+            'review_record_evidence',
+            'review_status',
+            'review_submit',
             'task_list',
             'task_status',
           ].sort();
@@ -291,18 +403,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MUSE_REVISION=76c57712a48ef48100259231a2e9d54069c2b14a
-          AGENTS_REVISION=7fd3252e7663ad5e68be5e90429d126aa66c38c8
+          MUSE_REVISION="${{ inputs.muse_revision || '3510440a01bac8c8ecbe8d5b8d08eb4a5cd46cac' }}"
+          AGENTS_REVISION="${{ inputs.agents_revision || '7fd3252e7663ad5e68be5e90429d126aa66c38c8' }}"
           CONTEXT_OUT="$RUNNER_TEMP/opencode-review-context"
           rm -rf "$CONTEXT_OUT"
-          mkdir -p "$CONTEXT_OUT/muse/opencode" "$CONTEXT_OUT/agents" "$CONTEXT_OUT/metadata"
+          mkdir -p "$CONTEXT_OUT/muse/opencode" "$CONTEXT_OUT/agents" "$CONTEXT_OUT/metadata" \
+            "$CONTEXT_OUT/machinery"
 
           cp -a .review-context/muse/.opencode/dist "$CONTEXT_OUT/muse/opencode/"
           cp -a .review-context/muse/.opencode/plugins "$CONTEXT_OUT/muse/opencode/"
+          cp -a .review-context/muse/.opencode/agents "$CONTEXT_OUT/muse/opencode/"
           cp .review-context/muse/.opencode/opencode.json "$CONTEXT_OUT/muse/opencode/opencode.json"
           cp .review-context/muse/.opencode/package.json "$CONTEXT_OUT/muse/opencode/package.json"
           cp .review-context/muse/.opencode/exposed-tools.txt "$CONTEXT_OUT/metadata/exposed-tools.txt"
           tar --exclude=.git -C .review-context/agents -cf - . | tar -C "$CONTEXT_OUT/agents" -xf -
+
+          # The reviewer agent ships inside the compiled Muse profile; the review
+          # prompt and deterministic publisher travel with the same pinned muse
+          # checkout, so the whole stack is bound by muse_revision alone.
+          test -s "$CONTEXT_OUT/muse/opencode/agents/github-reviewer.md"
+          cp .review-context/muse/.ημ/review/evidence-review.md "$CONTEXT_OUT/machinery/"
+          cp .review-context/muse/.ημ/review/publish-opencode-review.cjs "$CONTEXT_OUT/machinery/"
+          cp .review-context/muse/.ημ/review/publish-opencode-review.test.cjs "$CONTEXT_OUT/machinery/"
 
           printf '%s\n' "$MUSE_REVISION" > "$CONTEXT_OUT/metadata/muse-revision.txt"
           printf '%s\n' "$AGENTS_REVISION" > "$CONTEXT_OUT/metadata/agents-revision.txt"
@@ -310,7 +432,7 @@ jobs:
           (cd "$CONTEXT_OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
 
       - name: Upload review context
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: review-context-${{ github.event.pull_request.head.sha }}
           path: ${{ runner.temp }}/opencode-review-context
@@ -326,31 +448,29 @@ jobs:
     timeout-minutes: 45
     env:
       HAS_DISCORD_REVIEW_WEBHOOK_URL: ${{ secrets.DISCORD_REVIEW_WEBHOOK_URL != '' }}
-      OPENCODE_CONFIG_CONTENT: '{"default_agent":"github-reviewer"}'
     permissions:
       contents: read
-      pull-requests: write
-      issues: write
+      pull-requests: read
     steps:
       - name: Checkout pull request
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
 
       - name: Download deterministic evidence
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: review-evidence-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
           path: .opencode/review-evidence
 
       - name: Download Muse tools and global skills
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: review-context-${{ github.event.pull_request.head.sha }}
           path: .review-context
@@ -361,27 +481,38 @@ jobs:
           set -euo pipefail
           (cd .review-context && sha256sum -c SHA256SUMS)
 
-          rm -rf .opencode/dist .opencode/plugins
-          mkdir -p .opencode
-          cp -a .review-context/muse/opencode/dist .opencode/
-          cp -a .review-context/muse/opencode/plugins .opencode/
-          cp .review-context/muse/opencode/opencode.json .opencode/opencode.json
-          cp .review-context/muse/opencode/package.json .opencode/package.json
-          npm install --prefix .opencode --ignore-scripts --no-audit --no-fund
+          # Install into the runner-global opencode config. Caller repositories
+          # may track their own .opencode/ tree; nothing in this step may write
+          # there. The runner is disposable, so the global config is ours.
+          GLOBAL_CFG="$HOME/.config/opencode"
+          RUNTIME="$HOME/.eta-mu-review"
+          rm -rf "$RUNTIME" "$GLOBAL_CFG/plugins/eta-mu-actors.js" "$GLOBAL_CFG/agents/github-reviewer.md"
+          mkdir -p "$GLOBAL_CFG/plugins" "$GLOBAL_CFG/agents" "$RUNTIME"
+
+          cp -a .review-context/muse/opencode/dist "$RUNTIME/"
+          cp .review-context/muse/opencode/package.json "$RUNTIME/package.json"
+          npm install --prefix "$RUNTIME" --ignore-scripts --no-audit --no-fund
+
+          printf '// Generated by the eta-mu evidence review workflow; runner-local.\nexport { EtaMuActorsPlugin } from "%s/dist/eta-mu-actors.js";\n' "$RUNTIME" \
+            > "$GLOBAL_CFG/plugins/eta-mu-actors.js"
+          cp .review-context/muse/opencode/agents/github-reviewer.md "$GLOBAL_CFG/agents/github-reviewer.md"
+          cp .review-context/muse/opencode/opencode.json "$GLOBAL_CFG/opencode.json"
 
           rm -rf "$HOME/.agents"
           ln -s "$GITHUB_WORKSPACE/.review-context/agents" "$HOME/.agents"
           test -s "$HOME/.agents/skills/work-cycle/SKILL.md"
-          test -s .opencode/agents/github-reviewer.md
-          test -s .opencode/plugins/eta-mu-actors.js
-          test -s .opencode/opencode.json
+          test -s "$GLOBAL_CFG/agents/github-reviewer.md"
+          test -s "$GLOBAL_CFG/plugins/eta-mu-actors.js"
+          test -s "$GLOBAL_CFG/opencode.json"
+          test -s .review-context/machinery/publish-opencode-review.cjs
+          test -s .review-context/machinery/evidence-review.md
 
           # The reviewer must read the PR's tree, not a tree its own setup edited.
           # This counts untracked files too, deliberately: an unexpected file can
-          # steer a review as easily as a modified one. Everything this step
-          # legitimately creates (.opencode/, .review-context/) is gitignored, so
-          # anything reported here is genuinely unaccounted for.
-          if [[ -n "$(git status --porcelain)" ]]; then
+          # steer a review as easily as a modified one. The only tolerated entries
+          # are the review context this step installs (.opencode/, .review-context/),
+          # which caller repositories are not required to gitignore.
+          if git status --porcelain | grep -v -e '^?? \.opencode/' -e '^?? \.review-context/' | grep -q .; then
             echo "::error::Review-context setup left the working tree dirty before model execution."
             git status --short
             exit 1
@@ -392,55 +523,90 @@ jobs:
           echo "Muse observer registry:"
           cat .review-context/metadata/exposed-tools.txt
 
+      - name: Test deterministic review publisher
+        run: node --test .review-context/machinery/publish-opencode-review.test.cjs
+
+      - name: Require eta-mu app credentials
+        shell: bash
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        run: |
+          if [[ -z "$ETA_MU_APP_ID" || -z "$ETA_MU_APP_PRIVATE_KEY" ]]; then
+            echo "::error::ETA_MU_APP_ID / ETA_MU_APP_PRIVATE_KEY are not visible to this repository."
+            echo "::error::Operator action required: create the eta-mu GitHub App credentials as organization secrets with access to this repository, then re-run this workflow."
+            exit 1
+          fi
+
+      - name: Install pinned OpenCode CLI
+        run: npm install --global opencode-ai@${{ inputs.opencode_version || '1.18.18' }}
+
       - name: Capture review start time
         id: review_start
         run: echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Run evidence-first OpenCode review
-        uses: anomalyco/opencode/github@40e4d730cac33cc9e76659ae7acb16b3a6132b83
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REVIEW_MODEL: ${{ inputs.model || 'opencode/mimo-v2.5-free' }}
+        run: |
+          set -o pipefail
+          sed "s/{{PR_NUMBER}}/${PR_NUMBER}/g" .review-context/machinery/evidence-review.md > "$RUNNER_TEMP/review-prompt.md"
+
+          # The model runs read-only inside the checked-out PR. It has no GitHub
+          # token at all: publication is the deterministic publisher's job.
+          opencode run \
+            --agent github-reviewer \
+            --model "$REVIEW_MODEL" \
+            "$(cat "$RUNNER_TEMP/review-prompt.md")" \
+            2> "$RUNNER_TEMP/opencode-stderr.log" \
+            | tee .opencode/review-evidence/model-response.txt
+
+      - name: Upload model response
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          model: opencode/mimo-v2.5-free
-          share: false
-          use_github_token: true
-          prompt: |
-            Review pull request #${{ github.event.pull_request.number }} using the
-            evidence-first state machine in the github-reviewer agent.
+          name: review-model-response-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          path: |
+            .opencode/review-evidence/model-response.txt
+          if-no-files-found: warn
+          retention-days: 14
 
-            Begin by reading:
-            - .opencode/review-evidence/summary.json
-            - .opencode/review-evidence/deterministic.log
-            - .review-context/metadata/exposed-tools.txt
-            - PROCESS.md
-            - .ημ/PRINCIPLE.edn
-            - linked task or issue material available in the pull-request context
+      - name: Create eta-mu GitHub App token for review publication
+        id: eta_mu_publish_token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.ETA_MU_APP_ID }}
+          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-metadata: read
+          permission-pull-requests: write
 
-            The project-local OpenCode configuration includes a review-safe Muse projection
-            compiled from octave-commons/muse. It exposes only the exact observer registry in
-            exposed-tools.txt. It does not expose spawn, tell, append, promotion, mutation,
-            network-search, or shell tools.
-
-            Global skills are mounted from the revision recorded in
-            .review-context/metadata/agents-revision.txt. Load a skill only when its
-            description matches a concrete review need. Skills teach process and environment
-            adaptation; they do not prove a defect and they do not override the evidence
-            threshold.
-
-            Reconstruct the relevant invariants from complete files and repository contracts.
-            Attempt to disprove every candidate finding before publishing it. Publish inline
-            comments only for confirmed, changed-line defects meeting the agent's evidence
-            threshold. Put test gaps and unresolved questions in one concise non-blocking
-            summary. If no candidate survives validation, leave a short passing summary.
+      - name: Publish actual GitHub pull request review
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          REVIEW_SUBMISSION_FILE: .opencode/review-evidence/submission.json
+        with:
+          github-token: ${{ steps.eta_mu_publish_token.outputs.token }}
+          script: |
+            const { publishReview } = require('./.review-context/machinery/publish-opencode-review.cjs');
+            await publishReview({
+              github,
+              context,
+              core,
+              submissionFile: process.env.REVIEW_SUBMISSION_FILE,
+            });
 
       - name: Send new inline review comments to Discord
         if: ${{ always() && env.HAS_DISCORD_REVIEW_WEBHOOK_URL == 'true' }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           DISCORD_REVIEW_WEBHOOK_URL: ${{ secrets.DISCORD_REVIEW_WEBHOOK_URL }}
           REVIEW_STARTED_AT: ${{ steps.review_start.outputs.started_at }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.eta_mu_publish_token.outputs.token || github.token }}
           script: |
             const webhookUrl = process.env.DISCORD_REVIEW_WEBHOOK_URL;
             const startedAt = new Date(process.env.REVIEW_STARTED_AT || 0);
@@ -467,15 +633,17 @@ jobs:
               return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
             };
             const embeds = fresh.map((comment) => ({
-              title: `${owner}/${repo}#${pr.number}: evidence review comment`,
+              // Discord rejects embeds whose total size exceeds 6000 chars; the
+              // description cap must leave room for title, fields, and footer.
+              title: truncate(`${owner}/${repo}#${pr.number}: evidence review comment`, 256),
               url: comment.html_url,
               color: 0x8b5cf6,
-              description: truncate(comment.body, 3500),
+              description: truncate(comment.body, 1500),
               fields: [
-                { name: 'Author', value: comment.user?.login || 'unknown', inline: true },
-                { name: 'File', value: truncate(comment.path || 'unknown', 1024), inline: true },
+                { name: 'Author', value: truncate(comment.user?.login || 'unknown', 100), inline: true },
+                { name: 'File', value: truncate(comment.path || 'unknown', 200), inline: true },
                 { name: 'Line', value: String(comment.line || comment.original_line || 'n/a'), inline: true },
-                { name: 'PR', value: pr.html_url, inline: false },
+                { name: 'PR', value: truncate(pr.html_url, 200), inline: false },
               ],
               timestamp: comment.created_at,
             }));

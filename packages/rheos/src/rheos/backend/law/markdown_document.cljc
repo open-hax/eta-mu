@@ -12,9 +12,9 @@
    [:document/format [:= :markdown]]
    [:document/source-path {:optional true} :string]
    [:document/frontmatter-present? :boolean]
-   [:document/frontmatter/raw [:maybe :string]]
-   [:document/frontmatter/data :map]
-   [:document/frontmatter/decoding {:optional true} FrontmatterDecoding]
+   [:document/frontmatter-raw [:maybe :string]]
+   [:document/frontmatter-data :map]
+   [:document/frontmatter-decoding {:optional true} FrontmatterDecoding]
    [:document/body :string]])
 
 (defn valid? [document]

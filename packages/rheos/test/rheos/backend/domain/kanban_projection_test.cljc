@@ -5,7 +5,7 @@
                      [rheos.backend.domain.kanban-projection :as kanban])))
 
 (deftest projects-historical-kanban-fields
-  (let [document {:document/frontmatter/data
+  (let [document {:document/frontmatter-data
                   {:title "Review evidence"
                    :status "completed"
                    :priority "p1"
@@ -25,7 +25,7 @@
     (is (= "Body" (:content task)))))
 
 (deftest projection-defaults-are-explicit-inputs
-  (let [document {:document/frontmatter/data {}
+  (let [document {:document/frontmatter-data {}
                   :document/body "Body"}
         task (kanban/task document
                           {:fallback-title "No Metadata"
@@ -35,3 +35,16 @@
     (is (= "incoming" (:status task)))
     (is (= "P3" (:priority task)))
     (is (= "fixed-time" (:created-at task)))))
+
+(deftest hyphenated-created-at-takes-precedence
+  (let [document {:document/frontmatter-data
+                  {:title "Timestamp spellings"
+                   :created-at "hyphenated"
+                   :created_at "underscored"
+                   :createdAt "camel-cased"}
+                  :document/body "Body"}
+        task (kanban/task document
+                          {:fallback-title "fallback"
+                           :fallback-created-at "fallback-time"
+                           :source-path "/tmp/timestamps.md"})]
+    (is (= "hyphenated" (:created-at task)))))
