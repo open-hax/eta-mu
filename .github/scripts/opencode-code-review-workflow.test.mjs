@@ -113,6 +113,7 @@ function finalGateEnvironment(sha, overrides = {}) {
     DETERMINISTIC_JOB_RESULT: "success",
     DETERMINISTIC_OUTPUT_RESULT: "success",
     ELIGIBLE_REVIEW_EVENT: "true",
+    PULL_REQUEST_EVENT: "true",
     REVIEW_CLEAN: "true",
     REVIEW_COMPLETION_SHA: sha,
     REVIEW_EXACT_HEAD: "true",
@@ -129,6 +130,10 @@ test("workflow exposes one stable always-running terminal gate", () => {
   assert.equal(gate.name, "OpenCode evidence review gate");
   assert.deepEqual(gate.needs, ["deterministic_evidence", "prepare_review_context", "review"]);
   assert.equal(gate.if, "${{ always() }}");
+  assert.equal(
+    namedStep("review_gate", "Enforce truthful reusable review result").env.PULL_REQUEST_EVENT,
+    "${{ github.event.pull_request != null }}",
+  );
 
   const deterministic = workflow.jobs.deterministic_evidence;
   for (const output of ["result", "expected_sha", "executed_sha", "completion_sha", "exact_head", "clean"]) {
@@ -645,10 +650,7 @@ test("terminal gate passes only the complete successful exact-head tuple", (t) =
 test("terminal gate treats unsupported pull requests as explicitly not applicable", (t) => {
   const { directory, sha } = makeRepository(t);
   const script = namedStep("review_gate", "Enforce truthful reusable review result").run;
-  for (const mutation of [
-    { ELIGIBLE_REVIEW_EVENT: "false" },
-    { ELIGIBLE_REVIEW_EVENT: "" },
-  ]) {
+  for (const mutation of [{ ELIGIBLE_REVIEW_EVENT: "false" }]) {
     const result = runScript(script, directory, finalGateEnvironment(sha, {
       ...mutation,
       CONTEXT_JOB_RESULT: "skipped",
@@ -658,5 +660,22 @@ test("terminal gate treats unsupported pull requests as explicitly not applicabl
     }));
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /not applicable to draft or fork pull requests/);
+  }
+});
+
+test("terminal gate fails closed without pull request context", (t) => {
+  const { directory, sha } = makeRepository(t);
+  const script = namedStep("review_gate", "Enforce truthful reusable review result").run;
+  for (const pullRequestEvent of ["false", ""]) {
+    const result = runScript(script, directory, finalGateEnvironment(sha, {
+      PULL_REQUEST_EVENT: pullRequestEvent,
+      ELIGIBLE_REVIEW_EVENT: "false",
+      CONTEXT_JOB_RESULT: "skipped",
+      DETERMINISTIC_JOB_RESULT: "skipped",
+      DETERMINISTIC_OUTPUT_RESULT: "",
+      REVIEW_JOB_RESULT: "skipped",
+    }));
+    assert.notEqual(result.status, 0, pullRequestEvent);
+    assert.match(result.stderr, /pull_request_context=missing/);
   }
 });

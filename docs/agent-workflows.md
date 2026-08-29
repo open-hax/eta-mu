@@ -69,7 +69,9 @@ For draft or fork pull requests, that same stable job runs and reports the
 review as explicitly not applicable. Those events are outside the workflow's
 supported review boundary, so their intentionally skipped prerequisites do not
 block branch protection. Eligible non-draft, same-repository runs retain the
-fail-closed behavior.
+fail-closed behavior. A reusable call from `push`, `merge_group`, or any other
+event without a pull-request payload is a caller contract failure, not an
+unsupported pull request, and the terminal gate fails closed.
 
 Deterministic command failures do not suppress their evidence or the review
 attempt. The command step records every exit, the summary reports
