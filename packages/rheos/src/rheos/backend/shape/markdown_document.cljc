@@ -2,6 +2,11 @@
   (:require [clojure.string :as str]
             [rheos.backend.shape.frontmatter :as frontmatter]))
 
+(def partial-decoding
+  {:decoder/id :rheos/flat-frontmatter-v1
+   :decode/status :partial
+   :decode/capabilities #{:top-level-string-scalars}})
+
 (defn- line-at [raw offset]
   (let [end (or (str/index-of raw "\n" offset) (count raw))
         raw-line (subs raw offset end)
@@ -40,6 +45,7 @@
      :document/frontmatter-present? true
      :document/frontmatter-raw frontmatter-raw
      :document/frontmatter-data (frontmatter/parse-flat frontmatter-raw)
+     :document/frontmatter-decoding partial-decoding
      :document/body body}
     {:document/format :markdown
      :document/frontmatter-present? false
