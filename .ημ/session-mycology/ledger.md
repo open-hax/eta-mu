@@ -216,3 +216,12 @@
   spore: 20260813-082341-resolve-generated-artifact-conflicts-at-the-source.md
   receipt-refs: pr-181-main-merge-conflicts
   note: Translated main's direct CI edits into #181's declarative workflow source, then regenerated instead of selecting conflict sides.
+- ts: 2026-08-29T15:25:38Z
+  session: /workspace/scratch/8d4eacbf051e/worktrees/eta-tranche-evidence-v2
+  task: Complete eta-mu PR tranche #281, #284, #285, and #287; supersede invalid closeout proposal #293
+  p-efficiency: 0.82
+  p-friction: 0.43
+  p-skill-candidate: 0.65
+  spore: none
+  receipt-refs: 2026-08-29T14:58:40Z, 2026-08-29T15:04:50Z, 2026-08-29T15:04:51Z, 2026-08-29T15:23:34Z, 2026-08-29T15:25:14Z, 2026-08-29T15:25:38Z
+  note: Exact-head patch verification made implementation merges mechanical, but the first evidence proposal validated only the global skill schema and missed eta-mu's local :repo law. Evidence review caught that plus ambiguous receipt refs. Better path: run the consuming repository's validator before publishing receipts. No new spore; the existing review-thread-closeout-verification spore covers the general review loop and the candidate score remains below promotion threshold.
