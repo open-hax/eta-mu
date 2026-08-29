@@ -1,7 +1,7 @@
 ---
 category: "tasks"
 labels: ["tasks", "kanban", "bug"]
-write-id: "1786069692366-0.kofna1e3gostasb4r1k"
+write-id: "1788040502942-0.zqjfasl0lvsjb684btj"
 points: "1"
 source: "user-report:2026-07-16"
 title: "eta-mu kanban update-status accepts non-FSM statuses (e.g. in_review)"
@@ -71,4 +71,6 @@ Scope item 2 (status audit): zero in_review remnants on disk; all 11 statuses in
 Evidence: 148 tests / 767 assertions green (was 138/476), clj-kondo 0 warnings (required rewriting two .then/.catch chains as async/await to satisfy the house rule), clean shadow-cljs build 0 compiler warnings, pnpm gates --base main 4/4 passed.
 
 Found while working the card: the comment --text fix that landed in PR #182 was NOT live in eta-mu-beta — the global symlink points at packages/eta-mu/dist-cli, which had not been rebuilt since the merge, so the first comment attempt this session again recorded the literal string --text and returned ok true. The card file was repaired by hand and the CLI rebuilt (pnpm -C packages/rheos build && pnpm -C packages/eta-mu build), after which --text binds correctly. The fix was real; the stale local binary hid it. Worth noting that a merged fix to a mutation surface is not in force for agents until dist-cli is rebuilt.
+
+Closure audit blocker 2026-08-29: keep open. The reported compatibility surface is eta-mu kanban update-status UUID STATUS, but the current bridge recognizes status-update and move only. update-status falls through to Rheos as an unknown verb, so invalid input is nonzero without exercising FSM refusal and legal legacy updates are broken. PR #183 tests status-update UUID --to STATUS, a different spelling. Add the legacy alias and end-to-end legal plus illegal no-write tests before closure.
 ---

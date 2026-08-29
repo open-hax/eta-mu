@@ -243,3 +243,12 @@
   spore: none
   receipt-refs: 2026-08-29T20:31:12Z, 2026-08-29T20:34:02Z, 2026-08-29T20:46:52Z
   note: Executable tests reproduced the undefined default helper, caller/event head mismatch, and missing pull-request-context paths before repair. Fresh exact-head review caught the non-PR neutrality hole after the first patch, so the better path is to enumerate eligible, intentionally unsupported, and malformed event classes in the terminal contract. No new spore; the existing separate-evidence-retention-from-terminal-truth and review-thread-closeout-verification spores cover the reusable pattern.
+- ts: 2026-08-29T22:00:12Z
+  session: /workspace/scratch/8d4eacbf051e/eta-mu-issue-drain
+  task: Lawfully reconcile the audited eta-mu issues #199, #268, #271, #272, #274, and #276
+  p-efficiency: 0.84
+  p-friction: 0.64
+  p-skill-candidate: 0.48
+  spore: none
+  receipt-refs: 2026-08-29T21:59:55.923Z
+  note: Rehydrating from the exact merged main after scratch loss preserved canonical ledger history. The current-tree Rheos source, exact pinned Katamorph dependency, and live GitHub planner proved 23 lawful board events, 287 valid cards, no duplicate issue markers, and six scoped updates before publication. The full projector also exposed 69 unrelated stale updates, so the safe boundary is to apply only the six audited operations after merge and rerun the planner. No new spore; the existing worktree-cwd-write-targeting, review-thread-closeout-verification, and separate-evidence-retention-from-terminal-truth spores already cover the reusable lessons.

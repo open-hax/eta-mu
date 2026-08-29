@@ -1,13 +1,14 @@
 ---
-uuid: "rheos-edn-config-and-card-selection"
-title: "Rheos EDN config and card projection discovery"
-status: in_progress
-type: task
-priority: P0
-points: 5
-labels: rheos, config, edn, projection
-category: tasks
+category: "tasks"
+labels: "rheos, config, edn, projection"
 parent: "rheos-ledger-authoritative-projections"
+type: "task"
+write-id: "1788040494925-0.jcssue8fmiliahytphq"
+points: "5"
+title: "Rheos EDN config and card projection discovery"
+priority: "P0"
+status: "done"
+uuid: "rheos-edn-config-and-card-selection"
 ---
 
 # Rheos EDN config and card projection discovery
@@ -60,3 +61,7 @@ board.
 - `pnpm -C packages/rheos test`
 - `pnpm -C packages/rheos lint`
 - `pnpm -C packages/rheos build`
+
+---
+Closure audit 2026-08-29: acceptance is complete. PR #158 head 8e867e14b75d1e63d0597eb5858070fb07827da1 merged as 14cd09d3eaba75160cb565c7eb459716e73b225e. Current source and regression tests still cover EDN-before-JSON discovery, explicit extension parsing, one JSON deprecation warning, camelCase compatibility, projection-only card discovery, task-root and symlink containment, and recursive fallback. Merge evidence records pnpm gates 6 of 6, Rheos 121 tests with 336 assertions, clj-kondo zero warnings, and all 15 review threads resolved; exact-head CodeRabbit succeeded. Historical Actions logs are no longer retained.
+---
