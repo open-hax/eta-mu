@@ -59,13 +59,21 @@ function makeRepository(t) {
   return { directory, sha };
 }
 
-function addGeneratedCatalog(directory, content = "checked-in catalog\n") {
-  const catalog = path.join(directory, "packages/legacy/ai/src/models.generated.ts");
-  fs.mkdirSync(path.dirname(catalog), { recursive: true });
-  fs.writeFileSync(catalog, content);
-  execFileSync("git", ["add", "packages/legacy/ai/src/models.generated.ts"], { cwd: directory });
-  execFileSync("git", ["commit", "-qm", "add generated catalog"], { cwd: directory });
-  return catalog;
+const generatedOutputPaths = [
+  "packages/legacy/ai/src/models.generated.ts",
+  "packages/contracts/output/dist-cli/index.cjs",
+  "packages/contracts/output/dist-cli/index.cjs.map",
+];
+
+function addGeneratedOutputs(directory) {
+  for (const relativePath of generatedOutputPaths) {
+    const output = path.join(directory, relativePath);
+    fs.mkdirSync(path.dirname(output), { recursive: true });
+    fs.writeFileSync(output, `checked-in ${relativePath}\n`);
+  }
+  execFileSync("git", ["add", ...generatedOutputPaths], { cwd: directory });
+  execFileSync("git", ["commit", "-qm", "add generated outputs"], { cwd: directory });
+  return generatedOutputPaths.map((relativePath) => path.join(directory, relativePath));
 }
 
 function guardEnvironment(directory, output, expectedSha) {
@@ -128,14 +136,29 @@ test("workflow exposes one stable always-running terminal gate", () => {
   assert.doesNotMatch(workflow.jobs.review.if, /deterministic_evidence\.outputs\.result/);
 });
 
-test("both pull-request jobs explicitly checkout and guard the event head", () => {
+test("a required reusable head input drives both exact checkout guards", () => {
+  const input = workflow.on.workflow_call.inputs.pr_head_sha;
+  assert.equal(input.required, true);
+  assert.equal(input.type, "string");
+  const expectedRef = "${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}";
+
   for (const jobId of ["deterministic_evidence", "review"]) {
     const checkout = namedStep(jobId, "Checkout pull request");
-    assert.equal(checkout.with.ref, "${{ github.event.pull_request.head.sha }}");
+    assert.equal(checkout.with.ref, expectedRef);
     assert.equal(checkout.with["persist-credentials"], false);
   }
-  assert.match(namedStep("deterministic_evidence", "Verify exact and clean pull request checkout").run, /git rev-parse HEAD/);
-  assert.match(namedStep("review", "Verify exact and clean review checkout").run, /git rev-parse HEAD/);
+
+  for (const [jobId, name] of [
+    ["deterministic_evidence", "Verify exact and clean pull request checkout"],
+    ["review", "Verify exact and clean review checkout"],
+  ]) {
+    const guard = namedStep(jobId, name);
+    assert.equal(guard.env.PR_HEAD_SHA ?? guard.env.EXPECTED_SHA, expectedRef);
+    assert.match(guard.run, /git rev-parse HEAD/);
+    assert.match(guard.run, /git cat-file -e "\$\{expected_sha\}\^\{commit\}"/);
+    assert.match(guard.run, /\^\[0-9a-f\]\{40\}\$/);
+    assert.match(guard.run, /\^\[0-9a-f\]\{64\}\$/);
+  }
 });
 
 test("toolchain setup defaults on when the input is absent and honors an explicit false", () => {
@@ -164,6 +187,32 @@ test("toolchain setup defaults on when the input is absent and honors an explici
     false,
     "workflow_call explicit false opts out",
   );
+
+  const clojure = namedStep("deterministic_evidence", "Set up Clojure CLI 1.12.5.1654");
+  assert.equal(clojure.with.bb, "1.13.219");
+  assert.equal(clojure.with["clj-kondo"], "2025.10.23");
+});
+
+test("default deterministic gates mirror private Git dependencies without persisting auth", () => {
+  const setupCondition =
+    "${{ !contains(toJSON(inputs), '\"setup_eta_mu_toolchain\"') || inputs.setup_eta_mu_toolchain }}";
+  const detect = namedStep("deterministic_evidence", "Detect eta-mu app credentials");
+  assert.equal(detect.if, setupCondition);
+
+  const token = namedStep("deterministic_evidence", "Create cross-repository read token");
+  assert.match(token.uses, /^actions\/create-github-app-token@[0-9a-f]{40}$/);
+  assert.match(token.with.repositories, /^katamorph\nevent-ledger\s*$/);
+
+  const mirror = namedStep("deterministic_evidence", "Mirror private Git dependencies");
+  assert.match(mirror.if, /dependency-token\.outputs\.token/);
+  assert.match(mirror.run, /clone --mirror/);
+  assert.match(mirror.run, /mirror_repository katamorph/);
+  assert.match(mirror.run, /mirror_repository event-ledger/);
+
+  const gates = namedStep("deterministic_evidence", "Run deterministic gates").run;
+  assert.match(gates, /url\.file:\/\/\$mirrors\/katamorph\.git\.insteadOf/);
+  assert.match(gates, /url\.file:\/\/\$mirrors\/event-ledger\.git\.insteadOf/);
+  assert.match(gates, /trap remove_mirror_rewrites EXIT/);
 });
 
 test("artifact names do not claim an unverified head revision", () => {
@@ -191,6 +240,7 @@ test("deterministic checkout guard records independently executed SHA", (t) => {
   assert.deepEqual(parseOutput(output), {
     expected_sha: sha,
     executed_sha: sha,
+    expected_commit: "true",
     exact_head: "true",
     clean: "true",
   });
@@ -203,8 +253,15 @@ test("deterministic checkout guard records independently executed SHA", (t) => {
 
 test("deterministic checkout guard rejects a copied expected SHA mismatch", (t) => {
   const { directory, sha } = makeRepository(t);
+  fs.writeFileSync(path.join(directory, "other.txt"), "other revision\n");
+  execFileSync("git", ["add", "other.txt"], { cwd: directory });
+  execFileSync("git", ["commit", "-qm", "other revision"], { cwd: directory });
+  const expected = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: directory,
+    encoding: "utf8",
+  }).trim();
+  execFileSync("git", ["checkout", "-q", "--detach", sha], { cwd: directory });
   const output = path.join(directory, "guard-output");
-  const expected = "f".repeat(40);
   const result = runScript(
     namedStep("deterministic_evidence", "Verify exact and clean pull request checkout").run,
     directory,
@@ -215,7 +272,21 @@ test("deterministic checkout guard rejects a copied expected SHA mismatch", (t) 
   const values = parseOutput(output);
   assert.equal(values.expected_sha, expected);
   assert.equal(values.executed_sha, sha);
+  assert.equal(values.expected_commit, "true");
   assert.equal(values.exact_head, "false");
+});
+
+test("deterministic checkout guard rejects a non-commit reusable target", (t) => {
+  const { directory } = makeRepository(t);
+  const output = path.join(directory, "guard-output");
+  const result = runScript(
+    namedStep("deterministic_evidence", "Verify exact and clean pull request checkout").run,
+    directory,
+    guardEnvironment(directory, output, "main"),
+  );
+  assert.notEqual(result.status, 0);
+  assert.match(result.stdout, /not an available immutable commit/);
+  assert.equal(parseOutput(output).expected_commit, "false");
 });
 
 test("deterministic checkout guard rejects a dirty tree", (t) => {
@@ -233,8 +304,15 @@ test("deterministic checkout guard rejects a dirty tree", (t) => {
 
 test("review checkout independently rejects an expected SHA mismatch", (t) => {
   const { directory, sha } = makeRepository(t);
+  fs.writeFileSync(path.join(directory, "other.txt"), "other revision\n");
+  execFileSync("git", ["add", "other.txt"], { cwd: directory });
+  execFileSync("git", ["commit", "-qm", "other revision"], { cwd: directory });
+  const expected = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: directory,
+    encoding: "utf8",
+  }).trim();
+  execFileSync("git", ["checkout", "-q", "--detach", sha], { cwd: directory });
   const output = path.join(directory, "review-guard-output");
-  const expected = "b".repeat(40);
   const result = runScript(
     namedStep("review", "Verify exact and clean review checkout").run,
     directory,
@@ -244,6 +322,7 @@ test("review checkout independently rejects an expected SHA mismatch", (t) => {
   const values = parseOutput(output);
   assert.equal(values.expected_sha, expected);
   assert.equal(values.executed_sha, sha);
+  assert.equal(values.expected_commit, "true");
   assert.equal(values.exact_head, "false");
 });
 
@@ -323,38 +402,39 @@ test("deterministic summary fails closed when status output is missing", (t) => 
   assert.match(summary.errors.join("\n"), /statuses\.env is missing/);
 });
 
-test("build gate archives and restores its tracked generated catalog side effect", (t) => {
+test("build gate archives and restores every explicit tracked generated output", (t) => {
   const { directory } = makeRepository(t);
-  const catalog = addGeneratedCatalog(directory);
+  const outputs = addGeneratedOutputs(directory);
   const runnerTemp = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-review-runner-"));
   t.after(() => fs.rmSync(runnerTemp, { recursive: true, force: true }));
+  const mutation = generatedOutputPaths
+    .map((relativePath) => `printf 'regenerated ${relativePath}' > ${relativePath}`)
+    .join("; ");
   const result = runScript(
     namedStep("deterministic_evidence", "Run deterministic gates").run,
     directory,
     {
       CHECKOUT_CLEAN: "true",
       CHECKOUT_EXACT_HEAD: "true",
-      EVIDENCE_GATES_SCRIPT:
-        "run_gate_preserving_generated_catalog build bash -c 'printf regenerated > packages/legacy/ai/src/models.generated.ts'",
+      EVIDENCE_GATES_SCRIPT: `run_gate_preserving_generated_outputs build bash -c "${mutation}"`,
       GITHUB_WORKSPACE: directory,
       RUNNER_TEMP: runnerTemp,
     },
   );
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(fs.readFileSync(catalog, "utf8"), "checked-in catalog\n");
-  assert.equal(
-    fs.readFileSync(
-      path.join(directory, ".opencode/review-evidence/generated/models.generated.ts"),
-      "utf8",
-    ),
-    "regenerated",
-  );
+  for (const [index, output] of outputs.entries()) {
+    const relativePath = generatedOutputPaths[index];
+    assert.equal(fs.readFileSync(output, "utf8"), `checked-in ${relativePath}\n`);
+    const archived = path.join(directory, ".opencode/review-evidence/generated", relativePath);
+    assert.equal(fs.readFileSync(archived, "utf8"), `regenerated ${relativePath}`);
+    assert.match(fs.readFileSync(`${archived}.sha256`, "utf8"), /^[0-9a-f]{64}\s+/);
+  }
   assert.deepEqual(
     parseOutput(path.join(directory, ".opencode/review-evidence/statuses.env")),
     {
-      generated_catalog_baseline: "0",
+      generated_outputs_baseline: "0",
       build: "0",
-      generated_catalog_restore: "0",
+      generated_outputs_restore: "0",
     },
   );
   assert.equal(
@@ -363,9 +443,9 @@ test("build gate archives and restores its tracked generated catalog side effect
   );
 });
 
-test("build gate never hides a generated catalog mutation that predates the build", (t) => {
+test("build gate never hides a generated-output mutation that predates the build", (t) => {
   const { directory } = makeRepository(t);
-  const catalog = addGeneratedCatalog(directory);
+  const [catalog] = addGeneratedOutputs(directory);
   fs.writeFileSync(catalog, "unexpected prior mutation\n");
   const runnerTemp = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-review-runner-"));
   t.after(() => fs.rmSync(runnerTemp, { recursive: true, force: true }));
@@ -375,7 +455,7 @@ test("build gate never hides a generated catalog mutation that predates the buil
     {
       CHECKOUT_CLEAN: "true",
       CHECKOUT_EXACT_HEAD: "true",
-      EVIDENCE_GATES_SCRIPT: "run_gate_preserving_generated_catalog build bash -c true",
+      EVIDENCE_GATES_SCRIPT: "run_gate_preserving_generated_outputs build bash -c true",
       GITHUB_WORKSPACE: directory,
       RUNNER_TEMP: runnerTemp,
     },
@@ -385,9 +465,9 @@ test("build gate never hides a generated catalog mutation that predates the buil
   assert.deepEqual(
     parseOutput(path.join(directory, ".opencode/review-evidence/statuses.env")),
     {
-      generated_catalog_baseline: "1",
+      generated_outputs_baseline: "1",
       build: "0",
-      generated_catalog_restore: "125",
+      generated_outputs_restore: "125",
     },
   );
   assert.match(

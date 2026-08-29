@@ -45,12 +45,23 @@ gate**. Configure that job as the required check in callers. It runs under
 `always()` and fails closed unless deterministic execution, context compilation,
 and review publication all succeeded.
 
-Deterministic Java, Clojure, and pnpm setup is enabled when a direct
+Every reusable caller must pass `pr_head_sha` as the immutable
+`${{ github.event.pull_request.head.sha }}` value. Both workflow checkouts,
+deterministic command environment, evidence summary, and review bind to that
+input. Direct `pull_request` execution uses the same event-head value without a
+reusable input. A missing reusable input is a workflow contract error; a
+non-commit or mismatched value fails the checkout guards.
+
+Deterministic Java, Clojure, Babashka, clj-kondo, and pnpm setup is enabled when a direct
 `pull_request` trigger has no reusable-workflow inputs and by the
 `workflow_call` default. A reusable caller may explicitly set
 `setup_eta_mu_toolchain: false` when its evidence script supplies a compatible
 toolchain; the workflow distinguishes an absent input key from a present
 boolean before applying its value, independently of the inherited event name.
+Default eta-mu gates use the repository GitHub App to mirror the pinned
+Katamorph and event-ledger repositories into runner-temporary storage. Bounded
+`insteadOf` rewrites exist only for deterministic execution and are removed by
+an exit trap; missing credentials remain a recorded deterministic failure.
 
 For draft or fork pull requests, that same stable job runs and reports the
 review as explicitly not applicable. Those events are outside the workflow's
@@ -64,11 +75,13 @@ attempt. The command step records every exit, the summary reports
 failure. The terminal check is what makes the reusable caller red. This split is
 intentional: retaining diagnostics must never turn a failed gate green.
 
-Eta-mu's build refreshes the tracked legacy model catalog from live provider
-metadata. The default gate requires that catalog to match `HEAD` before the
-build, archives any regenerated version as review evidence, and restores the
+Eta-mu's build refreshes explicit tracked generated outputs: the legacy model
+catalog plus the contracts CLI bundle and source map. The default gate requires
+every listed path to match `HEAD` before the build, archives changed bytes and
+SHA-256 evidence under their repository-relative paths, and restores the exact
 checked-out bytes afterward. The build exit remains authoritative, and every
-other tracked or untracked mutation still fails the clean-tree proof.
+other tracked or untracked mutation still fails the clean-tree proof. A missing
+or already dirty listed path is never restored or hidden.
 
 Evidence schema `open-hax.review-evidence/v2` distinguishes the event's
 `expected_head_sha` from the independently observed `executed_sha` and

@@ -6,6 +6,10 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_call:
     inputs:
+      pr_head_sha:
+        description: Immutable pull-request head commit to check out, execute, review, and report.
+        required: true
+        type: string
       model:
         description: OpenCode provider/model the reviewer runs.
         required: false
@@ -84,7 +88,7 @@ jobs:
       - name: Checkout pull request
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -93,7 +97,7 @@ jobs:
         continue-on-error: true
         shell: bash
         env:
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_SHA: ${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           evidence_dir="$GITHUB_WORKSPACE/.opencode/review-evidence"
@@ -101,14 +105,19 @@ jobs:
           expected_sha="$PR_HEAD_SHA"
           executed_sha="$(git rev-parse HEAD)"
           checkout_status="$(git status --porcelain --untracked-files=all)"
+          expected_commit=false
           exact_head=false
           clean=false
-          [[ "$executed_sha" == "$expected_sha" ]] && exact_head=true
+          if [[ "$expected_sha" =~ ^[0-9a-f]{40}$ || "$expected_sha" =~ ^[0-9a-f]{64}$ ]]; then
+            git cat-file -e "${expected_sha}^{commit}" 2>/dev/null && expected_commit=true
+          fi
+          [[ "$expected_commit" == true && "$executed_sha" == "$expected_sha" ]] && exact_head=true
           [[ -z "$checkout_status" ]] && clean=true
 
           {
             echo "expected_sha=$expected_sha"
             echo "executed_sha=$executed_sha"
+            echo "expected_commit=$expected_commit"
             echo "exact_head=$exact_head"
             echo "clean=$clean"
           } >> "$GITHUB_OUTPUT"
@@ -118,11 +127,16 @@ jobs:
           jq -n \
             --arg expected_sha "$expected_sha" \
             --arg executed_sha "$executed_sha" \
+            --argjson expected_commit "$expected_commit" \
             --argjson exact_head "$exact_head" \
             --argjson clean "$clean" \
-            '{expected_sha: $expected_sha, executed_sha: $executed_sha, exact_head: $exact_head, clean: $clean}' \
+            '{expected_sha: $expected_sha, executed_sha: $executed_sha, expected_commit: $expected_commit, exact_head: $exact_head, clean: $clean}' \
             > "$evidence_dir/checkout.json"
 
+          if [[ "$expected_commit" != true ]]; then
+            echo "::error::Expected pull-request revision is not an available immutable commit: $expected_sha"
+            exit 1
+          fi
           if [[ "$exact_head" != true ]]; then
             echo "::error::Expected pull-request head $expected_sha but checkout executed $executed_sha."
             exit 1
@@ -142,9 +156,11 @@ jobs:
 
       - name: Set up Clojure CLI 1.12.5.1654
         if: ${{ !contains(toJSON(inputs), '"setup_eta_mu_toolchain"') || inputs.setup_eta_mu_toolchain }}
-        uses: DeLaGuardo/setup-clojure@3fe9b3ae632c6758d0b7757b0838606ef4287b08 # 13.4
+        uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360 # 13.4
         with:
           cli: 1.12.5.1654
+          bb: "1.13.219"
+          clj-kondo: "2025.10.23"
 
       - name: Set up pnpm 10.14.0
         if: ${{ !contains(toJSON(inputs), '"setup_eta_mu_toolchain"') || inputs.setup_eta_mu_toolchain }}
@@ -157,6 +173,68 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
+
+      - name: Detect eta-mu app credentials
+        id: dependency-credentials
+        if: ${{ !contains(toJSON(inputs), '"setup_eta_mu_toolchain"') || inputs.setup_eta_mu_toolchain }}
+        env:
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          if [[ -n "${ETA_MU_APP_ID}" && -n "${ETA_MU_APP_PRIVATE_KEY}" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create cross-repository read token
+        id: dependency-token
+        if: ${{ steps.dependency-credentials.outputs.available == 'true' }}
+        continue-on-error: true
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        with:
+          app-id: ${{ secrets.ETA_MU_APP_ID }}
+          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            katamorph
+            event-ledger
+          permission-contents: read
+
+      - name: Mirror private Git dependencies
+        if: ${{ steps.dependency-token.outputs.token != '' }}
+        continue-on-error: true
+        env:
+          DEPENDENCY_TOKEN: ${{ steps.dependency-token.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mirrors="$RUNNER_TEMP/private-git-mirrors"
+          mkdir -p "$mirrors"
+          authorization="$(printf 'x-access-token:%s' "$DEPENDENCY_TOKEN" | base64 -w0)"
+
+          mirror_repository() {
+            local repository="$1"
+            local destination="$mirrors/${repository}.git"
+            local attempt
+            for attempt in 1 2 3; do
+              rm -rf "$destination"
+              if git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${authorization}" \
+                clone --mirror \
+                "https://github.com/open-hax/${repository}.git" \
+                "$destination"; then
+                return 0
+              fi
+              if [[ "$attempt" -eq 3 ]]; then
+                return 1
+              fi
+              sleep $((attempt * 5))
+            done
+          }
+
+          mirror_repository katamorph
+          mirror_repository event-ledger
 
       - name: Stage pull request diff and context
         if: ${{ steps.checkout_guard.outputs.exact_head == 'true' && steps.checkout_guard.outputs.clean == 'true' }}
@@ -201,7 +279,7 @@ jobs:
         shell: bash
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_SHA: ${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           EVIDENCE_GATES_SCRIPT: ${{ inputs.evidence_gates_script || '' }}
           CHECKOUT_EXACT_HEAD: ${{ steps.checkout_guard.outputs.exact_head }}
@@ -232,47 +310,88 @@ jobs:
             return 0
           }
 
-          run_gate_preserving_generated_catalog() {
+          run_gate_preserving_generated_outputs() {
             local name="$1"
             shift
-            local catalog_path="packages/legacy/ai/src/models.generated.ts"
-            local baseline_snapshot="$RUNNER_TEMP/models.generated.ts.before"
+            local baseline_dir="$RUNNER_TEMP/opencode-generated-output-baseline"
             local generated_dir="$evidence_dir/generated"
-            local baseline_clean=false
+            local baseline_clean=true
+            local generated_paths=(
+              "packages/legacy/ai/src/models.generated.ts"
+              "packages/contracts/output/dist-cli/index.cjs"
+              "packages/contracts/output/dist-cli/index.cjs.map"
+            )
+            local generated_path snapshot_path artifact_path
 
-            if [[ -f "$catalog_path" ]] && git diff --quiet HEAD -- "$catalog_path"; then
-              baseline_clean=true
-              cp "$catalog_path" "$baseline_snapshot"
-              echo "generated_catalog_baseline=0" >> "$statuses"
+            mkdir -p "$baseline_dir"
+            for generated_path in "${generated_paths[@]}"; do
+              snapshot_path="$baseline_dir/$generated_path"
+              if [[ -f "$generated_path" ]] && git diff --quiet HEAD -- "$generated_path"; then
+                mkdir -p "$(dirname "$snapshot_path")"
+                cp "$generated_path" "$snapshot_path"
+              else
+                baseline_clean=false
+                echo "Generated output was missing or dirty before the build gate: $generated_path" >> "$log"
+              fi
+            done
+            if [[ "$baseline_clean" == true ]]; then
+              echo "generated_outputs_baseline=0" >> "$statuses"
             else
-              echo "generated_catalog_baseline=1" >> "$statuses"
-              echo "Generated model catalog was missing or dirty before the build gate." >> "$log"
+              echo "generated_outputs_baseline=1" >> "$statuses"
             fi
 
             run_gate "$name" "$@"
 
             if [[ "$baseline_clean" == true ]]; then
-              if [[ ! -f "$catalog_path" ]] || ! cmp -s "$baseline_snapshot" "$catalog_path"; then
-                mkdir -p "$generated_dir"
-                if [[ -f "$catalog_path" ]]; then
-                  cp "$catalog_path" "$generated_dir/models.generated.ts"
-                  sha256sum "$generated_dir/models.generated.ts" > "$generated_dir/models.generated.ts.sha256"
-                else
-                  printf '%s\n' "build removed $catalog_path" > "$generated_dir/models.generated.ts.missing"
+              for generated_path in "${generated_paths[@]}"; do
+                snapshot_path="$baseline_dir/$generated_path"
+                artifact_path="$generated_dir/$generated_path"
+                if [[ ! -f "$generated_path" ]] || ! cmp -s "$snapshot_path" "$generated_path"; then
+                  mkdir -p "$(dirname "$artifact_path")"
+                  if [[ -f "$generated_path" ]]; then
+                    cp "$generated_path" "$artifact_path"
+                    sha256sum "$artifact_path" > "${artifact_path}.sha256"
+                  else
+                    printf '%s\n' "build removed $generated_path" > "${artifact_path}.missing"
+                  fi
                 fi
-              fi
+              done
 
-              cp "$baseline_snapshot" "$catalog_path"
-              if git diff --quiet HEAD -- "$catalog_path"; then
-                echo "generated_catalog_restore=0" >> "$statuses"
+              for generated_path in "${generated_paths[@]}"; do
+                snapshot_path="$baseline_dir/$generated_path"
+                mkdir -p "$(dirname "$generated_path")"
+                cp "$snapshot_path" "$generated_path"
+              done
+              if git diff --quiet HEAD -- "${generated_paths[@]}"; then
+                echo "generated_outputs_restore=0" >> "$statuses"
               else
-                echo "generated_catalog_restore=1" >> "$statuses"
-                echo "Generated model catalog could not be restored to the checked-out revision." >> "$log"
+                echo "generated_outputs_restore=1" >> "$statuses"
+                echo "Explicit generated outputs could not be restored to the checked-out revision." >> "$log"
               fi
             else
-              echo "generated_catalog_restore=125" >> "$statuses"
+              echo "generated_outputs_restore=125" >> "$statuses"
             fi
           }
+
+          mirrors="$RUNNER_TEMP/private-git-mirrors"
+          remove_mirror_rewrites() {
+            git config --global --unset-all \
+              "url.file://$mirrors/katamorph.git.insteadOf" || true
+            git config --global --unset-all \
+              "url.file://$mirrors/event-ledger.git.insteadOf" || true
+          }
+          trap remove_mirror_rewrites EXIT
+
+          if [[ -d "$mirrors/katamorph.git" ]]; then
+            git config --global \
+              "url.file://$mirrors/katamorph.git.insteadOf" \
+              "https://github.com/open-hax/katamorph.git"
+          fi
+          if [[ -d "$mirrors/event-ledger.git" ]]; then
+            git config --global \
+              "url.file://$mirrors/event-ledger.git.insteadOf" \
+              "https://github.com/open-hax/event-ledger.git"
+          fi
 
           if [[ "$CHECKOUT_EXACT_HEAD" != "true" || "$CHECKOUT_CLEAN" != "true" ]]; then
             echo "checkout_guard=1" >> "$statuses"
@@ -286,7 +405,7 @@ jobs:
               run_gate bootstrap_extensions pnpm --dir packages/extensions build
               run_gate lint pnpm lint
               run_gate test pnpm test
-              run_gate_preserving_generated_catalog build pnpm build
+              run_gate_preserving_generated_outputs build pnpm build
             else
               echo "bootstrap_extensions=125" >> "$statuses"
               echo "lint=125" >> "$statuses"
@@ -302,7 +421,7 @@ jobs:
         shell: bash
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_SHA: ${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           CHECKOUT_EXPECTED_SHA: ${{ steps.checkout_guard.outputs.expected_sha }}
           CHECKOUT_EXECUTED_SHA: ${{ steps.checkout_guard.outputs.executed_sha }}
@@ -631,7 +750,7 @@ jobs:
       - name: Checkout pull request
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -639,22 +758,31 @@ jobs:
         id: review_checkout
         shell: bash
         env:
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_SHA: ${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           expected_sha="$PR_HEAD_SHA"
           executed_sha="$(git rev-parse HEAD)"
           checkout_status="$(git status --porcelain --untracked-files=all)"
+          expected_commit=false
           exact_head=false
           clean=false
-          [[ "$executed_sha" == "$expected_sha" ]] && exact_head=true
+          if [[ "$expected_sha" =~ ^[0-9a-f]{40}$ || "$expected_sha" =~ ^[0-9a-f]{64}$ ]]; then
+            git cat-file -e "${expected_sha}^{commit}" 2>/dev/null && expected_commit=true
+          fi
+          [[ "$expected_commit" == true && "$executed_sha" == "$expected_sha" ]] && exact_head=true
           [[ -z "$checkout_status" ]] && clean=true
           {
             echo "expected_sha=$expected_sha"
             echo "executed_sha=$executed_sha"
+            echo "expected_commit=$expected_commit"
             echo "exact_head=$exact_head"
             echo "clean=$clean"
           } >> "$GITHUB_OUTPUT"
+          if [[ "$expected_commit" != true ]]; then
+            echo "::error::Expected review revision is not an available immutable commit: $expected_sha"
+            exit 1
+          fi
           if [[ "$exact_head" != true ]]; then
             echo "::error::Expected pull-request head $expected_sha but review checkout executed $executed_sha."
             exit 1
