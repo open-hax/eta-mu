@@ -99,7 +99,10 @@ Checks for unresolved review threads. With `--strict`, it blocks on all unresolv
 Creates PRs only for matching branches that have commits ahead of the base and no
 open PR. A closed or merged PR suppresses recreation while its recorded head SHA
 still matches the branch; advancing the branch beyond that terminal head makes it
-eligible again when the new head remains ahead of the base.
+eligible again when the new head remains ahead of the base. Base-divergence checks
+run inside the per-branch processing boundary: a branch with unrelated or malformed
+history is reported as an error without preventing another eligible branch from
+being projected.
 
 ### `eta-mu auto-merge --repo owner/repo --pr N [--merge-method SQUASH]`
 Enables GitHub auto-merge via GraphQL API.

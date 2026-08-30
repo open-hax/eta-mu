@@ -8,6 +8,7 @@ vi.mock("../src/github.js", async (importOriginal) => {
     ...actual,
     createGitHubClient: vi.fn(() => ({})),
     listBranchesWithoutPRs: vi.fn(),
+    isBranchAheadOfBase: vi.fn(),
     fetchBranchCommits: vi.fn(),
     createPullRequest: vi.fn(),
   };
@@ -22,6 +23,7 @@ describe("ensurePRs", () => {
     vi.mocked(github.listBranchesWithoutPRs).mockResolvedValue([
       { name: "fix/test-branch", sha: "abc123" },
     ]);
+    vi.mocked(github.isBranchAheadOfBase).mockResolvedValue(true);
     vi.mocked(github.fetchBranchCommits).mockResolvedValue(["fix: test commit"]);
     vi.mocked(github.createPullRequest).mockResolvedValue({ number: 42, url: "https://github.com/test/repo/pull/42" });
 
@@ -44,6 +46,7 @@ describe("ensurePRs", () => {
     vi.mocked(github.listBranchesWithoutPRs).mockResolvedValue([
       { name: "fix/test-branch", sha: "abc123" },
     ]);
+    vi.mocked(github.isBranchAheadOfBase).mockResolvedValue(true);
 
     const result = await ensurePRs({
       repo: { owner: "test", name: "repo" },
@@ -64,6 +67,7 @@ describe("ensurePRs", () => {
     vi.mocked(github.listBranchesWithoutPRs).mockResolvedValue([
       { name: "fix/test-branch", sha: "abc123" },
     ]);
+    vi.mocked(github.isBranchAheadOfBase).mockResolvedValue(true);
     vi.mocked(github.fetchBranchCommits).mockRejectedValue(new Error("Network error"));
 
     const result = await ensurePRs({
@@ -78,5 +82,58 @@ describe("ensurePRs", () => {
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0].branch).toBe("fix/test-branch");
     expect(result.errors[0].error).toBe("Network error");
+  });
+
+  it("continues after one branch comparison fails", async () => {
+    vi.mocked(github.listBranchesWithoutPRs).mockResolvedValue([
+      { name: "fix/orphaned", sha: "orphaned-head" },
+      { name: "fix/eligible", sha: "eligible-head" },
+    ]);
+    vi.mocked(github.isBranchAheadOfBase)
+      .mockRejectedValueOnce(new Error("No common ancestor"))
+      .mockResolvedValueOnce(true);
+    vi.mocked(github.fetchBranchCommits).mockResolvedValue(["fix: eligible commit"]);
+    vi.mocked(github.createPullRequest).mockResolvedValue({
+      number: 43,
+      url: "https://github.com/test/repo/pull/43",
+    });
+
+    const result = await ensurePRs({
+      repo: { owner: "test", name: "repo" },
+      base: "staging",
+      token: "test-token",
+      branchPatterns: ["fix/*"],
+      dryRun: false,
+    });
+
+    expect(result.errors).toEqual([{ branch: "fix/orphaned", error: "No common ancestor" }]);
+    expect(result.created).toEqual([
+      {
+        branch: "fix/eligible",
+        prNumber: 43,
+        url: "https://github.com/test/repo/pull/43",
+      },
+    ]);
+    expect(github.createPullRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it("suppresses a branch with no commits ahead of the base", async () => {
+    vi.mocked(github.listBranchesWithoutPRs).mockResolvedValue([
+      { name: "fix/incorporated", sha: "incorporated-head" },
+    ]);
+    vi.mocked(github.isBranchAheadOfBase).mockResolvedValue(false);
+
+    const result = await ensurePRs({
+      repo: { owner: "test", name: "repo" },
+      base: "staging",
+      token: "test-token",
+      branchPatterns: ["fix/*"],
+      dryRun: false,
+    });
+
+    expect(result.created).toEqual([]);
+    expect(result.skipped).toEqual(["fix/incorporated"]);
+    expect(result.errors).toEqual([]);
+    expect(github.createPullRequest).not.toHaveBeenCalled();
   });
 });

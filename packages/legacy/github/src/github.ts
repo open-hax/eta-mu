@@ -335,27 +335,29 @@ export const listBranchesWithoutPRs = async (
     `^(?:${patterns.map((p) => p.replace(/\*/g, ".*")).join("|")})$`,
   );
 
-  const candidates = branches.filter((branch) => {
-    if (protectedRefs.has(branch.name)) return false;
-    if (branch.name === base) return false;
-    if (openPRHeads.has(branch.name)) return false;
-    if (terminalPRHeads.has(`${branch.name}\0${branch.commit.sha}`)) return false;
-    return branchPattern.test(branch.name);
+  return branches.flatMap((branch) => {
+    if (protectedRefs.has(branch.name)) return [];
+    if (branch.name === base) return [];
+    if (openPRHeads.has(branch.name)) return [];
+    if (terminalPRHeads.has(`${branch.name}\0${branch.commit.sha}`)) return [];
+    if (!branchPattern.test(branch.name)) return [];
+    return [{ name: branch.name, sha: branch.commit.sha }];
   });
+};
 
-  const eligible: BranchWithoutPR[] = [];
-  for (const branch of candidates) {
-    const comparison = await octokit.rest.repos.compareCommits({
-      owner: repo.owner,
-      repo: repo.name,
-      base,
-      head: branch.commit.sha,
-    });
-    if (comparison.data.ahead_by > 0) {
-      eligible.push({ name: branch.name, sha: branch.commit.sha });
-    }
-  }
-  return eligible;
+export const isBranchAheadOfBase = async (
+  octokit: Octokit,
+  repo: RepoSlug,
+  base: string,
+  branch: BranchWithoutPR,
+): Promise<boolean> => {
+  const comparison = await octokit.rest.repos.compareCommits({
+    owner: repo.owner,
+    repo: repo.name,
+    base,
+    head: branch.sha,
+  });
+  return comparison.data.ahead_by > 0;
 };
 
 export const createPullRequest = async (
