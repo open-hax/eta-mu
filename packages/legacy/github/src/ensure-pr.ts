@@ -3,8 +3,8 @@ import {
   createPullRequest,
   fetchBranchCommits,
   inferPRTitle,
+  isBranchAheadOfBase,
   listBranchesWithoutPRs,
-  parseRepoSlug,
 } from "./github.js";
 import type { RepoSlug } from "./types.js";
 
@@ -59,6 +59,11 @@ export const ensurePRs = async (options: EnsurePROptions): Promise<EnsurePRResul
 
   for (const branch of branches) {
     try {
+      if (!(await isBranchAheadOfBase(octokit, options.repo, options.base, branch))) {
+        skipped.push(branch.name);
+        continue;
+      }
+
       if (options.dryRun) {
         skipped.push(branch.name);
         continue;

@@ -80,12 +80,12 @@ Total package: ~1,726 TS lines (slightly below the epic’s 2,076 line estimate 
 - **Proposed CLJS namespaces:**
   - `eta_mu.github.extern.github-client` — Octokit creation and all REST/GraphQL calls
   - `eta_mu.github.shape.github` — pure transforms (`parseRepoSlug`, `inferPRTitle`, `formatReviewGateOutput`)
-- **Public exports:** `parseRepoSlug`, `createGitHubClient`, `fetchEventContext`, `createIssueComment`, `upsertStickyComment`, `formatReviewGateOutput`, `publishCheckRun`, `listBranchesWithoutPRs`, `BranchWithoutPR`, `createPullRequest`, `inferPRTitle`, `fetchBranchCommits`
+- **Public exports:** `parseRepoSlug`, `createGitHubClient`, `fetchEventContext`, `createIssueComment`, `upsertStickyComment`, `formatReviewGateOutput`, `publishCheckRun`, `listBranchesWithoutPRs`, `isBranchAheadOfBase`, `BranchWithoutPR`, `createPullRequest`, `inferPRTitle`, `fetchBranchCommits`
 - **Consumers inside `packages/legacy`:**
   - `src/index.ts` re-exports `parseRepoSlug`, `createGitHubClient`, `fetchEventContext`, `formatReviewGateOutput`, `publishCheckRun`
   - `src/cli.ts` uses `createGitHubClient`, `fetchEventContext`, `formatReviewGateOutput`, `parseRepoSlug`, `publishCheckRun`, plus non-exported `createIssueComment` and `upsertStickyComment`
-  - `src/ensure-pr.ts` uses `createGitHubClient`, `createPullRequest`, `fetchBranchCommits`, `inferPRTitle`, `listBranchesWithoutPRs`, `parseRepoSlug`
-  - `tests/github.test.ts` tests `formatReviewGateOutput` and `inferPRTitle`
+  - `src/ensure-pr.ts` uses `createGitHubClient`, `createPullRequest`, `fetchBranchCommits`, `inferPRTitle`, `isBranchAheadOfBase`, `listBranchesWithoutPRs`
+  - `tests/github.test.ts` tests `formatReviewGateOutput`, `inferPRTitle`, terminal/open PR inventory, and base-divergence checks
 - **Raw JS interop surfaces:**
   - `@octokit/rest` (`Octokit`) for REST + GraphQL
   - `process.env.GITHUB_SERVER_URL`, `GITHUB_REPOSITORY`, `GITHUB_RUN_ID` for action-run links

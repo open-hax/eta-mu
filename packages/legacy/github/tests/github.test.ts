@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   formatReviewGateOutput,
   inferPRTitle,
+  isBranchAheadOfBase,
   listBranchesWithoutPRs,
 } from "../src/github.js";
 
@@ -135,7 +136,7 @@ describe("listBranchesWithoutPRs", () => {
     expect(client.compareCommits).not.toHaveBeenCalled();
   });
 
-  it("suppresses branches whose changes are already incorporated", async () => {
+  it("leaves base-divergence checks to the per-branch processing boundary", async () => {
     const client = githubClient(
       [{ name: "fix/incorporated", commit: { sha: "current-head" } }],
       [{ state: "closed", head: { ref: "fix/incorporated", sha: "old-head" } }],
@@ -144,7 +145,15 @@ describe("listBranchesWithoutPRs", () => {
 
     await expect(
       listBranchesWithoutPRs(client.octokit, repo, "staging", ["fix/*"]),
-    ).resolves.toEqual([]);
+    ).resolves.toEqual([{ name: "fix/incorporated", sha: "current-head" }]);
+    expect(client.compareCommits).not.toHaveBeenCalled();
+
+    await expect(
+      isBranchAheadOfBase(client.octokit, repo, "staging", {
+        name: "fix/incorporated",
+        sha: "current-head",
+      }),
+    ).resolves.toBe(false);
     expect(client.compareCommits).toHaveBeenCalledWith({
       owner: "open-hax",
       repo: "proxx",
@@ -153,7 +162,7 @@ describe("listBranchesWithoutPRs", () => {
     });
   });
 
-  it("keeps a branch eligible after it advances beyond a terminal head", async () => {
+  it("reports a branch ahead after it advances beyond a terminal head", async () => {
     const client = githubClient(
       [{ name: "fix/advanced", commit: { sha: "advanced-head" } }],
       [{ state: "closed", head: { ref: "fix/advanced", sha: "old-head" } }],
@@ -163,5 +172,11 @@ describe("listBranchesWithoutPRs", () => {
     await expect(
       listBranchesWithoutPRs(client.octokit, repo, "staging", ["fix/*"]),
     ).resolves.toEqual([{ name: "fix/advanced", sha: "advanced-head" }]);
+    await expect(
+      isBranchAheadOfBase(client.octokit, repo, "staging", {
+        name: "fix/advanced",
+        sha: "advanced-head",
+      }),
+    ).resolves.toBe(true);
   });
 });

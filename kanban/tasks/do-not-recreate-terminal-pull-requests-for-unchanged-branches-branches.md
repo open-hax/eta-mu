@@ -3,7 +3,7 @@ category: "tasks"
 labels: "github, automation, pull-request, recovery"
 parent: "github-cljs-rewrite-domain-pr"
 type: "task"
-write-id: "1788053214985-0.bb82s51q2saim3o4w3"
+write-id: "1788056365204-0.cvzmsmw6o2mgwh7aoqb"
 points: "3"
 title: "Do not recreate terminal pull requests for unchanged branches"
 priority: "P0"
@@ -53,4 +53,6 @@ Intake plan 2026-08-30: the canonical owner is child card skip-unchanged-termina
 Implementation evidence 2026-08-30: RED source inspection and Proxx PRs #359/#394 prove listBranchesWithoutPRs queried only state=open and therefore forgot every terminal head. GREEN changes the inventory to all PR history, skips open heads and exact terminal head/SHA pairs without extra calls, then serially compares only remaining candidates and admits them only when ahead_by is positive. The package-root Vitest suite passes 20/20, including exact Proxx terminal fixtures, open-PR suppression, ahead_by=0 incorporation, and an advanced terminal branch. The changed TypeScript source passes a standalone strict NodeNext compile; Biome reports both changed TypeScript files clean; documentation now states the terminal-head and base-divergence contract; git diff --check passes. Full-package tsc is not local authority in this linked worktree because the pre-existing @open-hax/eta-mu-cli workspace export has no built dist declarations; hosted build/typecheck remains required before merge.
 
 Projection authority 2026-08-30: canonical card UUID skip-unchanged-terminal-pr-branches is represented by eta-mu issue #308. Preflight searches found no prior open or closed owner, and the created issue carries the exact marker, review status, P0 priority, source path, and desired label set. Issue #208 remains the broader icebox parent rather than being overloaded with this P0 operational defect.
+
+Review-derived containment correction 2026-08-30: eta PR #310 exact head b333063414bb430eec17030c25544009ede998e9 is blocked by Codex review comment 3888231448. The #309 implementation placed repos.compareCommits during repository-wide discovery, so one no-common-ancestor rejection could abort every remaining branch. The repair branch fix/isolate-branch-comparison-failures moves the divergence check into the existing per-branch try boundary, records the failed branch in errors, continues a separate eligible branch, and preserves exact terminal-head suppression plus ahead_by=0 suppression. PR #310 must pin only the immutable landed repair merge; all 34 Proxx burst PRs remain open and quarantined until that two-phase rollout is reviewed and active.
 ---

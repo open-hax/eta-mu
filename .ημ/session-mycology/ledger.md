@@ -306,3 +306,12 @@
   spore: none
   receipt-refs: 2026-08-30T01:25:24Z
   note: Open-only inventory erased terminal history and turned a stable branch into perpetual intake. Binding terminal evidence to both ref and SHA handles the cheap unchanged case; a serial base comparison handles incorporated or newly divergent heads without an API burst. One accidental root-scoped Vitest invocation demonstrated why package-root commands are the authority in this linked worktree; the correct package suite is 20/20. No new spore; the existing exact-head and worktree-command-scope lessons cover the reusable failure mode.
+- ts: 2026-08-30T02:21:12Z
+  session: /workspace/scratch/8d4eacbf051e/eta-compare-isolation
+  task: Isolate terminal-PR base comparison failures before activation
+  p-efficiency: 0.84
+  p-friction: 0.53
+  p-skill-candidate: 0.62
+  spore: none
+  receipt-refs: 2026-08-30T02:21:12Z
+  note: Post-merge activation review caught an orchestration gap before the unsafe pin landed: a repository-wide comparison rejection could discard unrelated valid work. Separating discovery from per-branch divergence preserves whole-repository progress and records the failed branch without weakening terminal-head or zero-ahead suppression; the CLJS migration inventory now names the extracted boundary and its actual consumers. No new spore; the existing review-thread exact-head and separate-evidence-retention lessons cover the reusable pattern.
