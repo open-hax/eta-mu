@@ -380,6 +380,8 @@ test("operator docs distinguish in-job recovery from a failed-job rerun", () => 
   assert.match(workflowDocs, /failed-job re-run/i);
   assert.match(workflowDocs, /prerequisite jobs? emitted/i);
   assert.match(workflowDocs, /malformed.*fail closed/is);
+  assert.match(workflowDocs, /invocation that rejects.*null exit code/is);
+  assert.match(workflowDocs, /stream files are finalized/is);
 });
 
 function recoveryFixture(t) {
@@ -493,6 +495,72 @@ test("malformed submission fails closed without consuming the recovery attempt",
   assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
 });
 
+test("non-zero completed invocation records its evidence and does not retry", async (t) => {
+  const { directory, submissionFile } = recoveryFixture(t);
+  const calls = [];
+  await assert.rejects(
+    runReviewRecovery({
+      evidenceDirectory: directory,
+      basePrompt: "review the change",
+      submissionFile,
+      invokeAttempt: async ({ attempt, responseFile, stderrFile }) => {
+        calls.push(attempt);
+        fs.writeFileSync(responseFile, "failed response\n");
+        fs.writeFileSync(stderrFile, "failed stderr\n");
+        return { exitCode: 17 };
+      },
+    }),
+    /attempt 1 exited 17/,
+  );
+
+  assert.deepEqual(calls, [1]);
+  const recovery = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8"));
+  assert.deepEqual(recovery.attempts, [
+    {
+      attempt: 1,
+      exit_code: 17,
+      invocation_state: "completed",
+      response_file: "model-response-attempt-1.txt",
+      stderr_file: "opencode-stderr-attempt-1.log",
+      submission_state: "missing",
+    },
+  ]);
+  assert.equal(fs.readFileSync(path.join(directory, "model-response-attempt-1.txt"), "utf8"), "failed response\n");
+  assert.equal(fs.readFileSync(path.join(directory, "opencode-stderr-attempt-1.log"), "utf8"), "failed stderr\n");
+  assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
+});
+
+test("rejected invocation is recorded once and rethrows the original error", async (t) => {
+  const { directory, submissionFile } = recoveryFixture(t);
+  const invocationError = new Error("fixture invocation rejected");
+  await assert.rejects(
+    runReviewRecovery({
+      evidenceDirectory: directory,
+      basePrompt: "review the change",
+      submissionFile,
+      invokeAttempt: async () => {
+        throw invocationError;
+      },
+    }),
+    (error) => error === invocationError,
+  );
+
+  const recovery = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8"));
+  assert.equal(recovery.attempts.length, 1);
+  assert.deepEqual(recovery.attempts[0], {
+    attempt: 1,
+    exit_code: null,
+    invocation_state: "rejected",
+    response_file: "model-response-attempt-1.txt",
+    stderr_file: "opencode-stderr-attempt-1.log",
+    submission_state: "missing",
+    invocation_error: "fixture invocation rejected",
+  });
+  assert.equal(fs.readFileSync(path.join(directory, "model-response-attempt-1.txt"), "utf8"), "");
+  assert.equal(fs.readFileSync(path.join(directory, "opencode-stderr-attempt-1.log"), "utf8"), "");
+  assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
+});
+
 test("recovery CLI preserves both real child-process streams", (t) => {
   const { directory } = recoveryFixture(t);
   const promptFile = path.join(directory, "prompt.md");
@@ -545,6 +613,40 @@ if (attempt === 2) {
     ),
     ["missing", "present"],
   );
+});
+
+test("recovery CLI finalizes streams and records a spawn failure", (t) => {
+  const { directory } = recoveryFixture(t);
+  const promptFile = path.join(directory, "prompt.md");
+  const packagedRunner = path.join(directory, "run-opencode-review-recovery.mjs");
+  fs.writeFileSync(promptFile, "Review pull request #{{PR_NUMBER}}.\n");
+  fs.writeFileSync(packagedRunner, packagedRecoveryRunner());
+
+  const result = spawnSync(process.execPath, [packagedRunner], {
+    cwd: root,
+    encoding: "utf8",
+    timeout: 10_000,
+    env: {
+      ...process.env,
+      OPENCODE_BIN: path.join(directory, "missing-opencode"),
+      PR_NUMBER: "296",
+      REVIEW_EVIDENCE_DIR: directory,
+      REVIEW_MODEL: "fixture/model",
+      REVIEW_PROMPT_FILE: promptFile,
+    },
+  });
+
+  assert.equal(result.error, undefined);
+  assert.equal(result.signal, null);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /ENOENT/);
+  assert.equal(fs.readFileSync(path.join(directory, "model-response-attempt-1.txt"), "utf8"), "");
+  assert.equal(fs.readFileSync(path.join(directory, "opencode-stderr-attempt-1.log"), "utf8"), "");
+  const recovery = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8"));
+  assert.equal(recovery.attempts.length, 1);
+  assert.equal(recovery.attempts[0].invocation_state, "rejected");
+  assert.match(recovery.attempts[0].invocation_error, /ENOENT/);
+  assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
 });
 
 test("deterministic checkout guard records independently executed SHA", (t) => {

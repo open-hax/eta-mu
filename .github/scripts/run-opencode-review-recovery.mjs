@@ -34,6 +34,38 @@ function writeRecovery(metadataFile, metadata) {
   fs.writeFileSync(metadataFile, `${JSON.stringify(metadata, null, 2)}\n`);
 }
 
+function recordAttempt({
+  metadata,
+  metadataFile,
+  attempt,
+  result,
+  invocationError,
+  invocationRejected = false,
+  responseFile,
+  stderrFile,
+  submissionFile,
+}) {
+  if (!fs.existsSync(responseFile)) fs.writeFileSync(responseFile, "");
+  if (!fs.existsSync(stderrFile)) fs.writeFileSync(stderrFile, "");
+
+  const state = submissionState(submissionFile);
+  const record = {
+    attempt,
+    exit_code: result?.exitCode ?? null,
+    invocation_state: invocationRejected ? "rejected" : "completed",
+    response_file: path.basename(responseFile),
+    stderr_file: path.basename(stderrFile),
+    submission_state: state,
+  };
+  if (invocationRejected) {
+    record.invocation_error =
+      invocationError instanceof Error ? invocationError.message : String(invocationError);
+  }
+  metadata.attempts.push(record);
+  writeRecovery(metadataFile, metadata);
+  return state;
+}
+
 /**
  * Run one review attempt and exactly one corrective attempt when, and only
  * when, the first completed invocation omitted the review_submit artifact.
@@ -69,19 +101,32 @@ export async function runReviewRecovery({
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     const responseFile = path.join(evidenceDirectory, `model-response-attempt-${attempt}.txt`);
     const stderrFile = path.join(evidenceDirectory, `opencode-stderr-attempt-${attempt}.log`);
-    const result = await invokeAttempt({ attempt, prompt, responseFile, stderrFile });
-    if (!fs.existsSync(responseFile)) fs.writeFileSync(responseFile, "");
-    if (!fs.existsSync(stderrFile)) fs.writeFileSync(stderrFile, "");
+    let result;
+    try {
+      result = await invokeAttempt({ attempt, prompt, responseFile, stderrFile });
+    } catch (invocationError) {
+      recordAttempt({
+        metadata,
+        metadataFile,
+        attempt,
+        invocationError,
+        invocationRejected: true,
+        responseFile,
+        stderrFile,
+        submissionFile,
+      });
+      throw invocationError;
+    }
 
-    const state = submissionState(submissionFile);
-    metadata.attempts.push({
+    const state = recordAttempt({
+      metadata,
+      metadataFile,
       attempt,
-      exit_code: result?.exitCode ?? null,
-      response_file: path.basename(responseFile),
-      stderr_file: path.basename(stderrFile),
-      submission_state: state,
+      result,
+      responseFile,
+      stderrFile,
+      submissionFile,
     });
-    writeRecovery(metadataFile, metadata);
 
     if (result?.exitCode !== 0) {
       throw new Error(`OpenCode review attempt ${attempt} exited ${result?.exitCode ?? "without a code"}`);
@@ -109,31 +154,44 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile }) {
 
   const response = fs.createWriteStream(responseFile, { flags: "w" });
   const stderr = fs.createWriteStream(stderrFile, { flags: "w" });
-  const child = spawn(
-    opencodeBin,
-    ["run", "--agent", "github-reviewer", "--model", reviewModel, prompt],
-    { stdio: ["ignore", "pipe", "pipe"] },
-  );
+  const streamsFinished = Promise.allSettled([finished(response), finished(stderr)]);
+  let invocationRejected = false;
 
-  child.stdout.on("data", (chunk) => {
-    response.write(chunk);
-    process.stdout.write(chunk);
-  });
-  child.stderr.on("data", (chunk) => {
-    stderr.write(chunk);
-    process.stderr.write(chunk);
-  });
+  try {
+    const child = spawn(
+      opencodeBin,
+      ["run", "--agent", "github-reviewer", "--model", reviewModel, prompt],
+      { stdio: ["ignore", "pipe", "pipe"] },
+    );
 
-  const exit = await new Promise((resolve, reject) => {
-    child.once("error", reject);
-    child.once("close", (code, signal) => resolve({ code, signal }));
-  });
-  response.end();
-  stderr.end();
-  await Promise.all([finished(response), finished(stderr)]);
+    child.stdout.on("data", (chunk) => {
+      response.write(chunk);
+      process.stdout.write(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr.write(chunk);
+      process.stderr.write(chunk);
+    });
 
-  if (exit.signal) throw new Error(`OpenCode review terminated by ${exit.signal}`);
-  return { exitCode: exit.code };
+    const exit = await new Promise((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", (code, signal) => resolve({ code, signal }));
+    });
+
+    if (exit.signal) throw new Error(`OpenCode review terminated by ${exit.signal}`);
+    return { exitCode: exit.code };
+  } catch (error) {
+    invocationRejected = true;
+    throw error;
+  } finally {
+    response.end();
+    stderr.end();
+    const streamResults = await streamsFinished;
+    if (!invocationRejected) {
+      const streamFailure = streamResults.find(({ status }) => status === "rejected");
+      if (streamFailure) throw streamFailure.reason;
+    }
+  }
 }
 
 async function main() {

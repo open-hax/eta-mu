@@ -279,3 +279,12 @@
   spore: none
   receipt-refs: 2026-08-30T00:01:04Z
   note: Direct-repository hosted checks can conceal a reusable-workflow path defect because the implementation file exists only in the provider checkout. Packaging the exact source bytes into the already checksummed context artifact preserves the single revision-bound transport boundary; a byte-parity regression makes the otherwise encoded carrier auditable. The existing separate-evidence-retention-from-terminal-truth spore covers this boundary, so no duplicate spore was incubated.
+- ts: 2026-08-30T00:40:13Z
+  session: /workspace/scratch/8d4eacbf051e/eta-mu-post300
+  task: Close rejected-invocation durability findings on eta-mu PR #304
+  p-efficiency: 0.86
+  p-friction: 0.58
+  p-skill-candidate: 0.68
+  spore: none
+  receipt-refs: 2026-08-30T00:40:13Z
+  note: Exact-head review exposed that an invocation can fail before the omission classifier and leave neither durable metadata nor finalized streams. The repair records rejected and non-zero attempts before classification, finalizes both streams on every child-process path, and locks original-error/no-retry semantics in the packaged runner. Rheos's closing comment delimiter was independently proven canonical rather than rewritten. The existing separate-evidence-retention-from-terminal-truth spore covers this boundary, so no duplicate spore was incubated.
