@@ -3,11 +3,11 @@ category: "tasks"
 labels: "rheos, cli, round-trip, planning"
 dependency: []
 type: "task"
-write-id: "1788070983364-0.iqru079lsldapz11dt"
+write-id: "1788072879884-0.0ue8ic2tkgt6ud11ocb"
 points: "3"
 title: "Restore Rheos round-trip and planning metadata safety"
 priority: "P0"
-status: "in_progress"
+status: "review"
 uuid: "rheos-roundtrip-planning-metadata"
 created_at: "2026-08-30T03:09:19.638Z"
 ---
@@ -46,4 +46,6 @@ Final gate correction after isolating the new domain cases in a reviewable text 
 Review transition remains correctly blocked by the repository-wide build hook: pnpm build stops before package builds because the managed pnpm wrapper rejects ignored dependency build scripts (canvas, esbuild, fs-ext-extra-prebuilt, koffi, msgpackr-extract, protobufjs). No supply-chain policy or lockfile was changed. The scoped Rheos tests, kondo, all four release targets, and eta-mu bridge tests/kondo remain green.
 
 Current-main successor evidence 2026-08-30: the implementation commit was replayed onto exact eta main f0f3abef94268ac5262a205280a5bd5247e30ce7; the three append-only ledgers were reconciled as base plus both tails in event-time order, and all source/test changes apply without conflict. On this exact tree, Rheos is 180 tests / 902 assertions with zero failures, clj-kondo reports 0 errors / 0 warnings, and release server, cli, github-sync, and app each compile with 0 warnings; git diff check is clean. The eta-mu bridge remains environment-blocked before compilation because repo1.maven.org cannot resolve shadow-cljs 3.4.11. The managed pnpm dependency verifier also rewrites an allowBuilds placeholder and rejects the same ignored native scripts before package commands; that incidental rewrite was removed and no supply-chain policy changed. The card stays in_progress and PR #312 stays draft until exact hosted gates/review establish a lawful review transition; no completion is claimed.
+
+Exact published-head hosted evidence for PR #312 at a65c8a3e52c58729a1bdde6baf27de7715f79f82 / tree 06989af78f2485bcc935149c43033717e5f31818 is terminal green. Sandbox bundle run 33296977996 job 99218238851 completed install, validate, test, build, collection, and upload successfully. Coverage run 33296978000 passed eta-mu CLI test, kondo, coverage, e2e, CLJS extensions, and TypeScript packages. Rheos run 33296978007 job 99218238643 passed tests, lint, and all release targets; sync run 33296977980 job 99218238633 passed board generation, drift history, projection dry-run, and evidence upload. CodeQL 33296978100 and the draft-safe OpenCode terminal gate 33296977982 also succeeded. This supersedes the local Maven and managed-wrapper execution blockers as exact hosted broad proof, so the card may now walk in_progress -> testing -> review; no review or completion verdict is claimed yet.
 ---
