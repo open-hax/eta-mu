@@ -1,9 +1,9 @@
 ---
 category: "tasks"
-labels: "github, automation, pull-request, recovery, security-boundary"
+labels: "github,automation,pull-request,recovery"
 parent: "skip-unchanged-terminal-pr-branches"
 type: "task"
-write-id: "1788062914794-0.mw039qlt5dn9yw90m9"
+write-id: "1788063199664-0.lpkrm5v2vj78f4l5fv"
 points: "3"
 title: "Scope pull-request suppression to the target repository"
 priority: "P0"
