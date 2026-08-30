@@ -153,6 +153,7 @@
         updates (when (map? updates)
                   (reduce-kv (fn [m k v] (assoc m (keyword k) v)) {} updates))
         bad-keys (when (seq updates) (law-frontmatter/disallowed-keys updates))
+        value-errors (when (seq updates) (law-frontmatter/planning-value-errors updates))
         project (find-project project-id)]
     (cond
       (not project) (send-error reply 404 "unknown project")
@@ -163,6 +164,8 @@
                                  "POST /api/task/" uuid "/status"))
       (seq bad-keys)
       (send-error reply 400 (law-frontmatter/disallowed-keys-message bad-keys))
+      (seq value-errors)
+      (send-error reply 400 (law-frontmatter/planning-value-errors-message value-errors))
       :else (try
               (let [all-tasks (await (tasks/load-tasks (:tasks-dir project)))
                     task (first (filter #(= (:uuid %) uuid) all-tasks))]

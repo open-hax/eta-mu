@@ -87,11 +87,14 @@
    override deliberately); or the target file already exists.
 
    Returns `{:ok true :uuid … :title … :status … :source-path … :card-type …}`."
-  [{:keys [project title card-type parent status priority points labels body
+  [{:keys [project title card-type parent dependency status priority points labels body
            dir uuid source force-status?]}]
   (when-not project
     (task-create/refuse! :not-found "unknown project" {}))
-  (let [card-type (task-create/check-request! {:title title :card-type card-type})
+  (let [card-type (task-create/check-request! {:project project :title title
+                                               :card-type card-type
+                                               :dependency dependency})
+        dependency (vec (or dependency []))
         existing (await (tasks/load-tasks (:tasks-dir project)))
         decision (task-create/decide-card {:project project :title title
                                            :card-type card-type :parent parent
@@ -112,6 +115,7 @@
                                        :points points
                                        :labels (vec (or labels []))
                                        :parent parent
+                                       :dependency dependency
                                        :category (path/basename card-dir)
                                        :write-id write-id
                                        :created-at (.toISOString (new js/Date))
@@ -123,7 +127,9 @@
             (ledger/get-ledger (:tasks-dir project))
             (:id project) card-uuid
             {:title title :card-type card-type :status card-status
-             :parent parent :source-path file-path :body (:body card)}
+             :parent parent :dependency dependency
+             :source-path file-path :body (:body card)}
             write-id source))
     {:ok true :uuid card-uuid :title title :status card-status
-     :card-type card-type :parent parent :source-path file-path}))
+     :card-type card-type :parent parent :dependency dependency
+     :source-path file-path}))

@@ -315,3 +315,12 @@
   spore: none
   receipt-refs: 2026-08-30T02:21:12Z
   note: Post-merge activation review caught an orchestration gap before the unsafe pin landed: a repository-wide comparison rejection could discard unrelated valid work. Separating discovery from per-branch divergence preserves whole-repository progress and records the failed branch without weakening terminal-head or zero-ahead suppression; the CLJS migration inventory now names the extracted boundary and its actual consumers. No new spore; the existing review-thread exact-head and separate-evidence-retention lessons cover the reusable pattern.
+- ts: 2026-08-30T03:32:45Z
+  session: /workspace/scratch/0d23a6d476fc/worktrees/rheos-roundtrip
+  task: Restore Rheos dependency round-trip safety and lawful planning metadata
+  p-efficiency: 0.78
+  p-friction: 0.64
+  p-skill-candidate: 0.72
+  spore: none
+  receipt-refs: 2026-08-30T03:32:39.640Z
+  note: The empty-array parser defect was one boundary line, but proving the repair required following the whole-file comment rewrite and every create/update adapter. Kondo exposed a nested deftest that the green compiler run had not executed, and a tracked NUL fixture made its diff binary, so the new cases were isolated in a reviewable text namespace. The repository-wide review hook remains blocked before package builds by managed ignored-build policy; scoped Rheos and eta-mu gates are green and no supply-chain policy was relaxed. No new spore: falsify-every-new-test, worktree-cwd-write-targeting, and verify-the-binary-not-the-source already cover the reusable lessons.

@@ -45,6 +45,7 @@
           (is (= "13" (:points fm)))
           (is (= "ledger, cutover" (:labels fm)))
           (is (nil? (:parent fm)) "a root card records no parent")
+          (is (= [] (:dependency fm)) "no dependencies remain an explicit empty vector")
           (is (string? (:write-id fm))))
         (finally (await (cleanup! project)))))))
 
@@ -139,6 +140,36 @@
           (is (= :usage (:kind (ex-data bad-type)))))
         (finally (await (cleanup! project)))))))
 
+(deftest ^:async configured-types-and-dependencies-round-trip
+  (testing "repository-declared card types determine placement and dependency metadata"
+    (let [base (await (scratch-project))
+          project (assoc base :card-dirs {:story "stories" :chore "chores"})]
+      (try
+        (let [result (await (task-create/create-task!
+                             {:project project :title "Lawful Story"
+                              :card-type "story"
+                              :dependency ["epiphany-17" "calliope-16"]
+                              :source "test"}))
+              fm (await (frontmatter-of (:source-path result)))]
+          (is (:ok result))
+          (is (= "story" (:card-type result)))
+          (is (= "stories" (path/basename (path/dirname (:source-path result)))))
+          (is (= "story" (:type fm)))
+          (is (= ["epiphany-17" "calliope-16"] (:dependency fm))))
+        (finally (await (cleanup! project)))))))
+
+(deftest ^:async configured-vocabulary-refuses-legacy-and-implicit-types
+  (testing "a configured board cannot silently create an undeclared task"
+    (let [base (await (scratch-project))
+          project (assoc base :card-dirs {:story "stories" :chore "chores"})]
+      (try
+        (doseq [args [{:project project :title "Implicit" :source "test"}
+                      {:project project :title "Legacy" :card-type "task" :source "test"}]]
+          (let [err (try (await (task-create/create-task! args))
+                         nil (catch :default e e))]
+            (is (= :usage (:kind (ex-data err))))))
+        (finally (await (cleanup! project)))))))
+
 (deftest ^:async emits-task-created-event
   (testing "Creation is a ledger fact carrying enough payload to reconstruct the card"
     (let [project (await (scratch-project))
@@ -147,7 +178,8 @@
       (try
         (let [result (await (task-create/create-task!
                              {:project project :title "Recorded Card"
-                              :card-type "epic" :body "# Recorded Card\n\nAuthored."
+                              :card-type "epic" :dependency ["dep-a"]
+                              :body "# Recorded Card\n\nAuthored."
                               :source "test"}))
               created (first (filter #(= "task-created" (:type %)) @captured))]
           (is (some? created) "a task-created event was published")
@@ -155,6 +187,7 @@
           (is (= "Recorded Card" (:title created)))
           (is (= "epic" (:card-type created)))
           (is (= "incoming" (:status created)))
+          (is (= ["dep-a"] (:dependency created)))
           (is (= (:source-path result) (:source-path created)))
           (is (re-find #"Authored\." (:body created))
               "the authored body travels with the event, so a fold can rebuild it")

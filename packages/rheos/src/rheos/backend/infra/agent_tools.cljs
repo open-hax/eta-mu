@@ -213,7 +213,7 @@
   "Create a card. Both this and `kanban_create_subtask` delegate to the one
    creation chokepoint, so a root card and a child card are the same operation
    and both land in the ledger."
-  [{:keys [title project parent parent-uuid type card-type status priority points
+  [{:keys [title project parent parent-uuid dependency type card-type status priority points
            labels body dir uuid force-status source]}]
   (let [proj (projects/find-project project)]
     (when-not proj (throw (ex-info (str "unknown project: " project)
@@ -221,8 +221,9 @@
     (await (task-create/create-task!
             {:project proj
              :title title
-             :card-type (or card-type type "task")
+             :card-type (or card-type type)
              :parent (or parent parent-uuid)
+             :dependency dependency
              :status status
              :priority priority
              :points points
@@ -309,18 +310,24 @@
                    :required ["uuid" "text"]}
     :handler tool-kanban-add-comment}
    {:name "kanban_update_frontmatter"
-    :description "Update a card's descriptive frontmatter (title, priority, labels, points, category, description, estimate, assignee). Ledger-recorded, one event per changed key. `status` is refused — it is FSM-governed, use kanban_update_status."
+    :description "Update a card's descriptive frontmatter or dependency planning vector (title, priority, labels, points, category, description, estimate, assignee, dependency). Dependency must be an array of non-empty ids; [] clears it. Ledger-recorded, one event per changed key. `status` is refused — it is FSM-governed, use kanban_update_status."
     :input-schema {:type "object"
                    :properties {:uuid {:type "string"} :project {:type "string"}
-                                :updates {:type "object" :description "key -> value map of frontmatter fields to set"}}
+                                :updates {:type "object"
+                                          :description "key -> value map of frontmatter fields to set"
+                                          :properties {:dependency {:type "array"
+                                                                    :items {:type "string"}
+                                                                    :description "ordered dependency ids; [] clears"}}
+                                          :additionalProperties true}}
                    :required ["uuid" "updates"]}
     :handler tool-kanban-update-frontmatter}
    {:name "kanban_create_task"
     :description "Create a card and record a task-created ledger event. Works for root cards and children alike — pass `parent` only for a child. The card enters at the project FSM's initial state; use kanban_update_status to advance it. Pass `body` to author the card's markdown, otherwise a skeleton (Outcome / Scope / Acceptance criteria) is written so the card can pass its first gate."
     :input-schema {:type "object"
                    :properties {:title {:type "string"}
-                                :type {:type "string" :enum ["task" "epic"] :description "card type; default \"task\""}
+                                :type {:type "string" :description "card type from the selected project's configured :card-dirs vocabulary"}
                                 :parent {:type "string" :description "parent card uuid — omit for a root card"}
+                                :dependency {:type "array" :items {:type "string"} :description "dependency ids; [] means none"}
                                 :project {:type "string"}
                                 :status {:type "string" :description "refused unless it is the FSM initial state; pass force-status to override"}
                                 :force-status {:type "boolean"}
@@ -335,9 +342,11 @@
     :description "Create a card linked to a parent task. Thin alias of kanban_create_task with a required parent; prefer kanban_create_task."
     :input-schema {:type "object"
                    :properties {:parent-uuid {:type "string"} :title {:type "string"}
+                                :type {:type "string" :description "configured card type"}
                                 :project {:type "string"} :status {:type "string"}
                                 :priority {:type "string"} :body {:type "string"}
-                                :labels {:type "array" :items {:type "string"}}}
+                                :labels {:type "array" :items {:type "string"}}
+                                :dependency {:type "array" :items {:type "string"}}}
                    :required ["parent-uuid" "title"]}
     :handler tool-kanban-create-subtask}])
 

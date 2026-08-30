@@ -2,8 +2,8 @@
   "Law: DESCRIBES which task frontmatter keys a client may mutate.
 
    This is a shape, not a morphism — pure data plus pure predicates, no I/O.
-   `mutable-keys` is the closed set of safe, descriptive fields a board client
-   is allowed to write through PATCH /api/task/:uuid/frontmatter.
+   `mutable-keys` is the closed set of safe fields a board client is allowed to
+   write through PATCH /api/task/:uuid/frontmatter.
 
    Deliberately EXCLUDED:
    - `:status` — must transition through the FSM via POST /api/task/:uuid/status.
@@ -16,10 +16,20 @@
    so both snake_case and kebab-case spellings of the forbidden keys are listed."
   (:require [clojure.string :as str]))
 
+(def descriptive-keys
+  "Existing descriptive frontmatter accepted by the update endpoint."
+  #{:title :priority :labels :points :category :description :estimate :assignee})
+
+(def planning-keys
+  "The metadata Issue #234 will lock with the card body after breakdown. This
+   patch only makes dependency newly writable; the shared future guard can
+   consume the complete planning set without reconstructing it from endpoints."
+  #{:title :priority :labels :points :parent :dependency})
+
 (def mutable-keys
   "Closed set of frontmatter keys a client may write. Anything outside this set is
    rejected by [[disallowed-keys]]."
-  #{:title :priority :labels :points :category :description :estimate :assignee})
+  (conj descriptive-keys :dependency))
 
 (def status-key
   "The FSM-governed key. Routed to its own endpoint, never accepted here."
@@ -53,3 +63,18 @@
   "Human-readable rejection string naming the offending keys."
   [ks]
   (str "frontmatter keys not allowed: " (str/join ", " (map name ks))))
+
+(defn planning-value-errors
+  "Describe malformed planning metadata in `updates`. Dependency is always a
+   vector of non-empty ids; an empty vector is the explicit clear operation."
+  [updates]
+  (cond-> []
+    (and (contains? updates :dependency)
+         (not (and (vector? (:dependency updates))
+                   (every? #(and (string? %) (not (str/blank? %)))
+                           (:dependency updates)))))
+    (conj {:key :dependency
+           :message "dependency must be a vector of non-empty ids (use [] to clear)"})))
+
+(defn planning-value-errors-message [errors]
+  (str/join "; " (map :message errors)))

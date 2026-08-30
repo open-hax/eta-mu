@@ -12,9 +12,21 @@
    Root cards and child cards are the same operation; `:parent` is just optional."
   (:require [clojure.string :as str]
             [rheos.backend.law.fsm :as fsm]
+            [rheos.backend.law.frontmatter :as frontmatter-law]
             [rheos.backend.shape.content-parser :as content-parser]))
 
-(def card-types #{"task" "epic"})
+(def legacy-card-types
+  "Creation vocabulary for boards that have not declared `:card-dirs`."
+  #{"task" "epic"})
+
+(defn card-types
+  "The project's closed creation vocabulary. `:card-dirs` already maps card
+   types to repository-valid locations, so its keys are the declaration. Legacy
+   boards without that declaration retain task/epic compatibility."
+  [project]
+  (if-let [configured (seq (:card-dirs project))]
+    (set (map (comp name key) configured))
+    legacy-card-types))
 
 (def conventional-dirs
   "Where each card type lives by convention, relative to the task root. Whether
@@ -59,15 +71,27 @@
 
 (defn check-request!
   "Validate what can be judged without looking at the board, and return the
-   effective card type. Refuses a blank title or a type outside [[card-types]]."
-  [{:keys [title card-type]}]
+   effective card type. Refuses a blank title, malformed dependencies, or a type
+   outside the project's [[card-types]]."
+  [{:keys [project title card-type dependency]}]
   (when (str/blank? title)
     (refuse! :usage "a card needs a --title" {}))
-  (let [card-type (or card-type "task")]
-    (when-not (card-types card-type)
+  (when-let [errors (seq (frontmatter-law/planning-value-errors
+                          {:dependency (or dependency [])}))]
+    (refuse! :usage (frontmatter-law/planning-value-errors-message errors)
+             {:errors errors}))
+  (let [allowed (card-types project)
+        requested (some-> card-type str str/trim not-empty)
+        card-type (or requested (when (contains? allowed "task") "task"))]
+    (when-not card-type
+      (refuse! :usage
+               (str "this project declares card types "
+                    (str/join ", " (sort allowed)) "; pass --type")
+               {:card-types (sort allowed)}))
+    (when-not (contains? allowed card-type)
       (refuse! :usage (str "unknown card type: " card-type
-                           " (expected one of " (str/join ", " (sort card-types)) ")")
-               {:card-type card-type}))
+                           " (expected one of " (str/join ", " (sort allowed)) ")")
+               {:card-type card-type :card-types (sort allowed)}))
     card-type))
 
 (def uuid-pattern
@@ -174,8 +198,8 @@
    [[rheos.backend.shape.content-parser/serialize-frontmatter]] iterates whatever
    it is handed, and a CLJS map of this size is a hash map with arbitrary
    iteration order. Pairs keep new cards readable and diff-stable."
-  [{:keys [uuid title status card-type priority points labels parent
-           category write-id created-at]}]
+  [{:keys [uuid title status card-type priority points labels parent dependency
+           category write-id created-at] :as card}]
   (cond-> [[:uuid uuid]
            [:title title]
            [:status status]
@@ -184,6 +208,7 @@
     points        (conj [:points (str points)])
     (seq labels)  (conj [:labels (str/join ", " labels)])
     parent        (conj [:parent parent])
+    (contains? card :dependency) (conj [:dependency (vec (or dependency []))])
     category      (conj [:category category])
     true          (conj [:write-id write-id])
     true          (conj [:created_at created-at])))
