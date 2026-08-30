@@ -315,3 +315,12 @@
   spore: none
   receipt-refs: 2026-08-30T02:21:12Z
   note: Post-merge activation review caught an orchestration gap before the unsafe pin landed: a repository-wide comparison rejection could discard unrelated valid work. Separating discovery from per-branch divergence preserves whole-repository progress and records the failed branch without weakening terminal-head or zero-ahead suppression; the CLJS migration inventory now names the extracted boundary and its actual consumers. No new spore; the existing review-thread exact-head and separate-evidence-retention lessons cover the reusable pattern.
+- ts: 2026-08-30T03:57:55Z
+  session: /workspace/scratch/8d4eacbf051e/eta-terminal-reconcile
+  task: Activate terminal-PR suppression, close the 34 exact recreations, and reconcile eta issue #308
+  p-efficiency: 0.82
+  p-friction: 0.67
+  p-skill-candidate: 0.74
+  spore: none
+  receipt-refs: 2026-08-30T03:57:55Z
+  note: Two live runs made the containment boundary observable: a canary run proved unchanged terminal heads stayed closed, then a legitimate new branch after all 34 closures proved only genuine divergence projected. The temporary audit ref could not be deleted because the connected surface has no authenticated delete-ref operation, so Proxx #436 owns its exact-SHA deletion and absence proof together with the deeper default-branch workflow placement defect. A pinned local CLI rebuild was network-blocked; the retained hosted runtime was used only after its artifact digest, commit parents, and tree were proven identical to landed eta main. No new spore; the existing confirmed-trigger, exact-head closeout, and evidence-retention spores cover the reusable lessons.
