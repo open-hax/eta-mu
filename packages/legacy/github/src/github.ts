@@ -321,11 +321,15 @@ export const listBranchesWithoutPRs = async (
     }),
   ]);
 
+  const targetRepository = `${repo.owner}/${repo.name}`.toLowerCase();
+  const sameRepositoryPRs = prs.filter(
+    (pr) => pr.head.repo?.full_name.toLowerCase() === targetRepository,
+  );
   const openPRHeads = new Set(
-    prs.filter((pr) => pr.state === "open").map((pr) => pr.head.ref),
+    sameRepositoryPRs.filter((pr) => pr.state === "open").map((pr) => pr.head.ref),
   );
   const terminalPRHeads = new Set(
-    prs
+    sameRepositoryPRs
       .filter((pr) => pr.state !== "open")
       .map((pr) => `${pr.head.ref}\0${pr.head.sha}`),
   );

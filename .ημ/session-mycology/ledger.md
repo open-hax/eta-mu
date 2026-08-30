@@ -324,3 +324,30 @@
   spore: none
   receipt-refs: 2026-08-30T03:32:39.640Z
   note: The empty-array parser defect was one boundary line, but proving the repair required following the whole-file comment rewrite and every create/update adapter. Kondo exposed a nested deftest that the green compiler run had not executed, and a tracked NUL fixture made its diff binary, so the new cases were isolated in a reviewable text namespace. The repository-wide review hook remains blocked before package builds by managed ignored-build policy; scoped Rheos and eta-mu gates are green and no supply-chain policy was relaxed. No new spore: falsify-every-new-test, worktree-cwd-write-targeting, and verify-the-binary-not-the-source already cover the reusable lessons.
+- ts: 2026-08-30T04:10:18Z
+  session: /workspace/scratch/8d4eacbf051e/eta-fork-owner
+  task: Establish canonical ownership for fork-collision suppression repair
+  p-efficiency: 0.88
+  p-friction: 0.72
+  p-skill-candidate: 0.83
+  spore: none
+  receipt-refs: 2026-08-30T04:10:18.378Z
+  note: Re-reading the supposedly clean exact-head review exposed an unresolved, valid repository-identity defect before false completion bytes could merge. A fork pull request can share a ref name or ref-and-SHA tuple with a target-repository branch, so repository identity must be part of suppression authority. Canonical P0 child scope-pr-history-to-target-repository now owns the repair; #313 is frozen and #308 remains open. No new spore; the existing review-thread-closeout-verification spore already covers the missed-thread failure mode.
+- ts: 2026-08-30T04:16:57Z
+  session: /workspace/scratch/8d4eacbf051e/eta-fork-owner
+  task: Repair fork-collision pull-request suppression under canonical issue #314
+  p-efficiency: 0.91
+  p-friction: 0.38
+  p-skill-candidate: 0.61
+  spore: none
+  receipt-refs: 2026-08-30T04:16:57.270Z
+  note: Repository identity now gates both cheap suppression keys before either open ref or terminal ref-and-SHA history can hide a target branch. Two review-derived fork collisions were reproduced red, then the full package passed 25/25 with additional mixed-case and missing-identity coverage. The canonical card is in review on #315; hosted exact-head evidence remains required before activation. No new spore; the existing review-thread and exact-head spores cover the reusable boundary.
+- ts: 2026-08-30T05:20:31Z
+  session: /workspace/scratch/8d4eacbf051e/eta-fork-activation
+  task: Activate the reviewed fork-collision suppression implementation
+  p-efficiency: 0.89
+  p-friction: 0.44
+  p-skill-candidate: 0.64
+  spore: none
+  receipt-refs: 2026-08-30T05:20:31.845Z
+  note: Keeping implementation H and activation A as separate immutable revisions prevents a reusable workflow from loading repaired source while still executing its predecessor. The activation changes only the internal checkout pin, preserves the review card through later consumer proof, and verifies the exact repository/path/credential contract plus the full 25-test GitHub package. Local CLI compilation was bounded by Maven network denial, so hosted exact-head gates remain the authority. No new spore; the existing exact-head and separate-evidence-retention spores already cover this revision topology.

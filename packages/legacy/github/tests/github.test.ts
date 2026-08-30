@@ -9,7 +9,10 @@ import {
 
 const githubClient = (
   branches: Array<{ name: string; commit: { sha: string } }>,
-  prs: Array<{ state: string; head: { ref: string; sha: string } }>,
+  prs: Array<{
+    state: string;
+    head: { ref: string; sha: string; repo: { full_name: string } | null };
+  }>,
   aheadBy: Record<string, number> = {},
 ) => {
   const listBranches = vi.fn();
@@ -102,6 +105,7 @@ describe("listBranchesWithoutPRs", () => {
         head: {
           ref: "chore/sandbox-bundle-action",
           sha: "a2c8b93a7b7ed26814284401390756000fbeaf6e",
+          repo: { full_name: "open-hax/proxx" },
         },
       },
       {
@@ -109,6 +113,7 @@ describe("listBranchesWithoutPRs", () => {
         head: {
           ref: "fix/spec-draft-hook-location-62-v2",
           sha: "40a9810eea31e9f8398e5c5ff40e74ad9e65e3e4",
+          repo: { full_name: "open-hax/proxx" },
         },
       },
     ];
@@ -127,7 +132,16 @@ describe("listBranchesWithoutPRs", () => {
   it("suppresses open pull requests without comparing their branches", async () => {
     const client = githubClient(
       [{ name: "fix/open", commit: { sha: "open-head" } }],
-      [{ state: "open", head: { ref: "fix/open", sha: "open-head" } }],
+      [
+        {
+          state: "open",
+          head: {
+            ref: "fix/open",
+            sha: "open-head",
+            repo: { full_name: "Open-Hax/Proxx" },
+          },
+        },
+      ],
     );
 
     await expect(
@@ -136,10 +150,79 @@ describe("listBranchesWithoutPRs", () => {
     expect(client.compareCommits).not.toHaveBeenCalled();
   });
 
+  it("does not grant suppression authority when the PR head repository is unavailable", async () => {
+    const client = githubClient(
+      [{ name: "fix/deleted-fork", commit: { sha: "repository-head" } }],
+      [
+        {
+          state: "open",
+          head: {
+            ref: "fix/deleted-fork",
+            sha: "orphaned-head",
+            repo: null,
+          },
+        },
+      ],
+    );
+
+    await expect(
+      listBranchesWithoutPRs(client.octokit, repo, "staging", ["fix/*"]),
+    ).resolves.toEqual([{ name: "fix/deleted-fork", sha: "repository-head" }]);
+  });
+
+  it("does not let an open fork PR suppress a same-named repository branch", async () => {
+    const client = githubClient(
+      [{ name: "fix/shared-name", commit: { sha: "repository-head" } }],
+      [
+        {
+          state: "open",
+          head: {
+            ref: "fix/shared-name",
+            sha: "fork-head",
+            repo: { full_name: "contributor/proxx" },
+          },
+        },
+      ],
+    );
+
+    await expect(
+      listBranchesWithoutPRs(client.octokit, repo, "staging", ["fix/*"]),
+    ).resolves.toEqual([{ name: "fix/shared-name", sha: "repository-head" }]);
+  });
+
+  it("does not let a terminal fork PR suppress an exact repository ref and SHA", async () => {
+    const client = githubClient(
+      [{ name: "fix/shared-name", commit: { sha: "shared-head" } }],
+      [
+        {
+          state: "closed",
+          head: {
+            ref: "fix/shared-name",
+            sha: "shared-head",
+            repo: { full_name: "contributor/proxx" },
+          },
+        },
+      ],
+    );
+
+    await expect(
+      listBranchesWithoutPRs(client.octokit, repo, "staging", ["fix/*"]),
+    ).resolves.toEqual([{ name: "fix/shared-name", sha: "shared-head" }]);
+  });
+
   it("leaves base-divergence checks to the per-branch processing boundary", async () => {
     const client = githubClient(
       [{ name: "fix/incorporated", commit: { sha: "current-head" } }],
-      [{ state: "closed", head: { ref: "fix/incorporated", sha: "old-head" } }],
+      [
+        {
+          state: "closed",
+          head: {
+            ref: "fix/incorporated",
+            sha: "old-head",
+            repo: { full_name: "open-hax/proxx" },
+          },
+        },
+      ],
       { "current-head": 0 },
     );
 
@@ -165,7 +248,16 @@ describe("listBranchesWithoutPRs", () => {
   it("reports a branch ahead after it advances beyond a terminal head", async () => {
     const client = githubClient(
       [{ name: "fix/advanced", commit: { sha: "advanced-head" } }],
-      [{ state: "closed", head: { ref: "fix/advanced", sha: "old-head" } }],
+      [
+        {
+          state: "closed",
+          head: {
+            ref: "fix/advanced",
+            sha: "old-head",
+            repo: { full_name: "open-hax/proxx" },
+          },
+        },
+      ],
       { "advanced-head": 2 },
     );
 
