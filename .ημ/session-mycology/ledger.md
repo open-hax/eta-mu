@@ -333,3 +333,12 @@
   spore: none
   receipt-refs: 2026-08-30T04:16:57.270Z
   note: Repository identity now gates both cheap suppression keys before either open ref or terminal ref-and-SHA history can hide a target branch. Two review-derived fork collisions were reproduced red, then the full package passed 25/25 with additional mixed-case and missing-identity coverage. The canonical card is in review on #315; hosted exact-head evidence remains required before activation. No new spore; the existing review-thread and exact-head spores cover the reusable boundary.
+- ts: 2026-08-30T05:20:31Z
+  session: /workspace/scratch/8d4eacbf051e/eta-fork-activation
+  task: Activate the reviewed fork-collision suppression implementation
+  p-efficiency: 0.89
+  p-friction: 0.44
+  p-skill-candidate: 0.64
+  spore: none
+  receipt-refs: 2026-08-30T05:20:31.845Z
+  note: Keeping implementation H and activation A as separate immutable revisions prevents a reusable workflow from loading repaired source while still executing its predecessor. The activation changes only the internal checkout pin, preserves the review card through later consumer proof, and verifies the exact repository/path/credential contract plus the full 25-test GitHub package. Local CLI compilation was bounded by Maven network denial, so hosted exact-head gates remain the authority. No new spore; the existing exact-head and separate-evidence-retention spores already cover this revision topology.
