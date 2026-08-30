@@ -3,11 +3,11 @@ category: "tasks"
 labels: "workflow, review, recovery"
 parent: "290f0cdf-9160-453e-a69c-67211432baa7"
 type: "task"
-write-id: "1788050377039-0.100q731urkn637jxqkv"
+write-id: "1788052128468-0.h48pkc9ejk92y5wuc17"
 points: "3"
 title: "Preserve review prerequisites and recover one omitted submission"
 priority: "P0"
-status: "review"
+status: "done"
 uuid: "bounded-review-submit-recovery"
 created_at: "2026-08-29T23:39:44.478Z"
 ---
@@ -60,4 +60,6 @@ Self-review correction 2026-08-30: published head b4bb49c was quarantined before
 Exact-head review correction 2026-08-30: CodeRabbit thread PRRT_kwDORu27H86ddrmy reproduced a real rejected-invocation durability gap on superseded head 559b62e: a rejected invokeAttempt skipped recovery.json, and spawn failure bypassed response/stderr stream finalization. The repair records one rejected attempt with null exit code, invocation state/error, retained file names, and observed submission state before rethrowing the original error; invokeOpenCode now finalizes and awaits both streams on success and failure. RED evidence was the pre-repair path plus the exact reviewer finding. GREEN is 35/35 executable workflow tests, including direct original-error identity/metadata assertions and a packaged-runner missing-binary child-process fixture that exits 1 without hanging, leaves both finalized attempt files, writes recovery.json, and never consumes attempt 2. The sibling delimiter thread PRRT_kwDORu27H86ddrm0 was verified non-applicable and resolved: both lines are canonical Rheos closing comment delimiters emitted as ---\\ncontent\\n--- by serialize-sections and locked by parser round-trip tests.
 
 Final local review evidence 2026-08-30 before superseding PR head: incorporated the completed OpenCode note by adding a non-zero completed-invocation fixture; {exitCode:17} is durably recorded with completed state and both evidence files, fails with the exact code, and never consumes attempt 2. The executable workflow contract is 36/36. Pinned actionlint 1.7.12 plus ShellCheck 0.11.0 reports zero diagnostics; the repository Biome error-level gate checked 492 files with no fixes; both TypeScript targets pass through their pinned local compilers; current-source Rheos read-task returns this card in review; git diff --check passes. The aggregate pnpm wrapper cannot be treated as local authority in this environment because its supply-chain hook rejects ignored native dependency builds and extension validation observes unbuilt dist/pi outputs; the already-required hosted sandbox/build gate remains the terminal build authority. No merge is authorized until a fresh exact-head hosted wave and zero unresolved review threads.
+
+Merged completion evidence 2026-08-30: PR #304 merged exact reviewed head 0ee94bdac0c5f5677e352a33d01917b9e96fe49e as merge commit e8eea02d31030215984375980b765803fc72d80d, preserving reviewed tree c0f03cd03606658f9acc45a7cf70b6af747123a8. All seven exact-head workflows succeeded: main PR gate 33283964526, Sandbox 33283964509, coverage 33283964508, CodeQL 33283964503, Muse diagnostic 33283964529, Discord 33283964514, and OpenCode review 33283964506. OpenCode deterministic evidence, context compilation, packaged review/publication, and terminal enforcement jobs all succeeded; its exact-head review approved with no findings. Codex completed exact head 0ee94bd with no findings. CodeRabbit bound its fresh request to exact head/tree but transparently stopped at the included-review quota; the prior valid finding is addressed, the non-applicable Rheos delimiter finding was withdrawn, and all review threads are resolved. Issue #296 auto-closed on merge. Acceptance is complete.
 ---

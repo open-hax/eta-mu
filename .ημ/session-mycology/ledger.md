@@ -288,3 +288,12 @@
   spore: none
   receipt-refs: 2026-08-30T00:40:13Z
   note: Exact-head review exposed that an invocation can fail before the omission classifier and leave neither durable metadata nor finalized streams. The repair records rejected and non-zero attempts before classification, finalizes both streams on every child-process path, and locks original-error/no-retry semantics in the packaged runner. Rheos's closing comment delimiter was independently proven canonical rather than rewritten. The existing separate-evidence-retention-from-terminal-truth spore covers this boundary, so no duplicate spore was incubated.
+- ts: 2026-08-30T01:09:23Z
+  session: /workspace/scratch/8d4eacbf051e/eta-mu-post304
+  task: Reconcile eta-mu PR #304 and issue #296 from the exact landed tree
+  p-efficiency: 0.91
+  p-friction: 0.31
+  p-skill-candidate: 0.42
+  spore: none
+  receipt-refs: 2026-08-30T01:09:23Z
+  note: The guarded merge preserved the reviewed tree, so closeout was a small causal projection: append landed evidence, walk review through document to done, then refresh GitHub only after those bytes land. CodeRabbit's exact-head quota stop remains explicit evidence rather than being promoted into a review result. No new spore; the existing review-thread-closeout-verification and separate-evidence-retention-from-terminal-truth spores cover the reusable boundary.
