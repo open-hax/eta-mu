@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: open-hax/eta-mu
-          ref: bafe9aa6a09406cfd83010f5e06538117dc6056c
+          ref: 9f075501ba3b1fae3e6a8865d39f2fea7d11c1dc
           path: .eta-mu
           persist-credentials: false
 
