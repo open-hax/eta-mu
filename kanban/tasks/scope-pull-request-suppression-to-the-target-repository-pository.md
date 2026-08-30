@@ -3,7 +3,7 @@ category: "tasks"
 labels: "github,automation,pull-request,recovery"
 parent: "skip-unchanged-terminal-pr-branches"
 type: "task"
-write-id: "1788063408304-0.jbd0w90wmncep0o8d9j"
+write-id: "1788067220042-0.tsyuapn477iw0yc1b"
 points: "3"
 title: "Scope pull-request suppression to the target repository"
 priority: "P0"
@@ -49,4 +49,8 @@ Prevent an open or terminal pull request from a fork from suppressing projection
 
 ---
 Implementation evidence 2026-08-30: exact base 285fedac reproduced both review-derived collisions before repair: an open fork with the target branch ref and a terminal fork with the exact target ref+SHA each suppressed the legitimate branch. The candidate filters PR suppression authority by case-insensitive head.repo.full_name equality to owner/name before constructing either open-ref or terminal ref+SHA sets; missing head repository identity confers no suppression authority. RED was 2/12 failed with empty candidates. GREEN is now the full @open-hax/eta-mu-github suite 25/25, including mixed-case same-repository identity and missing/deleted-fork identity. Strict targeted NodeNext typecheck of source+test, Biome on both TypeScript files, and git diff check pass. Full package typecheck remains blocked only by the pre-existing missing built @open-hax/eta-mu-cli declarations in src/pi-agent.ts:14. Hosted exact-head gates and review remain required.
+
+Activation follow-through 2026-08-30: implementation H landed as eta merge 01f81d0d1c044fc3f5859db1aaa03d8e18962f28 with reviewed tree 07bb6cd72d59a7d1aabf7e7328fde763b41f62b4. The distinct activation A will change only the reusable ensure-pr workflow's internal eta checkout from 9f075501ba3b1fae3e6a8865d39f2fea7d11c1dc to exact H. Proxx must remain on the old reusable revision until A passes exact local and hosted gates, independent review, and guarded merge. Issue #314 and this card remain open/review through the later Proxx wrapper pin and scheduled live proof; H alone is not completion.
+
+Activation A local evidence 2026-08-30: exact base and parent are H=01f81d0d1c044fc3f5859db1aaa03d8e18962f28. YAML parsing proves the reusable workflow checkout remains open-hax/eta-mu, path .eta-mu, persist-credentials false, and now executes exact H; the old 9f075501 checkout is absent from that workflow. The unchanged GitHub automation package passes 25/25 from its package root with zero test warnings; git diff check passes. Rheos re-read preserves card status review with no drift for this card, and the newly appended activation receipt validates independently. Full local eta-mu CLI rebuild is environment-blocked before compilation because repo1.maven.org is unreachable for shadow-cljs 3.4.11; no CLI source is changed, and exact hosted main gates remain required. Proxx activation remains forbidden until this distinct A is reviewed and merged.
 ---
