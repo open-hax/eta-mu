@@ -173,14 +173,15 @@
           task {:uuid "t5" :source-path (path/join dir "t5.md")}
           before (await (.readFile fsp (:source-path task) "utf8"))]
       (try
-        (let [err (try
-                    (await (task-edit/update-frontmatter!
-                            {:project project :task task
-                             :updates {"dependency" "dep-a"} :source "test"}))
-                    nil (catch :default e e))
-              after-refusal (await (.readFile fsp (:source-path task) "utf8"))]
-          (is (= :usage (:kind (ex-data err))))
-          (is (= before after-refusal)))
+        (doseq [invalid ["dep-a" ["dep\"status"] ["dep-a\nstatus: done"]]]
+          (let [err (try
+                      (await (task-edit/update-frontmatter!
+                              {:project project :task task
+                               :updates {"dependency" invalid} :source "test"}))
+                      nil (catch :default e e))
+                after-refusal (await (.readFile fsp (:source-path task) "utf8"))]
+            (is (= :usage (:kind (ex-data err))))
+            (is (= before after-refusal))))
         (let [set-result (await (task-edit/update-frontmatter!
                                  {:project project :task task
                                   :updates {"dependency" ["dep-a" "dep-b"]}

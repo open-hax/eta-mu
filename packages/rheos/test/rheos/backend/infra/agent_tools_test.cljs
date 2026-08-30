@@ -40,9 +40,16 @@
   (testing "create and update expose dependency as structured arrays"
     (is (= "array" (get-in (tool "kanban_create_task")
                             [:input-schema :properties :dependency :type])))
+    (is (= "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+           (get-in (tool "kanban_create_task")
+                   [:input-schema :properties :dependency :items :pattern])))
     (is (= "array" (get-in (tool "kanban_update_frontmatter")
                             [:input-schema :properties :updates :properties
-                             :dependency :type])))))
+                             :dependency :type])))
+    (is (= "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+           (get-in (tool "kanban_update_frontmatter")
+                   [:input-schema :properties :updates :properties
+                    :dependency :items :pattern])))))
 
 (defn- ^:async dispatch-outcome
   "Dispatch `tool` against a temp board holding one card at `status`.

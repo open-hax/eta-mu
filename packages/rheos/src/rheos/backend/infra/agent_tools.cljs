@@ -310,13 +310,14 @@
                    :required ["uuid" "text"]}
     :handler tool-kanban-add-comment}
    {:name "kanban_update_frontmatter"
-    :description "Update a card's descriptive frontmatter or dependency planning vector (title, priority, labels, points, category, description, estimate, assignee, dependency). Dependency must be an array of non-empty ids; [] clears it. Ledger-recorded, one event per changed key. `status` is refused — it is FSM-governed, use kanban_update_status."
+    :description "Update a card's descriptive frontmatter or dependency planning vector (title, priority, labels, points, category, description, estimate, assignee, dependency). Dependency must be an array of line-safe card ids; [] clears it. Ledger-recorded, one event per changed key. `status` is refused — it is FSM-governed, use kanban_update_status."
     :input-schema {:type "object"
                    :properties {:uuid {:type "string"} :project {:type "string"}
                                 :updates {:type "object"
                                           :description "key -> value map of frontmatter fields to set"
                                           :properties {:dependency {:type "array"
-                                                                    :items {:type "string"}
+                                                                    :items {:type "string"
+                                                                            :pattern "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"}
                                                                     :description "ordered dependency ids; [] clears"}}
                                           :additionalProperties true}}
                    :required ["uuid" "updates"]}
@@ -327,7 +328,10 @@
                    :properties {:title {:type "string"}
                                 :type {:type "string" :description "card type from the selected project's configured :card-dirs vocabulary"}
                                 :parent {:type "string" :description "parent card uuid — omit for a root card"}
-                                :dependency {:type "array" :items {:type "string"} :description "dependency ids; [] means none"}
+                                :dependency {:type "array"
+                                             :items {:type "string"
+                                                     :pattern "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"}
+                                             :description "line-safe dependency card ids; [] means none"}
                                 :project {:type "string"}
                                 :status {:type "string" :description "refused unless it is the FSM initial state; pass force-status to override"}
                                 :force-status {:type "boolean"}
@@ -346,7 +350,9 @@
                                 :project {:type "string"} :status {:type "string"}
                                 :priority {:type "string"} :body {:type "string"}
                                 :labels {:type "array" :items {:type "string"}}
-                                :dependency {:type "array" :items {:type "string"}}}
+                                :dependency {:type "array"
+                                             :items {:type "string"
+                                                     :pattern "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"}}}
                    :required ["parent-uuid" "title"]}
     :handler tool-kanban-create-subtask}])
 

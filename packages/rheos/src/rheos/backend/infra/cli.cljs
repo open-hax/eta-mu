@@ -136,7 +136,7 @@
     :flags [["--title <text>" "card title (required)"]
             ["--type <type>" "card type from the project's configured :card-dirs vocabulary"]
             ["--parent <uuid>" "parent card uuid — omit for a root card"]
-            ["--dependency <uuid>" "repeatable dependency id; omit for none"]
+            ["--dependency <uuid>" "repeatable line-safe card id; omit for none"]
             ["--priority <P0..P3>" "priority; default P3"]
             ["--points <n>" "Fibonacci size estimate"]
             ["--labels <a,b,c>" "comma-separated labels"]
@@ -156,7 +156,7 @@
             ["--status <s>" "refused unless it is the FSM initial state"]
             ["--priority <P0..P3>" "priority; default P3"]
             ["--labels <a,b,c>" "comma-separated labels"]
-            ["--dependency <uuid>" "repeatable dependency id; omit for none"]]
+            ["--dependency <uuid>" "repeatable line-safe card id; omit for none"]]
     :example "rheos create-subtask my-epic --title \"Extract the fold\""}
 
    {:verb "move" :group "lifecycle" :mutates? true

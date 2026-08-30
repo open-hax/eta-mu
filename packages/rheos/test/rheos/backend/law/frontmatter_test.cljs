@@ -10,7 +10,12 @@
     (is (empty? (frontmatter/planning-value-errors {:dependency []})))
     (is (empty? (frontmatter/planning-value-errors
                  {:dependency ["dep-a" "dep-b"]})))
-    (doseq [dependency ["dep-a" [""] ["dep-a" " "]]]
+    (doseq [dependency ["dep-a"
+                        [""]
+                        ["dep-a" " "]
+                        ["dep\"status"]
+                        ["dep-a\nstatus: done"]
+                        ["dep-a\rstatus: done"]]]
       (is (= [:dependency]
              (mapv :key (frontmatter/planning-value-errors
                          {:dependency dependency})))))))

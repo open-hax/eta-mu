@@ -48,7 +48,7 @@ any board — point it somewhere scratch first if you are learning.
 rheos projects
 rheos read-board --project kanban --status in_progress,review
 
-# 1. Create the card. Types and their directories come from cardDirs.
+# 1. Create the card. Types and their directories come from :card-dirs.
 rheos create --type story --title "Ledger cutover" --priority P0
 rheos create --type story --title "Extract the fold" --parent ledger-cutover \
   --dependency schema-law --dependency storage-port --points 3
@@ -159,7 +159,9 @@ card and record a ledger event.
 `points`, `category`, `description`, `estimate`, `assignee`, and `dependency`.
 Dependency is structured metadata: use
 `--set dependency=dep-a,dep-b` to set an ordered vector or
-`--set dependency=` to clear it to `[]`. `status` is refused and redirected to
+`--set dependency=` to clear it to `[]`. Dependency card IDs start with a
+letter or digit and contain only letters, digits, `.`, `_`, or `-`, matching
+the card UUID grammar and keeping serialized frontmatter line-safe. `status` is refused and redirected to
 `move`, so the FSM stays the only status authority. Identity and provenance keys
 (`uuid`, `created_at`, `write-id`, `source-path`) are never writable.
 

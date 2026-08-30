@@ -26,6 +26,12 @@
    consume the complete planning set without reconstructing it from endpoints."
   #{:title :priority :labels :points :parent :dependency})
 
+(def card-id-pattern
+  "Line-safe card identifier grammar. Dependency values are serialized inside
+   quoted inline arrays, so accepting quotes or line breaks would let an
+   otherwise valid update alter the surrounding frontmatter syntax."
+  #"^[a-zA-Z0-9][a-zA-Z0-9._-]*$")
+
 (def mutable-keys
   "Closed set of frontmatter keys a client may write. Anything outside this set is
    rejected by [[disallowed-keys]]."
@@ -66,15 +72,17 @@
 
 (defn planning-value-errors
   "Describe malformed planning metadata in `updates`. Dependency is always a
-   vector of non-empty ids; an empty vector is the explicit clear operation."
+   vector of line-safe card ids; an empty vector is the explicit clear operation."
   [updates]
   (cond-> []
     (and (contains? updates :dependency)
          (not (and (vector? (:dependency updates))
-                   (every? #(and (string? %) (not (str/blank? %)))
+                   (every? #(and (string? %)
+                                 (re-matches card-id-pattern %))
                            (:dependency updates)))))
     (conj {:key :dependency
-           :message "dependency must be a vector of non-empty ids (use [] to clear)"})))
+           :message (str "dependency must be a vector of card ids using only "
+                         "letters, digits, '.', '_' or '-' (use [] to clear)")})))
 
 (defn planning-value-errors-message [errors]
   (str/join "; " (map :message errors)))

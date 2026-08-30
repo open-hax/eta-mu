@@ -39,7 +39,11 @@
                     {:project {} :title "T" :dependency []})))
     (is (= "task" (task-create/check-request!
                     {:project {} :title "T" :dependency ["dep-a" "dep-b"]})))
-    (doseq [dependency ["dep-a" [""] ["dep-a" " "]]]
+    (doseq [dependency ["dep-a"
+                        [""]
+                        ["dep-a" " "]
+                        ["dep\"status"]
+                        ["dep-a\nstatus: done"]]]
       (is (= :usage
              (:kind (ex-data
                      (try (task-create/check-request!

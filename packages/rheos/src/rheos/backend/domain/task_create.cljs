@@ -101,7 +101,7 @@
    characters into a file name, so it is also a path component. Anchoring the
    first character to alphanumeric rules out both a leading dot and a bare `..`,
    and omitting the separators rules out escaping the card directory."
-  #"^[a-zA-Z0-9][a-zA-Z0-9._-]*$")
+  frontmatter-law/card-id-pattern)
 
 (defn check-uuid!
   "Refuse a uuid that cannot safely become part of a file name, and return it
