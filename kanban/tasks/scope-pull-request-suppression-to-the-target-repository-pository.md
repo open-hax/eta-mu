@@ -3,11 +3,11 @@ category: "tasks"
 labels: "github,automation,pull-request,recovery"
 parent: "skip-unchanged-terminal-pr-branches"
 type: "task"
-write-id: "1788063199664-0.lpkrm5v2vj78f4l5fv"
+write-id: "1788063408304-0.jbd0w90wmncep0o8d9j"
 points: "3"
 title: "Scope pull-request suppression to the target repository"
 priority: "P0"
-status: "in_progress"
+status: "review"
 uuid: "scope-pr-history-to-target-repository"
 created_at: "2026-08-30T04:08:09.107Z"
 ---
@@ -46,3 +46,7 @@ Prevent an open or terminal pull request from a fork from suppressing projection
 - No change to fork pull-request review policy.
 - No branch deletion or pull-request reopening.
 - No weakening of exact-head, ahead-of-base, or per-branch error-retention gates.
+
+---
+Implementation evidence 2026-08-30: exact base 285fedac reproduced both review-derived collisions before repair: an open fork with the target branch ref and a terminal fork with the exact target ref+SHA each suppressed the legitimate branch. The candidate filters PR suppression authority by case-insensitive head.repo.full_name equality to owner/name before constructing either open-ref or terminal ref+SHA sets; missing head repository identity confers no suppression authority. RED was 2/12 failed with empty candidates. GREEN is now the full @open-hax/eta-mu-github suite 25/25, including mixed-case same-repository identity and missing/deleted-fork identity. Strict targeted NodeNext typecheck of source+test, Biome on both TypeScript files, and git diff check pass. Full package typecheck remains blocked only by the pre-existing missing built @open-hax/eta-mu-cli declarations in src/pi-agent.ts:14. Hosted exact-head gates and review remain required.
+---
