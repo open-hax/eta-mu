@@ -96,7 +96,10 @@ The first implementation is intentionally eta-mu-specific because its determinis
 Checks for unresolved review threads. With `--strict`, it blocks on all unresolved threads regardless of actor.
 
 ### `eta-mu ensure-pr --repo owner/repo --base staging [--pattern fix/*] [--dry-run]`
-Creates PRs for branches without existing PRs to the base branch.
+Creates PRs only for matching branches that have commits ahead of the base and no
+open PR. A closed or merged PR suppresses recreation while its recorded head SHA
+still matches the branch; advancing the branch beyond that terminal head makes it
+eligible again when the new head remains ahead of the base.
 
 ### `eta-mu auto-merge --repo owner/repo --pr N [--merge-method SQUASH]`
 Enables GitHub auto-merge via GraphQL API.

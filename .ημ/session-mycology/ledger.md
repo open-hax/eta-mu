@@ -297,3 +297,12 @@
   spore: none
   receipt-refs: 2026-08-30T01:09:23Z
   note: The guarded merge preserved the reviewed tree, so closeout was a small causal projection: append landed evidence, walk review through document to done, then refresh GitHub only after those bytes land. CodeRabbit's exact-head quota stop remains explicit evidence rather than being promoted into a review result. No new spore; the existing review-thread-closeout-verification and separate-evidence-retention-from-terminal-truth spores cover the reusable boundary.
+- ts: 2026-08-30T01:25:24Z
+  session: /workspace/scratch/8d4eacbf051e/eta-terminal-pr
+  task: Stop ensure-prs from recreating unchanged terminal pull requests
+  p-efficiency: 0.88
+  p-friction: 0.39
+  p-skill-candidate: 0.63
+  spore: none
+  receipt-refs: 2026-08-30T01:25:24Z
+  note: Open-only inventory erased terminal history and turned a stable branch into perpetual intake. Binding terminal evidence to both ref and SHA handles the cheap unchanged case; a serial base comparison handles incorporated or newly divergent heads without an API burst. One accidental root-scoped Vitest invocation demonstrated why package-root commands are the authority in this linked worktree; the correct package suite is 20/20. No new spore; the existing exact-head and worktree-command-scope lessons cover the reusable failure mode.

@@ -315,30 +315,47 @@ export const listBranchesWithoutPRs = async (
     octokit.paginate(octokit.rest.pulls.list, {
       owner: repo.owner,
       repo: repo.name,
-      state: "open",
+      state: "all",
       base,
       per_page: 100,
     }),
   ]);
 
-  const prHeads = new Set(prs.map((pr) => pr.head.ref));
+  const openPRHeads = new Set(
+    prs.filter((pr) => pr.state === "open").map((pr) => pr.head.ref),
+  );
+  const terminalPRHeads = new Set(
+    prs
+      .filter((pr) => pr.state !== "open")
+      .map((pr) => `${pr.head.ref}\0${pr.head.sha}`),
+  );
 
   const protectedRefs = new Set(["main", "master", "staging", "production", "prod"]);
   const branchPattern = new RegExp(
     `^(?:${patterns.map((p) => p.replace(/\*/g, ".*")).join("|")})$`,
   );
 
-  return branches
-    .filter((branch) => {
-      if (protectedRefs.has(branch.name)) return false;
-      if (branch.name === base) return false;
-      if (prHeads.has(branch.name)) return false;
-      return branchPattern.test(branch.name);
-    })
-    .map((branch) => ({
-      name: branch.name,
-      sha: branch.commit.sha,
-    }));
+  const candidates = branches.filter((branch) => {
+    if (protectedRefs.has(branch.name)) return false;
+    if (branch.name === base) return false;
+    if (openPRHeads.has(branch.name)) return false;
+    if (terminalPRHeads.has(`${branch.name}\0${branch.commit.sha}`)) return false;
+    return branchPattern.test(branch.name);
+  });
+
+  const eligible: BranchWithoutPR[] = [];
+  for (const branch of candidates) {
+    const comparison = await octokit.rest.repos.compareCommits({
+      owner: repo.owner,
+      repo: repo.name,
+      base,
+      head: branch.commit.sha,
+    });
+    if (comparison.data.ahead_by > 0) {
+      eligible.push({ name: branch.name, sha: branch.commit.sha });
+    }
+  }
+  return eligible;
 };
 
 export const createPullRequest = async (
