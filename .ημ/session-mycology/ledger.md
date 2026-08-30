@@ -315,3 +315,12 @@
   spore: none
   receipt-refs: 2026-08-30T02:21:12Z
   note: Post-merge activation review caught an orchestration gap before the unsafe pin landed: a repository-wide comparison rejection could discard unrelated valid work. Separating discovery from per-branch divergence preserves whole-repository progress and records the failed branch without weakening terminal-head or zero-ahead suppression; the CLJS migration inventory now names the extracted boundary and its actual consumers. No new spore; the existing review-thread exact-head and separate-evidence-retention lessons cover the reusable pattern.
+- ts: 2026-08-30T04:10:18Z
+  session: /workspace/scratch/8d4eacbf051e/eta-fork-owner
+  task: Establish canonical ownership for fork-collision suppression repair
+  p-efficiency: 0.88
+  p-friction: 0.72
+  p-skill-candidate: 0.83
+  spore: none
+  receipt-refs: 2026-08-30T04:10:18.378Z
+  note: Re-reading the supposedly clean exact-head review exposed an unresolved, valid repository-identity defect before false completion bytes could merge. A fork pull request can share a ref name or ref-and-SHA tuple with a target-repository branch, so repository identity must be part of suppression authority. Canonical P0 child scope-pr-history-to-target-repository now owns the repair; #313 is frozen and #308 remains open. No new spore; the existing review-thread-closeout-verification spore already covers the missed-thread failure mode.
