@@ -43,6 +43,9 @@ The workflow has three bounded stages:
 The two model invocations write separate response and stderr files plus a small
 `recovery.json` decision record. The attempt artifact therefore preserves the
 first response even when the corrective invocation succeeds or fails.
+The bounded runner itself travels in the checksummed review-context artifact.
+That is required for reusable callers: their review job checks out the caller's
+pull-request tree, which does not contain eta-mu's repository-local scripts.
 
 A GitHub failed-job re-run is a different boundary from the in-job corrective
 invocation. GitHub retains the original run and re-runs failed jobs and their

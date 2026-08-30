@@ -270,3 +270,12 @@
   spore: none
   receipt-refs: 2026-08-29T23:48:49Z
   note: A failed-job rerun is not a fresh upstream attempt: names recomputed from github.run_attempt can strand immutable successful evidence. Passing the uploaded names through needs outputs preserves that causality. The provider omission path is distinct and receives exactly one in-job retry only for an absent tool artifact; malformed or repeated omissions remain red. The existing separate-evidence-retention-from-terminal-truth spore already covers this reusable pattern, so no duplicate spore was incubated.
+- ts: 2026-08-30T00:01:04Z
+  session: /workspace/scratch/8d4eacbf051e/eta-mu-post300
+  task: Make the bounded recovery runner available inside reusable caller workspaces
+  p-efficiency: 0.82
+  p-friction: 0.61
+  p-skill-candidate: 0.71
+  spore: none
+  receipt-refs: 2026-08-30T00:01:04Z
+  note: Direct-repository hosted checks can conceal a reusable-workflow path defect because the implementation file exists only in the provider checkout. Packaging the exact source bytes into the already checksummed context artifact preserves the single revision-bound transport boundary; a byte-parity regression makes the otherwise encoded carrier auditable. The existing separate-evidence-retention-from-terminal-truth spore covers this boundary, so no duplicate spore was incubated.

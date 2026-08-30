@@ -3,7 +3,7 @@ category: "tasks"
 labels: "workflow, review, recovery"
 parent: "290f0cdf-9160-453e-a69c-67211432baa7"
 type: "task"
-write-id: "1788047321478-0.uyl1n30ec49vh7we3it"
+write-id: "1788048058581-0.g0ozw9spi1bumbzlqwa"
 points: "3"
 title: "Preserve review prerequisites and recover one omitted submission"
 priority: "P0"
@@ -54,4 +54,6 @@ Intake plan 2026-08-29: issue #296 and Proxx run 33278721535 establish two indep
 Discovery anomaly 2026-08-29: pinned actionlint/ShellCheck on the touched workflow reproduced three warnings already present on base a6d39f48: one SC2129 in the default deterministic failure branch and two SC2094 false positives where SHA256SUMS was written inside the directory being scanned. The recovery shape remains valid. Under the repository zero-warning contract, the same branch now groups its four status writes and the checksum manifest is assembled in runner-temp then moved into the context; actionlint is clean without changing gate or archive semantics.
 
 Implementation evidence 2026-08-29 on exact base a6d39f48: RED first failed at module load because the bounded recovery runner did not exist; after implementation, 32/32 executable workflow tests pass. They cover first-pass submission, missing-first recovery, repeated omission, malformed JSON, real child-process stdout/stderr retention, pre-publication schema validation structure, terminal truth, and job-output-bound prerequisite artifact reuse. actionlint 1.7.12 with ShellCheck 0.11.0 is clean; Biome checked 492 files; TypeScript typecheck passed; git diff --check passed. The full extensions build could not run locally because the restricted environment cannot resolve shadow-cljs 3.4.11 from Maven, so hosted sandbox/build authority remains required before merge.
+
+Self-review correction 2026-08-30: published head b4bb49c was quarantined before merge because a reusable workflow checks out the caller repository, where eta-mu local path .github/scripts/run-opencode-review-recovery.mjs would not exist. The exact tracked runner bytes are now transported inside the checksummed review-context artifact and executed from .review-context/machinery. A new contract decodes the embedded payload byte-for-byte against the tracked source, and the real child-process CLI fixture executes that packaged copy. GREEN is now 33/33 tests; actionlint plus ShellCheck, Biome 492 files, and git diff check remain clean. A fresh exact-head review wave is required on the superseding commit.
 ---

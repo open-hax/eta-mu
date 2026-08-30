@@ -744,6 +744,78 @@ jobs:
           cp .review-context/muse/.ημ/review/publish-opencode-review.cjs "$CONTEXT_OUT/machinery/"
           cp .review-context/muse/.ημ/review/publish-opencode-review.test.cjs "$CONTEXT_OUT/machinery/"
 
+          # A reusable workflow checks out the caller's repository, so eta-mu's
+          # tracked runner is not otherwise present in the review workspace.
+          # Package the exact source bytes into the checksummed context artifact;
+          # the workflow contract test decodes this payload and compares it with
+          # .github/scripts/run-opencode-review-recovery.mjs byte for byte.
+          base64 --decode > "$CONTEXT_OUT/machinery/run-opencode-review-recovery.mjs" <<'ETA_MU_RECOVERY_RUNNER_BASE64'
+          Ly8gU1BEWC1MaWNlbnNlLUlkZW50aWZpZXI6IEdQTC0zLjAtb3ItbGF0ZXIKCmltcG9ydCB7IHNwYXduIH0gZnJvbSAibm9kZTpjaGlsZF9wcm9jZXNzIjsK
+          aW1wb3J0IGZzIGZyb20gIm5vZGU6ZnMiOwppbXBvcnQgcGF0aCBmcm9tICJub2RlOnBhdGgiOwppbXBvcnQgeyBmaW5pc2hlZCB9IGZyb20gIm5vZGU6c3Ry
+          ZWFtL3Byb21pc2VzIjsKaW1wb3J0IHsgZmlsZVVSTFRvUGF0aCB9IGZyb20gIm5vZGU6dXJsIjsKCmNvbnN0IFJFQ09WRVJZX1NDSEVNQSA9ICJvcGVuLWhh
+          eC5yZXZpZXctcmVjb3ZlcnkvdjEiOwpjb25zdCBNQVhfQVRURU1QVFMgPSAyOwoKZnVuY3Rpb24gc3VibWlzc2lvblN0YXRlKHN1Ym1pc3Npb25GaWxlKSB7
+          CiAgaWYgKCFmcy5leGlzdHNTeW5jKHN1Ym1pc3Npb25GaWxlKSkgcmV0dXJuICJtaXNzaW5nIjsKICB0cnkgewogICAgSlNPTi5wYXJzZShmcy5yZWFkRmls
+          ZVN5bmMoc3VibWlzc2lvbkZpbGUsICJ1dGY4IikpOwogICAgcmV0dXJuICJwcmVzZW50IjsKICB9IGNhdGNoIHsKICAgIHJldHVybiAibWFsZm9ybWVkIjsK
+          ICB9Cn0KCmZ1bmN0aW9uIGNvcnJlY3RpdmVQcm9tcHQoYmFzZVByb21wdCkgewogIHJldHVybiBgJHtiYXNlUHJvbXB0LnRyaW1FbmQoKX0KCkNvcnJlY3Rp
+          dmUgYXR0ZW1wdCAyIG9mIDI6IHRoZSBmaXJzdCBjb21wbGV0ZWQgbW9kZWwgaW52b2NhdGlvbiBvbWl0dGVkIHRoZQpyZXF1aXJlZCByZXZpZXdfc3VibWl0
+          IGFydGlmYWN0LiBTdGFydCB0aGUgZXZpZGVuY2UtZmlyc3QgcmV2aWV3IHN0YXRlIG1hY2hpbmUKYWdhaW4gd2l0aCByZXZpZXdfYmVnaW47IGRvIG5vdCBh
+          c3N1bWUgYW55IGluLW1lbW9yeSBzdGF0ZSBzdXJ2aXZlZCB0aGUgZmlyc3QKcHJvY2Vzcy4gQ29tcGxldGUgZXZlcnkgcmVxdWlyZWQgc3RhZ2UgYW5kIGRv
+          IG5vdCBlbmQgdW50aWwgcmV2aWV3X3N1Ym1pdCBoYXMKcmV0dXJuZWQgb2suIFRoaXMgaXMgdGhlIG9ubHkgcmVjb3ZlcnkgYXR0ZW1wdC4KYDsKfQoKZnVu
+          Y3Rpb24gd3JpdGVSZWNvdmVyeShtZXRhZGF0YUZpbGUsIG1ldGFkYXRhKSB7CiAgZnMud3JpdGVGaWxlU3luYyhtZXRhZGF0YUZpbGUsIGAke0pTT04uc3Ry
+          aW5naWZ5KG1ldGFkYXRhLCBudWxsLCAyKX1cbmApOwp9CgovKioKICogUnVuIG9uZSByZXZpZXcgYXR0ZW1wdCBhbmQgZXhhY3RseSBvbmUgY29ycmVjdGl2
+          ZSBhdHRlbXB0IHdoZW4sIGFuZCBvbmx5CiAqIHdoZW4sIHRoZSBmaXJzdCBjb21wbGV0ZWQgaW52b2NhdGlvbiBvbWl0dGVkIHRoZSByZXZpZXdfc3VibWl0
+          IGFydGlmYWN0LgogKiBTY2hlbWEgdmFsaWRhdGlvbiByZW1haW5zIGEgc2VwYXJhdGUgcHJlLXB1YmxpY2F0aW9uIGJvdW5kYXJ5IGJlY2F1c2UgaXQKICog
+          cmVxdWlyZXMgdGhlIGxpdmUgcHVsbC1yZXF1ZXN0IGNoYW5nZWQtbGluZSBpbmRleC4KICovCmV4cG9ydCBhc3luYyBmdW5jdGlvbiBydW5SZXZpZXdSZWNv
+          dmVyeSh7CiAgZXZpZGVuY2VEaXJlY3RvcnksCiAgYmFzZVByb21wdCwKICBzdWJtaXNzaW9uRmlsZSA9IHBhdGguam9pbihldmlkZW5jZURpcmVjdG9yeSwg
+          InN1Ym1pc3Npb24uanNvbiIpLAogIGludm9rZUF0dGVtcHQsCn0pIHsKICBpZiAoIWV2aWRlbmNlRGlyZWN0b3J5KSB0aHJvdyBuZXcgRXJyb3IoImV2aWRl
+          bmNlRGlyZWN0b3J5IGlzIHJlcXVpcmVkIik7CiAgaWYgKHR5cGVvZiBiYXNlUHJvbXB0ICE9PSAic3RyaW5nIiB8fCBiYXNlUHJvbXB0LnRyaW0oKS5sZW5n
+          dGggPT09IDApIHsKICAgIHRocm93IG5ldyBFcnJvcigiYmFzZVByb21wdCBtdXN0IGJlIGEgbm9uLWVtcHR5IHN0cmluZyIpOwogIH0KICBpZiAodHlwZW9m
+          IGludm9rZUF0dGVtcHQgIT09ICJmdW5jdGlvbiIpIHRocm93IG5ldyBFcnJvcigiaW52b2tlQXR0ZW1wdCBpcyByZXF1aXJlZCIpOwoKICBmcy5ta2RpclN5
+          bmMoZXZpZGVuY2VEaXJlY3RvcnksIHsgcmVjdXJzaXZlOiB0cnVlIH0pOwogIGNvbnN0IG1ldGFkYXRhRmlsZSA9IHBhdGguam9pbihldmlkZW5jZURpcmVj
+          dG9yeSwgInJlY292ZXJ5Lmpzb24iKTsKICBjb25zdCBtZXRhZGF0YSA9IHsKICAgIHNjaGVtYTogUkVDT1ZFUllfU0NIRU1BLAogICAgbWF4X2F0dGVtcHRz
+          OiBNQVhfQVRURU1QVFMsCiAgICByZWNvdmVyeV9yZWFzb246IG51bGwsCiAgICBhdHRlbXB0czogW10sCiAgfTsKCiAgaWYgKGZzLmV4aXN0c1N5bmMoc3Vi
+          bWlzc2lvbkZpbGUpKSB7CiAgICB0aHJvdyBuZXcgRXJyb3IoYHJlZnVzaW5nIHByZS1leGlzdGluZyByZXZpZXcgc3VibWlzc2lvbjogJHtzdWJtaXNzaW9u
+          RmlsZX1gKTsKICB9CgogIGxldCBwcm9tcHQgPSBiYXNlUHJvbXB0OwogIGZvciAobGV0IGF0dGVtcHQgPSAxOyBhdHRlbXB0IDw9IE1BWF9BVFRFTVBUUzsg
+          YXR0ZW1wdCArPSAxKSB7CiAgICBjb25zdCByZXNwb25zZUZpbGUgPSBwYXRoLmpvaW4oZXZpZGVuY2VEaXJlY3RvcnksIGBtb2RlbC1yZXNwb25zZS1hdHRl
+          bXB0LSR7YXR0ZW1wdH0udHh0YCk7CiAgICBjb25zdCBzdGRlcnJGaWxlID0gcGF0aC5qb2luKGV2aWRlbmNlRGlyZWN0b3J5LCBgb3BlbmNvZGUtc3RkZXJy
+          LWF0dGVtcHQtJHthdHRlbXB0fS5sb2dgKTsKICAgIGNvbnN0IHJlc3VsdCA9IGF3YWl0IGludm9rZUF0dGVtcHQoeyBhdHRlbXB0LCBwcm9tcHQsIHJlc3Bv
+          bnNlRmlsZSwgc3RkZXJyRmlsZSB9KTsKICAgIGlmICghZnMuZXhpc3RzU3luYyhyZXNwb25zZUZpbGUpKSBmcy53cml0ZUZpbGVTeW5jKHJlc3BvbnNlRmls
+          ZSwgIiIpOwogICAgaWYgKCFmcy5leGlzdHNTeW5jKHN0ZGVyckZpbGUpKSBmcy53cml0ZUZpbGVTeW5jKHN0ZGVyckZpbGUsICIiKTsKCiAgICBjb25zdCBz
+          dGF0ZSA9IHN1Ym1pc3Npb25TdGF0ZShzdWJtaXNzaW9uRmlsZSk7CiAgICBtZXRhZGF0YS5hdHRlbXB0cy5wdXNoKHsKICAgICAgYXR0ZW1wdCwKICAgICAg
+          ZXhpdF9jb2RlOiByZXN1bHQ/LmV4aXRDb2RlID8/IG51bGwsCiAgICAgIHJlc3BvbnNlX2ZpbGU6IHBhdGguYmFzZW5hbWUocmVzcG9uc2VGaWxlKSwKICAg
+          ICAgc3RkZXJyX2ZpbGU6IHBhdGguYmFzZW5hbWUoc3RkZXJyRmlsZSksCiAgICAgIHN1Ym1pc3Npb25fc3RhdGU6IHN0YXRlLAogICAgfSk7CiAgICB3cml0
+          ZVJlY292ZXJ5KG1ldGFkYXRhRmlsZSwgbWV0YWRhdGEpOwoKICAgIGlmIChyZXN1bHQ/LmV4aXRDb2RlICE9PSAwKSB7CiAgICAgIHRocm93IG5ldyBFcnJv
+          cihgT3BlbkNvZGUgcmV2aWV3IGF0dGVtcHQgJHthdHRlbXB0fSBleGl0ZWQgJHtyZXN1bHQ/LmV4aXRDb2RlID8/ICJ3aXRob3V0IGEgY29kZSJ9YCk7CiAg
+          ICB9CiAgICBpZiAoc3RhdGUgPT09ICJwcmVzZW50IikgcmV0dXJuIG1ldGFkYXRhOwogICAgaWYgKHN0YXRlID09PSAibWFsZm9ybWVkIikgewogICAgICB0
+          aHJvdyBuZXcgRXJyb3IoYG1hbGZvcm1lZCByZXZpZXcgc3VibWlzc2lvbiBhZnRlciBhdHRlbXB0ICR7YXR0ZW1wdH1gKTsKICAgIH0KICAgIGlmIChhdHRl
+          bXB0ID09PSBNQVhfQVRURU1QVFMpIHsKICAgICAgdGhyb3cgbmV3IEVycm9yKGByZXZpZXdlciBvbWl0dGVkIHJldmlld19zdWJtaXQgYWZ0ZXIgJHtNQVhf
+          QVRURU1QVFN9IGF0dGVtcHRzYCk7CiAgICB9CgogICAgbWV0YWRhdGEucmVjb3ZlcnlfcmVhc29uID0gIm1pc3NpbmdfcmV2aWV3X3N1Ym1pdCI7CiAgICB3
+          cml0ZVJlY292ZXJ5KG1ldGFkYXRhRmlsZSwgbWV0YWRhdGEpOwogICAgcHJvbXB0ID0gY29ycmVjdGl2ZVByb21wdChiYXNlUHJvbXB0KTsKICB9CgogIHRo
+          cm93IG5ldyBFcnJvcigidW5yZWFjaGFibGUgcmV2aWV3IHJlY292ZXJ5IHN0YXRlIik7Cn0KCmFzeW5jIGZ1bmN0aW9uIGludm9rZU9wZW5Db2RlKHsgcHJv
+          bXB0LCByZXNwb25zZUZpbGUsIHN0ZGVyckZpbGUgfSkgewogIGNvbnN0IG9wZW5jb2RlQmluID0gcHJvY2Vzcy5lbnYuT1BFTkNPREVfQklOIHx8ICJvcGVu
+          Y29kZSI7CiAgY29uc3QgcmV2aWV3TW9kZWwgPSBwcm9jZXNzLmVudi5SRVZJRVdfTU9ERUw7CiAgaWYgKCFyZXZpZXdNb2RlbCkgdGhyb3cgbmV3IEVycm9y
+          KCJSRVZJRVdfTU9ERUwgaXMgcmVxdWlyZWQiKTsKCiAgY29uc3QgcmVzcG9uc2UgPSBmcy5jcmVhdGVXcml0ZVN0cmVhbShyZXNwb25zZUZpbGUsIHsgZmxh
+          Z3M6ICJ3IiB9KTsKICBjb25zdCBzdGRlcnIgPSBmcy5jcmVhdGVXcml0ZVN0cmVhbShzdGRlcnJGaWxlLCB7IGZsYWdzOiAidyIgfSk7CiAgY29uc3QgY2hp
+          bGQgPSBzcGF3bigKICAgIG9wZW5jb2RlQmluLAogICAgWyJydW4iLCAiLS1hZ2VudCIsICJnaXRodWItcmV2aWV3ZXIiLCAiLS1tb2RlbCIsIHJldmlld01v
+          ZGVsLCBwcm9tcHRdLAogICAgeyBzdGRpbzogWyJpZ25vcmUiLCAicGlwZSIsICJwaXBlIl0gfSwKICApOwoKICBjaGlsZC5zdGRvdXQub24oImRhdGEiLCAo
+          Y2h1bmspID0+IHsKICAgIHJlc3BvbnNlLndyaXRlKGNodW5rKTsKICAgIHByb2Nlc3Muc3Rkb3V0LndyaXRlKGNodW5rKTsKICB9KTsKICBjaGlsZC5zdGRl
+          cnIub24oImRhdGEiLCAoY2h1bmspID0+IHsKICAgIHN0ZGVyci53cml0ZShjaHVuayk7CiAgICBwcm9jZXNzLnN0ZGVyci53cml0ZShjaHVuayk7CiAgfSk7
+          CgogIGNvbnN0IGV4aXQgPSBhd2FpdCBuZXcgUHJvbWlzZSgocmVzb2x2ZSwgcmVqZWN0KSA9PiB7CiAgICBjaGlsZC5vbmNlKCJlcnJvciIsIHJlamVjdCk7
+          CiAgICBjaGlsZC5vbmNlKCJjbG9zZSIsIChjb2RlLCBzaWduYWwpID0+IHJlc29sdmUoeyBjb2RlLCBzaWduYWwgfSkpOwogIH0pOwogIHJlc3BvbnNlLmVu
+          ZCgpOwogIHN0ZGVyci5lbmQoKTsKICBhd2FpdCBQcm9taXNlLmFsbChbZmluaXNoZWQocmVzcG9uc2UpLCBmaW5pc2hlZChzdGRlcnIpXSk7CgogIGlmIChl
+          eGl0LnNpZ25hbCkgdGhyb3cgbmV3IEVycm9yKGBPcGVuQ29kZSByZXZpZXcgdGVybWluYXRlZCBieSAke2V4aXQuc2lnbmFsfWApOwogIHJldHVybiB7IGV4
+          aXRDb2RlOiBleGl0LmNvZGUgfTsKfQoKYXN5bmMgZnVuY3Rpb24gbWFpbigpIHsKICBjb25zdCBwck51bWJlciA9IHByb2Nlc3MuZW52LlBSX05VTUJFUjsK
+          ICBjb25zdCBwcm9tcHRGaWxlID0gcHJvY2Vzcy5lbnYuUkVWSUVXX1BST01QVF9GSUxFOwogIGNvbnN0IGV2aWRlbmNlRGlyZWN0b3J5ID0gcHJvY2Vzcy5l
+          bnYuUkVWSUVXX0VWSURFTkNFX0RJUjsKICBpZiAoIS9eXGQrJC8udGVzdChwck51bWJlciB8fCAiIikpIHRocm93IG5ldyBFcnJvcigiUFJfTlVNQkVSIG11
+          c3QgYmUgbnVtZXJpYyIpOwogIGlmICghcHJvbXB0RmlsZSkgdGhyb3cgbmV3IEVycm9yKCJSRVZJRVdfUFJPTVBUX0ZJTEUgaXMgcmVxdWlyZWQiKTsKICBp
+          ZiAoIWV2aWRlbmNlRGlyZWN0b3J5KSB0aHJvdyBuZXcgRXJyb3IoIlJFVklFV19FVklERU5DRV9ESVIgaXMgcmVxdWlyZWQiKTsKCiAgY29uc3QgcHJvbXB0
+          VGVtcGxhdGUgPSBmcy5yZWFkRmlsZVN5bmMocHJvbXB0RmlsZSwgInV0ZjgiKTsKICBjb25zdCBiYXNlUHJvbXB0ID0gcHJvbXB0VGVtcGxhdGUucmVwbGFj
+          ZUFsbCgie3tQUl9OVU1CRVJ9fSIsIHByTnVtYmVyKTsKICBhd2FpdCBydW5SZXZpZXdSZWNvdmVyeSh7IGV2aWRlbmNlRGlyZWN0b3J5LCBiYXNlUHJvbXB0
+          LCBpbnZva2VBdHRlbXB0OiBpbnZva2VPcGVuQ29kZSB9KTsKfQoKaWYgKHByb2Nlc3MuYXJndlsxXSAmJiBwYXRoLnJlc29sdmUocHJvY2Vzcy5hcmd2WzFd
+          KSA9PT0gZmlsZVVSTFRvUGF0aChpbXBvcnQubWV0YS51cmwpKSB7CiAgbWFpbigpLmNhdGNoKChlcnJvcikgPT4gewogICAgY29uc29sZS5lcnJvcihgOjpl
+          cnJvcjo6JHtlcnJvci5tZXNzYWdlfWApOwogICAgcHJvY2Vzcy5leGl0Q29kZSA9IDE7CiAgfSk7Cn0K
+          ETA_MU_RECOVERY_RUNNER_BASE64
+
           printf '%s\n' "$MUSE_REVISION" > "$CONTEXT_OUT/metadata/muse-revision.txt"
           printf '%s\n' "$AGENTS_REVISION" > "$CONTEXT_OUT/metadata/agents-revision.txt"
           (cd "$CONTEXT_OUT/agents" && find skills -name SKILL.md -type f -print | sort) > "$CONTEXT_OUT/metadata/skills.txt"
@@ -940,7 +1012,7 @@ jobs:
           REVIEW_MODEL: ${{ inputs.model || 'opencode/mimo-v2.5-free' }}
           REVIEW_PROMPT_FILE: .review-context/machinery/evidence-review.md
           REVIEW_EVIDENCE_DIR: ${{ github.workspace }}/.opencode/review-evidence
-        run: node .github/scripts/run-opencode-review-recovery.mjs
+        run: node .review-context/machinery/run-opencode-review-recovery.mjs
 
       - name: Validate final review submission
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7

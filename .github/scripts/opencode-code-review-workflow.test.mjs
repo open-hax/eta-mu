@@ -20,6 +20,10 @@ const YAML = requireFromEtaMu("yaml");
 const workflowText = fs.readFileSync(workflowPath, "utf8");
 const workflow = YAML.parse(workflowText);
 const workflowDocs = fs.readFileSync(path.join(root, "docs/agent-workflows.md"), "utf8");
+const recoveryRunnerSource = fs.readFileSync(
+  path.join(root, ".github/scripts/run-opencode-review-recovery.mjs"),
+  "utf8",
+);
 
 function namedStep(jobId, name) {
   const step = workflow.jobs[jobId].steps.find((candidate) => candidate.name === name);
@@ -333,6 +337,23 @@ test("review downloads the immutable artifact names emitted by prerequisite jobs
   assert.doesNotMatch(contextDownload.with.name, /github\.run_attempt/);
 });
 
+function packagedRecoveryRunner() {
+  const assembly = namedStep("prepare_review_context", "Assemble revision-bound review context");
+  const match = assembly.run.match(
+    /<<'ETA_MU_RECOVERY_RUNNER_BASE64'\n([\s\S]*?)\nETA_MU_RECOVERY_RUNNER_BASE64/,
+  );
+  assert.ok(match, "review context must carry the bounded recovery runner payload");
+  return Buffer.from(match[1].replace(/\s+/g, ""), "base64").toString("utf8");
+}
+
+test("review context packages the exact runner for reusable-workflow callers", () => {
+  assert.equal(packagedRecoveryRunner(), recoveryRunnerSource);
+  assert.equal(
+    namedStep("review", "Run bounded evidence-first OpenCode review").run,
+    "node .review-context/machinery/run-opencode-review-recovery.mjs",
+  );
+});
+
 test("workflow bounds recovery before validating and publishing the submission", () => {
   const recovery = namedStep("review", "Run bounded evidence-first OpenCode review");
   assert.match(recovery.run, /run-opencode-review-recovery\.mjs/);
@@ -476,7 +497,9 @@ test("recovery CLI preserves both real child-process streams", (t) => {
   const { directory } = recoveryFixture(t);
   const promptFile = path.join(directory, "prompt.md");
   const fakeOpenCode = path.join(directory, "fake-opencode.mjs");
+  const packagedRunner = path.join(directory, "run-opencode-review-recovery.mjs");
   fs.writeFileSync(promptFile, "Review pull request #{{PR_NUMBER}}.\n");
+  fs.writeFileSync(packagedRunner, packagedRecoveryRunner());
   fs.writeFileSync(
     fakeOpenCode,
     `#!/usr/bin/env node
@@ -497,7 +520,7 @@ if (attempt === 2) {
 
   const result = spawnSync(
     process.execPath,
-    [path.join(root, ".github/scripts/run-opencode-review-recovery.mjs")],
+    [packagedRunner],
     {
       cwd: root,
       encoding: "utf8",
