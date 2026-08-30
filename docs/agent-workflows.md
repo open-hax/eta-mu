@@ -38,7 +38,26 @@ The workflow has three bounded stages:
 
 1. **Deterministic evidence** — install from the committed lockfile, then run the repository lint, test, and build gates. Exit codes and logs are serialized under `.opencode/review-evidence/`. A failed environment or dependency install is evidence about the run, not automatically evidence of a code defect.
 2. **Review-context compilation** — check out pinned revisions of `octave-commons/muse` and `riatzukiza/.agents`. Muse compiles a review-specific OpenCode projection containing only observer tools; the `.agents` repository is packaged as the global skill source. Both revisions and the skill inventory are recorded in the context artifact.
-3. **One model review pass** — map the change, reconstruct relevant contracts and invariants, generate candidate findings, attempt to disprove each candidate, and publish only findings that survive the evidence threshold.
+3. **Model review with omission-only recovery** — map the change, reconstruct relevant contracts and invariants, generate candidate findings, attempt to disprove each candidate, and publish only findings that survive the evidence threshold. A completed first invocation that leaves a missing `review_submit` artifact receives exactly one corrective model invocation. The recovery starts the state machine again and must finish with a real tool-written submission; it never synthesizes a review from free-form output. A malformed submission does not consume the recovery attempt, and malformed or repeatedly missing submissions fail closed before publication.
+
+The two model invocations write separate response and stderr files plus a small
+`recovery.json` decision record. The attempt artifact therefore preserves the
+first response even when the corrective invocation succeeds or fails.
+An invocation that rejects is recorded once with a null exit code before its
+original error is rethrown; both stream files are finalized, and that failure
+never consumes the omission-only corrective attempt.
+The bounded runner itself travels in the checksummed review-context artifact.
+That is required for reusable callers: their review job checks out the caller's
+pull-request tree, which does not contain eta-mu's repository-local scripts.
+
+A GitHub failed-job re-run is a different boundary from the in-job corrective
+invocation. GitHub retains the original run and re-runs failed jobs and their
+dependents; successful prerequisite jobs may remain from attempt 1. The review
+job downloads the immutable artifact names its prerequisite jobs emitted through
+job outputs, rather than rebuilding names from the new `github.run_attempt`.
+Consequently a review-only re-run reuses the original deterministic evidence and
+compiled context. A full workflow re-run executes those prerequisites again and
+emits new attempt-scoped names.
 
 The reusable workflow has one stable terminal check, **OpenCode evidence review
 gate**. Configure that job as the required check in callers. It runs under

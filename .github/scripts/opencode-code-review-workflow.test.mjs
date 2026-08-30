@@ -9,6 +9,8 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { runReviewRecovery } from "./run-opencode-review-recovery.mjs";
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const workflowPath =
   process.env.ETA_MU_REVIEW_WORKFLOW_PATH ||
@@ -17,6 +19,11 @@ const requireFromEtaMu = createRequire(path.join(root, "packages/eta-mu/package.
 const YAML = requireFromEtaMu("yaml");
 const workflowText = fs.readFileSync(workflowPath, "utf8");
 const workflow = YAML.parse(workflowText);
+const workflowDocs = fs.readFileSync(path.join(root, "docs/agent-workflows.md"), "utf8");
+const recoveryRunnerSource = fs.readFileSync(
+  path.join(root, ".github/scripts/run-opencode-review-recovery.mjs"),
+  "utf8",
+);
 
 function namedStep(jobId, name) {
   const step = workflow.jobs[jobId].steps.find((candidate) => candidate.name === name);
@@ -298,10 +305,348 @@ test("artifact names do not claim an unverified head revision", () => {
     namedStep("review", "Upload review attempt artifacts").with.name,
   ]) {
     assert.doesNotMatch(name, /pull_request\.head\.sha/);
-    assert.match(name, /github\.run_id/);
   }
+  assert.equal(
+    namedStep("deterministic_evidence", "Bind deterministic artifact name").env.RUN_ID,
+    "${{ github.run_id }}",
+  );
+  assert.equal(
+    namedStep("prepare_review_context", "Bind review-context artifact name").env.RUN_ID,
+    "${{ github.run_id }}",
+  );
+  assert.match(namedStep("review", "Upload review attempt artifacts").with.name, /github\.run_id/);
   assert.equal(namedStep("deterministic_evidence", "Upload deterministic evidence").if, "always()");
   assert.equal(namedStep("review", "Upload review attempt artifacts").if, "always()");
+});
+
+test("review downloads the immutable artifact names emitted by prerequisite jobs", () => {
+  assert.equal(
+    workflow.jobs.deterministic_evidence.outputs.artifact_name,
+    "${{ steps.deterministic_artifact_name.outputs.name }}",
+  );
+  assert.equal(
+    workflow.jobs.prepare_review_context.outputs.artifact_name,
+    "${{ steps.context_artifact_name.outputs.name }}",
+  );
+
+  const evidenceDownload = namedStep("review", "Download deterministic evidence");
+  const contextDownload = namedStep("review", "Download Muse tools and global skills");
+  assert.equal(evidenceDownload.with.name, "${{ needs.deterministic_evidence.outputs.artifact_name }}");
+  assert.equal(contextDownload.with.name, "${{ needs.prepare_review_context.outputs.artifact_name }}");
+  assert.doesNotMatch(evidenceDownload.with.name, /github\.run_attempt/);
+  assert.doesNotMatch(contextDownload.with.name, /github\.run_attempt/);
+});
+
+function packagedRecoveryRunner() {
+  const assembly = namedStep("prepare_review_context", "Assemble revision-bound review context");
+  const match = assembly.run.match(
+    /<<'ETA_MU_RECOVERY_RUNNER_BASE64'\n([\s\S]*?)\nETA_MU_RECOVERY_RUNNER_BASE64/,
+  );
+  assert.ok(match, "review context must carry the bounded recovery runner payload");
+  return Buffer.from(match[1].replace(/\s+/g, ""), "base64").toString("utf8");
+}
+
+test("review context packages the exact runner for reusable-workflow callers", () => {
+  assert.equal(packagedRecoveryRunner(), recoveryRunnerSource);
+  assert.equal(
+    namedStep("review", "Run bounded evidence-first OpenCode review").run,
+    "node .review-context/machinery/run-opencode-review-recovery.mjs",
+  );
+});
+
+test("workflow bounds recovery before validating and publishing the submission", () => {
+  const recovery = namedStep("review", "Run bounded evidence-first OpenCode review");
+  assert.match(recovery.run, /run-opencode-review-recovery\.mjs/);
+
+  const steps = workflow.jobs.review.steps.map((step) => step.name);
+  const validateIndex = steps.indexOf("Validate final review submission");
+  const uploadIndex = steps.indexOf("Upload review attempt artifacts");
+  const publishIndex = steps.indexOf("Publish actual GitHub pull request review");
+  assert.ok(validateIndex > steps.indexOf(recovery.name));
+  assert.ok(uploadIndex > validateIndex);
+  assert.ok(publishIndex > uploadIndex);
+
+  const uploadPaths = namedStep("review", "Upload review attempt artifacts").with.path;
+  assert.match(uploadPaths, /model-response-attempt-1\.txt/);
+  assert.match(uploadPaths, /model-response-attempt-2\.txt/);
+  assert.match(uploadPaths, /opencode-stderr-attempt-1\.log/);
+  assert.match(uploadPaths, /opencode-stderr-attempt-2\.log/);
+  assert.match(uploadPaths, /recovery\.json/);
+});
+
+test("operator docs distinguish in-job recovery from a failed-job rerun", () => {
+  assert.match(workflowDocs, /exactly one corrective model invocation/i);
+  assert.match(workflowDocs, /missing `review_submit`/i);
+  assert.match(workflowDocs, /failed-job re-run/i);
+  assert.match(workflowDocs, /prerequisite jobs? emitted/i);
+  assert.match(workflowDocs, /malformed.*fail closed/is);
+  assert.match(workflowDocs, /invocation that rejects.*null exit code/is);
+  assert.match(workflowDocs, /stream files are finalized/is);
+});
+
+function recoveryFixture(t) {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-review-recovery-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  return {
+    directory,
+    submissionFile: path.join(directory, "submission.json"),
+  };
+}
+
+function validSubmission() {
+  return {
+    schema: "open-hax.github-review/v1",
+    event: "APPROVE",
+    summary: "No confirmed defects survived validation.",
+    comments: [],
+  };
+}
+
+test("first-pass submission does not invoke recovery", async (t) => {
+  const { directory, submissionFile } = recoveryFixture(t);
+  const calls = [];
+  const result = await runReviewRecovery({
+    evidenceDirectory: directory,
+    basePrompt: "review the change",
+    submissionFile,
+    invokeAttempt: async ({ attempt, prompt, responseFile, stderrFile }) => {
+      calls.push({ attempt, prompt });
+      fs.writeFileSync(responseFile, "first response\n");
+      fs.writeFileSync(stderrFile, "first stderr\n");
+      fs.writeFileSync(submissionFile, `${JSON.stringify(validSubmission())}\n`);
+      return { exitCode: 0 };
+    },
+  });
+
+  assert.equal(calls.length, 1);
+  assert.equal(result.attempts.length, 1);
+  assert.equal(result.attempts[0].submission_state, "present");
+  assert.equal(fs.readFileSync(path.join(directory, "model-response-attempt-1.txt"), "utf8"), "first response\n");
+  assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
+});
+
+test("one omitted submission receives exactly one corrective attempt", async (t) => {
+  const { directory, submissionFile } = recoveryFixture(t);
+  const calls = [];
+  const result = await runReviewRecovery({
+    evidenceDirectory: directory,
+    basePrompt: "review the change",
+    submissionFile,
+    invokeAttempt: async ({ attempt, prompt, responseFile, stderrFile }) => {
+      calls.push({ attempt, prompt });
+      fs.writeFileSync(responseFile, `response ${attempt}\n`);
+      fs.writeFileSync(stderrFile, `stderr ${attempt}\n`);
+      if (attempt === 2) {
+        fs.writeFileSync(submissionFile, `${JSON.stringify(validSubmission())}\n`);
+      }
+      return { exitCode: 0 };
+    },
+  });
+
+  assert.deepEqual(calls.map(({ attempt }) => attempt), [1, 2]);
+  assert.match(calls[1].prompt, /corrective attempt 2 of 2/i);
+  assert.match(calls[1].prompt, /review_submit/);
+  assert.deepEqual(result.attempts.map(({ submission_state }) => submission_state), ["missing", "present"]);
+  assert.equal(fs.readFileSync(path.join(directory, "model-response-attempt-1.txt"), "utf8"), "response 1\n");
+  assert.equal(fs.readFileSync(path.join(directory, "model-response-attempt-2.txt"), "utf8"), "response 2\n");
+});
+
+test("repeated omission fails closed after two retained attempts", async (t) => {
+  const { directory, submissionFile } = recoveryFixture(t);
+  const calls = [];
+  await assert.rejects(
+    runReviewRecovery({
+      evidenceDirectory: directory,
+      basePrompt: "review the change",
+      submissionFile,
+      invokeAttempt: async ({ attempt, responseFile, stderrFile }) => {
+        calls.push(attempt);
+        fs.writeFileSync(responseFile, `response ${attempt}\n`);
+        fs.writeFileSync(stderrFile, `stderr ${attempt}\n`);
+        return { exitCode: 0 };
+      },
+    }),
+    /omitted review_submit after 2 attempts/,
+  );
+  assert.deepEqual(calls, [1, 2]);
+  const recovery = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8"));
+  assert.deepEqual(recovery.attempts.map(({ submission_state }) => submission_state), ["missing", "missing"]);
+});
+
+test("malformed submission fails closed without consuming the recovery attempt", async (t) => {
+  const { directory, submissionFile } = recoveryFixture(t);
+  const calls = [];
+  await assert.rejects(
+    runReviewRecovery({
+      evidenceDirectory: directory,
+      basePrompt: "review the change",
+      submissionFile,
+      invokeAttempt: async ({ attempt, responseFile, stderrFile }) => {
+        calls.push(attempt);
+        fs.writeFileSync(responseFile, "malformed response\n");
+        fs.writeFileSync(stderrFile, "malformed stderr\n");
+        fs.writeFileSync(submissionFile, "{broken\n");
+        return { exitCode: 0 };
+      },
+    }),
+    /malformed review submission/,
+  );
+  assert.deepEqual(calls, [1]);
+  assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
+});
+
+test("non-zero completed invocation records its evidence and does not retry", async (t) => {
+  const { directory, submissionFile } = recoveryFixture(t);
+  const calls = [];
+  await assert.rejects(
+    runReviewRecovery({
+      evidenceDirectory: directory,
+      basePrompt: "review the change",
+      submissionFile,
+      invokeAttempt: async ({ attempt, responseFile, stderrFile }) => {
+        calls.push(attempt);
+        fs.writeFileSync(responseFile, "failed response\n");
+        fs.writeFileSync(stderrFile, "failed stderr\n");
+        return { exitCode: 17 };
+      },
+    }),
+    /attempt 1 exited 17/,
+  );
+
+  assert.deepEqual(calls, [1]);
+  const recovery = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8"));
+  assert.deepEqual(recovery.attempts, [
+    {
+      attempt: 1,
+      exit_code: 17,
+      invocation_state: "completed",
+      response_file: "model-response-attempt-1.txt",
+      stderr_file: "opencode-stderr-attempt-1.log",
+      submission_state: "missing",
+    },
+  ]);
+  assert.equal(fs.readFileSync(path.join(directory, "model-response-attempt-1.txt"), "utf8"), "failed response\n");
+  assert.equal(fs.readFileSync(path.join(directory, "opencode-stderr-attempt-1.log"), "utf8"), "failed stderr\n");
+  assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
+});
+
+test("rejected invocation is recorded once and rethrows the original error", async (t) => {
+  const { directory, submissionFile } = recoveryFixture(t);
+  const invocationError = new Error("fixture invocation rejected");
+  await assert.rejects(
+    runReviewRecovery({
+      evidenceDirectory: directory,
+      basePrompt: "review the change",
+      submissionFile,
+      invokeAttempt: async () => {
+        throw invocationError;
+      },
+    }),
+    (error) => error === invocationError,
+  );
+
+  const recovery = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8"));
+  assert.equal(recovery.attempts.length, 1);
+  assert.deepEqual(recovery.attempts[0], {
+    attempt: 1,
+    exit_code: null,
+    invocation_state: "rejected",
+    response_file: "model-response-attempt-1.txt",
+    stderr_file: "opencode-stderr-attempt-1.log",
+    submission_state: "missing",
+    invocation_error: "fixture invocation rejected",
+  });
+  assert.equal(fs.readFileSync(path.join(directory, "model-response-attempt-1.txt"), "utf8"), "");
+  assert.equal(fs.readFileSync(path.join(directory, "opencode-stderr-attempt-1.log"), "utf8"), "");
+  assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
+});
+
+test("recovery CLI preserves both real child-process streams", (t) => {
+  const { directory } = recoveryFixture(t);
+  const promptFile = path.join(directory, "prompt.md");
+  const fakeOpenCode = path.join(directory, "fake-opencode.mjs");
+  const packagedRunner = path.join(directory, "run-opencode-review-recovery.mjs");
+  fs.writeFileSync(promptFile, "Review pull request #{{PR_NUMBER}}.\n");
+  fs.writeFileSync(packagedRunner, packagedRecoveryRunner());
+  fs.writeFileSync(
+    fakeOpenCode,
+    `#!/usr/bin/env node
+import fs from "node:fs";
+import path from "node:path";
+const evidence = process.env.REVIEW_EVIDENCE_DIR;
+const countFile = path.join(evidence, "fake-count.txt");
+const attempt = fs.existsSync(countFile) ? Number(fs.readFileSync(countFile, "utf8")) + 1 : 1;
+fs.writeFileSync(countFile, String(attempt));
+console.log("model response " + attempt);
+console.error("model stderr " + attempt);
+if (attempt === 2) {
+  fs.writeFileSync(path.join(evidence, "submission.json"), JSON.stringify(${JSON.stringify(validSubmission())}) + "\\n");
+}
+`,
+  );
+  fs.chmodSync(fakeOpenCode, 0o755);
+
+  const result = spawnSync(
+    process.execPath,
+    [packagedRunner],
+    {
+      cwd: root,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        OPENCODE_BIN: fakeOpenCode,
+        PR_NUMBER: "296",
+        REVIEW_EVIDENCE_DIR: directory,
+        REVIEW_MODEL: "fixture/model",
+        REVIEW_PROMPT_FILE: promptFile,
+      },
+    },
+  );
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(fs.readFileSync(path.join(directory, "model-response-attempt-1.txt"), "utf8"), "model response 1\n");
+  assert.equal(fs.readFileSync(path.join(directory, "model-response-attempt-2.txt"), "utf8"), "model response 2\n");
+  assert.equal(fs.readFileSync(path.join(directory, "opencode-stderr-attempt-1.log"), "utf8"), "model stderr 1\n");
+  assert.equal(fs.readFileSync(path.join(directory, "opencode-stderr-attempt-2.log"), "utf8"), "model stderr 2\n");
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8")).attempts.map(
+      ({ submission_state }) => submission_state,
+    ),
+    ["missing", "present"],
+  );
+});
+
+test("recovery CLI finalizes streams and records a spawn failure", (t) => {
+  const { directory } = recoveryFixture(t);
+  const promptFile = path.join(directory, "prompt.md");
+  const packagedRunner = path.join(directory, "run-opencode-review-recovery.mjs");
+  fs.writeFileSync(promptFile, "Review pull request #{{PR_NUMBER}}.\n");
+  fs.writeFileSync(packagedRunner, packagedRecoveryRunner());
+
+  const result = spawnSync(process.execPath, [packagedRunner], {
+    cwd: root,
+    encoding: "utf8",
+    timeout: 10_000,
+    env: {
+      ...process.env,
+      OPENCODE_BIN: path.join(directory, "missing-opencode"),
+      PR_NUMBER: "296",
+      REVIEW_EVIDENCE_DIR: directory,
+      REVIEW_MODEL: "fixture/model",
+      REVIEW_PROMPT_FILE: promptFile,
+    },
+  });
+
+  assert.equal(result.error, undefined);
+  assert.equal(result.signal, null);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /ENOENT/);
+  assert.equal(fs.readFileSync(path.join(directory, "model-response-attempt-1.txt"), "utf8"), "");
+  assert.equal(fs.readFileSync(path.join(directory, "opencode-stderr-attempt-1.log"), "utf8"), "");
+  const recovery = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8"));
+  assert.equal(recovery.attempts.length, 1);
+  assert.equal(recovery.attempts[0].invocation_state, "rejected");
+  assert.match(recovery.attempts[0].invocation_error, /ENOENT/);
+  assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
 });
 
 test("deterministic checkout guard records independently executed SHA", (t) => {

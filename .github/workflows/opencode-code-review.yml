@@ -82,6 +82,7 @@ jobs:
       completion_sha: ${{ steps.gates.outputs.completion_sha }}
       exact_head: ${{ steps.gates.outputs.exact_head }}
       clean: ${{ steps.gates.outputs.clean }}
+      artifact_name: ${{ steps.deterministic_artifact_name.outputs.name }}
     permissions:
       contents: read
     steps:
@@ -421,10 +422,12 @@ jobs:
               run_gate test pnpm test
               run_gate_preserving_generated_outputs build pnpm build
             else
-              echo "bootstrap_extensions=125" >> "$statuses"
-              echo "lint=125" >> "$statuses"
-              echo "test=125" >> "$statuses"
-              echo "build=125" >> "$statuses"
+              {
+                echo "bootstrap_extensions=125"
+                echo "lint=125"
+                echo "test=125"
+                echo "build=125"
+              } >> "$statuses"
               echo "Dependency installation failed; bootstrap, lint, test, and build were not attempted." >> "$log"
             fi
           fi
@@ -530,11 +533,21 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `clean=${clean}\n`);
           NODE
 
+      - name: Bind deterministic artifact name
+        id: deterministic_artifact_name
+        if: always()
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: printf 'name=review-evidence-%s-%s-%s\n' "$PR_NUMBER" "$RUN_ID" "$RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+
       - name: Upload deterministic evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: review-evidence-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ steps.deterministic_artifact_name.outputs.name }}
           path: .opencode/review-evidence
           if-no-files-found: error
           retention-days: 14
@@ -544,6 +557,8 @@ jobs:
     if: ${{ github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    outputs:
+      artifact_name: ${{ steps.context_artifact_name.outputs.name }}
     permissions:
       contents: read
     steps:
@@ -729,15 +744,112 @@ jobs:
           cp .review-context/muse/.ημ/review/publish-opencode-review.cjs "$CONTEXT_OUT/machinery/"
           cp .review-context/muse/.ημ/review/publish-opencode-review.test.cjs "$CONTEXT_OUT/machinery/"
 
+          # A reusable workflow checks out the caller's repository, so eta-mu's
+          # tracked runner is not otherwise present in the review workspace.
+          # Package the exact source bytes into the checksummed context artifact;
+          # the workflow contract test decodes this payload and compares it with
+          # .github/scripts/run-opencode-review-recovery.mjs byte for byte.
+          base64 --decode > "$CONTEXT_OUT/machinery/run-opencode-review-recovery.mjs" <<'ETA_MU_RECOVERY_RUNNER_BASE64'
+          Ly8gU1BEWC1MaWNlbnNlLUlkZW50aWZpZXI6IEdQTC0zLjAtb3ItbGF0ZXIKCmltcG9ydCB7IHNwYXduIH0gZnJvbSAibm9kZTpjaGlsZF9wcm9jZXNzIjsK
+          aW1wb3J0IGZzIGZyb20gIm5vZGU6ZnMiOwppbXBvcnQgcGF0aCBmcm9tICJub2RlOnBhdGgiOwppbXBvcnQgeyBmaW5pc2hlZCB9IGZyb20gIm5vZGU6c3Ry
+          ZWFtL3Byb21pc2VzIjsKaW1wb3J0IHsgZmlsZVVSTFRvUGF0aCB9IGZyb20gIm5vZGU6dXJsIjsKCmNvbnN0IFJFQ09WRVJZX1NDSEVNQSA9ICJvcGVuLWhh
+          eC5yZXZpZXctcmVjb3ZlcnkvdjEiOwpjb25zdCBNQVhfQVRURU1QVFMgPSAyOwoKZnVuY3Rpb24gc3VibWlzc2lvblN0YXRlKHN1Ym1pc3Npb25GaWxlKSB7
+          CiAgaWYgKCFmcy5leGlzdHNTeW5jKHN1Ym1pc3Npb25GaWxlKSkgcmV0dXJuICJtaXNzaW5nIjsKICB0cnkgewogICAgSlNPTi5wYXJzZShmcy5yZWFkRmls
+          ZVN5bmMoc3VibWlzc2lvbkZpbGUsICJ1dGY4IikpOwogICAgcmV0dXJuICJwcmVzZW50IjsKICB9IGNhdGNoIHsKICAgIHJldHVybiAibWFsZm9ybWVkIjsK
+          ICB9Cn0KCmZ1bmN0aW9uIGNvcnJlY3RpdmVQcm9tcHQoYmFzZVByb21wdCkgewogIHJldHVybiBgJHtiYXNlUHJvbXB0LnRyaW1FbmQoKX0KCkNvcnJlY3Rp
+          dmUgYXR0ZW1wdCAyIG9mIDI6IHRoZSBmaXJzdCBjb21wbGV0ZWQgbW9kZWwgaW52b2NhdGlvbiBvbWl0dGVkIHRoZQpyZXF1aXJlZCByZXZpZXdfc3VibWl0
+          IGFydGlmYWN0LiBTdGFydCB0aGUgZXZpZGVuY2UtZmlyc3QgcmV2aWV3IHN0YXRlIG1hY2hpbmUKYWdhaW4gd2l0aCByZXZpZXdfYmVnaW47IGRvIG5vdCBh
+          c3N1bWUgYW55IGluLW1lbW9yeSBzdGF0ZSBzdXJ2aXZlZCB0aGUgZmlyc3QKcHJvY2Vzcy4gQ29tcGxldGUgZXZlcnkgcmVxdWlyZWQgc3RhZ2UgYW5kIGRv
+          IG5vdCBlbmQgdW50aWwgcmV2aWV3X3N1Ym1pdCBoYXMKcmV0dXJuZWQgb2suIFRoaXMgaXMgdGhlIG9ubHkgcmVjb3ZlcnkgYXR0ZW1wdC4KYDsKfQoKZnVu
+          Y3Rpb24gd3JpdGVSZWNvdmVyeShtZXRhZGF0YUZpbGUsIG1ldGFkYXRhKSB7CiAgZnMud3JpdGVGaWxlU3luYyhtZXRhZGF0YUZpbGUsIGAke0pTT04uc3Ry
+          aW5naWZ5KG1ldGFkYXRhLCBudWxsLCAyKX1cbmApOwp9CgpmdW5jdGlvbiByZWNvcmRBdHRlbXB0KHsKICBtZXRhZGF0YSwKICBtZXRhZGF0YUZpbGUsCiAg
+          YXR0ZW1wdCwKICByZXN1bHQsCiAgaW52b2NhdGlvbkVycm9yLAogIGludm9jYXRpb25SZWplY3RlZCA9IGZhbHNlLAogIHJlc3BvbnNlRmlsZSwKICBzdGRl
+          cnJGaWxlLAogIHN1Ym1pc3Npb25GaWxlLAp9KSB7CiAgaWYgKCFmcy5leGlzdHNTeW5jKHJlc3BvbnNlRmlsZSkpIGZzLndyaXRlRmlsZVN5bmMocmVzcG9u
+          c2VGaWxlLCAiIik7CiAgaWYgKCFmcy5leGlzdHNTeW5jKHN0ZGVyckZpbGUpKSBmcy53cml0ZUZpbGVTeW5jKHN0ZGVyckZpbGUsICIiKTsKCiAgY29uc3Qg
+          c3RhdGUgPSBzdWJtaXNzaW9uU3RhdGUoc3VibWlzc2lvbkZpbGUpOwogIGNvbnN0IHJlY29yZCA9IHsKICAgIGF0dGVtcHQsCiAgICBleGl0X2NvZGU6IHJl
+          c3VsdD8uZXhpdENvZGUgPz8gbnVsbCwKICAgIGludm9jYXRpb25fc3RhdGU6IGludm9jYXRpb25SZWplY3RlZCA/ICJyZWplY3RlZCIgOiAiY29tcGxldGVk
+          IiwKICAgIHJlc3BvbnNlX2ZpbGU6IHBhdGguYmFzZW5hbWUocmVzcG9uc2VGaWxlKSwKICAgIHN0ZGVycl9maWxlOiBwYXRoLmJhc2VuYW1lKHN0ZGVyckZp
+          bGUpLAogICAgc3VibWlzc2lvbl9zdGF0ZTogc3RhdGUsCiAgfTsKICBpZiAoaW52b2NhdGlvblJlamVjdGVkKSB7CiAgICByZWNvcmQuaW52b2NhdGlvbl9l
+          cnJvciA9CiAgICAgIGludm9jYXRpb25FcnJvciBpbnN0YW5jZW9mIEVycm9yID8gaW52b2NhdGlvbkVycm9yLm1lc3NhZ2UgOiBTdHJpbmcoaW52b2NhdGlv
+          bkVycm9yKTsKICB9CiAgbWV0YWRhdGEuYXR0ZW1wdHMucHVzaChyZWNvcmQpOwogIHdyaXRlUmVjb3ZlcnkobWV0YWRhdGFGaWxlLCBtZXRhZGF0YSk7CiAg
+          cmV0dXJuIHN0YXRlOwp9CgovKioKICogUnVuIG9uZSByZXZpZXcgYXR0ZW1wdCBhbmQgZXhhY3RseSBvbmUgY29ycmVjdGl2ZSBhdHRlbXB0IHdoZW4sIGFu
+          ZCBvbmx5CiAqIHdoZW4sIHRoZSBmaXJzdCBjb21wbGV0ZWQgaW52b2NhdGlvbiBvbWl0dGVkIHRoZSByZXZpZXdfc3VibWl0IGFydGlmYWN0LgogKiBTY2hl
+          bWEgdmFsaWRhdGlvbiByZW1haW5zIGEgc2VwYXJhdGUgcHJlLXB1YmxpY2F0aW9uIGJvdW5kYXJ5IGJlY2F1c2UgaXQKICogcmVxdWlyZXMgdGhlIGxpdmUg
+          cHVsbC1yZXF1ZXN0IGNoYW5nZWQtbGluZSBpbmRleC4KICovCmV4cG9ydCBhc3luYyBmdW5jdGlvbiBydW5SZXZpZXdSZWNvdmVyeSh7CiAgZXZpZGVuY2VE
+          aXJlY3RvcnksCiAgYmFzZVByb21wdCwKICBzdWJtaXNzaW9uRmlsZSA9IHBhdGguam9pbihldmlkZW5jZURpcmVjdG9yeSwgInN1Ym1pc3Npb24uanNvbiIp
+          LAogIGludm9rZUF0dGVtcHQsCn0pIHsKICBpZiAoIWV2aWRlbmNlRGlyZWN0b3J5KSB0aHJvdyBuZXcgRXJyb3IoImV2aWRlbmNlRGlyZWN0b3J5IGlzIHJl
+          cXVpcmVkIik7CiAgaWYgKHR5cGVvZiBiYXNlUHJvbXB0ICE9PSAic3RyaW5nIiB8fCBiYXNlUHJvbXB0LnRyaW0oKS5sZW5ndGggPT09IDApIHsKICAgIHRo
+          cm93IG5ldyBFcnJvcigiYmFzZVByb21wdCBtdXN0IGJlIGEgbm9uLWVtcHR5IHN0cmluZyIpOwogIH0KICBpZiAodHlwZW9mIGludm9rZUF0dGVtcHQgIT09
+          ICJmdW5jdGlvbiIpIHRocm93IG5ldyBFcnJvcigiaW52b2tlQXR0ZW1wdCBpcyByZXF1aXJlZCIpOwoKICBmcy5ta2RpclN5bmMoZXZpZGVuY2VEaXJlY3Rv
+          cnksIHsgcmVjdXJzaXZlOiB0cnVlIH0pOwogIGNvbnN0IG1ldGFkYXRhRmlsZSA9IHBhdGguam9pbihldmlkZW5jZURpcmVjdG9yeSwgInJlY292ZXJ5Lmpz
+          b24iKTsKICBjb25zdCBtZXRhZGF0YSA9IHsKICAgIHNjaGVtYTogUkVDT1ZFUllfU0NIRU1BLAogICAgbWF4X2F0dGVtcHRzOiBNQVhfQVRURU1QVFMsCiAg
+          ICByZWNvdmVyeV9yZWFzb246IG51bGwsCiAgICBhdHRlbXB0czogW10sCiAgfTsKCiAgaWYgKGZzLmV4aXN0c1N5bmMoc3VibWlzc2lvbkZpbGUpKSB7CiAg
+          ICB0aHJvdyBuZXcgRXJyb3IoYHJlZnVzaW5nIHByZS1leGlzdGluZyByZXZpZXcgc3VibWlzc2lvbjogJHtzdWJtaXNzaW9uRmlsZX1gKTsKICB9CgogIGxl
+          dCBwcm9tcHQgPSBiYXNlUHJvbXB0OwogIGZvciAobGV0IGF0dGVtcHQgPSAxOyBhdHRlbXB0IDw9IE1BWF9BVFRFTVBUUzsgYXR0ZW1wdCArPSAxKSB7CiAg
+          ICBjb25zdCByZXNwb25zZUZpbGUgPSBwYXRoLmpvaW4oZXZpZGVuY2VEaXJlY3RvcnksIGBtb2RlbC1yZXNwb25zZS1hdHRlbXB0LSR7YXR0ZW1wdH0udHh0
+          YCk7CiAgICBjb25zdCBzdGRlcnJGaWxlID0gcGF0aC5qb2luKGV2aWRlbmNlRGlyZWN0b3J5LCBgb3BlbmNvZGUtc3RkZXJyLWF0dGVtcHQtJHthdHRlbXB0
+          fS5sb2dgKTsKICAgIGxldCByZXN1bHQ7CiAgICB0cnkgewogICAgICByZXN1bHQgPSBhd2FpdCBpbnZva2VBdHRlbXB0KHsgYXR0ZW1wdCwgcHJvbXB0LCBy
+          ZXNwb25zZUZpbGUsIHN0ZGVyckZpbGUgfSk7CiAgICB9IGNhdGNoIChpbnZvY2F0aW9uRXJyb3IpIHsKICAgICAgcmVjb3JkQXR0ZW1wdCh7CiAgICAgICAg
+          bWV0YWRhdGEsCiAgICAgICAgbWV0YWRhdGFGaWxlLAogICAgICAgIGF0dGVtcHQsCiAgICAgICAgaW52b2NhdGlvbkVycm9yLAogICAgICAgIGludm9jYXRp
+          b25SZWplY3RlZDogdHJ1ZSwKICAgICAgICByZXNwb25zZUZpbGUsCiAgICAgICAgc3RkZXJyRmlsZSwKICAgICAgICBzdWJtaXNzaW9uRmlsZSwKICAgICAg
+          fSk7CiAgICAgIHRocm93IGludm9jYXRpb25FcnJvcjsKICAgIH0KCiAgICBjb25zdCBzdGF0ZSA9IHJlY29yZEF0dGVtcHQoewogICAgICBtZXRhZGF0YSwK
+          ICAgICAgbWV0YWRhdGFGaWxlLAogICAgICBhdHRlbXB0LAogICAgICByZXN1bHQsCiAgICAgIHJlc3BvbnNlRmlsZSwKICAgICAgc3RkZXJyRmlsZSwKICAg
+          ICAgc3VibWlzc2lvbkZpbGUsCiAgICB9KTsKCiAgICBpZiAocmVzdWx0Py5leGl0Q29kZSAhPT0gMCkgewogICAgICB0aHJvdyBuZXcgRXJyb3IoYE9wZW5D
+          b2RlIHJldmlldyBhdHRlbXB0ICR7YXR0ZW1wdH0gZXhpdGVkICR7cmVzdWx0Py5leGl0Q29kZSA/PyAid2l0aG91dCBhIGNvZGUifWApOwogICAgfQogICAg
+          aWYgKHN0YXRlID09PSAicHJlc2VudCIpIHJldHVybiBtZXRhZGF0YTsKICAgIGlmIChzdGF0ZSA9PT0gIm1hbGZvcm1lZCIpIHsKICAgICAgdGhyb3cgbmV3
+          IEVycm9yKGBtYWxmb3JtZWQgcmV2aWV3IHN1Ym1pc3Npb24gYWZ0ZXIgYXR0ZW1wdCAke2F0dGVtcHR9YCk7CiAgICB9CiAgICBpZiAoYXR0ZW1wdCA9PT0g
+          TUFYX0FUVEVNUFRTKSB7CiAgICAgIHRocm93IG5ldyBFcnJvcihgcmV2aWV3ZXIgb21pdHRlZCByZXZpZXdfc3VibWl0IGFmdGVyICR7TUFYX0FUVEVNUFRT
+          fSBhdHRlbXB0c2ApOwogICAgfQoKICAgIG1ldGFkYXRhLnJlY292ZXJ5X3JlYXNvbiA9ICJtaXNzaW5nX3Jldmlld19zdWJtaXQiOwogICAgd3JpdGVSZWNv
+          dmVyeShtZXRhZGF0YUZpbGUsIG1ldGFkYXRhKTsKICAgIHByb21wdCA9IGNvcnJlY3RpdmVQcm9tcHQoYmFzZVByb21wdCk7CiAgfQoKICB0aHJvdyBuZXcg
+          RXJyb3IoInVucmVhY2hhYmxlIHJldmlldyByZWNvdmVyeSBzdGF0ZSIpOwp9Cgphc3luYyBmdW5jdGlvbiBpbnZva2VPcGVuQ29kZSh7IHByb21wdCwgcmVz
+          cG9uc2VGaWxlLCBzdGRlcnJGaWxlIH0pIHsKICBjb25zdCBvcGVuY29kZUJpbiA9IHByb2Nlc3MuZW52Lk9QRU5DT0RFX0JJTiB8fCAib3BlbmNvZGUiOwog
+          IGNvbnN0IHJldmlld01vZGVsID0gcHJvY2Vzcy5lbnYuUkVWSUVXX01PREVMOwogIGlmICghcmV2aWV3TW9kZWwpIHRocm93IG5ldyBFcnJvcigiUkVWSUVX
+          X01PREVMIGlzIHJlcXVpcmVkIik7CgogIGNvbnN0IHJlc3BvbnNlID0gZnMuY3JlYXRlV3JpdGVTdHJlYW0ocmVzcG9uc2VGaWxlLCB7IGZsYWdzOiAidyIg
+          fSk7CiAgY29uc3Qgc3RkZXJyID0gZnMuY3JlYXRlV3JpdGVTdHJlYW0oc3RkZXJyRmlsZSwgeyBmbGFnczogInciIH0pOwogIGNvbnN0IHN0cmVhbXNGaW5p
+          c2hlZCA9IFByb21pc2UuYWxsU2V0dGxlZChbZmluaXNoZWQocmVzcG9uc2UpLCBmaW5pc2hlZChzdGRlcnIpXSk7CiAgbGV0IGludm9jYXRpb25SZWplY3Rl
+          ZCA9IGZhbHNlOwoKICB0cnkgewogICAgY29uc3QgY2hpbGQgPSBzcGF3bigKICAgICAgb3BlbmNvZGVCaW4sCiAgICAgIFsicnVuIiwgIi0tYWdlbnQiLCAi
+          Z2l0aHViLXJldmlld2VyIiwgIi0tbW9kZWwiLCByZXZpZXdNb2RlbCwgcHJvbXB0XSwKICAgICAgeyBzdGRpbzogWyJpZ25vcmUiLCAicGlwZSIsICJwaXBl
+          Il0gfSwKICAgICk7CgogICAgY2hpbGQuc3Rkb3V0Lm9uKCJkYXRhIiwgKGNodW5rKSA9PiB7CiAgICAgIHJlc3BvbnNlLndyaXRlKGNodW5rKTsKICAgICAg
+          cHJvY2Vzcy5zdGRvdXQud3JpdGUoY2h1bmspOwogICAgfSk7CiAgICBjaGlsZC5zdGRlcnIub24oImRhdGEiLCAoY2h1bmspID0+IHsKICAgICAgc3RkZXJy
+          LndyaXRlKGNodW5rKTsKICAgICAgcHJvY2Vzcy5zdGRlcnIud3JpdGUoY2h1bmspOwogICAgfSk7CgogICAgY29uc3QgZXhpdCA9IGF3YWl0IG5ldyBQcm9t
+          aXNlKChyZXNvbHZlLCByZWplY3QpID0+IHsKICAgICAgY2hpbGQub25jZSgiZXJyb3IiLCByZWplY3QpOwogICAgICBjaGlsZC5vbmNlKCJjbG9zZSIsIChj
+          b2RlLCBzaWduYWwpID0+IHJlc29sdmUoeyBjb2RlLCBzaWduYWwgfSkpOwogICAgfSk7CgogICAgaWYgKGV4aXQuc2lnbmFsKSB0aHJvdyBuZXcgRXJyb3Io
+          YE9wZW5Db2RlIHJldmlldyB0ZXJtaW5hdGVkIGJ5ICR7ZXhpdC5zaWduYWx9YCk7CiAgICByZXR1cm4geyBleGl0Q29kZTogZXhpdC5jb2RlIH07CiAgfSBj
+          YXRjaCAoZXJyb3IpIHsKICAgIGludm9jYXRpb25SZWplY3RlZCA9IHRydWU7CiAgICB0aHJvdyBlcnJvcjsKICB9IGZpbmFsbHkgewogICAgcmVzcG9uc2Uu
+          ZW5kKCk7CiAgICBzdGRlcnIuZW5kKCk7CiAgICBjb25zdCBzdHJlYW1SZXN1bHRzID0gYXdhaXQgc3RyZWFtc0ZpbmlzaGVkOwogICAgaWYgKCFpbnZvY2F0
+          aW9uUmVqZWN0ZWQpIHsKICAgICAgY29uc3Qgc3RyZWFtRmFpbHVyZSA9IHN0cmVhbVJlc3VsdHMuZmluZCgoeyBzdGF0dXMgfSkgPT4gc3RhdHVzID09PSAi
+          cmVqZWN0ZWQiKTsKICAgICAgaWYgKHN0cmVhbUZhaWx1cmUpIHRocm93IHN0cmVhbUZhaWx1cmUucmVhc29uOwogICAgfQogIH0KfQoKYXN5bmMgZnVuY3Rp
+          b24gbWFpbigpIHsKICBjb25zdCBwck51bWJlciA9IHByb2Nlc3MuZW52LlBSX05VTUJFUjsKICBjb25zdCBwcm9tcHRGaWxlID0gcHJvY2Vzcy5lbnYuUkVW
+          SUVXX1BST01QVF9GSUxFOwogIGNvbnN0IGV2aWRlbmNlRGlyZWN0b3J5ID0gcHJvY2Vzcy5lbnYuUkVWSUVXX0VWSURFTkNFX0RJUjsKICBpZiAoIS9eXGQr
+          JC8udGVzdChwck51bWJlciB8fCAiIikpIHRocm93IG5ldyBFcnJvcigiUFJfTlVNQkVSIG11c3QgYmUgbnVtZXJpYyIpOwogIGlmICghcHJvbXB0RmlsZSkg
+          dGhyb3cgbmV3IEVycm9yKCJSRVZJRVdfUFJPTVBUX0ZJTEUgaXMgcmVxdWlyZWQiKTsKICBpZiAoIWV2aWRlbmNlRGlyZWN0b3J5KSB0aHJvdyBuZXcgRXJy
+          b3IoIlJFVklFV19FVklERU5DRV9ESVIgaXMgcmVxdWlyZWQiKTsKCiAgY29uc3QgcHJvbXB0VGVtcGxhdGUgPSBmcy5yZWFkRmlsZVN5bmMocHJvbXB0Rmls
+          ZSwgInV0ZjgiKTsKICBjb25zdCBiYXNlUHJvbXB0ID0gcHJvbXB0VGVtcGxhdGUucmVwbGFjZUFsbCgie3tQUl9OVU1CRVJ9fSIsIHByTnVtYmVyKTsKICBh
+          d2FpdCBydW5SZXZpZXdSZWNvdmVyeSh7IGV2aWRlbmNlRGlyZWN0b3J5LCBiYXNlUHJvbXB0LCBpbnZva2VBdHRlbXB0OiBpbnZva2VPcGVuQ29kZSB9KTsK
+          fQoKaWYgKHByb2Nlc3MuYXJndlsxXSAmJiBwYXRoLnJlc29sdmUocHJvY2Vzcy5hcmd2WzFdKSA9PT0gZmlsZVVSTFRvUGF0aChpbXBvcnQubWV0YS51cmwp
+          KSB7CiAgbWFpbigpLmNhdGNoKChlcnJvcikgPT4gewogICAgY29uc29sZS5lcnJvcihgOjplcnJvcjo6JHtlcnJvci5tZXNzYWdlfWApOwogICAgcHJvY2Vz
+          cy5leGl0Q29kZSA9IDE7CiAgfSk7Cn0K
+          ETA_MU_RECOVERY_RUNNER_BASE64
+
           printf '%s\n' "$MUSE_REVISION" > "$CONTEXT_OUT/metadata/muse-revision.txt"
           printf '%s\n' "$AGENTS_REVISION" > "$CONTEXT_OUT/metadata/agents-revision.txt"
           (cd "$CONTEXT_OUT/agents" && find skills -name SKILL.md -type f -print | sort) > "$CONTEXT_OUT/metadata/skills.txt"
-          (cd "$CONTEXT_OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+          sums_file="$RUNNER_TEMP/opencode-review-context.SHA256SUMS"
+          (cd "$CONTEXT_OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > "$sums_file"
+          mv "$sums_file" "$CONTEXT_OUT/SHA256SUMS"
+
+      - name: Bind review-context artifact name
+        id: context_artifact_name
+        shell: bash
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: printf 'name=review-context-%s-%s\n' "$RUN_ID" "$RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
 
       - name: Upload review context
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: review-context-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ steps.context_artifact_name.outputs.name }}
           path: ${{ runner.temp }}/opencode-review-context
           include-hidden-files: true
           if-no-files-found: error
@@ -827,13 +939,13 @@ jobs:
       - name: Download deterministic evidence
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: review-evidence-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ needs.deterministic_evidence.outputs.artifact_name }}
           path: .opencode/review-evidence
 
       - name: Download Muse tools and global skills
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: review-context-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ needs.prepare_review_context.outputs.artifact_name }}
           path: .review-context
 
       - name: Verify and install the bounded review context
@@ -909,23 +1021,29 @@ jobs:
         id: review_start
         run: echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
-      - name: Run evidence-first OpenCode review
-        shell: bash
+      - name: Run bounded evidence-first OpenCode review
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REVIEW_MODEL: ${{ inputs.model || 'opencode/mimo-v2.5-free' }}
-        run: |
-          set -o pipefail
-          sed "s/{{PR_NUMBER}}/${PR_NUMBER}/g" .review-context/machinery/evidence-review.md > "$RUNNER_TEMP/review-prompt.md"
+          REVIEW_PROMPT_FILE: .review-context/machinery/evidence-review.md
+          REVIEW_EVIDENCE_DIR: ${{ github.workspace }}/.opencode/review-evidence
+        run: node .review-context/machinery/run-opencode-review-recovery.mjs
 
-          # The model runs read-only inside the checked-out PR. It has no GitHub
-          # token at all: publication is the deterministic publisher's job.
-          opencode run \
-            --agent github-reviewer \
-            --model "$REVIEW_MODEL" \
-            "$(cat "$RUNNER_TEMP/review-prompt.md")" \
-            2> "$RUNNER_TEMP/opencode-stderr.log" \
-            | tee .opencode/review-evidence/model-response.txt
+      - name: Validate final review submission
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          REVIEW_SUBMISSION_FILE: .opencode/review-evidence/submission.json
+        with:
+          script: |
+            const {
+              readSubmission,
+              changedLineIndex,
+              validateEnvelope,
+            } = require('./.review-context/machinery/publish-opencode-review.cjs');
+            const envelope = readSubmission({ submissionFile: process.env.REVIEW_SUBMISSION_FILE });
+            const changedLines = await changedLineIndex({ github, context });
+            validateEnvelope(envelope, changedLines);
+            core.info('Final review submission is schema-valid and bound to reviewable pull-request lines.');
 
       - name: Upload review attempt artifacts
         if: always()
@@ -933,9 +1051,12 @@ jobs:
         with:
           name: review-attempt-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            .opencode/review-evidence/model-response.txt
+            .opencode/review-evidence/model-response-attempt-1.txt
+            .opencode/review-evidence/model-response-attempt-2.txt
+            .opencode/review-evidence/opencode-stderr-attempt-1.log
+            .opencode/review-evidence/opencode-stderr-attempt-2.log
+            .opencode/review-evidence/recovery.json
             .opencode/review-evidence/submission.json
-            ${{ runner.temp }}/opencode-stderr.log
           if-no-files-found: warn
           retention-days: 14
 
