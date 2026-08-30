@@ -132,10 +132,11 @@
    and `docs/cli.md`; kept in the order a card moves through its life."
   [{:verb "create" :group "lifecycle" :mutates? true
     :args "--title <text>"
-    :summary "Create a card (epic or task, root or child) and record a task-created event."
+    :summary "Create a repository-valid card (root or child) and record a task-created event."
     :flags [["--title <text>" "card title (required)"]
-            ["--type <task|epic>" "card type; default task"]
+            ["--type <type>" "card type from the project's configured :card-dirs vocabulary"]
             ["--parent <uuid>" "parent card uuid — omit for a root card"]
+            ["--dependency <uuid>" "repeatable line-safe card id; omit for none"]
             ["--priority <P0..P3>" "priority; default P3"]
             ["--points <n>" "Fibonacci size estimate"]
             ["--labels <a,b,c>" "comma-separated labels"]
@@ -144,16 +145,18 @@
             ["--uuid <id>" "explicit uuid; refused if already taken"]
             ["--status <s>" "refused unless it is the FSM initial state"]
             ["--force-status" "allow a non-initial --status"]]
-    :example "rheos create --type epic --title \"Ledger cutover\" --priority P0"
+    :example "rheos create --type story --title \"Ledger cutover\" --dependency schema-law --priority P0"
     :notes "A card is written with a skeleton body unless --body-file is given, so it can pass its first gate."}
 
    {:verb "create-subtask" :group "lifecycle" :mutates? true
     :args "<parent-uuid> --title <text>"
     :summary "Alias of `create --parent`. Kept for compatibility; prefer `create`."
     :flags [["--title <text>" "card title (required)"]
+            ["--type <type>" "card type from the project's configured vocabulary"]
             ["--status <s>" "refused unless it is the FSM initial state"]
             ["--priority <P0..P3>" "priority; default P3"]
-            ["--labels <a,b,c>" "comma-separated labels"]]
+            ["--labels <a,b,c>" "comma-separated labels"]
+            ["--dependency <uuid>" "repeatable line-safe card id; omit for none"]]
     :example "rheos create-subtask my-epic --title \"Extract the fold\""}
 
    {:verb "move" :group "lifecycle" :mutates? true
@@ -185,10 +188,10 @@
 
    {:verb "frontmatter" :group "lifecycle" :mutates? true
     :args "<uuid> --set <key>=<value>"
-    :summary "Update descriptive frontmatter (title, priority, labels, points, category, description, estimate, assignee)."
+    :summary "Update descriptive frontmatter or the dependency planning vector."
     :flags [["--set <key>=<value>" "repeatable; one ledger event per changed key"]]
-    :example "rheos frontmatter my-card --set points=3 --set priority=P1"
-    :notes "`--set status=…` is refused: status is FSM-governed, use `move`. Identity and provenance keys (uuid, created_at, write-id, source-path) are never writable."}
+    :example "rheos frontmatter my-card --set dependency=schema-law,storage-port"
+    :notes "Dependency is decoded as a vector; use `--set dependency=` to clear it. `--set status=…` is refused: status is FSM-governed, use `move`. Identity and provenance keys (uuid, created_at, write-id, source-path) are never writable."}
 
    {:verb "read-task" :group "read"
     :args "<uuid>"
@@ -480,6 +483,7 @@
                  (get-flag flags "parent"))
         labels (when-let [l (get-flag flags "labels")]
                  (vec (filter seq (map str/trim (str/split l #",")))))
+        dependency (mapv #(str/trim (str %)) (get-flag-list flags "dependency"))
         body (await (read-body flags))
         result (await (task-create/create-task!
                        {:project project
@@ -490,6 +494,7 @@
                         :priority (get-flag flags "priority")
                         :points (get-flag flags "points")
                         :labels labels
+                        :dependency dependency
                         :body body
                         :dir (get-flag flags "dir")
                         :uuid (get-flag flags "uuid")
@@ -543,7 +548,13 @@
     (when-not (and idx (pos? idx))
       (throw (ex-info (str "--set expects key=value, got: " pair)
                       {:kind :usage :pair pair})))
-    [(str/trim (subs pair 0 idx)) (subs pair (inc idx))]))
+    (let [key (str/trim (subs pair 0 idx))
+          value (subs pair (inc idx))]
+      [key (if (= "dependency" key)
+             (if (str/blank? value)
+               []
+               (mapv str/trim (str/split value #",")))
+             value)])))
 
 (defn- ^:async cmd-frontmatter [_ parsed]
   (let [flags (:flags parsed)

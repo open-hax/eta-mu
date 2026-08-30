@@ -2,6 +2,18 @@
   "Parse task markdown into frontmatter + body/comment sections."
   (:require [clojure.string :as str]))
 
+(defn- parse-inline-array [key raw-items]
+  (let [items (mapv #(str/trim (str/replace % "\"" ""))
+                    (str/split raw-items #","))]
+    (cond
+      (str/blank? raw-items) []
+      ;; Historical Rheos rewrites produced dependency: [""] from an empty
+      ;; vector. A dependency on the empty-string id is never meaningful, so
+      ;; normalize blank members at the parsing boundary rather than letting an
+      ;; unrelated comment write preserve a phantom edge.
+      (= "dependency" key) (vec (remove str/blank? items))
+      :else items)))
+
 (defn parse-frontmatter [raw]
   (let [match (re-matches #"---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)" raw)]
     (if match
@@ -13,8 +25,7 @@
                              ;; Array: key: ["a", "b", "c"]
                              (re-matches #"^(\w[\w_-]*):\s*\[(.*)\]\s*" line)
                              (let [[_ k v] (re-matches #"^(\w[\w_-]*):\s*\[(.*)\]\s*" line)
-                                   items (mapv #(str/trim (str/replace % "\"" ""))
-                                               (str/split v #","))]
+                                   items (parse-inline-array k v)]
                                (assoc acc (keyword k) items))
                              ;; Quoted string: key: "value"
                              (re-matches #"^(\w[\w_-]*):\s*\"(.*)\"\s*" line)

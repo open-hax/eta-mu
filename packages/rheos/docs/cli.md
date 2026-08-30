@@ -48,9 +48,10 @@ any board — point it somewhere scratch first if you are learning.
 rheos projects
 rheos read-board --project kanban --status in_progress,review
 
-# 1. Create the card. Root cards need no parent; epics go in epics/.
-rheos create --type epic --title "Ledger cutover" --priority P0
-rheos create --title "Extract the fold" --parent ledger-cutover --points 3
+# 1. Create the card. Types and their directories come from :card-dirs.
+rheos create --type story --title "Ledger cutover" --priority P0
+rheos create --type story --title "Extract the fold" --parent ledger-cutover \
+  --dependency schema-law --dependency storage-port --points 3
 
 # ...or author the body yourself instead of taking the skeleton:
 rheos create --title "Extract the fold" --parent ledger-cutover --body-file card.md
@@ -60,6 +61,7 @@ cat card.md | rheos create --title "Extract the fold" --body-file -
 rheos move extract-the-fold --to accepted
 rheos move extract-the-fold --to breakdown
 rheos frontmatter extract-the-fold --set points=3 --set priority=P1
+rheos frontmatter extract-the-fold --set dependency=schema-law,storage-port
 
 # 3. Advance it. `move` is the only way to change status.
 rheos move extract-the-fold --to ready
@@ -103,19 +105,22 @@ deprecation warning.
 ```
 
 Multi-project boards use a `:projects` vector, each entry with its own
-`:tasks-dir` and optional `:id`, `:title`, `:fsm`, `:card-projection`:
+`:tasks-dir` and optional `:id`, `:title`, `:fsm`, `:card-dirs`,
+`:card-projection`:
 
 ```clojure
 {:default-project "kanban"
- :projects [{:id "kanban" :title "eta-mu" :tasks-dir "./kanban" :fsm :promethean}
+ :projects [{:id "kanban" :title "eta-mu" :tasks-dir "./kanban" :fsm :promethean
+             :card-dirs {:epic "epics" :story "stories" :chore "chores"}}
             {:id "proxx"  :tasks-dir "../proxx/kanban"}]}
 ```
 
 `--tasks-dir` overrides the resolved task root for single-project boards.
 
-New cards are placed by type: `<tasks-dir>/epics/` for `--type epic` and
-`<tasks-dir>/tasks/` for `--type task` when those directories exist, else the
-task root itself. Override per-call with `--dir`. When a project configures
+When `:card-dirs` is non-empty, its keys are the closed set accepted by
+`--type`, and each value is that type's directory relative to the task root.
+Projects without `:card-dirs` retain the legacy `task`/`epic` vocabulary and
+conventional placement. Override placement per-call with `--dir`. When a project configures
 `:card-projection {:paths [...]}`, a create that would land outside those paths
 is refused rather than writing a card the board will never scan.
 
@@ -142,19 +147,23 @@ card and record a ledger event.
 
 | Verb | Purpose |
 |---|---|
-| ✎ `create --title <t>` | Create a card (epic or task, root or child); records `task-created` |
+| ✎ `create --title <t>` | Create a repository-declared card type, root or child; records `task-created` |
 | ✎ `create-subtask <parent> --title <t>` | Alias of `create --parent`; kept for compatibility |
 | ✎ `move <uuid> --to <status>` | Change status. FSM-enforced, ledger-recorded, streamed to the UI |
 | ✎ `status-update <uuid> --to <status>` | The same enforced move via agent-tool dispatch; prints JSON |
 | ✎ `comment <uuid> --text <t>` | Append a comment — the way to update a card after breakdown |
 | ✎ `add-comment <uuid> --text <t>` | Alias of `comment` |
-| ✎ `frontmatter <uuid> --set k=v` | Update descriptive frontmatter; `--set` repeats |
+| ✎ `frontmatter <uuid> --set k=v` | Update descriptive or planning frontmatter; `--set` repeats |
 
 `frontmatter` writes only the closed mutable set: `title`, `priority`, `labels`,
-`points`, `category`, `description`, `estimate`, `assignee`. `status` is refused
-and redirected to `move`, so the FSM stays the only status authority. Identity
-and provenance keys (`uuid`, `created_at`, `write-id`, `source-path`) are never
-writable.
+`points`, `category`, `description`, `estimate`, `assignee`, and `dependency`.
+Dependency is structured metadata: use
+`--set dependency=dep-a,dep-b` to set an ordered vector or
+`--set dependency=` to clear it to `[]`. Dependency card IDs start with a
+letter or digit and contain only letters, digits, `.`, `_`, or `-`, matching
+the card UUID grammar and keeping serialized frontmatter line-safe. `status` is refused and redirected to
+`move`, so the FSM stays the only status authority. Identity and provenance keys
+(`uuid`, `created_at`, `write-id`, `source-path`) are never writable.
 
 There is no delete verb. Terminal states are reached with
 `move <uuid> --to rejected` or `--to archived`.

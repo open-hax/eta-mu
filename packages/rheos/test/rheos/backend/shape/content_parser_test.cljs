@@ -21,6 +21,14 @@
           result (parser/parse-frontmatter raw)]
       (is (= ["epics" "cljs" "kanban"] (get-in result [:frontmatter :labels])))))
 
+  (testing "dependency arrays preserve none and ordered nonblank ids"
+    (doseq [[source expected] [["[]" []]
+                               ["[\"\"]" []]
+                               ["[\"dep-a\", \"\", \"dep-b\"]" ["dep-a" "dep-b"]]]]
+      (let [raw (str "---\ndependency: " source "\n---\nBody")]
+        (is (= expected (get-in (parser/parse-frontmatter raw)
+                                [:frontmatter :dependency]))))))
+
   (testing "parses empty values"
     (let [raw "---\ncategory:\n---\nBody"
           result (parser/parse-frontmatter raw)]
@@ -122,6 +130,22 @@
           comments (filter #(= "comment" (:type %)) (:sections parsed))]
       (is (= 1 (count comments)))
       (is (= "First comment" (:content (first comments)))))))
+
+(deftest test-append-comment-preserves-dependencies
+  (testing "comment rewrites cannot invent a dependency from an empty vector"
+    (let [raw "---\nuuid: \"test\"\ndependency: []\n---\n\nBody"
+          result (parser/append-comment raw "First comment")]
+      (is (= [] (get-in (parser/parse-task-content result)
+                         [:frontmatter :dependency])))
+      (is (re-find #"dependency: \[\]" result))
+      (is (not (re-find #"dependency: \[\"\"\]" result)))))
+  (testing "comment rewrites preserve non-empty dependency order"
+    (let [raw "---\nuuid: \"test\"\ndependency: [\"dep-a\", \"dep-b\"]\n---\n\nBody"
+          result (parser/append-comment raw "First comment")]
+      (is (= ["dep-a" "dep-b"]
+             (get-in (parser/parse-task-content result)
+                     [:frontmatter :dependency])))
+      (is (re-find #"dependency: \[\"dep-a\", \"dep-b\"\]" result)))))
 
 (deftest test-append-comment-appends-to-last
   (testing "appends to the last comment section"

@@ -11,15 +11,18 @@
 (defn- tmp-dir []
   (path/join (.tmpdir os) (str "rheos-test-" (.now js/Date) "-" (rand-int 100000))))
 
-(defn- write-task! [dir uuid title]
+(defn- write-task!
+  ([dir uuid title] (write-task! dir uuid title nil))
+  ([dir uuid title dependency-line]
   (let [file-path (path/join dir (str uuid ".md"))
         raw (str "---\n"
                  "uuid: \"" uuid "\"\n"
                  "title: \"" title "\"\n"
                  "status: \"incoming\"\n"
                  "priority: \"P3\"\n"
+                 (when dependency-line (str "dependency: " dependency-line "\n"))
                  "---\n\n# " title "\n\nBody")]
-    (.writeFile fsp file-path raw "utf8")))
+    (.writeFile fsp file-path raw "utf8"))))
 
 (deftest ^:async update-frontmatter-emits-events
   (testing "Updating frontmatter writes the file and records events"
@@ -143,3 +146,49 @@
         (finally
           (unsub)
           (await (.rm fsp dir #js {:recursive true :force true})))))))
+
+(deftest ^:async append-comment-keeps-empty-dependency-empty
+  (testing "the full-file comment rewrite cannot invent an empty-string dependency"
+    (let [dir (tmp-dir)
+          _ (await (.mkdir fsp dir #js {:recursive true}))
+          _ (await (write-task! dir "t4" "Task Four" "[]"))
+          project {:id "test" :title "Test" :tasks-dir dir :meta {}}
+          task {:uuid "t4" :source-path (path/join dir "t4.md")}]
+      (try
+        (await (task-edit/append-comment!
+                {:project project :task task :text "Still independent" :source "test"}))
+        (let [raw (await (.readFile fsp (:source-path task) "utf8"))
+              fm (:frontmatter (content-parser/parse-task-content raw))]
+          (is (= [] (:dependency fm)))
+          (is (re-find #"dependency: \[\]" raw))
+          (is (not (re-find #"dependency: \[\"\"\]" raw))))
+        (finally (await (.rm fsp dir #js {:recursive true :force true})))))))
+
+(deftest ^:async update-frontmatter-validates-dependency-shape-before-writing
+  (testing "structured dependency vectors set and clear; scalar input changes no bytes"
+    (let [dir (tmp-dir)
+          _ (await (.mkdir fsp dir #js {:recursive true}))
+          _ (await (write-task! dir "t5" "Task Five" "[]"))
+          project {:id "test" :title "Test" :tasks-dir dir :meta {}}
+          task {:uuid "t5" :source-path (path/join dir "t5.md")}
+          before (await (.readFile fsp (:source-path task) "utf8"))]
+      (try
+        (doseq [invalid ["dep-a" ["dep\"status"] ["dep-a\nstatus: done"]]]
+          (let [err (try
+                      (await (task-edit/update-frontmatter!
+                              {:project project :task task
+                               :updates {"dependency" invalid} :source "test"}))
+                      nil (catch :default e e))
+                after-refusal (await (.readFile fsp (:source-path task) "utf8"))]
+            (is (= :usage (:kind (ex-data err))))
+            (is (= before after-refusal))))
+        (let [set-result (await (task-edit/update-frontmatter!
+                                 {:project project :task task
+                                  :updates {"dependency" ["dep-a" "dep-b"]}
+                                  :source "test"}))]
+          (is (= ["dep-a" "dep-b"] (get-in set-result [:frontmatter :dependency]))))
+        (let [clear-result (await (task-edit/update-frontmatter!
+                                   {:project project :task task
+                                    :updates {"dependency" []} :source "test"}))]
+          (is (= [] (get-in clear-result [:frontmatter :dependency]))))
+        (finally (await (.rm fsp dir #js {:recursive true :force true})))))))

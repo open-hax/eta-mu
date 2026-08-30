@@ -28,6 +28,10 @@ Single-project example:
 ```clojure
 {:tasks-dir "./docs/kanban"
  :fsm :promethean
+ :card-dirs
+ {:epic "epics"
+  :story "stories"
+  :chore "chores"}
  :card-projection
  {:paths ["epics" "stories" "chores"]}
  :meta
@@ -44,6 +48,7 @@ Multi-project example:
  [{:id "fork-tales"
    :title "Fork Tales"
    :tasks-dir "../fork_tales_v2/docs/kanban"
+   :card-dirs {:epic "epics" :story "stories" :chore "chores"}
    :card-projection {:paths ["epics" "stories" "chores"]}}
   {:id "epiphany"
    :title "Epiphany"
@@ -56,6 +61,12 @@ Multi-project example:
 Filesystem paths in config are resolved relative to the config file. Card
 projection paths are resolved relative to their project's task root and may not
 escape it.
+
+When `:card-dirs` is non-empty, its keys are the project's closed creation
+vocabulary as well as its placement map. For example, the configuration above
+accepts `--type story` and refuses undeclared `--type task`. A project whose
+vocabulary does not contain `:task` must pass `--type` explicitly. Boards that
+omit `:card-dirs` retain the legacy `task`/`epic` vocabulary.
 
 ## Card projection discovery
 
@@ -93,6 +104,11 @@ Legacy camelCase JSON is normalized to the same kebab-case internal shape:
 ```json
 {
   "tasksDir": "./docs/kanban",
+  "cardDirs": {
+    "epic": "epics",
+    "story": "stories",
+    "chore": "chores"
+  },
   "cardProjection": {
     "paths": ["epics", "stories", "chores"]
   },

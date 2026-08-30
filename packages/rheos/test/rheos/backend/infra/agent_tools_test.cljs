@@ -27,6 +27,30 @@
                    "---\n\n# Task One\n\nBody")
               "utf8"))
 
+(defn- tool [name]
+  (first (filter #(= name (:name %)) agent-tools/tools)))
+
+(deftest tool-schemas-express-repository-types-and-planning-metadata
+  (testing "creation defers type vocabulary to project configuration"
+    (let [type-schema (get-in (tool "kanban_create_task")
+                              [:input-schema :properties :type])]
+      (is (= "string" (:type type-schema)))
+      (is (nil? (:enum type-schema)))
+      (is (re-find #"card-dirs" (:description type-schema)))))
+  (testing "create and update expose dependency as structured arrays"
+    (is (= "array" (get-in (tool "kanban_create_task")
+                            [:input-schema :properties :dependency :type])))
+    (is (= "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+           (get-in (tool "kanban_create_task")
+                   [:input-schema :properties :dependency :items :pattern])))
+    (is (= "array" (get-in (tool "kanban_update_frontmatter")
+                            [:input-schema :properties :updates :properties
+                             :dependency :type])))
+    (is (= "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+           (get-in (tool "kanban_update_frontmatter")
+                   [:input-schema :properties :updates :properties
+                    :dependency :items :pattern])))))
+
 (defn- ^:async dispatch-outcome
   "Dispatch `tool` against a temp board holding one card at `status`.
    Returns {:error <ex-data or nil> :result :before :after}."
@@ -83,6 +107,27 @@
       (is (not= before after))
       (is (re-find #"status: \"ready\"" after)))))
 
+(deftest ^:async update-frontmatter-accepts-structured-dependencies
+  (testing "the API carries a vector rather than stringifying planning metadata"
+    (let [{:keys [error result after]}
+          (await (dispatch-outcome "incoming" "kanban_update_frontmatter"
+                                   {:uuid "t1" :project "test"
+                                    :updates {:dependency ["dep-a" "dep-b"]}}))]
+      (is (nil? error))
+      (is (:ok result))
+      (is (= ["dep-a" "dep-b"] (get-in result [:frontmatter :dependency])))
+      (is (re-find #"dependency: \[\"dep-a\", \"dep-b\"\]" after)))))
+
+(deftest ^:async update-frontmatter-refuses-scalar-dependency-without-writing
+  (testing "malformed API metadata is a usage error and preserves the source bytes"
+    (let [{:keys [error result before after]}
+          (await (dispatch-outcome "incoming" "kanban_update_frontmatter"
+                                   {:uuid "t1" :project "test"
+                                    :updates {:dependency "dep-a"}}))]
+      (is (nil? result))
+      (is (= :usage (:kind error)))
+      (is (= before after)))))
+
 ;; ---------------------------------------------------------------------------
 ;; The exit code a scripted caller actually observes
 ;; ---------------------------------------------------------------------------
@@ -134,6 +179,20 @@
           (await (run-cli! "breakdown" ["status-update" "t1" "--to" "ready"]))]
       (is (= 0 exit-code))
       (is (re-find #"status: \"ready\"" after)))))
+
+(deftest ^:async frontmatter-cli-decodes-and-clears-dependency-vectors
+  (testing "comma-separated CLI input becomes repository-valid vector metadata"
+    (let [{:keys [exit-code after]}
+          (await (run-cli! "incoming"
+                           ["frontmatter" "t1" "--set" "dependency=dep-a,dep-b"]))]
+      (is (= 0 exit-code))
+      (is (re-find #"dependency: \[\"dep-a\", \"dep-b\"\]" after))))
+  (testing "an empty CLI value is the explicit clear operation"
+    (let [{:keys [exit-code after]}
+          (await (run-cli! "incoming" ["frontmatter" "t1" "--set" "dependency="]))]
+      (is (= 0 exit-code))
+      (is (re-find #"dependency: \[\]" after))
+      (is (not (re-find #"dependency: \[\"\"\]" after))))))
 
 (deftest exit-codes-cover-refusal
   (testing "the published mapping the tests above depend on"
