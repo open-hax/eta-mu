@@ -1,0 +1,12 @@
+{:process/schemas
+ {:translation/document-v1
+  [:map {:closed true}
+   [:translation/language :string]
+   [:document/id :string]
+   [:document/body :string]]}
+ :process/value
+ {:translation/language "fr"}
+ :process/contracts
+ [{:contract/id :translation/review-policy}]
+ :process/resources
+ [{:resource/id :translation/glossary}]}
