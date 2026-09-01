@@ -115,34 +115,42 @@
                {:seen #{} :values []})
        :values))
 
-(defn- find-schema [schemas schema-id missing-schema]
+(defn- find-schema [schemas schema-id]
   (let [canonical-schema-id (canonical-reference-id schema-id)]
-    (reduce-kv (fn [result candidate-id schema-form]
-                 (if (= canonical-schema-id
-                        (canonical-reference-id candidate-id))
-                   (reduced schema-form)
-                   result))
-               missing-schema
-               schemas)))
+    (->> schemas
+         (keep (fn [[candidate-id schema-form]]
+                 (when (= canonical-schema-id
+                          (canonical-reference-id candidate-id))
+                   schema-form)))
+         vec)))
 
 (defn assemble
   "Merge one document profile with its parsed EDN sidecar.
 
    Markdown owns document identity/body. The sidecar owns structural process
-   data and may contribute additional Katamorph references."
+  data and may contribute additional Katamorph references."
   [document profile sidecar source-path sidecar-path]
   (let [schema-id (:document/schema profile)
-        missing-schema ::missing
-        schema-form (find-schema (:process/schemas sidecar)
-                                 schema-id
-                                 missing-schema)]
-    (if (= missing-schema schema-form)
+        matching-schemas (find-schema (:process/schemas sidecar) schema-id)]
+    (cond
+      (empty? matching-schemas)
       {:ok false
        :profile profile
        :errors [{:error/code :schema/not-found
                  :error/message (str "sidecar does not define schema " schema-id)
                  :error/path [:process/schemas schema-id]}]}
-      (let [contracts (distinct-references
+
+      (< 1 (count matching-schemas))
+      {:ok false
+       :profile profile
+       :errors [{:error/code :schema/ambiguous
+                 :error/message (str "sidecar defines schema " schema-id
+                                     " more than once")
+                 :error/path [:process/schemas schema-id]}]}
+
+      :else
+      (let [schema-form (first matching-schemas)
+            contracts (distinct-references
                        :contract/id
                        (into [(:document/contract profile)]
                              (or (:process/contracts sidecar) [])))

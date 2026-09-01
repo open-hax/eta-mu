@@ -99,6 +99,22 @@
           result (profile/assemble document document-profile sidecar "a.md" "a.edn")]
       (is (:ok result))
       (is (= schema-form (get-in result [:document :document/schema-form])))))
+  (testing "duplicate canonical schema identifiers are ambiguous in either order"
+    (let [document (markdown/parse markdown-source)
+          document-profile (:profile (profile/decode-profile document))
+          first-form [:map [:first :string]]
+          second-form [:map [:second :string]]]
+      (doseq [schemas [(array-map :translation/document-v1 first-form
+                                  "translation/document-v1" second-form)
+                       (array-map "translation/document-v1" second-form
+                                  :translation/document-v1 first-form)]]
+        (let [result (profile/assemble
+                      document document-profile
+                      {:process/schemas schemas :process/value {}}
+                      "a.md" "a.edn")]
+          (is (false? (:ok result)))
+          (is (= :schema/ambiguous
+                 (get-in result [:errors 0 :error/code])))))))
   (testing "string and keyword reference identifiers deduplicate canonically"
     (let [document (markdown/parse markdown-source)
           document-profile (:profile (profile/decode-profile document))
