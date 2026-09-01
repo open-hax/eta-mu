@@ -15,10 +15,10 @@
 (def ^:private projected-label-pattern #"`([^`]*)`")
 (def ^:private legacy-projected-labels-pattern
   #"^(?:none|`[^`]*`(?:\s*,\s*`[^`]*`)*)$")
-(def ^:private ownership-marker-pattern
-  #"(?m)^<!--\s*openhax-kanban-label-ownership-v1\s+(\[[^\r\n]*\])\s*-->\r?$")
-(def ^:private ownership-marker-prefix-pattern
-  #"(?m)^<!--\s*openhax-kanban-label-ownership-v1(?:\s|-->)")
+(def ^:private ownership-marker-line-pattern
+  #"(?m)^<!--\s*openhax-kanban-label-ownership-v1(?:\s|-->)[^\r\n]*\r?$")
+(def ^:private ownership-marker-value-pattern
+  #"^<!--\s*openhax-kanban-label-ownership-v1\s+(\[[^\r\n]*\])\s*-->\r?$")
 
 (defn normalize-label
   "Normalize one canonical task label into the GitHub projection spelling."
@@ -101,14 +101,17 @@
 
 (defn- structured-ownership [issue-body policy]
   (let [body (or issue-body "")]
-    (if-let [[_ encoded] (re-find ownership-marker-pattern body)]
+    (if-let [marker-line (re-find ownership-marker-line-pattern body)]
       {:present? true
-       :labels (try
-                 (let [labels (valid-ownership-vector (edn/read-string encoded) policy)]
-                   (if (and labels (= encoded (pr-str labels))) labels []))
-                 (catch #?(:clj Exception :cljs :default) _ []))}
-      {:present? (boolean (re-find ownership-marker-prefix-pattern body))
-       :labels []})))
+       :labels
+       (if-let [[_ encoded] (re-matches ownership-marker-value-pattern
+                                        marker-line)]
+         (try
+           (let [labels (valid-ownership-vector (edn/read-string encoded) policy)]
+             (if (and labels (= encoded (pr-str labels))) labels []))
+           (catch #?(:clj Exception :cljs :default) _ []))
+         [])}
+      {:present? false :labels []})))
 
 (defn- legacy-ownership [issue-body]
   (if-let [metadata (some-> (second (re-find projected-labels-pattern

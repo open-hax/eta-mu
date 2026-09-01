@@ -72,9 +72,19 @@
         (is (empty? (labels/projected-task-labels body)))
         (is (empty? (:remove (labels/plan-delta
                               (task)
-                              {:body body
-                               :labels ["kanban" "status:review"
-                                        "priority:P1" "human"]}))))))))
+                               {:body body
+                                :labels ["kanban" "status:review"
+                                        "priority:P1" "human"]})))))))
+  (testing "only the first structural marker is authoritative"
+    (let [body (str "<!-- openhax-kanban-label-ownership-v1 malformed -->\n"
+                    "- Labels: `human`\n"
+                    "<!-- openhax-kanban-label-ownership-v1 [\"human\"] -->\n")]
+      (is (empty? (labels/projected-task-labels body)))
+      (is (empty? (:remove (labels/plan-delta
+                            (task)
+                            {:body body
+                             :labels ["kanban" "status:review"
+                                      "priority:P1" "human"]})))))))
 
 (deftest canonical-protected-labels-stay-outside-projection-authority
   (doseq [protected ["deploy" "eta-mu:review" "ETA-MU:repair"]]

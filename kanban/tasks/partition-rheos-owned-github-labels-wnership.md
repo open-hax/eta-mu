@@ -4,7 +4,7 @@ labels: "rheos, github, projection, policy"
 dependency: ["rheos-preserve-inline-yaml-label-arrays"]
 parent: "rheos-ledger-authoritative-projections"
 type: "task"
-write-id: "1788285863106-0.5lzya722dsuuh5d1q9"
+write-id: "1788287102564-0.uy7otnrmnn01mlrhtb"
 title: "Partition Rheos-owned GitHub labels"
 priority: "P0"
 status: "review"
@@ -42,4 +42,6 @@ Scope refinement discovered during implementation: a real canonical card already
 Hosted review finding resolved before merge: the full reconciliation plan is now preflighted against --max-writes. Any logical issue operation larger than the configured budget refuses the sync before all writes and reports the issue plus required/configured counts. Regression covers 53 writes from 51 stale managed labels and proves no fitting prefix operation is applied. Verified by 192 Rheos tests / 973 assertions, zero failures; clj-kondo zero errors/warnings; four production release builds zero warnings.
 
 Exact-head review regressions fixed: projected ownership now uses a strict EDN marker over normalized non-protected labels; malformed markers fail closed without legacy fallback; embedded backticks cannot create wrongful human-label deletion. Verified 195 tests / 992 assertions, zero failures; clj-kondo 0 errors/warnings; four release builds 0 warnings.
+
+Hosted exact-head review follow-up resolved: the first structural ownership-marker line is now authoritative. A malformed first record cannot be skipped in favor of a later valid-looking marker embedded in task content, so unmanaged labels remain unclaimed. Verified 195 tests / 994 assertions, zero failures; clj-kondo 0 errors/warnings; four release builds 0 warnings.
 ---
