@@ -93,11 +93,14 @@ jobs:
       # fresh GitHub-hosted runner therefore never receives the private source
       # or App capability that PR-controlled code could read or exfiltrate.
       - name: Lint Sol public source and tests
+        working-directory: packages/sol
         shell: bash
         run: |
           set -o pipefail
-          clj-kondo --lint packages/sol/src/cljs packages/sol/test/cljs 2>&1 | tee sol-lint.log
-          node scripts/contract-guard.mjs packages/sol/src/cljs packages/sol/test/cljs 2>&1 | tee -a sol-lint.log
+          # Run from the package root so clj-kondo loads Sol's checked-in
+          # async/macro hooks without installing any pull-request dependency.
+          clj-kondo --lint src/cljs test/cljs 2>&1 | tee sol-lint.log
+          node ../../scripts/contract-guard.mjs src/cljs test/cljs 2>&1 | tee -a sol-lint.log
 
       - name: Record pull-request private-integration boundary
         if: ${{ github.event_name == 'pull_request' }}

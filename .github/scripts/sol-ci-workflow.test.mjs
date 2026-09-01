@@ -89,8 +89,9 @@ test("pull-request-controlled Sol execution has no private dependency capability
 
   const lint = namedStep("Lint Sol public source and tests");
   assert.equal(lint.if, undefined);
-  assert.match(lint.run, /clj-kondo --lint packages\/sol\/src\/cljs packages\/sol\/test\/cljs/);
-  assert.match(lint.run, /node scripts\/contract-guard\.mjs packages\/sol\/src\/cljs packages\/sol\/test\/cljs/);
+  assert.equal(lint["working-directory"], "packages/sol");
+  assert.match(lint.run, /clj-kondo --lint src\/cljs test\/cljs/);
+  assert.match(lint.run, /node \.\.\/\.\.\/scripts\/contract-guard\.mjs src\/cljs test\/cljs/);
   assert.doesNotMatch(lint.run, /pnpm(?:\s|$)/);
   assert.doesNotMatch(lint.run, /packages\/sol\/(?:test|build)(?:\s|$)/);
 
