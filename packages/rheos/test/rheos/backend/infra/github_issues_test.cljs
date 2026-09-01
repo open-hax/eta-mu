@@ -1,5 +1,7 @@
 (ns rheos.backend.infra.github-issues-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [cljs.test :refer [deftest is testing]]
+            [rheos.backend.domain.github-label-projection :as label-projection]
             [rheos.backend.infra.github-issues :as github]))
 
 (defn- task
@@ -32,6 +34,66 @@
     (is (= :create-issue (:type (last (:operations plan)))))
     (is (= ["kanban" "status:incoming" "priority:P1" "sync"]
            (:labels (last (:operations plan)))))))
+
+(deftest issue-body-structurally-encodes-normalized-label-ownership
+  (let [t (assoc (task "encoded-labels" "incoming")
+                 :labels ["operator`context" "security,review" "deploy"])
+        body (github/build-issue-body t "/repo")]
+    (is (str/includes?
+         body
+         "<!-- openhax-kanban-label-ownership-v1 [\"operator-context\" \"security-review\"] -->"))
+    (is (= ["operator-context" "security-review"]
+           (label-projection/projected-task-labels body)))
+    (is (str/includes? body "- Labels: `operator-context`, `security-review`"))
+    (is (not (str/includes? body "operator`context")))
+    (is (not (str/includes? body "`deploy`")))))
+
+(deftest legacy-body-migration-preserves-unproven-labels-and-installs-v1
+  (let [current (assoc (task "migration" "review")
+                       :labels ["domain:new"])
+        legacy-body (str "<!-- openhax-kanban-sync uuid=\"migration\" -->\n"
+                         "<!-- This section is managed by eta-mu Rheos GitHub sync. -->\n\n"
+                         "## Kanban metadata\n\n"
+                         "- Labels: `domain:old`\n\n---\n\nBody\n")
+        repo-labels (->> (concat (github/desired-labels current)
+                                 ["domain:old"])
+                         distinct
+                         (mapv (fn [name] {:name name})))
+        first-plan (github/plan-sync
+                    [current]
+                    {:labels repo-labels
+                     :issues [{:number 7
+                               :title (:title current)
+                               :body legacy-body
+                               :state "open"
+                               :labels ["kanban" "status:incoming" "priority:P1"
+                                        "domain:old"]}]}
+                    {:cwd "/repo"})
+        first-operation (first (:operations first-plan))
+        migrated-body (get-in first-operation [:patch :body])
+        without-task-labels (assoc current :labels [])
+        second-plan (github/plan-sync
+                     [without-task-labels]
+                     {:labels repo-labels
+                      :issues [{:number 7
+                                :title (:title current)
+                                :body migrated-body
+                                :state "open"
+                                :labels ["kanban" "status:review" "priority:P1"
+                                         "domain:old" "domain:new"]}]}
+                     {:cwd "/repo"})
+        second-operation (first (:operations second-plan))]
+    (testing "the migration pass treats every legacy backtick label as unproven"
+      (is (= ["status:review" "domain:new"]
+             (:add-labels first-operation)))
+      (is (= ["status:incoming"] (:remove-labels first-operation)))
+      (is (not-any? #{"domain:old"} (:remove-labels first-operation))))
+    (testing "the managed body installs canonical structural-v1 evidence"
+      (is (= ["domain:new"]
+             (label-projection/projected-task-labels migrated-body))))
+    (testing "a later pass removes only the label proven by structural v1"
+      (is (= ["domain:new"] (:remove-labels second-operation)))
+      (is (not-any? #{"domain:old"} (:remove-labels second-operation))))))
 
 (deftest closes-done-task-as-completed
   (let [t (task "a" "done")
@@ -83,3 +145,252 @@
                                                   :source-path "/repo/kanban/tasks/other.md")]
                                           {:labels [] :issues []}
                                           {:cwd "/repo"}))))
+
+(deftest reconciles-only-projector-owned-labels-with-delta-requests
+  (let [current (assoc (task "a" "review") :labels ["domain:new"])
+        previous (assoc current :status "incoming" :labels ["domain:old"])
+        issue {:number 7
+               :title (:title current)
+               :body (github/build-issue-body previous "/repo")
+               :state "open"
+               :labels ["kanban"
+                        "status:incoming"
+                        "priority:P1"
+                        "domain:old"
+                        "human-context"
+                        "eta-mu:review"
+                        "deploy"]}
+        repo-labels (->> (concat (github/desired-labels current) ["domain:old"])
+                         distinct
+                         (mapv (fn [name] {:name name})))
+        plan (github/plan-sync [current]
+                               {:labels repo-labels :issues [issue]}
+                               {:cwd "/repo"})
+        operation (first (:operations plan))
+        requests (github/operation-requests "open-hax/eta-mu" operation)
+        patch-request (first (filter #(= "PATCH" (:method %)) requests))]
+    (is (= :update-issue (:type operation)))
+    (is (= ["status:review" "domain:new"] (:add-labels operation)))
+    (is (= ["status:incoming" "domain:old"] (:remove-labels operation)))
+    (is (= 4 (:write-count operation)))
+    (is (not (contains? operation :labels)))
+    (is (= ["POST" "DELETE" "DELETE" "PATCH"] (mapv :method requests)))
+    (is (= {:labels ["status:review" "domain:new"]}
+           (:body (first requests))))
+    (is (not (contains? (:body patch-request) :labels)))
+    (is (= "PATCH" (:method (last requests))))
+    (is (some #(str/ends-with? (:url %) "/labels/status%3Aincoming") requests))
+    (is (some #(str/ends-with? (:url %) "/labels/domain%3Aold") requests))))
+
+(deftest label-deletion-path-encoding-stays-behind-the-extern-boundary
+  (let [requests (github/operation-requests
+                  "open-hax/eta-mu"
+                  {:type :update-issue
+                   :issue-number 7
+                   :patch {}
+                   :add-labels []
+                   :remove-labels ["domain:old/value"]})]
+    (is (= "https://api.github.com/repos/open-hax/eta-mu/issues/7/labels/domain%3Aold%2Fvalue"
+           (:url (first requests))))))
+
+(deftest unsafe-dot-segment-ownership-cannot-reach-a-delete-request
+  (doseq [unsafe-label ["." ".." "%2e" "%2E" ".%2e" "%2e."
+                        "%2e%2e"]]
+    (let [current (assoc (task "dot-segment" "review") :labels [])
+          marker (str "<!-- openhax-kanban-label-ownership-v1 "
+                      (pr-str [unsafe-label]) " -->")
+          body (str "<!-- openhax-kanban-sync uuid=\"dot-segment\" -->\n"
+                    marker "\n"
+                    "<!-- This section is managed by eta-mu Rheos GitHub sync. -->\n")
+          repo-labels (mapv (fn [name] {:name name})
+                            (github/desired-labels current))
+          plan (github/plan-sync
+                [current]
+                {:labels repo-labels
+                 :issues [{:number 7
+                           :title (:title current)
+                           :body body
+                           :state "open"
+                           :labels ["kanban" "status:incoming" "priority:P1"
+                                    unsafe-label "human" "deploy" "eta-mu:review"]}]}
+                {:cwd "/repo"})
+          operation (first (:operations plan))
+          requests (github/operation-requests "open-hax/eta-mu" operation)
+          delete-urls (->> requests
+                           (filter #(= "DELETE" (:method %)))
+                           (mapv :url))]
+      (is (empty? (label-projection/projected-task-labels body)) unsafe-label)
+      (is (= ["status:incoming"] (:remove-labels operation)) unsafe-label)
+      (is (not-any? #{unsafe-label "human" "deploy" "eta-mu:review"}
+                    (:remove-labels operation))
+          unsafe-label)
+      (is (= ["https://api.github.com/repos/open-hax/eta-mu/issues/7/labels/status%3Aincoming"]
+             delete-urls)
+          unsafe-label))))
+
+(deftest operation-request-refuses-hand-built-dot-segment-deletes
+  (doseq [unsafe-label [nil :not-a-label "" "." ".." "%2e" ".%2E" "%2e."
+                        "%2E%2e"]]
+    (is (thrown-with-msg?
+         js/Error
+         #"Refusing unsafe GitHub named-label delete path segment"
+         (github/operation-requests
+          "open-hax/eta-mu"
+          {:type :update-issue
+           :issue-number 7
+           :patch {}
+           :add-labels []
+           :remove-labels [unsafe-label]}))
+        unsafe-label)))
+
+(deftest partial-label-reconciliation-remains-recoverable-until-body-patch
+  (let [current (assoc (task "a" "review") :labels ["domain:new"])
+        previous (assoc current :status "incoming" :labels ["domain:old"])
+        previous-body (github/build-issue-body previous "/repo")
+        repo-labels (->> (concat (github/desired-labels current) ["domain:old"])
+                         distinct
+                         (mapv (fn [name] {:name name})))
+        plan-after-add (github/plan-sync
+                        [current]
+                        {:labels repo-labels
+                         :issues [{:number 7
+                                   :title (:title current)
+                                   :body previous-body
+                                   :state "open"
+                                   :labels ["kanban" "status:incoming" "status:review"
+                                            "priority:P1" "domain:old" "domain:new"]}]}
+                        {:cwd "/repo"})
+        retry-after-add (first (:operations plan-after-add))
+        plan-after-deletes (github/plan-sync
+                            [current]
+                            {:labels repo-labels
+                             :issues [{:number 7
+                                       :title (:title current)
+                                       :body previous-body
+                                       :state "open"
+                                       :labels (github/desired-labels current)}]}
+                            {:cwd "/repo"})
+        retry-after-deletes (first (:operations plan-after-deletes))]
+    (testing "a failure after additive writes still retries named stale-label deletes"
+      (is (empty? (:add-labels retry-after-add)))
+      (is (= ["status:incoming" "domain:old"] (:remove-labels retry-after-add)))
+      (is (= "PATCH" (:method (last (github/operation-requests
+                                      "open-hax/eta-mu"
+                                      retry-after-add))))))
+    (testing "a failure after deletes retries only the still-stale managed body"
+      (is (empty? (:add-labels retry-after-deletes)))
+      (is (empty? (:remove-labels retry-after-deletes)))
+      (is (= ["PATCH"]
+             (mapv :method
+                   (github/operation-requests "open-hax/eta-mu"
+                                              retry-after-deletes)))))))
+
+(deftest real-board-reserved-deploy-task-label-is-safe
+  (let [deploy-task (assoc (task "ci-main-gate-after-services-removal" "done")
+                           :labels ["tasks" "ci" "deploy" "monorepo" "blocker"])
+        desired (github/desired-labels deploy-task)
+        current-issue (assoc (issue-for 9 deploy-task "closed" "done")
+                             :state-reason "completed"
+                             :labels (conj desired "deploy"))
+        plan (github/plan-sync [deploy-task]
+                               {:labels (mapv (fn [name] {:name name})
+                                              (conj desired "deploy"))
+                                :issues [current-issue]}
+                               {:cwd "/repo"})]
+    (is (= ["kanban" "status:done" "priority:P1"
+            "tasks" "ci" "monorepo" "blocker"]
+           desired))
+    (is (empty? (:operations plan)))))
+
+(deftest write-budget-never-slices-a-logical-issue-reconciliation
+  (let [first-operation {:type :update-issue :issue-number 1 :write-count 2}
+        second-operation {:type :update-issue :issue-number 2 :write-count 3}
+        selection (github/select-operations-within-write-budget
+                   [first-operation second-operation]
+                   4)]
+    (is (= [first-operation] (:selected selection)))
+    (is (= [second-operation] (:deferred selection)))
+    (is (= 2 (:selected-writes selection)))
+    (is (= 3 (:deferred-writes selection)))))
+
+(deftest ^:async dry-run-enforces-write-budget-and-reports-real-deferrals
+  (let [tasks [(task "dry-a" "review") (task "dry-b" "review")]
+        desired-labels (github/desired-labels (first tasks))
+        repo-state {:labels (mapv (fn [name] {:name name}) desired-labels)
+                    :issues (mapv (fn [number t]
+                                    {:number number
+                                     :title (str "Stale " (:title t))
+                                     :body (github/build-issue-body t "/repo")
+                                     :state "open"
+                                     :labels desired-labels})
+                                  [71 72]
+                                  tasks)}
+        {:keys [result undersized-error]}
+        (with-redefs [github/load-repo-state!
+                      (fn [_ _] (js/Promise.resolve repo-state))]
+          {:result (await (github/sync! tasks
+                                        {:token "test-token"
+                                         :repo "open-hax/eta-mu"
+                                         :cwd "/repo"
+                                         :dry-run true
+                                         :max-writes 1}))
+           :undersized-error
+           (try
+             (await (github/sync! tasks
+                                  {:token "test-token"
+                                   :repo "open-hax/eta-mu"
+                                   :cwd "/repo"
+                                   :dry-run true
+                                   :max-writes 0}))
+             nil
+             (catch :default cause cause))})]
+    (is (= 2 (count (:operations result))))
+    (is (= 2 (:planned-writes result)))
+    (is (empty? (:applied-operations result)))
+    (is (zero? (:applied-writes result)))
+    (is (= 1 (:deferred-operations result)))
+    (is (= 1 (:deferred-writes result)))
+    (is (some? undersized-error))
+    (is (re-find #"requires 1 API write, but --max-writes is 0"
+                 (.-message undersized-error)))))
+
+(deftest undersized-write-budget-refuses-all-writes-instead-of-starving
+  (let [stale-labels (mapv #(str "domain:stale-" %) (range 51))
+        current (assoc (task "large-label-delta" "review")
+                       :labels ["domain:new"])
+        previous (assoc current :labels stale-labels)
+        issue {:number 77
+               :title (:title current)
+               :body (github/build-issue-body previous "/repo")
+               :state "open"
+               :labels (vec (concat ["kanban" "status:review" "priority:P1"]
+                                    stale-labels))}
+        repo-labels (->> (concat (github/desired-labels current) stale-labels)
+                         distinct
+                         (mapv (fn [name] {:name name})))
+        oversized-operation (-> (github/plan-sync [current]
+                                                    {:labels repo-labels
+                                                     :issues [issue]}
+                                                    {:cwd "/repo"})
+                                :operations
+                                first)
+        prefix-operation {:type :create-label
+                          :name "unrelated"
+                          :write-count 1}
+        applied (atom [])
+        error (try
+                (let [selection (github/select-operations-within-write-budget
+                                 [prefix-operation oversized-operation]
+                                 50)]
+                  (doseq [operation (:selected selection)]
+                    (swap! applied conj operation))
+                  nil)
+                (catch :default cause cause))]
+    (is (= 53 (:write-count oversized-operation))
+        "one add, 51 named deletes, and the managed-body patch stay one operation")
+    (is (some? error))
+    (is (re-find #"issue #77 requires 53 API writes" (.-message error)))
+    (is (re-find #"--max-writes is 50" (.-message error)))
+    (is (re-find #"Increase --max-writes to at least 53" (.-message error)))
+    (is (empty? @applied)
+        "the complete plan is rejected before even a fitting prefix operation can write")))

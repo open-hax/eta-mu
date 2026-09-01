@@ -13,10 +13,33 @@
     (is (law/valid? document))
     (is (= {:decoder/id :rheos/flat-frontmatter-v1
             :decode/status :partial
-            :decode/capabilities #{:top-level-string-scalars}}
+            :decode/capabilities #{:top-level-string-scalars
+                                   :top-level-string-sequences}}
            (:document/frontmatter-decoding document)))
     (is (= {:title "Card" :status "ready"}
            (:document/frontmatter-data document)))))
+
+(deftest canonical-inline-string-sequences-are-decoded
+  (testing "non-empty sequences preserve member order"
+    (let [document (markdown/parse
+                    "---\nlabels: [\"ci\", \"security,review\", \"governance\"]\n---\nBody")]
+      (is (= ["ci" "security,review" "governance"]
+             (get-in document [:document/frontmatter-data :labels])))))
+  (testing "the canonical empty sequence remains a vector"
+    (let [document (markdown/parse "---\nlabels: []\n---\nBody")]
+      (is (= [] (get-in document [:document/frontmatter-data :labels]))))))
+
+(deftest unsupported-inline-collections-remain-fail-closed
+  (doseq [line ["labels: [ci, automation]"
+                "labels: [\"ci\", 42]"
+                "labels: [[\"ci\"]]"
+                "labels: [\"ci\", {\"owner\": \"ops\"}]"
+                "labels: [\"ci\",]"
+                "labels: [\"ci\"] trailing"
+                "labels: [\"ci\""]]
+    (testing line
+      (let [document (markdown/parse (str "---\n" line "\n---\nBody"))]
+        (is (not (contains? (:document/frontmatter-data document) :labels)))))))
 
 (deftest structural-yaml-is-preserved-but-not-misrepresented
   (let [raw (str "---\n"
