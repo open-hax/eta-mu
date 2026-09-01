@@ -98,4 +98,17 @@
                    :process/value {}}
           result (profile/assemble document document-profile sidecar "a.md" "a.edn")]
       (is (:ok result))
-      (is (= schema-form (get-in result [:document :document/schema-form]))))))
+      (is (= schema-form (get-in result [:document :document/schema-form])))))
+  (testing "string and keyword reference identifiers deduplicate canonically"
+    (let [document (markdown/parse markdown-source)
+          document-profile (:profile (profile/decode-profile document))
+          sidecar {:process/schemas {:translation/document-v1 [:map]}
+                   :process/value {}
+                   :process/contracts [{:contract/id "translation/document-v1"}]
+                   :process/resources [{:resource/id "workflow/translation-review"}]}
+          result (profile/assemble document document-profile sidecar "a.md" "a.edn")]
+      (is (:ok result))
+      (is (= [{:contract/id :translation/document-v1}]
+             (get-in result [:document :document/contracts])))
+      (is (= [{:resource/id :workflow/translation-review}]
+             (get-in result [:document :document/resources]))))))

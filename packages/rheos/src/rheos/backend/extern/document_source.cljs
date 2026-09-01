@@ -1,6 +1,7 @@
 (ns rheos.backend.extern.document-source
   "Node boundary for typed Markdown document source and sidecar access."
-  (:require ["node:crypto" :as crypto]
+  (:require ["node:buffer" :refer [Buffer]]
+            ["node:crypto" :as crypto]
             ["node:fs/promises" :as fsp]
             ["node:path" :as path]
             [clojure.string :as str]))
@@ -61,9 +62,12 @@
                  :error/message "document source cannot be read"}]})))
 
 (defn content-sha256 [document-raw sidecar-raw]
-  (let [digest (crypto/createHash "sha256")]
+  (let [digest (crypto/createHash "sha256")
+        document-bytes (.from Buffer document-raw "utf8")
+        sidecar-bytes (.from Buffer sidecar-raw "utf8")]
+    (.update digest (str (.-length document-bytes) ":") "utf8")
     (.update digest document-raw "utf8")
-    (.update digest "\u0000" "utf8")
+    (.update digest (str (.-length sidecar-bytes) ":") "utf8")
     (.update digest sidecar-raw "utf8")
     (.digest digest "hex")))
 

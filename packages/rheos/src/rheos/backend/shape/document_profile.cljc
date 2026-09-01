@@ -98,21 +98,22 @@
          :errors [{:error/code :sidecar/invalid-shape
                    :error/message "sidecar failed the document-process Malli law"}]}))))
 
+(defn- canonical-reference-id [reference-id]
+  (if (keyword? reference-id)
+    (subs (str reference-id) 1)
+    (str reference-id)))
+
 (defn- distinct-references [id-key references]
   (->> references
        (reduce (fn [{:keys [seen values] :as acc} reference]
-                 (let [reference-id (get reference id-key)]
+                 (let [reference-id (canonical-reference-id
+                                     (get reference id-key))]
                    (if (contains? seen reference-id)
                      acc
                      {:seen (conj seen reference-id)
                       :values (conj values reference)})))
                {:seen #{} :values []})
        :values))
-
-(defn- canonical-reference-id [reference-id]
-  (if (keyword? reference-id)
-    (subs (str reference-id) 1)
-    (str reference-id)))
 
 (defn- find-schema [schemas schema-id missing-schema]
   (let [canonical-schema-id (canonical-reference-id schema-id)]

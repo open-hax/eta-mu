@@ -41,4 +41,7 @@
     (is (= 64 (count first-digest)))
     (is (= first-digest (source/content-sha256 "markdown" "{:a 1}")))
     (is (not= first-digest (source/content-sha256 "markdown!" "{:a 1}")))
-    (is (not= first-digest (source/content-sha256 "markdown" "{:a 2}")))))
+    (is (not= first-digest (source/content-sha256 "markdown" "{:a 2}")))
+    (is (not= (source/content-sha256 "a" "\u0000b")
+              (source/content-sha256 "a\u0000" "b"))
+        "length framing keeps embedded NULs on their original side")))
