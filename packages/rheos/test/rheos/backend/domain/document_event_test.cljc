@@ -61,7 +61,7 @@
   (let [envelope (event/proposal-envelope context assembled)]
     (is (law/valid-event? envelope))
     (is (= "rheos.document.file-change-proposed" (:event/type envelope)))
-    (is (= [:translation/document-v1] (:contracts envelope)))
+    (is (= ["translation/document-v1"] (:contracts envelope)))
     (is (= [{:contract/id :translation/document-v1}] (:contract/refs envelope)))
     (is (= [{:resource/id :workflow/translation-review}] (:resource/refs envelope)))
     (is (= :partial

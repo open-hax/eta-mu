@@ -134,6 +134,19 @@
   (when (projected? projection-paths file-path)
     (await (handle-file-event! board-id tasks-dir file-path event-type))))
 
+(defn report-watcher-error! [file-path error]
+  (js/console.error "Watcher error:" file-path (.-message error)))
+
+(defn ^:async handle-watched-markdown-safely!
+  "Keep a rejected file-event promise inside the watcher callback boundary."
+  [board-id tasks-dir file-path event-type projection-paths]
+  (try
+    (await (handle-watched-markdown!
+            board-id tasks-dir file-path event-type projection-paths))
+    (catch :default error
+      (report-watcher-error! file-path error)
+      nil)))
+
 (defn start-watcher!
   "Watch a board's task root for Markdown changes.
 
@@ -158,7 +171,7 @@
                     ;; A profiled Markdown file emits a typed document proposal
                     ;; or rejection. Only projected files continue through the
                     ;; unchanged Kanban correlation/drift path.
-                    (handle-watched-markdown!
+                    (handle-watched-markdown-safely!
                      board-id tasks-dir p event projection-paths))))]
        (.on watcher "change" (on "change"))
        (.on watcher "add" (on "add"))

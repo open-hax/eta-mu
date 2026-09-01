@@ -65,14 +65,24 @@
 (defn- read-edn [raw]
   #?(:clj
      (try
-       {:ok true :value (edn/read-string raw)}
+       (let [forms (edn/read-string (str "[" raw "]"))]
+         (if (= 1 (count forms))
+           {:ok true :value (first forms)}
+           {:ok false
+            :errors [{:error/code :sidecar/invalid-edn
+                      :error/message "sidecar must contain exactly one EDN form"}]}))
        (catch Exception _
          {:ok false
           :errors [{:error/code :sidecar/invalid-edn
                     :error/message "sidecar is not valid EDN"}]}))
      :cljs
      (try
-       {:ok true :value (edn/read-string raw)}
+       (let [forms (edn/read-string (str "[" raw "]"))]
+         (if (= 1 (count forms))
+           {:ok true :value (first forms)}
+           {:ok false
+            :errors [{:error/code :sidecar/invalid-edn
+                      :error/message "sidecar must contain exactly one EDN form"}]}))
        (catch :default _
          {:ok false
           :errors [{:error/code :sidecar/invalid-edn
@@ -99,6 +109,21 @@
                {:seen #{} :values []})
        :values))
 
+(defn- canonical-reference-id [reference-id]
+  (if (keyword? reference-id)
+    (subs (str reference-id) 1)
+    (str reference-id)))
+
+(defn- find-schema [schemas schema-id missing-schema]
+  (let [canonical-schema-id (canonical-reference-id schema-id)]
+    (reduce-kv (fn [result candidate-id schema-form]
+                 (if (= canonical-schema-id
+                        (canonical-reference-id candidate-id))
+                   (reduced schema-form)
+                   result))
+               missing-schema
+               schemas)))
+
 (defn assemble
   "Merge one document profile with its parsed EDN sidecar.
 
@@ -107,7 +132,9 @@
   [document profile sidecar source-path sidecar-path]
   (let [schema-id (:document/schema profile)
         missing-schema ::missing
-        schema-form (get (:process/schemas sidecar) schema-id missing-schema)]
+        schema-form (find-schema (:process/schemas sidecar)
+                                 schema-id
+                                 missing-schema)]
     (if (= missing-schema schema-form)
       {:ok false
        :profile profile

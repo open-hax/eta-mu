@@ -20,6 +20,9 @@
    :profile profile})
 
 (defn- ^:async append! [tasks-dir envelope]
+  (when-not (:valid (protocols/validate-envelope envelope))
+    (throw (ex-info "Rheos refused a non-canonical event envelope"
+                    {:event/type (:event/type envelope)})))
   (await (protocols/append-event! (ledger/get-ledger tasks-dir) envelope))
   envelope)
 

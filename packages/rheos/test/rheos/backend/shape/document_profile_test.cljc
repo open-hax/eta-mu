@@ -74,6 +74,14 @@
   (testing "malformed EDN"
     (is (= :sidecar/invalid-edn
            (get-in (profile/decode-sidecar "{") [:errors 0 :error/code]))))
+  (testing "trailing EDN forms"
+    (is (= :sidecar/invalid-edn
+           (get-in (profile/decode-sidecar (str sidecar-source " {}"))
+                   [:errors 0 :error/code]))))
+  (testing "malformed trailing EDN"
+    (is (= :sidecar/invalid-edn
+           (get-in (profile/decode-sidecar (str sidecar-source " ["))
+                   [:errors 0 :error/code]))))
   (testing "selected schema must exist"
     (let [document (markdown/parse markdown-source)
           document-profile (:profile (profile/decode-profile document))
@@ -81,4 +89,13 @@
                    :process/value {}}
           result (profile/assemble document document-profile sidecar "a.md" "a.edn")]
       (is (false? (:ok result)))
-      (is (= :schema/not-found (get-in result [:errors 0 :error/code]))))))
+      (is (= :schema/not-found (get-in result [:errors 0 :error/code])))))
+  (testing "string and keyword schema identifiers share one lookup identity"
+    (let [document (markdown/parse markdown-source)
+          document-profile (:profile (profile/decode-profile document))
+          schema-form [:map]
+          sidecar {:process/schemas {"translation/document-v1" schema-form}
+                   :process/value {}}
+          result (profile/assemble document document-profile sidecar "a.md" "a.edn")]
+      (is (:ok result))
+      (is (= schema-form (get-in result [:document :document/schema-form]))))))

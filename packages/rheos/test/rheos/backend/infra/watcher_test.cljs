@@ -52,6 +52,19 @@
               "board" "/tasks" document "change" [cards]))
       (is (= [:typed-document] @calls)))))
 
+(deftest ^:async watcher-callback-contains-rejected-file-events
+  (let [reported (atom [])]
+    (with-redefs [watcher/handle-watched-markdown!
+                  (fn [& _]
+                    (js/Promise.reject (js/Error. "append failed")))
+                  watcher/report-watcher-error!
+                  (fn [file-path error]
+                    (reset! reported [file-path (.-message error)]))]
+      (is (nil? (await (watcher/handle-watched-markdown-safely!
+                        "board" "/tasks" "/tasks/card.md" "change" nil))))
+      (is (= ["/tasks/card.md" "append failed"]
+             @reported)))))
+
 (deftest ^:async handle-file-event-correlates-known-write
   (testing "File event with a registered write-id is marked correlated"
     (let [dir (tmp-dir)

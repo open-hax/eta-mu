@@ -63,6 +63,11 @@
                     {:event/type (:event/type event)})))
   event)
 
+(defn- canonical-reference-id [reference-id]
+  (if (keyword? reference-id)
+    (subs (str reference-id) 1)
+    (str reference-id)))
+
 (defn proposal-envelope
   [{:keys [change-kind content-sha256] :as context} document]
   (let [contracts (:document/contracts document)
@@ -74,7 +79,8 @@
                        :change/kind change-kind
                        :content/sha256 content-sha256
                        :document document})
-                     (assoc :contracts (mapv :contract/id contracts)
+                     (assoc :contracts (mapv (comp canonical-reference-id :contract/id)
+                                             contracts)
                             :contract/refs contracts
                             :resource/refs resources))]
     (assert-event envelope)))
