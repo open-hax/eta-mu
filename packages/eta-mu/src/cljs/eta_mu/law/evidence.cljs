@@ -1,6 +1,6 @@
 (ns eta-mu.law.evidence
-  "Closed Malli contracts for exact-head evidence lanes and their deterministic
-   aggregate decision.
+  "Closed Malli contracts for exact-snapshot evidence lanes and their
+   deterministic aggregate decision.
 
    These schemas describe admissible data only. They do not execute reviewers,
    read artifacts, or publish provider outcomes."
@@ -9,17 +9,27 @@
 (def non-empty-string
   [:string {:min 1}])
 
+(def artifact-location-schema
+  [:map {:closed true}
+   [:artifact/id {:optional true} non-empty-string]
+   [:path {:optional true} non-empty-string]
+   [:line-start {:optional true} :int]
+   [:line-end {:optional true} :int]
+   [:lane {:optional true} :keyword]])
+
 (def artifact-ref-schema
   [:map {:closed true}
    [:artifact/kind :keyword]
    [:artifact/hash non-empty-string]
-   [:artifact/location {:optional true} [:map-of :keyword :any]]])
+   [:artifact/location {:optional true} artifact-location-schema]])
 
 (def review-target-schema
   [:map {:closed true}
    [:repository/id [:or :int non-empty-string]]
    [:pull-request/object-id non-empty-string]
+   [:base non-empty-string]
    [:head non-empty-string]
+   [:review-input/hash non-empty-string]
    [:snapshot/hash non-empty-string]
    [:dependency-closure/hash non-empty-string]])
 
@@ -57,7 +67,7 @@
 (def aggregate-request-schema
   "The outer request is closed, while lane values are validated independently.
    This lets the fold report one malformed lane as unavailable evidence without
-   losing the otherwise valid exact-head target."
+   losing the otherwise valid exact-snapshot target."
   [:map {:closed true}
    [:schema/version [:= 1]]
    [:required/lanes [:vector {:min 1} :keyword]]
