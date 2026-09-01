@@ -4,7 +4,7 @@ labels: "rheos, github, projection, data-integrity"
 dependency: []
 parent: "rheos-ledger-authoritative-projections"
 type: "task"
-write-id: "1788283852133-0.9jpdxlwovuqb2n6xwu9"
+write-id: "1788285862266-0.2rp650hj8ifaxojmmvc"
 title: "Preserve inline YAML label arrays in Rheos projections"
 priority: "P0"
 status: "review"
@@ -34,4 +34,6 @@ Rheos decodes canonical top-level inline YAML string sequences without broadenin
 
 ---
 Verified on the combined blocker-removal candidate: 191 Rheos tests / 967 assertions, clj-kondo 0 errors and 0 warnings, all four production release builds 0 warnings, and all 252 previously affected inline task-label arrays remain nonempty. Candidate also proves exact read-task/board equality.
+
+Exact-head review regression fixed: the shared canonical inline-sequence decoder now preserves quoted commas identically through read-task and board projection. Verified 195 tests / 992 assertions, zero failures; clj-kondo 0 errors/warnings; server, CLI, GitHub-sync, and app release builds 0 warnings.
 ---

@@ -9,7 +9,12 @@
 (def ^:private quoted-string-pattern
   #"\"([^\"]*)\"")
 
-(defn- parse-canonical-string-sequence [value]
+(defn parse-canonical-string-sequence
+  "Decode Rheos's supported YAML subset for one inline string sequence.
+
+   Returns nil for syntax outside that subset so every consumer can make the
+   same fail-closed decision instead of growing a second comma-splitting parser."
+  [value]
   (when (re-matches canonical-string-sequence-pattern value)
     (mapv second (re-seq quoted-string-pattern value))))
 

@@ -4,10 +4,10 @@ labels: "rheos, github, projection, policy"
 dependency: ["rheos-preserve-inline-yaml-label-arrays"]
 parent: "rheos-ledger-authoritative-projections"
 type: "task"
-write-id: "1788284628735-0.z6x44xmjtlpp442rtjl"
+write-id: "1788285863106-0.5lzya722dsuuh5d1q9"
 title: "Partition Rheos-owned GitHub labels"
 priority: "P0"
-status: "testing"
+status: "review"
 uuid: "rheos-github-label-ownership"
 created_at: "2026-09-01T17:18:23.185Z"
 ---
@@ -40,4 +40,6 @@ The #320 dependency is satisfied within this same atomic candidate and verified 
 Scope refinement discovered during implementation: a real canonical card already carries deploy as task metadata, so rejecting the whole projection would create a board-wide outage. The safe law treats protected canonical labels as inert: they are filtered from desired projection and never added or removed. This satisfies the authority boundary while preserving existing cards; the immutable task-created event retains the original hypothesis.
 
 Hosted review finding resolved before merge: the full reconciliation plan is now preflighted against --max-writes. Any logical issue operation larger than the configured budget refuses the sync before all writes and reports the issue plus required/configured counts. Regression covers 53 writes from 51 stale managed labels and proves no fitting prefix operation is applied. Verified by 192 Rheos tests / 973 assertions, zero failures; clj-kondo zero errors/warnings; four production release builds zero warnings.
+
+Exact-head review regressions fixed: projected ownership now uses a strict EDN marker over normalized non-protected labels; malformed markers fail closed without legacy fallback; embedded backticks cannot create wrongful human-label deletion. Verified 195 tests / 992 assertions, zero failures; clj-kondo 0 errors/warnings; four release builds 0 warnings.
 ---

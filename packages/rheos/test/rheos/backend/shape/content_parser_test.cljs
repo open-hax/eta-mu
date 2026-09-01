@@ -1,6 +1,7 @@
 (ns rheos.backend.shape.content-parser-test
   (:require [cljs.test :refer [deftest is testing]]
-            [rheos.backend.shape.content-parser :as parser]))
+            [rheos.backend.shape.content-parser :as parser]
+            [rheos.backend.shape.frontmatter :as frontmatter]))
 
 (deftest test-parse-frontmatter
   (testing "parses quoted string values"
@@ -20,6 +21,15 @@
     (let [raw "---\nlabels: [\"epics\", \"cljs\", \"kanban\"]\n---\nBody"
           result (parser/parse-frontmatter raw)]
       (is (= ["epics" "cljs" "kanban"] (get-in result [:frontmatter :labels])))))
+
+  (testing "quoted commas agree with the canonical flat decoder"
+    (let [yaml "labels: [\"security,review\", \"ci\"]"
+          raw (str "---\n" yaml "\n---\nBody")
+          read-task-labels (get-in (parser/parse-frontmatter raw)
+                                   [:frontmatter :labels])
+          canonical-labels (:labels (frontmatter/parse-flat yaml))]
+      (is (= ["security,review" "ci"] read-task-labels))
+      (is (= canonical-labels read-task-labels))))
 
   (testing "dependency arrays preserve none and ordered nonblank ids"
     (doseq [[source expected] [["[]" []]

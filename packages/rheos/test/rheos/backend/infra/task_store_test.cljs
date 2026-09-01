@@ -25,7 +25,7 @@
 
 (deftest ^:async canonical-inline-labels-match-read-task-and-board-projection
   (let [root (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-label-projection-")))
-        expected ["ci" "automation" "governance"]
+        expected ["ci" "security,review" "governance"]
         card-path (path/join root "labelled-card.md")
         saved-projects {:projects (projects/all)
                         :default-project-id (projects/default-id)}]
@@ -37,7 +37,7 @@
                    "title: \"Labelled Card\"\n"
                    "status: \"incoming\"\n"
                    "priority: \"P1\"\n"
-                   "labels: [\"ci\", \"automation\", \"governance\"]\n"
+                   "labels: [\"ci\", \"security,review\", \"governance\"]\n"
                    "---\n\n# Labelled Card\n")
               "utf8"))
       (projects/set-projects!

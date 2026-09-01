@@ -1,12 +1,12 @@
 (ns rheos.backend.shape.content-parser
   "Parse task markdown into frontmatter + body/comment sections."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [rheos.backend.shape.frontmatter :as frontmatter]))
 
 (defn- parse-inline-array [key raw-items]
-  (let [items (mapv #(str/trim (str/replace % "\"" ""))
-                    (str/split raw-items #","))]
+  (when-let [items (frontmatter/parse-canonical-string-sequence
+                    (str "[" raw-items "]"))]
     (cond
-      (str/blank? raw-items) []
       ;; Historical Rheos rewrites produced dependency: [""] from an empty
       ;; vector. A dependency on the empty-string id is never meaningful, so
       ;; normalize blank members at the parsing boundary rather than letting an
@@ -26,7 +26,9 @@
                              (re-matches #"^(\w[\w_-]*):\s*\[(.*)\]\s*" line)
                              (let [[_ k v] (re-matches #"^(\w[\w_-]*):\s*\[(.*)\]\s*" line)
                                    items (parse-inline-array k v)]
-                               (assoc acc (keyword k) items))
+                               (if (some? items)
+                                 (assoc acc (keyword k) items)
+                                 acc))
                              ;; Quoted string: key: "value"
                              (re-matches #"^(\w[\w_-]*):\s*\"(.*)\"\s*" line)
                              (let [[_ k v] (re-matches #"^(\w[\w_-]*):\s*\"(.*)\"\s*" line)]

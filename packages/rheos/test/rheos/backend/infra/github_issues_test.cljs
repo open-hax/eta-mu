@@ -1,6 +1,7 @@
 (ns rheos.backend.infra.github-issues-test
   (:require [clojure.string :as str]
             [cljs.test :refer [deftest is testing]]
+            [rheos.backend.domain.github-label-projection :as label-projection]
             [rheos.backend.infra.github-issues :as github]))
 
 (defn- task
@@ -33,6 +34,19 @@
     (is (= :create-issue (:type (last (:operations plan)))))
     (is (= ["kanban" "status:incoming" "priority:P1" "sync"]
            (:labels (last (:operations plan)))))))
+
+(deftest issue-body-structurally-encodes-normalized-label-ownership
+  (let [t (assoc (task "encoded-labels" "incoming")
+                 :labels ["operator`context" "security,review" "deploy"])
+        body (github/build-issue-body t "/repo")]
+    (is (str/includes?
+         body
+         "<!-- openhax-kanban-label-ownership-v1 [\"operator-context\" \"security-review\"] -->"))
+    (is (= ["operator-context" "security-review"]
+           (label-projection/projected-task-labels body)))
+    (is (str/includes? body "- Labels: `operator-context`, `security-review`"))
+    (is (not (str/includes? body "operator`context")))
+    (is (not (str/includes? body "`deploy`")))))
 
 (deftest closes-done-task-as-completed
   (let [t (task "a" "done")

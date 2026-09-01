@@ -38,6 +38,44 @@
     (is (= ["status:review"] (:add delta)))
     (is (= ["status:incoming"] (:remove delta)))))
 
+(deftest structural-ownership-marker-cannot-be-truncated-by-label-backticks
+  (let [previous (task ["human`context" "security,review"])
+        marker (labels/ownership-marker previous)
+        issue {:body (str marker "\n"
+                          "- Labels: `human`context`, `security,review`\n")
+               :labels ["kanban" "status:review" "priority:P1"
+                        "human" "human-context" "security-review"]}
+        delta (labels/plan-delta (task) issue)]
+    (is (= "<!-- openhax-kanban-label-ownership-v1 [\"human-context\" \"security-review\"] -->"
+           marker))
+    (is (= ["human-context" "security-review"]
+           (labels/projected-task-labels (:body issue))))
+    (is (= ["human-context" "security-review"] (:remove delta)))
+    (is (not-any? #{"human"} (:remove delta))
+        "the raw backtick prefix never becomes a wrongful ownership claim")))
+
+(deftest malformed-ownership-records-fail-closed
+  (testing "an old backtick line with an embedded backtick claims nothing"
+    (let [body "- Labels: `human`context`\n"]
+      (is (empty? (labels/projected-task-labels body)))
+      (is (empty? (:remove (labels/plan-delta
+                            (task)
+                            {:body body
+                             :labels ["kanban" "status:review"
+                                      "priority:P1" "human"]}))))))
+  (testing "a present but invalid structural marker cannot downgrade to legacy"
+    (doseq [marker ["<!-- openhax-kanban-label-ownership-v1 [\"human\" 42] -->"
+                    "<!-- openhax-kanban-label-ownership-v1 [\"human\"] [\"trailing\"] -->"
+                    "<!-- openhax-kanban-label-ownership-v1 malformed -->"]]
+      (let [body (str marker "\n"
+                      "- Labels: `human`\n")]
+        (is (empty? (labels/projected-task-labels body)))
+        (is (empty? (:remove (labels/plan-delta
+                              (task)
+                              {:body body
+                               :labels ["kanban" "status:review"
+                                        "priority:P1" "human"]}))))))))
+
 (deftest canonical-protected-labels-stay-outside-projection-authority
   (doseq [protected ["deploy" "eta-mu:review" "ETA-MU:repair"]]
     (let [desired (labels/desired-labels (task [protected]))

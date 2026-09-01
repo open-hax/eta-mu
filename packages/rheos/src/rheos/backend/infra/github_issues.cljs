@@ -59,10 +59,12 @@
 
 (defn build-issue-body [task cwd]
   (let [source (relative-source task cwd)
-        labels (if (seq (:labels task))
-                 (str/join ", " (map #(str "`" % "`") (:labels task)))
+        task-labels (label-projection/canonical-task-labels task)
+        labels (if (seq task-labels)
+                 (str/join ", " (map #(str "`" % "`") task-labels))
                  "none")
         header (str "<!-- openhax-kanban-sync uuid=\"" (:uuid task) "\" -->\n"
+                    (label-projection/ownership-marker task) "\n"
                     "<!-- This section is managed by eta-mu Rheos GitHub sync. -->\n\n"
                     "## Kanban metadata\n\n"
                     "- UUID: `" (:uuid task) "`\n"

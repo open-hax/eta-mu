@@ -22,8 +22,8 @@
 (deftest canonical-inline-string-sequences-are-decoded
   (testing "non-empty sequences preserve member order"
     (let [document (markdown/parse
-                    "---\nlabels: [\"ci\", \"automation\", \"governance\"]\n---\nBody")]
-      (is (= ["ci" "automation" "governance"]
+                    "---\nlabels: [\"ci\", \"security,review\", \"governance\"]\n---\nBody")]
+      (is (= ["ci" "security,review" "governance"]
              (get-in document [:document/frontmatter-data :labels])))))
   (testing "the canonical empty sequence remains a vector"
     (let [document (markdown/parse "---\nlabels: []\n---\nBody")]
