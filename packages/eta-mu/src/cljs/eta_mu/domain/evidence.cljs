@@ -164,13 +164,13 @@
 (defn- contradiction-ids
   [findings]
   (->> findings
-       (keepcat (fn [finding]
-                  (cond-> []
-                    (= :contradicted (:finding/status finding))
-                    (conj (:finding/id finding))
+       (mapcat (fn [finding]
+                 (cond-> []
+                   (= :contradicted (:finding/status finding))
+                   (conj (:finding/id finding))
 
-                    (seq (:finding/contradicts finding))
-                    (into (:finding/contradicts finding)))))
+                   (seq (:finding/contradicts finding))
+                   (into (:finding/contradicts finding)))))
        stable-strings))
 
 (defn- finding-counts
@@ -227,7 +227,7 @@
           unsupported-problems (unsupported-finding-problems findings)
           finding-conflicts (finding-id-conflicts findings)
           contradictions (contradiction-ids findings)
-          problems
+          availability-problems
           (stable-strings
            (concat invalid-problems
                    target-problems*
@@ -240,25 +240,27 @@
                         duplicate-result-lanes)
                    (map #(str "required lane is missing: " %)
                         missing-lanes)))
-          blockers (filterv #(and (supported-confirmed-finding? %)
-                                  (blocking? %))
-                            findings)
-          advisories (filterv #(and (supported-confirmed-finding? %)
-                                    (advisory? %))
-                              findings)
-          conflict? (or (seq finding-conflicts) (seq contradictions))
-          status (cond
-                   (seq problems) :evidence-unavailable
-                   conflict? :evidence-conflicted
-                   (seq blockers) :evidence-blocked
-                   (seq advisories) :advisory
-                   :else :approved)
           conflict-problems
           (stable-strings
            (concat (map #(str "finding identity has conflicting bodies: " %)
                         finding-conflicts)
                    (map #(str "trusted evidence contains a contradiction: " %)
                         contradictions)))
+          problems (stable-strings
+                    (concat availability-problems conflict-problems))
+          blockers (filterv #(and (supported-confirmed-finding? %)
+                                  (blocking? %))
+                            findings)
+          advisories (filterv #(and (supported-confirmed-finding? %)
+                                    (advisory? %))
+                              findings)
+          conflict? (seq conflict-problems)
+          status (cond
+                   (seq availability-problems) :evidence-unavailable
+                   conflict? :evidence-conflicted
+                   (seq blockers) :evidence-blocked
+                   (seq advisories) :advisory
+                   :else :approved)
           complete-lanes (->> trusted-results
                               (map :evidence/lane)
                               stable-keywords)]
@@ -271,4 +273,4 @@
        :missing/lanes missing-lanes
        :finding/counts (finding-counts findings)
        :findings findings
-       :problems (if conflict? conflict-problems problems)})))
+       :problems problems})))
