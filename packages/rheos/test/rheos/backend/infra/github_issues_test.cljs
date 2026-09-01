@@ -48,6 +48,53 @@
     (is (not (str/includes? body "operator`context")))
     (is (not (str/includes? body "`deploy`")))))
 
+(deftest legacy-body-migration-preserves-unproven-labels-and-installs-v1
+  (let [current (assoc (task "migration" "review")
+                       :labels ["domain:new"])
+        legacy-body (str "<!-- openhax-kanban-sync uuid=\"migration\" -->\n"
+                         "<!-- This section is managed by eta-mu Rheos GitHub sync. -->\n\n"
+                         "## Kanban metadata\n\n"
+                         "- Labels: `domain:old`\n\n---\n\nBody\n")
+        repo-labels (->> (concat (github/desired-labels current)
+                                 ["domain:old"])
+                         distinct
+                         (mapv (fn [name] {:name name})))
+        first-plan (github/plan-sync
+                    [current]
+                    {:labels repo-labels
+                     :issues [{:number 7
+                               :title (:title current)
+                               :body legacy-body
+                               :state "open"
+                               :labels ["kanban" "status:incoming" "priority:P1"
+                                        "domain:old"]}]}
+                    {:cwd "/repo"})
+        first-operation (first (:operations first-plan))
+        migrated-body (get-in first-operation [:patch :body])
+        without-task-labels (assoc current :labels [])
+        second-plan (github/plan-sync
+                     [without-task-labels]
+                     {:labels repo-labels
+                      :issues [{:number 7
+                                :title (:title current)
+                                :body migrated-body
+                                :state "open"
+                                :labels ["kanban" "status:review" "priority:P1"
+                                         "domain:old" "domain:new"]}]}
+                     {:cwd "/repo"})
+        second-operation (first (:operations second-plan))]
+    (testing "the migration pass treats every legacy backtick label as unproven"
+      (is (= ["status:review" "domain:new"]
+             (:add-labels first-operation)))
+      (is (= ["status:incoming"] (:remove-labels first-operation)))
+      (is (not-any? #{"domain:old"} (:remove-labels first-operation))))
+    (testing "the managed body installs canonical structural-v1 evidence"
+      (is (= ["domain:new"]
+             (label-projection/projected-task-labels migrated-body))))
+    (testing "a later pass removes only the label proven by structural v1"
+      (is (= ["domain:new"] (:remove-labels second-operation)))
+      (is (not-any? #{"domain:old"} (:remove-labels second-operation))))))
+
 (deftest closes-done-task-as-completed
   (let [t (task "a" "done")
         existing (issue-for 7 t "open" "review")
@@ -134,6 +181,17 @@
     (is (= "PATCH" (:method (last requests))))
     (is (some #(str/ends-with? (:url %) "/labels/status%3Aincoming") requests))
     (is (some #(str/ends-with? (:url %) "/labels/domain%3Aold") requests))))
+
+(deftest label-deletion-path-encoding-stays-behind-the-extern-boundary
+  (let [requests (github/operation-requests
+                  "open-hax/eta-mu"
+                  {:type :update-issue
+                   :issue-number 7
+                   :patch {}
+                   :add-labels []
+                   :remove-labels ["domain:old/value"]})]
+    (is (= "https://api.github.com/repos/open-hax/eta-mu/issues/7/labels/domain%3Aold%2Fvalue"
+           (:url (first requests))))))
 
 (deftest partial-label-reconciliation-remains-recoverable-until-body-patch
   (let [current (assoc (task "a" "review") :labels ["domain:new"])

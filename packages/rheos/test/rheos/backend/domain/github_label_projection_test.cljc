@@ -34,7 +34,8 @@
     (is (= ["kanban" "status:review" "priority:P1" "domain:new"]
            (:desired delta)))
     (is (= ["status:review" "domain:new"] (:add delta)))
-    (is (= ["status:incoming" "domain:old"] (:remove delta)))
+    (is (= ["status:incoming"] (:remove delta))
+        "ambiguous pre-v1 metadata cannot authorize task-label deletion")
     (testing "unmanaged, command, and reserved labels are outside projector ownership"
       (is (empty? (filter #{"human-context" "eta-mu:review" "deploy"}
                           (:remove delta)))))))
@@ -95,6 +96,18 @@
                             {:body body
                              :labels ["kanban" "status:review"
                                       "priority:P1" "human"]})))))))
+  (testing "delimiter-injected legacy ownership is never authoritative"
+    (doseq [metadata ["`foo`"
+                      "`foo`, `human`"
+                      "`foo`context`"]]
+      (let [body (str "- Labels: " metadata "\n")
+            delta (labels/plan-delta
+                   (task)
+                   {:body body
+                    :labels ["kanban" "status:review" "priority:P1"
+                             "foo" "human"]})]
+        (is (empty? (labels/projected-task-labels body)) metadata)
+        (is (empty? (:remove delta)) metadata))))
 
 (deftest task-content-cannot-supply-missing-header-ownership
   (let [body (managed-body

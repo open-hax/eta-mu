@@ -4,7 +4,7 @@ labels: "rheos, github, projection, policy"
 dependency: ["rheos-preserve-inline-yaml-label-arrays"]
 parent: "rheos-ledger-authoritative-projections"
 type: "task"
-write-id: "1788288851655-0.7y5zexu5cuyeitqy4kq"
+write-id: "1788290511137-0.hossg9eyd1jwy3fd8rc"
 title: "Partition Rheos-owned GitHub labels"
 priority: "P0"
 status: "review"
@@ -48,5 +48,7 @@ Hosted exact-head review follow-up resolved: the first structural ownership-mark
 Exact-head PR #322 review follow-up: ownership v1 evidence is accepted only at managed header line 2 immediately after the UUID sync marker, so a pre-v1 task-content marker cannot claim or delete a human label. Dry-run now executes the same budget preflight and selection as live mode and reports actual deferrals while applying no writes. Combined candidate verified by 197 Rheos tests / 1006 assertions, clj-kondo 0 errors / 0 warnings, and four release builds with 0 warnings.
 
 Final PR #322 review gate: Rheos comment serialization now preserves a blank line before the closing delimiter, and this card was rewritten through the ledger-backed CLI to normalize its evidence block. Final combined evidence: 197 Rheos tests / 1009 assertions, clj-kondo 0 errors / 0 warnings, and server, CLI, GitHub-sync, and app release builds with 0 warnings.
+
+Final exact-head PR #322 review findings resolved: label policy and ownership admission now live in law while domain owns normalization/reconciliation; URI component encoding is isolated behind an extern adapter with direct reserved-character and Unicode coverage; all legacy backtick ownership is untrusted, while a two-pass regression proves structural-v1 migration preserves unproven labels and later removes only v1-proven labels. Verified by 202 Rheos tests / 1031 assertions, clj-kondo 0 errors / 0 warnings, and server, CLI, GitHub-sync, and app release builds with 0 warnings.
 
 ---

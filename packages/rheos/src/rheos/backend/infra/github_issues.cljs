@@ -2,7 +2,8 @@
   "GitHub Issues projection for Rheos canonical task objects."
   (:require [clojure.string :as str]
             ["node:path" :as path]
-            [rheos.backend.domain.github-label-projection :as label-projection]))
+            [rheos.backend.domain.github-label-projection :as label-projection]
+            [rheos.backend.extern.uri :as uri]))
 
 (def ^:private marker-pattern #"<!--\s*openhax-kanban-sync\s+uuid=\"([^\"]+)\"\s*-->")
 (def ^:private legacy-marker-pattern #"(?im)^Kanban UUID:\s*(.+)$")
@@ -262,7 +263,7 @@
             :body {:labels (:add-labels operation)}}])
         (map (fn [label]
                {:method "DELETE"
-                :url (str issue-url "/labels/" (js/encodeURIComponent label))
+                :url (str issue-url "/labels/" (uri/encode-component label))
                 :body nil})
              (:remove-labels operation))
         (when (seq patch-body)
