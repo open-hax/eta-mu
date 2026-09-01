@@ -269,9 +269,27 @@
     []))
 
 (defn select-operations-within-write-budget
-  "Select complete logical operations without slicing one at the write limit."
+  "Select complete logical operations without slicing one at the write limit.
+
+   Refuse the entire selection when one operation cannot fit the configured
+   budget. Returning an empty selection in that case would report a successful
+   sync while deferring the same operation forever; selecting it would silently
+   exceed the operator's safety limit."
   [operations max-writes]
   (let [limit (max 0 (or max-writes 50))]
+    (when-let [operation (first (filter #(> (or (:write-count %) 1) limit)
+                                        operations))]
+      (let [required (or (:write-count operation) 1)
+            subject (case (:type operation)
+                      :update-issue (str "issue #" (:issue-number operation))
+                      :create-issue (str "issue \"" (:title operation) "\"")
+                      :create-label (str "label \"" (:name operation) "\"")
+                      (name (or (:type operation) :unknown-operation)))]
+        (throw (js/Error.
+                (str "GitHub sync write budget is too small: " subject
+                     " requires " required " API writes, but --max-writes is " limit
+                     ". Increase --max-writes to at least " required
+                     "; refusing the sync before applying any writes.")))))
     (loop [remaining (vec operations)
            selected []
            selected-writes 0]

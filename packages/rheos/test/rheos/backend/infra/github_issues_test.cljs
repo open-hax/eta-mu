@@ -190,3 +190,44 @@
     (is (= [second-operation] (:deferred selection)))
     (is (= 2 (:selected-writes selection)))
     (is (= 3 (:deferred-writes selection)))))
+
+(deftest undersized-write-budget-refuses-all-writes-instead-of-starving
+  (let [stale-labels (mapv #(str "domain:stale-" %) (range 51))
+        current (assoc (task "large-label-delta" "review")
+                       :labels ["domain:new"])
+        previous (assoc current :labels stale-labels)
+        issue {:number 77
+               :title (:title current)
+               :body (github/build-issue-body previous "/repo")
+               :state "open"
+               :labels (vec (concat ["kanban" "status:review" "priority:P1"]
+                                    stale-labels))}
+        repo-labels (->> (concat (github/desired-labels current) stale-labels)
+                         distinct
+                         (mapv (fn [name] {:name name})))
+        oversized-operation (-> (github/plan-sync [current]
+                                                    {:labels repo-labels
+                                                     :issues [issue]}
+                                                    {:cwd "/repo"})
+                                :operations
+                                first)
+        prefix-operation {:type :create-label
+                          :name "unrelated"
+                          :write-count 1}
+        applied (atom [])
+        error (try
+                (let [selection (github/select-operations-within-write-budget
+                                 [prefix-operation oversized-operation]
+                                 50)]
+                  (doseq [operation (:selected selection)]
+                    (swap! applied conj operation))
+                  nil)
+                (catch :default cause cause))]
+    (is (= 53 (:write-count oversized-operation))
+        "one add, 51 named deletes, and the managed-body patch stay one operation")
+    (is (some? error))
+    (is (re-find #"issue #77 requires 53 API writes" (.-message error)))
+    (is (re-find #"--max-writes is 50" (.-message error)))
+    (is (re-find #"Increase --max-writes to at least 53" (.-message error)))
+    (is (empty? @applied)
+        "the complete plan is rejected before even a fitting prefix operation can write")))

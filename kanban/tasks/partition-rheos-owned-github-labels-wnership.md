@@ -4,7 +4,7 @@ labels: "rheos, github, projection, policy"
 dependency: ["rheos-preserve-inline-yaml-label-arrays"]
 parent: "rheos-ledger-authoritative-projections"
 type: "task"
-write-id: "1788283882635-0.q69m5g4s3965ohbunm"
+write-id: "1788284628735-0.z6x44xmjtlpp442rtjl"
 title: "Partition Rheos-owned GitHub labels"
 priority: "P0"
 status: "testing"
@@ -38,4 +38,6 @@ The outward Rheos projector reconciles only labels it owns and preserves unmanag
 The #320 dependency is satisfied within this same atomic candidate and verified before unblocking. Projection now preserves unmanaged, eta-mu:* command, and deploy authority; additive/delete ordering is retry-recoverable; the real deploy-labelled board card remains safe. Full Rheos tests, kondo, builds, and diff check are green.
 
 Scope refinement discovered during implementation: a real canonical card already carries deploy as task metadata, so rejecting the whole projection would create a board-wide outage. The safe law treats protected canonical labels as inert: they are filtered from desired projection and never added or removed. This satisfies the authority boundary while preserving existing cards; the immutable task-created event retains the original hypothesis.
+
+Hosted review finding resolved before merge: the full reconciliation plan is now preflighted against --max-writes. Any logical issue operation larger than the configured budget refuses the sync before all writes and reports the issue plus required/configured counts. Regression covers 53 writes from 51 stale managed labels and proves no fitting prefix operation is applied. Verified by 192 Rheos tests / 973 assertions, zero failures; clj-kondo zero errors/warnings; four production release builds zero warnings.
 ---
