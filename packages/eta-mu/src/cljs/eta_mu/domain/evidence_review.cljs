@@ -2,10 +2,11 @@
   "Pure admission and aggregation laws for parallel evidence-review lanes.
 
   Model and agent outputs enter as candidate lane results. This namespace binds
-  them to one immutable review snapshot, rejects unsupported evidence, preserves
-  contradictions, and computes a deterministic conclusion. It performs no I/O
-  and has no GitHub publication authority."
-  (:require [eta-mu.law.evidence-review :as law]))
+  them to one immutable review snapshot and one admitted lane catalog, rejects
+  unsupported evidence, preserves contradictions, and computes a deterministic
+  conclusion. It performs no I/O and has no GitHub publication authority."
+  (:require [eta-mu.domain.evidence-lane-catalog :as lane-catalog]
+            [eta-mu.law.evidence-review :as law]))
 
 (def ^:private snapshot-keys
   [:schema/version
@@ -15,6 +16,12 @@
    :review/snapshot-hash
    :review/dependency-closure-hash
    :review/episode])
+
+(def ^:private producer-profile-keys
+  [:producer/actor
+   :producer/actor-binding
+   :producer/profile-revision
+   :producer/workflow-revision])
 
 (defn confirmed-blocker?
   [finding]
@@ -52,22 +59,23 @@
     false))
 
 (defn- evidence-retained?
-  [inspected-hashes finding]
-  (let [evidence (:finding/evidence finding)]
+  [inspected-artifacts finding]
+  (let [retained-references (set inspected-artifacts)
+        evidence (:finding/evidence finding)]
     (and (seq evidence)
-         (every? #(contains? inspected-hashes (:artifact/hash %)) evidence))))
+         (every? #(contains? retained-references %) evidence))))
 
 (defn admissible-finding?
-  "True when a finding is structurally valid, scoped, and cites retained lane
-  artifacts. Confirmed blockers additionally require a concrete failure trace."
+  "True when a finding is structurally valid, scoped, and cites exact retained
+  lane artifact references. Confirmed blockers additionally require a concrete
+  failure trace."
   [inspected-artifacts finding]
-  (let [inspected-hashes (set (map :artifact/hash inspected-artifacts))]
-    (and (confidence-valid? finding)
-         (scope-valid? finding)
-         (evidence-retained? inspected-hashes finding)
-         (or (not (confirmed-blocker? finding))
-             (and (string? (:finding/failure-trace finding))
-                  (seq (:finding/failure-trace finding)))))))
+  (and (confidence-valid? finding)
+       (scope-valid? finding)
+       (evidence-retained? inspected-artifacts finding)
+       (or (not (confirmed-blocker? finding))
+           (and (string? (:finding/failure-trace finding))
+                (seq (:finding/failure-trace finding))))))
 
 (defn- snapshot-facts
   [value]
@@ -78,18 +86,34 @@
   (= (snapshot-facts snapshot)
      (snapshot-facts lane-result)))
 
+(defn- producer-matches?
+  [lane-profile lane-result]
+  (= (:lane/producer lane-profile)
+     (select-keys (:evidence/producer lane-result)
+                  producer-profile-keys)))
+
 (defn- result-rejection-reasons
-  [snapshot required-lanes lane-result]
+  [snapshot catalog lane-result]
   (let [shape-valid? (law/valid-lane-result-shape? lane-result)
         lane (:evidence/lane lane-result)
+        lane-profile (when shape-valid?
+                       (lane-catalog/lane-profile catalog lane))
         inspected (:coverage/inspected lane-result)
         findings (:findings lane-result)]
     (cond-> []
       (not shape-valid?)
       (conj :invalid-result-shape)
 
-      (and shape-valid? (not (contains? required-lanes lane)))
+      (and shape-valid? (nil? lane-profile))
       (conj :unexpected-lane)
+
+      (and lane-profile
+           (not= (:lane/revision lane-profile)
+                 (:evidence/lane-revision lane-result)))
+      (conj :lane-revision-mismatch)
+
+      (and lane-profile (not (producer-matches? lane-profile lane-result)))
+      (conj :producer-profile-mismatch)
 
       (and shape-valid? (not (target-matches? snapshot lane-result)))
       (conj :review-snapshot-mismatch)
@@ -120,8 +144,7 @@
    (:finding/status finding)
    (:finding/disposition finding)
    (->> (:finding/evidence finding)
-        (map :artifact/hash)
-        sort
+        (sort-by pr-str)
         vec)])
 
 (defn- dedupe-findings
@@ -175,25 +198,27 @@
                      :verdict verdict}))))
 
 (defn aggregate-verdict
-  "Validate and fold candidate lane results for one immutable review snapshot.
+  "Validate and fold candidate lane results for one immutable review snapshot
+  and one admitted lane catalog.
 
   A sound confirmed blocker yields `:failure` even when another lane is
   incomplete. Without a blocker, missing, rejected, conflicting, stale, partial,
   timed-out, failed, blocked, or unavailable required evidence yields `:blocked`.
-  `:success` requires every required lane to be complete."
-  [snapshot required-lanes lane-results]
+  `:success` requires every catalog-required lane to be complete."
+  [snapshot catalog lane-results]
   (when-not (law/valid-review-snapshot? snapshot)
     (throw (ex-info "Invalid review snapshot"
                     {:errors (law/explain-review-snapshot snapshot)})))
-  (when-not (and (set? required-lanes)
-                 (seq required-lanes)
-                 (every? keyword? required-lanes))
-    (throw (ex-info "Required evidence lanes must be a non-empty keyword set"
-                    {:required-lanes required-lanes})))
-  (let [validation (mapv (fn [lane-result]
+  (let [catalog-errors (lane-catalog/catalog-admissibility-errors catalog)]
+    (when (seq catalog-errors)
+      (throw (ex-info "Invalid evidence lane catalog"
+                      {:errors catalog-errors
+                       :catalog catalog}))))
+  (let [required-lanes (:catalog/required-lanes catalog)
+        validation (mapv (fn [lane-result]
                            {:result lane-result
                             :reasons (result-rejection-reasons
-                                      snapshot required-lanes lane-result)})
+                                      snapshot catalog lane-result)})
                          lane-results)
         rejected (filterv (comp seq :reasons) validation)
         accepted (->> validation
@@ -256,7 +281,9 @@
                      :else :success)]
     (validated-verdict
      (merge snapshot
-            {:aggregate/conclusion conclusion
+            {:aggregate/catalog-id (:catalog/id catalog)
+             :aggregate/catalog-version (:catalog/version catalog)
+             :aggregate/conclusion conclusion
              :aggregate/reasons reasons
              :aggregate/required-lanes required-lanes
              :aggregate/lane-statuses lane-statuses
