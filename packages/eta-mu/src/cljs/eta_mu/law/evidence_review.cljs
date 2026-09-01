@@ -15,7 +15,7 @@
   [:re #"^[0-9a-f]{40}$"])
 
 (def revision-schema
-  [:or git-sha-schema sha256-schema])
+  [:or git-sha-schema sha256-schema :keyword])
 
 (def coverage-status-schema
   [:enum :complete :partial :blocked :unavailable :timed-out :failed :stale])
@@ -40,6 +40,7 @@
 
 (def producer-schema
   [:map {:closed true}
+   [:producer/actor :keyword]
    [:producer/actor-binding non-empty-string-schema]
    [:producer/profile-revision revision-schema]
    [:producer/workflow-revision revision-schema]
@@ -107,6 +108,8 @@
    [:review/snapshot-hash sha256-schema]
    [:review/dependency-closure-hash sha256-schema]
    [:review/episode non-empty-string-schema]
+   [:aggregate/catalog-id :keyword]
+   [:aggregate/catalog-version [:int {:min 1}]]
    [:aggregate/conclusion [:enum :success :failure :blocked]]
    [:aggregate/reasons [:vector :keyword]]
    [:aggregate/required-lanes [:set :keyword]]
