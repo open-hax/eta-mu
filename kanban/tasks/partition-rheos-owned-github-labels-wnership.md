@@ -4,7 +4,7 @@ labels: "rheos, github, projection, policy"
 dependency: ["rheos-preserve-inline-yaml-label-arrays"]
 parent: "rheos-ledger-authoritative-projections"
 type: "task"
-write-id: "1788287102564-0.uy7otnrmnn01mlrhtb"
+write-id: "1788288851655-0.7y5zexu5cuyeitqy4kq"
 title: "Partition Rheos-owned GitHub labels"
 priority: "P0"
 status: "review"
@@ -44,4 +44,9 @@ Hosted review finding resolved before merge: the full reconciliation plan is now
 Exact-head review regressions fixed: projected ownership now uses a strict EDN marker over normalized non-protected labels; malformed markers fail closed without legacy fallback; embedded backticks cannot create wrongful human-label deletion. Verified 195 tests / 992 assertions, zero failures; clj-kondo 0 errors/warnings; four release builds 0 warnings.
 
 Hosted exact-head review follow-up resolved: the first structural ownership-marker line is now authoritative. A malformed first record cannot be skipped in favor of a later valid-looking marker embedded in task content, so unmanaged labels remain unclaimed. Verified 195 tests / 994 assertions, zero failures; clj-kondo 0 errors/warnings; four release builds 0 warnings.
+
+Exact-head PR #322 review follow-up: ownership v1 evidence is accepted only at managed header line 2 immediately after the UUID sync marker, so a pre-v1 task-content marker cannot claim or delete a human label. Dry-run now executes the same budget preflight and selection as live mode and reports actual deferrals while applying no writes. Combined candidate verified by 197 Rheos tests / 1006 assertions, clj-kondo 0 errors / 0 warnings, and four release builds with 0 warnings.
+
+Final PR #322 review gate: Rheos comment serialization now preserves a blank line before the closing delimiter, and this card was rewritten through the ledger-backed CLI to normalize its evidence block. Final combined evidence: 197 Rheos tests / 1009 assertions, clj-kondo 0 errors / 0 warnings, and server, CLI, GitHub-sync, and app release builds with 0 warnings.
+
 ---

@@ -11,6 +11,15 @@
     :priority "P1"
     :labels task-labels}))
 
+(defn- managed-body [ownership-line labels-line task-content]
+  (str "<!-- openhax-kanban-sync uuid=\"a\" -->\n"
+       ownership-line "\n"
+       "<!-- This section is managed by eta-mu Rheos GitHub sync. -->\n\n"
+       "## Kanban metadata\n\n"
+       "- Labels: " labels-line "\n\n"
+       "---\n\n"
+       task-content))
+
 (deftest partitions-projector-owned-and-protected-labels
   (let [issue {:body (str "<!-- openhax-kanban-sync uuid=\"a\" -->\n"
                           "- Labels: `domain:old`\n")
@@ -41,8 +50,9 @@
 (deftest structural-ownership-marker-cannot-be-truncated-by-label-backticks
   (let [previous (task ["human`context" "security,review"])
         marker (labels/ownership-marker previous)
-        issue {:body (str marker "\n"
-                          "- Labels: `human`context`, `security,review`\n")
+        issue {:body (managed-body marker
+                                   "`human`context`, `security,review`"
+                                   "Task body")
                :labels ["kanban" "status:review" "priority:P1"
                         "human" "human-context" "security-review"]}
         delta (labels/plan-delta (task) issue)]
@@ -67,8 +77,7 @@
     (doseq [marker ["<!-- openhax-kanban-label-ownership-v1 [\"human\" 42] -->"
                     "<!-- openhax-kanban-label-ownership-v1 [\"human\"] [\"trailing\"] -->"
                     "<!-- openhax-kanban-label-ownership-v1 malformed -->"]]
-      (let [body (str marker "\n"
-                      "- Labels: `human`\n")]
+      (let [body (managed-body marker "`human`" "Task body")]
         (is (empty? (labels/projected-task-labels body)))
         (is (empty? (:remove (labels/plan-delta
                               (task)
@@ -76,15 +85,29 @@
                                 :labels ["kanban" "status:review"
                                         "priority:P1" "human"]})))))))
   (testing "only the first structural marker is authoritative"
-    (let [body (str "<!-- openhax-kanban-label-ownership-v1 malformed -->\n"
-                    "- Labels: `human`\n"
-                    "<!-- openhax-kanban-label-ownership-v1 [\"human\"] -->\n")]
+    (let [body (managed-body
+                "<!-- openhax-kanban-label-ownership-v1 malformed -->"
+                "`human`"
+                "<!-- openhax-kanban-label-ownership-v1 [\"human\"] -->")]
       (is (empty? (labels/projected-task-labels body)))
       (is (empty? (:remove (labels/plan-delta
                             (task)
                             {:body body
                              :labels ["kanban" "status:review"
                                       "priority:P1" "human"]})))))))
+
+(deftest task-content-cannot-supply-missing-header-ownership
+  (let [body (managed-body
+              "<!-- This pre-v1 header has no ownership record. -->"
+              "none"
+              "<!-- openhax-kanban-label-ownership-v1 [\"human\"] -->")
+        delta (labels/plan-delta
+               (task)
+               {:body body
+                :labels ["kanban" "status:review" "priority:P1" "human"]})]
+    (is (empty? (labels/projected-task-labels body)))
+    (is (empty? (:remove delta))
+        "a marker copied into task content has no ownership authority")))
 
 (deftest canonical-protected-labels-stay-outside-projection-authority
   (doseq [protected ["deploy" "eta-mu:review" "ETA-MU:repair"]]

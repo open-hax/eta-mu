@@ -15,10 +15,12 @@
 (def ^:private projected-label-pattern #"`([^`]*)`")
 (def ^:private legacy-projected-labels-pattern
   #"^(?:none|`[^`]*`(?:\s*,\s*`[^`]*`)*)$")
+(def ^:private sync-marker-line-pattern
+  #"^<!--\s*openhax-kanban-sync\s+uuid=\"[^\"]+\"\s*-->$")
 (def ^:private ownership-marker-line-pattern
-  #"(?m)^<!--\s*openhax-kanban-label-ownership-v1(?:\s|-->)[^\r\n]*\r?$")
+  #"^<!--\s*openhax-kanban-label-ownership-v1(?:\s|-->)[^\r\n]*$")
 (def ^:private ownership-marker-value-pattern
-  #"^<!--\s*openhax-kanban-label-ownership-v1\s+(\[[^\r\n]*\])\s*-->\r?$")
+  #"^<!--\s*openhax-kanban-label-ownership-v1\s+(\[[^\r\n]*\])\s*-->$")
 
 (defn normalize-label
   "Normalize one canonical task label into the GitHub projection spelling."
@@ -100,8 +102,11 @@
     (distinct-labels candidate)))
 
 (defn- structured-ownership [issue-body policy]
-  (let [body (or issue-body "")]
-    (if-let [marker-line (re-find ownership-marker-line-pattern body)]
+  (let [[sync-line marker-line] (str/split-lines (or issue-body ""))]
+    (if (and (some? sync-line)
+             (some? marker-line)
+             (re-matches sync-marker-line-pattern sync-line)
+             (re-matches ownership-marker-line-pattern marker-line))
       {:present? true
        :labels
        (if-let [[_ encoded] (re-matches ownership-marker-value-pattern

@@ -205,6 +205,47 @@
     (is (= 2 (:selected-writes selection)))
     (is (= 3 (:deferred-writes selection)))))
 
+(deftest ^:async dry-run-enforces-write-budget-and-reports-real-deferrals
+  (let [tasks [(task "dry-a" "review") (task "dry-b" "review")]
+        desired-labels (github/desired-labels (first tasks))
+        repo-state {:labels (mapv (fn [name] {:name name}) desired-labels)
+                    :issues (mapv (fn [number t]
+                                    {:number number
+                                     :title (str "Stale " (:title t))
+                                     :body (github/build-issue-body t "/repo")
+                                     :state "open"
+                                     :labels desired-labels})
+                                  [71 72]
+                                  tasks)}
+        {:keys [result undersized-error]}
+        (with-redefs [github/load-repo-state!
+                      (fn [_ _] (js/Promise.resolve repo-state))]
+          {:result (await (github/sync! tasks
+                                        {:token "test-token"
+                                         :repo "open-hax/eta-mu"
+                                         :cwd "/repo"
+                                         :dry-run true
+                                         :max-writes 1}))
+           :undersized-error
+           (try
+             (await (github/sync! tasks
+                                  {:token "test-token"
+                                   :repo "open-hax/eta-mu"
+                                   :cwd "/repo"
+                                   :dry-run true
+                                   :max-writes 0}))
+             nil
+             (catch :default cause cause))})]
+    (is (= 2 (count (:operations result))))
+    (is (= 2 (:planned-writes result)))
+    (is (empty? (:applied-operations result)))
+    (is (zero? (:applied-writes result)))
+    (is (= 1 (:deferred-operations result)))
+    (is (= 1 (:deferred-writes result)))
+    (is (some? undersized-error))
+    (is (re-find #"requires 1 API write, but --max-writes is 0"
+                 (.-message undersized-error)))))
+
 (deftest undersized-write-budget-refuses-all-writes-instead-of-starving
   (let [stale-labels (mapv #(str "domain:stale-" %) (range 51))
         current (assoc (task "large-label-delta" "review")

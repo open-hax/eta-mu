@@ -4,7 +4,7 @@ labels: "rheos, github, projection, data-integrity"
 dependency: []
 parent: "rheos-ledger-authoritative-projections"
 type: "task"
-write-id: "1788285862266-0.2rp650hj8ifaxojmmvc"
+write-id: "1788288851054-0.dl4rnf9hgybni8pxcf5"
 title: "Preserve inline YAML label arrays in Rheos projections"
 priority: "P0"
 status: "review"
@@ -36,4 +36,9 @@ Rheos decodes canonical top-level inline YAML string sequences without broadenin
 Verified on the combined blocker-removal candidate: 191 Rheos tests / 967 assertions, clj-kondo 0 errors and 0 warnings, all four production release builds 0 warnings, and all 252 previously affected inline task-label arrays remain nonempty. Candidate also proves exact read-task/board equality.
 
 Exact-head review regression fixed: the shared canonical inline-sequence decoder now preserves quoted commas identically through read-task and board projection. Verified 195 tests / 992 assertions, zero failures; clj-kondo 0 errors/warnings; server, CLI, GitHub-sync, and app release builds 0 warnings.
+
+Exact-head PR #322 review follow-up: bracket-prefixed malformed and trailing inline arrays now fail closed through the shared decoder in both read-task and board paths; parity regressions cover unterminated and trailing forms. Combined candidate verified by 197 Rheos tests / 1006 assertions, clj-kondo 0 errors / 0 warnings, and server, CLI, GitHub-sync, and app release builds with 0 warnings.
+
+Final PR #322 review gate: Rheos comment serialization now preserves a blank line before the closing delimiter, and this card was rewritten through the ledger-backed CLI to normalize its evidence block. Final combined evidence: 197 Rheos tests / 1009 assertions, clj-kondo 0 errors / 0 warnings, and server, CLI, GitHub-sync, and app release builds with 0 warnings.
+
 ---

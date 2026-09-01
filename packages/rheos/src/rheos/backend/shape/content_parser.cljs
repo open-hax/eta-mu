@@ -3,9 +3,8 @@
   (:require [clojure.string :as str]
             [rheos.backend.shape.frontmatter :as frontmatter]))
 
-(defn- parse-inline-array [key raw-items]
-  (when-let [items (frontmatter/parse-canonical-string-sequence
-                    (str "[" raw-items "]"))]
+(defn- parse-inline-array [key raw-value]
+  (when-let [items (frontmatter/parse-canonical-string-sequence raw-value)]
     (cond
       ;; Historical Rheos rewrites produced dependency: [""] from an empty
       ;; vector. A dependency on the empty-string id is never meaningful, so
@@ -22,9 +21,10 @@
             lines (str/split-lines yaml-str)
             data (reduce (fn [acc line]
                            (cond
-                             ;; Array: key: ["a", "b", "c"]
-                             (re-matches #"^(\w[\w_-]*):\s*\[(.*)\]\s*" line)
-                             (let [[_ k v] (re-matches #"^(\w[\w_-]*):\s*\[(.*)\]\s*" line)
+                             ;; Canonical array, or a bracket-prefixed value that
+                             ;; must fail closed instead of becoming a scalar.
+                             (re-matches #"^(\w[\w_-]*):\s*(\[.*)$" line)
+                             (let [[_ k v] (re-matches #"^(\w[\w_-]*):\s*(\[.*)$" line)
                                    items (parse-inline-array k v)]
                                (if (some? items)
                                  (assoc acc (keyword k) items)
@@ -93,7 +93,7 @@
   (str/join "\n\n"
     (mapv (fn [section]
             (if (= (:type section) "comment")
-              (str "---\n" (:content section) "\n---")
+              (str "---\n" (:content section) "\n\n---")
               (:content section)))
           sections)))
 

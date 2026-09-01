@@ -1,7 +1,7 @@
 ---
 category: "tasks"
 type: "task"
-write-id: "1788283153990-0.t4ijudfrn5rfs79e6z"
+write-id: "1788288852261-0.byysigl2dpqnfa2vgzc"
 points: "8"
 title: "Project canonical Rheos tasks to GitHub Issues"
 priority: "P1"
@@ -74,4 +74,9 @@ Gate fixed on the way in: `bundle` was failing because `packages/legacy/kanban/t
 Follow-up owned here: reconcile status with reality, and re-parent under `rheos-ledger-authoritative-projections` if #158 lands.
 
 Successor ownership work is now tracked by rheos-github-label-ownership; it remains blocked on rheos-preserve-inline-yaml-label-arrays / GitHub issue #320 until the shared repair branch proves both invariants.
+
+Successor PR #322 exact-head evidence: dry-run now enforces the live write-budget selector and reports real deferred operation/write counts while remaining effect-free; ownership evidence is authoritative only in the expected managed-header position; malformed bracket arrays remain omitted across both readers. Verified by 197 Rheos tests / 1006 assertions, clj-kondo 0 errors / 0 warnings, and four release builds with 0 warnings.
+
+Final PR #322 review gate: Rheos comment serialization now preserves a blank line before the closing delimiter, and this card was rewritten through the ledger-backed CLI to normalize its evidence block. Final combined evidence: 197 Rheos tests / 1009 assertions, clj-kondo 0 errors / 0 warnings, and server, CLI, GitHub-sync, and app release builds with 0 warnings.
+
 ---

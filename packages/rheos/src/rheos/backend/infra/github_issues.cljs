@@ -289,7 +289,9 @@
                       (name (or (:type operation) :unknown-operation)))]
         (throw (js/Error.
                 (str "GitHub sync write budget is too small: " subject
-                     " requires " required " API writes, but --max-writes is " limit
+                     " requires " required " API "
+                     (if (= 1 required) "write" "writes")
+                     ", but --max-writes is " limit
                      ". Increase --max-writes to at least " required
                      "; refusing the sync before applying any writes.")))))
     (loop [remaining (vec operations)
@@ -325,15 +327,17 @@
         base-plan (plan-sync tasks repo-state options)
         operations (:operations base-plan)
         planned-writes (reduce + 0 (map #(or (:write-count %) 1) operations))
-        plan (assoc base-plan :planned-writes planned-writes)]
+        plan (assoc base-plan :planned-writes planned-writes)
+        selection (select-operations-within-write-budget operations max-writes)]
     (if dry-run
-      (assoc plan
-             :applied-operations []
-             :applied-writes 0
-             :deferred-operations 0
-             :deferred-writes 0)
+      (let [{:keys [deferred deferred-writes]} selection]
+        (assoc plan
+               :applied-operations []
+               :applied-writes 0
+               :deferred-operations (count deferred)
+               :deferred-writes deferred-writes))
       (let [{:keys [selected deferred selected-writes deferred-writes]}
-            (select-operations-within-write-budget operations max-writes)]
+            selection]
         (loop [remaining selected applied []]
           (if-let [operation (first remaining)]
             (do
