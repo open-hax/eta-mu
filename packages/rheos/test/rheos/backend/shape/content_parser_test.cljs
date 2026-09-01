@@ -1,6 +1,7 @@
 (ns rheos.backend.shape.content-parser-test
   (:require [cljs.test :refer [deftest is testing]]
-            [rheos.backend.shape.content-parser :as parser]))
+            [rheos.backend.shape.content-parser :as parser]
+            [rheos.backend.shape.frontmatter :as frontmatter]))
 
 (deftest test-parse-frontmatter
   (testing "parses quoted string values"
@@ -20,6 +21,27 @@
     (let [raw "---\nlabels: [\"epics\", \"cljs\", \"kanban\"]\n---\nBody"
           result (parser/parse-frontmatter raw)]
       (is (= ["epics" "cljs" "kanban"] (get-in result [:frontmatter :labels])))))
+
+  (testing "quoted commas agree with the canonical flat decoder"
+    (let [yaml "labels: [\"security,review\", \"ci\"]"
+          raw (str "---\n" yaml "\n---\nBody")
+          read-task-labels (get-in (parser/parse-frontmatter raw)
+                                   [:frontmatter :labels])
+          canonical-labels (:labels (frontmatter/parse-flat yaml))]
+      (is (= ["security,review" "ci"] read-task-labels))
+      (is (= canonical-labels read-task-labels))))
+
+  (testing "malformed bracket-prefixed values fail closed in both readers"
+    (doseq [value ["[\"ci\""
+                   "[\"ci\"] trailing"]]
+      (let [yaml (str "labels: " value)
+            raw (str "---\n" yaml "\n---\nBody")
+            read-task-frontmatter (:frontmatter (parser/parse-frontmatter raw))
+            canonical-frontmatter (frontmatter/parse-flat yaml)]
+        (is (not (contains? read-task-frontmatter :labels)) value)
+        (is (= (contains? canonical-frontmatter :labels)
+               (contains? read-task-frontmatter :labels))
+            value))))
 
   (testing "dependency arrays preserve none and ordered nonblank ids"
     (doseq [[source expected] [["[]" []]
@@ -129,7 +151,9 @@
           parsed (parser/parse-task-content result)
           comments (filter #(= "comment" (:type %)) (:sections parsed))]
       (is (= 1 (count comments)))
-      (is (= "First comment" (:content (first comments)))))))
+      (is (= "First comment" (:content (first comments))))
+      (is (re-find #"First comment\n\n---$" result)
+          "the closing delimiter cannot render the comment as a Setext heading"))))
 
 (deftest test-append-comment-preserves-dependencies
   (testing "comment rewrites cannot invent a dependency from an empty vector"

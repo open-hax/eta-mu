@@ -37,8 +37,11 @@
   (println (str "- Update issues: " (get-in result [:summary :update-issues])))
   (println (str "- Skip closed tasks without issues: " (get-in result [:summary :skipped-closed-tasks])))
   (println (str "- Exclude non-task markdown: " (get-in result [:summary :excluded-tasks])))
+  (println (str "- Planned API writes: " (:planned-writes result)))
   (println (str "- Applied operations: " (count (:applied-operations result))))
+  (println (str "- Applied API writes: " (:applied-writes result)))
   (println (str "- Deferred operations: " (:deferred-operations result)))
+  (println (str "- Deferred API writes: " (:deferred-writes result)))
   (doseq [operation (:operations result)]
     (case (:type operation)
       :create-label (println (str "  + label " (:name operation)))

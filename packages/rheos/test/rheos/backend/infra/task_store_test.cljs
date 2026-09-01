@@ -3,6 +3,9 @@
             ["node:os" :as os]
             ["node:path" :as path]
             [cljs.test :refer [deftest testing is]]
+            [rheos.backend.domain.board :as board]
+            [rheos.backend.infra.agent-tools :as agent-tools]
+            [rheos.backend.infra.projects :as projects]
             [rheos.backend.infra.task-store :as task-store]))
 
 (def card-markdown
@@ -19,6 +22,45 @@
               (str "---\nuuid: \"" uuid "\"\ntitle: \"" title "\"\n"
                    "status: \"incoming\"\npriority: \"P3\"\n---\n\n# " title "\n\nBody")
               "utf8"))
+
+(deftest ^:async canonical-inline-labels-match-read-task-and-board-projection
+  (let [root (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-label-projection-")))
+        expected ["ci" "security,review" "governance"]
+        card-path (path/join root "labelled-card.md")
+        saved-projects {:projects (projects/all)
+                        :default-project-id (projects/default-id)}]
+    (try
+      (await (.writeFile
+              fsp card-path
+              (str "---\n"
+                   "uuid: \"labelled-card\"\n"
+                   "title: \"Labelled Card\"\n"
+                   "status: \"incoming\"\n"
+                   "priority: \"P1\"\n"
+                   "labels: [\"ci\", \"security,review\", \"governance\"]\n"
+                   "---\n\n# Labelled Card\n")
+              "utf8"))
+      (projects/set-projects!
+       {:projects [{:id "labels" :title "Labels" :tasks-dir root :meta {}}]
+        :default-project-id "labels"})
+      (let [read-task (await (agent-tools/dispatch
+                              "kanban_read_task"
+                              {:uuid "labelled-card" :project "labels"}))
+            snapshot (board/build-board-snapshot (await (task-store/load-tasks root)))
+            projected-task (->> (:columns snapshot)
+                                (mapcat :tasks)
+                                (filter #(= "labelled-card" (:uuid %)))
+                                first)
+            read-labels (get-in read-task [:frontmatter :labels])]
+        (is (= expected read-labels))
+        (is (some? projected-task))
+        (is (= read-labels (:labels projected-task))
+            "read-task and board snapshot must expose the same ordered labels")
+        (is (seq (:labels projected-task))
+            "a type-valid empty label vector is still semantic data loss"))
+      (finally
+        (projects/set-projects! saved-projects)
+        (await (.rm fsp root #js {:recursive true :force true}))))))
 
 (deftest ^:async configured-projection-paths-ignore-neighboring-prose
   (let [root (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-projection-")))
