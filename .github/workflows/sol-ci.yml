@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 name: Sol CI
 
 on:
@@ -7,6 +8,8 @@ on:
       - "packages/turn-processor/**"
       - "packages/eta-mu/**"
       - ".github/workflows/sol-ci.yml"
+      - ".github/workflows/sol-trusted-integration.yml"
+      - ".github/scripts/sol-ci-workflow.test.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -17,6 +20,8 @@ on:
       - "packages/turn-processor/**"
       - "packages/eta-mu/**"
       - ".github/workflows/sol-ci.yml"
+      - ".github/workflows/sol-trusted-integration.yml"
+      - ".github/scripts/sol-ci-workflow.test.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -26,122 +31,80 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - name: Check out repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Check out exact event revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
           persist-credentials: false
 
+      - name: Verify exact and clean checkout
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          expected_sha="$EXPECTED_SHA"
+          executed_sha="$(git rev-parse HEAD)"
+          checkout_status="$(git status --porcelain --untracked-files=all)"
+          if [[ ! "$expected_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Sol CI expected revision is not an immutable SHA: ${expected_sha:-missing}"
+            exit 1
+          fi
+          if [[ "$executed_sha" != "$expected_sha" ]]; then
+            echo "::error::Sol CI executed $executed_sha instead of exact revision $expected_sha."
+            exit 1
+          fi
+          if [[ -n "$checkout_status" ]]; then
+            echo "::error::Sol CI checkout was dirty before validation."
+            printf '%s\n' "$checkout_status"
+            exit 1
+          fi
+
       - name: Set up Java
-        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           distribution: temurin
           java-version: "21"
 
       - name: Set up Clojure CLI and clj-kondo
-        uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
+        uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360 # 13.4
         with:
           cli: 1.12.5.1654
           clj-kondo: 2025.10.23
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: "10.14.0"
           run_install: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Lint Sol source and tests
+      # Pull-request execution ends after public-source static validation. A
+      # fresh GitHub-hosted runner therefore never receives the private source
+      # or App capability that PR-controlled code could read or exfiltrate.
+      - name: Lint Sol public source and tests
         shell: bash
         run: |
           set -o pipefail
-          pnpm --dir packages/sol lint 2>&1 | tee sol-lint.log
+          clj-kondo --lint packages/sol/src/cljs packages/sol/test/cljs 2>&1 | tee sol-lint.log
+          node scripts/contract-guard.mjs packages/sol/src/cljs packages/sol/test/cljs 2>&1 | tee -a sol-lint.log
 
-      - name: Detect eta-mu app credentials
-        id: dependency-credentials
-        env:
-          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
-          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+      - name: Record pull-request private-integration boundary
+        if: ${{ github.event_name == 'pull_request' }}
         shell: bash
         run: |
-          if [[ -n "${ETA_MU_APP_ID}" && -n "${ETA_MU_APP_PRIVATE_KEY}" ]]; then
-            echo "available=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "available=false" >> "${GITHUB_OUTPUT}"
-          fi
-
-      - name: Create cross-repository read token
-        id: dependency-token
-        if: steps.dependency-credentials.outputs.available == 'true'
-        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547
-        with:
-          app-id: ${{ secrets.ETA_MU_APP_ID }}
-          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: |
-            katamorph
-            event-ledger
-
-      - name: Configure private Git dependency reads
-        env:
-          DEPENDENCY_TOKEN: ${{ steps.dependency-token.outputs.token }}
-        shell: bash
-        run: |
-          if [[ "${{ steps.dependency-credentials.outputs.available }}" != "true" ]]; then
-            echo "ETA_MU_APP_ID / ETA_MU_APP_PRIVATE_KEY are unavailable"
-            exit 1
-          fi
-          if [[ -z "${DEPENDENCY_TOKEN}" ]]; then
-            echo "The eta-mu GitHub App did not mint a dependency token"
-            exit 1
-          fi
-          authorization="$(printf 'x-access-token:%s' "${DEPENDENCY_TOKEN}" | base64 -w0)"
-          git config --global http.https://github.com/.extraheader "AUTHORIZATION: basic ${authorization}"
-
-      - name: Install workspace dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Test Sol
-        shell: bash
-        run: |
-          set -o pipefail
-          pnpm --dir packages/sol test 2>&1 | tee sol-test.log
-          grep -q "0 failures, 0 errors" sol-test.log
-          if grep -E "(^|[[:space:]])WARNING([:[:space:]]|$)" sol-test.log; then
-            echo "Sol test compilation emitted warnings"
-            exit 1
-          fi
-
-      - name: Build Sol server
-        shell: bash
-        run: |
-          set -o pipefail
-          pnpm --dir packages/sol build 2>&1 | tee sol-build.log
-          if grep -E "(^|[[:space:]])WARNING([:[:space:]]|$)" sol-build.log; then
-            echo "Sol server compilation emitted warnings"
-            exit 1
-          fi
-
-      - name: Remove private Git authorization
-        if: always()
-        run: git config --global --unset-all http.https://github.com/.extraheader || true
-
-      - name: Upload Sol validation evidence
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: sol-validation
-          path: |
-            sol-lint.log
-            sol-test.log
-            sol-build.log
-            packages/sol/.shadow-cljs/
-          if-no-files-found: ignore
+          {
+            echo "Sol pull-request validation is exact-head public-source lint only."
+            echo "Katamorph/event-ledger source and App credentials are intentionally absent."
+            echo "Full private-dependency test/build runs only for trusted main/staging push revisions."
+          } | tee sol-private-integration-deferred.log

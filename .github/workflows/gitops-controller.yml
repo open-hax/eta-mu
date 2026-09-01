@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: eta-mu GitOps controller
+
+on:
+  pull_request:
+    paths:
+      - packages/gitops-controller/**
+      - package.json
+      - .npmrc
+      - .dockerignore
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .github/workflows/gitops-controller.yml
+  push:
+    branches: [main]
+    paths:
+      - packages/gitops-controller/**
+      - package.json
+      - .npmrc
+      - .dockerignore
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .github/workflows/gitops-controller.yml
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic:
+    name: Controller tests, lint, and release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          persist-credentials: false
+      - name: Verify exact source revision
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 10.14.0
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+      - uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
+        with:
+          clj-kondo: 2025.10.23
+      - name: Install frozen controller dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter @eta-mu/gitops-controller...
+      - name: Test controller
+        run: pnpm -C packages/gitops-controller test
+      - name: Lint controller
+        run: pnpm -C packages/gitops-controller lint:kondo
+      - name: Build release
+        run: pnpm -C packages/gitops-controller build
+
+  image:
+    name: Build immutable runtime image
+    needs: deterministic
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          persist-credentials: false
+      - name: Verify exact source revision
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Build controller image
+        run: >-
+          docker build
+          --file packages/gitops-controller/Dockerfile
+          --tag eta-mu-gitops-controller:${EXPECTED_SHA}
+          .

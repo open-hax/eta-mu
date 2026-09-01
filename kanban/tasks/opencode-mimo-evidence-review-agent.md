@@ -1,7 +1,7 @@
 ---
 category: "tasks"
 labels: ["tasks", "github", "opencode", "review", "automation"]
-write-id: "1785194140000-0.mimo-review-agent"
+write-id: "1788283153939-0.uzle4qk8sjdy1ee0ron"
 points: "5"
 source: "operator request 2026-07-27"
 title: "Build an evidence-first OpenCode GitHub review agent using MiMo V2.5 Free"
@@ -79,7 +79,6 @@ environment guidance rather than evidence.
 - Re-run the pull-request canary and inspect its generated review output before merge.
 
 ---
-
 Implementation started 2026-07-27 from a direct operator request. The first canary's
 deterministic stage passed and uploaded evidence. A later run proved anonymous
 `opencode/mimo-v2.5-free` inference works, but also exposed two integration defects: the
@@ -88,3 +87,6 @@ ignored its `agent` input and fell back to the mutable built-in `build` agent. C
 `574f37f`, `fc40dd1`, and `e9146d4` preserve the full context, remove the false API-key gate,
 force the bounded reviewer through inline config, and complete the deterministic Clojure/build
 environment.
+
+Webhook admission and exact-head workflow dispatch are now tracked by child eta-mu-webhook-review-controller. The existing evidence-first reviewer remains the execution authority; the controller only authenticates, authorizes, revision-binds, receipts, and dispatches review commands.
+---

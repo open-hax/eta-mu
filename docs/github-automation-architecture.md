@@ -29,12 +29,39 @@ This document describes the centralized GitHub automation system owned by `open-
 ### 2. `review-resolution-gate.yml`
 **Purpose**: Block merge until all review comments are resolved
 
-**Triggers**: PR activity, review submission, review comment creation
+**Triggers**: A trusted default-branch `workflow_dispatch` produced by the
+eta-mu controller after a signed review submitted/dismissed, inline review
+comment created, or review thread resolved/unresolved webhook. The reusable
+workflow's `workflow_call` surface is used only by the target repository's
+pinned thin wrapper; it inherits `workflow_dispatch`, and every controller-bound
+validation step is unconditional.
 **Inputs**:
-- `pr`: pull request number
+- `pr_number`, `pr_head_sha`, `pr_base_sha`, `pr_merge_sha`, and `command_id`:
+  pull request, exact head/default-base/synthetic-merge tuple, and durable
+  lifecycle-webhook command
+- `gate_check_id`: exact pending Check Run created by the controller App
+- `evidence_run_id` and `evidence_command_id`: exact durably correlated review
+  workflow run and originating review command
 - `strict`: when true, blocks on any unresolved thread (default: true)
 
-**Logic**: Fetches all review threads via GraphQL. In strict mode, it fails if any thread is unresolved.
+**Logic**: Fetches all review threads via GraphQL. In strict mode, it fails if
+any thread is unresolved. A webhook dispatch is always strict and first requires
+both GitHub actor identities to equal the configured controller App, re-fetches
+the open same-repository pull request at the admitted default-base/head/test-
+merge tuple, and independently
+polls the exact `evidence_run_id`, and validates its protected workflow numeric
+ID, exact `path@default-ref`, attempt, repository, controller actor, and terminal
+success. It also requires a current acceptable exact-head review from the
+protected review-publication App before evaluating all unresolved threads.
+The workflow has read-only Actions, Checks, Contents, and Pull requests
+permissions. It never receives controller App credentials and never creates or
+updates a Check Run. Its signed `workflow_run:completed` event is correlated
+back to the durable dispatch by the controller, which alone terminally updates
+the same `gate_check_id`; only a successful gate run can produce success.
+The required Check Run is created on the synthetic merge SHA with immutable
+external identity
+`eta-mu-review-gate/v2:<delivery>:<pr>:<head>:<base>:<merge>`; review
+publication remains bound to the PR head.
 
 ### 3. `auto-merge.yml`
 **Purpose**: Enable GitHub auto-merge when checks pass
@@ -64,20 +91,24 @@ This document describes the centralized GitHub automation system owned by `open-
 ### 5. `opencode-code-review.yml` reference implementation
 **Purpose**: Produce a bounded, evidence-first pull-request review with OpenCode and `opencode/mimo-v2.5-free`.
 
-**Triggers**: Non-draft, same-repository pull requests opened, updated, reopened, or marked ready.
+**Triggers**: Trusted default-branch `workflow_dispatch` only, produced by the eta-mu GitOps controller after admission of a signed, allowlisted `pull_request:labeled` webhook carrying the exact `eta-mu:review` command. Consumer repositories use a default-branch dispatch wrapper and forward the controller's pull-request number, exact head SHA, exact default-base SHA, exact synthetic merge SHA, and durable command ID plus `controller_app_login: ${{ vars.ETA_MU_CONTROLLER_APP_LOGIN }}`. The called workflow validates that administrator-controlled value's exact `name[bot]` shape and requires both the inherited actor and triggering actor to match it; manual collaborator dispatches and human reruns fail closed. The controller App is separate from the review-publication App.
 
 **Logic**:
-1. Run deterministic dependency, lint, test, and build gates and serialize their exit codes and logs.
-2. Check out pinned revisions of `octave-commons/muse` and `riatzukiza/.agents`.
-3. Use Muse to compile a review-only OpenCode projection containing observer tools over existing Muse, phase, actor, task, and agent state.
-4. Package the compiled tools, source revisions, checksums, and external skill inventory into a review-context artifact.
-5. Mount the `.agents` checkout at `~/.agents`, OpenCode's external skill discovery root.
-6. Invoke one read-only OpenCode primary agent.
-7. Map changed contracts and risk zones.
-8. Generate candidate defects and test gaps.
-9. Attempt to disprove every candidate.
-10. Publish only confirmed changed-line defects meeting the evidence threshold.
-11. Keep uncertain questions and test gaps in a non-blocking summary.
+1. Re-fetch the pull request and require it to remain open, same-repository, mergeable, and targeted at the repository's current default branch with the exact admitted head/base/merge tuple. Create an in-progress diagnostic `eta-mu-opencode-evidence` check on that synthetic merge commit, bound to the command ID, workflow run/attempt, pull-request number, and all three revisions.
+2. Run the public webhook-controller deterministic scope without App credentials or private dependency bytes and serialize its exit codes and logs. The separate exact-head `Sol CI / verify` PR check is public-source lint only; private-dependency Sol test/build runs on trusted canonical pushes and remains an explicit pre-merge evidence gap.
+3. Check out pinned revisions of `octave-commons/muse` and `riatzukiza/.agents`.
+4. Use Muse to compile a review-only OpenCode projection containing observer tools over existing Muse, phase, actor, task, and agent state.
+5. Package the compiled tools, source revisions, checksums, and external skill inventory into a review-context artifact.
+6. Mount the `.agents` checkout at `~/.agents`, OpenCode's external skill discovery root.
+7. Archive the pull-request tree as inert, read-only `source/` evidence in a fresh execution directory with no pull-request OpenCode configuration at its root.
+8. Invoke one read-only OpenCode primary agent without GitHub App or publication credentials.
+9. Map changed contracts and risk zones.
+10. Generate candidate defects and test gaps.
+11. Attempt to disprove every candidate.
+12. Upload only a schema-bound submission, then verify and publish it from a fresh privileged job with no checkout or model workspace.
+13. Publish only confirmed changed-line defects meeting the evidence threshold.
+14. Finalize only the newest same-name check on the exact synthetic merge commit after listing with `filter: all`; a stale older success cannot satisfy a newer pending or failed command.
+15. Keep uncertain questions and test gaps in a non-blocking summary.
 
 The Muse projection intentionally omits write/network-capable multiplexed tools such as `receipt_river`, `edn_ledger`, `session_mycology`, and web search. It also omits actor/agent spawn, actor tell, task execution/control, and phase recording. Observer tools do not make Muse the owner of actor, event, policy, session, or workflow semantics.
 
@@ -134,19 +165,90 @@ jobs:
     secrets: inherit
 ```
 
+### `opencode-code-review.yml`
+```yaml
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        required: true
+        type: number
+      pr_head_sha:
+        required: true
+        type: string
+      pr_base_sha:
+        required: true
+        type: string
+      pr_merge_sha:
+        required: true
+        type: string
+      command_id:
+        required: true
+        type: string
+jobs:
+  evidence-review:
+    permissions:
+      checks: write
+      contents: read
+      pull-requests: read
+    uses: open-hax/eta-mu/.github/workflows/opencode-code-review.yml@<pinned-commit>
+    with:
+      controller_app_login: ${{ vars.ETA_MU_CONTROLLER_APP_LOGIN }}
+      pr_number: ${{ inputs.pr_number }}
+      pr_head_sha: ${{ inputs.pr_head_sha }}
+      pr_base_sha: ${{ inputs.pr_base_sha }}
+      pr_merge_sha: ${{ inputs.pr_merge_sha }}
+      command_id: ${{ inputs.command_id }}
+    secrets: inherit
+```
+
 ### `review-resolution-gate.yml`
 ```yaml
 on:
-  pull_request: [types: [opened, reopened, synchronize, edited, ready_for_review]]
-  pull_request_review: [types: [submitted, dismissed]]
-  pull_request_review_comment: [types: [created]]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        required: true
+        type: number
+      pr_head_sha:
+        required: true
+        type: string
+      pr_base_sha:
+        required: true
+        type: string
+      pr_merge_sha:
+        required: true
+        type: string
+      command_id:
+        required: true
+        type: string
+      gate_check_id:
+        required: true
+        type: string
+      evidence_run_id:
+        required: true
+        type: string
+      evidence_command_id:
+        required: true
+        type: string
 jobs:
   review-gate:
-    uses: open-hax/eta-mu/.github/workflows/review-resolution-gate.yml@main
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      pull-requests: read
+    uses: open-hax/eta-mu/.github/workflows/review-resolution-gate.yml@<pinned-commit>
     with:
-      pr: ${{ github.event.pull_request.number }}
+      pr_number: ${{ inputs.pr_number }}
       strict: true
-    secrets: inherit
+      pr_head_sha: ${{ inputs.pr_head_sha }}
+      pr_base_sha: ${{ inputs.pr_base_sha }}
+      pr_merge_sha: ${{ inputs.pr_merge_sha }}
+      command_id: ${{ inputs.command_id }}
+      gate_check_id: ${{ inputs.gate_check_id }}
+      evidence_run_id: ${{ inputs.evidence_run_id }}
+      evidence_command_id: ${{ inputs.evidence_command_id }}
 ```
 
 ### `auto-merge.yml`
@@ -193,7 +295,11 @@ Before adding thin wrappers to consumer repositories:
 7. Parameterize deterministic commands for JVM-only, npm, pnpm, and mixed workspaces.
 
 ### Branch Protection
-For the review gate to block merges, branch protection rules must require the `review-resolution-gate` check to pass before merging.
+For the review gate to block merges, branch protection rules must require the
+controller-App-owned `eta-mu-review-gate` check to pass before merging. No
+generic GitHub Actions job check or evidence check is lifecycle authority. Pin
+the required status check to the controller App's integration ID where the
+ruleset or branch-protection API exposes that binding.
 
 ## Testing
 
