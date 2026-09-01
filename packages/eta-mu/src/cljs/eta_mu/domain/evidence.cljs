@@ -2,7 +2,7 @@
   "Pure deterministic aggregation for typed evidence-lane results.
 
    The fold never executes a reviewer and never publishes to GitHub. It accepts
-   only exact-head data described by `eta-mu.law.evidence` and returns a
+   only exact-snapshot data described by `eta-mu.law.evidence` and returns a
    fail-closed decision that an infra publisher may later validate and render."
   (:require [clojure.string :as str]
             [eta-mu.law.evidence :as law]))
@@ -12,9 +12,19 @@
    :advisory 0
    :contradicted 0})
 
+(defn- collection-values
+  "Return only sequence-shaped values used by the public aggregate contracts.
+   Malformed scalar or map inputs become an empty sequence here so the fold can
+   return a schema failure instead of throwing before validation."
+  [values]
+  (cond
+    (nil? values) []
+    (or (sequential? values) (set? values)) values
+    :else []))
+
 (defn- stable-keywords
   [values]
-  (->> values
+  (->> (collection-values values)
        (filter keyword?)
        distinct
        (sort-by str)
@@ -22,7 +32,7 @@
 
 (defn- stable-strings
   [values]
-  (->> values
+  (->> (collection-values values)
        (filter string?)
        distinct
        sort
@@ -30,7 +40,7 @@
 
 (defn- stable-findings
   [findings]
-  (->> findings
+  (->> (collection-values findings)
        distinct
        (sort-by (fn [finding]
                   (str (:finding/id finding) "\u0000" (pr-str finding))))
@@ -97,7 +107,7 @@
 
 (defn- duplicate-values
   [values]
-  (->> values
+  (->> (collection-values values)
        frequencies
        (keep (fn [[value count]]
                (when (> count 1) value)))
@@ -121,25 +131,33 @@
                       (:evidence/lane result)))))
        stable-strings))
 
+(defn- status-label
+  [statuses]
+  (->> statuses
+       stable-keywords
+       (map name)
+       (str/join ",")))
+
 (defn- required-coverage-problems
   [required-lanes results-by-lane]
   (->> required-lanes
        (keep (fn [lane]
-               (when-let [result (first (get results-by-lane lane))]
-                 (when-not (= :complete (:coverage/status result))
-                   (str "required lane is not complete: " lane
-                        " (" (:coverage/status result) ")")))))
+               (when-let [lane-results (seq (get results-by-lane lane))]
+                 (let [statuses (set (map :coverage/status lane-results))]
+                   (when (not= #{:complete} statuses)
+                     (str "required lane is not complete: " lane
+                          " (" (status-label statuses) ")"))))))
        stable-strings))
 
 (defn- empty-inspection-problems
   [required-lanes results-by-lane]
   (->> required-lanes
        (keep (fn [lane]
-               (when-let [result (first (get results-by-lane lane))]
-                 (when (and (= :complete (:coverage/status result))
-                            (empty? (:coverage/inspected result)))
-                   (str "complete required lane inspected no retained artifacts: "
-                        lane)))))
+               (when (some #(and (= :complete (:coverage/status %))
+                                 (empty? (:coverage/inspected %)))
+                           (get results-by-lane lane))
+                 (str "complete required lane inspected no retained artifacts: "
+                      lane))))
        stable-strings))
 
 (defn- unsupported-finding-problems
@@ -192,8 +210,8 @@
    4. supported confirmed advisories => `:advisory`;
    5. complete clean required lanes => `:approved`.
 
-   Input ordering cannot change the returned lane, problem, finding, or verdict
-   ordering."
+   Malformed collection fields never escape as exceptions. Input ordering cannot
+   change the returned lane, problem, finding, or verdict ordering."
   [request]
   (if-not (law/valid-aggregate-request? request)
     (malformed-request-decision request)
