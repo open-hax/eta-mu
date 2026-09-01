@@ -5,6 +5,7 @@
             ["node:path" :as path]
             [clojure.string :as str]
             [rheos.backend.domain.events :as events]
+            [rheos.backend.infra.document-file-event :as document-file-event]
             [rheos.backend.infra.ledger :as ledger]
             [rheos.backend.law.fsm :as fsm]
             [rheos.backend.shape.content-parser :as content-parser]))
@@ -120,13 +121,41 @@
       (catch :default err
         (js/console.error "Watcher error:" file-path (.-message err))))))
 
-(defn start-watcher!
-  "Watch a board's task root for card changes.
+(defn ^:async handle-watched-markdown!
+  "Sequence the typed document adapter before the legacy Kanban adapter.
 
-   `projection-paths` narrows what counts as a card file to the project's
-   configured `:card-projection` roots, so the watcher and the task loader agree
-   on which files are on the board. Omit it, or pass an empty collection, to
-   treat the whole task root as the board."
+   Every Markdown file is offered to the typed document adapter. Only files in
+   the board's card projection continue through the legacy Kanban adapter. A
+   profiled card may satisfy both; serializing their ledger appends prevents two
+   file writers from racing on the same append-only EDN file."
+  [board-id tasks-dir file-path event-type projection-paths]
+  (await (document-file-event/handle-file-event!
+          board-id tasks-dir file-path event-type))
+  (when (projected? projection-paths file-path)
+    (await (handle-file-event! board-id tasks-dir file-path event-type))))
+
+(defn report-watcher-error! [file-path error]
+  (js/console.error "Watcher error:" file-path (.-message error)))
+
+(defn ^:async handle-watched-markdown-safely!
+  "Keep a rejected file-event promise inside the watcher callback boundary."
+  [board-id tasks-dir file-path event-type projection-paths]
+  (try
+    (await (handle-watched-markdown!
+            board-id tasks-dir file-path event-type projection-paths))
+    (catch :default error
+      (report-watcher-error! file-path error)
+      nil)))
+
+(defn start-watcher!
+  "Watch a board's task root for Markdown changes.
+
+   Every Markdown file is checked for the typed document profile.
+   `projection-paths` narrows only what continues through the legacy Kanban
+   adapter to the project's configured `:card-projection` roots, so the watcher
+   and task loader agree on which files are cards. Omit it to treat the whole
+   task root as the legacy board; an explicit empty collection projects no
+   legacy cards."
   ([board-id tasks-dir] (start-watcher! board-id tasks-dir nil))
   ([board-id tasks-dir projection-paths]
    (when-not (@watchers board-id)
@@ -136,9 +165,14 @@
      (let [watcher (chokidar/watch tasks-dir #js {:ignoreInitial true
                                                   :persistent true
                                                   :awaitWriteFinish true})
-           card? (fn [p] (and (md? p) (projected? projection-paths p)))
            on (fn [event]
-                (fn [p] (when (card? p) (handle-file-event! board-id tasks-dir p event))))]
+                (fn [p]
+                  (when (md? p)
+                    ;; A profiled Markdown file emits a typed document proposal
+                    ;; or rejection. Only projected files continue through the
+                    ;; unchanged Kanban correlation/drift path.
+                    (handle-watched-markdown-safely!
+                     board-id tasks-dir p event projection-paths))))]
        (.on watcher "change" (on "change"))
        (.on watcher "add" (on "add"))
        (.on watcher "unlink" (on "unlink"))

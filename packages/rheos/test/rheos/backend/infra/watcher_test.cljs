@@ -3,6 +3,7 @@
             ["node:os" :as os]
             ["node:path" :as path]
             [cljs.test :refer [deftest testing is]]
+            [rheos.backend.infra.document-file-event :as document-file-event]
             [rheos.backend.infra.watcher :as watcher]
             [rheos.backend.domain.events :as events]
             [rheos.backend.law.fsm :as fsm]
@@ -20,6 +21,49 @@
                  "priority: \"P3\"\n"
                  "---\n\n# " title "\n\nBody")]
     (.writeFile fsp file-path raw "utf8")))
+
+(deftest ^:async typed-document-append-precedes-legacy-kanban-append
+  (let [calls (atom [])]
+    (with-redefs [document-file-event/handle-file-event!
+                  (fn [& _]
+                    (swap! calls conj :typed-document)
+                    (js/Promise.resolve nil))
+                  watcher/handle-file-event!
+                  (fn [& _]
+                    (swap! calls conj :legacy-kanban)
+                    (js/Promise.resolve nil))]
+      (await (watcher/handle-watched-markdown!
+              "board" "/tasks" "/tasks/card.md" "change" nil))
+      (is (= [:typed-document :legacy-kanban] @calls)))))
+
+(deftest ^:async document-outside-card-projection-skips-only-legacy
+  (let [calls (atom [])
+        cards (path/resolve "/tasks/cards")
+        document (path/resolve "/tasks/documents/translation.md")]
+    (with-redefs [document-file-event/handle-file-event!
+                  (fn [& _]
+                    (swap! calls conj :typed-document)
+                    (js/Promise.resolve nil))
+                  watcher/handle-file-event!
+                  (fn [& _]
+                    (swap! calls conj :legacy-kanban)
+                    (js/Promise.resolve nil))]
+      (await (watcher/handle-watched-markdown!
+              "board" "/tasks" document "change" [cards]))
+      (is (= [:typed-document] @calls)))))
+
+(deftest ^:async watcher-callback-contains-rejected-file-events
+  (let [reported (atom [])]
+    (with-redefs [watcher/handle-watched-markdown!
+                  (fn [& _]
+                    (js/Promise.reject (js/Error. "append failed")))
+                  watcher/report-watcher-error!
+                  (fn [file-path error]
+                    (reset! reported [file-path (.-message error)]))]
+      (is (nil? (await (watcher/handle-watched-markdown-safely!
+                        "board" "/tasks" "/tasks/card.md" "change" nil))))
+      (is (= ["/tasks/card.md" "append failed"]
+             @reported)))))
 
 (deftest ^:async handle-file-event-correlates-known-write
   (testing "File event with a registered write-id is marked correlated"
