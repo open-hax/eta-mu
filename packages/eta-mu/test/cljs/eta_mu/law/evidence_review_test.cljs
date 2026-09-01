@@ -38,11 +38,12 @@
 (def lane-result
   (merge valid-snapshot
          {:evidence/lane :contracts-schema
-          :evidence/lane-revision (digest "f")
+          :evidence/lane-revision :eta-mu.lane/contracts-schema-v1
           :evidence/producer
-          {:producer/actor-binding "axxium:binding:contracts-reviewer"
-           :producer/profile-revision (digest "1")
-           :producer/workflow-revision (apply str (repeat 40 "2"))
+          {:producer/actor :eta-mu.agent/contracts-schema-reviewer
+           :producer/actor-binding "axxium:binding:contracts-schema-reviewer-v1"
+           :producer/profile-revision :eta-mu.profile/contracts-schema-reviewer-v1
+           :producer/workflow-revision :eta-mu.workflow/github-evidence-lanes-v1
            :producer/attestation-hash (digest "3")}
           :coverage/status :complete
           :coverage/inspected [artifact]
@@ -50,7 +51,9 @@
 
 (def aggregate-verdict
   (merge valid-snapshot
-         {:aggregate/conclusion :failure
+         {:aggregate/catalog-id :eta-mu/github-evidence-lanes-v1
+          :aggregate/catalog-version 1
+          :aggregate/conclusion :failure
           :aggregate/reasons [:confirmed-blocker]
           :aggregate/required-lanes #{:contracts-schema}
           :aggregate/lane-statuses
@@ -87,17 +90,21 @@
                         [:evidence/producer :producer/workflow-revision]
                         "latest"))))
     (is (not (law/valid-lane-result-shape?
+              (dissoc-in lane-result [:evidence/producer :producer/actor]))))
+    (is (not (law/valid-lane-result-shape?
               (assoc lane-result :coverage/status :passed)))))
   (testing "invalid lane results return diagnostics"
     (is (some? (law/explain-lane-result
                 (dissoc lane-result :review/episode))))))
 
 (deftest aggregate-verdict-schema-test
-  (testing "a deterministic aggregate verdict validates"
+  (testing "a deterministic, catalog-bound aggregate verdict validates"
     (is (law/valid-aggregate-verdict? aggregate-verdict)))
   (testing "models cannot smuggle publication authority into the verdict"
     (is (not (law/valid-aggregate-verdict?
               (assoc aggregate-verdict :github/publish? true)))))
-  (testing "invalid conclusions return diagnostics"
+  (testing "invalid conclusions or missing catalog identity return diagnostics"
     (is (some? (law/explain-aggregate-verdict
-                (assoc aggregate-verdict :aggregate/conclusion :approve))))))
+                (assoc aggregate-verdict :aggregate/conclusion :approve))))
+    (is (some? (law/explain-aggregate-verdict
+                (dissoc aggregate-verdict :aggregate/catalog-id))))))
