@@ -132,6 +132,14 @@
       (is (empty? (:add delta)))
       (is (empty? (:remove delta))))))
 
+(deftest normalized-url-dot-segments-stay-outside-projection-authority
+  (doseq [raw-label ["." ".." " 💥.💥 " "💥..💥"]]
+    (let [canonical (labels/canonical-task-labels (task [raw-label]))
+          marker (labels/ownership-marker (task [raw-label]))]
+      (is (empty? canonical) raw-label)
+      (is (= "<!-- openhax-kanban-label-ownership-v1 [] -->" marker)
+          raw-label))))
+
 (deftest label-comparison-is-case-insensitive-without-rewriting-names
   (let [delta (labels/plan-delta
                (task ["Domain:New" "domain:new"])

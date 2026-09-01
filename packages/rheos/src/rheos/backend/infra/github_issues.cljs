@@ -3,7 +3,8 @@
   (:require [clojure.string :as str]
             ["node:path" :as path]
             [rheos.backend.domain.github-label-projection :as label-projection]
-            [rheos.backend.extern.uri :as uri]))
+            [rheos.backend.extern.uri :as uri]
+            [rheos.backend.law.github-label-projection :as label-law]))
 
 (def ^:private marker-pattern #"<!--\s*openhax-kanban-sync\s+uuid=\"([^\"]+)\"\s*-->")
 (def ^:private legacy-marker-pattern #"(?im)^Kanban UUID:\s*(.+)$")
@@ -262,6 +263,13 @@
             :url (str issue-url "/labels")
             :body {:labels (:add-labels operation)}}])
         (map (fn [label]
+               (when-not (label-law/named-label-delete-safe? label)
+                 (throw
+                  (js/Error.
+                   (str "Refusing unsafe GitHub named-label delete path segment "
+                        (pr-str label)
+                        "; empty and URL dot-segment labels cannot be deleted "
+                        "through the single-label endpoint."))))
                {:method "DELETE"
                 :url (str issue-url "/labels/" (uri/encode-component label))
                 :body nil})

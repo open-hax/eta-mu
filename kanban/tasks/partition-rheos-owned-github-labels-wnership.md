@@ -4,7 +4,7 @@ labels: "rheos, github, projection, policy"
 dependency: ["rheos-preserve-inline-yaml-label-arrays"]
 parent: "rheos-ledger-authoritative-projections"
 type: "task"
-write-id: "1788290511137-0.hossg9eyd1jwy3fd8rc"
+write-id: "1788292686052-0.ylcy7630grkzb5ktn5"
 title: "Partition Rheos-owned GitHub labels"
 priority: "P0"
 status: "review"
@@ -50,5 +50,9 @@ Exact-head PR #322 review follow-up: ownership v1 evidence is accepted only at m
 Final PR #322 review gate: Rheos comment serialization now preserves a blank line before the closing delimiter, and this card was rewritten through the ledger-backed CLI to normalize its evidence block. Final combined evidence: 197 Rheos tests / 1009 assertions, clj-kondo 0 errors / 0 warnings, and server, CLI, GitHub-sync, and app release builds with 0 warnings.
 
 Final exact-head PR #322 review findings resolved: label policy and ownership admission now live in law while domain owns normalization/reconciliation; URI component encoding is isolated behind an extern adapter with direct reserved-character and Unicode coverage; all legacy backtick ownership is untrusted, while a two-pass regression proves structural-v1 migration preserves unproven labels and later removes only v1-proven labels. Verified by 202 Rheos tests / 1031 assertions, clj-kondo 0 errors / 0 warnings, and server, CLI, GitHub-sync, and app release builds with 0 warnings.
+
+Exact-head PR #322 dot-segment safety finding resolved: normalized task labels must now satisfy named-delete path admission, rejecting empty, literal dot/double-dot, percent-spelled dot variants, and raw inputs that normalize to dot segments. Existing v1 markers containing such labels fail closed, the planner preserves protected and unmanaged labels, and the infra boundary refuses any hand-built unsafe named DELETE before returning requests. Verified by 206 Rheos tests / 1099 assertions, clj-kondo 0 errors / 0 warnings, and server, CLI, GitHub-sync, and app release builds with 0 warnings.
+
+Final dot-segment gate refinement: named-delete admission also rejects non-string operation values before URI encoding. Final combined evidence is 206 Rheos tests / 1105 assertions with zero failures/errors, clj-kondo 0 errors / 0 warnings, and all four release builds at 0 warnings.
 
 ---

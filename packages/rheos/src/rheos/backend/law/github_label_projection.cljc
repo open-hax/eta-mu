@@ -17,6 +17,8 @@
   #"^<!--\s*openhax-kanban-label-ownership-v1(?:\s|-->)[^\r\n]*$")
 (def ^:private ownership-marker-value-pattern
   #"^<!--\s*openhax-kanban-label-ownership-v1\s+(\[[^\r\n]*\])\s*-->$")
+(def ^:private url-dot-segment-pattern
+  #"(?i)^(?:\.|%2e)(?:\.|%2e)?$")
 
 (defn- label-key [label]
   (-> (str label) str/trim str/lower-case))
@@ -45,6 +47,26 @@
         (or (exact-match? label (get-in policy [:owned :exact]))
             (prefix-match? label (get-in policy [:owned :prefixes]))))))
 
+(defn named-label-delete-safe?
+  "True when one label can occupy GitHub's named-delete path segment safely.
+
+   Empty components hit the collection endpoint. WHATWG URL resolution treats
+   literal and percent-spelled single/double dots as path navigation before a
+   request is sent, so none can represent a named label deletion."
+  [label]
+  (and (string? label)
+       (let [candidate (str/trim label)]
+         (and (not (str/blank? candidate))
+              (not (re-matches url-dot-segment-pattern candidate))))))
+
+(defn projected-task-label-admissible?
+  "True when a normalized task label may be projected and later named-deleted."
+  ([label]
+   (projected-task-label-admissible? label default-policy))
+  ([label policy]
+   (and (named-label-delete-safe? label)
+        (not (protected-label? label policy)))))
+
 (defn- distinct-labels [labels]
   (loop [remaining labels
          seen #{}
@@ -60,9 +82,8 @@
   (when (and (vector? candidate)
              (every? string? candidate)
              (every? (fn [label]
-                       (and (not (str/blank? label))
-                            (= label (normalize-label label))
-                            (not (protected-label? label policy))))
+                       (and (= label (normalize-label label))
+                            (projected-task-label-admissible? label policy)))
                      candidate))
     (distinct-labels candidate)))
 

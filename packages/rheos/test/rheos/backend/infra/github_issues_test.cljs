@@ -193,6 +193,56 @@
     (is (= "https://api.github.com/repos/open-hax/eta-mu/issues/7/labels/domain%3Aold%2Fvalue"
            (:url (first requests))))))
 
+(deftest unsafe-dot-segment-ownership-cannot-reach-a-delete-request
+  (doseq [unsafe-label ["." ".." "%2e" "%2E" ".%2e" "%2e."
+                        "%2e%2e"]]
+    (let [current (assoc (task "dot-segment" "review") :labels [])
+          marker (str "<!-- openhax-kanban-label-ownership-v1 "
+                      (pr-str [unsafe-label]) " -->")
+          body (str "<!-- openhax-kanban-sync uuid=\"dot-segment\" -->\n"
+                    marker "\n"
+                    "<!-- This section is managed by eta-mu Rheos GitHub sync. -->\n")
+          repo-labels (mapv (fn [name] {:name name})
+                            (github/desired-labels current))
+          plan (github/plan-sync
+                [current]
+                {:labels repo-labels
+                 :issues [{:number 7
+                           :title (:title current)
+                           :body body
+                           :state "open"
+                           :labels ["kanban" "status:incoming" "priority:P1"
+                                    unsafe-label "human" "deploy" "eta-mu:review"]}]}
+                {:cwd "/repo"})
+          operation (first (:operations plan))
+          requests (github/operation-requests "open-hax/eta-mu" operation)
+          delete-urls (->> requests
+                           (filter #(= "DELETE" (:method %)))
+                           (mapv :url))]
+      (is (empty? (label-projection/projected-task-labels body)) unsafe-label)
+      (is (= ["status:incoming"] (:remove-labels operation)) unsafe-label)
+      (is (not-any? #{unsafe-label "human" "deploy" "eta-mu:review"}
+                    (:remove-labels operation))
+          unsafe-label)
+      (is (= ["https://api.github.com/repos/open-hax/eta-mu/issues/7/labels/status%3Aincoming"]
+             delete-urls)
+          unsafe-label))))
+
+(deftest operation-request-refuses-hand-built-dot-segment-deletes
+  (doseq [unsafe-label [nil :not-a-label "" "." ".." "%2e" ".%2E" "%2e."
+                        "%2E%2e"]]
+    (is (thrown-with-msg?
+         js/Error
+         #"Refusing unsafe GitHub named-label delete path segment"
+         (github/operation-requests
+          "open-hax/eta-mu"
+          {:type :update-issue
+           :issue-number 7
+           :patch {}
+           :add-labels []
+           :remove-labels [unsafe-label]}))
+        unsafe-label)))
+
 (deftest partial-label-reconciliation-remains-recoverable-until-body-patch
   (let [current (assoc (task "a" "review") :labels ["domain:new"])
         previous (assoc current :status "incoming" :labels ["domain:old"])

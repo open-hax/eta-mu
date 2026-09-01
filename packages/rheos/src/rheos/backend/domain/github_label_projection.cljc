@@ -34,8 +34,7 @@
   ([task policy]
    (->> (:labels task)
         (map normalize-label)
-        (remove str/blank?)
-        (remove #(law/protected-label? % policy))
+        (filter #(law/projected-task-label-admissible? % policy))
         distinct-labels
         vec)))
 
@@ -89,7 +88,8 @@
                                (map label-key)
                                (projected-task-labels (:body issue) policy))
          removable? (fn [label]
-                      (and (not (law/protected-label? label policy))
+                      (and (law/named-label-delete-safe? label)
+                           (not (law/protected-label? label policy))
                            (or (law/projector-owned-label? label policy)
                                (contains? prior-task-keys
                                           (label-key label)))))]

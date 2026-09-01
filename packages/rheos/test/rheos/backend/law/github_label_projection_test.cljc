@@ -20,6 +20,16 @@
     (is (law/projector-owned-label? "priority:P1"))
     (is (not (law/projector-owned-label? "human")))))
 
+(deftest named-label-delete-admission-rejects-url-dot-segments
+  (doseq [label [nil :not-a-label "" "." ".." "%2e" "%2E" ".%2e" "%2e."
+                 "%2e%2e" " %2E%2e "]]
+    (is (not (law/named-label-delete-safe? label)) label)
+    (is (not (law/projected-task-label-admissible? label)) label))
+  (doseq [label ["..." "./" "domain:." "domain:.." "human"]]
+    (is (law/named-label-delete-safe? label) label))
+  (is (not (law/projected-task-label-admissible? "deploy")))
+  (is (not (law/projected-task-label-admissible? "eta-mu:review"))))
+
 (deftest structural-ownership-admission-is-position-bound-and-fail-closed
   (let [canonical-label (fn [label] label)]
     (is (= {:present? true :labels ["domain:old"]}
