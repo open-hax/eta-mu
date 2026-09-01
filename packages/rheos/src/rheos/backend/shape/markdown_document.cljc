@@ -5,7 +5,8 @@
 (def partial-decoding
   {:decoder/id :rheos/flat-frontmatter-v1
    :decode/status :partial
-   :decode/capabilities #{:top-level-string-scalars}})
+   :decode/capabilities #{:top-level-string-scalars
+                          :top-level-string-sequences}})
 
 (defn- line-at [raw offset]
   (let [end (or (str/index-of raw "\n" offset) (count raw))

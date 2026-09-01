@@ -1,7 +1,8 @@
 (ns rheos.backend.infra.github-issues
   "GitHub Issues projection for Rheos canonical task objects."
   (:require [clojure.string :as str]
-            ["node:path" :as path]))
+            ["node:path" :as path]
+            [rheos.backend.domain.github-label-projection :as label-projection]))
 
 (def ^:private marker-pattern #"<!--\s*openhax-kanban-sync\s+uuid=\"([^\"]+)\"\s*-->")
 (def ^:private legacy-marker-pattern #"(?im)^Kanban UUID:\s*(.+)$")
@@ -19,22 +20,8 @@
 (defn- sleep! [ms]
   (js/Promise. (fn [resolve _] (js/setTimeout resolve ms))))
 
-(defn- normalize-label [label]
-  (let [normalized (-> label
-                       str/trim
-                       (str/replace #"\s+" "-")
-                       (str/replace #"[^A-Za-z0-9_.:/-]+" "-")
-                       (str/replace #"^-+|-+$" ""))]
-    (subs normalized 0 (min 50 (count normalized)))))
-
 (defn desired-labels [task]
-  (->> (concat ["kanban" (str "status:" (:status task))]
-               (when (seq (:priority task)) [(str "priority:" (:priority task))])
-               (:labels task))
-       (map normalize-label)
-       (filter seq)
-       distinct
-       vec))
+  (label-projection/desired-labels task))
 
 (defn- label-state [name]
   {:name name
@@ -107,9 +94,6 @@
         {:state "closed"}))
     desired))
 
-(defn- same-labels? [left right]
-  (= (sort left) (sort right)))
-
 (defn- assert-unique-uuids! [tasks]
   (loop [remaining tasks seen {}]
     (when-let [task (first remaining)]
@@ -133,7 +117,9 @@
                     []
                     (->> wanted-labels
                          (remove #(contains? existing-labels (str/lower-case %)))
-                         (mapv #(assoc (label-state %) :type :create-label))))]
+                         (mapv #(assoc (label-state %)
+                                       :type :create-label
+                                       :write-count 1))))]
     (loop [remaining eligible
            operations label-ops
            skipped-closed 0]
@@ -153,22 +139,44 @@
 
               (nil? issue)
               (recur (rest remaining)
-                     (conj operations {:type :create-issue :task task :title title :body body :labels labels})
+                     (conj operations {:type :create-issue
+                                       :task task
+                                       :title title
+                                       :body body
+                                       :labels labels
+                                       :write-count 1})
                      skipped-closed)
 
               :else
-              (let [state (effective-state task issue desired)]
-                (if (or (not= title (:title issue))
-                        (not= body (or (:body issue) ""))
-                        (not= (:state state) (:state issue))
-                        (not (same-labels? labels (:labels issue))))
+              (let [state (effective-state task issue desired)
+                    state-changed? (or (not= (:state state) (:state issue))
+                                       (and (:state-reason state)
+                                            (not= (:state-reason state) (:state-reason issue))))
+                    patch (cond-> {}
+                            (not= title (:title issue)) (assoc :title title)
+                            (not= body (or (:body issue) "")) (assoc :body body)
+                            state-changed? (assoc :state (:state state))
+                            (and state-changed? (:state-reason state))
+                            (assoc :state-reason (:state-reason state)))
+                    label-delta (label-projection/plan-delta task issue)
+                    add-labels (:add label-delta)
+                    remove-labels (:remove label-delta)
+                    write-count (+ (if (seq add-labels) 1 0)
+                                   (count remove-labels)
+                                   (if (seq patch) 1 0))]
+                (if (pos? write-count)
                   (recur (rest remaining)
-                         (conj operations {:type :update-issue
-                                           :issue-number (:number issue)
-                                           :task task :title title :body body :labels labels
-                                           :state (:state state)
-                                           :state-reason (:state-reason state)})
-                         skipped-closed)
+                          (conj operations {:type :update-issue
+                                            :issue-number (:number issue)
+                                            :task task
+                                            :title title
+                                            :state (:state state)
+                                            :state-reason (:state-reason state)
+                                            :patch patch
+                                            :add-labels add-labels
+                                            :remove-labels remove-labels
+                                            :write-count write-count})
+                          skipped-closed)
                   (recur (rest remaining) operations skipped-closed))))))
         {:operations operations
          :excluded-tasks excluded
@@ -216,6 +224,7 @@
    :title (:title issue)
    :body (:body issue)
    :state (:state issue)
+   :state-reason (:state_reason issue)
    :labels (mapv :name (:labels issue))})
 
 (defn ^:async load-repo-state! [token repo]
@@ -224,42 +233,96 @@
         issues (->> raw-issues (remove :pull_request) (mapv normalize-issue))]
     {:labels labels :issues issues}))
 
-(defn- ^:async apply-operation! [token repo operation]
+(defn operation-requests
+  "Materialize the bounded GitHub requests for one logical sync operation."
+  [repo operation]
   (case (:type operation)
     :create-label
-    (await (fetch-json! token (api-url repo "/labels") "POST"
-                        (select-keys operation [:name :color :description])))
+    [{:method "POST"
+      :url (api-url repo "/labels")
+      :body (select-keys operation [:name :color :description])}]
 
     :create-issue
-    (await (fetch-json! token (api-url repo "/issues") "POST"
-                        (select-keys operation [:title :body :labels])))
+    [{:method "POST"
+      :url (api-url repo "/issues")
+      :body (select-keys operation [:title :body :labels])}]
 
     :update-issue
-    (await (fetch-json! token
-                        (api-url repo (str "/issues/" (:issue-number operation)))
-                        "PATCH"
-                        (cond-> (select-keys operation [:title :body :labels :state])
-                          (:state-reason operation) (assoc :state_reason (:state-reason operation)))))
+    (let [issue-url (api-url repo (str "/issues/" (:issue-number operation)))
+          patch (:patch operation)
+          patch-body (cond-> (dissoc patch :state-reason)
+                       (:state-reason patch) (assoc :state_reason (:state-reason patch)))]
+      (vec
+       (concat
+        (when (seq (:add-labels operation))
+          [{:method "POST"
+            :url (str issue-url "/labels")
+            :body {:labels (:add-labels operation)}}])
+        (map (fn [label]
+               {:method "DELETE"
+                :url (str issue-url "/labels/" (js/encodeURIComponent label))
+                :body nil})
+             (:remove-labels operation))
+        (when (seq patch-body)
+          [{:method "PATCH" :url issue-url :body patch-body}]))))
 
-    nil))
+    []))
+
+(defn select-operations-within-write-budget
+  "Select complete logical operations without slicing one at the write limit."
+  [operations max-writes]
+  (let [limit (max 0 (or max-writes 50))]
+    (loop [remaining (vec operations)
+           selected []
+           selected-writes 0]
+      (if-let [operation (first remaining)]
+        (let [write-count (or (:write-count operation) 1)]
+          (if (<= (+ selected-writes write-count) limit)
+            (recur (subvec remaining 1)
+                   (conj selected operation)
+                   (+ selected-writes write-count))
+            {:selected selected
+             :deferred remaining
+             :selected-writes selected-writes
+             :deferred-writes (reduce + 0 (map #(or (:write-count %) 1) remaining))}))
+        {:selected selected
+         :deferred []
+         :selected-writes selected-writes
+         :deferred-writes 0}))))
+
+(defn- ^:async apply-operation! [token repo operation write-delay-ms]
+  (loop [remaining (operation-requests repo operation)]
+    (when-let [request (first remaining)]
+      (await (fetch-json! token (:url request) (:method request) (:body request)))
+      (when (and (seq (rest remaining)) (pos? (or write-delay-ms 0)))
+        (await (sleep! write-delay-ms)))
+      (recur (rest remaining)))))
 
 (defn ^:async sync! [tasks {:keys [token repo dry-run write-delay-ms max-writes] :as options}]
   (when (str/blank? token) (throw (js/Error. "Missing GITHUB_TOKEN or GH_TOKEN.")))
   (when (str/blank? repo) (throw (js/Error. "Missing GitHub repo target.")))
   (let [repo-state (await (load-repo-state! token repo))
-        plan (plan-sync tasks repo-state options)
-        operations (:operations plan)
-        limit (or max-writes 50)
-        selected (vec (take limit operations))]
+        base-plan (plan-sync tasks repo-state options)
+        operations (:operations base-plan)
+        planned-writes (reduce + 0 (map #(or (:write-count %) 1) operations))
+        plan (assoc base-plan :planned-writes planned-writes)]
     (if dry-run
-      (assoc plan :applied-operations [] :deferred-operations 0)
-      (loop [remaining selected applied []]
-        (if-let [operation (first remaining)]
-          (do
-            (await (apply-operation! token repo operation))
-            (when (and (seq (rest remaining)) (pos? (or write-delay-ms 0)))
-              (await (sleep! write-delay-ms)))
-            (recur (rest remaining) (conj applied operation)))
-          (assoc plan
-                 :applied-operations applied
-                 :deferred-operations (- (count operations) (count applied))))))))
+      (assoc plan
+             :applied-operations []
+             :applied-writes 0
+             :deferred-operations 0
+             :deferred-writes 0)
+      (let [{:keys [selected deferred selected-writes deferred-writes]}
+            (select-operations-within-write-budget operations max-writes)]
+        (loop [remaining selected applied []]
+          (if-let [operation (first remaining)]
+            (do
+              (await (apply-operation! token repo operation write-delay-ms))
+              (when (and (seq (rest remaining)) (pos? (or write-delay-ms 0)))
+                (await (sleep! write-delay-ms)))
+              (recur (rest remaining) (conj applied operation)))
+            (assoc plan
+                   :applied-operations applied
+                   :applied-writes selected-writes
+                   :deferred-operations (count deferred)
+                   :deferred-writes deferred-writes)))))))

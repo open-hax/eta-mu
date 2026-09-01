@@ -92,10 +92,12 @@ jobs:
         working-directory: packages/rheos
         run: |
           clj-kondo --lint \
+            src/rheos/backend/domain/github_label_projection.cljc \
             src/rheos/backend/infra/github_issue_preflight.cljs \
             src/rheos/backend/infra/github_issues.cljs \
             src/rheos/backend/infra/github_sync_cli.cljs \
             src/rheos/backend/infra/task_store.cljs \
+            test/rheos/backend/domain/github_label_projection_test.cljc \
             test/rheos/backend/infra/github_issue_preflight_test.cljs \
             test/rheos/backend/infra/github_issues_test.cljs
 

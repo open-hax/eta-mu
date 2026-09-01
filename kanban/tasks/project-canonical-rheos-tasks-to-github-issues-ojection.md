@@ -1,7 +1,7 @@
 ---
 category: "tasks"
 type: "task"
-write-id: "1786029518260-0.4uin24roxfi0krg67yr"
+write-id: "1788283153990-0.t4ijudfrn5rfs79e6z"
 points: "8"
 title: "Project canonical Rheos tasks to GitHub Issues"
 priority: "P1"
@@ -72,4 +72,6 @@ Merged to main (PR #176) on 2026-08-06. The card was written after the fact — 
 Gate fixed on the way in: `bundle` was failing because `packages/legacy/kanban/tests/kanban-sync-workflow.test.ts` still asserted the TypeScript-era interpolation in `.github/workflows/kanban-sync.yml`, which this PR replaced. The test now tracks the guard as written and covers both containment refusals, which it never did before.
 
 Follow-up owned here: reconcile status with reality, and re-parent under `rheos-ledger-authoritative-projections` if #158 lands.
+
+Successor ownership work is now tracked by rheos-github-label-ownership; it remains blocked on rheos-preserve-inline-yaml-label-arrays / GitHub issue #320 until the shared repair branch proves both invariants.
 ---
