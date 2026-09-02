@@ -38,22 +38,28 @@
 (def ^:private blocking-append-context* (atom nil))
 (def ^:private failing-append-context* (atom nil))
 
-(defn- ^:async blocking-append-line! [file line expected-position]
-  (let [{:keys [append-line! block-once?* started!* release]}
-        @blocking-append-context*]
-    (when (and (str/ends-with? file "dispatches.nd-edn")
-               (compare-and-set! block-once?* true false))
-      (@started!* nil)
-      (await release))
-    (await (append-line! file line expected-position))))
+(defn- ^:async blocking-append-line!
+  ([file line]
+   (await (blocking-append-line! file line nil)))
+  ([file line expected-position]
+   (let [{:keys [append-line! block-once?* started!* release]}
+         @blocking-append-context*]
+     (when (and (str/ends-with? file "dispatches.nd-edn")
+                (compare-and-set! block-once?* true false))
+       (@started!* nil)
+       (await release))
+     (await (append-line! file line expected-position)))))
 
-(defn- ^:async failing-append-line! [file line expected-position]
-  (let [{:keys [append-line! fail-once?*]} @failing-append-context*
-        result (await (append-line! file line expected-position))]
-    (when (compare-and-set! fail-once?* true false)
-      (throw (ex-info "injected post-readback failure"
-                      {:error/code :injected-readback-failure})))
-    result))
+(defn- ^:async failing-append-line!
+  ([file line]
+   (await (failing-append-line! file line nil)))
+  ([file line expected-position]
+   (let [{:keys [append-line! fail-once?*]} @failing-append-context*
+         result (await (append-line! file line expected-position))]
+     (when (compare-and-set! fail-once?* true false)
+       (throw (ex-info "injected post-readback failure"
+                       {:error/code :injected-readback-failure})))
+     result)))
 
 (deftest ^:async immutable-publication-is-complete-and-no-replace
   (let [root (await (fs/temporary-directory!))
