@@ -357,6 +357,7 @@ async function runResolver(t, {
   inputPrNumber = "42",
   commandId = "9eb17352-284c-4b55-879d-0d07f353fdee",
   fetchedPullRequest = pullRequestFixture(),
+  fetchedPullRequests,
   existingChecks = [],
   runId = "314159",
   runAttempt = "2",
@@ -365,9 +366,11 @@ async function runResolver(t, {
   t.after(() => fs.rmSync(outputDirectory, { recursive: true, force: true }));
   const outputs = {};
   const checkCalls = { create: [], list: [], update: [] };
+  const pullRequests = fetchedPullRequests || [fetchedPullRequest];
+  let pullRequestCalls = 0;
   let createdCheck;
   const script = namedStep("resolve_pull_request", "Resolve and verify pull request context").with.script;
-  const execute = new AsyncFunction("github", "context", "core", "process", "require", script);
+  const execute = new AsyncFunction("github", "context", "core", "process", "require", "setTimeout", script);
   await execute(
     {
       rest: {
@@ -376,7 +379,9 @@ async function runResolver(t, {
             assert.equal(owner, "open-hax");
             assert.equal(repo, "fixture");
             assert.equal(pullNumber, 42);
-            return { data: fetchedPullRequest };
+            const current = pullRequests[Math.min(pullRequestCalls, pullRequests.length - 1)];
+            pullRequestCalls += 1;
+            return { data: current };
           },
         },
         checks: {
@@ -429,6 +434,7 @@ async function runResolver(t, {
       },
     },
     requireFromController,
+    (callback) => callback(),
   );
   const resolvedBytes = fs.readFileSync(path.join(outputDirectory, "pull-request.json"));
   return {
@@ -437,6 +443,7 @@ async function runResolver(t, {
     createdCheck,
     resolved: JSON.parse(resolvedBytes.toString("utf8")),
     resolvedBytes,
+    pullRequestCalls,
   };
 }
 
@@ -448,6 +455,7 @@ async function runEvidenceCheckFinalizer({
   baseSha = "a".repeat(40),
   mergeSha = "c".repeat(40),
   sameHeadChecks,
+  observedCalls,
 } = {}) {
   const commandId = "9eb17352-284c-4b55-879d-0d07f353fdee";
   const externalId = `eta-mu-code-review/v2:${commandId}:314159:2:42:${headSha}:${baseSha}:${mergeSha}`;
@@ -463,7 +471,7 @@ async function runEvidenceCheckFinalizer({
     app: { slug: "github-actions" },
   };
   const checks = sameHeadChecks || [boundCheck];
-  const calls = { get: [], list: [], update: [] };
+  const calls = observedCalls || { get: [], list: [], update: [] };
   const outputs = {};
   const script = namedStep("review_gate", "Finalize pull-request merge evidence check").with.script;
   const execute = new AsyncFunction("github", "context", "core", "process", "require", script);
@@ -880,6 +888,28 @@ test("resolver admits an exact open same-repository dispatch and records normali
   assert.equal(checkCalls.list[0].ref, "c".repeat(40));
 });
 
+test("resolver polls transient mergeability and fails closed after bounded attempts", async (t) => {
+  const resolvedPullRequest = pullRequestFixture();
+  const { pullRequestCalls, resolved } = await runResolver(t, {
+    fetchedPullRequests: [
+      pullRequestFixture({ mergeable: null }),
+      resolvedPullRequest,
+    ],
+  });
+  assert.equal(pullRequestCalls, 2);
+  assert.equal(resolved.mergeable, true);
+
+  await assert.rejects(
+    runResolver(t, {
+      fetchedPullRequests: [
+        ...Array.from({ length: 6 }, () => pullRequestFixture({ mergeable: null })),
+        resolvedPullRequest,
+      ],
+    }),
+    /did not resolve pull-request mergeability during admission after bounded polling/i,
+  );
+});
+
 test("resolver creates the PR-merge check and cancels only older bound pending checks", async (t) => {
   const headSha = "b".repeat(40);
   const baseSha = "a".repeat(40);
@@ -991,9 +1021,68 @@ test("newer pending or failed PR-merge evidence rejects stale success", async ()
       sameHeadChecks: [staleSuccess, newerCheck],
     });
     assert.equal(calls.list[0].filter, "all");
-    assert.equal(calls.get.length, 0);
+    assert.equal(calls.get.length, 1);
+    assert.equal(calls.get[0].check_run_id, staleSuccess.id);
     assert.equal(calls.update.length, 0);
     assert.equal(outputs.superseded, "true");
+  }
+});
+
+test("a superseded in-progress PR-merge evidence check is cancelled without overwriting the newer check", async () => {
+  const headSha = "b".repeat(40);
+  const baseSha = "a".repeat(40);
+  const mergeSha = "c".repeat(40);
+  const currentCheck = {
+    id: 9001,
+    name: "eta-mu-opencode-evidence",
+    head_sha: mergeSha,
+    status: "in_progress",
+    conclusion: null,
+    external_id: `eta-mu-code-review/v2:9eb17352-284c-4b55-879d-0d07f353fdee:314159:2:42:${headSha}:${baseSha}:${mergeSha}`,
+    app: { slug: "github-actions" },
+  };
+  const newerCheck = {
+    ...currentCheck,
+    id: 9002,
+    external_id: `eta-mu-code-review/v2:11111111-1111-4111-8111-111111111111:314160:1:42:${headSha}:${baseSha}:${mergeSha}`,
+  };
+  const { calls, outputs } = await runEvidenceCheckFinalizer({
+    sameHeadChecks: [currentCheck, newerCheck],
+  });
+
+  assert.equal(calls.get.length, 1);
+  assert.equal(calls.get[0].check_run_id, currentCheck.id);
+  assert.equal(calls.update.length, 1);
+  assert.equal(calls.update[0].check_run_id, currentCheck.id);
+  assert.equal(calls.update[0].status, "completed");
+  assert.equal(calls.update[0].conclusion, "cancelled");
+  assert.notEqual(calls.update[0].check_run_id, newerCheck.id);
+  assert.equal(outputs.superseded, "true");
+});
+
+test("PR-merge evidence finalization fails closed when list ordering cannot prove the bound check is current", async () => {
+  const headSha = "b".repeat(40);
+  const baseSha = "a".repeat(40);
+  const mergeSha = "c".repeat(40);
+  const olderCheck = {
+    id: 8000,
+    name: "eta-mu-opencode-evidence",
+    head_sha: mergeSha,
+    status: "completed",
+    conclusion: "success",
+    external_id: `eta-mu-code-review/v2:11111111-1111-4111-8111-111111111111:314158:1:42:${headSha}:${baseSha}:${mergeSha}`,
+    app: { slug: "github-actions" },
+  };
+
+  for (const sameHeadChecks of [[olderCheck], []]) {
+    const observedCalls = { get: [], list: [], update: [] };
+    await assert.rejects(
+      runEvidenceCheckFinalizer({ sameHeadChecks, observedCalls }),
+      /PR-merge evidence check ordering no longer matches its trusted binding/i,
+    );
+    assert.equal(observedCalls.list.length, 1);
+    assert.equal(observedCalls.get.length, 0);
+    assert.equal(observedCalls.update.length, 0);
   }
 });
 
@@ -1575,9 +1664,16 @@ test("jobs that execute pull-request code receive no App credentials or private 
     2,
   );
   assert.match(defaultScript, /pnpm --dir packages\/gitops-controller exec shadow-cljs compile test/);
-  assert.match(defaultScript, /node packages\/gitops-controller\/target\/test\.cjs/);
+  assert.match(defaultScript, /run_gate controller_test pnpm --dir packages\/gitops-controller test/);
+  assert.equal(
+    workflowText.match(
+      /run_gate controller_test pnpm --dir packages\/gitops-controller test/g,
+    )?.length,
+    2,
+  );
+  assert.doesNotMatch(workflowText, /node packages\/gitops-controller\/target\/test\.cjs/);
   assert.match(defaultScript, /pnpm --dir packages\/gitops-controller exec shadow-cljs release server/);
-  assert.doesNotMatch(defaultScript, /pnpm --dir packages\/(?:extensions|gitops-controller) (?:build|test|lint:kondo)/);
+  assert.doesNotMatch(defaultScript, /pnpm --dir packages\/(?:extensions|gitops-controller) (?:build|lint:kondo)/);
   assert.doesNotMatch(defaultScript, /bootstrap_extensions/);
   assert.doesNotMatch(defaultScript, /pnpm lint(?:\s|$)/);
   assert.doesNotMatch(defaultScript, /pnpm test(?:\s|$)/);

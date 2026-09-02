@@ -58,11 +58,21 @@
                    "x-github-event" "pull_request"
                    "x-github-delivery" delivery-id}]
       (try
+        (testing "dependency reporting is explicit and does not gate readiness"
+          (let [readiness-response
+                (await (.inject app #js {:method "GET"
+                                         :url "/health/ready"}))
+                dependency-response
+                (await (.inject app #js {:method "GET"
+                                         :url "/health/dependencies"}))]
+            (is (= 503 (.-statusCode readiness-response)))
+            (is (= 200 (.-statusCode dependency-response)))
+            (is (= {:dependencies {:github "unchecked"
+                                    :axxium "not-configured"
+                                    :sol "not-configured"
+                                    :proxx "not-configured"}}
+                   (response-body dependency-response)))))
         (testing "readiness is gated on completed startup recovery"
-          (is (= 503 (.-statusCode
-                      (await (.inject app
-                                      #js {:method "GET"
-                                           :url "/health/ready"})))))
           (await (worker/start! queue-worker))
           (is (= 200 (.-statusCode
                       (await (.inject app

@@ -13,6 +13,14 @@
 
 (defonce runtime* (atom nil))
 
+(def ^:private optional-dependency-status
+  {:axxium :not-configured
+   :sol :not-configured
+   :proxx :not-configured})
+
+(defn- dependency-status [worker-status]
+  (merge optional-dependency-status (:dependency worker-status)))
+
 (defn create-app
   [{:keys [config store worker enqueue!]}]
   (let [app (-> (fastify/app)
@@ -46,7 +54,8 @@
      app "/health/dependencies"
      (fn [_request reply]
        (fastify/send! reply 200
-                      {:dependencies (:dependency (worker/status worker))})))
+                      {:dependencies
+                       (dependency-status (worker/status worker))})))
     (fastify/register-post!
      app "/hooks/eta-mu/github"
      (^:async fn [request reply]

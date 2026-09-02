@@ -115,7 +115,12 @@ controller App creates and terminally updates `eta-mu-review-gate`.
 | `POST /hooks/eta-mu/github` | Signed, bounded GitHub webhook admission |
 | `GET /health/live` | Process liveness only |
 | `GET /health/ready` | Deterministic state/worker readiness; no network probe |
-| `GET /health/dependencies` | Last observed GitHub dependency state |
+| `GET /health/dependencies` | Last observed GitHub state plus explicit optional dependency status |
+
+`/health/ready` depends only on deterministic local state and worker startup;
+optional integrations never gate it. `/health/dependencies` reports the last
+observed GitHub state and reports Axxium, Sol, and Proxx as `not-configured`
+while those optional ports are absent from the observe-only composition.
 
 Only `issues:labeled` with exact `eta-mu:probe`,
 `pull_request:labeled` with exact `eta-mu:review` or `eta-mu:probe`,

@@ -87,7 +87,7 @@ on:
             run_gate workflow_contract node --test .github/scripts/opencode-code-review-workflow.test.mjs .github/scripts/sol-ci-workflow.test.mjs
             run_gate controller_lint clj-kondo --config packages/gitops-controller/.clj-kondo/config.edn --lint packages/gitops-controller/src/cljs packages/gitops-controller/test/cljs
             run_gate controller_test_compile pnpm --dir packages/gitops-controller exec shadow-cljs compile test
-            run_gate controller_test node packages/gitops-controller/target/test.cjs
+            run_gate controller_test pnpm --dir packages/gitops-controller test
             run_gate controller_build pnpm --dir packages/gitops-controller exec shadow-cljs release server
           else
             echo "workflow_contract=125" >> "$statuses"
@@ -194,10 +194,19 @@ jobs:
               throw new Error('workflow_dispatch command_id is missing or invalid.');
             }
 
-            const { data: pullRequest } = await github.rest.pulls.get({
-              ...context.repo,
-              pull_number: pullNumber,
-            });
+            const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+            let pullRequest;
+            for (let attempt = 1; attempt <= 6; attempt += 1) {
+              ({ data: pullRequest } = await github.rest.pulls.get({
+                ...context.repo,
+                pull_number: pullNumber,
+              }));
+              if (pullRequest.mergeable !== null) break;
+              if (attempt < 6) await wait(1000);
+            }
+            if (pullRequest.mergeable === null) {
+              throw new Error('GitHub did not resolve pull-request mergeability during admission after bounded polling.');
+            }
             const repository = `${context.repo.owner}/${context.repo.repo}`;
             const targetRepository = String(pullRequest.base?.repo?.full_name || '');
             const defaultBaseRef = String(pullRequest.base?.repo?.default_branch || '');
@@ -679,7 +688,7 @@ jobs:
               run_gate workflow_contract node --test .github/scripts/opencode-code-review-workflow.test.mjs .github/scripts/sol-ci-workflow.test.mjs
               run_gate controller_lint clj-kondo --config packages/gitops-controller/.clj-kondo/config.edn --lint packages/gitops-controller/src/cljs packages/gitops-controller/test/cljs
               run_gate controller_test_compile pnpm --dir packages/gitops-controller exec shadow-cljs compile test
-              run_gate controller_test node packages/gitops-controller/target/test.cjs
+              run_gate controller_test pnpm --dir packages/gitops-controller test
               run_gate controller_build pnpm --dir packages/gitops-controller exec shadow-cljs release server
             else
               {
@@ -2175,25 +2184,46 @@ jobs:
                 && check.app?.slug === 'github-actions'
                 && String(check.external_id || '').startsWith('eta-mu-code-review/v2:'))
               .sort((left, right) => right.id - left.id)[0];
-            if (!newest || newest.id !== checkId) {
-              core.info('PR-merge evidence check was superseded by a newer review command; leaving it unchanged.');
+            const getBoundCheck = async () => {
+              const { data: check } = await github.rest.checks.get({
+                ...context.repo,
+                check_run_id: checkId,
+              });
+              if (check.id !== checkId
+                  || check.name !== checkName
+                  || check.head_sha !== expectedMerge
+                  || check.external_id !== expectedExternalId
+                  || check.details_url !== expectedDetailsUrl
+                  || check.app?.slug !== 'github-actions'
+                  || !['in_progress', 'completed'].includes(check.status)) {
+                throw new Error('PR-merge evidence check no longer matches its trusted binding.');
+              }
+              return check;
+            };
+            if (newest?.id > checkId) {
+              const check = await getBoundCheck();
+              if (check.status === 'in_progress') {
+                await github.rest.checks.update({
+                  ...context.repo,
+                  check_run_id: checkId,
+                  status: 'completed',
+                  conclusion: 'cancelled',
+                  completed_at: new Date().toISOString(),
+                  output: {
+                    title: checkName,
+                    summary: 'Evidence-first review was superseded by a newer review command for this merge revision.',
+                  },
+                });
+              }
+              core.info('PR-merge evidence check was superseded by a newer review command and terminalized safely.');
               core.setOutput('superseded', 'true');
               return;
             }
-
-            const { data: check } = await github.rest.checks.get({
-              ...context.repo,
-              check_run_id: checkId,
-            });
-            if (check.id !== checkId
-                || check.name !== checkName
-                || check.head_sha !== expectedMerge
-                || check.external_id !== expectedExternalId
-                || check.details_url !== expectedDetailsUrl
-                || check.app?.slug !== 'github-actions'
-                || !['in_progress', 'completed'].includes(check.status)) {
-              throw new Error('PR-merge evidence check no longer matches its trusted binding.');
+            if (!newest || newest.id !== checkId) {
+              throw new Error('PR-merge evidence check ordering no longer matches its trusted binding.');
             }
+
+            await getBoundCheck();
             const conclusion = process.env.CHECK_CONCLUSION === 'success' ? 'success' : 'failure';
             await github.rest.checks.update({
               ...context.repo,

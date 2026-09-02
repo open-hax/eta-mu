@@ -528,8 +528,22 @@
                              ".github/workflows/opencode-code-review.yml@main")
                       pull "eta-mu-controller[bot]")
                      [:terminal-intent :patch :conclusion]))))
-    (is (= :pull-request-merge-context-changed
-           (:reason (review/trusted-workflow-completion-plan
-                     completion correlation source-id run
-                     (assoc pull :node-id "PR_other")
-                     "eta-mu-controller[bot]"))))))
+    (testing "transient test-merge computation is distinct from tuple drift"
+      (is (= :pull-request-test-merge-not-ready
+             (:reason (review/trusted-workflow-completion-plan
+                       completion correlation source-id run
+                       (assoc pull :mergeable? nil :merge-sha nil)
+                       "eta-mu-controller[bot]"))))
+      (is (= :pull-request-merge-context-changed
+             (:reason (review/trusted-workflow-completion-plan
+                       completion correlation source-id run
+                       (assoc pull :mergeable? false :merge-sha nil)
+                       "eta-mu-controller[bot]"))))
+      (is (= :pull-request-merge-context-changed
+             (:reason (review/trusted-workflow-completion-plan
+                       completion correlation source-id run
+                       (assoc pull
+                              :node-id "PR_other"
+                              :mergeable? nil
+                              :merge-sha nil)
+                       "eta-mu-controller[bot]")))))))

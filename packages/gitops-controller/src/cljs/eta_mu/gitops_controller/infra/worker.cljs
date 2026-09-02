@@ -408,15 +408,21 @@
                                    ;; boundary. A denied lease cannot create a
                                    ;; false uncertain-call receipt.
                                    (reset! stage* :begin-dispatch-call)
-                                   (when-not
-                                    (await (store/begin-dispatch-call!
-                                            store delivery-id final-dispatch))
-                                     (throw
-                                      (ex-info
-                                       "workflow dispatch call was already begun"
-                                       {:error/code
-                                        :dispatch-outcome-uncertain})))
-                                   (reset! call-begun?* true)
+                                   (let [created?
+                                         (await
+                                          (store/begin-dispatch-call!
+                                           store delivery-id final-dispatch))]
+                                     ;; A false return proves the same durable
+                                     ;; non-idempotent boundary as a fresh
+                                     ;; marker. Set the catch-path fact before
+                                     ;; refusing to invoke GitHub again.
+                                     (reset! call-begun?* true)
+                                     (when-not created?
+                                       (throw
+                                        (ex-info
+                                         "workflow dispatch call was already begun"
+                                         {:error/code
+                                          :dispatch-outcome-uncertain}))))
                                    (ensure-enabled! worker)
                                    true)})
                               dispatch-result
@@ -525,13 +531,17 @@
               (:controller-app-login policy))]
     (dependency! worker :available)
     (if-not (:planned? plan)
-      (await
-       (store/complete!
-        store delivery-id
-        {:outcome :refused
-         :command/type :review-gate-completion
-         :workflow-run-id (:workflow-run-id command)
-         :reason (:reason plan)}))
+      ;; GitHub may report mergeable:null while it computes the test merge.
+      ;; Leave that signed completion pending for periodic replay; all
+      ;; definitive workflow or pull-request drift remains terminally refused.
+      (when-not (= :pull-request-test-merge-not-ready (:reason plan))
+        (await
+         (store/complete!
+          store delivery-id
+          {:outcome :refused
+           :command/type :review-gate-completion
+           :workflow-run-id (:workflow-run-id command)
+           :reason (:reason plan)})))
       (do
         (reset! stage* :record-gate-terminal-intent)
         (await (store/record-gate-terminal-intent!
@@ -691,6 +701,28 @@
           (await (execute-dispatch! worker delivery-id command plan
                                     stage* call-begun?* dispatch*)))))))
 
+(defn- uncertain-completion [dispatch]
+  {:outcome :held
+   :reason :dispatch-outcome-uncertain
+   :command/type (law/command-type (:command/type dispatch))
+   :event (:event dispatch)
+   :action (:action dispatch)
+   :repository (:repository dispatch)
+   :workflow (:workflow dispatch)
+   :ref (:ref dispatch)
+   :pr-number (js/Number (get-in dispatch [:inputs :pr_number]))
+   :pr-base-sha (get-in dispatch [:inputs :pr_base_sha])
+   :pr-head-sha (get-in dispatch [:inputs :pr_head_sha])
+   :pr-merge-sha (get-in dispatch [:inputs :pr_merge_sha])
+   :command-id (get-in dispatch [:inputs :command_id])})
+
+(defn- ^:async hold-uncertain! [worker delivery-id startup?]
+  (let [call (await (store/read-dispatch-call
+                     (:store worker) delivery-id))
+        result (cond-> (uncertain-completion (:dispatch call))
+                 startup? (assoc :recovered-on-startup true))]
+    (await (store/complete! (:store worker) delivery-id result))))
+
 (defn ^:async process-delivery!
   [{:keys [store mode policy] :as worker} delivery-id]
   (when (enter! worker delivery-id)
@@ -700,7 +732,16 @@
           command* (atom nil)
           dispatch* (atom nil)]
       (try
-        (when-not (await (store/completed? store delivery-id))
+        ;; Classify the non-idempotent boundary only after acquiring this
+        ;; delivery's owner. No concurrent invocation can publish the marker
+        ;; between this check and ordinary processing in the single-replica
+        ;; composition.
+        (when-not
+         (or (await (store/completed? store delivery-id))
+             (when (await (store/dispatch-call-begun? store delivery-id))
+               (reset! stage* :recover-uncertain-dispatch)
+               (await (hold-uncertain! worker delivery-id false))
+               true))
           (let [receipt (await (store/read-delivery store delivery-id))
                 command (:command receipt)
                 policy-decision (admission/current-policy-decision
@@ -816,25 +857,7 @@
   (let [delivery-ids (await
                       (store/uncertain-outbox-ids (:store worker)))]
     (doseq [delivery-id delivery-ids]
-      (let [call (await (store/read-dispatch-call
-                         (:store worker) delivery-id))
-            dispatch (:dispatch call)]
-        (await (store/complete!
-                (:store worker) delivery-id
-                {:outcome :held
-                 :reason :dispatch-outcome-uncertain
-                 :recovered-on-startup true
-                 :command/type (law/command-type (:command/type dispatch))
-                 :event (:event dispatch)
-                 :action (:action dispatch)
-                 :repository (:repository dispatch)
-                 :workflow (:workflow dispatch)
-                 :ref (:ref dispatch)
-                 :pr-number (js/Number (get-in dispatch [:inputs :pr_number]))
-                 :pr-base-sha (get-in dispatch [:inputs :pr_base_sha])
-                 :pr-head-sha (get-in dispatch [:inputs :pr_head_sha])
-                 :pr-merge-sha (get-in dispatch [:inputs :pr_merge_sha])
-                 :command-id (get-in dispatch [:inputs :command_id])}))))
+      (await (hold-uncertain! worker delivery-id true)))
     (count delivery-ids)))
 
 (defn ^:async replay-pending! [worker]

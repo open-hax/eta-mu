@@ -30,16 +30,14 @@
 (defn- workflow-attempt-url [workflow-run]
   (str (:html-url workflow-run) "/attempts/" (:run-attempt workflow-run)))
 
-(defn dispatch-current-pull-request?
-  "Prove that a durable dispatch still names the current, mergeable test-merge
-  revision for one exact pull request on its repository default branch."
+(defn- dispatch-pull-request-identity-current?
+  "Prove every stable part of the pull-request tuple independently from
+  GitHub's asynchronously computed test-merge fields."
   [dispatch current-pull-request]
   (let [gate-check (:gate-check dispatch)]
     (and (law/current-pull-request? current-pull-request)
          (= "open" (:state current-pull-request))
          (not (:draft? current-pull-request))
-         (true? (:mergeable? current-pull-request))
-         (law/commit-sha? (:merge-sha current-pull-request))
          (= (:repository dispatch) (:repository current-pull-request))
          (= (:repository-id dispatch) (:repository-id current-pull-request))
          (= (:repository current-pull-request)
@@ -55,13 +53,31 @@
             (:base-sha current-pull-request))
          (= (get-in dispatch [:inputs :pr_head_sha])
             (:head-sha current-pull-request))
-         (= (get-in dispatch [:inputs :pr_merge_sha])
-            (:merge-sha current-pull-request))
          (= (:pr-number gate-check) (:number current-pull-request))
          (= (:pr-node-id gate-check) (:node-id current-pull-request))
          (= (:base-branch gate-check) (:base-branch current-pull-request))
          (= (:base-sha gate-check) (:base-sha current-pull-request))
-         (= (:head-sha gate-check) (:head-sha current-pull-request))
+         (= (:head-sha gate-check) (:head-sha current-pull-request)))))
+
+(defn- dispatch-test-merge-pending?
+  [dispatch current-pull-request]
+  (and (dispatch-pull-request-identity-current?
+        dispatch current-pull-request)
+       (or (nil? (:mergeable? current-pull-request))
+           (and (true? (:mergeable? current-pull-request))
+                (nil? (:merge-sha current-pull-request))))))
+
+(defn dispatch-current-pull-request?
+  "Prove that a durable dispatch still names the current, mergeable test-merge
+  revision for one exact pull request on its repository default branch."
+  [dispatch current-pull-request]
+  (let [gate-check (:gate-check dispatch)]
+    (and (dispatch-pull-request-identity-current?
+          dispatch current-pull-request)
+         (true? (:mergeable? current-pull-request))
+         (law/commit-sha? (:merge-sha current-pull-request))
+         (= (get-in dispatch [:inputs :pr_merge_sha])
+            (:merge-sha current-pull-request))
          (= (:merge-sha gate-check) (:merge-sha current-pull-request)))))
 
 (defn dispatch-command-current?
@@ -122,6 +138,13 @@
       (not (webhook-matches-refetched-run?
             command dispatch current-workflow-run))
       {:planned? false :reason :workflow-run-webhook-mismatch}
+
+      (not (dispatch-pull-request-identity-current?
+            dispatch current-pull-request))
+      {:planned? false :reason :pull-request-merge-context-changed}
+
+      (dispatch-test-merge-pending? dispatch current-pull-request)
+      {:planned? false :reason :pull-request-test-merge-not-ready}
 
       (not (dispatch-current-pull-request? dispatch current-pull-request))
       {:planned? false :reason :pull-request-merge-context-changed}

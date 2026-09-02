@@ -798,7 +798,17 @@
         receipt)))))
 
 (defn ^:async dispatch-call-begun? [store delivery-id]
-  (await (fs/path-exists? (dispatch-call-file store delivery-id))))
+  (await
+   (with-writer!
+    store
+    (^:async fn []
+      ;; A same-process journal-first append is already authoritative even when
+      ;; its first projection publication failed. Repair this exact identity
+      ;; before reporting the non-idempotent boundary absent.
+      (when-let [receipt (get @(:dirty-projections* store)
+                              ["review-dispatch-call-begun" delivery-id])]
+        (await (publish-tracked-projection! store receipt)))
+      (await (fs/path-exists? (dispatch-call-file store delivery-id)))))))
 
 (defn ^:async begin-dispatch-call!
   "Durably mark the last safe replay boundary before invoking GitHub's
@@ -1100,13 +1110,20 @@
                   completed? (await
                               (fs/path-exists?
                                (dispatch-file store delivery-id)))
-                  live? (and (or (not outbox?)
-                                 (not dispatch-call-begun?))
-                             (not completed?))]
-              (when-not live?
+                  replayable? (and (or (not outbox?)
+                                       (not dispatch-call-begun?))
+                                   (not completed?))
+                  ;; A journal-first dispatch-call marker whose projection was
+                  ;; repaired above is no longer safe to execute, but it still
+                  ;; needs worker-level fail-closed terminalization. Keep that
+                  ;; fact visible until the worker records its completion.
+                  recoverable? (and dispatch-call-begun?
+                                    (not completed?))
+                  pending? (or replayable? recoverable?)]
+              (when-not pending?
                 (remove-pending-delivery! store delivery-id))
               (recur (next remaining)
-                     (cond-> result live? (conj delivery-id))))
+                     (cond-> result pending? (conj delivery-id))))
             result)))))))
 
 (defn ^:async uncertain-outbox-ids

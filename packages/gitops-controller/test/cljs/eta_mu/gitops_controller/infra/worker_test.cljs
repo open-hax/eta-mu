@@ -87,6 +87,51 @@
             (fs/join (get-in state-store [:paths partition])
                      (str delivery-id ".edn"))))))
 
+(def ^:private failing-projection-write-context* (atom nil))
+
+(defn- ^:async fail-projection-write-once! [file contents]
+  (let [{:keys [write-exclusive! target fail-once?*]}
+        @failing-projection-write-context*]
+    (if (and (= target file)
+             (compare-and-set! fail-once?* true false))
+      (throw (ex-info "synthetic projection publication failure"
+                      {:error/code :synthetic-projection-failure}))
+      (await (write-exclusive! file contents)))))
+
+(def ^:private blocking-projection-write-context* (atom nil))
+
+(defn- ^:async block-after-projection-write-once! [file contents]
+  (let [{:keys [write-exclusive! target block-once?* published!* release]}
+        @blocking-projection-write-context*
+        created? (await (write-exclusive! file contents))]
+    (when (and (= target file)
+               (compare-and-set! block-once?* true false))
+      (@published!* true)
+      (await release))
+    created?))
+
+(def ^:private marker-race-context* (atom nil))
+
+(defn- ^:async block-before-dispatch-call-once!
+  [state-store delivery-id dispatch]
+  (let [{:keys [begin-dispatch-call! block-begin-once?* begin-ready!*
+                begin-release]}
+        @marker-race-context*]
+    (when (compare-and-set! block-begin-once?* true false)
+      (@begin-ready!* true)
+      (await begin-release))
+    (await (begin-dispatch-call! state-store delivery-id dispatch))))
+
+(defn- ^:async block-after-pending-read-once! [state-store]
+  (let [{:keys [pending-delivery-ids block-pending-once?* pending-ready!*
+                pending-release]}
+        @marker-race-context*
+        delivery-ids (await (pending-delivery-ids state-store))]
+    (when (compare-and-set! block-pending-once?* true false)
+      (@pending-ready!* true)
+      (await pending-release))
+    delivery-ids))
+
 (def current-pull-request
   {:number 321
    :node-id "PR_kwDOExample"
@@ -724,13 +769,17 @@
         (worker/stop! queue-worker)
         (await (fs/remove-tree! root))))))
 
-(deftest ^:async trusted-workflow-completion-updates-the-correlated-app-gate
+(deftest ^:async workflow-completion-waits-for-test-merge-then-updates-the-gate
   (let [root (await (fs/temporary-directory!))
         state-store (store/create root)
         source-id "808f730f-136f-457d-b629-ceccdcf7766b"
         completion-id "56a5d98a-87df-4d70-a40c-40a3cf109198"
         run-id 991
         terminal-call* (atom nil)
+        current* (atom (assoc current-pull-request
+                              :labels #{}
+                              :mergeable? nil
+                              :merge-sha nil))
         original-command (assoc command
                                 :delivery-id source-id
                                 :command-id source-id
@@ -765,9 +814,7 @@
         github {:fetch-workflow-run! (fn [_]
                                        (js/Promise.resolve completed-run))
                 :fetch-pull-request! (fn [_]
-                                       (js/Promise.resolve
-                                        (assoc current-pull-request
-                                               :labels #{})))
+                                       (js/Promise.resolve @current*))
                 :complete-review-gate!
                 (^:async fn [installation-id request]
                   (await ((:authorize-patch! request)))
@@ -799,6 +846,12 @@
       (await (store/accept-delivery! state-store completion))
       (await (worker/start! queue-worker))
       (await (worker/process-delivery! queue-worker completion-id))
+      (is (nil? @terminal-call*))
+      (is (false? (await (store/completed? state-store completion-id))))
+      (is (= [completion-id]
+             (await (store/pending-delivery-ids state-store))))
+      (reset! current* (assoc current-pull-request :labels #{}))
+      (await (worker/replay-pending! queue-worker))
       (let [result (:result
                     (await (store/read-completion state-store completion-id)))
             terminal-receipt (await (store/read-gate-terminal-intent
@@ -1038,6 +1091,187 @@
           (is (= :dispatch-outcome-uncertain
                  (get-in completion [:result :reason])))))
       (finally
+        (worker/stop! queue-worker)
+        (await (fs/remove-tree! root))))))
+
+(deftest ^:async live-repair-holds-a-journal-first-dispatch-call
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        dispatch-invocations* (atom 0)
+        github-posts* (atom 0)
+        write-exclusive! fs/write-exclusive!
+        fail-once?* (atom true)
+        dispatch-call-file
+        (fs/join (get-in state-store [:paths :dispatch-calls])
+                 (str delivery-id ".edn"))
+        dispatch-ledger (fs/join root "ledgers" "dispatches.nd-edn")
+        github {:prepare-review-gate! prepare-review-gate!
+                :fetch-workflow-run! fetch-code-review-run!
+                :fetch-pull-request!
+                (fn [_] (js/Promise.resolve current-pull-request))
+                :actor-permission!
+                (fn [_]
+                  (js/Promise.resolve {:permission "write"
+                                       :user-id 9
+                                       :user-login "operator"}))
+                :dispatch-review!
+                (^:async fn [_ dispatch]
+                  (swap! dispatch-invocations* inc)
+                  (await (invoke-authorizer! dispatch :authorize-dispatch!))
+                  (swap! github-posts* inc)
+                  {:dispatched? true
+                   :workflow-run-id 987
+                   :run-url "https://api.github.test/runs/987"
+                   :html-url "https://github.test/runs/987"})}
+        queue-worker (worker/create
+                      {:store state-store
+                       :github github
+                       :authority (authority/github-port github)
+                       :policy review-policy
+                       :replay-interval-ms 600000})]
+    (reset! failing-projection-write-context*
+            {:write-exclusive! write-exclusive!
+             :target dispatch-call-file
+             :fail-once?* fail-once?*})
+    (try
+      (await (store/initialize! state-store))
+      (await (worker/start! queue-worker))
+      (await (store/accept-delivery! state-store
+                                     (admitted-command review-policy)))
+      (with-redefs [fs/write-exclusive! fail-projection-write-once!]
+        (await (worker/process-delivery! queue-worker delivery-id)))
+      (testing "the call boundary reached the journal but not its projection"
+        (is (= 1 @dispatch-invocations*))
+        (is (zero? @github-posts*))
+        (is (true? (:running? (worker/status queue-worker))))
+        (is (false? (await (fs/path-exists? dispatch-call-file))))
+        (is (= 1 (count (re-seq #":review-dispatch-call-begun"
+                                (await (fs/read-text dispatch-ledger)))))))
+      (testing "live repair terminalizes the command before ordinary replay"
+        (is (= {:replayed 1}
+               (await (worker/replay-pending! queue-worker))))
+        (let [completion (await (store/read-completion
+                                 state-store delivery-id))]
+          (is (= :held (get-in completion [:result :outcome])))
+          (is (= :dispatch-outcome-uncertain
+                 (get-in completion [:result :reason]))))
+        (is (= {:replayed 0}
+               (await (worker/replay-pending! queue-worker))))
+        (is (= 1 @dispatch-invocations*))
+        (is (zero? @github-posts*))
+        (is (= 1 (count (re-seq #":review-dispatch-call-begun"
+                                (await (fs/read-text dispatch-ledger))))))
+        (is (= 1 (count (re-seq #":review-command-completed"
+                                (await (fs/read-text dispatch-ledger)))))))
+      (finally
+        (reset! failing-projection-write-context* nil)
+        (worker/stop! queue-worker)
+        (await (fs/remove-tree! root))))))
+
+(deftest ^:async marker-race-between-enumeration-and-processing-is-held
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        dispatch-invocations* (atom 0)
+        github-posts* (atom 0)
+        write-exclusive! fs/write-exclusive!
+        begin-dispatch-call! store/begin-dispatch-call!
+        pending-delivery-ids store/pending-delivery-ids
+        fail-projection-once?* (atom true)
+        block-begin-once?* (atom true)
+        block-pending-once?* (atom true)
+        begin-ready!* (atom nil)
+        begin-release!* (atom nil)
+        pending-ready!* (atom nil)
+        pending-release!* (atom nil)
+        begin-ready (js/Promise. (fn [resolve _]
+                                   (reset! begin-ready!* resolve)))
+        begin-release (js/Promise. (fn [resolve _]
+                                     (reset! begin-release!* resolve)))
+        pending-ready (js/Promise. (fn [resolve _]
+                                     (reset! pending-ready!* resolve)))
+        pending-release (js/Promise. (fn [resolve _]
+                                       (reset! pending-release!* resolve)))
+        dispatch-call-file
+        (fs/join (get-in state-store [:paths :dispatch-calls])
+                 (str delivery-id ".edn"))
+        completion-file
+        (fs/join (get-in state-store [:paths :dispatches])
+                 (str delivery-id ".edn"))
+        dispatch-ledger (fs/join root "ledgers" "dispatches.nd-edn")
+        github {:prepare-review-gate! prepare-review-gate!
+                :fetch-workflow-run! fetch-code-review-run!
+                :fetch-pull-request!
+                (fn [_] (js/Promise.resolve current-pull-request))
+                :actor-permission!
+                (fn [_]
+                  (js/Promise.resolve {:permission "write"
+                                       :user-id 9
+                                       :user-login "operator"}))
+                :dispatch-review!
+                (^:async fn [_ dispatch]
+                  (swap! dispatch-invocations* inc)
+                  (await (invoke-authorizer! dispatch :authorize-dispatch!))
+                  (swap! github-posts* inc)
+                  {:workflow-run-id 987
+                   :run-url "https://api.github.test/runs/987"
+                   :html-url "https://github.test/runs/987"})}
+        queue-worker (worker/create
+                      {:store state-store
+                       :github github
+                       :authority (authority/github-port github)
+                       :policy review-policy
+                       :replay-interval-ms 600000})]
+    (reset! failing-projection-write-context*
+            {:write-exclusive! write-exclusive!
+             :target dispatch-call-file
+             :fail-once?* fail-projection-once?*})
+    (reset! marker-race-context*
+            {:begin-dispatch-call! begin-dispatch-call!
+             :pending-delivery-ids pending-delivery-ids
+             :block-begin-once?* block-begin-once?*
+             :block-pending-once?* block-pending-once?*
+             :begin-ready!* begin-ready!*
+             :begin-release begin-release
+             :pending-ready!* pending-ready!*
+             :pending-release pending-release})
+    (try
+      (await (store/initialize! state-store))
+      (await (worker/start! queue-worker))
+      (await (store/accept-delivery! state-store
+                                     (admitted-command review-policy)))
+      (with-redefs [fs/write-exclusive! fail-projection-write-once!
+                    store/begin-dispatch-call!
+                    block-before-dispatch-call-once!
+                    store/pending-delivery-ids block-after-pending-read-once!]
+        (let [processing (worker/process-delivery! queue-worker delivery-id)]
+          (await begin-ready)
+          (let [replaying (worker/replay-pending! queue-worker)]
+            ;; Replay has enumerated this delivery while no marker exists. The
+            ;; original owner then durably appends the marker, fails projection
+            ;; publication, and releases ownership before replay processes it.
+            (await pending-ready)
+            (@begin-release!* true)
+            (await processing)
+            (is (false? (await (fs/path-exists? dispatch-call-file))))
+            (is (false? (await (fs/path-exists? completion-file))))
+            (@pending-release!* true)
+            (is (= {:replayed 1} (await replaying)))
+            (let [completion (await (store/read-completion
+                                     state-store delivery-id))]
+              (is (= :held (get-in completion [:result :outcome])))
+              (is (= :dispatch-outcome-uncertain
+                     (get-in completion [:result :reason])))))))
+      (is (= 1 @dispatch-invocations*))
+      (is (zero? @github-posts*))
+      (is (= {:replayed 0}
+             (await (worker/replay-pending! queue-worker))))
+      (is (= 1 (count (re-seq #":review-dispatch-call-begun"
+                              (await (fs/read-text dispatch-ledger))))))
+      (is (= 1 (count (re-seq #":review-command-completed"
+                              (await (fs/read-text dispatch-ledger))))))
+      (finally
+        (reset! failing-projection-write-context* nil)
+        (reset! marker-race-context* nil)
         (worker/stop! queue-worker)
         (await (fs/remove-tree! root))))))
 
@@ -1531,11 +1765,23 @@
 (deftest ^:async periodic-replay-cannot-hold-a-live-dispatch
   (let [root (await (fs/temporary-directory!))
         state-store (store/create root)
-        dispatch-started-resolve* (atom nil)
-        dispatch-release* (atom nil)
-        dispatch-started
+        projection-published-resolve* (atom nil)
+        projection-release-resolve* (atom nil)
+        projection-published
         (js/Promise. (fn [resolve _]
-                       (reset! dispatch-started-resolve* resolve)))
+                       (reset! projection-published-resolve* resolve)))
+        projection-release
+        (js/Promise. (fn [resolve _]
+                       (reset! projection-release-resolve* resolve)))
+        write-exclusive! fs/write-exclusive!
+        block-once?* (atom true)
+        dispatch-call-file
+        (fs/join (get-in state-store [:paths :dispatch-calls])
+                 (str delivery-id ".edn"))
+        completion-file
+        (fs/join (get-in state-store [:paths :dispatches])
+                 (str delivery-id ".edn"))
+        dispatch-count* (atom 0)
         github {:prepare-review-gate! prepare-review-gate!
                 :fetch-workflow-run! fetch-code-review-run!
                 :fetch-pull-request!
@@ -1548,34 +1794,47 @@
                 :dispatch-review!
                 (^:async fn [_ dispatch]
                   (await (invoke-authorizer! dispatch :authorize-dispatch!))
-                  (@dispatch-started-resolve* true)
-                  (js/Promise.
-                   (fn [resolve _]
-                     (reset! dispatch-release* resolve))))}
+                  (swap! dispatch-count* inc)
+                  {:workflow-run-id 987
+                   :run-url "https://api.github.test/runs/987"
+                   :html-url "https://github.test/runs/987"})}
         queue-worker (worker/create
                       {:store state-store
                        :github github
                        :authority (authority/github-port github)
                        :policy review-policy
                        :replay-interval-ms 5000})]
+    (reset! blocking-projection-write-context*
+            {:write-exclusive! write-exclusive!
+             :target dispatch-call-file
+             :block-once?* block-once?*
+             :published!* projection-published-resolve*
+             :release projection-release})
     (try
       (await (store/initialize! state-store))
       (await (worker/start! queue-worker))
       (await (store/accept-delivery! state-store
                                      (admitted-command review-policy)))
-      (let [processing (worker/process-delivery! queue-worker delivery-id)]
-        (await dispatch-started)
-        (is (= {:replayed 0}
-               (await (worker/replay-pending! queue-worker))))
-        (is (false? (await (store/completed? state-store delivery-id))))
-        (@dispatch-release* {:workflow-run-id 987
-                             :run-url "https://api.github.test/runs/987"
-                             :html-url "https://github.test/runs/987"})
-        (await processing)
-        (is (= :dispatched
-               (get-in (await (store/read-completion state-store delivery-id))
-                       [:result :outcome]))))
+      (with-redefs [fs/write-exclusive! block-after-projection-write-once!]
+        (let [processing (worker/process-delivery! queue-worker delivery-id)]
+          ;; The immutable call projection is visible, but its original owner
+          ;; has not resumed to remove the pending cache entry or invoke GitHub.
+          (await projection-published)
+          (is (true? (await (fs/path-exists? dispatch-call-file))))
+          (is (= {:replayed 1}
+                 (await (worker/replay-pending! queue-worker))))
+          (is (= 1 (:in-flight (worker/status queue-worker))))
+          (is (false? (await (fs/path-exists? completion-file))))
+          (is (zero? @dispatch-count*))
+          (@projection-release-resolve* true)
+          (await processing)
+          (is (= 1 @dispatch-count*))
+          (is (= :dispatched
+                 (get-in (await (store/read-completion
+                                 state-store delivery-id))
+                         [:result :outcome])))))
       (finally
+        (reset! blocking-projection-write-context* nil)
         (worker/stop! queue-worker)
         (await (fs/remove-tree! root))))))
 

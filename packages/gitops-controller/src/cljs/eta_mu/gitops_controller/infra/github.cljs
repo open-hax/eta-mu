@@ -3,6 +3,7 @@
   (:require [clojure.string :as str]
             [eta-mu.gitops-controller.extern.crypto :as crypto]
             [eta-mu.gitops-controller.extern.http :as http]
+            [eta-mu.gitops-controller.extern.uri :as uri]
             [eta-mu.gitops-controller.law.webhook :as law]
             [eta-mu.gitops-controller.shape.webhook :as shape]))
 
@@ -18,7 +19,7 @@
 
 (defn- repository-path [repository]
   (->> (str/split repository #"/")
-       (map js/encodeURIComponent)
+       (map uri/encode-component)
        (str/join "/")))
 
 (defn- headers [token]
@@ -152,7 +153,7 @@
                (http/request!
                 {:url (str (:github-api-url config) "/repos/"
                            (repository-path repository) "/git/ref/heads/"
-                           (js/encodeURIComponent default-branch))
+                           (uri/encode-component default-branch))
                  :method "GET"
                  :headers (headers token)}))]
           (if (:ok? ref-response)
@@ -171,7 +172,7 @@
                   (http/request!
                    {:url (str (:github-api-url config) "/repos/"
                               (repository-path repository) "/collaborators/"
-                              (js/encodeURIComponent sender-login) "/permission")
+                              (uri/encode-component sender-login) "/permission")
                     :method "GET"
                     :headers (headers token)}))]
     (if (and (:ok? response)
@@ -227,8 +228,8 @@
            (http/request!
             {:url (str (:github-api-url config) "/repos/"
                        (repository-path repository) "/commits/"
-                       (js/encodeURIComponent merge-sha) "/check-runs"
-                       "?check_name=" (js/encodeURIComponent name)
+                       (uri/encode-component merge-sha) "/check-runs"
+                       "?check_name=" (uri/encode-component name)
                        "&filter=all&per_page=100&page=" page)
              :method "GET"
              :headers (headers token)}))]
@@ -257,8 +258,8 @@
            (http/request!
             {:url (str (:github-api-url config) "/repos/"
                        (repository-path repository) "/commits/"
-                       (js/encodeURIComponent merge-sha) "/check-runs"
-                       "?check_name=" (js/encodeURIComponent name)
+                       (uri/encode-component merge-sha) "/check-runs"
+                       "?check_name=" (uri/encode-component name)
                        "&filter=all&per_page=100&page=" page)
              :method "GET"
              :headers (headers token)}))]
@@ -450,7 +451,7 @@
                   (http/request!
                    {:url (str (:github-api-url config) "/repos/"
                               (repository-path repository) "/actions/workflows/"
-                              (js/encodeURIComponent workflow) "/dispatches")
+                              (uri/encode-component workflow) "/dispatches")
                     :method "POST"
                     :headers (headers token)
                     :body {:ref ref
