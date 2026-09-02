@@ -18,11 +18,15 @@
                 (js/Promise.
                  (fn [resolve _reject]
                    (js/setImmediate #(resolve true))))))))
-      (let [first-invocation (@callback*)
-            overlapping-invocation (@callback*)]
+      (let [first-invocation (@callback*)]
+        ;; Promesa starts an async function on the next microtask. A real
+        ;; interval cannot fire again before that turn begins, so let the
+        ;; first invocation acquire its lease before simulating overlap.
+        (await (js/Promise.resolve))
         (is (= 1 @calls*))
+        (let [overlapping-invocation (@callback*)]
+          (await overlapping-invocation))
         (await first-invocation)
-        (await overlapping-invocation)
         (is (= 1 @calls*))
         (await (@callback*))
         (is (= 2 @calls*))))))

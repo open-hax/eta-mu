@@ -35,6 +35,22 @@
 (def ignored-command
   (dissoc command :command-id :command/type :capability :admission))
 
+(defn ^:async block-dispatch-append!
+  [append-line! block-once?* started!* release file line expected-position]
+  (when (and (str/ends-with? file "dispatches.nd-edn")
+             (compare-and-set! block-once?* true false))
+    (@started!* nil)
+    (await release))
+  (await (append-line! file line expected-position)))
+
+(defn ^:async fail-after-readback!
+  [append-line! fail-once?* file line expected-position]
+  (let [result (await (append-line! file line expected-position))]
+    (when (compare-and-set! fail-once?* true false)
+      (throw (ex-info "injected post-readback failure"
+                      {:error/code :injected-readback-failure})))
+    result))
+
 (deftest ^:async immutable-publication-is-complete-and-no-replace
   (let [root (await (fs/temporary-directory!))
         file (fs/join root "immutable.json")
@@ -229,12 +245,12 @@
       (await (store/initialize! state-store))
       (with-redefs
         [fs/append-line!
-         (^:async fn [file line expected-position]
-           (when (and (str/ends-with? file "dispatches.nd-edn")
-                      (compare-and-set! block-once?* true false))
-             (@started!* nil)
-             (await release))
-           (await (append-line! file line expected-position)))]
+         ;; Preserve the fixed-arity CLJS ABI at the redefined Var boundary;
+         ;; the delegated implementation remains a modern async function.
+         (fn [file line expected-position]
+           (block-dispatch-append!
+            append-line! block-once?* started!* release
+            file line expected-position))]
         (let [blocked-write (store/claim-dispatch!
                              state-store dispatch-id {:operation :blocked})]
           (try
@@ -284,12 +300,11 @@
       (await (store/initialize! state-store))
       (with-redefs
         [fs/append-line!
-         (^:async fn [file line expected-position]
-           (let [result (await (append-line! file line expected-position))]
-             (when (compare-and-set! fail-once?* true false)
-               (throw (ex-info "injected post-readback failure"
-                               {:error/code :injected-readback-failure})))
-             result))]
+         ;; Preserve the fixed-arity CLJS ABI at the redefined Var boundary;
+         ;; the delegated implementation remains a modern async function.
+         (fn [file line expected-position]
+           (fail-after-readback!
+            append-line! fail-once?* file line expected-position))]
         (is (= :injected-readback-failure
                (:error/code
                 (ex-data
