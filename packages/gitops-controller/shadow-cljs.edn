@@ -1,0 +1,34 @@
+{:source-paths ["src/cljs" "test/cljs"]
+ :dependencies [[borkdude/edamame "1.6.42"]]
+ :repositories {"clojars" {:url "https://repo.clojars.org/"}}
+ :js-options {:js-provider :import}
+ :builds
+ {:server
+  {:target :esm
+   :runtime :node
+   :output-dir "dist"
+   :modules {:server {:init-fn eta-mu.gitops-controller.infra.server/start!}}
+   :js-options
+   {:js-provider :import
+    :keep-as-import
+    #{"fastify"
+      "node:crypto"
+      "node:fs/promises"
+      "node:path"
+      "node:os"}}
+   :compiler-options
+   {:output-feature-set :es-next
+    :optimizations :simple
+    :source-map true
+    :infer-externs false}}
+
+  :test
+  {:target :node-test
+   :output-to "target/test.cjs"
+   :ns-regexp "-test$"
+   :autorun false
+   :compiler-options
+   {:output-feature-set :es-next
+    :optimizations :none
+    :source-map true
+    :infer-externs false}}}}

@@ -1,0 +1,57 @@
+# The controller image is built from a deliberately tiny workspace projection.
+# Everything is denied first; only the frozen workspace manifests and controller
+# package are admitted below.
+**
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!packages/
+!packages/gitops-controller/
+!packages/gitops-controller/**
+
+# Never allow local build products, runtime state, or credential material back
+# into the admitted package subtree.
+packages/gitops-controller/node_modules
+packages/gitops-controller/.shadow-cljs
+packages/gitops-controller/target
+packages/gitops-controller/dist
+**/.env
+**/.env.*
+**/.envrc
+**/.npmrc
+**/*.pem
+**/*.key
+**/*.p8
+**/*.pk8
+**/*.p12
+**/*.pfx
+**/*.jks
+**/*.keystore
+**/id_rsa*
+**/id_ed25519*
+**/secrets
+**/secrets/**
+**/.secrets
+**/.secrets/**
+**/*credentials*.json
+**/*service-account*.json
+**/deliveries
+**/deliveries/**
+**/dispatches
+**/dispatches/**
+**/outbox
+**/outbox/**
+**/ledgers
+**/ledgers/**
+**/mirrors
+**/mirrors/**
+**/worktrees
+**/worktrees/**
+**/projections
+**/projections/**
+**/*.ndjson
+**/*.nd-edn
+**/*.log
+**/*.sqlite
+**/*.sqlite-*
+**/*.db

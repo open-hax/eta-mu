@@ -1,32 +1,327 @@
 name: Review Resolution Gate
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
-      repo:
-        description: "Repository in owner/name format (defaults to calling repo)"
-        required: false
-        type: string
-        default: ""
-      pr:
-        description: "Pull request number"
+      pr_number:
+        description: "Pull request number admitted by the webhook controller"
         required: true
         type: number
-      strict:
-        description: "Block on ALL unresolved review threads (not just tracked actors)"
-        required: false
-        type: boolean
-        default: true
-    secrets:
-      ETA_MU_APP_ID:
-        required: false
-      ETA_MU_APP_PRIVATE_KEY:
-        required: false
+      pr_head_sha:
+        description: "Exact pull-request head admitted by the webhook controller"
+        required: true
+        type: string
+      pr_base_sha:
+        description: "Exact default-branch base admitted by the webhook controller"
+        required: true
+        type: string
+      pr_merge_sha:
+        description: "Exact test-merge commit admitted by the webhook controller"
+        required: true
+        type: string
+      command_id:
+        description: "Durable webhook delivery identifier"
+        required: true
+        type: string
+      gate_check_id:
+        description: "Controller-owned pending gate Check Run identifier"
+        required: true
+        type: string
+      evidence_run_id:
+        description: "Durably correlated code-review workflow run identifier"
+        required: true
+        type: string
+      evidence_command_id:
+        description: "Durably correlated code-review webhook delivery identifier"
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      controller_app_login:
+        description: "Dedicated controller App bot login from the caller's protected repository variable"
+        required: true
+        type: string
+      pr_number:
+        description: "Pull request number admitted by the webhook controller"
+        required: true
+        type: number
+      pr_head_sha:
+        description: "Exact pull-request head for a webhook-dispatched reconciliation"
+        required: true
+        type: string
+      pr_base_sha:
+        description: "Exact default-branch base for a webhook-dispatched reconciliation"
+        required: true
+        type: string
+      pr_merge_sha:
+        description: "Exact test-merge commit for a webhook-dispatched reconciliation"
+        required: true
+        type: string
+      command_id:
+        description: "Durable webhook delivery identifier"
+        required: true
+        type: string
+      gate_check_id:
+        description: "Controller-owned pending gate Check Run identifier"
+        required: true
+        type: string
+      evidence_run_id:
+        description: "Durably correlated code-review workflow run identifier"
+        required: true
+        type: string
+      evidence_command_id:
+        description: "Durably correlated code-review webhook delivery identifier"
+        required: true
+        type: string
+
+concurrency:
+  group: eta-mu-review-gate-${{ github.repository }}-${{ inputs.pr_number }}
+  cancel-in-progress: true
 
 jobs:
   review-resolution-gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      pull-requests: read
     steps:
+      - name: Validate webhook-dispatched gate reconciliation
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          EXPECTED_CONTROLLER_APP_LOGIN: ${{ inputs.controller_app_login || vars.ETA_MU_CONTROLLER_APP_LOGIN }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          PR_BASE_SHA: ${{ inputs.pr_base_sha }}
+          PR_HEAD_SHA: ${{ inputs.pr_head_sha }}
+          PR_MERGE_SHA: ${{ inputs.pr_merge_sha }}
+          COMMAND_ID: ${{ inputs.command_id }}
+          EXPECTED_CONTROLLER_APP_SLUG: ${{ vars.ETA_MU_CONTROLLER_APP_SLUG }}
+          GATE_CHECK_ID: ${{ inputs.gate_check_id }}
+          GATE_CHECK_NAME: eta-mu-review-gate
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            if (context.eventName !== 'workflow_dispatch') {
+              throw new Error(`Gate reconciliation requires workflow_dispatch; received ${context.eventName || '(missing)'}.`);
+            }
+            const expectedActor = String(process.env.EXPECTED_CONTROLLER_APP_LOGIN || '');
+            if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,99}\[bot\]$/.test(expectedActor)) {
+              throw new Error('ETA_MU_CONTROLLER_APP_LOGIN repository variable is missing or invalid.');
+            }
+            if (context.actor !== expectedActor || process.env.TRIGGERING_ACTOR !== expectedActor) {
+              throw new Error('Gate reconciliation requires the configured controller App as both actor and triggering actor.');
+            }
+            const rawNumber = String(process.env.PR_NUMBER || '').trim();
+            const expectedBase = String(process.env.PR_BASE_SHA || '').trim();
+            const expectedHead = String(process.env.PR_HEAD_SHA || '').trim();
+            const expectedMerge = String(process.env.PR_MERGE_SHA || '').trim();
+            const commandId = String(process.env.COMMAND_ID || '').trim();
+            const rawGateCheckId = String(process.env.GATE_CHECK_ID || '').trim();
+            if (!/^[1-9][0-9]*$/.test(rawNumber) || !Number.isSafeInteger(Number(rawNumber))) {
+              throw new Error('Gate reconciliation pull request number is missing or invalid.');
+            }
+            if (![expectedBase, expectedHead, expectedMerge]
+              .every((sha) => /^[0-9a-f]{40}$/i.test(sha))) {
+              throw new Error('Gate reconciliation base/head/test-merge tuple is missing or invalid.');
+            }
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(commandId)) {
+              throw new Error('Gate reconciliation command_id is missing or invalid.');
+            }
+            if (!/^[1-9][0-9]*$/.test(rawGateCheckId) || !Number.isSafeInteger(Number(rawGateCheckId))) {
+              throw new Error('Controller-owned gate_check_id is missing or invalid.');
+            }
+            const expectedControllerSlug = String(process.env.EXPECTED_CONTROLLER_APP_SLUG || '').trim();
+            if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,99}$/.test(expectedControllerSlug)) {
+              throw new Error('ETA_MU_CONTROLLER_APP_SLUG repository variable is missing or invalid.');
+            }
+
+            const pullNumber = Number(rawNumber);
+            const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+            let pullRequest;
+            for (let attempt = 1; attempt <= 6; attempt += 1) {
+              ({ data: pullRequest } = await github.rest.pulls.get({
+                ...context.repo,
+                pull_number: pullNumber,
+              }));
+              if (pullRequest.mergeable !== null) break;
+              if (attempt < 6) await wait(1000);
+            }
+            if (pullRequest.mergeable === null) {
+              throw new Error('GitHub did not resolve pull-request mergeability after bounded polling.');
+            }
+            const repository = `${context.repo.owner}/${context.repo.repo}`;
+            const targetRepository = String(pullRequest.base?.repo?.full_name || '');
+            const headRepository = String(pullRequest.head?.repo?.full_name || '');
+            const defaultBranch = String(context.payload.repository?.default_branch || '');
+            if (pullRequest.state !== 'open' || pullRequest.draft === true
+                || pullRequest.mergeable !== true
+                || targetRepository.toLowerCase() !== repository.toLowerCase()
+                || headRepository.toLowerCase() !== repository.toLowerCase()
+                || String(pullRequest.base?.ref || '') !== defaultBranch
+                || String(pullRequest.base?.sha || '') !== expectedBase
+                || String(pullRequest.head?.sha || '') !== expectedHead
+                || String(pullRequest.merge_commit_sha || '') !== expectedMerge) {
+              throw new Error('Gate reconciliation no longer matches the admitted open same-repository default-base test merge.');
+            }
+
+            const gateCheckId = Number(rawGateCheckId);
+            const { data: gateCheck } = await github.rest.checks.get({
+              ...context.repo,
+              check_run_id: gateCheckId,
+            });
+            const expectedExternalId = `eta-mu-review-gate/v2:${commandId}:${rawNumber}:${expectedHead}:${expectedBase}:${expectedMerge}`;
+            if (gateCheck.id !== gateCheckId
+                || gateCheck.name !== process.env.GATE_CHECK_NAME
+                || gateCheck.head_sha !== expectedMerge
+                || gateCheck.external_id !== expectedExternalId
+                || gateCheck.details_url !== pullRequest.html_url
+                || gateCheck.app?.slug !== expectedControllerSlug
+                || gateCheck.status !== 'in_progress'
+                || gateCheck.conclusion !== null) {
+              throw new Error('Controller-owned gate Check Run does not match the admitted repository/PR/base/head/merge/delivery identity.');
+            }
+
+            const exactHeadGates = await github.paginate(github.rest.checks.listForRef, {
+              ...context.repo,
+              ref: expectedMerge,
+              check_name: process.env.GATE_CHECK_NAME,
+              filter: 'all',
+              per_page: 100,
+            });
+            const newestControllerGate = exactHeadGates
+              .filter((run) => run.name === process.env.GATE_CHECK_NAME
+                && run.head_sha === expectedMerge
+                && run.app?.slug === expectedControllerSlug)
+              .sort((left, right) => right.id - left.id)[0];
+            if (!newestControllerGate || newestControllerGate.id !== gateCheckId) {
+              throw new Error('gate_check_id is not the newest controller-owned exact-merge review gate.');
+            }
+
+      - name: Wait for bound exact-head review evidence
+        id: bound_evidence
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          EVIDENCE_RUN_ID: ${{ inputs.evidence_run_id }}
+          EVIDENCE_COMMAND_ID: ${{ inputs.evidence_command_id }}
+          EXPECTED_CONTROLLER_APP_LOGIN: ${{ inputs.controller_app_login || vars.ETA_MU_CONTROLLER_APP_LOGIN }}
+          EXPECTED_REVIEW_WORKFLOW_ID: ${{ vars.ETA_MU_REVIEW_WORKFLOW_ID }}
+          EXPECTED_REVIEW_WORKFLOW_PATH: ${{ vars.ETA_MU_REVIEW_WORKFLOW_PATH }}
+          EXPECTED_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const rawRunId = String(process.env.EVIDENCE_RUN_ID || '').trim();
+            const evidenceCommandId = String(process.env.EVIDENCE_COMMAND_ID || '').trim();
+            const expectedActor = String(process.env.EXPECTED_CONTROLLER_APP_LOGIN || '').trim();
+            const rawWorkflowId = String(process.env.EXPECTED_REVIEW_WORKFLOW_ID || '').trim();
+            const expectedPath = String(process.env.EXPECTED_REVIEW_WORKFLOW_PATH || '').trim();
+            const expectedBranch = String(process.env.EXPECTED_DEFAULT_BRANCH || '').trim();
+            if (!/^[1-9][0-9]*$/.test(rawRunId) || !Number.isSafeInteger(Number(rawRunId))) {
+              throw new Error('evidence_run_id is missing or invalid.');
+            }
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(evidenceCommandId)) {
+              throw new Error('evidence_command_id is missing or invalid.');
+            }
+            if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,99}\[bot\]$/.test(expectedActor)) {
+              throw new Error('ETA_MU_CONTROLLER_APP_LOGIN repository variable is missing or invalid.');
+            }
+            if (!/^[1-9][0-9]*$/.test(rawWorkflowId) || !Number.isSafeInteger(Number(rawWorkflowId))) {
+              throw new Error('ETA_MU_REVIEW_WORKFLOW_ID repository variable is missing or invalid.');
+            }
+            const pathRefSeparator = expectedPath.lastIndexOf('@');
+            const expectedWorkflowPath = expectedPath.slice(0, pathRefSeparator);
+            const expectedWorkflowRef = expectedPath.slice(pathRefSeparator + 1);
+            if (pathRefSeparator <= 0
+                || !/^[A-Za-z0-9._/-]+\.ya?ml$/.test(expectedWorkflowPath)
+                || !expectedWorkflowPath.startsWith('.github/workflows/')
+                || !/^[A-Za-z0-9._/-]+$/.test(expectedWorkflowRef)) {
+              throw new Error('ETA_MU_REVIEW_WORKFLOW_PATH must be an exact workflow path@ref.');
+            }
+            if (!/^[A-Za-z0-9._/-]+$/.test(expectedBranch)
+                || expectedWorkflowRef !== expectedBranch) {
+              throw new Error('The protected review workflow path must be pinned to the repository default branch.');
+            }
+
+            const runId = Number(rawRunId);
+            const workflowId = Number(rawWorkflowId);
+            const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+            let observedHeadSha = '';
+            for (let attempt = 1; attempt <= 120; attempt += 1) {
+              const { data: run } = await github.rest.actions.getWorkflowRun({
+                ...context.repo,
+                run_id: runId,
+              });
+              const repository = String(run.repository?.full_name || '');
+              const actor = String(run.actor?.login || '');
+              const triggeringActor = String(run.triggering_actor?.login || '');
+              const headSha = String(run.head_sha || '');
+              if (run.id !== runId
+                  || run.workflow_id !== workflowId
+                  || repository.toLowerCase() !== `${context.repo.owner}/${context.repo.repo}`.toLowerCase()
+                  || run.path !== expectedWorkflowPath
+                  || run.event !== 'workflow_dispatch'
+                  || run.run_attempt !== 1
+                  || run.head_branch !== expectedWorkflowRef
+                  || !/^[0-9a-f]{40}$/i.test(headSha)
+                  || actor !== expectedActor
+                  || triggeringActor !== expectedActor) {
+                throw new Error(`Evidence workflow run ${rawRunId} failed its protected identity binding.`);
+              }
+              if (observedHeadSha && observedHeadSha !== headSha) {
+                throw new Error(`Evidence workflow run ${rawRunId} changed its immutable head SHA.`);
+              }
+              observedHeadSha = headSha;
+              if (run.status === 'completed') {
+                if (run.conclusion !== 'success') {
+                  throw new Error(`Evidence workflow run completed with ${run.conclusion || 'no conclusion'}.`);
+                }
+                core.setOutput('created_at', String(run.created_at || ''));
+                core.info(`Durably correlated evidence run ${rawRunId} (${evidenceCommandId}) succeeded on polling attempt ${attempt}.`);
+                return;
+              }
+              if (attempt < 120) await wait(10000);
+            }
+            throw new Error(`Timed out after 20 minutes waiting for evidence workflow run ${rawRunId}.`);
+
+      - name: Require a current trusted exact-head review
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          PR_HEAD_SHA: ${{ inputs.pr_head_sha }}
+          REVIEW_RUN_CREATED_AT: ${{ steps.bound_evidence.outputs.created_at }}
+          EXPECTED_REVIEW_PUBLISHER_APP_LOGIN: ${{ vars.ETA_MU_REVIEW_PUBLISHER_APP_LOGIN }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const rawNumber = String(process.env.PR_NUMBER || '').trim();
+            const expectedHead = String(process.env.PR_HEAD_SHA || '').trim();
+            const expectedPublisher = String(process.env.EXPECTED_REVIEW_PUBLISHER_APP_LOGIN || '').trim();
+            const evidenceCreatedAt = Date.parse(String(process.env.REVIEW_RUN_CREATED_AT || ''));
+            if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,99}\[bot\]$/.test(expectedPublisher)) {
+              throw new Error('ETA_MU_REVIEW_PUBLISHER_APP_LOGIN repository variable is missing or invalid.');
+            }
+            if (!Number.isFinite(evidenceCreatedAt)) {
+              throw new Error('The bound evidence run has no valid creation timestamp.');
+            }
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              ...context.repo,
+              pull_number: Number(rawNumber),
+              per_page: 100,
+            });
+            const currentReview = reviews
+              .filter((review) => review.user?.login === expectedPublisher
+                && review.commit_id === expectedHead
+                && Date.parse(String(review.submitted_at || '')) >= evidenceCreatedAt)
+              .sort((left, right) => right.id - left.id)[0];
+            if (!currentReview
+                || !['APPROVED', 'COMMENTED'].includes(String(currentReview.state || '').toUpperCase())
+                || !String(currentReview.body || '').trim()) {
+              throw new Error('No current acceptable exact-head review from the protected review publication App is bound to this evidence run.');
+            }
+
       - name: Checkout target repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -39,48 +334,6 @@ jobs:
           ref: bafe9aa6a09406cfd83010f5e06538117dc6056c
           path: .eta-mu
           persist-credentials: false
-
-      - name: Resolve target repository
-        id: target_repository
-        shell: bash
-        env:
-          TARGET_REPOSITORY: ${{ inputs.repo || github.repository }}
-        run: |
-          if [[ ! "$TARGET_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
-            echo "::error title=Invalid repository::Expected owner/name, got '$TARGET_REPOSITORY'"
-            exit 1
-          fi
-          {
-            echo "full_name=$TARGET_REPOSITORY"
-            echo "owner=${TARGET_REPOSITORY%%/*}"
-            echo "repository=${TARGET_REPOSITORY#*/}"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Detect eta-mu app credentials
-        id: eta_mu_app_credentials
-        env:
-          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
-          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-        run: |
-          if [[ -n "${ETA_MU_APP_ID}" && -n "${ETA_MU_APP_PRIVATE_KEY}" ]]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Create eta-mu app token
-        id: eta_mu_token
-        if: ${{ steps.eta_mu_app_credentials.outputs.available == 'true' }}
-        continue-on-error: true
-        env:
-          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
-          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          app-id: ${{ env.ETA_MU_APP_ID }}
-          private-key: ${{ env.ETA_MU_APP_PRIVATE_KEY }}
-          owner: ${{ steps.target_repository.outputs.owner }}
-          repositories: ${{ steps.target_repository.outputs.repository }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
@@ -99,14 +352,14 @@ jobs:
 
       - name: Enforce review resolution
         env:
-          GITHUB_TOKEN: ${{ steps.eta_mu_token.conclusion == 'success' && steps.eta_mu_token.outputs.token != '' && steps.eta_mu_token.outputs.token || github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
           ETA_MU_REVIEW_ACTORS: ${{ vars.ETA_MU_REVIEW_ACTORS }}
+          ETA_MU_GATE_HEAD_SHA: ${{ inputs.pr_head_sha }}
         run: |
-          strict_flag=""
-          if [ "${{ inputs.strict }}" = "true" ]; then
-            strict_flag="--strict"
-          fi
-          pnpm --dir .eta-mu/packages/legacy/github dev review-gate \
-            --repo "${{ steps.target_repository.outputs.full_name }}" \
-            --pr "${{ inputs.pr }}" \
-            $strict_flag
+          gate_args=(
+            --repo "${{ github.repository }}"
+            --pr "${{ inputs.pr_number }}"
+            --strict
+            --head-sha "$ETA_MU_GATE_HEAD_SHA"
+          )
+          pnpm --dir .eta-mu/packages/legacy/github dev review-gate "${gate_args[@]}"

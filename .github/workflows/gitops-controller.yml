@@ -1,0 +1,179 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: eta-mu GitOps controller
+
+on:
+  pull_request:
+    paths:
+      - packages/gitops-controller/**
+      - package.json
+      - .npmrc
+      - .dockerignore
+      - .github/scripts/opencode-code-review-workflow.test.mjs
+      - .github/scripts/run-opencode-review-recovery.mjs
+      - .github/scripts/sol-ci-workflow.test.mjs
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .github/workflows/gitops-controller.yml
+      - .github/workflows/opencode-code-review.yml
+      - .github/workflows/review-resolution-gate.yml
+      - .github/workflows/sol-ci.yml
+      - .github/workflows/sol-trusted-integration.yml
+      - docs/agent-workflows.md
+      - docs/github-automation-architecture.md
+      - kanban/tasks/admit-exact-head-code-reviews-through-signed-webhooks-ntroller.md
+      - kanban/tasks/opencode-mimo-evidence-review-agent.md
+  push:
+    branches: [main]
+    paths:
+      - packages/gitops-controller/**
+      - package.json
+      - .npmrc
+      - .dockerignore
+      - .github/scripts/opencode-code-review-workflow.test.mjs
+      - .github/scripts/run-opencode-review-recovery.mjs
+      - .github/scripts/sol-ci-workflow.test.mjs
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .github/workflows/gitops-controller.yml
+      - .github/workflows/opencode-code-review.yml
+      - .github/workflows/review-resolution-gate.yml
+      - .github/workflows/sol-ci.yml
+      - .github/workflows/sol-trusted-integration.yml
+      - docs/agent-workflows.md
+      - docs/github-automation-architecture.md
+      - kanban/tasks/admit-exact-head-code-reviews-through-signed-webhooks-ntroller.md
+      - kanban/tasks/opencode-mimo-evidence-review-agent.md
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic:
+    name: Controller tests, lint, and release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          persist-credentials: false
+      - name: Verify exact source revision
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 10.14.0
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+      - uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
+        with:
+          clj-kondo: 2025.10.23
+      - name: Install frozen controller dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter @eta-mu/gitops-controller...
+      - name: Test review and Sol workflow contracts
+        run: >-
+          node --test
+          .github/scripts/opencode-code-review-workflow.test.mjs
+          .github/scripts/sol-ci-workflow.test.mjs
+      - name: Test controller
+        run: pnpm -C packages/gitops-controller test
+      - name: Lint controller
+        run: pnpm -C packages/gitops-controller lint:kondo
+      - name: Build release
+        run: pnpm -C packages/gitops-controller build
+
+  image:
+    name: Build immutable runtime image
+    needs: deterministic
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          persist-credentials: false
+      - name: Verify exact source revision
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Build controller image
+        run: >-
+          docker build
+          --file packages/gitops-controller/Dockerfile
+          --build-arg "ETA_MU_SOURCE_REVISION=${EXPECTED_SHA}"
+          --tag "eta-mu-gitops-controller:${EXPECTED_SHA}"
+          .
+      - name: Verify controller image revision label
+        run: |
+          image="eta-mu-gitops-controller:${EXPECTED_SHA}"
+          test "$(docker image inspect "$image" --format '{{ .Config.User }}')" = "node"
+          test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.source" }}')" = "https://github.com/open-hax/eta-mu"
+          test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$EXPECTED_SHA"
+          test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.licenses" }}')" = "GPL-3.0-or-later"
+      - name: Smoke observe-only container
+        run: |
+          image="eta-mu-gitops-controller:${EXPECTED_SHA}"
+          container_name="eta-mu-controller-smoke-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          smoke_root="$(mktemp -d)"
+          cleanup() {
+            docker rm --force "$container_name" >/dev/null 2>&1 || true
+            if test -n "$smoke_root" && test -d "$smoke_root"; then
+              sudo rm -rf -- "$smoke_root"
+            fi
+          }
+          trap cleanup EXIT
+
+          controller_uid="$(docker run --rm --entrypoint id "$image" -u)"
+          controller_gid="$(docker run --rm --entrypoint id "$image" -g)"
+          mkdir "$smoke_root/state"
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
+            -out "$smoke_root/app.pem" >/dev/null 2>&1
+          openssl rand -hex 32 > "$smoke_root/webhook-secret"
+          chmod 0700 "$smoke_root" "$smoke_root/state"
+          chmod 0400 "$smoke_root/app.pem" "$smoke_root/webhook-secret"
+          sudo chown "${controller_uid}:${controller_gid}" \
+            "$smoke_root/state" "$smoke_root/app.pem" \
+            "$smoke_root/webhook-secret"
+
+          docker run --detach --name "$container_name" \
+            --read-only \
+            --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --tmpfs /tmp:rw,noexec,nosuid,nodev \
+            --publish 127.0.0.1:18790:8790 \
+            --mount "type=bind,source=${smoke_root}/state,target=/srv/open-hax/state/eta-mu-controller" \
+            --mount "type=bind,source=${smoke_root}/app.pem,target=/run/secrets/app.pem,readonly" \
+            --mount "type=bind,source=${smoke_root}/webhook-secret,target=/run/secrets/webhook-secret,readonly" \
+            --env ETA_MU_CONTROLLER_MODE=observe-only \
+            --env ETA_MU_PROJECT_ID=eta-mu \
+            --env ETA_MU_GITHUB_APP_ID=1 \
+            --env ETA_MU_GITHUB_APP_PRIVATE_KEY_FILE=/run/secrets/app.pem \
+            --env ETA_MU_GITHUB_WEBHOOK_SECRET_FILE=/run/secrets/webhook-secret \
+            --env ETA_MU_GITHUB_INSTALLATION_ALLOWLIST=1 \
+            --env ETA_MU_GITHUB_REPOSITORY_ALLOWLIST=open-hax/eta-mu \
+            "$image"
+
+          healthy=false
+          for _attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error \
+                 http://127.0.0.1:18790/health/live >/dev/null \
+               && curl --fail --silent --show-error \
+                    http://127.0.0.1:18790/health/ready \
+                    > "$smoke_root/ready.json"; then
+              healthy=true
+              break
+            fi
+            sleep 1
+          done
+          if test "$healthy" != true; then
+            docker logs "$container_name"
+            exit 1
+          fi
+          grep -F '"ready":true' "$smoke_root/ready.json"
