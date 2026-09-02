@@ -4,7 +4,6 @@
 
 (deftest ^:async intervals-never-overlap-and-resume-after-settlement
   (let [callback* (atom nil)
-        release* (atom nil)
         calls* (atom 0)]
     (with-redefs
       [runtime/start-interval!
@@ -16,18 +15,15 @@
               5000
               (fn []
                 (swap! calls* inc)
-                (js/Promise.
-                 (fn [resolve _]
-                   (reset! release* resolve)))))))
-      (let [first-invocation (@callback*)]
-        (@callback*)
+                (js/Promise.resolve true)))))
+      (let [first-invocation (@callback*)
+            overlapping-invocation (@callback*)]
         (is (= 1 @calls*))
-        (@release* true)
         (await first-invocation)
-        (let [third-invocation (@callback*)]
-          (is (= 2 @calls*))
-          (@release* true)
-          (await third-invocation))))))
+        (await overlapping-invocation)
+        (is (= 1 @calls*))
+        (await (@callback*))
+        (is (= 2 @calls*))))))
 
 (deftest ^:async rejected-interval-invocation-releases-the-serial-lease
   (let [callback* (atom nil)
