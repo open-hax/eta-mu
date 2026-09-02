@@ -127,7 +127,7 @@ Only `issues:labeled` with exact `eta-mu:probe`,
 defensive `pull_request:opened|reopened|synchronize|ready_for_review` and
 base-changing `pull_request:edited`,
 `pull_request_review:submitted|dismissed`,
-`pull_request_review_comment:created`, and
+`pull_request_review_comment:created|deleted`, and
 `pull_request_review_thread:resolved|unresolved`, plus trusted completion events
 for the configured review and gate workflow IDs, are queued. Repository and
 installation allowlists are both mandatory. Authenticated, base-shaped,

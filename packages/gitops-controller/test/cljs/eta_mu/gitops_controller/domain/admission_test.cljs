@@ -128,6 +128,8 @@
            ["pull_request_review" "dismissed" :review-node-id "PRR_example"]
            ["pull_request_review_comment" "created"
             :review-comment-node-id "PRRC_example"]
+           ["pull_request_review_comment" "deleted"
+            :review-comment-node-id "PRRC_example"]
            ["pull_request_review_thread" "resolved"
             :review-thread-node-id "PRRT_example"]
            ["pull_request_review_thread" "unresolved"

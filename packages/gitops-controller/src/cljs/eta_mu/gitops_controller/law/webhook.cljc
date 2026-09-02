@@ -37,7 +37,7 @@
 
 (def gate-reconcile-actions
   {"pull_request_review" #{"submitted" "dismissed"}
-   "pull_request_review_comment" #{"created"}
+   "pull_request_review_comment" #{"created" "deleted"}
    "pull_request_review_thread" #{"resolved" "unresolved"}})
 
 (def review-gate-invalidation-actions

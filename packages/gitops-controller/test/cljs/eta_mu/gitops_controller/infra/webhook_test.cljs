@@ -473,6 +473,7 @@
         resolved-id "56a5d98a-87df-4d70-a40c-40a3cf109198"
         unresolved-id "97b89d7d-8fbd-42b8-9a6a-3492ddf04937"
         comment-id "c9b71e08-70c0-41f5-bc2b-11a978cf7ca6"
+        deleted-comment-id "b0000000-0000-4000-8000-000000000001"
         submitted-id "193cbef4-af2f-4bc0-a73a-f4ac06ecb92c"
         dismissed-id "d0cfe1b8-4952-4331-8b36-3f53af75d33e"
         probe-id "808f730f-136f-457d-b629-ceccdcf7766b"
@@ -532,6 +533,10 @@
               comment-response
               (await (request! "pull_request_review_comment"
                                comment-id comment-payload))
+              deleted-comment-response
+              (await (request! "pull_request_review_comment"
+                               deleted-comment-id
+                               (assoc comment-payload :action "deleted")))
               submitted-payload (assoc review-payload
                                        :action "submitted"
                                        :review {:node_id "PRR_example"})
@@ -568,6 +573,10 @@
               comment-command
               (get-in (await (store/read-delivery state-store comment-id))
                       [:command])
+              deleted-comment-command
+              (get-in (await (store/read-delivery state-store
+                                                  deleted-comment-id))
+                      [:command])
               probe-command
               (get-in (await (store/read-delivery state-store probe-id))
                       [:command])
@@ -575,7 +584,8 @@
               (get-in (await (store/read-delivery state-store synchronize-id))
                       [:command])]
           (doseq [response [resolved-response unresolved-response
-                            comment-response submitted-response
+                            comment-response deleted-comment-response
+                            submitted-response
                             dismissed-response]]
             (is (= 202 (.-statusCode response)))
             (is (false? (:duplicate (response-body response)))))
@@ -592,11 +602,16 @@
           (is (= :review-gate-reconcile (:command/type comment-command)))
           (is (= "PRRC_example"
                  (:review-comment-node-id comment-command)))
+          (is (= :review-gate-reconcile
+                 (:command/type deleted-comment-command)))
+          (is (= "PRRC_example"
+                 (:review-comment-node-id deleted-comment-command)))
           (is (= :ingress-probe (:command/type probe-command)))
           (is (= :review-gate-invalidate
                  (:command/type synchronize-command)))
-          (is (= [resolved-id unresolved-id comment-id submitted-id
-                  dismissed-id probe-id synchronize-id base-edit-id]
+          (is (= [resolved-id unresolved-id comment-id deleted-comment-id
+                  submitted-id dismissed-id probe-id synchronize-id
+                  base-edit-id]
                  @enqueued*))
           (doseq [[ignored-delivery-id reason]
                   [[ignored-id "unmanaged-action"]
