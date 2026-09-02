@@ -4,6 +4,8 @@
 
 (deftest ^:async intervals-never-overlap-and-resume-after-settlement
   (let [callback* (atom nil)
+        release* (atom nil)
+        hold-first?* (atom true)
         calls* (atom 0)]
     (with-redefs
       [runtime/start-interval!
@@ -15,19 +17,21 @@
               5000
               (fn []
                 (swap! calls* inc)
-                (js/Promise.
-                 (fn [resolve _reject]
-                   (js/setImmediate #(resolve true))))))))
+                (if (compare-and-set! hold-first?* true false)
+                  (js/Promise.
+                   (fn [resolve _reject]
+                     (reset! release* resolve)))
+                  (js/Promise.resolve true))))))
       (let [first-invocation (@callback*)]
-        ;; Promesa starts an async function on the next microtask. A real
-        ;; interval cannot fire again before that turn begins, so let the
-        ;; first invocation acquire its lease before simulating overlap.
+        ;; Let the transformed async invocation acquire its lease, then keep
+        ;; that lease explicitly unsettled while the overlapping tick runs.
         (await (js/Promise.resolve))
         (is (= 1 @calls*))
         (let [overlapping-invocation (@callback*)]
           (await overlapping-invocation))
-        (await first-invocation)
         (is (= 1 @calls*))
+        (@release* true)
+        (await first-invocation)
         (await (@callback*))
         (is (= 2 @calls*))))))
 

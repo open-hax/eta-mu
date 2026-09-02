@@ -35,17 +35,21 @@
 (def ignored-command
   (dissoc command :command-id :command/type :capability :admission))
 
-(defn ^:async block-dispatch-append!
-  [append-line! block-once?* started!* release file line expected-position]
-  (when (and (str/ends-with? file "dispatches.nd-edn")
-             (compare-and-set! block-once?* true false))
-    (@started!* nil)
-    (await release))
-  (await (append-line! file line expected-position)))
+(def ^:private blocking-append-context* (atom nil))
+(def ^:private failing-append-context* (atom nil))
 
-(defn ^:async fail-after-readback!
-  [append-line! fail-once?* file line expected-position]
-  (let [result (await (append-line! file line expected-position))]
+(defn- ^:async blocking-append-line! [file line expected-position]
+  (let [{:keys [append-line! block-once?* started!* release]}
+        @blocking-append-context*]
+    (when (and (str/ends-with? file "dispatches.nd-edn")
+               (compare-and-set! block-once?* true false))
+      (@started!* nil)
+      (await release))
+    (await (append-line! file line expected-position))))
+
+(defn- ^:async failing-append-line! [file line expected-position]
+  (let [{:keys [append-line! fail-once?*]} @failing-append-context*
+        result (await (append-line! file line expected-position))]
     (when (compare-and-set! fail-once?* true false)
       (throw (ex-info "injected post-readback failure"
                       {:error/code :injected-readback-failure})))
@@ -241,16 +245,15 @@
                                (reset! started!* resolve)))
         release (js/Promise. (fn [resolve _reject]
                                (reset! release!* resolve)))]
+    (reset! blocking-append-context*
+            {:append-line! append-line!
+             :block-once?* block-once?*
+             :started!* started!*
+             :release release})
     (try
       (await (store/initialize! state-store))
       (with-redefs
-        [fs/append-line!
-         ;; Preserve the fixed-arity CLJS ABI at the redefined Var boundary;
-         ;; the delegated implementation remains a modern async function.
-         (fn [file line expected-position]
-           (block-dispatch-append!
-            append-line! block-once?* started!* release
-            file line expected-position))]
+        [fs/append-line! blocking-append-line!]
         (let [blocked-write (store/claim-dispatch!
                              state-store dispatch-id {:operation :blocked})]
           (try
@@ -272,6 +275,7 @@
               (@release!* nil)
               (await blocked-write)))))
       (finally
+        (reset! blocking-append-context* nil)
         (await (fs/remove-tree! root))))))
 
 (deftest ^:async pending-replay-preserves-ledger-arrival-not-guid-order
@@ -296,15 +300,13 @@
         projection-file (fs/join root "deliveries" (str delivery-id ".edn"))
         append-line! fs/append-line!
         fail-once?* (atom true)]
+    (reset! failing-append-context*
+            {:append-line! append-line!
+             :fail-once?* fail-once?*})
     (try
       (await (store/initialize! state-store))
       (with-redefs
-        [fs/append-line!
-         ;; Preserve the fixed-arity CLJS ABI at the redefined Var boundary;
-         ;; the delegated implementation remains a modern async function.
-         (fn [file line expected-position]
-           (fail-after-readback!
-            append-line! fail-once?* file line expected-position))]
+        [fs/append-line! failing-append-line!]
         (is (= :injected-readback-failure
                (:error/code
                 (ex-data
@@ -336,6 +338,7 @@
                 (first (str/split-lines
                         (await (fs/read-text ledger-file))))))))
       (finally
+        (reset! failing-append-context* nil)
         (await (fs/remove-tree! root))))))
 
 (deftest ^:async periodic-replay-restores-a-journal-first-projection-gap
