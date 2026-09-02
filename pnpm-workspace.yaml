@@ -3,17 +3,6 @@ packages:
   - packages/contracts/*
   - packages/legacy/*
 
-# Keep the same reviewed native-build allowlist explicit for modern pnpm while
-# retaining `onlyBuiltDependencies` below for the workspace's pinned pnpm 10.14.
-allowBuilds:
-  '@parcel/watcher': true
-  canvas: true
-  esbuild: true
-  fs-ext-extra-prebuilt: true
-  koffi: true
-  msgpackr-extract: true
-  protobufjs: true
-
 gitChecks: false
 
 onlyBuiltDependencies:

@@ -121,7 +121,10 @@ the live pull request, binds the current head, and dispatches the target
 repository's configured default-branch gate wrapper with `pr_number`,
 `pr_head_sha`, `pr_base_sha`, `pr_merge_sha`, `command_id`, the exact
 controller-owned `gate_check_id`, and the
-durably correlated `evidence_run_id`/`evidence_command_id`. Because third-party review bots may not be
+durably correlated `evidence_run_id`/`evidence_command_id`. The wrapper forwards
+`controller_app_login: ${{ vars.ETA_MU_CONTROLLER_APP_LOGIN }}` as a required
+reusable-workflow input; direct eta-mu dispatch reads the same protected
+repository variable. Because third-party review bots may not be
 repository collaborators, a verified GitHub signature plus installation and
 repository allowlists authorizes only this defensive gate recomputation. It does
 not authorize a model review. The called workflow requires both actor
@@ -143,12 +146,19 @@ mergeable synthetic merge commit and dispatches no workflow or model. This
 prevents a prior PR lifecycle's success from being reused after revision or
 base changes.
 
-For external ingress verification, a human may apply the exact
-`eta-mu:probe` label. It traverses signature verification, installation and
-repository allowlists, live pull-request lookup, and actor authorization, then
-records one durable `probed` completion for the delivery GUID. It never creates
-an outbox or invokes a workflow, regardless of controller mode or deployment
-effect-lease state.
+For transport-only ingress verification, a human may apply the exact
+`eta-mu:probe` label to a pull request. It traverses signature verification,
+installation and repository allowlists, live pull-request lookup, and actor
+authorization, then records one durable `probed` completion for the delivery
+GUID.
+
+The Services observe-only proof applies `eta-mu:probe` to a canonical open
+issue instead. The controller uses repository-scoped Issues, Contents, and
+Metadata read tokens to re-fetch the issue, repository, and default-branch ref;
+requires exactly one canonical Rheos task marker; and records a deterministic
+revision-bound project plan with `effects: []`. Both probes remain terminal and
+write-free: neither creates an outbox, invokes a workflow, consults Sol, mutates
+Git or Rheos, or depends on deployment effect-lease state.
 
 Deterministic command failures do not suppress their evidence or the review
 attempt. The command step records every exit, the summary reports

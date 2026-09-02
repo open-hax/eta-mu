@@ -89,4 +89,5 @@ force the bounded reviewer through inline config, and complete the deterministic
 environment.
 
 Webhook admission and exact-head workflow dispatch are now tracked by child eta-mu-webhook-review-controller. The existing evidence-first reviewer remains the execution authority; the controller only authenticates, authorizes, revision-binds, receipts, and dispatches review commands.
+
 ---

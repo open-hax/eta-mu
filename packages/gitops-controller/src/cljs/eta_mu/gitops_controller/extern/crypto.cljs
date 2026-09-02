@@ -18,6 +18,11 @@
       (.update value "utf8")
       (.digest "hex")))
 
+(defn sha256-bytes [value]
+  (-> (.createHash crypto "sha256")
+      (.update value)
+      (.digest "hex")))
+
 (defn rsa-private-key? [value]
   (try
     (let [key (.createPrivateKey crypto value)]

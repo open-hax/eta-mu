@@ -17,12 +17,19 @@
 (def app-bot-login-pattern
   #"^[A-Za-z0-9][A-Za-z0-9-]{0,99}\[bot\]$")
 
+(def project-id-pattern
+  #"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+
+(def task-uuid-pattern
+  #"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+
 (def review-command-label "eta-mu:review")
 (def probe-command-label "eta-mu:probe")
 (def review-gate-check-name "eta-mu-review-gate")
 
 (def managed-events
-  #{"pull_request"
+  #{"issues"
+    "pull_request"
     "pull_request_review"
     "pull_request_review_comment"
     "pull_request_review_thread"
@@ -39,14 +46,15 @@
 (def command-types
   #{:code-review :review-gate-reconcile :review-gate-invalidate
     :review-gate-completion
-    :ingress-probe})
+    :ingress-probe :issue-probe})
 
 (def command-capabilities
   {:code-review :gitops/review
    :review-gate-reconcile :gitops/reconcile-review-gate
    :review-gate-invalidate :gitops/invalidate-review-gate
    :review-gate-completion :gitops/complete-review-gate
-   :ingress-probe :gitops/probe})
+   :ingress-probe :gitops/probe
+   :issue-probe :gitops/probe})
 
 (def workflow-run-conclusions
   #{"success" "failure" "cancelled" "timed_out" "action_required"
@@ -60,6 +68,9 @@
 
 (def sha-pattern
   #"^[0-9a-f]{40}$")
+
+(def sha256-pattern
+  #"^[0-9a-f]{64}$")
 
 (def allowed-permissions
   #{"admin" "maintain" "write"})
@@ -93,6 +104,12 @@
 
 (defn app-bot-login? [value]
   (and (string? value) (boolean (re-matches app-bot-login-pattern value))))
+
+(defn project-id? [value]
+  (and (string? value) (boolean (re-matches project-id-pattern value))))
+
+(defn task-uuid? [value]
+  (and (string? value) (boolean (re-matches task-uuid-pattern value))))
 
 (defn review-command-label? [value]
   (= review-command-label value))
@@ -179,6 +196,13 @@
        (= "labeled" action)
        (= probe-command-label label)))
 
+(defn issue-probe-command?
+  [{:keys [event action label issue-pull-request?]}]
+  (and (= "issues" event)
+       (= "labeled" action)
+       (= probe-command-label label)
+       (false? issue-pull-request?)))
+
 (declare commit-sha?)
 
 (defn workflow-run-completion-command?
@@ -230,35 +254,126 @@
 (defn commit-sha? [value]
   (and (string? value) (boolean (re-matches sha-pattern value))))
 
+(defn payload-sha256? [value]
+  (and (string? value) (boolean (re-matches sha256-pattern value))))
+
 (defn review-gate-external-id
   [delivery-id pull-request-number head-sha base-sha merge-sha]
   (str "eta-mu-review-gate/v2:" delivery-id ":" pull-request-number ":"
        head-sha ":" base-sha ":" merge-sha))
 
-(defn webhook-source?
-  [{:keys [delivery-id event action repository installation-id
-           repository-id pull-request-number pull-request-node-id sender-id
-           sender-login] :as command}]
+(defn webhook-base-source?
+  [{:keys [delivery-id event repository installation-id
+           repository-id sender-id sender-login payload/sha256]}]
   (and (delivery-id? delivery-id)
        (non-blank-string? event)
-       (non-blank-string? action)
        (repository-full-name? repository)
        (positive-integer? installation-id)
        (positive-integer? repository-id)
        (positive-integer? sender-id)
        (non-blank-string? sender-login)
-       (if (= "workflow_run" event)
-         (workflow-run-completion-command? command)
-         (and (positive-integer? pull-request-number)
-              (non-blank-string? pull-request-node-id)))))
+       (payload-sha256? sha256)))
 
-(defn admitted-command? [command]
-  (and (webhook-source? command)
-       (or (code-review-command? command)
-           (review-gate-reconcile-command? command)
-           (review-gate-invalidation-command? command)
-           (workflow-run-completion-command? command)
-           (ingress-probe-command? command))))
+(defn pull-request-webhook-source?
+  [{:keys [action pull-request-number pull-request-node-id] :as command}]
+  (and (webhook-base-source? command)
+       (non-blank-string? action)
+       (positive-integer? pull-request-number)
+       (non-blank-string? pull-request-node-id)))
+
+(defn issue-webhook-source?
+  [{:keys [action issue-number issue-node-id issue-pull-request?] :as command}]
+  (and (webhook-base-source? command)
+       (non-blank-string? action)
+       (positive-integer? issue-number)
+       (non-blank-string? issue-node-id)
+       (boolean? issue-pull-request?)))
+
+(defn webhook-source?
+  [{:keys [event] :as command}]
+  (and (webhook-base-source? command)
+       (case event
+         "workflow_run" (workflow-run-completion-command? command)
+         "issues" (issue-webhook-source? command)
+         (pull-request-webhook-source? command))))
+
+(def ignored-delivery-reasons
+  #{:unmanaged-event :unmanaged-action :unmanaged-label
+    :unmanaged-workflow :untrusted-workflow-actor})
+
+(defn- source-matches-command-type? [command-type-value command]
+  (case command-type-value
+    :code-review (code-review-command? command)
+    :review-gate-reconcile (review-gate-reconcile-command? command)
+    :review-gate-invalidate (review-gate-invalidation-command? command)
+    :review-gate-completion (workflow-run-completion-command? command)
+    :ingress-probe (ingress-probe-command? command)
+    :issue-probe (issue-probe-command? command)
+    false))
+
+(defn admitted-command?
+  "Validate the policy-independent structure of a durable queued command."
+  [{:keys [delivery-id command-id label admission] :as command}]
+  (let [command-type-value (:command/type command)
+        command-capability-value (:capability command)
+        admission-type (:command/type admission)]
+    (and (webhook-source? command)
+         (= delivery-id command-id)
+         (keyword? command-type-value)
+         (keyword? command-capability-value)
+         (= command-type-value admission-type)
+         (= command-capability-value
+            (command-capability command-type-value))
+         (source-matches-command-type? command-type-value command)
+         (= 2 (:version admission))
+         (contains? controller-modes (:mode admission))
+         (non-blank-string? (:policy-revision admission))
+         (case command-type-value
+           :code-review
+           (and (= label (:review-label admission))
+                (workflow-file? (:workflow admission)))
+
+           (:review-gate-reconcile :review-gate-completion)
+           (workflow-file? (:workflow admission))
+
+           :review-gate-invalidate
+           (nil? (:workflow admission))
+
+           :ingress-probe
+           (and (= label (:probe-label admission))
+                (nil? (:workflow admission)))
+
+           :issue-probe
+           (and (= label (:probe-label admission))
+                (project-id? (:project-id admission))
+                (nil? (:workflow admission)))
+
+           false))))
+
+(defn current-issue?
+  [{:keys [number node-id repository repository-id state pull-request?
+           html-url labels canonical-task-uuid canonical-task-marker-count
+           default-branch default-branch-ref default-branch-sha
+           default-branch-object-type repository-archived?
+           repository-disabled?]}]
+  (and (positive-integer? number)
+       (non-blank-string? node-id)
+       (repository-full-name? repository)
+       (positive-integer? repository-id)
+       (contains? #{"open" "closed"} state)
+       (boolean? pull-request?)
+       (non-blank-string? html-url)
+       (set? labels)
+       (every? non-blank-string? labels)
+       (or (nil? canonical-task-uuid) (string? canonical-task-uuid))
+       (integer? canonical-task-marker-count)
+       (not (neg? canonical-task-marker-count))
+       (non-blank-string? default-branch)
+       (= (str "refs/heads/" default-branch) default-branch-ref)
+       (commit-sha? default-branch-sha)
+       (= "commit" default-branch-object-type)
+       (boolean? repository-archived?)
+       (boolean? repository-disabled?)))
 
 (defn current-pull-request?
   [{:keys [number node-id repository repository-id head-repository

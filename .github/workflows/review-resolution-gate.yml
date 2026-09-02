@@ -37,6 +37,10 @@ on:
         type: string
   workflow_call:
     inputs:
+      controller_app_login:
+        description: "Dedicated controller App bot login from the caller's protected repository variable"
+        required: true
+        type: string
       pr_number:
         description: "Pull request number admitted by the webhook controller"
         required: true
@@ -69,11 +73,6 @@ on:
         description: "Durably correlated code-review webhook delivery identifier"
         required: true
         type: string
-      strict:
-        description: "Block on ALL unresolved review threads (not just tracked actors)"
-        required: false
-        type: boolean
-        default: true
 
 concurrency:
   group: eta-mu-review-gate-${{ github.repository }}-${{ inputs.pr_number }}
@@ -92,7 +91,7 @@ jobs:
       - name: Validate webhook-dispatched gate reconciliation
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
-          EXPECTED_CONTROLLER_APP_LOGIN: ${{ vars.ETA_MU_CONTROLLER_APP_LOGIN }}
+          EXPECTED_CONTROLLER_APP_LOGIN: ${{ inputs.controller_app_login || vars.ETA_MU_CONTROLLER_APP_LOGIN }}
           TRIGGERING_ACTOR: ${{ github.triggering_actor }}
           PR_NUMBER: ${{ inputs.pr_number }}
           PR_BASE_SHA: ${{ inputs.pr_base_sha }}
@@ -140,10 +139,19 @@ jobs:
             }
 
             const pullNumber = Number(rawNumber);
-            const { data: pullRequest } = await github.rest.pulls.get({
-              ...context.repo,
-              pull_number: pullNumber,
-            });
+            const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+            let pullRequest;
+            for (let attempt = 1; attempt <= 6; attempt += 1) {
+              ({ data: pullRequest } = await github.rest.pulls.get({
+                ...context.repo,
+                pull_number: pullNumber,
+              }));
+              if (pullRequest.mergeable !== null) break;
+              if (attempt < 6) await wait(1000);
+            }
+            if (pullRequest.mergeable === null) {
+              throw new Error('GitHub did not resolve pull-request mergeability after bounded polling.');
+            }
             const repository = `${context.repo.owner}/${context.repo.repo}`;
             const targetRepository = String(pullRequest.base?.repo?.full_name || '');
             const headRepository = String(pullRequest.head?.repo?.full_name || '');
@@ -223,12 +231,17 @@ jobs:
             if (!/^[1-9][0-9]*$/.test(rawWorkflowId) || !Number.isSafeInteger(Number(rawWorkflowId))) {
               throw new Error('ETA_MU_REVIEW_WORKFLOW_ID repository variable is missing or invalid.');
             }
-            if (!/^[A-Za-z0-9._/-]+\.ya?ml@[A-Za-z0-9._/-]+$/.test(expectedPath)
-                || !expectedPath.startsWith('.github/workflows/')) {
+            const pathRefSeparator = expectedPath.lastIndexOf('@');
+            const expectedWorkflowPath = expectedPath.slice(0, pathRefSeparator);
+            const expectedWorkflowRef = expectedPath.slice(pathRefSeparator + 1);
+            if (pathRefSeparator <= 0
+                || !/^[A-Za-z0-9._/-]+\.ya?ml$/.test(expectedWorkflowPath)
+                || !expectedWorkflowPath.startsWith('.github/workflows/')
+                || !/^[A-Za-z0-9._/-]+$/.test(expectedWorkflowRef)) {
               throw new Error('ETA_MU_REVIEW_WORKFLOW_PATH must be an exact workflow path@ref.');
             }
             if (!/^[A-Za-z0-9._/-]+$/.test(expectedBranch)
-                || !expectedPath.endsWith(`@${expectedBranch}`)) {
+                || expectedWorkflowRef !== expectedBranch) {
               throw new Error('The protected review workflow path must be pinned to the repository default branch.');
             }
 
@@ -248,10 +261,10 @@ jobs:
               if (run.id !== runId
                   || run.workflow_id !== workflowId
                   || repository.toLowerCase() !== `${context.repo.owner}/${context.repo.repo}`.toLowerCase()
-                  || run.path !== expectedPath
+                  || run.path !== expectedWorkflowPath
                   || run.event !== 'workflow_dispatch'
                   || run.run_attempt !== 1
-                  || run.head_branch !== expectedBranch
+                  || run.head_branch !== expectedWorkflowRef
                   || !/^[0-9a-f]{40}$/i.test(headSha)
                   || actor !== expectedActor
                   || triggeringActor !== expectedActor) {

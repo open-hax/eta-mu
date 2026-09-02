@@ -19,7 +19,8 @@
                              #js {:type "pkcs8" :format "pem"})
         config {:github-api-url "https://api.github.test"
                 :github-app-id 123
-                :github-private-key private-key}
+                :github-private-key private-key
+                :mode :review-dispatch}
         adapter (github/port config)]
     (set!
      (.-fetch js/globalThis)
@@ -55,9 +56,11 @@
                    (swap! authorized* inc)
                    (js/Promise.resolve true))})))
             dispatch-request (second @requests*)
+            token-body (-> (first @requests*) :options (.-body) json/decode)
             body (-> dispatch-request :options (.-body) json/decode)
             request-headers (-> dispatch-request :options (.-headers))]
         (is (= 2 (count @requests*)))
+        (is (= {} token-body))
         (is (= "https://api.github.test/repos/open-hax/eta-mu/actions/workflows/opencode-code-review.yml/dispatches"
                (:url dispatch-request)))
         (is (= {:ref "main"
@@ -79,6 +82,92 @@
       (finally
         (set! (.-fetch js/globalThis) original-fetch)))))
 
+(deftest ^:async observe-only-tokens-are-repository-scoped-and-mutations-are-disabled
+  (let [original-fetch (.-fetch js/globalThis)
+        key-pair (.generateKeyPairSync
+                  node-crypto "rsa" #js {:modulusLength 2048})
+        private-key (.export (.-privateKey key-pair)
+                             #js {:type "pkcs8" :format "pem"})
+        base-config {:github-api-url "https://api.github.test"
+                     :github-app-id 123
+                     :github-private-key private-key}
+        adapter (github/port (assoc base-config :mode :observe-only))
+        default-adapter (github/port base-config)
+        requests* (atom [])]
+    (set!
+     (.-fetch js/globalThis)
+     (fn [url options]
+       (swap! requests* conj {:url url :options options})
+       (js/Promise.resolve
+        (if (.endsWith url "/access_tokens")
+          (response 201 {:token "installation-token"})
+          (response 200 {:permission "write"
+                         :user {:id 9 :login "operator"}})))))
+    (try
+      (await ((:actor-permission! adapter)
+              {:installation-id 77
+               :repository-id 42
+               :repository "open-hax/eta-mu"
+               :sender-login "operator"}))
+      (let [token-request (first @requests*)
+            token-body (-> token-request :options (.-body) json/decode)]
+        (is (= {:repository_ids [42]
+                :permissions {:metadata "read"}}
+               token-body)))
+      (doseq [current-adapter [adapter default-adapter]]
+        (let [error (try
+                      (await ((:dispatch-review! current-adapter)
+                              77 {:repository-id 42
+                                  :repository "open-hax/eta-mu"}))
+                      nil
+                      (catch :default value value))]
+          (is (= :github-mutation-disabled
+                 (:error/code (ex-data error))))))
+      (is (= 2 (count @requests*)))
+      (finally
+        (set! (.-fetch js/globalThis) original-fetch)))))
+
+(deftest ^:async observe-only-pull-read-token-is-operation-scoped
+  (let [original-fetch (.-fetch js/globalThis)
+        key-pair (.generateKeyPairSync
+                  node-crypto "rsa" #js {:modulusLength 2048})
+        private-key (.export (.-privateKey key-pair)
+                             #js {:type "pkcs8" :format "pem"})
+        adapter (github/port {:github-api-url "https://api.github.test"
+                              :github-app-id 123
+                              :github-private-key private-key
+                              :mode :observe-only})
+        requests* (atom [])]
+    (set!
+     (.-fetch js/globalThis)
+     (fn [url options]
+       (swap! requests* conj {:url url :options options})
+       (js/Promise.resolve
+        (cond
+          (.endsWith url "/access_tokens")
+          (response 201 {:token "installation-token"})
+
+          (.endsWith url "/pulls/321")
+          (response 200 {:number 321})
+
+          :else
+          (response 200 {:id 42
+                         :full_name "open-hax/eta-mu"
+                         :default_branch "main"})))))
+    (try
+      (await ((:fetch-pull-request! adapter)
+              {:installation-id 77
+               :repository-id 42
+               :repository "open-hax/eta-mu"
+               :pull-request-number 321}))
+      (let [token-body (-> @requests* first :options (.-body) json/decode)]
+        (is (= {:repository_ids [42]
+                :permissions {:metadata "read"
+                              :pull_requests "read"}}
+               token-body)))
+      (finally
+        (set! (.-fetch js/globalThis) original-fetch)))))
+
 (deftest ^:async legacy-204-dispatch-is-held-fail-closed
   (let [original-fetch (.-fetch js/globalThis)
         key-pair (.generateKeyPairSync
@@ -87,7 +176,8 @@
                              #js {:type "pkcs8" :format "pem"})
         adapter (github/port {:github-api-url "https://api.github.test"
                               :github-app-id 123
-                              :github-private-key private-key})
+                              :github-private-key private-key
+                              :mode :review-dispatch})
         request-count* (atom 0)]
     (set! (.-fetch js/globalThis)
           (fn [_url _options]
@@ -123,7 +213,8 @@
                              #js {:type "pkcs8" :format "pem"})
         adapter (github/port {:github-api-url "https://api.github.test"
                               :github-app-id 123
-                              :github-private-key private-key})
+                              :github-private-key private-key
+                              :mode :review-dispatch})
         base "1111111111111111111111111111111111111111"
         head "0123456789abcdef0123456789abcdef01234567"
         merge-sha "2222222222222222222222222222222222222222"
@@ -208,6 +299,87 @@
       (finally
         (set! (.-fetch js/globalThis) original-fetch)))))
 
+(deftest ^:async cancelled-exact-gate-with-a-newer-peer-is-reported-as-superseded
+  (let [original-fetch (.-fetch js/globalThis)
+        requests* (atom [])
+        authorized* (atom 0)
+        key-pair (.generateKeyPairSync
+                  node-crypto "rsa" #js {:modulusLength 2048})
+        private-key (.export (.-privateKey key-pair)
+                             #js {:type "pkcs8" :format "pem"})
+        adapter (github/port {:github-api-url "https://api.github.test"
+                              :github-app-id 123
+                              :github-private-key private-key
+                              :mode :review-dispatch})
+        merge-sha "2222222222222222222222222222222222222222"
+        external-id
+        (str "eta-mu-review-gate/v2:"
+             "9eb17352-284c-4b55-879d-0d07f353fdee:321:"
+             "0123456789abcdef0123456789abcdef01234567:"
+             "1111111111111111111111111111111111111111:"
+             merge-sha)
+        expected {:name "eta-mu-review-gate"
+                  :repository "open-hax/eta-mu"
+                  :repository-id 42
+                  :pr-number 321
+                  :merge-sha merge-sha
+                  :delivery-id "9eb17352-284c-4b55-879d-0d07f353fdee"
+                  :external-id external-id
+                  :details-url "https://github.com/open-hax/eta-mu/pull/321"}
+        cancelled {:id 4567
+                   :node_id "CR_cancelled"
+                   :name "eta-mu-review-gate"
+                   :head_sha merge-sha
+                   :status "completed"
+                   :conclusion "cancelled"
+                   :external_id external-id
+                   :details_url (:details-url expected)
+                   :app {:id 123 :slug "eta-mu-controller"}}
+        newer (assoc cancelled
+                     :id 4568
+                     :node_id "CR_newer"
+                     :status "in_progress"
+                     :conclusion nil
+                     :external_id "eta-mu-review-gate/v2:newer")]
+    (set!
+     (.-fetch js/globalThis)
+     (fn [url options]
+       (swap! requests* conj {:url url :options options})
+       (js/Promise.resolve
+        (cond
+          (.endsWith url "/access_tokens")
+          (response 201 {:token "installation-token"})
+
+          (.includes url "/commits/")
+          (response 200 {:check_runs [cancelled newer]})
+
+          :else (response 500 {:unexpected url})))))
+    (try
+      (let [result
+            (await
+             ((:prepare-review-gate! adapter)
+              77
+              (with-meta expected
+                {:authorize-create!
+                 (fn []
+                   (swap! authorized* inc)
+                   (js/Promise.resolve true))
+                 :authorize-cancel!
+                 (fn []
+                   (swap! authorized* inc)
+                   (js/Promise.resolve true))})))]
+        (is (:superseded? result))
+        (is (= 4567 (:id result)))
+        (is (= "completed" (:status result)))
+        (is (= "cancelled" (:conclusion result)))
+        (is (= 4568 (:superseded-by-check-id result)))
+        (is (zero? @authorized*))
+        (is (not-any? #(contains? #{"POST" "PATCH"}
+                                  (.-method (:options %)))
+                      (rest @requests*))))
+      (finally
+        (set! (.-fetch js/globalThis) original-fetch)))))
+
 (deftest ^:async terminal-update-patches-the-exact-controller-owned-check
   (let [original-fetch (.-fetch js/globalThis)
         requests* (atom [])
@@ -217,7 +389,8 @@
                              #js {:type "pkcs8" :format "pem"})
         config {:github-api-url "https://api.github.test"
                 :github-app-id 123
-                :github-private-key private-key}
+                :github-private-key private-key
+                :mode :review-dispatch}
         adapter (github/port config)
         head "0123456789abcdef0123456789abcdef01234567"
         base "1111111111111111111111111111111111111111"
@@ -319,5 +492,100 @@
                       @requests*))
         (is (= 1 (count (filter #(= "PATCH" (.-method (:options %)))
                                 @requests*)))))
+      (finally
+        (set! (.-fetch js/globalThis) original-fetch)))))
+
+(deftest ^:async issue-probe-refetches-issue-repository-and-default-branch
+  (let [original-fetch (.-fetch js/globalThis)
+        requests* (atom [])
+        key-pair (.generateKeyPairSync
+                  node-crypto "rsa" #js {:modulusLength 2048})
+        private-key (.export (.-privateKey key-pair)
+                             #js {:type "pkcs8" :format "pem"})
+        adapter (github/port {:github-api-url "https://api.github.test"
+                              :github-app-id 123
+                              :github-private-key private-key})
+        sha "0123456789abcdef0123456789abcdef01234567"]
+    (set!
+     (.-fetch js/globalThis)
+     (fn [url options]
+       (swap! requests* conj
+              {:url url
+               :method (.-method options)
+               :body (when-let [body (.-body options)]
+                       (json/decode body))})
+       (js/Promise.resolve
+        (cond
+          (.endsWith url "/access_tokens")
+          (response 201 {:token "installation-token"})
+
+          (.endsWith url "/issues/320")
+          (response
+           200
+           {:number 320
+            :node_id "I_kwDOExample"
+            :state "open"
+            :html_url "https://github.test/open-hax/eta-mu/issues/320"
+            :body (str "<!-- openhax-kanban-sync "
+                       "uuid=\"eta-mu-webhook-review-controller\" -->")
+            :labels [{:name "eta-mu:probe"} {:name "priority:P0"}]})
+
+          (.endsWith url "/repos/open-hax/eta-mu")
+          (response 200 {:id 42
+                         :full_name "open-hax/eta-mu"
+                         :default_branch "main"
+                         :archived false
+                         :disabled false})
+
+          (.endsWith url "/git/ref/heads/main")
+          (response 200 {:ref "refs/heads/main"
+                         :object {:type "commit" :sha sha}})
+
+          (.endsWith url "/collaborators/operator/permission")
+          (response 200 {:permission "write"
+                         :user {:id 9 :login "operator"}})
+
+          :else
+          (response 500 {:unexpected url})))))
+    (try
+      (let [command
+            {:event "issues"
+             :action "labeled"
+             :label "eta-mu:probe"
+             :installation-id 77
+             :repository "open-hax/eta-mu"
+             :repository-id 42
+             :issue-number 320
+             :sender-login "operator"}
+            current
+            (await
+             ((:fetch-issue! adapter) command))
+            permission (await ((:actor-permission! adapter) command))]
+        (is (= 6 (count @requests*)))
+        (is (= ["POST" "GET" "GET" "GET" "POST" "GET"]
+               (mapv :method @requests*)))
+        (is (= ["https://api.github.test/app/installations/77/access_tokens"
+                "https://api.github.test/repos/open-hax/eta-mu/issues/320"
+                "https://api.github.test/repos/open-hax/eta-mu"
+                "https://api.github.test/repos/open-hax/eta-mu/git/ref/heads/main"
+                "https://api.github.test/app/installations/77/access_tokens"
+                (str "https://api.github.test/repos/open-hax/eta-mu/"
+                     "collaborators/operator/permission")]
+               (mapv :url @requests*)))
+        (is (= {:repository_ids [42]
+                :permissions {:issues "read"
+                              :contents "read"
+                              :metadata "read"}}
+               (:body (first @requests*))))
+        (is (= {:repository_ids [42]
+                :permissions {:metadata "read"}}
+               (:body (nth @requests* 4))))
+        (is (= sha (:default-branch-sha current)))
+        (is (= #{"eta-mu:probe" "priority:P0"} (:labels current)))
+        (is (false? (:pull-request? current)))
+        (is (= {:permission "write"
+                :user-id 9
+                :user-login "operator"}
+               permission)))
       (finally
         (set! (.-fetch js/globalThis) original-fetch)))))

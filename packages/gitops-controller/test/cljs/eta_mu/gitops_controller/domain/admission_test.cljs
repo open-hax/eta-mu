@@ -8,6 +8,7 @@
 
 (def command
   {:delivery-id "9eb17352-284c-4b55-879d-0d07f353fdee"
+   :payload/sha256 (apply str (repeat 64 "a"))
    :event "pull_request"
    :action "labeled"
    :label "eta-mu:review"
@@ -77,6 +78,26 @@
             (admission/current-policy-decision
              config (assoc admitted
                            :capability :gitops/reconcile-review-gate)))))))
+
+(deftest observe-only-admission-does-not-require-mutation-workflow-ids
+  (let [observe-config (-> config
+                           (assoc :mode :observe-only
+                                  :policy-revision "observe-policy-v1")
+                           (dissoc :review-workflow-id
+                                   :gate-workflow-id
+                                   :controller-app-login))
+        review (:command (admission/decide observe-config command))
+        reconcile-source (-> command
+                             (assoc :event "pull_request_review_thread"
+                                    :action "resolved"
+                                    :review-thread-node-id "PRRT_example")
+                             (dissoc :label))
+        reconcile (:command
+                   (admission/decide observe-config reconcile-source))]
+    (is (:allowed?
+         (admission/current-policy-decision observe-config review)))
+    (is (:allowed?
+         (admission/current-policy-decision observe-config reconcile)))))
 
 (deftest review-gate-events-and-probe-have-distinct-durable-authority
   (let [thread-command (-> command
@@ -349,6 +370,7 @@
    (workflow-completion-source workflow-id workflow-file "success"))
   ([workflow-id workflow-file conclusion]
    {:delivery-id "56a5d98a-87df-4d70-a40c-40a3cf109198"
+    :payload/sha256 (apply str (repeat 64 "b"))
     :event "workflow_run"
     :action "completed"
     :installation-id 77

@@ -33,19 +33,22 @@ This document describes the centralized GitHub automation system owned by `open-
 eta-mu controller after a signed review submitted/dismissed, inline review
 comment created, or review thread resolved/unresolved webhook. The reusable
 workflow's `workflow_call` surface is used only by the target repository's
-pinned thin wrapper; it inherits `workflow_dispatch`, and every controller-bound
-validation step is unconditional.
+pinned thin wrapper. That wrapper itself must be triggered by `workflow_dispatch`;
+the inherited event name is part of the fail-closed caller contract, and every
+controller-bound validation step is unconditional.
 **Inputs**:
+- `controller_app_login`: administrator-controlled controller App `name[bot]`
+  login forwarded by a reusable caller; direct dispatch reads the same protected
+  repository variable
 - `pr_number`, `pr_head_sha`, `pr_base_sha`, `pr_merge_sha`, and `command_id`:
   pull request, exact head/default-base/synthetic-merge tuple, and durable
   lifecycle-webhook command
 - `gate_check_id`: exact pending Check Run created by the controller App
 - `evidence_run_id` and `evidence_command_id`: exact durably correlated review
   workflow run and originating review command
-- `strict`: when true, blocks on any unresolved thread (default: true)
 
-**Logic**: Fetches all review threads via GraphQL. In strict mode, it fails if
-any thread is unresolved. A webhook dispatch is always strict and first requires
+**Logic**: Fetches all review threads via GraphQL and fails if any thread is
+unresolved. A webhook dispatch is always strict and first requires
 both GitHub actor identities to equal the configured controller App, re-fetches
 the open same-repository pull request at the admitted default-base/head/test-
 merge tuple, and independently
@@ -199,7 +202,10 @@ jobs:
       pr_base_sha: ${{ inputs.pr_base_sha }}
       pr_merge_sha: ${{ inputs.pr_merge_sha }}
       command_id: ${{ inputs.command_id }}
-    secrets: inherit
+    secrets:
+      ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+      ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+      DISCORD_REVIEW_WEBHOOK_URL: ${{ secrets.DISCORD_REVIEW_WEBHOOK_URL }}
 ```
 
 ### `review-resolution-gate.yml`
@@ -240,8 +246,8 @@ jobs:
       pull-requests: read
     uses: open-hax/eta-mu/.github/workflows/review-resolution-gate.yml@<pinned-commit>
     with:
+      controller_app_login: ${{ vars.ETA_MU_CONTROLLER_APP_LOGIN }}
       pr_number: ${{ inputs.pr_number }}
-      strict: true
       pr_head_sha: ${{ inputs.pr_head_sha }}
       pr_base_sha: ${{ inputs.pr_base_sha }}
       pr_merge_sha: ${{ inputs.pr_merge_sha }}

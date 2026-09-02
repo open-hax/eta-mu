@@ -13,6 +13,14 @@
 (defn- repository-file [name]
   (.join path (repository-root) name))
 
+(def ^:private source-revision-argument "ETA_MU_SOURCE_REVISION")
+
+(defn- dockerfile-from-images [dockerfile]
+  (keep (fn [line]
+          (when (str/starts-with? line "FROM ")
+            (second (str/split line #" " 3))))
+        (str/split-lines dockerfile)))
+
 (deftest controller-image-build-context-is-allowlisted-and-secret-free
   (let [dockerignore (.readFileSync node-fs
                                     (repository-file ".dockerignore") "utf8")
@@ -34,7 +42,7 @@
                       "**/*.p8"
                       "**/secrets/**"
                       "**/ledgers/**"
-                      "**/*.ndjson"]]
+                      "**/*.nd-edn"]]
       (is (.includes dockerignore excluded)))
     (is (.includes dockerfile "COPY . ."))
     (is (.includes dockerfile "pnpm install --frozen-lockfile --ignore-scripts --filter @eta-mu/gitops-controller..."))
@@ -44,11 +52,41 @@
                    "test ! -L /opt/controller/node_modules/@open-hax/eta-mu-monorepo"))
     (is (.includes dockerfile "EXPOSE 8790"))))
 
+(deftest controller-image-provenance-is-immutable-and-observable
+  (let [dockerfile (.readFileSync
+                    node-fs
+                    (repository-file
+                     "packages/gitops-controller/Dockerfile") "utf8")
+        workspace (.readFileSync
+                   node-fs
+                   (repository-file "pnpm-workspace.yaml") "utf8")
+        from-images (dockerfile-from-images dockerfile)]
+    (is (= 3 (count from-images)))
+    (doseq [image from-images]
+      (is (re-matches #"[^@ ]+@sha256:[0-9a-f]{64}" image)))
+    (is (= 2 (count (re-seq (re-pattern (str "ARG " source-revision-argument))
+                            dockerfile))))
+    (is (.includes dockerfile
+                   "\"\"|*[!0-9a-f]*) exit 64"))
+    (is (.includes dockerfile
+                   "test \"${#ETA_MU_SOURCE_REVISION}\" -eq 40"))
+    (doseq [label ["org.opencontainers.image.source=\"https://github.com/open-hax/eta-mu\""
+                   "org.opencontainers.image.revision=\"${ETA_MU_SOURCE_REVISION}\""
+                   "org.opencontainers.image.licenses=\"GPL-3.0-or-later\""]]
+      (is (.includes dockerfile label)))
+    (is (.includes dockerfile "USER node"))
+    (is (not (.includes workspace "allowBuilds:")))
+    (is (.includes workspace "onlyBuiltDependencies:"))))
+
 (deftest controller-ci-is-exact-revision-unprivileged-and-frozen
   (let [workflow (.readFileSync
                   node-fs
                   (repository-file ".github/workflows/gitops-controller.yml")
-                  "utf8")]
+                  "utf8")
+        lint-script (.readFileSync
+                     node-fs
+                     (repository-file "scripts/lint.bb")
+                     "utf8")]
     (is (.includes workflow "permissions:\n  contents: read"))
     (is (.includes workflow
                    "EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}"))
@@ -59,10 +97,23 @@
     (doseq [gate ["pnpm -C packages/gitops-controller test"
                   "pnpm -C packages/gitops-controller lint:kondo"
                   "pnpm -C packages/gitops-controller build"
-                  "docker build"]]
+                  "docker build"
+                  "Smoke observe-only container"
+                  ".Config.User"
+                  "--read-only"
+                  "--cap-drop ALL"
+                  "no-new-privileges:true"
+                  "ETA_MU_CONTROLLER_MODE=observe-only"
+                  "ETA_MU_GITHUB_APP_PRIVATE_KEY_FILE=/run/secrets/app.pem"
+                  "ETA_MU_GITHUB_WEBHOOK_SECRET_FILE=/run/secrets/webhook-secret"
+                  "http://127.0.0.1:18790/health/live"
+                  "http://127.0.0.1:18790/health/ready"]]
       (is (.includes workflow gate)))
+    (is (not (re-find #"--env ETA_MU_GITHUB_APP_PRIVATE_KEY=" workflow)))
+    (is (not (re-find #"--env ETA_MU_GITHUB_WEBHOOK_SECRET=" workflow)))
     (is (not (.includes workflow "secrets.")))
-    (is (not (.includes workflow "docker push")))))
+    (is (not (.includes workflow "docker push")))
+    (is (.includes lint-script "\"@eta-mu/gitops-controller\""))))
 
 (deftest gate-reconciliation-workflow-is-controller-bound-and-exact-head
   (let [workflow (.readFileSync

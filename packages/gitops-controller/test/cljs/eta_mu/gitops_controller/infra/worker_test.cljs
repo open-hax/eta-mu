@@ -9,9 +9,11 @@
             [eta-mu.gitops-controller.infra.worker :as worker]))
 
 (def delivery-id "9eb17352-284c-4b55-879d-0d07f353fdee")
+(def payload-sha256 (apply str (repeat 64 "a")))
 
 (def command
   {:delivery-id delivery-id
+   :payload/sha256 payload-sha256
    :command-id delivery-id
    :capability :gitops/review
    :event "pull_request"
@@ -48,7 +50,12 @@
    :installation-allowlist #{77}})
 
 (def review-policy (policy :review-dispatch "review-policy-v1"))
-(def observe-policy (policy :observe-only "observe-policy-v1"))
+(def observe-policy
+  (dissoc (policy :observe-only "observe-policy-v1")
+          :controller-app-login
+          :review-workflow-id
+          :gate-workflow-id
+          :effect-lease))
 
 (defn admitted-command [current-policy]
   (assoc command
@@ -103,6 +110,31 @@
     :details-url (:details-url expected)
     :app-id 123
     :app-slug "eta-mu-controller"}))
+
+(deftest ^:async observe-only-write-authorizer-stops-before-all-dynamic-reads
+  (let [refetches* (atom 0)
+        lease-requests* (atom 0)
+        authorize!
+        (worker/write-authorizer
+         {:mode :observe-only
+          :github
+          {:fetch-pull-request!
+           (fn [_]
+             (swap! refetches* inc)
+             (js/Promise.resolve current-pull-request))}
+          :effect-lease
+          {:authorize!
+           (fn [_]
+             (swap! lease-requests* inc)
+             (js/Promise.resolve {:allowed? true}))}}
+         delivery-id command {} true)
+        error (try
+                (await (authorize!))
+                nil
+                (catch :default value value))]
+    (is (= :github-mutation-disabled (:error/code (ex-data error))))
+    (is (zero? @refetches*))
+    (is (zero? @lease-requests*))))
 
 (defn fetch-code-review-run!
   [{:keys [workflow-run-id]}]
@@ -174,6 +206,7 @@
    (admission/decide
     review-policy
     {:delivery-id completion-id
+     :payload/sha256 payload-sha256
      :event "workflow_run"
      :action "completed"
      :installation-id 77
@@ -260,6 +293,70 @@
         (is (= 7001
                (get-in correlation [:correlation :dispatch :workflow-id])))
         (is (empty? (await (store/pending-delivery-ids state-store)))))
+      (finally
+        (worker/stop! queue-worker)
+        (await (fs/remove-tree! root))))))
+
+(deftest ^:async replay-settles-an-exact-cancelled-gate-superseded-by-a-newer-peer
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        dispatch (review-dispatch-intent)
+        durable-gate
+        (merge (:gate-check dispatch)
+               {:id gate-check-id
+                :node-id "CR_cancelled"
+                :status "in_progress"
+                :app-id 123
+                :app-slug "eta-mu-controller"})
+        dispatch-count* (atom 0)
+        github {:prepare-review-gate!
+                (fn [_ _]
+                  (js/Promise.resolve
+                   (assoc durable-gate
+                          :status "completed"
+                          :conclusion "cancelled"
+                          :superseded? true
+                          :superseded-by-check-id (inc gate-check-id))))
+                :fetch-pull-request!
+                (fn [_] (js/Promise.resolve current-pull-request))
+                :actor-permission!
+                (fn [_]
+                  (js/Promise.resolve {:permission "write"
+                                       :user-id 9
+                                       :user-login "operator"}))
+                :dispatch-review!
+                (fn [_ _]
+                  (swap! dispatch-count* inc)
+                  (js/Promise.reject
+                   (ex-info "superseded gate must not dispatch" {})))}
+        queue-worker (worker/create
+                      {:store state-store
+                       :github github
+                       :authority (authority/github-port github)
+                       :policy review-policy
+                       :replay-interval-ms 600000})]
+    (try
+      (await (store/initialize! state-store))
+      (await (store/accept-delivery! state-store
+                                     (admitted-command review-policy)))
+      (await (store/claim-dispatch! state-store delivery-id dispatch))
+      (await (store/record-gate-check! state-store delivery-id durable-gate))
+      (await (worker/start! queue-worker))
+      (let [completion
+            (get-in (await (store/read-completion state-store delivery-id))
+                    [:result])
+            retained-gate
+            (get-in (await (store/read-gate-check state-store delivery-id))
+                    [:gate-check])]
+        (is (= "gate-superseded" (:outcome completion)))
+        (is (= gate-check-id (:gate-check-id completion)))
+        (is (= (inc gate-check-id)
+               (:superseded-by-check-id completion)))
+        (is (= "in_progress" (:status retained-gate)))
+        (is (zero? @dispatch-count*))
+        (is (empty? (await (store/pending-delivery-ids state-store))))
+        (is (= {:replayed 0}
+               (await (worker/replay-pending! queue-worker)))))
       (finally
         (worker/stop! queue-worker)
         (await (fs/remove-tree! root))))))
@@ -907,7 +1004,7 @@
                            :authority (authority/github-port github)
                            :policy review-policy
                            :replay-interval-ms 600000})
-        dispatch-ledger (fs/join root "ledgers" "dispatches.ndjson")]
+        dispatch-ledger (fs/join root "ledgers" "dispatches.nd-edn")]
     (try
       (await (store/initialize! state-store))
       (await (worker/start! queue-worker))
@@ -978,7 +1075,7 @@
                            :authority (authority/github-port github)
                            :policy review-policy
                            :replay-interval-ms 600000})
-        dispatch-ledger (fs/join root "ledgers" "dispatches.ndjson")]
+        dispatch-ledger (fs/join root "ledgers" "dispatches.nd-edn")]
     (try
       (await (store/initialize! state-store))
       (await (worker/start! queue-worker))
@@ -1059,6 +1156,59 @@
         (is (= "observed" (get-in completion [:result :outcome])))
         (is (= "0123456789abcdef0123456789abcdef01234567"
                (get-in completion [:result :dispatch :inputs :pr_head_sha]))))
+      (finally
+        (worker/stop! queue-worker)
+        (await (fs/remove-tree! root))))))
+
+(deftest ^:async observe-only-downgrade-replay-never-cancels-a-durable-gate
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        dispatch (review-dispatch-intent)
+        durable-gate
+        (merge (:gate-check dispatch)
+               {:id gate-check-id
+                :node-id "CR_legacy"
+                :status "in_progress"
+                :app-id 123
+                :app-slug "eta-mu-controller"})
+        mutation-count* (atom 0)
+        github {:cancel-review-gate!
+                (fn [& _]
+                  (swap! mutation-count* inc)
+                  (js/Promise.reject
+                   (ex-info "observe-only must not cancel GitHub state" {})))}
+        current-policy (assoc observe-policy
+                              :canary-delivery-ids #{delivery-id})
+        queue-worker (worker/create
+                      {:store state-store
+                       :github github
+                       :authority {}
+                       ;; Deliberately inject a stale active lease to prove the
+                       ;; worker's observe-only mode fence dominates it.
+                       :effect-lease active-effect-lease
+                       :policy current-policy
+                       :replay-interval-ms 600000})]
+    (try
+      (await (store/initialize! state-store))
+      ;; Simulate state durably prepared by the former review-dispatch
+      ;; deployment before Services rolls the controller back to observe-only.
+      (await (store/accept-delivery! state-store
+                                     (admitted-command review-policy)))
+      (await (store/claim-dispatch! state-store delivery-id dispatch))
+      (await (store/record-gate-check! state-store delivery-id durable-gate))
+      (await (worker/start! queue-worker))
+      (let [completion
+            (get-in (await (store/read-completion state-store delivery-id))
+                    [:result])]
+        (is (= "refused" (:outcome completion)))
+        (is (= "admission-policy-changed" (:reason completion)))
+        (is (zero? @mutation-count*))
+        (is (= :active
+               (get-in (worker/status queue-worker)
+                       [:effect-lease :state])))
+        (is (true? (await (store/gate-check-recorded?
+                           state-store delivery-id))))
+        (is (empty? (await (store/pending-delivery-ids state-store)))))
       (finally
         (worker/stop! queue-worker)
         (await (fs/remove-tree! root))))))
@@ -1477,12 +1627,13 @@
       (await (store/accept-delivery! state-store
                                      (admitted-command observe-policy)))
       (await (fs/remove-file-if-present!
-              (fs/join root "ledgers" "deliveries.ndjson")))
-      (is (empty? (await (store/pending-delivery-ids state-store))))
+              (fs/join root "deliveries" (str delivery-id ".edn"))))
       (await (worker/start! queue-worker))
       (let [startup (get-in (worker/status queue-worker) [:startup :evidence])
             completion (await (store/read-completion state-store delivery-id))]
-        (is (= 1 (get-in startup [:reconciliation :ledger-appends])))
+        (is (= 0 (get-in startup [:reconciliation :ledger-appends])))
+        (is (= 1 (get-in startup [:reconciliation
+                                  :projection-restores])))
         (is (= 1 (:replayed startup)))
         (is (= 1 @fetch-count*))
         (is (= "observed" (get-in completion [:result :outcome]))))
@@ -1501,8 +1652,9 @@
                        :replay-interval-ms 5000})]
     (try
       (await (store/initialize! state-store))
-      (await (fs/write-exclusive!
-              (fs/join root "ledgers" "deliveries.ndjson") "{\n"))
+      (let [delivery-ledger (fs/join root "ledgers" "deliveries.nd-edn")]
+        (await (fs/remove-file-if-present! delivery-ledger))
+        (is (await (fs/write-exclusive! delivery-ledger "{\n"))))
       (let [error (try
                     (await (worker/start! queue-worker))
                     nil
@@ -1563,12 +1715,17 @@
       (await (worker/start! queue-worker))
       (is (true? (:running? (worker/status queue-worker))))
       (await (fs/write-exclusive!
-              (fs/join root "deliveries" (str delivery-id ".json"))
+              (fs/join root "deliveries" (str delivery-id ".edn"))
               "{"))
-      (await (worker/process-delivery! queue-worker delivery-id))
-      (let [worker-status (worker/status queue-worker)]
+      (let [error (try
+                    (await (worker/process-delivery! queue-worker delivery-id))
+                    nil
+                    (catch :default caught caught))
+            worker-status (worker/status queue-worker)]
+        (is (= :immutable-state-conflict
+               (:error/code (ex-data error))))
         (is (false? (:running? worker-status)))
-        (is (= :unexpected-worker-failure
+        (is (= :immutable-state-conflict
                (get-in worker-status [:last-error :error/code]))))
       (finally
         (worker/stop! queue-worker)

@@ -12,6 +12,7 @@
     (law/review-gate-invalidation-command? command) :review-gate-invalidate
     (law/workflow-run-completion-command? command) :review-gate-completion
     (law/ingress-probe-command? command) :ingress-probe
+    (law/issue-probe-command? command) :issue-probe
     :else nil))
 
 (defn- workflow-binding-for
@@ -32,14 +33,15 @@
 
       :else nil)
     :ingress-probe {:workflow nil :workflow-id nil}
+    :issue-probe {:workflow nil :workflow-id nil}
     nil))
 
 (defn current-policy-decision
   "Re-admit durable intent against the current policy. A configuration change
   may only tighten authority; it can never promote old observe-only evidence
   into a mutating workflow dispatch."
-  [{:keys [mode policy-revision review-label probe-label repository-allowlist
-           installation-allowlist] :as policy}
+  [{:keys [mode policy-revision project-id review-label probe-label
+           repository-allowlist installation-allowlist] :as policy}
    {:keys [repository installation-id label admission] :as command}]
   (let [admitted-mode (mode-keyword (:mode admission))
         current-mode (mode-keyword mode)
@@ -60,12 +62,18 @@
           (not= command-type admitted-command-type)
           (not= command-type expected-command-type)
           (not= expected-capability (law/capability (:capability command)))
+          (and (= :issue-probe command-type)
+               (or (not (law/project-id? project-id))
+                   (not (law/project-id? (:project-id admission)))))
           (and (contains? #{:code-review :review-gate-reconcile
                             :review-gate-completion}
                           command-type)
                (or (not (law/workflow-file? (:workflow admission)))
                    (not (law/workflow-file? expected-workflow))
-                   (not (law/positive-integer? expected-workflow-id)))))
+                   (and (or (= :review-dispatch current-mode)
+                            (= :review-gate-completion command-type))
+                        (not (law/positive-integer?
+                              expected-workflow-id))))))
       {:allowed? false :reason :admission-policy-unbound}
 
       (or (not= admitted-mode current-mode)
@@ -87,6 +95,12 @@
            (or (not= label probe-label)
                (not= label (:probe-label admission))))
       {:allowed? false :reason :probe-label-policy-changed}
+
+      (and (= :issue-probe command-type)
+           (or (not= label probe-label)
+               (not= label (:probe-label admission))
+               (not= project-id (:project-id admission))))
+      {:allowed? false :reason :issue-probe-policy-changed}
 
       (and (contains? #{:code-review :review-gate-reconcile
                         :review-gate-completion}
@@ -113,7 +127,7 @@
        :workflow-id expected-workflow-id})))
 
 (defn- admit
-  [{:keys [mode policy-revision review-label probe-label] :as policy}
+  [{:keys [mode policy-revision project-id review-label probe-label] :as policy}
    command command-type capability]
   (let [{:keys [workflow]} (workflow-binding-for policy command-type command)
         selected-workflow workflow]
@@ -136,15 +150,18 @@
               (= :code-review command-type)
               (assoc :review-label review-label)
 
-              (= :ingress-probe command-type)
-              (assoc :probe-label probe-label)))}))
+              (contains? #{:ingress-probe :issue-probe} command-type)
+              (assoc :probe-label probe-label)
+
+              (= :issue-probe command-type)
+              (assoc :project-id project-id)))}))
 
 (defn decide
   [{:keys [review-label probe-label repository-allowlist installation-allowlist]
     :as policy}
    command]
   (cond
-    (not (law/webhook-source? command))
+    (not (law/webhook-base-source? command))
     {:admitted? false :reason :invalid-command}
 
     (not (contains? repository-allowlist (:repository command)))
@@ -153,8 +170,37 @@
     (not (contains? installation-allowlist (:installation-id command)))
     {:admitted? false :reason :installation-not-allowed}
 
+    (not (law/managed-event? (:event command)))
+    {:admitted? false :ignored? true :reason :unmanaged-event}
+
+    (not (law/non-blank-string? (:action command)))
+    {:admitted? false :reason :invalid-command}
+
+    (= "issues" (:event command))
+    (cond
+      (not (law/issue-webhook-source? command))
+      {:admitted? false :reason :invalid-command}
+
+      (:issue-pull-request? command)
+      {:admitted? false :reason :pull-request-is-not-an-issue}
+
+      (not= "labeled" (:action command))
+      {:admitted? false :ignored? true :reason :unmanaged-action}
+
+      (not (law/non-blank-string? (:label command)))
+      {:admitted? false :reason :invalid-command-label}
+
+      (= probe-label (:label command))
+      (admit policy command :issue-probe :gitops/probe)
+
+      :else
+      {:admitted? false :ignored? true :reason :unmanaged-label})
+
     (= "pull_request" (:event command))
     (cond
+      (not (law/pull-request-webhook-source? command))
+      {:admitted? false :reason :invalid-command}
+
       (law/review-gate-invalidation-command? command)
       (admit policy command :review-gate-invalidate
              :gitops/invalidate-review-gate)
@@ -176,6 +222,9 @@
 
     (contains? law/gate-reconcile-actions (:event command))
     (cond
+      (not (law/pull-request-webhook-source? command))
+      {:admitted? false :reason :invalid-command}
+
       (not (law/gate-reconcile-action? (:event command) (:action command)))
       {:admitted? false :ignored? true :reason :unmanaged-action}
 
@@ -187,36 +236,41 @@
              :gitops/reconcile-review-gate))
 
     (= "workflow_run" (:event command))
-    (let [{:keys [workflow workflow-id]}
-          (workflow-binding-for policy :review-gate-completion command)]
-      (cond
+    (cond
       (not= "completed" (:action command))
       {:admitted? false :ignored? true :reason :unmanaged-action}
 
-      (or (nil? workflow)
-          (not= workflow-id (:workflow-definition-id command))
-          (not= workflow-id (:workflow-run-workflow-id command))
-          (not (law/workflow-definition-path?
-                workflow
-                (:workflow-definition-path command)))
-          (not (law/workflow-run-webhook-path?
-                workflow
-                (:workflow-run-head-branch command)
-                (:workflow-run-path command))))
-      {:admitted? false :ignored? true :reason :unmanaged-workflow}
-
-      (or (not= (:controller-app-login policy)
-                (:workflow-run-actor-login command))
-          (not= (:controller-app-login policy)
-                (:workflow-run-triggering-actor-login command))
-          (not= (:workflow-run-actor-id command)
-                (:workflow-run-triggering-actor-id command))
-          (not= 1 (:workflow-run-run-attempt command)))
-      {:admitted? false :ignored? true :reason :untrusted-workflow-actor}
+      (not (law/webhook-source? command))
+      {:admitted? false :reason :invalid-command}
 
       :else
-      (admit policy command :review-gate-completion
-             :gitops/complete-review-gate)))
+      (let [{:keys [workflow workflow-id]}
+            (workflow-binding-for policy :review-gate-completion command)]
+        (cond
+          (or (nil? workflow)
+              (not= workflow-id (:workflow-definition-id command))
+              (not= workflow-id (:workflow-run-workflow-id command))
+              (not (law/workflow-definition-path?
+                    workflow
+                    (:workflow-definition-path command)))
+              (not (law/workflow-run-webhook-path?
+                    workflow
+                    (:workflow-run-head-branch command)
+                    (:workflow-run-path command))))
+          {:admitted? false :ignored? true :reason :unmanaged-workflow}
+
+          (or (not= (:controller-app-login policy)
+                    (:workflow-run-actor-login command))
+              (not= (:controller-app-login policy)
+                    (:workflow-run-triggering-actor-login command))
+              (not= (:workflow-run-actor-id command)
+                    (:workflow-run-triggering-actor-id command))
+              (not= 1 (:workflow-run-run-attempt command)))
+          {:admitted? false :ignored? true :reason :untrusted-workflow-actor}
+
+          :else
+          (admit policy command :review-gate-completion
+                 :gitops/complete-review-gate))))
 
     :else
     {:admitted? false :ignored? true :reason :unmanaged-event}))

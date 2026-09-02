@@ -70,8 +70,10 @@
          github-port (or (:github overrides) (github/port controller-config))
          authority-port (or (:authority overrides)
                             (authority/github-port github-port))
-         effect-lease-port (or (:effect-lease overrides)
-                               (effect-lease/port controller-config))
+         effect-lease-port
+         (when (= :review-dispatch (:mode controller-config))
+           (or (:effect-lease overrides)
+               (effect-lease/port controller-config)))
          queue-worker (worker/create
                        {:store state-store
                         :github github-port

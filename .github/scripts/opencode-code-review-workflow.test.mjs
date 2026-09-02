@@ -19,11 +19,20 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const workflowPath =
   process.env.ETA_MU_REVIEW_WORKFLOW_PATH ||
   path.join(root, ".github/workflows/opencode-code-review.yml");
-const requireFromEtaMu = createRequire(path.join(root, "packages/eta-mu/package.json"));
-const YAML = requireFromEtaMu("yaml");
+const requireFromController = createRequire(
+  path.join(root, "packages/gitops-controller/package.json"),
+);
+const YAML = requireFromController("yaml");
 const workflowText = fs.readFileSync(workflowPath, "utf8");
 const workflow = YAML.parse(workflowText);
+const gateWorkflowPath = path.join(root, ".github/workflows/review-resolution-gate.yml");
+const gateWorkflowText = fs.readFileSync(gateWorkflowPath, "utf8");
+const gateWorkflow = YAML.parse(gateWorkflowText);
 const workflowDocs = fs.readFileSync(path.join(root, "docs/agent-workflows.md"), "utf8");
+const automationDocs = fs.readFileSync(
+  path.join(root, "docs/github-automation-architecture.md"),
+  "utf8",
+);
 const recoveryRunnerSource = fs.readFileSync(
   path.join(root, ".github/scripts/run-opencode-review-recovery.mjs"),
   "utf8",
@@ -33,6 +42,14 @@ const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 function namedStep(jobId, name) {
   const step = workflow.jobs[jobId].steps.find((candidate) => candidate.name === name);
   assert.ok(step, `missing ${jobId} step: ${name}`);
+  return step;
+}
+
+function namedGateStep(name) {
+  const step = gateWorkflow.jobs["review-resolution-gate"].steps.find(
+    (candidate) => candidate.name === name,
+  );
+  assert.ok(step, `missing review-resolution gate step: ${name}`);
   return step;
 }
 
@@ -213,6 +230,121 @@ function pullRequestFixture(overrides = {}) {
   };
 }
 
+async function runGateAdmission({
+  eventName = "workflow_dispatch",
+  mergeability = [true],
+} = {}) {
+  const commandId = "9eb17352-284c-4b55-879d-0d07f353fdee";
+  const gateCheckId = 7003;
+  const pullRequests = mergeability.map((mergeable) => pullRequestFixture({ mergeable }));
+  let pullRequestCalls = 0;
+  const gateCheck = {
+    id: gateCheckId,
+    name: "eta-mu-review-gate",
+    head_sha: "c".repeat(40),
+    external_id: `eta-mu-review-gate/v2:${commandId}:42:${"b".repeat(40)}:${"a".repeat(40)}:${"c".repeat(40)}`,
+    details_url: "https://github.com/open-hax/fixture/pull/42",
+    app: { slug: "eta-mu-controller" },
+    status: "in_progress",
+    conclusion: null,
+  };
+  const script = namedGateStep("Validate webhook-dispatched gate reconciliation").with.script;
+  const execute = new AsyncFunction("github", "context", "core", "process", script);
+  await execute(
+    {
+      rest: {
+        pulls: {
+          get: async () => {
+            const current = pullRequests[Math.min(pullRequestCalls, pullRequests.length - 1)];
+            pullRequestCalls += 1;
+            return { data: current };
+          },
+        },
+        checks: {
+          get: async () => ({ data: gateCheck }),
+          listForRef: async () => ({ data: { check_runs: [gateCheck] } }),
+        },
+      },
+      paginate: async (method, request) => (await method(request)).data.check_runs,
+    },
+    {
+      eventName,
+      actor: "eta-mu-controller[bot]",
+      payload: { repository: { default_branch: "main" } },
+      repo: { owner: "open-hax", repo: "fixture" },
+    },
+    {},
+    {
+      env: {
+        COMMAND_ID: commandId,
+        EXPECTED_CONTROLLER_APP_LOGIN: "eta-mu-controller[bot]",
+        EXPECTED_CONTROLLER_APP_SLUG: "eta-mu-controller",
+        GATE_CHECK_ID: String(gateCheckId),
+        GATE_CHECK_NAME: "eta-mu-review-gate",
+        PR_BASE_SHA: "a".repeat(40),
+        PR_HEAD_SHA: "b".repeat(40),
+        PR_MERGE_SHA: "c".repeat(40),
+        PR_NUMBER: "42",
+        TRIGGERING_ACTOR: "eta-mu-controller[bot]",
+      },
+    },
+  );
+  return { pullRequestCalls };
+}
+
+async function runBoundEvidence({
+  expectedPath = ".github/workflows/opencode-code-review.yml@main",
+  runPath = ".github/workflows/opencode-code-review.yml",
+  runBranch = "main",
+} = {}) {
+  const outputs = {};
+  const script = namedGateStep("Wait for bound exact-head review evidence").with.script;
+  const execute = new AsyncFunction("github", "context", "core", "process", script);
+  await execute(
+    {
+      rest: {
+        actions: {
+          getWorkflowRun: async () => ({
+            data: {
+              id: 8001,
+              workflow_id: 7001,
+              repository: { full_name: "open-hax/fixture" },
+              path: runPath,
+              event: "workflow_dispatch",
+              run_attempt: 1,
+              head_branch: runBranch,
+              head_sha: "b".repeat(40),
+              actor: { login: "eta-mu-controller[bot]" },
+              triggering_actor: { login: "eta-mu-controller[bot]" },
+              status: "completed",
+              conclusion: "success",
+              created_at: "2026-09-01T20:00:00Z",
+            },
+          }),
+        },
+      },
+    },
+    { repo: { owner: "open-hax", repo: "fixture" } },
+    {
+      info() {},
+      setOutput(name, value) {
+        outputs[name] = String(value);
+      },
+    },
+    {
+      env: {
+        EVIDENCE_COMMAND_ID: "9eb17352-284c-4b55-879d-0d07f353fdee",
+        EVIDENCE_RUN_ID: "8001",
+        EXPECTED_CONTROLLER_APP_LOGIN: "eta-mu-controller[bot]",
+        EXPECTED_DEFAULT_BRANCH: "main",
+        EXPECTED_REVIEW_WORKFLOW_ID: "7001",
+        EXPECTED_REVIEW_WORKFLOW_PATH: expectedPath,
+      },
+    },
+  );
+  return outputs;
+}
+
 async function runResolver(t, {
   eventName = "workflow_dispatch",
   actor = "eta-mu-controller[bot]",
@@ -296,7 +428,7 @@ async function runResolver(t, {
         RESOLVED_PR_DIRECTORY: outputDirectory,
       },
     },
-    requireFromEtaMu,
+    requireFromController,
   );
   const resolvedBytes = fs.readFileSync(path.join(outputDirectory, "pull-request.json"));
   return {
@@ -378,7 +510,7 @@ async function runEvidenceCheckFinalizer({
         PR_NUMBER: "42",
       },
     },
-    requireFromEtaMu,
+    requireFromController,
   );
   return { boundCheck, calls, outputs };
 }
@@ -447,7 +579,7 @@ async function runPublication({
           },
         };
       }
-      return requireFromEtaMu(specifier);
+      return requireFromController(specifier);
     },
   ).finally(() => fs.rmSync(directory, { recursive: true, force: true }));
   return { outputs, publishedPullRequests };
@@ -475,6 +607,87 @@ test("workflow dispatch exposes a deterministic revision-bound command contract"
     workflow.concurrency.group,
     "opencode-evidence-review-${{ inputs.pr_number }}",
   );
+});
+
+test("review-resolution gate exposes only the strict dispatch-wrapper contract", async () => {
+  const reusableInputs = gateWorkflow.on.workflow_call.inputs;
+  assert.deepEqual(reusableInputs.controller_app_login, {
+    description:
+      "Dedicated controller App bot login from the caller's protected repository variable",
+    required: true,
+    type: "string",
+  });
+  assert.equal(reusableInputs.strict, undefined);
+
+  const validation = namedGateStep("Validate webhook-dispatched gate reconciliation");
+  assert.equal(
+    validation.env.EXPECTED_CONTROLLER_APP_LOGIN,
+    "${{ inputs.controller_app_login || vars.ETA_MU_CONTROLLER_APP_LOGIN }}",
+  );
+  assert.match(validation.with.script, /context\.eventName !== 'workflow_dispatch'/);
+  await assert.rejects(
+    runGateAdmission({ eventName: "pull_request" }),
+    /requires workflow_dispatch/i,
+  );
+
+  const enforcement = namedGateStep("Enforce review resolution");
+  assert.match(enforcement.run, /--strict/);
+  assert.doesNotMatch(JSON.stringify(enforcement), /inputs\.strict|GATE_STRICT/);
+});
+
+test("review-resolution gate polls transient mergeability before tuple validation", async () => {
+  const { pullRequestCalls } = await runGateAdmission({ mergeability: [null, true] });
+  assert.equal(pullRequestCalls, 2);
+  await assert.rejects(
+    runGateAdmission({ mergeability: [false] }),
+    /no longer matches the admitted open same-repository default-base test merge/i,
+  );
+});
+
+test("review-resolution gate binds a bare workflow path separately from its protected ref", async () => {
+  const outputs = await runBoundEvidence();
+  assert.equal(outputs.created_at, "2026-09-01T20:00:00Z");
+
+  await assert.rejects(
+    runBoundEvidence({ runPath: ".github/workflows/opencode-code-review.yml@main" }),
+    /failed its protected identity binding/i,
+  );
+  await assert.rejects(
+    runBoundEvidence({ runBranch: "feature/untrusted" }),
+    /failed its protected identity binding/i,
+  );
+});
+
+test("consumer wrapper documentation passes only declared review capabilities", () => {
+  const reviewStart = automationDocs.indexOf("### `opencode-code-review.yml`");
+  const gateStart = automationDocs.indexOf("### `review-resolution-gate.yml`", reviewStart);
+  const autoMergeStart = automationDocs.indexOf("### `auto-merge.yml`", gateStart);
+  const reviewWrapper = automationDocs.slice(reviewStart, gateStart);
+  const gateWrapper = automationDocs.slice(gateStart, autoMergeStart);
+
+  assert.doesNotMatch(reviewWrapper, /secrets:\s*inherit/);
+  for (const secret of [
+    "ETA_MU_APP_ID",
+    "ETA_MU_APP_PRIVATE_KEY",
+    "DISCORD_REVIEW_WEBHOOK_URL",
+  ]) {
+    assert.match(reviewWrapper, new RegExp(`${secret}: \\$\\{\\{ secrets\\.${secret} \\}\\}`));
+  }
+  assert.match(
+    gateWrapper,
+    /controller_app_login: \$\{\{ vars\.ETA_MU_CONTROLLER_APP_LOGIN \}\}/,
+  );
+  assert.doesNotMatch(gateWrapper, /strict:/);
+});
+
+test("review card comments retain standalone Markdown delimiters", () => {
+  for (const relativePath of [
+    "kanban/tasks/admit-exact-head-code-reviews-through-signed-webhooks-ntroller.md",
+    "kanban/tasks/opencode-mimo-evidence-review-agent.md",
+  ]) {
+    const card = fs.readFileSync(path.join(root, relativePath), "utf8");
+    assert.match(card, /\n\n---\n?$/);
+  }
 });
 
 test("workflow_dispatch consumer wrappers forward explicit reusable review identity", async (t) => {
@@ -1305,7 +1518,16 @@ test("jobs that execute pull-request code receive no App credentials or private 
   assert.match(defaultScript, /controller_test/);
   assert.match(defaultScript, /controller_build/);
   assert.match(defaultScript, /pnpm install --frozen-lockfile --ignore-scripts/);
-  assert.match(defaultScript, /clj-kondo --lint packages\/gitops-controller\/src\/cljs/);
+  assert.match(
+    defaultScript,
+    /clj-kondo --config packages\/gitops-controller\/\.clj-kondo\/config\.edn --lint packages\/gitops-controller\/src\/cljs/,
+  );
+  assert.equal(
+    workflowText.match(
+      /run_gate controller_lint clj-kondo --config packages\/gitops-controller\/\.clj-kondo\/config\.edn --lint packages\/gitops-controller\/src\/cljs packages\/gitops-controller\/test\/cljs/g,
+    )?.length,
+    2,
+  );
   assert.match(defaultScript, /pnpm --dir packages\/gitops-controller exec shadow-cljs compile test/);
   assert.match(defaultScript, /node packages\/gitops-controller\/target\/test\.cjs/);
   assert.match(defaultScript, /pnpm --dir packages\/gitops-controller exec shadow-cljs release server/);
@@ -1327,10 +1549,16 @@ test("the default reusable evidence script executes every declared gate", (t) =>
   const { directory } = makeRepository(t);
   addGeneratedOutputs(directory);
   const fakeBin = path.join(directory, "fake-bin");
+  const kondoLog = path.join(directory, "clj-kondo.args");
   fs.mkdirSync(fakeBin, { recursive: true });
   for (const executable of ["clj-kondo", "node", "pnpm"]) {
     const fakeExecutable = path.join(fakeBin, executable);
-    fs.writeFileSync(fakeExecutable, "#!/bin/sh\nexit 0\n");
+    fs.writeFileSync(
+      fakeExecutable,
+      executable === "clj-kondo"
+        ? '#!/bin/sh\nprintf \'%s\\n\' "$*" >> "$FAKE_KONDO_LOG"\nexit 0\n'
+        : "#!/bin/sh\nexit 0\n",
+    );
     fs.chmodSync(fakeExecutable, 0o755);
   }
   const runnerTemp = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-review-runner-"));
@@ -1345,11 +1573,16 @@ test("the default reusable evidence script executes every declared gate", (t) =>
       EVIDENCE_GATES_SCRIPT:
         workflow.on.workflow_call.inputs.evidence_gates_script.default,
       GITHUB_WORKSPACE: directory,
+      FAKE_KONDO_LOG: kondoLog,
       PATH: `${fakeBin}:${process.env.PATH}`,
       RUNNER_TEMP: runnerTemp,
     },
   );
   assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(
+    fs.readFileSync(kondoLog, "utf8").trim(),
+    "--config packages/gitops-controller/.clj-kondo/config.edn --lint packages/gitops-controller/src/cljs packages/gitops-controller/test/cljs",
+  );
   assert.deepEqual(
     parseOutput(path.join(directory, ".opencode/review-evidence/statuses.env")),
     {

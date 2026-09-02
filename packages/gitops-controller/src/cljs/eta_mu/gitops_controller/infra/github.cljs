@@ -6,6 +6,16 @@
             [eta-mu.gitops-controller.law.webhook :as law]
             [eta-mu.gitops-controller.shape.webhook :as shape]))
 
+(def ^:private actor-permission-token-permissions
+  {:metadata "read"})
+
+(def ^:private pull-request-token-permissions
+  {:metadata "read"
+   :pull_requests "read"})
+
+(def ^:private workflow-run-token-permissions
+  {:actions "read"})
+
 (defn- repository-path [repository]
   (->> (str/split repository #"/")
        (map js/encodeURIComponent)
@@ -27,6 +37,12 @@
 (defn- review-gate-error [message data]
   (ex-info message (merge {:error/code :invalid-review-gate-check} data)))
 
+(defn- ensure-review-dispatch! [config operation]
+  (when-not (= :review-dispatch (:mode config))
+    (throw (ex-info "GitHub mutation is disabled outside review-dispatch mode"
+                    {:error/code :github-mutation-disabled
+                     :operation operation}))))
+
 (defn- ^:async authorize-write! [callback operation]
   (when-not (fn? callback)
     (throw (review-gate-error
@@ -38,23 +54,46 @@
             {:operation operation})))
   true)
 
+(def issue-read-token-permissions
+  {:issues "read"
+   :contents "read"
+   :metadata "read"})
+
 (defn- ^:async installation-token!
-  [{:keys [github-api-url github-app-id github-private-key]} installation-id]
+  [{:keys [github-api-url github-app-id github-private-key mode]}
+   installation-id repository-id permissions]
+  (when (and (= :observe-only mode)
+             (not (law/positive-integer? repository-id)))
+    (throw (ex-info "observe-only token mint requires one repository ID"
+                    {:error/code :observe-token-repository-required})))
+  (when (and (= :observe-only mode)
+             (or (empty? permissions)
+                 (not-every? #(= "read" (val %)) permissions)))
+    (throw (ex-info "observe-only token mint requires explicit read permissions"
+                    {:error/code :observe-token-permissions-required})))
   (let [jwt (crypto/github-app-jwt github-app-id github-private-key)
+        request-body
+        (if (= :observe-only mode)
+          {:repository_ids [repository-id]
+           :permissions permissions}
+          {})
         response (await
                   (http/request!
                    {:url (str github-api-url "/app/installations/"
                               installation-id "/access_tokens")
                     :method "POST"
                     :headers (headers jwt)
-                    :body {}}))]
+                    :body request-body}))]
     (if (and (:ok? response) (string? (get-in response [:body :token])))
       (get-in response [:body :token])
       (throw (response-error "installation-token" response)))))
 
 (defn- ^:async fetch-pull-request!
-  [config {:keys [installation-id repository pull-request-number]}]
-  (let [token (await (installation-token! config installation-id))
+  [config {:keys [installation-id repository-id repository
+                  pull-request-number]}]
+  (let [token (await (installation-token!
+                      config installation-id repository-id
+                      pull-request-token-permissions))
         pull-request-response
         (await
          (http/request!
@@ -77,9 +116,57 @@
          (:body pull-request-response) (:body repository-response))
         (throw (response-error "fetch-repository" repository-response))))))
 
+(defn- ^:async fetch-issue!
+  [config {:keys [installation-id repository repository-id issue-number]}]
+  (let [token
+        (await
+         (installation-token!
+          config installation-id repository-id issue-read-token-permissions))
+        issue-response
+        (await
+         (http/request!
+          {:url (str (:github-api-url config) "/repos/"
+                     (repository-path repository) "/issues/" issue-number)
+           :method "GET"
+           :headers (headers token)}))]
+    (when-not (:ok? issue-response)
+      (throw (response-error "fetch-issue" issue-response)))
+    (let [repository-response
+          (await
+           (http/request!
+            {:url (str (:github-api-url config) "/repos/"
+                       (repository-path repository))
+             :method "GET"
+             :headers (headers token)}))]
+      (when-not (:ok? repository-response)
+        (throw (response-error "fetch-repository" repository-response)))
+      (let [default-branch (get-in repository-response
+                                   [:body :default_branch])]
+        (when-not (law/non-blank-string? default-branch)
+          (throw
+           (ex-info "GitHub repository has no default branch"
+                    {:error/code :invalid-github-response
+                     :operation :fetch-repository})))
+        (let [ref-response
+              (await
+               (http/request!
+                {:url (str (:github-api-url config) "/repos/"
+                           (repository-path repository) "/git/ref/heads/"
+                           (js/encodeURIComponent default-branch))
+                 :method "GET"
+                 :headers (headers token)}))]
+          (if (:ok? ref-response)
+            (shape/github-issue->current
+             (:body issue-response) (:body repository-response)
+             (:body ref-response))
+            (throw (response-error "fetch-default-branch"
+                                   ref-response))))))))
+
 (defn- ^:async actor-permission!
-  [config {:keys [installation-id repository sender-login]}]
-  (let [token (await (installation-token! config installation-id))
+  [config {:keys [installation-id repository-id repository sender-login]}]
+  (let [token (await (installation-token!
+                      config installation-id repository-id
+                      actor-permission-token-permissions))
         response (await
                   (http/request!
                    {:url (str (:github-api-url config) "/repos/"
@@ -118,6 +205,7 @@
    :name (:name check-run)
    :merge-sha (:head_sha check-run)
    :status (:status check-run)
+   :conclusion (:conclusion check-run)
    :external-id (:external_id check-run)
    :details-url (:details_url check-run)
    :app-id (get-in check-run [:app :id])
@@ -186,45 +274,57 @@
                   "review gate scan exceeded GitHub's bounded ref window"
                   {:repository repository :merge-sha merge-sha})))))))
 
+(defn- current-name-check?
+  [config expected check-run]
+  (and (law/positive-integer? (:id check-run))
+       (= (:github-app-id config) (get-in check-run [:app :id]))
+       (= (:name expected) (:name check-run))
+       (= (:merge-sha expected) (:head_sha check-run))))
+
+(defn- newest-current-name-check [config expected runs]
+  (->> runs
+       (filter #(current-name-check? config expected %))
+       (sort-by :id >)
+       first))
+
 (defn- ^:async cancel-superseded-gates!
-  [config token expected current-check]
-  (let [runs (await (all-current-name-check-runs! config token expected))]
-    (doseq [candidate runs]
-      (when (and (not= (:id current-check) (:id candidate))
-                 (< (:id candidate) (:id current-check))
-                 (= (:github-app-id config) (get-in candidate [:app :id]))
-                 (= (:name expected) (:name candidate))
-                 (= (:merge-sha expected) (:head_sha candidate))
-                 (contains? #{"queued" "in_progress"} (:status candidate)))
-        (let [_ (await (authorize-write!
-                        (-> expected meta :authorize-cancel!)
-                        :cancel-superseded-review-gate))
-              response
-              (await
-               (http/request!
-                {:url (str (:github-api-url config) "/repos/"
-                           (repository-path (:repository expected))
-                           "/check-runs/" (:id candidate))
-                 :method "PATCH"
-                 :headers (headers token)
-                 :body {:name (:name expected)
-                        :status "completed"
-                        :conclusion "cancelled"
-                        :completed_at (.toISOString (js/Date.))
-                        :output
-                        {:title "Superseded review reconciliation"
-                         :summary (str "Superseded by webhook delivery `"
-                                       (:delivery-id expected) "` for pull request #"
-                                       (:pr-number expected) ".")}}}))]
-          (when-not (and (:ok? response)
-                         (= "completed" (get-in response [:body :status]))
-                         (= "cancelled" (get-in response [:body :conclusion])))
-            (throw (response-error "cancel-superseded-review-gate"
-                                   response))))))))
+  [config token expected current-check runs]
+  (doseq [candidate runs]
+    (when (and (current-name-check? config expected candidate)
+               (not= (:id current-check) (:id candidate))
+               (< (:id candidate) (:id current-check))
+               (contains? #{"queued" "in_progress"} (:status candidate)))
+      (let [_ (await (authorize-write!
+                      (-> expected meta :authorize-cancel!)
+                      :cancel-superseded-review-gate))
+            response
+            (await
+             (http/request!
+              {:url (str (:github-api-url config) "/repos/"
+                         (repository-path (:repository expected))
+                         "/check-runs/" (:id candidate))
+               :method "PATCH"
+               :headers (headers token)
+               :body {:name (:name expected)
+                      :status "completed"
+                      :conclusion "cancelled"
+                      :completed_at (.toISOString (js/Date.))
+                      :output
+                      {:title "Superseded review reconciliation"
+                       :summary (str "Superseded by webhook delivery `"
+                                     (:delivery-id expected) "` for pull request #"
+                                     (:pr-number expected) ".")}}}))]
+        (when-not (and (:ok? response)
+                       (= "completed" (get-in response [:body :status]))
+                       (= "cancelled" (get-in response [:body :conclusion])))
+          (throw (response-error "cancel-superseded-review-gate"
+                                 response)))))))
 
 (defn- ^:async prepare-review-gate!
   [config installation-id expected]
-  (let [token (await (installation-token! config installation-id))
+  (ensure-review-dispatch! config :prepare-review-gate)
+  (let [token (await (installation-token! config installation-id
+                                          (:repository-id expected) nil))
         matches (await (matching-check-runs! config token expected))
         _ (when (< 1 (count matches))
             (throw (review-gate-error
@@ -261,22 +361,38 @@
                                 "`. Workflow dispatch has not yet completed.")}}}))]
             (if (= 201 (:status response))
               (:body response)
-              (throw (response-error "create-review-gate-check" response)))))]
-    (when-not (expected-review-gate-check? config expected check-run)
+              (throw (response-error "create-review-gate-check" response)))))
+        runs (await (all-current-name-check-runs! config token expected))
+        newest (newest-current-name-check config expected runs)]
+    (cond
+      (expected-review-gate-check? config expected check-run)
+      (do
+        ;; Creating the new in-progress run immediately replaces a stale
+        ;; success as the newest same-name/App result. Any older pending run is
+        ;; terminally cancelled so it cannot remain an orphaned required check.
+        (await (cancel-superseded-gates! config token expected check-run runs))
+        (bound-check-run->receipt expected check-run))
+
+      (and (review-gate-check-identity? config expected check-run)
+           (= "completed" (:status check-run))
+           (= "cancelled" (:conclusion check-run))
+           newest
+           (< (:id check-run) (:id newest)))
+      (assoc (bound-check-run->receipt expected check-run)
+             :superseded? true
+             :superseded-by-check-id (:id newest))
+
+      :else
       (throw (review-gate-error
               "GitHub returned a review gate Check Run with the wrong identity"
               {:expected expected
-               :actual (check-run->receipt check-run)})))
-    ;; Creating the new in-progress run immediately replaces a stale success as
-    ;; the newest same-name/App result. Any older pending run (for example the
-    ;; code-review admission that emitted this lifecycle event) is terminally
-    ;; cancelled so it cannot remain an orphaned required check.
-    (await (cancel-superseded-gates! config token expected check-run))
-    (bound-check-run->receipt expected check-run)))
+               :actual (check-run->receipt check-run)})))))
 
 (defn- ^:async cancel-review-gate!
   [config installation-id expected reason]
-  (let [token (await (installation-token! config installation-id))
+  (ensure-review-dispatch! config :cancel-review-gate)
+  (let [token (await (installation-token! config installation-id
+                                          (:repository-id expected) nil))
         matches (await (matching-check-runs! config token expected))]
     (when (< 1 (count matches))
       (throw (review-gate-error
@@ -322,9 +438,11 @@
 
 (defn- ^:async dispatch-review!
   [config installation-id dispatch]
+  (ensure-review-dispatch! config :dispatch-review)
   (let [{:keys [repository workflow ref inputs]} dispatch
         dispatch-authorizer (-> dispatch meta :authorize-dispatch!)
-        token (await (installation-token! config installation-id))
+        token (await (installation-token! config installation-id
+                                          (:repository-id dispatch) nil))
         _ (await (authorize-write! dispatch-authorizer :dispatch-review))
         response (await
                   (http/request!
@@ -344,8 +462,10 @@
       (throw (response-error "dispatch-review" response)))))
 
 (defn- ^:async fetch-workflow-run!
-  [config {:keys [installation-id repository workflow-run-id]}]
-  (let [token (await (installation-token! config installation-id))
+  [config {:keys [installation-id repository-id repository workflow-run-id]}]
+  (let [token (await (installation-token!
+                      config installation-id repository-id
+                      workflow-run-token-permissions))
         response
         (await
          (http/request!
@@ -373,7 +493,9 @@
 (defn- ^:async complete-review-gate!
   [config installation-id
    {:keys [gate-check terminal-intent authorize-patch!]}]
-  (let [token (await (installation-token! config installation-id))
+  (ensure-review-dispatch! config :complete-review-gate)
+  (let [token (await (installation-token! config installation-id
+                                          (:repository-id gate-check) nil))
         patch (:patch terminal-intent)
         response
         (await
@@ -444,10 +566,13 @@
              :gate-check (bound-check-run->receipt gate-check updated)}))))))
 
 (defn port [config]
-  {:fetch-pull-request! #(fetch-pull-request! config %)
-   :actor-permission! #(actor-permission! config %)
-   :prepare-review-gate! #(prepare-review-gate! config %1 %2)
-   :cancel-review-gate! #(cancel-review-gate! config %1 %2 %3)
-   :fetch-workflow-run! #(fetch-workflow-run! config %)
-   :complete-review-gate! #(complete-review-gate! config %1 %2)
-   :dispatch-review! #(dispatch-review! config %1 %2)})
+  (let [configured (assoc config
+                          :mode (or (:mode config) :observe-only))]
+    {:fetch-pull-request! #(fetch-pull-request! configured %)
+     :fetch-issue! #(fetch-issue! configured %)
+     :actor-permission! #(actor-permission! configured %)
+     :prepare-review-gate! #(prepare-review-gate! configured %1 %2)
+     :cancel-review-gate! #(cancel-review-gate! configured %1 %2 %3)
+     :fetch-workflow-run! #(fetch-workflow-run! configured %)
+     :complete-review-gate! #(complete-review-gate! configured %1 %2)
+     :dispatch-review! #(dispatch-review! configured %1 %2)}))

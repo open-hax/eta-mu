@@ -1,6 +1,18 @@
 (ns eta-mu.gitops-controller.shape.webhook
   "Pure projection from decoded GitHub JSON into the controller command shape.")
 
+(def ^:private canonical-task-marker-pattern
+  #"<!--\s*openhax-kanban-sync\s+uuid=\"([^\"]+)\"\s*-->")
+
+(defn canonical-task-marker
+  "Return the one canonical Rheos task marker in an issue body. Multiple
+  markers, even if they repeat the same UUID, are ambiguous and return nil."
+  [body]
+  (let [matches (vec (re-seq canonical-task-marker-pattern (or body "")))]
+    {:count (count matches)
+     :uuid (when (= 1 (count matches))
+             (second (first matches)))}))
+
 (defn payload->command
   [envelope payload]
   {:delivery-id (:delivery-id envelope)
@@ -10,6 +22,9 @@
    :installation-id (get-in payload [:installation :id])
    :repository-id (get-in payload [:repository :id])
    :repository (get-in payload [:repository :full_name])
+   :issue-number (get-in payload [:issue :number])
+   :issue-node-id (get-in payload [:issue :node_id])
+   :issue-pull-request? (some? (get-in payload [:issue :pull_request]))
    :pull-request-number (get-in payload [:pull_request :number])
    :pull-request-node-id (get-in payload [:pull_request :node_id])
    :base-ref-before (get-in payload [:changes :base :ref :from])
@@ -59,6 +74,29 @@
    :labels (->> (:labels pull-request)
                 (keep :name)
                 set)})
+
+(defn github-issue->current
+  [issue repository default-branch-ref]
+  (let [{marker-count :count task-uuid :uuid}
+        (canonical-task-marker (:body issue))]
+    {:number (:number issue)
+     :node-id (:node_id issue)
+     :repository (:full_name repository)
+     :repository-id (:id repository)
+     :state (:state issue)
+     :pull-request? (some? (:pull_request issue))
+     :html-url (:html_url issue)
+     :labels (->> (:labels issue)
+                  (map :name)
+                  set)
+     :canonical-task-uuid task-uuid
+     :canonical-task-marker-count marker-count
+     :default-branch (:default_branch repository)
+     :default-branch-ref (:ref default-branch-ref)
+     :default-branch-sha (get-in default-branch-ref [:object :sha])
+     :default-branch-object-type (get-in default-branch-ref [:object :type])
+     :repository-archived? (true? (:archived repository))
+     :repository-disabled? (true? (:disabled repository))}))
 
 (defn github-workflow-run->current [workflow-run]
   {:id (:id workflow-run)

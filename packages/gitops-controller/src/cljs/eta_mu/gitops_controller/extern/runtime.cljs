@@ -18,11 +18,21 @@
     (catch :default _
       (js/console.error "eta-mu scheduled operation failed"))))
 
+(defn- ^:async invoke-serially-contained! [running?* f]
+  (when (compare-and-set! running?* false true)
+    (try
+      (await (f))
+      (catch :default _
+        (js/console.error "eta-mu scheduled operation failed"))
+      (finally
+        (reset! running?* false)))))
+
 (defn schedule! [f]
   (js/setImmediate #(invoke-contained! f)))
 
 (defn every! [interval-ms f]
-  (js/setInterval #(invoke-contained! f) interval-ms))
+  (let [running?* (atom false)]
+    (js/setInterval #(invoke-serially-contained! running?* f) interval-ms)))
 
 (defn cancel! [timer]
   (js/clearInterval timer))

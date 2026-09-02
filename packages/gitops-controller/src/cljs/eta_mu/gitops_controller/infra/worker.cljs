@@ -6,6 +6,7 @@
   remain a fail-closed backstop and never grant a competing invocation authority
   to write a terminal result."
   (:require [eta-mu.gitops-controller.domain.admission :as admission]
+            [eta-mu.gitops-controller.domain.issue :as issue]
             [eta-mu.gitops-controller.domain.review :as review]
             [eta-mu.gitops-controller.extern.runtime :as runtime]
             [eta-mu.gitops-controller.infra.store :as store]
@@ -192,6 +193,21 @@
        (get-in dispatch [:inputs :gate_check_id])
        (assoc :gate-check-id (get-in dispatch [:inputs :gate_check_id]))))))
 
+(defn- issue-result-context [mode command]
+  {:command/type :issue-probe
+   :event (:event command)
+   :action (:action command)
+   :label (:label command)
+   :repository (:repository command)
+   :repository-id (:repository-id command)
+   :installation-id (:installation-id command)
+   :issue-number (:issue-number command)
+   :issue-node-id (:issue-node-id command)
+   :sender-id (:sender-id command)
+   :sender-login (:sender-login command)
+   :command-id (:command-id command)
+   :mode mode})
+
 (defn- ^:async record-attempt-failure-safely!
   [worker delivery-id stage code]
   (try
@@ -243,9 +259,43 @@
                  :pr-number (:pull-request-number command)})))
     current))
 
-(defn- write-authorizer
+(def ^:private superseded-gate-identity-keys
+  [:id :name :merge-sha :external-id :app-id :delivery-id])
+
+(defn- ^:async complete-superseded-gate!
+  [store mode delivery-id command plan gate-check]
+  (when-not (and (= "completed" (:status gate-check))
+                 (= "cancelled" (:conclusion gate-check))
+                 (law/positive-integer? (:id gate-check))
+                 (law/positive-integer?
+                  (:superseded-by-check-id gate-check))
+                 (< (:id gate-check) (:superseded-by-check-id gate-check)))
+    (throw (ex-info "invalid superseded review gate evidence"
+                    {:error/code :invalid-review-gate-check
+                     :gate-check-id (:id gate-check)})))
+  (when (await (store/gate-check-recorded? store delivery-id))
+    (let [durable (:gate-check
+                   (await (store/read-gate-check store delivery-id)))]
+      (when-not (= (select-keys durable superseded-gate-identity-keys)
+                   (select-keys gate-check superseded-gate-identity-keys))
+        (throw (ex-info "superseded gate disagrees with durable identity"
+                        {:error/code :immutable-state-conflict
+                         :delivery-id delivery-id})))))
+  (await
+   (store/complete!
+    store delivery-id
+    (merge (result-context mode command plan)
+           {:outcome :gate-superseded
+            :gate-check-id (:id gate-check)
+            :superseded-by-check-id (:superseded-by-check-id gate-check)}))))
+
+(defn write-authorizer
+  "Return a callback that revalidates all dynamic GitHub write authority."
   [worker delivery-id command dispatch require-current?]
   (^:async fn []
+    (when-not (= :review-dispatch (:mode worker))
+      (throw (ex-info "GitHub mutation is disabled outside review-dispatch mode"
+                      {:error/code :github-mutation-disabled})))
     (when require-current?
       (await (ensure-current-dispatch! worker command dispatch)))
     ;; The dynamic Services marker is the final remote-independent read before
@@ -300,103 +350,106 @@
                 gate-check
                 (await ((:prepare-review-gate! github)
                         (:installation-id command)
-                        expected-gate))
-                _ (reset! stage* :record-review-gate)
-                gate-receipt (await (store/record-gate-check!
-                                     store delivery-id gate-check))
-                evidence-correlation (:correlation evidence-receipt)
-                final-dispatch
-                (cond-> (:dispatch plan)
-                  (= :review-gate-reconcile command-type)
-                  (assoc-in [:inputs :gate_check_id]
-                            (str (get-in gate-receipt [:gate-check :id])))
+                        expected-gate))]
+            (if (:superseded? gate-check)
+              (await (complete-superseded-gate!
+                      store mode delivery-id command plan gate-check))
+              (let [_ (reset! stage* :record-review-gate)
+                    gate-receipt (await (store/record-gate-check!
+                                         store delivery-id gate-check))
+                    evidence-correlation (:correlation evidence-receipt)
+                    final-dispatch
+                    (cond-> (:dispatch plan)
+                      (= :review-gate-reconcile command-type)
+                      (assoc-in [:inputs :gate_check_id]
+                                (str (get-in gate-receipt [:gate-check :id])))
 
-                  evidence-correlation
-                  (assoc-in [:inputs :evidence_run_id]
-                            (str (get-in evidence-correlation
-                                         [:workflow-run :id])))
+                      evidence-correlation
+                      (assoc-in [:inputs :evidence_run_id]
+                                (str (get-in evidence-correlation
+                                             [:workflow-run :id])))
 
-                  evidence-correlation
-                  (assoc-in [:inputs :evidence_command_id]
-                            (get-in evidence-correlation
-                                    [:dispatch :inputs :command_id])))
-                final-plan (assoc plan :dispatch final-dispatch)]
-            (reset! dispatch* final-dispatch)
-            (if invalidation?
-              (await
-               (store/complete!
-                store delivery-id
-                (merge (result-context mode command final-plan)
-                       {:outcome :gate-invalidated
-                        :gate-check-id (get-in gate-receipt
-                                               [:gate-check :id])})))
-              ;; Re-read the Services marker and exact merge context before
-              ;; crossing the non-idempotent workflow-dispatch boundary.
-              (do
-                (reset! stage* :pre-dispatch-effect-lease)
-                (let [final-lease
-                      (await (authorize-effect! worker delivery-id))]
-                  (when (:allowed? final-lease)
-                    (ensure-enabled! worker)
-                    (reset! stage* :validate-dispatch-merge-context)
-                    (await (ensure-current-dispatch!
-                            worker command final-dispatch))
-                    (reset! stage* :dispatch-review)
-                    (let [base-authorizer
-                          (write-authorizer worker delivery-id command
-                                            final-dispatch true)
-                          authorized-dispatch
-                          (with-meta final-dispatch
-                            {:authorize-dispatch!
-                             (^:async fn []
-                               (await (base-authorizer))
-                               ;; This marker is persisted only after the
-                               ;; adapter has reached its immediate pre-POST
-                               ;; boundary. A denied lease cannot create a
-                               ;; false uncertain-call receipt.
-                               (reset! stage* :begin-dispatch-call)
-                               (when-not
-                                (await (store/begin-dispatch-call!
-                                        store delivery-id final-dispatch))
-                                 (throw
-                                  (ex-info
-                                   "workflow dispatch call was already begun"
-                                   {:error/code
-                                    :dispatch-outcome-uncertain})))
-                               (reset! call-begun?* true)
-                               (ensure-enabled! worker)
-                               true)})
-                            dispatch-result
-                            (await ((:dispatch-review! github)
-                                    (:installation-id command)
-                                    authorized-dispatch))
-                            workflow-run
-                            {:id (:workflow-run-id dispatch-result)
-                             :url (:run-url dispatch-result)
-                             :html-url (:html-url dispatch-result)}]
-                        ;; Persist the only non-reconstructible response
-                        ;; identity before any secondary API read.
-                        (reset! stage* :correlate-returned-workflow-run)
-                        (await
-                         (store/record-workflow-run-correlation!
-                          store delivery-id
-                          {:command command
-                           :dispatch final-dispatch
-                           :expected-run-attempt 1
-                           :gate-check (merge
-                                        (get-in final-dispatch [:gate-check])
-                                        (get-in gate-receipt [:gate-check]))
-                           :workflow-run workflow-run}))
-                        (reset! stage* :complete-dispatch)
-                        (await
-                         (store/complete!
-                          store delivery-id
-                          (merge (result-context mode command final-plan)
-                                 {:outcome :dispatched
-                                  :workflow-run workflow-run}
-                                 (select-keys dispatch-result
-                                              [:workflow-run-id :run-url
-                                               :html-url])))))))))))))))
+                      evidence-correlation
+                      (assoc-in [:inputs :evidence_command_id]
+                                (get-in evidence-correlation
+                                        [:dispatch :inputs :command_id])))
+                    final-plan (assoc plan :dispatch final-dispatch)]
+                (reset! dispatch* final-dispatch)
+                (if invalidation?
+                  (await
+                   (store/complete!
+                    store delivery-id
+                    (merge (result-context mode command final-plan)
+                           {:outcome :gate-invalidated
+                            :gate-check-id (get-in gate-receipt
+                                                   [:gate-check :id])})))
+                  ;; Re-read the Services marker and exact merge context before
+                  ;; crossing the non-idempotent workflow-dispatch boundary.
+                  (do
+                    (reset! stage* :pre-dispatch-effect-lease)
+                    (let [final-lease
+                          (await (authorize-effect! worker delivery-id))]
+                      (when (:allowed? final-lease)
+                        (ensure-enabled! worker)
+                        (reset! stage* :validate-dispatch-merge-context)
+                        (await (ensure-current-dispatch!
+                                worker command final-dispatch))
+                        (reset! stage* :dispatch-review)
+                        (let [base-authorizer
+                              (write-authorizer worker delivery-id command
+                                                final-dispatch true)
+                              authorized-dispatch
+                              (with-meta final-dispatch
+                                {:authorize-dispatch!
+                                 (^:async fn []
+                                   (await (base-authorizer))
+                                   ;; This marker is persisted only after the
+                                   ;; adapter reaches its immediate pre-POST
+                                   ;; boundary. A denied lease cannot create a
+                                   ;; false uncertain-call receipt.
+                                   (reset! stage* :begin-dispatch-call)
+                                   (when-not
+                                    (await (store/begin-dispatch-call!
+                                            store delivery-id final-dispatch))
+                                     (throw
+                                      (ex-info
+                                       "workflow dispatch call was already begun"
+                                       {:error/code
+                                        :dispatch-outcome-uncertain})))
+                                   (reset! call-begun?* true)
+                                   (ensure-enabled! worker)
+                                   true)})
+                              dispatch-result
+                              (await ((:dispatch-review! github)
+                                      (:installation-id command)
+                                      authorized-dispatch))
+                              workflow-run
+                              {:id (:workflow-run-id dispatch-result)
+                               :url (:run-url dispatch-result)
+                               :html-url (:html-url dispatch-result)}]
+                          ;; Persist the only non-reconstructible response
+                          ;; identity before any secondary API read.
+                          (reset! stage* :correlate-returned-workflow-run)
+                          (await
+                           (store/record-workflow-run-correlation!
+                            store delivery-id
+                            {:command command
+                             :dispatch final-dispatch
+                             :expected-run-attempt 1
+                             :gate-check (merge
+                                          (get-in final-dispatch [:gate-check])
+                                          (get-in gate-receipt [:gate-check]))
+                             :workflow-run workflow-run}))
+                          (reset! stage* :complete-dispatch)
+                          (await
+                           (store/complete!
+                            store delivery-id
+                            (merge (result-context mode command final-plan)
+                                   {:outcome :dispatched
+                                    :workflow-run workflow-run}
+                                   (select-keys dispatch-result
+                                                [:workflow-run-id :run-url
+                                                 :html-url])))))))))))))))))
 
 (defn- ^:async cancel-stale-intent!
   [{:keys [store github mode] :as worker} delivery-id command plan durable
@@ -433,20 +486,24 @@
 (defn- ^:async complete-pre-dispatch-refusal!
   "Cancel an exact durable pending gate before recording a refusal. A durable
   call-begun marker is never rewritten as a pre-dispatch refusal."
-  [{:keys [store github] :as worker} delivery-id command result stage*]
+  [{:keys [store github mode] :as worker} delivery-id command result stage*]
   (if (await (store/dispatch-call-begun? store delivery-id))
     nil
     (do
-      (when-let [{:keys [dispatch gate-check]}
-                 (await (durable-gate-for-delivery store delivery-id))]
-        (reset! stage* :cancel-gate-before-refusal)
-        (await
-         ((:cancel-review-gate! github)
-          (:installation-id command)
-          (with-meta gate-check
-            {:authorize-cancel!
-             (write-authorizer worker delivery-id command dispatch false)})
-          "The admitted command was refused before workflow dispatch.")))
+      ;; A downgrade replay may carry a gate prepared by a prior mutation-mode
+      ;; deployment. Observe-only records the refusal but never PATCHes that
+      ;; historical GitHub object, even if an old marker or canary is active.
+      (when (= :review-dispatch mode)
+        (when-let [{:keys [dispatch gate-check]}
+                   (await (durable-gate-for-delivery store delivery-id))]
+          (reset! stage* :cancel-gate-before-refusal)
+          (await
+           ((:cancel-review-gate! github)
+            (:installation-id command)
+            (with-meta gate-check
+              {:authorize-cancel!
+               (write-authorizer worker delivery-id command dispatch false)})
+            "The admitted command was refused before workflow dispatch."))))
       (await (store/complete! store delivery-id result)))))
 
 (defn- ^:async complete-correlated-gate!
@@ -561,6 +618,26 @@
     ;; it without granting effects.
     nil))
 
+(defn- ^:async process-issue-probe!
+  [{:keys [store github authority mode policy] :as worker}
+   delivery-id command stage*]
+  (reset! stage* :fetch-issue)
+  (let [current-issue (await ((:fetch-issue! github) command))
+        _ (reset! stage* :authorize-actor)
+        authority-decision (await ((:authorize! authority) command))
+        plan (issue/plan command current-issue authority-decision policy)]
+    (dependency! worker :available)
+    (await
+     (store/complete!
+      store delivery-id
+      (if (:planned? plan)
+        (merge (issue-result-context mode command)
+               {:outcome :probed
+                :probe (:probe plan)})
+        (merge (issue-result-context mode command)
+               {:outcome :refused
+                :reason (:reason plan)}))))))
+
 (defn- ^:async process-current-command!
   [{:keys [store github authority mode] :as worker} delivery-id command
    policy-decision stage* call-begun?* dispatch*]
@@ -664,10 +741,15 @@
                       (if completion-command?
                         (await (process-workflow-completion!
                                 worker delivery-id command stage*))
-                        (await
-                         (process-current-command!
-                          worker delivery-id command policy-decision
-                          stage* call-begun?* dispatch*)))))))))
+                        (if (= :issue-probe
+                               (law/command-type (:command/type command)))
+                          (await
+                           (process-issue-probe!
+                            worker delivery-id command stage*))
+                          (await
+                           (process-current-command!
+                            worker delivery-id command policy-decision
+                            stage* call-begun?* dispatch*))))))))))
         (catch :default error
           (let [code (error-code error)
                 stage @stage*]

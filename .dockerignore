@@ -50,6 +50,7 @@ packages/gitops-controller/dist
 **/projections
 **/projections/**
 **/*.ndjson
+**/*.nd-edn
 **/*.log
 **/*.sqlite
 **/*.sqlite-*

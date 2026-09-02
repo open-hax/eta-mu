@@ -40,24 +40,30 @@
     (await (fs/read-secret-file file))
     (str/trim (required value-name))))
 
-(defn- policy-revision
-  [{:keys [mode review-label probe-label workflow gate-workflow
+(defn policy-revision-basis
+  "Return the explicitly ordered, JSON-safe policy identity hashed into every
+  admission. A vector-of-pairs avoids relying on PersistentHashMap iteration
+  order for a revision that must survive restarts and independent builds."
+  [{:keys [mode project-id review-label probe-label workflow gate-workflow
            review-workflow-id gate-workflow-id controller-app-login
            repository-allowlist
            installation-allowlist]}]
+  [["policy/version" 1]
+   ["mode" (name mode)]
+   ["project-id" project-id]
+   ["review-label" review-label]
+   ["probe-label" probe-label]
+   ["workflow" workflow]
+   ["gate-workflow" gate-workflow]
+   ["review-workflow-id" review-workflow-id]
+   ["gate-workflow-id" gate-workflow-id]
+   ["controller-app-login" controller-app-login]
+   ["repository-allowlist" (vec (sort repository-allowlist))]
+   ["installation-allowlist" (vec (sort installation-allowlist))]])
+
+(defn- policy-revision [policy]
   (crypto/sha256-text
-   (json/encode
-    {:policy/version 1
-     :mode mode
-     :review-label review-label
-     :probe-label probe-label
-     :workflow workflow
-     :gate-workflow gate-workflow
-     :review-workflow-id review-workflow-id
-     :gate-workflow-id gate-workflow-id
-     :controller-app-login controller-app-login
-     :repository-allowlist (vec (sort repository-allowlist))
-     :installation-allowlist (vec (sort installation-allowlist))})))
+   (json/encode (policy-revision-basis policy))))
 
 (defn validate-credentials!
   [{:keys [github-private-key webhook-secret]}]
@@ -73,7 +79,11 @@
 
 (defn ^:async load!
   []
-  (let [repository-allowlist
+  (let [mode (controller-mode
+              (or (runtime/environment "ETA_MU_CONTROLLER_MODE")
+                  "observe-only"))
+        mutation-enabled? (= :review-dispatch mode)
+        repository-allowlist
         (comma-set (required "ETA_MU_GITHUB_REPOSITORY_ALLOWLIST"))
         installation-allowlist
         (integer-set "ETA_MU_GITHUB_INSTALLATION_ALLOWLIST"
@@ -89,23 +99,29 @@
                          law/review-command-label)
         probe-label (or (runtime/environment "ETA_MU_GITHUB_PROBE_LABEL")
                         law/probe-command-label)
+        project-id (required "ETA_MU_PROJECT_ID")
         workflow (or (runtime/environment "ETA_MU_GITHUB_REVIEW_WORKFLOW")
                      "opencode-code-review.yml")
         gate-workflow
         (or (runtime/environment "ETA_MU_GITHUB_GATE_WORKFLOW")
             "review-resolution-gate.yml")
         review-workflow-id
-        (parse-positive-integer
-         "ETA_MU_GITHUB_REVIEW_WORKFLOW_ID"
-         (required "ETA_MU_GITHUB_REVIEW_WORKFLOW_ID"))
+        (when mutation-enabled?
+          (parse-positive-integer
+           "ETA_MU_GITHUB_REVIEW_WORKFLOW_ID"
+           (required "ETA_MU_GITHUB_REVIEW_WORKFLOW_ID")))
         gate-workflow-id
-        (parse-positive-integer
-         "ETA_MU_GITHUB_GATE_WORKFLOW_ID"
-         (required "ETA_MU_GITHUB_GATE_WORKFLOW_ID"))
-        controller-app-login (required "ETA_MU_CONTROLLER_APP_LOGIN")
-        deployment-id (required "ETA_MU_CONTROLLER_DEPLOYMENT_ID")
+        (when mutation-enabled?
+          (parse-positive-integer
+           "ETA_MU_GITHUB_GATE_WORKFLOW_ID"
+           (required "ETA_MU_GITHUB_GATE_WORKFLOW_ID")))
+        controller-app-login
+        (when mutation-enabled? (required "ETA_MU_CONTROLLER_APP_LOGIN"))
+        deployment-id
+        (when mutation-enabled? (required "ETA_MU_CONTROLLER_DEPLOYMENT_ID"))
         active-marker-file
-        (required "ETA_MU_CONTROLLER_ACTIVE_MARKER_FILE")
+        (when mutation-enabled?
+          (required "ETA_MU_CONTROLLER_ACTIVE_MARKER_FILE"))
         canary-delivery-ids
         (comma-set (runtime/environment
                     "ETA_MU_CONTROLLER_CANARY_DELIVERY_IDS"))
@@ -115,10 +131,8 @@
         webhook-secret
         (await (secret "ETA_MU_GITHUB_WEBHOOK_SECRET_FILE"
                        "ETA_MU_GITHUB_WEBHOOK_SECRET"))
-        mode (controller-mode
-              (or (runtime/environment "ETA_MU_CONTROLLER_MODE")
-                  "observe-only"))
         policy {:mode mode
+                :project-id project-id
                 :review-label review-label
                 :probe-label probe-label
                 :workflow workflow
@@ -131,7 +145,8 @@
     (when (empty? repository-allowlist)
       (throw (ex-info "repository allowlist must not be empty"
                       {:field "ETA_MU_GITHUB_REPOSITORY_ALLOWLIST"})))
-    (when-not (= 1 (count repository-allowlist))
+    (when (and mutation-enabled?
+               (not= 1 (count repository-allowlist)))
       (throw (ex-info
               "the canary controller requires exactly one repository because workflow IDs are repository-scoped"
               {:field "ETA_MU_GITHUB_REPOSITORY_ALLOWLIST"})))
@@ -149,6 +164,10 @@
       (throw (ex-info
               "ETA_MU_GITHUB_PROBE_LABEL must be eta-mu:probe"
               {:field "ETA_MU_GITHUB_PROBE_LABEL"})))
+    (when-not (law/project-id? project-id)
+      (throw (ex-info
+              "ETA_MU_PROJECT_ID must be a line-safe stable project identifier"
+              {:field "ETA_MU_PROJECT_ID"})))
     (when-not (law/workflow-file? workflow)
       (throw (ex-info
               "ETA_MU_GITHUB_REVIEW_WORKFLOW must be a workflow YAML file name"
@@ -161,19 +180,23 @@
       (throw (ex-info
               "review and gate reconciliation workflows must be distinct"
               {:field "ETA_MU_GITHUB_GATE_WORKFLOW"})))
-    (when (= review-workflow-id gate-workflow-id)
+    (when (and mutation-enabled?
+               (= review-workflow-id gate-workflow-id))
       (throw (ex-info
               "review and gate workflow IDs must be distinct"
               {:field "ETA_MU_GITHUB_GATE_WORKFLOW_ID"})))
-    (when-not (law/app-bot-login? controller-app-login)
+    (when (and mutation-enabled?
+               (not (law/app-bot-login? controller-app-login)))
       (throw (ex-info
               "ETA_MU_CONTROLLER_APP_LOGIN must be the exact App bot login"
               {:field "ETA_MU_CONTROLLER_APP_LOGIN"})))
-    (when-not (law/deployment-id? deployment-id)
+    (when (and mutation-enabled?
+               (not (law/deployment-id? deployment-id)))
       (throw (ex-info
               "ETA_MU_CONTROLLER_DEPLOYMENT_ID must be run-id-attempt"
               {:field "ETA_MU_CONTROLLER_DEPLOYMENT_ID"})))
-    (when-not (str/starts-with? active-marker-file "/")
+    (when (and mutation-enabled?
+               (not (str/starts-with? active-marker-file "/")))
       (throw (ex-info
               "ETA_MU_CONTROLLER_ACTIVE_MARKER_FILE must be absolute"
               {:field "ETA_MU_CONTROLLER_ACTIVE_MARKER_FILE"})))
@@ -181,9 +204,14 @@
       (throw (ex-info
               "ETA_MU_CONTROLLER_CANARY_DELIVERY_IDS contains an invalid GUID"
               {:field "ETA_MU_CONTROLLER_CANARY_DELIVERY_IDS"})))
+    (when (and (= :observe-only mode) (seq canary-delivery-ids))
+      (throw (ex-info
+              "observe-only mode cannot grant canary mutation authority"
+              {:field "ETA_MU_CONTROLLER_CANARY_DELIVERY_IDS"})))
     (validate-credentials! {:github-private-key github-private-key
                             :webhook-secret webhook-secret})
     {:mode mode
+     :project-id project-id
      :policy-revision (policy-revision policy)
      :host (or (runtime/environment "ETA_MU_CONTROLLER_HOST") "0.0.0.0")
      :port port

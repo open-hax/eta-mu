@@ -1,4 +1,5 @@
 {:source-paths ["src/cljs" "test/cljs"]
+ :dependencies [[borkdude/edamame "1.6.42"]]
  :repositories {"clojars" {:url "https://repo.clojars.org/"}}
  :js-options {:js-provider :import}
  :builds

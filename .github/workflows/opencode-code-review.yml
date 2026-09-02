@@ -85,7 +85,7 @@ on:
           install_status="$(awk -F= '$1 == "install" {print $2}' "$statuses")"
           if [[ "$install_status" == "0" ]]; then
             run_gate workflow_contract node --test .github/scripts/opencode-code-review-workflow.test.mjs .github/scripts/sol-ci-workflow.test.mjs
-            run_gate controller_lint clj-kondo --lint packages/gitops-controller/src/cljs packages/gitops-controller/test/cljs
+            run_gate controller_lint clj-kondo --config packages/gitops-controller/.clj-kondo/config.edn --lint packages/gitops-controller/src/cljs packages/gitops-controller/test/cljs
             run_gate controller_test_compile pnpm --dir packages/gitops-controller exec shadow-cljs compile test
             run_gate controller_test node packages/gitops-controller/target/test.cjs
             run_gate controller_build pnpm --dir packages/gitops-controller exec shadow-cljs release server
@@ -677,7 +677,7 @@ jobs:
             install_status="$(awk -F= '$1 == "install" {print $2}' "$statuses")"
             if [[ "$install_status" == "0" ]]; then
               run_gate workflow_contract node --test .github/scripts/opencode-code-review-workflow.test.mjs .github/scripts/sol-ci-workflow.test.mjs
-              run_gate controller_lint clj-kondo --lint packages/gitops-controller/src/cljs packages/gitops-controller/test/cljs
+              run_gate controller_lint clj-kondo --config packages/gitops-controller/.clj-kondo/config.edn --lint packages/gitops-controller/src/cljs packages/gitops-controller/test/cljs
               run_gate controller_test_compile pnpm --dir packages/gitops-controller exec shadow-cljs compile test
               run_gate controller_test node packages/gitops-controller/target/test.cjs
               run_gate controller_build pnpm --dir packages/gitops-controller exec shadow-cljs release server

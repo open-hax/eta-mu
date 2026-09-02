@@ -10,8 +10,10 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const requireFromEtaMu = createRequire(path.join(root, "packages/eta-mu/package.json"));
-const YAML = requireFromEtaMu("yaml");
+const requireFromController = createRequire(
+  path.join(root, "packages/gitops-controller/package.json"),
+);
+const YAML = requireFromController("yaml");
 const workflowPath = path.join(root, ".github/workflows/sol-ci.yml");
 const workflowText = fs.readFileSync(workflowPath, "utf8");
 const workflow = YAML.parse(workflowText);
@@ -20,6 +22,10 @@ const trustedWorkflowPath = path.join(root, ".github/workflows/sol-trusted-integ
 const trustedWorkflowText = fs.readFileSync(trustedWorkflowPath, "utf8");
 const trustedWorkflow = YAML.parse(trustedWorkflowText);
 const trustedVerify = trustedWorkflow.jobs.verify;
+const controllerWorkflowPath = path.join(root, ".github/workflows/gitops-controller.yml");
+const controllerWorkflowText = fs.readFileSync(controllerWorkflowPath, "utf8");
+const controllerWorkflow = YAML.parse(controllerWorkflowText);
+const controllerDeterministic = controllerWorkflow.jobs.deterministic;
 
 function namedStep(name) {
   const step = verify.steps.find((candidate) => candidate.name === name);
@@ -30,6 +36,12 @@ function namedStep(name) {
 function namedTrustedStep(name) {
   const step = trustedVerify.steps.find((candidate) => candidate.name === name);
   assert.ok(step, `missing trusted Sol integration step: ${name}`);
+  return step;
+}
+
+function namedControllerStep(name) {
+  const step = controllerDeterministic.steps.find((candidate) => candidate.name === name);
+  assert.ok(step, `missing controller CI step: ${name}`);
   return step;
 }
 
@@ -170,4 +182,68 @@ test("Sol workflow actions are immutable and the stable check name remains Sol C
   for (const step of [...verify.steps, ...trustedVerify.steps].filter((candidate) => candidate.uses)) {
     assert.match(step.uses, /@[0-9a-f]{40}$/, `${step.name} action is not pinned to a commit`);
   }
+});
+
+test("a pull-request workflow executes both workflow contract suites", () => {
+  const triggerPaths = controllerWorkflow.on.pull_request.paths;
+  for (const relativePath of [
+    ".github/scripts/opencode-code-review-workflow.test.mjs",
+    ".github/scripts/run-opencode-review-recovery.mjs",
+    ".github/scripts/sol-ci-workflow.test.mjs",
+    ".github/workflows/opencode-code-review.yml",
+    ".github/workflows/review-resolution-gate.yml",
+    ".github/workflows/sol-ci.yml",
+    ".github/workflows/sol-trusted-integration.yml",
+    "docs/agent-workflows.md",
+    "docs/github-automation-architecture.md",
+    "kanban/tasks/admit-exact-head-code-reviews-through-signed-webhooks-ntroller.md",
+    "kanban/tasks/opencode-mimo-evidence-review-agent.md",
+  ]) {
+    assert.ok(triggerPaths.includes(relativePath), `controller CI does not trigger for ${relativePath}`);
+  }
+
+  const install = namedControllerStep("Install frozen controller dependencies");
+  const contracts = namedControllerStep("Test review and Sol workflow contracts");
+  assert.match(install.run, /--filter @eta-mu\/gitops-controller\.\.\./);
+  assert.match(
+    contracts.run,
+    /node --test\s+\.github\/scripts\/opencode-code-review-workflow\.test\.mjs\s+\.github\/scripts\/sol-ci-workflow\.test\.mjs/,
+  );
+  assert.ok(
+    controllerDeterministic.steps.indexOf(install) < controllerDeterministic.steps.indexOf(contracts),
+  );
+});
+
+test("controller image CI binds provenance and smoke-tests the runtime contract", () => {
+  const imageJob = controllerWorkflow.jobs.image;
+  const build = imageJob.steps.find((candidate) => candidate.name === "Build controller image");
+  const verify = imageJob.steps.find(
+    (candidate) => candidate.name === "Verify controller image revision label",
+  );
+  const smoke = imageJob.steps.find(
+    (candidate) => candidate.name === "Smoke observe-only container",
+  );
+  assert.ok(build);
+  assert.ok(verify);
+  assert.ok(smoke);
+  assert.match(build.run, /--build-arg "ETA_MU_SOURCE_REVISION=\$\{EXPECTED_SHA\}"/);
+  assert.match(build.run, /--tag "eta-mu-gitops-controller:\$\{EXPECTED_SHA\}"/);
+  assert.match(verify.run, /docker image inspect/);
+  assert.match(verify.run, /\.Config\.User/);
+  assert.match(verify.run, /org\.opencontainers\.image\.source/);
+  assert.match(verify.run, /org\.opencontainers\.image\.revision/);
+  assert.match(verify.run, /org\.opencontainers\.image\.licenses/);
+  assert.match(verify.run, /= "\$EXPECTED_SHA"/);
+  assert.match(smoke.run, /--read-only/);
+  assert.match(smoke.run, /--cap-drop ALL/);
+  assert.match(smoke.run, /no-new-privileges:true/);
+  assert.match(smoke.run, /ETA_MU_CONTROLLER_MODE=observe-only/);
+  assert.match(smoke.run, /ETA_MU_GITHUB_APP_PRIVATE_KEY_FILE=\/run\/secrets\/app\.pem/);
+  assert.match(smoke.run, /ETA_MU_GITHUB_WEBHOOK_SECRET_FILE=\/run\/secrets\/webhook-secret/);
+  assert.match(smoke.run, /\/health\/live/);
+  assert.match(smoke.run, /\/health\/ready/);
+  assert.ok(smoke.run.indexOf("chmod 0700") < smoke.run.indexOf("sudo chown"));
+  assert.ok(smoke.run.indexOf("chmod 0400") < smoke.run.indexOf("sudo chown"));
+  assert.ok(imageJob.steps.indexOf(build) < imageJob.steps.indexOf(verify));
+  assert.ok(imageJob.steps.indexOf(verify) < imageJob.steps.indexOf(smoke));
 });
