@@ -76,18 +76,10 @@ jobs:
           cli: 1.12.5.1654
           clj-kondo: 2025.10.23
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-        with:
-          version: "10.14.0"
-          run_install: false
-
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
 
       # Pull-request execution ends after public-source static validation. A
       # fresh GitHub-hosted runner therefore never receives the private source

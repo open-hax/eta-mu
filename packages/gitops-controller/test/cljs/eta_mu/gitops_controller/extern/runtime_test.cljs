@@ -3,15 +3,14 @@
             [eta-mu.gitops-controller.extern.runtime :as runtime]))
 
 (deftest ^:async intervals-never-overlap-and-resume-after-settlement
-  (let [original-set-interval (.-setInterval js/globalThis)
-        callback* (atom nil)
+  (let [callback* (atom nil)
         release* (atom nil)
         calls* (atom 0)]
-    (set! (.-setInterval js/globalThis)
-          (fn [callback _interval-ms]
-            (reset! callback* callback)
-            123))
-    (try
+    (with-redefs
+      [runtime/start-interval!
+       (fn [callback _interval-ms]
+         (reset! callback* callback)
+         123)]
       (is (= 123
              (runtime/every!
               5000
@@ -28,21 +27,16 @@
         (let [third-invocation (@callback*)]
           (is (= 2 @calls*))
           (@release* true)
-          (await third-invocation)))
-      (finally
-        (set! (.-setInterval js/globalThis) original-set-interval)))))
+          (await third-invocation))))))
 
 (deftest ^:async rejected-interval-invocation-releases-the-serial-lease
-  (let [original-set-interval (.-setInterval js/globalThis)
-        original-error (.-error js/console)
-        callback* (atom nil)
+  (let [callback* (atom nil)
         calls* (atom 0)]
-    (set! (.-setInterval js/globalThis)
-          (fn [callback _interval-ms]
-            (reset! callback* callback)
-            456))
-    (set! (.-error js/console) (fn [_message] nil))
-    (try
+    (with-redefs
+      [runtime/start-interval!
+       (fn [callback _interval-ms]
+         (reset! callback* callback)
+         456)]
       (runtime/every!
        5000
        (fn []
@@ -50,7 +44,4 @@
          (js/Promise.reject (js/Error. "expected test rejection"))))
       (await (@callback*))
       (await (@callback*))
-      (is (= 2 @calls*))
-      (finally
-        (set! (.-error js/console) original-error)
-        (set! (.-setInterval js/globalThis) original-set-interval)))))
+      (is (= 2 @calls*)))))

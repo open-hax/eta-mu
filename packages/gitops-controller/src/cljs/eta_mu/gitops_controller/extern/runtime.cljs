@@ -30,9 +30,12 @@
 (defn schedule! [f]
   (js/setImmediate #(invoke-contained! f)))
 
+(defn start-interval! [callback interval-ms]
+  (js/setInterval callback interval-ms))
+
 (defn every! [interval-ms f]
   (let [running?* (atom false)]
-    (js/setInterval #(invoke-serially-contained! running?* f) interval-ms)))
+    (start-interval! #(invoke-serially-contained! running?* f) interval-ms)))
 
 (defn cancel! [timer]
   (js/clearInterval timer))

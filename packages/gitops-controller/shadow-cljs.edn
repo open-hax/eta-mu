@@ -26,7 +26,7 @@
   {:target :node-test
    :output-to "target/test.cjs"
    :ns-regexp "-test$"
-   :autorun true
+   :autorun false
    :compiler-options
    {:output-feature-set :es-next
     :optimizations :none

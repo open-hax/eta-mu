@@ -26,6 +26,13 @@ const controllerWorkflowPath = path.join(root, ".github/workflows/gitops-control
 const controllerWorkflowText = fs.readFileSync(controllerWorkflowPath, "utf8");
 const controllerWorkflow = YAML.parse(controllerWorkflowText);
 const controllerDeterministic = controllerWorkflow.jobs.deterministic;
+const controllerPackage = JSON.parse(
+  fs.readFileSync(path.join(root, "packages/gitops-controller/package.json"), "utf8"),
+);
+const controllerShadowText = fs.readFileSync(
+  path.join(root, "packages/gitops-controller/shadow-cljs.edn"),
+  "utf8",
+);
 
 function namedStep(name) {
   const step = verify.steps.find((candidate) => candidate.name === name);
@@ -98,6 +105,12 @@ test("pull-request-controlled Sol execution has no private dependency capability
   ]) {
     assert.doesNotMatch(serialized, pattern);
   }
+
+  assert.equal(
+    verify.steps.find((candidate) => candidate.name === "Set up pnpm"),
+    undefined,
+  );
+  assert.deepEqual(namedStep("Set up Node.js").with, { "node-version": "22" });
 
   const lint = namedStep("Lint Sol public source and tests");
   assert.equal(lint.if, undefined);
@@ -246,4 +259,40 @@ test("controller image CI binds provenance and smoke-tests the runtime contract"
   assert.ok(smoke.run.indexOf("chmod 0400") < smoke.run.indexOf("sudo chown"));
   assert.ok(imageJob.steps.indexOf(build) < imageJob.steps.indexOf(verify));
   assert.ok(imageJob.steps.indexOf(verify) < imageJob.steps.indexOf(smoke));
+});
+
+test("controller package test gate rejects a truncated async run", (t) => {
+  const script = controllerPackage.scripts.test;
+  assert.match(script, /target\/test-output\.log/);
+  assert.match(script, /status=0/);
+  assert.match(script, /\|\| status=\$\?/);
+  assert.match(script, /Ran \[1-9\]\[0-9\]\* tests containing/);
+  assert.match(controllerShadowText, /:autorun false/);
+
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-controller-test-gate-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const fakeBin = path.join(directory, "fake-bin");
+  const target = path.join(directory, "target");
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.mkdirSync(target, { recursive: true });
+  const shadow = path.join(fakeBin, "shadow-cljs");
+  fs.writeFileSync(shadow, "#!/bin/sh\nexit 0\n");
+  fs.chmodSync(shadow, 0o755);
+
+  const run = (output) => {
+    fs.writeFileSync(
+      path.join(target, "test.cjs"),
+      `console.log(${JSON.stringify(output)});\n`,
+    );
+    return spawnSync("sh", ["-c", script], {
+      cwd: directory,
+      encoding: "utf8",
+      env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+    });
+  };
+
+  const complete = run("Ran 1 tests containing 1 assertions.\n0 failures, 0 errors.");
+  assert.equal(complete.status, 0, complete.stderr || complete.stdout);
+  const truncated = run("Testing eta-mu.gitops-controller.extern.runtime-test");
+  assert.notEqual(truncated.status, 0);
 });
