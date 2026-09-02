@@ -372,7 +372,7 @@
                        [:command])]
           (is (= 202 (.-statusCode accepted)))
           (is (false? (:duplicate (response-body accepted))))
-          (is (= "review-gate-completion" (:command/type command)))
+          (is (= :review-gate-completion (:command/type command)))
           (is (= 991 (:workflow-run-id command)))
           (is (= ".github/workflows/review-resolution-gate.yml"
                  (:workflow-run-path command)))
@@ -577,13 +577,13 @@
           (is (= 202 (.-statusCode synchronize-response)))
           (is (= 202 (.-statusCode base-edit-response)))
           (is (true? (:ignored (response-body ordinary-edit-response))))
-          (is (= "review-gate-reconcile" (:command/type resolved-command)))
+          (is (= :review-gate-reconcile (:command/type resolved-command)))
           (is (= "PRRT_example" (:review-thread-node-id resolved-command)))
-          (is (= "review-gate-reconcile" (:command/type comment-command)))
+          (is (= :review-gate-reconcile (:command/type comment-command)))
           (is (= "PRRC_example"
                  (:review-comment-node-id comment-command)))
-          (is (= "ingress-probe" (:command/type probe-command)))
-          (is (= "review-gate-invalidate"
+          (is (= :ingress-probe (:command/type probe-command)))
+          (is (= :review-gate-invalidate
                  (:command/type synchronize-command)))
           (is (= [resolved-id unresolved-id comment-id submitted-id
                   dismissed-id probe-id synchronize-id base-edit-id]

@@ -229,13 +229,12 @@
       (await (store/initialize! state-store))
       (with-redefs
         [fs/append-line!
-         (^:async fn [& arguments]
-           (let [file (first arguments)]
-             (when (and (str/ends-with? file "dispatches.nd-edn")
-                        (compare-and-set! block-once?* true false))
-               (@started!* nil)
-               (await release))
-             (await (apply append-line! arguments))))]
+         (^:async fn [file line expected-position]
+           (when (and (str/ends-with? file "dispatches.nd-edn")
+                      (compare-and-set! block-once?* true false))
+             (@started!* nil)
+             (await release))
+           (await (append-line! file line expected-position)))]
         (let [blocked-write (store/claim-dispatch!
                              state-store dispatch-id {:operation :blocked})]
           (try
@@ -285,8 +284,8 @@
       (await (store/initialize! state-store))
       (with-redefs
         [fs/append-line!
-         (^:async fn [& arguments]
-           (let [result (await (apply append-line! arguments))]
+         (^:async fn [file line expected-position]
+           (let [result (await (append-line! file line expected-position))]
              (when (compare-and-set! fail-once?* true false)
                (throw (ex-info "injected post-readback failure"
                                {:error/code :injected-readback-failure})))
@@ -370,7 +369,7 @@
       (await (store/accept-delivery! state-store command))
       (with-redefs
         [fs/read-complete-text!
-         (fn [& _]
+         (fn [_file _repair-unterminated-tail?]
            (throw (ex-info "historical journal rescan"
                            {:error/code :historical-journal-rescan})))]
         (is (:accepted? (await (store/accept-delivery!

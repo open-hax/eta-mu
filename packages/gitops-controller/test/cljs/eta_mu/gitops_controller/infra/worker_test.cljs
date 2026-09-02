@@ -284,7 +284,7 @@
                 :pr_merge_sha "2222222222222222222222222222222222222222"
                 :command_id delivery-id}
                (:inputs dispatch)))
-        (is (= "dispatched" (get-in completion [:result :outcome])))
+        (is (= :dispatched (get-in completion [:result :outcome])))
         (is (= 987 (get-in completion [:result :workflow-run-id])))
         (is (= {:id 987
                 :url "https://api.github.test/runs/987"
@@ -348,7 +348,7 @@
             retained-gate
             (get-in (await (store/read-gate-check state-store delivery-id))
                     [:gate-check])]
-        (is (= "gate-superseded" (:outcome completion)))
+        (is (= :gate-superseded (:outcome completion)))
         (is (= gate-check-id (:gate-check-id completion)))
         (is (= (inc gate-check-id)
                (:superseded-by-check-id completion)))
@@ -432,7 +432,7 @@
                 :evidence_run_id (str evidence-run-id)
                 :evidence_command_id evidence-delivery-id}
                (:inputs @dispatch*)))
-        (is (= "review-gate-reconcile" (:command/type completion)))
+        (is (= :review-gate-reconcile (:command/type completion)))
         (is (= "pull_request_review_thread" (:event completion)))
         (is (= "resolved" (:action completion)))
         (is (= (str gate-check-id) (:gate-check-id completion)))
@@ -525,7 +525,7 @@
         (is (= newer-id
                (get-in (first @dispatches*)
                        [:inputs :evidence_command_id])))
-        (is (= "dispatched"
+        (is (= :dispatched
                (get-in (await (store/read-completion
                                state-store delivery-id))
                        [:result :outcome]))))
@@ -584,7 +584,7 @@
         (is (= 1 (count @prepared*)))
         (is (zero? @dispatch-count*))
         (is (zero? @permission-count*))
-        (is (= "gate-invalidated" (:outcome result)))
+        (is (= :gate-invalidated (:outcome result)))
         (is (= :review-gate-invalidate
                (keyword (:command/type intent))))
         (is (= (:merge-sha current-pull-request)
@@ -643,7 +643,7 @@
       (await (worker/replay-pending! queue-worker))
       (is (= 1 @prepared*))
       (is (= 1 @dispatch-count*))
-      (is (= "dispatched"
+      (is (= :dispatched
              (get-in (await (store/read-completion state-store delivery-id))
                      [:result :outcome])))
       (finally
@@ -738,7 +738,7 @@
                (get-in intent [:patch :details-url])))
         (is (= source-id (:source-delivery-id intent)))
         (is (= intent (:intent terminal-receipt)))
-        (is (= "gate-completed" (:outcome result)))
+        (is (= :gate-completed (:outcome result)))
         (is (= gate-check-id (:gate-check-id result))))
       (finally
         (worker/stop! queue-worker)
@@ -829,7 +829,7 @@
         (await (worker/replay-pending! queue-worker))
         (await (worker/replay-pending! queue-worker))
         (is (= {:fetch 5 :permission 1 :dispatch 1} @calls*))
-        (is (= "dispatched"
+        (is (= :dispatched
                (get-in (await (store/read-completion state-store delivery-id))
                        [:result :outcome]))))
       (testing "rollback revokes ordinary effects without a restart"
@@ -849,7 +849,7 @@
           (await (store/accept-delivery! state-store canary-command))
           (await (worker/process-delivery! queue-worker canary-id))
           (is (= {:fetch 10 :permission 2 :dispatch 2} @calls*))
-          (is (= "dispatched"
+          (is (= :dispatched
                  (get-in (await (store/read-completion state-store canary-id))
                          [:result :outcome])))))
       (finally
@@ -912,8 +912,8 @@
         (await (worker/process-delivery! queue-worker delivery-id))
         (let [result (:result
                       (await (store/read-completion state-store delivery-id)))]
-          (is (= "probed" (:outcome result)))
-          (is (= "ingress-probe" (:command/type result)))
+          (is (= :probed (:outcome result)))
+          (is (= :ingress-probe (:command/type result)))
           (is (= "eta-mu:probe" (:label result)))
           (is (= "0123456789abcdef0123456789abcdef01234567"
                  (:pr-head-sha result)))
@@ -960,8 +960,8 @@
       (let [completion (await (store/read-completion state-store delivery-id))]
         (testing "the durable intent prevents a second external effect"
           (is (= 1 @dispatch-count*))
-          (is (= "held" (get-in completion [:result :outcome])))
-          (is (= "dispatch-outcome-uncertain"
+          (is (= :held (get-in completion [:result :outcome])))
+          (is (= :dispatch-outcome-uncertain
                  (get-in completion [:result :reason])))))
       (finally
         (worker/stop! queue-worker)
@@ -1028,7 +1028,7 @@
         (is (= 1 @dispatch-count*))
         (await (fs/remove-tree! dispatch-ledger))
         (await (worker/start! restarted-worker))
-        (is (= "held"
+        (is (= :held
                (get-in (await (store/read-completion state-store delivery-id))
                        [:result :outcome])))
         (is (= 1 @dispatch-count*)))
@@ -1109,7 +1109,7 @@
                               [:startup :evidence])]
           (is (= 5 (get-in startup [:reconciliation :ledger-appends])))
           (is (true? (await (store/completed? state-store delivery-id))))
-          (is (= "held"
+          (is (= :held
                  (get-in (await (store/read-completion state-store delivery-id))
                          [:result :outcome])))))
       (finally
@@ -1153,7 +1153,7 @@
       (let [completion (await (store/read-completion state-store delivery-id))]
         (is (= :observe-only (:mode (worker/status queue-worker))))
         (is (zero? @dispatch-count*))
-        (is (= "observed" (get-in completion [:result :outcome])))
+        (is (= :observed (get-in completion [:result :outcome])))
         (is (= "0123456789abcdef0123456789abcdef01234567"
                (get-in completion [:result :dispatch :inputs :pr_head_sha]))))
       (finally
@@ -1200,8 +1200,8 @@
       (let [completion
             (get-in (await (store/read-completion state-store delivery-id))
                     [:result])]
-        (is (= "refused" (:outcome completion)))
-        (is (= "admission-policy-changed" (:reason completion)))
+        (is (= :refused (:outcome completion)))
+        (is (= :admission-policy-changed (:reason completion)))
         (is (zero? @mutation-count*))
         (is (= :active
                (get-in (worker/status queue-worker)
@@ -1255,7 +1255,7 @@
                                :effects-allowed? true}}
                recovery))
         (is (= 1 @dispatch-count*))
-        (is (= "dispatched" (get-in completion [:result :outcome])))
+        (is (= :dispatched (get-in completion [:result :outcome])))
         (is (= gate-check-id
                (get-in (await (store/read-gate-check state-store delivery-id))
                        [:gate-check :id]))))
@@ -1310,9 +1310,8 @@
                         (await (store/read-completion state-store delivery-id)))]
         (is (zero? @dispatch-count*))
         (is (= 77 (:installation-id @cancelled*)))
-        (is (= :refused (keyword (:outcome completion))))
-        (is (= :durable-dispatch-intent-stale
-               (keyword (:reason completion))))
+        (is (= :refused (:outcome completion)))
+        (is (= :durable-dispatch-intent-stale (:reason completion)))
         (is (false? (:fatal? (worker/status queue-worker))))
         (is (true? (:running? (worker/status queue-worker)))))
       (finally
@@ -1373,7 +1372,7 @@
         (@fetch-release* current-pull-request)
         (await first-processing)
         (is (= 1 @dispatch-count*))
-        (is (= "dispatched"
+        (is (= :dispatched
                (get-in (await (store/read-completion state-store delivery-id))
                        [:result :outcome]))))
       (finally
@@ -1494,7 +1493,7 @@
                              :run-url "https://api.github.test/runs/987"
                              :html-url "https://github.test/runs/987"})
         (await processing)
-        (is (= "dispatched"
+        (is (= :dispatched
                (get-in (await (store/read-completion state-store delivery-id))
                        [:result :outcome]))))
       (finally
@@ -1594,8 +1593,8 @@
         (is (= 1 (get-in worker-status
                          [:startup :evidence :replayed])))
         (is (zero? @github-call-count*))
-        (is (= "refused" (get-in completion [:result :outcome])))
-        (is (= "admission-policy-changed"
+        (is (= :refused (get-in completion [:result :outcome])))
+        (is (= :admission-policy-changed
                (get-in completion [:result :reason]))))
       (finally
         (worker/stop! queue-worker)
@@ -1636,7 +1635,7 @@
                                   :projection-restores])))
         (is (= 1 (:replayed startup)))
         (is (= 1 @fetch-count*))
-        (is (= "observed" (get-in completion [:result :outcome]))))
+        (is (= :observed (get-in completion [:result :outcome]))))
       (finally
         (worker/stop! queue-worker)
         (await (fs/remove-tree! root))))))

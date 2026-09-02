@@ -15,7 +15,9 @@
               5000
               (fn []
                 (swap! calls* inc)
-                (js/Promise.resolve true)))))
+                (js/Promise.
+                 (fn [resolve _reject]
+                   (js/setImmediate #(resolve true))))))))
       (let [first-invocation (@callback*)
             overlapping-invocation (@callback*)]
         (is (= 1 @calls*))

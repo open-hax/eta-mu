@@ -93,8 +93,8 @@
       (await (worker/process-delivery! restarted-worker delivery-id))
       (let [result
             (:result (await (store/read-completion state-store delivery-id)))]
-        (is (= "probed" (:outcome result)))
-        (is (= "issue-probe" (:command/type result)))
+        (is (= :probed (:outcome result)))
+        (is (= :issue-probe (:command/type result)))
         (is (= 320 (:issue-number result)))
         (is (= "I_kwDOExample" (:issue-node-id result)))
         (is (= 9 (:sender-id result)))
