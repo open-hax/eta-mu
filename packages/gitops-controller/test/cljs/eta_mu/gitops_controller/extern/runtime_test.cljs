@@ -5,6 +5,10 @@
 (deftest ^:async intervals-never-overlap-and-resume-after-settlement
   (let [callback* (atom nil)
         release* (atom nil)
+        started-resolve* (atom nil)
+        started (js/Promise.
+                 (fn [resolve _reject]
+                   (reset! started-resolve* resolve)))
         hold-first?* (atom true)
         calls* (atom 0)]
     (with-redefs
@@ -20,18 +24,17 @@
                 (if (compare-and-set! hold-first?* true false)
                   (js/Promise.
                    (fn [resolve _reject]
-                     (reset! release* resolve)))
+                     (reset! release* resolve)
+                     (@started-resolve* true)))
                   (js/Promise.resolve true))))))
       (let [first-invocation (@callback*)]
-        ;; Let the transformed async invocation acquire its lease, then keep
-        ;; that lease explicitly unsettled while the overlapping tick runs.
-        (await (js/Promise.resolve))
+        ;; Wait for the scheduled operation itself to prove that it acquired
+        ;; the lease; a fixed number of microtask yields is not that proof.
+        (await started)
         (is (= 1 @calls*))
-        (@callback*)
-        ;; The scheduler ignores an interval callback's return value. Yield
-        ;; once so the overlap attempt observes the held lease without making
-        ;; the test wait on the invocation that owns it.
-        (await (js/Promise.resolve))
+        ;; Await the overlapping tick itself: with the first operation proven
+        ;; active, this invocation must lose the lease and settle immediately.
+        (await (@callback*))
         (is (= 1 @calls*))
         (@release* true)
         (await first-invocation)
