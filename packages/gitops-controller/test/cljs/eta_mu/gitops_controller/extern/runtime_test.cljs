@@ -20,7 +20,7 @@
                  (fn [resolve _]
                    (reset! release* resolve)))))))
       (let [first-invocation (@callback*)]
-        (await (@callback*))
+        (@callback*)
         (is (= 1 @calls*))
         (@release* true)
         (await first-invocation)
