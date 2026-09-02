@@ -1875,10 +1875,19 @@ jobs:
               throw new Error('Publication refused: admitted base is not the repository default branch.');
             }
 
-            const { data: currentPullRequest } = await github.rest.pulls.get({
-              ...context.repo,
-              pull_number: Number(rawNumber),
-            });
+            const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+            let currentPullRequest;
+            for (let attempt = 1; attempt <= 6; attempt += 1) {
+              ({ data: currentPullRequest } = await github.rest.pulls.get({
+                ...context.repo,
+                pull_number: Number(rawNumber),
+              }));
+              if (currentPullRequest.mergeable !== null) break;
+              if (attempt < 6) await wait(1000);
+            }
+            if (currentPullRequest.mergeable === null) {
+              throw new Error('GitHub did not resolve pull-request mergeability before publication after bounded polling.');
+            }
             const repository = `${context.repo.owner}/${context.repo.repo}`;
             const targetRepository = String(currentPullRequest.base?.repo?.full_name || '');
             const headRepository = String(currentPullRequest.head?.repo?.full_name || '');

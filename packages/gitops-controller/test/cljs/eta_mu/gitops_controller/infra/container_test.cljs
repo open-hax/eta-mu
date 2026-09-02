@@ -126,7 +126,7 @@
                    "evidence_command_id:"]]
       (is (.includes workflow input)))
     (is (.includes workflow
-                   "EXPECTED_CONTROLLER_APP_LOGIN: ${{ vars.ETA_MU_CONTROLLER_APP_LOGIN }}"))
+                   "EXPECTED_CONTROLLER_APP_LOGIN: ${{ inputs.controller_app_login || vars.ETA_MU_CONTROLLER_APP_LOGIN }}"))
     (is (.includes workflow "TRIGGERING_ACTOR: ${{ github.triggering_actor }}"))
     (is (.includes workflow "context.actor !== expectedActor"))
     (is (.includes workflow

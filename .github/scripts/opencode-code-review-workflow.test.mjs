@@ -521,6 +521,7 @@ async function runPublication({
   admittedHeadSha = "b".repeat(40),
   admittedMergeSha = "c".repeat(40),
   fetchedPullRequest = pullRequestFixture(),
+  fetchedPullRequests,
 } = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-publication-"));
   const submissionFile = path.join(directory, "submission.json");
@@ -529,6 +530,8 @@ async function runPublication({
   fs.writeFileSync(submissionFile, submissionBytes);
   const outputs = {};
   const publishedPullRequests = [];
+  const pullRequests = fetchedPullRequests || [fetchedPullRequest];
+  let pullRequestCalls = 0;
   const step = namedStep("publish_review", "Publish actual GitHub pull request review");
   const execute = new AsyncFunction(
     "github",
@@ -536,6 +539,7 @@ async function runPublication({
     "core",
     "process",
     "require",
+    "setTimeout",
     step.with.script,
   );
   await execute(
@@ -546,7 +550,9 @@ async function runPublication({
             assert.equal(owner, "open-hax");
             assert.equal(repo, "fixture");
             assert.equal(pullNumber, 42);
-            return { data: fetchedPullRequest };
+            const current = pullRequests[Math.min(pullRequestCalls, pullRequests.length - 1)];
+            pullRequestCalls += 1;
+            return { data: current };
           },
         },
       },
@@ -581,8 +587,9 @@ async function runPublication({
       }
       return requireFromController(specifier);
     },
+    (callback) => callback(),
   ).finally(() => fs.rmSync(directory, { recursive: true, force: true }));
-  return { outputs, publishedPullRequests };
+  return { outputs, publishedPullRequests, pullRequestCalls };
 }
 
 test("workflow dispatch exposes a deterministic revision-bound command contract", () => {
@@ -1094,6 +1101,23 @@ test("publication refetches inside the publishing action and uses the live API o
   assert.deepEqual(outputs, { publishable: "true" });
   assert.equal(publishedPullRequests.length, 1);
   assert.equal(publishedPullRequests[0], fetchedPullRequest);
+});
+
+test("publication polls transient mergeability before its final tuple check", async () => {
+  const resolvedPullRequest = pullRequestFixture();
+  const { pullRequestCalls, publishedPullRequests } = await runPublication({
+    fetchedPullRequests: [
+      pullRequestFixture({ mergeable: null }),
+      resolvedPullRequest,
+    ],
+  });
+  assert.equal(pullRequestCalls, 2);
+  assert.deepEqual(publishedPullRequests, [resolvedPullRequest]);
+
+  await assert.rejects(
+    runPublication({ fetchedPullRequest: pullRequestFixture({ mergeable: null }) }),
+    /did not resolve pull-request mergeability before publication after bounded polling/i,
+  );
 });
 
 test("publication refuses a head advanced after admission and leaves the terminal gate red", async (t) => {
