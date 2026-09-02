@@ -255,8 +255,13 @@ test("controller image CI binds provenance and smoke-tests the runtime contract"
   assert.match(smoke.run, /ETA_MU_GITHUB_WEBHOOK_SECRET_FILE=\/run\/secrets\/webhook-secret/);
   assert.match(smoke.run, /\/health\/live/);
   assert.match(smoke.run, /\/health\/ready/);
-  assert.ok(smoke.run.indexOf("chmod 0700") < smoke.run.indexOf("sudo chown"));
-  assert.ok(smoke.run.indexOf("chmod 0400") < smoke.run.indexOf("sudo chown"));
+  const chownIndex = smoke.run.indexOf("sudo chown");
+  assert.ok(chownIndex > -1, "smoke step does not chown the secret mounts");
+  for (const mode of ["chmod 0700", "chmod 0400"]) {
+    const modeIndex = smoke.run.indexOf(mode);
+    assert.ok(modeIndex > -1, `smoke step does not apply ${mode}`);
+    assert.ok(modeIndex < chownIndex, `${mode} must precede sudo chown`);
+  }
   assert.ok(imageJob.steps.indexOf(build) < imageJob.steps.indexOf(verify));
   assert.ok(imageJob.steps.indexOf(verify) < imageJob.steps.indexOf(smoke));
 });

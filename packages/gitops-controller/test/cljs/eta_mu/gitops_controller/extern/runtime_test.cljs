@@ -27,8 +27,11 @@
         ;; that lease explicitly unsettled while the overlapping tick runs.
         (await (js/Promise.resolve))
         (is (= 1 @calls*))
-        (let [overlapping-invocation (@callback*)]
-          (await overlapping-invocation))
+        (@callback*)
+        ;; The scheduler ignores an interval callback's return value. Yield
+        ;; once so the overlap attempt observes the held lease without making
+        ;; the test wait on the invocation that owns it.
+        (await (js/Promise.resolve))
         (is (= 1 @calls*))
         (@release* true)
         (await first-invocation)

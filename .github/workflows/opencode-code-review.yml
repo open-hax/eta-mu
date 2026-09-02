@@ -2161,7 +2161,10 @@ jobs:
               per_page: 100,
             });
             const newest = sameMergeChecks
-              .filter((check) => check.name === checkName && check.head_sha === expectedMerge)
+              .filter((check) => check.name === checkName
+                && check.head_sha === expectedMerge
+                && check.app?.slug === 'github-actions'
+                && String(check.external_id || '').startsWith('eta-mu-code-review/v2:'))
               .sort((left, right) => right.id - left.id)[0];
             if (!newest || newest.id !== checkId) {
               core.info('PR-merge evidence check was superseded by a newer review command; leaving it unchanged.');

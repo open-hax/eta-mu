@@ -1,12 +1,11 @@
 (ns eta-mu.gitops-controller.infra.issue-webhook-test
-  (:require ["node:crypto" :as node-crypto]
-            [cljs.test :refer [deftest is]]
+  (:require [cljs.test :refer [deftest is]]
             [eta-mu.gitops-controller.extern.fs :as fs]
-            [eta-mu.gitops-controller.extern.json :as json]
             [eta-mu.gitops-controller.infra.store :as store]
             [eta-mu.gitops-controller.infra.webhook :as webhook]))
 
 (def secret "0123456789abcdef0123456789abcdef")
+(def payload-sha256 (apply str (repeat 64 "a")))
 
 (def config
   {:mode :observe-only
@@ -28,62 +27,50 @@
    :issue {:number 320 :node_id "I_kwDOExample"}
    :sender {:id 9 :login "operator"}})
 
-(defn- raw-body [value]
-  (js/Buffer.from (json/encode value) "utf8"))
-
-(defn- signature [body]
-  (str "sha256="
-       (-> (.createHmac node-crypto "sha256" secret)
-           (.update body)
-           (.digest "hex"))))
-
-(defn- headers [delivery-id body]
-  {:signature (signature body)
+(defn- ingress [delivery-id actual-payload]
+  {:webhook/status :authenticated
    :delivery-id delivery-id
-   :event "issues"})
+   :event "issues"
+   :payload actual-payload
+   :payload/sha256 payload-sha256})
 
-(deftest ^:async signed-issue-probe-is-the-only-durable-issue-command
+(deftest ^:async authenticated-issue-probe-is-the-only-durable-issue-command
   (let [root (await (fs/temporary-directory!))
         state-store (store/create root)
         enqueued* (atom [])
         delivery-id "9eb17352-284c-4b55-879d-0d07f353fdee"
         ignored-id "56a5d98a-87df-4d70-a40c-40a3cf109198"
-        pull-request-id "808f730f-136f-457d-b629-ceccdcf7766b"
-        body (raw-body payload)]
+        pull-request-id "808f730f-136f-457d-b629-ceccdcf7766b"]
     (try
       (await (store/initialize! state-store))
       (let [invalid
             (await
              (webhook/handle!
               config state-store #(swap! enqueued* conj %)
-              (assoc (headers delivery-id body)
-                     :signature
-                     (str "sha256=" (apply str (repeat 64 "0"))))
-              body))
+              {:webhook/status :invalid-signature}))
             accepted
             (await
              (webhook/handle! config state-store #(swap! enqueued* conj %)
-                              (headers delivery-id body) body))
+                              (ingress delivery-id payload)))
             duplicate
             (await
              (webhook/handle! config state-store #(swap! enqueued* conj %)
-                              (headers delivery-id body) body))
-            ignored-body (raw-body (assoc payload :action "edited"))
+                              (ingress delivery-id payload)))
+            ignored-payload (assoc payload :action "edited")
             ignored
             (await
              (webhook/handle!
               config state-store #(swap! enqueued* conj %)
-              (headers ignored-id ignored-body) ignored-body))
-            pull-request-body
-            (raw-body (assoc-in payload [:issue :pull_request]
-                                {:url
-                                 "https://api.github.test/repos/open-hax/eta-mu/pulls/320"}))
+              (ingress ignored-id ignored-payload)))
+            pull-request-payload
+            (assoc-in payload [:issue :pull_request]
+                      {:url
+                       "https://api.github.test/repos/open-hax/eta-mu/pulls/320"})
             pull-request-response
             (await
              (webhook/handle!
               config state-store #(swap! enqueued* conj %)
-              (headers pull-request-id pull-request-body)
-              pull-request-body))
+              (ingress pull-request-id pull-request-payload)))
             command
             (get-in (await (store/read-delivery state-store delivery-id))
                     [:command])]

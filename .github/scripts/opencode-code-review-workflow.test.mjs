@@ -624,6 +624,11 @@ test("review-resolution gate exposes only the strict dispatch-wrapper contract",
     validation.env.EXPECTED_CONTROLLER_APP_LOGIN,
     "${{ inputs.controller_app_login || vars.ETA_MU_CONTROLLER_APP_LOGIN }}",
   );
+  const evidence = namedGateStep("Wait for bound exact-head review evidence");
+  assert.equal(
+    evidence.env.EXPECTED_CONTROLLER_APP_LOGIN,
+    "${{ inputs.controller_app_login || vars.ETA_MU_CONTROLLER_APP_LOGIN }}",
+  );
   assert.match(validation.with.script, /context\.eventName !== 'workflow_dispatch'/);
   await assert.rejects(
     runGateAdmission({ eventName: "pull_request" }),
@@ -904,25 +909,40 @@ test("resolver creates the PR-merge check and cancels only older bound pending c
   assert.equal(checkCalls.update[0].conclusion, "cancelled");
 });
 
-test("PR-merge evidence finalizer updates only the newest exact-name check", async () => {
+test("PR-merge evidence finalizer ignores newer checks outside its App and external-ID family", async () => {
   const headSha = "b".repeat(40);
+  const baseSha = "a".repeat(40);
   const mergeSha = "c".repeat(40);
+  const externalId = `eta-mu-code-review/v2:9eb17352-284c-4b55-879d-0d07f353fdee:314159:2:42:${headSha}:${baseSha}:${mergeSha}`;
   const olderSuccess = {
     id: 8000,
     name: "eta-mu-opencode-evidence",
     head_sha: mergeSha,
     status: "completed",
     conclusion: "success",
+    external_id: externalId,
     app: { slug: "github-actions" },
   };
+  const currentCheck = {
+    id: 9001,
+    name: "eta-mu-opencode-evidence",
+    head_sha: mergeSha,
+    status: "in_progress",
+    external_id: externalId,
+    app: { slug: "github-actions" },
+  };
+  const foreignAppCheck = {
+    ...currentCheck,
+    id: 9002,
+    app: { slug: "another-app" },
+  };
+  const foreignFamilyCheck = {
+    ...currentCheck,
+    id: 9003,
+    external_id: "another-review-contract/v1:9003",
+  };
   const { calls, outputs } = await runEvidenceCheckFinalizer({
-    sameHeadChecks: [olderSuccess, {
-      id: 9001,
-      name: "eta-mu-opencode-evidence",
-      head_sha: mergeSha,
-      status: "in_progress",
-      app: { slug: "github-actions" },
-    }],
+    sameHeadChecks: [olderSuccess, currentCheck, foreignAppCheck, foreignFamilyCheck],
   });
   assert.equal(calls.list.length, 1);
   assert.equal(calls.list[0].filter, "all");
@@ -948,12 +968,14 @@ test("newer pending or failed PR-merge evidence rejects stale success", async ()
       head_sha: mergeSha,
       status: "completed",
       conclusion: "success",
+      external_id: `eta-mu-code-review/v2:9eb17352-284c-4b55-879d-0d07f353fdee:314159:2:42:${headSha}:${"a".repeat(40)}:${mergeSha}`,
       app: { slug: "github-actions" },
     };
     const newerCheck = {
       id: 9002,
       name: "eta-mu-opencode-evidence",
       head_sha: mergeSha,
+      external_id: `eta-mu-code-review/v2:11111111-1111-4111-8111-111111111111:314160:1:42:${headSha}:${"a".repeat(40)}:${mergeSha}`,
       app: { slug: "github-actions" },
       ...newer,
     };

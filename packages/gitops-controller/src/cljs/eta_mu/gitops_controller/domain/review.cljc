@@ -64,6 +64,15 @@
          (= (:head-sha gate-check) (:head-sha current-pull-request))
          (= (:merge-sha gate-check) (:merge-sha current-pull-request)))))
 
+(defn dispatch-command-current?
+  "Prove the immutable pull-request tuple and any revocable command authority
+  immediately before a GitHub effect."
+  [command dispatch current-pull-request]
+  (and (dispatch-current-pull-request? dispatch current-pull-request)
+       (or (not= :code-review
+                 (law/command-type (:command/type command)))
+           (contains? (:labels current-pull-request) (:label command)))))
+
 (defn- webhook-matches-refetched-run? [command dispatch workflow-run]
   (and (= (:workflow-run-id command) (:id workflow-run))
        (= (:workflow-run-node-id command) (:node-id workflow-run))

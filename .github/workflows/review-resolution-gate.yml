@@ -206,7 +206,7 @@ jobs:
         env:
           EVIDENCE_RUN_ID: ${{ inputs.evidence_run_id }}
           EVIDENCE_COMMAND_ID: ${{ inputs.evidence_command_id }}
-          EXPECTED_CONTROLLER_APP_LOGIN: ${{ vars.ETA_MU_CONTROLLER_APP_LOGIN }}
+          EXPECTED_CONTROLLER_APP_LOGIN: ${{ inputs.controller_app_login || vars.ETA_MU_CONTROLLER_APP_LOGIN }}
           EXPECTED_REVIEW_WORKFLOW_ID: ${{ vars.ETA_MU_REVIEW_WORKFLOW_ID }}
           EXPECTED_REVIEW_WORKFLOW_PATH: ${{ vars.ETA_MU_REVIEW_WORKFLOW_PATH }}
           EXPECTED_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}

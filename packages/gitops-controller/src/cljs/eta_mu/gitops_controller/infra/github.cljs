@@ -365,7 +365,9 @@
         runs (await (all-current-name-check-runs! config token expected))
         newest (newest-current-name-check config expected runs)]
     (cond
-      (expected-review-gate-check? config expected check-run)
+      (and (expected-review-gate-check? config expected check-run)
+           newest
+           (= (:id check-run) (:id newest)))
       (do
         ;; Creating the new in-progress run immediately replaces a stale
         ;; success as the newest same-name/App result. Any older pending run is

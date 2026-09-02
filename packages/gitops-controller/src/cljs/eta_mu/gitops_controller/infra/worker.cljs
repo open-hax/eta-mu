@@ -251,9 +251,9 @@
   (ensure-enabled! worker)
   (let [current (await ((:fetch-pull-request! github) command))]
     (dependency! worker :available)
-    (when-not (review/dispatch-current-pull-request? dispatch current)
+    (when-not (review/dispatch-command-current? command dispatch current)
       (throw
-       (ex-info "pull-request merge context changed before GitHub effect"
+       (ex-info "pull-request or command context changed before GitHub effect"
                 {:error/code :pull-request-context-changed
                  :repository (:repository command)
                  :pr-number (:pull-request-number command)})))

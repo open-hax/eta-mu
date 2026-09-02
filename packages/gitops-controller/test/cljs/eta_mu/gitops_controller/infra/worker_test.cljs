@@ -73,6 +73,20 @@
     (await (.rename node-fs temporary marker))
     (await (fs/sync-directory! root))))
 
+(def ^:private dispatch-projection-partitions
+  [:outbox
+   :gate-checks
+   :dispatch-calls
+   :workflow-runs
+   :gate-terminal-intents
+   :dispatches])
+
+(defn- ^:async remove-dispatch-projections! [state-store delivery-id]
+  (doseq [partition dispatch-projection-partitions]
+    (await (fs/remove-file-if-present!
+            (fs/join (get-in state-store [:paths partition])
+                     (str delivery-id ".edn"))))))
+
 (def current-pull-request
   {:number 321
    :node-id "PR_kwDOExample"
@@ -110,6 +124,66 @@
     :details-url (:details-url expected)
     :app-id 123
     :app-slug "eta-mu-controller"}))
+
+(deftest ^:async removed-review-label-before-github-write-revokes-command
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        refetches* (atom 0)
+        write-authorizations* (atom 0)
+        check-writes* (atom 0)
+        dispatches* (atom 0)
+        github
+        {:prepare-review-gate!
+         (^:async fn [_ expected]
+           (swap! write-authorizations* inc)
+           (await (invoke-authorizer! expected :authorize-create!))
+           (swap! check-writes* inc)
+           {:id gate-check-id})
+         :fetch-pull-request!
+         (fn [_]
+           (let [refetch (swap! refetches* inc)]
+             (js/Promise.resolve
+              (cond-> current-pull-request
+                (< 1 refetch) (assoc :labels #{})))))
+         :actor-permission!
+         (fn [_]
+           (js/Promise.resolve {:permission "write"
+                                :user-id 9
+                                :user-login "operator"}))
+         :dispatch-review!
+         (^:async fn [_ dispatch]
+           (swap! write-authorizations* inc)
+           (await (invoke-authorizer! dispatch :authorize-dispatch!))
+           (swap! dispatches* inc)
+           {:workflow-run-id 987
+            :run-url "https://api.github.test/runs/987"
+            :html-url "https://github.test/runs/987"})}
+        queue-worker
+        (worker/create
+         {:store state-store
+          :github github
+          :authority (authority/github-port github)
+          :policy review-policy
+          :replay-interval-ms 600000})]
+    (try
+      (await (store/initialize! state-store))
+      (await (worker/start! queue-worker))
+      (await (store/accept-delivery! state-store
+                                     (admitted-command review-policy)))
+      (await (worker/process-delivery! queue-worker delivery-id))
+      (is (= 2 @refetches*))
+      (is (zero? @write-authorizations*))
+      (is (zero? @check-writes*))
+      (is (zero? @dispatches*))
+      (is (false? (await (store/gate-check-recorded?
+                          state-store delivery-id))))
+      (is (false? (await (store/dispatch-call-begun?
+                          state-store delivery-id))))
+      (is (= [delivery-id]
+             (await (store/pending-delivery-ids state-store))))
+      (finally
+        (worker/stop! queue-worker)
+        (await (fs/remove-tree! root))))))
 
 (deftest ^:async observe-only-write-authorizer-stops-before-all-dynamic-reads
   (let [refetches* (atom 0)
@@ -1012,26 +1086,33 @@
                                      (admitted-command review-policy)))
       (let [processing (worker/process-delivery! queue-worker delivery-id)]
         (await dispatch-started)
-        (await (fs/remove-file-if-present! dispatch-ledger))
-        (await (fs/ensure-directory! dispatch-ledger))
-        (@dispatch-reject*
-         (ex-info "synthetic transport loss"
-                  {:error/code :synthetic-transport-loss}))
-        (let [failure (try
-                        (await processing)
-                        nil
-                        (catch :default error error))]
-          (is (= :completion-not-durable
-                 (:error/code (ex-data failure))))
-          (is (true? (:fatal? (worker/status queue-worker))))
-          (is (false? (:running? (worker/status queue-worker)))))
-        (is (= 1 @dispatch-count*))
-        (await (fs/remove-tree! dispatch-ledger))
-        (await (worker/start! restarted-worker))
-        (is (= :held
-               (get-in (await (store/read-completion state-store delivery-id))
-                       [:result :outcome])))
-        (is (= 1 @dispatch-count*)))
+        (let [dispatch-ledger-contents (await (fs/read-text dispatch-ledger))]
+          (await (remove-dispatch-projections! state-store delivery-id))
+          (await (fs/remove-file-if-present! dispatch-ledger))
+          (await (fs/ensure-directory! dispatch-ledger))
+          (@dispatch-reject*
+           (ex-info "synthetic transport loss"
+                    {:error/code :synthetic-transport-loss}))
+          (let [failure (try
+                          (await processing)
+                          nil
+                          (catch :default error error))]
+            (is (= :completion-not-durable
+                   (:error/code (ex-data failure))))
+            (is (true? (:fatal? (worker/status queue-worker))))
+            (is (false? (:running? (worker/status queue-worker)))))
+          (is (= 1 @dispatch-count*))
+          (await (fs/remove-tree! dispatch-ledger))
+          (is (await (fs/write-exclusive! dispatch-ledger
+                                          dispatch-ledger-contents)))
+          (await (worker/start! restarted-worker))
+          (let [startup (get-in (worker/status restarted-worker)
+                                [:startup :evidence])]
+            (is (= 0 (get-in startup [:reconciliation :ledger-appends])))
+            (is (= :held
+                   (get-in (await (store/read-completion state-store delivery-id))
+                           [:result :outcome])))
+            (is (= 1 @dispatch-count*)))))
       (finally
         (worker/stop! queue-worker)
         (worker/stop! restarted-worker)
@@ -1083,35 +1164,33 @@
                                      (admitted-command review-policy)))
       (let [processing (worker/process-delivery! queue-worker delivery-id)]
         (await dispatch-started)
-        ;; The durable intent is already proven. Replacing its ledger path with
-        ;; a directory injects failure after completion projection publication.
-        (await (fs/remove-file-if-present! dispatch-ledger))
-        (await (fs/ensure-directory! dispatch-ledger))
-        (@dispatch-release* {:workflow-run-id 987
-                             :run-url "https://api.github.test/runs/987"
-                             :html-url "https://github.test/runs/987"})
-        (is (some? (try
-                     (await processing)
-                     nil
-                     (catch :default error error))))
-        (is (= 1 @dispatch-count*))
-        (is (true? (:fatal? (worker/status queue-worker))))
-        (await (fs/remove-tree! dispatch-ledger))
-        (is (= :completion-not-durable
-               (:error/code
-                (ex-data
-                 (try
-                   (await (store/completed? state-store delivery-id))
-                   nil
-                   (catch :default error error))))))
-        (await (worker/start! restarted-worker))
-        (let [startup (get-in (worker/status restarted-worker)
-                              [:startup :evidence])]
-          (is (= 5 (get-in startup [:reconciliation :ledger-appends])))
-          (is (true? (await (store/completed? state-store delivery-id))))
-          (is (= :held
-                 (get-in (await (store/read-completion state-store delivery-id))
-                         [:result :outcome])))))
+        ;; Preserve the proven journal while replacing its path with a
+        ;; directory to inject failure before completion can become durable.
+        (let [dispatch-ledger-contents (await (fs/read-text dispatch-ledger))]
+          (await (remove-dispatch-projections! state-store delivery-id))
+          (await (fs/remove-file-if-present! dispatch-ledger))
+          (await (fs/ensure-directory! dispatch-ledger))
+          (@dispatch-release* {:workflow-run-id 987
+                               :run-url "https://api.github.test/runs/987"
+                               :html-url "https://github.test/runs/987"})
+          (is (some? (try
+                       (await processing)
+                       nil
+                       (catch :default error error))))
+          (is (= 1 @dispatch-count*))
+          (is (true? (:fatal? (worker/status queue-worker))))
+          (await (fs/remove-tree! dispatch-ledger))
+          (is (false? (await (store/completed? state-store delivery-id))))
+          (is (await (fs/write-exclusive! dispatch-ledger
+                                          dispatch-ledger-contents)))
+          (await (worker/start! restarted-worker))
+          (let [startup (get-in (worker/status restarted-worker)
+                                [:startup :evidence])]
+            (is (= 0 (get-in startup [:reconciliation :ledger-appends])))
+            (is (true? (await (store/completed? state-store delivery-id))))
+            (is (= :held
+                   (get-in (await (store/read-completion state-store delivery-id))
+                           [:result :outcome]))))))
       (finally
         (worker/stop! queue-worker)
         (worker/stop! restarted-worker)

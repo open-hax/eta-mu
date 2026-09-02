@@ -2,6 +2,7 @@
   "HTTP composition for the eta-mu GitOps review controller."
   (:require [eta-mu.gitops-controller.extern.fastify :as fastify]
             [eta-mu.gitops-controller.extern.runtime :as runtime]
+            [eta-mu.gitops-controller.extern.webhook :as webhook-boundary]
             [eta-mu.gitops-controller.infra.authority :as authority]
             [eta-mu.gitops-controller.infra.config :as config]
             [eta-mu.gitops-controller.infra.effect-lease :as effect-lease]
@@ -49,14 +50,10 @@
     (fastify/register-post!
      app "/hooks/eta-mu/github"
      (^:async fn [request reply]
-       (let [headers {:signature (fastify/request-header
-                                  request "x-hub-signature-256")
-                      :delivery-id (fastify/request-header
-                                    request "x-github-delivery")
-                      :event (fastify/request-header request "x-github-event")}
+       (let [ingress (webhook-boundary/admit-request
+                      (:webhook-secret config) request)
              result (await
-                     (webhook/handle! config store enqueue! headers
-                                      (fastify/request-body request)))]
+                     (webhook/handle! config store enqueue! ingress))]
          (fastify/send! reply (:status result) (:body result)))))
     app))
 

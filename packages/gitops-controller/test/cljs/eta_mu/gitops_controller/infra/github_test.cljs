@@ -380,6 +380,86 @@
       (finally
         (set! (.-fetch js/globalThis) original-fetch)))))
 
+(deftest ^:async in-progress-exact-gate-with-a-newer-peer-is-held-fail-closed
+  (let [original-fetch (.-fetch js/globalThis)
+        requests* (atom [])
+        authorized* (atom 0)
+        key-pair (.generateKeyPairSync
+                  node-crypto "rsa" #js {:modulusLength 2048})
+        private-key (.export (.-privateKey key-pair)
+                             #js {:type "pkcs8" :format "pem"})
+        adapter (github/port {:github-api-url "https://api.github.test"
+                              :github-app-id 123
+                              :github-private-key private-key
+                              :mode :review-dispatch})
+        merge-sha "2222222222222222222222222222222222222222"
+        external-id
+        (str "eta-mu-review-gate/v2:"
+             "9eb17352-284c-4b55-879d-0d07f353fdee:321:"
+             "0123456789abcdef0123456789abcdef01234567:"
+             "1111111111111111111111111111111111111111:"
+             merge-sha)
+        expected {:name "eta-mu-review-gate"
+                  :repository "open-hax/eta-mu"
+                  :repository-id 42
+                  :pr-number 321
+                  :merge-sha merge-sha
+                  :delivery-id "9eb17352-284c-4b55-879d-0d07f353fdee"
+                  :external-id external-id
+                  :details-url "https://github.com/open-hax/eta-mu/pull/321"}
+        pending {:id 4567
+                 :node_id "CR_pending"
+                 :name "eta-mu-review-gate"
+                 :head_sha merge-sha
+                 :status "in_progress"
+                 :conclusion nil
+                 :external_id external-id
+                 :details_url (:details-url expected)
+                 :app {:id 123 :slug "eta-mu-controller"}}
+        newer (assoc pending
+                     :id 4568
+                     :node_id "CR_newer"
+                     :external_id "eta-mu-review-gate/v2:newer")]
+    (set!
+     (.-fetch js/globalThis)
+     (fn [url options]
+       (swap! requests* conj {:url url :options options})
+       (js/Promise.resolve
+        (cond
+          (.endsWith url "/access_tokens")
+          (response 201 {:token "installation-token"})
+
+          (.includes url "/commits/")
+          (response 200 {:check_runs [pending newer]})
+
+          :else (response 500 {:unexpected url})))))
+    (try
+      (let [error
+            (try
+              (await
+               ((:prepare-review-gate! adapter)
+                77
+                (with-meta expected
+                  {:authorize-create!
+                   (fn []
+                     (swap! authorized* inc)
+                     (js/Promise.resolve true))
+                   :authorize-cancel!
+                   (fn []
+                     (swap! authorized* inc)
+                     (js/Promise.resolve true))})))
+              nil
+              (catch :default value value))]
+        (is (= :invalid-review-gate-check
+               (:error/code (ex-data error))))
+        (is (= 4567 (get-in (ex-data error) [:actual :id])))
+        (is (zero? @authorized*))
+        (is (not-any? #(contains? #{"POST" "PATCH"}
+                                  (.-method (:options %)))
+                      (rest @requests*))))
+      (finally
+        (set! (.-fetch js/globalThis) original-fetch)))))
+
 (deftest ^:async terminal-update-patches-the-exact-controller-owned-check
   (let [original-fetch (.-fetch js/globalThis)
         requests* (atom [])
