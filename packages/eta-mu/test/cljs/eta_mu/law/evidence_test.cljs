@@ -5,7 +5,9 @@
 (def ^:private target
   {:repository/id 654321
    :pull-request/object-id "PR_kwDOexample"
+   :base "fedcba9876543210"
    :head "0123456789abcdef"
+   :review-input/hash "sha256:review-input"
    :snapshot/hash "sha256:snapshot"
    :dependency-closure/hash "sha256:closure"})
 
@@ -60,6 +62,11 @@
     (is (some? (law/explain-lane-result
                 (assoc lane-result :coverage/status :probably-complete))))))
 
+(deftest lane-target-requires-base-and-review-input
+  (doseq [field [:base :review-input/hash]]
+    (is (not (law/valid-lane-result?
+              (update lane-result :review/target dissoc field))))))
+
 (deftest aggregate-contract-test
   (let [request {:schema/version 1
                  :required/lanes [:contracts :tests :ci-provenance]
@@ -72,4 +79,7 @@
       (is (not (law/valid-aggregate-request?
                 (assoc request :publication/token "secret"))))
       (is (not (law/valid-aggregate-request?
-                (update request :review/target dissoc :head)))))))
+                (update request :review/target dissoc :head))))
+      (doseq [field [:base :review-input/hash]]
+        (is (not (law/valid-aggregate-request?
+                  (update request :review/target dissoc field))))))))

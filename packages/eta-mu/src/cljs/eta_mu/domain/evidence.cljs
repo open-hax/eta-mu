@@ -97,12 +97,13 @@
 (defn- invalid-result-problems
   [results]
   (->> results
-       (keep-indexed
-        (fn [index result]
+       (keep
+        (fn [result]
           (when-not (law/valid-lane-result? result)
             (str "lane result failed its closed schema: "
-                 (or (some-> (:evidence/lane result) str)
-                     (str "input-" index))))))
+                 (if (keyword? (:evidence/lane result))
+                   (str (:evidence/lane result))
+                   "anonymous")))))
        stable-strings))
 
 (defn- duplicate-values
@@ -163,11 +164,18 @@
 (defn- unsupported-finding-problems
   [findings]
   (->> findings
-       (keep (fn [finding]
-               (when (and (confirmed? finding)
-                          (not (supported-confirmed-finding? finding)))
-                 (str "confirmed finding lacks retained evidence or a blocking failure trace: "
-                      (:finding/id finding)))))
+       (mapcat (fn [finding]
+                 (cond-> []
+                   (and (confirmed? finding)
+                        (not (supported-confirmed-finding? finding)))
+                   (conj (str "confirmed finding lacks retained evidence or a blocking failure trace: "
+                              (:finding/id finding)))
+
+                   (and (or (= :contradicted (:finding/status finding))
+                            (seq (:finding/contradicts finding)))
+                        (empty? (:finding/evidence finding)))
+                   (conj (str "contradiction finding lacks retained evidence: "
+                              (:finding/id finding))))))
        stable-strings))
 
 (defn- finding-id-conflicts

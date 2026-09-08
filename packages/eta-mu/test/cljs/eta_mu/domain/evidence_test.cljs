@@ -6,7 +6,9 @@
 (def ^:private target
   {:repository/id 654321
    :pull-request/object-id "PR_kwDOexample"
+   :base "fedcba9876543210"
    :head "0123456789abcdef"
+   :review-input/hash "sha256:review-input"
    :snapshot/hash "sha256:snapshot"
    :dependency-closure/hash "sha256:closure"})
 
@@ -184,3 +186,70 @@
     (is (= ["aggregate request failed its closed schema"]
            (:problems decision)))
     (is (law/valid-aggregate-decision? decision))))
+
+(deftest malformed-collections-fail-closed
+  (doseq [field [:required/lanes :lane/results]
+          value [nil 42 :contracts "contracts" {} #{:contracts}]]
+    (let [decision (evidence/aggregate-verdict
+                    (assoc (request (clean-results)) field value))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (= ["aggregate request failed its closed schema"]
+             (:problems decision)))
+      (is (law/valid-aggregate-decision? decision)))))
+
+(deftest anonymous-malformed-results-are-order-invariant
+  (doseq [malformed [nil 42 {} {:evidence/lane "contracts"}
+                     {:evidence/lane {:unexpected :value}}]]
+    (let [results (conj (clean-results) malformed)
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (= ["lane result failed its closed schema: anonymous"]
+             (:problems decision)))
+      (is (= decision
+             (evidence/aggregate-verdict (request (vec (reverse results)))))))))
+
+(deftest duplicate-coverage-and-inspection-are-order-invariant
+  (doseq [duplicate [(assoc (lane-result :tests) :coverage/status :partial)
+                     (assoc (lane-result :tests) :coverage/inspected [])]]
+    (let [results (conj (clean-results) duplicate)
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (some #(re-find #"duplicated" %) (:problems decision)))
+      (is (some #(re-find #"not complete|inspected no retained artifacts" %)
+                (:problems decision)))
+      (is (= decision
+             (evidence/aggregate-verdict (request (vec (reverse results)))))))))
+
+(deftest exact-bindings-cannot-be-omitted-or-substituted
+  (doseq [field [:base :review-input/hash]]
+    (testing (str "request omission: " field)
+      (let [decision (evidence/aggregate-verdict
+                      (update (request (clean-results)) :review/target dissoc field))]
+        (is (= :evidence-unavailable (:aggregate/status decision)))
+        (is (= ["aggregate request failed its closed schema"]
+               (:problems decision)))))
+    (testing (str "lane mismatch: " field)
+      (let [result (assoc-in (lane-result :tests) [:review/target field] "different")
+            decision (evidence/aggregate-verdict
+                      (request (assoc (clean-results) 1 result)))]
+        (is (= :evidence-unavailable (:aggregate/status decision)))
+        (is (= [:ci-provenance :contracts] (:complete/lanes decision)))
+        (is (some #(re-find #"does not match" %) (:problems decision)))))))
+
+(deftest contradiction-claims-require-retained-evidence
+  (doseq [contradiction [(assoc advisory-finding :finding/status :contradicted)
+                        (assoc advisory-finding
+                               :finding/status :retracted
+                               :finding/contradicts ["finding:other"])]]
+    (let [unsupported (assoc contradiction :finding/evidence [])
+          decide (fn [finding]
+                   (evidence/aggregate-verdict
+                    (request (assoc (clean-results) 0
+                                    (lane-result :contracts [finding])))))
+          decision (decide unsupported)]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (some #(= (str "contradiction finding lacks retained evidence: "
+                        (:finding/id contradiction)) %)
+                (:problems decision)))
+      (is (= [unsupported] (:findings decision)))
+      (is (= :evidence-conflicted (:aggregate/status (decide contradiction)))))))
