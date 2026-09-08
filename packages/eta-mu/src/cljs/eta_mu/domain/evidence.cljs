@@ -139,15 +139,34 @@
        (map name)
        (str/join ",")))
 
-(defn- required-coverage-problems
-  [required-lanes results-by-lane]
-  (->> required-lanes
+(defn- coverage-problems
+  [results-by-lane]
+  (->> (keys results-by-lane)
        (keep (fn [lane]
                (when-let [lane-results (seq (get results-by-lane lane))]
                  (let [statuses (set (map :coverage/status lane-results))]
                    (when (not= #{:complete} statuses)
-                     (str "required lane is not complete: " lane
+                     (str "lane is not complete: " lane
                           " (" (status-label statuses) ")"))))))
+       stable-strings))
+
+(defn- artifact-identity
+  "Locations annotate a retained artifact; its kind and digest bind identity."
+  [artifact]
+  (select-keys artifact [:artifact/kind :artifact/hash]))
+
+(defn- uninspected-finding-problems
+  [results]
+  (->> results
+       (mapcat
+        (fn [result]
+          (let [inspected (set (map artifact-identity (:coverage/inspected result)))]
+            (keep (fn [finding]
+                    (when (some #(not (contains? inspected (artifact-identity %)))
+                                (:finding/evidence finding))
+                      (str "finding cites an uninspected artifact: "
+                           (:evidence/lane result) " " (:finding/id finding))))
+                  (:findings result)))))
        stable-strings))
 
 (defn- empty-inspection-problems
@@ -219,7 +238,9 @@
    5. complete clean required lanes => `:approved`.
 
    Malformed collection fields never escape as exceptions. Input ordering cannot
-   change the returned lane, problem, finding, or verdict ordering."
+   change the returned lane, problem, finding, or verdict ordering. Every supplied
+   lane must be complete, and each finding citation must occur in that lane's
+   inspected artifact manifest."
   [request]
   (if-not (law/valid-aggregate-request? request)
     (malformed-request-decision request)
@@ -239,14 +260,14 @@
                              (remove result-lanes)
                              stable-keywords)
           target-problems* (target-problems request valid-results)
-          coverage-problems
-          (required-coverage-problems required-lanes results-by-lane)
+          coverage-problems* (coverage-problems results-by-lane)
           inspection-problems
           (empty-inspection-problems results-by-lane)
           trusted-results
           (filterv #(and (exact-target? request %)
                          (= :complete (:coverage/status %)))
                    valid-results)
+          manifest-problems (uninspected-finding-problems trusted-results)
           findings (->> trusted-results
                         (mapcat :findings)
                         stable-findings)
@@ -257,8 +278,9 @@
           (stable-strings
            (concat invalid-problems
                    target-problems*
-                   coverage-problems
+                   coverage-problems*
                    inspection-problems
+                   manifest-problems
                    unsupported-problems
                    (map #(str "required lane is duplicated: " %)
                         duplicate-required)

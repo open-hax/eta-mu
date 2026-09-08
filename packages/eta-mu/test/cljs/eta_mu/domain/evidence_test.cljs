@@ -37,7 +37,8 @@
     :review/target target
     :review/episode episode
     :coverage/status :complete
-    :coverage/inspected [(artifact lane)]
+    :coverage/inspected (vec (distinct (cons (artifact lane)
+                                            (mapcat :finding/evidence findings))))
     :findings findings}))
 
 (defn- request
@@ -275,3 +276,57 @@
       (is (= expected-status (:aggregate/status supported)))
       (is (some #{:optional-review} (:complete/lanes supported)))
       (is (law/valid-aggregate-decision? supported)))))
+
+(deftest supplied-incomplete-lanes-fail-closed
+  (doseq [coverage [:partial :blocked :unavailable :timed-out :stale]
+          findings [[] [blocking-finding]]]
+    (let [optional (assoc (lane-result :optional-review findings)
+                          :coverage/status coverage)
+          results (conj (clean-results) optional)
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (some #(and (re-find #"not complete" %)
+                      (re-find #"optional-review" %)) (:problems decision)))
+      (is (= decision (evidence/aggregate-verdict
+                       (request (vec (reverse results)))))))))
+
+(deftest finding-evidence-must-belong-to-its-lane-inspection
+  (doseq [finding [advisory-finding blocking-finding
+                   (assoc advisory-finding :finding/status :contradicted)
+                   (assoc advisory-finding :finding/status :retracted
+                          :finding/contradicts ["finding:other"])]]
+    (let [cited {:artifact/kind :trace :artifact/hash "sha256:lane-local"}
+          finding (assoc finding :finding/evidence [cited])
+          unsupported (assoc (lane-result :contracts [finding])
+                              :coverage/inspected [(artifact :contracts)])
+          other-lane (assoc (lane-result :tests) :coverage/inspected [cited])
+          results [unsupported other-lane (lane-result :ci-provenance)]
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (seq (:problems decision)))
+      (is (= decision (evidence/aggregate-verdict
+                       (request (vec (reverse results)))))))))
+
+(deftest artifact-identity-uses-kind-and-hash-with-location-independent
+  (let [cited {:artifact/kind :trace :artifact/hash "sha256:same"
+               :artifact/location {:path "src/example.cljs" :line-start 2}}
+        finding (assoc advisory-finding :finding/evidence [cited])
+        decide (fn [inspected]
+                 (evidence/aggregate-verdict
+                  (request (assoc (clean-results) 0
+                                  (assoc (lane-result :contracts [finding])
+                                         :coverage/inspected [inspected])))))
+        located (assoc cited :artifact/location {:path "retained/trace.edn"})]
+    (is (= :advisory (:aggregate/status (decide located))))
+    (is (= :evidence-unavailable
+           (:aggregate/status (decide (assoc located :artifact/kind :diff)))))
+    (is (= :evidence-unavailable
+           (:aggregate/status (decide (assoc located :artifact/hash "sha256:other")))))))
+
+(deftest every-cited-artifact-must-be-inspected
+  (let [cited (artifact :contracts)
+        finding (assoc advisory-finding :finding/evidence [cited (artifact :docs)])
+        result (assoc (lane-result :contracts [finding]) :coverage/inspected [cited])
+        decision (evidence/aggregate-verdict
+                  (request (assoc (clean-results) 0 result)))]
+    (is (= :evidence-unavailable (:aggregate/status decision)))))
