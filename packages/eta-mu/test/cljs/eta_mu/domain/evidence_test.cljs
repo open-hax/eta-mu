@@ -253,3 +253,25 @@
                 (:problems decision)))
       (is (= [unsupported] (:findings decision)))
       (is (= :evidence-conflicted (:aggregate/status (decide contradiction)))))))
+
+(deftest optional-complete-lanes-require-retained-inspection
+  (doseq [[findings expected-status]
+          [[[] :approved]
+           [[advisory-finding] :advisory]
+           [[blocking-finding] :evidence-blocked]
+           [[(assoc advisory-finding :finding/status :contradicted)]
+            :evidence-conflicted]]]
+    (let [optional (lane-result :optional-review findings)
+          decide (fn [result]
+                   (evidence/aggregate-verdict
+                    (request (conj (clean-results) result))))
+          unsupported (decide (assoc optional :coverage/inspected []))
+          supported (decide optional)]
+      (is (= :evidence-unavailable (:aggregate/status unsupported)))
+      (is (some #(and (re-find #"inspected no retained artifacts" %)
+                      (re-find #"optional-review" %))
+                (:problems unsupported)))
+      (is (law/valid-aggregate-decision? unsupported))
+      (is (= expected-status (:aggregate/status supported)))
+      (is (some #{:optional-review} (:complete/lanes supported)))
+      (is (law/valid-aggregate-decision? supported)))))

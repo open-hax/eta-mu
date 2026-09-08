@@ -151,13 +151,13 @@
        stable-strings))
 
 (defn- empty-inspection-problems
-  [required-lanes results-by-lane]
-  (->> required-lanes
+  [results-by-lane]
+  (->> (keys results-by-lane)
        (keep (fn [lane]
                (when (some #(and (= :complete (:coverage/status %))
                                  (empty? (:coverage/inspected %)))
                            (get results-by-lane lane))
-                 (str "complete required lane inspected no retained artifacts: "
+                 (str "complete lane inspected no retained artifacts: "
                       lane))))
        stable-strings))
 
@@ -242,7 +242,7 @@
           coverage-problems
           (required-coverage-problems required-lanes results-by-lane)
           inspection-problems
-          (empty-inspection-problems required-lanes results-by-lane)
+          (empty-inspection-problems results-by-lane)
           trusted-results
           (filterv #(and (exact-target? request %)
                          (= :complete (:coverage/status %)))
