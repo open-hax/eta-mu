@@ -84,6 +84,46 @@
          (= scope (dissoc expected-identity :delivery-id)
             (dissoc identity :delivery-id)))))
 
+(defn matching-review-gate-identity? [github-app-id external-id check-run]
+  (and (= external-id (:external-id check-run))
+       (= github-app-id (:app-id check-run))))
+
+(defn review-gate-check-identity? [github-app-id expected check-run]
+  (and (law/positive-integer? (:id check-run))
+       (or (nil? (:id expected)) (= (:id expected) (:id check-run)))
+       (= (:name expected) (:name check-run))
+       (= (:merge-sha expected) (:merge-sha check-run))
+       (matching-review-gate-identity? github-app-id (:external-id expected) check-run)
+       (law/non-blank-string? (:app-slug check-run))))
+
+(defn expected-review-gate-check? [github-app-id expected check-run]
+  (and (review-gate-check-identity? github-app-id expected check-run)
+       (= (:details-url expected) (:details-url check-run))
+       (= "in_progress" (:status check-run))
+       (nil? (:conclusion check-run))))
+
+(defn terminal-review-gate? [github-app-id gate-check patch check-run output]
+  (and (review-gate-check-identity? github-app-id gate-check check-run)
+       (= "completed" (:status check-run))
+       (= (:conclusion patch) (:conclusion check-run))
+       (= (:details-url patch) (:details-url check-run))
+       (= (:external-id patch) (:external-id check-run))
+       (= (get-in patch [:output :title]) (:title output))
+       (= (get-in patch [:output :summary]) (:summary output))))
+
+(defn newest-current-review-gate-check [github-app-id expected runs]
+  (->> runs
+       (filter #(current-review-gate-check? github-app-id expected %))
+       (sort-by :id >)
+       first))
+
+(defn superseded-pending-review-gate?
+  [github-app-id expected current-check candidate]
+  (and (current-review-gate-check? github-app-id expected candidate)
+       (not= (:id current-check) (:id candidate))
+       (< (:id candidate) (:id current-check))
+       (contains? #{"queued" "in_progress"} (:status candidate))))
+
 (defn trusted-dispatched-workflow-run?
   [dispatch workflow-run controller-app-login]
   (and (law/positive-integer? (:id workflow-run))

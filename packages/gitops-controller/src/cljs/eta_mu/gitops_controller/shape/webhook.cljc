@@ -41,6 +41,40 @@
        :base-sha base-sha
        :merge-sha merge-sha})))
 
+(defn github-check-run->receipt [check-run]
+  {:id (:id check-run)
+   :node-id (:node_id check-run)
+   :name (:name check-run)
+   :merge-sha (:head_sha check-run)
+   :status (:status check-run)
+   :conclusion (:conclusion check-run)
+   :external-id (:external_id check-run)
+   :details-url (:details_url check-run)
+   :app-id (get-in check-run [:app :id])
+   :app-slug (get-in check-run [:app :slug])})
+
+(defn github-check-run->bound-receipt [expected check-run]
+  (merge
+   (select-keys expected
+                [:repository :repository-id :pr-number :pr-node-id
+                 :base-branch :base-sha :head-sha :merge-sha :delivery-id
+                 :external-id :details-url :name])
+   (github-check-run->receipt check-run)))
+
+(defn github-pull-request-node->identity [pull]
+  {:pull-request-number (:number pull)
+   :pull-request-node-id (:id pull)})
+
+(defn github-actor-permission->evidence [permission]
+  {:permission (:permission permission)
+   :user-id (get-in permission [:user :id])
+   :user-login (get-in permission [:user :login])})
+
+(defn github-workflow-dispatch->receipt [dispatch]
+  {:workflow-run-id (:workflow_run_id dispatch)
+   :run-url (:run_url dispatch)
+   :html-url (:html_url dispatch)})
+
 (def ^:private canonical-task-marker-pattern
   #"<!--\s*openhax-kanban-sync\s+uuid=\"([^\"]+)\"\s*-->")
 
@@ -141,8 +175,8 @@
      :default-branch-ref (:ref default-branch-ref)
      :default-branch-sha (get-in default-branch-ref [:object :sha])
      :default-branch-object-type (get-in default-branch-ref [:object :type])
-     :repository-archived? (true? (:archived repository))
-     :repository-disabled? (true? (:disabled repository))}))
+     :repository-archived? (:archived repository)
+     :repository-disabled? (:disabled repository)}))
 
 (defn github-workflow-run->current [workflow-run]
   {:id (:id workflow-run)

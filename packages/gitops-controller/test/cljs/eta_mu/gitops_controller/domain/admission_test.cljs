@@ -33,6 +33,21 @@
    :repository-allowlist #{"open-hax/eta-mu"}
    :installation-allowlist #{77}})
 
+(deftest effect-admissibility-follows-the-command-capability-contract
+  (doseq [command-type [:code-review :review-gate-reconcile :review-gate-invalidate
+                        :review-gate-completion :review-gate-base-push]]
+    (is (true? (admission/mutating-command? {:command/type command-type})))
+    (is (true? (admission/mutating-command? {:command/type (name command-type)}))))
+  (doseq [command-type [:ingress-probe :issue-probe :unregistered nil]]
+    (is (false? (admission/mutating-command? {:command/type command-type}))))
+  ;; Registering a new capability must bring its command behind the effect
+  ;; boundary without adding another allowlist in infrastructure.
+  (with-redefs [law/command-capabilities
+                (assoc law/command-capabilities :future-review :gitops/future-review)]
+    (is (true? (law/command-type? :future-review)))
+    (is (true? (admission/mutating-command? {:command/type :future-review}))))
+  (is (false? (law/command-type? :future-review))))
+
 (deftest admission-requires-the-managed-command-and-both-allowlists
   (testing "the configured review label becomes a deterministic command"
     (is (= {:admitted? true

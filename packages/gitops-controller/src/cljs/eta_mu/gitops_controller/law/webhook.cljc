@@ -45,11 +45,6 @@
   #{"opened" "reopened" "synchronize" "ready_for_review"
     "closed" "converted_to_draft"})
 
-(def command-types
-  #{:code-review :review-gate-reconcile :review-gate-invalidate
-    :review-gate-completion :review-gate-base-push
-    :ingress-probe :issue-probe})
-
 (def command-capabilities
   {:code-review :gitops/review
    :review-gate-reconcile :gitops/reconcile-review-gate
@@ -154,7 +149,7 @@
     :else nil))
 
 (defn command-type? [value]
-  (contains? command-types (normalized-command-type value)))
+  (contains? command-capabilities (normalized-command-type value)))
 
 (defn command-capability [command-type-value]
   (get command-capabilities (normalized-command-type command-type-value)))

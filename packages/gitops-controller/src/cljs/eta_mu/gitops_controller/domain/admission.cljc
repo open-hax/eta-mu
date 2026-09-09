@@ -3,6 +3,15 @@
   (:require [eta-mu.gitops-controller.law.webhook :as law]
             [eta-mu.gitops-controller.shape.webhook :as shape]))
 
+(defn mutating-command?
+  "Every registered command except a probe requires serialized effect
+  authority. Derive this from the capability registry so new commands cannot
+  silently omit the worker's exclusion and lease boundary."
+  [command]
+  (let [command-type (shape/command-type (:command/type command))]
+    (and (law/command-type? command-type)
+         (not= :gitops/probe (law/command-capability command-type)))))
+
 (defn- mode-keyword [value]
   (if (string? value) (keyword value) value))
 
@@ -296,11 +305,10 @@
     :else
     {:admitted? false :ignored? true :reason :unmanaged-event}))
 
-(defn base-push-child
-  "Derive one defensive PR invalidation from an admitted signed push. Child
-  identity is supplied by the deterministic UUID boundary; no model authority
-  or newly observed mutable PR revision enters its immutable source receipt."
-  [policy parent child-id pull-request]
+(defn recorded-base-push-child
+  "Reconstruct immutable child provenance from a structurally valid parent's
+  recorded admission. This proves lineage without granting current authority."
+  [parent child-id pull-request]
   (let [source (-> parent
                    (dissoc :admission :capability :command/type :command-id)
                    (assoc :parent-delivery-id (:delivery-id parent)
@@ -308,7 +316,24 @@
                           :pull-request-number (:pull-request-number pull-request)
                           :pull-request-node-id (:pull-request-node-id pull-request)))]
     (when (and (= :review-gate-base-push (:command/type parent))
-               (:allowed? (current-policy-decision policy parent))
+               (law/admitted-command? parent)
                (law/base-push-child-command? source))
-      (:command (admit policy source :review-gate-invalidate
+      (:command (admit (select-keys (:admission parent) [:mode :policy-revision])
+                       source :review-gate-invalidate
                        :gitops/invalidate-review-gate)))))
+
+(defn base-push-child
+  "Derive one currently authorized defensive PR invalidation from a signed
+  push. The deterministic UUID boundary supplies its child identity."
+  [policy parent child-id pull-request]
+  (when (:allowed? (current-policy-decision policy parent))
+    (recorded-base-push-child parent child-id pull-request)))
+
+(defn base-push-child-lease-delivery-id
+  "A verified child inherits its parent canary only while current policy admits
+  both. Otherwise bounded cleanup must use the child's ordinary effect lease."
+  [policy parent child]
+  (if (and (:allowed? (current-policy-decision policy parent))
+           (:allowed? (current-policy-decision policy child)))
+    (:delivery-id parent)
+    (:delivery-id child)))

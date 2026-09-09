@@ -9,7 +9,8 @@
             [eta-mu.gitops-controller.infra.effect-lease :as effect-lease]
             [eta-mu.gitops-controller.infra.github :as github]
             [eta-mu.gitops-controller.infra.store :as store]
-            [eta-mu.gitops-controller.infra.worker :as worker]))
+            [eta-mu.gitops-controller.infra.worker :as worker]
+            [eta-mu.gitops-controller.shape.edn :as edn]))
 
 (def delivery-id "9eb17352-284c-4b55-879d-0d07f353fdee")
 (def payload-sha256 (apply str (repeat 64 "a")))
@@ -442,7 +443,17 @@
   (let [root (await (fs/temporary-directory!))
         state-store (store/create root)
         restarted-store (store/create root)
-        parent (base-push-command review-policy)
+        marker (fs/join root "active-deployment")
+        lease (effect-lease/port {:deployment-id "101-1" :active-marker-file marker
+                                  :canary-delivery-ids #{delivery-id}})
+        lease-deliveries* (atom [])
+        current-policy (assoc review-policy :effect-lease
+                              {:status! (:status! lease)
+                               :authorize!
+                               (^:async fn [id]
+                                 (swap! lease-deliveries* conj id)
+                                 (await ((:authorize! lease) id)))})
+        parent (base-push-command current-policy)
         pull-requests [{:pull-request-number 321 :pull-request-node-id "PR_kwDOExample"}
                        {:pull-request-number 322 :pull-request-node-id "PR_second"}]
         enumeration-count* (atom 0)
@@ -469,7 +480,7 @@
                                     (swap! dispatch-count* inc))}
         worker-options {:github github
                         :authority (authority/github-port github)
-                        :policy review-policy :replay-interval-ms 600000}
+                        :policy current-policy :replay-interval-ms 600000}
         first-worker (worker/create (assoc worker-options :store state-store))
         restarted-worker (worker/create (assoc worker-options :store restarted-store))
         child-admissions* (atom 0)
@@ -494,6 +505,11 @@
       (await (worker/replay-pending! restarted-worker))
       (is (= 2 @enumeration-count*))
       (is (= [321 322] (vec (sort @prepared*))))
+      (is (= #{delivery-id} (set @lease-deliveries*)))
+      (is (false? (await (fs/path-exists? marker))))
+      (is (= :provisional (get-in (worker/status restarted-worker) [:effect-lease :state])))
+      (is (= :deployment-canary
+             (get-in (worker/status restarted-worker) [:effect-lease :basis])))
       (is (zero? @dispatch-count*))
       (is (empty? (await (store/pending-delivery-ids restarted-store))))
       (is (= 3 (count (await (fs/entries
@@ -540,35 +556,212 @@
         (worker/stop! queue-worker)
         (await (fs/remove-tree! root))))))
 
-(deftest ^:async base-push-child-must-match-its-durable-parent-before-github
-  (let [root (await (fs/temporary-directory!))
-        state-store (store/create root)
-        parent (base-push-command review-policy)
-        pull-request {:pull-request-number 321 :pull-request-node-id "PR_kwDOExample"}
-        child-id (worker/base-push-child-id parent pull-request)
-        child (assoc (admission/base-push-child review-policy parent child-id pull-request)
-                     :push-after-sha "3333333333333333333333333333333333333333")
-        github-calls* (atom 0)
-        queue-worker (worker/create
-                      {:store state-store :policy review-policy :authority {}
-                       :github {:fetch-pull-request! (fn [_] (swap! github-calls* inc))}
-                       :replay-interval-ms 600000})]
-    (try
-      (await (store/initialize! state-store))
-      (await (worker/start! queue-worker))
-      (await (store/accept-delivery! state-store parent))
-      (await (store/accept-delivery! state-store child))
-      (let [error (try
-                    (await (worker/process-delivery! queue-worker child-id))
-                    nil
-                    (catch :default error error))]
-        (is (= :immutable-state-conflict (:error/code (ex-data error))))
+(deftest ^:async base-push-child-must-match-its-durable-parent-before-any-lease
+  (doseq [mutation [{:push-after-sha "3333333333333333333333333333333333333333"}
+                    {:repository "open-hax/other"} {:repository-id 43}
+                    {:installation-id 88}
+                    {:delivery-id "193cbef4-af2f-4bc0-a73a-f4ac06ecb92c"
+                     :command-id "193cbef4-af2f-4bc0-a73a-f4ac06ecb92c"}
+                    {:parent-delivery-id "193cbef4-af2f-4bc0-a73a-f4ac06ecb92c"}]]
+    (let [root (await (fs/temporary-directory!))
+          state-store (store/create root)
+          lease-requests* (atom [])
+          current-policy (assoc review-policy
+                                :repository-allowlist #{"open-hax/eta-mu" "open-hax/other"}
+                                :installation-allowlist #{77 88}
+                                :effect-lease
+                                {:status! #(js/Promise.resolve {:state :provisional})
+                                 :authorize! (fn [id]
+                                               (swap! lease-requests* conj id)
+                                               (js/Promise.resolve
+                                                {:allowed? (= delivery-id id)
+                                                 :lease {:state :provisional}}))})
+          parent (base-push-command current-policy)
+          pull-request {:pull-request-number 321 :pull-request-node-id "PR_kwDOExample"}
+          derived-id (worker/base-push-child-id parent pull-request)
+          child (merge (admission/base-push-child current-policy parent derived-id pull-request)
+                       mutation)
+          child-id (:delivery-id child)
+          github-calls* (atom 0)
+          queue-worker (worker/create
+                        {:store state-store :policy current-policy :authority {}
+                         :github {:fetch-pull-request! (fn [_] (swap! github-calls* inc))}
+                         :replay-interval-ms 600000})]
+      (try
+        (await (store/initialize! state-store))
+        (await (worker/start! queue-worker))
+        (await (store/accept-delivery! state-store parent))
+        (await (store/accept-delivery! state-store child))
+        (try (await (worker/process-delivery! queue-worker child-id))
+             (catch :default _ nil))
+        (is (= (if (:parent-delivery-id mutation)
+                 :delivery-not-found :immutable-state-conflict)
+               (get-in (worker/status queue-worker) [:last-error :error/code])))
         (is (zero? @github-calls*))
-        (is (:fatal? (worker/status queue-worker)))
-        (is (false? (await (store/dispatch-intent-recorded? state-store child-id)))))
-      (finally
-        (worker/stop! queue-worker)
-        (await (fs/remove-tree! root))))))
+        (is (empty? @lease-requests*))
+        (is (false? (await (store/dispatch-intent-recorded? state-store child-id))))
+        (finally
+          (worker/stop! queue-worker)
+          (await (fs/remove-tree! root)))))))
+
+(deftest ^:async parent-canary-provenance-and-lease-are-rechecked-before-each-gate-write
+  (doseq [boundary [:create :cancel]
+          revocation [:changed-parent :revoked-canary]]
+    (let [root (await (fs/temporary-directory!))
+          state-store (store/create root)
+          marker (fs/join root "active-deployment")
+          lease (effect-lease/port {:deployment-id "101-1" :active-marker-file marker
+                                    :canary-delivery-ids #{delivery-id}})
+          closed-lease (effect-lease/port {:deployment-id "101-1" :active-marker-file marker
+                                           :canary-delivery-ids #{}})
+          revoked?* (atom false)
+          lease-deliveries* (atom [])
+          writes* (atom [])
+          dispatches* (atom 0)
+          current-policy
+          (assoc review-policy :effect-lease
+                 {:status! (:status! lease)
+                  :authorize!
+                  (^:async fn [id]
+                    (swap! lease-deliveries* conj id)
+                    (await ((:authorize! (if (and @revoked?*
+                                                 (= :revoked-canary revocation))
+                                          closed-lease lease)) id)))})
+          parent (base-push-command current-policy)
+          pull-request {:pull-request-number 321 :pull-request-node-id "PR_kwDOExample"}
+          child-id (worker/base-push-child-id parent pull-request)
+          child (admission/base-push-child current-policy parent child-id pull-request)
+          github
+          {:fetch-pull-request! (fn [_] (js/Promise.resolve current-pull-request))
+           :prepare-review-gate!
+           (^:async fn [_ expected]
+             (doseq [[stage callback] [[:create :authorize-create!]
+                                      [:cancel :authorize-cancel!]]]
+               (when (= stage boundary) (reset! revoked?* true))
+               (await (invoke-authorizer! expected callback))
+               (swap! writes* conj stage))
+             {:id gate-check-id})
+           :dispatch-review! (fn [& _] (swap! dispatches* inc))}
+          queue-worker (worker/create {:store state-store :policy current-policy
+                                        :github github :authority (authority/github-port github)
+                                        :replay-interval-ms 600000})
+          read-delivery! store/read-delivery]
+      (try
+        (await (store/initialize! state-store))
+        (await (worker/start! queue-worker))
+        (await (store/accept-delivery! state-store parent))
+        (await (store/accept-delivery! state-store child))
+        (with-redefs [store/read-delivery
+                      (^:async fn [target id]
+                        (let [receipt (await (read-delivery! target id))]
+                          (if (and (= delivery-id id) @revoked?*
+                                   (= :changed-parent revocation))
+                            (assoc-in receipt [:command :push-after-sha]
+                                      "3333333333333333333333333333333333333333")
+                            receipt)))]
+          (try (await (worker/process-delivery! queue-worker child-id))
+               (catch :default _ nil)))
+        (is (= (if (= :create boundary) [] [:create]) @writes*))
+        (is (= (if (= :changed-parent revocation)
+                 :immutable-state-conflict :effect-lease-revoked)
+               (get-in (worker/status queue-worker) [:last-error :error/code])))
+        (is (= #{delivery-id} (set @lease-deliveries*)))
+        (is (zero? @dispatches*))
+        (is (false? (await (store/dispatch-call-begun? state-store child-id))))
+        (is (false? (await (store/completed? state-store child-id))))
+        (is (false? (await (fs/path-exists? marker))))
+        (finally
+          (worker/stop! queue-worker)
+          (await (fs/remove-tree! root)))))))
+
+(deftest ^:async changed-policy-refuses-authentic-base-push-children-without-corrupting-lineage
+  (doseq [[policy-change expected-reason]
+          [[{:policy-revision "review-policy-v2"} :admission-policy-changed]
+           [{:repository-allowlist #{}} :repository-authorization-revoked]
+           [{:installation-allowlist #{}} :installation-authorization-revoked]]
+          active? [true false]]
+    (let [root (await (fs/temporary-directory!))
+          state-store (store/create root)
+          marker (fs/join root "active-deployment")
+          lease (effect-lease/port {:deployment-id "101-1" :active-marker-file marker
+                                    :canary-delivery-ids #{delivery-id}})
+          lease-deliveries* (atom [])
+          current-policy (merge review-policy policy-change
+                                {:effect-lease
+                                 {:status! (:status! lease)
+                                  :authorize!
+                                  (^:async fn [id]
+                                    (swap! lease-deliveries* conj id)
+                                    (await ((:authorize! lease) id)))}})
+          parent (base-push-command review-policy)
+          pull-request {:pull-request-number 321 :pull-request-node-id "PR_kwDOExample"}
+          child-id (worker/base-push-child-id parent pull-request)
+          child (admission/base-push-child review-policy parent child-id pull-request)
+          dispatch (assoc (review-dispatch-intent child-id)
+                          :command/type :review-gate-invalidate
+                          :event "push" :action "updated" :workflow nil :workflow-id nil)
+          gate (merge (:gate-check dispatch)
+                      {:id gate-check-id :node-id "CR_pending"
+                       :status "in_progress" :app-id 123 :app-slug "eta-mu-controller"})
+          gate-status* (atom "in_progress")
+          cancellations* (atom [])
+          new-effects* (atom 0)
+          github {:cancel-review-gate!
+                  (^:async fn [installation-id expected _]
+                    (is (= 77 installation-id))
+                    (is (= gate expected))
+                    (await (invoke-authorizer! expected :authorize-cancel!))
+                    (swap! cancellations* conj (:id expected))
+                    (reset! gate-status* "cancelled")
+                    {:cancelled? true})
+                  :prepare-review-gate! (fn [& _] (swap! new-effects* inc))
+                  :dispatch-review! (fn [& _] (swap! new-effects* inc))}
+          queue-worker (worker/create {:store state-store :policy current-policy
+                                        :github github :authority {}
+                                        :replay-interval-ms 600000})]
+      (try
+        (await (store/initialize! state-store))
+        (when active? (await (fs/write-exclusive! marker "101-1\n")))
+        (await (store/accept-delivery! state-store parent))
+        (await (store/complete! state-store delivery-id {:outcome :gate-refresh-queued}))
+        (await (store/accept-delivery! state-store child))
+        (await (store/claim-dispatch! state-store child-id dispatch))
+        (await (store/record-gate-check! state-store child-id gate))
+        ;; This is legitimate pre-completion state from policy v1. Startup
+        ;; under revoked policy may cancel it, but must not call it corrupt.
+        (try (await (worker/start! queue-worker)) (catch :default _ nil))
+        (is (false? (:fatal? (worker/status queue-worker))))
+        (is (true? (:running? (worker/status queue-worker))))
+        (is (= [child-id] @lease-deliveries*))
+        (is (zero? @new-effects*))
+        (is (false? (await (store/dispatch-call-begun? state-store child-id))))
+        (is (= active? (await (store/completed? state-store child-id))))
+        (if active?
+          (do
+            (is (= [gate-check-id] @cancellations*))
+            (is (= "cancelled" @gate-status*))
+            (when (await (store/completed? state-store child-id))
+              (let [result (:result (await (store/read-completion state-store child-id)))]
+                (is (= :refused (:outcome result)))
+                (is (= expected-reason (:reason result)))))
+            (is (empty? (await (store/pending-delivery-ids state-store)))))
+          (do
+            (is (empty? @cancellations*))
+            (is (= "in_progress" @gate-status*))
+            ;; Successful startup clears transient status errors; its durable
+            ;; attempt still records the exact pre-cancellation lease denial.
+            (is (= {:delivery/id child-id :stage :cancel-gate-before-refusal
+                    :error/code :effect-lease-revoked}
+                   (select-keys
+                    (edn/read-one
+                     (await (fs/read-text
+                             (fs/join (get-in state-store [:paths :ledgers])
+                                      "attempts.nd-edn"))))
+                    [:delivery/id :stage :error/code])))
+            (is (= [child-id] (await (store/pending-delivery-ids state-store))))))
+        (finally
+          (worker/stop! queue-worker)
+          (await (fs/remove-tree! root)))))))
 
 (deftest ^:async renamed-default-branch-terminalizes-the-old-push-without-children
   (let [root (await (fs/temporary-directory!))
@@ -608,6 +801,13 @@
 (deftest ^:async base-push-observe-only-and-inactive-deployment-never-write-github
   (doseq [[current-policy expected-enumerations expected-pending]
           [[observe-policy 1 0]
+           [(assoc observe-policy :effect-lease
+                   {:status! #(js/Promise.resolve {:state :provisional})
+                    :authorize! (fn [_]
+                                  (js/Promise.resolve
+                                   {:allowed? true :basis :deployment-canary
+                                    :lease {:state :provisional}}))})
+            1 0]
            [(assoc review-policy :effect-lease
                    {:status! #(js/Promise.resolve {:state :provisional})
                     :authorize! (fn [_]

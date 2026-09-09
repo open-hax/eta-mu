@@ -207,9 +207,7 @@
           (invalid-pull-list! "GitHub returned an invalid open pull-request page"))
         (let [accumulated
               (into result
-                    (map (fn [pull]
-                           {:pull-request-number (:number pull)
-                            :pull-request-node-id (:id pull)}))
+                    (map shape/github-pull-request-node->identity)
                     nodes)]
           (when-not (and (= (count accumulated)
                             (count (set (map :pull-request-node-id accumulated))))
@@ -288,47 +286,8 @@
     (if (and (:ok? response)
              (string? (get-in response [:body :permission]))
              (integer? (get-in response [:body :user :id])))
-      {:permission (get-in response [:body :permission])
-       :user-id (get-in response [:body :user :id])
-       :user-login (get-in response [:body :user :login])}
+      (shape/github-actor-permission->evidence (:body response))
       (throw (response-error "actor-permission" response)))))
-
-(defn- review-gate-check-identity?
-  [{:keys [github-app-id]} expected check-run]
-  (and (law/positive-integer? (:id check-run))
-       (or (nil? (:id expected)) (= (:id expected) (:id check-run)))
-       (= (:name expected) (:name check-run))
-       (= (:merge-sha expected) (:head_sha check-run))
-       (= (:external-id expected) (:external_id check-run))
-       (= github-app-id (get-in check-run [:app :id]))
-       (law/non-blank-string? (get-in check-run [:app :slug]))))
-
-(defn- expected-review-gate-check?
-  [config expected check-run]
-  (and (review-gate-check-identity? config expected check-run)
-       (= (:details-url expected) (:details_url check-run))
-       (= "in_progress" (:status check-run))
-       (nil? (:conclusion check-run))))
-
-(defn- check-run->receipt [check-run]
-  {:id (:id check-run)
-   :node-id (:node_id check-run)
-   :name (:name check-run)
-   :merge-sha (:head_sha check-run)
-   :status (:status check-run)
-   :conclusion (:conclusion check-run)
-   :external-id (:external_id check-run)
-   :details-url (:details_url check-run)
-   :app-id (get-in check-run [:app :id])
-   :app-slug (get-in check-run [:app :slug])})
-
-(defn- bound-check-run->receipt [expected check-run]
-  (merge
-   (select-keys expected
-                [:repository :repository-id :pr-number :pr-node-id
-                 :base-branch :base-sha :head-sha :merge-sha :delivery-id
-                 :external-id :details-url :name])
-   (check-run->receipt check-run)))
 
 (defn- check-run-page! [response page-number]
   (when-not (law/github-check-run-page? page-number (:body response))
@@ -354,9 +313,9 @@
       (when-not (:ok? response)
         (throw (response-error "list-review-gate-checks" response)))
       (let [runs (check-run-page! response page)
-            exact (filterv #(and (= external-id (:external_id %))
-                                 (= (:github-app-id config)
-                                    (get-in % [:app :id])))
+            exact (filterv #(review/matching-review-gate-identity?
+                            (:github-app-id config) external-id
+                            (shape/github-check-run->receipt %))
                            runs)
             accumulated (into result exact)]
         (cond
@@ -393,24 +352,13 @@
                   "review gate scan exceeded GitHub's bounded ref window"
                   {:repository repository :merge-sha merge-sha})))))))
 
-(defn- current-name-check?
-  [config expected check-run]
-  (review/current-review-gate-check?
-   (:github-app-id config) expected (check-run->receipt check-run)))
-
-(defn- newest-current-name-check [config expected runs]
-  (->> runs
-       (filter #(current-name-check? config expected %))
-       (sort-by :id >)
-       first))
-
 (defn- ^:async cancel-superseded-gates!
   [config token expected current-check runs]
   (doseq [candidate runs]
-    (when (and (current-name-check? config expected candidate)
-               (not= (:id current-check) (:id candidate))
-               (< (:id candidate) (:id current-check))
-               (contains? #{"queued" "in_progress"} (:status candidate)))
+    (when (review/superseded-pending-review-gate?
+           (:github-app-id config) expected
+           (shape/github-check-run->receipt current-check)
+           (shape/github-check-run->receipt candidate))
       (let [_ (await (authorize-write!
                       (-> expected meta :authorize-cancel!)
                       :cancel-superseded-review-gate))
@@ -481,9 +429,12 @@
               (:body response)
               (throw (response-error "create-review-gate-check" response)))))
         runs (await (all-current-name-check-runs! config token expected))
-        newest (newest-current-name-check config expected runs)]
+        newest (review/newest-current-review-gate-check
+                (:github-app-id config) expected
+                (mapv shape/github-check-run->receipt runs))]
     (cond
-      (and (expected-review-gate-check? config expected check-run)
+      (and (review/expected-review-gate-check?
+            (:github-app-id config) expected (shape/github-check-run->receipt check-run))
            newest
            (= (:id check-run) (:id newest)))
       (do
@@ -491,14 +442,15 @@
         ;; success as the newest same-name/App result. Any older pending run is
         ;; terminally cancelled so it cannot remain an orphaned required check.
         (await (cancel-superseded-gates! config token expected check-run runs))
-        (bound-check-run->receipt expected check-run))
+        (shape/github-check-run->bound-receipt expected check-run))
 
-      (and (review-gate-check-identity? config expected check-run)
+      (and (review/review-gate-check-identity?
+            (:github-app-id config) expected (shape/github-check-run->receipt check-run))
            (= "completed" (:status check-run))
            (= "cancelled" (:conclusion check-run))
            newest
            (< (:id check-run) (:id newest)))
-      (assoc (bound-check-run->receipt expected check-run)
+      (assoc (shape/github-check-run->bound-receipt expected check-run)
              :superseded? true
              :superseded-by-check-id (:id newest))
 
@@ -506,7 +458,7 @@
       (throw (review-gate-error
               "GitHub returned a review gate Check Run with the wrong identity"
               {:expected expected
-               :actual (check-run->receipt check-run)})))))
+               :actual (shape/github-check-run->receipt check-run)})))))
 
 (defn- ^:async cancel-review-gate!
   [config installation-id expected reason]
@@ -521,11 +473,12 @@
               {:external-id (:external-id expected)})))
     (if-let [check-run (first matches)]
       (do
-        (when-not (review-gate-check-identity? config expected check-run)
+        (when-not (review/review-gate-check-identity?
+                   (:github-app-id config) expected (shape/github-check-run->receipt check-run))
           (throw (review-gate-error
                   "refusing to cancel a Check Run with the wrong identity"
                   {:expected expected
-                   :actual (check-run->receipt check-run)})))
+                   :actual (shape/github-check-run->receipt check-run)})))
         (if (contains? #{"queued" "in_progress"} (:status check-run))
           (let [_ (await (authorize-write!
                           (-> expected meta :authorize-cancel!)
@@ -552,9 +505,9 @@
                                                   [:body :conclusion])))
               (throw (response-error "cancel-review-gate-check" response)))
             {:cancelled? true
-             :gate-check (bound-check-run->receipt expected (:body response))})
+             :gate-check (shape/github-check-run->bound-receipt expected (:body response))})
           {:cancelled? false :already-terminal? true
-           :gate-check (bound-check-run->receipt expected check-run)}))
+           :gate-check (shape/github-check-run->bound-receipt expected check-run)}))
       {:cancelled? false :absent? true})))
 
 (defn- ^:async dispatch-review!
@@ -576,9 +529,7 @@
                     :body {:ref ref
                            :inputs inputs
                            :return_run_details true}}))
-        receipt {:workflow-run-id (get-in response [:body :workflow_run_id])
-                 :run-url (get-in response [:body :run_url])
-                 :html-url (get-in response [:body :html_url])}]
+        receipt (shape/github-workflow-dispatch->receipt (:body response))]
     (if (law/workflow-dispatch-response? (:status response) receipt)
       (assoc receipt :dispatched? true :status 200)
       (throw (response-error "dispatch-review" response)))))
@@ -600,18 +551,6 @@
       (shape/github-workflow-run->current (:body response))
       (throw (response-error "fetch-workflow-run" response)))))
 
-(defn- terminal-review-gate?
-  [config gate-check patch check-run]
-  (and (review-gate-check-identity? config gate-check check-run)
-       (= "completed" (:status check-run))
-       (= (:conclusion patch) (:conclusion check-run))
-       (= (:details-url patch) (:details_url check-run))
-       (= (:external-id patch) (:external_id check-run))
-       (= (get-in patch [:output :title])
-          (get-in check-run [:output :title]))
-       (= (get-in patch [:output :summary])
-          (get-in check-run [:output :summary]))))
-
 (defn- ^:async terminalize-superseded-gate!
   [config token gate-check current successor authorize-patch!]
   (let [result {:superseded? true
@@ -620,7 +559,7 @@
       (and (= "completed" (:status current))
            (law/non-blank-string? (:conclusion current)))
       (assoc result :updated? false
-             :gate-check (bound-check-run->receipt gate-check current))
+             :gate-check (shape/github-check-run->bound-receipt gate-check current))
 
       (and (contains? #{"queued" "in_progress"} (:status current))
            (nil? (:conclusion current))
@@ -646,12 +585,14 @@
                                              (:id successor) ".")}}}))
             updated (:body response)]
         (when-not (and (:ok? response)
-                       (review-gate-check-identity? config gate-check updated)
+                       (review/review-gate-check-identity?
+                        (:github-app-id config) gate-check
+                        (shape/github-check-run->receipt updated))
                        (= "completed" (:status updated))
                        (= "cancelled" (:conclusion updated)))
           (throw (response-error "cancel-superseded-completion" response)))
         (assoc result :updated? true
-               :gate-check (bound-check-run->receipt gate-check updated)))
+               :gate-check (shape/github-check-run->bound-receipt gate-check updated)))
 
       :else
       (throw (review-gate-error
@@ -681,12 +622,16 @@
     (let [current (:body response)
           runs (await (all-current-name-check-runs!
                        config token gate-check))
-          newest (newest-current-name-check config gate-check runs)]
-      (when-not (review-gate-check-identity? config gate-check current)
+          newest (review/newest-current-review-gate-check
+                  (:github-app-id config) gate-check
+                  (mapv shape/github-check-run->receipt runs))]
+      (when-not (review/review-gate-check-identity?
+                 (:github-app-id config) gate-check
+                 (shape/github-check-run->receipt current))
         (throw (review-gate-error
                 "refusing to complete a Check Run with the wrong identity"
                 {:expected gate-check
-                 :actual (check-run->receipt current)})))
+                 :actual (shape/github-check-run->receipt current)})))
       (when (or (nil? newest) (< (:id newest) (:id current)))
         (throw (review-gate-error
                 "review gate scan does not prove the current check or a successor"
@@ -699,9 +644,11 @@
         (await (terminalize-superseded-gate!
                 config token gate-check current newest authorize-patch!))
         (cond
-          (terminal-review-gate? config gate-check patch current)
+          (review/terminal-review-gate?
+           (:github-app-id config) gate-check patch
+           (shape/github-check-run->receipt current) (:output current))
           {:updated? false :already-completed? true
-           :gate-check (bound-check-run->receipt gate-check current)}
+           :gate-check (shape/github-check-run->bound-receipt gate-check current)}
 
           (not (and (= "in_progress" (:status current))
                     (nil? (:conclusion current))
@@ -731,12 +678,13 @@
                           :output (:output patch)}}))
                 updated (:body update-response)]
             (when-not (and (:ok? update-response)
-                           (terminal-review-gate?
-                            config gate-check patch updated))
+                           (review/terminal-review-gate?
+                            (:github-app-id config) gate-check patch
+                            (shape/github-check-run->receipt updated) (:output updated)))
               (throw (response-error "complete-review-gate-check"
                                      update-response)))
             {:updated? true
-             :gate-check (bound-check-run->receipt gate-check updated)}))))))
+             :gate-check (shape/github-check-run->bound-receipt gate-check updated)}))))))
 
 (defn port [config]
   (let [configured (assoc config

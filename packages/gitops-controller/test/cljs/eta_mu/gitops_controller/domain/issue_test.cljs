@@ -201,6 +201,31 @@
            (:labels current)))
     (is (= 2 (:canonical-task-marker-count ambiguous)))
     (is (nil? (:canonical-task-uuid ambiguous)))
+    (testing "repository lifecycle flags must explicitly establish eligibility"
+      (let [command (:command (admission/decide policy issue-source))]
+        (is (:planned? (issue/plan command current authorized policy)))
+        (doseq [[foreign-key current-key refusal]
+                [[:archived :repository-archived? :repository-is-archived]
+                 [:disabled :repository-disabled? :repository-is-disabled]]]
+          (doseq [incomplete [(dissoc repository foreign-key)
+                             (assoc repository foreign-key nil)
+                             (assoc repository foreign-key "false")
+                             (assoc repository foreign-key 0)]]
+            (let [projected (shape/github-issue->current
+                             base incomplete branch-ref)]
+              (is (= (get incomplete foreign-key)
+                     (get projected current-key)))
+              (is (not (law/current-issue? projected)))
+              (is (= :invalid-current-issue
+                     (:reason
+                      (issue/plan command projected authorized policy))))))
+          (let [ineligible (shape/github-issue->current
+                            base (assoc repository foreign-key true)
+                            branch-ref)]
+            (is (law/current-issue? ineligible))
+            (is (= refusal
+                   (:reason
+                    (issue/plan command ineligible authorized policy))))))))
     (testing "task UUIDs are bounded before entering durable evidence"
       (let [maximum (apply str (repeat 128 "a"))
             oversized (apply str (repeat 129 "a"))

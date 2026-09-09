@@ -147,19 +147,24 @@
     (swap! (:state* worker) assoc :effect-lease lease-status)
     lease-status))
 
-(defn- ^:async authorize-effect! [worker delivery-id]
-  (let [decision (await ((get-in worker [:effect-lease :authorize!])
-                         delivery-id))]
+(declare verify-base-push-parent!)
+
+(defn- ^:async authorize-effect! [worker delivery-id command]
+  (when (and (:parent-delivery-id command)
+             (not= delivery-id (:delivery-id command)))
+    (throw (ex-info "effect lease delivery does not match its derived command"
+                    {:error/code :immutable-state-conflict})))
+  ;; A parent canary covers only its exact deterministic defensive children.
+  ;; Re-prove journal-backed provenance at every lease read, including the
+  ;; adapter's immediate write boundary.
+  (let [lease-delivery-id (or (await (verify-base-push-parent!
+                                     (:store worker) (:policy worker) command))
+                             delivery-id)
+        decision (await ((get-in worker [:effect-lease :authorize!])
+                         lease-delivery-id))]
     (swap! (:state* worker) assoc
            :effect-lease (assoc (:lease decision) :basis (:basis decision)))
     decision))
-
-(defn- mutating-command? [command]
-  (contains? #{:code-review :review-gate-reconcile
-               :review-gate-invalidate
-               :review-gate-base-push
-               :review-gate-completion}
-             (shape/command-type (:command/type command))))
 
 (defn- durable-dispatch-current? [durable planned]
   (= (select-keys durable
@@ -315,7 +320,7 @@
                         {:error/code :actor-authority-revoked}))))
     ;; The dynamic Services marker is the final remote-independent read before
     ;; the adapter mutates GitHub.
-    (let [lease (await (authorize-effect! worker delivery-id))]
+    (let [lease (await (authorize-effect! worker delivery-id command))]
       (ensure-enabled! worker)
       (when-not (:allowed? lease)
         (throw (ex-info "effect lease was revoked before GitHub write"
@@ -350,7 +355,7 @@
   ;; immediately before the immutable dispatch claim, so rollback revokes
   ;; future effects.
   (reset! stage* :effect-lease)
-  (let [lease-decision (await (authorize-effect! worker delivery-id))]
+  (let [lease-decision (await (authorize-effect! worker delivery-id command))]
     (when (:allowed? lease-decision)
       (ensure-enabled! worker)
       (reset! stage* :claim-dispatch)
@@ -423,7 +428,7 @@
                   (do
                     (reset! stage* :pre-dispatch-effect-lease)
                     (let [final-lease
-                          (await (authorize-effect! worker delivery-id))]
+                          (await (authorize-effect! worker delivery-id command))]
                       (when (:allowed? final-lease)
                         (ensure-enabled! worker)
                         (reset! stage* :validate-dispatch-merge-context)
@@ -594,7 +599,8 @@
                 store delivery-id (:terminal-intent plan)))
         ;; Re-read the dynamic marker immediately before the idempotent PATCH.
         (reset! stage* :pre-complete-effect-lease)
-        (let [final-lease (await (authorize-effect! worker source-delivery-id))]
+        (let [final-lease (await (authorize-effect!
+                                 worker source-delivery-id original-command))]
           (when (:allowed? final-lease)
             (ensure-enabled! worker)
             (reset! stage* :complete-review-gate)
@@ -664,7 +670,8 @@
           ;; Provisional completion inherits only the correlated source command
           ;; (including a canary GUID), never the unpredictable callback GUID.
           (reset! stage* :completion-effect-lease)
-          (let [lease (await (authorize-effect! worker source-delivery-id))]
+          (let [lease (await (authorize-effect!
+                             worker source-delivery-id original-command))]
             (when (:allowed? lease)
               (await (complete-correlated-gate!
                       worker delivery-id command correlation
@@ -739,16 +746,21 @@
                      {:outcome (if (= :observe-only mode)
                                  :observed :gate-refresh-queued)}))))))
 
-(defn- ^:async verify-base-push-parent! [state-store policy command]
+(defn- ^:async verify-base-push-parent!
+  "Prove immutable lineage separately from the parent's current canary grant."
+  [state-store policy command]
   (when-let [parent-id (:parent-delivery-id command)]
-    (let [parent (:command (await (store/read-delivery state-store parent-id)))
-          expected (admission/base-push-child
-                    policy parent (base-push-child-id parent command) command)]
-      (when-not (= command expected)
+    (let [durable (:command (await (store/read-delivery
+                                   state-store (:delivery-id command))))
+          parent (:command (await (store/read-delivery state-store parent-id)))
+          expected (admission/recorded-base-push-child
+                    parent (base-push-child-id parent command) command)]
+      (when-not (= command durable expected)
         (throw (ex-info "base-push child does not match its durable parent"
                         {:error/code :immutable-state-conflict
                          :delivery-id (:delivery-id command)
-                         :parent-delivery-id parent-id}))))))
+                         :parent-delivery-id parent-id})))
+      (admission/base-push-child-lease-delivery-id policy parent command))))
 
 (defn- ^:async process-gate-retirement!
   [{:keys [store github mode] :as worker} delivery-id command stage*]
@@ -897,7 +909,7 @@
                 completion-command?
                 (= :review-gate-completion
                    (shape/command-type (:command/type command)))
-                effect-command? (mutating-command? command)]
+                effect-command? (admission/mutating-command? command)]
             (reset! command* command)
             ;; Refusal cleanup is itself a mutating defensive effect, so the
             ;; same single-writer exclusion applies before policy branching.
@@ -922,7 +934,7 @@
                         initial-lease
                         (when lease-required?
                           (reset! stage* :preflight-effect-lease)
-                          (await (authorize-effect! worker delivery-id)))]
+                          (await (authorize-effect! worker delivery-id command)))]
                     ;; A provisional candidate deliberately leaves ordinary work
                     ;; pending before any GitHub call. Activation causes periodic
                     ;; replay; a configured deployment canary is the sole bypass.

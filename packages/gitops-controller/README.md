@@ -77,8 +77,11 @@ the controller never infers blocker satisfaction dynamically.
 Services owns a second, dynamically read effect lease. Immediately before an
 external call and again before the durable dispatch claim, a `review-dispatch`
 worker must observe an active marker containing exactly its deployment ID, or
-the command's delivery GUID must be in the deployment's exact canary set. A
-missing, malformed, unreadable, or differently named marker leaves the command
+the command's delivery GUID must be in the deployment's exact canary set.
+Deterministic base-push children may use the signed parent's canary GUID only
+after revalidating canonical lineage and current parent policy at every lease
+boundary. Correlated completion uses its original source command's GUID.
+A missing, malformed, unreadable, or differently named marker leaves the command
 pending with no outbox or completion. Marker changes take effect without a
 restart, so atomic activation grants the lease and rollback revokes it. The
 marker directory, not the marker file inode, must be mounted read-only into the
