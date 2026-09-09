@@ -407,8 +407,7 @@
                                  allowed "opencode-code-review.yml"))))))
 
 (deftest refetched-shape-separates-pull-request-and-repository-authority
-  (let [current
-        (shape/github-pull-request->current
+  (let [pull-request
          {:number 321
           :node_id "PR_kwDOExample"
           :html_url "https://github.com/open-hax/eta-mu/pull/321"
@@ -423,13 +422,32 @@
                  :sha "1111111111111111111111111111111111111111"
                  :repo {:full_name "open-hax/eta-mu" :id 42
                         :default_branch "attacker-controlled"}}}
-         {:full_name "open-hax/eta-mu"
-          :id 42
-          :default_branch "main"})]
+        repository {:full_name "open-hax/eta-mu"
+                    :id 42
+                    :default_branch "main"}
+        current (shape/github-pull-request->current pull-request repository)
+        admitted (:command (admission/decide config command))
+        plan-refetched (fn [response]
+                         (review/plan
+                          admitted
+                          (shape/github-pull-request->current
+                           (assoc-in response [:base :ref] "main") repository)
+                          {:authorized? true} "opencode-code-review.yml"))]
     (is (= "main" (:default-branch current)))
     (is (= #{"eta-mu:review" "needs-docs"} (:labels current)))
     (is (= "attacker-controlled" (:base-branch current)))
-    (is (law/current-pull-request? current))))
+    (is (law/current-pull-request? current))
+    (testing "only literal draft booleans establish the refetched PR state"
+      (is (:planned? (plan-refetched pull-request)))
+      (is (= :pull-request-is-draft
+             (:reason (plan-refetched (assoc pull-request :draft true)))))
+      (doseq [response (cons (dissoc pull-request :draft)
+                             (map #(assoc pull-request :draft %)
+                                  [nil "false" "true" 0 1 {} []]))]
+        (is (false? (law/current-pull-request?
+                     (shape/github-pull-request->current response repository))))
+        (is (= :invalid-current-pull-request
+               (:reason (plan-refetched response))))))))
 
 (deftest current-workflow-dispatch-response-contract
   (let [receipt {:workflow-run-id 987

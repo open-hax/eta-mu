@@ -74,6 +74,9 @@
 (def sha256-pattern
   #"^[0-9a-f]{64}$")
 
+(def review-gate-external-id-pattern
+  #"^eta-mu-review-gate/v2:([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}):([1-9][0-9]*):([0-9a-f]{40}):([0-9a-f]{40}):([0-9a-f]{40})$")
+
 (def allowed-permissions
   #{"admin" "maintain" "write"})
 
@@ -272,6 +275,10 @@
 
 (defn commit-sha? [value]
   (and (string? value) (boolean (re-matches sha-pattern value))))
+
+(defn review-gate-external-id? [value]
+  (and (string? value)
+       (boolean (re-matches review-gate-external-id-pattern value))))
 
 (defn payload-sha256? [value]
   (and (string? value) (boolean (re-matches sha256-pattern value))))

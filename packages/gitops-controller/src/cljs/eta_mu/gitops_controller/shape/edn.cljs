@@ -35,11 +35,19 @@
 (defn encode
   "Encode plain data as one deterministic EDN form without a terminator."
   [value]
-  (let [encoded (pr-str (canonicalize value))]
-    (when (or (str/includes? encoded "\n") (str/includes? encoded "\r"))
-      (throw (ex-info "EDN record must occupy exactly one physical line"
-                      {:error/code :invalid-edn-record})))
-    encoded))
+  ;; Canonical comparisons print keys and set members as well, so isolate
+  ;; their printer settings before sorting can discard distinct values.
+  (binding [*print-length* nil
+            *print-level* nil
+            *print-namespace-maps* false
+            *print-readably* true
+            *print-meta* false
+            *print-dup* false]
+    (let [encoded (pr-str (canonicalize value))]
+      (when (or (str/includes? encoded "\n") (str/includes? encoded "\r"))
+        (throw (ex-info "EDN record must occupy exactly one physical line"
+                        {:error/code :invalid-edn-record})))
+      encoded)))
 
 (defn read-one
   "Read exactly one EDN form and require true end-of-input."

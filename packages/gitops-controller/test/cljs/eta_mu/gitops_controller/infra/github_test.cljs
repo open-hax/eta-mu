@@ -3,7 +3,8 @@
             [cljs.test :refer [deftest is]]
             [eta-mu.gitops-controller.extern.http :as http]
             [eta-mu.gitops-controller.extern.json :as json]
-            [eta-mu.gitops-controller.infra.github :as github]))
+            [eta-mu.gitops-controller.infra.github :as github]
+            [eta-mu.gitops-controller.shape.webhook :as shape]))
 
 (defn- response [status body]
   (js/Response. (when body (json/encode body))
@@ -449,6 +450,18 @@
       (finally
         (set! (.-fetch js/globalThis) original-fetch)))))
 
+(defn- strict-gate-fixture []
+  (let [head "0123456789abcdef0123456789abcdef01234567"
+        base "1111111111111111111111111111111111111111"
+        merge-sha "2222222222222222222222222222222222222222"
+        delivery-id "9eb17352-284c-4b55-879d-0d07f353fdee"]
+    {:id 4567 :name "eta-mu-review-gate"
+     :repository "open-hax/eta-mu" :repository-id 42 :pr-number 321
+     :head-sha head :base-sha base :merge-sha merge-sha
+     :delivery-id delivery-id
+     :external-id (shape/review-gate-external-id delivery-id 321 head base merge-sha)
+     :details-url "https://github.com/open-hax/eta-mu/pull/321"}))
+
 (deftest ^:async cancelled-exact-gate-with-a-newer-peer-is-reported-as-superseded
   (let [original-fetch (.-fetch js/globalThis)
         requests* (atom [])
@@ -472,6 +485,8 @@
                   :repository "open-hax/eta-mu"
                   :repository-id 42
                   :pr-number 321
+                  :head-sha "0123456789abcdef0123456789abcdef01234567"
+                  :base-sha "1111111111111111111111111111111111111111"
                   :merge-sha merge-sha
                   :delivery-id "9eb17352-284c-4b55-879d-0d07f353fdee"
                   :external-id external-id
@@ -490,7 +505,9 @@
                      :node_id "CR_newer"
                      :status "in_progress"
                      :conclusion nil
-                     :external_id "eta-mu-review-gate/v2:newer")]
+                     :external_id (shape/review-gate-external-id
+                                   "d0cfe1b8-4952-4331-8b36-3f53af75d33e" 321
+                                   (:head-sha expected) (:base-sha expected) merge-sha))]
     (set!
      (.-fetch js/globalThis)
      (fn [url options]
@@ -553,6 +570,8 @@
                   :repository "open-hax/eta-mu"
                   :repository-id 42
                   :pr-number 321
+                  :head-sha "0123456789abcdef0123456789abcdef01234567"
+                  :base-sha "1111111111111111111111111111111111111111"
                   :merge-sha merge-sha
                   :delivery-id "9eb17352-284c-4b55-879d-0d07f353fdee"
                   :external-id external-id
@@ -569,7 +588,9 @@
         newer (assoc pending
                      :id 4568
                      :node_id "CR_newer"
-                     :external_id "eta-mu-review-gate/v2:newer")]
+                     :external_id (shape/review-gate-external-id
+                                   "d0cfe1b8-4952-4331-8b36-3f53af75d33e" 321
+                                   (:head-sha expected) (:base-sha expected) merge-sha))]
     (set!
      (.-fetch js/globalThis)
      (fn [url options]
@@ -730,16 +751,15 @@
 
 (deftest ^:async superseded-completion-requires-a-strict-owned-successor-and-final-authority
   (let [adapter (github/port (adapter-config))
-        gate {:id 4567 :name "eta-mu-review-gate"
-              :repository "open-hax/eta-mu" :repository-id 42
-              :merge-sha "2222222222222222222222222222222222222222"
-              :external-id "eta-mu-review-gate/v2:original"
-              :details-url "https://github.com/open-hax/eta-mu/pull/321"}
+        gate (strict-gate-fixture)
         current {:id 4567 :name (:name gate) :head_sha (:merge-sha gate)
                  :external_id (:external-id gate) :details_url (:details-url gate)
                  :status "in_progress" :conclusion nil
                  :app {:id 123 :slug "eta-mu-controller"}}
-        successor (assoc current :id 4568 :external_id "eta-mu-review-gate/v2:successor")]
+        successor (assoc current :id 4568 :external_id
+                         (shape/review-gate-external-id
+                          "d0cfe1b8-4952-4331-8b36-3f53af75d33e" 321
+                          (:head-sha gate) (:base-sha gate) (:merge-sha gate)))]
     (doseq [[runs allowed? expected-code]
             [[[] true :invalid-review-gate-check]
              [[(assoc successor :id 4566)] true :invalid-review-gate-check]
@@ -784,6 +804,66 @@
             (is (= conclusion (get-in result [:gate-check :conclusion])))
             (is (false? (:updated? result)))
             (is (zero? @patches*))))))))
+
+(deftest ^:async unrelated-gates-neither-block-preparation-nor-supersede-completion
+  (let [adapter (github/port (adapter-config))
+        gate (strict-gate-fixture)
+        current {:id (:id gate) :name (:name gate) :head_sha (:merge-sha gate)
+                 :external_id (:external-id gate) :details_url (:details-url gate)
+                 :status "in_progress" :conclusion nil
+                 :app {:id 123 :slug "eta-mu-controller"}}
+        patch {:name (:name gate) :status "completed" :conclusion "success"
+               :external-id (:external-id gate)
+               :details-url "https://github.com/open-hax/eta-mu/actions/runs/991/attempts/1"
+               :output {:title "Exact review passed" :summary "Bound evidence passed."}}
+        source "d0cfe1b8-4952-4331-8b36-3f53af75d33e"
+        other-sha "3333333333333333333333333333333333333333"
+        unrelated-identities
+        ["eta-mu-review-gate/v2:newer"
+         (str "eta-mu-review-gate/v1:" source ":321:" (:head-sha gate))
+         (shape/review-gate-external-id
+          source 322 (:head-sha gate) (:base-sha gate) (:merge-sha gate))
+         (shape/review-gate-external-id
+          source 321 other-sha (:base-sha gate) (:merge-sha gate))
+         (shape/review-gate-external-id
+          source 321 (:head-sha gate) other-sha (:merge-sha gate))
+         (shape/review-gate-external-id
+          source 321 (:head-sha gate) (:base-sha gate) other-sha)]]
+    (doseq [external-id unrelated-identities
+            peer-id [4566 4568]]
+      (let [peer (assoc current :id peer-id :external_id external-id)
+            requests* (atom [])
+            authorizations* (atom 0)]
+        (with-redefs
+          [http/request!
+           (fn [{:keys [url method body] :as request}]
+             (swap! requests* conj request)
+             {:ok? true :status 200
+              :body (cond
+                      (.endsWith url "/access_tokens") {:token "test-token"}
+                      (.includes url "/commits/") {:check_runs [current peer]}
+                      (= "PATCH" method) (merge current body)
+                      :else current)})]
+          (let [prepared (await ((:prepare-review-gate! adapter)
+                                 77 (with-meta gate
+                                      {:authorize-create! (fn [] false)
+                                       :authorize-cancel!
+                                       (fn [] (swap! authorizations* inc) true)})))
+                completed (await ((:complete-review-gate! adapter)
+                                  77 {:gate-check gate
+                                      :terminal-intent {:patch patch}
+                                      :authorize-patch!
+                                      (fn [] (swap! authorizations* inc) true)}))
+                patches (filterv #(= "PATCH" (:method %)) @requests*)]
+            (is (= (:id gate) (:id prepared)))
+            (is (not (:superseded? prepared)))
+            (is (:updated? completed))
+            (is (not (:superseded? completed)))
+            (is (= "success" (get-in completed [:gate-check :conclusion])))
+            (is (= 1 @authorizations*))
+            (is (= 1 (count patches)))
+            (is (.endsWith (:url (first patches)) "/check-runs/4567"))
+            (is (= "success" (get-in (first patches) [:body :conclusion])))))))))
 
 (deftest ^:async issue-probe-refetches-issue-repository-and-default-branch
   (let [original-fetch (.-fetch js/globalThis)
@@ -879,3 +959,118 @@
                permission)))
       (finally
         (set! (.-fetch js/globalThis) original-fetch)))))
+
+(defn- paginated-gate-fixture []
+  (let [expected {:name "eta-mu-review-gate"
+                  :repository "open-hax/eta-mu" :repository-id 42
+                  :pr-number 321 :pr-node-id "PR_kwDOExample"
+                  :base-branch "main"
+                  :base-sha "1111111111111111111111111111111111111111"
+                  :head-sha "0123456789abcdef0123456789abcdef01234567"
+                  :merge-sha "2222222222222222222222222222222222222222"
+                  :delivery-id "9eb17352-284c-4b55-879d-0d07f353fdee"
+                  :details-url "https://github.com/open-hax/eta-mu/pull/321"}
+        expected (assoc expected :external-id
+                        (str "eta-mu-review-gate/v2:" (:delivery-id expected)
+                             ":321:" (:head-sha expected) ":"
+                             (:base-sha expected) ":" (:merge-sha expected)))
+        gate {:id 4568 :node_id "CR_gate" :name (:name expected)
+              :head_sha (:merge-sha expected)
+              :external_id (:external-id expected)
+              :details_url (:details-url expected)
+              :status "in_progress" :conclusion nil
+              :app {:id 123 :slug "eta-mu-controller"}}
+        foreign (mapv #(assoc gate :id % :app {:id 999 :slug "foreign"})
+                      (range 1 101))]
+    {:expected expected :gate gate :foreign foreign
+     :first-page (conj (subvec foreign 0 99) gate)}))
+
+(defn- ^:async run-paginated-gate-operation [operation expected gate pages]
+  (let [adapter (github/port (adapter-config))
+        requests* (atom [])
+        authorizations* (atom 0)
+        expected (with-meta expected
+                   {:authorize-create! #(do (swap! authorizations* inc) true)
+                    :authorize-cancel! #(do (swap! authorizations* inc) true)})]
+    (with-redefs
+      [http/request!
+       (fn [{:keys [url method] :as request}]
+         (swap! requests* conj request)
+         (cond
+           (.endsWith url "/access_tokens")
+           {:ok? true :status 201 :body {:token "installation-token"}}
+
+           (.includes url "/commits/")
+           (let [page (js/parseInt (second (re-find #"page=(\d+)$" url)) 10)]
+             (nth pages (dec page)))
+
+           (= "PATCH" method)
+           {:ok? true :status 200
+            :body (assoc gate :status "completed" :conclusion "cancelled")}
+
+           :else {:ok? false :status 500 :body {:unexpected url}}))]
+      (let [outcome (try
+                      {:result
+                       (if (= :prepare operation)
+                         (await ((:prepare-review-gate! adapter) 77 expected))
+                         (await ((:cancel-review-gate! adapter)
+                                 77 expected "stale command")))}
+                      (catch :default error {:error error}))]
+        (assoc outcome
+               :authorizations @authorizations*
+               :pages (filterv #(.includes (:url %) "/commits/") @requests*)
+               :writes (filterv #(and (contains? #{"POST" "PATCH"} (:method %))
+                                      (not (.endsWith (:url %) "/access_tokens")))
+                                @requests*))))))
+
+(deftest ^:async exact-gate-duplicates-across-pages-refuse-preparation-and-cancellation
+  (let [{:keys [expected gate first-page]} (paginated-gate-fixture)
+        pages [{:ok? true :status 200 :body {:check_runs first-page}}
+               {:ok? true :status 200
+                :body {:check_runs [(assoc gate :id 4567)]}}]]
+    (doseq [operation [:prepare :cancel]]
+      (let [{:keys [error authorizations pages writes]}
+            (await (run-paginated-gate-operation operation expected gate pages))]
+        (is (= :invalid-review-gate-check (:error/code (ex-data error))))
+        (is (= "multiple Check Runs share one durable gate identity" (ex-message error)))
+        (is (= 2 (count pages)))
+        (is (zero? authorizations))
+        (is (empty? writes))))))
+
+(deftest ^:async an-early-exact-gate-cannot-hide-later-page-failure-or-window-exhaustion
+  (let [{:keys [expected gate foreign first-page]} (paginated-gate-fixture)
+        first-response {:ok? true :status 200 :body {:check_runs first-page}}
+        full-response {:ok? true :status 200 :body {:check_runs foreign}}]
+    (doseq [operation [:prepare :cancel]
+            [pages expected-code expected-page-count]
+            [[[first-response {:ok? false :status 503 :body {}}]
+              :github-request-failed 2]
+             [(into [first-response] (repeat 10 full-response))
+              :invalid-review-gate-check 11]]]
+      (let [{:keys [error authorizations pages writes]}
+            (await (run-paginated-gate-operation operation expected gate pages))]
+        (is (= expected-code (:error/code (ex-data error))))
+        (is (= expected-page-count (count pages)))
+        (is (zero? authorizations))
+        (is (empty? writes))))))
+
+(deftest ^:async a-unique-early-gate-is-usable-after-the-final-page-proves-uniqueness
+  (let [{:keys [expected gate foreign first-page]} (paginated-gate-fixture)
+        pages [{:ok? true :status 200 :body {:check_runs first-page}}
+               {:ok? true :status 200 :body {:check_runs [(first foreign)]}}]]
+    (doseq [operation [:prepare :cancel]]
+      (let [{:keys [error result authorizations pages writes]}
+            (await (run-paginated-gate-operation operation expected gate pages))]
+        (is (nil? error))
+        (if (= :prepare operation)
+          (do
+            (is (= (:id gate) (:id result)))
+            (is (= 4 (count pages)))
+            (is (zero? authorizations))
+            (is (empty? writes)))
+          (do
+            (is (:cancelled? result))
+            (is (= (:id gate) (get-in result [:gate-check :id])))
+            (is (= 2 (count pages)))
+            (is (= 1 authorizations))
+            (is (= ["PATCH"] (mapv :method writes)))))))))

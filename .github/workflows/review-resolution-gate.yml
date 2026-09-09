@@ -191,10 +191,32 @@ jobs:
               filter: 'all',
               per_page: 100,
             });
+            const parseGateIdentity = (externalId) => {
+              if (typeof externalId !== 'string') return null;
+              const parts = externalId.split(':');
+              if (parts.length !== 6 || parts[0] !== 'eta-mu-review-gate/v2') return null;
+              const [, delivery, prNumber, head, base, merge] = parts;
+              if (delivery.length !== 36
+                  || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(delivery)
+                  || !Number.isSafeInteger(Number(prNumber))
+                  || Number(prNumber) <= 0
+                  || String(Number(prNumber)) !== prNumber
+                  || ![head, base, merge].every((sha) => sha.length === 40 && /^[0-9a-f]{40}$/i.test(sha))) {
+                return null;
+              }
+              return { delivery, prNumber, head, base, merge };
+            };
             const newestControllerGate = exactHeadGates
-              .filter((run) => run.name === process.env.GATE_CHECK_NAME
-                && run.head_sha === expectedMerge
-                && run.app?.slug === expectedControllerSlug)
+              .filter((run) => {
+                const identity = parseGateIdentity(run.external_id);
+                return run.name === process.env.GATE_CHECK_NAME
+                  && run.head_sha === expectedMerge
+                  && run.app?.slug === expectedControllerSlug
+                  && identity?.prNumber === rawNumber
+                  && identity.head === expectedHead
+                  && identity.base === expectedBase
+                  && identity.merge === expectedMerge;
+              })
               .sort((left, right) => right.id - left.id)[0];
             if (!newestControllerGate || newestControllerGate.id !== gateCheckId) {
               throw new Error('gate_check_id is not the newest controller-owned exact-merge review gate.');

@@ -233,6 +233,76 @@
         (worker/stop! queue-worker)
         (await (fs/remove-tree! root))))))
 
+(deftest ^:async collaborator-permission-is-refreshed-before-every-start-command-write
+  (doseq [revocation-boundary [:cancel :create :dispatch :never]]
+    (let [root (await (fs/temporary-directory!))
+          state-store (store/create root)
+          permission* (atom "write")
+          permission-reads* (atom [])
+          writes* (atom [])
+          github
+          {:fetch-pull-request! (fn [_] (js/Promise.resolve current-pull-request))
+           :actor-permission!
+           (fn [actual-command]
+             (swap! permission-reads* conj [(:sender-id actual-command) @permission*])
+             (js/Promise.resolve {:permission @permission*
+                                  :user-id 9 :user-login "operator"}))
+           :prepare-review-gate!
+           (^:async fn [_ expected]
+             ;; Preparing one gate can first cancel its predecessor, then
+             ;; create the replacement. Each mutation has its own callback.
+             (doseq [[boundary callback] [[:cancel :authorize-cancel!]
+                                         [:create :authorize-create!]]]
+               (when (= boundary revocation-boundary)
+                 (reset! permission* "read"))
+               (await (invoke-authorizer! expected callback))
+               (swap! writes* conj boundary))
+             {:id gate-check-id :node-id "CR_kwDOGate"
+              :name (:name expected) :merge-sha (:merge-sha expected)
+              :status "in_progress" :external-id (:external-id expected)
+              :details-url (:details-url expected)
+              :app-id 123 :app-slug "eta-mu-controller"})
+           :dispatch-review!
+           (^:async fn [_ dispatch]
+             (when (= :dispatch revocation-boundary)
+               (reset! permission* "read"))
+             (await (invoke-authorizer! dispatch :authorize-dispatch!))
+             (swap! writes* conj :dispatch)
+             {:workflow-run-id 987 :run-url "https://api.github.test/runs/987"
+              :html-url "https://github.test/runs/987"})}
+          queue-worker (worker/create
+                        {:store state-store :github github
+                         :authority (authority/github-port github)
+                         :policy review-policy :replay-interval-ms 600000})]
+      (try
+        (await (store/initialize! state-store))
+        (await (worker/start! queue-worker))
+        (await (store/accept-delivery! state-store
+                                      (admitted-command review-policy)))
+        (await (worker/process-delivery! queue-worker delivery-id))
+        (is (= (case revocation-boundary
+                 :cancel [] :create [:cancel] :dispatch [:cancel :create]
+                 :never [:cancel :create :dispatch])
+               @writes*)
+            (name revocation-boundary))
+        (is (= (case revocation-boundary :cancel 2 :create 3 4)
+               (count @permission-reads*)))
+        (is (= [9 "write"] (first @permission-reads*)))
+        (is (= [9 (if (= :never revocation-boundary) "write" "read")]
+               (last @permission-reads*)))
+        (is (= (= :never revocation-boundary)
+               (await (store/dispatch-call-begun? state-store delivery-id))))
+        (is (= (= :never revocation-boundary)
+               (await (store/completed? state-store delivery-id))))
+        (when-not (= :never revocation-boundary)
+          (is (= :actor-authority-revoked
+                 (get-in (worker/status queue-worker) [:last-error :error/code])))
+          (is (= [delivery-id] (await (store/pending-delivery-ids state-store)))))
+        (is (false? (:fatal? (worker/status queue-worker))))
+        (finally
+          (worker/stop! queue-worker)
+          (await (fs/remove-tree! root)))))))
+
 (deftest ^:async observe-only-write-authorizer-stops-before-all-dynamic-reads
   (let [refetches* (atom 0)
         lease-requests* (atom 0)
@@ -617,7 +687,7 @@
                                 state-store delivery-id))]
         (is (= 1 (count dispatches)))
         (is (= 5 (count (filter #(= :fetch (first %)) @calls*))))
-        (is (= 1 (count (filter #(= :permission (first %)) @calls*))))
+        (is (= 3 (count (filter #(= :permission (first %)) @calls*))))
         (is (= 77 installation-id))
         (is (= {:pr_number "321"
                 :pr_base_sha "1111111111111111111111111111111111111111"
@@ -1130,7 +1200,7 @@
         (worker/stop! queue-worker)
         (await (fs/remove-tree! root))))))
 
-(deftest ^:async code-review-terminalization-ignores-removed-label-but-keeps-tuple-and-lease
+(deftest ^:async code-review-terminalization-ignores-removed-label-and-issuer-permission
   (doseq [scenario [:removed-label :tuple-drift :revoked-lease]]
     (let [root (await (fs/temporary-directory!))
           state-store (store/create root)
@@ -1139,6 +1209,7 @@
           run-id 991
           current* (atom (assoc current-pull-request :labels #{}))
           lease-allowed?* (atom true)
+          permission-reads* (atom 0)
           terminal-patches* (atom [])
           original-command (assoc (admitted-command review-policy)
                                   :delivery-id source-id :command-id source-id)
@@ -1158,6 +1229,11 @@
                                                request))
                                         (js/Promise.resolve completed-run))
                   :fetch-pull-request! (fn [_] (js/Promise.resolve @current*))
+                  :actor-permission!
+                  (fn [_]
+                    (swap! permission-reads* inc)
+                    (js/Promise.resolve {:permission "read"
+                                         :user-id 9 :user-login "operator"}))
                   :complete-review-gate!
                   (^:async fn [_ request]
                     (case scenario
@@ -1175,7 +1251,8 @@
                                                 {:allowed? @lease-allowed?*
                                                  :lease {:state :active}}))})
           queue-worker (worker/create
-                        {:store state-store :github github :authority {}
+                        {:store state-store :github github
+                         :authority (authority/github-port github)
                          :policy current-policy :replay-interval-ms 600000})
           completion (completion-command completion-id run-id 7001
                                          "opencode-code-review.yml" "success")]
@@ -1191,6 +1268,7 @@
         (await (worker/start! queue-worker))
         (await (store/accept-delivery! state-store completion))
         (await (worker/process-delivery! queue-worker completion-id))
+        (is (zero? @permission-reads*))
         (is (= (= :removed-label scenario)
                (await (store/completed? state-store completion-id)))
             (name scenario))
@@ -1429,7 +1507,7 @@
         (await (fs/write-exclusive! marker "101-1\n"))
         (await (worker/replay-pending! queue-worker))
         (await (worker/replay-pending! queue-worker))
-        (is (= {:fetch 5 :permission 1 :dispatch 1} @calls*))
+        (is (= {:fetch 5 :permission 3 :dispatch 1} @calls*))
         (is (= :dispatched
                (get-in (await (store/read-completion state-store delivery-id))
                        [:result :outcome]))))
@@ -1440,7 +1518,7 @@
                                         :command-id rollback-id))]
           (await (store/accept-delivery! state-store rolled-command))
           (await (worker/process-delivery! queue-worker rollback-id))
-          (is (= {:fetch 5 :permission 1 :dispatch 1} @calls*))
+          (is (= {:fetch 5 :permission 3 :dispatch 1} @calls*))
           (is (= [rollback-id]
                  (await (store/pending-delivery-ids state-store))))))
       (testing "an exact deployment canary GUID is the only provisional bypass"
@@ -1449,7 +1527,7 @@
                                         :command-id canary-id))]
           (await (store/accept-delivery! state-store canary-command))
           (await (worker/process-delivery! queue-worker canary-id))
-          (is (= {:fetch 10 :permission 2 :dispatch 2} @calls*))
+          (is (= {:fetch 10 :permission 6 :dispatch 2} @calls*))
           (is (= :dispatched
                  (get-in (await (store/read-completion state-store canary-id))
                          [:result :outcome])))))
@@ -2101,6 +2179,49 @@
         (is (= :durable-dispatch-intent-stale (:reason completion)))
         (is (false? (:fatal? (worker/status queue-worker))))
         (is (true? (:running? (worker/status queue-worker)))))
+      (finally
+        (worker/stop! queue-worker)
+        (await (fs/remove-tree! root))))))
+
+(deftest ^:async revoked-issuer-still-allows-defensive-cancellation-of-a-pending-gate
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        permission-reads* (atom 0)
+        cancellations* (atom [])
+        dispatch (review-dispatch-intent)
+        github
+        {:fetch-pull-request! (fn [_] (js/Promise.resolve current-pull-request))
+         :actor-permission!
+         (fn [_]
+           (swap! permission-reads* inc)
+           (js/Promise.resolve {:permission "read"
+                                :user-id 9 :user-login "operator"}))
+         :cancel-review-gate!
+         (^:async fn [_ gate _]
+           (await (invoke-authorizer! gate :authorize-cancel!))
+           (swap! cancellations* conj (:id gate))
+           {:cancelled? true})}
+        queue-worker (worker/create
+                      {:store state-store :github github
+                       :authority (authority/github-port github)
+                       :policy review-policy :replay-interval-ms 600000})]
+    (try
+      (await (store/initialize! state-store))
+      (await (store/accept-delivery! state-store (admitted-command review-policy)))
+      (await (store/claim-dispatch! state-store delivery-id dispatch))
+      (await (store/record-gate-check!
+              state-store delivery-id
+              (assoc (:gate-check dispatch) :id gate-check-id
+                     :node-id "CR_kwDOGate" :status "in_progress"
+                     :app-id 123 :app-slug "eta-mu-controller")))
+      (await (worker/start! queue-worker))
+      (let [result (:result (await (store/read-completion state-store delivery-id)))]
+        (is (= :refused (:outcome result)))
+        (is (= :actor-not-authorized (:reason result)))
+        (is (= [gate-check-id] @cancellations*))
+        (is (= 1 @permission-reads*))
+        (is (false? (await (store/dispatch-call-begun? state-store delivery-id))))
+        (is (false? (:fatal? (worker/status queue-worker)))))
       (finally
         (worker/stop! queue-worker)
         (await (fs/remove-tree! root))))))

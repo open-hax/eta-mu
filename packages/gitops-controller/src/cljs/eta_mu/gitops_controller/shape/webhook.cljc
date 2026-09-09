@@ -1,5 +1,6 @@
 (ns eta-mu.gitops-controller.shape.webhook
-  "Pure projections and identity construction for controller webhook data.")
+  "Pure projections and identity construction for controller webhook data."
+  (:require [eta-mu.gitops-controller.law.webhook :as law]))
 
 (defn command-type [value]
   (cond
@@ -26,6 +27,19 @@
   [delivery-id pull-request-number head-sha base-sha merge-sha]
   (str "eta-mu-review-gate/v2:" delivery-id ":" pull-request-number ":"
        head-sha ":" base-sha ":" merge-sha))
+
+(defn parse-review-gate-external-id
+  "Decode only the complete v2 identity; keep the PR number as canonical text
+  so untrusted decimal input cannot overflow or round during parsing."
+  [value]
+  (when (law/review-gate-external-id? value)
+    (let [[_ delivery-id pr-number-text head-sha base-sha merge-sha]
+          (re-matches law/review-gate-external-id-pattern value)]
+      {:delivery-id delivery-id
+       :pr-number-text pr-number-text
+       :head-sha head-sha
+       :base-sha base-sha
+       :merge-sha merge-sha})))
 
 (def ^:private canonical-task-marker-pattern
   #"<!--\s*openhax-kanban-sync\s+uuid=\"([^\"]+)\"\s*-->")
@@ -96,7 +110,7 @@
    :head-repository (get-in pull-request [:head :repo :full_name])
    :head-repository-id (get-in pull-request [:head :repo :id])
    :state (:state pull-request)
-   :draft? (true? (:draft pull-request))
+   :draft? (:draft pull-request)
    :head-sha (get-in pull-request [:head :sha])
    :merge-sha (:merge_commit_sha pull-request)
    :mergeable? (:mergeable pull-request)

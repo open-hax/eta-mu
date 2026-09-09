@@ -295,7 +295,8 @@
             :superseded-by-check-id (:superseded-by-check-id gate-check)}))))
 
 (defn write-authorizer
-  "Revalidate GitHub write authority. true checks start-command authority;
+  "Revalidate GitHub write authority. true checks start-command authority,
+  including current collaborator permission for a requested code review;
   :terminal requires the exact durable PR tuple but not the original label;
   false authorizes only an already-bound defensive cancellation. Every path
   retains the final dynamic Services effect lease."
@@ -306,6 +307,12 @@
                       {:error/code :github-mutation-disabled})))
     (when require-current?
       (await (ensure-current-dispatch! worker command dispatch require-current?)))
+    (when (and (true? require-current?)
+               (= :code-review (shape/command-type (:command/type command))))
+      (when-not (:authorized? (await ((get-in worker [:authority :authorize!])
+                                      command)))
+        (throw (ex-info "actor authority was revoked before GitHub write"
+                        {:error/code :actor-authority-revoked}))))
     ;; The dynamic Services marker is the final remote-independent read before
     ;; the adapter mutates GitHub.
     (let [lease (await (authorize-effect! worker delivery-id))]

@@ -3,6 +3,29 @@
   (:require [eta-mu.gitops-controller.law.webhook :as law]
             [eta-mu.gitops-controller.shape.webhook :as shape]))
 
+(defn current-review-gate-check?
+  "Require a controller-owned v2 gate for the same PR/base/head/merge tuple
+  before ordering peer checks fetched from the expected repository. A new
+  valid delivery may supersede an older delivery for that exact tuple."
+  [github-app-id expected check-run]
+  (let [identity (shape/parse-review-gate-external-id (:external-id check-run))
+        expected-identity (shape/parse-review-gate-external-id (:external-id expected))
+        scope {:pr-number-text (str (:pr-number expected))
+               :head-sha (:head-sha expected)
+               :base-sha (:base-sha expected)
+               :merge-sha (:merge-sha expected)}]
+    (and (law/positive-integer? github-app-id)
+         (law/positive-integer? (:id check-run))
+         (law/positive-integer? (:pr-number expected))
+         (= github-app-id (:app-id check-run))
+         (law/non-blank-string? (:app-slug check-run))
+         (= law/review-gate-check-name (:name expected) (:name check-run))
+         (= (:merge-sha expected) (:merge-sha check-run))
+         (some? identity)
+         (some? expected-identity)
+         (= scope (dissoc expected-identity :delivery-id)
+            (dissoc identity :delivery-id)))))
+
 (defn trusted-dispatched-workflow-run?
   [dispatch workflow-run controller-app-login]
   (and (law/positive-integer? (:id workflow-run))

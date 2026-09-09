@@ -4,7 +4,7 @@ labels: "github, webhook, review, gitops"
 dependency: []
 parent: "opencode-mimo-evidence-review-agent"
 type: "task"
-write-id: "1788987230688-0.uqs063fchgavo45n3pd"
+write-id: "1788988483604-0.toldushighsmd8h9dd"
 title: "Admit exact-head code reviews through signed webhooks"
 priority: "P0"
 status: "review"
@@ -66,5 +66,11 @@ Completed the law/shape correction: marker parser moved from law.webhook to shap
 Current-head Codex review on91ac841 reports that documented workflow-run paths may include the expected owner/repository prefix, which current completion validation rejects. Verify primary GitHub schema/API behavior, then support the valid qualified form consistently in signed webhook and authoritative run checks while strictly enforcing repository, workflow and ref. Preserve existing forms; add real completion regression plus wrong-scope refusals.
 
 Verified the official GitHub REST workflow-run.path schema documents owner/repository-qualified paths; real workflow_dispatch API data also uses bare paths. Controller ingress and authoritative completion now accept exactly bare workflow path, path@expected-ref, and expected-repository/path@expected-ref. The review-resolution workflow applies the same contract. Wrong repository, workflow, ref and lookalike paths remain refused; independent identity and revision checks remain intact. Real adapter/durable completion regression passes. Two independent review agents found no actionable defects. Full controller: 120 tests / 1141 assertions, zero failures/errors; release and clj-kondo: zero warnings; combined workflow contracts: 90/90. Protected Sol test/build still awaits administrator setup and explicit human approval of the final SHA; Services activation stays disabled.
+
+Current-head Codex review on fb21f77 exposes four additional trust-boundary gaps. Verify and minimally correct: refresh issuer permission immediately before actor-authorized writes while keeping defensive terminal cleanup independent; require a parsed v2 identity bound to the same PR/base/head/merge revision before accepting a successor; finish bounded exact-check pagination so cross-page duplicates cannot appear unique; preserve and validate the literal foreign draft boolean instead of treating malformed values as non-draft. Add executable revocation, malformed identity, cross-page duplicate, and malformed draft regressions; preserve Services activation and protected Sol boundaries.
+
+Related discovery: resolution workflow used the same under-scoped successor filter; corrected it alongside controller peer ordering, with a reproduced malformed-identity refusal regression. All four Codex corrections pass combined controller128tests/1385assertions and release0warnings; workflow contracts93/93. CodeRabbit reviewed fb21f77 and reported only an ambient-printer determinism concern in durable EDN encode: verify and bind printer controls if reproduced. Its docstring coverage suggestion and nested-Biome tool limitation are not repository merge gates and do not justify unrelated changes.
+
+Completed the four verified Codex corrections and the reproduced CodeRabbit EDN data-loss fix. Every actor-authorized review write refreshes permission before the final lease; terminal and defensive cleanup remain issuer-independent. Successor selection requires a complete same-tuple v2 identity in controller and resolution workflow. Exact check lookup scans all bounded pages and refuses duplicates or incomplete evidence. Missing/nonboolean draft state fails the existing contract. Durable encode binds printer controls across canonical comparisons and printing, preserving distinct complex keys. Permission regression produced22failures on old code; workflow malformed successor regression reproduced red; EDN printer reproduction lost a distinct key. Final controller129tests/1399assertions0fail0error; release and kondo0warnings; unchanged workflow contracts93/93. Independent cross-review found no defects. Actual protected Sol test/build is still pending admin setup and explicit human approval; Services review-dispatch stays disabled.
 
 ---

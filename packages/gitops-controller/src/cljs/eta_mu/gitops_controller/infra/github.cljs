@@ -1,6 +1,7 @@
 (ns eta-mu.gitops-controller.infra.github
   "GitHub App REST adapter. All returned data is shaped CLJS data."
   (:require [clojure.string :as str]
+            [eta-mu.gitops-controller.domain.review :as review]
             [eta-mu.gitops-controller.extern.crypto :as crypto]
             [eta-mu.gitops-controller.extern.http :as http]
             [eta-mu.gitops-controller.extern.runtime :as runtime]
@@ -331,7 +332,8 @@
 
 (defn- ^:async matching-check-runs!
   [config token {:keys [repository merge-sha name external-id]}]
-  (loop [page 1]
+  (loop [page 1
+         result []]
     (let [response
           (await
            (http/request!
@@ -348,11 +350,11 @@
             exact (filterv #(and (= external-id (:external_id %))
                                  (= (:github-app-id config)
                                     (get-in % [:app :id])))
-                           runs)]
+                           runs)
+            accumulated (into result exact)]
         (cond
-          (seq exact) exact
-          (< (count runs) 100) []
-          (< page 11) (recur (inc page))
+          (< (count runs) 100) accumulated
+          (< page 11) (recur (inc page) accumulated)
           :else
           (throw (review-gate-error
                   "review gate check lookup exceeded GitHub's bounded ref window"
@@ -386,10 +388,8 @@
 
 (defn- current-name-check?
   [config expected check-run]
-  (and (law/positive-integer? (:id check-run))
-       (= (:github-app-id config) (get-in check-run [:app :id]))
-       (= (:name expected) (:name check-run))
-       (= (:merge-sha expected) (:head_sha check-run))))
+  (review/current-review-gate-check?
+   (:github-app-id config) expected (check-run->receipt check-run)))
 
 (defn- newest-current-name-check [config expected runs]
   (->> runs

@@ -233,6 +233,8 @@ function pullRequestFixture(overrides = {}) {
 async function runGateAdmission({
   eventName = "workflow_dispatch",
   mergeability = [true],
+  gateCheckOverrides = {},
+  additionalGateChecks = [],
 } = {}) {
   const commandId = "9eb17352-284c-4b55-879d-0d07f353fdee";
   const gateCheckId = 7003;
@@ -247,6 +249,7 @@ async function runGateAdmission({
     app: { slug: "eta-mu-controller" },
     status: "in_progress",
     conclusion: null,
+    ...gateCheckOverrides,
   };
   const script = namedGateStep("Validate webhook-dispatched gate reconciliation").with.script;
   const execute = new AsyncFunction("github", "context", "core", "process", script);
@@ -262,7 +265,14 @@ async function runGateAdmission({
         },
         checks: {
           get: async () => ({ data: gateCheck }),
-          listForRef: async () => ({ data: { check_runs: [gateCheck] } }),
+          listForRef: async () => ({
+            data: {
+              check_runs: [
+                gateCheck,
+                ...additionalGateChecks.map((run) => ({ ...gateCheck, id: gateCheckId + 1, ...run })),
+              ],
+            },
+          }),
         },
       },
       paginate: async (method, request) => (await method(request)).data.check_runs,
@@ -663,6 +673,60 @@ test("review-resolution gate polls transient mergeability before tuple validatio
   await assert.rejects(
     runGateAdmission({ mergeability: [false] }),
     /no longer matches the admitted open same-repository default-base test merge/i,
+  );
+});
+
+test("review-resolution gate ignores malformed and unrelated successor identities", async () => {
+  const delivery = "11111111-1111-4111-8111-111111111111";
+  const prefix = "eta-mu-review-gate/v2";
+  const head = "b".repeat(40);
+  const base = "a".repeat(40);
+  const merge = "c".repeat(40);
+  const identity = `${prefix}:${delivery}:42:${head}:${base}:${merge}`;
+  for (const externalId of [
+    null,
+    "",
+    "unrelated-contract",
+    `${prefix}:${delivery}:43:${head}:${base}:${merge}`,
+    `${prefix}:${delivery}:42:${"d".repeat(40)}:${base}:${merge}`,
+    `${prefix}:${delivery}:42:${head}:${"d".repeat(40)}:${merge}`,
+    `${prefix}:${delivery}:42:${head}:${base}:${"d".repeat(40)}`,
+    `${prefix}:not-a-delivery:42:${head}:${base}:${merge}`,
+    `${prefix}:11111111-1111-0111-0111-111111111111:42:${head}:${base}:${merge}`,
+    `${prefix}:${delivery}:042:${head}:${base}:${merge}`,
+    `${prefix}:${delivery}:9007199254740992:${head}:${base}:${merge}`,
+    identity.replace("/v2:", "/v1:"),
+    `${identity}:extra`,
+    `${identity}\n`,
+  ]) {
+    await runGateAdmission({ additionalGateChecks: [{ external_id: externalId }] });
+  }
+});
+
+test("review-resolution gate yields to a valid newer delivery for its exact tuple", async () => {
+  for (const delivery of [
+    "11111111-1111-1111-8111-111111111111",
+    "11111111-1111-5111-8111-111111111111",
+  ]) {
+    await assert.rejects(
+      runGateAdmission({
+        additionalGateChecks: [{
+          external_id: `eta-mu-review-gate/v2:${delivery}:42:${"b".repeat(40)}:${"a".repeat(40)}:${"c".repeat(40)}`,
+        }],
+      }),
+      /not the newest controller-owned exact-merge review gate/i,
+    );
+  }
+});
+
+test("review-resolution gate still requires the dispatched check's exact delivery", async () => {
+  await assert.rejects(
+    runGateAdmission({
+      gateCheckOverrides: {
+        external_id: `eta-mu-review-gate/v2:11111111-1111-4111-8111-111111111111:42:${"b".repeat(40)}:${"a".repeat(40)}:${"c".repeat(40)}`,
+      },
+    }),
+    /does not match the admitted repository\/PR\/base\/head\/merge\/delivery identity/i,
   );
 });
 
