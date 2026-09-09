@@ -4,7 +4,7 @@ labels: "github, webhook, review, gitops"
 dependency: []
 parent: "opencode-mimo-evidence-review-agent"
 type: "task"
-write-id: "1788984343949-0.f8nlj927dtmlnuwisrf"
+write-id: "1788984725925-0.jlugnni9q3e2ttu7vmy"
 title: "Admit exact-head code reviews through signed webhooks"
 priority: "P0"
 status: "review"
@@ -54,5 +54,7 @@ PR332 current-head GitHub review found three bootstrap anomalies: Octokit normal
 Current-head Codex review on56cf3e3 adds four concrete corrections: replace shape.edn String.includes host calls with CLJS includes?; terminalize an older verified gate on post-workflow strict-newer supersession; durably settle a signed base-push after default-branch rename; add independent controller CI triggers for sol-premerge-contract.yml. Scoped agents are repairing lifecycle paths with negative and replay regressions; parent owns the two small boundary edits.
 
 Corrected current-head Codex findings: CLJS string predicate in shape; strict-newer verified completion cancels pending predecessor before durable settlement and retries failure; default-branch rename durably refuses signed parent without child admission; independent CI includes the Sol contract workflow. Also carries the three reviewed bootstrap guard fixes from PR332. Full controller119tests/1053assertions0fail0error; release0warnings; package kondo0errors0warnings; combined workflow contracts89/89. Sol actual protected test/build still awaits bootstrap merge/admin setup/human exact-head approval.
+
+Protected Sol bootstrap PR332 merged as476b07bd66efb84566a4159556deacb1e9407e6f after current-head Codex review found no major issues, independent security review of corrections passed, required checks and standalone9tests passed, and all three review threads resolved. Integration preserves all ledger bytes/order and existing duplicate IDs; .github/packages/docs source is identical to tested2dde9ab. Controller119tests/1053assertions and workflow89tests evidence therefore applies to unchanged code. The only remaining original blocker is administrator sol-premerge environment setup/dedicated secrets, explicit human approval, and actual protected Sol test/build on the final candidate.
 
 ---
