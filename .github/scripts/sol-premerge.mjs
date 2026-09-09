@@ -28,11 +28,11 @@ export function assertCandidate(envelope, repository, branch, pullRequest) {
 export function assertEnvironment(environment, policies, defaultBranch) {
   const reviewers = environment.protection_rules?.find(rule => rule.type === "required_reviewers");
   if (environment.name !== environmentName || !Number.isSafeInteger(environment.id) ||
-      !reviewers?.reviewers?.length ||
+      environment.can_admins_bypass !== false || !reviewers?.reviewers?.length ||
       environment.deployment_branch_policy?.protected_branches !== false ||
       environment.deployment_branch_policy?.custom_branch_policies !== true ||
       policies.length !== 1 || policies[0].name !== defaultBranch || policies[0].type !== "branch") {
-    throw new Error("sol-premerge requires a human reviewer and exactly the default branch deployment policy.");
+    throw new Error("sol-premerge requires disabled administrator bypass, a human reviewer, and exactly the default branch deployment policy.");
   }
 }
 
@@ -70,7 +70,7 @@ export async function verifyPremerge({ github, context, core, env, requireApprov
   });
   const policies = await github.paginate(github.rest.repos.listDeploymentBranchPolicies, {
     ...context.repo, environment_name: environmentName, per_page: 100,
-  }, response => response.data.branch_policies);
+  });
   assertEnvironment(environment, policies, repository.default_branch);
   if (requireApproval) {
     const { data: reviews } = await github.request("GET /repos/{owner}/{repo}/actions/runs/{run_id}/approvals", {

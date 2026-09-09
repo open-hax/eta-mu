@@ -3,7 +3,7 @@ category: "tasks"
 labels: "sol, ci, security"
 dependency: []
 type: "task"
-write-id: "1788982702522-0.o27t34ymfskh0sj8xk"
+write-id: "1788983983063-0.rzfkuker9gsnp6uygip"
 title: "Bootstrap protected exact-SHA Sol pre-merge tests"
 priority: "P1"
 status: "review"
@@ -36,5 +36,9 @@ Run the standalone Sol pre-merge contract suite, then require hosted checks and 
 
 ---
 Standalone bootstrap contracts pass 8/8 on this main-based checkout, using the unchanged public yaml dependency. The guarded workflow and fresh publisher are ready for independent review. This implements the trust-promotion mechanism only; administrator environment configuration, explicit exact-candidate human approval and actual Sol behavioral test/build evidence remain required before PR 328 can merge.
+
+PR332 current-head GitHub review found three bootstrap anomalies: Octokit normalizes branch-policy pagination to an array; environment guard must explicitly reject administrator bypass; lint warnings were omitted from the protected zero-warning scan. Reopen implementation for minimal corrections and regressions on both branches. Actual private Sol evidence remains pending.
+
+Corrected all three current-head GitHub findings: normalized Octokit pagination; explicit disabled-admin-bypass guard; lint/test/build zero-warning scan. Three regressions failed before correction. Standalone contracts9/9 and combined workflow contracts89/89 now pass; diff checks clean. Actual protected Sol execution remains pending bootstrap merge, administrator configuration and exact-candidate human approval.
 
 ---
