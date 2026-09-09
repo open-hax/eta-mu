@@ -1,0 +1,27 @@
+{
+  "name": "@eta-mu/gitops-controller",
+  "version": "0.1.0",
+  "description": "Signed GitHub webhook admission and revision-bound eta-mu review dispatch",
+  "type": "module",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "shadow-cljs release server",
+    "clean": "rm -rf dist target .shadow-cljs",
+    "lint:kondo": "clj-kondo --lint src/cljs test/cljs",
+    "start": "node dist/server.js",
+    "test": "shadow-cljs compile test && rm -f target/test-output.log && { status=0; node target/test.cjs > target/test-output.log 2>&1 || status=$?; cat target/test-output.log; test \"$status\" -eq 0 && grep -Eq 'Ran [1-9][0-9]* tests containing [1-9][0-9]* assertions\\.' target/test-output.log; }"
+  },
+  "dependencies": {
+    "fastify": "5.8.4"
+  },
+  "devDependencies": {
+    "shadow-cljs": "3.4.11",
+    "source-map-support": "0.5.21",
+    "yaml": "2.9.0"
+  }
+}

@@ -35,6 +35,7 @@
    "@eta-mu/terminal-ui"
    "@eta-mu/turn-processor"
    "@eta-mu/extensions"
+   "@eta-mu/gitops-controller"
    "@eta-mu/e2e"
    "@open-hax/protocols"
    "@open-hax/chat-ui"
