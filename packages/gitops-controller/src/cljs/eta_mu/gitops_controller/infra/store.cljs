@@ -1,6 +1,7 @@
 (ns eta-mu.gitops-controller.infra.store
   "Append-only delivery and dispatch evidence with immutable ID projections."
   (:require [clojure.string :as str]
+            [eta-mu.gitops-controller.domain.review :as review]
             [eta-mu.gitops-controller.extern.fs :as fs]
             [eta-mu.gitops-controller.extern.runtime :as runtime]
             [eta-mu.gitops-controller.law.webhook :as law]
@@ -981,6 +982,42 @@
             (await (require-ledger-receipt!
                     store "dispatches" dispatch-receipt-types receipt
                     :dispatch-intent-not-durable)))))))))
+
+(defn ^:async find-review-gate-intents
+  "Return canonical gate-bearing intents for one exact repository/PR identity.
+  Completed commands remain candidates because their remote gates may still be
+  pending. The caller must prove the original delivery's installation scope."
+  [store command]
+  (await
+   (with-writer!
+    store
+    (^:async fn []
+      (let [events (await (read-ledger-events store "dispatches"))
+            indexed (ledger-index "dispatches" dispatch-receipt-types events)
+            matches
+            (->> events
+                 (map receipt-identity)
+                 distinct
+                 (map indexed)
+                 (filter #(and (= "review-dispatch-intent" (receipt-type %))
+                               (review/gate-retirement-dispatch?
+                                command (:dispatch %)))))]
+        (loop [remaining (seq matches)
+               result []]
+          (if-let [receipt (first remaining)]
+            (let [_ (when-not (= (:delivery/id receipt)
+                                 (get-in receipt [:dispatch :inputs :command_id]))
+                      (conflict! "review gate intent has a cross-wired delivery ID"
+                                 {:delivery/id (:delivery/id receipt)}))
+                  projection
+                  (-> (await (fs/read-text
+                              (outbox-file store (:delivery/id receipt))))
+                      edn/read-one)]
+              (when-not (same-wire-value? receipt projection)
+                (conflict! "review gate intent disagrees with its projection"
+                           {:delivery/id (:delivery/id receipt)}))
+              (recur (next remaining) (conj result receipt)))
+            result)))))))
 
 (defn ^:async record-gate-terminal-intent!
   "Persist the desired exact Check Run conclusion before the idempotent PATCH."

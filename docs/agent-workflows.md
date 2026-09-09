@@ -154,6 +154,16 @@ mergeable synthetic merge commit and dispatches no workflow or model. This
 prevents a prior PR lifecycle's success from being reused after revision or
 base changes.
 
+Signed, allowlisted `pull_request:closed|converted_to_draft` events cancel
+durably bound pending gates for that PR without dispatching a workflow or model.
+Base-changing `pull_request:edited` events use the same cleanup when the current
+PR targets a branch other than the repository default.
+The controller rechecks the PR identity and ineligible state before each write,
+retains the final Services effect lease, and preserves already completed checks.
+A completion callback that observes the same ineligible state uses this cleanup
+path as well. A delayed event cannot authorize cancellation after the PR returns
+to an open, non-draft state on the default base.
+
 For transport-only ingress verification, a human may apply the exact
 `eta-mu:probe` label to a pull request. It traverses signature verification,
 installation and repository allowlists, live pull-request lookup, and actor

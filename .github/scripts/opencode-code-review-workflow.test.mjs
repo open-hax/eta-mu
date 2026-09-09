@@ -230,15 +230,25 @@ function pullRequestFixture(overrides = {}) {
   };
 }
 
+function unconfirmedDraftFixtures() {
+  const missingDraft = pullRequestFixture();
+  delete missingDraft.draft;
+  return [
+    missingDraft,
+    ...[null, "false", "true", 0, 1, true].map((draft) => pullRequestFixture({ draft })),
+  ];
+}
+
 async function runGateAdmission({
   eventName = "workflow_dispatch",
   mergeability = [true],
+  fetchedPullRequest = pullRequestFixture(),
   gateCheckOverrides = {},
   additionalGateChecks = [],
 } = {}) {
   const commandId = "9eb17352-284c-4b55-879d-0d07f353fdee";
   const gateCheckId = 7003;
-  const pullRequests = mergeability.map((mergeable) => pullRequestFixture({ mergeable }));
+  const pullRequests = mergeability.map((mergeable) => ({ ...fetchedPullRequest, mergeable }));
   let pullRequestCalls = 0;
   const gateCheck = {
     id: gateCheckId,
@@ -674,6 +684,19 @@ test("review-resolution gate polls transient mergeability before tuple validatio
     runGateAdmission({ mergeability: [false] }),
     /no longer matches the admitted open same-repository default-base test merge/i,
   );
+});
+
+test("review-resolution gate requires an explicitly false draft status", async () => {
+  for (const fetchedPullRequest of unconfirmedDraftFixtures()) {
+    await assert.rejects(
+      runGateAdmission({ fetchedPullRequest }),
+      /no longer matches the admitted open same-repository default-base test merge/i,
+    );
+  }
+  const { pullRequestCalls } = await runGateAdmission({
+    fetchedPullRequest: pullRequestFixture({ draft: false }),
+  });
+  assert.equal(pullRequestCalls, 1);
 });
 
 test("review-resolution gate ignores malformed and unrelated successor identities", async () => {
@@ -1230,6 +1253,19 @@ test("resolver refuses stale revisions, non-default bases, non-mergeable, draft,
   );
 });
 
+test("resolver requires an explicitly false draft status", async (t) => {
+  for (const fetchedPullRequest of unconfirmedDraftFixtures()) {
+    await assert.rejects(
+      runResolver(t, { fetchedPullRequest }),
+      /dispatch refused.*draft/i,
+    );
+  }
+  const { outputs } = await runResolver(t, {
+    fetchedPullRequest: pullRequestFixture({ draft: false }),
+  });
+  assert.equal(outputs.eligible, "true");
+});
+
 test("resolver rejects every non-webhook caller event before API resolution", async (t) => {
   await assert.rejects(
     runResolver(t, {
@@ -1350,6 +1386,19 @@ test("publication refuses a newly closed, draft, or fork pull request", async ()
       /publication refused.*(?:closed|draft|fork)/i,
     );
   }
+});
+
+test("publication requires an explicitly false draft status", async () => {
+  for (const fetchedPullRequest of unconfirmedDraftFixtures()) {
+    await assert.rejects(
+      runPublication({ fetchedPullRequest }),
+      /publication refused.*draft/i,
+    );
+  }
+  const fetchedPullRequest = pullRequestFixture({ draft: false });
+  const { outputs, publishedPullRequests } = await runPublication({ fetchedPullRequest });
+  assert.deepEqual(outputs, { publishable: "true" });
+  assert.deepEqual(publishedPullRequests, [fetchedPullRequest]);
 });
 
 test("publication refuses a base advance or pull request retarget after admission", async () => {

@@ -236,7 +236,8 @@
                       (dissoc :label))))))
 
 (deftest defensive-pull-request-lifecycle-events-mint-no-workflow-authority
-  (doseq [action ["opened" "reopened" "synchronize" "ready_for_review"]]
+  (doseq [action ["opened" "reopened" "synchronize" "ready_for_review"
+                  "closed" "converted_to_draft"]]
     (let [source (-> command
                      (assoc :action action)
                      (dissoc :label))
@@ -261,8 +262,31 @@
                              (dissoc :label)))))
   (is (:ignored? (admission/decide
                   config (-> command
-                             (assoc :action "closed")
+                             (assoc :action "assigned")
                              (dissoc :label))))))
+
+(deftest gate-retirement-requires-current-terminal-or-nondefault-base-identity
+  (let [current {:number 321 :node-id "PR_kwDOExample"
+                 :repository "open-hax/eta-mu" :repository-id 42
+                 :default-branch "main" :head-repository "open-hax/eta-mu"
+                 :head-repository-id 42 :state "closed" :draft? false
+                 :mergeable? nil :merge-sha nil :base-branch "main"
+                 :base-sha "1111111111111111111111111111111111111111"
+                 :head-sha "0123456789abcdef0123456789abcdef01234567"
+                 :html-url "https://github.com/open-hax/eta-mu/pull/321" :labels #{}}]
+    (is (:planned? (review/gate-retirement-plan command current)))
+    (is (:planned? (review/gate-retirement-plan
+                   command (assoc current :state "open" :draft? true))))
+    (is (= {:planned? true :reason :pull-request-base-is-not-default}
+           (review/gate-retirement-plan
+            command (assoc current :state "open" :base-branch "release"))))
+    (doseq [mutation [{:state "open"} {:state "unknown"} {:draft? nil}
+                      {:draft? "true"} {:repository "attacker/eta-mu"}
+                      {:repository-id 999} {:node-id "PR_other"} {:number 322}
+                      {:head-repository "attacker/eta-mu"}
+                      {:head-repository-id 999}]]
+      (is (false? (:planned? (review/gate-retirement-plan
+                             command (merge current mutation))))))))
 
 (deftest gate-reconciliation-plan-is-exact-head-and-label-independent
   (let [thread-command (-> command

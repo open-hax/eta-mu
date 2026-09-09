@@ -3,6 +3,64 @@
   (:require [eta-mu.gitops-controller.law.webhook :as law]
             [eta-mu.gitops-controller.shape.webhook :as shape]))
 
+(defn gate-retirement-plan
+  "Retire durable gates only while the same authoritative PR is closed,
+  literally draft, or targets a non-default base. Its old test merge may vanish."
+  [command current]
+  (cond
+    (not (law/current-pull-request? current))
+    {:planned? false :reason :invalid-current-pull-request}
+
+    (not (and (= (:repository command) (:repository current))
+              (= (:repository-id command) (:repository-id current))
+              (= (:repository current) (:head-repository current))
+              (= (:repository-id current) (:head-repository-id current))
+              (= (:pull-request-number command) (:number current))
+              (= (:pull-request-node-id command) (:node-id current))))
+    {:planned? false :reason :pull-request-identity-changed}
+
+    (= "closed" (:state current))
+    {:planned? true :reason :pull-request-not-open}
+
+    (true? (:draft? current))
+    {:planned? true :reason :pull-request-is-draft}
+
+    (not= (:base-branch current) (:default-branch current))
+    {:planned? true :reason :pull-request-base-is-not-default}
+
+    :else
+    {:planned? false :reason :pull-request-still-reviewable}))
+
+(defn gate-retirement-dispatch?
+  "Select an exact durable gate identity for the target repository and PR,
+  including earlier heads and commands whose workflow is already in flight."
+  [command dispatch]
+  (let [gate (:gate-check dispatch)
+        inputs (:inputs dispatch)]
+    (and (contains? #{:code-review :review-gate-reconcile :review-gate-invalidate}
+                    (shape/command-type (:command/type dispatch)))
+         (= (:repository command) (:repository dispatch) (:repository gate))
+         (= (:repository-id command) (:repository-id dispatch) (:repository-id gate))
+         (= (:pull-request-node-id command) (:pull-request-node-id dispatch)
+            (:pr-node-id gate))
+         (= (:pull-request-number command) (:pr-number gate))
+         (= (str (:pull-request-number command)) (:pr_number inputs))
+         (= law/review-gate-check-name (:name gate))
+         (law/non-blank-string? (:ref dispatch))
+         (= (:ref dispatch) (:base-branch gate))
+         (law/delivery-id? (:command_id inputs))
+         (= (:command_id inputs) (:delivery-id gate))
+         (law/commit-sha? (:pr_head_sha inputs))
+         (law/commit-sha? (:pr_base_sha inputs))
+         (law/commit-sha? (:pr_merge_sha inputs))
+         (= (:pr_head_sha inputs) (:head-sha gate))
+         (= (:pr_base_sha inputs) (:base-sha gate))
+         (= (:pr_merge_sha inputs) (:merge-sha gate))
+         (= (shape/review-gate-external-id
+             (:command_id inputs) (:pr-number gate) (:head-sha gate)
+             (:base-sha gate) (:merge-sha gate))
+            (:external-id gate)))))
+
 (defn current-review-gate-check?
   "Require a controller-owned v2 gate for the same PR/base/head/merge tuple
   before ordering peer checks fetched from the expected repository. A new

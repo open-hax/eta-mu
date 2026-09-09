@@ -322,6 +322,26 @@
                         {:error/code :effect-lease-revoked})))
       true)))
 
+(defn- ^:async retire-bound-gate!
+  [{:keys [github] :as worker} delivery-id command dispatch gate-check]
+  (when-not (review/gate-retirement-dispatch? command dispatch)
+    (throw (ex-info "retirement does not match the durable gate identity"
+                    {:error/code :immutable-state-conflict})))
+  (await
+   ((:cancel-review-gate! github)
+    (:installation-id command)
+    (with-meta gate-check
+      {:authorize-cancel!
+       (^:async fn []
+         (let [current (await ((:fetch-pull-request! github) command))]
+           (when-not (:planned? (review/gate-retirement-plan command current))
+             (throw (ex-info "pull request is no longer eligible for gate retirement"
+                             {:error/code :pull-request-context-changed}))))
+         ;; Cancelling an existing exact gate is independent of the original
+         ;; issuer and test-merge availability, but retains the final lease.
+         (await ((write-authorizer worker delivery-id command dispatch false))))})
+    "The pull request is closed, draft, or targets a non-default base; its pending review gate is no longer active.")))
+
 (defn- ^:async execute-dispatch!
   [{:keys [store github mode] :as worker} delivery-id command plan
    stage* call-begun?* dispatch*]
@@ -551,13 +571,23 @@
       ;; Leave that signed completion pending for periodic replay; all
       ;; definitive workflow or pull-request drift remains terminally refused.
       (when-not (= :pull-request-test-merge-not-ready (:reason plan))
-        (await
-         (store/complete!
-          store delivery-id
-          {:outcome :refused
-           :command/type :review-gate-completion
-           :workflow-run-id (:workflow-run-id command)
-           :reason (:reason plan)})))
+        (let [retirement (review/gate-retirement-plan
+                          original-command current-pull-request)
+              retired? (and (= :pull-request-merge-context-changed (:reason plan))
+                            (:planned? retirement))
+              result (when retired?
+                       (await (retire-bound-gate!
+                               worker source-delivery-id original-command
+                               (:dispatch correlation) (:gate-check correlation))))]
+          (await
+           (store/complete!
+            store delivery-id
+            (cond-> {:outcome (if retired? :gate-retired :refused)
+                     :command/type :review-gate-completion
+                     :workflow-run-id (:workflow-run-id command)
+                     :reason (if retired? (:reason retirement) (:reason plan))}
+              retired? (assoc :gate-check-id (get-in correlation [:gate-check :id])
+                              :cancelled (:cancelled? result)))))))
       (do
         (reset! stage* :record-gate-terminal-intent)
         (await (store/record-gate-terminal-intent!
@@ -720,6 +750,46 @@
                          :delivery-id (:delivery-id command)
                          :parent-delivery-id parent-id}))))))
 
+(defn- ^:async process-gate-retirement!
+  [{:keys [store github mode] :as worker} delivery-id command stage*]
+  (reset! stage* :fetch-retirement-pull-request)
+  (let [current (await ((:fetch-pull-request! github) command))
+        plan (review/gate-retirement-plan command current)]
+    (dependency! worker :available)
+    (if (and (:planned? plan) (= :review-dispatch mode))
+      (let [_ (reset! stage* :find-retirement-gate-intents)
+            intents (await (store/find-review-gate-intents store command))
+            cancellations* (atom 0)
+            gates* (atom 0)]
+        (doseq [intent intents]
+          (let [source-id (:delivery/id intent)
+                original (:command (await (store/read-delivery store source-id)))]
+            (when (= (:installation-id command) (:installation-id original))
+              (when-not (review/gate-retirement-dispatch? original (:dispatch intent))
+                (throw (ex-info "retirement intent disagrees with its source command"
+                                {:error/code :immutable-state-conflict})))
+              (let [{:keys [dispatch gate-check]}
+                    (await (durable-gate-for-delivery store source-id))]
+                (when-not (= dispatch (:dispatch intent))
+                  (throw (ex-info "retirement intent changed during projection read"
+                                  {:error/code :immutable-state-conflict})))
+                (reset! stage* :retire-review-gate)
+                (let [result (await (retire-bound-gate!
+                                     worker delivery-id command dispatch gate-check))]
+                  (swap! gates* inc)
+                  (when (:cancelled? result)
+                    (swap! cancellations* inc)))))))
+        (await (store/complete!
+                store delivery-id
+                (merge (result-context mode command)
+                       {:outcome :gates-retired :reason (:reason plan)
+                        :gate-count @gates* :cancelled-count @cancellations*}))))
+      (await (store/complete!
+              store delivery-id
+              (merge (result-context mode command)
+                     {:outcome (if (:planned? plan) :observed :refused)
+                      :reason (:reason plan)}))))))
+
 (defn- ^:async process-current-command!
   [{:keys [store github authority mode] :as worker} delivery-id command
    policy-decision stage* call-begun?* dispatch*]
@@ -740,6 +810,10 @@
     (reset! dispatch* (:dispatch plan))
     (dependency! worker :available)
     (cond
+      (and (law/review-gate-base-change-command? command)
+           (= :pull-request-base-is-not-default (:reason plan)))
+      (await (process-gate-retirement! worker delivery-id command stage*))
+
       (not (:planned? plan))
       (when-not (= :pull-request-test-merge-not-ready (:reason plan))
         (await
@@ -861,6 +935,10 @@
 
                         completion-command?
                         (await (process-workflow-completion!
+                                worker delivery-id command stage*))
+
+                        (law/review-gate-retirement-command? command)
+                        (await (process-gate-retirement!
                                 worker delivery-id command stage*))
 
                         :else

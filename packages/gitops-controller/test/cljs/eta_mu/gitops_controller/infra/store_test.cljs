@@ -4,7 +4,8 @@
             [cljs.test :refer [deftest is testing]]
             [eta-mu.gitops-controller.extern.fs :as fs]
             [eta-mu.gitops-controller.infra.store :as store]
-            [eta-mu.gitops-controller.shape.edn :as edn]))
+            [eta-mu.gitops-controller.shape.edn :as edn]
+            [eta-mu.gitops-controller.shape.webhook :as shape]))
 
 (def delivery-id "9eb17352-284c-4b55-879d-0d07f353fdee")
 (def payload-sha256 (apply str (repeat 64 "a")))
@@ -34,6 +35,39 @@
 
 (def ignored-command
   (dissoc command :command-id :command/type :capability :admission))
+
+(defn- gate-dispatch [source-command source-id command-type]
+  (let [repository (:repository source-command)
+        repository-id (:repository-id source-command)
+        pr-number (:pull-request-number source-command)
+        pr-node-id (:pull-request-node-id source-command)
+        base-sha (apply str (repeat 40 "1"))
+        head-sha (apply str (repeat 40 "2"))
+        merge-sha (apply str (repeat 40 "3"))]
+    {:command/type command-type
+     :repository repository
+     :repository-id repository-id
+     :pull-request-node-id pr-node-id
+     :workflow "opencode-code-review.yml"
+     :workflow-id 999
+     :ref "main"
+     :gate-check {:name "eta-mu-review-gate"
+                  :repository repository
+                  :repository-id repository-id
+                  :pr-number pr-number
+                  :pr-node-id pr-node-id
+                  :base-branch "main"
+                  :base-sha base-sha
+                  :head-sha head-sha
+                  :merge-sha merge-sha
+                  :delivery-id source-id
+                  :external-id (shape/review-gate-external-id
+                                source-id pr-number head-sha base-sha merge-sha)}
+     :inputs {:pr_number (str pr-number)
+              :pr_base_sha base-sha
+              :pr_head_sha head-sha
+              :pr_merge_sha merge-sha
+              :command_id source-id}}))
 
 (def ^:private blocking-append-context* (atom nil))
 (def ^:private failing-append-context* (atom nil))
@@ -497,6 +531,112 @@
           "partial"))
         (is (= [delivery-id]
                (await (store/pending-delivery-ids state-store)))))
+      (finally
+        (await (fs/remove-tree! root))))))
+
+(deftest ^:async gate-retirement-lookup-includes-completed-exact-scope-intents
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        reconciliation-id "d0cfe1b8-4952-4331-8b36-3f53af75d33e"
+        invalidation-id "9eb17352-284c-4b55-879d-0d07f353fdef"
+        matching [[delivery-id :code-review]
+                  [reconciliation-id :review-gate-reconcile]
+                  [invalidation-id :review-gate-invalidate]]
+        unrelated [["9eb17352-284c-4b55-879d-0d07f353fde1"
+                    (assoc command :repository "other/repository")]
+                   ["9eb17352-284c-4b55-879d-0d07f353fde2"
+                    (assoc command :repository-id 43)]
+                   ["9eb17352-284c-4b55-879d-0d07f353fde3"
+                    (assoc command :pull-request-node-id "PR_another")]
+                   ["9eb17352-284c-4b55-879d-0d07f353fde4"
+                    (assoc command :pull-request-number 322)]]]
+    (try
+      (await (store/initialize! state-store))
+      (doseq [[source-id command-type] matching]
+        (await (store/claim-dispatch!
+                state-store source-id
+                (gate-dispatch command source-id command-type))))
+      (await (store/complete! state-store delivery-id
+                              {:outcome :dispatched :workflow-run-id 4567}))
+      (doseq [[source-id unrelated-command] unrelated]
+        (await (store/claim-dispatch!
+                state-store source-id
+                (gate-dispatch unrelated-command source-id :code-review))))
+      (let [probe-id "9eb17352-284c-4b55-879d-0d07f353fde5"]
+        (await (store/claim-dispatch!
+                state-store probe-id
+                (gate-dispatch command probe-id :ingress-probe))))
+      (let [receipts (await (store/find-review-gate-intents state-store command))]
+        (is (= (mapv first matching) (mapv :delivery/id receipts)))
+        (is (= (mapv second matching)
+               (mapv #(get-in % [:dispatch :command/type]) receipts)))
+        (is (true? (await (store/completed? state-store delivery-id)))))
+      (let [restarted (await (store/initialize! (store/create root)))]
+        (is (= (mapv first matching)
+               (mapv :delivery/id
+                     (await (store/find-review-gate-intents
+                             restarted command))))))
+      (finally
+        (await (fs/remove-tree! root))))))
+
+(deftest ^:async gate-retirement-lookup-refuses-conflicting-selected-projection
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        successor-id "d0cfe1b8-4952-4331-8b36-3f53af75d33e"
+        projection-file (fs/join root "outbox" (str delivery-id ".edn"))]
+    (try
+      (await (store/initialize! state-store))
+      (await (store/claim-dispatch!
+              state-store delivery-id
+              (gate-dispatch command delivery-id :code-review)))
+      (await (store/claim-dispatch!
+              state-store successor-id
+              (gate-dispatch command successor-id :review-gate-reconcile)))
+      ;; A valid newer intent cannot hide corruption in an older gate that
+      ;; still needs retirement.
+      (let [receipt (-> (await (fs/read-text projection-file)) edn/read-one)]
+        (await (.writeFile node-fs projection-file
+                           (edn/encode
+                            (assoc-in receipt [:dispatch :repository-id] 43))
+                           "utf8")))
+      (let [error (try
+                    (await (store/find-review-gate-intents state-store command))
+                    nil
+                    (catch :default caught caught))]
+        (is (= :immutable-state-conflict (:error/code (ex-data error)))))
+      (finally
+        (await (fs/remove-tree! root))))))
+
+(deftest ^:async gate-retirement-lookup-refuses-cross-wired-durable-intents
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        other-id "d0cfe1b8-4952-4331-8b36-3f53af75d33e"]
+    (try
+      (await (store/initialize! state-store))
+      ;; Even agreeing journal and projection bytes cannot attach another
+      ;; delivery's gate identity to this source receipt.
+      (await (store/claim-dispatch!
+              state-store delivery-id
+              (gate-dispatch command other-id :code-review)))
+      (let [error (try
+                    (await (store/find-review-gate-intents state-store command))
+                    nil
+                    (catch :default caught caught))]
+        (is (= :immutable-state-conflict (:error/code (ex-data error)))))
+      (finally
+        (await (fs/remove-tree! root))))))
+
+(deftest ^:async gate-retirement-lookup-never-uses-projection-only-authority
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        ledger-file (fs/join root "ledgers" "dispatches.nd-edn")]
+    (try
+      (await (store/initialize! state-store))
+      (await (store/claim-dispatch!
+              state-store delivery-id
+              (gate-dispatch command delivery-id :code-review)))
+      (await (fs/remove-file-if-present! ledger-file))
+      (is (= [] (await (store/find-review-gate-intents state-store command))))
       (finally
         (await (fs/remove-tree! root))))))
 

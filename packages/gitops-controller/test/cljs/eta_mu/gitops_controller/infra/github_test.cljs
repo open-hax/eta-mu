@@ -11,6 +11,10 @@
                 #js {:status status
                      :headers #js {"content-type" "application/json"}}))
 
+(defn- check-runs-body
+  ([runs] (check-runs-body (count runs) runs))
+  ([total-count runs] {:total_count total-count :check_runs runs}))
+
 (defn- adapter-config []
   (let [pair (.generateKeyPairSync node-crypto "rsa"
                                    #js {:modulusLength 1024})]
@@ -409,13 +413,13 @@
                (= 1 (count (filter #(and (= :request (:event %))
                                          (.includes (:url %) "/commits/"))
                                    @events*))))
-          (response 200 {:check_runs [foreign]})
+          (response 200 (check-runs-body [foreign]))
 
           (.endsWith url "/check-runs")
           (response 201 created)
 
           (.includes url "/commits/")
-          (response 200 {:check_runs [created foreign]})
+          (response 200 (check-runs-body [created foreign]))
 
           :else (response 500 {:unexpected url})))))
     (try
@@ -518,7 +522,7 @@
           (response 201 {:token "installation-token"})
 
           (.includes url "/commits/")
-          (response 200 {:check_runs [cancelled newer]})
+          (response 200 (check-runs-body [cancelled newer]))
 
           :else (response 500 {:unexpected url})))))
     (try
@@ -601,7 +605,7 @@
           (response 201 {:token "installation-token"})
 
           (.includes url "/commits/")
-          (response 200 {:check_runs [pending newer]})
+          (response 200 (check-runs-body [pending newer]))
 
           :else (response 500 {:unexpected url})))))
     (try
@@ -698,7 +702,7 @@
           (response 201 {:token "installation-token"})
 
           (.includes url "/commits/")
-          (response 200 {:check_runs [@current-check*]})
+          (response 200 (check-runs-body [@current-check*]))
 
           (and (.endsWith url "/check-runs/4567")
                (= "GET" (.-method options)))
@@ -776,7 +780,7 @@
              {:ok? true :status 200
               :body (cond
                       (.endsWith url "/access_tokens") {:token "test-token"}
-                      (.includes url "/commits/") {:check_runs runs}
+                      (.includes url "/commits/") (check-runs-body runs)
                       :else current)})]
           (let [error (try (await ((:complete-review-gate! adapter) 77 request))
                            nil
@@ -793,7 +797,7 @@
              {:ok? true :status 200
               :body (cond
                       (.endsWith url "/access_tokens") {:token "test-token"}
-                      (.includes url "/commits/") {:check_runs [terminal successor]}
+                      (.includes url "/commits/") (check-runs-body [terminal successor])
                       :else terminal)})]
           (let [result (await ((:complete-review-gate! adapter)
                                77 {:gate-check gate
@@ -841,7 +845,7 @@
              {:ok? true :status 200
               :body (cond
                       (.endsWith url "/access_tokens") {:token "test-token"}
-                      (.includes url "/commits/") {:check_runs [current peer]}
+                      (.includes url "/commits/") (check-runs-body [current peer])
                       (= "PATCH" method) (merge current body)
                       :else current)})]
           (let [prepared (await ((:prepare-review-gate! adapter)
@@ -988,13 +992,14 @@
 (defn- ^:async run-paginated-gate-operation [operation expected gate pages]
   (let [adapter (github/port (adapter-config))
         requests* (atom [])
+        page-requests* (atom 0)
         authorizations* (atom 0)
         expected (with-meta expected
                    {:authorize-create! #(do (swap! authorizations* inc) true)
                     :authorize-cancel! #(do (swap! authorizations* inc) true)})]
     (with-redefs
       [http/request!
-       (fn [{:keys [url method] :as request}]
+       (fn [{:keys [url method body] :as request}]
          (swap! requests* conj request)
          (cond
            (.endsWith url "/access_tokens")
@@ -1002,19 +1007,40 @@
 
            (.includes url "/commits/")
            (let [page (js/parseInt (second (re-find #"page=(\d+)$" url)) 10)]
-             (nth pages (dec page)))
+             (swap! page-requests* inc)
+             (if (fn? pages)
+               (pages page @page-requests*)
+               (nth pages (dec page))))
+
+           (= "GET" method)
+           {:ok? true :status 200 :body gate}
+
+           (= "POST" method)
+           {:ok? true :status 201 :body gate}
 
            (= "PATCH" method)
-           {:ok? true :status 200
-            :body (assoc gate :status "completed" :conclusion "cancelled")}
+           {:ok? true :status 200 :body (merge gate body)}
 
            :else {:ok? false :status 500 :body {:unexpected url}}))]
       (let [outcome (try
                       {:result
-                       (if (= :prepare operation)
+                       (case operation
+                         :prepare
                          (await ((:prepare-review-gate! adapter) 77 expected))
+                         :cancel
                          (await ((:cancel-review-gate! adapter)
-                                 77 expected "stale command")))}
+                                 77 expected "stale command"))
+                         :complete
+                         (await ((:complete-review-gate! adapter)
+                                 77 {:gate-check (assoc expected :id (:id gate))
+                                     :terminal-intent
+                                     {:patch {:conclusion "success"
+                                              :external-id (:external-id expected)
+                                              :details-url (:details-url expected)
+                                              :output {:title "Review passed"
+                                                       :summary "Exact evidence passed."}}}
+                                     :authorize-patch!
+                                     #(do (swap! authorizations* inc) true)})))}
                       (catch :default error {:error error}))]
         (assoc outcome
                :authorizations @authorizations*
@@ -1025,9 +1051,9 @@
 
 (deftest ^:async exact-gate-duplicates-across-pages-refuse-preparation-and-cancellation
   (let [{:keys [expected gate first-page]} (paginated-gate-fixture)
-        pages [{:ok? true :status 200 :body {:check_runs first-page}}
+        pages [{:ok? true :status 200 :body (check-runs-body 101 first-page)}
                {:ok? true :status 200
-                :body {:check_runs [(assoc gate :id 4567)]}}]]
+                :body (check-runs-body 101 [(assoc gate :id 4567)])}]]
     (doseq [operation [:prepare :cancel]]
       (let [{:keys [error authorizations pages writes]}
             (await (run-paginated-gate-operation operation expected gate pages))]
@@ -1039,8 +1065,8 @@
 
 (deftest ^:async an-early-exact-gate-cannot-hide-later-page-failure-or-window-exhaustion
   (let [{:keys [expected gate foreign first-page]} (paginated-gate-fixture)
-        first-response {:ok? true :status 200 :body {:check_runs first-page}}
-        full-response {:ok? true :status 200 :body {:check_runs foreign}}]
+        first-response {:ok? true :status 200 :body (check-runs-body 1100 first-page)}
+        full-response {:ok? true :status 200 :body (check-runs-body 1100 foreign)}]
     (doseq [operation [:prepare :cancel]
             [pages expected-code expected-page-count]
             [[[first-response {:ok? false :status 503 :body {}}]
@@ -1056,8 +1082,9 @@
 
 (deftest ^:async a-unique-early-gate-is-usable-after-the-final-page-proves-uniqueness
   (let [{:keys [expected gate foreign first-page]} (paginated-gate-fixture)
-        pages [{:ok? true :status 200 :body {:check_runs first-page}}
-               {:ok? true :status 200 :body {:check_runs [(first foreign)]}}]]
+        pages [{:ok? true :status 200 :body (check-runs-body 101 first-page)}
+               {:ok? true :status 200
+                :body (check-runs-body 101 [(first foreign)])}]]
     (doseq [operation [:prepare :cancel]]
       (let [{:keys [error result authorizations pages writes]}
             (await (run-paginated-gate-operation operation expected gate pages))]
@@ -1074,3 +1101,118 @@
             (is (= 2 (count pages)))
             (is (= 1 authorizations))
             (is (= ["PATCH"] (mapv :method writes)))))))))
+
+(deftest ^:async malformed-check-run-pages-never-establish-gate-presence-or-absence
+  (let [{:keys [expected gate]} (paginated-gate-fixture)
+        malformed-pages
+        [nil [] "not-an-object" {}
+         {:total_count 0}
+         {:total_count 0 :check_runs nil}
+         {:total_count 0 :check_runs {}}
+         {:total_count 0 :check_runs ""}
+         {:total_count 0 :check_runs 0}
+         {:total_count 0 :check_runs false}
+         {:check_runs []}
+         {:total_count nil :check_runs []}
+         {:total_count "0" :check_runs []}
+         {:total_count -1 :check_runs []}
+         {:total_count 1 :check_runs []}
+         {:total_count 0 :check_runs [gate]}]]
+    (doseq [operation [:prepare :cancel :complete]
+            body malformed-pages]
+      (let [{:keys [error authorizations writes]}
+            (await (run-paginated-gate-operation
+                    operation expected gate [{:ok? true :status 200 :body body}]))]
+        (is (= :invalid-review-gate-check (:error/code (ex-data error))))
+        (is (zero? authorizations))
+        (is (empty? writes))))))
+
+(deftest ^:async malformed-check-identities-cannot-be-filtered-into-apparent-absence
+  (let [{:keys [expected gate]} (paginated-gate-fixture)
+        malformed-entries
+        (concat [nil [] "not-a-check" 7 {}
+                 (assoc gate :id "4568")
+                 (assoc gate :name nil)
+                 (assoc gate :head_sha "not-a-sha")
+                 (assoc gate :external_id {})
+                 (assoc gate :app "unknown")
+                 (assoc gate :app {})
+                 (assoc-in gate [:app :id] "123")
+                 (assoc-in gate [:app :slug] [])
+                 (assoc gate :status nil)
+                 (assoc gate :conclusion {})
+                 (assoc gate :details_url [])]
+                (map #(dissoc gate %)
+                     [:id :name :head_sha :external_id :app :status :conclusion
+                      :details_url]))]
+    (doseq [operation [:prepare :cancel :complete]
+            entry malformed-entries]
+      (let [{:keys [error authorizations writes]}
+            (await (run-paginated-gate-operation
+                    operation expected gate
+                    [{:ok? true :status 200 :body (check-runs-body [entry])}]))]
+        (is (= :invalid-review-gate-check (:error/code (ex-data error))))
+        (is (zero? authorizations))
+        (is (empty? writes))))))
+
+(deftest ^:async valid-empty-and-nullable-foreign-check-pages-still-permit-one-gate
+  (let [{:keys [expected gate]} (paginated-gate-fixture)
+        nullable-foreign (assoc gate :id 1 :app nil :external_id nil
+                                :details_url nil :status "requested")
+        optional-slug-foreign (assoc nullable-foreign :id 2 :app {:id 999})]
+    (doseq [existing [[] [nullable-foreign optional-slug-foreign]]]
+      (let [{:keys [error result authorizations writes]}
+            (await
+             (run-paginated-gate-operation
+              :prepare expected gate
+              (fn [_page request-number]
+                {:ok? true :status 200
+                 :body (check-runs-body
+                        (if (= 1 request-number) existing (conj existing gate)))})))]
+        (is (nil? error))
+        (is (= (:id gate) (:id result)))
+        (is (= 1 authorizations))
+        (is (= ["POST"] (mapv :method writes)))))
+    (let [{:keys [error result authorizations writes]}
+          (await (run-paginated-gate-operation
+                  :complete expected gate
+                  [{:ok? true :status 200
+                    :body (check-runs-body [gate nullable-foreign optional-slug-foreign])}]))]
+      (is (nil? error))
+      (is (:updated? result))
+      (is (= 1 authorizations))
+      (is (= ["PATCH"] (mapv :method writes))))))
+
+(deftest ^:async malformed-later-pages-refuse-every-gate-list-reader-before-writing
+  (let [{:keys [expected gate first-page]} (paginated-gate-fixture)
+        valid-first {:ok? true :status 200 :body (check-runs-body 101 first-page)}]
+    (doseq [[failed-page expected-code]
+            [[{:ok? true :status 200 :body {}} :invalid-review-gate-check]
+             [{:ok? true :status 200 :body {:total_count 101 :check_runs nil}}
+              :invalid-review-gate-check]
+             [{:ok? true :status 200 :body (check-runs-body 101 [])}
+              :invalid-review-gate-check]
+             [{:ok? false :status 503 :body {}} :github-request-failed]]
+            operation [:prepare :cancel :complete]]
+      (let [{:keys [error authorizations pages writes]}
+            (await (run-paginated-gate-operation
+                    operation expected gate [valid-first failed-page]))]
+        (is (= expected-code (:error/code (ex-data error))))
+        (is (= 2 (count pages)))
+        (is (zero? authorizations))
+        (is (empty? writes)))
+      ;; Preparation performs a second, independent peer scan after its exact
+      ;; identity lookup. A malformed peer page must also stop cancellation.
+      (when (= :prepare operation)
+        (let [{:keys [error authorizations pages writes]}
+              (await
+               (run-paginated-gate-operation
+                operation expected gate
+                (fn [page request-number]
+                  (if (= 1 request-number)
+                    {:ok? true :status 200 :body (check-runs-body [gate])}
+                    (if (= 1 page) valid-first failed-page)))))]
+          (is (= expected-code (:error/code (ex-data error))))
+          (is (= 3 (count pages)))
+          (is (zero? authorizations))
+          (is (empty? writes)))))))

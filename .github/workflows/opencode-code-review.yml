@@ -229,7 +229,7 @@ jobs:
             const headRepository = String(pullRequest.head?.repo?.full_name || '');
             const refusalReasons = [];
             if (pullRequest.state !== 'open') refusalReasons.push(pullRequest.state || 'closed');
-            if (pullRequest.draft === true) refusalReasons.push('draft');
+            if (pullRequest.draft !== false) refusalReasons.push('draft status is not explicitly false');
             if (headRepository.toLowerCase() !== repository.toLowerCase()) refusalReasons.push('fork');
             if (!defaultBaseRef || pullRequest.base?.ref !== defaultBaseRef) {
               refusalReasons.push(`base is not repository default ${defaultBaseRef || '(missing)'}`);
@@ -1909,7 +1909,7 @@ jobs:
             if (currentPullRequest.state !== 'open') {
               refusalReasons.push(currentPullRequest.state || 'closed');
             }
-            if (currentPullRequest.draft === true) refusalReasons.push('draft');
+            if (currentPullRequest.draft !== false) refusalReasons.push('draft status is not explicitly false');
             if (targetRepository.toLowerCase() !== repository.toLowerCase()) {
               refusalReasons.push(`targets ${targetRepository || '(missing repository)'}`);
             }

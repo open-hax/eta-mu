@@ -330,6 +330,13 @@
                  :external-id :details-url :name])
    (check-run->receipt check-run)))
 
+(defn- check-run-page! [response page-number]
+  (when-not (law/github-check-run-page? page-number (:body response))
+    (throw (review-gate-error
+            "GitHub returned an invalid review gate Check Run page"
+            {:page-number page-number})))
+  (get-in response [:body :check_runs]))
+
 (defn- ^:async matching-check-runs!
   [config token {:keys [repository merge-sha name external-id]}]
   (loop [page 1
@@ -346,7 +353,7 @@
              :headers (headers token)}))]
       (when-not (:ok? response)
         (throw (response-error "list-review-gate-checks" response)))
-      (let [runs (vec (get-in response [:body :check_runs]))
+      (let [runs (check-run-page! response page)
             exact (filterv #(and (= external-id (:external_id %))
                                  (= (:github-app-id config)
                                     (get-in % [:app :id])))
@@ -376,7 +383,7 @@
              :headers (headers token)}))]
       (when-not (:ok? response)
         (throw (response-error "list-review-gate-checks" response)))
-      (let [runs (vec (get-in response [:body :check_runs]))
+      (let [runs (check-run-page! response page)
             accumulated (into result runs)]
         (cond
           (< (count runs) 100) accumulated

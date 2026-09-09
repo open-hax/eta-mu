@@ -42,7 +42,8 @@
    "pull_request_review_thread" #{"resolved" "unresolved"}})
 
 (def review-gate-invalidation-actions
-  #{"opened" "reopened" "synchronize" "ready_for_review"})
+  #{"opened" "reopened" "synchronize" "ready_for_review"
+    "closed" "converted_to_draft"})
 
 (def command-types
   #{:code-review :review-gate-reconcile :review-gate-invalidate
@@ -210,13 +211,21 @@
        (positive-integer? pull-request-number)
        (non-blank-string? pull-request-node-id)))
 
+(defn review-gate-base-change-command? [{:keys [event action base-ref-before]}]
+  (and (= "pull_request" event)
+       (= "edited" action)
+       (non-blank-string? base-ref-before)))
+
 (defn review-gate-invalidation-command?
-  [{:keys [event action base-ref-before] :as command}]
+  [{:keys [event action] :as command}]
   (or (and (= "pull_request" event)
-           (or (contains? review-gate-invalidation-actions action)
-               (and (= "edited" action)
-                    (non-blank-string? base-ref-before))))
+           (contains? review-gate-invalidation-actions action))
+      (review-gate-base-change-command? command)
       (base-push-child-command? command)))
+
+(defn review-gate-retirement-command? [{:keys [event action]}]
+  (and (= "pull_request" event)
+       (contains? #{"closed" "converted_to_draft"} action)))
 
 (defn ingress-probe-command?
   [{:keys [event action label]}]
@@ -279,6 +288,41 @@
 (defn review-gate-external-id? [value]
   (and (string? value)
        (boolean (re-matches review-gate-external-id-pattern value))))
+
+(defn github-check-run-list-entry?
+  "Validate the REST fields consumed while identifying and ordering checks.
+  GitHub permits a null App and external identity; unrelated runs need not
+  carry a controller identity, and the optional App slug may be absent."
+  [value]
+  (and (map? value)
+       (every? #(contains? value %)
+               [:id :name :head_sha :external_id :app :status :conclusion
+                :details_url])
+       (positive-integer? (:id value))
+       (non-blank-string? (:name value))
+       (commit-sha? (:head_sha value))
+       (or (nil? (:external_id value)) (string? (:external_id value)))
+       (or (nil? (:app value))
+           (and (map? (:app value))
+                (positive-integer? (get-in value [:app :id]))
+                (or (not (contains? (:app value) :slug))
+                    (string? (get-in value [:app :slug])))))
+       (non-blank-string? (:status value))
+       (or (nil? (:conclusion value)) (string? (:conclusion value)))
+       (or (nil? (:details_url value)) (string? (:details_url value)))))
+
+(defn github-check-run-page?
+  "A 100-entry REST page must explicitly describe its result count and every
+  consumed check identity before it can establish presence or absence."
+  [page-number value]
+  (and (positive-integer? page-number)
+       (map? value)
+       (integer? (:total_count value))
+       (<= 0 (:total_count value))
+       (vector? (:check_runs value))
+       (= (count (:check_runs value))
+          (min 100 (max 0 (- (:total_count value) (* 100 (dec page-number))))))
+       (every? github-check-run-list-entry? (:check_runs value))))
 
 (defn payload-sha256? [value]
   (and (string? value) (boolean (re-matches sha256-pattern value))))

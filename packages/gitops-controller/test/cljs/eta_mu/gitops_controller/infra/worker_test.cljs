@@ -945,68 +945,70 @@
         (await (fs/remove-tree! root))))))
 
 (deftest ^:async pull-request-lifecycle-invalidates-the-merge-gate-without-dispatch
-  (let [root (await (fs/temporary-directory!))
-        state-store (store/create root)
-        invalidation-id "193cbef4-af2f-4bc0-a73a-f4ac06ecb92c"
-        prepared* (atom [])
-        dispatch-count* (atom 0)
-        permission-count* (atom 0)
-        github {:prepare-review-gate!
-                (^:async fn [installation-id expected]
-                  (swap! prepared* conj expected)
-                  (await (prepare-review-gate! installation-id expected)))
-                :fetch-pull-request!
-                (fn [_] (js/Promise.resolve
-                         (assoc current-pull-request :labels #{})))
-                :actor-permission!
-                (fn [_]
-                  (swap! permission-count* inc)
-                  (js/Promise.reject
-                   (ex-info "defensive invalidation needs no collaborator role"
-                            {})))
-                :dispatch-review!
-                (^:async fn [_ dispatch]
-                  (await (invoke-authorizer! dispatch :authorize-dispatch!))
-                  (swap! dispatch-count* inc)
-                  (js/Promise.resolve {:workflow-run-id 999}))}
-        queue-worker (worker/create
-                      {:store state-store
-                       :github github
-                       :authority (authority/github-port github)
-                       :policy review-policy
-                       :replay-interval-ms 600000})
-        source (-> command
-                   (assoc :delivery-id invalidation-id
-                          :action "synchronize")
-                   (dissoc :label :capability))
-        invalidation (:command (admission/decide review-policy source))]
-    (try
-      (await (store/initialize! state-store))
-      (await (store/accept-delivery! state-store invalidation))
-      (await (worker/start! queue-worker))
-      (await (worker/process-delivery! queue-worker invalidation-id))
-      (await (worker/process-delivery! queue-worker invalidation-id))
-      (let [result (:result
-                    (await (store/read-completion state-store
-                                                  invalidation-id)))
-            intent (:dispatch
-                    (await (store/read-dispatch-intent state-store
-                                                       invalidation-id)))]
-        (is (= 1 (count @prepared*)))
-        (is (zero? @dispatch-count*))
-        (is (zero? @permission-count*))
-        (is (= :gate-invalidated (:outcome result)))
-        (is (= :review-gate-invalidate
-               (keyword (:command/type intent))))
-        (is (= (:merge-sha current-pull-request)
-               (get-in intent [:gate-check :merge-sha])))
-        (is (false? (await (store/dispatch-call-begun?
-                            state-store invalidation-id))))
-        (is (false? (await (store/workflow-run-correlation-recorded?
-                            state-store invalidation-id)))))
-      (finally
-        (worker/stop! queue-worker)
-        (await (fs/remove-tree! root))))))
+  (doseq [change [{:action "synchronize"}
+                  {:action "edited" :base-ref-before "release"}]]
+    (let [root (await (fs/temporary-directory!))
+          state-store (store/create root)
+          invalidation-id "193cbef4-af2f-4bc0-a73a-f4ac06ecb92c"
+          prepared* (atom [])
+          dispatch-count* (atom 0)
+          permission-count* (atom 0)
+          github {:prepare-review-gate!
+                  (^:async fn [installation-id expected]
+                    (swap! prepared* conj expected)
+                    (await (prepare-review-gate! installation-id expected)))
+                  :fetch-pull-request!
+                  (fn [_] (js/Promise.resolve
+                           (assoc current-pull-request :labels #{})))
+                  :actor-permission!
+                  (fn [_]
+                    (swap! permission-count* inc)
+                    (js/Promise.reject
+                     (ex-info "defensive invalidation needs no collaborator role"
+                              {})))
+                  :dispatch-review!
+                  (^:async fn [_ dispatch]
+                    (await (invoke-authorizer! dispatch :authorize-dispatch!))
+                    (swap! dispatch-count* inc)
+                    (js/Promise.resolve {:workflow-run-id 999}))}
+          queue-worker (worker/create
+                        {:store state-store
+                         :github github
+                         :authority (authority/github-port github)
+                         :policy review-policy
+                         :replay-interval-ms 600000})
+          source (-> command
+                     (assoc :delivery-id invalidation-id)
+                     (merge change)
+                     (dissoc :label :capability))
+          invalidation (:command (admission/decide review-policy source))]
+      (try
+        (await (store/initialize! state-store))
+        (await (store/accept-delivery! state-store invalidation))
+        (await (worker/start! queue-worker))
+        (await (worker/process-delivery! queue-worker invalidation-id))
+        (await (worker/process-delivery! queue-worker invalidation-id))
+        (let [result (:result
+                      (await (store/read-completion state-store
+                                                    invalidation-id)))
+              intent (:dispatch
+                      (await (store/read-dispatch-intent state-store
+                                                         invalidation-id)))]
+          (is (= 1 (count @prepared*)))
+          (is (zero? @dispatch-count*))
+          (is (zero? @permission-count*))
+          (is (= :gate-invalidated (:outcome result)))
+          (is (= :review-gate-invalidate
+                 (keyword (:command/type intent))))
+          (is (= (:merge-sha current-pull-request)
+                 (get-in intent [:gate-check :merge-sha])))
+          (is (false? (await (store/dispatch-call-begun?
+                              state-store invalidation-id))))
+          (is (false? (await (store/workflow-run-correlation-recorded?
+                              state-store invalidation-id)))))
+        (finally
+          (worker/stop! queue-worker)
+          (await (fs/remove-tree! root)))))))
 
 (deftest ^:async indeterminate-test-merge-remains-pending-until-refetch
   (let [root (await (fs/temporary-directory!))
@@ -1337,7 +1339,8 @@
               :body {:permission "write" :user {:id 9 :login "operator"}}}
 
              (.includes url "/commits/")
-             {:ok? true :status 200 :body {:check_runs (vec (vals @checks*))}}
+             {:ok? true :status 200
+              :body {:total_count (count @checks*) :check_runs (vec (vals @checks*))}}
 
              (and (= "POST" method) (.endsWith url "/check-runs"))
              (let [id (swap! next-check-id* inc)
@@ -1422,6 +1425,188 @@
       (finally
         (worker/stop! queue-worker)
         (await (fs/remove-tree! root))))))
+
+(deftest ^:async terminal-and-retarget-events-retire-only-durable-gates-through-the-adapter
+  (doseq [entry [:lifecycle :completion]
+          terminal [:closed :draft :retargeted]
+          guard [:none :reopened :revoked-lease :patch-failure :observe-only]]
+    (let [root (await (fs/temporary-directory!))
+          state-store (store/create root)
+          retirement-id "56a5d98a-87df-4d70-a40c-40a3cf109198"
+          current* (atom {:state "open" :draft false :mergeable true
+                          :merge_commit_sha (:merge-sha current-pull-request)})
+          checks* (atom {})
+          phase* (atom :dispatch)
+          guarded?* (atom false)
+          lease-allowed?* (atom true)
+          failed-patch?* (atom false)
+          patches* (atom [])
+          dispatches* (atom 0)
+          permissions* (atom 0)
+          current-repository {:id 42 :full_name "open-hax/eta-mu" :default_branch "main"}
+          lease {:status! #(js/Promise.resolve {:state :active})
+                 :authorize! #(js/Promise.resolve {:allowed? @lease-allowed?*
+                                                   :lease {:state :active}})}
+          active-policy (assoc review-policy :effect-lease lease)
+          final-policy (cond-> active-policy
+                         (= :observe-only guard) (assoc :mode :observe-only))
+          adapter (github/port {:github-api-url "https://api.github.test"
+                                :github-app-id 123 :github-private-key "mocked-signing"
+                                :mode :review-dispatch})
+          make-worker (fn [policy]
+                        (worker/create {:store state-store :policy policy :github adapter
+                                        :authority (authority/github-port adapter)
+                                        :replay-interval-ms 600000}))
+          worker* (atom (make-worker active-policy))]
+      (try
+        (with-redefs
+          [crypto/github-app-jwt (fn [& _] "test-jwt")
+           http/request!
+           (fn [{:keys [url method body]}]
+             (cond
+               (.endsWith url "/access_tokens")
+               {:ok? true :status 201 :body {:token "test-token"}}
+
+               (.endsWith url "/pulls/321")
+               {:ok? true :status 200
+                :body (merge {:number 321 :node_id "PR_kwDOExample"
+                              :head {:sha (:head-sha current-pull-request)
+                                     :repo current-repository}
+                              :base {:ref "main" :sha (:base-sha current-pull-request)}
+                              :html_url (:html-url current-pull-request)
+                              :labels [{:name "eta-mu:review"}]}
+                             @current*)}
+
+               (.endsWith url "/repos/open-hax/eta-mu")
+               {:ok? true :status 200 :body current-repository}
+
+               (.endsWith url "/permission")
+               (do (swap! permissions* inc)
+                   {:ok? true :status 200
+                    :body {:permission "write" :user {:id 9 :login "operator"}}})
+
+               (.includes url "/commits/")
+               (do
+                 ;; Race after the worker's initial PR read and before the
+                 ;; adapter invokes the immediate pre-PATCH authorizer.
+                 (when (and (= :retirement @phase*)
+                            (compare-and-set! guarded?* false true))
+                   (case guard
+                     :reopened (reset! current* {:state "open" :draft false
+                                                :mergeable true
+                                                :merge_commit_sha
+                                                (:merge-sha current-pull-request)})
+                     :revoked-lease (reset! lease-allowed?* false)
+                     nil))
+                 {:ok? true :status 200
+                  :body {:total_count (count @checks*)
+                         :check_runs (vec (vals @checks*))}})
+
+               (and (= "POST" method) (.endsWith url "/check-runs"))
+               (let [check (assoc body :id gate-check-id :node_id "CR_kwDOGate"
+                                  :conclusion nil
+                                  :app {:id 123 :slug "eta-mu-controller"})]
+                 (swap! checks* assoc gate-check-id check)
+                 {:ok? true :status 201 :body check})
+
+               (and (= "PATCH" method) (.endsWith url "/check-runs/4567"))
+               (do
+                 (swap! patches* conj [gate-check-id (:conclusion body)])
+                 (if (and (= :patch-failure guard)
+                          (compare-and-set! failed-patch?* false true))
+                   {:ok? false :status 503 :body {}}
+                   (let [updated (merge (get @checks* gate-check-id) body)]
+                     (swap! checks* assoc gate-check-id updated)
+                     {:ok? true :status 200 :body updated})))
+
+               (.endsWith url "/dispatches")
+               (do (swap! dispatches* inc)
+                   {:ok? true :status 200
+                    :body {:workflow_run_id 987 :run_url "https://api.github.test/runs/987"
+                           :html_url "https://github.test/runs/987"}})
+
+               (.endsWith url "/actions/runs/987")
+               {:ok? true :status 200
+                :body {:id 987 :node_id "WFR_987" :workflow_id 7001
+                       :repository current-repository
+                       :path "open-hax/eta-mu/.github/workflows/opencode-code-review.yml@main"
+                       :event "workflow_dispatch" :status "completed" :conclusion "success"
+                       :head_sha "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                       :head_branch "main" :run_attempt 1
+                       :url "https://api.github.test/runs/987"
+                       :html_url "https://github.test/runs/987"
+                       :actor {:id 501 :login "eta-mu-controller[bot]"}
+                       :triggering_actor {:id 501 :login "eta-mu-controller[bot]"}}}
+
+               :else (throw (ex-info "unexpected retirement fixture request"
+                                    {:method method :url url}))))]
+          (await (store/initialize! state-store))
+          (await (worker/start! @worker*))
+          (await (store/accept-delivery! state-store (admitted-command active-policy)))
+          (await (worker/process-delivery! @worker* delivery-id))
+          (is (= 1 @dispatches*))
+          (is (true? (await (store/dispatch-call-begun? state-store delivery-id))))
+          (is (= "in_progress" (:status (get @checks* gate-check-id))))
+          ;; Another App's same-name gate must never be cancelled, even if its
+          ;; external ID exactly copies the controller's durable receipt.
+          (swap! checks* assoc 9000
+                 (assoc (get @checks* gate-check-id) :id 9000 :node_id "CR_foreign"
+                        :app {:id 999 :slug "foreign-app"}))
+          (reset! current* (cond-> {:state (if (= :closed terminal) "closed" "open")
+                                    :draft (= :draft terminal)
+                                    :mergeable nil :merge_commit_sha nil}
+                             (= :retargeted terminal)
+                             (assoc :base {:ref "release"
+                                           :sha (:base-sha current-pull-request)})))
+          (reset! phase* :retirement)
+          (reset! permissions* 0)
+          (when (= :observe-only guard)
+            (worker/stop! @worker*)
+            (reset! worker* (make-worker final-policy))
+            (await (worker/start! @worker*)))
+          (let [source (if (= :completion entry)
+                         (completion-command retirement-id 987 7001
+                                             "opencode-code-review.yml" "success")
+                         (-> command
+                             (assoc :delivery-id retirement-id :command-id retirement-id
+                                    :action (case terminal :closed "closed"
+                                              :draft "converted_to_draft" :retargeted "edited"))
+                             (cond-> (= :retargeted terminal)
+                               (assoc :base-ref-before "main"))
+                             (dissoc :label)))
+                retirement (:command (admission/decide final-policy source))]
+            (is (some? retirement))
+            (await (store/accept-delivery! state-store retirement))
+            (await (worker/process-delivery! @worker* retirement-id))
+            (when (= :patch-failure guard)
+              (is (false? (await (store/completed? state-store retirement-id))))
+              (is (= "in_progress" (:status (get @checks* gate-check-id))))
+              (await (worker/replay-pending! @worker*)))
+            (if (contains? #{:none :patch-failure} guard)
+              (do
+                (is (= "cancelled" (:conclusion (get @checks* gate-check-id))))
+                (is (= (if (= :completion entry) :gate-retired :gates-retired)
+                       (get-in (await (store/read-completion state-store retirement-id))
+                               [:result :outcome])))
+                (let [count-before (count @patches*)]
+                  (await (worker/process-delivery! @worker* retirement-id))
+                  (await (worker/replay-pending! @worker*))
+                  (is (= count-before (count @patches*)))))
+              (do
+                (is (empty? @patches*))
+                (is (= "in_progress" (:status (get @checks* gate-check-id))))
+                (if (= :observe-only guard)
+                  (is (= :observed
+                         (get-in (await (store/read-completion state-store retirement-id))
+                                 [:result :outcome])))
+                  (is (false? (await (store/completed? state-store retirement-id)))))))
+            (is (= "in_progress" (:status (get @checks* 9000))))
+            (is (= 1 @dispatches*))
+            (is (zero? @permissions*))
+            (is (false? (:fatal? (worker/status @worker*))))))
+        (finally
+          (worker/stop! @worker*)
+          (await (fs/remove-tree! root)))))))
 
 (deftest ^:async uncorrelated-completion-remains-replayable-without-effects
   (let [root (await (fs/temporary-directory!))

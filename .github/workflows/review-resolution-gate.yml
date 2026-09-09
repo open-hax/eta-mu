@@ -156,7 +156,7 @@ jobs:
             const targetRepository = String(pullRequest.base?.repo?.full_name || '');
             const headRepository = String(pullRequest.head?.repo?.full_name || '');
             const defaultBranch = String(context.payload.repository?.default_branch || '');
-            if (pullRequest.state !== 'open' || pullRequest.draft === true
+            if (pullRequest.state !== 'open' || pullRequest.draft !== false
                 || pullRequest.mergeable !== true
                 || targetRepository.toLowerCase() !== repository.toLowerCase()
                 || headRepository.toLowerCase() !== repository.toLowerCase()

@@ -131,7 +131,8 @@ while those optional ports are absent from the observe-only composition.
 
 Only `issues:labeled` with exact `eta-mu:probe`,
 `pull_request:labeled` with exact `eta-mu:review` or `eta-mu:probe`,
-defensive `pull_request:opened|reopened|synchronize|ready_for_review` and
+defensive `pull_request:opened|reopened|synchronize|ready_for_review`,
+terminal cleanup for `pull_request:closed|converted_to_draft`, and
 base-changing `pull_request:edited`, non-deleted default-branch `push`,
 `pull_request_review:submitted|dismissed`,
 `pull_request_review_comment:created|deleted`, and
