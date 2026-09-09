@@ -487,17 +487,31 @@
           [[7001 "opencode-code-review.yml"]
            [7002 "review-resolution-gate.yml"]]]
     (let [source (workflow-completion-source workflow-id workflow-file)
-          bare (admission/decide config source)
-          qualified (admission/decide
-                     config (assoc source :workflow-run-path
-                                   (str ".github/workflows/" workflow-file
-                                        "@main")))]
-      (is (:admitted? bare))
-      (is (:admitted? qualified))
-      (is (= :review-gate-completion
-             (get-in bare [:command :command/type])))
-      (is (:allowed?
-           (admission/current-policy-decision config (:command bare))))))
+          path (str ".github/workflows/" workflow-file)]
+      (doseq [run-path [path (str path "@main")
+                       (str "open-hax/eta-mu/" path "@main")]]
+        (let [decision (admission/decide
+                        config (assoc source :workflow-run-path run-path))]
+          (is (:admitted? decision))
+          (is (= :review-gate-completion
+                 (get-in decision [:command :command/type])))
+          (is (:allowed?
+               (admission/current-policy-decision config (:command decision))))))
+      (doseq [run-path [(str "attacker/eta-mu/" path "@main")
+                       (str "open-hax/other/" path "@main")
+                       (str "open-hax/eta-mu/" path "@trunk")
+                       (str "open-hax/eta-mu/" path)
+                       (str "open-hax/eta-mu/" path "@main/../trunk")
+                       (str "open-hax/eta-mu/" path "@main/extra")
+                       (str "open-hax/eta-mu/" path ".evil@main")
+                       (str "open-hax/eta-mu/../" path "@main")]]
+        (is (= :unmanaged-workflow
+               (:reason (admission/decide
+                         config (assoc source :workflow-run-path run-path)))))
+        (let [admitted (:command (admission/decide config source))]
+          (is (= :command-workflow-policy-changed
+                 (:reason (admission/current-policy-decision
+                           config (assoc admitted :workflow-run-path run-path)))))))))
   (is (= :unmanaged-workflow
          (:reason (admission/decide
                    config (assoc (workflow-completion-source
@@ -591,6 +605,34 @@
            (get-in plan [:terminal-intent :patch :conclusion])))
     (is (= "https://github.test/runs/991/attempts/1"
            (get-in plan [:terminal-intent :patch :details-url])))
+    (testing "webhook and authoritative paths independently bind the dispatched workflow"
+      (doseq [path [".github/workflows/review-resolution-gate.yml"
+                    ".github/workflows/review-resolution-gate.yml@main"
+                    "open-hax/eta-mu/.github/workflows/review-resolution-gate.yml@main"]]
+        (is (:planned?
+             (review/trusted-workflow-completion-plan
+              (assoc completion :workflow-run-path path) correlation source-id
+              (assoc run :path path) pull "eta-mu-controller[bot]"))))
+      (doseq [path ["attacker/eta-mu/.github/workflows/review-resolution-gate.yml@main"
+                    "open-hax/other/.github/workflows/review-resolution-gate.yml@main"
+                    "open-hax/eta-mu/.github/workflows/review-resolution-gate.yml@trunk"
+                    "open-hax/eta-mu/.github/workflows/other.yml@main"
+                    "open-hax/eta-mu/.github/workflows/review-resolution-gate.yml.evil@main"
+                    "open-hax/eta-mu/../.github/workflows/review-resolution-gate.yml@main"]]
+        (is (= :untrusted-workflow-run
+               (:reason (review/trusted-workflow-completion-plan
+                         completion correlation source-id (assoc run :path path)
+                         pull "eta-mu-controller[bot]"))))
+        (is (= :workflow-run-webhook-mismatch
+               (:reason (review/trusted-workflow-completion-plan
+                         (assoc completion :workflow-run-path path) correlation
+                         source-id run pull "eta-mu-controller[bot]")))))
+      (is (= :untrusted-workflow-run
+             (:reason (review/trusted-workflow-completion-plan
+                       completion correlation source-id
+                       (assoc run :path ".github/workflows/review-resolution-gate.yml"
+                              :head-branch "trunk")
+                       pull "eta-mu-controller[bot]")))))
     (testing "a successful code-review run cannot green its own gate"
       (is (= "failure"
              (get-in (review/trusted-workflow-completion-plan

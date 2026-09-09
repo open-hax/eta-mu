@@ -118,7 +118,8 @@
                (not (law/workflow-definition-path?
                      expected-workflow (:workflow-definition-path command)))
                (not (law/workflow-run-webhook-path?
-                     expected-workflow (:workflow-run-head-branch command)
+                     (:repository command) expected-workflow
+                     (:workflow-run-head-branch command)
                      (:workflow-run-path command)))))
       {:allowed? false :reason :command-workflow-policy-changed}
 
@@ -274,7 +275,7 @@
                     workflow
                     (:workflow-definition-path command)))
               (not (law/workflow-run-webhook-path?
-                    workflow
+                    (:repository command) workflow
                     (:workflow-run-head-branch command)
                     (:workflow-run-path command))))
           {:admitted? false :ignored? true :reason :unmanaged-workflow}

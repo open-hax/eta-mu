@@ -247,6 +247,12 @@ jobs:
 
             const runId = Number(rawRunId);
             const workflowId = Number(rawWorkflowId);
+            const expectedRepository = `${context.repo.owner}/${context.repo.repo}`;
+            const acceptedWorkflowPaths = [
+              expectedWorkflowPath,
+              `${expectedWorkflowPath}@${expectedWorkflowRef}`,
+              `${expectedRepository}/${expectedWorkflowPath}@${expectedWorkflowRef}`,
+            ];
             const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
             let observedHeadSha = '';
             for (let attempt = 1; attempt <= 120; attempt += 1) {
@@ -260,8 +266,8 @@ jobs:
               const headSha = String(run.head_sha || '');
               if (run.id !== runId
                   || run.workflow_id !== workflowId
-                  || repository.toLowerCase() !== `${context.repo.owner}/${context.repo.repo}`.toLowerCase()
-                  || run.path !== expectedWorkflowPath
+                  || repository.toLowerCase() !== expectedRepository.toLowerCase()
+                  || !acceptedWorkflowPaths.includes(run.path)
                   || run.event !== 'workflow_dispatch'
                   || run.run_attempt !== 1
                   || run.head_branch !== expectedWorkflowRef

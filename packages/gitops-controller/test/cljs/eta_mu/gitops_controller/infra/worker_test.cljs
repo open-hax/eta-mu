@@ -997,6 +997,8 @@
         source-id "808f730f-136f-457d-b629-ceccdcf7766b"
         completion-id "56a5d98a-87df-4d70-a40c-40a3cf109198"
         run-id 991
+        run-path "open-hax/eta-mu/.github/workflows/review-resolution-gate.yml@main"
+        fetched-runs* (atom 0)
         terminal-call* (atom nil)
         current* (atom (assoc current-pull-request
                               :labels #{}
@@ -1031,10 +1033,37 @@
                            :status "in_progress"})
         completed-run (assoc (await (fetch-gate-review-run!
                                      {:workflow-run-id run-id}))
+                             :path run-path
                              :status "completed"
                              :conclusion "success")
-        github {:fetch-workflow-run! (fn [_]
-                                       (js/Promise.resolve completed-run))
+        adapter (github/port {:github-api-url "https://api.github.test"
+                              :github-app-id 123 :github-private-key "mocked-signing"
+                              :mode :review-dispatch})
+        github {:fetch-workflow-run!
+                (^:async fn [request]
+                  (with-redefs
+                    [crypto/github-app-jwt (fn [& _] "test-jwt")
+                     http/request!
+                     (fn [{:keys [url method]}]
+                       (if (= "POST" method)
+                         {:ok? true :status 201 :body {:token "test-token"}}
+                         (do
+                           (is (= "https://api.github.test/repos/open-hax/eta-mu/actions/runs/991"
+                                  url))
+                           (swap! fetched-runs* inc)
+                           {:ok? true :status 200
+                            :body {:id run-id :node_id "WFR_991" :workflow_id 7002
+                                   :repository {:id 42 :full_name "open-hax/eta-mu"}
+                                   :path run-path :event "workflow_dispatch"
+                                   :status "completed" :conclusion "success"
+                                   :head_sha (:head-sha completed-run)
+                                   :head_branch "main" :run_attempt 1
+                                   :url (:url completed-run)
+                                   :html_url (:html-url completed-run)
+                                   :actor {:id 501 :login "eta-mu-controller[bot]"}
+                                   :triggering_actor
+                                   {:id 501 :login "eta-mu-controller[bot]"}}})))]
+                    (await ((:fetch-workflow-run! adapter) request))))
                 :fetch-pull-request! (fn [_]
                                        (js/Promise.resolve @current*))
                 :complete-review-gate!
@@ -1050,9 +1079,13 @@
                        :authority {}
                        :policy review-policy
                        :replay-interval-ms 600000})
-        completion (completion-command completion-id run-id 7002
-                                       "review-resolution-gate.yml"
-                                       "success")]
+        completion (:command
+                    (admission/decide
+                     review-policy
+                     (assoc (completion-command completion-id run-id 7002
+                                                "review-resolution-gate.yml"
+                                                "success")
+                            :workflow-run-path run-path)))]
     (try
       (await (store/initialize! state-store))
       (await
@@ -1079,6 +1112,10 @@
             terminal-receipt (await (store/read-gate-terminal-intent
                                      state-store completion-id))
             intent (get-in @terminal-call* [:request :terminal-intent])]
+        (is (<= 2 @fetched-runs*))
+        (is (= run-path
+               (get-in (await (store/read-delivery state-store completion-id))
+                       [:command :workflow-run-path])))
         (is (= 77 (:installation-id @terminal-call*)))
         (is (= gate-check-id
                (get-in @terminal-call* [:request :gate-check :id])))

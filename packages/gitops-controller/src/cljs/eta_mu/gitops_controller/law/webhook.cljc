@@ -122,24 +122,26 @@
 (defn workflow-file? [value]
   (and (string? value) (boolean (re-matches workflow-file-pattern value))))
 
-(defn workflow-run-path? [workflow ref value]
-  (and (workflow-file? workflow)
+(defn workflow-run-path?
+  "Accept GitHub's exact bare, ref-qualified, and repository-qualified run
+  paths. Callers also bind the repository, workflow ID, and head branch."
+  [repository workflow ref value]
+  (and (repository-full-name? repository)
+       (workflow-file? workflow)
        (non-blank-string? ref)
-       (= (str ".github/workflows/" workflow "@" ref) value)))
+       (contains? #{(str ".github/workflows/" workflow)
+                    (str ".github/workflows/" workflow "@" ref)
+                    (str repository "/.github/workflows/" workflow "@" ref)}
+                  value)))
 
 (defn workflow-definition-path? [workflow value]
   (and (workflow-file? workflow)
        (= (str ".github/workflows/" workflow) value)))
 
 (defn workflow-run-webhook-path?
-  "Accept the two exact path representations GitHub emits for a workflow_run
-  webhook. The authoritative REST refetch still requires path@ref."
-  [workflow ref value]
-  (and (workflow-file? workflow)
-       (non-blank-string? ref)
-       (contains? #{(str ".github/workflows/" workflow)
-                    (str ".github/workflows/" workflow "@" ref)}
-                  value)))
+  "Apply the same exact workflow_run path contract at signed ingress and REST."
+  [repository workflow ref value]
+  (workflow-run-path? repository workflow ref value))
 
 (defn- normalized-command-type [value]
   (cond

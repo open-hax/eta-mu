@@ -4,7 +4,7 @@ labels: "github, webhook, review, gitops"
 dependency: []
 parent: "opencode-mimo-evidence-review-agent"
 type: "task"
-write-id: "1788985583524-0.0opx92txmsb4jzpf97a"
+write-id: "1788987230688-0.uqs063fchgavo45n3pd"
 title: "Admit exact-head code reviews through signed webhooks"
 priority: "P0"
 status: "review"
@@ -62,5 +62,9 @@ Final-head Codex review on7c0ce18 found one architecture correction: active-mark
 The layer audit confirms the parser is in law.webhook and finds four other exported transforms under the same boundary rule: command-type/capability normalization, gate-reconcile-source-id extraction, and review-gate-external-id construction. Move these externally consumed morphisms to shape in the same mechanical correction, preserving internal validation semantics and the declarative command-capability contract lookup. No behavior or activation change.
 
 Completed the law/shape correction: marker parser moved from law.webhook to shape.effect-lease; law retains boolean validity predicates. Four exported data morphisms moved to shape.webhook and callers migrated; private normalization serves only independent law validation/static capability lookup. Exact LF, missing LF, CRLF, extra-line and invalid deployment IDs remain covered. Full controller120tests/1078assertions0fail0error; release0warnings; package kondo0errors0warnings. Workflow source is unchanged from the89/89 tested version. Sol protected test/build remains the sole operational blocker pending administrator setup and human approval of the new final SHA.
+
+Current-head Codex review on91ac841 reports that documented workflow-run paths may include the expected owner/repository prefix, which current completion validation rejects. Verify primary GitHub schema/API behavior, then support the valid qualified form consistently in signed webhook and authoritative run checks while strictly enforcing repository, workflow and ref. Preserve existing forms; add real completion regression plus wrong-scope refusals.
+
+Verified the official GitHub REST workflow-run.path schema documents owner/repository-qualified paths; real workflow_dispatch API data also uses bare paths. Controller ingress and authoritative completion now accept exactly bare workflow path, path@expected-ref, and expected-repository/path@expected-ref. The review-resolution workflow applies the same contract. Wrong repository, workflow, ref and lookalike paths remain refused; independent identity and revision checks remain intact. Real adapter/durable completion regression passes. Two independent review agents found no actionable defects. Full controller: 120 tests / 1141 assertions, zero failures/errors; release and clj-kondo: zero warnings; combined workflow contracts: 90/90. Protected Sol test/build still awaits administrator setup and explicit human approval of the final SHA; Services activation stays disabled.
 
 ---

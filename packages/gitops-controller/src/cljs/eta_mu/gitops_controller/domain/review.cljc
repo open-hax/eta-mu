@@ -10,7 +10,8 @@
        (= (:workflow-id dispatch) (:workflow-id workflow-run))
        (= (:repository dispatch) (:repository workflow-run))
        (= (:repository-id dispatch) (:repository-id workflow-run))
-       (law/workflow-run-path? (:workflow dispatch) (:ref dispatch)
+       (law/workflow-run-path? (:repository dispatch)
+                               (:workflow dispatch) (:ref dispatch)
                                (:path workflow-run))
        (= "workflow_dispatch" (:event workflow-run))
        (contains? #{"queued" "in_progress" "completed"}
@@ -95,7 +96,8 @@
        (= (:workflow-run-node-id command) (:node-id workflow-run))
        (= (:workflow-run-workflow-id command) (:workflow-id workflow-run))
        (law/workflow-run-webhook-path?
-        (:workflow dispatch) (:ref dispatch) (:workflow-run-path command))
+        (:repository dispatch) (:workflow dispatch) (:ref dispatch)
+        (:workflow-run-path command))
        (= (:workflow-run-event command) (:event workflow-run))
        (= (:workflow-run-status command) (:status workflow-run))
        (= (:workflow-run-conclusion command) (:conclusion workflow-run))

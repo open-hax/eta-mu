@@ -296,6 +296,8 @@ async function runBoundEvidence({
   expectedPath = ".github/workflows/opencode-code-review.yml@main",
   runPath = ".github/workflows/opencode-code-review.yml",
   runBranch = "main",
+  runRepository = "open-hax/fixture",
+  runWorkflowId = 7001,
 } = {}) {
   const outputs = {};
   const script = namedGateStep("Wait for bound exact-head review evidence").with.script;
@@ -307,8 +309,8 @@ async function runBoundEvidence({
           getWorkflowRun: async () => ({
             data: {
               id: 8001,
-              workflow_id: 7001,
-              repository: { full_name: "open-hax/fixture" },
+              workflow_id: runWorkflowId,
+              repository: { full_name: runRepository },
               path: runPath,
               event: "workflow_dispatch",
               run_attempt: 1,
@@ -664,18 +666,51 @@ test("review-resolution gate polls transient mergeability before tuple validatio
   );
 });
 
-test("review-resolution gate binds a bare workflow path separately from its protected ref", async () => {
-  const outputs = await runBoundEvidence();
-  assert.equal(outputs.created_at, "2026-09-01T20:00:00Z");
+test("review-resolution gate accepts documented workflow path forms with the protected ref", async () => {
+  for (const runPath of [
+    ".github/workflows/opencode-code-review.yml",
+    ".github/workflows/opencode-code-review.yml@main",
+    "open-hax/fixture/.github/workflows/opencode-code-review.yml@main",
+  ]) {
+    const outputs = await runBoundEvidence({ runPath });
+    assert.equal(outputs.created_at, "2026-09-01T20:00:00Z", runPath);
+  }
+});
 
-  await assert.rejects(
-    runBoundEvidence({ runPath: ".github/workflows/opencode-code-review.yml@main" }),
-    /failed its protected identity binding/i,
-  );
-  await assert.rejects(
-    runBoundEvidence({ runBranch: "feature/untrusted" }),
-    /failed its protected identity binding/i,
-  );
+test("review-resolution gate rejects workflow path lookalikes and mismatched bindings", async () => {
+  for (const runPath of [
+    ".github/workflows/opencode-code-review.yml@feature/untrusted",
+    "open-hax/fixture/.github/workflows/opencode-code-review.yml@feature/untrusted",
+    "other-owner/fixture/.github/workflows/opencode-code-review.yml@main",
+    "open-hax/other-repository/.github/workflows/opencode-code-review.yml@main",
+    "open-hax/fixture/.github/workflows/opencode-code-review.yml",
+    "open-hax/fixture/.github/workflows/opencode-code-review.yml@main/extra",
+    "open-hax/fixture/.github/workflows/other-review.yml@main",
+    "open-hax/fixture/.github/workflows/../opencode-code-review.yml@main",
+    ".github/workflows/opencode-code-review.yml@refs/heads/main",
+    ".github/workflows/opencode-code-review.yml@main@main",
+    "",
+    null,
+  ]) {
+    await assert.rejects(
+      runBoundEvidence({ runPath }),
+      /failed its protected identity binding/i,
+      String(runPath),
+    );
+  }
+  for (const mismatch of [
+    { runBranch: "feature/untrusted" },
+    { runRepository: "other-owner/fixture" },
+    { runWorkflowId: 7002 },
+  ]) {
+    await assert.rejects(
+      runBoundEvidence({
+        runPath: "open-hax/fixture/.github/workflows/opencode-code-review.yml@main",
+        ...mismatch,
+      }),
+      /failed its protected identity binding/i,
+    );
+  }
 });
 
 test("consumer wrapper documentation passes only declared review capabilities", () => {
