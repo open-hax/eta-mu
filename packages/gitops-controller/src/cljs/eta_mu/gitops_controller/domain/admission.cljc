@@ -1,6 +1,7 @@
 (ns eta-mu.gitops-controller.domain.admission
   "Pure policy for turning a valid webhook command into operator intent."
-  (:require [eta-mu.gitops-controller.law.webhook :as law]))
+  (:require [eta-mu.gitops-controller.law.webhook :as law]
+            [eta-mu.gitops-controller.shape.webhook :as shape]))
 
 (defn- mode-keyword [value]
   (if (string? value) (keyword value) value))
@@ -47,8 +48,8 @@
    {:keys [repository installation-id label admission] :as command}]
   (let [admitted-mode (mode-keyword (:mode admission))
         current-mode (mode-keyword mode)
-        command-type (law/command-type (:command/type command))
-        admitted-command-type (law/command-type
+        command-type (shape/command-type (:command/type command))
+        admitted-command-type (shape/command-type
                                (:command/type admission))
         expected-command-type (source-command-type command)
         expected-capability (law/command-capability command-type)
@@ -63,7 +64,7 @@
           (not (law/command-type? command-type))
           (not= command-type admitted-command-type)
           (not= command-type expected-command-type)
-          (not= expected-capability (law/capability (:capability command)))
+          (not= expected-capability (shape/capability (:capability command)))
           (and (= :issue-probe command-type)
                (or (not (law/project-id? project-id))
                    (not (law/project-id? (:project-id admission)))))
@@ -138,7 +139,7 @@
      (assoc command
             :command-id (:delivery-id command)
             :command/type command-type
-            :capability (law/capability capability)
+            :capability (shape/capability capability)
             :admission
             (cond-> {:version 2
                      :mode mode
@@ -247,7 +248,7 @@
       (not (law/gate-reconcile-action? (:event command) (:action command)))
       {:admitted? false :ignored? true :reason :unmanaged-action}
 
-      (not (law/non-blank-string? (law/gate-reconcile-source-id command)))
+      (not (law/non-blank-string? (shape/gate-reconcile-source-id command)))
       {:admitted? false :reason :invalid-review-event}
 
       :else

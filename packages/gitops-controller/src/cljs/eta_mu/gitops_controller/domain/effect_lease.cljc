@@ -1,6 +1,6 @@
 (ns eta-mu.gitops-controller.domain.effect-lease
   "Pure deployment effect-lease admissibility decisions."
-  (:require [eta-mu.gitops-controller.law.webhook :as law]))
+  (:require [eta-mu.gitops-controller.shape.effect-lease :as shape]))
 
 (defn unreadable-status
   [deployment-id]
@@ -11,7 +11,7 @@
 
 (defn status
   [deployment-id marker]
-  (let [active-deployment (law/active-marker-deployment marker)]
+  (let [active-deployment (shape/active-marker-deployment marker)]
     (cond
       (nil? marker)
       {:state :provisional

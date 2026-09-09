@@ -4,7 +4,8 @@
             [eta-mu.gitops-controller.extern.fs :as fs]
             [eta-mu.gitops-controller.extern.runtime :as runtime]
             [eta-mu.gitops-controller.law.webhook :as law]
-            [eta-mu.gitops-controller.shape.edn :as edn]))
+            [eta-mu.gitops-controller.shape.edn :as edn]
+            [eta-mu.gitops-controller.shape.webhook :as shape]))
 
 (defn- paths [root]
   {:deliveries (fs/join root "deliveries")
@@ -915,7 +916,7 @@
                   (fn [receipt]
                     (let [dispatch (get-in receipt [:correlation :dispatch])]
                       (and (= :code-review
-                              (law/command-type (:command/type dispatch)))
+                              (shape/command-type (:command/type dispatch)))
                            (= repository (:repository dispatch))
                            (= repository-id
                               (get-in receipt [:correlation :command
@@ -955,7 +956,7 @@
                (let [dispatch (:dispatch receipt)]
                  (and (= "review-dispatch-intent" (receipt-type receipt))
                       (= :code-review
-                         (law/command-type (:command/type dispatch)))
+                         (shape/command-type (:command/type dispatch)))
                       (= repository (:repository dispatch))
                       (= repository-id (:repository-id dispatch))
                       (= (str pr-number)

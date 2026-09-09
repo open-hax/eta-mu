@@ -4,7 +4,7 @@ labels: "github, webhook, review, gitops"
 dependency: []
 parent: "opencode-mimo-evidence-review-agent"
 type: "task"
-write-id: "1788984725925-0.jlugnni9q3e2ttu7vmy"
+write-id: "1788985583524-0.0opx92txmsb4jzpf97a"
 title: "Admit exact-head code reviews through signed webhooks"
 priority: "P0"
 status: "review"
@@ -56,5 +56,11 @@ Current-head Codex review on56cf3e3 adds four concrete corrections: replace shap
 Corrected current-head Codex findings: CLJS string predicate in shape; strict-newer verified completion cancels pending predecessor before durable settlement and retries failure; default-branch rename durably refuses signed parent without child admission; independent CI includes the Sol contract workflow. Also carries the three reviewed bootstrap guard fixes from PR332. Full controller119tests/1053assertions0fail0error; release0warnings; package kondo0errors0warnings; combined workflow contracts89/89. Sol actual protected test/build still awaits bootstrap merge/admin setup/human exact-head approval.
 
 Protected Sol bootstrap PR332 merged as476b07bd66efb84566a4159556deacb1e9407e6f after current-head Codex review found no major issues, independent security review of corrections passed, required checks and standalone9tests passed, and all three review threads resolved. Integration preserves all ledger bytes/order and existing duplicate IDs; .github/packages/docs source is identical to tested2dde9ab. Controller119tests/1053assertions and workflow89tests evidence therefore applies to unchanged code. The only remaining original blocker is administrator sol-premerge environment setup/dedicated secrets, explicit human approval, and actual protected Sol test/build on the final candidate.
+
+Final-head Codex review on7c0ce18 found one architecture correction: active-marker-deployment parses the LF-terminated wire marker and returns deployment data from law.effect-lease. Move that morphism to shape and keep law predicates only, preserving strict marker/lease semantics and existing negative regressions. No Services activation change is authorized or intended.
+
+The layer audit confirms the parser is in law.webhook and finds four other exported transforms under the same boundary rule: command-type/capability normalization, gate-reconcile-source-id extraction, and review-gate-external-id construction. Move these externally consumed morphisms to shape in the same mechanical correction, preserving internal validation semantics and the declarative command-capability contract lookup. No behavior or activation change.
+
+Completed the law/shape correction: marker parser moved from law.webhook to shape.effect-lease; law retains boolean validity predicates. Four exported data morphisms moved to shape.webhook and callers migrated; private normalization serves only independent law validation/static capability lookup. Exact LF, missing LF, CRLF, extra-line and invalid deployment IDs remain covered. Full controller120tests/1078assertions0fail0error; release0warnings; package kondo0errors0warnings. Workflow source is unchanged from the89/89 tested version. Sol protected test/build remains the sole operational blocker pending administrator setup and human approval of the new final SHA.
 
 ---

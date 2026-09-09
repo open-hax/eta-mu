@@ -539,7 +539,7 @@
               :head-sha head
               :merge-sha "2222222222222222222222222222222222222222"
               :external-id
-              (law/review-gate-external-id
+              (shape/review-gate-external-id
                source-id 321 head
                "1111111111111111111111111111111111111111"
                "2222222222222222222222222222222222222222")

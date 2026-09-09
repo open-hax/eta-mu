@@ -11,7 +11,8 @@
             [eta-mu.gitops-controller.extern.crypto :as crypto]
             [eta-mu.gitops-controller.extern.runtime :as runtime]
             [eta-mu.gitops-controller.infra.store :as store]
-            [eta-mu.gitops-controller.law.webhook :as law]))
+            [eta-mu.gitops-controller.law.webhook :as law]
+            [eta-mu.gitops-controller.shape.webhook :as shape]))
 
 (defn create
   [{:keys [store github authority effect-lease mode workflow policy
@@ -158,7 +159,7 @@
                :review-gate-invalidate
                :review-gate-base-push
                :review-gate-completion}
-             (law/command-type (:command/type command))))
+             (shape/command-type (:command/type command))))
 
 (defn- durable-dispatch-current? [durable planned]
   (= (select-keys durable
@@ -174,7 +175,7 @@
   ([mode command plan]
    (let [dispatch (:dispatch plan)
          probe (:probe plan)]
-     (cond-> {:command/type (law/command-type (:command/type command))
+     (cond-> {:command/type (shape/command-type (:command/type command))
               :event (:event command)
               :action (:action command)
               :repository (:repository command)
@@ -330,7 +331,7 @@
       ;; creation is idempotently reconciled by its immutable external_id.
       (await (store/claim-dispatch! store delivery-id (:dispatch plan)))
       (ensure-enabled! worker)
-      (let [command-type (law/command-type (:command/type command))
+      (let [command-type (shape/command-type (:command/type command))
             invalidation? (= :review-gate-invalidate command-type)
             _ (when (= :review-gate-reconcile command-type)
                 (reset! stage* :resolve-latest-code-review-intent))
@@ -741,7 +742,7 @@
                  {:outcome :refused :reason (:reason plan)})
           stage*)))
 
-      (= :ingress-probe (law/command-type (:command/type command)))
+      (= :ingress-probe (shape/command-type (:command/type command)))
       (await
        (store/complete!
         store delivery-id
@@ -770,7 +771,7 @@
 (defn- uncertain-completion [dispatch]
   {:outcome :held
    :reason :dispatch-outcome-uncertain
-   :command/type (law/command-type (:command/type dispatch))
+   :command/type (shape/command-type (:command/type dispatch))
    :event (:event dispatch)
    :action (:action dispatch)
    :repository (:repository dispatch)
@@ -814,7 +815,7 @@
                                  policy command)
                 completion-command?
                 (= :review-gate-completion
-                   (law/command-type (:command/type command)))
+                   (shape/command-type (:command/type command)))
                 effect-command? (mutating-command? command)]
             (reset! command* command)
             ;; Refusal cleanup is itself a mutating defensive effect, so the
@@ -847,7 +848,7 @@
                     (when (or (not lease-required?) (:allowed? initial-lease))
                       (cond
                         (= :review-gate-base-push
-                           (law/command-type (:command/type command)))
+                           (shape/command-type (:command/type command)))
                         (await (process-base-push!
                                 worker delivery-id command stage*))
 
@@ -857,7 +858,7 @@
 
                         :else
                         (if (= :issue-probe
-                               (law/command-type (:command/type command)))
+                               (shape/command-type (:command/type command)))
                           (await
                            (process-issue-probe!
                             worker delivery-id command stage*))

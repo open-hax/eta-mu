@@ -1,12 +1,13 @@
 (ns eta-mu.gitops-controller.domain.issue
   "Pure planning for the effect-free, issue-backed deployment probe."
-  (:require [eta-mu.gitops-controller.law.webhook :as law]))
+  (:require [eta-mu.gitops-controller.law.webhook :as law]
+            [eta-mu.gitops-controller.shape.webhook :as shape]))
 
 (defn plan
   [command current-issue authority-decision
    {:keys [project-id policy-revision]}]
   (cond
-    (not= :issue-probe (law/command-type (:command/type command)))
+    (not= :issue-probe (shape/command-type (:command/type command)))
     {:planned? false :reason :invalid-command-type}
 
     (not (law/current-issue? current-issue))

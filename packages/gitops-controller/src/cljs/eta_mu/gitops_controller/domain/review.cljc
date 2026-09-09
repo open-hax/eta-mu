@@ -1,6 +1,7 @@
 (ns eta-mu.gitops-controller.domain.review
   "Pure revision binding for review, gate reconciliation, and ingress probes."
-  (:require [eta-mu.gitops-controller.law.webhook :as law]))
+  (:require [eta-mu.gitops-controller.law.webhook :as law]
+            [eta-mu.gitops-controller.shape.webhook :as shape]))
 
 (defn trusted-dispatched-workflow-run?
   [dispatch workflow-run controller-app-login]
@@ -86,7 +87,7 @@
   [command dispatch current-pull-request]
   (and (dispatch-current-pull-request? dispatch current-pull-request)
        (or (not= :code-review
-                 (law/command-type (:command/type command)))
+                 (shape/command-type (:command/type command)))
            (contains? (:labels current-pull-request) (:label command)))))
 
 (defn- webhook-matches-refetched-run? [command dispatch workflow-run]
@@ -118,7 +119,7 @@
         gate-check (:gate-check correlation)]
     (cond
       (not (contains? #{:code-review :review-gate-reconcile}
-                      (law/command-type (:command/type dispatch))))
+                      (shape/command-type (:command/type dispatch))))
       {:planned? false :reason :workflow-run-is-not-review-related}
 
       (not (trusted-dispatched-workflow-run?
@@ -151,7 +152,7 @@
 
       :else
       (let [gate-workflow? (= :review-gate-reconcile
-                              (law/command-type (:command/type dispatch)))
+                              (shape/command-type (:command/type dispatch)))
             conclusion (if (and gate-workflow?
                                 (= "success"
                                    (:conclusion current-workflow-run)))
@@ -197,7 +198,7 @@
 
 (defn plan
   [command current-pull-request authority-decision workflow]
-  (let [command-type (law/command-type (:command/type command))]
+  (let [command-type (shape/command-type (:command/type command))]
     (cond
     (not (law/command-type? command-type))
     {:planned? false :reason :invalid-command-type}
@@ -288,7 +289,7 @@
          :head-sha head-sha
          :merge-sha merge-sha
          :delivery-id delivery-id
-         :external-id (law/review-gate-external-id
+         :external-id (shape/review-gate-external-id
                        delivery-id pull-request-number head-sha
                        (:base-sha current-pull-request) merge-sha)
          :details-url (:html-url current-pull-request)}

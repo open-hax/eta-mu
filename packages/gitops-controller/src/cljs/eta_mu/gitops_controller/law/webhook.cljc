@@ -141,23 +141,17 @@
                     (str ".github/workflows/" workflow "@" ref)}
                   value)))
 
-(defn command-type [value]
+(defn- normalized-command-type [value]
   (cond
     (keyword? value) value
     (string? value) (keyword value)
     :else nil))
 
 (defn command-type? [value]
-  (contains? command-types (command-type value)))
-
-(defn capability [value]
-  (cond
-    (keyword? value) value
-    (string? value) (keyword value)
-    :else nil))
+  (contains? command-types (normalized-command-type value)))
 
 (defn command-capability [command-type-value]
-  (get command-capabilities (command-type command-type-value)))
+  (get command-capabilities (normalized-command-type command-type-value)))
 
 (defn managed-event? [value]
   (contains? managed-events value))
@@ -171,19 +165,15 @@
 (defn gate-reconcile-action? [event action]
   (contains? (get gate-reconcile-actions event #{}) action))
 
-(defn gate-reconcile-source-id
-  [{:keys [event review-node-id review-comment-node-id
-           review-thread-node-id]}]
-  (case event
-    "pull_request_review" review-node-id
-    "pull_request_review_comment" review-comment-node-id
-    "pull_request_review_thread" review-thread-node-id
-    nil))
-
 (defn review-gate-reconcile-command?
-  [{:keys [event action] :as command}]
+  [{:keys [event action review-node-id review-comment-node-id review-thread-node-id]}]
   (and (gate-reconcile-action? event action)
-       (non-blank-string? (gate-reconcile-source-id command))))
+       (non-blank-string?
+        (case event
+          "pull_request_review" review-node-id
+          "pull_request_review_comment" review-comment-node-id
+          "pull_request_review_thread" review-thread-node-id
+          nil))))
 
 (declare commit-sha?)
 
@@ -271,27 +261,18 @@
   (and (string? value)
        (boolean (re-matches deployment-id-pattern value))))
 
-(defn active-marker-deployment
-  "Parse the Services-owned marker's exact wire format. Atomic replacement of
-  this one LF-terminated line is the only production effect-lease grant."
+(defn active-marker?
+  "Validate the Services-owned marker's exact, single LF-terminated line."
   [text]
-  (when (and (string? text)
-             (str/ends-with? text "\n"))
-    (let [deployment (subs text 0 (dec (count text)))]
-      (when (and (deployment-id? deployment)
-                 (= text (str deployment "\n")))
-        deployment))))
+  (and (string? text)
+       (str/ends-with? text "\n")
+       (deployment-id? (subs text 0 (dec (count text))))))
 
 (defn commit-sha? [value]
   (and (string? value) (boolean (re-matches sha-pattern value))))
 
 (defn payload-sha256? [value]
   (and (string? value) (boolean (re-matches sha256-pattern value))))
-
-(defn review-gate-external-id
-  [delivery-id pull-request-number head-sha base-sha merge-sha]
-  (str "eta-mu-review-gate/v2:" delivery-id ":" pull-request-number ":"
-       head-sha ":" base-sha ":" merge-sha))
 
 (defn webhook-base-source?
   [{:keys [delivery-id event repository installation-id

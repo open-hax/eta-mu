@@ -1,8 +1,7 @@
 (ns eta-mu.gitops-controller.infra.config-test
   (:require ["node:crypto" :as node-crypto]
             [cljs.test :refer [deftest is testing]]
-            [eta-mu.gitops-controller.infra.config :as config]
-            [eta-mu.gitops-controller.law.webhook :as law]))
+            [eta-mu.gitops-controller.infra.config :as config]))
 
 (def environment-names
   ["ETA_MU_CONTROLLER_MODE"
@@ -184,10 +183,6 @@
           (is (nil? (:review-workflow-id loaded)))
           (is (nil? (:gate-workflow-id loaded)))
           (is (string? (:policy-revision loaded)))))
-      (testing "the active marker has one exact LF-terminated wire format"
-        (is (= "100-1" (law/active-marker-deployment "100-1\n")))
-        (is (nil? (law/active-marker-deployment "100-1")))
-        (is (nil? (law/active-marker-deployment "100-1\nextra\n"))))
       (testing "project identity is required and line-safe"
         (set-environment! "ETA_MU_PROJECT_ID" "../eta-mu")
         (is (= "ETA_MU_PROJECT_ID"

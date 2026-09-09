@@ -1,6 +1,7 @@
 (ns eta-mu.gitops-controller.domain.authority
   "Axxium-shaped authority requests and pure permission interpretation."
-  (:require [eta-mu.gitops-controller.law.webhook :as law]))
+  (:require [eta-mu.gitops-controller.law.webhook :as law]
+            [eta-mu.gitops-controller.shape.webhook :as shape]))
 
 (defn request
   [{:keys [sender-id sender-login repository repository-id installation-id
@@ -9,7 +10,7 @@
    :actor {:actor/provider :github
            :actor/id sender-id
            :actor/login sender-login}
-   :capability (law/capability capability)
+   :capability (shape/capability capability)
    :resource {:repository/full-name repository
               :repository/id repository-id
               :github/installation-id installation-id}})

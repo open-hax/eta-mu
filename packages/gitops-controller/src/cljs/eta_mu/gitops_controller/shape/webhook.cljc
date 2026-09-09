@@ -1,5 +1,31 @@
 (ns eta-mu.gitops-controller.shape.webhook
-  "Pure projection from decoded GitHub JSON into the controller command shape.")
+  "Pure projections and identity construction for controller webhook data.")
+
+(defn command-type [value]
+  (cond
+    (keyword? value) value
+    (string? value) (keyword value)
+    :else nil))
+
+(defn capability [value]
+  (cond
+    (keyword? value) value
+    (string? value) (keyword value)
+    :else nil))
+
+(defn gate-reconcile-source-id
+  [{:keys [event review-node-id review-comment-node-id
+           review-thread-node-id]}]
+  (case event
+    "pull_request_review" review-node-id
+    "pull_request_review_comment" review-comment-node-id
+    "pull_request_review_thread" review-thread-node-id
+    nil))
+
+(defn review-gate-external-id
+  [delivery-id pull-request-number head-sha base-sha merge-sha]
+  (str "eta-mu-review-gate/v2:" delivery-id ":" pull-request-number ":"
+       head-sha ":" base-sha ":" merge-sha))
 
 (def ^:private canonical-task-marker-pattern
   #"<!--\s*openhax-kanban-sync\s+uuid=\"([^\"]+)\"\s*-->")
