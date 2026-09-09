@@ -5,6 +5,14 @@
             [eta-mu.gitops-controller.infra.config :as config]
             [eta-mu.gitops-controller.law.webhook :as law]))
 
+(deftest derived-delivery-ids-are-reproducible-namespaced-uuidv5-values
+  ;; Expected value independently computed with Python's RFC uuid.uuid5 using
+  ;; uuid.NAMESPACE_URL and the adapter's documented name prefix.
+  (is (= "d8968dd2-125a-58c5-894f-9b7c92b27c8e"
+         (crypto/deterministic-delivery-id "parent:42:PR_node")))
+  (is (not= (crypto/deterministic-delivery-id "parent:42:PR_node")
+            (crypto/deterministic-delivery-id "next-parent:42:PR_node"))))
+
 (defn- rsa-private-key-fixture []
   (let [key-pair (.generateKeyPairSync node-crypto "rsa"
                                        #js {:modulusLength 1024})]

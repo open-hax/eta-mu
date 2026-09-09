@@ -9,6 +9,27 @@
 (defn now-timestamp []
   (.toISOString (js/Date.)))
 
+(defn number-value [value]
+  (js/Number value))
+
+(defn serial-executor
+  "Return an async runner whose invocations share one FIFO host queue."
+  []
+  (let [tail* (atom (js/Promise.resolve nil))]
+    (^:async fn [operation]
+      (let [release* (atom nil)
+            gate (js/Promise. (fn [resolve _reject]
+                                (reset! release* resolve)))
+            predecessor @tail*]
+        ;; Publish the next gate before yielding so concurrent callers retain
+        ;; their invocation order. Only the operation result may reject.
+        (reset! tail* gate)
+        (await predecessor)
+        (try
+          (await (operation))
+          (finally
+            (@release* nil)))))))
+
 (defn unix-seconds []
   (js/Math.floor (/ (.now js/Date) 1000)))
 

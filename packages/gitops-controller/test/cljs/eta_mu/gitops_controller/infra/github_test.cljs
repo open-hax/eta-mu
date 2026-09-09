@@ -1,6 +1,7 @@
 (ns eta-mu.gitops-controller.infra.github-test
   (:require ["node:crypto" :as node-crypto]
             [cljs.test :refer [deftest is]]
+            [eta-mu.gitops-controller.extern.http :as http]
             [eta-mu.gitops-controller.extern.json :as json]
             [eta-mu.gitops-controller.infra.github :as github]))
 
@@ -8,6 +9,132 @@
   (js/Response. (when body (json/encode body))
                 #js {:status status
                      :headers #js {"content-type" "application/json"}}))
+
+(defn- adapter-config []
+  (let [pair (.generateKeyPairSync node-crypto "rsa"
+                                   #js {:modulusLength 1024})]
+    {:github-api-url "https://api.github.test"
+     :github-app-id 123
+     :github-private-key (.export (.-privateKey pair)
+                                   #js {:type "pkcs8" :format "pem"})
+     :mode :review-dispatch}))
+
+(deftest ^:async every-token-mint-requires-a-repository-before-signing-or-fetching
+  (let [calls* (atom 0)
+        adapter (github/port {:github-api-url "https://api.github.test"
+                              :github-app-id 123
+                              :github-private-key "deliberately invalid"
+                              :mode :review-dispatch})]
+    (with-redefs [http/request! (fn [_request] (swap! calls* inc))]
+      (doseq [repository-id [nil 0 -1 "42"]]
+        (let [error (try (await ((:dispatch-review! adapter)
+                                 77 {:repository-id repository-id
+                                     :repository "open-hax/eta-mu"}))
+                         nil
+                         (catch :default value value))]
+          (is (= :github-token-repository-required
+                 (:error/code (ex-data error))))))
+      (is (zero? @calls*)))))
+
+(deftest ^:async reads-retain-only-their-operation-permissions-in-review-dispatch-mode
+  (let [requests* (atom [])
+        adapter (github/port (adapter-config))
+        command {:installation-id 77 :repository-id 42
+                 :repository "open-hax/eta-mu" :sender-login "operator"
+                 :pull-request-number 321 :workflow-run-id 991}]
+    (with-redefs
+      [http/request!
+       (^:async fn [{:keys [url] :as request}]
+         (swap! requests* conj request)
+         {:ok? true :status 200
+          :body (cond
+                  (.endsWith url "/access_tokens") {:token "installation-token"}
+                  (.endsWith url "/permission")
+                  {:permission "write" :user {:id 9 :login "operator"}}
+                  (.endsWith url "/pulls/321") {:number 321}
+                  (.endsWith url "/runs/991") {:id 991}
+                  :else {:id 42 :full_name "open-hax/eta-mu"
+                         :default_branch "main"})})]
+      (await ((:actor-permission! adapter) command))
+      (await ((:fetch-pull-request! adapter) command))
+      (await ((:fetch-workflow-run! adapter) command))
+      (is (= [{:repository_ids [42] :permissions {:metadata "read"}}
+              {:repository_ids [42]
+               :permissions {:metadata "read" :pull_requests "read"}}
+              {:repository_ids [42] :permissions {:actions "read"}}]
+             (->> @requests*
+                  (filter #(.endsWith (:url %) "/access_tokens"))
+                  (mapv :body)))))))
+
+(defn- pull-page [number has-next? cursor]
+  {:data
+   {:repository
+    {:databaseId 42 :nameWithOwner "open-hax/eta-mu"
+     :defaultBranchRef {:name "main"}
+     :pullRequests
+     {:nodes [{:id (str "PR_" number) :number number
+               :state "OPEN" :baseRefName "main"}]
+      :pageInfo {:hasNextPage has-next? :endCursor cursor}}}}})
+
+(defn- ^:async enumerate-pulls [pages]
+  (let [adapter (github/port (adapter-config))
+        requests* (atom [])
+        page* (atom 0)]
+    (with-redefs
+      [http/request!
+       (^:async fn [{:keys [url] :as request}]
+         (swap! requests* conj request)
+         {:ok? true :status 200
+          :body (if (.endsWith url "/access_tokens")
+                  {:token "installation-token"}
+                  (nth pages (dec (swap! page* inc))))})]
+      (let [result (try
+                     {:pulls
+                      (await ((:list-open-pull-requests! adapter)
+                              {:installation-id 77 :repository-id 42
+                               :repository "open-hax/eta-mu"
+                               :repository-default-branch "main"
+                               :push-ref "refs/heads/main"}))}
+                     (catch :default error {:error error}))]
+        (assoc result :requests @requests*)))))
+
+(deftest ^:async base-push-enumeration-carries-cursors-and-returns-complete-identities
+  (let [{:keys [pulls error requests]}
+        (await (enumerate-pulls [(pull-page 321 true "cursor-321")
+                                (pull-page 322 false "cursor-322")]))]
+    (is (nil? error))
+    (is (= [{:pull-request-number 321 :pull-request-node-id "PR_321"}
+            {:pull-request-number 322 :pull-request-node-id "PR_322"}]
+           pulls))
+    (is (= {:repository_ids [42]
+            :permissions {:metadata "read" :pull_requests "read"
+                          :contents "read"}}
+           (:body (first requests))))
+    (is (= [nil "cursor-321"]
+           (mapv #(get-in % [:body :variables :after]) (rest requests))))
+    (is (every? #(= "https://api.github.test/graphql" (:url %))
+                (rest requests)))
+    (is (= {:owner "open-hax" :name "eta-mu" :base "main" :after nil}
+           (get-in (second requests) [:body :variables])))))
+
+(deftest ^:async base-push-enumeration-fails-without-returning-partial-targets
+  (let [valid (pull-page 321 false "cursor-321")]
+    (doseq [pages [[(assoc-in valid [:data :repository :databaseId] 999)]
+                  [(assoc-in valid [:data :repository :defaultBranchRef :name]
+                             "different")]
+                  [(assoc-in valid [:data :repository :pullRequests :nodes 0 :id]
+                             nil)]
+                  [(assoc-in valid [:data :repository :pullRequests :nodes 0 :state]
+                             "CLOSED")]
+                  [(assoc valid :errors [{:message "partial result"}])]
+                  [(pull-page 321 true "cursor") (pull-page 322 true "cursor")]
+                  [(pull-page 321 true "cursor") valid]
+                  (mapv #(pull-page % true (str "cursor-" %)) (range 1 11))]]
+      (let [{:keys [pulls error requests]} (await (enumerate-pulls pages))]
+        (is (nil? pulls))
+        (is (contains? #{:invalid-github-response :github-request-failed}
+                       (:error/code (ex-data error))))
+        (is (<= (count requests) 11))))))
 
 (deftest ^:async workflow-dispatch-uses-the-2026-03-10-run-details-contract
   (let [original-fetch (.-fetch js/globalThis)
@@ -40,6 +167,7 @@
               77
               (with-meta
                 {:repository "open-hax/eta-mu"
+                 :repository-id 42
                  :workflow "opencode-code-review.yml"
                  :ref "main"
                  :inputs {:pr_number "321"
@@ -60,7 +188,9 @@
             body (-> dispatch-request :options (.-body) json/decode)
             request-headers (-> dispatch-request :options (.-headers))]
         (is (= 2 (count @requests*)))
-        (is (= {} token-body))
+        (is (= {:repository_ids [42]
+                :permissions {:actions "write"}}
+               token-body))
         (is (= "https://api.github.test/repos/open-hax/eta-mu/actions/workflows/opencode-code-review.yml/dispatches"
                (:url dispatch-request)))
         (is (= {:ref "main"
@@ -191,6 +321,7 @@
                     (await ((:dispatch-review! adapter)
                             77 (with-meta
                                  {:repository "open-hax/eta-mu"
+                                  :repository-id 42
                                   :workflow "opencode-code-review.yml"
                                   :ref "main"
                                   :inputs {:command_id
@@ -291,6 +422,9 @@
             (.indexOf @events* {:event :authorize-create})
             post-request (nth @events* post-index)]
         (is (< authorize-index post-index))
+        (is (= {:repository_ids [42]
+                :permissions {:checks "write"}}
+               (:body (first @events*))))
         (is (.includes (:url post-request) "/check-runs"))
         (is (= merge-sha (get-in post-request [:body :head_sha])))
         (is (= head (:head-sha receipt)))
@@ -557,6 +691,9 @@
                                  (swap! authorized* inc)
                                  (js/Promise.resolve true))}))]
         (is (:updated? result))
+        (is (= {:repository_ids [42]
+                :permissions {:checks "write"}}
+               (-> @requests* first :options (.-body) json/decode)))
         (is (= 1 @authorized*))
         (is (:already-completed? replay))
         (is (.endsWith (:url patch-request) "/check-runs/4567"))

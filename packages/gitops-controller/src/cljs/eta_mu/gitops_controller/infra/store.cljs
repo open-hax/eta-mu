@@ -49,8 +49,8 @@
    ;; All ledger/projection mutations in one controller process are serialized.
    ;; Production still runs one controller replica per state root; this queue is
    ;; the same-process half of that single-writer contract.
-   :writer-tails* {:deliveries (atom (js/Promise.resolve nil))
-                   :other (atom (js/Promise.resolve nil))}
+   :writers {:deliveries (runtime/serial-executor)
+             :other (runtime/serial-executor)}
    ;; The delivery journal is validated once at startup. Admission and periodic
    ;; replay then remain bounded by one identity or the live pending set, never
    ;; by total historical journal length.
@@ -117,19 +117,7 @@
   ([store operation]
    (await (with-writer! store :other operation)))
   ([store partition operation]
-   (let [release* (atom nil)
-         gate (js/Promise. (fn [resolve _reject]
-                             (reset! release* resolve)))
-         writer-tail* (get-in store [:writer-tails* partition])
-         predecessor @writer-tail*]
-     ;; JavaScript cannot yield between this read and reset, so each caller gets
-     ;; the previous gate and publishes its own before any asynchronous work.
-     (reset! writer-tail* gate)
-     (await predecessor)
-     (try
-       (await (operation))
-       (finally
-         (@release* nil))))))
+   (await ((get-in store [:writers partition]) operation))))
 
 (defn- ^:async with-all-writers! [store operation]
   ;; Lifecycle reconciliation is startup-exclusive and takes locks in one fixed
@@ -174,7 +162,7 @@
         (if (empty? text)
           []
           (let [body (subs text 0 (dec (count text)))
-                lines (array-seq (.split body "\n"))]
+                lines (str/split body #"\n" -1)]
             (mapv (fn [index line]
                     (decode-ledger-line ledger (inc index) line))
                   (range (count lines)) lines))))

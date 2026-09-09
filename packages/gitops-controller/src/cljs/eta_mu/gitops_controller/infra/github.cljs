@@ -3,6 +3,7 @@
   (:require [clojure.string :as str]
             [eta-mu.gitops-controller.extern.crypto :as crypto]
             [eta-mu.gitops-controller.extern.http :as http]
+            [eta-mu.gitops-controller.extern.runtime :as runtime]
             [eta-mu.gitops-controller.extern.uri :as uri]
             [eta-mu.gitops-controller.law.webhook :as law]
             [eta-mu.gitops-controller.shape.webhook :as shape]))
@@ -14,8 +15,20 @@
   {:metadata "read"
    :pull_requests "read"})
 
+(def ^:private base-push-token-permissions
+  ;; This query also reads the defaultBranchRef Git reference.
+  {:metadata "read"
+   :pull_requests "read"
+   :contents "read"})
+
 (def ^:private workflow-run-token-permissions
   {:actions "read"})
+
+(def ^:private workflow-dispatch-token-permissions
+  {:actions "write"})
+
+(def ^:private review-gate-token-permissions
+  {:checks "write"})
 
 (defn- repository-path [repository]
   (->> (str/split repository #"/")
@@ -63,10 +76,16 @@
 (defn- ^:async installation-token!
   [{:keys [github-api-url github-app-id github-private-key mode]}
    installation-id repository-id permissions]
-  (when (and (= :observe-only mode)
-             (not (law/positive-integer? repository-id)))
-    (throw (ex-info "observe-only token mint requires one repository ID"
-                    {:error/code :observe-token-repository-required})))
+  (when-not (law/positive-integer? repository-id)
+    (throw (ex-info "installation token mint requires one repository ID"
+                    {:error/code (if (= :observe-only mode)
+                                   :observe-token-repository-required
+                                   :github-token-repository-required)})))
+  (when-not (and (map? permissions)
+                 (seq permissions)
+                 (every? #{"read" "write"} (vals permissions)))
+    (throw (ex-info "installation token mint requires explicit operation permissions"
+                    {:error/code :github-token-permissions-required})))
   (when (and (= :observe-only mode)
              (or (empty? permissions)
                  (not-every? #(= "read" (val %)) permissions)))
@@ -74,10 +93,8 @@
                     {:error/code :observe-token-permissions-required})))
   (let [jwt (crypto/github-app-jwt github-app-id github-private-key)
         request-body
-        (if (= :observe-only mode)
-          {:repository_ids [repository-id]
-           :permissions permissions}
-          {})
+        {:repository_ids [repository-id]
+         :permissions permissions}
         response (await
                   (http/request!
                    {:url (str github-api-url "/app/installations/"
@@ -116,6 +133,89 @@
         (shape/github-pull-request->current
          (:body pull-request-response) (:body repository-response))
         (throw (response-error "fetch-repository" repository-response))))))
+
+(def ^:private open-pull-requests-query
+  (str "query BasePushPullRequests($owner:String!,$name:String!,"
+       "$base:String!,$after:String){"
+       "repository(owner:$owner,name:$name,followRenames:false){"
+       "databaseId nameWithOwner defaultBranchRef{name} "
+       "pullRequests(first:100,after:$after,states:OPEN,baseRefName:$base,"
+       "orderBy:{field:CREATED_AT,direction:ASC}){"
+       "nodes{id number state baseRefName} "
+       "pageInfo{hasNextPage endCursor}}}}"))
+
+(defn- invalid-pull-list! [message]
+  (throw (ex-info message {:error/code :invalid-github-response
+                          :operation :list-open-pull-requests})))
+
+(defn- ^:async list-open-pull-requests!
+  [config {:keys [installation-id repository-id repository
+                  repository-default-branch push-ref]}]
+  (let [token (await (installation-token!
+                      config installation-id repository-id
+                      base-push-token-permissions))
+        [owner name] (str/split repository #"/")]
+    ;; Cursor pagination keeps a PR closing on an earlier page from shifting
+    ;; every subsequent offset. No child is returned from a partial scan.
+    (loop [page 1 cursor nil seen-cursors #{} result []]
+      (let [response
+            (await
+             (http/request!
+              {:url (uri/github-graphql-url (:github-api-url config))
+               :method "POST"
+               :headers (headers token)
+               :body {:query open-pull-requests-query
+                      :variables {:owner owner :name name
+                                  :base repository-default-branch
+                                  :after cursor}}}))
+            current (get-in response [:body :data :repository])
+            pulls (:pullRequests current)
+            nodes (:nodes pulls)
+            {:keys [hasNextPage endCursor]} (:pageInfo pulls)]
+        (when-not (and (:ok? response)
+                       (empty? (get-in response [:body :errors])))
+          (throw (response-error "list-open-pull-requests" response)))
+        (when-not (and (= repository-id (:databaseId current))
+                       (string? (:nameWithOwner current))
+                       (= (str/lower-case repository)
+                          (str/lower-case (:nameWithOwner current)))
+                       (law/non-blank-string? repository-default-branch)
+                       (= repository-default-branch
+                          (get-in current [:defaultBranchRef :name]))
+                       (= push-ref (str "refs/heads/"
+                                        repository-default-branch)))
+          (invalid-pull-list! "GitHub base-push repository scope changed"))
+        (when-not (and (vector? nodes)
+                       (<= (count nodes) 100)
+                       (boolean? hasNextPage)
+                       (every? #(and (law/positive-integer? (:number %))
+                                     (law/non-blank-string? (:id %))
+                                     (= "OPEN" (:state %))
+                                     (= repository-default-branch
+                                        (:baseRefName %)))
+                               nodes))
+          (invalid-pull-list! "GitHub returned an invalid open pull-request page"))
+        (let [accumulated
+              (into result
+                    (map (fn [pull]
+                           {:pull-request-number (:number pull)
+                            :pull-request-node-id (:id pull)}))
+                    nodes)]
+          (when-not (and (= (count accumulated)
+                            (count (set (map :pull-request-node-id accumulated))))
+                         (= (count accumulated)
+                            (count (set (map :pull-request-number accumulated)))))
+            (invalid-pull-list! "GitHub repeated a pull-request identity during pagination"))
+          (if-not hasNextPage
+            (vec (sort-by :pull-request-number accumulated))
+            (do
+              (when (or (>= page 10)
+                        (empty? nodes)
+                        (not (law/non-blank-string? endCursor))
+                        (contains? seen-cursors endCursor))
+                (invalid-pull-list! "GitHub open pull-request scan exceeded its bounded cursor window"))
+              (recur (inc page) endCursor (conj seen-cursors endCursor)
+                     accumulated))))))))
 
 (defn- ^:async fetch-issue!
   [config {:keys [installation-id repository repository-id issue-number]}]
@@ -309,7 +409,7 @@
                :body {:name (:name expected)
                       :status "completed"
                       :conclusion "cancelled"
-                      :completed_at (.toISOString (js/Date.))
+                      :completed_at (runtime/now-timestamp)
                       :output
                       {:title "Superseded review reconciliation"
                        :summary (str "Superseded by webhook delivery `"
@@ -325,7 +425,8 @@
   [config installation-id expected]
   (ensure-review-dispatch! config :prepare-review-gate)
   (let [token (await (installation-token! config installation-id
-                                          (:repository-id expected) nil))
+                                          (:repository-id expected)
+                                          review-gate-token-permissions))
         matches (await (matching-check-runs! config token expected))
         _ (when (< 1 (count matches))
             (throw (review-gate-error
@@ -348,7 +449,7 @@
                    :body {:name (:name expected)
                           :head_sha (:merge-sha expected)
                           :status "in_progress"
-                          :started_at (.toISOString (js/Date.))
+                          :started_at (runtime/now-timestamp)
                           :external_id (:external-id expected)
                           :details_url (:details-url expected)
                           :output
@@ -395,7 +496,8 @@
   [config installation-id expected reason]
   (ensure-review-dispatch! config :cancel-review-gate)
   (let [token (await (installation-token! config installation-id
-                                          (:repository-id expected) nil))
+                                          (:repository-id expected)
+                                          review-gate-token-permissions))
         matches (await (matching-check-runs! config token expected))]
     (when (< 1 (count matches))
       (throw (review-gate-error
@@ -423,7 +525,7 @@
                    :body {:name (:name expected)
                           :status "completed"
                           :conclusion "cancelled"
-                          :completed_at (.toISOString (js/Date.))
+                          :completed_at (runtime/now-timestamp)
                           :details_url (:details-url expected)
                           :external_id (:external-id expected)
                           :output {:title "Review command became stale"
@@ -445,7 +547,8 @@
   (let [{:keys [repository workflow ref inputs]} dispatch
         dispatch-authorizer (-> dispatch meta :authorize-dispatch!)
         token (await (installation-token! config installation-id
-                                          (:repository-id dispatch) nil))
+                                          (:repository-id dispatch)
+                                          workflow-dispatch-token-permissions))
         _ (await (authorize-write! dispatch-authorizer :dispatch-review))
         response (await
                   (http/request!
@@ -498,7 +601,8 @@
    {:keys [gate-check terminal-intent authorize-patch!]}]
   (ensure-review-dispatch! config :complete-review-gate)
   (let [token (await (installation-token! config installation-id
-                                          (:repository-id gate-check) nil))
+                                          (:repository-id gate-check)
+                                          review-gate-token-permissions))
         patch (:patch terminal-intent)
         response
         (await
@@ -570,8 +674,11 @@
 
 (defn port [config]
   (let [configured (assoc config
+                          :github-api-url
+                          (uri/github-api-url! (:github-api-url config))
                           :mode (or (:mode config) :observe-only))]
     {:fetch-pull-request! #(fetch-pull-request! configured %)
+     :list-open-pull-requests! #(list-open-pull-requests! configured %)
      :fetch-issue! #(fetch-issue! configured %)
      :actor-permission! #(actor-permission! configured %)
      :prepare-review-gate! #(prepare-review-gate! configured %1 %2)

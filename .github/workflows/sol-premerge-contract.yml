@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Sol pre-merge workflow contract
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/sol-premerge.yml
+      - .github/workflows/sol-premerge-contract.yml
+      - .github/scripts/sol-premerge.mjs
+      - .github/scripts/sol-premerge.test.mjs
+      - docs/sol-premerge-bootstrap.md
+      - packages/eta-mu/package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/sol-premerge.yml
+      - .github/workflows/sol-premerge-contract.yml
+      - .github/scripts/sol-premerge.mjs
+      - .github/scripts/sol-premerge.test.mjs
+      - docs/sol-premerge-bootstrap.md
+      - packages/eta-mu/package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact public event revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: "10.14.0"
+          run_install: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+      - name: Install existing public workflow parser
+        run: pnpm --filter eta-mu install --frozen-lockfile --ignore-scripts
+      - name: Test protected Sol workflow contracts
+        run: node --test .github/scripts/sol-premerge.test.mjs

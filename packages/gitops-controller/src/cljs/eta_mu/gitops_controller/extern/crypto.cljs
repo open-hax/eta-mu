@@ -23,6 +23,22 @@
       (.update value)
       (.digest "hex")))
 
+(defn deterministic-delivery-id
+  "RFC UUIDv5 in the URL namespace for a derived base-push delivery identity."
+  [value]
+  (let [namespace-bytes (.from js/Buffer
+                               "6ba7b8119dad11d180b400c04fd430c8" "hex")
+        bytes (-> (.createHash crypto "sha1")
+                  (.update namespace-bytes)
+                  (.update (str "https://github.com/open-hax/eta-mu/"
+                                "gitops-controller/base-push/" value) "utf8")
+                  (.digest))]
+    (.writeUInt8 bytes (bit-or 0x50 (bit-and 0x0f (.readUInt8 bytes 6))) 6)
+    (.writeUInt8 bytes (bit-or 0x80 (bit-and 0x3f (.readUInt8 bytes 8))) 8)
+    (let [hex (.toString bytes "hex" 0 16)]
+      (str (subs hex 0 8) "-" (subs hex 8 12) "-" (subs hex 12 16)
+           "-" (subs hex 16 20) "-" (subs hex 20 32)))))
+
 (defn rsa-private-key? [value]
   (try
     (let [key (.createPrivateKey crypto value)]

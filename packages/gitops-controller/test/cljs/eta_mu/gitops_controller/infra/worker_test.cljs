@@ -352,6 +352,190 @@
      :sender-id 501
      :sender-login "eta-mu-controller[bot]"})))
 
+(defn base-push-command [current-policy]
+  (:command
+   (admission/decide
+    current-policy
+    (-> command
+        (dissoc :command-id :capability :label
+                :pull-request-number :pull-request-node-id)
+        (assoc :event "push" :action "updated"
+               :push-ref "refs/heads/main" :repository-default-branch "main"
+               :push-before-sha "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+               :push-after-sha (:base-sha current-pull-request)
+               :push-deleted? false)))))
+
+(deftest ^:async base-push-recovers-partial-durable-fan-out-without-duplicate-effects
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        restarted-store (store/create root)
+        parent (base-push-command review-policy)
+        pull-requests [{:pull-request-number 321 :pull-request-node-id "PR_kwDOExample"}
+                       {:pull-request-number 322 :pull-request-node-id "PR_second"}]
+        enumeration-count* (atom 0)
+        prepared* (atom [])
+        dispatch-count* (atom 0)
+        github {:list-open-pull-requests!
+                (fn [_]
+                  (swap! enumeration-count* inc)
+                  (js/Promise.resolve (if (= 1 @enumeration-count*)
+                                        pull-requests
+                                        (vec (reverse pull-requests)))))
+                :fetch-pull-request!
+                (fn [child]
+                  (js/Promise.resolve
+                   (assoc current-pull-request
+                          :number (:pull-request-number child)
+                          :node-id (:pull-request-node-id child)
+                          :labels #{})))
+                :prepare-review-gate!
+                (^:async fn [installation-id expected]
+                  (swap! prepared* conj (:pr-number expected))
+                  (await (prepare-review-gate! installation-id expected)))
+                :dispatch-review! (fn [& _]
+                                    (swap! dispatch-count* inc))}
+        worker-options {:github github
+                        :authority (authority/github-port github)
+                        :policy review-policy :replay-interval-ms 600000}
+        first-worker (worker/create (assoc worker-options :store state-store))
+        restarted-worker (worker/create (assoc worker-options :store restarted-store))
+        child-admissions* (atom 0)
+        accept! store/accept-delivery!]
+    (try
+      (await (store/initialize! state-store))
+      (await (store/accept-delivery! state-store parent))
+      (with-redefs [store/accept-delivery!
+                    (^:async fn [target child]
+                      (when (= 2 (swap! child-admissions* inc))
+                        (throw (ex-info "interrupted child admission"
+                                        {:error/code :synthetic-child-admission-failure})))
+                      (await (accept! target child)))]
+        (await (worker/start! first-worker)))
+      (is (false? (await (store/completed? state-store delivery-id))))
+      (is (= 2 (count (await (store/pending-delivery-ids state-store)))))
+      (is (empty? @prepared*))
+      (worker/stop! first-worker)
+      (await (store/initialize! restarted-store))
+      (await (worker/start! restarted-worker))
+      (await (worker/replay-pending! restarted-worker))
+      (await (worker/replay-pending! restarted-worker))
+      (is (= 2 @enumeration-count*))
+      (is (= [321 322] (vec (sort @prepared*))))
+      (is (zero? @dispatch-count*))
+      (is (empty? (await (store/pending-delivery-ids restarted-store))))
+      (is (= 3 (count (await (fs/entries
+                             (get-in restarted-store [:paths :deliveries]))))))
+      (is (= :gate-refresh-queued
+             (get-in (await (store/read-completion restarted-store delivery-id))
+                     [:result :outcome])))
+      (doseq [pull-request pull-requests]
+        (let [child-id (worker/base-push-child-id parent pull-request)
+              child (:command (await (store/read-delivery restarted-store child-id)))
+              completion (await (store/read-completion restarted-store child-id))]
+          (is (= delivery-id (:parent-delivery-id child)))
+          (is (= payload-sha256 (:payload/sha256 child)))
+          (is (= :gate-invalidated (get-in completion [:result :outcome])))
+          (is (false? (await (store/dispatch-call-begun? restarted-store child-id))))))
+      (finally
+        (worker/stop! first-worker)
+        (worker/stop! restarted-worker)
+        (await (fs/remove-tree! root))))))
+
+(deftest ^:async base-push-enumeration-failure-remains-pending-without-effects
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        parent (base-push-command review-policy)
+        queue-worker
+        (worker/create
+         {:store state-store :policy review-policy :authority {}
+          :replay-interval-ms 600000
+          :github {:list-open-pull-requests!
+                   (fn [_] (js/Promise.reject
+                            (ex-info "bounded enumeration exceeded"
+                                     {:error/code :base-push-enumeration-limit})))}})]
+    (try
+      (await (store/initialize! state-store))
+      (await (store/accept-delivery! state-store parent))
+      (await (worker/start! queue-worker))
+      (await (worker/replay-pending! queue-worker))
+      (is (= [delivery-id] (await (store/pending-delivery-ids state-store))))
+      (is (false? (await (store/completed? state-store delivery-id))))
+      (is (false? (await (store/dispatch-intent-recorded? state-store delivery-id))))
+      (is (= :base-push-enumeration-limit
+             (get-in (worker/status queue-worker) [:last-error :error/code])))
+      (finally
+        (worker/stop! queue-worker)
+        (await (fs/remove-tree! root))))))
+
+(deftest ^:async base-push-child-must-match-its-durable-parent-before-github
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        parent (base-push-command review-policy)
+        pull-request {:pull-request-number 321 :pull-request-node-id "PR_kwDOExample"}
+        child-id (worker/base-push-child-id parent pull-request)
+        child (assoc (admission/base-push-child review-policy parent child-id pull-request)
+                     :push-after-sha "3333333333333333333333333333333333333333")
+        github-calls* (atom 0)
+        queue-worker (worker/create
+                      {:store state-store :policy review-policy :authority {}
+                       :github {:fetch-pull-request! (fn [_] (swap! github-calls* inc))}
+                       :replay-interval-ms 600000})]
+    (try
+      (await (store/initialize! state-store))
+      (await (worker/start! queue-worker))
+      (await (store/accept-delivery! state-store parent))
+      (await (store/accept-delivery! state-store child))
+      (let [error (try
+                    (await (worker/process-delivery! queue-worker child-id))
+                    nil
+                    (catch :default error error))]
+        (is (= :immutable-state-conflict (:error/code (ex-data error))))
+        (is (zero? @github-calls*))
+        (is (:fatal? (worker/status queue-worker)))
+        (is (false? (await (store/dispatch-intent-recorded? state-store child-id)))))
+      (finally
+        (worker/stop! queue-worker)
+        (await (fs/remove-tree! root))))))
+
+(deftest ^:async base-push-observe-only-and-inactive-deployment-never-write-github
+  (doseq [[current-policy expected-enumerations expected-pending]
+          [[observe-policy 1 0]
+           [(assoc review-policy :effect-lease
+                   {:status! #(js/Promise.resolve {:state :provisional})
+                    :authorize! (fn [_]
+                                  (js/Promise.resolve
+                                   {:allowed? false :lease {:state :provisional}}))})
+            0 1]]]
+    (let [root (await (fs/temporary-directory!))
+          state-store (store/create root)
+          parent (base-push-command current-policy)
+          enumerations* (atom 0)
+          writes* (atom 0)
+          github {:list-open-pull-requests!
+                  (fn [_]
+                    (swap! enumerations* inc)
+                    (js/Promise.resolve
+                     [{:pull-request-number 321 :pull-request-node-id "PR_kwDOExample"}]))
+                  :fetch-pull-request! (fn [_] (js/Promise.resolve current-pull-request))
+                  :prepare-review-gate! (fn [& _] (swap! writes* inc))
+                  :dispatch-review! (fn [& _] (swap! writes* inc))}
+          queue-worker (worker/create
+                        {:store state-store :policy current-policy :github github
+                         :authority (authority/github-port github)
+                         :replay-interval-ms 600000})]
+      (try
+        (await (store/initialize! state-store))
+        (await (store/accept-delivery! state-store parent))
+        (await (worker/start! queue-worker))
+        (await (worker/replay-pending! queue-worker))
+        (is (= expected-enumerations @enumerations*))
+        (is (= expected-pending
+               (count (await (store/pending-delivery-ids state-store)))))
+        (is (zero? @writes*))
+        (finally
+          (worker/stop! queue-worker)
+          (await (fs/remove-tree! root)))))))
+
 (deftest ^:async worker-refetches-authorizes-and-dispatches-the-exact-head-once
   (let [root (await (fs/temporary-directory!))
         state-store (store/create root)
@@ -870,6 +1054,88 @@
       (finally
         (worker/stop! queue-worker)
         (await (fs/remove-tree! root))))))
+
+(deftest ^:async code-review-terminalization-ignores-removed-label-but-keeps-tuple-and-lease
+  (doseq [scenario [:removed-label :tuple-drift :revoked-lease]]
+    (let [root (await (fs/temporary-directory!))
+          state-store (store/create root)
+          source-id "808f730f-136f-457d-b629-ceccdcf7766b"
+          completion-id "56a5d98a-87df-4d70-a40c-40a3cf109198"
+          run-id 991
+          current* (atom (assoc current-pull-request :labels #{}))
+          lease-allowed?* (atom true)
+          terminal-patches* (atom [])
+          original-command (assoc (admitted-command review-policy)
+                                  :delivery-id source-id :command-id source-id)
+          dispatch (review-dispatch-intent source-id)
+          gate-check (merge (:gate-check dispatch)
+                            {:id gate-check-id :node-id "CR_kwDOGate"
+                             :app-id 123 :app-slug "eta-mu-controller"
+                             :status "in_progress"})
+          completed-run (assoc (await (fetch-code-review-run!
+                                      {:workflow-run-id run-id}))
+                               :status "completed" :conclusion "success")
+          github {:fetch-workflow-run! (fn [request]
+                                        (is (= {:installation-id 77
+                                                :repository "open-hax/eta-mu"
+                                                :repository-id 42
+                                                :workflow-run-id run-id}
+                                               request))
+                                        (js/Promise.resolve completed-run))
+                  :fetch-pull-request! (fn [_] (js/Promise.resolve @current*))
+                  :complete-review-gate!
+                  (^:async fn [_ request]
+                    (case scenario
+                      :tuple-drift (swap! current* assoc :base-sha
+                                          "3333333333333333333333333333333333333333")
+                      :revoked-lease (reset! lease-allowed?* false)
+                      nil)
+                    (await ((:authorize-patch! request)))
+                    (swap! terminal-patches* conj (:terminal-intent request))
+                    {:updated? true})}
+          current-policy (assoc review-policy :effect-lease
+                                {:status! #(js/Promise.resolve {:state :active})
+                                 :authorize! (fn [_]
+                                               (js/Promise.resolve
+                                                {:allowed? @lease-allowed?*
+                                                 :lease {:state :active}}))})
+          queue-worker (worker/create
+                        {:store state-store :github github :authority {}
+                         :policy current-policy :replay-interval-ms 600000})
+          completion (completion-command completion-id run-id 7001
+                                         "opencode-code-review.yml" "success")]
+      (try
+        (await (store/initialize! state-store))
+        (await
+         (store/record-workflow-run-correlation!
+          state-store source-id
+          {:command original-command :dispatch (assoc dispatch :gate-check gate-check)
+           :expected-run-attempt 1 :gate-check gate-check
+           :workflow-run {:id run-id :url (:url completed-run)
+                          :html-url (:html-url completed-run)}}))
+        (await (worker/start! queue-worker))
+        (await (store/accept-delivery! state-store completion))
+        (await (worker/process-delivery! queue-worker completion-id))
+        (is (= (= :removed-label scenario)
+               (await (store/completed? state-store completion-id)))
+            (name scenario))
+        (if (= :removed-label scenario)
+          (do
+            (is (= 1 (count @terminal-patches*)))
+            (is (= "failure" (get-in (first @terminal-patches*) [:patch :conclusion])))
+            (is (= source-id (:source-delivery-id (first @terminal-patches*))))
+            (is (= :gate-completed
+                   (get-in (await (store/read-completion state-store completion-id))
+                           [:result :outcome]))))
+          (do
+            (is (empty? @terminal-patches*))
+            (is (= [completion-id] (await (store/pending-delivery-ids state-store))))
+            (is (= (if (= :tuple-drift scenario)
+                     :pull-request-context-changed :effect-lease-revoked)
+                   (get-in (worker/status queue-worker) [:last-error :error/code])))))
+        (finally
+          (worker/stop! queue-worker)
+          (await (fs/remove-tree! root)))))))
 
 (deftest ^:async uncorrelated-completion-remains-replayable-without-effects
   (let [root (await (fs/temporary-directory!))

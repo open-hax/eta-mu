@@ -8,6 +8,7 @@
   (:require [eta-mu.gitops-controller.domain.admission :as admission]
             [eta-mu.gitops-controller.domain.issue :as issue]
             [eta-mu.gitops-controller.domain.review :as review]
+            [eta-mu.gitops-controller.extern.crypto :as crypto]
             [eta-mu.gitops-controller.extern.runtime :as runtime]
             [eta-mu.gitops-controller.infra.store :as store]
             [eta-mu.gitops-controller.law.webhook :as law]))
@@ -155,6 +156,7 @@
 (defn- mutating-command? [command]
   (contains? #{:code-review :review-gate-reconcile
                :review-gate-invalidate
+               :review-gate-base-push
                :review-gate-completion}
              (law/command-type (:command/type command))))
 
@@ -247,11 +249,13 @@
           correlation)))))
 
 (defn- ^:async ensure-current-dispatch!
-  [{:keys [github] :as worker} command dispatch]
+  [{:keys [github] :as worker} command dispatch requirement]
   (ensure-enabled! worker)
   (let [current (await ((:fetch-pull-request! github) command))]
     (dependency! worker :available)
-    (when-not (review/dispatch-command-current? command dispatch current)
+    (when-not (if (= :terminal requirement)
+                (review/dispatch-current-pull-request? dispatch current)
+                (review/dispatch-command-current? command dispatch current))
       (throw
        (ex-info "pull-request or command context changed before GitHub effect"
                 {:error/code :pull-request-context-changed
@@ -290,14 +294,17 @@
             :superseded-by-check-id (:superseded-by-check-id gate-check)}))))
 
 (defn write-authorizer
-  "Return a callback that revalidates all dynamic GitHub write authority."
+  "Revalidate GitHub write authority. true checks start-command authority;
+  :terminal requires the exact durable PR tuple but not the original label;
+  false authorizes only an already-bound defensive cancellation. Every path
+  retains the final dynamic Services effect lease."
   [worker delivery-id command dispatch require-current?]
   (^:async fn []
     (when-not (= :review-dispatch (:mode worker))
       (throw (ex-info "GitHub mutation is disabled outside review-dispatch mode"
                       {:error/code :github-mutation-disabled})))
     (when require-current?
-      (await (ensure-current-dispatch! worker command dispatch)))
+      (await (ensure-current-dispatch! worker command dispatch require-current?)))
     ;; The dynamic Services marker is the final remote-independent read before
     ;; the adapter mutates GitHub.
     (let [lease (await (authorize-effect! worker delivery-id))]
@@ -338,7 +345,7 @@
         (when (or (not= :review-gate-reconcile command-type)
                   evidence-receipt)
           (reset! stage* :validate-prepared-merge-context)
-          (await (ensure-current-dispatch! worker command (:dispatch plan)))
+          (await (ensure-current-dispatch! worker command (:dispatch plan) true))
           (reset! stage* :prepare-review-gate)
           (let [gate-write-authorizer
                 (write-authorizer worker delivery-id command
@@ -393,7 +400,7 @@
                         (ensure-enabled! worker)
                         (reset! stage* :validate-dispatch-merge-context)
                         (await (ensure-current-dispatch!
-                                worker command final-dispatch))
+                                worker command final-dispatch true))
                         (reset! stage* :dispatch-review)
                         (let [base-authorizer
                               (write-authorizer worker delivery-id command
@@ -521,6 +528,7 @@
          ((:fetch-workflow-run! github)
           {:installation-id (:installation-id command)
            :repository (:repository command)
+           :repository-id (:repository-id command)
            :workflow-run-id (:workflow-run-id command)}))
         _ (reset! stage* :fetch-completion-pull-request)
         current-pull-request
@@ -564,7 +572,7 @@
                        (await
                         ((write-authorizer
                           worker source-delivery-id original-command
-                          (:dispatch correlation) true))))}))]
+                          (:dispatch correlation) :terminal))))}))]
               (await
                (store/complete!
                 store delivery-id
@@ -648,9 +656,53 @@
                {:outcome :refused
                 :reason (:reason plan)}))))))
 
+(defn base-push-child-id [command pull-request]
+  (crypto/deterministic-delivery-id
+   (str "eta-mu/base-push-gate/v1:" (:delivery-id command) ":"
+        (:repository-id command) ":" (:pull-request-node-id pull-request))))
+
+(defn- ^:async process-base-push!
+  [{:keys [store github policy mode] :as worker} delivery-id command stage*]
+  (reset! stage* :enumerate-base-push-pull-requests)
+  (let [pull-requests (await ((:list-open-pull-requests! github) command))]
+    (dependency! worker :available)
+    ;; Admission of every child must be durable before the parent is marked
+    ;; complete. A crash can repeat enumeration, but the stable parent/PR UUID
+    ;; reconciles each immutable child instead of duplicating a Check effect.
+    (doseq [pull-request pull-requests]
+      (reset! stage* :admit-base-push-child)
+      (let [child-id (base-push-child-id command pull-request)
+            child (admission/base-push-child policy command child-id pull-request)]
+        (when-not child
+          (throw (ex-info "invalid base-push pull request identity"
+                          {:error/code :invalid-base-push-pull-request})))
+        (await (store/accept-delivery! store child))))
+    (await (store/complete!
+            store delivery-id
+            {:outcome (if (= :observe-only mode) :observed :gate-refresh-queued)
+             :command/type :review-gate-base-push
+             :repository (:repository command)
+             :command-id delivery-id
+             :mode mode
+             :push-after-sha (:push-after-sha command)
+             :pull-request-count (count pull-requests)}))))
+
+(defn- ^:async verify-base-push-parent! [state-store policy command]
+  (when-let [parent-id (:parent-delivery-id command)]
+    (let [parent (:command (await (store/read-delivery state-store parent-id)))
+          expected (admission/base-push-child
+                    policy parent (base-push-child-id parent command) command)]
+      (when-not (= command expected)
+        (throw (ex-info "base-push child does not match its durable parent"
+                        {:error/code :immutable-state-conflict
+                         :delivery-id (:delivery-id command)
+                         :parent-delivery-id parent-id}))))))
+
 (defn- ^:async process-current-command!
   [{:keys [store github authority mode] :as worker} delivery-id command
    policy-decision stage* call-begun?* dispatch*]
+  (reset! stage* :verify-base-push-provenance)
+  (await (verify-base-push-parent! store (:policy worker) command))
   (reset! stage* :fetch-pull-request)
   (let [current-pull-request
         (await ((:fetch-pull-request! github) command))
@@ -710,7 +762,7 @@
    :repository (:repository dispatch)
    :workflow (:workflow dispatch)
    :ref (:ref dispatch)
-   :pr-number (js/Number (get-in dispatch [:inputs :pr_number]))
+   :pr-number (runtime/number-value (get-in dispatch [:inputs :pr_number]))
    :pr-base-sha (get-in dispatch [:inputs :pr_base_sha])
    :pr-head-sha (get-in dispatch [:inputs :pr_head_sha])
    :pr-merge-sha (get-in dispatch [:inputs :pr_merge_sha])
@@ -779,9 +831,17 @@
                     ;; pending before any GitHub call. Activation causes periodic
                     ;; replay; a configured deployment canary is the sole bypass.
                     (when (or (not lease-required?) (:allowed? initial-lease))
-                      (if completion-command?
+                      (cond
+                        (= :review-gate-base-push
+                           (law/command-type (:command/type command)))
+                        (await (process-base-push!
+                                worker delivery-id command stage*))
+
+                        completion-command?
                         (await (process-workflow-completion!
                                 worker delivery-id command stage*))
+
+                        :else
                         (if (= :issue-probe
                                (law/command-type (:command/type command)))
                           (await

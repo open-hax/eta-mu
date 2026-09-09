@@ -28,3 +28,45 @@
           (is (= "HTTP request timed out" (ex-message error)))))
       (finally
         (set! (.-fetch js/globalThis) original-fetch)))))
+
+(deftest ^:async credential-requests-reject-insecure-urls-before-fetch
+  (let [original-fetch (.-fetch js/globalThis)
+        called?* (atom false)]
+    (set! (.-fetch js/globalThis)
+          (fn [_url _options] (reset! called?* true)))
+    (try
+      (doseq [url ["http://github.test/secret-path"
+                   "https://user:secret@github.test/api"]]
+        (let [error (try (await (http/request!
+                                 {:url url :method "POST"
+                                  :headers {"authorization" "Bearer secret"}}))
+                         nil
+                         (catch :default value value))]
+          (is (= {:error/code :invalid-http-url} (ex-data error)))))
+      (is (false? @called?*))
+      (finally
+        (set! (.-fetch js/globalThis) original-fetch)))))
+
+(deftest ^:async credential-requests-disable-redirects-and-sanitize-failures
+  (let [original-fetch (.-fetch js/globalThis)
+        redirects* (atom [])]
+    (set! (.-fetch js/globalThis)
+          (fn [_url options]
+            (swap! redirects* conj (.-redirect options))
+            (js/Promise.resolve
+             (js/Response. nil
+                           #js {:status 307
+                                :headers #js {"location"
+                                              "https://foreign.test/secret"}}))))
+    (try
+      (let [error (try (await (http/request!
+                               {:url "https://github.test/api"
+                                :method "POST"
+                                :headers {"authorization" "Bearer secret"}}))
+                       nil
+                       (catch :default value value))]
+        (is (= ["error"] @redirects*))
+        (is (= {:error/code :http-request-failed} (ex-data error)))
+        (is (= "HTTP request failed" (ex-message error))))
+      (finally
+        (set! (.-fetch js/globalThis) original-fetch)))))

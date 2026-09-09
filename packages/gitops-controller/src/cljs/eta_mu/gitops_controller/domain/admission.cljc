@@ -10,6 +10,7 @@
     (law/code-review-command? command) :code-review
     (law/review-gate-reconcile-command? command) :review-gate-reconcile
     (law/review-gate-invalidation-command? command) :review-gate-invalidate
+    (law/default-branch-push-command? command) :review-gate-base-push
     (law/workflow-run-completion-command? command) :review-gate-completion
     (law/ingress-probe-command? command) :ingress-probe
     (law/issue-probe-command? command) :issue-probe
@@ -23,6 +24,7 @@
     :review-gate-reconcile {:workflow gate-workflow
                             :workflow-id gate-workflow-id}
     :review-gate-invalidate {:workflow nil :workflow-id nil}
+    :review-gate-base-push {:workflow nil :workflow-id nil}
     :review-gate-completion
     (cond
       (= review-workflow-id (:workflow-definition-id command))
@@ -176,6 +178,23 @@
     (not (law/non-blank-string? (:action command)))
     {:admitted? false :reason :invalid-command}
 
+    (= "push" (:event command))
+    (cond
+      ;; Only the internal durable fan-out can create child commands. A
+      ;; webhook can never supply controller-generated parent provenance.
+      (some? (:parent-delivery-id command))
+      {:admitted? false :reason :invalid-command}
+
+      (not (law/push-webhook-source? command))
+      {:admitted? false :reason :invalid-command}
+
+      (not (law/default-branch-push-command? command))
+      {:admitted? false :ignored? true :reason :unmanaged-push}
+
+      :else
+      (admit policy command :review-gate-base-push
+             :gitops/invalidate-review-gate))
+
     (= "issues" (:event command))
     (cond
       (not (law/issue-webhook-source? command))
@@ -274,3 +293,20 @@
 
     :else
     {:admitted? false :ignored? true :reason :unmanaged-event}))
+
+(defn base-push-child
+  "Derive one defensive PR invalidation from an admitted signed push. Child
+  identity is supplied by the deterministic UUID boundary; no model authority
+  or newly observed mutable PR revision enters its immutable source receipt."
+  [policy parent child-id pull-request]
+  (let [source (-> parent
+                   (dissoc :admission :capability :command/type :command-id)
+                   (assoc :parent-delivery-id (:delivery-id parent)
+                          :delivery-id child-id
+                          :pull-request-number (:pull-request-number pull-request)
+                          :pull-request-node-id (:pull-request-node-id pull-request)))]
+    (when (and (= :review-gate-base-push (:command/type parent))
+               (:allowed? (current-policy-decision policy parent))
+               (law/base-push-child-command? source))
+      (:command (admit policy source :review-gate-invalidate
+                       :gitops/invalidate-review-gate)))))

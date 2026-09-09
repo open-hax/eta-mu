@@ -15,9 +15,9 @@
 
 (defn payload->command
   [envelope payload]
-  {:delivery-id (:delivery-id envelope)
+  (cond-> {:delivery-id (:delivery-id envelope)
    :event (:event envelope)
-   :action (:action payload)
+   :action (if (= "push" (:event envelope)) "updated" (:action payload))
    :label (get-in payload [:label :name])
    :installation-id (get-in payload [:installation :id])
    :repository-id (get-in payload [:repository :id])
@@ -52,7 +52,13 @@
    :workflow-run-triggering-actor-login
    (get-in payload [:workflow_run :triggering_actor :login])
    :sender-id (get-in payload [:sender :id])
-   :sender-login (get-in payload [:sender :login])})
+   :sender-login (get-in payload [:sender :login])}
+    (= "push" (:event envelope))
+    (assoc :push-ref (:ref payload)
+           :push-before-sha (:before payload)
+           :push-after-sha (:after payload)
+           :push-deleted? (:deleted payload)
+           :repository-default-branch (get-in payload [:repository :default_branch]))))
 
 (defn github-pull-request->current
   [pull-request repository]

@@ -2,6 +2,29 @@
   (:require [cljs.test :refer [deftest is]]
             [eta-mu.gitops-controller.extern.runtime :as runtime]))
 
+(deftest ^:async serial-executor-keeps-order-and-releases-after-rejection
+  (let [run! (runtime/serial-executor)
+        events* (atom [])
+        release* (atom nil)
+        hold (js/Promise. (fn [resolve _reject] (reset! release* resolve)))
+        first-result (run! (^:async fn []
+                             (swap! events* conj :first-started)
+                             (await hold)
+                             (swap! events* conj :first-failed)
+                             (throw (ex-info "expected failure" {}))))
+        second-result (run! (fn []
+                              (swap! events* conj :second)
+                              :second-result))]
+    (await (js/Promise.resolve nil))
+    (is (= [:first-started] @events*))
+    (@release* nil)
+    (let [error (try (await first-result)
+                     nil
+                     (catch :default value value))]
+      (is (= "expected failure" (ex-message error))))
+    (is (= :second-result (await second-result)))
+    (is (= [:first-started :first-failed :second] @events*))))
+
 (deftest ^:async intervals-never-overlap-and-resume-after-settlement
   (let [callback* (atom nil)
         release* (atom nil)

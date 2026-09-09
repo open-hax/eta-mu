@@ -1,6 +1,6 @@
 # eta-mu GitOps controller
 
-`@eta-mu/gitops-controller` admits six deterministic GitHub command families:
+`@eta-mu/gitops-controller` admits deterministic GitHub command families:
 
 - applying the exact `eta-mu:review` label to an open, non-draft pull request
   dispatches the configured evidence-first review workflow;
@@ -11,6 +11,10 @@
 - opening, reopening, synchronizing, marking ready, or retargeting the base of
   a pull request creates a fresh pending gate on the current test-merge commit
   without dispatching a workflow or model;
+- a signed push to the repository's current default branch enumerates affected
+  open pull requests and durably queues deterministic gate invalidations. Each
+  child re-fetches its current base/head/test-merge tuple before creating a gate;
+  neither the push nor its children dispatch a workflow or model;
 - applying the exact `eta-mu:probe` label to a canonical, open GitHub issue
   produces a durable terminal project-observation plan. The controller
   re-fetches the issue, repository, and default-branch ref; rejects
@@ -30,7 +34,10 @@ request and repository, authorize the sender, and bind the exact
 default-base/head/test-merge tuple after GitHub reports the pull request
 mergeable. Issue probes re-fetch the issue, repository, and repository
 default-branch ref before authorization. Every label command must still be
-present on the live object. Effecting commands dispatch only workflow files
+present on the live object before starting a review. Completion of an already
+dispatched review proves the exact gate and revision identity without requiring
+the original command label to remain present; the current effect lease still
+applies. Effecting commands dispatch only workflow files
 from the repository's current default branch. A pull request's target branch
 never selects executable workflow code.
 
@@ -125,7 +132,7 @@ while those optional ports are absent from the observe-only composition.
 Only `issues:labeled` with exact `eta-mu:probe`,
 `pull_request:labeled` with exact `eta-mu:review` or `eta-mu:probe`,
 defensive `pull_request:opened|reopened|synchronize|ready_for_review` and
-base-changing `pull_request:edited`,
+base-changing `pull_request:edited`, non-deleted default-branch `push`,
 `pull_request_review:submitted|dismissed`,
 `pull_request_review_comment:created|deleted`, and
 `pull_request_review_thread:resolved|unresolved`, plus trusted completion events
@@ -146,6 +153,7 @@ leave no durable state.
 | `ETA_MU_CONTROLLER_ACTIVE_MARKER_FILE` | `review-dispatch` only | Absolute path to Services' read-only `.active-release` marker; exact bytes are `<deployment-id>\n`; omit in `observe-only` |
 | `ETA_MU_CONTROLLER_CANARY_DELIVERY_IDS` | `review-dispatch` only | Comma-separated exact GitHub delivery GUIDs allowed to effect before activation; must be empty in `observe-only` |
 | `ETA_MU_GITHUB_APP_ID` | yes | Numeric GitHub App ID |
+| `ETA_MU_GITHUB_API_URL` | no | HTTPS API root; defaults to `https://api.github.com`; embedded credentials, queries, fragments, and redirects are refused |
 | `ETA_MU_GITHUB_APP_PRIVATE_KEY_FILE` | preferred | Mounted RSA private-key PEM path; parsed before listen |
 | `ETA_MU_GITHUB_APP_PRIVATE_KEY` | fallback | Inline RSA private-key PEM when a file mount is unavailable |
 | `ETA_MU_GITHUB_WEBHOOK_SECRET_FILE` | preferred | Mounted webhook secret path; trimmed value must contain at least 32 characters |
@@ -178,7 +186,9 @@ Git, Rheos, or Sol authority.
 The later review-dispatch profile is distinct. It adds Pull requests (read),
 Actions (write), and Checks (write), and subscribes to pull-request,
 pull-request-review, pull-request-review-comment, pull-request-review-thread,
-and workflow-run events. Administration (read), when used to verify protected
+default-branch push, and workflow-run events. Every installation token is scoped
+to one repository and the explicit permissions needed by its operation.
+Administration (read), when used to verify protected
 required-check source binding before activation, is not part of the issue-only
 listener token. Neither profile receives Administration (write). Both point
 their webhook at `/hooks/eta-mu/github`. The target gate wrapper grants its

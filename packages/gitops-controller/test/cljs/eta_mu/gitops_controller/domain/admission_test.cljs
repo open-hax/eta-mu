@@ -79,6 +79,89 @@
              config (assoc admitted
                            :capability :gitops/reconcile-review-gate)))))))
 
+(def base-push-source
+  (-> command
+      (dissoc :label :pull-request-number :pull-request-node-id)
+      (assoc :event "push" :action "updated"
+             :push-ref "refs/heads/main" :repository-default-branch "main"
+             :push-before-sha "1111111111111111111111111111111111111111"
+             :push-after-sha "2222222222222222222222222222222222222222"
+             :push-deleted? false)))
+
+(deftest default-branch-push-admission-is-defensive-and-provenance-bound
+  (let [parent (:command (admission/decide config base-push-source))
+        child-id "a0000000-0000-5000-8000-000000000001"
+        child (admission/base-push-child
+               config parent child-id
+               {:pull-request-number 321 :pull-request-node-id "PR_kwDOExample"})]
+    (is (= :review-gate-base-push (:command/type parent)))
+    (is (law/admitted-command? parent))
+    (is (:allowed? (admission/current-policy-decision config parent)))
+    (is (= :review-gate-invalidate (:command/type child)))
+    (is (law/admitted-command? child))
+    (is (:allowed? (admission/current-policy-decision config child)))
+    (is (= (:delivery-id parent) (:parent-delivery-id child)))
+    (is (= (:payload/sha256 parent) (:payload/sha256 child)))
+    (is (nil? (get-in parent [:admission :workflow])))
+    (is (nil? (get-in child [:admission :workflow])))
+    (is (= :gitops/invalidate-review-gate (:capability child)))
+    (is (= :invalid-command (:reason (admission/decide config child))))
+    (is (nil? (admission/base-push-child
+               (assoc config :mode :observe-only) parent child-id
+               {:pull-request-number 321 :pull-request-node-id "PR_kwDOExample"}))))
+  (doseq [changes [{:push-ref "refs/heads/feature"}
+                   {:push-ref "refs/tags/main"}
+                   {:push-deleted? true
+                    :push-after-sha (apply str (repeat 40 "0"))}]]
+    (let [source (merge base-push-source changes)]
+      (is (law/webhook-source? source))
+      (is (= :unmanaged-push
+             (:reason (admission/decide config source))))))
+  (doseq [changes [{:push-ref nil}
+                   {:push-ref "not-a-ref"}
+                   {:push-before-sha nil}
+                   {:push-before-sha "invalid"}
+                   {:push-after-sha nil}
+                   {:push-after-sha "invalid"}
+                   {:push-after-sha (apply str (repeat 40 "0"))}
+                   {:push-deleted? true}
+                   {:push-deleted? nil}
+                   {:push-deleted? "false"}]]
+    (let [source (merge base-push-source changes)
+          decision (admission/decide config source)]
+      (is (not (law/webhook-source? source)))
+      (is (= :invalid-command (:reason decision)))
+      (is (not (:ignored? decision)))))
+  (is (= :repository-not-allowed
+         (:reason (admission/decide
+                   config (assoc base-push-source :repository "elsewhere/repo")))))
+  (is (= :installation-not-allowed
+         (:reason (admission/decide
+                   config (assoc base-push-source :installation-id 999))))))
+
+(deftest push-projection-uses-the-signed-ref-and-supplies-only-internal-action
+  (let [projected (shape/payload->command
+                   {:delivery-id (:delivery-id command) :event "push"}
+                   {:ref "refs/heads/main"
+                    :before (:push-before-sha base-push-source)
+                    :after (:push-after-sha base-push-source)
+                    :deleted false
+                    :repository {:id 42 :full_name "open-hax/eta-mu"
+                                 :default_branch "main"}
+                    :installation {:id 77}
+                    :sender {:id 9 :login "operator"}
+                    :parent-delivery-id "untrusted"
+                    :command/type :code-review})]
+    (is (= "updated" (:action projected)))
+    (is (= "refs/heads/main" (:push-ref projected)))
+    (is (= "main" (:repository-default-branch projected)))
+    (is (false? (:push-deleted? projected)))
+    (is (not (contains? projected :parent-delivery-id)))
+    (is (not (contains? projected :command/type)))
+    (is (:admitted? (admission/decide
+                     config (assoc projected :payload/sha256
+                                   (:payload/sha256 command)))))))
+
 (deftest observe-only-admission-does-not-require-mutation-workflow-ids
   (let [observe-config (-> config
                            (assoc :mode :observe-only

@@ -229,6 +229,11 @@
     (:draft? current-pull-request)
     {:planned? false :reason :pull-request-is-draft}
 
+    (and (law/base-push-child-command? command)
+         (not= (:repository-default-branch command)
+               (:default-branch current-pull-request)))
+    {:planned? false :reason :push-default-branch-changed}
+
     (not= (:default-branch current-pull-request)
           (:base-branch current-pull-request))
     {:planned? false :reason :pull-request-base-is-not-default}

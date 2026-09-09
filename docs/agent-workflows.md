@@ -94,17 +94,25 @@ the `workflow_call` default. A reusable `workflow_dispatch` wrapper may explicit
 toolchain; the workflow distinguishes an absent input key from a present
 boolean before applying its value, independently of the inherited event name.
 Default eta-mu review gates deliberately do not execute Sol, Rheos, or any gate
-that needs the private Katamorph or event-ledger repositories. Those bytes and
-their read credentials must never enter a job that executes pull-request code.
+that needs the private Katamorph or event-ledger repositories. Within these
+automated review gates, private dependency bytes and their read credentials
+must never enter a job that executes pull-request code.
 Changes in that scope require the repository's native exact-head
 **Sol CI / verify** (and the corresponding native Rheos checks when applicable)
 as separate evidence in addition to **eta-mu-opencode-evidence**. The webhook
 review is evidence and commentary, not a replacement for those native checks.
 On pull requests, **Sol CI / verify** checks out the immutable head and runs only
 public-source lint; it has no App credential, private dependency source, test, or
-build step. Full Sol test/build with Katamorph and event-ledger runs only on
-trusted `main`/`staging` push revisions. That deferred integration is an explicit
-pre-merge evidence gap, not a full-test success hidden behind a green PR check.
+build step. Full Sol test/build remains available on trusted `main`/`staging`
+push revisions. Pre-merge behavioral evidence uses the separate protected
+**Sol Pre-merge Integration** workflow: trusted default-branch machinery,
+environment-required human approval of the full candidate SHA, live candidate
+revalidation, and dependency-token revocation before candidate execution. Its
+fresh publisher creates **Sol pre-merge / test-build** on the approved PR head.
+The [bootstrap contract](sol-premerge-bootstrap.md) requires a separate trusted
+workflow bootstrap and administrator-owned environment setup before the path
+can run. Until that exact-head check actually succeeds, the pre-merge evidence
+gap remains open; neither the static check nor post-merge tests fill it.
 
 Draft, closed, and fork pull requests are refused by the controller before
 dispatch. The workflow repeats that current-state check so a race after webhook

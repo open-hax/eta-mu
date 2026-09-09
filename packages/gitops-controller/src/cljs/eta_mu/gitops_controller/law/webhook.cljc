@@ -29,6 +29,7 @@
 
 (def managed-events
   #{"issues"
+    "push"
     "pull_request"
     "pull_request_review"
     "pull_request_review_comment"
@@ -45,7 +46,7 @@
 
 (def command-types
   #{:code-review :review-gate-reconcile :review-gate-invalidate
-    :review-gate-completion
+    :review-gate-completion :review-gate-base-push
     :ingress-probe :issue-probe})
 
 (def command-capabilities
@@ -53,6 +54,7 @@
    :review-gate-reconcile :gitops/reconcile-review-gate
    :review-gate-invalidate :gitops/invalidate-review-gate
    :review-gate-completion :gitops/complete-review-gate
+   :review-gate-base-push :gitops/invalidate-review-gate
    :ingress-probe :gitops/probe
    :issue-probe :gitops/probe})
 
@@ -183,12 +185,43 @@
   (and (gate-reconcile-action? event action)
        (non-blank-string? (gate-reconcile-source-id command))))
 
+(declare commit-sha?)
+
+(defn- push-event?
+  [{:keys [event action push-ref repository-default-branch push-before-sha
+           push-after-sha push-deleted?]}]
+  (and (= "push" event)
+       (= "updated" action)
+       (non-blank-string? repository-default-branch)
+       (string? push-ref)
+       (boolean (re-matches #"^refs/(heads|tags)/[^\s]+$" push-ref))
+       (commit-sha? push-before-sha)
+       (commit-sha? push-after-sha)
+       (boolean? push-deleted?)
+       (= push-deleted? (= (apply str (repeat 40 "0")) push-after-sha))))
+
+(defn default-branch-push-command?
+  [{:keys [push-ref repository-default-branch push-deleted?] :as command}]
+  (and (push-event? command)
+       (= (str "refs/heads/" repository-default-branch) push-ref)
+       (false? push-deleted?)))
+
+(defn base-push-child-command?
+  [{:keys [parent-delivery-id delivery-id pull-request-number
+           pull-request-node-id] :as command}]
+  (and (default-branch-push-command? command)
+       (delivery-id? parent-delivery-id)
+       (not= parent-delivery-id delivery-id)
+       (positive-integer? pull-request-number)
+       (non-blank-string? pull-request-node-id)))
+
 (defn review-gate-invalidation-command?
-  [{:keys [event action base-ref-before]}]
-  (and (= "pull_request" event)
-       (or (contains? review-gate-invalidation-actions action)
-           (and (= "edited" action)
-                (non-blank-string? base-ref-before)))))
+  [{:keys [event action base-ref-before] :as command}]
+  (or (and (= "pull_request" event)
+           (or (contains? review-gate-invalidation-actions action)
+               (and (= "edited" action)
+                    (non-blank-string? base-ref-before))))
+      (base-push-child-command? command)))
 
 (defn ingress-probe-command?
   [{:keys [event action label]}]
@@ -202,8 +235,6 @@
        (= "labeled" action)
        (= probe-command-label label)
        (false? issue-pull-request?)))
-
-(declare commit-sha?)
 
 (defn workflow-run-completion-command?
   [{:keys [event action workflow-definition-id workflow-definition-path
@@ -281,6 +312,10 @@
        (positive-integer? pull-request-number)
        (non-blank-string? pull-request-node-id)))
 
+(defn push-webhook-source? [command]
+  (and (webhook-base-source? command)
+       (push-event? command)))
+
 (defn issue-webhook-source?
   [{:keys [action issue-number issue-node-id issue-pull-request?] :as command}]
   (and (webhook-base-source? command)
@@ -293,12 +328,14 @@
   [{:keys [event] :as command}]
   (and (webhook-base-source? command)
        (case event
+         "push" (push-webhook-source? command)
          "workflow_run" (workflow-run-completion-command? command)
          "issues" (issue-webhook-source? command)
          (pull-request-webhook-source? command))))
 
 (def ignored-delivery-reasons
   #{:unmanaged-event :unmanaged-action :unmanaged-label
+    :unmanaged-push
     :unmanaged-workflow :untrusted-workflow-actor})
 
 (defn- source-matches-command-type? [command-type-value command]
@@ -307,6 +344,8 @@
     :review-gate-reconcile (review-gate-reconcile-command? command)
     :review-gate-invalidate (review-gate-invalidation-command? command)
     :review-gate-completion (workflow-run-completion-command? command)
+    :review-gate-base-push (and (default-branch-push-command? command)
+                               (nil? (:parent-delivery-id command)))
     :ingress-probe (ingress-probe-command? command)
     :issue-probe (issue-probe-command? command)
     false))
@@ -336,7 +375,7 @@
            (:review-gate-reconcile :review-gate-completion)
            (workflow-file? (:workflow admission))
 
-           :review-gate-invalidate
+           (:review-gate-invalidate :review-gate-base-push)
            (nil? (:workflow admission))
 
            :ingress-probe

@@ -9,6 +9,9 @@ on:
       - "packages/eta-mu/**"
       - ".github/workflows/sol-ci.yml"
       - ".github/workflows/sol-trusted-integration.yml"
+      - ".github/workflows/sol-premerge.yml"
+      - ".github/scripts/sol-premerge.mjs"
+      - ".github/scripts/sol-premerge.test.mjs"
       - ".github/scripts/sol-ci-workflow.test.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -21,6 +24,9 @@ on:
       - "packages/eta-mu/**"
       - ".github/workflows/sol-ci.yml"
       - ".github/workflows/sol-trusted-integration.yml"
+      - ".github/workflows/sol-premerge.yml"
+      - ".github/scripts/sol-premerge.mjs"
+      - ".github/scripts/sol-premerge.test.mjs"
       - ".github/scripts/sol-ci-workflow.test.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -101,5 +107,6 @@ jobs:
           {
             echo "Sol pull-request validation is exact-head public-source lint only."
             echo "Katamorph/event-ledger source and App credentials are intentionally absent."
-            echo "Full private-dependency test/build runs only for trusted main/staging push revisions."
+            echo "Pre-merge test/build requires the separate protected Sol Pre-merge Integration workflow and exact-SHA human approval."
+            echo "Trusted main/staging push validation remains separate."
           } | tee sol-private-integration-deferred.log

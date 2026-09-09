@@ -11,6 +11,10 @@ on:
       - .github/scripts/opencode-code-review-workflow.test.mjs
       - .github/scripts/run-opencode-review-recovery.mjs
       - .github/scripts/sol-ci-workflow.test.mjs
+      - .github/scripts/sol-premerge.mjs
+      - .github/scripts/sol-premerge.test.mjs
+      - .github/workflows/sol-premerge.yml
+      - docs/sol-premerge-bootstrap.md
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
       - .github/workflows/gitops-controller.yml
@@ -32,6 +36,10 @@ on:
       - .github/scripts/opencode-code-review-workflow.test.mjs
       - .github/scripts/run-opencode-review-recovery.mjs
       - .github/scripts/sol-ci-workflow.test.mjs
+      - .github/scripts/sol-premerge.mjs
+      - .github/scripts/sol-premerge.test.mjs
+      - .github/workflows/sol-premerge.yml
+      - docs/sol-premerge-bootstrap.md
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
       - .github/workflows/gitops-controller.yml

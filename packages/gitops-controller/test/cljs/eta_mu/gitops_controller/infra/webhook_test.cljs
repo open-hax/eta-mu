@@ -154,7 +154,7 @@
                                              :url "/hooks/eta-mu/github"
                                              :headers (assoc headers
                                                              "x-github-event"
-                                                             "push"
+                                                             "check_run"
                                                              "x-github-delivery"
                                                              unsupported-id
                                                              "x-hub-signature-256"
@@ -167,11 +167,16 @@
             (is (= "ignored" (some-> (:disposition receipt) name)))
             (is (= "unmanaged-event" (some-> (:reason receipt) name)))
             (is (empty? @enqueued*))))
-        (testing "an allowlisted actionless push is terminal and deduplicated"
+        (testing "a valid feature-branch push is terminal and deduplicated"
           (let [push-id "a0000000-0000-4000-8000-000000000004"
-                raw (json/encode {:installation {:id 77}
+                raw (json/encode {:ref "refs/heads/feature"
+                                  :before "1111111111111111111111111111111111111111"
+                                  :after "2222222222222222222222222222222222222222"
+                                  :deleted false
+                                  :installation {:id 77}
                                   :repository {:id 42
-                                               :full_name "open-hax/eta-mu"}
+                                               :full_name "open-hax/eta-mu"
+                                               :default_branch "main"}
                                   :sender {:id 9 :login "operator"}})
                 request {:method "POST"
                          :url "/hooks/eta-mu/github"
@@ -188,10 +193,41 @@
             (is (= 202 (.-statusCode duplicate-response)))
             (is (true? (:duplicate (response-body duplicate-response))))
             (is (= "ignored" (some-> (:disposition receipt) name)))
-            (is (= "unmanaged-event" (some-> (:reason receipt) name)))
+            (is (= "unmanaged-push" (some-> (:reason receipt) name)))
             (is (not (contains?
                       (set (await (store/pending-delivery-ids state-store)))
                       push-id)))
+            (is (empty? @enqueued*))))
+        (testing "malformed default-branch push fields leave no durable state"
+          (let [push-id "a0000000-0000-4000-8000-000000000006"
+                valid-push {:ref "refs/heads/main"
+                            :before "1111111111111111111111111111111111111111"
+                            :after "2222222222222222222222222222222222222222"
+                            :deleted false
+                            :installation {:id 77}
+                            :repository {:id 42 :full_name "open-hax/eta-mu"
+                                         :default_branch "main"}
+                            :sender {:id 9 :login "operator"}}
+                deliveries-before (await (fs/entries
+                                          (get-in state-store [:paths :deliveries])))]
+            (doseq [changes [{:before nil} {:before "invalid"}
+                             {:after nil} {:after "invalid"}
+                             {:deleted nil} {:deleted "false"}
+                             {:ref nil} {:ref "not-a-ref"}]]
+              (let [raw (json/encode (merge valid-push changes))
+                    response (await
+                              (.inject app
+                                       (clj->js
+                                        {:method "POST" :url "/hooks/eta-mu/github"
+                                         :headers (assoc headers
+                                                         "x-github-event" "push"
+                                                         "x-github-delivery" push-id
+                                                         "x-hub-signature-256" (signature raw))
+                                         :payload raw})))]
+                (is (= 422 (.-statusCode response)))
+                (is (= "invalid-command" (:reason (response-body response))))))
+            (is (= deliveries-before
+                   (await (fs/entries (get-in state-store [:paths :deliveries])))))
             (is (empty? @enqueued*))))
         (testing "a managed event without an action remains state-free"
           (let [missing-action-id "a0000000-0000-4000-8000-000000000005"
@@ -480,6 +516,7 @@
         synchronize-id "a0000000-0000-4000-8000-000000000001"
         base-edit-id "a0000000-0000-4000-8000-000000000002"
         ordinary-edit-id "a0000000-0000-4000-8000-000000000003"
+        base-push-id "a0000000-0000-4000-8000-000000000004"
         ignored-id "fb0e2552-a3e3-43f4-86bb-c8857617c463"
         controller-config {:mode :observe-only
                            :policy-revision "observe-policy-v2"
@@ -567,6 +604,16 @@
               ordinary-edit-response
               (await (request! "pull_request" ordinary-edit-id
                                (assoc review-payload :action "edited")))
+              base-push-payload {:ref "refs/heads/main"
+                                 :before "1111111111111111111111111111111111111111"
+                                 :after "2222222222222222222222222222222222222222"
+                                 :deleted false
+                                 :repository {:id 42 :full_name "open-hax/eta-mu"
+                                              :default_branch "main"}
+                                 :installation {:id 77}
+                                 :sender {:id 9 :login "operator"}}
+              base-push-response (await (request! "push" base-push-id base-push-payload))
+              base-push-duplicate (await (request! "push" base-push-id base-push-payload))
               resolved-command
               (get-in (await (store/read-delivery state-store resolved-id))
                       [:command])
@@ -582,6 +629,9 @@
                       [:command])
               synchronize-command
               (get-in (await (store/read-delivery state-store synchronize-id))
+                      [:command])
+              base-push-command
+              (get-in (await (store/read-delivery state-store base-push-id))
                       [:command])]
           (doseq [response [resolved-response unresolved-response
                             comment-response deleted-comment-response
@@ -597,6 +647,12 @@
           (is (= 202 (.-statusCode synchronize-response)))
           (is (= 202 (.-statusCode base-edit-response)))
           (is (true? (:ignored (response-body ordinary-edit-response))))
+          (is (= 202 (.-statusCode base-push-response)))
+          (is (false? (:duplicate (response-body base-push-response))))
+          (is (true? (:duplicate (response-body base-push-duplicate))))
+          (is (= :review-gate-base-push (:command/type base-push-command)))
+          (is (= :gitops/invalidate-review-gate (:capability base-push-command)))
+          (is (nil? (get-in base-push-command [:admission :workflow])))
           (is (= :review-gate-reconcile (:command/type resolved-command)))
           (is (= "PRRT_example" (:review-thread-node-id resolved-command)))
           (is (= :review-gate-reconcile (:command/type comment-command)))
@@ -611,7 +667,7 @@
                  (:command/type synchronize-command)))
           (is (= [resolved-id unresolved-id comment-id deleted-comment-id
                   submitted-id dismissed-id probe-id synchronize-id
-                  base-edit-id]
+                  base-edit-id base-push-id]
                  @enqueued*))
           (doseq [[ignored-delivery-id reason]
                   [[ignored-id "unmanaged-action"]

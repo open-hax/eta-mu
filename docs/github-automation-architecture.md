@@ -98,7 +98,7 @@ publication remains bound to the PR head.
 
 **Logic**:
 1. Re-fetch the pull request and require it to remain open, same-repository, mergeable, and targeted at the repository's current default branch with the exact admitted head/base/merge tuple. Create an in-progress diagnostic `eta-mu-opencode-evidence` check on that synthetic merge commit, bound to the command ID, workflow run/attempt, pull-request number, and all three revisions.
-2. Run the public webhook-controller deterministic scope without App credentials or private dependency bytes and serialize its exit codes and logs. The separate exact-head `Sol CI / verify` PR check is public-source lint only; private-dependency Sol test/build runs on trusted canonical pushes and remains an explicit pre-merge evidence gap.
+2. Run the public webhook-controller deterministic scope without App credentials or private dependency bytes and serialize its exit codes and logs. The separate exact-head `Sol CI / verify` PR check is public-source lint only. Private-dependency Sol test/build uses either trusted canonical pushes or the separately bootstrapped [protected exact-SHA pre-merge workflow](sol-premerge-bootstrap.md), which requires human trust approval and publishes its actual result on the candidate head. Until that protected run succeeds, the pre-merge evidence gap remains open.
 3. Check out pinned revisions of `octave-commons/muse` and `riatzukiza/.agents`.
 4. Use Muse to compile a review-only OpenCode projection containing observer tools over existing Muse, phase, actor, task, and agent state.
 5. Package the compiled tools, source revisions, checksums, and external skill inventory into a review-context artifact.

@@ -5,10 +5,11 @@
             [eta-mu.gitops-controller.extern.fs :as fs]
             [eta-mu.gitops-controller.extern.json :as json]
             [eta-mu.gitops-controller.extern.runtime :as runtime]
+            [eta-mu.gitops-controller.extern.uri :as uri]
             [eta-mu.gitops-controller.law.webhook :as law]))
 
 (defn- parse-positive-integer [name value]
-  (let [parsed (js/Number value)]
+  (let [parsed (runtime/number-value value)]
     (when-not (law/positive-integer? parsed)
       (throw (ex-info (str name " must be a positive integer") {:field name})))
     parsed))
@@ -228,8 +229,9 @@
      :deployment-id deployment-id
      :active-marker-file active-marker-file
      :canary-delivery-ids canary-delivery-ids
-     :github-api-url (or (runtime/environment "ETA_MU_GITHUB_API_URL")
-                         "https://api.github.com")
+     :github-api-url (uri/github-api-url!
+                      (or (runtime/environment "ETA_MU_GITHUB_API_URL")
+                          "https://api.github.com"))
      :github-app-id (parse-positive-integer
                      "ETA_MU_GITHUB_APP_ID"
                      (required "ETA_MU_GITHUB_APP_ID"))

@@ -12,6 +12,7 @@
    "ETA_MU_CONTROLLER_ACTIVE_MARKER_FILE"
    "ETA_MU_CONTROLLER_CANARY_DELIVERY_IDS"
    "ETA_MU_GITHUB_APP_ID"
+   "ETA_MU_GITHUB_API_URL"
    "ETA_MU_GITHUB_APP_PRIVATE_KEY"
    "ETA_MU_GITHUB_APP_PRIVATE_KEY_FILE"
    "ETA_MU_GITHUB_WEBHOOK_SECRET"
@@ -85,6 +86,7 @@
                "ETA_MU_CONTROLLER_CANARY_DELIVERY_IDS"
                (str first-canary "," second-canary)
                "ETA_MU_GITHUB_APP_ID" "123"
+               "ETA_MU_GITHUB_API_URL" "https://api.github.test/"
                "ETA_MU_GITHUB_APP_PRIVATE_KEY" (private-key)
                "ETA_MU_GITHUB_APP_PRIVATE_KEY_FILE" nil
                "ETA_MU_GITHUB_WEBHOOK_SECRET"
@@ -101,6 +103,7 @@
         (set-environment! name value))
       (let [loaded (await (config/load!))]
         (is (= :review-dispatch (:mode loaded)))
+        (is (= "https://api.github.test" (:github-api-url loaded)))
         (is (= "eta-mu" (:project-id loaded)))
         (is (= "eta-mu-review-gate.yml" (:gate-workflow loaded)))
         (is (= 7001 (:review-workflow-id loaded)))
@@ -110,6 +113,15 @@
         (is (= "100-1" (:deployment-id loaded)))
         (is (= #{first-canary second-canary}
                (:canary-delivery-ids loaded))))
+      (testing "invalid API roots fail startup without transmitting credentials"
+        (set-environment! "ETA_MU_GITHUB_API_URL" "http://api.github.test")
+        (is (= "ETA_MU_GITHUB_API_URL"
+               (:field
+                (ex-data
+                 (try (await (config/load!))
+                      nil
+                      (catch :default error error))))))
+        (set-environment! "ETA_MU_GITHUB_API_URL" "https://api.github.test"))
       (testing "review and reconciliation effects cannot share a workflow"
         (set-environment! "ETA_MU_GITHUB_GATE_WORKFLOW" "eta-mu-review.yml")
         (is (= "ETA_MU_GITHUB_GATE_WORKFLOW"

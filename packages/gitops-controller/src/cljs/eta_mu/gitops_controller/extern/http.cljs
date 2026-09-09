@@ -1,6 +1,7 @@
 (ns eta-mu.gitops-controller.extern.http
   "Fetch boundary for GitHub REST requests."
-  (:require [eta-mu.gitops-controller.extern.json :as json]))
+  (:require [eta-mu.gitops-controller.extern.json :as json]
+            [eta-mu.gitops-controller.extern.uri :as uri]))
 
 (defn- headers->js [headers]
   (clj->js headers))
@@ -21,19 +22,24 @@
 
 (defn ^:async request!
   [{:keys [url method headers body timeout-ms]}]
-  (let [controller (js/AbortController.)
+  (let [url (uri/https-request-url! url)
+        controller (js/AbortController.)
         timer (js/setTimeout #(.abort controller)
                              (bounded-timeout-ms timeout-ms))
         options (cond-> {:method method
                          :headers (headers->js headers)
+                         :redirect "error"
                          :signal (.-signal controller)}
                   body (assoc :body (json/encode body)))]
     (try
-      (let [response (await (js/fetch url (clj->js options)))
-            text (await (.text response))]
-        {:status (.-status response)
-         :ok? (.-ok response)
-         :body (when-not (empty? text) (json/decode text))})
+      (let [response (await (js/fetch url (clj->js options)))]
+        (when (or (.-redirected response)
+                  (<= 300 (.-status response) 399))
+          (throw (ex-info "HTTP redirects are disabled" {})))
+        (let [text (await (.text response))]
+          {:status (.-status response)
+           :ok? (.-ok response)
+           :body (when-not (empty? text) (json/decode text))}))
       (catch :default error
         (throw (transport-error error)))
       (finally
