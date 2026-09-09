@@ -576,7 +576,7 @@
               (await
                (store/complete!
                 store delivery-id
-                {:outcome (if (:superseded? result)
+                (cond-> {:outcome (if (:superseded? result)
                             :gate-superseded
                             :gate-completed)
                  :command/type :review-gate-completion
@@ -584,9 +584,11 @@
                  :source-delivery-id source-delivery-id
                  :gate-check-id (get-in plan
                                         [:terminal-intent :gate-check-id])
-                 :conclusion (get-in plan
-                                     [:terminal-intent :patch :conclusion])
-                 :updated (:updated? result)})))))))))
+                 :conclusion (or (get-in result [:gate-check :conclusion])
+                                 (get-in plan [:terminal-intent :patch :conclusion]))
+                 :updated (:updated? result)}
+                  (:superseded? result)
+                  (assoc :superseded-by-check-id (:superseded-by-check-id result))))))))))))
 
 (defn- ^:async process-workflow-completion!
   [{:keys [store mode] :as worker} delivery-id command stage*]
@@ -664,7 +666,15 @@
 (defn- ^:async process-base-push!
   [{:keys [store github policy mode] :as worker} delivery-id command stage*]
   (reset! stage* :enumerate-base-push-pull-requests)
-  (let [pull-requests (await ((:list-open-pull-requests! github) command))]
+  (let [enumeration
+        (try
+          {:pull-requests (await ((:list-open-pull-requests! github) command))}
+          (catch :default error
+            (if (= :base-push-default-branch-changed (error-code error))
+              {:refusal (select-keys (ex-data error)
+                                     [:expected-default-branch :current-default-branch])}
+              (throw error))))
+        pull-requests (:pull-requests enumeration)]
     (dependency! worker :available)
     ;; Admission of every child must be durable before the parent is marked
     ;; complete. A crash can repeat enumeration, but the stable parent/PR UUID
@@ -679,13 +689,17 @@
         (await (store/accept-delivery! store child))))
     (await (store/complete!
             store delivery-id
-            {:outcome (if (= :observe-only mode) :observed :gate-refresh-queued)
-             :command/type :review-gate-base-push
-             :repository (:repository command)
-             :command-id delivery-id
-             :mode mode
-             :push-after-sha (:push-after-sha command)
-             :pull-request-count (count pull-requests)}))))
+            (merge {:command/type :review-gate-base-push
+                    :repository (:repository command)
+                    :command-id delivery-id
+                    :mode mode
+                    :push-after-sha (:push-after-sha command)
+                    :pull-request-count (count pull-requests)}
+                   (if-let [refusal (:refusal enumeration)]
+                     (assoc refusal :outcome :refused
+                            :reason :base-push-default-branch-changed)
+                     {:outcome (if (= :observe-only mode)
+                                 :observed :gate-refresh-queued)}))))))
 
 (defn- ^:async verify-base-push-parent! [state-store policy command]
   (when-let [parent-id (:parent-delivery-id command)]

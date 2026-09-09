@@ -2,9 +2,12 @@
   (:require ["node:fs/promises" :as node-fs]
             [cljs.test :refer [deftest is testing]]
             [eta-mu.gitops-controller.domain.admission :as admission]
+            [eta-mu.gitops-controller.extern.crypto :as crypto]
             [eta-mu.gitops-controller.extern.fs :as fs]
+            [eta-mu.gitops-controller.extern.http :as http]
             [eta-mu.gitops-controller.infra.authority :as authority]
             [eta-mu.gitops-controller.infra.effect-lease :as effect-lease]
+            [eta-mu.gitops-controller.infra.github :as github]
             [eta-mu.gitops-controller.infra.store :as store]
             [eta-mu.gitops-controller.infra.worker :as worker]))
 
@@ -493,6 +496,41 @@
         (is (zero? @github-calls*))
         (is (:fatal? (worker/status queue-worker)))
         (is (false? (await (store/dispatch-intent-recorded? state-store child-id)))))
+      (finally
+        (worker/stop! queue-worker)
+        (await (fs/remove-tree! root))))))
+
+(deftest ^:async renamed-default-branch-terminalizes-the-old-push-without-children
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        calls* (atom 0)
+        queue-worker
+        (worker/create
+         {:store state-store :policy review-policy :authority {}
+          :replay-interval-ms 600000
+          :github {:list-open-pull-requests!
+                   (fn [_]
+                     (swap! calls* inc)
+                     (throw (ex-info "signed default branch was renamed"
+                                     {:error/code :base-push-default-branch-changed
+                                      :operation :list-open-pull-requests
+                                      :expected-default-branch "main"
+                                      :current-default-branch "trunk"})))}})]
+    (try
+      (await (store/initialize! state-store))
+      (await (store/accept-delivery! state-store (base-push-command review-policy)))
+      (await (worker/start! queue-worker))
+      (await (worker/replay-pending! queue-worker))
+      (let [result (:result (await (store/read-completion state-store delivery-id)))]
+        (is (= :refused (:outcome result)))
+        (is (= :base-push-default-branch-changed (:reason result)))
+        (is (= "main" (:expected-default-branch result)))
+        (is (= "trunk" (:current-default-branch result)))
+        (is (zero? (:pull-request-count result))))
+      (is (= 1 @calls*))
+      (is (empty? (await (store/pending-delivery-ids state-store))))
+      (is (= 1 (count (await (fs/entries (get-in state-store [:paths :deliveries]))))))
+      (is (false? (await (store/dispatch-intent-recorded? state-store delivery-id))))
       (finally
         (worker/stop! queue-worker)
         (await (fs/remove-tree! root))))))
@@ -1136,6 +1174,139 @@
         (finally
           (worker/stop! queue-worker)
           (await (fs/remove-tree! root)))))))
+
+(deftest ^:async older-workflow-completion-closes-gate-after-partial-supersession-and-refusal
+  (let [root (await (fs/temporary-directory!))
+        state-store (store/create root)
+        successor-id "808f730f-136f-457d-b629-ceccdcf7766b"
+        completion-id "56a5d98a-87df-4d70-a40c-40a3cf109198"
+        labels* (atom [{:name "eta-mu:review"}])
+        checks* (atom {})
+        next-check-id* (atom 4566)
+        old-cancel-failures* (atom 2)
+        patch-attempts* (atom [])
+        dispatches* (atom 0)
+        adapter (github/port {:github-api-url "https://api.github.test"
+                              :github-app-id 123 :github-private-key "mocked-signing"
+                              :mode :review-dispatch})
+        queue-worker (worker/create
+                      {:store state-store :policy review-policy :github adapter
+                       :authority (authority/github-port adapter)
+                       :replay-interval-ms 600000})
+        current-repository {:id 42 :full_name "open-hax/eta-mu" :default_branch "main"}
+        successor (assoc (admitted-command review-policy)
+                         :delivery-id successor-id :command-id successor-id)]
+    (try
+      (with-redefs
+        [crypto/github-app-jwt (fn [& _] "test-jwt")
+         http/request!
+         (fn [{:keys [url method body]}]
+           (cond
+             (.endsWith url "/access_tokens")
+             {:ok? true :status 201 :body {:token "test-token"}}
+
+             (.endsWith url "/pulls/321")
+             {:ok? true :status 200
+              :body {:number 321 :node_id "PR_kwDOExample"
+                     :state "open" :draft false :mergeable true
+                     :merge_commit_sha (:merge-sha current-pull-request)
+                     :head {:sha (:head-sha current-pull-request) :repo current-repository}
+                     :base {:ref "main" :sha (:base-sha current-pull-request)}
+                     :html_url (:html-url current-pull-request) :labels @labels*}}
+
+             (.endsWith url "/repos/open-hax/eta-mu")
+             {:ok? true :status 200 :body current-repository}
+
+             (.endsWith url "/permission")
+             {:ok? true :status 200
+              :body {:permission "write" :user {:id 9 :login "operator"}}}
+
+             (.includes url "/commits/")
+             {:ok? true :status 200 :body {:check_runs (vec (vals @checks*))}}
+
+             (and (= "POST" method) (.endsWith url "/check-runs"))
+             (let [id (swap! next-check-id* inc)
+                   check (assoc body :id id :node_id (str "CR_" id) :conclusion nil
+                                :app {:id 123 :slug "eta-mu-controller"})]
+               (swap! checks* assoc id check)
+               {:ok? true :status 201 :body check})
+
+             (.includes url "/check-runs/")
+             (let [id (if (.endsWith url "/4567") 4567 4568)]
+               (if (= "GET" method)
+                 {:ok? true :status 200 :body (get @checks* id)}
+                 (do
+                   (swap! patch-attempts* conj [id (:conclusion body)])
+                   (if (and (= 4567 id) (pos? @old-cancel-failures*))
+                     (do (swap! old-cancel-failures* dec)
+                         {:ok? false :status 503 :body {}})
+                     (let [updated (merge (get @checks* id) body)]
+                       (swap! checks* assoc id updated)
+                       {:ok? true :status 200 :body updated})))))
+
+             (.endsWith url "/dispatches")
+             (do
+               (swap! dispatches* inc)
+               {:ok? true :status 200
+                :body {:workflow_run_id 987 :run_url "https://api.github.test/runs/987"
+                       :html_url "https://github.test/runs/987"}})
+
+             (.endsWith url "/actions/runs/987")
+             {:ok? true :status 200
+              :body {:id 987 :node_id "WFR_987" :workflow_id 7001
+                     :repository current-repository
+                     :path ".github/workflows/opencode-code-review.yml@main"
+                     :event "workflow_dispatch" :status "completed" :conclusion "success"
+                     :head_sha "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                     :head_branch "main" :run_attempt 1
+                     :url "https://api.github.test/runs/987"
+                     :html_url "https://github.test/runs/987"
+                     :actor {:id 501 :login "eta-mu-controller[bot]"}
+                     :triggering_actor {:id 501 :login "eta-mu-controller[bot]"}}}
+
+             :else (throw (ex-info "unexpected GitHub fixture request"
+                                  {:method method :url url}))))]
+        (await (store/initialize! state-store))
+        (await (worker/start! queue-worker))
+        (await (store/accept-delivery! state-store (admitted-command review-policy)))
+        (await (worker/process-delivery! queue-worker delivery-id))
+        (is (= 1 @dispatches*))
+        (await (store/accept-delivery! state-store successor))
+        (await (worker/process-delivery! queue-worker successor-id))
+        (is (= "in_progress" (:status (get @checks* 4567))))
+        (is (= "in_progress" (:status (get @checks* 4568))))
+        (is (false? (await (store/completed? state-store successor-id))))
+        (reset! labels* [])
+        (await (worker/process-delivery! queue-worker successor-id))
+        (is (= :refused
+               (get-in (await (store/read-completion state-store successor-id))
+                       [:result :outcome])))
+        (is (= "cancelled" (:conclusion (get @checks* 4568))))
+        (is (= "in_progress" (:status (get @checks* 4567))))
+        (await (store/accept-delivery!
+                state-store (completion-command completion-id 987 7001
+                                                "opencode-code-review.yml" "success")))
+        (await (worker/process-delivery! queue-worker completion-id))
+        (is (false? (await (store/completed? state-store completion-id))))
+        (is (= [completion-id] (await (store/pending-delivery-ids state-store))))
+        (is (= "in_progress" (:status (get @checks* 4567))))
+        (await (worker/replay-pending! queue-worker))
+        (let [result (:result (await (store/read-completion state-store completion-id)))]
+          (is (= :gate-superseded (:outcome result)))
+          (is (= 4568 (:superseded-by-check-id result)))
+          (is (= "cancelled" (:conclusion result)))
+          (is (true? (:updated result))))
+        (is (= "cancelled" (:conclusion (get @checks* 4567))))
+        (is (= "cancelled" (:conclusion (get @checks* 4568))))
+        (is (empty? (await (store/pending-delivery-ids state-store))))
+        (await (worker/process-delivery! queue-worker completion-id))
+        (is (= [[4567 "cancelled"] [4568 "cancelled"]
+                [4567 "cancelled"] [4567 "cancelled"]]
+               @patch-attempts*))
+        (is (= 1 @dispatches*)))
+      (finally
+        (worker/stop! queue-worker)
+        (await (fs/remove-tree! root))))))
 
 (deftest ^:async uncorrelated-completion-remains-replayable-without-effects
   (let [root (await (fs/temporary-directory!))

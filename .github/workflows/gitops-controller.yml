@@ -14,6 +14,7 @@ on:
       - .github/scripts/sol-premerge.mjs
       - .github/scripts/sol-premerge.test.mjs
       - .github/workflows/sol-premerge.yml
+      - .github/workflows/sol-premerge-contract.yml
       - docs/sol-premerge-bootstrap.md
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -39,6 +40,7 @@ on:
       - .github/scripts/sol-premerge.mjs
       - .github/scripts/sol-premerge.test.mjs
       - .github/workflows/sol-premerge.yml
+      - .github/workflows/sol-premerge-contract.yml
       - docs/sol-premerge-bootstrap.md
       - pnpm-lock.yaml
       - pnpm-workspace.yaml

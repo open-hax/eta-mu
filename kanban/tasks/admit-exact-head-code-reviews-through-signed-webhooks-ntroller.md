@@ -4,7 +4,7 @@ labels: "github, webhook, review, gitops"
 dependency: []
 parent: "opencode-mimo-evidence-review-agent"
 type: "task"
-write-id: "1788982677757-0.2ebnuvh9chbrelxatek"
+write-id: "1788984343949-0.f8nlj927dtmlnuwisrf"
 title: "Admit exact-head code reviews through signed webhooks"
 priority: "P0"
 status: "review"
@@ -48,5 +48,11 @@ Repair scope (2026-09-09, starting at d01b36685348505ce268cb1f2a1e628b56d0bfee):
 Repair work on 2026-09-09 reverified four unresolved threads and two out-of-diff security findings at d01b366. Controller lifecycle, extern ownership, scoped installation tokens and HTTPS transport repairs are implemented; first hardened wrapper run passes 115 tests / 944 assertions and controller release has zero warnings. A malformed-push classification follow-up is under regression verification. Sol pre-merge workflow bootstrap is separate from controller activation and requires actual protected exact-SHA human approval plus behavioral test/build evidence before its thread can resolve.
 
 Final local controller verification after malformed-push correction: hardened package test wrapper completed 115 tests / 992 assertions, zero failures/errors; full package clj-kondo zero errors/warnings; combined review and Sol workflow contracts 88/88. The protected Sol workflow itself has no private behavioral evidence yet; its bootstrap remains separate and the Sol review thread stays open. No Services activation setting or production effect lease was enabled.
+
+PR332 current-head GitHub review found three bootstrap anomalies: Octokit normalizes branch-policy pagination to an array; environment guard must explicitly reject administrator bypass; lint warnings were omitted from the protected zero-warning scan. Reopen implementation for minimal corrections and regressions on both branches. Actual private Sol evidence remains pending.
+
+Current-head Codex review on56cf3e3 adds four concrete corrections: replace shape.edn String.includes host calls with CLJS includes?; terminalize an older verified gate on post-workflow strict-newer supersession; durably settle a signed base-push after default-branch rename; add independent controller CI triggers for sol-premerge-contract.yml. Scoped agents are repairing lifecycle paths with negative and replay regressions; parent owns the two small boundary edits.
+
+Corrected current-head Codex findings: CLJS string predicate in shape; strict-newer verified completion cancels pending predecessor before durable settlement and retries failure; default-branch rename durably refuses signed parent without child admission; independent CI includes the Sol contract workflow. Also carries the three reviewed bootstrap guard fixes from PR332. Full controller119tests/1053assertions0fail0error; release0warnings; package kondo0errors0warnings; combined workflow contracts89/89. Sol actual protected test/build still awaits bootstrap merge/admin setup/human exact-head approval.
 
 ---

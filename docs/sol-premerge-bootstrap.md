@@ -26,7 +26,9 @@ This is a pre-merge testing boundary. It neither enables controller
    explicit human required reviewer, disables administrator bypass, and chooses
    **Selected branches and tags** with exactly one rule: branch `main`. Do not
    use a wildcard, a tag rule, or the broader **Protected branches only** option.
-   The workflow checks that `main` itself is protected. A sole maintainer may
+   The workflow checks that `main` itself is protected and the environment API
+   explicitly reports `can_admins_bypass: false`; a missing value fails closed.
+   A sole maintainer may
    leave **Prevent self-review** off and deliberately approve a run they
    dispatched. Dispatching a run is never treated as its approval.
 3. Configure environment-only `SOL_PREMERGE_APP_ID` and
@@ -73,8 +75,9 @@ The approval intentionally permits that exact reviewed candidate to read private
 dependencies. It is a human trust promotion, not an automatic sandbox guarantee.
 Branch permissions and environment secrets/settings are administrator-owned
 deployment prerequisites; committing the YAML alone does not configure them.
-The guard additionally reads the run's real approval history and rejects a
-bypass with no recorded human approval.
+The guard requires administrator bypass to remain disabled and additionally
+reads the run's real approval history. Approval-like bypass records cannot
+substitute for the disabled-bypass environment policy.
 
 GitHub documents that environment and run-approval reads require only Actions
 read permission, while environment configuration requires Administration write:

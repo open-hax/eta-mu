@@ -2,6 +2,9 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createRequire } from "node:module";
+import { spawnSync } from "node:child_process";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 import { assertCandidate, assertEnvironment, assertHumanApproval, verifyPremerge } from "./sol-premerge.mjs";
 
@@ -21,7 +24,7 @@ const envelope = {
   workflowSha: machinery,
 };
 const environment = {
-  name: "sol-premerge", id: 42,
+  name: "sol-premerge", id: 42, can_admins_bypass: false,
   protection_rules: [{ type: "required_reviewers", prevent_self_review: false, reviewers: [{ type: "User" }] }],
   deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
 };
@@ -50,6 +53,7 @@ test("Sol promotion rejects missing review and permissive deployment policy", ()
   assert.doesNotThrow(() => assertEnvironment(environment, policies, "main"));
   for (const change of [
     { name: "production" }, { id: undefined }, { protection_rules: [] },
+    { can_admins_bypass: true }, { can_admins_bypass: undefined }, { can_admins_bypass: null },
     { protection_rules: [{ type: "required_reviewers", prevent_self_review: true, reviewers: [] }] },
     { deployment_branch_policy: null },
     { deployment_branch_policy: { protected_branches: true, custom_branch_policies: false } },
@@ -76,12 +80,16 @@ test("Sol revalidation fails before execution when approval or current head chan
   const env = { GITHUB_WORKFLOW_REF: envelope.workflowRef, GITHUB_WORKFLOW_SHA: machinery, GITHUB_RUN_ATTEMPT: "1", SOL_PR_NUMBER: "328", SOL_HEAD_SHA: head };
   let pr = candidate;
   let reviews = [approval];
+  let currentEnvironment = environment;
+  let currentPolicies = policies;
   const github = {
     rest: {
-      repos: { get: async () => ({ data: repository }), getBranch: async () => ({ data: branch }), getEnvironment: async () => ({ data: environment }), listDeploymentBranchPolicies: "policies" },
+      repos: { get: async () => ({ data: repository }), getBranch: async () => ({ data: branch }), getEnvironment: async () => ({ data: currentEnvironment }), listDeploymentBranchPolicies: "policies" },
       pulls: { get: async () => ({ data: pr }) },
     },
-    paginate: async (route, args, map) => map({ data: { branch_policies: policies } }),
+    // Octokit normalizes object-wrapped list endpoints before applying the
+    // optional mapper, then concatenates all pages into the returned array.
+    paginate: async (route, args, map) => map ? [].concat(map({ data: currentPolicies })) : currentPolicies,
     request: async route => { assert.match(route, /\/approvals$/); return { data: reviews }; },
   };
   const options = { github, context, env, core: { setOutput: (...args) => outputs.push(args), info: () => {} }, requireApproval: true };
@@ -90,6 +98,12 @@ test("Sol revalidation fails before execution when approval or current head chan
   reviews = [];
   await assert.rejects(verifyPremerge(options), /A human/);
   reviews = [approval];
+  currentEnvironment = { ...environment, can_admins_bypass: true };
+  await assert.rejects(verifyPremerge(options), /sol-premerge requires/);
+  currentEnvironment = environment;
+  currentPolicies = [...policies, { name: "candidate", type: "branch" }];
+  await assert.rejects(verifyPremerge(options), /sol-premerge requires/);
+  currentPolicies = policies;
   pr = { ...candidate, head: { ...candidate.head, sha: machinery } };
   await assert.rejects(verifyPremerge(options), /exact approved candidate/);
   await assert.rejects(verifyPremerge({ ...options, env: { ...env, SOL_PR_NUMBER: "328;evil" } }), /Invalid Sol/);
@@ -111,6 +125,40 @@ function loadYaml() {
 const YAML = loadYaml();
 const workflow = YAML.parse(fs.readFileSync(new URL("../workflows/sol-premerge.yml", import.meta.url), "utf8"));
 const contractWorkflow = YAML.parse(fs.readFileSync(new URL("../workflows/sol-premerge-contract.yml", import.meta.url), "utf8"));
+
+test("Sol validation rejects zero-exit warnings from lint, tests, and build without leaking logs", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "sol-premerge-zero-warnings-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const bin = path.join(directory, "bin");
+  const logs = path.join(directory, "logs");
+  fs.mkdirSync(bin);
+  fs.mkdirSync(logs);
+  fs.writeFileSync(path.join(bin, "git"), '#!/bin/sh\nif [ "$1" = "rev-parse" ]; then printf "%s\\n" "$EXPECTED_SHA"; fi\n', { mode: 0o755 });
+  fs.writeFileSync(path.join(bin, "pnpm"), `#!${process.execPath}\nconst fs = require('node:fs');
+const command = process.argv.at(-1);
+if (command === 'lint') console.log(process.env.SOL_FIXTURE_LINT);
+if (command === 'test') console.log('Ran 1 tests containing 1 assertions.\\n0 failures, 0 errors.\\n' + process.env.SOL_FIXTURE_TEST);
+if (command === 'build') { fs.mkdirSync('packages/sol/dist', { recursive: true }); fs.writeFileSync('packages/sol/dist/server.js', 'compiled'); console.log(process.env.SOL_FIXTURE_BUILD); }
+`, { mode: 0o755 });
+  const step = workflow.jobs.verify.steps.find(step => step.name === "Verify and test approved candidate");
+  const run = (fixture = {}) => spawnSync("bash", ["-c", step.run], {
+    cwd: directory, encoding: "utf8",
+    env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, RUNNER_TEMP: logs, EXPECTED_SHA: head,
+      SOL_FIXTURE_LINT: "linting took 10ms, errors: 0, warnings: 0", SOL_FIXTURE_TEST: "", SOL_FIXTURE_BUILD: "", ...fixture },
+  });
+  const clean = run();
+  assert.equal(clean.status, 0, clean.stderr || clean.stdout);
+  for (const fixture of [
+    { SOL_FIXTURE_LINT: "src/private.cljs:1:1: warning: private diagnostic" },
+    { SOL_FIXTURE_LINT: "linting took 10ms, errors: 0, warnings: 1" },
+    { SOL_FIXTURE_TEST: "warning: private diagnostic" },
+    { SOL_FIXTURE_BUILD: "WARNING: private diagnostic" },
+  ]) {
+    const result = run(fixture);
+    assert.notEqual(result.status, 0, JSON.stringify(fixture));
+    assert.doesNotMatch(result.stdout + result.stderr, /private diagnostic/);
+  }
+});
 
 test("the independent bootstrap contract runs on exact public source without private capability", () => {
   assert.ok(contractWorkflow.on.pull_request);

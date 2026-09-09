@@ -120,8 +120,12 @@
 (deftest ^:async base-push-enumeration-fails-without-returning-partial-targets
   (let [valid (pull-page 321 false "cursor-321")]
     (doseq [pages [[(assoc-in valid [:data :repository :databaseId] 999)]
-                  [(assoc-in valid [:data :repository :defaultBranchRef :name]
-                             "different")]
+                  [(-> valid
+                       (assoc-in [:data :repository :databaseId] 999)
+                       (assoc-in [:data :repository :defaultBranchRef :name]
+                                 "different"))]
+                  [(assoc-in valid [:data :repository :defaultBranchRef :name] nil)]
+                  [(assoc-in valid [:data :repository :defaultBranchRef :name] " ")]
                   [(assoc-in valid [:data :repository :pullRequests :nodes 0 :id]
                              nil)]
                   [(assoc-in valid [:data :repository :pullRequests :nodes 0 :state]
@@ -135,6 +139,18 @@
         (is (contains? #{:invalid-github-response :github-request-failed}
                        (:error/code (ex-data error))))
         (is (<= (count requests) 11))))))
+
+(deftest ^:async changed-default-branch-is-terminally-stale-without-partial-targets
+  (let [renamed (assoc-in (pull-page 322 false "cursor-322")
+                          [:data :repository :defaultBranchRef :name] "trunk")]
+    (doseq [pages [[renamed] [(pull-page 321 true "cursor-321") renamed]]]
+      (let [{:keys [pulls error]} (await (enumerate-pulls pages))]
+        (is (nil? pulls))
+        (is (= {:error/code :base-push-default-branch-changed
+                :operation :list-open-pull-requests
+                :expected-default-branch "main"
+                :current-default-branch "trunk"}
+               (ex-data error)))))))
 
 (deftest ^:async workflow-dispatch-uses-the-2026-03-10-run-details-contract
   (let [original-fetch (.-fetch js/globalThis)
@@ -711,6 +727,63 @@
                                 @requests*)))))
       (finally
         (set! (.-fetch js/globalThis) original-fetch)))))
+
+(deftest ^:async superseded-completion-requires-a-strict-owned-successor-and-final-authority
+  (let [adapter (github/port (adapter-config))
+        gate {:id 4567 :name "eta-mu-review-gate"
+              :repository "open-hax/eta-mu" :repository-id 42
+              :merge-sha "2222222222222222222222222222222222222222"
+              :external-id "eta-mu-review-gate/v2:original"
+              :details-url "https://github.com/open-hax/eta-mu/pull/321"}
+        current {:id 4567 :name (:name gate) :head_sha (:merge-sha gate)
+                 :external_id (:external-id gate) :details_url (:details-url gate)
+                 :status "in_progress" :conclusion nil
+                 :app {:id 123 :slug "eta-mu-controller"}}
+        successor (assoc current :id 4568 :external_id "eta-mu-review-gate/v2:successor")]
+    (doseq [[runs allowed? expected-code]
+            [[[] true :invalid-review-gate-check]
+             [[(assoc successor :id 4566)] true :invalid-review-gate-check]
+             [[(assoc-in successor [:app :id] 999)] true :invalid-review-gate-check]
+             [[current successor] false :invalid-review-gate-check]]]
+      (let [patches* (atom 0)
+            request {:gate-check gate
+                     :terminal-intent {:patch {:conclusion "success"}}
+                     :authorize-patch! (fn [] allowed?)}]
+        (with-redefs
+          [http/request!
+           (fn [{:keys [url method]}]
+             (when (= "PATCH" method) (swap! patches* inc))
+             {:ok? true :status 200
+              :body (cond
+                      (.endsWith url "/access_tokens") {:token "test-token"}
+                      (.includes url "/commits/") {:check_runs runs}
+                      :else current)})]
+          (let [error (try (await ((:complete-review-gate! adapter) 77 request))
+                           nil
+                           (catch :default value value))]
+            (is (= expected-code (:error/code (ex-data error))))
+            (is (zero? @patches*))))))
+    (doseq [conclusion ["success" "failure" "cancelled"]]
+      (let [terminal (assoc current :status "completed" :conclusion conclusion)
+            patches* (atom 0)]
+        (with-redefs
+          [http/request!
+           (fn [{:keys [url method]}]
+             (when (= "PATCH" method) (swap! patches* inc))
+             {:ok? true :status 200
+              :body (cond
+                      (.endsWith url "/access_tokens") {:token "test-token"}
+                      (.includes url "/commits/") {:check_runs [terminal successor]}
+                      :else terminal)})]
+          (let [result (await ((:complete-review-gate! adapter)
+                               77 {:gate-check gate
+                                   :terminal-intent {:patch {:conclusion "success"}}
+                                   :authorize-patch! (fn [] false)}))]
+            (is (:superseded? result))
+            (is (= 4568 (:superseded-by-check-id result)))
+            (is (= conclusion (get-in result [:gate-check :conclusion])))
+            (is (false? (:updated? result)))
+            (is (zero? @patches*))))))))
 
 (deftest ^:async issue-probe-refetches-issue-repository-and-default-branch
   (let [original-fetch (.-fetch js/globalThis)

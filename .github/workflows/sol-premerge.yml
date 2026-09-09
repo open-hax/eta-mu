@@ -162,8 +162,8 @@ jobs:
           grep -Eq '^0 failures, 0 errors\.' "$RUNNER_TEMP/sol-test.log"
           pnpm --dir packages/sol build > "$RUNNER_TEMP/sol-build.log" 2>&1
           test -s packages/sol/dist/server.js
-          if grep -Eq '(^|[[:space:]])WARNING([:[:space:]]|$)' "$RUNNER_TEMP/sol-test.log" "$RUNNER_TEMP/sol-build.log"; then
-            echo '::error::Sol compilation emitted warnings.'
+          if grep -Eiq '(^|[[:space:]])warning([:[:space:]]|$)|(^|[[:space:]])warnings:[[:space:]]*[1-9][0-9]*' "$RUNNER_TEMP/sol-lint.log" "$RUNNER_TEMP/sol-test.log" "$RUNNER_TEMP/sol-build.log"; then
+            echo '::error::Sol validation emitted warnings.'
             exit 1
           fi
           echo 'Sol exact-candidate lint, behavioral tests, and server build passed.'

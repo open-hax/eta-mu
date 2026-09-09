@@ -1,6 +1,7 @@
 (ns eta-mu.gitops-controller.shape.edn
   "Strict, deterministic EDN records for durable controller evidence."
-  (:require [edamame.core :as edamame]))
+  (:require [clojure.string :as str]
+            [edamame.core :as edamame]))
 
 (def ^:private edn-only-options
   ;; edamame otherwise accepts Clojure reader extensions that are not EDN.
@@ -35,7 +36,7 @@
   "Encode plain data as one deterministic EDN form without a terminator."
   [value]
   (let [encoded (pr-str (canonicalize value))]
-    (when (or (.includes encoded "\n") (.includes encoded "\r"))
+    (when (or (str/includes? encoded "\n") (str/includes? encoded "\r"))
       (throw (ex-info "EDN record must occupy exactly one physical line"
                       {:error/code :invalid-edn-record})))
     encoded))

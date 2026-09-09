@@ -169,6 +169,7 @@
                                   :base repository-default-branch
                                   :after cursor}}}))
             current (get-in response [:body :data :repository])
+            current-default-branch (get-in current [:defaultBranchRef :name])
             pulls (:pullRequests current)
             nodes (:nodes pulls)
             {:keys [hasNextPage endCursor]} (:pageInfo pulls)]
@@ -180,11 +181,19 @@
                        (= (str/lower-case repository)
                           (str/lower-case (:nameWithOwner current)))
                        (law/non-blank-string? repository-default-branch)
-                       (= repository-default-branch
-                          (get-in current [:defaultBranchRef :name]))
+                       (law/non-blank-string? current-default-branch)
                        (= push-ref (str "refs/heads/"
                                         repository-default-branch)))
-          (invalid-pull-list! "GitHub base-push repository scope changed"))
+          (invalid-pull-list! "GitHub returned an invalid base-push repository scope"))
+        (when-not (= repository-default-branch current-default-branch)
+          ;; A valid repository can intentionally change its default branch
+          ;; while this signed push waits in the queue. That old push can no
+          ;; longer authorize fan-out and must not be retried indefinitely.
+          (throw (ex-info "The signed push's default branch is no longer current"
+                          {:error/code :base-push-default-branch-changed
+                           :operation :list-open-pull-requests
+                           :expected-default-branch repository-default-branch
+                           :current-default-branch current-default-branch})))
         (when-not (and (vector? nodes)
                        (<= (count nodes) 100)
                        (boolean? hasNextPage)
@@ -596,6 +605,54 @@
        (= (get-in patch [:output :summary])
           (get-in check-run [:output :summary]))))
 
+(defn- ^:async terminalize-superseded-gate!
+  [config token gate-check current successor authorize-patch!]
+  (let [result {:superseded? true
+                :superseded-by-check-id (:id successor)}]
+    (cond
+      (and (= "completed" (:status current))
+           (law/non-blank-string? (:conclusion current)))
+      (assoc result :updated? false
+             :gate-check (bound-check-run->receipt gate-check current))
+
+      (and (contains? #{"queued" "in_progress"} (:status current))
+           (nil? (:conclusion current))
+           (= (:details-url gate-check) (:details_url current)))
+      (let [_ (await (authorize-write! authorize-patch!
+                                       :cancel-superseded-completion))
+            response
+            (await
+             (http/request!
+              {:url (str (:github-api-url config) "/repos/"
+                         (repository-path (:repository gate-check))
+                         "/check-runs/" (:id current))
+               :method "PATCH"
+               :headers (headers token)
+               :body {:name (:name gate-check)
+                      :status "completed"
+                      :conclusion "cancelled"
+                      :completed_at (runtime/now-timestamp)
+                      :details_url (:details-url gate-check)
+                      :external_id (:external-id gate-check)
+                      :output {:title "Superseded review completion"
+                               :summary (str "Superseded by owned Check Run #"
+                                             (:id successor) ".")}}}))
+            updated (:body response)]
+        (when-not (and (:ok? response)
+                       (review-gate-check-identity? config gate-check updated)
+                       (= "completed" (:status updated))
+                       (= "cancelled" (:conclusion updated)))
+          (throw (response-error "cancel-superseded-completion" response)))
+        (assoc result :updated? true
+               :gate-check (bound-check-run->receipt gate-check updated)))
+
+      :else
+      (throw (review-gate-error
+              "refusing to terminalize an unexpected superseded gate state"
+              {:gate-check-id (:id current)
+               :status (:status current)
+               :conclusion (:conclusion current)})))))
+
 (defn- ^:async complete-review-gate!
   [config installation-id
    {:keys [gate-check terminal-intent authorize-patch!]}]
@@ -617,21 +674,23 @@
     (let [current (:body response)
           runs (await (all-current-name-check-runs!
                        config token gate-check))
-          newest (->> runs
-                      (filter #(and (= (:name gate-check) (:name %))
-                                    (= (:merge-sha gate-check) (:head_sha %))
-                                    (= (:github-app-id config)
-                                       (get-in % [:app :id]))))
-                      (sort-by :id >)
-                      first)]
+          newest (newest-current-name-check config gate-check runs)]
       (when-not (review-gate-check-identity? config gate-check current)
         (throw (review-gate-error
                 "refusing to complete a Check Run with the wrong identity"
                 {:expected gate-check
                  :actual (check-run->receipt current)})))
-      (if (or (nil? newest) (not= (:id current) (:id newest)))
-        {:updated? false :superseded? true
-         :gate-check (bound-check-run->receipt gate-check current)}
+      (when (or (nil? newest) (< (:id newest) (:id current)))
+        (throw (review-gate-error
+                "review gate scan does not prove the current check or a successor"
+                {:gate-check-id (:id current)})))
+      (if (< (:id current) (:id newest))
+        ;; A newer gate can be created before cancellation of its predecessor
+        ;; fails. Completing the signed workflow callback must close that old
+        ;; pending gate before the delivery becomes terminal, even if the
+        ;; successor itself was later refused and cancelled.
+        (await (terminalize-superseded-gate!
+                config token gate-check current newest authorize-patch!))
         (cond
           (terminal-review-gate? config gate-check patch current)
           {:updated? false :already-completed? true
