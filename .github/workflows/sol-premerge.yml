@@ -1,0 +1,217 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Sol Pre-merge Integration
+run-name: Sol PR ${{ inputs.pr_number }} at ${{ inputs.head_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Open same-repository pull request to validate
+        required: true
+        type: string
+      head_sha:
+        description: Full immutable candidate SHA for human trust approval
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: sol-premerge-${{ inputs.pr_number }}
+  cancel-in-progress: false
+
+env:
+  SOL_PR_NUMBER: ${{ inputs.pr_number }}
+  SOL_HEAD_SHA: ${{ inputs.head_sha }}
+
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      head-sha: ${{ steps.candidate.outputs.head-sha }}
+      pr-number: ${{ steps.candidate.outputs.pr-number }}
+    steps:
+      - name: Check out trusted workflow machinery
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Validate candidate and protected environment
+        id: candidate
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const { verifyPremerge } = await import(`${process.env.GITHUB_WORKSPACE}/.github/scripts/sol-premerge.mjs`);
+            await verifyPremerge({ github, context, core, env: process.env });
+
+  verify:
+    needs: candidate
+    name: Approve and test ${{ needs.candidate.outputs.head-sha }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment:
+      name: sol-premerge
+      url: https://github.com/open-hax/eta-mu/pull/${{ needs.candidate.outputs.pr-number }}/commits/${{ needs.candidate.outputs.head-sha }}
+    steps:
+      - name: Check out trusted workflow machinery
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Revalidate exact candidate and human approval
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const { verifyPremerge } = await import(`${process.env.GITHUB_WORKSPACE}/.github/scripts/sol-premerge.mjs`);
+            await verifyPremerge({ github, context, core, env: process.env, requireApproval: true });
+
+      - name: Set up Java
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Set up Clojure CLI and clj-kondo
+        uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360 # 13.4
+        with:
+          cli: 1.12.5.1654
+          clj-kondo: 2025.10.23
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: "10.14.0"
+          run_install: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+
+      # Dedicated credentials exist only in the protected environment. No
+      # candidate bytes or candidate package scripts are present yet.
+      - name: Create private-dependency read token
+        id: dependency-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.SOL_PREMERGE_APP_ID }}
+          private-key: ${{ secrets.SOL_PREMERGE_APP_PRIVATE_KEY }}
+          owner: open-hax
+          repositories: |
+            katamorph
+            event-ledger
+          permission-contents: read
+          skip-token-revoke: true
+
+      - name: Prefetch canonical immutable dependencies
+        working-directory: packages/sol
+        env:
+          DEPENDENCY_TOKEN: ${{ steps.dependency-token.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          authorization="$(printf 'x-access-token:%s' "$DEPENDENCY_TOKEN" | base64 -w0)"
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${authorization}"
+          # Only the trusted default-branch dependency manifest is evaluated.
+          # Raw dependency/compiler output is private and never uploaded.
+          clojure -P > "$RUNNER_TEMP/sol-dependency-prefetch.log" 2>&1
+
+      - name: Revoke dependency token before candidate checkout
+        id: revoke
+        if: ${{ always() && steps.dependency-token.outputs.token != '' }}
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          github-token: ${{ steps.dependency-token.outputs.token }}
+          script: |
+            await github.request('DELETE /installation/token');
+
+      - name: Revalidate candidate immediately before execution
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const { verifyPremerge } = await import(`${process.env.GITHUB_WORKSPACE}/.github/scripts/sol-premerge.mjs`);
+            await verifyPremerge({ github, context, core, env: process.env, requireApproval: true });
+
+      - name: Check out approved exact candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.candidate.outputs.head-sha }}
+          path: candidate
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Verify and test approved candidate
+        working-directory: candidate
+        env:
+          EXPECTED_SHA: ${{ needs.candidate.outputs.head-sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          [[ -z "$(git status --porcelain --untracked-files=all)" ]]
+          pnpm --filter @eta-mu/sol... install --frozen-lockfile --ignore-scripts > "$RUNNER_TEMP/sol-install.log" 2>&1
+          pnpm --dir packages/sol lint > "$RUNNER_TEMP/sol-lint.log" 2>&1
+          pnpm --dir packages/sol test > "$RUNNER_TEMP/sol-test.log" 2>&1
+          grep -Eq '^Ran [1-9][0-9]* tests containing [1-9][0-9]* assertions\.' "$RUNNER_TEMP/sol-test.log"
+          grep -Eq '^0 failures, 0 errors\.' "$RUNNER_TEMP/sol-test.log"
+          pnpm --dir packages/sol build > "$RUNNER_TEMP/sol-build.log" 2>&1
+          test -s packages/sol/dist/server.js
+          if grep -Eiq '(^|[[:space:]])warning([:[:space:]]|$)|(^|[[:space:]])warnings:[[:space:]]*[1-9][0-9]*' "$RUNNER_TEMP/sol-lint.log" "$RUNNER_TEMP/sol-test.log" "$RUNNER_TEMP/sol-build.log"; then
+            echo '::error::Sol validation emitted warnings.'
+            exit 1
+          fi
+          echo 'Sol exact-candidate lint, behavioral tests, and server build passed.'
+
+  publish:
+    needs: [candidate, verify]
+    if: ${{ always() && needs.candidate.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: write
+    steps:
+      # No checkout, private source, artifacts, or candidate-controlled outputs.
+      - name: Publish exact-head Sol pre-merge result
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          VERIFIED_HEAD: ${{ needs.candidate.outputs.head-sha }}
+          VERIFIED_PR: ${{ needs.candidate.outputs.pr-number }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+        with:
+          script: |
+            const head = process.env.VERIFIED_HEAD;
+            const number = Number(process.env.VERIFIED_PR);
+            if (!/^[0-9a-f]{40}$/.test(head) || !Number.isSafeInteger(number) || number < 1) throw new Error('Invalid candidate identity.');
+            const { data: repository } = await github.rest.repos.get(context.repo);
+            const { data: branch } = await github.rest.repos.getBranch({ ...context.repo, branch: repository.default_branch });
+            if (repository.full_name !== 'open-hax/eta-mu' || context.eventName !== 'workflow_dispatch' ||
+                context.ref !== `refs/heads/${repository.default_branch}` ||
+                process.env.GITHUB_WORKFLOW_REF !== `${repository.full_name}/.github/workflows/sol-premerge.yml@${context.ref}` ||
+                process.env.GITHUB_RUN_ATTEMPT !== '1' || branch.protected !== true ||
+                branch.commit.sha !== process.env.GITHUB_WORKFLOW_SHA || context.sha !== process.env.GITHUB_WORKFLOW_SHA) {
+              throw new Error('Trusted workflow authority changed; no Sol result published.');
+            }
+            const { data: pr } = await github.rest.pulls.get({ ...context.repo, pull_number: number });
+            if (pr.state !== 'open' || pr.merged || pr.head?.repo?.full_name !== repository.full_name ||
+                pr.base?.repo?.full_name !== repository.full_name || pr.base.ref !== repository.default_branch || pr.head.sha !== head) {
+              throw new Error('Candidate changed; no Sol result published.');
+            }
+            const conclusion = process.env.VERIFY_RESULT === 'success' ? 'success' : 'failure';
+            await github.rest.checks.create({
+              ...context.repo, name: 'Sol pre-merge / test-build', head_sha: head,
+              status: 'completed', conclusion,
+              details_url: `https://github.com/${repository.full_name}/actions/runs/${context.runId}`,
+              external_id: `sol-premerge:${number}:${head}:${context.runId}`,
+              output: {
+                title: `Sol approved-candidate validation: ${conclusion}`,
+                summary: `PR #${number}; exact head ${head}; trusted machinery ${process.env.GITHUB_WORKFLOW_SHA}; job result ${process.env.VERIFY_RESULT}. Private source, build products, and raw compiler logs are not published.`,
+              },
+            });
