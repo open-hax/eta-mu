@@ -2,10 +2,10 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789201337530-0.y94w7uhp65mlm8i12jw"
+write-id: "1789205342075-0.891mq4dtk65ib13p26g"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
-status: "review"
+status: "in_progress"
 uuid: "clio-local-edn-service-providers-and-deprecated-ledger-retirement"
 created_at: "2026-09-11T23:34:31.827Z"
 ---
@@ -46,5 +46,11 @@ Actual CodeRabbit PR334 follow-up scope: Sol and Axxium test/build CI steps stil
 Expanded review scope from actual Codex3995625819 (PRRT_kwDORu27H86huhvS): Maven bracketed [WARNING] diagnostics also bypass generated workflow and local gate matching. Extend both shipped command paths and their real Bash/CLI regressions, then regenerate workflow artifacts from the projector. Preserve zero-warning summaries and original nonzero compiler exits.
 
 Warning-gate reviewer findings repaired: all four Sol/Axxium test/build Bash steps now reject case-insensitive diagnostics with commas or Maven brackets; generated and local gates share equivalent matching and reject positive warning counts while accepting zero summaries. The same existing Sol premerge matcher was repaired. Failure-first evidence: four package gates accepted lowercase warnings; generated/local suite had 12 assertion failures. Final actual Bash regression15tests0fail; CLI suite174tests391assertions plus projector/local4tests44assertions0fail/errors; CLI release166files0warnings, lint0errors0warnings. Generated main-pr-gate/rheos were re-emitted from source and semantic workflow check passes. Full CLI test20.937s, build16.456s. No application providers changed.
+
+PR334 review3995700261: the shared EDN service opener still refused an exclusive-create winner. Reproduced with two independent Node processes paused after both absent checks: process B threw native EEXIST after A appended a document. Reopen only that exact native race and canonically validate the winner; unrelated I/O and known-schema missing ledgers still refuse. Actual process regression now passes and retains both documents; full protocol gates are running. Rheos CLI was rebuilt after scratch loss; source restored from exact published foundation0be6.
+
+Shared EDN opener review regression is green: full guarded protocol suite 71 tests / 217 assertions, strict TypeScript consumer, compiled ESM 111 files / 0 warnings, actual two-process race 1 test / 0 failures, configured kondo 0 errors / 0 warnings. Tests also prove corrupt winner and unrelated I/O still refuse, and missing ledger beside initialized schemas is not recreated. No dependency or lock changes. Scope is the shared provider opener and native error classification, unlike the prior Sol-only fix.
+
+Attempted canonical in_progress to review transition. Rheos invoked repository-wide pnpm build, but the unactivated shell selected runtime pnpm and it refused interactive modules purge before compilation. No override was used; the card remains in_progress. The scoped protocol gates above remain actual green evidence, not proof of this broader build. Publishing the bounded review correction now; repository-wide build remains part of final acceptance.
 
 ---

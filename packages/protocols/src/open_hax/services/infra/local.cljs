@@ -27,7 +27,11 @@
     (when-not (fs/exists? file)
       (law/require! (not existing?) :missing-ledger
                     "Local service schemas exist but services.edn is missing")
-      (ledger/create-ledger! file))
+      (try
+        (ledger/create-ledger! file)
+        (catch :default cause
+          (when-not (host/already-exists-error? cause)
+            (throw cause)))))
     (let [store {:directory directory :file file
                  :runtime (runtime/open schemas law/catalog)}]
       (history store)

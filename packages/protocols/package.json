@@ -14,6 +14,7 @@
     "compile:test": "shadow-cljs compile test",
     "test": "shadow-cljs compile test && node target/test.cjs",
     "test:types": "tsc --strict --noEmit --target es2022 --module nodenext test/types/graph-neighbors.mts",
+    "test:concurrent-open": "pnpm compile:lib && node --test test/js/concurrent-open.test.mjs",
     "lint": "clj-kondo --lint src test",
     "lint:kondo": "clj-kondo --lint src test"
   },

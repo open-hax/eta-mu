@@ -8,6 +8,11 @@
 (defn now [] (.toISOString (js/Date.)))
 (defn id [] (str (random-uuid)))
 
+(defn already-exists-error?
+  "Only a native exclusive-create collision permits reopening a concurrent winner."
+  [cause]
+  (= "EEXIST" (.-code cause)))
+
 (defn password-digest [password]
   (let [salt (.toString (crypto/randomBytes 16) "hex")]
     {:algorithm :scrypt
