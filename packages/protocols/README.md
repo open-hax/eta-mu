@@ -72,8 +72,20 @@ survive a subsequent reopen.
 
 Every public EDN factory rejects absent and whitespace-only directories before
 filesystem effects. Local user creation records a server-issued `created-at`
-timestamp and replay preserves it. `pnpm test` includes actual ESM tests for
-these public contracts and concurrent first open, in addition to the CLJS suite.
+timestamp; public updates cannot replace it, and replay preserves it. `pnpm test`
+includes actual ESM tests for these public contracts and concurrent first open,
+in addition to the CLJS suite.
+
+The record protocols store generic maps, not application-specific schemas.
+Result declarations therefore expose unvalidated application fields as optional
+`unknown`: narrow document content, graph labels, translation text, and label
+names before using them. Every admitted record has a string ID. Session and
+document timestamps may be supplied by callers, so their declarations also
+require narrowing; the server-owned user creation timestamp remains a string.
+Updating a missing session or labeling a missing translation returns `null`.
+Explicit non-map record submissions are refused before append. Graph neighbor
+queries retain their `string[]` result contract and refuse malformed projected
+identities instead of omitting edges or returning values of another type.
 
 Event retry identity compares the complete originally submitted envelope,
 preserved separately from generated defaults in the same transaction. Dropping

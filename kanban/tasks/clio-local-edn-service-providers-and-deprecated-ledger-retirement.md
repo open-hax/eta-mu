@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789207091106-0.110p7wmh9albn23fy5pn"
+write-id: "1789212712188-0.42kzb8khwzod8gum7wy"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "in_progress"
@@ -56,5 +56,9 @@ Attempted canonical in_progress to review transition. Rheos invoked repository-w
 PR334 follow-up scope: reproduce Codex 3995801487 unsupported-platform default, 3995801489 duplicate Sol wire IDs across distinct concurrent episode streams, and 3995801498 missing JVM empty-file force. Preserve current Linux EDN behavior, add an explicit disabled provider on unsupported hosts, serialize complete wire-ID planning plus append under a separate kernel lock, and force the JVM-created inode before its parent. Run red/green regressions, full Sol lint/test/build and JVM Clio gate; no weakening of durable acknowledgments.
 
 PR334 review follow-up implemented and checked: 3995801487 Sol uses EDN by default only on Linux and explicit disabled volatile operation elsewhere; 3995801489 a separate kernel inode serializes global wire-ID admission across episode streams and replay refuses duplicate IDs; 3995801498 JVM exclusive create forces the owned file descriptor before its parent. Red reproductions preceded fixes. Final guarded Sol 141 tests/599 assertions, JVM 64/173, zero failures/errors; Sol production 201 files/0 warnings; actual two independent Node/NBB writers accepted one conflicting wire fact and replayed one. Sol/Clio scoped lint 0 errors/warnings; historical info debt remains visible. Identity agent protocols checkpoint eb13e60e additionally repairs 3995801491 blank explicit paths and 3995801495 creation timestamps: compiled ESM red2 then guarded71/217 plus3 native Node cases, strict TS/build/lint green. Docs packages/sol/docs/clio-review-verification.md records limits; remote reviewer closure still pending.
+
+Recovery follow-up for actual PR334 findings: reproduce visible-but-unflushed exact retries, add locked canonical reflush in both native hosts and projection-only service acknowledgments, preserve generic record contracts as optional unknown and nullable missing updates, protect generated user time and record maps/IDs, and await Sol worker close before fixture cleanup. Separate native failure-first tests and package lint/test/build are required; previous lost-tree evidence is not inherited.
+
+Fresh recovery gates pass: Clio BB25/75, NBB63/158, JVM65/182, Shadow63/158 (115 files,0 warnings); protocol CLJS71/217 plus8 actual Node tests/no skips, strict TS and kondo0/0. Both native kernel and projection-only service retry regressions failed against prior behavior before fixes. Sol141/599, nativeworker-close1test, actual2process wire-ID verifier accepted1/refused1/replayed1, server201files0warnings, lint0/0. Three-reviewer successor requests remain pending; no repository-wide build or physical power-loss guarantee is claimed.
 
 ---
