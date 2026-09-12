@@ -21,11 +21,10 @@
 ;;   scripts/workflows.bb emit [--target github-actions|local-gates|all] [--dry-run]
 ;;   scripts/workflows.bb check          # generated == committed?
 
-(ns eta-mu.commands.workflows
+(ns workflows
   (:require ["yaml" :as yaml]
             ["node:fs" :as fs]
             ["node:path" :as path]
-            ["node:child_process" :as cp]
             [clojure.edn :as edn]
             [clojure.string :as str]
             [cljs.pprint :as pp]))
@@ -45,7 +44,7 @@
   (let [s (str s)]
     (str s (apply str (repeat (max 0 (- n (count s))) " ")))))
 
-(defn- exists? [p] (fs/existsSync p))
+(defn- path-exists? [p] (fs/existsSync p))
 (defn- read-text [p] (fs/readFileSync p "utf8"))
 (defn- write-text! [p s] (fs/writeFileSync p s "utf8"))
 
@@ -55,7 +54,7 @@
   []
   (loop [dir (path/resolve (js/process.cwd))]
     (cond
-      (exists? (path/join dir ".git")) dir
+      (path-exists? (path/join dir ".git")) dir
       (= dir (path/dirname dir)) (die! "not inside a git repository")
       :else (recur (path/dirname dir)))))
 
@@ -67,7 +66,7 @@
 
 (defn load-registry [root]
   (let [f (path/join root contracts-dir "resources.edn")]
-    (when-not (exists? f)
+    (when-not (path-exists? f)
       ;; This tool ships with eta-mu and runs in every project, so "no resources
       ;; here" is an ordinary situation, not a crash. Say what is missing and
       ;; what it would contain.
@@ -82,7 +81,7 @@
 
 (defn load-workflows [root]
   (let [dir (path/join root contracts-dir)
-        names (->> (if (exists? dir) (vec (fs/readdirSync dir)) [])
+        names (->> (if (path-exists? dir) (vec (fs/readdirSync dir)) [])
                    (filter #(and (str/ends-with? % ".edn")
                                  (not= "resources.edn" %)
                                  (not (str/starts-with? % "."))))
@@ -163,12 +162,40 @@
         body (cond-> {}
                (:on/branches t) (assoc "branches" (vec (:on/branches t)))
                (:on/paths t) (assoc "paths" (vec (:on/paths t)))
-               (:on/types t) (assoc "types" (mapv name (:on/types t)))
-               (:on/cron t) (constantly nil))]
+               (:on/types t) (assoc "types" (mapv name (:on/types t))))]
     [ev (if (:on/cron t) [{"cron" (:on/cron t)}] body)]))
 
 (defn- gh-perms [m]
   (into {} (map (fn [[k v]] [(name k) (name v)]) m)))
+
+(defn- shell-quote [value]
+  (str "'" (str/replace value "'" "'\"'\"'") "'"))
+
+(defn- checked-run
+  "Preserve the local gate's exit, expected-output and WARNING-line contracts
+   in the emitted Bash step. Commands run in their own fail-fast shell while
+   the outer shell captures both output streams without losing the exit code."
+  [{:keys [step/run gate/expect gate/no-warning]}]
+  (if-not (or expect no-warning)
+    run
+    (let [delimiter (loop [candidate "ETA_MU_GATE_COMMAND"]
+                      (if (some #{candidate} (str/split-lines run))
+                        (recur (str candidate "_"))
+                        candidate))]
+      (str "eta_gate_log=\"$(mktemp)\"\n"
+           "trap 'rm -f \"$eta_gate_log\"' EXIT\n"
+           "set +e\n"
+           "bash --noprofile --norc -e -o pipefail <<'" delimiter "' 2>&1 | tee \"$eta_gate_log\"\n"
+           run "\n" delimiter "\n"
+           "eta_gate_status=(\"${PIPESTATUS[@]}\")\n"
+           "set -e\n"
+           "if [ \"${eta_gate_status[0]}\" -ne 0 ]; then exit \"${eta_gate_status[0]}\"; fi\n"
+           "if [ \"${eta_gate_status[1]}\" -ne 0 ]; then exit \"${eta_gate_status[1]}\"; fi\n"
+           (when expect
+             (str "if ! grep -Fq -- " (shell-quote expect) " \"$eta_gate_log\"; then\n"
+                  "  echo '::error::Gate expected output was not found'\n  exit 1\nfi\n"))
+           (when no-warning
+             "if grep -Eq '(^|[[:space:]])WARNING([:[:space:]]|$)' \"$eta_gate_log\"; then\n  echo '::error::Gate emitted WARNING lines'\n  exit 1\nfi\n")))))
 
 (defn- gh-step [registry s]
   (cond-> {}
@@ -177,7 +204,8 @@
     (:step/if s) (assoc "if" (:step/if s))
     (:step/action s) (assoc "uses" (get-in registry [:actions (:step/action s) :action/uses]))
     (:step/with s) (assoc "with" (into {} (map (fn [[k v]] [(name k) v]) (:step/with s))))
-    (:step/run s) (assoc "run" (:step/run s))
+    (:step/run s) (assoc "run" (checked-run s))
+    (and (:step/run s) (or (:gate/expect s) (:gate/no-warning s))) (assoc "shell" "bash")
     (:step/env s) (assoc "env" (into {} (map (fn [[k v]] [(name k) v]) (:step/env s))))
     (:step/working-directory s) (assoc "working-directory" (:step/working-directory s))
     (:step/continue-on-error s) (assoc "continue-on-error" (:step/continue-on-error s))))
@@ -298,7 +326,7 @@
       (doseq [wf (filter emitting? workflows)]
         (let [path (path/join root workflows-dir (str (:contract/id wf) ".yml"))
               text (yaml-str (->github-actions registry wf))
-              existing (when (exists? path) (read-text path))
+              existing (when (path-exists? path) (read-text path))
               same (and existing (semantic= existing text))]
           (println (str "  " (pad (:contract/id wf) 16) " " path
                         (cond same " (unchanged)"
@@ -328,7 +356,7 @@
                 :let [path (path/join root workflows-dir (str (:contract/id wf) ".yml"))
                       text (yaml-str (->github-actions registry wf))]]
             (cond
-              (not (exists? path))
+              (not (path-exists? path))
               (do (println (str "  MISSING  " path " — never emitted")) :missing)
               (not (semantic= (read-text path) text))
               (do (println (str "  DRIFT    " path " — committed YAML differs from its resource")) :drift)
@@ -341,7 +369,7 @@
           [(let [path (path/join root gate-plan-path)
                  expected (->local-gates workflows)]
              (cond
-               (not (exists? path))
+               (not (path-exists? path))
                (do (println "  MISSING  gate plan — run `emit`") :missing)
 
                (not= expected (:gates (edn/read-string (read-text path))))

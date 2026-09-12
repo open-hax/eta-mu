@@ -20,8 +20,14 @@
 (defn- encode [value]
   (clj->js value :keyword-fn #(subs (str %) 1)))
 
+(def ^:private optional-arity
+  {p/create-session 1 p/query-neighbors 2 p/traverse 2 p/query-by-label 2})
+
 (defn- ^:async invoke [service operation args]
   (let [args (mapv decode args)
+        args (if (= (count args) (some-> (get optional-arity operation) dec))
+               (conj args {})
+               args)
         args (if (and (#{p/query-neighbors p/traverse} operation)
                       (string? (get-in args [1 :direction])))
                (update-in args [1 :direction] keyword)

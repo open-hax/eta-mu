@@ -1,7 +1,6 @@
 (ns axxium.law.identity
   "Portable admission laws for identity credentials and their atomic facts."
   (:require [clio.law.schema :as clio-schema]
-            [clojure.string :as str]
             [malli.core :as m]))
 
 (def Principal
@@ -43,11 +42,6 @@
   (require! (m/validate Principal principal) :invalid-principal "Invalid identity principal")
   principal)
 
-(defn normalize-identifier
-  "Normalize account lookup identifiers consistently across all clients."
-  [value]
-  (when (string? value) (-> value str/trim str/lower-case)))
-
 (defn valid-username?
   "Usernames are distinct from email and have a bounded portable alphabet."
   [value]
@@ -59,15 +53,22 @@
   (boolean (and (string? value) (<= (count value) 254)
                 (re-matches #"[^\s@]+@[^\s@]+\.[^\s@]+" value))))
 
-(defn safe-redirect
-  "Only local absolute paths can follow authentication."
-  [value]
-  (if (and (string? value) (str/starts-with? value "/")
-           (not (str/starts-with? value "//"))
-           (not (re-find #"[\\\r\n]" value)))
-    value "/"))
-
 (defn active?
   "Inactive identities cannot authenticate even with an unexpired session."
   [principal]
   (= :active (:principal/status principal)))
+
+(def SignupAdmission
+  "Host-produced inputs required for one pure signup admission decision."
+  [:map {:closed true}
+   [:actor Principal]
+   [:private-ref [:string {:min 1}]]
+   [:token [:string {:min 1}]]
+   [:token-hash [:string {:min 1}]]
+   [:expires-at [:and :int [:> 0]]]])
+
+(defn validate-signup-admission!
+  "Validate explicit signup inputs without generating credentials or identifiers."
+  [input]
+  (require! (m/validate SignupAdmission input) :invalid-signup-admission "Invalid signup admission inputs")
+  input)

@@ -60,7 +60,7 @@
    (fn []
      (let [now (host/now)
            retained (policy/retained (entries store) now)]
-       (policy/admit! retained browser-hash now)
+       (policy/admit! retained browser-hash now purpose)
        (let [reference (if (= :memory (:provider store)) (str "ceremony:" (host/id))
                            (str "ceremony:" (host/seal! (vault store) data)))
              value {:purpose purpose :browser-hash browser-hash :issued-at now
@@ -77,3 +77,19 @@
 
 (defn remove! [store id]
   (locked! store #(persist! store (dissoc (policy/retained (entries store) (host/now)) id))))
+
+(defn finish-password! [store id]
+  (locked!
+   store
+   #(let [retained (policy/retained (entries store) (host/now))]
+      (when (= :password/active (get-in retained [id :purpose]))
+        ;; Keep issuance time/client for throttling; only release the active slot.
+        (persist! store (assoc-in retained [id :purpose] :password/attempt))))))
+
+(defn ^:async password-work!
+  "Bound public password derivation before invoking expensive work, across restarts."
+  [store client-key work]
+  (let [id (str "password:" (host/id))]
+    (issue! store id (str "password:" client-key) :password/active {} 300000)
+    (try (await (work))
+         (finally (finish-password! store id)))))

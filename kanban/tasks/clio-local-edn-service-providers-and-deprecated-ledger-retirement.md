@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789172004475-0.5svp146h41lsjbl5j1b"
+write-id: "1789197946420-0.xuwc8tedepcd8h2o79"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "review"
@@ -28,4 +28,11 @@ Final review repaired two query contracts: present nil now satisfies $exists tru
 Documentation follow-up scope: reconcile current ROADMAP, root protocol ownership guidance and Rheos dependency/run guidance with canonical Clio and actual manifests; retain dated historical records and clearly distinguish raw-envelope board compatibility from deprecated package dependencies. Documentation-only validation checks references against current files and verifies whitespace; no source changes or additional broad tests.
 
 Documentation reconciliation complete: ROADMAP now names Clio as canonical ledger owner and dates the preserved August board/copy surveys; root README names @open-hax/protocols and compatibility payload ownership; Rheos README matches actual dependencies/source paths and four-target npm build, while documenting its narrower BB build and retained raw-envelope adapter. New links and manifest claims verified, whitespace clean. No source changes.
+
+Actual PR334 review follow-up: restrict canonical instants to the common four-digit Gregorian EDN range and verify tagged round trips; define a fail-closed JVM schema rename directory-sync contract. Root owns canonical.cljc and extern/jvm/fs.clj with boundary and cross-host regression tests. Existing accepted history is preserved.
+
+PR334 Sol review scope delegated to clio_application_stores: after a canonical stale-slot conflict, re-read wire-ID admission and return only an identical committed envelope; changed or unrelated writes still fail. Clio root fixes now pass JVM60tests159assertions, BB25/75, NBB57/132 and compiled Shadow57/132; Shadow110files0warnings, Clio lint0errors0warnings. JVM/Node actually replay both Gregorian EDN boundary instants. Directory-force support is checked before atomic schema rename and forced afterward; unsupported directory sync is an explicit failure.
+
+Sol PR334 review PRRT_kwDORu27H86huDcc: reproduced two failures when an identical wire envelope loses a real Clio stream-slot race. Recheck only canonical concurrent-stream-write and reuse the identical committed wrapper; changed wire payloads and competing causal roots remain explicit conflicts. Deterministic interleaving of two store handles uses real kernel admission. Final Sol test134/assert580 all green; lint0errors0warnings and contract-guard pass; server198files0warnings. Files packages/sol/src/cljs/open_hax/sol/infra/agent/clio_store.cljs and matching test. No other provider modified.
+
 ---

@@ -40,6 +40,8 @@
       store)))
 
 (defmethod history :edn [{:keys [file runtime]}]
+  (law/require! (fs/exists? file) :missing-ledger
+                "Identity ledger disappeared; refusing empty replay")
   (ledger/canonicalize-files (:schema/revisions (runtime/refresh runtime)) [file]))
 (defmethod seal! :edn [store value] (host/seal! (:vault store) value))
 (defmethod unseal :edn [store reference]

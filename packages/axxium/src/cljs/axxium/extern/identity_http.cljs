@@ -3,6 +3,7 @@
   (:require [axxium.extern.fastify :as fastify]
             [axxium.extern.identity-host :as host]
             [axxium.law.identity :as law]
+            [axxium.law.identity-http :as response-law]
             [clojure.string :as str]
             ["@fastify/cookie" :default fastify-cookie]
             ["fastify" :default Fastify]))
@@ -37,6 +38,8 @@
      :query (dictionary (.-query request))
      :params (dictionary (.-params request))
      :headers headers :token (or bearer (:axxium_session cookies))
+     ;; Socket identity cannot be rotated with an attacker-controlled cookie/header.
+     :client-key (host/sha256 (or (some-> request .-socket .-remoteAddress) "unknown-local-client"))
      :browser-token (:axxium_browser cookies)
      :bearer? (boolean bearer) :cookie-auth? (boolean (:axxium_session cookies))}))
 
@@ -68,14 +71,9 @@
 (defn clear-session! "Expire the current browser session cookie." [reply]
   (.clearCookie reply cookie-name #js {:path "/"}))
 
-(defn ensure-browser!
-  "Maintain an unpredictable HTTP-only ceremony binding distinct from a login session."
-  [request reply public-origin]
-  (or (:browser-token request)
-      (let [token (host/random-token)]
-        (.setCookie reply browser-cookie token #js {:path "/api/auth" :httpOnly true
-                                                    :secure (secure? public-origin) :sameSite "lax" :maxAge 600})
-        token)))
+(defn- set-browser! [reply token public-origin]
+  (.setCookie reply browser-cookie token #js {:path "/api/auth" :httpOnly true
+                                             :secure (secure? public-origin) :sameSite "lax" :maxAge 600}))
 
 (defn redirect! "Send a server-validated authentication redirect." [reply url] (.redirect reply url))
 (defn no-store! "Prevent caches from retaining session and credential responses." [reply]
@@ -84,15 +82,24 @@
 (defn send! "Preserve namespaced identity keys in JSON responses." [reply status value]
   (fastify/send-json! reply status value))
 
+(defn- respond! [reply public-origin response]
+  (response-law/require-response! response)
+  (when-let [token (:browser-token response)] (set-browser! reply token public-origin))
+  (when-let [token (:session-token response)] (set-session! reply token public-origin))
+  (when (:clear-session? response) (clear-session! reply))
+  (if-let [url (:redirect response)]
+    (redirect! reply url)
+    (send! reply (or (:status response) 200) (:body response))))
+
 (defn register!
-  "Register one bounded JSON route; stable public errors omit private provider details."
-  [app method path handler]
+  "Handlers consume and return defined EDN data; native reply never leaves extern."
+  [app method path public-origin handler]
   (.route app
           #js {:method method :url path :bodyLimit 262144
                :handler (fn ^:async handle [request reply]
                           (no-store! reply)
                           (try
-                            (await (handler (request-data request) reply))
+                            (respond! reply public-origin (await (handler (request-data request))))
                             (catch :default error
                               (let [code (:code (ex-data error))
                                     concurrent? (= :clio.ledger/concurrent-stream-write (:clio/error (ex-data error)))

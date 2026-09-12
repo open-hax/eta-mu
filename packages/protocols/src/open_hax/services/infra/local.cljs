@@ -10,6 +10,8 @@
             [open-hax.services.law.local :as law]))
 
 (defn history [{:keys [file runtime]}]
+  (law/require! (fs/exists? file) :missing-ledger
+                "Local service ledger disappeared; refusing empty replay")
   (ledger/canonicalize-files (:schema/revisions (runtime/refresh runtime)) [file]))
 
 (defn state [store]
@@ -68,5 +70,8 @@
                          (catch :default cause
                            (host/report-callback-error! cause))))))
         close! (host/watch-file! (:file store) pump!)]
-    (pump!)
+    (try (pump!)
+         (catch :default cause
+           (close!)
+           (throw cause)))
     {:id (host/id) :close! close! :close close!}))

@@ -126,10 +126,11 @@ declare module "@open-hax/protocols" {
   export interface GraphOperations {
     "add-node"(node: Record<string, unknown>): Promise<GraphNode>;
     "add-edge"(edge: Record<string, unknown>): Promise<GraphEdge>;
+    /** Returns neighboring node IDs; use traverse for full node records. */
     "query-neighbors"(
       nodeId: string,
       opts?: { direction?: "in" | "out" | "both"; "edge-types"?: string[] }
-    ): Promise<GraphNode[]>;
+    ): Promise<string[]>;
     traverse(
       start: string,
       opts?: { depth?: number; "edge-types"?: string[] }

@@ -35,18 +35,33 @@
       (canonical-events store)
       store)))
 
+(defn- retry-committed-envelope!
+  "Only an identical wire fact can resolve a lost stream-slot race."
+  [{:keys [clio-runtime ledger-file] :as store} envelope cause]
+  (when-not (= :clio.ledger/concurrent-stream-write (:clio/error (ex-data cause)))
+    (throw cause))
+  (let [plan (episode-ledger/append-plan (canonical-events store) envelope)]
+    (when-not (= :retry (:plan/action plan))
+      (throw cause))
+    ;; Reuse the durable UUID/time, rather than creating another wrapper. Clio
+    ;; checks this exact event under its normal lock before we acknowledge it.
+    (ledger/append-event! (:schema/revisions (runtime/refresh clio-runtime))
+                          ledger-file (:event plan))))
+
 (defn append-envelope!
   "Persist an episode payload before acknowledging it. Exact wire retries reuse
    the original Clio event; changed payloads with the same id are rejected."
   [{:keys [clio-runtime ledger-file] :as store} envelope]
   (let [plan (episode-ledger/append-plan (canonical-events store) envelope)]
-    (case (:plan/action plan)
-      :retry
-      (ledger/append-event! (:schema/revisions (runtime/refresh clio-runtime))
-                            ledger-file (:event plan))
-
-      :append
-      (runtime/append! clio-runtime ledger-file :sol/episode-emitted (:event plan)))
+    (try
+      (case (:plan/action plan)
+        :retry
+        (ledger/append-event! (:schema/revisions (runtime/refresh clio-runtime))
+                              ledger-file (:event plan))
+        :append
+        (runtime/append! clio-runtime ledger-file :sol/episode-emitted (:event plan)))
+      (catch :default cause
+        (retry-committed-envelope! store envelope cause)))
     envelope))
 
 (defn read-envelopes

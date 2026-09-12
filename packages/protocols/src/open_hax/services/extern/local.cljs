@@ -25,6 +25,15 @@
   (js/console.error "Local service subscription callback failed" cause))
 
 (defn watch-file! [file notify!]
-  (let [listener (fn [_current _previous] (notify!))]
-    (fs/watchFile file #js {:interval 50 :persistent false} listener)
-    (fn [] (fs/unwatchFile file listener))))
+  (let [closed? (atom false)]
+    (letfn [(close! []
+              (when (compare-and-set! closed? false true)
+                (fs/unwatchFile file listener)))
+            (listener [_current _previous]
+              (when-not @closed?
+                (try (notify!)
+                     (catch :default cause
+                       (close!)
+                       (report-callback-error! cause)))))]
+      (fs/watchFile file #js {:interval 50 :persistent false} listener)
+      close!)))

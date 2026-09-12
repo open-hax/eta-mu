@@ -37,6 +37,47 @@
   (episode-event/envelope context "wire-event-2" "2026-09-11T00:00:01.000Z"
                           "wire-event-1" "sol.turn.started" {:status "running"}))
 
+(defn- append-with-overlap!
+  "Preempt one already-planned append with a second store's real kernel write."
+  [loser winner requested winning]
+  (let [append! clio-runtime/append!
+        pending (atom true)]
+    (with-redefs [clio-runtime/append!
+                  (fn [runtime file schema-id event]
+                    (when (compare-and-set! pending true false)
+                      (clio-store/append-envelope! winner winning))
+                    (append! runtime file schema-id event))]
+      (try {:value (clio-store/append-envelope! loser requested)}
+           (catch :default error {:error (ex-data error)})))))
+
+(deftest overlapping-identical-wire-retries-return-the-first-durable-fact
+  (let [directory (temporary-directory)]
+    (try
+      (let [loser (clio-store/open-store directory)
+            winner (clio-store/open-store directory)
+            result (append-with-overlap! loser winner first-envelope first-envelope)
+            events (clio-store/canonical-events winner)]
+        (is (nil? (:error result)))
+        (is (= first-envelope (:value result)))
+        (is (= [first-envelope] (mapv :event/data events)))
+        (clio-store/append-envelope! loser first-envelope)
+        (is (= events (clio-store/canonical-events loser)) "Original UUID and timestamp stay unchanged"))
+      (finally (remove-directory! directory)))))
+
+(deftest overlapping-changed-or-different-wire-events-remain-conflicts
+  (doseq [[winning refusal]
+          [[(assoc first-envelope :payload {:changed true}) :sol.clio/id-collision]
+           [(assoc first-envelope :event/id "another-wire" :causal/root "another-wire") :sol.clio/causal-conflict]]]
+    (let [directory (temporary-directory)]
+      (try
+        (let [loser (clio-store/open-store directory)
+              winner (clio-store/open-store directory)
+              result (append-with-overlap! loser winner first-envelope winning)]
+          (is (= refusal (get-in result [:error :sol/error])))
+          (is (nil? (:value result)))
+          (is (= [winning] (clio-store/read-envelopes loser))))
+        (finally (remove-directory! directory))))))
+
 (deftest restart-replay-and-wire-retry-test
   (let [directory (temporary-directory)]
     (try

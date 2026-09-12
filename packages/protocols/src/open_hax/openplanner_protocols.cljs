@@ -115,9 +115,9 @@
   (add-edge [this edge]
     "Add an edge between two nodes. Returns the edge with ID.")
   (query-neighbors [this node-id opts]
-    "Query neighboring nodes. opts: {:direction :in|:out|:both :edge-types [...]}.")
+    "Query neighboring node IDs. opts: {:direction :in|:out|:both :edge-types [...]}.")
   (traverse [this start opts]
-    "Traverse the graph from start node. opts: {:depth N :edge-types [...]}."))
+    "Return full node records reached from start. opts: {:depth N :edge-types [...]}."))
 
 ;; ---------------------------------------------------------------------------
 ;; Translation Management

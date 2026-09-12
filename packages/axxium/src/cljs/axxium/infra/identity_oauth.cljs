@@ -7,6 +7,7 @@
             [axxium.infra.identity-ceremonies :as ceremonies]
             [axxium.infra.identity-store :as store]
             [axxium.law.identity :as law]
+            [axxium.shape.identity :as shape]
             [clojure.string :as str]))
 
 (defn provider-config
@@ -79,7 +80,7 @@
         nonce (host/random-token)
         callback (oauth/callback-url (get-in service [:options :public-base-url]) provider)
         state (identity/challenge! service browser-token (keyword "oauth" (name provider))
-                                   (cond-> {:redirect (law/safe-redirect redirect) :verifier verifier :nonce nonce :redirect-uri callback}
+                                   (cond-> {:redirect (shape/safe-redirect redirect) :verifier verifier :nonce nonce :redirect-uri callback}
                                      actor (assoc :link-principal-id (:principal/id actor)
                                                   :link-session-hash (host/sha256 session-token))))]
     (oauth/authorize-url provider config state challenge nonce callback)))
@@ -92,7 +93,7 @@
   (law/require! (and (string? handle) (<= 3 (count handle) 2048)) :invalid-handle "ATProto handle or DID is required")
   (let [actor (when (= "true" link) (identity/require-principal! service token))
         state (identity/challenge! service browser :oauth/atproto
-                                   (cond-> {:redirect (law/safe-redirect redirect)}
+                                   (cond-> {:redirect (shape/safe-redirect redirect)}
                                      actor (assoc :link-principal-id (:principal/id actor)
                                                   :link-session-hash (host/sha256 token))))]
     (oauth/atproto-authorize! client handle state)))

@@ -7,6 +7,7 @@
             [axxium.infra.identity-store :as store]
             [axxium.infra.identity-ceremonies :as ceremonies]
             [axxium.law.identity :as law]
+            [axxium.shape.identity :as shape]
             [clojure.string :as str]))
 
 (def session-ttl-ms "Default session lifetime, bounded by server policy." (* 24 60 60 1000))
@@ -62,29 +63,20 @@
 (defn ^:async signup!
   "Atomically register username/email aliases, credential and the first session."
   [{:keys [store]} {:keys [username email password display-name]}]
-  (let [email (law/normalize-identifier email)
-        username (law/normalize-identifier username)]
+  (let [email (shape/normalize-identifier email)
+        username (shape/normalize-identifier username)]
     (law/require! (law/valid-username? username) :invalid-username "Username must be 3–64 letters, numbers, dots, underscores or hyphens")
     (law/require! (law/valid-email? email) :invalid-email "A valid email is required")
     (law/require! (and (string? password) (<= 12 (count password)) (<= (host/utf8-length password) 1024))
                   :invalid-password "Password must contain at least 12 characters and at most 1024 UTF-8 bytes")
+    (domain/require-free-identifiers! (store/state store) username email)
     (let [credential (await (crypto/hash-password password))
           reference (store/seal! store credential)
           actor (principal username email display-name)
-          actor-id (:principal/id actor)
-          token (host/random-token)]
-      (store/transact!
-       store
-       (fn [state]
-         (law/require! (not (or (get-in state [:aliases username]) (get-in state [:aliases email])))
-                       :identifier-exists "Username or email is already registered")
-         {:operation :signup :actor actor-id
-          :changes [(domain/put :principals actor-id actor)
-                    (domain/put :aliases username {:principal-id actor-id})
-                    (domain/put :aliases email {:principal-id actor-id})
-                    (domain/put :credentials (str "password:" actor-id) {:principal-id actor-id :private-ref reference})
-                    (session-change actor token)]
-          :result (login-result actor token)})))))
+          token (host/random-token)
+          input {:actor actor :private-ref reference :token token
+                 :token-hash (host/sha256 token) :expires-at (+ (host/now) session-ttl-ms)}]
+      (store/transact! store #(domain/signup-transition % input)))))
 
 (defn ^:async login!
   "Authenticate by username OR email, then commit a session against unchanged credentials."
@@ -108,8 +100,8 @@
 (defn ^:async bootstrap!
   "Provision the explicit first administrator atomically; never promote an existing signup."
   [{:keys [store]} {:keys [username email password display-name principal-id]}]
-  (let [username (law/normalize-identifier username)
-        email (law/normalize-identifier email)
+  (let [username (shape/normalize-identifier username)
+        email (shape/normalize-identifier email)
         state (store/state store)
         marker (get-in state [:credentials "system:bootstrap"])]
     (law/require! (and (law/valid-username? username) (law/valid-email? email)
@@ -351,4 +343,4 @@
                                               (cond-> {:principal-id actor-id :issuer issuer :subject subject}
                                                 (and (string? email) (law/valid-email? email)) (assoc :provider-email email)))
                                   (session-change actor token)]))
-          :result (assoc (login-result actor token) :redirect (law/safe-redirect (:redirect data)))})))))
+          :result (assoc (login-result actor token) :redirect (shape/safe-redirect (:redirect data)))})))))

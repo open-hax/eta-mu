@@ -104,11 +104,41 @@ jobs:
           DEPENDENCY_TOKEN: ${{ steps.dependency-token.outputs.token }}
           CREDENTIALS_AVAILABLE: ${{ steps.dependency-credentials.outputs.available }}
       - name: Test
-        run: pnpm --dir packages/rheos test
+        run: |
+          eta_gate_log="$(mktemp)"
+          trap 'rm -f "$eta_gate_log"' EXIT
+          set +e
+          bash --noprofile --norc -e -o pipefail <<'ETA_MU_GATE_COMMAND' 2>&1 | tee "$eta_gate_log"
+          pnpm --dir packages/rheos test
+          ETA_MU_GATE_COMMAND
+          eta_gate_status=("${PIPESTATUS[@]}")
+          set -e
+          if [ "${eta_gate_status[0]}" -ne 0 ]; then exit "${eta_gate_status[0]}"; fi
+          if [ "${eta_gate_status[1]}" -ne 0 ]; then exit "${eta_gate_status[1]}"; fi
+          if ! grep -Fq -- '0 failures, 0 errors' "$eta_gate_log"; then
+            echo '::error::Gate expected output was not found'
+            exit 1
+          fi
+        shell: bash
       - name: Lint
         run: pnpm --dir packages/rheos lint:kondo
       - name: Build Rheos release targets
-        run: pnpm --dir packages/rheos build
+        run: |
+          eta_gate_log="$(mktemp)"
+          trap 'rm -f "$eta_gate_log"' EXIT
+          set +e
+          bash --noprofile --norc -e -o pipefail <<'ETA_MU_GATE_COMMAND' 2>&1 | tee "$eta_gate_log"
+          pnpm --dir packages/rheos build
+          ETA_MU_GATE_COMMAND
+          eta_gate_status=("${PIPESTATUS[@]}")
+          set -e
+          if [ "${eta_gate_status[0]}" -ne 0 ]; then exit "${eta_gate_status[0]}"; fi
+          if [ "${eta_gate_status[1]}" -ne 0 ]; then exit "${eta_gate_status[1]}"; fi
+          if grep -Eq '(^|[[:space:]])WARNING([:[:space:]]|$)' "$eta_gate_log"; then
+            echo '::error::Gate emitted WARNING lines'
+            exit 1
+          fi
+        shell: bash
       - name: Remove private Git authorization
         if: always()
         run: git config --global --unset-all http.https://github.com/.extraheader || true

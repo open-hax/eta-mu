@@ -84,7 +84,7 @@
 (defn- ^:async append-to-file! [file-path event-str]
   (await (fsp/appendFile file-path event-str "utf8")))
 
-(defn- ^:async read-file-for-watch [file-path callback filter-spec]
+(defn- read-file-for-watch [file-path callback filter-spec]
   (let [watcher (.watch fs file-path)
         pred (when (seq filter-spec)
                (fn [event]
@@ -99,8 +99,8 @@
                      (callback last-event)))))
              (catch :default e
                (js/console.error "EDN watch error:" e)))))
-    {:id (str (random-uuid))
-     :close! (fn [] (.close watcher))}))
+    (let [close! (fn [] (.close watcher))]
+      {:id (str (random-uuid)) :close! close! :close close!})))
 
 ;; ---------------------------------------------------------------------------
 ;; Protocol implementation helpers

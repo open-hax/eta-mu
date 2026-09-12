@@ -4,9 +4,11 @@
             [clio.infra.ledger :as ledger]
             [open-hax.openplanner-protocols :as p]
             [open-hax.records.edn.services :as edn]
+            [open-hax.records.edn.event-admission :as legacy]
             [open-hax.services.infra.local :as local]
             [open-hax.services.infra.providers :as providers]
             [open-hax.services.extern.api :as api]
+            [open-hax.services.extern.local :as host]
             ["node:fs" :as node-fs]
             ["node:os" :as os]
             ["node:path" :as path]))
@@ -15,6 +17,16 @@
 (defn- cleanup! [dir] (node-fs/rmSync dir #js {:recursive true :force true}))
 (defn- rejected-type [f]
   (try (f) nil (catch :default cause (:services/error (ex-data cause)))))
+
+(defn- ^:async observed? [predicate]
+  (let [deadline (+ (js/Date.now) 3000)]
+    (loop []
+      (cond
+        (predicate) true
+        (> (js/Date.now) deadline) false
+        :else (do
+                (await (js/Promise. (fn [resolve _] (js/setTimeout resolve 20))))
+                (recur))))))
 
 (deftest ^:async durable-protocol-state-test
   (let [dir (directory)]
@@ -100,6 +112,32 @@
                                                (p/make-envelope "batch.two" {})])))))
       (finally (cleanup! dir)))))
 
+(deftest ^:async authentication-refuses-concurrently-replaced-password-test
+  (let [dir (directory)]
+    (try
+      (let [s (edn/create-edn-services dir)
+            created (await (p/create-user s {:username "race" :password "old-fixture"}))
+            id (get-in created [:payload :userId])
+            competing (edn/create-edn-services dir)
+            matches? host/password-matches?
+            replacement (host/password-digest "new-fixture")]
+        (with-redefs [host/password-matches?
+                      (fn [password digest]
+                        (let [matched? (matches? password digest)]
+                          (local/transact! (:store competing)
+                                           (fn [_] {:changes [{:op :patch :collection :users :id id
+                                                              :value {:credentials replacement}}]}))
+                          matched?))]
+          (is (= :clio.ledger/concurrent-stream-write
+                 (try (await (p/authenticate s {:username "race" :password "old-fixture"}))
+                      nil (catch :default cause (:clio/error (ex-data cause)))))))
+        (is (empty? (await (p/query-events s {:event/type "user.login.success"}))))
+        (is (= "user.login.failure"
+               (:event/type (await (p/authenticate s {:username "race" :password "old-fixture"})))))
+        (is (= "user.login.success"
+               (:event/type (await (p/authenticate s {:username "race" :password "new-fixture"}))))))
+      (finally (cleanup! dir)))))
+
 (deftest missing-and-corrupt-ledgers-fail-closed-test
   (let [dir (directory)]
     (try
@@ -146,14 +184,18 @@
                                 (p/make-envelope "watched" {:n 2})]))
       (await (p/emit-to-room s "other-room" "changed" {:n 0}))
       (await (p/emit-to-room s "room" "changed" {:n 1}))
-      (await (js/Promise. (fn [resolve _] (js/setTimeout resolve 180))))
+      (is (await (observed? #(and (= 2 (count @events)) (= 1 (count @rooms))))))
       (is (= [1 2] (mapv #(get-in % [:payload :n]) @events)))
       (is (= [{:n 1}] @rooms))
       ((:close! event-watch))
       (p/unsubscribe s room-watch)
-      (await (p/append-event! s (p/make-envelope "watched" {:n 3})))
-      (await (p/emit-to-room s "room" "changed" {:n 2}))
-      (await (js/Promise. (fn [resolve _] (js/setTimeout resolve 100))))
+      (let [observed (atom false)
+            probe (p/subscribe s "room" "changed" (fn [_] (reset! observed true)))]
+        (try
+          (await (p/append-event! s (p/make-envelope "watched" {:n 3})))
+          (await (p/emit-to-room s "room" "changed" {:n 2}))
+          (is (await (observed? #(deref observed))))
+          (finally (p/unsubscribe s probe))))
       (is (= 2 (count @events)))
       (is (= 1 (count @rooms)))
       (finally
@@ -170,6 +212,89 @@
   (is (= {:event/type "wire.recorded" :payload {:trace/id "stable"}}
          (js->clj (api/make-envelope "wire.recorded" #js {"trace/id" "stable"})
                   :keywordize-keys true))))
+
+(deftest ^:async javascript-optional-protocol-arguments-test
+  (let [dir (directory)]
+    (try
+      (let [s (edn/create-edn-services-js dir)]
+        (is (string? (aget (await ((aget s "create-session"))) "id")))
+        (await ((aget s "add-node") #js {:id "a"}))
+        (await ((aget s "add-node") #js {:id "b"}))
+        (await ((aget s "add-edge") #js {:source "a" :target "b"}))
+        (is (= ["b"] (js->clj (await ((aget s "query-neighbors") "a")))))
+        (is (= ["a" "b"] (mapv #(aget % "id") (await ((aget s "traverse") "a")))))
+        (await ((aget s "create-label") #js {:id "review"}))
+        (await ((aget s "apply-label") "review" "a" "node"))
+        (is (= [{"labelId" "review" "targetId" "a" "targetType" "node"}]
+               (js->clj (await ((aget s "query-by-label") "review"))))))
+      (finally (cleanup! dir)))))
+
+(deftest ^:async javascript-legacy-watch-has-immediate-close-handle-test
+  (let [dir (directory)
+        s (legacy/create-edn-event-admission-js dir)
+        received (atom [])
+        handle ((aget s "watch-events") #js {} #(swap! received conj %))]
+    (try
+      (is (nil? (aget handle "then")))
+      (is (fn? (aget handle "close")))
+      (await ((aget s "append-event!") #js {"event/type" "legacy.watched"}))
+      (is (await (observed? #(seq @received))))
+      (is (= "legacy.watched" (aget (first @received) "event/type")))
+      (finally
+        ;; Await also closes the pre-fix Promise handle in the regression run.
+        (let [resolved (await handle)
+              close (or (aget resolved "close") (aget resolved "close!"))]
+          (when close (close)))
+        (cleanup! dir)))))
+
+(deftest ^:async subscription-ledger-failure-reports-and-closes-test
+  (doseq [damage [:corrupt :deleted]]
+    (let [dir (directory)
+          s (edn/create-edn-services dir)
+          file (str dir "/services.edn")
+          original (fs/read-text file)
+          failures (atom [])
+          received (atom [])
+          handle (p/watch-events s {} #(swap! received conj %))]
+      (try
+        (with-redefs [host/report-callback-error! #(swap! failures conj %)]
+          (if (= damage :corrupt)
+            (node-fs/writeFileSync file "{:invalid")
+            (node-fs/unlinkSync file))
+          (is (await (observed? #(seq @failures))) (name damage))
+          (is (= (if (= damage :corrupt) :clio.ledger/invalid-edn :missing-ledger)
+                 (let [data (ex-data (first @failures))]
+                   (or (:clio/error data) (:services/error data)))))
+          (node-fs/writeFileSync file original)
+          (let [fresh-events (atom [])
+                fresh-watch (p/watch-events s {} #(swap! fresh-events conj %))]
+            (try
+              (await (p/append-event! s (p/make-envelope "after.repair" {})))
+              (is (await (observed? #(seq @fresh-events))))
+              (is (empty? @received) "Failed subscription remains closed after repair")
+              (is (= 1 (count @failures)))
+              (finally ((:close! fresh-watch))))))
+        (finally ((:close! handle)) (cleanup! dir))))))
+
+(deftest ^:async javascript-graph-boundary-preserves-id-and-node-shapes
+  (let [dir (directory)]
+    (try
+      (let [s (edn/create-edn-services-js dir)]
+        (await ((aget s "add-node") #js {:id "a" :type "concept" :label "Alpha"}))
+        (await ((aget s "add-node") #js {:id "b" :type "concept" :label "Beta"}))
+        (await ((aget s "add-edge") #js {:source "a" :target "b" :type "supports"}))
+        (let [reopened (edn/create-edn-services-js dir)
+              ids (await ((aget reopened "query-neighbors") "a"
+                          #js {:direction "out" :edge-types #js ["supports"]}))
+              nodes (await ((aget reopened "traverse") "a" #js {:depth 1}))]
+          (is (js/Array.isArray ids))
+          (is (= ["b"] (js->clj ids)))
+          (is (every? string? (array-seq ids)))
+          (is (= [{:id "a" :type "concept" :label "Alpha"}
+                  {:id "b" :type "concept" :label "Beta"}]
+                 (mapv #(select-keys % [:id :type :label])
+                       (js->clj nodes :keywordize-keys true))))))
+      (finally (cleanup! dir)))))
 
 (deftest ^:async query-validation-and-null-existence-test
   (let [dir (directory)]

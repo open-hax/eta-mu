@@ -131,6 +131,8 @@ credential, challenge and session projections involved in an operation.
 Concurrent writers claiming the same stream slot fail visibly; callers retry
 the complete command. Projections rebuild from validated history. A missing
 initialized ledger, missing encryption key or corrupt history fails startup.
+An open identity store also refuses reads and decisions if its ledger disappears;
+it cannot silently recreate an empty identity history.
 
 Unauthenticated ceremonies use a separate expiring Clio checkpoint,
 `ceremonies.edn`, and encrypted blobs in `private/ceremonies/`. Their five-minute
@@ -144,6 +146,24 @@ entries and unreferenced ceremony blobs are collected on startup and subsequent
 issuance, keeping abandoned requests bounded even if browser cookies rotate.
 ATProto pending SDK state uses this same expiring store; accepted SDK sessions
 and long-lived client keys retain their private durable storage.
+
+Public password signup and login reserve capacity in this checkpoint before
+deriving a password hash. At most two unexpired password reservations may exist
+across processes sharing the store. The shared global limit is 64 attempts per minute,
+and password attempts additionally have an 8-per-minute socket-address limit;
+changing browser cookies or forwarded headers cannot reset that client bucket.
+Completion releases the active slot while retaining its rate record. A process
+crash leaves a lease that expires after five minutes; a stalled job that outlives
+its lease may overlap later work, so this is a leased concurrency bound rather
+than cancellation of native crypto. Rejected admission returns
+429 without invoking scrypt. These bounds protect the standalone plugin; trusted
+in-process identity functions are available separately for controlled bootstrap
+and service composition. Known duplicate signup aliases are refused before
+hashing or allocating a credential blob and checked again at atomic admission.
+
+Infra route handlers accept defined request maps and return response data:
+body/status, redirects and explicit session/browser cookie effects. Only the
+extern HTTP adapter validates and applies those effects to native Fastify replies.
 
 The event facts contain private credential references, never plaintext
 passwords, password hashes, bearer tokens, OAuth tokens or DPoP private keys.

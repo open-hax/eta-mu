@@ -36,6 +36,25 @@
                                                  :email "test@example.invalid"}]
                                :format "armored"})))
 
+(deftest ^:async passkey-descriptor-validation-is-eager-test
+  (let [registration {:rp-id "localhost" :rp-name "Axxium"
+                      :user-id "descriptor-test" :user-name "alice"}
+        descriptor {:id "AA" :transports ["internal"]}]
+    (is (= [(assoc descriptor :type "public-key")]
+           (:excludeCredentials
+            (await (credentials/registration-options (assoc registration :credentials [descriptor]))))))
+    (is (= [(assoc descriptor :type "public-key")]
+           (:allowCredentials (await (credentials/authentication-options
+                                      {:rp-id "localhost" :credentials [descriptor]})))))
+    (doseq [invalid-id ["not base64url" "AA=" "AB"]
+            generate! [#(credentials/registration-options (assoc registration :credentials [{:id invalid-id}]))
+                       #(credentials/authentication-options {:rp-id "localhost" :credentials [{:id invalid-id}]})]]
+      (try
+        (await (generate!))
+        (is false "Descriptor validation must throw before SDK option generation")
+        (catch :default error
+          (is (= :invalid-credential-input (:type (ex-data error)))))))))
+
 (defn- ^:async sign-challenge [private-key challenge & [other-private-key]]
   (let [key (await (.readPrivateKey pgp #js {:armoredKey private-key}))
         other-key (when other-private-key

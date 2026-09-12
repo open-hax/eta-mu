@@ -4,6 +4,7 @@
             [axxium.infra.identity :as identity]
             [axxium.infra.identity-store :as store]
             [axxium.law.identity :as law]
+            [axxium.shape.identity :as shape]
             [cljs.test :refer [deftest is testing]]
             ["node:fs" :as fs]
             ["node:os" :as os]
@@ -34,10 +35,15 @@
             (is (= actor (:principal login)))
             (identity/logout! restarted (:token login))
             (is (nil? (identity/resolve-principal (open-service directory) (:token login))))))
-        (try
-          (await (identity/signup! restarted (assoc signup :username "different")))
-          (is false "duplicate email must be rejected")
-          (catch :default error (is (= :identifier-exists (:code (ex-data error))))))
+        (let [blobs-before (set (array-seq (fs/readdirSync (str directory "/private"))))]
+          (doseq [duplicate [(assoc signup :username "different")
+                             (assoc signup :email "other@example.test") signup]]
+            (try
+              (await (identity/signup! restarted duplicate))
+              (is false "duplicate identifiers must be rejected")
+              (catch :default error (is (= :identifier-exists (:code (ex-data error)))))))
+          (is (= blobs-before (set (array-seq (fs/readdirSync (str directory "/private")))))
+              "Rejected duplicate signup must not allocate credential blobs"))
         (is (= 1 (count (:principals (store/state (:store restarted))))))
         (let [ledger (fs/readFileSync (str directory "/identity.edn") "utf8")]
           (is (not (.includes ledger (:password signup))))
@@ -95,9 +101,16 @@
 (deftest missing-state-and-corruption-test
   (let [directory (directory)]
     (try
-      (open-service directory)
-      (fs/unlinkSync (str directory "/identity.edn"))
-      (is (= :missing-ledger (failure-code #(open-service directory))))
+      (let [service (open-service directory)
+            decided? (atom false)]
+        (fs/unlinkSync (str directory "/identity.edn"))
+        (is (= :missing-ledger (failure-code #(open-service directory))))
+        (is (= :missing-ledger (failure-code #(store/state (:store service)))))
+        (is (= :missing-ledger
+               (failure-code #(store/transact! (:store service)
+                                                (fn [_] (reset! decided? true) {:result :unsafe-empty-state})))))
+        (is (false? @decided?) "A running store must not decide from a lost ledger")
+        (is (false? (fs/existsSync (str directory "/identity.edn")))))
       (finally (remove! directory))))
   (let [directory (directory)]
     (try
@@ -114,9 +127,9 @@
 
 (deftest pure-identity-contracts-test
   (testing "safe local redirects and separate usernames"
-    (is (= "/wiki" (law/safe-redirect "/wiki")))
+    (is (= "/wiki" (shape/safe-redirect "/wiki")))
     (doseq [redirect ["//evil.test" "https://evil.test" "/\\evil.test" "/wiki\nLocation: evil"]]
-      (is (= "/" (law/safe-redirect redirect))))
+      (is (= "/" (shape/safe-redirect redirect))))
     (is (law/valid-username? "alice_123"))
     (is (not (law/valid-username? "alice@example.test")))))
 

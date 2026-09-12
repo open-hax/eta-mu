@@ -65,3 +65,38 @@
         (is (= 1 (count (:canonical/events (store/history (:store reopened)))))
             "Acceptance and consumption are one durable identity fact"))
       (finally (fs/rmSync directory #js {:recursive true :force true})))))
+
+(deftest ^:async password-work-has-durable-concurrency-and-client-bounds
+  (let [directory (fs/mkdtempSync (path/join (os/tmpdir) "axxium-password-bounds-"))
+        started (atom 0)
+        releases (atom [])
+        blocked (fn [] (swap! started inc)
+                  (js/Promise. (fn [resolve] (swap! releases conj resolve))))]
+    (try
+      (let [first-store (:store (identity/open! (options directory)))
+            second-store (:store (identity/open! (options directory)))
+            first-work (ceremonies/password-work! first-store "client-a" blocked)
+            second-work (ceremonies/password-work! second-store "client-b" blocked)
+            checkpoint (fs/readFileSync (str directory "/ceremonies.edn") "utf8")]
+        (try
+          (await (ceremonies/password-work! second-store "rotated-client" blocked))
+          (is false "The third request must be refused before expensive work")
+          (catch :default error (is (= :ceremony-rate-limit (:code (ex-data error))))))
+        (is (= 2 @started))
+        (is (= checkpoint (fs/readFileSync (str directory "/ceremonies.edn") "utf8")))
+        (doseq [release @releases] (release :verified))
+        (is (= :verified (await first-work)))
+        (is (= :verified (await second-work)))
+        (is (not-any? #(= :password/active (:purpose %)) (vals (ceremonies/entries first-store))))
+        (let [reopened (:store (identity/open! (options directory)))]
+          (dotimes [_ 7] (is (= :verified (await (ceremonies/password-work! reopened "client-a" (fn [] :verified))))))
+          (try
+            (await (ceremonies/password-work! reopened "client-a" blocked))
+            (is false "Completed requests still count against the durable client window")
+            (catch :default error (is (= :ceremony-rate-limit (:code (ex-data error))))))
+          (is (= 2 @started))
+          (is (empty? (:canonical/events (store/history reopened)))
+              "Password admission does not append permanent anonymous history")))
+      (finally
+        (doseq [release @releases] (release :cleanup))
+        (fs/rmSync directory #js {:recursive true :force true})))))

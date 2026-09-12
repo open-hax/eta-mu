@@ -45,7 +45,7 @@ way for the protocols they support.
 | EventAdmission | Validated wire envelopes, stable retries, conflicting identity refused, durable subscriptions |
 | SessionManagement | Create/get/update/close, all replayed from Clio |
 | DocumentStorage | Store/get/query/archive, archived documents remain inspectable |
-| GraphOperations | Nodes/edges, directional and typed neighbors, bounded traversal |
+| GraphOperations | Nodes/edges, neighboring node IDs filtered by direction and edge type, bounded traversal returning full node records |
 | TranslationManagement | Store supplied segments/labels and atomically queue batches |
 | LabelManagement | Create/apply/query, repeated application is idempotent |
 | UserManagement | Local users, salted scrypt password digests, authentication and updates; get-user redacts credentials |
@@ -63,11 +63,18 @@ event. Reads reconstruct projections from validated history. Exact event
 retries do not append twice; malformed history, missing ledger beside known
 schemas, conflicting IDs and stale concurrent writes are refused.
 
+Password verification and its login result use one transaction history. A
+credential change competing with that admission causes a stream conflict;
+callers must retry the complete authentication operation against current state.
+
 All services share one stream. Concurrent processes may receive a stream
 conflict and should retry the whole operation. Reads and appends validate all
 history, favoring inspection and correctness over speed. Subscriptions poll
 every 50 ms and deliver new matching events in canonical order, including bursts
 from other process instances. Handles are process-local and must be closed.
+If a subscription cannot read valid history, it reports the failure and closes;
+repairing the ledger requires explicitly opening a new subscription. JavaScript
+watch handles expose `close()` immediately, including the legacy EDN adapter.
 
 Queries support equality, nested field paths, `$and`, `$or`, `$eq`, `$ne`, `$in`,
 `$nin`, `$exists`, `$gt`, `$gte`, `$lt`, and `$lte`. Other operators are refused;
@@ -89,12 +96,15 @@ implementation.
 ```bash
 pnpm -C packages/protocols run compile:lib
 pnpm -C packages/protocols test
+pnpm -C packages/protocols test:types
 pnpm -C packages/protocols lint:kondo
 ```
 
 The test script compiles and then runs the bundle once. Real-file tests cover all
 eight EDN protocols, replay, credential redaction, admission conflicts, malformed
 history, stale writers, subscription bursts and independent provider selection.
+The TypeScript consumer fixture verifies that neighbor IDs are strings while
+traversal returns node records, using the workspace's declared TypeScript compiler.
 Existing remote-record tests remain in the same suite. NBB consumes `nbb.edn`;
 CLJS consumers use `deps.edn` or the shadow configuration. Node uses Clio's pinned
 native lock addon, shared through the workspace package manager.

@@ -28,7 +28,7 @@
     (let [service (identity/open! (environment-options))
           app (http/create-app)]
       (await (plugin/register! app service {}))
-      (http/register! app "GET" "/health" (fn [_ reply] (http/send! reply 200 {:ok true :service "axxium" :provider "edn"})))
+      (http/register! app "GET" "/health" nil (fn [_] {:body {:ok true :service "axxium" :provider "edn"}}))
       (http/log! (str "Axxium listening on "
                       (await (http/listen! app (or (host/env "AXXIUM_HOST") "127.0.0.1")
                                            (or (some-> (host/env "AXXIUM_PORT") parse-long) 8787))))))

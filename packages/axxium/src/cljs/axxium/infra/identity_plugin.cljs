@@ -1,8 +1,10 @@
 (ns axxium.infra.identity-plugin
   "Axxium-owned Fastify authentication plugin for Knoxx and standalone consumers."
   (:require [axxium.extern.identity-http :as http]
+            [axxium.extern.identity-host :as host]
             [axxium.extern.oauth :as oauth]
             [axxium.infra.identity :as identity]
+            [axxium.infra.identity-ceremonies :as ceremonies]
             [axxium.infra.identity-oauth :as identity-oauth]
             [axxium.law.identity :as law]))
 
@@ -25,110 +27,123 @@
      :loginUrl "/api/auth/providers/github/login" :localLoginUrl "/api/auth/local/login"
      :publicBaseUrl (get-in service [:options :public-base-url])}))
 
-(defn- complete-login! [service reply result]
-  (http/set-session! reply (:token result) (get-in service [:options :public-base-url]))
-  (http/send! reply 200 (dissoc result :token)))
+(defn- complete-login [result]
+  {:body (dissoc result :token) :session-token (:token result)})
 
 (defn- mutation! [service request]
   (http/csrf! request (get-in service [:options :public-base-url])))
 
+(defn- ^:async with-browser [request respond]
+  (let [token (or (:browser-token request) (host/random-token))
+        response (await (respond token))]
+    (cond-> response (nil? (:browser-token request)) (assoc :browser-token token))))
+
 (defn ^:async register!
-  "Register authentication routes; business consumers retain their own content authorization."
+  "Register authentication routes; handlers exchange defined request/response data."
   [app service _options]
   (await (http/ensure-cookies! app))
   (let [origin (get-in service [:options :public-base-url])
         atproto-client (await (identity-oauth/create-atproto-client! service))
-        browser! (fn [request reply] (http/ensure-browser! request reply origin))]
-    (http/register! app "GET" "/api/auth/config" (fn [_ reply] (http/send! reply 200 (auth-config service))))
-    (http/register! app "GET" "/api/auth/me"
-                    (fn [request reply]
-                      (http/send! reply 200 {:principal (identity/require-principal! service (:token request))})))
-    (http/register! app "POST" "/api/auth/signup"
-                    (fn ^:async handle [request reply]
-                      (mutation! service request)
-                      (complete-login! service reply (await (identity/signup! service (:body request))))))
-    (http/register! app "POST" "/api/auth/local/login"
-                    (fn ^:async handle [request reply]
-                      (mutation! service request)
-                      (complete-login! service reply (await (identity/login! service (:body request))))))
-    (http/register! app "POST" "/api/auth/logout"
-                    (fn [request reply]
-                      (mutation! service request)
-                      (identity/logout! service (:token request))
-                      (http/clear-session! reply)
-                      (http/send! reply 200 {:ok true})))
-    (http/register! app "GET" "/api/auth/login"
-                    (fn ^:async handle [request reply]
-                      (law/require! (not= "true" (get-in request [:query :link]))
-                                    :link-requires-post "Initiate account linking with POST to the provider link route")
-                      (http/redirect! reply (await (identity-oauth/begin! service :github (browser! request reply)
-                                                                         (:token request) (:query request) atproto-client)))))
-    (http/register! app "GET" "/api/auth/providers/:provider/login"
-                    (fn ^:async handle [request reply]
-                      (law/require! (not= "true" (get-in request [:query :link]))
-                                    :link-requires-post "Initiate account linking with POST to the provider link route")
-                      (http/redirect! reply
-                                      (await (identity-oauth/begin! service (keyword (get-in request [:params :provider]))
-                                                                    (browser! request reply) (:token request)
-                                                                    (:query request) atproto-client)))))
-    (http/register! app "POST" "/api/auth/providers/:provider/link"
-                    (fn ^:async handle [request reply]
-                      (mutation! service request)
-                      (identity/require-principal! service (:token request))
-                      (http/send! reply 200
-                                  {:authorizationUrl
-                                   (await (identity-oauth/begin!
-                                           service (keyword (get-in request [:params :provider]))
-                                           (browser! request reply) (:token request)
-                                           (assoc (:body request) :link "true") atproto-client))})))
-    (http/register! app "GET" "/api/auth/callback/:provider"
-                    (fn ^:async handle [request reply]
-                      (let [provider (keyword (get-in request [:params :provider]))]
-                        (law/require! (#{:github :discord :google :atproto} provider) :unsupported-provider "Unsupported identity provider")
-                        (let [result (await (identity-oauth/finish! service provider (:browser-token request)
-                                                                   (:query request) atproto-client))]
-                          (http/set-session! reply (:token result) origin)
-                          (http/redirect! reply (:redirect result))))))
-    (http/register! app "GET" "/api/auth/atproto/client-metadata.json"
-                    (fn [_ reply]
-                      (law/require! atproto-client :provider-not-configured "ATProto is not configured")
-                      (http/send! reply 200 (oauth/atproto-metadata atproto-client))))
-    (http/register! app "GET" "/api/auth/atproto/jwks.json"
-                    (fn [_ reply]
-                      (law/require! atproto-client :provider-not-configured "ATProto is not configured")
-                      (http/send! reply 200 (oauth/atproto-jwks atproto-client))))
-    (http/register! app "POST" "/api/auth/pgp/challenge"
-                    (fn [request reply]
-                      (mutation! service request)
-                      (http/send! reply 200 (identity/pgp-challenge! service (:token request) (browser! request reply)
-                                                                     (update (:body request) :purpose keyword)))))
-    (http/register! app "POST" "/api/auth/pgp/enroll"
-                    (fn ^:async handle [request reply]
-                      (mutation! service request)
-                      (http/send! reply 200 (await (identity/enroll-pgp! service (:token request) (:browser-token request) (:body request))))))
-    (http/register! app "POST" "/api/auth/pgp/verify"
-                    (fn ^:async handle [request reply]
-                      (mutation! service request)
-                      (complete-login! service reply (await (identity/pgp-login! service (:browser-token request) (:body request))))))
-    (http/register! app "POST" "/api/auth/passkey/registration-options"
-                    (fn ^:async handle [request reply]
-                      (mutation! service request)
-                      (http/send! reply 200 (await (identity/passkey-registration-options! service (:token request) (browser! request reply))))))
-    (http/register! app "POST" "/api/auth/passkey/registration-verify"
-                    (fn ^:async handle [request reply]
-                      (mutation! service request)
-                      (http/send! reply 200 (await (identity/passkey-registration-verify! service (:token request) (:browser-token request) (:body request))))))
-    (http/register! app "POST" "/api/auth/passkey/authentication-options"
-                    (fn ^:async handle [request reply]
-                      (mutation! service request)
-                      (http/send! reply 200 (await (identity/passkey-authentication-options! service (browser! request reply))))))
-    (http/register! app "POST" "/api/auth/passkey/authentication-verify"
-                    (fn ^:async handle [request reply]
-                      (mutation! service request)
-                      (complete-login! service reply (await (identity/passkey-authentication-verify! service (:browser-token request) (:body request))))))
-    (http/register! app "POST" "/api/actors/:id/capabilities"
-                    (fn [request reply]
-                      (mutation! service request)
-                      (http/send! reply 200 (identity/update-grants! service (:token request) (get-in request [:params :id])
-                                                                     (get-in request [:body :roles]) (get-in request [:body :capabilities])))))
+        route! (fn [method path handler] (http/register! app method path origin handler))]
+    (route! "GET" "/api/auth/config" (fn [_] {:body (auth-config service)}))
+    (route! "GET" "/api/auth/me"
+            (fn [request] {:body {:principal (identity/require-principal! service (:token request))}}))
+    (route! "POST" "/api/auth/signup"
+            (fn ^:async handle [request]
+              (mutation! service request)
+              (complete-login
+               (await (ceremonies/password-work! (:store service) (:client-key request)
+                                                 #(identity/signup! service (:body request)))))))
+    (route! "POST" "/api/auth/local/login"
+            (fn ^:async handle [request]
+              (mutation! service request)
+              (complete-login
+               (await (ceremonies/password-work! (:store service) (:client-key request)
+                                                 #(identity/login! service (:body request)))))))
+    (route! "POST" "/api/auth/logout"
+            (fn [request]
+              (mutation! service request)
+              (identity/logout! service (:token request))
+              {:body {:ok true} :clear-session? true}))
+    (route! "GET" "/api/auth/login"
+            (fn ^:async handle [request]
+              (law/require! (not= "true" (get-in request [:query :link]))
+                            :link-requires-post "Initiate account linking with POST to the provider link route")
+              (await (with-browser request
+                       (fn ^:async respond [browser]
+                         {:redirect (await (identity-oauth/begin! service :github browser
+                                                                (:token request) (:query request) atproto-client))})))))
+    (route! "GET" "/api/auth/providers/:provider/login"
+            (fn ^:async handle [request]
+              (law/require! (not= "true" (get-in request [:query :link]))
+                            :link-requires-post "Initiate account linking with POST to the provider link route")
+              (await (with-browser request
+                       (fn ^:async respond [browser]
+                         {:redirect (await (identity-oauth/begin! service (keyword (get-in request [:params :provider]))
+                                                                browser (:token request) (:query request) atproto-client))})))))
+    (route! "POST" "/api/auth/providers/:provider/link"
+            (fn ^:async handle [request]
+              (mutation! service request)
+              (identity/require-principal! service (:token request))
+              (await (with-browser request
+                       (fn ^:async respond [browser]
+                         {:body {:authorizationUrl
+                                 (await (identity-oauth/begin! service (keyword (get-in request [:params :provider]))
+                                                              browser (:token request)
+                                                              (assoc (:body request) :link "true") atproto-client))}})))))
+    (route! "GET" "/api/auth/callback/:provider"
+            (fn ^:async handle [request]
+              (let [provider (keyword (get-in request [:params :provider]))]
+                (law/require! (#{:github :discord :google :atproto} provider) :unsupported-provider "Unsupported identity provider")
+                (let [result (await (identity-oauth/finish! service provider (:browser-token request)
+                                                           (:query request) atproto-client))]
+                  {:session-token (:token result) :redirect (:redirect result)}))))
+    (route! "GET" "/api/auth/atproto/client-metadata.json"
+            (fn [_]
+              (law/require! atproto-client :provider-not-configured "ATProto is not configured")
+              {:body (oauth/atproto-metadata atproto-client)}))
+    (route! "GET" "/api/auth/atproto/jwks.json"
+            (fn [_]
+              (law/require! atproto-client :provider-not-configured "ATProto is not configured")
+              {:body (oauth/atproto-jwks atproto-client)}))
+    (route! "POST" "/api/auth/pgp/challenge"
+            (fn ^:async handle [request]
+              (mutation! service request)
+              (await (with-browser request
+                       (fn [browser]
+                         {:body (identity/pgp-challenge! service (:token request) browser
+                                                         (update (:body request) :purpose keyword))})))))
+    (route! "POST" "/api/auth/pgp/enroll"
+            (fn ^:async handle [request]
+              (mutation! service request)
+              {:body (await (identity/enroll-pgp! service (:token request) (:browser-token request) (:body request)))}))
+    (route! "POST" "/api/auth/pgp/verify"
+            (fn ^:async handle [request]
+              (mutation! service request)
+              (complete-login (await (identity/pgp-login! service (:browser-token request) (:body request))))))
+    (route! "POST" "/api/auth/passkey/registration-options"
+            (fn ^:async handle [request]
+              (mutation! service request)
+              (await (with-browser request
+                       (fn ^:async respond [browser]
+                         {:body (await (identity/passkey-registration-options! service (:token request) browser))})))))
+    (route! "POST" "/api/auth/passkey/registration-verify"
+            (fn ^:async handle [request]
+              (mutation! service request)
+              {:body (await (identity/passkey-registration-verify! service (:token request) (:browser-token request) (:body request)))}))
+    (route! "POST" "/api/auth/passkey/authentication-options"
+            (fn ^:async handle [request]
+              (mutation! service request)
+              (await (with-browser request
+                       (fn ^:async respond [browser]
+                         {:body (await (identity/passkey-authentication-options! service browser))})))))
+    (route! "POST" "/api/auth/passkey/authentication-verify"
+            (fn ^:async handle [request]
+              (mutation! service request)
+              (complete-login (await (identity/passkey-authentication-verify! service (:browser-token request) (:body request))))))
+    (route! "POST" "/api/actors/:id/capabilities"
+            (fn [request]
+              (mutation! service request)
+              {:body (identity/update-grants! service (:token request) (get-in request [:params :id])
+                                              (get-in request [:body :roles]) (get-in request [:body :capabilities]))}))
     service))
