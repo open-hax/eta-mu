@@ -22,7 +22,7 @@
     "test:workflows": "nbb commands/workflows_test.cljs",
     "test:coverage": "shadow-cljs compile test && c8 --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.domain*.js' --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.extern*.js' --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.infra*.js' --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.law*.js' --include '.shadow-cljs/builds/test/dev/out/cljs-runtime/eta_mu.shape*.js' --exclude '**/*_test.js' --reporter=text --reporter=lcov --reporter=json-summary node target/eta-mu-test.cjs",
     "test:e2e": "pnpm build && shadow-cljs compile e2e-test && node target/eta-mu-e2e-test.cjs",
-    "lint:kondo": "clj-kondo --lint src/cljs test/cljs test-e2e/cljs commands/workflows.cljs commands/workflows_test.cljs",
+    "lint:kondo": "clj-kondo --lint src/cljs test/cljs test-e2e/cljs commands/workflows.cljs commands/workflows_test.cljs commands/gates.cljs",
     "watch": "shadow-cljs watch cli"
   },
   "dependencies": {

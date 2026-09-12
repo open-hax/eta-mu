@@ -11,7 +11,7 @@
 ;;
 ;; Two behaviours are copied from CI because exit codes alone do not capture
 ;; them: some jobs assert "0 failures, 0 errors" appears in stdout, and some
-;; fail on any WARNING line.
+;; fail on warning diagnostics, including JVM Reflection warning lines.
 ;;
 ;;   eta-mu gates                 # gates whose paths this branch touches
 ;;   eta-mu gates --all           # every gate
@@ -20,7 +20,7 @@
 ;;   eta-mu gates --only rheos    # one gate by name (repeatable)
 ;;   eta-mu gates --audit         # path filters of non-emitting workflows
 
-(ns eta-mu.commands.gates
+(ns gates
   (:require ["node:fs" :as fs]
             ["node:path" :as path]
             ["node:child_process" :as cp]
@@ -32,7 +32,7 @@
 
 (defn- die! [& msg] (println (str/join " " msg)) (js/process.exit 2))
 
-(defn- exists? [p] (fs/existsSync p))
+(defn- path-exists? [p] (fs/existsSync p))
 (defn- read-text [p] (fs/readFileSync p "utf8"))
 
 (defn- pad [s n]
@@ -47,9 +47,9 @@
    reporting a clean run over an empty gate set."
   [root]
   (let [f (path/join root gate-plan-path)]
-    (when-not (exists? f)
+    (when-not (path-exists? f)
       (println (str "No gate plan at " f "\n"))
-      (if (exists? (path/join root "contracts" "workflows"))
+      (if (path-exists? (path/join root "contracts" "workflows"))
         (println "This project has workflow resources but has not emitted:\n\n  eta-mu workflows emit")
         (println (str "This project declares no workflows. `eta-mu workflows` explains\n"
                       "how to start one; gates are projected from those resources.")))
@@ -113,7 +113,7 @@
 (defn repo-root []
   (loop [dir (path/resolve (js/process.cwd))]
     (cond
-      (exists? (path/join dir ".git")) dir
+      (path-exists? (path/join dir ".git")) dir
       (= dir (path/dirname dir)) (die! "not inside a git repository")
       :else (recur (path/dirname dir)))))
 
@@ -182,13 +182,13 @@
         ms (- (js/Date.now) started)
         warn (when no-warning
                (->> (str/split-lines combined)
-                    (filter #(re-find #"(^|\s)WARNING([:\s]|$)" %))
+                    (filter #(re-find #"(^|\s)warning([,:\s]|$)" (str/lower-case %)))
                     seq))
         fail (cond
                (not (zero? exit)) (str "exit " exit)
                (and expect (not (str/includes? combined expect)))
                (str "expected \"" expect "\" in output — CI asserts this, exit code alone is not enough")
-               warn (str (count warn) " WARNING line(s) — this gate treats warnings as failures")
+               warn (str (count warn) " warning diagnostic(s) — this gate treats warnings as failures")
                :else nil)]
     {:cmd (str/join " " cmd) :ms ms :fail fail :output combined
      :warn warn}))
@@ -254,7 +254,7 @@
                ;; noise. The plan carries :gate/emitting for exactly this.
                :when (and (not (:emitting g))
                           (not= :always (:paths g))
-                          (exists? wf-file))]
+                          (path-exists? wf-file))]
            (let [wf (workflow-pr-paths wf-file)]
              (if-not wf
                (do (println (str "  ok       " (pad (:name g) 20) " no path filter"))
@@ -282,7 +282,7 @@
                        nil)))))))
         bad (remove nil? problems)]
     (println)
-    (when-not (exists? resources-dir)
+    (when-not (path-exists? resources-dir)
       (println "This project has no workflow resources."))
     (println "Emitting workflows are not audited — they cannot drift from their gate.")
     (when (seq bad)
@@ -298,8 +298,6 @@
         flag? #(some #{%} args)
         opt (fn [k] (second (drop-while #(not= % k) args)))
         base (or (opt "--base") "origin/main")
-        only (set (keep-indexed (fn [i a] (when (= "--only" (nth args (dec i) nil)) a))
-                                (range (count args))))
         only (set (for [[i a] (map-indexed vector args) :when (= a "--only")]
                     (nth args (inc i) nil)))
         root (repo-root)
@@ -333,7 +331,7 @@
       ;; gate that shells out to pnpm, which reads as three separate code
       ;; failures. It is a setup problem, so it exits 2 (distinct from 1 = a gate
       ;; failed) and says what to run.
-      (when-not (exists? (path/join root "node_modules"))
+      (when-not (path-exists? (path/join root "node_modules"))
         (println "No node_modules in" (str root))
         (println)
         (println "  Every pnpm gate would fail on its first step and look like a code failure.")

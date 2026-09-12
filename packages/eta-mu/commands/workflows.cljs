@@ -172,7 +172,7 @@
   (str "'" (str/replace value "'" "'\"'\"'") "'"))
 
 (defn- checked-run
-  "Preserve the local gate's exit, expected-output and WARNING-line contracts
+  "Preserve the local gate's exit, expected-output and warning-line contracts
    in the emitted Bash step. Commands run in their own fail-fast shell while
    the outer shell captures both output streams without losing the exit code."
   [{:keys [step/run gate/expect gate/no-warning]}]
@@ -195,7 +195,7 @@
              (str "if ! grep -Fq -- " (shell-quote expect) " \"$eta_gate_log\"; then\n"
                   "  echo '::error::Gate expected output was not found'\n  exit 1\nfi\n"))
            (when no-warning
-             "if grep -Eq '(^|[[:space:]])WARNING([:[:space:]]|$)' \"$eta_gate_log\"; then\n  echo '::error::Gate emitted WARNING lines'\n  exit 1\nfi\n")))))
+             "if grep -Eiq '(^|[[:space:]])warning([,:[:space:]]|$)' \"$eta_gate_log\"; then\n  echo '::error::Gate emitted warning diagnostics'\n  exit 1\nfi\n")))))
 
 (defn- gh-step [registry s]
   (cond-> {}

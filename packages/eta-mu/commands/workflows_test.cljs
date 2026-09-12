@@ -1,6 +1,8 @@
 (ns workflows-test
   (:require [cljs.test :refer [deftest is run-tests]]
             [nbb.core :as nbb]
+            ["node:fs" :as fs]
+            ["node:os" :as os]
             ["node:path" :as path]
             ["node:child_process" :as cp]))
 
@@ -21,11 +23,44 @@
                              #js {:encoding "utf8" :timeout 5000})]
     {:status (.-status result) :output (str (.-stdout result) (.-stderr result))}))
 
+(defn- execute-local-gate [command]
+  (let [directory (fs/mkdtempSync (path/join (os/tmpdir) "eta-gate-warning-"))
+        source (path/resolve (path/dirname nbb/*file*) "gates.cljs")]
+    (try
+      (doseq [relative [".git" "node_modules" "contracts/workflows"]]
+        (fs/mkdirSync (path/join directory relative) #js {:recursive true}))
+      (fs/writeFileSync
+       (path/join directory "contracts/workflows/.gates.edn")
+       (pr-str {:gates [{:gate/id "fixture" :gate/workflow "fixture"
+                         :gate/check "Fixture" :gate/paths :always
+                         :gate/steps [{:step/run command :gate/no-warning true}]}]}))
+      (let [result (cp/spawnSync "nbb" #js [source "--all"]
+                                 #js {:cwd directory :encoding "utf8" :timeout 10000})]
+        {:status (.-status result) :output (str (.-stdout result) (.-stderr result))})
+      (finally (fs/rmSync directory #js {:recursive true :force true})))))
+
+(deftest local-gate-enforces-the-same-warning-diagnostics
+  (doseq [[command expected-status]
+          [["printf '0 warnings\\n'" 0]
+           ["printf 'Reflection warning, fixture.clj:1:1 - unresolved call\\n' >&2" 1]
+           ["printf 'WARNING, compiler diagnostic\\n'" 1]
+           ["printf 'warning: diagnostic\\n'" 1]
+           ["printf 'Warning: diagnostic\\n'" 1]]]
+    (let [result (execute-local-gate command)]
+      (is (= expected-status (:status result)) (:output result))
+      (is (.includes (:output result)
+                     (if (zero? expected-status) "1 passed, 0 failed" "warning diagnostic(s)"))
+          (:output result)))))
+
 (deftest generated-gate-enforces-runtime-contracts
   (doseq [[command options expected-status]
           [["printf '0 warnings\\n0 failures, 0 errors\\n'" {:gate/no-warning true :gate/expect "0 failures, 0 errors"} 0]
            ["printf 'WARNING: compiler warning\\n'" {:gate/no-warning true} 1]
            ["printf 'WARNING: stderr warning\\n' >&2" {:gate/no-warning true} 1]
+           ["printf 'Reflection warning, fixture.clj:1:1 - call cannot be resolved.\\n' >&2" {:gate/no-warning true} 1]
+           ["printf 'WARNING, uppercase compiler diagnostic\\n'" {:gate/no-warning true} 1]
+           ["printf 'warning: lowercase diagnostic\\n'" {:gate/no-warning true} 1]
+           ["printf 'Warning: mixed-case diagnostic\\n'" {:gate/no-warning true} 1]
            ["printf 'unrelated output\\n'" {:gate/expect "0 failures, 0 errors"} 1]
            ["printf '0 failures, 0 errors\\n'; exit 7" {:gate/expect "0 failures, 0 errors"} 7]
            ["false | cat\nprintf 'should not run\\n'" {:gate/no-warning true} 1]

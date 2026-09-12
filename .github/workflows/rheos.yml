@@ -134,8 +134,8 @@ jobs:
           set -e
           if [ "${eta_gate_status[0]}" -ne 0 ]; then exit "${eta_gate_status[0]}"; fi
           if [ "${eta_gate_status[1]}" -ne 0 ]; then exit "${eta_gate_status[1]}"; fi
-          if grep -Eq '(^|[[:space:]])WARNING([:[:space:]]|$)' "$eta_gate_log"; then
-            echo '::error::Gate emitted WARNING lines'
+          if grep -Eiq '(^|[[:space:]])warning([,:[:space:]]|$)' "$eta_gate_log"; then
+            echo '::error::Gate emitted warning diagnostics'
             exit 1
           fi
         shell: bash

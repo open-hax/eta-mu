@@ -63,6 +63,13 @@ event. Reads reconstruct projections from validated history. Exact event
 retries do not append twice; malformed history, missing ledger beside known
 schemas, conflicting IDs and stale concurrent writes are refused.
 
+Event retry identity compares the complete originally submitted envelope,
+preserved separately from generated defaults in the same transaction. Dropping
+a payload or adding a formerly omitted default changes that intent and is
+refused, including after restart. Older history without a stored intent accepts
+only an exact copy of its full stored envelope; partial retries cannot be proven
+identical and are refused.
+
 Password verification and its login result use one transaction history. A
 credential change competing with that admission causes a stream conflict;
 callers must retry the complete authentication operation against current state.
@@ -75,6 +82,8 @@ from other process instances. Handles are process-local and must be closed.
 If a subscription cannot read valid history, it reports the failure and closes;
 repairing the ledger requires explicitly opening a new subscription. JavaScript
 watch handles expose `close()` immediately, including the legacy EDN adapter.
+JavaScript `emit-to-room` returns `Promise<void>`: await it to observe persistence
+completion and catch rejected writes. It does not return a stored notification.
 
 Queries support equality, nested field paths, `$and`, `$or`, `$eq`, `$ne`, `$in`,
 `$nin`, `$exists`, `$gt`, `$gte`, `$lt`, and `$lte`. Other operators are refused;

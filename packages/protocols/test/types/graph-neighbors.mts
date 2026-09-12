@@ -36,3 +36,14 @@ export function verifyImmediateWatchHandle(admission: EventAdmission): void {
   const handle = admission["watch-events"]({}, () => undefined);
   handle.close();
 }
+
+export async function verifyEmissionResult(services: ClioEdnServices): Promise<void> {
+  const pending: Promise<void> = services["emit-to-room"]("room", "changed", { n: 1 });
+  if (await pending !== undefined) throw new Error("Emission acknowledgement must be void");
+}
+
+export async function verifyEmissionFailure(services: ClioEdnServices): Promise<void> {
+  const pending: Promise<void> = services["emit-to-room"]("room", "changed", { n: 2 });
+  const rejected = await pending.then(() => false, () => true);
+  if (!rejected) throw new Error("Failed persistence must reject its emission acknowledgement");
+}

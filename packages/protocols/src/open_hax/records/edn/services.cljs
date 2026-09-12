@@ -43,7 +43,10 @@
   (let [id (or (:event/id envelope) (host/id))]
     (if-let [old (get-in state [:events id])]
       (do
-        (law/require! (= envelope (select-keys old (keys envelope)))
+        ;; Persist the exact submitted map separately from generated defaults.
+        ;; For older history with no intent record, only the entire stored map
+        ;; is provably identical; a partial retry must fail closed.
+        (law/require! (= envelope (get-in state [:event-intents id] old))
                       :event-id-collision "Event id carries different envelope data")
         {:result old})
       (let [stored (merge {:event/time (host/now)
@@ -51,7 +54,8 @@
                           :session/id (host/id)
                           :delivery/mode "tell"}
                          envelope {:event/id id})]
-        {:changes [(change :put :events id stored)] :result stored}))))
+        {:changes [(change :put :event-intents id envelope)
+                   (change :put :events id stored)] :result stored}))))
 
 (defn- append-envelope! [store envelope]
   (local/transact! store #(envelope-transition % envelope)))
@@ -198,7 +202,8 @@
   (unsubscribe [_ handle] ((:close! handle)))
   (emit-to-room [_ room event-type data]
     (local/perform
-     #(put! store :notifications {:room room :event-type event-type :data data} {}))))
+     #(do (put! store :notifications {:room room :event-type event-type :data data} {})
+          nil))))
 
 (defn create-edn-services
   "Open all eight service protocols without an external server.

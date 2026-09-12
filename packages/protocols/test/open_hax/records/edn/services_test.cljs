@@ -100,6 +100,14 @@
             first-event (await (p/append-event! s envelope))
             retry (await (p/append-event! s envelope))]
         (is (= first-event retry))
+        (is (= first-event (await (p/append-event! (edn/create-edn-services dir) envelope))))
+        (doseq [changed [(dissoc envelope :payload)
+                         (assoc envelope :delivery/mode "tell")
+                         (assoc envelope :event/time (:event/time first-event))]]
+          (is (= :event-id-collision
+                 (try (await (p/append-event! (edn/create-edn-services dir) changed))
+                      nil (catch :default cause (:services/error (ex-data cause)))))
+              (pr-str changed)))
         (is (= 1 (count (:canonical/events (local/history (:store s))))))
         (is (= [first-event] (await (p/query-events (edn/create-edn-services dir) {:event/type "test.recorded"}))))
         (is (= :event-id-collision
@@ -110,6 +118,31 @@
                     nil (catch :default cause (:services/error (ex-data cause))))))
         (is (vector? (await (p/append-events! s [(p/make-envelope "batch.one" {})
                                                (p/make-envelope "batch.two" {})])))))
+      (finally (cleanup! dir)))))
+
+(deftest ^:async javascript-room-emission-awaits-persistence-test
+  (let [dir (directory)]
+    (try
+      (let [s (edn/create-edn-services-js dir)]
+        (is (nil? (await ((aget s "emit-to-room") "room" "changed" #js {:n 1}))))
+        (node-fs/unlinkSync (str dir "/services.edn"))
+        (is (= :missing-ledger
+               (try (await ((aget s "emit-to-room") "room" "changed" #js {:n 2}))
+                    nil (catch :default cause (:services/error (ex-data cause)))))))
+      (finally (cleanup! dir)))))
+
+(deftest ^:async older-event-history-without-intent-refuses-partial-retries-test
+  (let [dir (directory)]
+    (try
+      (let [s (edn/create-edn-services dir)
+            stored (assoc (p/make-envelope "legacy.recorded" {:answer 42}) :event/id "legacy-stable-id")]
+        (local/transact! (:store s)
+                         (fn [_] {:changes [{:op :put :collection :events
+                                              :id (:event/id stored) :value stored}]}))
+        (is (= stored (await (p/append-event! (edn/create-edn-services dir) stored))))
+        (is (= :event-id-collision
+               (try (await (p/append-event! (edn/create-edn-services dir) (dissoc stored :payload)))
+                    nil (catch :default cause (:services/error (ex-data cause)))))))
       (finally (cleanup! dir)))))
 
 (deftest ^:async authentication-refuses-concurrently-replaced-password-test
