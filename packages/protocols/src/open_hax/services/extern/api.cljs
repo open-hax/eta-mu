@@ -23,19 +23,28 @@
 (def ^:private optional-arity
   {p/create-session 1 p/query-neighbors 2 p/traverse 2 p/query-by-label 2})
 
+(def ^:private void-operations
+  #{p/close-session p/archive-document p/apply-label p/emit-to-room})
+
+(defn- optional-arguments [operation args]
+  (let [args (vec args)]
+    (if-let [arity (get optional-arity operation)]
+      (cond
+        (= (count args) (dec arity)) (conj args {})
+        (and (= (count args) arity) (identical? js/undefined (peek args)))
+        (assoc args (dec arity) {})
+        :else args)
+      args)))
+
 (defn- ^:async invoke [service operation args]
-  (let [args (mapv decode args)
-        args (if (= (count args) (some-> (get optional-arity operation) dec))
-               (conj args {})
-               args)
+  (let [args (mapv decode (optional-arguments operation args))
         args (if (and (#{p/query-neighbors p/traverse} operation)
                       (string? (get-in args [1 :direction])))
                (update-in args [1 :direction] keyword)
                args)
         result (await (apply operation service args))]
-    ;; The JavaScript notification contract acknowledges durable completion
-    ;; without exposing an implementation-specific stored notification.
-    (if (= operation p/emit-to-room) js/undefined (encode result))))
+    ;; Promise<void> acknowledges completion without exposing a CLJS nil value.
+    (if (contains? void-operations operation) js/undefined (encode result))))
 
 (defn make-envelope [event-type payload]
   (encode (p/make-envelope event-type (decode payload))))

@@ -108,6 +108,10 @@ repairing the ledger requires explicitly opening a new subscription. JavaScript
 watch handles expose `close()` immediately, including the legacy EDN adapter.
 JavaScript `emit-to-room` returns `Promise<void>`: await it to observe persistence
 completion and catch rejected writes. It does not return a stored notification.
+The other `Promise<void>` operations (`close-session`, `archive-document`, and
+`apply-label`) likewise resolve to JavaScript `undefined` after completion.
+Optional JavaScript option objects accept both omission and explicit `undefined`;
+an explicit `null` record remains invalid for `create-session`.
 
 Queries support equality, nested field paths, `$and`, `$or`, `$eq`, `$ne`, `$in`,
 `$nin`, `$exists`, `$gt`, `$gte`, `$lt`, and `$lte`. Other operators are refused;

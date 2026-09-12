@@ -7,6 +7,7 @@
             [clio.infra.ledger :as ledger]
             [clio.infra.runtime :as clio-runtime]
             [open-hax.sol.extern.clio-admission :as admission]
+            [open-hax.sol.extern.ledger-sync-fault :as sync-fault]
             [open-hax.sol.extern.platform :as platform]
             [open-hax.sol.infra.agent.clio-store :as clio-store]
             [open-hax.sol.infra.agent.episode-ledger :as episode-ledger]
@@ -87,6 +88,39 @@
         (is (identical? failure
                         (try (clio-store/open-store directory)
                              (catch :default cause cause)))))
+      (finally (remove-directory! directory)))))
+
+(defn- refused-open [directory]
+  (try (clio-store/open-store directory)
+       nil
+       (catch :default cause
+         (loop [error cause]
+           (if-let [underlying (ex-cause error)]
+             (recur underlying)
+             (:sol/test-error (ex-data error)))))))
+
+(deftest failed-create-and-reopen-refuse-unflushed-ledger-test
+  (let [directory (temporary-directory)
+        file (str directory "/events.edn")]
+    (try
+      (sync-fault/with-failure!
+        file
+        (fn []
+          (is (= :ledger-sync (refused-open directory)))
+          (is (fs/existsSync file) "A failed creation retains its visible inode")
+          (is (= "" (fs/readFileSync file "utf8")))
+          (is (= :ledger-sync (refused-open directory))
+              "Reopening must not acknowledge the inode while its flush still fails")))
+      (let [store (clio-store/open-store directory)]
+        (is (empty? (clio-store/read-envelopes store)))
+        (clio-store/append-envelope! store first-envelope)
+        (let [bytes (fs/readFileSync file "utf8")]
+          (sync-fault/with-failure!
+            file
+            #(is (= :ledger-sync (refused-open directory))))
+          (is (= bytes (fs/readFileSync file "utf8")))
+          (is (= [first-envelope]
+                 (clio-store/read-envelopes (clio-store/open-store directory))))))
       (finally (remove-directory! directory)))))
 
 (defn- append-with-overlap!

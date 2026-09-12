@@ -163,6 +163,7 @@
   (batch-translate [_ batch]
     (local/perform
      #(let [batch-id (host/id)]
+        (law/require! (sequential? batch) :invalid-batch "Translation batch must be a sequence")
         (local/transact!
          store
          (fn [_]

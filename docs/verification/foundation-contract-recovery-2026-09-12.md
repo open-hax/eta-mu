@@ -69,3 +69,30 @@ The original rescued typed driver was split so a compiler failure cannot hide
 the independent timestamp, map-admission, or graph-result regressions. Earlier
 identity tests are not claimed for this reconstructed source. Combined
 current-head remote reviewer closure remains pending.
+
+## Exact-head successor review
+
+Codex findings `3996093510` and `3996093511` exposed two remaining JavaScript
+boundary mismatches. Fresh native tests failed with explicit `undefined`
+being decoded to a rejected nil session and with three `Promise<void>` calls
+returning null. Optional arguments are now normalized before decoding, so
+explicit `undefined` follows omission while explicit null retains its existing
+refusal. All four declared `Promise<void>` operations resolve to undefined only
+after their underlying work completes. Reopened state proves close, archive,
+and label mutations were persisted. The corrected full guarded protocol suite
+passes 71 CLJS tests / 217 assertions and 10 native Node tests, zero skips;
+test and ESM builds remain 136 / 111 files with zero warnings. Strict types and
+kondo remain clean.
+
+Finding `3996093514` was reproduced by the actual workflow audit: the shared
+warning-regression path existed in both hosted workflow files but not the two
+authoritative resource path sets. The resource trigger and gate paths now
+include that file, and the local gate projection was regenerated through the
+workflow CLI. The audit now reports no drift; projection check matches all ten
+gates. Four workflow tests / 44 assertions and six actual native warning-gate
+regressions pass. No warning enforcement or workflow permission was relaxed.
+
+A restored worktree initially lacked its eta-mu package node_modules link, so
+the first audit attempt failed to resolve `yaml`. Linking the already installed
+shared dependency directory restored the command without another install; the
+subsequent audit reproduced the real two-workflow drift before correction.

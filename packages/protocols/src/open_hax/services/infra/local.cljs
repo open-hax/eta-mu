@@ -36,6 +36,7 @@
     (let [store {:directory directory :file file
                  :runtime (runtime/open schemas law/catalog)}]
       (history store)
+      (ledger/ensure-durable! (get-in store [:runtime :schema/revisions]) file)
       store)))
 
 (defn transact! [store transition]

@@ -51,6 +51,7 @@
                  :admission-file (ensure-admission-lock! (str directory "/admission.lock"))
                  :clio-runtime (runtime/open schema-directory episode-law/catalog)}]
       (canonical-events store)
+      (ledger/ensure-durable! (:schema/revisions (runtime/refresh (:clio-runtime store))) ledger-file)
       store)))
 
 (defn- retry-committed-envelope!

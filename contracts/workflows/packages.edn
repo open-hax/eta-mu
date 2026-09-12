@@ -64,7 +64,8 @@
    :workflow/triggers
    [{:on/event :pull-request
      :on/paths ["packages/sol/**" "packages/clio/**" "packages/turn-processor/**" "packages/eta-mu/**"
-                ".github/workflows/sol-ci.yml" "package.json" "pnpm-lock.yaml"
+                ".github/workflows/sol-ci.yml" ".github/scripts/package-warning-gates.test.mjs"
+                "package.json" "pnpm-lock.yaml"
                 "pnpm-workspace.yaml"]}]
    :workflow/jobs
    [{:job/id "verify"
@@ -73,7 +74,7 @@
                 :gate/check "Sol CI"
                 :gate/needs-repos ["katamorph"]
                 :gate/paths ["packages/sol/" "packages/clio/" "packages/turn-processor/" "packages/eta-mu/"
-                             ".github/workflows/sol-ci.yml" "package.json"
+                             ".github/workflows/sol-ci.yml" ".github/scripts/package-warning-gates.test.mjs" "package.json"
                              "pnpm-lock.yaml" "pnpm-workspace.yaml"]}
      :job/steps
      [{:step/run "pnpm --dir packages/sol lint" :step/gate true}
@@ -87,13 +88,15 @@
    :workflow/emit false
    :workflow/triggers
    [{:on/event :pull-request
-     :on/paths ["packages/axxium/**" ".github/workflows/axxium-ci.yml" "pnpm-lock.yaml"]}]
+     :on/paths ["packages/axxium/**" ".github/workflows/axxium-ci.yml"
+                ".github/scripts/package-warning-gates.test.mjs" "pnpm-lock.yaml"]}]
    :workflow/jobs
    [{:job/id "verify"
      :job/name "Axxium CI"
      :job/gate {:gate/id "axxium"
                 :gate/check "Axxium CI"
                 :gate/paths ["packages/axxium/" ".github/workflows/axxium-ci.yml"
+                             ".github/scripts/package-warning-gates.test.mjs"
                              "pnpm-lock.yaml"]}
      :job/steps
      [{:step/run "cd packages/axxium && clj-kondo --lint src/cljs test/cljs"

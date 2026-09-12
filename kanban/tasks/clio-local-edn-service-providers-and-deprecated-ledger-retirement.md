@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789212712188-0.42kzb8khwzod8gum7wy"
+write-id: "1789214416261-0.v1m9cjr7v4oeomlpsgg"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "in_progress"
@@ -60,5 +60,11 @@ PR334 review follow-up implemented and checked: 3995801487 Sol uses EDN by defau
 Recovery follow-up for actual PR334 findings: reproduce visible-but-unflushed exact retries, add locked canonical reflush in both native hosts and projection-only service acknowledgments, preserve generic record contracts as optional unknown and nullable missing updates, protect generated user time and record maps/IDs, and await Sol worker close before fixture cleanup. Separate native failure-first tests and package lint/test/build are required; previous lost-tree evidence is not inherited.
 
 Fresh recovery gates pass: Clio BB25/75, NBB63/158, JVM65/182, Shadow63/158 (115 files,0 warnings); protocol CLJS71/217 plus8 actual Node tests/no skips, strict TS and kondo0/0. Both native kernel and projection-only service retry regressions failed against prior behavior before fixes. Sol141/599, nativeworker-close1test, actual2process wire-ID verifier accepted1/refused1/replayed1, server201files0warnings, lint0/0. Three-reviewer successor requests remain pending; no repository-wide build or physical power-loss guarantee is claimed.
+
+PR334 successor findings at f221: reproduce and repair uncertain empty-ledger creation/reopen durability by validating and forcing the owning ledger inode and parent before acknowledgment, preserving visible files. Native Node/JVM failure injection must prove both creation failure phases and retry refusal/order; real protocols and Sol reopen consumers must fail before the fence exists. Delegate optional undefined arguments, Promise<void> values, and authoritative workflow warning trigger drift to foundation_contracts; their new failure-first gates are green at 7d9daba. No merge or clean-review claim while current findings remain.
+
+CodeRabbit successor finding 3996101377 also confirmed: batch-translate nil currently maps to an empty change vector and returns a batch ID. Add sequence-shape admission before mapping, with public JavaScript null/undefined/non-array refusal and byte-identical ledger regression plus valid batch acceptance. This correction remains inside the current provider contract recovery scope.
+
+Fresh successor verification: actual creation/reopen fault regressions failed first (Node7/JVM6/protocols2/Sol2), then Clio BB25/75, JVM66/198, NBB+Shadow64/174 all pass; Shadow115files0warnings and kondo/boundary0/0. Protocols71/217 plus13nativeNode tests/no skips, test136/lib111 zero compiler warnings, strictTS and kondo0/0. Sol142/607 plus native worker-close test, test215/server201 files0warnings. Optional undefined/Promise<void> RED2 and authoritative warning workflow audit RED2drifts now green (4tests44assertions+6native warning tests). Missing translation batch RED1 now rejects before changes. Actual current findings fixed in source; publication and new three-reviewer loop still required, so card remains in progress.
 
 ---
