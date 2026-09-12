@@ -63,6 +63,13 @@ event. Reads reconstruct projections from validated history. Exact event
 retries do not append twice; malformed history, missing ledger beside known
 schemas, conflicting IDs and stale concurrent writes are refused.
 
+Concurrent first openers share the winner of the exclusive ledger create. Only
+the native `EEXIST` race is reopened, and the winning history still undergoes
+canonical validation. Other filesystem errors propagate; a missing ledger
+beside known schemas is never silently recreated. `pnpm test:concurrent-open`
+runs two actual Node processes through this race and verifies both documents
+survive a subsequent reopen.
+
 Event retry identity compares the complete originally submitted envelope,
 preserved separately from generated defaults in the same transaction. Dropping
 a payload or adding a formerly omitted default changes that intent and is
