@@ -1,0 +1,112 @@
+Picked up JAVA_TOOL_OPTIONS: -Duser.home=/workspace/scratch/3655842e43cf/runtime-restored/jvm-homes/session-vDLS81 -Djavax.net.ssl.trustStore=/workspace/scratch/3655842e43cf/runtime-restored/trust/cacerts -Djavax.net.ssl.trustStorePassword=changeit -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=36417 -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=36417 -Dhttp.nonProxyHosts=localhost|127.*|[::1]|0.0.0.0 -XX:+PerfDisableSharedMem -XX:ActiveProcessorCount=4 -Xmx2g
+Picked up JAVA_TOOL_OPTIONS: -Duser.home=/workspace/scratch/3655842e43cf/runtime-restored/jvm-homes/session-vDLS81 -Djavax.net.ssl.trustStore=/workspace/scratch/3655842e43cf/runtime-restored/trust/cacerts -Djavax.net.ssl.trustStorePassword=changeit -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=36417 -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=36417 -Dhttp.nonProxyHosts=localhost|127.*|[::1]|0.0.0.0 -XX:+PerfDisableSharedMem -XX:ActiveProcessorCount=4 -Xmx2g
+[:separator-test] Compiling ...
+========= Running Tests =======================
+no "source-map-support" (run "npm install source-map-support --save-dev" to get it)
+
+Testing rheos.backend.domain.board-test
+
+Testing rheos.backend.domain.compose-condition-test
+
+Testing rheos.backend.domain.compose-test
+
+Testing rheos.backend.domain.events-test
+
+Testing rheos.backend.domain.github-label-projection-test
+
+Testing rheos.backend.domain.kanban-projection-test
+
+Testing rheos.backend.domain.task-create-metadata-test
+
+Testing rheos.backend.domain.task-create-test
+
+Testing rheos.backend.domain.transition-test
+
+Testing rheos.backend.extern.uri-test
+
+Testing rheos.backend.infra.agent-tools-test
+rheos: transition rejected: No transition from 'review' to 'in_review'
+{
+  "ok": true,
+  "uuid": "t1",
+  "from": "breakdown",
+  "to": "ready"
+}
+{
+  "ok": true,
+  "uuid": "t1",
+  "frontmatter": {
+    "uuid": "t1",
+    "title": "Task One",
+    "status": "incoming",
+    "priority": "P3",
+    "dependency": [
+      "dep-a",
+      "dep-b"
+    ],
+    "write-id": "1789242705497-0.9muzpuynvlwyl50ctk"
+  }
+}
+{
+  "ok": true,
+  "uuid": "t1",
+  "frontmatter": {
+    "uuid": "t1",
+    "title": "Task One",
+    "status": "incoming",
+    "priority": "P3",
+    "dependency": [],
+    "write-id": "1789242705531-0.f4hfzwj95bv26l2lrev"
+  }
+}
+
+Testing rheos.backend.infra.cli-test
+
+Testing rheos.backend.infra.config-card-creation-test
+
+Testing rheos.backend.infra.config-test
+
+Testing rheos.backend.infra.github-issue-preflight-test
+
+Testing rheos.backend.infra.github-issues-test
+
+Testing rheos.backend.infra.store-test
+
+Testing rheos.backend.infra.task-create-conflict-test
+
+Testing rheos.backend.infra.task-create-test
+
+Testing rheos.backend.infra.task-edit-test
+
+Testing rheos.backend.infra.task-store-test
+
+Testing rheos.backend.infra.task-writeback-test
+
+Testing rheos.backend.infra.transition-test
+
+Testing rheos.backend.infra.view-store-test
+
+Testing rheos.backend.infra.watcher-test
+
+Testing rheos.backend.law.condition-test
+
+Testing rheos.backend.law.frontmatter-test
+
+Testing rheos.backend.law.fsm-test
+
+Testing rheos.backend.law.github-label-projection-test
+
+Testing rheos.backend.shape.content-parser-test
+
+Testing rheos.backend.shape.frontmatter-test
+
+Testing rheos.backend.shape.kanban-test
+
+Testing rheos.backend.shape.markdown-delimiter-test
+
+Testing rheos.backend.shape.markdown-document-test
+
+Ran 216 tests containing 1278 assertions.
+0 failures, 0 errors.
+===============================================
+[:separator-test] Build completed. (161 files, 160 compiled, 0 warnings, 49.12s)

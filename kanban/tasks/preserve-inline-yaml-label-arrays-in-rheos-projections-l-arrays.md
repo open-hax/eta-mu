@@ -4,7 +4,7 @@ labels: "rheos, github, projection, data-integrity"
 dependency: []
 parent: "rheos-ledger-authoritative-projections"
 type: "task"
-write-id: "1789239295081-0.dkn1x9368aj0mxst4ut"
+write-id: "1789242989050-0.hos3gwydnhnowm94mr5"
 title: "Preserve inline YAML label arrays in Rheos projections"
 priority: "P0"
 status: "review"
@@ -52,5 +52,9 @@ Ordinary restack complete at 707e132e with exact parents d5c458 and published Cl
 Scoped CodeRabbit5647795596 repair: retain the existing single-line inline string-sequence contract. Prove that physical LF, CR and form feed after opening delimiter, comma or closing delimiter and inside quoted members fail closed; spaces/tabs and literal escaped backslash-n remain supported. Restrict scanner whitespace and quoted token admission without extending member syntax. Run portable and native RED before the minimal repair, full Rheos/parser gates and isolated release outputs. Preserve the shared verified CLI artifact used by other agents; no remote writes.
 
 CodeRabbit 5647795596 repaired in c11d5e84 on local f3242759, whose tree equals published 7fb29118. Physical LF, CR, and form feed now refuse the complete inline sequence; spaces/tabs and literal quoted escape bytes retain their behavior. Initial JVM and compiled Node RED each had 30 failures; the adjacent flat-reader trim discrepancy reproduced 3 further failures before preserving raw sequence suffixes. Final JVM 13/118, full Rheos 215/1227 in autorun and separate Node, CLI 174/391 plus workflows 6/78, zero-error/zero-warning lint, and all four isolated release targets pass. Shared CLI hashes remain unchanged. Root independent scoped parser review clear. See docs/verification/rheos-inline-label-projection.md; no remote writes.
+
+Scoped PR335 Codex3997254446 follow-on: reproduce physical form feed between key colon and opening bracket being erased by the task content reader while raw board decoding refuses it. Preserve raw sequence admission through both readers, allow spaces/tabs unchanged, omit the whole malformed field without scalar fallback, and retain other frontmatter/body fields. Run native failure-first parity, complete Rheos and required CLI gates, JVM grammar and all four isolated releases with zero warnings. Existing shared CLI artifacts stay unchanged; parent owns restack and hosted re-review.
+
+PR335 Codex3997254446 repaired in21c19e2c on local2bea6c18, whose tree equals publishedb5f80. Pre-bracket raw whitespace now reaches canonical admission after stripping only ASCII spaces/tabs; malformed arrays cannot fall through as scalars. Native failure-first12tests115assertions9failures now full Rheos216/1278 twice, JVM13/118, required CLI174/391 plus workflows6/78, lint0/0 and four releases111/115/75/95 inputs0warnings. Compiler RED reported9failures but returned0; separate emitted Node correctly returned1, and both logs are retained. New compiled CLI reads this card; shared CLI hashes unchanged. Parent scoped source peer clear. Exact raw transcripts and hash index: docs/verification/evidence/rheos-separator-2026-09-12. Parent owns later current-identity restack and hosted successor re-review; no remote writes.
 
 ---

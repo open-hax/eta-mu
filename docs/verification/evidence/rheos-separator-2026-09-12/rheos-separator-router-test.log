@@ -1,0 +1,91 @@
+
+> eta-mu@1.1.1 test /workspace/scratch/3655842e43cf/eta-rheos-restored/packages/eta-mu
+> shadow-cljs compile test && node target/eta-mu-test.cjs && pnpm test:workflows
+
+shadow-cljs - config: /workspace/scratch/3655842e43cf/eta-rheos-restored/packages/eta-mu/shadow-cljs.edn
+Picked up JAVA_TOOL_OPTIONS: -Duser.home=/workspace/scratch/3655842e43cf/runtime-restored/jvm-homes/session-yFqCR7 -Djavax.net.ssl.trustStore=/workspace/scratch/3655842e43cf/runtime-restored/trust/cacerts -Djavax.net.ssl.trustStorePassword=changeit -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=38889 -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=38889 -Dhttp.nonProxyHosts=localhost|127.*|[::1]|0.0.0.0 -XX:+PerfDisableSharedMem -XX:ActiveProcessorCount=4 -Xmx2g
+[:test] Compiling ...
+[:test] Build completed. (200 files, 1 compiled, 0 warnings, 7.56s)
+no "source-map-support" (run "npm install source-map-support --save-dev" to get it)
+
+Testing eta-mu.domain.router-test
+
+Testing eta-mu.domain.session-test
+
+Testing eta-mu.domain.tools.edit-test
+
+Testing eta-mu.domain.tools.find-test
+
+Testing eta-mu.domain.tools.glob-test
+
+Testing eta-mu.domain.tools.grep-test
+
+Testing eta-mu.domain.tools.ls-test
+
+Testing eta-mu.domain.tools.read-test
+
+Testing eta-mu.domain.tools.truncate-test
+
+Testing eta-mu.extern.child-process-test
+[child_process] pid 88 ignored SIGTERM after 2000ms; escalating to SIGKILL
+
+Testing eta-mu.extern.openai-test
+
+Testing eta-mu.extern.readline-test
+
+Testing eta-mu.infra.cli.commands.agent-test
+
+Testing eta-mu.infra.cli.commands.kanban-test
+
+Testing eta-mu.infra.cli.commands.sol-test
+
+Testing eta-mu.infra.cli.router-test
+
+Testing eta-mu.infra.cli.tui-repl-test
+
+Testing eta-mu.infra.session-test
+
+Testing eta-mu.infra.tools.bash-test
+
+Testing eta-mu.infra.tools.edit-test
+
+Testing eta-mu.infra.tools.find-test
+
+Testing eta-mu.infra.tools.grep-test
+
+Testing eta-mu.infra.tools.ls-test
+
+Testing eta-mu.infra.tools.read-test
+
+Testing eta-mu.infra.tools.write-test
+
+Testing eta-mu.law.command-test
+
+Testing eta-mu.law.session-test
+
+Testing eta-mu.law.tools-test
+
+Testing eta-mu.shape.args-test
+
+Testing eta-mu.shape.command-resource-test
+
+Ran 174 tests containing 391 assertions.
+0 failures, 0 errors.
+
+> eta-mu@1.1.1 test:workflows /workspace/scratch/3655842e43cf/eta-rheos-restored/packages/eta-mu
+> nbb commands/workflows_test.cljs
+
+7 workflow resource(s) in contracts/workflows
+
+  main-pr-gate     eta-mu-main-pr-gate          5 job(s), 3 gate(s)  [ci.edn]
+  rheos            rheos                        1 job(s), 1 gate(s)  [ci.edn]
+  coverage         coverage                     2 job(s), 2 gate(s)  [packages.edn]
+  sol-ci           Sol CI                       1 job(s), 1 gate(s)  [packages.edn]
+  axxium-ci        Axxium CI                    1 job(s), 1 gate(s)  [packages.edn]
+  eta-mu-extensions-tests eta-mu-extensions-tests      1 job(s), 1 gate(s)  [packages.edn]
+  rheos-github-sync-ci Rheos GitHub Sync CI         1 job(s), 1 gate(s)  [packages.edn]
+
+Testing workflows-test
+
+Ran 6 tests containing 78 assertions.
+0 failures, 0 errors.

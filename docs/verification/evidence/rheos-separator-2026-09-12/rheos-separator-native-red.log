@@ -1,0 +1,60 @@
+no "source-map-support" (run "npm install source-map-support --save-dev" to get it)
+
+Testing rheos.backend.shape.content-parser-test
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+["\f" "[]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels []}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+["\f" "[ci]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels ["ci"]}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+["\f" "[\"security,review\", ci]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels ["security,review" "ci"]}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+[" \f\t" "[]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels []}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+[" \f\t" "[ci]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels ["ci"]}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+[" \f\t" "[\"security,review\", ci]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels ["security,review" "ci"]}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+["\t\f " "[]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels []}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+["\t\f " "[ci]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels ["ci"]}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+["\t\f " "[\"security,review\", ci]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels ["security,review" "ci"]}))
+
+Ran 12 tests containing 115 assertions.
+9 failures, 0 errors.

@@ -1,0 +1,5 @@
+{
+  "ok": true,
+  "uuid": "rheos-preserve-inline-yaml-label-arrays",
+  "comment": "PR335 Codex3997254446 repaired in21c19e2c on local2bea6c18, whose tree equals publishedb5f80. Pre-bracket raw whitespace now reaches canonical admission after stripping only ASCII spaces/tabs; malformed arrays cannot fall through as scalars. Native failure-first12tests115assertions9failures now full Rheos216/1278 twice, JVM13/118, required CLI174/391 plus workflows6/78, lint0/0 and four releases111/115/75/95 inputs0warnings. Compiler RED reported9failures but returned0; separate emitted Node correctly returned1, and both logs are retained. New compiled CLI reads this card; shared CLI hashes unchanged. Parent scoped source peer clear. Exact raw transcripts and hash index: docs/verification/evidence/rheos-separator-2026-09-12. Parent owns later current-identity restack and hosted successor re-review; no remote writes."
+}

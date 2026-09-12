@@ -1,0 +1,133 @@
+{
+  "source_commit": "21c19e2c8e9f2df0fb2ce1a33eb4ae1de010224c",
+  "source_tree": "bb87f2ac3d929be69379734dd285d10db9de6cf1",
+  "local_parent": "2bea6c1822bc41b265cf7c24911c451deb52ad5c",
+  "published_parent": "b5f80e3c97983cf89e76956b0b0040c9322b6048",
+  "equivalent_parent_tree": "cd1050e14abb528b3331beecc27bd76c923c6cb0",
+  "review": "https://github.com/open-hax/eta-mu/pull/335#discussion_r3997254446",
+  "thread": "PRRT_kwDORu27H86hyvc3",
+  "source_files": {
+    "packages/rheos/src/rheos/backend/shape/content_parser.cljs": {
+      "bytes": 6242,
+      "sha256": "fbe04e4927c848f1693ede8bdafb5a91c0ca8f6608a353eae4ea2fa479506bfe"
+    },
+    "packages/rheos/test/rheos/backend/shape/content_parser_test.cljs": {
+      "bytes": 10712,
+      "sha256": "ad79fa2d287afbdcc3970f7e2359abd485f2b4c228577db7255fbbb4d28d2810"
+    },
+    "packages/rheos/src/rheos/backend/shape/frontmatter.cljc": {
+      "bytes": 3482,
+      "sha256": "eabdb9212e9dc727ed2f8b7c030623c55b260dee73441da2daf33968609c3ae8"
+    }
+  },
+  "artifacts": {
+    "packages/rheos/target/separator-test/test.cjs": {
+      "bytes": 55788,
+      "sha256": "896f731d0789babd3d166323c064c6ea784c823048771f0c421e5fc2edae515a"
+    },
+    "packages/rheos/target/separator-release/cli.cjs": {
+      "bytes": 2155629,
+      "sha256": "116ba6ec0541d4706f610540e75120684a8a9afb31057b09dc727457b50c4746"
+    },
+    "packages/rheos/target/separator-release/github-sync.cjs": {
+      "bytes": 1789056,
+      "sha256": "5d45cf81ea6f54e8721e3de89f8c8298d21e3bc535c5cf1f1407f72fac71d152"
+    },
+    "packages/rheos/dist/cli.cjs": {
+      "bytes": 2155485,
+      "sha256": "35eb33a238f4a869091302b1ec0c7aa7a46f7a2b0ab9f069899ee6539d5795d4"
+    },
+    "packages/eta-mu/dist-cli/index.cjs": {
+      "bytes": 2580914,
+      "sha256": "ea34a1952d1b2a3cf1e10a379737ae753cb5dc86688179148639024036ecfb76"
+    }
+  },
+  "runtimes": {
+    "node": "24.20.0",
+    "pnpm": "10.14.0",
+    "clj_kondo": "2026.08.04"
+  },
+  "red": {
+    "tests": 12,
+    "assertions": 115,
+    "failures": 9,
+    "errors": 0,
+    "compiler_exit": 0,
+    "native_exit": 1
+  },
+  "green": {
+    "rheos": {
+      "tests": 216,
+      "assertions": 1278,
+      "failures": 0,
+      "errors": 0,
+      "compiler_inputs": 161,
+      "compiler_warnings": 0,
+      "independent_native_run": true
+    },
+    "jvm": {
+      "tests": 13,
+      "assertions": 118,
+      "failures": 0,
+      "errors": 0
+    },
+    "eta_cli": {
+      "tests": 174,
+      "assertions": 391,
+      "failures": 0,
+      "errors": 0,
+      "compiler_inputs": 200,
+      "compiler_warnings": 0
+    },
+    "workflow_contracts": {
+      "tests": 6,
+      "assertions": 78,
+      "failures": 0,
+      "errors": 0
+    },
+    "rheos_release_inputs": {
+      "server": 111,
+      "cli": 115,
+      "github_sync": 75,
+      "app": 95
+    },
+    "rheos_release_warnings": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "eta_router_release": {
+      "inputs": 166,
+      "warnings": 0,
+      "isolated_output": true
+    }
+  },
+  "peer": {
+    "reviewer": "parent/root",
+    "scope": "two source/test files versus2bea6c18",
+    "confirmed_findings": 0,
+    "independent_test_run": false
+  },
+  "limitations": [
+    "No remote writes or merge. Parent owns current identity restack and hosted successor reviews.",
+    "Existing informational architecture diagnostics remain unchanged.",
+    "Shared CLI hashes verified unchanged; isolated proof outputs retain all declared runtime/test settings.",
+    "Compiler success is distinct from test success: actual RED native artifact exited1."
+  ],
+  "receipt": "c74446e2-423a-47e2-8c73-73b53cb759fd",
+  "reflection": "4f007868-e84c-4bc7-8796-a84fc85a12ce",
+  "initial_router_release": {
+    "exit": 1,
+    "reason": "config-merge was incorrectly shaped as a root builds map; corrected to per-build output-to override for existing cli target"
+  },
+  "source_unchanged_after_tested_commit": true,
+  "commands": {
+    "red": "clojure -M -e [existing test config with unique separator-red ID/output and content-parser-test namespace]; node target/separator-red/test.cjs",
+    "full": "clojure -M recovery/rheos-separator-verify.clj test; node target/separator-test/test.cjs",
+    "jvm": "clojure -M -e [clojure.test/run-tests rheos.backend.shape.frontmatter-test; explicit status]",
+    "rheos_lint": "pnpm run lint",
+    "releases": "clojure -M recovery/rheos-separator-verify.clj release",
+    "router_test": "pnpm test (packages/eta-mu)",
+    "router_lint": "pnpm run lint:kondo (packages/eta-mu)",
+    "router_release": "pnpm exec shadow-cljs --config-merge {:output-to target/separator-router/index.cjs} release cli",
+    "proof_script": "rheos-separator-verify.clj is exact existing script with single-line replaced by separator in build IDs and outputs"
+  }
+}

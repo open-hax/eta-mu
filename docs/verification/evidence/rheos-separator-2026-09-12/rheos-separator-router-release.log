@@ -1,0 +1,28 @@
+shadow-cljs - config: /workspace/scratch/3655842e43cf/eta-rheos-restored/packages/eta-mu/shadow-cljs.edn
+Picked up JAVA_TOOL_OPTIONS: -Duser.home=/workspace/scratch/3655842e43cf/runtime-restored/jvm-homes/session-GdCdop -Djavax.net.ssl.trustStore=/workspace/scratch/3655842e43cf/runtime-restored/trust/cacerts -Djavax.net.ssl.trustStorePassword=changeit -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=33121 -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=33121 -Dhttp.nonProxyHosts=localhost|127.*|[::1]|0.0.0.0 -XX:+PerfDisableSharedMem -XX:ActiveProcessorCount=4 -Xmx2g
+no build with id: :separator-router
+{:build-id :separator-router, :known-builds #{:e2e-test :npm :cli :test}}
+ExceptionInfo: no build with id: :separator-router
+	shadow.cljs.devtools.cli-actual/do-build-commands (cli_actual.clj:44)
+	shadow.cljs.devtools.cli-actual/do-build-commands (cli_actual.clj:37)
+	shadow.cljs.devtools.cli-actual/main/body-fn--16795--auto----17364 (cli_actual.clj:161)
+	shadow.cljs.devtools.cli-actual/main (cli_actual.clj:160)
+	shadow.cljs.devtools.cli-actual/main (cli_actual.clj:131)
+	clojure.core/apply (core.clj:671)
+	clojure.core/apply (core.clj:662)
+	shadow.cljs.devtools.cli-actual/-main (cli_actual.clj:214)
+	shadow.cljs.devtools.cli-actual/-main (cli_actual.clj:212)
+	clojure.lang.Var.applyTo (Var.java:707)
+	clojure.core/apply (core.clj:667)
+	clojure.core/apply (core.clj:662)
+	shadow.cljs.devtools.cli/-main (cli.clj:75)
+	shadow.cljs.devtools.cli/-main (cli.clj:67)
+	clojure.lang.Var.applyTo (Var.java:707)
+	clojure.core/apply (core.clj:667)
+	clojure.main/main-opt (main.clj:515)
+	clojure.main/main-opt (main.clj:511)
+	clojure.main/main (main.clj:665)
+	clojure.main/main (main.clj:617)
+	clojure.lang.Var.applyTo (Var.java:707)
+	clojure.main.main (main.java:40)
+

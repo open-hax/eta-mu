@@ -1,0 +1,13 @@
+
+> @eta-mu/rheos@0.1.0 lint /workspace/scratch/3655842e43cf/eta-rheos-restored/packages/rheos
+> clj-kondo --lint src test
+
+src/rheos/backend/domain/compose.cljs:7:14: info: a domain namespace must not require rheos.backend.infra.ledger (infra): domain depends on law, shape, and its own layer.
+src/rheos/backend/domain/compose.cljs:8:14: info: a domain namespace must not require rheos.backend.infra.task-store (infra): domain depends on law, shape, and its own layer.
+src/rheos/backend/law/fsm.cljs:7:14: info: a law namespace must not require the host: "node:child_process". Decode foreign data in extern.*, orchestrate effects in infra.*.
+src/rheos/ui/domain/layout.cljs:11:14: info: a domain namespace must not require rheos.ui.infra.api (infra): domain depends on law, shape, and its own layer.
+src/rheos/ui/domain/layout.cljs:12:14: info: a domain namespace must not require rheos.ui.infra.ledger-stream (infra): domain depends on law, shape, and its own layer.
+src/rheos/ui/domain/orchestrator.cljs:17:14: info: a domain namespace must not require rheos.ui.infra.chat-session (infra): domain depends on law, shape, and its own layer.
+src/rheos/ui/domain/sidebar.cljs:7:14: info: a domain namespace must not require the host: "marked". Decode foreign data in extern.*, orchestrate effects in infra.*.
+src/rheos/ui/domain/sidebar.cljs:8:14: info: a domain namespace must not require the host: "dompurify". Decode foreign data in extern.*, orchestrate effects in infra.*.
+linting took 4726ms, errors: 0, warnings: 0

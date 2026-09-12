@@ -1,0 +1,4 @@
+shadow-cljs - config: /workspace/scratch/3655842e43cf/eta-rheos-restored/packages/eta-mu/shadow-cljs.edn
+Picked up JAVA_TOOL_OPTIONS: -Duser.home=/workspace/scratch/3655842e43cf/runtime-restored/jvm-homes/session-H7IFHH -Djavax.net.ssl.trustStore=/workspace/scratch/3655842e43cf/runtime-restored/trust/cacerts -Djavax.net.ssl.trustStorePassword=changeit -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=45865 -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=45865 -Dhttp.nonProxyHosts=localhost|127.*|[::1]|0.0.0.0 -XX:+PerfDisableSharedMem -XX:ActiveProcessorCount=4 -Xmx2g
+[:cli] Compiling ...
+[:cli] Build completed. (166 files, 0 compiled, 0 warnings, 24.79s)

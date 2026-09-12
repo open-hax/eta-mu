@@ -177,3 +177,71 @@ truncated. It confirmed complete unchanged prefixes for the kanban ledger
 (1,758,554 bytes), receipt ledger (268,854), reflections (36,579), and session
 memory (32,541). The small result is retained in the scratch log
 `rheos-single-line-prefix-proof.json`.
+
+## Review repair: preserve the pre-bracket separator
+
+Actual Codex [3997254446](https://github.com/open-hax/eta-mu/pull/335#discussion_r3997254446)
+found a second raw-input discrepancy on published `b5f80e3c`: the task reader's
+array regex consumed physical form feed between the colon and opening bracket.
+The shared scanner therefore never saw it, while the board's `parse-flat`
+correctly omitted the malformed field. Local parent `2bea6c18` has the exact
+published tree `cd1050e14abb528b3331beecc27bd76c923c6cb0`.
+
+Source repair `21c19e2c8e9f2df0fb2ce1a33eb4ae1de010224c` retains the complete
+pre-bracket whitespace in the array capture and removes only ASCII spaces/tabs
+before invoking the existing scanner. Keeping the malformed value in the array
+branch also prevents it from falling through as an unquoted scalar. Scalar,
+dependency cleanup, quoted-member, body, and remaining frontmatter behavior is
+unchanged. The owning card received the scoped plan through the existing verified
+Rheos CLI before implementation; no historical card or ledger bytes were edited.
+
+The new native regression compares both readers over nine malformed prefix/value
+pairs and twelve valid horizontal-separator cases. It checks ordered quoted-comma
+and plain members, empty arrays, an adjacent status field, and preserved body.
+Before repair, the focused suite ran **12 tests / 115 assertions, 9 failures,
+0 errors**. Shadow compilation itself still exited0 after reporting those test
+failures; executing the same emitted Node artifact independently exited**1**.
+Both raw transcripts are retained rather than treating compiler completion as a
+passing test result.
+
+Fresh final gates against the unchanged repaired source:
+
+| Gate | Result |
+|---|---|
+| Full Rheos compiler autorun and separate native Node | 216 tests / 1,278 assertions each; 0 failures, 0 errors |
+| Rheos test compilation | 161 inputs; 0 warnings |
+| Portable JVM grammar | 13 tests / 118 assertions; 0 failures, 0 errors |
+| Required eta-mu CLI tests and workflow contracts | 174 / 391 and 6 / 78; 0 failures, 0 errors |
+| CLI test compilation | 200 inputs; 0 warnings |
+| Rheos and CLI configured linters | 0 errors, 0 warnings |
+| Rheos server / CLI / GitHub / app releases | 111 / 115 / 75 / 95 inputs; 0 warnings in every target |
+| Actual new Rheos CLI | Owning card read successfully through the emitted release |
+
+The original 50,000-character timing guards remain unchanged and pass. Existing
+architecture diagnostics retain their configured informational level; no linter
+policy, suppression, dependency, lockfile or supported grammar was changed.
+The independent parent source review found no remaining scoped defect; that
+review did not independently rerun the gates.
+
+The existing verification script was copied to scratch with only `single-line`
+replaced by `separator` in build IDs/output paths. It retains the full advertised
+namespace selection, autorun and all four release configurations. Outputs live
+under `target/separator-*`; SHA256 checks prove both shared CLI artifacts remain
+unchanged. Node24.20.0, pnpm10.14.0 and clj-kondo2026.08.04 reuse the shared
+toolchain and dependency caches. JVM runs use the supported private performance
+file option plus four processors and a 2GiB heap; performance counters remain on.
+
+Raw failure and success logs, exit files, the isolated proof script, current
+source/artifact hashes and a SHA256 index are committed under
+[`evidence/rheos-separator-2026-09-12`](evidence/rheos-separator-2026-09-12).
+Parent coordination owns the later identity-base restack, actual hosted
+re-review and publication. This repair makes no whole-stack or merge claim.
+
+The closeout router was also freshly released to an isolated output: 166 inputs,
+zero warnings. An initial `--config-merge` invocation incorrectly supplied a
+root-level `:builds` map and failed with `no build with id: :separator-router`.
+The installed Shadow source confirms that this option merges one selected
+build's configuration; applying only `:output-to` to the declared `cli` target
+produced the correct artifact without changing shared output bytes. Both the
+failed attempt and corrected release log are retained. The rebuilt router
+appended the canonical receipt/reflection and `receipt validate 1` passed.

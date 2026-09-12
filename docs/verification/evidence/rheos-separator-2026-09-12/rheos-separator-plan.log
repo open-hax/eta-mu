@@ -1,0 +1,5 @@
+{
+  "ok": true,
+  "uuid": "rheos-preserve-inline-yaml-label-arrays",
+  "comment": "Scoped PR335 Codex3997254446 follow-on: reproduce physical form feed between key colon and opening bracket being erased by the task content reader while raw board decoding refuses it. Preserve raw sequence admission through both readers, allow spaces/tabs unchanged, omit the whole malformed field without scalar fallback, and retain other frontmatter/body fields. Run native failure-first parity, complete Rheos and required CLI gates, JVM grammar and all four isolated releases with zero warnings. Existing shared CLI artifacts stay unchanged; parent owns restack and hosted re-review."
+}

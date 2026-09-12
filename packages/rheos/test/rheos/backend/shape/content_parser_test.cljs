@@ -62,6 +62,28 @@
       (is (= {} (:frontmatter result)))
       (is (= "No frontmatter here" (:content result))))))
 
+(deftest inline-array-leading-whitespace-reader-parity
+  (testing "form feed before the opening bracket cannot become an admitted array or scalar"
+    (doseq [prefix ["\f" " \f\t" "\t\f "]
+            value ["[]" "[ci]" "[\"security,review\", ci]"]]
+      (let [yaml (str "status: review\nlabels:" prefix value)
+            raw (str "---\n" yaml "\n---\nBody")
+            {:keys [frontmatter content]} (parser/parse-frontmatter raw)
+            projected (frontmatter/parse-flat yaml)]
+        (is (= {:status "review"} projected) (pr-str [prefix value]))
+        (is (= projected frontmatter) (pr-str [prefix value]))
+        (is (= "Body" content)))))
+  (testing "horizontal separators retain ordered values in both readers"
+    (doseq [prefix ["" " " "\t" " \t "]
+            [value expected] [["[]" []]
+                              ["[ci]" ["ci"]]
+                              ["[\"security,review\", ci]" ["security,review" "ci"]]]]
+      (let [yaml (str "labels:" prefix value)
+            raw (str "---\n" yaml "\n---\nBody")
+            frontmatter (:frontmatter (parser/parse-frontmatter raw))]
+        (is (= {:labels expected} frontmatter) (pr-str [prefix value]))
+        (is (= frontmatter (frontmatter/parse-flat yaml)) (pr-str [prefix value]))))))
+
 (deftest test-parse-sections
   (testing "parses single body section"
     (let [content "\n# Heading\nBody text"

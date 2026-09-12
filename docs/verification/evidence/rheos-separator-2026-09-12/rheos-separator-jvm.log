@@ -1,0 +1,7 @@
+Picked up JAVA_TOOL_OPTIONS: -Duser.home=/workspace/scratch/3655842e43cf/runtime-restored/jvm-homes/session-WYGRpR -Djavax.net.ssl.trustStore=/workspace/scratch/3655842e43cf/runtime-restored/trust/cacerts -Djavax.net.ssl.trustStorePassword=changeit -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=34235 -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=34235 -Dhttp.nonProxyHosts=localhost|127.*|[::1]|0.0.0.0 -XX:+PerfDisableSharedMem -XX:ActiveProcessorCount=4 -Xmx2g
+Picked up JAVA_TOOL_OPTIONS: -Duser.home=/workspace/scratch/3655842e43cf/runtime-restored/jvm-homes/session-WYGRpR -Djavax.net.ssl.trustStore=/workspace/scratch/3655842e43cf/runtime-restored/trust/cacerts -Djavax.net.ssl.trustStorePassword=changeit -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=34235 -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=34235 -Dhttp.nonProxyHosts=localhost|127.*|[::1]|0.0.0.0 -XX:+PerfDisableSharedMem -XX:ActiveProcessorCount=4 -Xmx2g
+
+Testing rheos.backend.shape.frontmatter-test
+
+Ran 13 tests containing 118 assertions.
+0 failures, 0 errors.

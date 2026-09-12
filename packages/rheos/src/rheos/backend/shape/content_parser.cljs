@@ -4,7 +4,10 @@
             [rheos.backend.shape.frontmatter :as frontmatter]))
 
 (defn- parse-inline-array [key raw-value]
-  (when-let [items (frontmatter/parse-canonical-string-sequence raw-value)]
+  ;; Keep control whitespace for the shared scanner to reject. Only horizontal
+  ;; separators may be removed before the opening bracket.
+  (when-let [items (frontmatter/parse-canonical-string-sequence
+                    (str/replace raw-value #"^[ \t]+" ""))]
     (cond
       ;; Historical Rheos rewrites produced dependency: [""] from an empty
       ;; vector. A dependency on the empty-string id is never meaningful, so
@@ -23,8 +26,8 @@
                            (cond
                              ;; Canonical array, or a bracket-prefixed value that
                              ;; must fail closed instead of becoming a scalar.
-                             (re-matches #"^(\w[\w_-]*):\s*(\[.*)$" line)
-                             (let [[_ k v] (re-matches #"^(\w[\w_-]*):\s*(\[.*)$" line)
+                             (re-matches #"^(\w[\w_-]*):(\s*\[.*)$" line)
+                             (let [[_ k v] (re-matches #"^(\w[\w_-]*):(\s*\[.*)$" line)
                                    items (parse-inline-array k v)]
                                (if (some? items)
                                  (assoc acc (keyword k) items)

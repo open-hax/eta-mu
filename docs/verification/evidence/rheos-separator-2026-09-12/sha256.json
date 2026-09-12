@@ -1,0 +1,138 @@
+{
+  "prefix-proof.json": {
+    "bytes": 903,
+    "sha256": "0606a131769f0479a7bf92ec2b2c205fcc21505848cb9f7a39de2869ce9e0e50"
+  },
+  "rheos-separator-current-cli-read.exit": {
+    "bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "rheos-separator-current-cli-read.json": {
+    "bytes": 9355,
+    "sha256": "15d293ecf6f48c6edf568ac4bd207e078a76aff2ca73690969ef1e9536371aab"
+  },
+  "rheos-separator-full-test.exit": {
+    "bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "rheos-separator-full-test.log": {
+    "bytes": 3501,
+    "sha256": "706728283002ab7755f2a907ecc27c0528b1191b6725931bee9d3ddaf97e7f47"
+  },
+  "rheos-separator-jvm.exit": {
+    "bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "rheos-separator-jvm.log": {
+    "bytes": 1033,
+    "sha256": "3310d28e52d67c0c40998c37ac27fb25750b5663f57bbad19934fc1c6c1cb0d6"
+  },
+  "rheos-separator-lint.exit": {
+    "bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "rheos-separator-lint.log": {
+    "bytes": 1520,
+    "sha256": "d530c9490c5d5025a368dc9ae803d0c767c8c56e1f0931ff0b01e5e9cb0dcb1f"
+  },
+  "rheos-separator-native-green.exit": {
+    "bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "rheos-separator-native-green.log": {
+    "bytes": 2369,
+    "sha256": "81bede5ceaa6d04cdc7930a6b592c8052a17ab9c8500987b02f3bacfc4761bb2"
+  },
+  "rheos-separator-native-red.exit": {
+    "bytes": 2,
+    "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+  },
+  "rheos-separator-native-red.log": {
+    "bytes": 3130,
+    "sha256": "449908aa550cea5d9d24920465c843318b98861c146b27abbb140422a96cfabe"
+  },
+  "rheos-separator-plan.log": {
+    "bytes": 674,
+    "sha256": "44cc60828c1c047d03a476438ab5e54a6b3156ed5211348c54ac4721cb7104ed"
+  },
+  "rheos-separator-receipt-validate.log": {
+    "bytes": 24,
+    "sha256": "e557ab3fdba6266cba1fda8b67eaa3a8348608e0664549bb0b19ab9fca5aa905"
+  },
+  "rheos-separator-receipt.log": {
+    "bytes": 1731,
+    "sha256": "8e9df2c461cf23d75b5bce4666e5a87ae91e6448ee4ea3598886754d9b6f5811"
+  },
+  "rheos-separator-red.exit": {
+    "bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "rheos-separator-red.log": {
+    "bytes": 4259,
+    "sha256": "f7b30e51b0dbe09b58b3998b87487fdf5e05845f41d8906abc330b9ad6221daa"
+  },
+  "rheos-separator-reflection.log": {
+    "bytes": 1424,
+    "sha256": "26d98bc648e6bfac9d38929f142baae74ae791c8c03343fea8b3baa6ddfd868a"
+  },
+  "rheos-separator-releases.exit": {
+    "bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "rheos-separator-releases.log": {
+    "bytes": 1384,
+    "sha256": "71854db20e053662fc6883b609598b897d82e9fea758ae80071f69a582e07947"
+  },
+  "rheos-separator-result-comment.log": {
+    "bytes": 914,
+    "sha256": "f6dba19e5d44f16205a4ee14d1b2e0291338ac6b02f4ae03cce58cc79170bf13"
+  },
+  "rheos-separator-router-lint.exit": {
+    "bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "rheos-separator-router-lint.log": {
+    "bytes": 549,
+    "sha256": "322cd7015cf44420edd117d94d634ea8315b59c07f0aadf0c72f970eb454067d"
+  },
+  "rheos-separator-router-release-green.exit": {
+    "bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "rheos-separator-router-release-green.log": {
+    "bytes": 656,
+    "sha256": "bf4577e7ed08c6f2b21b48d7eb97dab211d197c7111128d085c16220fefd37f2"
+  },
+  "rheos-separator-router-release.exit": {
+    "bytes": 2,
+    "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+  },
+  "rheos-separator-router-release.log": {
+    "bytes": 1764,
+    "sha256": "cb664ed8feea23b56a69d83c0ee448cfa03fa7a6031de9e0bc348576985a3e1b"
+  },
+  "rheos-separator-router-test.exit": {
+    "bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "rheos-separator-router-test.log": {
+    "bytes": 3051,
+    "sha256": "2442fa1f3afcda7b72db4ddf52d2dc9b19f5ef6dc74fcebb41a811fd1cb628eb"
+  },
+  "rheos-separator-shared-cli-after.log": {
+    "bytes": 71,
+    "sha256": "2813f38dd55c324684be57b7e8553e8362906142c4a4e6d0f80fc3366ba017d6"
+  },
+  "rheos-separator-shared-cli-before.log": {
+    "bytes": 195,
+    "sha256": "12e3e373cbc12276795d06427905e7ecd75d0403efc7a6cffa93b5bee2ca6fe8"
+  },
+  "rheos-separator-verify.clj": {
+    "bytes": 1019,
+    "sha256": "048a268de6de2da8e9e31e018304210ca558d1f35d6d39255c26de99f8766936"
+  },
+  "verification.json": {
+    "bytes": 4781,
+    "sha256": "40bda0629eacf734c00a3a0840863fc997d24a06fdc1de4159c2b53478cc4b91"
+  }
+}

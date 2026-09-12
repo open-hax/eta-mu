@@ -1,0 +1,30 @@
+[
+  {
+    "path": "kanban/.events/ledger.edn",
+    "parent_bytes": 1760693,
+    "parent_sha256": "c763ec196f3e4f8b14f0b7796d42e385b91d618144a2eb3f5c4777419220c71f",
+    "suffix_bytes": 2243,
+    "prefix_preserved": true
+  },
+  {
+    "path": "receipts.edn",
+    "parent_bytes": 270303,
+    "parent_sha256": "590eac81abea7cd6246541c334769145b304dd76d8a0090ee96483a2545d746f",
+    "suffix_bytes": 1647,
+    "prefix_preserved": true
+  },
+  {
+    "path": ".\u03b7\u03bc/session-reflections.edn",
+    "parent_bytes": 37818,
+    "parent_sha256": "5a8b937b59217c9243e52a133573faa9a072b3d2bfa3eb3b2e343ac31d16a4e9",
+    "suffix_bytes": 1320,
+    "prefix_preserved": true
+  },
+  {
+    "path": ".\u03b7\u03bc/session-mycology/ledger.md",
+    "parent_bytes": 33430,
+    "parent_sha256": "4edf37e1e32cd3001f1d17d35130a34d8d3df873ee7b053f713b47b1ed2a0946",
+    "suffix_bytes": 977,
+    "prefix_preserved": true
+  }
+]

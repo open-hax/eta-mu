@@ -1,0 +1,66 @@
+Picked up JAVA_TOOL_OPTIONS: -Duser.home=/workspace/scratch/3655842e43cf/runtime-restored/jvm-homes/session-9PFGWH -Djavax.net.ssl.trustStore=/workspace/scratch/3655842e43cf/runtime-restored/trust/cacerts -Djavax.net.ssl.trustStorePassword=changeit -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=32817 -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=32817 -Dhttp.nonProxyHosts=localhost|127.*|[::1]|0.0.0.0 -XX:+PerfDisableSharedMem -XX:ActiveProcessorCount=4 -Xmx2g
+Picked up JAVA_TOOL_OPTIONS: -Duser.home=/workspace/scratch/3655842e43cf/runtime-restored/jvm-homes/session-9PFGWH -Djavax.net.ssl.trustStore=/workspace/scratch/3655842e43cf/runtime-restored/trust/cacerts -Djavax.net.ssl.trustStorePassword=changeit -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=32817 -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=32817 -Dhttp.nonProxyHosts=localhost|127.*|[::1]|0.0.0.0 -XX:+PerfDisableSharedMem -XX:ActiveProcessorCount=4 -Xmx2g
+[:separator-red] Compiling ...
+========= Running Tests =======================
+no "source-map-support" (run "npm install source-map-support --save-dev" to get it)
+
+Testing rheos.backend.shape.content-parser-test
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+["\f" "[]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels []}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+["\f" "[ci]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels ["ci"]}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+["\f" "[\"security,review\", ci]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels ["security,review" "ci"]}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+[" \f\t" "[]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels []}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+[" \f\t" "[ci]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels ["ci"]}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+[" \f\t" "[\"security,review\", ci]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels ["security,review" "ci"]}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+["\t\f " "[]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels []}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+["\t\f " "[ci]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels ["ci"]}))
+
+FAIL in (inline-array-leading-whitespace-reader-parity) (rheos/backend/shape/content_parser_test.cljs:74:13)
+form feed before the opening bracket cannot become an admitted array or scalar
+["\t\f " "[\"security,review\", ci]"]
+expected: (= projected frontmatter)
+  actual: (not (= {:status "review"} {:status "review", :labels ["security,review" "ci"]}))
+
+Ran 12 tests containing 115 assertions.
+9 failures, 0 errors.
+===============================================
+[:separator-red] Build completed. (54 files, 53 compiled, 0 warnings, 19.59s)

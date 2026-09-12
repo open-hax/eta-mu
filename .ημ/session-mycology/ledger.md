@@ -421,3 +421,13 @@
   spore: none
   receipt-refs: 34c77f19-4310-42a0-a48b-ed72bc888c8f
   note: Native and JVM RED each produced30 failures before horizontal scanner whitespace and physical LF/CR/form-feed admission were repaired. Adjacent flat-reader trimming then reproduced3 failures; preserving the original sequence suffix fixes that discrepancy. Full Rheos215/1227, JVM13/118, CLI174/391 plus workflows6/78 and all four isolated releases/lint pass. Original 50k timing guards remain. Both shared CLI hashes are unchanged. Existing artifact-verification lesson reused; root scoped review clear; no remote writes. Sourcec11d5e84 and the verification report retain exact evidence.
+
+- ts: 2026-09-12T19:57:49Z
+  session: foresight-sandbox-rheos-separator
+  task: Repair actual PR335 Codex3997254446 raw pre-bracket whitespace parity
+  p-efficiency: 0.88
+  p-friction: 0.3
+  p-skill-candidate: 0.7
+  spore: none
+  receipt-refs: c74446e2-423a-47e2-8c73-73b53cb759fd
+  note: Both real readers disagreed when the task regex erased a physical form feed before the scanner. Nine native failures now pass after retaining raw array capture and stripping only spaces/tabs. Full Rheos216/1278 twice, JVM13/118, CLI174/391 plus workflows6/78, strict lint and four releases pass. Compiler RED exit0 was not treated as test success; separate emitted Node exited1. Isolated router config-merge misuse failed before compilation and was corrected using installed Shadow semantics; rebuilt router166inputs0warnings wrote validated receipt and reflection. Shared CLI files remain unchanged. Existing artifact and review-closeout spores reused; parent owns publication/restack.

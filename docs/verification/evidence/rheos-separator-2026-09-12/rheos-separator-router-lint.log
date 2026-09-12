@@ -1,0 +1,7 @@
+
+> eta-mu@1.1.1 lint:kondo /workspace/scratch/3655842e43cf/eta-rheos-restored/packages/eta-mu
+> clj-kondo --lint src/cljs test/cljs test-e2e/cljs commands/workflows.cljs commands/workflows_test.cljs commands/gates.cljs
+
+src/cljs/eta_mu/domain/session.cljs:8:14: info: a domain namespace must not require eta-mu.extern.path (extern): domain depends on law, shape, and its own layer.
+src/cljs/eta_mu/infra/cli/commands/kanban.cljs:29:3: info: Redundant boolean coercion: expression already has type boolean
+linting took 3518ms, errors: 0, warnings: 0
