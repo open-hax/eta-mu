@@ -1,0 +1,186 @@
+{
+  "scope": "Three current Axxium PR333 findings; ordinary successor of published d491; no Knoxx or Clio source changes",
+  "observedAt": "2026-09-12T20:24:27.249109+00:00",
+  "baseRevision": "d4911c4e1af3d6d0e1ca716402e9f3b749acd361",
+  "baseTree": "150116ac11243db26387a33742b8ae5ade92c9e6",
+  "reviewFindings": [
+    {
+      "comment": 3997257944,
+      "thread": "PRRT_kwDORu27H86hywBB",
+      "disposition": "Standalone health route callback is explicitly native async and awaits health-response; existing real TCP health tests pass. Conformance correction, not a claimed dynamic baseline failure."
+    },
+    {
+      "comment": 3997257948,
+      "thread": "PRRT_kwDORu27H86hywBD",
+      "disposition": "Managed bootstrap loser reuses existing pure restart proof only after reference-aware candidate cleanup. Changed password or coordinates refuse; self-signup collision never gains authority."
+    },
+    {
+      "comment": 3997257950,
+      "thread": "PRRT_kwDORu27H86hywBF",
+      "disposition": "ATProto candidate cleanup runs after selection success or refusal, fences current state and retains admitted references after lost acknowledgement."
+    }
+  ],
+  "install": {
+    "frozen": true,
+    "packagesReused": 256,
+    "downloads": 0,
+    "exit": 0
+  },
+  "focusedBaseline": {
+    "buildInputs": 140,
+    "compiled": 139,
+    "compilerWarnings": 0,
+    "buildExit": 0,
+    "tests": 4,
+    "assertions": 31,
+    "failures": 11,
+    "errors": 0,
+    "exit": 1
+  },
+  "focusedInitialRepair": {
+    "buildInputs": 140,
+    "compiled": 4,
+    "compilerWarnings": 0,
+    "buildExit": 0,
+    "tests": 4,
+    "assertions": 31,
+    "failures": 0,
+    "errors": 0,
+    "exit": 0,
+    "scope": "Before final explicit operation-lambda conformance and additional lost-ack regression; final full suite below covers all final source."
+  },
+  "nativeBaseline": {
+    "testedArtifactRevision": "6e3575b337a684495f2f99d4043a10af20721b2b",
+    "publishedEquivalent": "d4911c4e1af3d6d0e1ca716402e9f3b749acd361",
+    "artifactDirectory": "/workspace/scratch/3655842e43cf/eta-identity-successor/packages/axxium/dist-lib",
+    "artifactTree": {
+      "fileCount": 2,
+      "sha256": "2b611b181e7de3bc2d57a5d90b429cb4fcc9bc4c82daad9356ab438b9091b880",
+      "entrySha256": "8a73b256b7c5017bcf29ce05bcf3bf7603aed51a245c8b6f02dd4a96965fdb92"
+    },
+    "initialAttempt": {
+      "tests": 2,
+      "failures": 2,
+      "scope": "First race reproduced two orphan blobs; second missed the native barrier because hook loaded cwd package copy. Not treated as a second cleanup failure."
+    },
+    "correctArtifactRelativeHook": {
+      "tests": 2,
+      "failures": 2,
+      "skips": 0,
+      "exit": 1,
+      "actualFailure": "Both original process scenarios observe two private blobs after both child exits; expected one."
+    }
+  },
+  "final": {
+    "fullTest": {
+      "tests": 151,
+      "assertions": 1290,
+      "failures": 0,
+      "errors": 0,
+      "exit": 0,
+      "inputs": 210,
+      "compiled": 209,
+      "compilerWarnings": 0
+    },
+    "release": {
+      "server": {
+        "inputs": 138,
+        "compiled": 81,
+        "compilerWarnings": 0
+      },
+      "lib": {
+        "inputs": 138,
+        "compiled": 81,
+        "compilerWarnings": 0
+      },
+      "exit": 0
+    },
+    "configuredLint": {
+      "errors": 0,
+      "warnings": 0,
+      "exit": 0
+    },
+    "boundary": {
+      "violations": 0,
+      "exit": 0
+    },
+    "nativeConsumer": {
+      "actualTcp": true,
+      "processTests": 3,
+      "passed": 3,
+      "skips": 0,
+      "exit": 0,
+      "externalConsent": false
+    },
+    "libraryArtifact": {
+      "fileCount": 2,
+      "sha256": "84c304edef09a4875259e1a3eaa24cd00edd45d00522577acc7a253ccd808543",
+      "entrySha256": "01272253b34214f039e3143f99d64d2dd182ac7ad35cdeae2d8c1fd75e06606f"
+    }
+  },
+  "peer": {
+    "agent": "/root/clio_review_repair/protocol_review_repairs",
+    "scope": "Three production files, native CLJS regression fixture, final JS process-hook/retention assertions and referenced admission/cleanup/domain rules",
+    "mode": "read-only",
+    "remainingConfirmedFindings": 0
+  },
+  "obstacles": [
+    "Package commands initially used repository cwd instead of packages/axxium; failed before compiling/running and were rerun from explicit package cwd.",
+    "The explicit async operation-lambda edit briefly had an unmatched parenthesis; configured lint rejected it. Simplifying into a named local operation restored zero warnings/errors before final full build.",
+    "External baseline module instrumentation initially loaded a separate fs-ext package from cwd and missed the second native barrier. Binding createRequire to the tested module URL reproduced both true native leaks.",
+    "Existing identity consumer emits its explicit external OAuth configuration notice; actual operator consent is not exercised. Persistent cleanup failure remains a bounded reported limitation rather than silent deletion or an original-result replacement."
+  ],
+  "historyPrefixes": {
+    "kanban/.events/ledger.edn": {
+      "baseBytes": 1752582,
+      "baseSha256": "f8c778aa7adbf4f14a9aefeacb683446d2c9faaa31eac26184a10083c7cdc3d3",
+      "completeBasePrefixRetained": true,
+      "newBytes": 2018
+    },
+    ".\u03b7\u03bc/session-reflections.edn": {
+      "baseBytes": 37234,
+      "baseSha256": "41ec30ed1ec4e8492ee3cebcafb9c3616b6d704ef448935d5cdd14d4d5a9426d",
+      "completeBasePrefixRetained": true,
+      "newBytes": 1132
+    },
+    "receipts.edn": {
+      "baseBytes": 269288,
+      "baseSha256": "de4efe19cf95b909d478f797009ee97e74c697e49e2f579768d39616efd49a2b",
+      "completeBasePrefixRetained": true,
+      "newBytes": 1440
+    }
+  },
+  "sourceSha256": {
+    "packages/axxium/src/cljs/axxium/infra/identity.cljs": "e7591164e0ee76c5594cf213de6b73208532f969ef0c3a4b6d4d84408eb67bb3",
+    "packages/axxium/src/cljs/axxium/infra/identity_oauth.cljs": "835a57ded7936d31205d658e85c2e7846a8d58885df61b3aa5106fae35a0f7ab",
+    "packages/axxium/src/cljs/axxium/server.cljs": "59e2ee75f9685109d950ecdd12cbdecf70a810cc8caca702fb2904da792bf15a",
+    "packages/axxium/test/cljs/axxium/extern/identity_startup_candidates_test.cljs": "8ea4703893ab81b2335a40ef3213b90b5e47132bd10fad49b73734d7c874525f",
+    "packages/axxium/test/js/concurrent-atproto-startup.test.mjs": "3a657d84cc5ffa1e3a0efe37cf7d43ac3dc4756d167f51bb0f37b93745a49f9f",
+    "packages/axxium/scripts/compile-startup-candidates.clj": "6ff1989d2f11b85e23ead1893c50141edaf16c004f258b9b1da810ee8fd6fd55"
+  },
+  "unchangedGateSha256": {
+    "packages/axxium/package.json": "9d56a5d00dec36be012b4c3b72775242c84109c2904b6499d90f9cb45dcb2043",
+    "packages/axxium/shadow-cljs.edn": "d94ee28e48fe1cf9ad7e8fc5b572ecd63a7885b955f0bfc4c1c6c52c54703eb2",
+    "packages/axxium/.clj-kondo/config.edn": "f795d49e2c01c29fc144fa292702e5ecb45a7822caffa2f280c64a3d36f377e0",
+    "packages/axxium/scripts/run-tests.mjs": "82756b9a85bb79aaae4c28f72de918fb8d40d72b041de7aac9d54855318fd63a",
+    "packages/axxium/scripts/shadow-test-error-guard.cjs": "492d19893b98ea65b8e7beadcced86a6ccfefb2bd4631531368960d940c10b38",
+    "packages/axxium/scripts/check-js-boundary.mjs": "53b7245a1ee4fe8cf208b7587fdd26394cd36c0d44de240169612a98557f9d22"
+  },
+  "logSha256": {
+    "/workspace/scratch/3655842e43cf/recovery/identity-startup-red-build.log": "43d2064bc144c89fb950bc9fe809c5019d248939a94b6ae6559ad3f5c1c017b4",
+    "/workspace/scratch/3655842e43cf/recovery/identity-startup-red-test.log": "24fbe050de55bf7859f2e5e10f642691fbc40902ff27b0233ea8f6c04cb46024",
+    "/workspace/scratch/3655842e43cf/recovery/identity-startup-green-build.log": "ad95c60014b83147a5098fe3a39ecd4685021e989bd2fb54c6c76eaefff90358",
+    "/workspace/scratch/3655842e43cf/recovery/identity-startup-green-test.log": "876799ca8ab7876aa4ba703d43cd952bf5f127dcc73a7bab41b8a1b061fe4887",
+    "/workspace/scratch/3655842e43cf/recovery/identity-startup-full-test.log": "5e8996066aff33e898fe185dae29159909bbe1d4498f54a0466b7218eaa9520b",
+    "/workspace/scratch/3655842e43cf/recovery/identity-startup-release.log": "1274a3bdf93707398f2be1b2da530abf516aa2d5d8142f5e29417f6729cdcf05",
+    "/workspace/scratch/3655842e43cf/recovery/identity-startup-native-red.log": "d8af74c0695e8fec566d9bd66ec3495d09f433eb7ac63f733507891473437695",
+    "/workspace/scratch/3655842e43cf/recovery/identity-startup-native-red-correct-hook.log": "74aab1ec8d0836c469f9ed8666d511001a65b0612be33ba9a2d3170455ca1b32",
+    "/workspace/scratch/3655842e43cf/recovery/identity-startup-native-green.log": "ec76e691151b32dcfa4c1f33f8b2f4c27062790e7e4e797df5d1b4f7bcd2e570",
+    "/workspace/scratch/3655842e43cf/recovery/identity-startup-lint.log": "5ff768ac7cdb05337f5d25dee9f5d880a8f1d9a80aafb3444d495d646eaa320e",
+    "/workspace/scratch/3655842e43cf/recovery/identity-startup-boundary.log": "3daeabad2986fc85fb61b9094493e002355407f55164680206a3b118a775d6dd",
+    "/workspace/scratch/3655842e43cf/recovery/identity-concurrency-install.log": "9cba1e370d8a61e87ec29d8c89124d2a4fe381ce6b136d5b6cda2c1ad4f9f048",
+    "/workspace/scratch/3655842e43cf/recovery/identity-startup-receipt.log": "cd8ed1a420fb0cc1217f1c6832a8f9aac01126aebb12c442b8f342550aa8d352",
+    "/workspace/scratch/3655842e43cf/recovery/identity-startup-session.log": "28b6fb444d9419540adb1185f52b9a01e89dd20bcab5e91efccbc59981d368e5",
+    "/workspace/scratch/3655842e43cf/recovery/identity-startup-card.log": "5268d8af43f06dbc7acc91f3c5caebc97cc4840c8dcdd9ece3fc8a1989a89eb8"
+  }
+}

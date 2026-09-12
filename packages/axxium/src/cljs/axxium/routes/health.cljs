@@ -1,24 +1,18 @@
 (ns axxium.routes.health
-  "Health check and system routes."
-  (:require [axxium.db :as db]))
+  "Retained database health decisions, with native HTTP operations in extern."
+  (:require [axxium.db :as db]
+            [axxium.extern.legacy-http :as http]))
 
-(defn- ^:async handle-health [_req reply]
+(defn- ^:async health [_request]
   (try
     (await (db/query "SELECT 1 as ping" []))
-    (.send reply (clj->js {:status "ok"
-                              :service "axxium"
-                              :version "0.1.0"}))
-    (catch :default err
-      (.send (.code reply 503)
-             (clj->js {:status "error"
-                          :service "axxium"
-                          :error (.-message err)})))))
+    {:body {:status "ok" :service "axxium" :version "0.1.0"}}
+    (catch :default error
+      {:status 503 :body {:status "error" :service "axxium"
+                          :error (get-in (http/error-data error "Database unavailable") [:body :error])}})))
 
-(defn- handle-root [_req reply]
-  (.redirect reply "/portal/index.html"))
-
-(defn register-health-routes!
-  "Register health and system routes."
-  [app]
-  (.get app "/health" handle-health)
-  (.get app "/" handle-root))
+(def register-health-routes!
+  "Register health and portal routes through the compatible native entry point."
+  (http/route-registrar
+   [{:method "GET" :path "/health" :handler (http/handler health {})}
+    {:method "GET" :path "/" :handler (http/handler (fn [_] {:redirect "/portal/index.html"}) {})}]))

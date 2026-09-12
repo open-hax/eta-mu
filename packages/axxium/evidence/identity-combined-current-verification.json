@@ -1,0 +1,272 @@
+{
+  "testedCommit": "77e0f3a3a6c28525f0f3ef79728bf8fc385163c3",
+  "testedTree": "0c795700cb3328321a251b2cf3221409e425b3a6",
+  "ordinaryMergeParents": [
+    "ebb590590e746fb5f592d94279f1ef2828ba2465",
+    "bd617b9301e2774c721ddeff434b707b788be95f"
+  ],
+  "mergeProof": {
+    ".\u03b7\u03bc/session-reflections.edn": {
+      "incomingSha256": "badbdd7ee3872ae4d59a7a9801fed8b64519bdacf8560d2fecab32a9a058c83d",
+      "identitySha256": "ca7673a2dd31c7f253cedd0e1951ae5b2b22c6df5263c77bffb659e47df5d83f",
+      "mergedSha256": "750c2c61b76e76cf4bbe86eb49ce792adde0cbc7e32ced92e781005bcd96d32d",
+      "incomingLines": 25,
+      "identityUniqueLinesAppended": 12,
+      "commonOrderVerified": true,
+      "incomingBytePrefixPreserved": true,
+      "allRecordsRetained": true
+    },
+    "kanban/.events/ledger.edn": {
+      "incomingSha256": "3a7e813e4c1373de728df75d9a45b5011c4e8f33869a2640ce068d227d0f81ca",
+      "identitySha256": "d1228a2d58c9b854bb91e1926f331db98a4d23033f7851bb16a0a6522d401857",
+      "mergedSha256": "0183dc85b47d60c82907820cbcb7ae221f937dc330280e56b2a9a8e70bc7ebe3",
+      "incomingLines": 3281,
+      "identityUniqueLinesAppended": 26,
+      "commonOrderVerified": true,
+      "incomingBytePrefixPreserved": true,
+      "allRecordsRetained": true
+    },
+    "receipts.edn": {
+      "incomingSha256": "973dd88ab5820cc90b98f186daccd0fb9a8ae392ff12ddd0a321118b6be9e63e",
+      "identitySha256": "15f729028f8bd95451aa9bc044ab584dc15d16b2fae98c757ee2567e568944d8",
+      "mergedSha256": "46d0f3a8176a21942d235f1c92f1fb1e44a646826749edb56e119015b9a40d4c",
+      "incomingLines": 227,
+      "identityUniqueLinesAppended": 11,
+      "commonOrderVerified": true,
+      "incomingBytePrefixPreserved": true,
+      "allRecordsRetained": true
+    },
+    "commit": "77e0f3a3a6c28525f0f3ef79728bf8fc385163c3",
+    "tree": "0c795700cb3328321a251b2cf3221409e425b3a6"
+  },
+  "subtreeProof": {
+    "packages/axxium": {
+      "reviewedCommit": "ebb590590e746fb5f592d94279f1ef2828ba2465",
+      "reviewedTree": "ca704eb3a496ef8cf6d2147b9fbaa4f3b7320cc0",
+      "combinedTree": "ca704eb3a496ef8cf6d2147b9fbaa4f3b7320cc0",
+      "identical": true
+    },
+    "packages/clio": {
+      "reviewedCommit": "bd617b9301e2774c721ddeff434b707b788be95f",
+      "reviewedTree": "82bc39da2cdccd669ee1aa35804c0b6448f5859f",
+      "combinedTree": "82bc39da2cdccd669ee1aa35804c0b6448f5859f",
+      "identical": true
+    },
+    "packages/protocols": {
+      "reviewedCommit": "bd617b9301e2774c721ddeff434b707b788be95f",
+      "reviewedTree": "6d9ab7f269f043a7192a8f90e82bccaea422e6b8",
+      "combinedTree": "6d9ab7f269f043a7192a8f90e82bccaea422e6b8",
+      "identical": true
+    }
+  },
+  "historicalReceiptProof": {
+    "2431570f10868197484d8e2902ad7508840625e7": {
+      "sameFailureLines": {
+        "75": true,
+        "82": true,
+        "83": true,
+        "92": true,
+        "97": true,
+        "98": true,
+        "100": true,
+        "101": true,
+        "102": true,
+        "103": true,
+        "104": true,
+        "105": true,
+        "106": true,
+        "107": true,
+        "109": true,
+        "110": true,
+        "111": true,
+        "116": true,
+        "126": true,
+        "127": true,
+        "128": true,
+        "129": true,
+        "130": true,
+        "131": true,
+        "132": true,
+        "133": true,
+        "134": true,
+        "135": true,
+        "136": true,
+        "137": true,
+        "138": true,
+        "139": true,
+        "140": true,
+        "141": true,
+        "142": true,
+        "143": true,
+        "148": true,
+        "171": true,
+        "172": true
+      },
+      "identical": true
+    },
+    "bd617b9301e2774c721ddeff434b707b788be95f": {
+      "sameFailureLines": {
+        "75": true,
+        "82": true,
+        "83": true,
+        "92": true,
+        "97": true,
+        "98": true,
+        "100": true,
+        "101": true,
+        "102": true,
+        "103": true,
+        "104": true,
+        "105": true,
+        "106": true,
+        "107": true,
+        "109": true,
+        "110": true,
+        "111": true,
+        "116": true,
+        "126": true,
+        "127": true,
+        "128": true,
+        "129": true,
+        "130": true,
+        "131": true,
+        "132": true,
+        "133": true,
+        "134": true,
+        "135": true,
+        "136": true,
+        "137": true,
+        "138": true,
+        "139": true,
+        "140": true,
+        "141": true,
+        "142": true,
+        "143": true,
+        "148": true,
+        "171": true,
+        "172": true
+      },
+      "identical": true
+    },
+    "count": 39
+  },
+  "results": {
+    "frozenOfflineInstall": {
+      "exit": 0,
+      "added": 8,
+      "reused": 8,
+      "downloaded": 0
+    },
+    "axxiumTest": {
+      "exit": 0,
+      "tests": 146,
+      "assertions": 1247,
+      "failures": 0,
+      "errors": 0,
+      "compilerInputs": 209,
+      "compilerWarnings": 0
+    },
+    "axxiumRelease": {
+      "exit": 0,
+      "serverInputs": 138,
+      "libInputs": 138,
+      "compilerWarnings": 0
+    },
+    "axxiumNative": {
+      "exit": 0,
+      "actualTcpConsumer": true,
+      "tests": 3,
+      "failures": 0,
+      "skipped": 0
+    },
+    "axxiumLint": {
+      "exit": 0,
+      "errors": 0,
+      "warnings": 0
+    },
+    "axxiumBoundary": {
+      "exit": 0
+    },
+    "protocolsTest": {
+      "exit": 0,
+      "tests": 78,
+      "assertions": 332,
+      "nativeTests": 22,
+      "nativeFailures": 0,
+      "nativeSkipped": 0,
+      "testInputs": 140,
+      "libInputs": 112,
+      "compilerWarnings": 0
+    },
+    "protocolsTypes": {
+      "exit": 0,
+      "strict": true
+    },
+    "protocolsLint": {
+      "exit": 0,
+      "errors": 0,
+      "warnings": 0
+    },
+    "kanbanCount": {
+      "exit": 0,
+      "tasks": 299
+    },
+    "receiptValidate": {
+      "exit": 1,
+      "failures": 39,
+      "allFailureLinesByteIdenticalInBothPriorBranches": true
+    }
+  },
+  "logs": {
+    "axxium-combined-frozen-install.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-combined-frozen-install.log",
+      "sha256": "5149100cc85fcfb9ced41b6c902c0825ee7f660a09dad2afc6472fc35f18789a"
+    },
+    "axxium-combined-current-test.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-combined-current-test.log",
+      "sha256": "d9c99d2d29e6745feea5d056a5db20c7123a4b3b20498a17f0b187a09b6ad10a"
+    },
+    "axxium-combined-current-release.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-combined-current-release.log",
+      "sha256": "44ff89afe5818a2c0e0d5c6ab7cb316fd71b2b6e55f80dc696f815193fbc8878"
+    },
+    "axxium-combined-current-native.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-combined-current-native.log",
+      "sha256": "2ff7d42dc26360fb01e68d607cbcb26d888b89e272b97d2a01aa9ee85027176a"
+    },
+    "axxium-combined-current-lint.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-combined-current-lint.log",
+      "sha256": "804b28fb699781319cffbd0ea673eedbafba5e8ca4778b90bb2b913bcee7742c"
+    },
+    "axxium-combined-current-boundary.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-combined-current-boundary.log",
+      "sha256": "dfc72644642d0e675a8961720d628568eee7574f802972fec59bbc487befb38a"
+    },
+    "axxium-combined-protocols-test.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-combined-protocols-test.log",
+      "sha256": "01fff2867133e4c3144e298952179e93d929f2e2a49f21ce1500e7778b0bc33d"
+    },
+    "axxium-combined-protocols-types.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-combined-protocols-types.log",
+      "sha256": "e4d809397942495551f6cd9ac8d88d3aea05b9604c5e5d8f4b4f98c27e475d57"
+    },
+    "axxium-combined-protocols-lint.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-combined-protocols-lint.log",
+      "sha256": "2edc3a64a4877f2c034ff0439e91bdc57e325eb525c5fc009d97d73dfb39c6e9"
+    },
+    "axxium-combined-kanban-count.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-combined-kanban-count.log",
+      "sha256": "2ded24c46945cdbe25fdabb529ba41f6bbc2e851fed0e1c1df450d99ae052c30"
+    },
+    "axxium-combined-receipts-validate.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-combined-receipts-validate.log",
+      "sha256": "9cab0c069bb8eb9f6a79f318a5c368af4ee5a26fa399e487e704ea6be39f553a"
+    }
+  },
+  "scopeLimits": [
+    "No full Foresight browser tour or external OAuth consent is claimed by these package results.",
+    "Clio BB/JVM/NBB/Shadow proofs belong to published bd617b93; exact source subtree equality is verified here, while this work reruns native consumers through the combined dependency graph.",
+    "The 39 historical invalid receipt records remain unchanged and require an audited migration.",
+    "Final follow-up commit adds documentation and canonical provenance only; tested source and artifacts remain frozen."
+  ]
+}

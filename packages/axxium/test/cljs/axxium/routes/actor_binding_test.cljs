@@ -36,7 +36,7 @@
                     (is (= "actor.agent.research" actor-id))
                     (js/Promise.resolve runtime-binding))
                   fastify/send-json! (capture-send sent*)]
-      (await (actor-route/handle-get-runtime-binding {} {}))
+      (await (actor-route/handle-get-runtime-binding #js {} #js {}))
       (is (= {:status 200
               :body {:ok true :binding runtime-binding}}
              @sent*)))))
@@ -46,7 +46,7 @@
     (with-redefs [session/resolve-auth-context
                   (fn [_request] (js/Promise.resolve nil))
                   fastify/send-json! (capture-send sent*)]
-      (await (actor-route/handle-get-runtime-binding {} {}))
+      (await (actor-route/handle-get-runtime-binding #js {} #js {}))
       (is (= {:status 401 :body {:error "Unauthorized"}}
              @sent*)))))
 
@@ -59,7 +59,7 @@
                   principal-binding/resolve-runtime-binding
                   (fn [_actor-id] (js/Promise.resolve nil))
                   fastify/send-json! (capture-send sent*)]
-      (await (actor-route/handle-get-runtime-binding {} {}))
+      (await (actor-route/handle-get-runtime-binding #js {} #js {}))
       (is (= {:status 404
               :body {:error "Runtime principal not found"}}
              @sent*)))))
@@ -76,7 +76,7 @@
                      (ex-info "Organization entities are not runnable principals"
                               {:reason :unsupported-principal-kind})))
                   fastify/send-json! (capture-send sent*)]
-      (await (actor-route/handle-get-runtime-binding {} {}))
+      (await (actor-route/handle-get-runtime-binding #js {} #js {}))
       (is (= {:status 422
               :body {:error "Unsupported runtime principal kind"
                      :code "unsupported_principal_kind"}}
