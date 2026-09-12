@@ -391,3 +391,23 @@
   spore: none
   receipt-refs: final Clio recovery receipt for source a9328801
   note: Restored exact reviewed source after maintenance pruned tools and checkouts. Native failure-first tests exposed missing generated retry identity, NBB stdout error routing, and lexical symbolic-link parent-path redirection. RealpathSync.native was required because Node realpathSync still chose the lexical target. Final Clio BB29/182 JVM77/355 NBB and Shadow75/362 plus protocols76/282 and19native pass; strict gates are clean. Existing binary-verification and absolute-path spores cover the reusable lesson. Actual hosted successor reviews remain required.
+
+- ts: 2026-09-12T17:53:13Z
+  session: foresight-sandbox-protocol-membership-range
+  task: Repair false/null membership and scalar/vector NaN range queries
+  p-efficiency: 0.85
+  p-friction: 0.5
+  p-skill-candidate: 0.75
+  spore: none
+  receipt-refs: 6221a3f7-e2fa-4026-8f47-06a24e91a314
+  note: Real portable and compiled consumer failures preceded the pure query correction. Generic equality was unsafe as a numeric NaN guard on a boxed host; numeric equality plus supported vector recursion passes both hosts. Preserving an unexpected subscription failure led to a native FIFO barrier proving a real missed-event startup gap. Query gates are green; watcher recovery follows separately, with no lucky-rerun dismissal. Existing verification lessons reused.
+
+- ts: 2026-09-12T18:00:01Z
+  session: foresight-sandbox-protocol-watch-startup
+  task: Close the real subscription initial-stat delivery gap
+  p-efficiency: 0.9
+  p-friction: 0.5
+  p-skill-candidate: 0.8
+  spore: none
+  receipt-refs: bf3b2de5-2c74-42a9-a09b-eb9a5c557cca
+  note: A controlled FIFO/native-worker barrier converted the intermittent subscription observation into an actual missed-event reproduction. The owned canonical polling timer passes first-write delivery without a second write, deduplication, unsubscribe and existing error-closure contracts. Full provider78/332 plus22native and strict gates pass. Idle full-history read cost is explicit; no fixture sleeps or hidden retries were added. Existing mechanism-verification lesson reused.

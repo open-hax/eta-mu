@@ -25,8 +25,16 @@
                 [false nil]))
             [true doc] (mapv keyword (str/split (name field) #"\.")))))
 
+(defn- contains-nan? [value]
+  (cond
+    (number? value) (not (== value value))
+    (vector? value) (boolean (some contains-nan? value))
+    :else false))
+
 (defn- range-comparison [actual expected]
   (when (and (some? actual) (some? expected)
+             ;; compare can return zero for NaN, including vector members.
+             (not (contains-nan? actual)) (not (contains-nan? expected))
              (or (= (type actual) (type expected))
                  (and (number? actual) (number? expected))
                  (and (inst? actual) (inst? expected))))
@@ -45,8 +53,8 @@
               (case op
                 :$eq (= actual value)
                 :$ne (not= actual value)
-                :$in (boolean (some #{actual} value))
-                :$nin (not (some #{actual} value))
+                :$in (boolean (some #(= actual %) value))
+                :$nin (not (some #(= actual %) value))
                 :$exists (= present? value)
                 :$gt (range-matches? pos? actual value)
                 :$gte (range-matches? #(not (neg? %)) actual value)

@@ -106,9 +106,12 @@ callers must retry the complete authentication operation against current state.
 
 All services share one stream. Concurrent processes may receive a stream
 conflict and should retry the whole operation. Reads and appends validate all
-history, favoring inspection and correctness over speed. Subscriptions poll
-every 50 ms and deliver new matching events in canonical order, including bursts
-from other process instances. Handles are process-local and must be closed.
+history, favoring inspection and correctness over speed. Subscriptions read
+canonical history every 50 ms and deliver new matching events in canonical
+order, including bursts from other process instances and writes during startup.
+This uses one unreferenced timer per subscription and rereads history even when
+idle, favoring reliable local delivery over large-ledger throughput. Handles are
+process-local and must be closed; closing stops the timer.
 If a subscription cannot read valid history, it reports the failure and closes;
 repairing the ledger requires explicitly opening a new subscription. JavaScript
 watch handles expose `close()` immediately, including the legacy EDN adapter.
@@ -126,9 +129,13 @@ Queries support equality, nested field paths, `$and`, `$or`, `$eq`, `$ne`, `$in`
 `$nin`, `$exists`, `$gt`, `$gte`, `$lt`, and `$lte`. Other operators are refused;
 this is a service adapter, not a Mongo wire-protocol or aggregation emulator.
 Every `$and` and `$or` child must be a query map; a null child is invalid.
+Membership uses equality, including false and null members. As with equality,
+a missing field matches a null member; use `$exists` to distinguish absence.
 Range operators compare compatible value types without numeric/string coercion.
 Existing same-type ordering is retained, including comparable vectors and
-instants. Missing, null, mixed-type or otherwise incomparable values do not
+instants. NaN operands, including nested vector members, never match a range;
+ordered infinity query bounds retain their existing behavior. Missing, null,
+mixed-type or otherwise incomparable values do not
 match a range and do not prevent other documents from matching.
 The existing Mongo/REST adapter semantics are preserved by this change.
 
