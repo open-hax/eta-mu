@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789219870750-0.mv1ko585kamdoa62qb"
+write-id: "1789221295372-0.pykkebvnwi536ecswl"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "in_progress"
@@ -80,5 +80,9 @@ Actual Codex3996269957 extends locked reads to the public singular read-ledger A
 Actual Codex 3996269954 also identifies unreadable generic property names: JS keywordization can admit a printed name that EDN cannot read back. Discovery confirms direct Clio keyword/symbol constructors have the same canonical admission gap. Scope: reproduce both the public JS persistence path and portable canonical names before changing implementation, reject non-round-trippable identifiers before bytes are appended, preserve valid names and existing hashes, then repeat host and downstream gates. Singular-reader gates are green after correcting two explicit JS inference hints; publication remains pending this newly confirmed integrity finding.
 
 Combined singular-reader and identifier-integrity checkpoint is freshly green. Actual RED: cross-host public singular reads 69/210 with5 failures; portable identifier admission26/107 with14 failures; public JS top-level/nested bad-key calls2 missing-rejection failures. Final ClioBB26/107,JVM70/242,NBB+Shadow66/218; protocols71/217+17 native; Sol142/607+1 native. All final compilers zero warnings, lint/boundaries0/0, strict TypeScript clean. Exact descriptor/inode alias guard and canonical kind/namespace/name roundtrip self-reviewed; accepted bytes survive refusal and reopen. Initial warning-positive builds were rejected and rerun after explicit host hint. Reports docs/verification/clio-single-reader-process-proof.md and clio-identifier-integrity.md. Card remains active until actual successor reviewers and hosted gates converge.
+
+Actual CodeRabbit 5646213434 on 090da40 found that locking public read-ledger through the write-capable adapter prevents consumers with read-only file permissions from inspecting history. New isolated successor scope: add native shared read locks opened read-only on Node and JVM, retaining conflict with exclusive writers and same-process descriptor safety; route immutable snapshots through that API; reproduce read-only access on both hosts and rerun existing partial-writer contention regressions. Foundation host lane owns the adapters and native permission proofs; identity lane owns kernel routing, combined gates and publication. Frozen 090 source remains unchanged.
+
+Read-only replay repair is freshly green. CodeRabbit5646213434 and Codex3996355428 on090 reproduced three actual public replay failures: JVM suite71/246. Shared read-only descriptors now preserve permissions and still conflict with exclusive writers. Final BB26/107, JVM72/254, NBB and Shadow67/226; protocols71/217 plus17 native; Sol142/607 plus1 native. Final compiler warnings zero, authoritative full-package lint/boundaries0/0 and strict types pass. This sandbox has only one mapped UID, so setpriv attempts failed; actual native preflight nevertheless proves read allowed and write EACCES on0444 because capabilities are zero. Both native permission and descriptor write-refusal regressions are real; existing cross-process partial-write handshakes remain green. Reciprocal review found no confirmed host-mode defect. Report docs/verification/clio-read-only-replay.md; actual successor reviews remain pending.
 
 ---

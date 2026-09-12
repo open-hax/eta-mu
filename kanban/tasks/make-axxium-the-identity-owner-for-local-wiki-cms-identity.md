@@ -2,7 +2,7 @@
 category: "tasks"
 dependency: []
 type: "task"
-write-id: "1789221130124-0.dpv0q5ye1b9v2jvu9p1"
+write-id: "1789221656347-0.d1r5m5jz3hmi14f9ans"
 title: "Make Axxium the identity owner for local Wiki CMS"
 priority: "P0"
 status: "in_progress"
@@ -51,5 +51,9 @@ Self-review adds a distinct bounded-retry seam to this successor: the actual ATP
 Fresh complete review-thread audit also confirms Codex3996249402 (a visible identity append can consume proof state while losing its already-created response token) and3996249405 (ATProto routes registering concurrently must reuse the committed client-key winner). Scope: preserve one event and one decision result across an uncertain native append, re-fence only that exact accepted event without redoing crypto or authority decisions, and fail closed if durability cannot be established. Separately, recover only the expected client-key creation race by rereading/unsealing its winner under bounded admission. Models lane owns ATProto key recovery plus actual route-startup race proof; identity lane owns transaction-result fault proof and fix. Existing passkey/self-target/clock fixes stay in this successor; browser source freezes remain unchanged. Final full gates will repeat after newest Clio restack.
 
 Combined current review checkpoint on immutable foundation 090da40 is green: 111 tests / 933 assertions, test 186 files and server/lib 125 files each with zero compiler warnings; lint 0/0 and boundary clean. Actual built ESM/TCP signup, restart, principal read, logout, Origin/header refusal and linking pass. Three native process tests pass without skips, including both ATProto signing-key startup races. This includes self-target grant refusal, PGP/passkey durable attempt limits, finite refresh polling, uncertain login-result recovery and ATProto winner reuse. Reciprocal review found no confirmed defect in the final two repairs. Live external provider consent still requires operator configuration. Foundation read-only permission successor remains independently pending; this checkpoint is published for actual reviewers/browser assessment, not merge clearance.
+
+Isolated identity successor now restacks the exact shared-read foundation 6c5af607. No Axxium behavior is intentionally changed in this slice. Repeat the advertised full identity test, server/lib release, lint, boundary and real TCP/native process verification against these exact kernel bytes before publishing. Previous111/933 evidence remains attached to immutable090 and is not transferred. All earlier browser worktree sources/dist remain frozen.
+
+Fresh full restack gates on immutable shared-read foundation 6c5af607 passed: 111 tests / 933 assertions; test 186 files and server/lib 125 each with zero compiler warnings; lint 0/0, boundary clean, actual TCP identity consumer and three native startup tests green without skips. No Axxium runtime source changed in this restack. These are actual repeated results, not transferred from090. Prior browser worktrees remain frozen. CodeRabbit found no new scoped findings on the preceding identity checkpoint and shared-read foundation; this new published head still needs its own actual reviewers and required hosted checks.
 
 ---

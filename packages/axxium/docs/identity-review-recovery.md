@@ -312,3 +312,21 @@ consumer}.log` in the sandbox working root. Foundation's newly reported read-onl
 permission regression is being fixed separately; these results cover immutable
 090 only and will not be transferred to that successor without rerunning gates.
 Actual published-head reviewers and required hosted checks remain merge gates.
+
+## Fresh restack on shared-read foundation 6c5af607
+
+The isolated successor merges immutable foundation
+`6c5af6077d069620583b29a180eb925a0805e94b`, which preserves read-only snapshot
+permissions with shared native locks. No Axxium runtime source changes in this
+restack. Full gates were actually repeated: **111 tests / 933 assertions**, no
+failures or errors; test compilation 186 files, server and ESM releases 125 files
+each, all with zero compiler warnings. Lint remains zero errors/warnings and the
+unchanged boundary checker passes. The actual ESM/TCP identity consumer and all
+three native startup tests pass again without skips. The external OAuth consent
+configuration notice retains the same explicitly limited meaning.
+
+These are fresh results from `axxium-6c5-{test,build,lint,boundary,consumer}.log`,
+not carried-forward 090 evidence. The prior 090 browser worktree remains frozen.
+CodeRabbit found no new scoped issue on the prior identity checkpoint and on
+the shared-read foundation; the new published identity head still requires its
+own actual review and required hosted checks before merge.
