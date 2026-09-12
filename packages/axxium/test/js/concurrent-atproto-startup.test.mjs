@@ -11,8 +11,8 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import Fastify from 'fastify';
 import { createRequire, syncBuiltinESMExports } from 'node:module';
-const native = createRequire(import.meta.url)('fs-ext-extra-prebuilt');
 const [moduleUrl, directory, barrier, role, scenario] = process.argv.slice(1);
+const native = createRequire(moduleUrl)('fs-ext-extra-prebuilt');
 const handles = new Map();
 const open = fs.openSync, flock = native.flockSync, generate = crypto.generateKeyPairSync;
 let generated = false, held = false;
@@ -121,6 +121,8 @@ for (const scenario of ['winner-committed', 'contention']) {
         assert.equal(proof.keyCount, 1);
       }
       assert.equal(proofs[0].publicKeyDigest, proofs[1].publicKeyDigest);
+      const privateBlobs = fs.readdirSync(path.join(directory, 'private')).filter(name => /^[0-9a-f]{64}$/.test(name));
+      assert.equal(privateBlobs.length, 1, 'Only the admitted private client key remains after both startups exit');
       assert.equal((fs.readFileSync(path.join(directory, 'identity.edn'), 'utf8').match(/:operation :oauth-client-key-created/g) ?? []).length, 1);
     } finally {
       for (const file of ['release-a', 'release-b', 'commit']) release(file);

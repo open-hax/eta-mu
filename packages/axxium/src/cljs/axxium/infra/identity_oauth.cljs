@@ -5,6 +5,7 @@
             [axxium.extern.oauth :as oauth]
             [axxium.infra.identity :as identity]
             [axxium.infra.identity-admission :as admission]
+            [axxium.infra.identity-private :as private]
             [axxium.infra.identity-sdk-store :as sdk-store]
             [axxium.infra.identity-store :as store]
             [axxium.law.identity :as law]
@@ -24,18 +25,26 @@
       (boolean (seq (:client-id config)))
       (boolean (and (contains? oauth/defaults provider) (seq (:client-id config)) (seq (:client-secret config)))))))
 
+(defn- ^:async select-client-key!
+  [store]
+  (let [candidate (delay (store/seal! store (oauth/generate-client-key)))]
+    (try
+      (await (admission/retry!
+              #(let [prepared (when-not (get-in (store/state store) [:credentials policy/client-key]) @candidate)]
+                 ;; Native preparation stays outside the pure locked decision.
+                 ;; A no-op decision fences the existing winner before returning.
+                 (store/transact! store (fn [state] (policy/select-client-key state prepared))))))
+      (finally
+        ;; Retain accepted references, including a commit whose acknowledgement
+        ;; failed; reclaim only this attempt's unreferenced candidate after a fence.
+        (when (realized? candidate)
+          (await (private/cleanup! store [@candidate])))))))
+
 (defn ^:async create-atproto-client!
   "Create one SDK client per service process with protected persistent stores."
   [{:keys [store options] :as service}]
   (when (configured? service :atproto)
-    (let [candidate (delay (store/seal! store (oauth/generate-client-key)))
-          reference (await (admission/retry!
-                            #(let [prepared (when-not (get-in (store/state store) [:credentials policy/client-key])
-                                              @candidate)]
-                               ;; Key generation stays outside the pure transition. The
-                               ;; current locked snapshot decides which replica won; its
-                               ;; no-op transaction also fences an existing accepted key.
-                               (store/transact! store (fn [state] (policy/select-client-key state prepared))))))
+    (let [reference (await (select-client-key! store))
           private-key (store/unseal store reference)]
       (await (oauth/atproto-client! {:client-id (:client-id (provider-config service :atproto))
                                      :origin (:public-base-url options) :private-key (:private-key private-key)

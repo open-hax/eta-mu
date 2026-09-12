@@ -102,6 +102,33 @@
                :issued-at issued-at :expires-at (+ issued-at session-ttl-ms)}]
     (store/transact! store #(password-domain/login-transition % input))))
 
+(defn- ^:async restart-bootstrap!
+  [store existing request password]
+  (let [expected (bootstrap/require-restart! existing request)
+        credential (store/unseal store (get-in expected [:credential :private-ref]))
+        verified? (await (crypto/verify-password password credential))]
+    (await (admission/retry!
+            #(store/transact! store (fn [state]
+                                     (bootstrap/restart-transition state {:expected expected :request request
+                                                                          :verified? verified?})))))))
+
+(defn- ^:async create-bootstrap!
+  [store actor request password]
+  (let [reference (store/seal! store (await (crypto/hash-password password)))
+        decide #(bootstrap/create-transition % {:actor actor :private-ref reference})
+        operation (fn ^:async admit-bootstrap []
+                    (await (admission/retry! #(store/transact! store decide))))]
+    (try
+      (await (private/with-prepared! store reference operation))
+      (catch :default cause
+        ;; Cleanup has fenced the current accepted references before this branch.
+        ;; Only a managed bootstrap winner can enter the normal restart proof;
+        ;; a colliding self-signup remains a collision and gains no authority.
+        (if-let [existing (when (= :bootstrap-collision (:code (ex-data cause)))
+                            (bootstrap/existing (store/state store)))]
+          (await (restart-bootstrap! store existing request password))
+          (throw cause))))))
+
 (defn ^:async bootstrap!
   "Provision the explicit first administrator atomically; never promote an existing signup."
   [{:keys [store]} {:keys [username email password display-name principal-id]}]
@@ -115,15 +142,12 @@
                        (string? password) (<= 12 (count password)) (<= (host/utf8-length password) 1024))
                   :invalid-bootstrap "Bootstrap requires a valid username, email and 12+ character password")
     (if existing
-      (let [expected (bootstrap/require-restart! existing request)
-            verified? (await (crypto/verify-password password (store/unseal store (get-in expected [:credential :private-ref]))))]
-        (store/transact! store #(bootstrap/restart-transition % {:expected expected :request request :verified? verified?})))
+      (await (restart-bootstrap! store existing request password))
       (let [actor (cond-> (assoc (principal username email display-name)
                                  :principal/roles ["system-admin"] :principal/capabilities ["axxium/admin"])
                     principal-id (assoc :principal/id principal-id))
-            _ (law/validate-principal! actor)
-            reference (store/seal! store (await (crypto/hash-password password)))]
-        (store/transact! store #(bootstrap/create-transition % {:actor actor :private-ref reference}))))))
+            _ (law/validate-principal! actor)]
+        (await (create-bootstrap! store actor request password))))))
 
 (defn logout!
   "Commit session revocation before acknowledging logout."

@@ -38,7 +38,7 @@
   [service]
   (let [app (http/create-app)]
     (await (plugin/register! app (await (descriptions/routes! service {}))))
-    (http/register! app "GET" "/health" nil (fn [_] (health-response service)))
+    (http/register! app "GET" "/health" nil (fn ^:async health [_] (await (health-response service))))
     app))
 
 (defn ^:async start!

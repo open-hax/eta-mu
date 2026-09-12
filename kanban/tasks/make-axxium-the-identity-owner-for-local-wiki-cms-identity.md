@@ -2,7 +2,7 @@
 category: "tasks"
 dependency: []
 type: "task"
-write-id: "1789239858759-0.gy230jy4p4pht3ahmam"
+write-id: "1789244559613-0.52ympevk4dje7ylrttv"
 title: "Make Axxium the identity owner for local Wiki CMS"
 priority: "P0"
 status: "in_progress"
@@ -73,5 +73,9 @@ PR333 successor from published2431570f: investigate actual reviews3997046865/67/
 Seven PR333 review repairs: trusted-client issuance quota, pure PGP login/enrollment and passkey enrollment, scoped reference-aware private cleanup, and readiness contention retry. Native storage RED6/28/8 failures to GREEN6/28; actual crypto races RED3/7/7 failures to GREEN3/7. Full146/1247,209 inputs0warnings; both138-input releases, configured lint0/0,boundary and real TCP plus3 native startups pass. Latest Clio bd617b93 normal merge and combined gates follow. Evidence in packages/axxium/evidence/identity-review-admission-and-private-material.json; root browser and published-head reviews remain separate.
 
 Combined77e0f3a3 ordinary merge of identity ebb59059 and published Clio bd617b93: Axxium146/1247,209inputs0warnings; server/lib138inputs0warnings; actualTCP+3native0skips; lint0/0,boundaryclean. Protocols78/332+22native0skips,140/112inputs0warnings, stricttypes/lint0/0. All source subtrees match their verified parents. Three ledger conflicts preserved incoming byte prefixes and all ordered identity-only records. Separate receipt audit finds39 historic failures, all byte-identical in both prior branches; no history rewritten. Combined evidence packages/axxium/evidence/identity-combined-current-verification.json. Root publication/review/browser acceptance remains pending.
+
+Current published d491 review successor plan: preserve the frozen browser candidate in its worktree; reproduce concurrent first bootstrap and ATProto client-key candidate leaks against real isolated EDN stores; recover only a matching bootstrap winner through existing pure restart admission and reference-aware cleanup; await the standalone health route callback under the native async contract. Run actual focused RED/GREEN, full Axxium tests, server/lib release, lint, boundary and native identity consumers. No remote writes or external OAuth consent claims.
+
+Current three startup review repairs verified on ordinary d491 successor: full Axxium151/1290,210testinputs0warnings;server/lib138inputs0warnings,configuredlint0/0,boundaryclean;actualESM/TCPand3nativeprocess tests pass0skips. Failure-first bootstrap/ATProto4/31with11failures becamegreen; strengthened real two-process tests failedold6e on2blobsversus1inbothrace scenarios and passrepaired release. Native fs-ext testhook nowresolvesfromexplicit testedmoduleURL; initial external-artifact barrier miss remains documented. Security peer clear, lost-ack cleanup retains current secrets, external consent/hosted reviews/final browser gates remain pending. No status promotion or remote writes in this lane.
 
 ---
