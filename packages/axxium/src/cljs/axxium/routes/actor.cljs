@@ -3,7 +3,8 @@
   (:require [axxium.auth.session :as session]
             [axxium.db :as db]
             [axxium.extern.legacy-http :as http]
-            [axxium.infra.principal-binding :as principal-binding]))
+            [axxium.infra.principal-binding :as principal-binding]
+            [axxium.law.identity-grants :as grants]))
 
 (defn- sanitize-actor [actor] (dissoc actor :password_hash))
 (def unauthorized {:status 401 :body {:error "Unauthorized"}})
@@ -56,7 +57,8 @@
 
 (defn- ^:async update-capabilities [request]
   (if-let [context (await (session/resolve-auth-context request))]
-    (if (contains? (set (or (:auth/capabilities context) [])) :axxium/admin)
+    (if (and (contains? (set (or (:auth/capabilities context) [])) :axxium/admin)
+             (grants/delegated-target? (:auth/actor-id context) (get-in request [:params :id])))
       (do
         (await (db/query "UPDATE actors SET capabilities = $1, updated_at = NOW() WHERE id = $2"
                          [(get-in request [:body :capabilities]) (get-in request [:params :id])]))

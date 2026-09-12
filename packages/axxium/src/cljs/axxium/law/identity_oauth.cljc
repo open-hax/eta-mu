@@ -15,3 +15,10 @@
   (identity/require! (m/validate ClientOperations operations) :invalid-provider-adapter
                     "ATProto adapter operations are invalid")
   operations)
+
+(defn require-client-key-reference!
+  "Refuse missing or malformed references instead of replacing an established signing key."
+  [reference]
+  (identity/require! (and (string? reference) (seq reference)) :invalid-client-key
+                    "Persisted ATProto client key reference is invalid")
+  reference)

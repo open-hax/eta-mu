@@ -32,11 +32,20 @@
                       :line (inc index)
                       :cause (str cause)})))))))
 
+(defn- read-existing-ledger!
+  "Capture and parse one complete immutable snapshot through its owning descriptor."
+  [path]
+  (let [lock (fs/acquire-read-lock! path)]
+    (try
+      (parse-ledger-text path (fs/read-locked-text lock))
+      (finally (fs/release-lock! lock)))))
+
 (defn read-ledger
+  "Inspect one ledger under its writer lock; an absent optional ledger remains empty."
   [path]
   (if-not (fs/exists? path)
     []
-    (parse-ledger-text path (fs/read-text path))))
+    (read-existing-ledger! path)))
 
 (defn- append-record!
   [lock existing-text event]
@@ -97,23 +106,35 @@
       (finally
         (fs/release-lock! lock)))))
 
-(defn ensure-durable!
-  "Validate and reflush an existing ledger before acknowledging reopen or a no-change retry.
-   Visible history can contain a creation or append whose synchronization failed. The
-   owning lock must remain held through validation and the new durability fence."
-  [revisions path]
+(defn ensure-durable-with!
+  "Read under the owning lock, then load revisions, validate and reflush before release.
+   Loading after capture admits concurrently published schemas without weakening
+   validation. The loader must be synchronous and must not acquire this ledger lock."
+  [load-revisions path]
   (require-ledger-path! path)
   (let [lock (fs/acquire-lock! path)]
     (try
-      (doseq [existing (parse-ledger-text path (fs/read-locked-text lock))]
-        (schema/validate-event! revisions existing))
+      (let [events (parse-ledger-text path (fs/read-locked-text lock))
+            revisions (load-revisions)]
+        (doseq [existing events]
+          (schema/validate-event! revisions existing)))
       (fs/sync-locked! lock)
       (finally (fs/release-lock! lock)))))
 
+(defn ensure-durable!
+  "Validate and reflush an existing ledger against explicitly supplied revisions.
+   Visible history can contain a creation or append whose synchronization failed. The
+   owning lock remains held through validation and the new durability fence."
+  [revisions path]
+  (ensure-durable-with! (fn [] revisions) path))
+
 (defn read-ledgers
+  "Capture complete per-file snapshots under the same inode locks used by writers.
+   Pure validation/union consumes these immutable values after releasing each lock;
+   this does not imply one atomic transaction across separate partition files."
   [paths]
   (doseq [path paths] (require-ledger-path! path))
-  (mapv read-ledger paths))
+  (mapv read-existing-ledger! paths))
 
 (defn canonicalize-files
   [revisions paths]

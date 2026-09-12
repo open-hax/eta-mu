@@ -3,7 +3,7 @@
   (:import [java.nio ByteBuffer]
            [java.nio.channels FileChannel FileLock]
            [java.nio.charset StandardCharsets]
-           [java.nio.file CopyOption Files LinkOption OpenOption Path Paths
+           [java.nio.file CopyOption Files LinkOption NoSuchFileException OpenOption Path Paths
             StandardCopyOption StandardOpenOption]
            [java.nio.file.attribute BasicFileAttributes FileAttribute]
            [java.util UUID]
@@ -16,6 +16,14 @@
 
 (defn- nio-path ^Path [path]
   (Paths/get ^String path (make-array String 0)))
+
+(defn absolute-path
+  "Resolve the existing target through the filesystem, preserving link/.. semantics."
+  [path]
+  (str (.toRealPath (nio-path path) no-links)))
+
+(defn missing-path-error? [cause]
+  (instance? NoSuchFileException cause))
 
 (defn- file-key
   [path]
@@ -157,25 +165,18 @@
       (mapv #(str (.getFileName ^Path %)) (iterator-seq (.iterator paths))))
     []))
 
-(defn acquire-lock!
-  "Lock an existing ledger inode using FileChannel's whole-file advisory lock.
-
-   JVM FileChannel uses POSIX record locking on Unix and interoperates with
-   Clio's Node fcntl lock. A process guard serializes acquisition before opening
-   any second descriptor: closing even a failed overlapping channel could drop
-   the process's existing POSIX lock. This deliberately serializes local JVM
-   ledger operations; separate processes still coordinate per inode in the OS.
-   The returned Clojure token carries no host channel or lock object."
-  [path]
+(defn- acquire-lock-mode!
+  [path read-only?]
   (.lock process-guard)
   (try
     (refuse-locked-path! path)
     (let [key (file-key path)
           channel (FileChannel/open (nio-path path)
-                                    (into-array OpenOption [StandardOpenOption/READ
-                                                            StandardOpenOption/WRITE]))]
+                                    (into-array OpenOption
+                                                (if read-only? [StandardOpenOption/READ]
+                                                    [StandardOpenOption/READ StandardOpenOption/WRITE])))]
       (try
-        (let [lock (.lock channel 0 Long/MAX_VALUE false)
+        (let [lock (.lock channel 0 Long/MAX_VALUE (boolean read-only?))
               token (str (UUID/randomUUID))]
           (swap! active-locks assoc token
                  {:channel channel :file-lock lock :file/key key :path path})
@@ -186,6 +187,26 @@
     (catch Throwable cause
       (.unlock process-guard)
       (throw cause))))
+
+(defn acquire-lock!
+  "Lock an existing ledger inode using FileChannel's exclusive whole-file lock.
+
+   JVM FileChannel uses POSIX record locking on Unix and interoperates with
+   Clio's Node fcntl lock. A process guard serializes acquisition before opening
+   any second descriptor: closing even a failed overlapping channel could drop
+   the process's existing POSIX lock. This deliberately serializes local JVM
+   ledger operations; separate processes still coordinate per inode in the OS.
+   The returned Clojure token carries no host channel or lock object."
+  [path]
+  (acquire-lock-mode! path false))
+
+(defn acquire-read-lock!
+  "Hold a shared whole-file lock using a genuinely read-only FileChannel.
+
+   Shared readers conflict with Clio's exclusive POSIX writers. They retain the
+   same local inode guard and release path, and cannot create or append files."
+  [path]
+  (acquire-lock-mode! path true))
 
 (defn- lock-entry [token]
   (or (get @active-locks (:lock/id token))

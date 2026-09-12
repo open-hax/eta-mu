@@ -5,7 +5,6 @@
             [axxium.extern.identity-host :as host]
             [clio.domain.projection :as projection]
             [clio.infra.event :as event]
-            [clio.infra.ledger :as ledger]
             [clio.infra.runtime :as runtime]
             [clojure.string :as str]))
 
@@ -15,8 +14,7 @@
 (defn entries [store]
   (if (= :memory (:provider store))
     @(:ceremonies store)
-    (let [canonical (ledger/canonicalize-files (:schema/revisions (runtime/refresh (:runtime store)))
-                                                [(:ceremony-file store)])]
+    (let [canonical (runtime/canonicalize-files (:runtime store) [(:ceremony-file store)])]
       (:challenges (projection/state canonical {} domain/apply-event)))))
 
 (defn- persist! [store retained]
@@ -42,6 +40,10 @@
   (locked! store
            #(let [current (entries store)
                   retained (policy/retained current (host/now))]
+              ;; Replacement changes the inode, so fence the validated checkpoint
+              ;; while the stable operation lock still excludes other replacements.
+              (when (= :edn (:provider store))
+                (runtime/ensure-durable! (:runtime store) (:ceremony-file store)))
               (if (not= current retained)
                 (persist! store retained)
                 (when (= :edn (:provider store))
@@ -70,6 +72,19 @@
          id)))))
 
 (defn private-reference? [reference] (str/starts-with? reference "ceremony:"))
+
+(defn reserve-proof!
+  "Durably reserve a completion slot under the operation lock before returning its proof data."
+  [store id purpose browser-hash current-state]
+  (locked!
+   store
+   #(let [now (host/now)
+          challenge (policy/reserve-proof-attempt (current-state) id purpose browser-hash now)
+          retained (policy/retained (entries store) now)]
+      ;; A failed publication never starts crypto. A visible uncertain increment
+      ;; remains spent; a retry advances again or refuses, never discounts it.
+      (persist! store (assoc retained id challenge))
+      (unseal store (:private-ref challenge)))))
 
 (defn private-value [store id]
   (when-let [record (get (policy/retained (entries store) (host/now)) id)]

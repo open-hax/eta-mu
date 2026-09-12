@@ -80,3 +80,368 @@ warnings; kondo zero errors/warnings; strict boundary check clean. The actual
 compiled ESM/TCP identity verifier passed signup, private restart, authentication,
 forgery/Origin refusal, logout, and protected linking initiation. Its explicit
 live-provider configuration warning remains applicable.
+
+## Initialization and private-file recovery follow-up
+
+Codex findings 3996174222, 3996174224, and 3996174226 exposed startup uncertainty
+outside the already-fenced identity ledger. A visible master key can survive a
+failed inode or parent flush; a ceremony checkpoint can survive a failed
+post-rename parent flush; and another initial opener can win exclusive ledger
+creation. Existing-key admission now validates and forces the same open key
+descriptor followed by its private parent. Private directory ancestry is forced,
+and ceremony pruning first validates and forces the checkpoint while holding its
+stable operation lock. Reopening preserves the original key and checkpoint bytes.
+
+Exclusive ledger creation catches only EEXIST, then validates the winner through
+the normal replay and durability boundaries. Permission failures remain failures,
+and malformed winning files are preserved and refused. The first concurrent
+opener also needs to serialize the whole initialization: otherwise its new vault
+can be mistaken by a second process for previously initialized but lost history.
+A separate native initialization lock now covers this synchronous construction;
+the existing nonblocking operation lock still guards later state mutations.
+
+Real filesystem fault injection reproduced seven failing assertions before these
+changes. The initial corrected suite passed 94 tests / 814 assertions, zero
+compiler warnings in both 121-file release targets, configured lint and boundary
+checks, and the compiled ESM/TCP identity consumer. A separate two-process public
+API test paused the first opener immediately after the actual key write; the old
+artifact refused the second opener as lost history, while the corrected artifact
+allowed both openers and proved their key hashes match. The verifier runs this
+native regression through the advertised verify:identity command. It never emits
+key bytes. Additional collision refusal cases and subsequent review corrections
+are included in the final combined verification recorded below.
+
+These are syscall/failure and concurrent-process proofs, not simulated physical
+power loss. Live external OAuth still requires operator provider configuration;
+the controlled issuer test remains explicitly separate from a live identity
+provider consent and discovery flow.
+
+One refusal is intentionally retained: if construction stops after creating private
+state but before any identity ledger exists, the next provider open cannot tell
+that interrupted first initialization apart from a lost initialized history. It
+refuses with `missing-ledger`; it does not manufacture an empty identity history
+or replace the surviving key. Recovery of an existing store requires restoring
+its original history. A confirmed never-used failed initialization can be kept
+for inspection while starting with a fresh empty data directory in the same
+runtime. Fully automatic recovery of that ambiguous case would require a separate
+durable initialization intent/completion protocol and is not claimed here.
+
+## Grant and PGP completion admission
+
+Codex 3996178543 and 3996178553 are addressed by pure, validated domain decisions
+and a durable completion reservation. Grant policy receives the current transaction
+snapshot and explicit token hash, time, target, roles, and capabilities. It resolves
+the administrator again from that snapshot, validates the target principal, and
+returns one replacement transaction. Infra supplies host inputs and executes the
+decision. The host retry delay also now uses the required native async/await form
+(Codex 3996178550).
+
+Both PGP enrollment and login reserve at most three proof attempts per browser-bound
+challenge before OpenPGP parsing or verification. Reservation holds the existing
+operation lock and publishes the counter in the durable ceremony checkpoint.
+Wrong-browser, wrong-purpose, expired, and consumed challenges refuse admission.
+Failed crypto remains counted across handles and restart. A failed checkpoint
+publication starts no crypto; if its increment remains visible it stays spent,
+so retries can advance or refuse but cannot discount it. Successful identity
+transactions retain the existing single-use challenge consumption. Lock contention
+uses the existing finite admission retry policy.
+
+The first PGP harness run had a mismatched test delimiter, corrected before the
+meaningful failure-first run. The separate actual behavioral RED ran 99 tests /
+848 assertions with ten failures and no errors: repeated invalid signatures
+reached crypto six times instead of three, and the post-publication scenario
+started unaccounted crypto. The corrected focused domain/admission cases passed
+seven tests / 40 assertions before the final combined run.
+
+Final combined verification after merging immutable Clio locked-snapshot commit
+690aad83ff54ef5225a1f1533b4a7bd0eaef3561: 102 tests / 864 assertions, zero failures
+or errors; server and ESM release targets each compile 124 files with zero warnings;
+configured kondo reports zero errors/warnings; boundary check is clean. The actual
+compiled ESM/TCP restart, login, forged-header, Origin, logout, and linking checks
+pass, followed by the native two-process initialization regression (one test,
+zero failures or skips). That verifier explicitly warns that live external OAuth
+requires operator configuration. The Clio, protocols, and Sol source trees are
+byte-identical to their separately gated immutable 690aad83 successor; their test
+totals are recorded with that foundation checkpoint rather than inherited from an
+older identity build.
+
+## Delegated administrator grant targets
+
+CodeRabbit 5645971998 identified that the documented prohibition on self-grants
+was missing from both the pure grant transition and the retained actor HTTP route.
+Both now use the same law requiring another identified principal as the target.
+This applies to role and capability updates, including requests by administrators;
+an administrator can still update another principal. The retained route refuses
+self-updates with HTTP 403 before reaching its SQL write boundary.
+
+Failure-first domain and actual Fastify injection tests reproduced four failing
+assertions across five tests / 23 assertions, including an unwanted SQL write.
+The corrected focused suite passes the same five tests / 23 assertions, with zero
+compiler warnings and zero configured lint errors or warnings. This scoped proof
+does not replace the subsequent combined identity gate.
+
+## Passkey completion admission
+
+Codex 3996249407 reproduced the same unbounded completion path for WebAuthn.
+Passkey enrollment and login now reserve their browser-bound challenge attempts
+through the existing durable proof reservation before entering SDK verification.
+The shared law permits the four PGP and passkey proof purposes, each with three
+attempts. Passkey enrollment also checks the authenticated account binding before
+verification. A wrong-account request with the correct browser binding can spend
+one slot but cannot invoke cryptography; a wrong-browser request spends none.
+
+The new regression uses ephemeral native P-256 keys, actual none-attestation wire
+responses and signatures made by a different key, through the real WebAuthn SDK.
+It reproduces repeated invalid signatures across reopened EDN handles, rejected
+attestations, and a checkpoint publication failure that must start no crypto.
+The visible uncertain reservation stays spent after reopening, preserving the
+three-attempt upper bound. A positive service-level enrollment/login test checks
+session creation, signature-counter advancement and single-use rejection.
+
+After correcting a test delimiter during lint, the behavioral RED ran nine tests /
+84 assertions with eleven failures and no errors. The corrected focused passkey,
+PGP and existing credential crypto suite passed 13 tests / 108 assertions, with
+zero compiler warnings and zero configured lint errors or warnings. Existing
+WebAuthn wire-fixture helpers were extracted unchanged for reuse by both suites;
+the production crypto boundary was not replaced. The final combined identity
+verification is recorded separately after the owner restacks the reviewed changes.
+
+## Independent SDK refresh lock bound
+
+Self-review found that the reference SDK's separate native refresh lock still
+used only a wall-clock deadline. The finite local-admission retry cap did not
+bound this different loop. A real fs-ext contention test froze and reversed host
+time while a watchdog released the held lock after 100 milliseconds: old code
+incorrectly reached the callback instead of refusing within the attempt cap.
+The full behavioral RED was 105 tests / 879 assertions with exactly eight failures
+in the new clock regression and no errors. The watchdog made the failure proof
+finite rather than leaving a hung test process.
+
+Native refresh polling now uses the awaited host delay boundary and a 1,500-attempt
+cap in addition to the 30-second wait deadline. At the nominal 20-millisecond
+interval, it permits at most 1,499 waits; clock stalls or reversal cannot remove
+the attempt bound. The held descriptor still closes in finally. The focused
+native regression passes one test / eight assertions, 68 compiled files with zero
+warnings, and configured lint zero errors/warnings. This limits polling for an
+OS lock; it does not cancel an already-running SDK callback or network operation.
+
+## Preserve the prepared login response across an uncertain append
+
+Actual Codex 3996249402 against `161a0e4` found that a visible identity append
+could consume a one-use challenge while discarding the freshly created response
+token when its durability fence threw. Retrying the identity decision would then
+encounter the consumed challenge instead of recovering that response.
+
+The transaction now prepares its Clio event exactly once alongside the original
+decision result. If append throws, it reads canonical history under the existing
+operation lock. Only an exact matching accepted event authorizes one retry of
+that same event through Clio's idempotent durability fence. The prepared result
+is returned only after successful persistence. This repeats neither the decision
+nor cryptographic verification and never appends a second event. An absent event
+preserves the original refusal; persistent fencing errors still refuse after the
+single recovery attempt.
+
+Native failure-first tests throw at the actual file and parent-directory fsync
+after the real identity bytes have been appended. The original implementation
+failed seven assertions in two tests / 24 assertions. Focused GREEN is eight
+tests / 70 assertions including existing durability regressions, with 121 files
+compiled and zero warnings; scoped lint is clean. The returned token resolves
+after reopening, exactly one event exists, and the consumed challenge cannot be
+replayed. Additional cases prove no result escapes a failure before writing or
+a persistent fence failure, and the decision is executed only once.
+
+This bounded recovery handles a transient in-flight fence failure. A process
+crash or persistent storage failure can still prevent delivery of the response;
+it is not a durable response mailbox and does not claim recovery of plaintext
+tokens across process loss. Final combined package gates and external review
+are recorded on the published successor after its foundation dependency is fixed.
+
+## Concurrent ATProto route startup selects the accepted key
+
+Actual Codex 3996249405 against `161a0e4` found that provider initialization
+released its lock before route registration selected the ATProto signing key.
+Two fresh processes could both observe a missing key; the later transaction
+rejected the first process's accepted key instead of reusing it. Real operation
+lock contention could also abort route startup.
+
+Key selection now runs through a pure domain decision over the current locked
+identity state. It returns the accepted reference when another process won, or
+records one prepared candidate when no key exists. Existing references receive
+the same no-op durability fence as other identity transactions. Missing or
+malformed accepted references refuse instead of replacing the signing identity.
+Generation and sealing remain outside the pure transition, with one lazy
+candidate per startup invocation. Only native storage contention is retried
+through the existing finite admission bound. SDK construction occurs after key
+selection, outside that retry. A losing candidate can leave an unreferenced
+encrypted vault object; it cannot replace the accepted key or add another key
+creation event.
+
+Two failure-first native tests use the actual compiled library, separate Node
+processes, real fs-ext operation locks and Fastify TCP routes. File barriers
+prove both processes observed a missing key before either generation proceeds.
+One case releases the second process after the first commits; the other proves
+actual native lock contention before releasing the winner. Both failed against
+the original library with the expected concurrent-key or busy-lock error.
+The corrected library passes both tests, with no skips, after a release build
+of 125 files and zero warnings; scoped lint has zero errors and warnings.
+Both processes serve metadata and JWKS successfully, expose the same public-key
+digest, and leave exactly one canonical key-creation event. Private key material
+is neither printed nor included in evidence. Full combined identity gates are
+recorded separately after the foundation restack.
+
+## Combined review checkpoint on immutable foundation 090da40
+
+After merging exact foundation `090da40b20c7df1d29efbc4f194d0938f84478cc`, the
+advertised identity suite passes **111 tests / 933 assertions**, with no failures
+or errors. Test compilation covers 186 files; server and public ESM releases
+each cover 125 files, all with zero compiler warnings. Advertised lint reports
+zero errors and warnings, and the unchanged JavaScript boundary checker passes.
+
+The built ESM consumer again exercises actual TCP signup, restart/session read,
+forged-header and foreign-Origin refusal, committed logout and authenticated
+linking. All three native tests pass without skips: competing first provider
+initialization plus both ATProto route-startup races. Its explicit existing
+notice that real external OAuth requires operator configuration remains a scope
+limitation, not evidence of successful live provider consent.
+
+This checkpoint includes self-target grant refusal, durable PGP/passkey proof
+admission, finite SDK refresh polling, uncertain identity append recovery and
+ATProto signing-key winner recovery. Reciprocal source review found no confirmed
+new defect in the last two repairs. Logs are `axxium-090-{test,build,lint,boundary,
+consumer}.log` in the sandbox working root. Foundation's newly reported read-only
+permission regression is being fixed separately; these results cover immutable
+090 only and will not be transferred to that successor without rerunning gates.
+Actual published-head reviewers and required hosted checks remain merge gates.
+
+## Fresh restack on shared-read foundation 6c5af607
+
+The isolated successor merges immutable foundation
+`6c5af6077d069620583b29a180eb925a0805e94b`, which preserves read-only snapshot
+permissions with shared native locks. No Axxium runtime source changes in this
+restack. Full gates were actually repeated: **111 tests / 933 assertions**, no
+failures or errors; test compilation 186 files, server and ESM releases 125 files
+each, all with zero compiler warnings. Lint remains zero errors/warnings and the
+unchanged boundary checker passes. The actual ESM/TCP identity consumer and all
+three native startup tests pass again without skips. The external OAuth consent
+configuration notice retains the same explicitly limited meaning.
+
+These are fresh results from `axxium-6c5-{test,build,lint,boundary,consumer}.log`,
+not carried-forward 090 evidence. The prior 090 browser worktree remains frozen.
+CodeRabbit found no new scoped issue on the prior identity checkpoint and on
+the shared-read foundation; the new published identity head still requires its
+own actual review and required hosted checks before merge.
+
+## Lost ceremony checkpoints and awaited database shutdown
+
+Codex `3996401601` identified that reopening an initialized provider recreated a
+missing `ceremonies.edn` as empty history. The real-file regression additionally
+showed that the old reopen then garbage-collected the surviving encrypted
+challenge blob. Startup now checks both required histories before opening the
+vault or running retention cleanup. A running handle already refuses the missing
+checkpoint; a restart now returns `:missing-ceremonies` without recreating it.
+Surviving checkpoint bytes also count as evidence of an existing store when
+checking for lost identity history.
+
+The regression covers an initialized empty checkpoint and a checkpoint with an
+issued proof, unchanged identity/key bytes, and successful recovery after the
+fixture explicitly restores the original checkpoint. Operators must restore a
+consistent original store backup; startup does not guess replacement admission
+history. An interrupted first initialization that leaves identity state but no
+ceremony checkpoint also remains closed: distinguishing it from deleted history
+would require a durable initialization-intent protocol, which this patch does
+not claim to provide.
+
+Codex `3996401599` is repaired by explicit native `^:async` database `close!` and
+`await` of the adapter shutdown. A real delayed-pool initialization failure now
+rejects the asynchronous completion result rather than escaping synchronously.
+Existing native pool-adapter lifecycle and error tests remain included.
+
+The unchanged implementation reproduced five owned assertion failures and one
+missing-private-blob error in the combined old-artifact run (115 tests / 982
+assertions, 21 failures / one error including the separate OAuth regressions).
+Focused corrected gates pass four tests / 25 assertions; compilation covers
+108 files with zero warnings and scoped lint is zero errors/warnings. Full
+combined gates and published-head reviews remain pending at this checkpoint.
+
+## Pure password admission and bounded generic OAuth completion
+
+Codex `3996401598` is addressed by a law-backed pure password transition. The
+host prepares verification, the expected actor/credential, token/hash and
+timestamps; the transition rechecks the current active identity and unchanged
+credential, returns current grants and refuses a colliding session identifier.
+Its persisted changes contain the token hash, never the plaintext response token.
+
+Codex `3996401606` is addressed by reusing the durable proof reservation before
+GitHub, Discord or Google token exchange. Browser and callback input guards
+remain; external exchange executes once outside all admission retries. Failed
+provider responses still consume finite attempts across provider reopen, and a
+visible uncertain reservation is never discounted or followed by network work.
+
+The actual local TCP issuer regression reproduced **two tests / 36 assertions,
+16 failures, zero errors**. Scoped corrected gates pass **22 tests / 166
+assertions**, covering pure login, existing dummy/racing password verification,
+all three token endpoints, reopen/exhaustion/uncertain admission, existing
+once-only OAuth contention and PGP/passkey bounds. Compilation covers 136 files
+with zero warnings; scoped lint is zero errors/warnings. Two initial scoped
+harness calls nested `--config-merge` under `:builds`, so they emitted the default
+artifact and were refused by the native output guard. The actual behavioral RED
+used the corrected build-level config; those harness failures are not counted
+as reproduced product defects. Reciprocal source review found no confirmed
+defect. Full combined gates and actual published-head review follow separately.
+
+## Initialization ordering found by the combined suite
+
+The first full gate on immutable foundation `cb4bcb4` exposed a real interaction:
+the existing interrupted-identity-creation recovery test now reached the missing
+checkpoint guard before retrying its identity durability fence. That run had
+118 tests / 999 assertions, one failure and one error. Its assertions remain
+unchanged. Fresh initialization now creates and fences `ceremonies.edn` before
+creating `identity.edn`; a visible final identity creation therefore has its
+required checkpoint and can safely retry the failed fence. An actually lost
+checkpoint still refuses before vault cleanup. Incomplete initialization with
+surviving private/checkpoint state but no identity history remains closed.
+
+This restack also adopts the new runtime-aware schema snapshot and durability
+helpers for identity and ceremony reads/open/no-change paths. Full combined
+gates are repeated after both changes; fixed-revision append behavior remains
+explicit and unchanged.
+
+## Combined identity checkpoint on immutable foundation cb4bcb4
+
+Fresh advertised tests pass **118 tests / 1,001 assertions**, with zero failures
+or errors. Test compilation covers 191 files; server and ESM releases each cover
+127 files, all with zero compiler warnings. Advertised lint has zero errors and
+warnings; the unchanged boundary checker passes. The compiled ESM/TCP identity
+consumer and all three native startup tests pass without skips, including both
+ATProto route races and concurrent first provider initialization. The existing
+external-consent configuration notice remains explicit; this is not a claim
+that real operator-configured provider logins were performed.
+
+These results come from `axxium-cb4-test02.log`, `axxium-cb4-build02.log`,
+`axxium-cb4-lint02.log`, `axxium-cb4-boundary02.log` and
+`axxium-cb4-consumer02.log` in the sandbox runtime evidence directory. They cover
+all four latest identity review repairs, ordered schema reads and the corrected
+checkpoint-first initialization. The remaining Clio command-line schema-order
+finding is assigned to an isolated successor; this browser candidate remains
+frozen. Actual published-head reviews and required hosted checks remain pending.
+
+## Fresh identity restack on Clio CLI successor ff48f090
+
+The isolated restack merges immutable foundation
+`ff48f090965be5c17cca1e3662d7402b383510c1`. A direct Git comparison confirms the
+Axxium runtime and Clio runtime/kernel/canonicalization source bytes are
+unchanged from the independently reviewed identity `979c9fb`; the foundation
+successor corrects the canonicalize CLI and adds native command tests.
+
+Advertised gates were still rerun: **118 tests / 1,001 assertions**, test
+compilation 191 files, server and ESM release 127 files each, all with zero
+compiler warnings. Lint is zero errors/warnings and the boundary check passes.
+The actual ESM/TCP consumer and all three native startup tests pass without
+skips. Operator-configured external OAuth consent remains unclaimed.
+Fresh logs are `axxium-ff48-{test,build,lint,boundary,consumer}.log` under runtime.
+
+CodeRabbit and Codex completed the preceding identity review without concrete
+or major issues respectively. CodeRabbit also confirms that foundation ff48
+addresses the last CLI finding without new scoped findings. This successor's
+own published-head reviews and hosted checks remain required; the prior
+browser source and compiled artifacts remain frozen throughout the restack.

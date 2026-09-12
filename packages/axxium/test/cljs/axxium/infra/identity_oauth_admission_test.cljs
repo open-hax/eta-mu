@@ -46,7 +46,8 @@
         (is (= 1 @exchanges) "Local admission must not exchange the consumed provider code again")
         (when (:ok result)
           (is (= (:principal result) (identity/resolve-principal service (:token result))))
-          (is (= :invalid-challenge (get-in (await (result! service :github browser state nil)) [:error :code])))))
+          (is (= :invalid-challenge (get-in (await (result! service :github browser state nil)) [:error :code])))
+          (is (= 1 @exchanges) "Challenge replay must not repeat the provider exchange")))
       (finally (await (http/close! issuer)) (fs/rmSync directory #js {:recursive true :force true})))))
 
 (deftest ^:async atproto-callback-result-is-retained-across-the-same-real-lock

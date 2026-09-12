@@ -53,14 +53,14 @@
   (when (= "[" (character-at text 0))
     (let [start (skip-whitespace text 1)]
       (if (= "]" (character-at text start))
-        (when (= (inc start) (count text)) [])
+        (when (= (skip-whitespace text (inc start)) (count text)) [])
         (loop [index start members []]
           (when-let [{:keys [value] next-index :next} (sequence-member text index)]
             (let [end (skip-whitespace text next-index)
                   members (conj members value)]
               (case (character-at text end)
                 "," (recur (skip-whitespace text (inc end)) members)
-                "]" (when (= (inc end) (count text)) members)
+                "]" (when (= (skip-whitespace text (inc end)) (count text)) members)
                 nil))))))))
 
 (defn- flat-value [raw]

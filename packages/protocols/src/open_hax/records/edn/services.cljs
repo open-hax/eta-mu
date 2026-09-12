@@ -207,7 +207,7 @@
     (local/watch! store :notifications
                   #(and (= room (:room %)) (= event-type (:event-type %)))
                   #(callback (:data %))))
-  (unsubscribe [_ handle] ((:close! handle)))
+  (unsubscribe [_ handle] ((or (:close handle) (:close! handle))))
   (emit-to-room [_ room event-type data]
     (local/perform
      #(do (put! store :notifications {:room room :event-type event-type :data data} {})

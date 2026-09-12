@@ -1,6 +1,6 @@
 (ns axxium.infra.identity-oauth
   "OAuth orchestration with durable browser state and explicit identity linking."
-  (:require [axxium.domain.identity :as domain]
+  (:require [axxium.domain.identity-oauth :as policy]
             [axxium.extern.identity-host :as host]
             [axxium.extern.oauth :as oauth]
             [axxium.infra.identity :as identity]
@@ -28,18 +28,15 @@
   "Create one SDK client per service process with protected persistent stores."
   [{:keys [store options] :as service}]
   (when (configured? service :atproto)
-    (let [key "system:atproto-client-key"
-          record (get-in (store/state store) [:credentials key])
-          private-key (if record
-                        (store/unseal store (:private-ref record))
-                        (let [generated (oauth/generate-client-key)
-                              reference (store/seal! store generated)]
-                          (store/transact! store (fn [state]
-                                                  (law/require! (nil? (get-in state [:credentials key]))
-                                                                :concurrent-key-creation "ATProto client initialized concurrently; restart")
-                                                  {:operation :oauth-client-key-created
-                                                   :changes [(domain/put :credentials key {:private-ref reference})]}))
-                          generated))]
+    (let [candidate (delay (store/seal! store (oauth/generate-client-key)))
+          reference (await (admission/retry!
+                            #(let [prepared (when-not (get-in (store/state store) [:credentials policy/client-key])
+                                              @candidate)]
+                               ;; Key generation stays outside the pure transition. The
+                               ;; current locked snapshot decides which replica won; its
+                               ;; no-op transaction also fences an existing accepted key.
+                               (store/transact! store (fn [state] (policy/select-client-key state prepared))))))
+          private-key (store/unseal store reference)]
       (await (oauth/atproto-client! {:client-id (:client-id (provider-config service :atproto))
                                      :origin (:public-base-url options) :private-key (:private-key private-key)
                                      :lock-directory (get-in store [:vault :directory])
@@ -96,9 +93,10 @@
       (await (accept-verified! service browser state :oauth/atproto identity)))
     (let [state (:state query)
           purpose (keyword "oauth" (name provider))
-          data (identity/read-challenge service browser state purpose)]
+          _ (identity/read-challenge service browser state purpose)]
       (law/require! (and (configured? service provider) (not (str/blank? (:code query))))
                     :invalid-callback "Invalid OAuth callback")
-      (let [verified (await (oauth/exchange! provider (provider-config service provider)
+      (let [data (await (identity/read-proof-challenge! service browser state purpose))
+            verified (await (oauth/exchange! provider (provider-config service provider)
                                             (assoc data :code (:code query))))]
         (await (accept-verified! service browser state purpose verified))))))

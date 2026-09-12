@@ -1,0 +1,42 @@
+{
+  "rheosParent": "d5c458595e8ddf933bb45b7bc06c1ad94188226d",
+  "incomingParent": "2431570f10868197484d8e2902ad7508840625e7",
+  "incomingTree": "1798573556251b6fc5d42936d34f2cbce8d322ac",
+  "ledgers": [
+    {
+      "path": "kanban/.events/ledger.edn",
+      "preservedIncomingBytes": 1747283,
+      "incomingSha256": "b3b5878986c2344f69808ad82ba594fae816e2823da6a5c956b2f389830ee623",
+      "rheosOnlyRecords": 8,
+      "appendedBytes": 9818,
+      "appendedSha256": "507690e32a5b0eabb827faeea7839acb87bb1b83d83284ab69277e0833d10505"
+    },
+    {
+      "path": "receipts.edn",
+      "preservedIncomingBytes": 262636,
+      "incomingSha256": "123d4722017667cc885deecc31a8623a9735c4d47a5b41e1a9e52f406629d639",
+      "rheosOnlyRecords": 4,
+      "appendedBytes": 4638,
+      "appendedSha256": "7b9a2faf80dd0aa5f82e4da3650d29cc180b7e480cf1dc47c0024368608694d9"
+    },
+    {
+      "path": ".\u03b7\u03bc/session-reflections.edn",
+      "preservedIncomingBytes": 31638,
+      "incomingSha256": "f963407eeb7e5a95bc357e7449bdf21b51b50dc6a952ab20cca0d8c605cd17f3",
+      "rheosOnlyRecords": 4,
+      "appendedBytes": 3771,
+      "appendedSha256": "4415d9349b8ef83abb6d6f949e5c925ba59f77f1ffcfe8c9b6a284674b332f83"
+    }
+  ],
+  "sessionMemory": {
+    "preservedIncomingBytes": 30719,
+    "incomingSha256": "24f84949a69186a7143441ff092611fdc35b74c95aac30fe577b99f2a60d5082",
+    "appendedBytes": 959
+  },
+  "sharedCard": {
+    "incomingFrontmatterUnchanged": true,
+    "incomingBodyPreserved": true,
+    "rheosOnlyCommentBlocks": 5,
+    "rheosCommentBytes": 2968
+  }
+}

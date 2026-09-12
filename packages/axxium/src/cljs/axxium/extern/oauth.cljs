@@ -67,9 +67,15 @@
       (case provider
         :google
         (let [jwks (jose/createRemoteJWKSet (js/URL. (:jwks-url config)))
-              result (await (jose/jwtVerify (aget tokens "id_token") jwks
-                                            #js {:issuer (:issuer config) :audience (:client-id config)
-                                                 :algorithms #js ["RS256"]}))
+              result (try
+                       (await (jose/jwtVerify (aget tokens "id_token") jwks
+                                             #js {:issuer (:issuer config) :audience (:client-id config)
+                                                  :algorithms #js ["RS256"]}))
+                       (catch :default error
+                         (if (instance? (.-JWTClaimValidationFailed jose/errors) error)
+                           (throw (ex-info "OIDC claim validation failed"
+                                           {:code :invalid-provider-response :claim (.-claim error)}))
+                           (throw error))))
               claims (.-payload result)]
           (law/require! (= nonce (aget claims "nonce")) :invalid-provider-response "OIDC nonce mismatch")
           {:issuer (:issuer config) :subject (aget claims "sub")

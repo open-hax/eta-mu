@@ -54,3 +54,17 @@
         (is false "database rejection must propagate")
         (catch :default error
           (is (= {:code "23514" :constraint "org_reference"} (ex-data error))))))))
+
+(defn- start-close! []
+  (try {:pending (db/close!)}
+       (catch :default cause {:synchronous cause})))
+
+(deftest ^:async database-close-refuses-through-its-asynchronous-result
+  (let [failure (ex-info "Injected pool initialization refusal" {:code :fixture-close})
+        result (with-redefs [db/pool (delay (throw failure))] (start-close!))]
+    (is (nil? (:synchronous result)) "Shutdown errors use the asynchronous completion channel")
+    (when-let [pending (:pending result)]
+      (try
+        (await pending)
+        (is false "A failed pool initialization must reject shutdown")
+        (catch :default cause (is (identical? failure cause)))))))

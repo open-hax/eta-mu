@@ -42,6 +42,16 @@
       (is (= (str "labels: " value) (:document/frontmatter-raw document)))
       (is (= "Body" (:document/body document))))))
 
+(deftest inline-sequences-preserve-whitespace-after-the-closing-bracket
+  (doseq [[value expected] [["[]" []]
+                            ["[\"ci\"]" ["ci"]]
+                            ["[ci, governance]" ["ci" "governance"]]
+                            ["[ci, \"security,review\"]" ["ci" "security,review"]]]
+          suffix [" " "\t" " \t  "]]
+    (let [input (str value suffix)]
+      (is (= expected (frontmatter/parse-canonical-string-sequence input)) (pr-str input))
+      (is (= expected (:labels (frontmatter/parse-flat (str "labels: " input))))))))
+
 (deftest unsupported-inline-collections-remain-fail-closed
   (doseq [line ["labels: [true, false]"
                 "labels: [ci, null]"
@@ -109,3 +119,15 @@
         (is (nil? result) "Malformed input must remain outside the declared string subset")
         (is (< elapsed 2000)
             (str "50,000 padding characters must not stall synchronous task reads: " elapsed "ms"))))))
+
+(deftest trailing-whitespace-has-bounded-acceptance-and-refusal-cost
+  (let [padding (apply str (repeat 50000 " "))]
+    (doseq [[value expected] [["[]" []] ["[ci]" ["ci"]]]
+            trailer ["" "!"]]
+      (let [input (str value padding trailer)
+            started (milliseconds)
+            result (frontmatter/parse-canonical-string-sequence input)
+            elapsed (- (milliseconds) started)]
+        (is (= (when (empty? trailer) expected) result))
+        (is (< elapsed 2000)
+            (str "Trailing whitespace must retain bounded scanning cost: " elapsed "ms"))))))

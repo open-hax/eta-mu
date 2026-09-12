@@ -215,6 +215,13 @@ Clio has no stale lockfile, lease timeout, PID-reclamation protocol, or
 application-level fencing race. Symlink and hard-link aliases therefore contend
 on the same underlying file identity rather than on path-derived lock names.
 
+`read-ledger` and each partition snapshot in `read-ledgers` use a read-only
+descriptor with a shared lock. On Unix this is a POSIX read lock plus shared
+`flock` in Node, or a shared `FileChannel` lock on the JVM. Read-only replay thus
+needs no write permission and still waits for participating exclusive writers
+to finish. The reader parses through the descriptor that owns its lock, then
+releases it. This is a per-file snapshot, not one transaction across files.
+
 Whether a candidate event may join a partition is a law, not transport.
 `clio.law.ledger/append-admission` classifies it against the events already
 present — `:appendable`, `:already-present`, `:id-collision`, or
@@ -230,10 +237,10 @@ becoming a fresh empty history while the intended ledger stays behind.
 
 A POSIX record lock is released when the process closes *any* descriptor for
 that file, not only the one that took the lock. Path-based `read-text` would
-therefore drop a held lock silently, so `clio.extern.js.fs` tracks the paths
-this process has locked and refuses that read outright; callers inside a
-critical section use `read-locked-text`. The guard keys on the path while the
-lock keys on the inode, so a hard-link alias under another name is not caught.
+therefore drop a held lock silently, so `clio.extern.js.fs` tracks the paths and
+exact device/inode identities this process has locked. It refuses path reads
+and lock reentry through the same path or an alias before opening another
+descriptor; callers inside a critical section use `read-locked-text`.
 
 The JVM adapter uses `FileChannel.lock` on the same existing inode. On Unix
 this participates in the Node adapter's authoritative POSIX record-lock
@@ -263,6 +270,22 @@ left present by a previously refused force. Tests observe real filesystem calls,
 inject file and directory synchronization failures, and verify that no dependent
 event is admitted. These tests establish syscall sequencing and failure handling;
 they do not simulate physical power loss or storage hardware guarantees.
+
+An append can leave its complete event visible even though inode or directory
+synchronization failed. `runtime/append!` retains the exact generated event in
+the exception data as `:clio/append-recovery`, a map containing `:ledger/path`
+(an absolute path) and `:event`. Preserve this EDN if recovery must survive a
+process restart. After addressing the underlying failure, explicitly call
+`(runtime/retry-append! rt recovery)`. It reloads historical schema revisions
+and retries that event without generating another UUID or timestamp. An exact
+visible event returns `:already-present` only after validation and both
+durability fences succeed. Errors retain the same recovery data and their
+original cause; a token does not certify that the event was admitted.
+
+Retries still refuse changed event bytes, competing stream slots, missing
+ledgers, unknown schemas and corrupt history. A partially written EDN record
+requires explicit investigation; this API does not guess missing bytes or
+repair corruption automatically.
 
 `clio.domain.canonicalize/canonicalize` performs:
 
@@ -308,6 +331,18 @@ npx clio append \
     :event/subject "counter:a"
     :event/data {:amount 10}}'
 ```
+
+If append fails after constructing its event, the CLI exits with status 1 and
+prints the error plus EDN data to stderr. Pass the **value** of
+`:clio/append-recovery` unchanged to the explicit recovery command:
+
+```bash
+npx clio retry-append .clio/schemas '<append-recovery-edn>'
+```
+
+This command uses the stored historical schema and event identity; it does not
+require the current catalog. Failure leaves stdout empty. Success prints the
+same `:append/result` and `:event` shape as `append`.
 
 Canonicalize arbitrarily partitioned ledgers:
 
@@ -388,6 +423,20 @@ exceed the common four-digit EDN reader grammar. Admission also checks the exact
 tagged print/read round trip. Refused values remain representable as explicit
 application strings, but cannot enter an event as canonical instants.
 Arbitrary host objects remain invalid.
+Keyword and symbol constructors can also produce names that their EDN printer
+cannot preserve. Admission requires the printed identifier to read back as
+exactly one value of the same kind, namespace and name. Whitespace, delimiters,
+reserved symbol literals and ambiguous constructor namespaces are refused
+before append; valid identifiers retain their existing canonical bytes. This
+also protects generic JavaScript records whose property names become keywords.
+Strings and both identifier components must contain Unicode scalar values:
+UTF-16 high surrogates require an immediately following low surrogate, and a
+low surrogate cannot stand alone. Malformed strings are refused with
+`:clio.canonical/invalid-unicode` before hashing or persistence; the error's
+`:offset` identifies the malformed code unit. Node and JVM UTF-8 encoders
+otherwise replace those units differently. Valid BMP characters, supplementary
+pairs and literal replacement characters retain their exact preimages. No
+Unicode normalization or lossy replacement is performed.
 Malli's data-only predicate symbol `inst?` expresses the instant contract;
 `:inst` is not in its default registry. Use quoted symbols in authored schema
 code so persisted catalogs contain data rather than runtime function objects.
