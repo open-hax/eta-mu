@@ -29,8 +29,24 @@
     (let [document (markdown/parse "---\nlabels: []\n---\nBody")]
       (is (= [] (get-in document [:document/frontmatter-data :labels]))))))
 
+(deftest plain-and-mixed-inline-string-sequences-are-decoded
+  (doseq [[value expected]
+          [["[graph, relationships, code, provenance]" ["graph" "relationships" "code" "provenance"]]
+           ["[ci, \"security,review\", governance]" ["ci" "security,review" "governance"]]
+           ["[needs review, domain:graph, \"false\"]" ["needs review" "domain:graph" "false"]]]]
+    (let [raw (str "---\nlabels: " value "\n---\nBody")
+          document (markdown/parse raw)]
+      (is (= expected (get-in document [:document/frontmatter-data :labels])))
+      (is (= (str "labels: " value) (:document/frontmatter-raw document)))
+      (is (= "Body" (:document/body document))))))
+
 (deftest unsupported-inline-collections-remain-fail-closed
-  (doseq [line ["labels: [ci, automation]"
+  (doseq [line ["labels: [true, false]"
+                "labels: [ci, null]"
+                "labels: [ci, False]"
+                "labels: [ci, -42]"
+                "labels: [ci, owner: ops]"
+                "labels: [ci, owner:]"
                 "labels: [\"ci\", 42]"
                 "labels: [[\"ci\"]]"
                 "labels: [\"ci\", {\"owner\": \"ops\"}]"
@@ -64,7 +80,7 @@
       (is (not (contains? decoded :nested)))
       (is (not (contains? decoded :note)))
       (is (not (contains? decoded :folded)))
-      (is (not (contains? decoded :tags)))
+      (is (= ["one" "two"] (:tags decoded)) "A plain string sequence is supported")
       (is (= "ready" (:status decoded))))))
 
 (deftest explicit-empty-quoted-string-remains-a-flat-scalar

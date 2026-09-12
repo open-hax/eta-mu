@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789214416261-0.v1m9cjr7v4oeomlpsgg"
+write-id: "1789215148197-0.jrnhipl281orsngyil5"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "in_progress"
@@ -66,5 +66,9 @@ PR334 successor findings at f221: reproduce and repair uncertain empty-ledger cr
 CodeRabbit successor finding 3996101377 also confirmed: batch-translate nil currently maps to an empty change vector and returns a batch ID. Add sequence-shape admission before mapping, with public JavaScript null/undefined/non-array refusal and byte-identical ledger regression plus valid batch acceptance. This correction remains inside the current provider contract recovery scope.
 
 Fresh successor verification: actual creation/reopen fault regressions failed first (Node7/JVM6/protocols2/Sol2), then Clio BB25/75, JVM66/198, NBB+Shadow64/174 all pass; Shadow115files0warnings and kondo/boundary0/0. Protocols71/217 plus13nativeNode tests/no skips, test136/lib111 zero compiler warnings, strictTS and kondo0/0. Sol142/607 plus native worker-close test, test215/server201 files0warnings. Optional undefined/Promise<void> RED2 and authoritative warning workflow audit RED2drifts now green (4tests44assertions+6native warning tests). Missing translation batch RED1 now rejects before changes. Actual current findings fixed in source; publication and new three-reviewer loop still required, so card remains in progress.
+
+Scoped stack-recovery successor: Epiphany source card labels [graph, relationships, code, provenance] disappear from a regenerated Rheos snapshot because the shared inline sequence decoder accepts quoted members only. In recovery/rheos-inline-labels, extend the bounded shared string sequence grammar to plain YAML string members, retain malformed/nested/typed refusals, add a real read-task and board projection regression proving original card bytes remain unchanged, and rebuild/test/lint the same Rheos CLI. Models lane owns regeneration of Epiphany snapshot; no historic card or ledger rewrite is authorized.
+
+Rheos inline-label successor verified: actual filesystem read-task/snapshot RED3 then GREEN208 tests/1124 assertions; portable grammar RED4 then JVM GREEN7/39; lint0/0; complete server111/CLI115/projector75/UI95 file releases all zero compiler warnings. Actual CLI projects 116 Epiphany cards and preserves graph, relationships, code, provenance on the unchanged source card. Independent peer review found no confirmed defect within the explicitly partial string-only YAML subset. Evidence and exact CLI/parser/card hashes are in docs/verification/rheos-inline-label-projection.md. Two existing cold-start external :paths warnings are documented, not suppressed.
 
 ---
