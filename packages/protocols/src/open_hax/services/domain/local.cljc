@@ -71,7 +71,7 @@
                  (cond-> []
                    (and (#{:out :both} direction) (= source node-id)) (conj target)
                    (and (#{:in :both} direction) (= target node-id)) (conj source))))
-       distinct sort vec))
+       distinct law/validate-neighbor-ids! sort vec))
 
 (defn traverse [state start {:keys [depth] :or {depth 1} :as opts}]
   (law/require! (and (integer? depth) (<= 0 depth)) :invalid-depth

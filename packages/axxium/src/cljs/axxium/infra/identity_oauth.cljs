@@ -4,7 +4,8 @@
             [axxium.extern.identity-host :as host]
             [axxium.extern.oauth :as oauth]
             [axxium.infra.identity :as identity]
-            [axxium.infra.identity-ceremonies :as ceremonies]
+            [axxium.infra.identity-admission :as admission]
+            [axxium.infra.identity-sdk-store :as sdk-store]
             [axxium.infra.identity-store :as store]
             [axxium.law.identity :as law]
             [axxium.shape.identity :as shape]
@@ -22,28 +23,6 @@
     (if (= :atproto provider)
       (boolean (seq (:client-id config)))
       (boolean (and (contains? oauth/defaults provider) (seq (:client-id config)) (seq (:client-secret config)))))))
-
-(defn- private-sdk-store [identity-store prefix]
-  {:get! (fn [key]
-           (when-let [record (get-in (store/state identity-store) [:credentials (str prefix key)])]
-             (store/unseal identity-store (:private-ref record))))
-   :put! (fn [key value]
-           (let [reference (store/seal! identity-store value)]
-             (store/transact! identity-store
-                              (fn [_] {:operation :oauth-private-state
-                                       :changes [(domain/put :credentials (str prefix key) {:private-ref reference})]}))))
-   :delete! (fn [key]
-              (store/transact! identity-store
-                               (fn [state] {:operation :oauth-private-state-deleted
-                                            :changes (when (get-in state [:credentials (str prefix key)])
-                                                       [(domain/remove-entry :credentials (str prefix key))])})))})
-
-(defn- pending-sdk-store [identity-store]
-  {:get! (fn [key] (ceremonies/private-value identity-store (str "atproto-state:" key)))
-   :put! (fn [key value]
-           (ceremonies/issue! identity-store (str "atproto-state:" key) (host/sha256 key)
-                              :atproto/pending value identity/challenge-ttl-ms))
-   :delete! (fn [key] (ceremonies/remove! identity-store (str "atproto-state:" key)))})
 
 (defn ^:async create-atproto-client!
   "Create one SDK client per service process with protected persistent stores."
@@ -64,8 +43,8 @@
       (await (oauth/atproto-client! {:client-id (:client-id (provider-config service :atproto))
                                      :origin (:public-base-url options) :private-key (:private-key private-key)
                                      :lock-directory (get-in store [:vault :directory])
-                                     :state-store (pending-sdk-store store)
-                                     :session-store (private-sdk-store store "atproto-session:")})))))
+                                     :state-store (sdk-store/pending-store store identity/challenge-ttl-ms)
+                                     :session-store (sdk-store/private-store store "atproto-session:")})))))
 
 (defmulti begin!
   "Authentication providers own their distinct start protocol."
@@ -88,7 +67,7 @@
 (defmethod begin! :github [service provider browser token query _] (begin-generic! service provider browser token query))
 (defmethod begin! :discord [service provider browser token query _] (begin-generic! service provider browser token query))
 (defmethod begin! :google [service provider browser token query _] (begin-generic! service provider browser token query))
-(defmethod begin! :atproto [service _ browser token {:keys [handle redirect link]} client]
+(defmethod begin! :atproto ^:async begin-atproto [service _ browser token {:keys [handle redirect link]} client]
   (law/require! client :provider-not-configured "ATProto client metadata is not configured")
   (law/require! (and (string? handle) (<= 3 (count handle) 2048)) :invalid-handle "ATProto handle or DID is required")
   (let [actor (when (= "true" link) (identity/require-principal! service token))
@@ -96,23 +75,14 @@
                                    (cond-> {:redirect (shape/safe-redirect redirect)}
                                      actor (assoc :link-principal-id (:principal/id actor)
                                                   :link-session-hash (host/sha256 token))))]
-    (oauth/atproto-authorize! client handle state)))
+    (await (oauth/atproto-authorize! client handle state))))
 (defmethod begin! :default [_ _ _ _ _ _]
   (throw (ex-info "Unsupported identity provider" {:code :unsupported-provider})))
 
 (defn- ^:async accept-verified!
-  "Retry only transient local admission, keeping the already verified provider result.
-   Every attempt rechecks the current browser challenge and linking session.
-   Its existing finite expiry bounds waiting; the one-use provider code is never exchanged twice."
+  "Recheck current challenge and linking authority while retrying only local admission."
   [service browser state purpose verified]
-  (loop []
-    (let [outcome (try {:result (identity/accept-external! service browser state purpose verified)}
-                       (catch :default cause {:cause cause}))]
-      (if-let [cause (:cause outcome)]
-        (if (= :clio.ledger/concurrent-stream-write (:clio/error (ex-data cause)))
-          (do (await (host/delay! 25)) (recur))
-          (throw cause))
-        (:result outcome)))))
+  (await (admission/retry! #(identity/accept-external! service browser state purpose verified))))
 
 (defn ^:async finish!
   "Validate browser-bound callback state before accepting any external identity."

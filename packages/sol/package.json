@@ -15,7 +15,7 @@
     "watch": "shadow-cljs watch server-dev",
     "start": "node dist/server.js",
     "start:dev": "node dist-dev/server.js",
-    "test": "shadow-cljs compile test",
+    "test": "shadow-cljs compile test && node --test test/js/*.test.mjs",
     "lint": "clj-kondo --lint src/cljs test/cljs && node ../../scripts/contract-guard.mjs src/cljs test/cljs",
     "lint:kondo": "clj-kondo --lint src/cljs test/cljs && node ../../scripts/contract-guard.mjs src/cljs test/cljs",
     "typecheck": "shadow-cljs compile server"

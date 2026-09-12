@@ -56,7 +56,7 @@
   (let [canonical (history store)
         current (projection/state canonical {:challenges (ceremonies/entries store)} domain/apply-event)
         {:keys [operation actor changes result]} (decide current)]
-    (when (seq changes)
+    (if (seq changes)
       (let [previous (last (:canonical/events canonical))]
         (runtime/append! (:runtime store) (:file store) :axxium/identity-changed
                          {:event/stream "axxium/identity"
@@ -64,7 +64,8 @@
                           :event/causes (if previous [(:event/id previous)] [])
                           :event/actor (or actor "axxium")
                           :event/subject "axxium/identity"
-                          :event/data {:operation operation :changes (vec changes)}})))
+                          :event/data {:operation operation :changes (vec changes)}}))
+      (ledger/ensure-durable! (:schema/revisions (runtime/refresh (:runtime store))) (:file store)))
     result))
 
 (defmethod transact! :edn [store decide]

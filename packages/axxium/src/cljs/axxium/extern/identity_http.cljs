@@ -38,8 +38,8 @@
      :query (dictionary (.-query request))
      :params (dictionary (.-params request))
      :headers headers :token (or bearer (:axxium_session cookies))
-     ;; Socket identity cannot be rotated with an attacker-controlled cookie/header.
-     :client-key (host/sha256 (or (some-> request .-socket .-remoteAddress) "unknown-local-client"))
+     ;; Fastify applies the host's trustProxy policy; never parse forwarding headers here.
+     :client-key (host/sha256 (or (.-ip request) (some-> request .-socket .-remoteAddress) "unknown-local-client"))
      :browser-token (:axxium_browser cookies)
      :bearer? (boolean bearer) :cookie-auth? (boolean (:axxium_session cookies))}))
 

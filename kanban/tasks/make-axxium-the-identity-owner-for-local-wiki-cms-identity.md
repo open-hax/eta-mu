@@ -2,7 +2,7 @@
 category: "tasks"
 dependency: []
 type: "task"
-write-id: "1789207320661-0.r3h5ab7vj1gic1zarwd"
+write-id: "1789213180387-0.uel0ft3eac9ft4x147v"
 title: "Make Axxium the identity owner for local Wiki CMS"
 priority: "P0"
 status: "in_progress"
@@ -29,5 +29,9 @@ Run package build/test/lint, focused cryptographic and replay tests, then the li
 Recovery and current proof: restored missing lawful ready/todo/in_progress transitions from retained breakdown state after the external worktree loss; no hand-edited status. Axxium correctness checkpoint published a7b19825fb5d7c624c38f1d41043c42e92d7f0c3 (exact local c512bd8). Integrated 66 tests/632 assertions, both release outputs118files with0warnings, lint0/0, built ESM/realTCP identity proof pass. Added fresh-session credential inventory/revocation with configured-provider last-method protection; fixed all seven Codex findings through pure external admission, native Fastify/SDK interfaces, dummy password work, browser-cookie refresh, retained-ledger vault guard and safe cleanup contention. Strict legacy boundary remains56violations/exit1 and live OAuth consent remains uncompleted pending provider configuration. PR333 current-head three-reviewer loop is active; root owns browser integration and no merge occurs before remaining issues/gates resolve.
 
 PR333 follow-up: reproduced one-use OAuth code loss under the real native Clio admission lock and moved bootstrap creation/restart policy into pure domain transitions. Local admission retries retain a verified provider result but recheck challenge expiry and linking session on each attempt; process-crash recovery is not claimed. Actual bcrypt tests exposed and repaired an invalid default import, and actual Fastify cookies reproduced a 1000x Max-Age unit bug. Guarded full suite 83 tests/744 assertions, release server/lib 119 files each with zero warnings, kondo zero errors/warnings, unchanged strict boundary zero violations and built ESM/TCP probe pass. Live external consent still requires operator provider configuration. Full repository board review gate remains separate; no status bypass.
+
+Recovery follow-up for actual PR333 findings: reconstruct real ATProto SDK local-store contention retries, bound SDK and verified identity admission without repeating provider code exchange, use Fastify trustProxy-derived client identity with direct socket fallback, mark ATProto begin native async, and reflush projection-only identity acknowledgments using the reviewed Clio kernel. Reconstruct regression fixtures against the real SDK and native locks, run fresh guarded tests/releases/lint/boundary/TCP proof, and explicitly retain live-consent limitations.
+
+Fresh reconstructed combined gate: 89 tests and 775 assertions, zero failures/errors, native async error guard; release server/lib121files0warnings; kondo0/0 and strict boundary0. Real SDK state/session contention tests prove one exchange, retained encrypted session, consumed pending state and no revoke; deadline plus reversed-clock attempt cap refuse indefinitely busy storage. Real Fastify trust policy separates trusted forwarded clients and rejects untrusted spoofed bucket selection. Native identity fsync regression failed3assertions before no-change fence and nowpasses. Built ESM/TCP signup, private restart, authenticated read, origin/header refusal, logout and POST linking pass; live external OAuth consent remains explicitly unavailable. Foundationf221 integrated with original identity ledger bytes preserved and new foundation events appended.
 
 ---

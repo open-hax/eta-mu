@@ -97,10 +97,12 @@
                                                    :publicKeyEncoding #js {:type "spki" :format "pem"}})]
     {:private-key (.-privateKey pair)}))
 
-(defn- sdk-store [{:keys [get! put! delete!]}]
-  #js {:get (fn [key] (js/Promise.resolve (some-> (get! key) clj->js)))
-       :set (fn [key value] (js/Promise.resolve (put! key (js->clj value :keywordize-keys true))))
-       :del (fn [key] (js/Promise.resolve (delete! key)))})
+(defn sdk-store
+  "Adapt named local storage operations into the reference SDK's asynchronous store."
+  [{:keys [get! put! delete!]}]
+  #js {:get (fn ^:async read-sdk [key] (some-> (await (get! key)) clj->js))
+       :set (fn ^:async write-sdk [key value] (await (put! key (js->clj value :keywordize-keys true))))
+       :del (fn ^:async delete-sdk [key] (await (delete! key)))})
 
 (defn- request-lock
   "Serialize refreshes per session locally and across processes sharing the EDN vault."

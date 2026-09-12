@@ -42,7 +42,7 @@
   (let [canonical (history store)
         current (projection/state canonical {} domain/apply-event)
         {:keys [changes result]} (transition current)]
-    (when (seq changes)
+    (if (seq changes)
       (let [previous (last (:canonical/events canonical))
             event (event/make-event
                    (get-in store [:runtime :schema/current])
@@ -56,7 +56,8 @@
         ;; Clio locks the inode and refuses a stale writer claiming this slot.
         ;; Callers may retry the whole operation; no lost updates are hidden.
         (ledger/append-event!
-         (:schema/revisions (runtime/refresh (:runtime store))) (:file store) event)))
+         (:schema/revisions (runtime/refresh (:runtime store))) (:file store) event))
+      (ledger/ensure-durable! (:schema/revisions (runtime/refresh (:runtime store))) (:file store)))
     result))
 
 (defn ^:async perform [operation] (operation))

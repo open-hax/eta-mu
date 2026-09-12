@@ -27,6 +27,18 @@
   (when-not condition
     (throw (ex-info message {:services/error type}))))
 
+(defn validate-record!
+  "Generic records preserve application fields, but the container must be a map."
+  [record]
+  (require! (map? record) :invalid-record "Service record must be a map")
+  record)
+
+(defn validate-neighbor-ids!
+  "Refuse malformed graph output without dropping its underlying stored edges."
+  [ids]
+  (require! (every? string? ids) :invalid-neighbor-identity "Neighbor identities must be strings")
+  ids)
+
 (def service-keys
   #{:events :sessions :documents :graph :translations :labels :users :realtime})
 

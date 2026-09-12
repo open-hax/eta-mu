@@ -1,5 +1,5 @@
 /// <reference path="../../index.d.ts" />
-import type { ClioEdnServices, EventAdmission, GraphNode, GraphOperations } from "@open-hax/protocols";
+import type { ClioEdnServices, EventAdmission, GraphNode, GraphOperations, Session, TranslationSegment } from "@open-hax/protocols";
 
 // This consumer must type-check against the published declaration and run
 // against the compiled provider without casts or mock graph operations.
@@ -46,4 +46,46 @@ export async function verifyEmissionFailure(services: ClioEdnServices): Promise<
   const pending: Promise<void> = services["emit-to-room"]("room", "changed", { n: 2 });
   const rejected = await pending.then(() => false, () => true);
   if (!rejected) throw new Error("Failed persistence must reject its emission acknowledgement");
+}
+
+export async function verifyGenericRecordConsumer(services: ClioEdnServices): Promise<void> {
+  const node = await services["add-node"]({ label: 42 });
+  const edge = await services["add-edge"]({});
+  const document = await services["store-document"]({ content: "inspectable" });
+  const translation = await services["create-translation"]({});
+  const label = await services["create-label"]({});
+  const session = await services["create-session"]({ "actor-id": 42 });
+  const ids: string[] = [node.id, edge.id, document.id, translation.id, label.id, session.id];
+  if (!ids.every(id => typeof id === "string")) throw new Error("Every admitted record requires a string identity");
+  if (typeof document.content !== "string" || document.content.toUpperCase() !== "INSPECTABLE") {
+    throw new Error("Generic document content must remain available after narrowing");
+  }
+  if (node.label !== 42) throw new Error("Application fields must preserve their supplied values");
+  if (false) {
+    // @ts-expect-error Application fields are unknown until narrowed.
+    const nodeType: string = node.type;
+    // @ts-expect-error Application fields are unknown until narrowed.
+    const nodeLabel: string = node.label;
+    // @ts-expect-error Application fields are unknown until narrowed.
+    const endpoint: string = edge.source;
+    // @ts-expect-error Document content is generic, not necessarily a map.
+    const content: Record<string, unknown> = document.content;
+    // @ts-expect-error Translation source need not be supplied.
+    const source: string = translation.source;
+    // @ts-expect-error Label name need not be supplied.
+    const name: string = label.name;
+    // @ts-expect-error Session actor IDs remain unvalidated application values.
+    const actor: string = session["actor-id"];
+    void [nodeType, nodeLabel, endpoint, content, source, name, actor];
+  }
+  const missingSession = await services["update-session"]("missing", {});
+  const missingTranslation = await services["label-translation"]("missing", "accepted");
+  if (false) {
+    // @ts-expect-error An absent session update can return null.
+    const presentSession: Session = missingSession;
+    // @ts-expect-error An absent translation update can return null.
+    const presentTranslation: TranslationSegment = missingTranslation;
+    void [presentSession, presentTranslation];
+  }
+  if (missingSession !== null || missingTranslation !== null) throw new Error("Missing updates must return null");
 }

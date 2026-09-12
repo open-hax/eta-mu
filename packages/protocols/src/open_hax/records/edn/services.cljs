@@ -12,6 +12,7 @@
     (some? value) (assoc :value value)))
 
 (defn- put! [store collection doc defaults]
+  (law/validate-record! doc)
   (local/transact!
    store
    (fn [state]
@@ -22,6 +23,7 @@
        {:changes [(change :put collection id stored)] :result stored}))))
 
 (defn- patch! [store collection id updates]
+  (law/validate-record! updates)
   (law/require! (not-any? #(contains? updates %) [:id :_id])
                 :immutable-id "Service document identity is immutable")
   (local/transact!
@@ -66,6 +68,7 @@
 (defn- safe-user [user] (dissoc user :credentials :password))
 
 (defn- create-user! [store user]
+  (law/validate-record! user)
   (law/require! (and (string? (:username user)) (seq (:username user))
                      (string? (:password user)) (seq (:password user)))
                 :invalid-user "Local user requires a username and password")
@@ -98,7 +101,8 @@
        (assoc (envelope-transition state result) :result result)))))
 
 (defn- update-user! [store id updates]
-  (law/require! (not-any? #(contains? updates %) [:id :_id :credentials])
+  (law/validate-record! updates)
+  (law/require! (not-any? #(contains? updates %) [:id :_id :credentials :created-at])
                 :immutable-user-field "Use password to change local credentials; identity is immutable")
   (when (contains? updates :password)
     (law/require! (and (string? (:password updates)) (seq (:password updates)))
@@ -134,7 +138,8 @@
                                                :createdAt (host/now) :updatedAt (host/now)})))
   (get-session [_ id] (local/perform #(get-doc store :sessions id)))
   (update-session [_ id updates]
-    (local/perform #(patch! store :sessions id (assoc updates :updatedAt (host/now)))))
+    (local/perform #(patch! store :sessions id (assoc (law/validate-record! updates)
+                                                   :updatedAt (host/now)))))
   (close-session [_ id]
     (local/perform #(local/transact! store (fn [_] {:changes [(change :delete :sessions id nil)]}))))
 
@@ -164,7 +169,8 @@
            {:changes (mapv (fn [segment]
                              (let [id (host/id)]
                                (change :put :translations id
-                                       (assoc segment :id id :_id id :batch-id batch-id))))
+                                       (assoc (law/validate-record! segment)
+                                              :id id :_id id :batch-id batch-id))))
                            batch)
             :result batch-id})))))
 
