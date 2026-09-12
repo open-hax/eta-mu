@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789217930622-0.kmtp1kptxhsxdfbs0qe"
+write-id: "1789224588659-0.5wd9xii22liopj56who"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "in_progress"
@@ -74,5 +74,7 @@ Rheos inline-label successor verified: actual filesystem read-task/snapshot RED3
 Scoped review repair for actual PR335 Codex3996227835: replace overlapping-whitespace inline-label regex validation with a bounded linear scanner preserving the declared partial string grammar; reproduce a malformed long member stall, add portable refusal/performance regression, rerun Rheos JVM/Shadow tests, lint and all release builds, and retain card bytes during reads/snapshots.
 
 Actual PR335 Codex3996227835 resolved: both overlapping-whitespace validators replaced by one monotonic portable scanner. Failure-first 50k-space malformed inputs took5827.8ms and3739.0ms; new actualNBB parse39.5ms and18.2ms. Rheos209tests1128assertions and JVM8/43 allgreen; lint0/0 and four release targets0warnings. Fresh CLI still projects the original Epiphany four labels with source card bytes unchanged. Bounded independent scanner review found no confirmed defect; publication and fresh actual reviewer completion remain pending.
+
+PR335 Codex3996508051 provenance correction: the four September 12 Rheos inline-label plan/result and scanner-review plan/result comments on this card were recorded under the wrong owner. Their owning task is rheos-preserve-inline-yaml-label-arrays at kanban/tasks/preserve-inline-yaml-label-arrays-in-rheos-projections-l-arrays.md. That card now explicitly amends the former quoted-only scope to the bounded plain/quoted/mixed string subset and carries the implementation acceptance and verification. The historical Clio comments and ledger records are retained unchanged; they do not expand this Clio task or substitute for the Rheos contract. See docs/verification/rheos-inline-label-projection.md for exact scope, failure-first results, and this correction.
 
 ---

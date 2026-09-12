@@ -4,7 +4,7 @@ labels: "rheos, github, projection, data-integrity"
 dependency: []
 parent: "rheos-ledger-authoritative-projections"
 type: "task"
-write-id: "1788288851054-0.dl4rnf9hgybni8pxcf5"
+write-id: "1789224588033-0.61iqnroq8odi8azowc0"
 title: "Preserve inline YAML label arrays in Rheos projections"
 priority: "P0"
 status: "review"
@@ -40,5 +40,7 @@ Exact-head review regression fixed: the shared canonical inline-sequence decoder
 Exact-head PR #322 review follow-up: bracket-prefixed malformed and trailing inline arrays now fail closed through the shared decoder in both read-task and board paths; parity regressions cover unterminated and trailing forms. Combined candidate verified by 197 Rheos tests / 1006 assertions, clj-kondo 0 errors / 0 warnings, and server, CLI, GitHub-sync, and app release builds with 0 warnings.
 
 Final PR #322 review gate: Rheos comment serialization now preserves a blank line before the closing delimiter, and this card was rewritten through the ledger-backed CLI to normalize its evidence block. Final combined evidence: 197 Rheos tests / 1009 assertions, clj-kondo 0 errors / 0 warnings, and server, CLI, GitHub-sync, and app release builds with 0 warnings.
+
+PR335 Codex3996508051 ownership correction and current contract: this Rheos task owns the inline-label decoder and its malformed-input cost repair. The September 12 plan and results were mistakenly appended to clio-local-edn-service-providers-and-deprecated-ledger-retirement; those historical comments remain evidence of when the work occurred, not its owning contract. This amendment supersedes the older Scope bullets that admit fully quoted values only and refuse every unquoted or mixed sequence. Authorized scope now accepts empty and single-line top-level string sequences containing quoted members, bounded plain word/path members, or a mixture, preserving order and quoted commas. Plain booleans, nulls, numeric-first values, mapping syntax, nesting, malformed delimiters, and trailing text still fail closed; arbitrary YAML remains unsupported. Acceptance: actual read-task and board snapshot preserve [graph, relationships, code, provenance] from the unchanged Epiphany card; quoted/plain/mixed grammar and malformed long-input regressions pass; task bytes remain unchanged during reads; Rheos tests, lint, and all four releases pass without warnings. The earlier quoted-only acceptance was deliberate historical scope, expanded here to meet the reported Epiphany loss. Verified implementation f67b232 and report docs/verification/rheos-inline-label-projection.md record failure-first evidence and final 209 tests / 1128 assertions, JVM 8 / 43, lint 0 / 0, and four zero-warning releases. This is a present-tense correction, not a claim that the owning contract was amended before implementation.
 
 ---
