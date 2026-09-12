@@ -1,5 +1,5 @@
 /// <reference path="../../index.d.ts" />
-import type { ClioEdnServices, EventAdmission, GraphNode, GraphOperations, Session, TranslationSegment } from "@open-hax/protocols";
+import type { ClioEdnServices, EventAdmission, GraphNode, GraphOperations, Session, SubscriptionHandle, TranslationSegment } from "@open-hax/protocols";
 
 // This consumer must type-check against the published declaration and run
 // against the compiled provider without casts or mock graph operations.
@@ -35,6 +35,29 @@ export async function verifyServiceDefaults(services: ClioEdnServices): Promise<
 export function verifyImmediateWatchHandle(admission: EventAdmission): void {
   const handle = admission["watch-events"]({}, () => undefined);
   handle.close();
+}
+
+export async function verifyCopiedSubscriptionHandle(services: ClioEdnServices): Promise<void> {
+  const received: unknown[] = [];
+  let observed = false;
+  const original = services.subscribe("copied-handle-room", "changed", data => received.push(data));
+  const copied: SubscriptionHandle = { id: original.id, close: original.close };
+  let probe: SubscriptionHandle | undefined;
+  try {
+    services.unsubscribe(copied);
+    services.unsubscribe(copied);
+    probe = services.subscribe("copied-handle-room", "changed", () => { observed = true; });
+    await services["emit-to-room"]("copied-handle-room", "changed", { proof: "still-active-probe" });
+    const deadline = Date.now() + 3000;
+    while (!observed && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+    if (!observed) throw new Error("The live probe must observe the actual persisted notification");
+    if (received.length !== 0) throw new Error("Unsubscribed copied handles must stop receiving notifications");
+  } finally {
+    original.close();
+    probe?.close();
+  }
 }
 
 export async function verifyEmissionResult(services: ClioEdnServices): Promise<void> {

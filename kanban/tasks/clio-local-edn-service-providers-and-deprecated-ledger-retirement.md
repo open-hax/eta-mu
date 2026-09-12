@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789224583180-0.sa0bn8hzxak4mknzwor"
+write-id: "1789233124964-0.lsmbgh8hkv9fqn9vto5"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "in_progress"
@@ -92,5 +92,12 @@ Fresh review successor GREEN: malformed Unicode actual RED57 failures on each ho
 CodeRabbit exact-cb4 review5646503100 accepts scalar refusal/runtime ordering but finds Clio canonicalize CLI still loading revisions before ledger snapshots. Scoped successor will capture actual immutable snapshots first, load revisions second, and test the shipped command with a real intervening schema publication/append. Preserve explicit revision APIs, corruption refusal and frozen cb4 browser/source candidates. Fresh Clio CLI/host gates and actual successor reviewer requests remain required.
 
 CLI review successor GREEN: actual published bin/clio.mjs unknown-revision RED1failure with real peer schema publication at native descriptor boundary; fixed command delegates ordered runtime snapshots. Real inherited-pipe cleanup regression also RED1failure then GREEN. Final Clio BB29/182,JVM75/329,NBB/Shadow72/306; Shadow117files0warnings,lint0/0,boundaryclean,CJSsyntax and spaced preload proof pass. Mandatory root AGENTS eta-mu CLI gates freshly passed174/391 plus workflow6/78, Shadow200files0warnings,lint0/0 with2existing info diagnostics. Reciprocal review fixed native async completion/path quoting/close-based process cleanup and found no remaining concrete defect. Actual published-head reviews and required hosted checks remain pending; frozen cb4/979 browser sources unchanged.
+
+---
+
+Recovery scope after workspace maintenance removed the active checkout: restored exact reviewed foundation ff48f090 in a native isolated worktree. Four actual Codex findings remain: preserve generated event identity across public runtime/CLI uncertain-write recovery; reject null logical query children; consume the declared SubscriptionHandle.close capability; and treat incomparable generic range values as non-matches. Reproduce each before repair, preserve durable exact-retry fences and explicit refusals, then run relevant full Clio/CLI/protocol gates with zero warnings. No frozen consumer or identity/Rheos source changes. CLI binaries and tool caches were also pruned, so this scoped body note records discovery while the same toolchain is restored; card status/frontmatter remain governed by the CLI.
+
+---
+Recovered ff48 after workspace maintenance and repaired actual public append recovery plus three protocol review findings. Immutable source a9328801 follows protocol10d42d85. Actual RED JVM2 missing-recovery failures; Node/CLI6 missing-recovery and stdout failures; symlink parent-path4 failures each host. Final Clio BB29/182 JVM77/355 NBB/Shadow75/362, Shadow118inputs0warnings, lint0/0 and clean boundary. Fresh protocols76/282 plus19native/no skips, test139/library112inputs0warnings, lint/types pass. Mandatory eta CLI174/391 plus workflow6/78 and release166inputs0warnings. Native realpath, exact retry fsync, unchanged event identity, collision refusal and actual CLI stderr/exit verified. Reciprocal peer review of a932 found no confirmed remaining issue. Actual hosted successor reviews still required; no merge claim. Evidence docs/verification/clio-public-append-recovery.md.
 
 ---

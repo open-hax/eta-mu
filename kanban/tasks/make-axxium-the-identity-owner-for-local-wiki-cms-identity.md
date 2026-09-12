@@ -2,7 +2,7 @@
 category: "tasks"
 dependency: []
 type: "task"
-write-id: "1789232806543-0.0syl76xqm1fhlj02n8dh"
+write-id: "1789233789089-0.37pa1muh901eojvmr4u"
 title: "Make Axxium the identity owner for local Wiki CMS"
 priority: "P0"
 status: "in_progress"
@@ -65,5 +65,7 @@ Prepare a separate immutable restack for the final Clio canonicalize CLI orderin
 Fresh immutable ff48 Clio CLI restack GREEN118tests1001assertions; test191files,server/lib127files0compilerwarnings,lint0/0,boundary clean,actual ESM/TCP+3native startup tests pass without skips. Direct Git diff verifies Axxium runtime and Clio runtime/kernel/canonical source unchanged from independently reviewed979 identity. Prior979/cbeadca browser sources/dist remain frozen. Actual CodeRabbit ff48 confirms CLI finding addressed without new scoped findings; new identity successor review/hosted checks remain required. External OAuth consent remains operator-configured and unclaimed.
 
 Post-maintenance PR333 review successor from64598f0: scope on axxium-wiki-identity covers current encrypted-reference readiness, pure passkey admission, retained dummy bcrypt, strict Google audience evidence, callback replay exchange counting and native fixture lifetime/stdout corrections. Actual RED126tests1074assertions16failures0errors; final guarded GREEN127tests1078assertions. Test197files/server129/lib129 all0compilerwarnings; lint0/0,boundaryclean, real compiled ESM/TCP consumer and3native startup tests0skips. Combined-stream native parsing reproduced3failures thenpassed with separate stdout. EDN24h absolute session migration is explicit; legacyJWT7days retained. Canonical CLI was rebuilt in the sibling recovery worktree and read-only-probed here before these provenance writes. Packages-only source stays frozen; published-head reviewers and root browser/global gates still required. Live external OAuth consent and PostgreSQL service remain unclaimed. Details: packages/axxium/docs/identity-review-post-recovery.md and evidence/identity-review-post-recovery.json.
+
+Combine published Axxium1a47a7ea with current Clio1ef5c1ca using an ordinary two-parent merge. Production and test sources merge without conflicts; only three append-only evidence ledgers conflict. The older Axxium branch interleaved its appends through the common ledger. Resolution preserves the complete incoming Clio byte prefix and appends every Axxium-only line in original order, with an ordered-subsequence proof that no common event was changed or dropped. Final combined Axxium and protocol gates will run before publication; earlier individual-tree evidence remains labeled separately.
 
 ---

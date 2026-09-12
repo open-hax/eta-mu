@@ -54,3 +54,41 @@ No dependency manifest, lockfile, Clio/protocol/Rheos source, test selector, ski
 The freshly built sibling eta-mu CLI was verified from this worktree with the 299-card inventory and its receipt/session schema outputs, then used to append the `axxium-wiki-identity` card, Receipt River and session reflection here. Initial singular `schema` probes were unsupported; the documented plural `schemas` commands succeeded without state changes. The card remains in progress: these package gates do not authorize a claim that the root browser/global review work is finished.
 
 The final rerun after indentation cleanup again passed **127 tests / 1,078 assertions**, zero failures/errors; 197 compiler inputs, four recompiled files, zero warnings. Final lint was zero errors/warnings and the boundary check was clean. Runtime/build source did not change after its successful releases and native proof.
+
+## Combined foundation verification
+
+Published Axxium `1a47a7eadbd612107585e9f44cbff22cc455fb99` and Clio
+`1ef5c1ca4015c3e9f5c01d50d423f5a1faf5ed6a` were fetched and checked against
+their tested trees. A normal two-parent merge produced local source commit
+`027da9ba19de31e86a72f30410b41ff11355be2b`, tree
+`1fedf4314f9844d8f73ad64ce99baebaaee41db0`.
+
+Source and test files merged without conflicts. Three evidence ledgers conflicted
+because the older identity history had interleaved its appends through the common
+foundation history. Resolution verified that every common line remained an ordered
+subsequence, preserved the complete incoming Clio ledger byte prefix, and appended
+all identity-only lines in their existing order. No record was discarded or edited.
+The three files retained respectively 10, 23 and 9 identity-only records, plus each
+foundation's new record. The canonical owning-card comment records this merge scope.
+
+Fresh verification on the combined source passed:
+
+- Axxium: 127 tests / 1,078 assertions; test 198 inputs, server and library each
+  130 inputs; every compiler reported zero warnings.
+- Actual built ESM/TCP signup, private Clio restart, authenticated read, forged
+  identity/header and foreign-Origin refusal, durable logout and protected linking.
+  Three concurrent-startup tests passed with zero skips.
+- Protocols: 76 tests / 282 assertions plus 19 native tests with zero skips;
+  test/library 139/112 inputs, zero compiler warnings; strict types passed.
+- Both packages' configured lint reported zero errors/warnings; Axxium's boundary
+  checker found no violations.
+
+The native identity script retains its explicit operator-configuration warning for
+live external OAuth consent. This is not evidence that such a consent round trip
+occurred. Logs are retained in the root recovery evidence as `combined-identity-*`
+and `combined-protocol-*`. The first dependency-install command used two incorrect
+package filters; the corrected frozen install used `@open-hax/axxium` and
+`@open-hax/protocols` before any verification. No dependency policy was weakened.
+
+This combined package proof precedes the full Knoxx/browser and hosted-review
+gates. The documentation-only closeout does not alter the verified runtime source.

@@ -381,3 +381,13 @@
   spore: none
   receipt-refs: receipt-river-fixture-repro/test/build/lint
   note: Compiled CLJS calls a known multi-arity var through arity dispatch properties; with-redefs fixtures must preserve that shape. Reproduced the exact original failure, restored the supported arities without changing assertions, and verified full package test/build/lint.
+
+- ts: 2026-09-12T17:12:51.568Z
+  session: /workspace/scratch/3655842e43cf/eta-clio-restored
+  task: Recover Clio public append identity and protocol query/subscription contracts
+  p-efficiency: 0.8
+  p-friction: 0.65
+  p-skill-candidate: 0.75
+  spore: none
+  receipt-refs: final Clio recovery receipt for source a9328801
+  note: Restored exact reviewed source after maintenance pruned tools and checkouts. Native failure-first tests exposed missing generated retry identity, NBB stdout error routing, and lexical symbolic-link parent-path redirection. RealpathSync.native was required because Node realpathSync still chose the lexical target. Final Clio BB29/182 JVM77/355 NBB and Shadow75/362 plus protocols76/282 and19native pass; strict gates are clean. Existing binary-verification and absolute-path spores cover the reusable lesson. Actual hosted successor reviews remain required.
