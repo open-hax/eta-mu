@@ -3,10 +3,12 @@
   (:require [axxium.domain.identity :as domain]
             [axxium.domain.identity-bootstrap :as bootstrap]
             [axxium.domain.identity-external :as external]
+            [axxium.domain.identity-grants :as grants]
             [axxium.extern.credential-crypto :as crypto]
             [axxium.extern.identity-host :as host]
             [axxium.extern.identity-http :as http]
             [axxium.infra.identity-store :as store]
+            [axxium.infra.identity-admission :as admission]
             [axxium.infra.identity-ceremonies :as ceremonies]
             [axxium.law.identity :as law]
             [axxium.shape.identity :as shape]
@@ -141,22 +143,12 @@
 
 (defn update-grants!
   "Only an authenticated identity administrator may grant or revoke capabilities."
-  [{:keys [store] :as service} token principal-id roles capabilities]
-  (let [requester (require-principal! service token)]
-    (law/require! (and (vector? roles) (every? string? roles)
-                       (vector? capabilities) (every? string? capabilities))
-                  :invalid-grants "Roles and capabilities must be string vectors")
+  [{:keys [store]} token principal-id roles capabilities]
+  (let [token-hash (host/sha256 (if (string? token) token ""))]
     (store/transact!
      store
-     (fn [state]
-       (law/require! (domain/can-grant? (domain/principal-for-session state (host/sha256 token) (host/now)))
-                     :forbidden "Identity administrator capability required")
-       (let [target (get-in state [:principals principal-id])]
-         (law/require! target :not-found "Principal not found")
-         {:operation :grants-updated :actor (:principal/id requester)
-          :changes [(domain/put :principals principal-id
-                                (assoc target :principal/roles roles :principal/capabilities capabilities))]
-          :result {:ok true}})))))
+     #(grants/transition % {:token-hash token-hash :now (host/now)
+                           :principal-id principal-id :roles roles :capabilities capabilities}))))
 
 (defn challenge!
   "Persist single-use browser-bound state; sensitive payload is encrypted separately."
@@ -171,6 +163,12 @@
                                          (host/sha256 (or browser-token "")) (host/now))]
     (store/unseal store (:private-ref record))))
 
+(defn- ^:async read-pgp-challenge!
+  [{:keys [store]} browser-token id purpose]
+  (await (admission/retry!
+          #(ceremonies/reserve-proof! store id purpose (host/sha256 (or browser-token ""))
+                                      (fn [] (store/state store))))))
+
 (defn- consume-changes [state id purpose browser-token]
   (domain/require-challenge! state id purpose (host/sha256 browser-token) (host/now))
   [(domain/remove-entry :challenges id)])
@@ -183,12 +181,12 @@
   "Link a public PGP key only after a logged-in user proves possession."
   [{:keys [store] :as service} token browser-token {:keys [challenge-id signature public-key]}]
   (let [actor (require-principal! service token)
-        data (read-challenge service browser-token challenge-id :pgp-enroll)
+        data (await (read-pgp-challenge! service browser-token challenge-id :pgp-enroll))
+        _ (law/require! (= (:principal/id actor) (:principal-id data)) :invalid-challenge "Challenge belongs to another account")
         proof (await (verify-proof! #(crypto/verify-pgp {:public-key public-key :signature signature :challenge (:challenge data)})))
         fingerprint (:fingerprint proof)
         key (str "pgp:" fingerprint)
         reference (store/seal! store {:public-key public-key})]
-    (law/require! (= (:principal/id actor) (:principal-id data)) :invalid-challenge "Challenge belongs to another account")
     (store/transact!
      store (fn [state]
              (law/require! (and (resolve-principal service token) (not (get-in state [:credentials key])))
@@ -212,7 +210,7 @@
 (defn ^:async pgp-login!
   "Verify a registered PGP key and consume its proof in the session transaction."
   [{:keys [store] :as service} browser-token {:keys [challenge-id signature]}]
-  (let [data (read-challenge service browser-token challenge-id :pgp-login)
+  (let [data (await (read-pgp-challenge! service browser-token challenge-id :pgp-login))
         key (str "pgp:" (:fingerprint data))
         record (get-in (store/state store) [:credentials key])]
     (law/require! record :invalid-credentials "Invalid PGP credential")

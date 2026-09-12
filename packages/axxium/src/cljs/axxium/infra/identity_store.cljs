@@ -21,10 +21,14 @@
   ;; Durable consumption facts win even if a crash preceded checkpoint cleanup.
   (projection/state (history store) {:challenges (ceremonies/entries store)} domain/apply-event))
 
-(defmethod create-provider :edn [{:keys [directory]}]
-  (law/require! (and (string? directory) (seq directory)) :missing-directory "EDN identity directory is required")
-  (let [directory (host/private-directory! (host/resolve-path directory))
-        file (str directory "/identity.edn")
+(defn- ensure-ledger! [file]
+  (when-not (fs/exists? file)
+    (try (ledger/create-ledger! file)
+         (catch :default cause
+           (when-not (host/already-exists-error? cause) (throw cause))))))
+
+(defn- open-edn-provider! [directory]
+  (let [file (str directory "/identity.edn")
         schemas (str directory "/schemas")
         ;; Surviving facts are proof of an existing encrypted identity store
         ;; even when its schema directory was lost during a partial restore.
@@ -33,16 +37,20 @@
             (law/require! (not existing?) :missing-ledger
                           "Identity state survives but identity.edn is missing; restore the original history"))
         vault (host/open-vault! directory existing?)]
-    (when-not (fs/exists? file)
-      (ledger/create-ledger! file))
+    (ensure-ledger! file)
     (let [ceremony-file (str directory "/ceremonies.edn")
-          _ (when-not (fs/exists? ceremony-file) (ledger/create-ledger! ceremony-file))
+          _ (ensure-ledger! ceremony-file)
           store {:provider :edn :directory directory :file file :ceremony-file ceremony-file
                  :vault vault :runtime (runtime/open schemas law/catalog)}]
       (history store)
       (ledger/ensure-durable! (get-in store [:runtime :schema/revisions]) file)
       (ceremonies/prune! store)
       store)))
+
+(defmethod create-provider :edn [{:keys [directory]}]
+  (law/require! (and (string? directory) (seq directory)) :missing-directory "EDN identity directory is required")
+  (let [directory (host/private-directory! (host/resolve-path directory))]
+    (host/with-initialization-lock! directory #(open-edn-provider! directory))))
 
 (defmethod history :edn [{:keys [file runtime]}]
   (law/require! (fs/exists? file) :missing-ledger

@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789214416261-0.v1m9cjr7v4oeomlpsgg"
+write-id: "1789216318986-0.ir855ka4tugho0oxl4e"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "in_progress"
@@ -66,5 +66,9 @@ PR334 successor findings at f221: reproduce and repair uncertain empty-ledger cr
 CodeRabbit successor finding 3996101377 also confirmed: batch-translate nil currently maps to an empty change vector and returns a batch ID. Add sequence-shape admission before mapping, with public JavaScript null/undefined/non-array refusal and byte-identical ledger regression plus valid batch acceptance. This correction remains inside the current provider contract recovery scope.
 
 Fresh successor verification: actual creation/reopen fault regressions failed first (Node7/JVM6/protocols2/Sol2), then Clio BB25/75, JVM66/198, NBB+Shadow64/174 all pass; Shadow115files0warnings and kondo/boundary0/0. Protocols71/217 plus13nativeNode tests/no skips, test136/lib111 zero compiler warnings, strictTS and kondo0/0. Sol142/607 plus native worker-close test, test215/server201 files0warnings. Optional undefined/Promise<void> RED2 and authoritative warning workflow audit RED2drifts now green (4tests44assertions+6native warning tests). Missing translation batch RED1 now rejects before changes. Actual current findings fixed in source; publication and new three-reviewer loop still required, so card remains in progress.
+
+Codex successor3996163876 identifies unlocked projection snapshots racing partial multi-process appends. In a separate worktree preserve all frozen browser/provider sources, reproduce with a writer retaining the real kernel lock while a record is partial and a public reader runs in another process. Canonical read-ledgers/canonicalize-files will take complete per-file snapshots through owning locked descriptors before pure validation/union; do not promise a global transaction across partitions. Preserve low-level raw read-ledger inspection and verify real consumer plus four Clio hosts.
+
+Completed Codex3996163876 read-side race correction in isolated eta-foundation-snapshot. Capture per-file immutable projection snapshots through the writer inode lock, always release on failure. Real public two-process query/open each reproduced partial EDN RED then GREEN; host lock/failure tests RED3 per host. Fresh final BB25/75 JVM67/202 NBB+Shadow65/178, protocols71/217+15 native no skips, Sol142/607+1 native; builds zero warnings, configured lint and strict types clean. Earlier frozen browser paths unchanged; publishing a new immutable successor for consumer reruns.
 
 ---

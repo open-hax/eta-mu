@@ -42,6 +42,11 @@
   (locked! store
            #(let [current (entries store)
                   retained (policy/retained current (host/now))]
+              ;; Replacement changes the inode, so fence the validated checkpoint
+              ;; while the stable operation lock still excludes other replacements.
+              (when (= :edn (:provider store))
+                (ledger/ensure-durable! (:schema/revisions (runtime/refresh (:runtime store)))
+                                        (:ceremony-file store)))
               (if (not= current retained)
                 (persist! store retained)
                 (when (= :edn (:provider store))
@@ -70,6 +75,19 @@
          id)))))
 
 (defn private-reference? [reference] (str/starts-with? reference "ceremony:"))
+
+(defn reserve-proof!
+  "Durably reserve a completion slot under the operation lock before returning its proof data."
+  [store id purpose browser-hash current-state]
+  (locked!
+   store
+   #(let [now (host/now)
+          challenge (policy/reserve-proof-attempt (current-state) id purpose browser-hash now)
+          retained (policy/retained (entries store) now)]
+      ;; A failed publication never starts crypto. A visible uncertain increment
+      ;; remains spent; a retry advances again or refuses, never discounts it.
+      (persist! store (assoc retained id challenge))
+      (unseal store (:private-ref challenge)))))
 
 (defn private-value [store id]
   (when-let [record (get (policy/retained (entries store) (host/now)) id)]

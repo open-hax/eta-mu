@@ -80,3 +80,87 @@ warnings; kondo zero errors/warnings; strict boundary check clean. The actual
 compiled ESM/TCP identity verifier passed signup, private restart, authentication,
 forgery/Origin refusal, logout, and protected linking initiation. Its explicit
 live-provider configuration warning remains applicable.
+
+## Initialization and private-file recovery follow-up
+
+Codex findings 3996174222, 3996174224, and 3996174226 exposed startup uncertainty
+outside the already-fenced identity ledger. A visible master key can survive a
+failed inode or parent flush; a ceremony checkpoint can survive a failed
+post-rename parent flush; and another initial opener can win exclusive ledger
+creation. Existing-key admission now validates and forces the same open key
+descriptor followed by its private parent. Private directory ancestry is forced,
+and ceremony pruning first validates and forces the checkpoint while holding its
+stable operation lock. Reopening preserves the original key and checkpoint bytes.
+
+Exclusive ledger creation catches only EEXIST, then validates the winner through
+the normal replay and durability boundaries. Permission failures remain failures,
+and malformed winning files are preserved and refused. The first concurrent
+opener also needs to serialize the whole initialization: otherwise its new vault
+can be mistaken by a second process for previously initialized but lost history.
+A separate native initialization lock now covers this synchronous construction;
+the existing nonblocking operation lock still guards later state mutations.
+
+Real filesystem fault injection reproduced seven failing assertions before these
+changes. The initial corrected suite passed 94 tests / 814 assertions, zero
+compiler warnings in both 121-file release targets, configured lint and boundary
+checks, and the compiled ESM/TCP identity consumer. A separate two-process public
+API test paused the first opener immediately after the actual key write; the old
+artifact refused the second opener as lost history, while the corrected artifact
+allowed both openers and proved their key hashes match. The verifier runs this
+native regression through the advertised verify:identity command. It never emits
+key bytes. Additional collision refusal cases and subsequent review corrections
+are included in the final combined verification recorded below.
+
+These are syscall/failure and concurrent-process proofs, not simulated physical
+power loss. Live external OAuth still requires operator provider configuration;
+the controlled issuer test remains explicitly separate from a live identity
+provider consent and discovery flow.
+
+One refusal is intentionally retained: if construction stops after creating private
+state but before any identity ledger exists, the next provider open cannot tell
+that interrupted first initialization apart from a lost initialized history. It
+refuses with `missing-ledger`; it does not manufacture an empty identity history
+or replace the surviving key. Recovery of an existing store requires restoring
+its original history. A confirmed never-used failed initialization can be kept
+for inspection while starting with a fresh empty data directory in the same
+runtime. Fully automatic recovery of that ambiguous case would require a separate
+durable initialization intent/completion protocol and is not claimed here.
+
+## Grant and PGP completion admission
+
+Codex 3996178543 and 3996178553 are addressed by pure, validated domain decisions
+and a durable completion reservation. Grant policy receives the current transaction
+snapshot and explicit token hash, time, target, roles, and capabilities. It resolves
+the administrator again from that snapshot, validates the target principal, and
+returns one replacement transaction. Infra supplies host inputs and executes the
+decision. The host retry delay also now uses the required native async/await form
+(Codex 3996178550).
+
+Both PGP enrollment and login reserve at most three proof attempts per browser-bound
+challenge before OpenPGP parsing or verification. Reservation holds the existing
+operation lock and publishes the counter in the durable ceremony checkpoint.
+Wrong-browser, wrong-purpose, expired, and consumed challenges refuse admission.
+Failed crypto remains counted across handles and restart. A failed checkpoint
+publication starts no crypto; if its increment remains visible it stays spent,
+so retries can advance or refuse but cannot discount it. Successful identity
+transactions retain the existing single-use challenge consumption. Lock contention
+uses the existing finite admission retry policy.
+
+The first PGP harness run had a mismatched test delimiter, corrected before the
+meaningful failure-first run. The separate actual behavioral RED ran 99 tests /
+848 assertions with ten failures and no errors: repeated invalid signatures
+reached crypto six times instead of three, and the post-publication scenario
+started unaccounted crypto. The corrected focused domain/admission cases passed
+seven tests / 40 assertions before the final combined run.
+
+Final combined verification after merging immutable Clio locked-snapshot commit
+690aad83ff54ef5225a1f1533b4a7bd0eaef3561: 102 tests / 864 assertions, zero failures
+or errors; server and ESM release targets each compile 124 files with zero warnings;
+configured kondo reports zero errors/warnings; boundary check is clean. The actual
+compiled ESM/TCP restart, login, forged-header, Origin, logout, and linking checks
+pass, followed by the native two-process initialization regression (one test,
+zero failures or skips). That verifier explicitly warns that live external OAuth
+requires operator configuration. The Clio, protocols, and Sol source trees are
+byte-identical to their separately gated immutable 690aad83 successor; their test
+totals are recorded with that foundation checkpoint rather than inherited from an
+older identity build.

@@ -2,7 +2,7 @@
 category: "tasks"
 dependency: []
 type: "task"
-write-id: "1789214954691-0.bddc1d128rm5w2h97b9"
+write-id: "1789216999180-0.9ivybmjq2ukra33ugdk"
 title: "Make Axxium the identity owner for local Wiki CMS"
 priority: "P0"
 status: "in_progress"
@@ -37,5 +37,11 @@ Fresh reconstructed combined gate: 89 tests and 775 assertions, zero failures/er
 Codex current-head finding 3996123683 confirms real ATProto uses distinct SDK query state and application/browser state. In an isolated successor worktree, expose non-consuming SDK app-state lookup at the extern facade, prevalidate the Axxium browser challenge with it before one-use exchange, and compare the returned app state before final admission. Add an actual reference NodeOAuthClient-to-Axxium finish regression for success, wrong-browser refusal before exchange, replay, and substituted returned app state. Preserve frozen browser source e0cdf35. Also restack the pending foundation creation/reopen durability fence and apply it to identity open.
 
 ATProto successor integrates real SDK query-key to app-state lookup: actual SDK-to-Axxium regression RED3 then GREEN, with wrong-browser refusal before exchange, substituted returned app state refusal, one exchange, usable local session and replay refusal. Identity interrupted-creation opener RED3 then GREEN with canonical Clio fence. Restacked foundation37b720 while browser predecessor eta-identity e0cdf35 stayed unchanged. Final Axxium91tests794assertions, server/lib121files each0warnings, kondo0/0 and strictboundary clean; actual compiled ESM/TCP identity verifier green with explicit live OAuth operator-configuration warning. Three-reviewer loop remains open; no merge claim.
+
+Current Codex findings3996174222/24/26: reflush a surviving vault key inode and private parent; validate and re-fence the ceremony checkpoint under its operation lock; recover native EEXIST during ledger creation. A separate stable initialization lock must serialize whole first-open construction so a second process cannot mistake an in-progress vault key for lost initialized history. Preserve the existing refusal for established private state with missing history. Native fault and actual concurrent opener regressions come first. Work only in eta-identity-initialization; both browser worktrees remain frozen.
+
+Additional actual Codex findings added to current initialization scope:3996178543 move grant decisions into pure law/domain transition using current transaction authority;3996178550 declare host delay native async and await completion;3996178553 bound failed PGP completion work through durable admission before crypto. models_children owns grant and PGP source; identity_clio owns host/startup durability. New mutable worktree eta-identity-initialization only; existing browser source paths remain frozen. Initial startup regressions freshly RED7 then GREEN94/814 plus actual two-process first-opener RED/GREEN; final combined gates will rerun after these additional fixes and next Clio snapshot restack.
+
+Completed all six actual Codex findings from fdc02c09: key/parent and ceremony checkpoint reopen fences; serialized first initialization with EEXIST-only ledger recovery; pure grant transition with current transaction authority; native async delay; durable three-attempt PGP reservation before crypto. Actual startup RED7, native concurrent-open RED1, behavioral PGP RED10 (separate initial harness parse error disclosed). Final combined immutable690 kernel:102tests864assertions, releases124files each0warnings, kondo0/0, boundary clean, compiled TCP/restart consumer plus native two-process test green. Ambiguous surviving-private-state/missing-ledger initialization remains explicit fail-closed, never reset. Existing frozen browser worktrees unchanged; publishing this tested successor for actual review.
 
 ---

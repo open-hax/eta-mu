@@ -1,6 +1,7 @@
 (ns axxium.extern.identity-host
   "Private filesystem and cryptographic storage boundary for local identities."
   (:require [cljs.reader :as reader]
+            [clio.extern.js.fs :as durable-fs]
             ["fs-ext-extra-prebuilt" :as fs-ext]
             ["node:crypto" :as crypto]
             ["node:fs" :as fs]
@@ -17,8 +18,8 @@
   (js/Buffer.byteLength value "utf8"))
 (defn resolve-path "Resolve a configured identity directory." [directory] (path/resolve directory))
 
-(defn delay! "Yield during a bounded lock cleanup retry." [milliseconds]
-  (js/Promise. (fn [resolve] (js/setTimeout resolve milliseconds))))
+(defn ^:async delay! "Yield during a bounded lock cleanup retry." [milliseconds]
+  (await (js/Promise. (fn [resolve] (js/setTimeout resolve milliseconds)))))
 
 (defn report-deferred-cleanup!
   "Report deferred lease cleanup without secrets or replacing the completed result."
@@ -35,7 +36,13 @@
   (when (.isSymbolicLink (fs/lstatSync directory))
     (throw (ex-info "Identity storage cannot be a symlink" {:code :unsafe-storage})))
   (fs/chmodSync directory 448)
+  (durable-fs/ensure-dir! directory)
   directory)
+
+(defn already-exists-error?
+  "Distinguish an exclusive-create collision from unrelated filesystem failures."
+  [error]
+  (= "EEXIST" (.-code error)))
 
 (defn- write-exclusive!
   [file bytes]
@@ -45,23 +52,31 @@
   (let [parent (fs/openSync (path/dirname file) "r")]
     (try (fs/fsyncSync parent) (finally (fs/closeSync parent)))))
 
-(defn with-operation-lock!
-  "Serialize local admission and ceremony compaction on a stable lock inode."
-  [directory run]
-  (let [file (str directory "/identity-operation.lock")]
+(defn- with-file-lock! [directory name mode run]
+  (let [file (str directory "/" name)]
     (try (write-exclusive! file "")
          (catch :default error (when-not (= "EEXIST" (.-code error)) (throw error))))
     (when (.isSymbolicLink (fs/lstatSync file))
       (throw (ex-info "Identity lock cannot be a symlink" {:code :unsafe-storage})))
     (let [fd (fs/openSync file "r+")]
       (try
-        (try (fs-ext/flockSync fd "exnb")
+        (try (fs-ext/flockSync fd mode)
              (catch :default error
                (if (#{"EAGAIN" "EWOULDBLOCK" "EACCES"} (.-code error))
                  (throw (ex-info "Identity changed concurrently; retry" {:clio/error :clio.ledger/concurrent-stream-write}))
                  (throw error))))
         (run)
         (finally (fs/closeSync fd))))))
+
+(defn with-operation-lock!
+  "Serialize local admission and ceremony compaction on a stable lock inode."
+  [directory run]
+  (with-file-lock! directory "identity-operation.lock" "exnb" run))
+
+(defn with-initialization-lock!
+  "Wait for another process to finish synchronous first-open construction."
+  [directory run]
+  (with-file-lock! directory "identity-initialization.lock" "ex" run))
 
 (defn replace-private-text!
   "Atomically replace a bounded checkpoint; callers hold the stable operation lock."
@@ -130,12 +145,18 @@
              (when-not (= "EEXIST" (.-code error)) (throw error)))))
     (when (.isSymbolicLink (fs/lstatSync key-file))
       (throw (ex-info "Identity encryption key cannot be a symlink" {:code :unsafe-storage})))
-    (fs/chmodSync key-file 384)
-    (let [key (fs/readFileSync key-file)]
-      (when-not (= 32 (.-length key))
-        (throw (ex-info "Identity encryption key is invalid" {:code :invalid-vault-key})))
-      ;; Private data remains protected, but native Buffers never enter infra.
-      {:directory directory :key (.toString key "base64url")})))
+    (let [fd (fs/openSync key-file "r")]
+      (try
+        (fs/fchmodSync fd 384)
+        (let [key (fs/readFileSync fd)]
+          (when-not (= 32 (.-length key))
+            (throw (ex-info "Identity encryption key is invalid" {:code :invalid-vault-key})))
+          (fs/fsyncSync fd)
+          (let [parent (fs/openSync directory "r")]
+            (try (fs/fsyncSync parent) (finally (fs/closeSync parent))))
+          ;; Private data remains protected, but native Buffers never enter infra.
+          {:directory directory :key (.toString key "base64url")})
+        (finally (fs/closeSync fd))))))
 
 (defn seal!
   "Persist an immutable encrypted EDN blob before referencing it from Clio."

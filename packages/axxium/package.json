@@ -11,7 +11,7 @@
     "start": "node dist/server.js",
     "typecheck": "shadow-cljs compile server",
     "test": "node scripts/run-tests.mjs",
-    "verify:identity": "node scripts/verify-identity.mjs",
+    "verify:identity": "node scripts/verify-identity.mjs && node --test test/js/*.test.mjs",
     "lint": "clj-kondo --lint src/cljs test/cljs",
     "lint:kondo": "pnpm lint",
     "boundary:check": "node scripts/check-js-boundary.mjs --check"
