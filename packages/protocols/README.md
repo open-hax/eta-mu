@@ -70,6 +70,11 @@ beside known schemas is never silently recreated. `pnpm test:concurrent-open`
 runs two actual Node processes through this race and verifies both documents
 survive a subsequent reopen.
 
+Every public EDN factory rejects absent and whitespace-only directories before
+filesystem effects. Local user creation records a server-issued `created-at`
+timestamp and replay preserves it. `pnpm test` includes actual ESM tests for
+these public contracts and concurrent first open, in addition to the CLJS suite.
+
 Event retry identity compares the complete originally submitted envelope,
 preserved separately from generated defaults in the same transaction. Dropping
 a payload or adding a formerly omitted default changes that intent and is

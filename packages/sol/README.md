@@ -149,9 +149,15 @@ PROXX_EMBED_MODEL=nomic-embed-text:latest
 
 ### Durable local episodes
 
-Sol records operational run/turn lifecycle events through `packages/clio` by
-default. `SOL_CLIO_DIRECTORY` contains an append-only `events.edn` partition and
-content-addressed historical Malli catalogs in `schemas/`. No MongoDB server,
+On Linux, Sol records operational run/turn lifecycle events through `packages/clio`
+by default. Other Node platforms default to the explicit `disabled` provider
+because the canonical filesystem currently guarantees directory durability only
+on Linux. `SOL_CLIO_PROVIDER=disabled` keeps the validated, volatile turn runtime
+operational without claiming durable episode persistence. Explicitly selecting
+`edn` on an unsupported host fails visibly; it never falls back after an error. `SOL_CLIO_DIRECTORY` contains an append-only `events.edn` partition and
+content-addressed historical Malli catalogs in `schemas/`. A separate
+`admission.lock` inode serializes Sol wire-ID decisions across all episode streams;
+Clio retains its own ledger inode lock and append authority. No MongoDB server,
 database driver, or deprecated `open-hax/event-ledger` checkout is required.
 The existing session/run EDN projections retain their current API and paths.
 
@@ -161,7 +167,10 @@ Clio owns its UUIDs, historical validation, inode locking, stream revisions,
 causal order, and replay. Sol translates its wire predecessor into the
 corresponding Clio predecessor; it does not invent another ledger engine.
 Exact wire retries preserve the original Clio event. Changed duplicates and
-stale predecessors fail before accepting a new fact.
+stale predecessors fail before accepting a new fact. Replaying old history that
+already contains duplicate Sol wire identities is refused. The kernel releases
+the admission lock on process exit; no lease timeout or stale-owner deletion is
+used. Same-process reentrant admission fails before opening another descriptor.
 
 In ClojureScript hosts, configure `{:clio-provider :edn :clio-directory "..."}`.
 The existing one-argument `:event-ledger-append!` function remains an explicit
@@ -169,7 +178,13 @@ custom-provider/test seam and receives the same Sol payload as before. Supplying
 the retired `:event-ledger-db` option without an injected appender throws a
 migration error. Unknown provider names throw rather than disabling persistence.
 An embedded host that supplies neither provider nor appender retains the
-historical validation-only behavior; the environment-based server selects EDN.
+historical validation-only behavior; the environment-based server selects EDN
+on Linux and explicitly disabled persistence elsewhere.
+
+Run `node packages/sol/scripts/verify-clio-wire-concurrency.mjs` from the repository
+root for an actual two-process Node/NBB admission check. Both writers submit the
+same wire ID with different episode IDs after a shared barrier: exactly one must
+be accepted, one refused, and replay must contain one fact.
 
 `open-hax.sol.infra.agent.clio-store/open-store` reopens durable history, and
 `read-envelopes` returns the original payloads in canonical order. Corrupt EDN,

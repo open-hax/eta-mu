@@ -1,7 +1,8 @@
 (ns open-hax.sol.infra.agent.episode-ledger
   "Effect seam from one Sol turn episode to Clio's durable event ledger.
 
-   Environment configuration selects :clio-provider :edn. Hosts may retain the
+   Environment configuration selects :edn on Linux and :disabled on other hosts.
+   Hosts may retain the
    :event-ledger-append! injection seam; the obsolete Mongo DB option is refused."
   (:require [open-hax.sol.domain.time :as time]
             [open-hax.sol.infra.agent.clio-store :as clio-store]
@@ -24,6 +25,7 @@
                           {:sol/error :sol.clio/retired-provider})))
         (case (:clio-provider config)
           nil nil
+          :disabled nil
           :edn (let [store (clio-store/open-store
                             (or (:clio-directory config) ".ημ/sol/clio"))]
                  (fn [envelope] (clio-store/append-envelope! store envelope)))

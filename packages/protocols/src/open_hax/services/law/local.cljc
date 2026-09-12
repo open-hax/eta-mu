@@ -30,6 +30,13 @@
 (def service-keys
   #{:events :sessions :documents :graph :translations :labels :users :realtime})
 
+(defn validate-directory!
+  "Reject absent and blank filesystem destinations before resolving or creating paths."
+  [directory]
+  (require! (and (string? directory) (not (str/blank? directory))) :missing-directory
+            "The EDN service provider requires a non-blank directory")
+  directory)
+
 (defn validate-overrides!
   "Refuse misspelled or malformed service selection before any provider is opened."
   [overrides]

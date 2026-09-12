@@ -16,8 +16,7 @@
 
 (defmethod create-provider :edn [{:keys [directory overrides]}]
   (law/validate-overrides! overrides)
-  (law/require! (and (string? directory) (seq directory)) :missing-directory
-                "The EDN service provider requires a directory")
+  (law/validate-directory! directory)
   (let [provider (edn/create-edn-services directory)]
     (if (seq overrides)
       (services/compose

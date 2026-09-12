@@ -2,6 +2,18 @@
   "Pure translation from Sol episode payloads to Clio stream facts."
   (:require [open-hax.sol.law.episode-event :as episode-law]))
 
+(defn validate-history!
+  "A wire identity may appear in only one accepted Clio wrapper across every episode stream."
+  [events]
+  (reduce (fn [seen event]
+            (let [envelope (episode-law/validate-stored-envelope! (:event/data event))
+                  id (:event/id envelope)]
+              (when (contains? seen id)
+                (throw (ex-info "Sol history contains multiple facts for one wire identity"
+                                {:sol/error :sol.clio/id-collision :event/id id})))
+              (conj seen id))) #{} events)
+  events)
+
 (defn append-plan
   "Preserve exact retries and require the supplied Sol predecessor to be the
    current episode head. Clio still arbitrates concurrent stream-slot writes."
