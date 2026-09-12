@@ -24,10 +24,10 @@
   [sql params]
   (:rows (await (query sql params))))
 
-(defn close!
+(defn ^:async close!
   "Close the PostgreSQL pool without exposing its native handle."
   []
-  ((:close! @pool)))
+  (await ((:close! @pool))))
 
 (def schema-sql
   "CREATE TABLE IF NOT EXISTS entities (

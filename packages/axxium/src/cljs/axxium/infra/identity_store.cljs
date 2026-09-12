@@ -30,21 +30,27 @@
 
 (defn- open-edn-provider! [directory]
   (let [file (str directory "/identity.edn")
+        ceremony-file (str directory "/ceremonies.edn")
         schemas (str directory "/schemas")
         ;; Surviving facts are proof of an existing encrypted identity store
         ;; even when its schema directory was lost during a partial restore.
-        existing? (or (fs/exists? schemas) (fs/exists? file) (host/private-state-exists? directory))
+        existing? (or (fs/exists? schemas) (fs/exists? file) (fs/exists? ceremony-file)
+                      (host/private-state-exists? directory))
         _ (when-not (fs/exists? file)
             (law/require! (not existing?) :missing-ledger
                           "Identity state survives but identity.edn is missing; restore the original history"))
+        _ (when existing?
+            (law/require! (fs/exists? ceremony-file) :missing-ceremonies
+                          "Identity state survives but ceremonies.edn is missing; restore the original checkpoint"))
         vault (host/open-vault! directory existing?)]
+    ;; Publish the checkpoint first: a visible final identity-ledger creation
+    ;; can then retry its fence without inventing missing ceremony history.
+    (ensure-ledger! ceremony-file)
     (ensure-ledger! file)
-    (let [ceremony-file (str directory "/ceremonies.edn")
-          _ (ensure-ledger! ceremony-file)
-          store {:provider :edn :directory directory :file file :ceremony-file ceremony-file
+    (let [store {:provider :edn :directory directory :file file :ceremony-file ceremony-file
                  :vault vault :runtime (runtime/open schemas law/catalog)}]
       (history store)
-      (ledger/ensure-durable! (get-in store [:runtime :schema/revisions]) file)
+      (runtime/ensure-durable! (:runtime store) file)
       (ceremonies/prune! store)
       store)))
 
@@ -56,7 +62,7 @@
 (defmethod history :edn [{:keys [file runtime]}]
   (law/require! (fs/exists? file) :missing-ledger
                 "Identity ledger disappeared; refusing empty replay")
-  (ledger/canonicalize-files (:schema/revisions (runtime/refresh runtime)) [file]))
+  (runtime/canonicalize-files runtime [file]))
 (defmethod seal! :edn [store value] (host/seal! (:vault store) value))
 (defmethod unseal :edn [store reference]
   (if (ceremonies/private-reference? reference) (ceremonies/unseal store reference)
@@ -90,7 +96,7 @@
            :event/actor (or actor "axxium")
            :event/subject "axxium/identity"
            :event/data {:operation operation :changes (vec changes)}})))
-      (ledger/ensure-durable! (:schema/revisions (runtime/refresh (:runtime store))) (:file store)))
+      (runtime/ensure-durable! (:runtime store) (:file store)))
     result))
 
 (defmethod transact! :edn [store decide]

@@ -330,3 +330,97 @@ not carried-forward 090 evidence. The prior 090 browser worktree remains frozen.
 CodeRabbit found no new scoped issue on the prior identity checkpoint and on
 the shared-read foundation; the new published identity head still requires its
 own actual review and required hosted checks before merge.
+
+## Lost ceremony checkpoints and awaited database shutdown
+
+Codex `3996401601` identified that reopening an initialized provider recreated a
+missing `ceremonies.edn` as empty history. The real-file regression additionally
+showed that the old reopen then garbage-collected the surviving encrypted
+challenge blob. Startup now checks both required histories before opening the
+vault or running retention cleanup. A running handle already refuses the missing
+checkpoint; a restart now returns `:missing-ceremonies` without recreating it.
+Surviving checkpoint bytes also count as evidence of an existing store when
+checking for lost identity history.
+
+The regression covers an initialized empty checkpoint and a checkpoint with an
+issued proof, unchanged identity/key bytes, and successful recovery after the
+fixture explicitly restores the original checkpoint. Operators must restore a
+consistent original store backup; startup does not guess replacement admission
+history. An interrupted first initialization that leaves identity state but no
+ceremony checkpoint also remains closed: distinguishing it from deleted history
+would require a durable initialization-intent protocol, which this patch does
+not claim to provide.
+
+Codex `3996401599` is repaired by explicit native `^:async` database `close!` and
+`await` of the adapter shutdown. A real delayed-pool initialization failure now
+rejects the asynchronous completion result rather than escaping synchronously.
+Existing native pool-adapter lifecycle and error tests remain included.
+
+The unchanged implementation reproduced five owned assertion failures and one
+missing-private-blob error in the combined old-artifact run (115 tests / 982
+assertions, 21 failures / one error including the separate OAuth regressions).
+Focused corrected gates pass four tests / 25 assertions; compilation covers
+108 files with zero warnings and scoped lint is zero errors/warnings. Full
+combined gates and published-head reviews remain pending at this checkpoint.
+
+## Pure password admission and bounded generic OAuth completion
+
+Codex `3996401598` is addressed by a law-backed pure password transition. The
+host prepares verification, the expected actor/credential, token/hash and
+timestamps; the transition rechecks the current active identity and unchanged
+credential, returns current grants and refuses a colliding session identifier.
+Its persisted changes contain the token hash, never the plaintext response token.
+
+Codex `3996401606` is addressed by reusing the durable proof reservation before
+GitHub, Discord or Google token exchange. Browser and callback input guards
+remain; external exchange executes once outside all admission retries. Failed
+provider responses still consume finite attempts across provider reopen, and a
+visible uncertain reservation is never discounted or followed by network work.
+
+The actual local TCP issuer regression reproduced **two tests / 36 assertions,
+16 failures, zero errors**. Scoped corrected gates pass **22 tests / 166
+assertions**, covering pure login, existing dummy/racing password verification,
+all three token endpoints, reopen/exhaustion/uncertain admission, existing
+once-only OAuth contention and PGP/passkey bounds. Compilation covers 136 files
+with zero warnings; scoped lint is zero errors/warnings. Two initial scoped
+harness calls nested `--config-merge` under `:builds`, so they emitted the default
+artifact and were refused by the native output guard. The actual behavioral RED
+used the corrected build-level config; those harness failures are not counted
+as reproduced product defects. Reciprocal source review found no confirmed
+defect. Full combined gates and actual published-head review follow separately.
+
+## Initialization ordering found by the combined suite
+
+The first full gate on immutable foundation `cb4bcb4` exposed a real interaction:
+the existing interrupted-identity-creation recovery test now reached the missing
+checkpoint guard before retrying its identity durability fence. That run had
+118 tests / 999 assertions, one failure and one error. Its assertions remain
+unchanged. Fresh initialization now creates and fences `ceremonies.edn` before
+creating `identity.edn`; a visible final identity creation therefore has its
+required checkpoint and can safely retry the failed fence. An actually lost
+checkpoint still refuses before vault cleanup. Incomplete initialization with
+surviving private/checkpoint state but no identity history remains closed.
+
+This restack also adopts the new runtime-aware schema snapshot and durability
+helpers for identity and ceremony reads/open/no-change paths. Full combined
+gates are repeated after both changes; fixed-revision append behavior remains
+explicit and unchanged.
+
+## Combined identity checkpoint on immutable foundation cb4bcb4
+
+Fresh advertised tests pass **118 tests / 1,001 assertions**, with zero failures
+or errors. Test compilation covers 191 files; server and ESM releases each cover
+127 files, all with zero compiler warnings. Advertised lint has zero errors and
+warnings; the unchanged boundary checker passes. The compiled ESM/TCP identity
+consumer and all three native startup tests pass without skips, including both
+ATProto route races and concurrent first provider initialization. The existing
+external-consent configuration notice remains explicit; this is not a claim
+that real operator-configured provider logins were performed.
+
+These results come from `axxium-cb4-test02.log`, `axxium-cb4-build02.log`,
+`axxium-cb4-lint02.log`, `axxium-cb4-boundary02.log` and
+`axxium-cb4-consumer02.log` in the sandbox runtime evidence directory. They cover
+all four latest identity review repairs, ordered schema reads and the corrected
+checkpoint-first initialization. The remaining Clio command-line schema-order
+finding is assigned to an isolated successor; this browser candidate remains
+frozen. Actual published-head reviews and required hosted checks remain pending.

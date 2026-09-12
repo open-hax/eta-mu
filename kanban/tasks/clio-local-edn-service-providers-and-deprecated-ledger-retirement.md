@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789221295372-0.pykkebvnwi536ecswl"
+write-id: "1789223064320-0.pv5lmjda3apqgh1quj"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "in_progress"
@@ -84,5 +84,9 @@ Combined singular-reader and identifier-integrity checkpoint is freshly green. A
 Actual CodeRabbit 5646213434 on 090da40 found that locking public read-ledger through the write-capable adapter prevents consumers with read-only file permissions from inspecting history. New isolated successor scope: add native shared read locks opened read-only on Node and JVM, retaining conflict with exclusive writers and same-process descriptor safety; route immutable snapshots through that API; reproduce read-only access on both hosts and rerun existing partial-writer contention regressions. Foundation host lane owns the adapters and native permission proofs; identity lane owns kernel routing, combined gates and publication. Frozen 090 source remains unchanged.
 
 Read-only replay repair is freshly green. CodeRabbit5646213434 and Codex3996355428 on090 reproduced three actual public replay failures: JVM suite71/246. Shared read-only descriptors now preserve permissions and still conflict with exclusive writers. Final BB26/107, JVM72/254, NBB and Shadow67/226; protocols71/217 plus17 native; Sol142/607 plus1 native. Final compiler warnings zero, authoritative full-package lint/boundaries0/0 and strict types pass. This sandbox has only one mapped UID, so setpriv attempts failed; actual native preflight nevertheless proves read allowed and write EACCES on0444 because capabilities are zero. Both native permission and descriptor write-refusal regressions are real; existing cross-process partial-write handshakes remain green. Reciprocal review found no confirmed host-mode defect. Report docs/verification/clio-read-only-replay.md; actual successor reviews remain pending.
+
+Review successor plan for Codex3996422912 and3996422913: reject malformed UTF-16 scalar strings before canonical UTF-8 hashing so JVM/Node cannot substitute different bytes or collide with literal question marks; capture locked immutable ledger snapshots before refreshing append-only schema revisions for runtime-backed service reads. Preserve corruption refusal, existing read-only locks and exact canonical hashes for valid Unicode. Prepare portable malformed/astral string and real schema-publication race regressions before implementation, then fresh four-host Clio and affected public consumer gates. Frozen6c and Axxium browser candidates remain unchanged; published-head reviews and CI remain required.
+
+Fresh review successor GREEN: malformed Unicode actual RED57 failures on each host, final BB29/182,JVM75/329,NBB/Shadow70/301; Clio115files0warnings and lint/boundary0/0. Real schema-publication insertion at snapshot boundary RED query/open2 unknown-revision failures; final protocols73/227 plus17 native/no skips, test137/lib111files0warnings, strict types/lint0/0. Sol142/607 plus1 native/no skips, test215/server201files0warnings, lint0/0 with existing info diagnostics. Reciprocal source review found no confirmed defect. Fixed-revision append contracts remain explicit; no hidden write retries. Frozen6c/aff browser paths unchanged. Actual published-head reviews and hosted checks pending.
 
 ---

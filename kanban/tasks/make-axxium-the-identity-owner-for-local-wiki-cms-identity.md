@@ -2,7 +2,7 @@
 category: "tasks"
 dependency: []
 type: "task"
-write-id: "1789221656347-0.d1r5m5jz3hmi14f9ans"
+write-id: "1789223564055-0.7gai9dl63fbk4gplf9v"
 title: "Make Axxium the identity owner for local Wiki CMS"
 priority: "P0"
 status: "in_progress"
@@ -55,5 +55,9 @@ Combined current review checkpoint on immutable foundation 090da40 is green: 111
 Isolated identity successor now restacks the exact shared-read foundation 6c5af607. No Axxium behavior is intentionally changed in this slice. Repeat the advertised full identity test, server/lib release, lint, boundary and real TCP/native process verification against these exact kernel bytes before publishing. Previous111/933 evidence remains attached to immutable090 and is not transferred. All earlier browser worktree sources/dist remain frozen.
 
 Fresh full restack gates on immutable shared-read foundation 6c5af607 passed: 111 tests / 933 assertions; test 186 files and server/lib 125 each with zero compiler warnings; lint 0/0, boundary clean, actual TCP identity consumer and three native startup tests green without skips. No Axxium runtime source changed in this restack. These are actual repeated results, not transferred from090. Prior browser worktrees remain frozen. CodeRabbit found no new scoped findings on the preceding identity checkpoint and shared-read foundation; this new published head still needs its own actual reviewers and required hosted checks.
+
+Review successor plan for Codex3996401598/3996401599/3996401601/3996401606: move password admission into a pure law-backed domain transition with host proof and clock inputs; bound generic GitHub/Discord/Google OAuth exchanges using the existing durable ceremony reservation before crypto/network; make retained database close explicitly async and awaited; refuse reopening an initialized EDN identity store whose ceremony checkpoint has disappeared. Preserve frozen browser candidates and exact external exchange boundaries. Each behavior gets failure-first coverage, focused review, then fresh combined test/build/lint/boundary/native consumer gates before publication and actual reviewer requests. No claim of live operator-configured external consent.
+
+Combined Axxium successor on immutable cb4 GREEN:118tests1001assertions; test191files,server/lib127files each zero compiler warnings; lint0/0,boundary clean, actual compiled ESM/TCP identity consumer and3 native startup tests pass without skips. Four latest Codex findings repaired: pure password admission, awaited database close, lost-checkpoint refusal, durable generic OAuth attempts. Full suite caught checkpoint/identity initialization order; preserved old recovery assertions and fenced checkpoint before final identity creation. Reciprocal scoped source reviews found no confirmed defects. External consent still requires operator configuration. Freeze this browser candidate; actual published-head reviews/hosted checks and separate Clio CLI ordering successor remain pending.
 
 ---

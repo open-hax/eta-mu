@@ -4,6 +4,7 @@
             [axxium.domain.identity-bootstrap :as bootstrap]
             [axxium.domain.identity-external :as external]
             [axxium.domain.identity-grants :as grants]
+            [axxium.domain.identity-password :as password-domain]
             [axxium.extern.credential-crypto :as crypto]
             [axxium.extern.identity-host :as host]
             [axxium.extern.identity-http :as http]
@@ -96,16 +97,12 @@
         credential (when (and (law/active? actor) record)
                      (store/unseal store (:private-ref record)))
         valid? (await (crypto/verify-password-or-dummy password credential))
-        token (host/random-token)]
-    (law/require! (and (law/active? actor) record valid?) :invalid-credentials "Invalid username or password")
-    (store/transact!
-     store
-     (fn [state]
-       (let [current (get-in state [:principals (:principal/id actor)])]
-         (law/require! (and (law/active? current) (= record (get-in state [:credentials key])))
-                       :invalid-credentials "Credentials changed during authentication")
-         {:operation :login :actor (:principal/id actor)
-          :changes [(session-change current token)] :result (login-result current token)})))))
+        token (host/random-token)
+        issued-at (host/now)
+        input {:actor-id (:principal/id actor) :expected-record record :verified? valid?
+               :token token :token-hash (host/sha256 token)
+               :issued-at issued-at :expires-at (+ issued-at session-ttl-ms)}]
+    (store/transact! store #(password-domain/login-transition % input))))
 
 (defn ^:async bootstrap!
   "Provision the explicit first administrator atomically; never promote an existing signup."
@@ -163,7 +160,8 @@
                                          (host/sha256 (or browser-token "")) (host/now))]
     (store/unseal store (:private-ref record))))
 
-(defn- ^:async read-proof-challenge!
+(defn ^:async read-proof-challenge!
+  "Reserve one durable completion attempt before invoking crypto or a token endpoint."
   [{:keys [store]} browser-token id purpose]
   (await (admission/retry!
           #(ceremonies/reserve-proof! store id purpose (host/sha256 (or browser-token ""))

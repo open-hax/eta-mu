@@ -93,9 +93,10 @@
       (await (accept-verified! service browser state :oauth/atproto identity)))
     (let [state (:state query)
           purpose (keyword "oauth" (name provider))
-          data (identity/read-challenge service browser state purpose)]
+          _ (identity/read-challenge service browser state purpose)]
       (law/require! (and (configured? service provider) (not (str/blank? (:code query))))
                     :invalid-callback "Invalid OAuth callback")
-      (let [verified (await (oauth/exchange! provider (provider-config service provider)
+      (let [data (await (identity/read-proof-challenge! service browser state purpose))
+            verified (await (oauth/exchange! provider (provider-config service provider)
                                             (assoc data :code (:code query))))]
         (await (accept-verified! service browser state purpose verified))))))
