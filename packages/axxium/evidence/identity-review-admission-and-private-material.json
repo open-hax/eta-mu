@@ -1,0 +1,198 @@
+{
+  "scope": "Axxium PR333 seven review findings; isolated successor before latest Clio merge",
+  "baseCommit": "2431570f10868197484d8e2902ad7508840625e7",
+  "reviewComments": [
+    3997046865,
+    3997046867,
+    3997046869,
+    3997046872,
+    3997046879,
+    3996986884,
+    3996986887
+  ],
+  "sourceSha256": {
+    "packages/axxium/src/cljs/axxium/domain/identity_ceremonies.cljc": "024f94e7f19066712164ecf91ea9f2f2cac641cfdfe04f5061323c19ca2cafe9",
+    "packages/axxium/src/cljs/axxium/domain/identity_credential_admission.cljc": "cc0650649f526659cd1b8f0e71a91c9ada50baccfdab90555d90cc8913a11f01",
+    "packages/axxium/src/cljs/axxium/domain/identity_passkey_enrollment.cljc": "e231e0141864c7db4d3973c7702e59de056de3ddbfc28cd707d4abb1db8a4e7c",
+    "packages/axxium/src/cljs/axxium/domain/identity_pgp.cljc": "9a7bac85c1e9fa8ccda6945ab0798351d5e5bb09f51e13adb8c87846a59c3d09",
+    "packages/axxium/src/cljs/axxium/domain/identity_private.cljc": "e8869b1cfdbb35613e3b921fe3eedb64f4be83987320bbbb4cfcb34b24aeed6b",
+    "packages/axxium/src/cljs/axxium/extern/identity_host.cljs": "437412682bf0ea9d9324614db3b92a47db2ebedc2bf3dc5b21dce88113fc4f71",
+    "packages/axxium/src/cljs/axxium/infra/identity.cljs": "a4aa4fc05707854c5009c29e9605cb9ff656964ef5cb04b2e981cc7c1a6f0097",
+    "packages/axxium/src/cljs/axxium/infra/identity_ceremonies.cljs": "6efca9546bc136019a6906c81034b637443666e3442825474efe241277a6e078",
+    "packages/axxium/src/cljs/axxium/infra/identity_plugin.cljs": "547488a5d8bc84ee5144b9c4fc4df6f2fe3418455d87b467272c8c6b84e090d6",
+    "packages/axxium/src/cljs/axxium/infra/identity_private.cljs": "7b63ad151774c07c8d5356aecc618ae36c34ba421ec8787398c0c9cce9000a47",
+    "packages/axxium/src/cljs/axxium/infra/identity_sdk_store.cljs": "118b70e211b1a003d14fdab31cd0a5ae518554bda9cb44eb9bf1f66fe04572cb",
+    "packages/axxium/src/cljs/axxium/infra/identity_store.cljs": "691772f4afaacdaff4d24fdf110261988270988957724163c62f8df02178594a",
+    "packages/axxium/src/cljs/axxium/law/identity_credential_admission.cljc": "c73131716e92a062e12930c18f453b14fb4c12484b1a91bc79ab3e23d33eb6a3",
+    "packages/axxium/src/cljs/axxium/law/identity_passkey_enrollment.cljc": "73644edba1c79d455b2db6cb89b426bcdee9867426ab8b4373df212090750e4f",
+    "packages/axxium/src/cljs/axxium/law/identity_pgp.cljc": "4db94ed5205fe239eba3924e71a38c350914e5d102e0d039134f801c31e3babb",
+    "packages/axxium/src/cljs/axxium/server.cljs": "adce6d496cc351af6736c1d65637e5a51f9443582a71e4859359f146be95ef77",
+    "packages/axxium/test/cljs/axxium/domain/identity_credential_admission_test.cljs": "262346d78ef0937b1124528e8f2a37dec683d31dc1f64084c8c4724e8904a195",
+    "packages/axxium/test/cljs/axxium/extern/identity_credential_race_test.cljs": "9b4e5248cacba912c1014c0f18b25fcb836f650d7a7fa8f6ef06582cb3fb94ec",
+    "packages/axxium/test/cljs/axxium/extern/identity_review_storage_test.cljs": "35777271613cac1392364c9f7581b93714fd32f6b3dae217afd30684db2c0339",
+    "packages/axxium/test/cljs/axxium/extern/identity_sdk_store_test.cljs": "ec7a1ef7d3625ddeb10d9011edbf7b43eac161a12382b28a18a83bfc5b917652"
+  },
+  "logs": {
+    "axxium-review-storage-red-corrected-build.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-review-storage-red-corrected-build.log",
+      "sha256": "ffc7c54ec9284251a7291899883bb436ea4f87f3f2605ac0486f3811b9f66786"
+    },
+    "axxium-review-storage-red-corrected-test.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-review-storage-red-corrected-test.log",
+      "sha256": "ccf1b34d8d33f3ac97cd18c30e2dd9bd193bdb2a66452fc17d8c89be313e2878"
+    },
+    "axxium-review-storage-green-build.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-review-storage-green-build.log",
+      "sha256": "0913fc86d38d8e678e97d076299747f65a432d859e2ffa2506af5c4413aa0219"
+    },
+    "axxium-review-storage-green-test.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-review-storage-green-test.log",
+      "sha256": "942ac1d4ff03071831cb6065d115fc7105aefa681a1af83ee22f9ef4d745c6ab"
+    },
+    "axxium-credential-races-red-build.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-credential-races-red-build.log",
+      "sha256": "315eeb0a73dccd2e1e92002bc64e3527eb14002910e3f3e9529bc0f05e3139bc"
+    },
+    "axxium-credential-races-red-test.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-credential-races-red-test.log",
+      "sha256": "8ee9bfdd3687831134662d2d7ae72444cbce96a580c2e0f3e4ec1be17b759e55"
+    },
+    "axxium-credential-races-red-corrected-build.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-credential-races-red-corrected-build.log",
+      "sha256": "53684e1c82c414b04ebdc8a589c61099a859ee404afba729375d6def29d4fb7a"
+    },
+    "axxium-credential-races-red-corrected-test.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-credential-races-red-corrected-test.log",
+      "sha256": "ae8ee5530b40803a26c071fbb8ed63f0734615e889d8fdda1f97c30531b95917"
+    },
+    "axxium-credential-races-green-build.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-credential-races-green-build.log",
+      "sha256": "a917671074fd93a68d247bd0136ad24122f9a18cb449d7b167677edd2021b188"
+    },
+    "axxium-credential-races-green-test.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-credential-races-green-test.log",
+      "sha256": "b5996fe7efc451bfc7869d3d4059e019ad9295f83c0b179ec6c41faf3376c960"
+    },
+    "axxium-successor-full-test.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-successor-full-test.log",
+      "sha256": "45a6b945b143a6072d3930adc318cf01c5824f1379254675eef24992cca8939b"
+    },
+    "axxium-successor-full-green.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-successor-full-green.log",
+      "sha256": "9c96ee1de11457138b8e2fc35bcb9f91449131212bd8a270640f0d6bff17e96e"
+    },
+    "axxium-successor-release.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-successor-release.log",
+      "sha256": "70ce55725a78623f87589e0eee6f794623de782bb0578fe79ab42ab125cd78b0"
+    },
+    "axxium-successor-lint.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-successor-lint.log",
+      "sha256": "85e812cec19fc4cb007045a0133bf28412252c97169b6e8dae5899fb00ff12e5"
+    },
+    "axxium-successor-boundary.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-successor-boundary.log",
+      "sha256": "dfc72644642d0e675a8961720d628568eee7574f802972fec59bbc487befb38a"
+    },
+    "axxium-successor-native.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-successor-native.log",
+      "sha256": "f064ad51e43717eff78a810a9f5d34048e0e7f2931f6f136d2333707a1f61365"
+    },
+    "axxium-successor-optional-lint.log": {
+      "path": "/workspace/scratch/3655842e43cf/runtime-restored/logs/axxium-successor-optional-lint.log",
+      "sha256": "a9cdd56d64d7c0e31178b1896e5a2bcddf536b0192ce568264593bd4b48e5c98"
+    }
+  },
+  "results": {
+    "storageRed": {
+      "tests": 6,
+      "assertions": 28,
+      "failures": 8,
+      "errors": 0,
+      "exit": 1
+    },
+    "storageGreen": {
+      "tests": 6,
+      "assertions": 28,
+      "failures": 0,
+      "errors": 0,
+      "exit": 0,
+      "compilerInputs": 141,
+      "compilerWarnings": 0
+    },
+    "cryptoRaceRed": {
+      "tests": 3,
+      "assertions": 7,
+      "failures": 7,
+      "errors": 0,
+      "exit": 1
+    },
+    "cryptoRaceGreen": {
+      "tests": 3,
+      "assertions": 7,
+      "failures": 0,
+      "errors": 0,
+      "exit": 0,
+      "compilerInputs": 132,
+      "compilerWarnings": 0
+    },
+    "fullFirst": {
+      "tests": 146,
+      "assertions": 1246,
+      "failures": 1,
+      "errors": 0,
+      "exit": 1,
+      "note": "Old SDK fixture omitted the new separately bounded cleanup retry phase."
+    },
+    "fullFinal": {
+      "command": "pnpm test",
+      "tests": 146,
+      "assertions": 1247,
+      "failures": 0,
+      "errors": 0,
+      "exit": 0,
+      "compilerInputs": 209,
+      "compilerWarnings": 0
+    },
+    "release": {
+      "command": "pnpm build",
+      "exit": 0,
+      "server": {
+        "inputs": 138,
+        "warnings": 0
+      },
+      "lib": {
+        "inputs": 138,
+        "warnings": 0
+      }
+    },
+    "lint": {
+      "command": "pnpm lint",
+      "exit": 0,
+      "errors": 0,
+      "warnings": 0
+    },
+    "boundary": {
+      "command": "pnpm boundary:check",
+      "exit": 0
+    },
+    "native": {
+      "command": "pnpm verify:identity",
+      "exit": 0,
+      "builtTcpConsumer": true,
+      "nativeTests": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "optionalNamespaceOrderInventory": {
+      "configuredGate": false,
+      "warnings": 34,
+      "exit": 2
+    }
+  },
+  "limits": [
+    "External provider consent and PostgreSQL deployment are not exercised.",
+    "Cleanup can be deferred after persistent lock contention or a process crash; only proven unreferenced supplied candidates are deleted.",
+    "Root website/global stack proof and published-head reviews are separate.",
+    "Native crypto race tests mutate state in one process after actual verification; they do not claim multiprocess races."
+  ]
+}

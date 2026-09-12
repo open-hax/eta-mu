@@ -2,7 +2,7 @@
 category: "tasks"
 dependency: []
 type: "task"
-write-id: "1789233789089-0.37pa1muh901eojvmr4u"
+write-id: "1789239858759-0.gy230jy4p4pht3ahmam"
 title: "Make Axxium the identity owner for local Wiki CMS"
 priority: "P0"
 status: "in_progress"
@@ -67,5 +67,11 @@ Fresh immutable ff48 Clio CLI restack GREEN118tests1001assertions; test191files,
 Post-maintenance PR333 review successor from64598f0: scope on axxium-wiki-identity covers current encrypted-reference readiness, pure passkey admission, retained dummy bcrypt, strict Google audience evidence, callback replay exchange counting and native fixture lifetime/stdout corrections. Actual RED126tests1074assertions16failures0errors; final guarded GREEN127tests1078assertions. Test197files/server129/lib129 all0compilerwarnings; lint0/0,boundaryclean, real compiled ESM/TCP consumer and3native startup tests0skips. Combined-stream native parsing reproduced3failures thenpassed with separate stdout. EDN24h absolute session migration is explicit; legacyJWT7days retained. Canonical CLI was rebuilt in the sibling recovery worktree and read-only-probed here before these provenance writes. Packages-only source stays frozen; published-head reviewers and root browser/global gates still required. Live external OAuth consent and PostgreSQL service remain unclaimed. Details: packages/axxium/docs/identity-review-post-recovery.md and evidence/identity-review-post-recovery.json.
 
 Combine published Axxium1a47a7ea with current Clio1ef5c1ca using an ordinary two-parent merge. Production and test sources merge without conflicts; only three append-only evidence ledgers conflict. The older Axxium branch interleaved its appends through the common ledger. Resolution preserves the complete incoming Clio byte prefix and appends every Axxium-only line in original order, with an ordered-subsequence proof that no common event was changed or dropped. Final combined Axxium and protocol gates will run before publication; earlier individual-tree evidence remains labeled separately.
+
+PR333 successor from published2431570f: investigate actual reviews3997046865/67/69/72/79 and3996986884/87. Bound fresh browser bindings by trusted client identity; move PGP login/enrollment and passkey enrollment admission into pure law-backed domain transitions; retry readiness only for native contention; safely reclaim superseded ATProto and rejected signup private blobs without deleting references after uncertain durable admission. Use a dedicated isolated worktree, reproduce real failures, run package test/build/lint/boundary/native TCP gates and independent review, then ordinary-merge published protocol successor e2e440c and rerun combined gates. Browser dependency and Knoxx production sources remain frozen. No publication or live external OAuth claim.
+
+Seven PR333 review repairs: trusted-client issuance quota, pure PGP login/enrollment and passkey enrollment, scoped reference-aware private cleanup, and readiness contention retry. Native storage RED6/28/8 failures to GREEN6/28; actual crypto races RED3/7/7 failures to GREEN3/7. Full146/1247,209 inputs0warnings; both138-input releases, configured lint0/0,boundary and real TCP plus3 native startups pass. Latest Clio bd617b93 normal merge and combined gates follow. Evidence in packages/axxium/evidence/identity-review-admission-and-private-material.json; root browser and published-head reviews remain separate.
+
+Combined77e0f3a3 ordinary merge of identity ebb59059 and published Clio bd617b93: Axxium146/1247,209inputs0warnings; server/lib138inputs0warnings; actualTCP+3native0skips; lint0/0,boundaryclean. Protocols78/332+22native0skips,140/112inputs0warnings, stricttypes/lint0/0. All source subtrees match their verified parents. Three ledger conflicts preserved incoming byte prefixes and all ordered identity-only records. Separate receipt audit finds39 historic failures, all byte-identical in both prior branches; no history rewritten. Combined evidence packages/axxium/evidence/identity-combined-current-verification.json. Root publication/review/browser acceptance remains pending.
 
 ---

@@ -1,29 +1,36 @@
 (ns axxium.infra.identity-sdk-store
   "Local ATProto SDK storage retries never repeat a provider token exchange."
-  (:require [axxium.domain.identity :as domain]
+  (:require [axxium.domain.identity-private :as private-domain]
             [axxium.extern.identity-host :as host]
             [axxium.infra.identity-admission :as admission]
             [axxium.infra.identity-ceremonies :as ceremonies]
+            [axxium.infra.identity-private :as private]
             [axxium.infra.identity-store :as store]))
 
 (defn private-store
-  "Persist SDK sessions privately; prepare one immutable blob before retrying admission."
+  "Persist SDK sessions with atomic reads and scoped post-admission blob reclamation."
   [identity-store prefix]
-  {:get! (fn [key]
-           (when-let [record (get-in (store/state identity-store) [:credentials (str prefix key)])]
-             (store/unseal identity-store (:private-ref record))))
+  {:get! (fn ^:async get-private [key]
+           (await (admission/retry! #(store/read-private-value identity-store (str prefix key)))))
    :put! (fn ^:async put-private [key value]
            (let [reference (store/seal! identity-store value)]
-             (await (admission/retry! #(store/transact!
-                             identity-store
-                             (fn [_] {:operation :oauth-private-state
-                                      :changes [(domain/put :credentials (str prefix key) {:private-ref reference})]}))))))
+             (await
+              (private/with-prepared!
+               identity-store reference
+               (fn ^:async admit-prepared []
+                 (let [result (await (admission/retry!
+                                      #(store/transact! identity-store
+                                                        (fn [state]
+                                                          (private-domain/replace-transition state (str prefix key) reference)))))]
+                   (await (private/cleanup! identity-store [(:retired-reference result)]))
+                   nil))))))
    :delete! (fn ^:async delete-private [key]
-              (await (admission/retry! #(store/transact!
-                               identity-store
-                               (fn [state] {:operation :oauth-private-state-deleted
-                                            :changes (when (get-in state [:credentials (str prefix key)])
-                                                       [(domain/remove-entry :credentials (str prefix key))])})))))})
+              (let [result (await (admission/retry!
+                                   #(store/transact! identity-store
+                                                     (fn [state]
+                                                       (private-domain/delete-transition state (str prefix key))))))]
+                (await (private/cleanup! identity-store [(:retired-reference result)]))
+                nil))})
 
 (defn pending-store
   "Bounded SDK authorization state, including retry-safe local consumption."

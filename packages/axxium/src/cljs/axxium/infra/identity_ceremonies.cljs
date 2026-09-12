@@ -55,26 +55,31 @@
     (get @(:private store) reference)
     (host/unseal (vault store) (subs reference 9))))
 
-(defn issue! [store id browser-hash purpose data ttl]
-  (host/bounded-private-value! data)
-  (locked!
-   store
-   (fn []
-     (let [now (host/now)
-           retained (policy/retained (entries store) now)]
-       (policy/admit! retained browser-hash now purpose)
-       (let [reference (if (= :memory (:provider store)) (str "ceremony:" (host/id))
-                           (str "ceremony:" (host/seal! (vault store) data)))
-             value {:purpose purpose :browser-hash browser-hash :issued-at now
-                    :expires-at (+ now ttl) :private-ref reference}]
-         (when (= :memory (:provider store)) (swap! (:private store) assoc reference data))
-         (persist! store (assoc retained id value))
-         id)))))
+(defn issue!
+  "Persist a bounded ceremony, optionally binding its issuance quota to a trusted client."
+  ([store id browser-hash purpose data ttl]
+   (issue! store id browser-hash purpose data ttl nil))
+  ([store id browser-hash purpose data ttl client-hash]
+   (host/bounded-private-value! data)
+   (locked!
+    store
+    (fn []
+      (let [now (host/now)
+            retained (policy/retained (entries store) now)]
+        (policy/admit! retained browser-hash now purpose client-hash)
+        (let [reference (if (= :memory (:provider store)) (str "ceremony:" (host/id))
+                            (str "ceremony:" (host/seal! (vault store) data)))
+              value (cond-> {:purpose purpose :browser-hash browser-hash :issued-at now
+                             :expires-at (+ now ttl) :private-ref reference}
+                      client-hash (assoc :client-hash client-hash))]
+          (when (= :memory (:provider store)) (swap! (:private store) assoc reference data))
+          (persist! store (assoc retained id value))
+          id))))))
 
 (defn private-reference? [reference] (str/starts-with? reference "ceremony:"))
 
-(defn reserve-proof!
-  "Durably reserve a completion slot under the operation lock before returning its proof data."
+(defn reserve-proof-context!
+  "Reserve a completion slot and capture its immutable record together with private proof data."
   [store id purpose browser-hash current-state]
   (locked!
    store
@@ -84,7 +89,12 @@
       ;; A failed publication never starts crypto. A visible uncertain increment
       ;; remains spent; a retry advances again or refuses, never discounts it.
       (persist! store (assoc retained id challenge))
-      (unseal store (:private-ref challenge)))))
+      {:record challenge :data (unseal store (:private-ref challenge))})))
+
+(defn reserve-proof!
+  "Return the protected proof data from one durable completion reservation."
+  [store id purpose browser-hash current-state]
+  (:data (reserve-proof-context! store id purpose browser-hash current-state)))
 
 (defn private-value [store id]
   (when-let [record (get (policy/retained (entries store) (host/now)) id)]

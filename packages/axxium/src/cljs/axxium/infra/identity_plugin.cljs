@@ -36,9 +36,9 @@
 (defn- mutation! [service request]
   (http/csrf! request (get-in service [:options :public-base-url])))
 
-(defn- ^:async with-browser [request respond]
+(defn- ^:async with-browser [service request respond]
   (let [token (or (:browser-token request) (host/random-token))
-        response (await (respond token))]
+        response (await (respond token (assoc service :ceremony-client-key (:client-key request))))]
     ;; A new five-minute challenge renews the browser's binding lifetime too.
     (assoc response :browser-token token)))
 
@@ -80,26 +80,26 @@
             (fn ^:async handle [request]
               (law/require! (not= "true" (get-in request [:query :link]))
                             :link-requires-post "Initiate account linking with POST to the provider link route")
-              (await (with-browser request
-                       (fn ^:async respond [browser]
-                         {:redirect (await (identity-oauth/begin! service :github browser
+              (await (with-browser service request
+                       (fn ^:async respond [browser request-service]
+                         {:redirect (await (identity-oauth/begin! request-service :github browser
                                                                 (:token request) (:query request) atproto-client))})))))
     (route! "GET" "/api/auth/providers/:provider/login"
             (fn ^:async handle [request]
               (law/require! (not= "true" (get-in request [:query :link]))
                             :link-requires-post "Initiate account linking with POST to the provider link route")
-              (await (with-browser request
-                       (fn ^:async respond [browser]
-                         {:redirect (await (identity-oauth/begin! service (keyword (get-in request [:params :provider]))
+              (await (with-browser service request
+                       (fn ^:async respond [browser request-service]
+                         {:redirect (await (identity-oauth/begin! request-service (keyword (get-in request [:params :provider]))
                                                                 browser (:token request) (:query request) atproto-client))})))))
     (route! "POST" "/api/auth/providers/:provider/link"
             (fn ^:async handle [request]
               (mutation! service request)
               (identity/require-principal! service (:token request))
-              (await (with-browser request
-                       (fn ^:async respond [browser]
+              (await (with-browser service request
+                       (fn ^:async respond [browser request-service]
                          {:body {:authorizationUrl
-                                 (await (identity-oauth/begin! service (keyword (get-in request [:params :provider]))
+                                 (await (identity-oauth/begin! request-service (keyword (get-in request [:params :provider]))
                                                               browser (:token request)
                                                               (assoc (:body request) :link "true") atproto-client))}})))))
     (route! "GET" "/api/auth/callback/:provider"
@@ -120,9 +120,9 @@
     (route! "POST" "/api/auth/pgp/challenge"
             (fn ^:async handle [request]
               (mutation! service request)
-              (await (with-browser request
-                       (fn [browser]
-                         {:body (identity/pgp-challenge! service (:token request) browser
+              (await (with-browser service request
+                       (fn [browser request-service]
+                         {:body (identity/pgp-challenge! request-service (:token request) browser
                                                          (update (:body request) :purpose keyword))})))))
     (route! "POST" "/api/auth/pgp/enroll"
             (fn ^:async handle [request]
@@ -135,9 +135,9 @@
     (route! "POST" "/api/auth/passkey/registration-options"
             (fn ^:async handle [request]
               (mutation! service request)
-              (await (with-browser request
-                       (fn ^:async respond [browser]
-                         {:body (await (identity/passkey-registration-options! service (:token request) browser))})))))
+              (await (with-browser service request
+                       (fn ^:async respond [browser request-service]
+                         {:body (await (identity/passkey-registration-options! request-service (:token request) browser))})))))
     (route! "POST" "/api/auth/passkey/registration-verify"
             (fn ^:async handle [request]
               (mutation! service request)
@@ -145,9 +145,9 @@
     (route! "POST" "/api/auth/passkey/authentication-options"
             (fn ^:async handle [request]
               (mutation! service request)
-              (await (with-browser request
-                       (fn ^:async respond [browser]
-                         {:body (await (identity/passkey-authentication-options! service browser))})))))
+              (await (with-browser service request
+                       (fn ^:async respond [browser request-service]
+                         {:body (await (identity/passkey-authentication-options! request-service browser))})))))
     (route! "POST" "/api/auth/passkey/authentication-verify"
             (fn ^:async handle [request]
               (mutation! service request)

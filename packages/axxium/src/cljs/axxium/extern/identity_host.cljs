@@ -96,6 +96,30 @@
           :when (and (re-matches #"[0-9a-f]{64}" file) (not (contains? retained file)))]
     (fs/unlinkSync (str directory "/" file))))
 
+(defn discard-private!
+  "Remove one proven-unreferenced main-vault blob and fence its parent directory."
+  [{:keys [directory]} reference]
+  (when-not (and (string? reference) (re-matches #"[0-9a-f]{64}" reference))
+    (throw (ex-info "Invalid private credential reference" {:code :invalid-secret-reference})))
+  (let [file (str directory "/" reference)]
+    (try
+      (let [entry (fs/lstatSync file)]
+        (when-not (.isFile entry)
+          (throw (ex-info "Private cleanup requires a regular file" {:code :unsafe-storage})))
+        (fs/unlinkSync file))
+      (catch :default cause
+        (when-not (= "ENOENT" (.-code cause)) (throw cause))))
+    (let [fd (fs/openSync directory "r")]
+      (try (fs/fsyncSync fd) (finally (fs/closeSync fd))))))
+
+(defn report-private-cleanup!
+  "Report deferred private cleanup using only a sanitized code, never credential data."
+  [cause]
+  (try
+    (js/console.error "Axxium private material cleanup deferred"
+                      (name (or (:code (ex-data cause)) (:clio/error (ex-data cause)) :storage-error)))
+    (catch :default report-cause {:reported? false :cause report-cause})))
+
 (defn bounded-private-value!
   "Reject oversized unauthenticated payloads before creating any encrypted blob."
   [value]

@@ -1,6 +1,7 @@
 (ns axxium.infra.identity-store
   "Identity provider boundary; EDN state is replayed from canonical Clio facts."
   (:require [axxium.domain.identity :as domain]
+            [axxium.domain.identity-private :as private-domain]
             [axxium.extern.identity-host :as host]
             [axxium.infra.identity-ceremonies :as ceremonies]
             [axxium.law.identity :as law]
@@ -33,6 +34,32 @@
        (doseq [reference (distinct (keep :private-ref records))]
          (law/require! (some? (unseal store reference)) :missing-secret "Referenced identity material is unavailable"))
        true))))
+
+(defn read-private-value
+  "Read a credential and authenticate its blob while excluding reference replacement."
+  [store key]
+  (ceremonies/locked!
+   store
+   #(when-let [record (get-in (state store) [:credentials key])]
+      (unseal store (:private-ref record)))))
+
+(defn discard-unreferenced!
+  "Reclaim only supplied main-vault candidates absent from fenced current state."
+  [store references]
+  (ceremonies/locked!
+   store
+   (fn []
+     (let [current (state store)
+           discarded (private-domain/reclaimable-references current references)]
+       ;; A failed append can already be visible. Re-fence current history before
+       ;; any deletion, and retain every current reference even after a lost ack.
+       (when (= :edn (:provider store))
+         (runtime/ensure-durable! (:runtime store) (:file store)))
+       (doseq [reference discarded]
+         (if (= :memory (:provider store))
+           (swap! (:private store) dissoc reference)
+           (host/discard-private! (:vault store) reference)))
+       discarded))))
 
 (defn- ensure-ledger! [file]
   (when-not (fs/exists? file)

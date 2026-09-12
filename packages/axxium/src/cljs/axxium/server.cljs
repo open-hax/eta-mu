@@ -3,6 +3,7 @@
   (:require [axxium.extern.identity-host :as host]
             [axxium.extern.identity-http :as http]
             [axxium.infra.identity :as identity]
+            [axxium.infra.identity-admission :as admission]
             [axxium.infra.identity-store :as store]
             [axxium.infra.identity-plugin :as descriptions]
             [axxium.extern.identity-plugin :as plugin]))
@@ -23,11 +24,11 @@
                           :client-secret (host/env "GOOGLE_OAUTH_CLIENT_SECRET")}
                  :atproto {:client-id (host/env "ATPROTO_OAUTH_CLIENT_ID")}}}))
 
-(defn health-response
+(defn ^:async health-response
   "Readiness requires current identity facts and their authenticated private material."
   [{:keys [store]}]
   (try
-    (store/check-readiness! store)
+    (await (admission/retry! #(store/check-readiness! store)))
     {:body {:ok true :service "axxium" :provider (name (:provider store))}}
     (catch :default _
       {:status 503 :body {:ok false :service "axxium" :provider (name (:provider store))}})))

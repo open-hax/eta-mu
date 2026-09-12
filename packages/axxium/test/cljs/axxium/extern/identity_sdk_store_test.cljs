@@ -68,7 +68,7 @@
           (is (nil? (await (.get (.-stateStore sdk) "sdk-state"))))
           (when-let [unlock @release] (reset! release nil) (unlock))
           (let [reopened (store/create-provider {:provider :edn :directory directory})
-                session ((:get! (sdk-store/private-store reopened "atproto-session:")) "did:plc:aaaaaaaaaaaaaaaaaaaaaaaa")]
+                session (await ((:get! (sdk-store/private-store reopened "atproto-session:")) "did:plc:aaaaaaaaaaaaaaaaaaaaaaaa"))]
             (is (= "did:plc:aaaaaaaaaaaaaaaaaaaaaaaa" (get-in session [:tokenSet :sub])))
             (is (map? (:dpopJwk session))))))
       (finally (when-let [unlock @release] (unlock))
@@ -78,18 +78,22 @@
   (let [directory (fs/mkdtempSync (path/join (os/tmpdir) "axxium-sdk-clock-"))
         release (atom nil)
         clock (atom (host/now))
-        delays (atom 0)]
+        delays (atom 0)
+        cleanup-failures (atom [])]
     (try
       (let [identity-store (store/create-provider {:provider :edn :directory directory})
             sdk (oauth/sdk-store (sdk-store/private-store identity-store "sdk:"))]
         (reset! release (lock! directory))
         (with-redefs [admission/max-attempts 4 host/now (fn [] @clock)
+                      host/report-private-cleanup! #(swap! cleanup-failures conj (ex-data %))
                       host/delay! (fn ^:async reverse-clock [_] (swap! delays inc) (swap! clock - 1000))]
           (let [failure (try (await (.set sdk "clock" #js {:test "value"})) nil
                              (catch :default cause (ex-data cause)))]
             (is (= :identity-store-busy (:code failure)))
             (is (= 4 (:attempts failure)))
-            (is (= 3 @delays)))))
+            (is (= 6 @delays) "Admission and deferred cleanup each stop after three waits")
+            (is (= [{:code :identity-store-busy :clio/error :clio.ledger/concurrent-stream-write
+                     :attempts 4}] @cleanup-failures)))))
       (finally (when-let [unlock @release] (unlock))
                (fs/rmSync directory #js {:recursive true :force true})))))
 

@@ -1,6 +1,9 @@
 (ns axxium.infra.identity
   "Axxium identity commands shared by the browser plugin and agent clients."
   (:require [axxium.domain.identity :as domain]
+            [axxium.domain.identity-credential-admission :as credential-admission]
+            [axxium.domain.identity-pgp :as pgp-domain]
+            [axxium.domain.identity-passkey-enrollment :as passkey-enrollment]
             [axxium.domain.identity-bootstrap :as bootstrap]
             [axxium.domain.identity-external :as external]
             [axxium.domain.identity-grants :as grants]
@@ -9,6 +12,7 @@
             [axxium.extern.credential-crypto :as crypto]
             [axxium.extern.identity-host :as host]
             [axxium.extern.identity-http :as http]
+            [axxium.infra.identity-private :as private]
             [axxium.infra.identity-store :as store]
             [axxium.infra.identity-admission :as admission]
             [axxium.infra.identity-ceremonies :as ceremonies]
@@ -59,15 +63,6 @@
             :principal/capabilities []}
      (seq email) (assoc :principal/email email))))
 
-(defn- session-change [principal token]
-  (let [issued-at (host/now)]
-    (domain/put :sessions (host/sha256 token)
-                {:principal-id (:principal/id principal) :issued-at issued-at
-                 :expires-at (+ issued-at session-ttl-ms)})))
-
-(defn- login-result [principal token]
-  {:ok true :principal principal :token token})
-
 (defn ^:async signup!
   "Atomically register username/email aliases, credential and the first session."
   [{:keys [store]} {:keys [username email password display-name]}]
@@ -80,13 +75,15 @@
                   :invalid-password "Password must contain at least 12 characters and at most 1024 UTF-8 bytes")
     (domain/require-free-identifiers! (store/state store) username email)
     (let [credential (await (crypto/hash-password password))
-          reference (store/seal! store credential)
           actor (principal username email display-name)
           token (host/random-token)
           issued-at (host/now)
+          token-hash (host/sha256 token)
+          reference (store/seal! store credential)
           input {:actor actor :private-ref reference :token token
-                 :token-hash (host/sha256 token) :issued-at issued-at :expires-at (+ issued-at session-ttl-ms)}]
-      (store/transact! store #(domain/signup-transition % input)))))
+                 :token-hash token-hash :issued-at issued-at :expires-at (+ issued-at session-ttl-ms)}]
+      (await (private/with-prepared! store reference
+                                      #(store/transact! store (fn [state] (domain/signup-transition state input))))))))
 
 (defn ^:async login!
   "Authenticate by username OR email, then commit a session against unchanged credentials."
@@ -150,9 +147,10 @@
 
 (defn challenge!
   "Persist single-use browser-bound state; sensitive payload is encrypted separately."
-  [{:keys [store]} browser-token purpose data]
+  [{:keys [store ceremony-client-key]} browser-token purpose data]
   (law/require! (and (string? browser-token) (>= (count browser-token) 32)) :invalid-browser "Authentication browser binding required")
-  (ceremonies/issue! store (host/id) (host/sha256 browser-token) purpose data challenge-ttl-ms))
+  (ceremonies/issue! store (host/id) (host/sha256 browser-token) purpose data challenge-ttl-ms
+                    (when ceremony-client-key (host/sha256 ceremony-client-key))))
 
 (defn read-challenge
   "Load the protected challenge after its browser and expiry guards pass."
@@ -168,32 +166,42 @@
           #(ceremonies/reserve-proof! store id purpose (host/sha256 (or browser-token ""))
                                       (fn [] (store/state store))))))
 
-(defn- consume-changes [state id purpose browser-token]
-  (domain/require-challenge! state id purpose (host/sha256 browser-token) (host/now))
-  [(domain/remove-entry :challenges id)])
+(defn- ^:async read-proof-context! [{:keys [store]} browser-token id purpose]
+  (await (admission/retry!
+          #(ceremonies/reserve-proof-context! store id purpose (host/sha256 (or browser-token ""))
+                                              (fn [] (store/state store))))))
+
+(defn- enrollment-authority [service token]
+  (let [actor (require-principal! service token)
+        session-hash (host/sha256 token)]
+    {:actor-id (:principal/id actor) :session-hash session-hash
+     :expected-session (get-in (store/state (:store service)) [:sessions session-hash])}))
+
+(defn- preflight-enrollment! [store authority data]
+  (credential-admission/require-enrollment-authority!
+   (store/state store) (assoc authority :challenge-principal-id (:principal-id data) :now (host/now))))
 
 (defn- ^:async verify-proof! [verify]
   (try (await (verify))
        (catch :default _ (throw (ex-info "Invalid authentication proof" {:code :invalid-credentials})))))
 
 (defn ^:async enroll-pgp!
-  "Link a public PGP key only after a logged-in user proves possession."
+  "Verify possession, then admit enrollment against the original session and challenge."
   [{:keys [store] :as service} token browser-token {:keys [challenge-id signature public-key]}]
-  (let [actor (require-principal! service token)
-        data (await (read-proof-challenge! service browser-token challenge-id :pgp-enroll))
-        _ (law/require! (= (:principal/id actor) (:principal-id data)) :invalid-challenge "Challenge belongs to another account")
+  (let [authority (enrollment-authority service token)
+        {:keys [record data]} (await (read-proof-context! service browser-token challenge-id :pgp-enroll))
+        _ (preflight-enrollment! store authority data)
         proof (await (verify-proof! #(crypto/verify-pgp {:public-key public-key :signature signature :challenge (:challenge data)})))
-        fingerprint (:fingerprint proof)
-        key (str "pgp:" fingerprint)
+        input (merge authority {:challenge-id challenge-id :browser-hash (host/sha256 browser-token)
+                                :expected-challenge record :challenge-principal-id (:principal-id data)
+                                :fingerprint (:fingerprint proof) :proof proof})
         reference (store/seal! store {:public-key public-key})]
-    (store/transact!
-     store (fn [state]
-             (law/require! (and (resolve-principal service token) (not (get-in state [:credentials key])))
-                           :credential-exists "Key is already registered or session expired")
-             {:operation :pgp-enrolled :actor (:principal/id actor)
-              :changes (conj (consume-changes state challenge-id :pgp-enroll browser-token)
-                             (domain/put :credentials key {:principal-id (:principal/id actor) :private-ref reference}))
-              :result {:ok true :fingerprint fingerprint}}))))
+    (await (private/with-prepared!
+            store reference
+            #(store/transact! store
+                              (fn [state]
+                                (pgp-domain/enrollment-transition state (assoc input :now (host/now)
+                                                                                     :private-ref reference))))))))
 
 (defn pgp-challenge!
   "Issue a domain-separated PGP proof challenge for enrollment or login."
@@ -207,23 +215,23 @@
     {:challenge-id id :challenge challenge}))
 
 (defn ^:async pgp-login!
-  "Verify a registered PGP key and consume its proof in the session transaction."
+  "Verify the registered key, then let pure admission consume its unchanged proof."
   [{:keys [store] :as service} browser-token {:keys [challenge-id signature]}]
-  (let [data (await (read-proof-challenge! service browser-token challenge-id :pgp-login))
-        key (str "pgp:" (:fingerprint data))
-        record (get-in (store/state store) [:credentials key])]
-    (law/require! record :invalid-credentials "Invalid PGP credential")
-    (let [public-key (:public-key (store/unseal store (:private-ref record)))]
-      (await (verify-proof! #(crypto/verify-pgp {:public-key public-key :signature signature :challenge (:challenge data)}))))
-    (let [token (host/random-token)]
-      (store/transact!
-       store (fn [state]
-               (let [actor (get-in state [:principals (:principal-id record)])]
-                 (law/require! (and (law/active? actor) (= record (get-in state [:credentials key])))
-                               :invalid-credentials "Invalid PGP credential")
-                 {:operation :pgp-login :actor (:principal/id actor)
-                  :changes (conj (consume-changes state challenge-id :pgp-login browser-token) (session-change actor token))
-                  :result (login-result actor token)}))))))
+  (let [{:keys [record data]} (await (read-proof-context! service browser-token challenge-id :pgp-login))
+        credential (get-in (store/state store) [:credentials (str "pgp:" (:fingerprint data))])]
+    (law/require! credential :invalid-credentials "Invalid PGP credential")
+    (let [public-key (:public-key (store/unseal store (:private-ref credential)))
+          proof (await (verify-proof! #(crypto/verify-pgp {:public-key public-key :signature signature
+                                                          :challenge (:challenge data)})))
+          token (host/random-token)
+          input {:fingerprint (:fingerprint data) :expected-record credential :proof proof
+                 :challenge-id challenge-id :browser-hash (host/sha256 browser-token)
+                 :expected-challenge record :token token :token-hash (host/sha256 token)}]
+      (store/transact! store
+                       (fn [state]
+                         (let [issued-at (host/now)]
+                           (pgp-domain/login-transition state (assoc input :issued-at issued-at
+                                                                          :expires-at (+ issued-at session-ttl-ms)))))))))
 
 (defn- passkeys [state principal-id]
   (->> (:credentials state)
@@ -245,24 +253,17 @@
     {:challenge-id id :options result}))
 
 (defn ^:async passkey-registration-verify!
-  "Verify browser attestation before linking the new passkey to its principal."
+  "Verify attestation, then admit enrollment against unchanged session and challenge authority."
   [{:keys [store options] :as service} token browser-token {:keys [challenge-id response]}]
-  (let [actor (require-principal! service token)
-        data (await (read-proof-challenge! service browser-token challenge-id :passkey-enroll))
-        _ (law/require! (= (:principal/id actor) (:principal-id data)) :invalid-challenge "Challenge belongs to another account")
-        result (await (verify-proof! #(crypto/verify-registration {:response response :challenge (:challenge data)
-                                                                  :origin (:public-base-url options) :rp-id (:rp-id options)})))
-        _ (law/require! (:verified? result) :invalid-credentials "Passkey registration could not be verified")
-        credential (:credential result)
-        key (str "passkey:" (:id credential))]
-    (store/transact!
-     store (fn [state]
-             (law/require! (and (resolve-principal service token) (not (get-in state [:credentials key])))
-                           :credential-exists "Passkey is already registered or session expired")
-             {:operation :passkey-enrolled :actor (:principal/id actor)
-              :changes (conj (consume-changes state challenge-id :passkey-enroll browser-token)
-                             (domain/put :credentials key {:principal-id (:principal/id actor) :credential credential}))
-              :result {:ok true :credential-id (:id credential)}}))))
+  (let [authority (enrollment-authority service token)
+        {:keys [record data]} (await (read-proof-context! service browser-token challenge-id :passkey-enroll))
+        _ (preflight-enrollment! store authority data)
+        proof (await (verify-proof! #(crypto/verify-registration {:response response :challenge (:challenge data)
+                                                                 :origin (:public-base-url options) :rp-id (:rp-id options)})))
+        input (merge authority {:challenge-id challenge-id :browser-hash (host/sha256 browser-token)
+                                :expected-challenge record :challenge-principal-id (:principal-id data)
+                                :proof proof})]
+    (store/transact! store #(passkey-enrollment/transition % (assoc input :now (host/now))))))
 
 (defn ^:async passkey-authentication-options!
   "Generate discoverable-credential authentication options without account enumeration."
