@@ -94,6 +94,62 @@
     (is (= 9 (:status result)))
     (is (= "ETA_MU_GATE_COMMAND\n" (:output result)))))
 
+(defn- shipped-rheos-workflow []
+  (let [root ((resolve 'workflows/repo-root))
+        registry ((resolve 'workflows/load-registry) root)
+        workflow (first (filter #(= "rheos" (:contract/id %))
+                                ((resolve 'workflows/load-workflows) root)))]
+    {:registry registry
+     :workflow ((resolve 'workflows/expand-workflow) registry workflow)}))
+
+(def ^:private protocol-commands
+  ["pnpm --dir packages/protocols test"
+   "pnpm --dir packages/protocols lint"
+   "pnpm --dir packages/protocols test:types"])
+
+(deftest protocols-have-enforced-hosted-and-local-package-gates
+  (let [{:keys [registry workflow]} (shipped-rheos-workflow)
+        steps (get-in workflow [:workflow/jobs 0 :job/steps])
+        hosted (get-in (project registry workflow) ["jobs" "test" "steps"])
+        gate (first ((resolve 'workflows/->local-gates) [workflow]))]
+    (doseq [command protocol-commands]
+      (let [step (first (filter #(= command (:step/run %)) steps))
+            local (first (filter #(= command (:step/run %)) (:gate/steps gate)))
+            projected (first (filter #(= (:step/name step) (get % "name")) hosted))]
+        (is (map? step) (str "Missing hosted package gate: " command))
+        (is (true? (:gate/no-warning step)) command)
+        (is (true? (:gate/no-warning local)) (str "Missing enforced local gate: " command))
+        (is (= "bash" (get projected "shell")) command)
+        (when (= command (first protocol-commands))
+          (is (= "0 failures, 0 errors" (:gate/expect step)))
+          (is (= (:gate/expect step) (:gate/expect local))))))
+    (is (some #(= "pnpm --dir packages/eta-mu test:workflows" (:step/run %)) steps))
+    (doseq [event [:push :pull-request]
+            changed-path ["packages/protocols/**" "packages/clio/**"
+                          "packages/eta-mu/commands/workflows_test.cljs"]]
+      (is (some #{changed-path}
+                (:on/paths (first (filter #(= event (:on/event %)) (:workflow/triggers workflow)))))
+          (str event " must select the package dependency or gate regression: " changed-path)))
+    (doseq [prefix ["packages/protocols/" "packages/clio/"
+                    "packages/eta-mu/commands/workflows_test.cljs"]]
+      (is (some #{prefix} (:gate/paths gate)) (str "Local gate must select " prefix)))))
+
+(deftest shipped-protocol-gates-refuse-false-green-processes
+  (let [{:keys [workflow]} (shipped-rheos-workflow)
+        steps (get-in workflow [:workflow/jobs 0 :job/steps])]
+    (doseq [command protocol-commands]
+      (when-let [step (first (filter #(= command (:step/run %)) steps))]
+        (doseq [[output exit-code expected]
+                [["0 warnings\\n0 failures, 0 errors\\n" 0 0]
+                 ["WARNING: fixture diagnostic\\n0 failures, 0 errors\\n" 0 1]
+                 ["0 warnings\\n0 failures, 0 errors\\n" 23 23]]]
+          (let [result (execute (assoc step :step/run
+                                      (str "printf '" output "'; exit " exit-code)))]
+            (is (= expected (:status result)) (str command ": " (:output result)))))
+        (when (= command (first protocol-commands))
+          (is (= 1 (:status (execute (assoc step :step/run "printf 'compiler exited successfully\\n'"))))
+              "The protocol test gate must require actual zero-failure assertions"))))))
+
 (let [result (run-tests 'workflows-test)]
   (when (pos? (+ (:fail result) (:error result)))
     (set! (.-exitCode js/process) 1)))

@@ -144,7 +144,9 @@
    :contract/id "rheos"
    :workflow/name "rheos"
    :workflow/doc
-   "Rheos package gate. The path filters include both board config files
+   "Rheos and protocols package gates. Clio changes exercise the provider
+    consumers, and workflow regression changes exercise the generated gates.
+    The path filters include both board config files
     because they carry each project's FSM and build-gate commands — a change
     there alters what Rheos enforces without touching packages/rheos/**."
    :workflow/permissions {:contents :read}
@@ -153,6 +155,7 @@
      :on/branches ["main"]
      :on/paths ["packages/rheos/**"
                 "packages/protocols/**"
+                "packages/clio/**"
                 "packages/chat-ui/**"
                 "openhax.kanban.edn"
                 "openhax.kanban.json"
@@ -162,10 +165,12 @@
                 "pnpm-workspace.yaml"
                 ".github/workflows/rheos.yml"
                 "contracts/workflows/**"
-                "packages/eta-mu/commands/workflows.cljs"]}
+                "packages/eta-mu/commands/workflows.cljs"
+                "packages/eta-mu/commands/workflows_test.cljs"]}
     {:on/event :pull-request
      :on/paths ["packages/rheos/**"
                 "packages/protocols/**"
+                "packages/clio/**"
                 "packages/chat-ui/**"
                 "openhax.kanban.edn"
                 "openhax.kanban.json"
@@ -175,7 +180,8 @@
                 "pnpm-workspace.yaml"
                 ".github/workflows/rheos.yml"
                 "contracts/workflows/**"
-                "packages/eta-mu/commands/workflows.cljs"]}]
+                "packages/eta-mu/commands/workflows.cljs"
+                "packages/eta-mu/commands/workflows_test.cljs"]}]
 
    :workflow/jobs
    [{:job/id "test"
@@ -187,11 +193,13 @@
      :job/gate {:gate/id "rheos"
                 :gate/check "Rheos tests and lint"
                 :gate/needs-repos ["katamorph"]
-                :gate/paths ["packages/rheos/" "packages/protocols/" "packages/chat-ui/"
+                :gate/paths ["packages/rheos/" "packages/protocols/" "packages/clio/" "packages/chat-ui/"
                              "openhax.kanban.edn" "openhax.kanban.json"
                              "kanban/openhax.kanban" "package.json"
                              "pnpm-lock.yaml" "pnpm-workspace.yaml"
-                             ".github/workflows/rheos.yml"]}
+                             ".github/workflows/rheos.yml"
+                             "packages/eta-mu/commands/workflows.cljs"
+                             "packages/eta-mu/commands/workflows_test.cljs"]}
      :job/steps
      [{:step/use :checkout}
       {:step/use :jvm}
@@ -205,6 +213,20 @@
       ;; below runs shadow-cljs, which resolves deps before compiling, so the
       ;; grant has to land here rather than beside any one of them.
       {:step/use :private-git-deps}
+      ;; Protocols changes select this workflow and must exercise their own
+      ;; Clio-backed provider, native concurrency cases, and public declarations.
+      {:step/name "Verify workflow gate contracts"
+       :step/run "pnpm --dir packages/eta-mu test:workflows"
+       :step/gate true :gate/expect "0 failures, 0 errors" :gate/no-warning true}
+      {:step/name "Test protocols"
+       :step/run "pnpm --dir packages/protocols test"
+       :step/gate true :gate/expect "0 failures, 0 errors" :gate/no-warning true}
+      {:step/name "Lint protocols"
+       :step/run "pnpm --dir packages/protocols lint"
+       :step/gate true :gate/no-warning true}
+      {:step/name "Check public protocol types"
+       :step/run "pnpm --dir packages/protocols test:types"
+       :step/gate true :gate/no-warning true}
       {:step/name "Test"
        :step/run "pnpm --dir packages/rheos test"
        :step/gate true
