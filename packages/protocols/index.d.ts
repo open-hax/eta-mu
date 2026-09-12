@@ -229,6 +229,6 @@ declare module "@open-hax/protocols" {
       room: string,
       eventType: string,
       data: unknown
-    ): void;
+    ): Promise<void>;
   }
 }

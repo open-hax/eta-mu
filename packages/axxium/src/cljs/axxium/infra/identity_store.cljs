@@ -26,7 +26,9 @@
   (let [directory (host/private-directory! (host/resolve-path directory))
         file (str directory "/identity.edn")
         schemas (str directory "/schemas")
-        existing? (fs/exists? schemas)
+        ;; Surviving facts are proof of an existing encrypted identity store
+        ;; even when its schema directory was lost during a partial restore.
+        existing? (or (fs/exists? schemas) (fs/exists? file))
         vault (host/open-vault! directory existing?)]
     (when-not (fs/exists? file)
       (law/require! (not existing?) :missing-ledger "Identity schemas exist but identity.edn is missing")

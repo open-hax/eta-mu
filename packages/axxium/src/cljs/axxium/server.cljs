@@ -3,7 +3,8 @@
   (:require [axxium.extern.identity-host :as host]
             [axxium.extern.identity-http :as http]
             [axxium.infra.identity :as identity]
-            [axxium.infra.identity-plugin :as plugin]))
+            [axxium.infra.identity-plugin :as descriptions]
+            [axxium.extern.identity-plugin :as plugin]))
 
 (defn environment-options
   "Explicit environment configuration for local EDN identity and optional OAuth providers."
@@ -27,7 +28,7 @@
   (try
     (let [service (identity/open! (environment-options))
           app (http/create-app)]
-      (await (plugin/register! app service {}))
+      (await (plugin/register! app (await (descriptions/routes! service {}))))
       (http/register! app "GET" "/health" nil (fn [_] {:body {:ok true :service "axxium" :provider "edn"}}))
       (http/log! (str "Axxium listening on "
                       (await (http/listen! app (or (host/env "AXXIUM_HOST") "127.0.0.1")

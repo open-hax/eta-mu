@@ -1,12 +1,14 @@
 (ns axxium.infra.identity-plugin
-  "Axxium-owned Fastify authentication plugin for Knoxx and standalone consumers."
+  "Authentication route descriptions over defined request and response data."
   (:require [axxium.extern.identity-http :as http]
             [axxium.extern.identity-host :as host]
             [axxium.extern.oauth :as oauth]
             [axxium.infra.identity :as identity]
             [axxium.infra.identity-ceremonies :as ceremonies]
+            [axxium.infra.identity-credentials :as credentials]
             [axxium.infra.identity-oauth :as identity-oauth]
-            [axxium.law.identity :as law]))
+            [axxium.law.identity :as law]
+            [axxium.law.identity-http :as http-law]))
 
 (defn auth-config
   "One method registry drives provider selection for human and agent clients."
@@ -23,6 +25,7 @@
                        [:google "Google" "oauth"] [:atproto "Bluesky / ATProto" "atproto"]
                        [:pgp "PGP key" "pgp"] [:passkey "Passkey" "passkey"]])]
     {:identityProvider "axxium" :methods methods :localPasswordEnabled true
+     :credentialListUrl "/api/auth/credentials" :credentialRevokeUrl "/api/auth/credentials/revoke"
      :githubEnabled (identity-oauth/configured? service :github)
      :loginUrl "/api/auth/providers/github/login" :localLoginUrl "/api/auth/local/login"
      :publicBaseUrl (get-in service [:options :public-base-url])}))
@@ -36,16 +39,24 @@
 (defn- ^:async with-browser [request respond]
   (let [token (or (:browser-token request) (host/random-token))
         response (await (respond token))]
-    (cond-> response (nil? (:browser-token request)) (assoc :browser-token token))))
+    ;; A new five-minute challenge renews the browser's binding lifetime too.
+    (assoc response :browser-token token)))
 
-(defn ^:async register!
-  "Register authentication routes; handlers exchange defined request/response data."
-  [app service _options]
-  (await (http/ensure-cookies! app))
+(defn ^:async routes!
+  "Describe handlers without accepting a native server or transport handle."
+  [service _options]
   (let [origin (get-in service [:options :public-base-url])
         atproto-client (await (identity-oauth/create-atproto-client! service))
-        route! (fn [method path handler] (http/register! app method path origin handler))]
+        routes (atom [])
+        route! (fn [method path handler]
+                 (swap! routes conj {:method method :path path :handler handler}))]
     (route! "GET" "/api/auth/config" (fn [_] {:body (auth-config service)}))
+    (route! "GET" "/api/auth/credentials"
+            (fn [request] {:body (credentials/inventory service (:token request))}))
+    (route! "POST" "/api/auth/credentials/revoke"
+            (fn [request]
+              (mutation! service request)
+              {:body (credentials/revoke! service (:token request) (:body request)) :clear-session? true}))
     (route! "GET" "/api/auth/me"
             (fn [request] {:body {:principal (identity/require-principal! service (:token request))}}))
     (route! "POST" "/api/auth/signup"
@@ -146,4 +157,4 @@
               (mutation! service request)
               {:body (identity/update-grants! service (:token request) (get-in request [:params :id])
                                               (get-in request [:body :roles]) (get-in request [:body :capabilities]))}))
-    service))
+    (http-law/require-routes! {:origin origin :routes @routes})))

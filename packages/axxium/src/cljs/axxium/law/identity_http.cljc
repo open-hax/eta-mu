@@ -16,3 +16,16 @@
   (identity/require! (m/validate Response response) :invalid-response
                     "Identity handler returned invalid response data")
   response)
+
+(def Routes
+  [:map {:closed true}
+   [:origin :string]
+   [:routes [:vector [:map {:closed true}
+                     [:method [:enum "GET" "POST"]]
+                     [:path :string]
+                     [:handler fn?]]]]])
+
+(defn require-routes! [routes]
+  (identity/require! (m/validate Routes routes) :invalid-routes
+                    "Identity route descriptions are invalid")
+  routes)

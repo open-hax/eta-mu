@@ -39,7 +39,7 @@
   Call this inside the provider transaction even after an inexpensive preflight;
   another writer may claim an alias while the credential is being prepared."
   [state input]
-  (let [{:keys [actor private-ref token token-hash expires-at]} (law/validate-signup-admission! input)
+  (let [{:keys [actor private-ref token token-hash issued-at expires-at]} (law/validate-signup-admission! input)
         actor-id (:principal/id actor)
         username (:principal/username actor)
         email (:principal/email actor)]
@@ -60,7 +60,7 @@
                (put :aliases username {:principal-id actor-id})
                (put :aliases email {:principal-id actor-id})
                (put :credentials (str "password:" actor-id) {:principal-id actor-id :private-ref private-ref})
-               (put :sessions token-hash {:principal-id actor-id :expires-at expires-at})]
+               (put :sessions token-hash {:principal-id actor-id :issued-at issued-at :expires-at expires-at})]
      :result {:ok true :principal actor :token token}}))
 
 (defn principal-for-session

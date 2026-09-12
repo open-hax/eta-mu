@@ -11,7 +11,7 @@
 
 (def input
   {:actor actor :private-ref "sealed-credential-reference" :token "opaque-session-token"
-   :token-hash "session-digest" :expires-at 123456789})
+   :token-hash "session-digest" :issued-at 123400000 :expires-at 123456789})
 
 (defn- refusal [state request]
   (try (identity/signup-transition state request) nil

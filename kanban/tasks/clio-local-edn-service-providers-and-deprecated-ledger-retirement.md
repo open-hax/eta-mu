@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789197946420-0.xuwc8tedepcd8h2o79"
+write-id: "1789200175947-0.wcairhsl9jz7jn86zf"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "review"
@@ -34,5 +34,11 @@ Actual PR334 review follow-up: restrict canonical instants to the common four-di
 PR334 Sol review scope delegated to clio_application_stores: after a canonical stale-slot conflict, re-read wire-ID admission and return only an identical committed envelope; changed or unrelated writes still fail. Clio root fixes now pass JVM60tests159assertions, BB25/75, NBB57/132 and compiled Shadow57/132; Shadow110files0warnings, Clio lint0errors0warnings. JVM/Node actually replay both Gregorian EDN boundary instants. Directory-force support is checked before atomic schema rename and forced afterward; unsupported directory sync is an explicit failure.
 
 Sol PR334 review PRRT_kwDORu27H86huDcc: reproduced two failures when an identical wire envelope loses a real Clio stream-slot race. Recheck only canonical concurrent-stream-write and reuse the identical committed wrapper; changed wire payloads and competing causal roots remain explicit conflicts. Deterministic interleaving of two store handles uses real kernel admission. Final Sol test134/assert580 all green; lint0errors0warnings and contract-guard pass; server198files0warnings. Files packages/sol/src/cljs/open_hax/sol/infra/agent/clio_store.cljs and matching test. No other provider modified.
+
+Codex PR334 durability P1 scope: reproduce missing Node schema-file/directory fsync through an observer of actual Node filesystem calls, then make schema temp writes, atomic publication, ledger initialization and newly created directory ancestry durable before dependent append can succeed. Preserve native inode locks and atomic rename; unsupported sync must refuse explicitly. Run failure-first Node tests, full NBB/Shadow suites, JVM interoperability and configured lint. Parent JVM70db0dc supplies the matching host contract.
+
+PR334 Codex3995555023 Node fsync P1 repaired. Reliable failure-first native observer: 2 tests/7 assertions/7 failures; after fix full pnpm run test exit0 in53.088s: BB25/75 JVM61/164 NBB62/151 Shadow62/151, all zero failures/errors, Shadow115files0warnings. pnpm run lint0errors0warnings, extern boundary clean. File contents, empty ledger, atomic publication directories and new/existing retry ancestry now synchronize before dependent event acknowledgement. Real Node-created schema/event reopens under JVM with identical root and typed payload. Failure injection covers temp fsync, pre/postrename directories and ancestry retry. ptrace unavailable; proof is actual native-call sequencing/refusal and interoperability, not simulated physical power loss. Parent owns separate JVM ancestry-retry follow-up and its subsequent full gate.
+
+Self-review found a durability retry gap in JVM ensure-dir!: an earlier mkdir could survive while its parent fsync failed, causing a retry to skip forcing already-present ancestry. A real injected-failure regression first failed (62 tests, 168 assertions, one failure), then passed after all ancestry is forced on every successful ensure-dir!. Full JVM final 62/168 zero failures/errors; package lint zero warnings/errors. Node durability counterpart bc6f105 separately passes native ordering and Node-to-JVM replay. Evidence clio-jvm-directory-retry-red and clio-jvm-directory-retry-green.
 
 ---

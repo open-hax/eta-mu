@@ -61,6 +61,19 @@
       false)
     (catch :default _ false)))
 
+(def ^:private dummy-password-record
+  ;; Fixed canonical byte lengths exercise the same versioned scrypt work.
+  ;; This is not a credential: its comparison result never authorizes login.
+  {:scheme :scrypt :version 1 :salt "AAAAAAAAAAAAAAAAAAAAAA"
+   :hash (apply str (repeat 86 "A"))})
+
+(defn ^:async verify-password-or-dummy
+  "Perform one bounded scrypt verification for known and unknown identities.
+   A missing credential always returns false after the dummy comparison."
+  [password credential]
+  (let [verified? (await (verify-password password (or credential dummy-password-record)))]
+    (boolean (and credential verified?))))
+
 (defn- require-armored-block! [armored label]
   ;; OpenPGP.js reads the first armored block and can ignore trailing blocks.
   ;; Credential inputs must represent exactly one complete envelope.

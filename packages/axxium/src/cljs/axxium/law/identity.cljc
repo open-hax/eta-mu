@@ -65,6 +65,7 @@
    [:private-ref [:string {:min 1}]]
    [:token [:string {:min 1}]]
    [:token-hash [:string {:min 1}]]
+   [:issued-at [:and :int [:>= 0]]]
    [:expires-at [:and :int [:> 0]]]])
 
 (defn validate-signup-admission!

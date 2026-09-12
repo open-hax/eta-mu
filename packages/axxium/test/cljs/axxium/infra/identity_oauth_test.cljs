@@ -4,6 +4,7 @@
             [axxium.extern.oauth :as oauth]
             [axxium.infra.identity :as identity]
             [axxium.infra.identity-oauth :as identity-oauth]
+            [cljs.reader :as edn]
             [cljs.test :refer [deftest is]]
             ["jose" :as jose]
             ["node:fs" :as fs]
@@ -86,6 +87,12 @@
       (let [first-client (await (identity-oauth/create-atproto-client! (identity/open! options)))
             second-client (await (identity-oauth/create-atproto-client! (identity/open! options)))
             metadata (oauth/atproto-metadata first-client)]
+        (is (map? first-client) "Native NodeOAuthClient stays inside extern")
+        (is (= #{:authorize! :callback! :metadata :jwks} (set (keys first-client))))
+        (is (fn? (:authorize! first-client)))
+        (is (fn? (:callback! first-client)))
+        (is (= metadata (edn/read-string (pr-str metadata))))
+        (is (= (oauth/atproto-jwks first-client) (edn/read-string (pr-str (oauth/atproto-jwks first-client)))))
         (is (= "private_key_jwt" (:token_endpoint_auth_method metadata)))
         (is (true? (:dpop_bound_access_tokens metadata)))
         (is (= ["https://identity.example.test/api/auth/callback/atproto"] (:redirect_uris metadata)))

@@ -4,7 +4,7 @@
             [clojure.string :as str]))
 
 (def collections
-  [:enum :events :sessions :documents :nodes :edges :translations :labels
+  [:enum :events :event-intents :sessions :documents :nodes :edges :translations :labels
    :label-targets :users :notifications])
 
 (def change-schema

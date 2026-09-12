@@ -1,6 +1,7 @@
 (ns axxium.infra.identity
   "Axxium identity commands shared by the browser plugin and agent clients."
   (:require [axxium.domain.identity :as domain]
+            [axxium.domain.identity-external :as external]
             [axxium.extern.credential-crypto :as crypto]
             [axxium.extern.identity-host :as host]
             [axxium.extern.identity-http :as http]
@@ -53,9 +54,10 @@
      (seq email) (assoc :principal/email email))))
 
 (defn- session-change [principal token]
-  (domain/put :sessions (host/sha256 token)
-              {:principal-id (:principal/id principal)
-               :expires-at (+ (host/now) session-ttl-ms)}))
+  (let [issued-at (host/now)]
+    (domain/put :sessions (host/sha256 token)
+                {:principal-id (:principal/id principal) :issued-at issued-at
+                 :expires-at (+ issued-at session-ttl-ms)})))
 
 (defn- login-result [principal token]
   {:ok true :principal principal :token token})
@@ -74,20 +76,23 @@
           reference (store/seal! store credential)
           actor (principal username email display-name)
           token (host/random-token)
+          issued-at (host/now)
           input {:actor actor :private-ref reference :token token
-                 :token-hash (host/sha256 token) :expires-at (+ (host/now) session-ttl-ms)}]
+                 :token-hash (host/sha256 token) :issued-at issued-at :expires-at (+ issued-at session-ttl-ms)}]
       (store/transact! store #(domain/signup-transition % input)))))
 
 (defn ^:async login!
   "Authenticate by username OR email, then commit a session against unchanged credentials."
   [{:keys [store]} {:keys [identifier email username password]}]
-  (let [actor (domain/principal-by-identifier (store/state store) (or identifier email username))
+  (let [current-state (store/state store)
+        actor (domain/principal-by-identifier current-state (or identifier email username))
         key (str "password:" (:principal/id actor))
-        record (get-in (store/state store) [:credentials key])
-        valid? (and (law/active? actor) record (string? password)
-                    (await (crypto/verify-password password (store/unseal store (:private-ref record)))))
+        record (get-in current-state [:credentials key])
+        credential (when (and (law/active? actor) record)
+                     (store/unseal store (:private-ref record)))
+        valid? (await (crypto/verify-password-or-dummy password credential))
         token (host/random-token)]
-    (law/require! valid? :invalid-credentials "Invalid username or password")
+    (law/require! (and (law/active? actor) record valid?) :invalid-credentials "Invalid username or password")
     (store/transact!
      store
      (fn [state]
@@ -311,36 +316,19 @@
 
 (defn accept-external!
   "Bind a verified issuer/subject; email alone never links or claims an existing account."
-  [{:keys [store] :as service} browser-token challenge-id purpose verified]
-  (let [{:keys [issuer subject email display-name]} verified
-        data (read-challenge service browser-token challenge-id purpose)
-        identity-key (pr-str [issuer subject])
-        new-actor (principal (str "member-" (subs (host/id) 0 12)) nil display-name)
-        token (host/random-token)]
-    (law/require! (and (string? issuer) (seq issuer) (string? subject) (seq subject))
-                  :invalid-provider-identity "Provider returned an invalid verified identity")
+  [{:keys [store]} browser-token challenge-id purpose verified]
+  (let [issued-at (host/now)
+        browser-hash (host/sha256 (or browser-token ""))
+        record (domain/require-challenge! (store/state store) challenge-id purpose browser-hash issued-at)
+        data (store/unseal store (:private-ref record))
+        new-actor (principal (str "member-" (subs (host/id) 0 12)) nil (:display-name verified))
+        token (host/random-token)
+        input {:verified verified :challenge-id challenge-id :purpose purpose :browser-hash browser-hash
+               :challenge-record record :challenge-data data :actor new-actor :token token
+               :token-hash (host/sha256 token)}]
     (store/transact!
      store
      (fn [state]
-       (let [binding (get-in state [:identities identity-key])
-             link-id (:link-principal-id data)
-             actor-id (or link-id (:principal-id binding) (:principal/id new-actor))
-             existing (get-in state [:principals actor-id])
-             actor (or existing new-actor)
-             changes (consume-changes state challenge-id purpose browser-token)]
-         (when link-id
-           (law/require! (= link-id (:principal/id (domain/principal-for-session state (:link-session-hash data) (host/now))))
-                         :unauthenticated "Linking session expired")
-           (law/require! (or (nil? binding) (= link-id (:principal-id binding)))
-                         :identity-already-linked "This external identity belongs to another account"))
-         (law/require! (law/active? actor) :invalid-credentials "Identity is not active")
-         {:operation (if link-id :external-identity-linked :external-login) :actor actor-id
-          :changes (into changes
-                         (concat (when-not existing
-                                   [(domain/put :principals actor-id actor)
-                                    (domain/put :aliases (:principal/username actor) {:principal-id actor-id})])
-                                 [(domain/put :identities identity-key
-                                              (cond-> {:principal-id actor-id :issuer issuer :subject subject}
-                                                (and (string? email) (law/valid-email? email)) (assoc :provider-email email)))
-                                  (session-change actor token)]))
-          :result (assoc (login-result actor token) :redirect (shape/safe-redirect (:redirect data)))})))))
+       (let [admitted-at (host/now)]
+         (external/accept-transition state (assoc input :issued-at admitted-at
+                                                        :expires-at (+ admitted-at session-ttl-ms))))))))

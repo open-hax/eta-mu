@@ -25,7 +25,7 @@ The default server uses Clio EDN and needs no PostgreSQL or MongoDB service.
 
 ```clojure
 (require '[axxium.infra.identity :as identity]
-         '[axxium.infra.identity-plugin :as plugin])
+         '[axxium.api :as api])
 
 (def service
   (identity/open! {:provider :edn
@@ -33,7 +33,7 @@ The default server uses Clio EDN and needs no PostgreSQL or MongoDB service.
                    :public-base-url "http://localhost:5173"
                    :rp-id "localhost"}))
 
-(await (plugin/register! fastify-app service {}))
+(await (api/register-routes fastify-app service))
 (identity/resolve-principal service opaque-token)
 ```
 
@@ -152,7 +152,11 @@ deriving a password hash. At most two unexpired password reservations may exist
 across processes sharing the store. The shared global limit is 64 attempts per minute,
 and password attempts additionally have an 8-per-minute socket-address limit;
 changing browser cookies or forwarded headers cannot reset that client bucket.
-Completion releases the active slot while retaining its rate record. A process
+Completion releases the active slot while retaining its rate record. Cleanup
+retries brief lock contention; a remaining failure is reported and leaves the
+expiring lease in place without replacing a committed result or original work
+error. Unknown, inactive, and credentialless identifiers perform the same
+fixed-cost scrypt comparison using a non-authorizing dummy record. A process
 crash leaves a lease that expires after five minutes; a stalled job that outlives
 its lease may overlap later work, so this is a leased concurrency bound rather
 than cancellation of native crypto. Rejected admission returns
@@ -161,9 +165,31 @@ in-process identity functions are available separately for controlled bootstrap
 and service composition. Known duplicate signup aliases are refused before
 hashing or allocating a credential blob and checked again at atomic admission.
 
+Infra constructs defined handler descriptions without receiving a native app.
+`axxium.api/register-routes` composes those descriptions with the extern plugin;
+the exported JavaScript function keeps its existing two-argument interface.
 Infra route handlers accept defined request maps and return response data:
 body/status, redirects and explicit session/browser cookie effects. Only the
 extern HTTP adapter validates and applies those effects to native Fastify replies.
+Each new ceremony renews its browser-binding cookie. The ATProto SDK remains
+inside an extern-owned operation facade; only defined functions and public
+metadata cross into orchestration.
+
+`GET /api/auth/credentials` lists the current account's public sign-in methods.
+`POST /api/auth/credentials/revoke` accepts `{credentialId}` and requires an
+active Axxium session issued within the last 15 minutes. Every login method can
+issue a fresh session; old sessions without recorded `issued-at` require another
+login, and expiry is never used to guess freshness. The transaction rechecks
+ownership, refuses removing the last available method or server-managed bootstrap password,
+then removes the selected method and all Axxium sessions in one Clio event.
+An unconfigured OAuth issuer remains visible in inventory but cannot count as
+the only alternative login. Configuration availability does not promise a
+third-party provider's current network health.
+Successful removal clears the cookie and requires sign-in again. OAuth removal
+disconnects the local issuer/subject binding; it does not revoke the external
+provider account or independent Knoxx MCP grants. Historical encrypted blobs
+remain part of the immutable identity history, but cannot authenticate after
+their current credential binding is removed.
 
 The event facts contain private credential references, never plaintext
 passwords, password hashes, bearer tokens, OAuth tokens or DPoP private keys.
@@ -206,8 +232,8 @@ Both emitted builds use `:simple` optimization: an actual consumer probe caught
 advanced optimization renaming a Node crypto property despite clean compilation.
 
 The local provider favors inspectable history over speed: it replays on every
-read. No legacy identity history is silently imported. Credential rotation,
-recovery policy and credential-removal user interfaces need explicit contracts
+read. No legacy identity history is silently imported. Credential rotation and
+recovery policy still need explicit contracts
 before broad production adoption. Existing historical PostgreSQL route boundary
 debt remains visible in `boundary:check`; new identity namespaces keep raw host
 interop exclusively in `extern`.

@@ -3,17 +3,19 @@
   (:require [axxium.extern.fastify :as fastify]
             [axxium.extern.identity-http :as http]
             [axxium.infra.identity :as identity]
-            [axxium.infra.identity-plugin :as plugin]))
+            [axxium.infra.identity-plugin :as descriptions]
+            [axxium.extern.identity-plugin :as plugin]))
 
 (defn create-provider
   "Create an opaque Axxium service from JavaScript configuration."
   [options]
   (identity/open! (http/provider-options options)))
 
-(defn register-routes
+(defn ^:async register-routes
   "Register the canonical Axxium login routes on an existing Fastify host."
   [app service]
-  (plugin/register! app service {}))
+  (await (plugin/register! app (await (descriptions/routes! service {}))))
+  service)
 
 (defn resolve-principal
   "Return a JSON-compatible verified principal, preserving namespaced keys."

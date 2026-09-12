@@ -105,10 +105,12 @@
                                     concurrent? (= :clio.ledger/concurrent-stream-write (:clio/error (ex-data error)))
                                     status (cond
                                              concurrent? 409
-                                             (#{:unauthenticated :invalid-credentials} code) 401
+                                             (#{:unauthenticated :invalid-credentials :reauthentication-required} code) 401
                                              (#{:forbidden :forbidden-origin} code) 403
                                              (= :link-requires-post code) 405
                                              (= :ceremony-rate-limit code) 429
+                                             (= :credential-not-found code) 404
+                                             (#{:last-login-method :managed-bootstrap} code) 409
                                              (#{:identifier-exists :credential-exists :identity-already-linked} code) 409
                                              (#{:provider-not-configured :provider-unavailable} code) 503
                                              code 400

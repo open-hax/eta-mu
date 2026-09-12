@@ -92,4 +92,13 @@
   (let [id (str "password:" (host/id))]
     (issue! store id (str "password:" client-key) :password/active {} 300000)
     (try (await (work))
-         (finally (finish-password! store id)))))
+         (finally
+           ;; Admission has a durable expiring lease. Cleanup cannot replace a
+           ;; committed result or the original work error with a lock conflict.
+           (loop [attempt 0]
+             (let [error (try (finish-password! store id) nil (catch :default error error))]
+               (when error
+                 (if (and (= :clio.ledger/concurrent-stream-write (:clio/error (ex-data error)))
+                          (< attempt 4))
+                   (do (await (host/delay! 20)) (recur (inc attempt)))
+                   (host/report-deferred-cleanup! error)))))))))

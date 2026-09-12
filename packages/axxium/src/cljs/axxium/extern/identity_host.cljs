@@ -17,6 +17,17 @@
   (js/Buffer.byteLength value "utf8"))
 (defn resolve-path "Resolve a configured identity directory." [directory] (path/resolve directory))
 
+(defn delay! "Yield during a bounded lock cleanup retry." [milliseconds]
+  (js/Promise. (fn [resolve] (js/setTimeout resolve milliseconds))))
+
+(defn report-deferred-cleanup!
+  "Report deferred lease cleanup without secrets or replacing the completed result."
+  [error]
+  (try
+    (js/console.error "Axxium password reservation cleanup deferred until lease expiry"
+                      (name (or (:clio/error (ex-data error)) (:code (ex-data error)) :storage-error)))
+    (catch :default _ nil)))
+
 (defn private-directory!
   "Create an owner-only directory; refuse symlink storage roots."
   [directory]
@@ -115,13 +126,14 @@
     (let [key (fs/readFileSync key-file)]
       (when-not (= 32 (.-length key))
         (throw (ex-info "Identity encryption key is invalid" {:code :invalid-vault-key})))
-      {:directory directory :key key})))
+      ;; Private data remains protected, but native Buffers never enter infra.
+      {:directory directory :key (.toString key "base64url")})))
 
 (defn seal!
   "Persist an immutable encrypted EDN blob before referencing it from Clio."
   [{:keys [directory key]} value]
   (let [iv (crypto/randomBytes 12)
-        cipher (crypto/createCipheriv "aes-256-gcm" key iv)
+        cipher (crypto/createCipheriv "aes-256-gcm" (js/Buffer.from key "base64url") iv)
         bytes (js/Buffer.concat #js [iv (.update cipher (pr-str value) "utf8")
                                      (.final cipher) (.getAuthTag cipher)])
         digest (sha256 bytes)]
@@ -139,7 +151,7 @@
         bytes (fs/readFileSync file)
         _ (when-not (= digest (sha256 bytes))
             (throw (ex-info "Private credential digest mismatch" {:code :corrupt-secret})))
-        decipher (crypto/createDecipheriv "aes-256-gcm" key (.subarray bytes 0 12))]
+        decipher (crypto/createDecipheriv "aes-256-gcm" (js/Buffer.from key "base64url") (.subarray bytes 0 12))]
     (.setAuthTag decipher (.subarray bytes (- (.-length bytes) 16)))
     (reader/read-string
      (.toString (js/Buffer.concat #js [(.update decipher (.subarray bytes 12 (- (.-length bytes) 16)))

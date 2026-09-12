@@ -31,8 +31,11 @@
         args (if (and (#{p/query-neighbors p/traverse} operation)
                       (string? (get-in args [1 :direction])))
                (update-in args [1 :direction] keyword)
-               args)]
-    (encode (await (apply operation service args)))))
+               args)
+        result (await (apply operation service args))]
+    ;; The JavaScript notification contract acknowledges durable completion
+    ;; without exposing an implementation-specific stored notification.
+    (if (= operation p/emit-to-room) js/undefined (encode result))))
 
 (defn make-envelope [event-type payload]
   (encode (p/make-envelope event-type (decode payload))))

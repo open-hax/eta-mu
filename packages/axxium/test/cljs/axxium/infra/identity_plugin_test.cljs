@@ -3,7 +3,8 @@
             [axxium.infra.identity :as identity]
             [axxium.infra.identity-ceremonies :as ceremonies]
             [axxium.infra.identity-store :as store]
-            [axxium.infra.identity-plugin :as plugin]
+            [axxium.api :as api]
+            [axxium.infra.identity-plugin :as descriptions]
             [cljs.reader :as edn]
             [cljs.test :refer [deftest is]]
             ["@fastify/cookie" :default fastify-cookie]))
@@ -15,18 +16,16 @@
 
 (deftest ^:async handlers-exchange-defined-response-data
   (let [service (identity/open! {:provider :memory :public-base-url "http://localhost"})
-        app (http/create-app)
-        handlers (atom {})]
-    (try
-      (with-redefs [http/register! (fn [_ method path _origin handler]
-                                    (swap! handlers assoc [method path] handler))]
-        (await (plugin/register! app service {})))
-      (let [config ((get @handlers ["GET" "/api/auth/config"]) {})
-            signup (await ((get @handlers ["POST" "/api/auth/signup"])
+        {:keys [origin routes]} (await (descriptions/routes! service {}))
+        handlers (into {} (map (fn [{:keys [method path handler]}] [[method path] handler])) routes)]
+      (is (= "http://localhost" origin))
+      (is (vector? routes))
+      (let [config ((get handlers ["GET" "/api/auth/config"]) {})
+            signup (await ((get handlers ["POST" "/api/auth/signup"])
                            {:body {:username "data-only" :email "data@example.test"
                                    :password "correct horse battery staple"}
                             :client-key "test-client"}))
-            logout ((get @handlers ["POST" "/api/auth/logout"])
+            logout ((get handlers ["POST" "/api/auth/logout"])
                     {:token (:session-token signup)})]
         (is (= #{:body} (set (keys config))))
         (is (= #{:body :session-token} (set (keys signup))))
@@ -34,7 +33,26 @@
         (is (= {:body {:ok true} :clear-session? true} logout))
         (doseq [response [config signup logout]]
           (is (= response (edn/read-string (pr-str response)))
-              "No native Fastify reply is needed to execute a handler")))
+              "No native Fastify app or reply is needed to construct or execute a handler")))))
+
+(deftest ^:async renewed-ceremonies-refresh-the-existing-browser-cookie
+  (let [service (identity/open! {:provider :memory :public-base-url "http://localhost"
+                                :providers {:github {:client-id "test-client" :client-secret "test-secret"}}})
+        app (http/create-app)
+        browser "abcdefghijklmnopqrstuvwxyz-0123456789-browser"]
+    (try
+      (await (api/register-routes app service))
+      (doseq [[method url payload] [["GET" "/api/auth/providers/github/login" nil]
+                                    ["POST" "/api/auth/pgp/challenge" #js {:purpose "login"}]
+                                    ["POST" "/api/auth/passkey/authentication-options" #js {}]]]
+        (let [response (await (.inject app #js {:method method :url url :payload payload
+                                               :headers #js {"cookie" (str "axxium_browser=" browser)}}))
+              header (aget (.-headers response) "set-cookie")]
+          (is (#{200 302} (.-statusCode response)))
+          (is (string? header))
+          (is (.includes (or header "") (str "axxium_browser=" browser)))
+          (is (.includes (or header "") "Max-Age=600"))
+          (is (.includes (or header "") "HttpOnly"))))
       (finally (await (http/close! app))))))
 
 (deftest ^:async password-http-admission-refuses-before-derivation
@@ -45,7 +63,7 @@
         first-work (ceremonies/password-work! (:store service) "one" blocked)
         second-work (ceremonies/password-work! (:store service) "two" blocked)]
     (try
-      (await (plugin/register! app service {}))
+      (await (api/register-routes app service))
       (doseq [url ["/api/auth/signup" "/api/auth/local/login"]]
         (let [response (await (.inject app #js {:method "POST" :url url
                                                :headers #js {"x-forwarded-for" "new-client"
@@ -66,7 +84,7 @@
   (let [service (identity/open! {:provider :memory :public-base-url "http://localhost"})
         app (http/create-app)]
     (try
-      (await (plugin/register! app service {}))
+      (await (api/register-routes app service))
       (dotimes [attempt 8]
         (let [response (await (.inject app #js {:method "POST" :url "/api/auth/local/login"
                                                :headers #js {"x-forwarded-for" (str "client-" attempt)
@@ -88,7 +106,7 @@
   (let [service (identity/open! {:provider :memory :public-base-url "http://localhost:8787" :rp-id "localhost"})
         app (http/create-app)]
     (try
-      (await (plugin/register! app service {}))
+      (await (api/register-routes app service))
       (let [config (body (await (.inject app #js {:method "GET" :url "/api/auth/config"})))
             response (await (.inject app #js {:method "POST" :url "/api/auth/signup"
                                               :headers #js {"origin" "http://localhost:8787"}
@@ -122,7 +140,7 @@
     (try
       (.register app fastify-cookie)
       (is (not (.hasRequestDecorator app "cookies")) "Dependency is queued, not materialized")
-      (await (plugin/register! app service {}))
+      (await (api/register-routes app service))
       (is (.hasRequestDecorator app "cookies"))
       (is (= 200 (.-statusCode (await (.inject app #js {:url "/api/auth/config"})))))
       (finally (await (http/close! app))))))
@@ -131,7 +149,7 @@
   (let [service (identity/open! {:provider :memory :public-base-url "http://localhost"})
         app (http/create-app)]
     (try
-      (await (plugin/register! app service {}))
+      (await (api/register-routes app service))
       (let [signup (fn [password] (.inject app #js {:method "POST" :url "/api/auth/signup"
                                                    :payload #js {:username "unicode" :email "unicode@example.test" :password password}}))
             rejected (await (signup (apply str (repeat 300 "😀"))))
@@ -148,7 +166,7 @@
                                                        :client-secret "local-test-secret"}}})
         app (http/create-app)]
     (try
-      (await (plugin/register! app service {}))
+      (await (api/register-routes app service))
       (is (= 401 (.-statusCode (await (.inject app #js {:method "POST" :url "/api/auth/providers/github/link"
                                                       :headers #js {"origin" origin} :payload #js {}})))))
       (let [{:keys [token]} (await (identity/signup! service {:username "linker" :email "linker@example.test"
