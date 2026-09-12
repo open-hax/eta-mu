@@ -99,10 +99,15 @@
       {:step/use :bb-and-kondo}
       {:step/use :node-pnpm}
       {:step/run "pnpm install --frozen-lockfile"}
-      {:step/run "pnpm --dir packages/clio lint" :step/gate true}
-      {:step/run "pnpm --dir packages/clio test"
-       :step/gate true
-       :gate/expect "0 failures, 0 errors"}
+      {:step/run "pnpm --dir packages/clio lint" :step/gate true :gate/no-warning true}
+      {:step/run "pnpm --dir packages/clio test:bb"
+       :step/gate true :gate/expect "0 failures, 0 errors" :gate/no-warning true}
+      {:step/run "pnpm --dir packages/clio test:jvm"
+       :step/gate true :gate/expect "0 failures, 0 errors" :gate/no-warning true}
+      {:step/run "pnpm --dir packages/clio test:nbb"
+       :step/gate true :gate/expect "0 failures, 0 errors" :gate/no-warning true}
+      {:step/run "pnpm --dir packages/clio test:shadow"
+       :step/gate true :gate/expect "0 failures, 0 errors" :gate/no-warning true}
       {:step/run "bb scripts/lint.bb --only clio --kondo-only" :step/gate true}
       {:step/run "bb scripts/test.bb --only clio"
        :step/gate true

@@ -200,7 +200,7 @@ test("Sol protected execution has a fresh dispatch, immutable machinery, and no 
   assert.ok(index("Revalidate candidate immediately before execution") < index("Check out approved exact candidate"));
   assert.ok(index("Check out approved exact candidate") < index("Verify and test approved candidate"));
   const token = steps[index("Create private-dependency read token")];
-  assert.match(token.with.repositories, /^katamorph\nevent-ledger\s*$/);
+  assert.match(token.with.repositories, /^katamorph\s*$/);
   assert.equal(token.with["permission-contents"], "read");
   assert.equal(token.with["app-id"], "${{ secrets.SOL_PREMERGE_APP_ID }}");
   assert.equal(token.with["private-key"], "${{ secrets.SOL_PREMERGE_APP_PRIVATE_KEY }}");

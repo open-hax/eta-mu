@@ -40,9 +40,19 @@
     "contracts/workflows/ci.edn"],
    :gate/emitting true,
    :gate/steps
-   [{:step/run "pnpm --dir packages/clio lint"}
-    {:step/run "pnpm --dir packages/clio test",
-     :gate/expect "0 failures, 0 errors"}
+   [{:step/run "pnpm --dir packages/clio lint", :gate/no-warning true}
+    {:step/run "pnpm --dir packages/clio test:bb",
+     :gate/expect "0 failures, 0 errors",
+     :gate/no-warning true}
+    {:step/run "pnpm --dir packages/clio test:jvm",
+     :gate/expect "0 failures, 0 errors",
+     :gate/no-warning true}
+    {:step/run "pnpm --dir packages/clio test:nbb",
+     :gate/expect "0 failures, 0 errors",
+     :gate/no-warning true}
+    {:step/run "pnpm --dir packages/clio test:shadow",
+     :gate/expect "0 failures, 0 errors",
+     :gate/no-warning true}
     {:step/run "bb scripts/lint.bb --only clio --kondo-only"}
     {:step/run "bb scripts/test.bb --only clio",
      :gate/expect "0 failures, 0 errors"}]}
@@ -124,6 +134,7 @@
    :gate/check "Sol CI",
    :gate/paths
    ["packages/sol/"
+    "packages/clio/"
     "packages/turn-processor/"
     "packages/eta-mu/"
     ".github/workflows/sol-ci.yml"
@@ -132,7 +143,7 @@
     "pnpm-workspace.yaml"
     "contracts/workflows/packages.edn"],
    :gate/emitting false,
-   :gate/needs-repos ["katamorph" "event-ledger"],
+   :gate/needs-repos ["katamorph"],
    :gate/steps
    [{:step/run "pnpm --dir packages/sol lint"}
     {:step/run "pnpm --dir packages/sol test",
