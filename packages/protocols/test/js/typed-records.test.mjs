@@ -69,3 +69,20 @@ test('neighbor queries refuse malformed projected identities without discarding 
     fs.rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test('translation batches reject missing or non-sequential inputs before changing the ledger', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'services-batch-shape-'));
+  try {
+    const services = createEdnServices(directory);
+    const before = fs.readFileSync(path.join(directory, 'services.edn'), 'utf8');
+    for (const batch of [null, undefined, {}, 'invalid', 42]) {
+      await assert.rejects(services['batch-translate'](batch), /must be a sequence/);
+      assert.equal(fs.readFileSync(path.join(directory, 'services.edn'), 'utf8'), before);
+    }
+    const id = await services['batch-translate']([{ source: 'hello', target: 'bonjour' }]);
+    assert.equal(typeof id, 'string');
+    assert.equal(fs.readFileSync(path.join(directory, 'services.edn'), 'utf8').trim().split('\n').length, 1);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});

@@ -3,6 +3,8 @@
   (:require [axxium.extern.identity-host :as host]
             [axxium.extern.oauth :as oauth]
             [axxium.infra.identity-admission :as admission]
+            [axxium.infra.identity :as identity]
+            [axxium.infra.identity-oauth :as flow]
             [axxium.infra.identity-sdk-store :as sdk-store]
             [axxium.infra.identity-store :as store]
             [cljs.test :refer [deftest is]]
@@ -115,3 +117,53 @@
         (is (nil? (get-in (store/state identity-store) [:credentials "sdk:refused"]))))
       (finally (when-let [unlock @release] (unlock))
                (fs/rmSync directory #js {:recursive true :force true})))))
+
+(deftest ^:async reference-sdk-state-is-distinct-from-the-browser-challenge
+  (let [directory (fs/mkdtempSync (path/join (os/tmpdir) "axxium-sdk-app-state-"))
+        exchanges (atom 0)]
+    (try
+      (let [service (identity/open! {:provider :edn :directory directory :public-base-url "http://localhost"})
+            sdk (client (:store service))
+            operations (oauth/atproto-client-operations sdk)
+            key (await (JoseKey.generate #js ["ES256"]))
+            browser (host/random-token)
+            app-state (identity/challenge! service browser :oauth/atproto {})
+            query {:state "sdk-lookup-key" :iss "https://issuer.example" :code "one-use"}
+            server #js {:issuer "https://issuer.example" :authMethod #js {:method "none"} :dpopKey key
+                         :clientMetadata #js {:redirect_uris #js ["https://client.example/callback"]}
+                         :serverMetadata #js {:authorization_response_iss_parameter_supported true}
+                         :exchangeCode (fn ^:async exchange [& _]
+                                         (swap! exchanges inc)
+                                         #js {:iss "https://issuer.example" :sub "did:plc:aaaaaaaaaaaaaaaaaaaaaaaa"
+                                              :scope "atproto" :token_type "DPoP" :access_token "fixture-access"
+                                              :refresh_token "fixture-refresh" :expires_at "2099-01-01T00:00:00.000Z"})
+                         :revoke (fn ^:async revoke [& _] nil)}
+            finish (fn ^:async finish [browser-token]
+                     (try (await (flow/finish! service :atproto browser-token query operations))
+                          (catch :default cause {:error (ex-data cause)})))]
+        (set! (.-fromIssuer (.-serverFactory sdk)) (fn ^:async issuer [& _] server))
+        (await (.set (.-stateStore sdk) (:state query)
+                     #js {:iss "https://issuer.example" :dpopKey key :authMethod #js {:method "none"}
+                          :verifier "fixture-verifier" :appState app-state}))
+        (is (not= app-state (:state query)))
+        (is (= :invalid-challenge (get-in (await (finish (host/random-token))) [:error :code])))
+        (is (= 0 @exchanges) "A foreign browser must fail before consuming the authorization code")
+        (is (some? (await (.get (.-stateStore sdk) (:state query)))))
+        (let [before (fs/readFileSync (str directory "/identity.edn") "utf8")
+              substituted (assoc operations :callback!
+                                 (fn ^:async substituted-state [_]
+                                   {:state "another-browser-state"
+                                    :identity {:issuer "atproto" :subject "did:plc:aaaaaaaaaaaaaaaaaaaaaaaa"}}))
+              refusal (try (await (flow/finish! service :atproto browser query substituted)) nil
+                           (catch :default cause (:code (ex-data cause))))]
+          (is (= :invalid-callback refusal))
+          (is (= before (fs/readFileSync (str directory "/identity.edn") "utf8")))
+          (is (= 0 @exchanges)))
+        (let [result (await (finish browser))]
+          (is (:ok result) (pr-str result))
+          (is (= 1 @exchanges))
+          (when (:ok result)
+            (is (= (:principal result) (identity/resolve-principal service (:token result))))))
+        (is (= :invalid-challenge (get-in (await (finish browser)) [:error :code])))
+        (is (= 1 @exchanges) "A replay cannot exchange the provider code again"))
+      (finally (fs/rmSync directory #js {:recursive true :force true})))))

@@ -40,6 +40,7 @@
           store {:provider :edn :directory directory :file file :ceremony-file ceremony-file
                  :vault vault :runtime (runtime/open schemas law/catalog)}]
       (history store)
+      (ledger/ensure-durable! (get-in store [:runtime :schema/revisions]) file)
       (ceremonies/prune! store)
       store)))
 

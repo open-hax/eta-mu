@@ -56,7 +56,8 @@
       (let [service (identity/open! {:provider :edn :directory directory :public-base-url "http://localhost"})
             browser (host/random-token)
             state (identity/challenge! service browser :oauth/atproto {})]
-        (with-redefs [oauth/atproto-callback! (fn ^:async callback [_ query]
+        (with-redefs [oauth/atproto-app-state! (fn ^:async app-state [_ query] (:state query))
+                      oauth/atproto-callback! (fn ^:async callback [_ query]
                                               (swap! callbacks inc)
                                               (hold-admission! directory)
                                               {:state (:state query)
@@ -77,6 +78,7 @@
             browser (host/random-token)
             state (identity/challenge! service browser :oauth/atproto {})]
         (with-redefs [host/now (fn [] @clock)
+                      oauth/atproto-app-state! (fn ^:async app-state [_ query] (:state query))
                       host/delay! (fn ^:async advance-clock [_] (swap! clock + (* 10 60 1000)))
                       oauth/atproto-callback! (fn ^:async callback [_ query]
                                                 (swap! callbacks inc)

@@ -138,6 +138,7 @@
     "packages/turn-processor/"
     "packages/eta-mu/"
     ".github/workflows/sol-ci.yml"
+    ".github/scripts/package-warning-gates.test.mjs"
     "package.json"
     "pnpm-lock.yaml"
     "pnpm-workspace.yaml"
@@ -158,6 +159,7 @@
    :gate/paths
    ["packages/axxium/"
     ".github/workflows/axxium-ci.yml"
+    ".github/scripts/package-warning-gates.test.mjs"
     "pnpm-lock.yaml"
     "contracts/workflows/packages.edn"],
    :gate/emitting false,

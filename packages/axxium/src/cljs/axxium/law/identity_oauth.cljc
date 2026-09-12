@@ -6,6 +6,7 @@
 (def ClientOperations
   [:map {:closed true}
    [:authorize! fn?]
+   [:app-state! fn?]
    [:callback! fn?]
    [:metadata :map]
    [:jwks :map]])

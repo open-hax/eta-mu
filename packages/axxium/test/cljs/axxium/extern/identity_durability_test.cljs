@@ -47,3 +47,24 @@
           (is (= 3 @attempts))
           (is (= before (.readFileSync fs file "utf8")))))
       (finally (.rmSync fs directory #js {:recursive true :force true})))))
+
+(deftest identity-reopen-must-reflush-an-interrupted-ledger-creation
+  (let [directory (.mkdtempSync fs (path/join (os/tmpdir) "axxium-create-retry-"))
+        file (str directory "/identity.edn")
+        attempts (atom 0)
+        open-provider #(store/create-provider {:provider :edn :directory directory})
+        refuses? #(try (open-provider) false (catch :default _ true))]
+    (try
+      (with-observer file #(do (swap! attempts inc) (throw (ex-info "Injected identity creation fsync failure" {})))
+        (fn []
+          (is (refuses?) "Creation must refuse the unsuccessful inode flush")
+          (is (.existsSync fs file) "The uncertain creation preserves the visible ledger")
+          (is (refuses?) "Reopening must retry the ledger inode flush before returning a provider")
+          (is (= 2 @attempts))))
+      (with-observer file #(swap! attempts inc)
+        (fn []
+          (let [provider (open-provider)]
+            (is (= {} (:credentials (store/state provider) {}))))))
+      (is (= 3 @attempts))
+      (is (= "" (.readFileSync fs file "utf8")))
+      (finally (.rmSync fs directory #js {:recursive true :force true})))))

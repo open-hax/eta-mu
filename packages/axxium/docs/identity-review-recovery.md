@@ -44,3 +44,39 @@ passes signup, private Clio restart, authenticated read, forged-header and
 foreign-Origin refusals, logout, and POST-only account linking. That probe
 prints an explicit warning that live external OAuth consent remains untested;
 these local proofs do not claim operator provider configuration.
+# ATProto callback state follow-up
+
+Codex finding 3996123683 exposed a real integration gap: the SDK callback's
+query `state` is a lookup key, while its returned `state` is the application's
+browser challenge. These are intentionally different values. The extern facade
+now reads the stored app state without consuming it. Axxium checks browser
+ownership before calling the SDK, compares the returned app state with that
+validated value, and rechecks current authority during admission.
+
+The new regression crosses the actual `NodeOAuthClient` through Axxium's
+`finish!`, using a real Jose key and the durable SDK stores. It reproduced three
+failures before the fix. A foreign browser cannot exchange the code; a replaced
+returned app state cannot append identity facts; a valid callback exchanges once
+and creates a usable local session; replay cannot exchange again. Older scoped
+admission fixtures were updated for the new facade operation and remain labeled
+as controlled fixtures.
+
+An additional native fault regression reproduced three failures when reopening
+`identity.edn` after interrupted creation. Identity open now validates and calls
+Clio's inode-and-parent durability fence before returning a provider. The
+successor is based on foundation `37b720d`; its browser predecessor remains
+frozen at local `e0cdf35` until the root stack repeats verification.
+
+The [official ATProto OAuth patterns](https://atproto.com/guides/oauth-patterns)
+were checked again on 2026-09-12. Axxium retains the reference SDK for discovery,
+PKCE, PAR, and DPoP, with private server storage and a local HTTP-only session.
+The controlled-issuer callback proves the integration and storage boundary; it
+does not claim live PDS discovery, PAR, nonce negotiation, or external consent.
+Those require a reachable metadata origin and operator-selected provider setup.
+
+Final successor gates on 2026-09-12: 91 tests / 794 assertions, no failures or
+errors; server and library release builds each 121 files with zero compiler
+warnings; kondo zero errors/warnings; strict boundary check clean. The actual
+compiled ESM/TCP identity verifier passed signup, private restart, authentication,
+forgery/Origin refusal, logout, and protected linking initiation. Its explicit
+live-provider configuration warning remains applicable.

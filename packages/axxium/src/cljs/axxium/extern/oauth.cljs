@@ -3,6 +3,7 @@
   (:require [axxium.extern.identity-host :as host]
             [axxium.law.identity :as law]
             [axxium.law.identity-oauth :as client-law]
+            [clojure.string :as str]
             ["@atproto/oauth-client-node" :refer [NodeOAuthClient]]
             ["@atproto/jwk-jose" :refer [JoseKey]]
             ["jose" :as jose]
@@ -120,6 +121,24 @@
             (@release)
             (when (identical? current (get @pending key)) (swap! pending dissoc key))))))))
 
+(defn atproto-client-operations
+  "Wrap a native reference client in the defined application-facing operations."
+  [client]
+  (client-law/require-client!
+   {:authorize! (fn ^:async authorize [handle state]
+                  (.toString (await (.authorize client handle #js {:state state :scope "atproto"}))))
+    :app-state! (fn ^:async app-state [query]
+                  (when (and (string? (:state query)) (not (str/blank? (:state query))))
+                    (some-> (await (.get (.-stateStore client) (:state query))) .-appState)))
+    :callback! (fn ^:async callback [query]
+                 (let [params (js/URLSearchParams. (clj->js query))
+                       result (await (.callback client params))]
+                   {:state (.-state result)
+                    :identity {:issuer "atproto" :subject (.. result -session -did)
+                               :display-name (.. result -session -did)}}))
+    :metadata (js->clj (.-clientMetadata client) :keywordize-keys true)
+    :jwks (js->clj (.-jwks client) :keywordize-keys true)}))
+
 (defn ^:async atproto-client!
   "Expose defined operations; the reference SDK stays closed inside this adapter."
   [{:keys [client-id origin private-key state-store session-store lock-directory]}]
@@ -134,23 +153,18 @@
                                :jwks_uri (str origin "/api/auth/atproto/jwks.json")}
           :keyset #js [key] :requestLock (request-lock lock-directory)
           :stateStore (sdk-store state-store) :sessionStore (sdk-store session-store)})]
-    (client-law/require-client!
-     {:authorize! (fn ^:async authorize [handle state]
-                    (.toString (await (.authorize client handle #js {:state state :scope "atproto"}))))
-      :callback! (fn ^:async callback [query]
-                   (let [params (js/URLSearchParams. (clj->js query))
-                         result (await (.callback client params))]
-                     {:state (.-state result)
-                      :identity {:issuer "atproto" :subject (.. result -session -did)
-                                 :display-name (.. result -session -did)}}))
-      :metadata (js->clj (.-clientMetadata client) :keywordize-keys true)
-      :jwks (js->clj (.-jwks client) :keywordize-keys true)})))
+    (atproto-client-operations client)))
 
 (defn ^:async atproto-authorize! "Start a handle/DID flow using SDK security mechanisms." [client handle state]
   (await ((:authorize! (client-law/require-client! client)) handle state)))
 
 (defn ^:async atproto-callback! "Verify the SDK callback and return its stable DID identity." [client query]
   (await ((:callback! (client-law/require-client! client)) query)))
+
+(defn ^:async atproto-app-state!
+  "Read the stored application state without consuming the SDK callback state or code."
+  [client query]
+  (await ((:app-state! (client-law/require-client! client)) query)))
 
 (defn atproto-metadata "Expose public SDK metadata only." [client]
   (:metadata (client-law/require-client! client)))

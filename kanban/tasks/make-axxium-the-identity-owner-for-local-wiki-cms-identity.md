@@ -2,7 +2,7 @@
 category: "tasks"
 dependency: []
 type: "task"
-write-id: "1789213180387-0.uel0ft3eac9ft4x147v"
+write-id: "1789214954691-0.bddc1d128rm5w2h97b9"
 title: "Make Axxium the identity owner for local Wiki CMS"
 priority: "P0"
 status: "in_progress"
@@ -33,5 +33,9 @@ PR333 follow-up: reproduced one-use OAuth code loss under the real native Clio a
 Recovery follow-up for actual PR333 findings: reconstruct real ATProto SDK local-store contention retries, bound SDK and verified identity admission without repeating provider code exchange, use Fastify trustProxy-derived client identity with direct socket fallback, mark ATProto begin native async, and reflush projection-only identity acknowledgments using the reviewed Clio kernel. Reconstruct regression fixtures against the real SDK and native locks, run fresh guarded tests/releases/lint/boundary/TCP proof, and explicitly retain live-consent limitations.
 
 Fresh reconstructed combined gate: 89 tests and 775 assertions, zero failures/errors, native async error guard; release server/lib121files0warnings; kondo0/0 and strict boundary0. Real SDK state/session contention tests prove one exchange, retained encrypted session, consumed pending state and no revoke; deadline plus reversed-clock attempt cap refuse indefinitely busy storage. Real Fastify trust policy separates trusted forwarded clients and rejects untrusted spoofed bucket selection. Native identity fsync regression failed3assertions before no-change fence and nowpasses. Built ESM/TCP signup, private restart, authenticated read, origin/header refusal, logout and POST linking pass; live external OAuth consent remains explicitly unavailable. Foundationf221 integrated with original identity ledger bytes preserved and new foundation events appended.
+
+Codex current-head finding 3996123683 confirms real ATProto uses distinct SDK query state and application/browser state. In an isolated successor worktree, expose non-consuming SDK app-state lookup at the extern facade, prevalidate the Axxium browser challenge with it before one-use exchange, and compare the returned app state before final admission. Add an actual reference NodeOAuthClient-to-Axxium finish regression for success, wrong-browser refusal before exchange, replay, and substituted returned app state. Preserve frozen browser source e0cdf35. Also restack the pending foundation creation/reopen durability fence and apply it to identity open.
+
+ATProto successor integrates real SDK query-key to app-state lookup: actual SDK-to-Axxium regression RED3 then GREEN, with wrong-browser refusal before exchange, substituted returned app state refusal, one exchange, usable local session and replay refusal. Identity interrupted-creation opener RED3 then GREEN with canonical Clio fence. Restacked foundation37b720 while browser predecessor eta-identity e0cdf35 stayed unchanged. Final Axxium91tests794assertions, server/lib121files each0warnings, kondo0/0 and strictboundary clean; actual compiled ESM/TCP identity verifier green with explicit live OAuth operator-configuration warning. Three-reviewer loop remains open; no merge claim.
 
 ---

@@ -88,7 +88,7 @@
             second-client (await (identity-oauth/create-atproto-client! (identity/open! options)))
             metadata (oauth/atproto-metadata first-client)]
         (is (map? first-client) "Native NodeOAuthClient stays inside extern")
-        (is (= #{:authorize! :callback! :metadata :jwks} (set (keys first-client))))
+        (is (= #{:authorize! :app-state! :callback! :metadata :jwks} (set (keys first-client))))
         (is (fn? (:authorize! first-client)))
         (is (fn? (:callback! first-client)))
         (is (= metadata (edn/read-string (pr-str metadata))))
@@ -104,7 +104,8 @@
         browser (host/random-token)
         state (identity/challenge! service browser :oauth/atproto {})
         calls (atom 0)]
-    (with-redefs [oauth/atproto-callback!
+    (with-redefs [oauth/atproto-app-state! (fn ^:async app-state [_ query] (:state query))
+                  oauth/atproto-callback!
                   (fn ^:async callback [_ query]
                     (swap! calls inc)
                     {:state (:state query) :identity {:issuer "https://bsky.social" :subject "did:plc:test" :display-name "Alice"}})]

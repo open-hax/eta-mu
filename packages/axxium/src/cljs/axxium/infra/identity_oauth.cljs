@@ -88,9 +88,10 @@
   "Validate browser-bound callback state before accepting any external identity."
   [service provider browser query client]
   (if (= :atproto provider)
-    (let [_ (identity/read-challenge service browser (:state query) :oauth/atproto)
+    (let [app-state (await (oauth/atproto-app-state! client query))
+          _ (identity/read-challenge service browser app-state :oauth/atproto)
           {:keys [state identity]} (await (oauth/atproto-callback! client query))]
-      (law/require! (= state (:state query)) :invalid-callback "OAuth callback state changed")
+      (law/require! (= state app-state) :invalid-callback "OAuth callback application state changed")
       (identity/read-challenge service browser state :oauth/atproto)
       (await (accept-verified! service browser state :oauth/atproto identity)))
     (let [state (:state query)
