@@ -63,6 +63,12 @@ event. Reads reconstruct projections from validated history. Exact event
 retries do not append twice; malformed history, missing ledger beside known
 schemas, conflicting IDs and stale concurrent writes are refused.
 
+Canonical reads acquire each ledger's owning inode lock before parsing its
+snapshot. A query or provider open waits for another process to complete an
+append, so a partially written final EDN form cannot be mistaken for corrupt
+committed history. The native public tests split a real locked append across
+two processes and verify that both query and open preserve the complete history.
+
 Concurrent first openers share the winner of the exclusive ledger create. Only
 the native `EEXIST` race is reopened, and the winning history still undergoes
 canonical validation. Other filesystem errors propagate; a missing ledger
