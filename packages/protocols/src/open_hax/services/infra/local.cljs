@@ -12,7 +12,7 @@
 (defn history [{:keys [file runtime]}]
   (law/require! (fs/exists? file) :missing-ledger
                 "Local service ledger disappeared; refusing empty replay")
-  (ledger/canonicalize-files (:schema/revisions (runtime/refresh runtime)) [file]))
+  (runtime/canonicalize-files runtime [file]))
 
 (defn state [store]
   (projection/state (history store) {} domain/apply-event))
@@ -36,7 +36,7 @@
     (let [store {:directory directory :file file
                  :runtime (runtime/open schemas law/catalog)}]
       (history store)
-      (ledger/ensure-durable! (get-in store [:runtime :schema/revisions]) file)
+      (runtime/ensure-durable! (:runtime store) file)
       store)))
 
 (defn transact! [store transition]
@@ -58,7 +58,7 @@
         ;; Callers may retry the whole operation; no lost updates are hidden.
         (ledger/append-event!
          (:schema/revisions (runtime/refresh (:runtime store))) (:file store) event))
-      (ledger/ensure-durable! (:schema/revisions (runtime/refresh (:runtime store))) (:file store)))
+      (runtime/ensure-durable! (:runtime store) (:file store)))
     result))
 
 (defn ^:async perform [operation] (operation))

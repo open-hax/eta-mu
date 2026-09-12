@@ -12,10 +12,8 @@
 (defn canonical-events
   "Read and validate the full persisted history, including historical schemas."
   [{:keys [clio-runtime ledger-file]}]
-  (let [current (runtime/refresh clio-runtime)]
-    (episode-ledger/validate-history!
-     (:canonical/events
-      (ledger/canonicalize-files (:schema/revisions current) [ledger-file])))))
+  (episode-ledger/validate-history!
+   (:canonical/events (runtime/canonicalize-files clio-runtime [ledger-file]))))
 
 (defn- ensure-admission-lock! [file]
   (when-not (fs/exists? file)
@@ -51,7 +49,7 @@
                  :admission-file (ensure-admission-lock! (str directory "/admission.lock"))
                  :clio-runtime (runtime/open schema-directory episode-law/catalog)}]
       (canonical-events store)
-      (ledger/ensure-durable! (:schema/revisions (runtime/refresh (:clio-runtime store))) ledger-file)
+      (runtime/ensure-durable! (:clio-runtime store) ledger-file)
       store)))
 
 (defn- retry-committed-envelope!
