@@ -5,6 +5,7 @@
             [clio.extern.js.fs :as fs]
             [clojure.string :as str]
             [open-hax.sol.domain.episode-ledger :as episode-ledger]
+            [open-hax.sol.extern.clio-admission :as admission]
             [open-hax.sol.extern.node-fs :as node-fs]
             [open-hax.sol.law.episode-event :as episode-law]))
 
@@ -12,8 +13,16 @@
   "Read and validate the full persisted history, including historical schemas."
   [{:keys [clio-runtime ledger-file]}]
   (let [current (runtime/refresh clio-runtime)]
-    (:canonical/events
-     (ledger/canonicalize-files (:schema/revisions current) [ledger-file]))))
+    (episode-ledger/validate-history!
+     (:canonical/events
+      (ledger/canonicalize-files (:schema/revisions current) [ledger-file])))))
+
+(defn- ensure-admission-lock! [file]
+  (when-not (fs/exists? file)
+    (try (fs/create-exclusive! file)
+         (catch :default cause
+           (when-not (node-fs/already-exists-error? cause) (throw cause)))))
+  file)
 
 (defn open-store
   "Create a ledger only in an empty/new directory. Reopening an initialized
@@ -39,6 +48,7 @@
           (when-not (node-fs/already-exists-error? cause)
             (throw cause)))))
     (let [store {:ledger-file ledger-file
+                 :admission-file (ensure-admission-lock! (str directory "/admission.lock"))
                  :clio-runtime (runtime/open schema-directory episode-law/catalog)}]
       (canonical-events store)
       store)))
@@ -56,7 +66,7 @@
     (ledger/append-event! (:schema/revisions (runtime/refresh clio-runtime))
                           ledger-file (:event plan))))
 
-(defn append-envelope!
+(defn- append-under-lock!
   "Persist an episode payload before acknowledging it. Exact wire retries reuse
    the original Clio event; changed payloads with the same id are rejected."
   [{:keys [clio-runtime ledger-file] :as store} envelope]
@@ -71,6 +81,11 @@
       (catch :default cause
         (retry-committed-envelope! store envelope cause)))
     envelope))
+
+(defn append-envelope!
+  "Admit a globally unique wire identity while holding the separate Sol kernel lock."
+  [store envelope]
+  (admission/with-lock! (:admission-file store) #(append-under-lock! store envelope)))
 
 (defn read-envelopes
   "Replay the original Sol public payloads from Clio's canonical history."

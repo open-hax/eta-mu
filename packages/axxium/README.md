@@ -214,6 +214,15 @@ It atomically creates its own marker and administrator. Repeating the same
 configuration verifies the existing credential; changed credentials or a
 collision with a prior signup fails. Signup cannot grant administrator rights,
 and users cannot grant themselves arbitrary capabilities.
+The host prepares password material; pure bootstrap transitions admit the
+creation or revalidate the unchanged marker, aliases, actor and credential after
+password verification and before the atomic commit.
+
+OAuth callbacks exchange a provider's one-use code once. If the local Clio
+admission lock is temporarily held, they retry admission with that verified
+result, rechecking the current challenge, expiry and linking session each time.
+Only lock contention is retried, and challenge expiry stops the wait. A process
+crash after the provider exchange still requires starting a new login.
 
 ## Verification and limits
 
@@ -234,9 +243,9 @@ advanced optimization renaming a Node crypto property despite clean compilation.
 The local provider favors inspectable history over speed: it replays on every
 read. No legacy identity history is silently imported. Credential rotation and
 recovery policy still need explicit contracts
-before broad production adoption. Existing historical PostgreSQL route boundary
-debt remains visible in `boundary:check`; new identity namespaces keep raw host
-interop exclusively in `extern`.
+before broad production adoption. Named extern adapters now own raw host interop
+for both current identity and retained PostgreSQL compatibility paths; the
+unchanged strict `boundary:check` reports zero violations.
 
 Axxium's older kernel specifications remain design references, not claims that
 all described authorization-server or DID authentication endpoints exist.

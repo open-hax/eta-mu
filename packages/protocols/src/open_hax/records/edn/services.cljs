@@ -71,7 +71,8 @@
                 :invalid-user "Local user requires a username and password")
   (let [stored (-> user
                    (dissoc :password)
-                   (assoc :credentials (host/password-digest (:password user))))]
+                   (assoc :created-at (host/now)
+                          :credentials (host/password-digest (:password user))))]
     (local/transact!
      store
      (fn [state]

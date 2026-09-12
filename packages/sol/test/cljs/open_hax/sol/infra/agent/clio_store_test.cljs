@@ -6,6 +6,8 @@
             [clio.extern.js.fs :as clio-fs]
             [clio.infra.ledger :as ledger]
             [clio.infra.runtime :as clio-runtime]
+            [open-hax.sol.extern.clio-admission :as admission]
+            [open-hax.sol.extern.platform :as platform]
             [open-hax.sol.infra.agent.clio-store :as clio-store]
             [open-hax.sol.infra.agent.episode-ledger :as episode-ledger]
             [open-hax.sol.infra.agent.service :as service]
@@ -88,15 +90,15 @@
       (finally (remove-directory! directory)))))
 
 (defn- append-with-overlap!
-  "Preempt one already-planned append with a second store's real kernel write."
+  "Let another store commit at the last boundary before acquiring the shared admission lock."
   [loser winner requested winning]
-  (let [append! clio-runtime/append!
+  (let [with-lock! admission/with-lock!
         pending (atom true)]
-    (with-redefs [clio-runtime/append!
-                  (fn [runtime file schema-id event]
+    (with-redefs [admission/with-lock!
+                  (fn [file operation]
                     (when (compare-and-set! pending true false)
                       (clio-store/append-envelope! winner winning))
-                    (append! runtime file schema-id event))]
+                    (with-lock! file operation))]
       (try {:value (clio-store/append-envelope! loser requested)}
            (catch :default error {:error (ex-data error)})))))
 
@@ -117,6 +119,7 @@
 (deftest overlapping-changed-or-different-wire-events-remain-conflicts
   (doseq [[winning refusal]
           [[(assoc first-envelope :payload {:changed true}) :sol.clio/id-collision]
+           [(assoc first-envelope :episode/id "another-episode") :sol.clio/id-collision]
            [(assoc first-envelope :event/id "another-wire" :causal/root "another-wire") :sol.clio/causal-conflict]]]
     (let [directory (temporary-directory)]
       (try
@@ -231,4 +234,53 @@
                (mapv :event/type events)))
         (is (= 1 (count (set (map :episode/id events)))))
         (is (= (:event/id (first events)) (:causal/root (last events)))))
+      (finally (remove-directory! directory)))))
+
+(deftest platform-default-only-enables-proven-durable-hosts
+  (let [previous (aget js/process.env "SOL_CLIO_PROVIDER")]
+    (try
+      (js-delete js/process.env "SOL_CLIO_PROVIDER")
+      (doseq [[host expected] [["linux" :edn] ["darwin" :disabled] ["win32" :disabled]]]
+        (with-redefs [platform/current (fn [] host)]
+          (is (= expected (:clio-provider (config/cfg))))))
+      (finally
+        (if previous (aset js/process.env "SOL_CLIO_PROVIDER" previous)
+            (js-delete js/process.env "SOL_CLIO_PROVIDER"))))))
+
+(deftest ^:async explicitly-disabled-persistence-still-runs-an-ordinary-turn
+  (let [cfg (assoc (config/cfg) :clio-provider :disabled
+                   :turn-executor! (fn [_ _ request]
+                                     {:answer "explicitly volatile" :run_id (:run-id request)
+                                      :session_id (:session-id request) :model "fixture"}))]
+    (is (nil? (episode-ledger/configured-appender cfg)))
+    (is (= "explicitly volatile"
+           (:answer (await (service/send-agent-turn! nil cfg {:run-id "disabled-run"
+                                                             :session-id "disabled-session" :model "fixture"})))))))
+
+(deftest reentrant-admission-refuses-without-releasing-the-outer-kernel-lock
+  (let [directory (temporary-directory)]
+    (try
+      (let [store (clio-store/open-store directory)]
+        (admission/with-lock!
+          (:admission-file store)
+          (fn []
+            (is (= :sol.clio/reentrant-admission
+                   (:sol/error (ex-data (try (clio-store/append-envelope! store first-envelope)
+                                            (catch :default cause cause)))))))))
+      (finally (remove-directory! directory)))))
+
+(deftest replay-refuses-duplicate-wire-identities-already-written-by-an-old-producer
+  (let [directory (temporary-directory)]
+    (try
+      (let [store (clio-store/open-store directory)
+            duplicate (assoc first-envelope :episode/id "different-episode")]
+        (clio-store/append-envelope! store first-envelope)
+        (clio-runtime/append!
+          (:clio-runtime store) (:ledger-file store) :sol/episode-emitted
+          {:event/stream "sol:episode:different-episode" :event/seq 1 :event/causes []
+           :event/actor "actor.research" :event/subject "sol:run:run-1" :event/data duplicate})
+        (is (= 2 (count (ledger/read-ledger (:ledger-file store)))) "The fixture is a real duplicate history")
+        (is (= :sol.clio/id-collision
+               (:sol/error (ex-data (try (clio-store/read-envelopes store)
+                                        (catch :default cause cause)))))))
       (finally (remove-directory! directory)))))

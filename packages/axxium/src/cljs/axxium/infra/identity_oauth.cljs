@@ -100,6 +100,20 @@
 (defmethod begin! :default [_ _ _ _ _ _]
   (throw (ex-info "Unsupported identity provider" {:code :unsupported-provider})))
 
+(defn- ^:async accept-verified!
+  "Retry only transient local admission, keeping the already verified provider result.
+   Every attempt rechecks the current browser challenge and linking session.
+   Its existing finite expiry bounds waiting; the one-use provider code is never exchanged twice."
+  [service browser state purpose verified]
+  (loop []
+    (let [outcome (try {:result (identity/accept-external! service browser state purpose verified)}
+                       (catch :default cause {:cause cause}))]
+      (if-let [cause (:cause outcome)]
+        (if (= :clio.ledger/concurrent-stream-write (:clio/error (ex-data cause)))
+          (do (await (host/delay! 25)) (recur))
+          (throw cause))
+        (:result outcome)))))
+
 (defn ^:async finish!
   "Validate browser-bound callback state before accepting any external identity."
   [service provider browser query client]
@@ -108,7 +122,7 @@
           {:keys [state identity]} (await (oauth/atproto-callback! client query))]
       (law/require! (= state (:state query)) :invalid-callback "OAuth callback state changed")
       (identity/read-challenge service browser state :oauth/atproto)
-      (identity/accept-external! service browser state :oauth/atproto identity))
+      (await (accept-verified! service browser state :oauth/atproto identity)))
     (let [state (:state query)
           purpose (keyword "oauth" (name provider))
           data (identity/read-challenge service browser state purpose)]
@@ -116,4 +130,4 @@
                     :invalid-callback "Invalid OAuth callback")
       (let [verified (await (oauth/exchange! provider (provider-config service provider)
                                             (assoc data :code (:code query))))]
-        (identity/accept-external! service browser state purpose verified)))))
+        (await (accept-verified! service browser state purpose verified))))))

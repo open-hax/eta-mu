@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789205342075-0.891mq4dtk65ib13p26g"
+write-id: "1789207091106-0.110p7wmh9albn23fy5pn"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "in_progress"
@@ -52,5 +52,9 @@ PR334 review3995700261: the shared EDN service opener still refused an exclusive
 Shared EDN opener review regression is green: full guarded protocol suite 71 tests / 217 assertions, strict TypeScript consumer, compiled ESM 111 files / 0 warnings, actual two-process race 1 test / 0 failures, configured kondo 0 errors / 0 warnings. Tests also prove corrupt winner and unrelated I/O still refuse, and missing ledger beside initialized schemas is not recreated. No dependency or lock changes. Scope is the shared provider opener and native error classification, unlike the prior Sol-only fix.
 
 Attempted canonical in_progress to review transition. Rheos invoked repository-wide pnpm build, but the unactivated shell selected runtime pnpm and it refused interactive modules purge before compilation. No override was used; the card remains in_progress. The scoped protocol gates above remain actual green evidence, not proof of this broader build. Publishing the bounded review correction now; repository-wide build remains part of final acceptance.
+
+PR334 follow-up scope: reproduce Codex 3995801487 unsupported-platform default, 3995801489 duplicate Sol wire IDs across distinct concurrent episode streams, and 3995801498 missing JVM empty-file force. Preserve current Linux EDN behavior, add an explicit disabled provider on unsupported hosts, serialize complete wire-ID planning plus append under a separate kernel lock, and force the JVM-created inode before its parent. Run red/green regressions, full Sol lint/test/build and JVM Clio gate; no weakening of durable acknowledgments.
+
+PR334 review follow-up implemented and checked: 3995801487 Sol uses EDN by default only on Linux and explicit disabled volatile operation elsewhere; 3995801489 a separate kernel inode serializes global wire-ID admission across episode streams and replay refuses duplicate IDs; 3995801498 JVM exclusive create forces the owned file descriptor before its parent. Red reproductions preceded fixes. Final guarded Sol 141 tests/599 assertions, JVM 64/173, zero failures/errors; Sol production 201 files/0 warnings; actual two independent Node/NBB writers accepted one conflicting wire fact and replayed one. Sol/Clio scoped lint 0 errors/warnings; historical info debt remains visible. Identity agent protocols checkpoint eb13e60e additionally repairs 3995801491 blank explicit paths and 3995801495 creation timestamps: compiled ESM red2 then guarded71/217 plus3 native Node cases, strict TS/build/lint green. Docs packages/sol/docs/clio-review-verification.md records limits; remote reviewer closure still pending.
 
 ---

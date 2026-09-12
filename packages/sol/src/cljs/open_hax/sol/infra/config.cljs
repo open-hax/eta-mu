@@ -1,5 +1,6 @@
 (ns open-hax.sol.infra.config
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [open-hax.sol.extern.platform :as platform]))
 
 (defn- env
   [k default]
@@ -47,7 +48,7 @@
     :host (env "SOL_HOST" (env "HOST" "0.0.0.0"))
     :port (js/parseInt (env "SOL_PORT" (env "PORT" "8001")) 10)
     :public-base-url (env "SOL_PUBLIC_BASE_URL" "")
-    :clio-provider (keyword (env "SOL_CLIO_PROVIDER" "edn"))
+    :clio-provider (keyword (env "SOL_CLIO_PROVIDER" (if (= "linux" (platform/current)) "edn" "disabled")))
     :clio-directory (env "SOL_CLIO_DIRECTORY" ".ημ/sol/clio")
     :knoxx-base-url (env "KNOXX_BASE_URL" "http://localhost:8000")
    :knoxx-api-key (env "KNOXX_API_KEY" "")

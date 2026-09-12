@@ -1,6 +1,6 @@
 (ns axxium.extern.legacy-password
   "Retained bcrypt credential boundary; new identities use the scrypt adapter."
-  (:require ["bcryptjs" :default bcrypt]))
+  (:require ["bcryptjs" :as bcrypt]))
 
-(defn hash-password [password rounds] (.hash bcrypt password rounds))
-(defn verify-password [password hash] (.compare bcrypt password hash))
+(defn ^:async hash-password [password rounds] (await (.hash bcrypt password rounds)))
+(defn ^:async verify-password [password hash] (await (.compare bcrypt password hash)))

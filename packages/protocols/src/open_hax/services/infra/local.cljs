@@ -18,6 +18,7 @@
   (projection/state (history store) {} domain/apply-event))
 
 (defn open! [directory]
+  (law/validate-directory! directory)
   (let [directory (host/resolve-path directory)
         file (str directory "/services.edn")
         schemas (str directory "/schemas")

@@ -40,11 +40,11 @@
       (when actor (http/decode actor)))
     (catch :default _ nil)))
 
-(defn delete-session!
+(defn ^:async delete-session!
   "Delete a session by token."
   [token]
-  (db/query "DELETE FROM sessions WHERE token_hash = $1"
-            [(hash-token token)]))
+  (await (db/query "DELETE FROM sessions WHERE token_hash = $1"
+                   [(hash-token token)])))
 
 (def set-session-cookie
   "Set the session cookie on a Fastify reply."
@@ -53,7 +53,7 @@
                          :httpOnly true
                          :secure (cfg/get-in-config [:session/cookie-secure])
                          :sameSite (cfg/get-in-config [:session/cookie-same-site])
-                         :maxAge (* (cfg/get-in-config [:jwt/expiry-hours]) 3600000)})))
+                         :maxAge (* (cfg/get-in-config [:jwt/expiry-hours]) 3600)})))
 
 (def clear-session-cookie
   "Clear the session cookie."

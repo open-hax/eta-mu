@@ -56,6 +56,26 @@ test. In the verified compiler revision the unguarded run falsely reported
 exact artifact exited 1 with `[shadow-test-guard] FATAL`. The probe namespace is
 outside the normal test-name selector; it is expected to fail when selected.
 
+## Provider admission and administrator bootstrap
+
+Provider exchange and local admission have different retry semantics. Generic
+OAuth and ATProto callbacks keep the already verified provider result while a
+native Clio operation lock is busy. They retry only that local contention,
+rechecking the challenge and current linking session on every attempt. Tests
+hold the real exclusive lock on a separate descriptor, prove the provider code
+is exchanged once, and prove challenge expiry refuses admission. A crash after
+exchange is not recovered by this in-process retry; start a new login then.
+
+Administrator creation and restart decisions are pure domain transitions. The
+host supplies generated identities, sealed password references and verification
+results. The transaction rechecks the marker, both aliases, current actor and
+credential after asynchronous password verification; concurrent drift refuses.
+
+The retained bcrypt adapter uses the actual module namespace and native async
+functions. A real bcrypt test exposed an invalid default import before release.
+A real Fastify cookie response also reproduced a millisecond/second mismatch:
+the corrected legacy two-hour session sends `Max-Age=7200`, not `7200000`.
+
 ## Evidence at this checkpoint
 
 - Failure-first live health and private-restore tests reproduced HTTP 200 after
@@ -64,8 +84,10 @@ outside the normal test-name selector; it is expected to fail when selected.
   16 failures, using the real store multimethod and password implementation.
   An initial fixture intercepted a compiled multimethod incorrectly and counted
   lawful ceremony checkpoints as credential data; that evidence was replaced.
-- Guarded full package suite: 75 tests / 706 assertions, zero failures/errors.
-- Server and library release builds: 118 files each, zero compiler warnings.
+- The provider contention regressions failed twice against the original callback;
+  the real cookie regression failed before the unit conversion was repaired.
+- Guarded full package suite: 83 tests / 744 assertions, zero failures/errors.
+- Server and library release builds: 119 files each, zero compiler warnings.
 - Full package lint: zero errors/warnings. Unchanged strict boundary scanner:
   no violations, closing the previous 56 legacy violations without exemptions.
 - Compiled ESM consumer over real TCP: signup, replay, current principal,

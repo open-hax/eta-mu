@@ -1,6 +1,7 @@
 (ns axxium.infra.identity
   "Axxium identity commands shared by the browser plugin and agent clients."
   (:require [axxium.domain.identity :as domain]
+            [axxium.domain.identity-bootstrap :as bootstrap]
             [axxium.domain.identity-external :as external]
             [axxium.extern.credential-crypto :as crypto]
             [axxium.extern.identity-host :as host]
@@ -111,39 +112,21 @@
   (let [username (shape/normalize-identifier username)
         email (shape/normalize-identifier email)
         state (store/state store)
-        marker (get-in state [:credentials "system:bootstrap"])]
+        existing (bootstrap/existing state)
+        request {:username username :email email :principal-id principal-id}]
     (law/require! (and (law/valid-username? username) (law/valid-email? email)
                        (string? password) (<= 12 (count password)) (<= (host/utf8-length password) 1024))
                   :invalid-bootstrap "Bootstrap requires a valid username, email and 12+ character password")
-    (if marker
-      (let [actor (get-in state [:principals (:principal-id marker)])
-            credential (get-in state [:credentials (str "password:" (:principal-id marker))])]
-        (law/require! (and (law/active? actor) (= username (:principal/username actor))
-                           (= email (:principal/email actor))
-                           (or (nil? principal-id) (= principal-id (:principal/id actor)))
-                           credential
-                           (await (crypto/verify-password password (store/unseal store (:private-ref credential)))))
-                      :bootstrap-mismatch "Bootstrap identity or credentials changed; explicit rotation is required")
-        actor)
+    (if existing
+      (let [expected (bootstrap/require-restart! existing request)
+            verified? (await (crypto/verify-password password (store/unseal store (get-in expected [:credential :private-ref]))))]
+        (store/transact! store #(bootstrap/restart-transition % {:expected expected :request request :verified? verified?})))
       (let [actor (cond-> (assoc (principal username email display-name)
                                  :principal/roles ["system-admin"] :principal/capabilities ["axxium/admin"])
                     principal-id (assoc :principal/id principal-id))
             _ (law/validate-principal! actor)
-            reference (store/seal! store (await (crypto/hash-password password)))
-            actor-id (:principal/id actor)]
-        (store/transact!
-         store (fn [state]
-                 (law/require! (not (or (get-in state [:credentials "system:bootstrap"])
-                                        (get-in state [:principals actor-id])
-                                        (get-in state [:aliases username]) (get-in state [:aliases email])))
-                               :bootstrap-collision "Bootstrap would replace an existing identity; refusing")
-                 {:operation :administrator-bootstrapped :actor "axxium-bootstrap"
-                  :changes [(domain/put :principals actor-id actor)
-                            (domain/put :aliases username {:principal-id actor-id})
-                            (domain/put :aliases email {:principal-id actor-id})
-                            (domain/put :credentials (str "password:" actor-id) {:principal-id actor-id :private-ref reference})
-                            (domain/put :credentials "system:bootstrap" {:principal-id actor-id})]
-                  :result actor}))))))
+            reference (store/seal! store (await (crypto/hash-password password)))]
+        (store/transact! store #(bootstrap/create-transition % {:actor actor :private-ref reference}))))))
 
 (defn logout!
   "Commit session revocation before acknowledging logout."
