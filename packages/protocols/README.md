@@ -112,6 +112,9 @@ from other process instances. Handles are process-local and must be closed.
 If a subscription cannot read valid history, it reports the failure and closes;
 repairing the ledger requires explicitly opening a new subscription. JavaScript
 watch handles expose `close()` immediately, including the legacy EDN adapter.
+Room subscription handles may be copied with only their declared `id` and
+`close()` fields and passed to `unsubscribe`; internal handle fields are not
+required.
 JavaScript `emit-to-room` returns `Promise<void>`: await it to observe persistence
 completion and catch rejected writes. It does not return a stored notification.
 The other `Promise<void>` operations (`close-session`, `archive-document`, and
@@ -122,6 +125,11 @@ an explicit `null` record remains invalid for `create-session`.
 Queries support equality, nested field paths, `$and`, `$or`, `$eq`, `$ne`, `$in`,
 `$nin`, `$exists`, `$gt`, `$gte`, `$lt`, and `$lte`. Other operators are refused;
 this is a service adapter, not a Mongo wire-protocol or aggregation emulator.
+Every `$and` and `$or` child must be a query map; a null child is invalid.
+Range operators compare compatible value types without numeric/string coercion.
+Existing same-type ordering is retained, including comparable vectors and
+instants. Missing, null, mixed-type or otherwise incomparable values do not
+match a range and do not prevent other documents from matching.
 The existing Mongo/REST adapter semantics are preserved by this change.
 
 ## Legacy EDN compatibility

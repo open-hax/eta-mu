@@ -8,14 +8,16 @@ import { pathToFileURL } from 'node:url';
 import { test } from 'node:test';
 import { createEdnServices } from '../../dist/main.js';
 
-test('actual typed consumer narrows generic records and observes nullable updates', async () => {
+test('actual typed consumer narrows records, observes nullable updates and closes copied handles', async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'services-typed-records-'));
   try {
     const require = createRequire(import.meta.url);
     execFileSync(process.execPath, [require.resolve('typescript/lib/tsc.js'), '--strict', '--target', 'es2022',
       '--module', 'nodenext', '--outDir', path.join(directory, 'consumer'), 'test/types/graph-neighbors.mts'], { stdio: 'pipe' });
     const consumer = await import(pathToFileURL(path.join(directory, 'consumer', 'graph-neighbors.mjs')).href);
-    await consumer.verifyGenericRecordConsumer(createEdnServices(path.join(directory, 'ledger')));
+    const services = createEdnServices(path.join(directory, 'ledger'));
+    await consumer.verifyGenericRecordConsumer(services);
+    await consumer.verifyCopiedSubscriptionHandle(services);
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }

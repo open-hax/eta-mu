@@ -70,7 +70,9 @@
     (if (#{:$and :$or} field)
       (do
         (require! (sequential? value) :invalid-query "Logical queries require a sequence")
-        (doseq [child value] (validate-query! child)))
+        (doseq [child value]
+          (require! (map? child) :invalid-query "Logical query children must be maps")
+          (validate-query! child)))
       (do
         (require! (not (operator? field)) :unsupported-query "Unsupported local query operator")
         (when (and (map? value) (some operator? (keys value)))

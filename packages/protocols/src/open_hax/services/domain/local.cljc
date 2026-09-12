@@ -25,6 +25,20 @@
                 [false nil]))
             [true doc] (mapv keyword (str/split (name field) #"\.")))))
 
+(defn- range-comparison [actual expected]
+  (when (and (some? actual) (some? expected)
+             (or (= (type actual) (type expected))
+                 (and (number? actual) (number? expected))
+                 (and (inst? actual) (inst? expected))))
+    ;; Generic fields can hold collections or incomparable nested elements.
+    ;; Only comparison failure is a nonmatch; validation and I/O still fail.
+    (try (compare actual expected)
+         (catch #?(:clj Exception :cljs :default) _cause nil))))
+
+(defn- range-matches? [predicate actual expected]
+  (when-some [comparison (range-comparison actual expected)]
+    (predicate comparison)))
+
 (defn- field-matches? [[present? actual] expected]
   (if (and (map? expected) (some #(str/starts-with? (name %) "$") (keys expected)))
     (every? (fn [[op value]]
@@ -34,10 +48,10 @@
                 :$in (boolean (some #{actual} value))
                 :$nin (not (some #{actual} value))
                 :$exists (= present? value)
-                :$gt (and (some? actual) (pos? (compare actual value)))
-                :$gte (and (some? actual) (not (neg? (compare actual value))))
-                :$lt (and (some? actual) (neg? (compare actual value)))
-                :$lte (and (some? actual) (not (pos? (compare actual value))))
+                :$gt (range-matches? pos? actual value)
+                :$gte (range-matches? #(not (neg? %)) actual value)
+                :$lt (range-matches? neg? actual value)
+                :$lte (range-matches? #(not (pos? %)) actual value)
                 (throw (ex-info "Unsupported local query operator"
                                 {:services/error :unsupported-query :operator op}))))
             expected)
