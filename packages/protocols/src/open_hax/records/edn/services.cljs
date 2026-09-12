@@ -37,24 +37,24 @@
 (defn- query [store collection filter-spec]
   (domain/documents (local/state store) collection filter-spec))
 
-(defn- append-envelope! [store envelope]
+(defn- envelope-transition [state envelope]
   (law/require! (:valid (protocols/validate-envelope envelope))
                 :invalid-envelope "Invalid service event envelope")
-  (local/transact!
-   store
-   (fn [state]
-     (let [id (or (:event/id envelope) (host/id))]
-       (if-let [old (get-in state [:events id])]
-         (do
-           (law/require! (= envelope (select-keys old (keys envelope)))
-                         :event-id-collision "Event id carries different envelope data")
-           {:result old})
-         (let [stored (merge {:event/time (host/now)
-                              :causal/root (host/id)
-                              :session/id (host/id)
-                              :delivery/mode "tell"}
-                             envelope {:event/id id})]
-           {:changes [(change :put :events id stored)] :result stored}))))))
+  (let [id (or (:event/id envelope) (host/id))]
+    (if-let [old (get-in state [:events id])]
+      (do
+        (law/require! (= envelope (select-keys old (keys envelope)))
+                      :event-id-collision "Event id carries different envelope data")
+        {:result old})
+      (let [stored (merge {:event/time (host/now)
+                          :causal/root (host/id)
+                          :session/id (host/id)
+                          :delivery/mode "tell"}
+                         envelope {:event/id id})]
+        {:changes [(change :put :events id stored)] :result stored}))))
+
+(defn- append-envelope! [store envelope]
+  (local/transact! store #(envelope-transition % envelope)))
 
 (defn- user-result [type id]
   {:event/type type :payload {:userId id}})
@@ -80,13 +80,17 @@
           :result (user-result "user.create.success" id)})))))
 
 (defn- authenticate! [store credentials]
-  (let [user (first (query store :users {:username (:username credentials)}))
-        ok? (and user (host/password-matches? (:password credentials) (:credentials user)))
-        result (if ok?
-                 (user-result "user.login.success" (:id user))
-                 {:event/type "user.login.failure" :payload {:reason "invalid credentials"}})]
-    (append-envelope! store result)
-    result))
+  (local/transact!
+   store
+   (fn [state]
+     (let [user (first (domain/documents state :users {:username (:username credentials)}))
+           ok? (and user (host/password-matches? (:password credentials) (:credentials user)))
+           result (if ok?
+                    (user-result "user.login.success" (:id user))
+                    {:event/type "user.login.failure" :payload {:reason "invalid credentials"}})]
+       ;; Credential verification and its admitted result share one history.
+       ;; A concurrent credential update makes Clio refuse this stale append.
+       (assoc (envelope-transition state result) :result result)))))
 
 (defn- update-user! [store id updates]
   (law/require! (not-any? #(contains? updates %) [:id :_id :credentials])
