@@ -89,8 +89,12 @@ importers:
         specifier: 2.2.9
         version: 2.2.9
       nbb:
-        specifier: 1.3.201
-        version: 1.3.201
+        specifier: 1.5.212
+        version: 1.5.212
+    devDependencies:
+      shadow-cljs:
+        specifier: 3.4.11
+        version: 3.4.11
 
   packages/contracts/output:
     devDependencies:
@@ -3083,9 +3087,6 @@ packages:
     resolution: {integrity: sha512-Hs59xBNfUIunMFgWAbGX5cq6893IbWg4KnrjbYwX3tx0ztorVgTDA6B2sxf8ejHJ4wz8BqGUMYlnzNBer5NvGg==}
     engines: {node: '>= 4'}
 
-  import-meta-resolve@2.2.2:
-    resolution: {integrity: sha512-f8KcQ1D80V7RnqVm+/lirO9zkOxjGxhaTC1IPrBGd3MEfNgmNG67tSUO9gTi2F3Blr2Az6g1vocaxzkVnWl9MA==}
-
   import-meta-resolve@4.2.0:
     resolution: {integrity: sha512-Iqv2fzaTQN28s/FwZAoFq0ZSs/7hMAHJVX+w8PZl3cY19Pxk6jFFalxQoIfW2826i/fDLXv8IiEZRIT0lDuWcg==}
 
@@ -3682,12 +3683,13 @@ packages:
   napi-build-utils@2.0.0:
     resolution: {integrity: sha512-GEbrYkbfF7MoNaoh2iGG84Mnf/WZfB0GdGEsM8wz7Expx/LlWf5U8t9nvJKXSp3qr5IsEbK04cBGhol/KwOsWA==}
 
-  nbb@1.3.201:
-    resolution: {integrity: sha512-sJxFoXNQECXcM09kwLUx5StStyo4pQ4Uy49r7oSNDnXVdQdz601sRC7CkEJPYgXM7HxO/hYgj7/rri25aH1/3g==}
-    hasBin: true
-
   nbb@1.5.211:
     resolution: {integrity: sha512-VgOlYvseeVYuDCAk5ehzAFZlNBu12gygZcIF2gRBFbNvCH5mMJlghvj8ag5gDZVNZ3AnorxWGAENMmcdVhIISQ==}
+    hasBin: true
+
+  nbb@1.5.212:
+    resolution: {integrity: sha512-7lLur29pCmrg+zw7/oTE2yE1lmKIt5S6rAJaCHfsNkf7ZQmgdoaT4qn1JgQNQCPS3i8k+4hG8ABG67JYjQEN2A==}
+    hasBin: true
 
   needle@2.9.1:
     resolution: {integrity: sha512-6R9fqJ5Zcmf+uYaFgdIHmLwNldn5HbK8L5ybn7Uz+ylX/rnOsSp1AHcvQSrCaFN+qNM1wpymHqD7mVasEOlHGQ==}
@@ -7936,8 +7938,6 @@ snapshots:
 
   ignore@7.0.5: {}
 
-  import-meta-resolve@2.2.2: {}
-
   import-meta-resolve@4.2.0: {}
 
   inherits@2.0.3: {}
@@ -8661,11 +8661,11 @@ snapshots:
 
   napi-build-utils@2.0.0: {}
 
-  nbb@1.3.201:
-    dependencies:
-      import-meta-resolve: 2.2.2
-
   nbb@1.5.211:
+    dependencies:
+      import-meta-resolve: 4.2.0
+
+  nbb@1.5.212:
     dependencies:
       import-meta-resolve: 4.2.0
 

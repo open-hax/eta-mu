@@ -103,7 +103,6 @@ jobs:
           owner: open-hax
           repositories: |
             katamorph
-            event-ledger
           permission-contents: read
           skip-token-revoke: true
 

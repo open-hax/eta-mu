@@ -57,16 +57,13 @@
    :workflow/name "Sol CI"
    :workflow/emit false
    :workflow/doc
-   "Sol is the only package whose deps.edn reaches outside the workspace —
-    katamorph and event-ledger are private repos consumed as immutable git refs.
-    eta-mu is public and a workflow's default GITHUB_TOKEN covers only its own
-    repo, so CI mints a scoped GitHub App token to read those two. None of that
-    applies locally, where a developer's git credential helper usually already
-    has access — hence :gate/needs-repos rather than a check for CI's credential,
-    which would skip a gate that can perfectly well run."
+   "Sol consumes canonical Clio from the workspace. Katamorph remains an
+    immutable external Git dependency requiring scoped CI read access. Local
+    gate selection preserves that real dependency boundary without requiring
+    or granting access to the deprecated standalone event-ledger repository."
    :workflow/triggers
    [{:on/event :pull-request
-     :on/paths ["packages/sol/**" "packages/turn-processor/**" "packages/eta-mu/**"
+     :on/paths ["packages/sol/**" "packages/clio/**" "packages/turn-processor/**" "packages/eta-mu/**"
                 ".github/workflows/sol-ci.yml" "package.json" "pnpm-lock.yaml"
                 "pnpm-workspace.yaml"]}]
    :workflow/jobs
@@ -74,8 +71,8 @@
      :job/name "Sol CI"
      :job/gate {:gate/id "sol"
                 :gate/check "Sol CI"
-                :gate/needs-repos ["katamorph" "event-ledger"]
-                :gate/paths ["packages/sol/" "packages/turn-processor/" "packages/eta-mu/"
+                :gate/needs-repos ["katamorph"]
+                :gate/paths ["packages/sol/" "packages/clio/" "packages/turn-processor/" "packages/eta-mu/"
                              ".github/workflows/sol-ci.yml" "package.json"
                              "pnpm-lock.yaml" "pnpm-workspace.yaml"]}
      :job/steps

@@ -44,6 +44,7 @@ jobs:
           java-version: "21"
       - uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
         with:
+          cli: 1.12.5.1654
           bb: 1.13.219
           clj-kondo: 2025.10.23
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
@@ -71,6 +72,7 @@ jobs:
           java-version: "21"
       - uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
         with:
+          cli: 1.12.5.1654
           bb: 1.13.219
           clj-kondo: 2025.10.23
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
@@ -82,7 +84,10 @@ jobs:
           node-version: "22"
       - run: pnpm install --frozen-lockfile
       - run: pnpm --dir packages/clio lint
-      - run: pnpm --dir packages/clio test
+      - run: pnpm --dir packages/clio test:bb
+      - run: pnpm --dir packages/clio test:jvm
+      - run: pnpm --dir packages/clio test:nbb
+      - run: pnpm --dir packages/clio test:shadow
       - run: bb scripts/lint.bb --only clio --kondo-only
       - run: bb scripts/test.bb --only clio
   main-tests:
