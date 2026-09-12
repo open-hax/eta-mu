@@ -1,11 +1,22 @@
-{:source-paths ["src/cljs" "test/cljs"]
+{:source-paths ["src/cljs" "test/cljs" "../clio/src"]
  :dependencies
  [[metosin/malli "0.16.4"]
   [funcool/promesa "11.0.678"]]
  :nrepl {:port 4600}
  :js-options {:js-provider :import}
  :builds
- {:server
+ {:lib
+  {:target :esm :runtime :node :output-dir "dist-lib"
+   :js-options {:js-provider :import
+                :keep-as-import #{"node:crypto" "node:fs" "node:path" "node:util" "node:buffer"
+                                  "@fastify/cookie" "fastify" "openpgp" "@simplewebauthn/server"
+                                  "@atproto/oauth-client-node" "@atproto/jwk-jose" "jose" "fs-ext-extra-prebuilt"}}
+   :modules {:index {:exports {:createProvider axxium.api/create-provider
+                               :registerIdentityRoutes axxium.api/register-routes
+                               :resolvePrincipal axxium.api/resolve-principal
+                               :requestToken axxium.api/request-token}}}
+   :compiler-options {:output-feature-set :es-next :optimizations :simple :source-map true :infer-externs false}}
+  :server
   {:target :esm
    :runtime :node
    :output-dir "dist"
@@ -13,7 +24,7 @@
    :js-options
    {:js-provider :import
     :keep-as-import
-    #{"fastify"
+    #{"fastify" "@atproto/oauth-client-node" "@simplewebauthn/server" "openpgp"
       "@fastify/cookie"
       "@fastify/cors"
       "@fastify/static"
@@ -38,7 +49,7 @@
    :js-options
    {:js-provider :import
     :keep-as-import
-    #{"fastify"
+    #{"fastify" "@atproto/oauth-client-node" "@simplewebauthn/server" "openpgp"
       "@fastify/cookie"
       "@fastify/cors"
       "@fastify/static"
@@ -63,7 +74,7 @@
   {:target :node-test
    :output-to "target/test.cjs"
    :ns-regexp "axxium\\..*-test$"
-   :autorun true
+   :autorun false
    :compiler-options
    {:output-feature-set :es-next
     :infer-externs false}}}}

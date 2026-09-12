@@ -78,12 +78,10 @@
     (if-not ctx
       (.send (.code reply 401) (clj->js {:error "Unauthorized"}))
       (let [actor-id (aget (aget req "params") "id")
-            requester-id (:auth/actor-id ctx)
             requester-caps (set (or (:auth/capabilities ctx) []))
             body (js->clj (or (aget req "body") #js {}) :keywordize-keys true)
             capabilities (:capabilities body)]
-        (if (or (= requester-id actor-id)
-                (contains? requester-caps :axxium/admin))
+        (if (contains? requester-caps :axxium/admin)
           (do
             (await (db/query
                     "UPDATE actors SET capabilities = $1, updated_at = NOW() WHERE id = $2"

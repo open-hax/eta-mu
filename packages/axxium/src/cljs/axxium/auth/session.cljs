@@ -20,7 +20,7 @@
   [actor]
   (let [token (await (token/create-token actor))
         token-hash (hash-token token)
-        actor-id (:actor/id actor)
+        actor-id (or (:actor/id actor) (:id actor))
         expiry-hours (cfg/get-in-config [:jwt/expiry-hours])
         expires-at (js/Date. (+ (.getTime (js/Date.)) (* expiry-hours 3600000)))]
     (await (db/query
@@ -38,7 +38,7 @@
           actor (await (db/query-one
                         "SELECT a.* FROM actors a
                          JOIN sessions s ON a.id = s.actor_id
-                         WHERE a.id = $1 AND s.token_hash = $2 AND s.expires_at > NOW()"
+                         WHERE a.id = $1 AND a.status = 'active' AND s.token_hash = $2 AND s.expires_at > NOW()"
                         [actor-id (hash-token token)]))]
       (when actor
         (js->clj actor :keywordize-keys true)))

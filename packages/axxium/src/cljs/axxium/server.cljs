@@ -1,64 +1,37 @@
 (ns axxium.server
-  "Axxium HTTP server.
-   Fastify-based, serving the identity provider API and portal."
-  (:require [axxium.config :as cfg]
-            [axxium.db :as db]
-            [axxium.routes.auth :as auth-routes]
-            [axxium.routes.actor :as actor-routes]
-            [axxium.routes.health :as health-routes]
-            ["fastify" :default Fastify]
-            ["@fastify/cors" :default fastifyCors]
-            ["@fastify/cookie" :default fastifyCookie]
-            ["@fastify/static" :default fastifyStatic]
-            ["node:path" :as path]))
+  "Standalone Axxium identity service; the same plugin is embedded by Knoxx."
+  (:require [axxium.extern.identity-host :as host]
+            [axxium.extern.identity-http :as http]
+            [axxium.infra.identity :as identity]
+            [axxium.infra.identity-plugin :as plugin]))
 
-(defn- ^:async create-app
-  "Create and configure the Fastify application.
-   Returns a promise that resolves with the configured app."
+(defn environment-options
+  "Explicit environment configuration for local EDN identity and optional OAuth providers."
   []
-  (let [app (Fastify #js {:logger true})]
-    (await (.register app fastifyCors
-                      #js {:origin true
-                           :credentials true
-                           :methods #js ["GET" "POST" "PUT" "DELETE" "OPTIONS"]
-                           :allowedHeaders #js ["Authorization" "Content-Type" "X-Requested-With"]}))
-    (await (.register app fastifyCookie))
-    app))
-
-(defn- register-routes!
-  "Register all API routes on the app."
-  [app]
-  (health-routes/register-health-routes! app)
-  (auth-routes/register-auth-routes! app)
-  (actor-routes/register-actor-routes! app))
-
-(defn- register-static!
-  "Register static file serving for the portal."
-  [app]
-  (.register app fastifyStatic
-             #js {:root (.resolve path "resources" "public")
-                  :prefix "/portal/"}))
+  (let [origin (or (host/env "AXXIUM_PUBLIC_BASE_URL") "http://localhost:8787")]
+    {:provider :edn
+     :directory (or (host/env "AXXIUM_EDN_DIRECTORY") ".ημ/axxium")
+     :public-base-url (http/origin origin)
+     :rp-id (http/hostname origin)
+     :providers {:github {:client-id (host/env "GITHUB_OAUTH_CLIENT_ID")
+                          :client-secret (host/env "GITHUB_OAUTH_CLIENT_SECRET")}
+                 :discord {:client-id (host/env "DISCORD_OAUTH_CLIENT_ID")
+                           :client-secret (host/env "DISCORD_OAUTH_CLIENT_SECRET")}
+                 :google {:client-id (host/env "GOOGLE_OAUTH_CLIENT_ID")
+                          :client-secret (host/env "GOOGLE_OAUTH_CLIENT_SECRET")}
+                 :atproto {:client-id (host/env "ATPROTO_OAUTH_CLIENT_ID")}}}))
 
 (defn ^:async start!
-  "Start the Axxium server.
-   Initializes database schema and starts listening."
+  "Start the actual identity plugin with no database server prerequisite."
   []
-  (println "Starting Axxium identity kernel...")
   (try
-    (await (db/init-schema!))
-    (println "Database schema initialized")
-    (let [app (await (create-app))]
-      (register-routes! app)
-      (await (register-static! app))
-      (let [address (await (.listen app
-                                    #js {:port (cfg/get-in-config [:axxium/port])
-                                         :host (cfg/get-in-config [:axxium/host])}))]
-        (println (str "Axxium listening on " address))
-        (println (str "Portal: " (cfg/get-in-config [:axxium/public-base-url]) "/portal/index.html"))))
-    (catch :default err
-      (println "Failed to start Axxium:" (.-message err))
-      (println "Error stack:" (.-stack err))
-      (js/process.exit 1))))
-
-;; Entry point for shadow-cljs :init-fn
-;; (start!) is called automatically by shadow-cljs
+    (let [service (identity/open! (environment-options))
+          app (http/create-app)]
+      (await (plugin/register! app service {}))
+      (http/register! app "GET" "/health" (fn [_ reply] (http/send! reply 200 {:ok true :service "axxium" :provider "edn"})))
+      (http/log! (str "Axxium listening on "
+                      (await (http/listen! app (or (host/env "AXXIUM_HOST") "127.0.0.1")
+                                           (or (some-> (host/env "AXXIUM_PORT") parse-long) 8787))))))
+    (catch :default _error
+      (http/log! "Axxium could not start; validate identity storage and provider configuration")
+      (http/exit! 1))))

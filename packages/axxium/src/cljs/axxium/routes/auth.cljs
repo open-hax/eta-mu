@@ -102,10 +102,10 @@
 (defn register-login-route! [app]
   (.post app "/api/auth/login" handle-login))
 
-(defn- handle-logout [req reply]
+(defn- ^:async handle-logout [req reply]
   (let [token (session/extract-auth-token req)]
     (when token
-      (session/delete-session! token))
+      (await (session/delete-session! token)))
     (session/clear-session-cookie reply)
     (.send reply (clj->js {:ok true}))))
 

@@ -14,12 +14,12 @@
         expiry-hours (cfg/get-in-config [:jwt/expiry-hours])
         encoder (new (.-TextEncoder js/globalThis))
         secret-bytes (.encode encoder secret)
-        claims {:sub (:actor/id actor)
-                :entity-id (:actor/entity-id actor)
-                :email (:actor/email actor)
-                :capabilities (:actor/capabilities actor)
-                :roles (:actor/roles actor)
-                :status (:actor/status actor)}
+        claims {:sub (or (:actor/id actor) (:id actor))
+                :entity-id (or (:actor/entity-id actor) (:entity_id actor))
+                :email (or (:actor/email actor) (:email actor))
+                :capabilities (or (:actor/capabilities actor) (:capabilities actor))
+                :roles (or (:actor/roles actor) (:roles actor))
+                :status (or (:actor/status actor) (:status actor))}
         jwt (new SignJWT (clj->js claims))]
     (doto jwt
       (.setProtectedHeader #js {"alg" "HS256" "typ" "JWT"})
