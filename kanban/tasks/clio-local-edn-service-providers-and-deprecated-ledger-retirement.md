@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789223064320-0.pv5lmjda3apqgh1quj"
+write-id: "1789224583180-0.sa0bn8hzxak4mknzwor"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "in_progress"
@@ -88,5 +88,9 @@ Read-only replay repair is freshly green. CodeRabbit5646213434 and Codex39963554
 Review successor plan for Codex3996422912 and3996422913: reject malformed UTF-16 scalar strings before canonical UTF-8 hashing so JVM/Node cannot substitute different bytes or collide with literal question marks; capture locked immutable ledger snapshots before refreshing append-only schema revisions for runtime-backed service reads. Preserve corruption refusal, existing read-only locks and exact canonical hashes for valid Unicode. Prepare portable malformed/astral string and real schema-publication race regressions before implementation, then fresh four-host Clio and affected public consumer gates. Frozen6c and Axxium browser candidates remain unchanged; published-head reviews and CI remain required.
 
 Fresh review successor GREEN: malformed Unicode actual RED57 failures on each host, final BB29/182,JVM75/329,NBB/Shadow70/301; Clio115files0warnings and lint/boundary0/0. Real schema-publication insertion at snapshot boundary RED query/open2 unknown-revision failures; final protocols73/227 plus17 native/no skips, test137/lib111files0warnings, strict types/lint0/0. Sol142/607 plus1 native/no skips, test215/server201files0warnings, lint0/0 with existing info diagnostics. Reciprocal source review found no confirmed defect. Fixed-revision append contracts remain explicit; no hidden write retries. Frozen6c/aff browser paths unchanged. Actual published-head reviews and hosted checks pending.
+
+CodeRabbit exact-cb4 review5646503100 accepts scalar refusal/runtime ordering but finds Clio canonicalize CLI still loading revisions before ledger snapshots. Scoped successor will capture actual immutable snapshots first, load revisions second, and test the shipped command with a real intervening schema publication/append. Preserve explicit revision APIs, corruption refusal and frozen cb4 browser/source candidates. Fresh Clio CLI/host gates and actual successor reviewer requests remain required.
+
+CLI review successor GREEN: actual published bin/clio.mjs unknown-revision RED1failure with real peer schema publication at native descriptor boundary; fixed command delegates ordered runtime snapshots. Real inherited-pipe cleanup regression also RED1failure then GREEN. Final Clio BB29/182,JVM75/329,NBB/Shadow72/306; Shadow117files0warnings,lint0/0,boundaryclean,CJSsyntax and spaced preload proof pass. Mandatory root AGENTS eta-mu CLI gates freshly passed174/391 plus workflow6/78, Shadow200files0warnings,lint0/0 with2existing info diagnostics. Reciprocal review fixed native async completion/path quoting/close-based process cleanup and found no remaining concrete defect. Actual published-head reviews and required hosted checks remain pending; frozen cb4/979 browser sources unchanged.
 
 ---

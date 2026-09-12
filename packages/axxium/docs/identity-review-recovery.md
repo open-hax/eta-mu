@@ -424,3 +424,24 @@ all four latest identity review repairs, ordered schema reads and the corrected
 checkpoint-first initialization. The remaining Clio command-line schema-order
 finding is assigned to an isolated successor; this browser candidate remains
 frozen. Actual published-head reviews and required hosted checks remain pending.
+
+## Fresh identity restack on Clio CLI successor ff48f090
+
+The isolated restack merges immutable foundation
+`ff48f090965be5c17cca1e3662d7402b383510c1`. A direct Git comparison confirms the
+Axxium runtime and Clio runtime/kernel/canonicalization source bytes are
+unchanged from the independently reviewed identity `979c9fb`; the foundation
+successor corrects the canonicalize CLI and adds native command tests.
+
+Advertised gates were still rerun: **118 tests / 1,001 assertions**, test
+compilation 191 files, server and ESM release 127 files each, all with zero
+compiler warnings. Lint is zero errors/warnings and the boundary check passes.
+The actual ESM/TCP consumer and all three native startup tests pass without
+skips. Operator-configured external OAuth consent remains unclaimed.
+Fresh logs are `axxium-ff48-{test,build,lint,boundary,consumer}.log` under runtime.
+
+CodeRabbit and Codex completed the preceding identity review without concrete
+or major issues respectively. CodeRabbit also confirms that foundation ff48
+addresses the last CLI finding without new scoped findings. This successor's
+own published-head reviews and hosted checks remain required; the prior
+browser source and compiled artifacts remain frozen throughout the restack.
