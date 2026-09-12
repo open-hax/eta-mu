@@ -86,3 +86,94 @@ An independent read-only audit checked the staged bytes, event identities, compl
 Fresh gates on merge `707e132e` pass: forced Clojure basis/JVM **10 tests / 75 assertions**, Rheos native **212 / 1,184** in both advertised runs, lint **0 errors / 0 warnings**, test compiler **161 inputs / 0 warnings**, and server/CLI/GitHub/UI releases **111 / 115 / 75 / 95 inputs**, all zero warnings. Rheos has no separate `typecheck` script; these CLJS compile and release targets enforce its compiler checks. The required eta-mu CLI gates also pass: **174 / 391** plus the merged workflow suite **6 / 78**, lint **0 / 0**, test **200 inputs** and release **166 inputs**, both zero warnings. The frozen install required no dependency resolution or download.
 
 The rebuilt direct CLI was then run against the exact clean Epiphany `c72b41eee96d22915a79487148df453c34627e48`, writing its snapshot to a temporary log directory. The [native snapshot proof](evidence/rheos-restack-epiphany-snapshot.json) confirms **116 tasks / 12 columns**, every label equal to the committed snapshot, all **116 Markdown hashes unchanged**, and the Epiphany checkout still clean. CLI and example-card hashes remain unchanged. The coordinator has identified newer protocol findings after this published prerequisite; this completed Rheos verification does not claim those separate findings are closed or that the whole dependency stack is ready to merge.
+
+## Review repair: horizontal inline whitespace
+
+Actual [CodeRabbit comment 5647795596](https://github.com/open-hax/eta-mu/pull/335#issuecomment-5647795596)
+identified a remaining contract defect on published `7fb29118a9f361987eb88a57e1d8b6a21fe7c375`:
+the scanner's broad whitespace class admitted physical line feeds after the
+opening bracket, commas, and closing bracket, despite the owning card's
+single-line requirement. This repair preserves that requirement. Local base
+`f3242759e80d9768bc5d2384157bb66712857cde` has the exact published tree
+`88f62d7db049e092c5f2af84a646c22b7e0445a4`.
+
+Source commit `c11d5e84ba5b49030662f88b346e2452db72e66d` makes scanner whitespace
+explicitly spaces and tabs. A whole-input check refuses physical LF, CR, and
+form feed, including inside quoted members. Literal backslash-n, backslash-r,
+and backslash-f text retains its existing uninterpreted string bytes; the
+decoder does not gain an escape interpreter or wider YAML grammar. Existing
+scalar trimming and frontmatter line splitting are unchanged, including
+ordinary CRLF document line boundaries.
+
+Failure-first tests produced **30 failed assertions** on both JVM and compiled
+Node (**12 tests / 115 assertions / 0 errors** on each). They cover separators
+after opening and closing delimiters, commas, quoted members, and the contents
+of quoted members. Positive cases preserve horizontal whitespace, tab characters
+inside quoted strings, and literal escape text.
+
+Reviewing the minimal repair exposed an adjacent projection problem:
+`parse-flat` trimmed the value before validation and could erase a forbidden
+trailing form feed. A second actual JVM RED run produced **3 failures / 0 errors
+in 13 tests / 118 assertions**. Sequence values now reach the shared decoder
+with their original suffix bytes; only leading spaces and tabs are removed.
+This keeps the flat projection aligned with the task reader's sequence
+admission. The root agent independently reviewed the scoped parser diff and
+found no introduced grammar, scalar, or line-splitting defect.
+
+Fresh final gates on the repaired source:
+
+| Gate | Result |
+| --- | --- |
+| Portable JVM grammar | 13 tests / 118 assertions; 0 failures, 0 errors |
+| Full Rheos Shadow autorun and separate native Node | 215 tests / 1,227 assertions in each run; 0 failures, 0 errors |
+| Rheos test compilation | 161 inputs; 0 warnings |
+| Rheos lint and isolated proof-script lint | 0 errors, 0 warnings |
+| Server / CLI / GitHub projector / app releases | 111 / 115 / 75 / 95 inputs; all 0 warnings |
+| Required eta-mu CLI tests and workflows | 174 / 391 plus 6 / 78; 0 failures, 0 errors |
+| eta-mu CLI test compile and lint | 200 inputs; 0 warnings; lint 0 errors, 0 warnings |
+
+The existing 50,000-character malformed-input and trailing-whitespace timing
+guards remain unchanged and pass on both runtime families. Existing architecture
+diagnostics that the repository classifies as informational remain informational;
+no linter configuration or suppression changed.
+
+The shared verified Rheos CLI and eta-mu router were in use by other agents.
+The new `packages/rheos/scripts/verify-inline-sequence.clj` reads the existing
+Shadow configurations and changes only build IDs and output locations. It
+retains the full test namespace selection, autorun, release optimizations,
+modules, and asset paths. From `packages/rheos`:
+
+```bash
+clojure -M scripts/verify-inline-sequence.clj test
+node target/single-line-test/test.cjs
+clojure -M scripts/verify-inline-sequence.clj release
+pnpm run lint
+clj-kondo --lint scripts/verify-inline-sequence.clj
+```
+
+The four releases live under `target/single-line-release`; no shared `dist`
+output was overwritten. SHA256 checks after all gates confirm both shared CLI
+artifacts are unchanged. The freshly built isolated Rheos CLI records the owning
+card's passing evidence. No dependency manifest, lockfile, historical event,
+review thread, or remote branch was changed by this repair. Parent coordination
+still owns prerequisite restacking, external re-review, publication, and merge.
+
+Scratch logs are under `/workspace/scratch/3655842e43cf/recovery/` with prefix
+`rheos-single-line-`: `jvm-red.log` and `node-red.log` contain the original
+30-failure runs, `parity-red.log` contains the additional 3-failure run,
+`jvm-green.log`, `full-test-compile.log`, `full-native-green.log`, `releases.log`,
+`lint.log`, `proof-script-lint.log`, `router-tests.log`, and `router-lint.log`
+contain final gates. `shared-cli-after.log` records the unchanged artifact checks.
+
+The fresh isolated CLI appended the result to the owning Rheos card. Receipt
+`34c77f19-4310-42a0-a48b-ed72bc888c8f` passes `receipt validate 1`; Session Mycology
+recorded reflection `4fb17aba-c226-4f10-86bd-4db9456a5750`. Existing ledger bytes
+remain intact and new records are appended on this branch.
+
+The final byte-prefix audit initially exceeded Node's default 1 MiB child-output
+buffer while reading the 1,758,554-byte historical kanban ledger. Giving this
+read-only audit an explicit 8 MiB capture buffer resolved `ENOBUFS`; no data was
+truncated. It confirmed complete unchanged prefixes for the kanban ledger
+(1,758,554 bytes), receipt ledger (268,854), reflections (36,579), and session
+memory (32,541). The small result is retained in the scratch log
+`rheos-single-line-prefix-proof.json`.

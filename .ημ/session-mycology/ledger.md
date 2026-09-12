@@ -411,3 +411,13 @@
   spore: none
   receipt-refs: latest Rheos ordinary merge707e132e test-run receipt
   note: Five metadata conflicts required complete incoming prefix preservation plus unique ordered Rheos-only records and complete historical card comments. Independent ID and byte audit confirmed preservation while identifying inherited ordering differences relative to an older ancestor. Rebuilt direct CLI retained all 116 immutable Epiphany Markdown hashes and labels. Full current-base Rheos and CLI gates pass; newer protocol findings remain separately owned and open. No source rewrite or new environment was needed.
+
+- ts: 2026-09-12T18:55:18Z
+  session: foresight-sandbox-rheos-single-line
+  task: Repair CodeRabbit5647795596 physical inline whitespace and projection trimming
+  p-efficiency: 0.9
+  p-friction: 0.3
+  p-skill-candidate: 0.75
+  spore: none
+  receipt-refs: 34c77f19-4310-42a0-a48b-ed72bc888c8f
+  note: Native and JVM RED each produced30 failures before horizontal scanner whitespace and physical LF/CR/form-feed admission were repaired. Adjacent flat-reader trimming then reproduced3 failures; preserving the original sequence suffix fixes that discrepancy. Full Rheos215/1227, JVM13/118, CLI174/391 plus workflows6/78 and all four isolated releases/lint pass. Original 50k timing guards remain. Both shared CLI hashes are unchanged. Existing artifact-verification lesson reused; root scoped review clear; no remote writes. Sourcec11d5e84 and the verification report retain exact evidence.

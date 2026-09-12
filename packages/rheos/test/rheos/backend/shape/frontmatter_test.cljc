@@ -52,6 +52,39 @@
       (is (= expected (frontmatter/parse-canonical-string-sequence input)) (pr-str input))
       (is (= expected (:labels (frontmatter/parse-flat (str "labels: " input))))))))
 
+(deftest inline-sequences-refuse-physical-line-breaks-and-form-feed
+  (doseq [separator ["\n" "\r" "\f"]
+          [prefix suffix] [["[" "]"]
+                           ["[" "ci]"]
+                           ["[ci," "provenance]"]
+                           ["[\"ci\"," "\"review\"]"]
+                           ["[\"ci\"" ", review]"]
+                           ["[\"ci\"" "]"]
+                           ["[]" ""]
+                           ["[ci]" ""]
+                           ["[\"ci" "review\"]"]
+                           ["[ci, \"security" "review\"]"]]]
+    (let [input (str prefix separator suffix)]
+      (is (nil? (frontmatter/parse-canonical-string-sequence input))
+          (str "An inline sequence must refuse the whole physical multiline value: " (pr-str input))))))
+
+(deftest inline-sequences-retain-horizontal-whitespace-and-literal-escapes
+  (doseq [[input expected]
+          [["[ \t ] \t" []]
+           ["[ \t \"ci\" \t , \t \"review\" \t ] \t" ["ci" "review"]]
+           ["[ \t ci \t , \t provenance \t ] \t" ["ci" "provenance"]]
+           ["[\"ci\treview\", \"security review\"]" ["ci\treview" "security review"]]
+           ["[\"ci\\nreview\", \"security\\rreview\", \"page\\freview\"]"
+            ["ci\\nreview" "security\\rreview" "page\\freview"]]]]
+    (is (= expected (frontmatter/parse-canonical-string-sequence input)) (pr-str input))
+    (is (= expected (:labels (frontmatter/parse-flat (str "labels: " input))))
+        "The existing quoted grammar preserves escape bytes rather than interpreting them")))
+
+(deftest flat-sequence-values-do-not-trim-away-forbidden-control-whitespace
+  (doseq [value ["[]\f" "[ci]\f" "[\"ci\"] \f\t"]]
+    (is (not (contains? (frontmatter/parse-flat (str "labels: \t" value)) :labels))
+        (str "The flat projection must submit the original sequence suffix for validation: " (pr-str value)))))
+
 (deftest unsupported-inline-collections-remain-fail-closed
   (doseq [line ["labels: [true, false]"
                 "labels: [ci, null]"

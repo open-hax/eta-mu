@@ -18,7 +18,7 @@
 
 (defn- skip-whitespace [text start]
   (loop [index start]
-    (if (matching-character? #"\s" text index)
+    (if (matching-character? #"[ \t]" text index)
       (recur (inc index))
       index)))
 
@@ -42,15 +42,17 @@
     :else nil))
 
 (defn parse-canonical-string-sequence
-  "Decode Rheos's supported YAML subset for one inline string sequence.
+  "Decode Rheos's supported YAML subset for one single-line string sequence.
 
    Quoted members and plain word/path labels can be mixed. Plain booleans,
    nulls, numeric values, mappings, and nested collections remain unsupported.
    The scanner advances monotonically, including on malformed whitespace-heavy
    input, so synchronous card reads never retry overlapping whitespace matches.
+   Physical LF, CR and form feed are refused, including inside quoted members.
    Returns nil for syntax outside that subset."
   [text]
-  (when (= "[" (character-at text 0))
+  (when (and (= "[" (character-at text 0))
+             (not (re-find #"[\r\n\f]" text)))
     (let [start (skip-whitespace text 1)]
       (if (= "]" (character-at text start))
         (when (= (skip-whitespace text (inc start)) (count text)) [])
@@ -71,7 +73,9 @@
           (str/starts-with? value ">")
           (str/starts-with? value "{")) unsupported
       (str/starts-with? value "[")
-      (or (parse-canonical-string-sequence value) unsupported)
+      ;; Keep the original sequence suffix so trimming cannot erase forbidden
+      ;; control whitespace before the shared decoder sees it.
+      (or (parse-canonical-string-sequence (str/replace raw #"^[ \t]+" "")) unsupported)
       :else (str/replace value #"^\"|\"$" ""))))
 
 (defn parse-flat [frontmatter-raw]
