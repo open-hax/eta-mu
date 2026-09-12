@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789200175947-0.wcairhsl9jz7jn86zf"
+write-id: "1789201337530-0.y94w7uhp65mlm8i12jw"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "review"
@@ -40,5 +40,11 @@ Codex PR334 durability P1 scope: reproduce missing Node schema-file/directory fs
 PR334 Codex3995555023 Node fsync P1 repaired. Reliable failure-first native observer: 2 tests/7 assertions/7 failures; after fix full pnpm run test exit0 in53.088s: BB25/75 JVM61/164 NBB62/151 Shadow62/151, all zero failures/errors, Shadow115files0warnings. pnpm run lint0errors0warnings, extern boundary clean. File contents, empty ledger, atomic publication directories and new/existing retry ancestry now synchronize before dependent event acknowledgement. Real Node-created schema/event reopens under JVM with identical root and typed payload. Failure injection covers temp fsync, pre/postrename directories and ancestry retry. ptrace unavailable; proof is actual native-call sequencing/refusal and interoperability, not simulated physical power loss. Parent owns separate JVM ancestry-retry follow-up and its subsequent full gate.
 
 Self-review found a durability retry gap in JVM ensure-dir!: an earlier mkdir could survive while its parent fsync failed, causing a retry to skip forcing already-present ancestry. A real injected-failure regression first failed (62 tests, 168 assertions, one failure), then passed after all ancestry is forced on every successful ensure-dir!. Full JVM final 62/168 zero failures/errors; package lint zero warnings/errors. Node durability counterpart bc6f105 separately passes native ordering and Node-to-JVM replay. Evidence clio-jvm-directory-retry-red and clio-jvm-directory-retry-green.
+
+Actual CodeRabbit PR334 follow-up scope: Sol and Axxium test/build CI steps still use case-sensitive WARNING matching. Exercise the actual Bash steps against zero-exit compiler logs, then admit zero-warning summaries and refuse lowercase, mixed-case, comma-terminated diagnostics and positive warning counts. Wire the regression into both workflows. No application or compiler targets change.
+
+Expanded review scope from actual Codex3995625819 (PRRT_kwDORu27H86huhvS): Maven bracketed [WARNING] diagnostics also bypass generated workflow and local gate matching. Extend both shipped command paths and their real Bash/CLI regressions, then regenerate workflow artifacts from the projector. Preserve zero-warning summaries and original nonzero compiler exits.
+
+Warning-gate reviewer findings repaired: all four Sol/Axxium test/build Bash steps now reject case-insensitive diagnostics with commas or Maven brackets; generated and local gates share equivalent matching and reject positive warning counts while accepting zero summaries. The same existing Sol premerge matcher was repaired. Failure-first evidence: four package gates accepted lowercase warnings; generated/local suite had 12 assertion failures. Final actual Bash regression15tests0fail; CLI suite174tests391assertions plus projector/local4tests44assertions0fail/errors; CLI release166files0warnings, lint0errors0warnings. Generated main-pr-gate/rheos were re-emitted from source and semantic workflow check passes. Full CLI test20.937s, build16.456s. No application providers changed.
 
 ---

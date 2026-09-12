@@ -1,6 +1,7 @@
 (ns open-hax.records.services
   "Compose independently selected service implementations behind one protocol value."
-  (:require [open-hax.openplanner-protocols :as p]))
+  (:require [open-hax.openplanner-protocols :as p]
+            [open-hax.services.law.local :as law]))
 
 (defrecord Services [events sessions documents graph translations labels users realtime]
   p/EventAdmission
@@ -43,6 +44,7 @@
 
 (defn compose
   [{:keys [events sessions documents graph translations labels users realtime] :as ports}]
+  (law/validate-overrides! ports)
   (when-not (every? true? [(satisfies? p/EventAdmission events)
                           (satisfies? p/SessionManagement sessions)
                           (satisfies? p/DocumentStorage documents)

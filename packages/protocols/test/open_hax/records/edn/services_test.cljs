@@ -241,6 +241,19 @@
   (is (= :missing-directory (rejected-type #(providers/create-provider {:provider :edn}))))
   (is (= :missing-database (rejected-type #(providers/create-provider {:provider :mongo})))))
 
+(deftest unknown-service-overrides-refuse-before-opening-storage
+  (let [base (directory)
+        candidate (str base "/must-not-be-created")]
+    (try
+      (doseq [config [{:provider :edn :directory candidate}
+                      {:provider :mongo :db #js {}}]]
+        (is (= :unknown-service-override
+               (rejected-type #(providers/create-provider (assoc config :overrides {:document nil}))))))
+      (is (false? (node-fs/existsSync candidate)))
+      (is (= :invalid-service-overrides
+             (rejected-type #(providers/create-provider {:provider :edn :directory candidate :overrides []}))))
+      (finally (cleanup! base)))))
+
 (deftest javascript-boundary-preserves-namespaced-wire-keys
   (is (= {:event/type "wire.recorded" :payload {:trace/id "stable"}}
          (js->clj (api/make-envelope "wire.recorded" #js {"trace/id" "stable"})
