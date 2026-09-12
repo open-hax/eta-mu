@@ -17,3 +17,10 @@
   (identity/require! (m/validate Request request) :invalid-grants
                     "Grant updates require a target and string vectors for roles and capabilities")
   request)
+
+(defn delegated-target?
+  "Grant changes require another identified principal, including for administrators."
+  [requester-id target-id]
+  (and (string? requester-id) (seq requester-id)
+       (string? target-id) (seq target-id)
+       (not= requester-id target-id)))

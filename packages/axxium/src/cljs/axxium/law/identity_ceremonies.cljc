@@ -7,10 +7,10 @@
 (def ProofAttemptCount [:and :int [:>= 0]])
 
 (defn require-proof-slot!
-  "Refuse corrupt counters and exhausted PGP completion budgets."
+  "Refuse corrupt counters and exhausted PGP or WebAuthn completion budgets."
   [purpose attempts]
-  (identity/require! (and (#{:pgp-login :pgp-enroll} purpose)
+  (identity/require! (and (#{:pgp-login :pgp-enroll :passkey-login :passkey-enroll} purpose)
                            (m/validate ProofAttemptCount attempts))
-                    :invalid-challenge "Invalid PGP completion admission")
+                    :invalid-challenge "Invalid proof completion admission")
   (identity/require! (< attempts max-proof-attempts) :ceremony-rate-limit
                     "Too many proof attempts; request a new authentication challenge"))

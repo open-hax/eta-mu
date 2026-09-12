@@ -163,7 +163,7 @@
                                          (host/sha256 (or browser-token "")) (host/now))]
     (store/unseal store (:private-ref record))))
 
-(defn- ^:async read-pgp-challenge!
+(defn- ^:async read-proof-challenge!
   [{:keys [store]} browser-token id purpose]
   (await (admission/retry!
           #(ceremonies/reserve-proof! store id purpose (host/sha256 (or browser-token ""))
@@ -181,7 +181,7 @@
   "Link a public PGP key only after a logged-in user proves possession."
   [{:keys [store] :as service} token browser-token {:keys [challenge-id signature public-key]}]
   (let [actor (require-principal! service token)
-        data (await (read-pgp-challenge! service browser-token challenge-id :pgp-enroll))
+        data (await (read-proof-challenge! service browser-token challenge-id :pgp-enroll))
         _ (law/require! (= (:principal/id actor) (:principal-id data)) :invalid-challenge "Challenge belongs to another account")
         proof (await (verify-proof! #(crypto/verify-pgp {:public-key public-key :signature signature :challenge (:challenge data)})))
         fingerprint (:fingerprint proof)
@@ -210,7 +210,7 @@
 (defn ^:async pgp-login!
   "Verify a registered PGP key and consume its proof in the session transaction."
   [{:keys [store] :as service} browser-token {:keys [challenge-id signature]}]
-  (let [data (await (read-pgp-challenge! service browser-token challenge-id :pgp-login))
+  (let [data (await (read-proof-challenge! service browser-token challenge-id :pgp-login))
         key (str "pgp:" (:fingerprint data))
         record (get-in (store/state store) [:credentials key])]
     (law/require! record :invalid-credentials "Invalid PGP credential")
@@ -249,13 +249,13 @@
   "Verify browser attestation before linking the new passkey to its principal."
   [{:keys [store options] :as service} token browser-token {:keys [challenge-id response]}]
   (let [actor (require-principal! service token)
-        data (read-challenge service browser-token challenge-id :passkey-enroll)
+        data (await (read-proof-challenge! service browser-token challenge-id :passkey-enroll))
+        _ (law/require! (= (:principal/id actor) (:principal-id data)) :invalid-challenge "Challenge belongs to another account")
         result (await (verify-proof! #(crypto/verify-registration {:response response :challenge (:challenge data)
                                                                   :origin (:public-base-url options) :rp-id (:rp-id options)})))
         _ (law/require! (:verified? result) :invalid-credentials "Passkey registration could not be verified")
         credential (:credential result)
         key (str "passkey:" (:id credential))]
-    (law/require! (= (:principal/id actor) (:principal-id data)) :invalid-challenge "Challenge belongs to another account")
     (store/transact!
      store (fn [state]
              (law/require! (and (resolve-principal service token) (not (get-in state [:credentials key])))
@@ -275,7 +275,7 @@
 (defn ^:async passkey-authentication-verify!
   "Consume a valid assertion and advance the signature counter atomically with login."
   [{:keys [store options] :as service} browser-token {:keys [challenge-id response]}]
-  (let [data (read-challenge service browser-token challenge-id :passkey-login)
+  (let [data (await (read-proof-challenge! service browser-token challenge-id :passkey-login))
         key (str "passkey:" (:id response))
         record (get-in (store/state store) [:credentials key])]
     (law/require! record :invalid-credentials "Invalid passkey credential")

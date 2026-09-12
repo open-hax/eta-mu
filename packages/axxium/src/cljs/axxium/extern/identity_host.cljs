@@ -102,6 +102,9 @@
   (when (> (js/Buffer.byteLength (pr-str value) "utf8") 65536)
     (throw (ex-info "Authentication state is too large" {:code :invalid-challenge}))))
 
+(def private-lock-max-attempts
+  "Finite native lock polling cap when the host clock stalls or reverses." 1500)
+
 (defn ^:async with-private-lock!
   "Hold a nonblocking OS file lock across provider refresh I/O; crash releases it."
   [directory key run]
@@ -112,15 +115,16 @@
     (let [fd (fs/openSync file "r+")
           deadline (+ (now) 30000)]
       (try
-        (loop []
+        (loop [attempt 1]
           (let [acquired? (try (fs-ext/flockSync fd "exnb") true
                                (catch :default error
                                  (if (#{"EAGAIN" "EWOULDBLOCK" "EACCES"} (.-code error)) false (throw error))))]
             (when-not acquired?
-              (when (> (now) deadline)
-                (throw (ex-info "Identity provider lock timed out" {:code :provider-unavailable})))
-              (await (js/Promise. (fn [resolve] (js/setTimeout resolve 20))))
-              (recur))))
+              (when (or (>= attempt private-lock-max-attempts) (>= (now) deadline))
+                (throw (ex-info "Identity provider lock timed out"
+                                {:code :provider-unavailable :attempts attempt})))
+              (await (delay! 20))
+              (recur (inc attempt)))))
         (await (run))
         (finally (fs/closeSync fd))))))
 

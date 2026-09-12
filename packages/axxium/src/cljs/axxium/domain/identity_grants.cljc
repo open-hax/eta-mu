@@ -12,6 +12,8 @@
     (law/require! requester :unauthenticated "Authentication required")
     (law/require! (identity/can-grant? requester) :forbidden
                   "Identity administrator capability required")
+    (law/require! (grants/delegated-target? (:principal/id requester) principal-id) :forbidden
+                  "Another administrator must update your roles and capabilities")
     (let [target (get-in state [:principals principal-id])]
       (law/require! target :not-found "Principal not found")
       {:operation :grants-updated :actor (:principal/id requester)

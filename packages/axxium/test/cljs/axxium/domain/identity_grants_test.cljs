@@ -56,3 +56,9 @@
                  (assoc request :principal-id "")
                  (assoc request :unexpected true)]]
     (is (= :invalid-grants (refusal state input)))))
+
+(deftest administrators-cannot-update-their-own-roles-or-capabilities
+  (doseq [input [(assoc request :principal-id "actor_admin")
+                 (assoc request :principal-id "actor_admin"
+                                :roles ["another-role"] :capabilities ["axxium/admin"])]]
+    (is (= :forbidden (refusal state input)))))

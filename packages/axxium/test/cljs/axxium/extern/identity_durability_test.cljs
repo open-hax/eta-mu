@@ -45,11 +45,11 @@
             (is (= {:accepted true} (get-in (store/state provider) [:credentials "marker"])))
             (is (thrown-with-msg? cljs.core/ExceptionInfo #"Injected identity fsync failure"
                                   (store/transact! provider transition)))
-            (is (= 2 @attempts))))
+            (is (= 3 @attempts) "The initial visible append gets one bounded exact-event re-fence")))
         (let [before (.readFileSync fs file "utf8")]
           (with-observer file #(swap! attempts inc)
             #(is (= {:accepted true} (store/transact! provider transition))))
-          (is (= 3 @attempts))
+          (is (= 4 @attempts))
           (is (= before (.readFileSync fs file "utf8")))))
       (finally (.rmSync fs directory #js {:recursive true :force true})))))
 

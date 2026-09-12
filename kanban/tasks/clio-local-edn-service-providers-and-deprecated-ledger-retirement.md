@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789216318986-0.ir855ka4tugho0oxl4e"
+write-id: "1789219870750-0.mv1ko585kamdoa62qb"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "in_progress"
@@ -70,5 +70,15 @@ Fresh successor verification: actual creation/reopen fault regressions failed fi
 Codex successor3996163876 identifies unlocked projection snapshots racing partial multi-process appends. In a separate worktree preserve all frozen browser/provider sources, reproduce with a writer retaining the real kernel lock while a record is partial and a public reader runs in another process. Canonical read-ledgers/canonicalize-files will take complete per-file snapshots through owning locked descriptors before pure validation/union; do not promise a global transaction across partitions. Preserve low-level raw read-ledger inspection and verify real consumer plus four Clio hosts.
 
 Completed Codex3996163876 read-side race correction in isolated eta-foundation-snapshot. Capture per-file immutable projection snapshots through the writer inode lock, always release on failure. Real public two-process query/open each reproduced partial EDN RED then GREEN; host lock/failure tests RED3 per host. Fresh final BB25/75 JVM67/202 NBB+Shadow65/178, protocols71/217+15 native no skips, Sol142/607+1 native; builds zero warnings, configured lint and strict types clean. Earlier frozen browser paths unchanged; publishing a new immutable successor for consumer reruns.
+
+Fresh Codex3996219654 extends the current review scope: protocols path triggers a hosted workflow but no actual protocols test/lint/strict-type gate. foundation_contracts owns a new immutable690-based successor worktree eta-foundation-ci, authoritative workflow contract and regenerated YAML plus failure-first projector/audit/guard proof. Frozen snapshot kernel/consumer source stays unchanged; identity initialization gates continue against exact690. No merge until hosted gate coverage and current-head reviews converge.
+
+Completed Codex3996219654 in authoritative emitting contracts/workflows/ci.edn, regenerated Rheos YAML/local plan. Protocol test/lint/test:types and actual workflow regression now run with exit/expected-output/no-warning guards; protocol/Clio/regression paths select them. Real resource RED20 then GREEN6tests78assertions; fresh protocols71/217+15native/no skips, compile136/111files0warnings, lint/types clean. Workflow audit/check match emitted YAML and10gateplan; eta-mu lint0/0 with two existing info diagnostics disclosed. Reciprocal source review found no introduced defect. Runtime Clio/protocol/Sol sources unchanged from690; hosted successor run still required.
+
+Actual Codex3996269957 extends locked reads to the public singular read-ledger API. The earlier canonical snapshot fix left this inspection seam unlocked, allowing partial JVM appends to appear malformed. New isolated eta-foundation-single from310 will share one descriptor-locked snapshot helper across singular and plural reads, preserving singular absent-file compatibility and plural fail-closed missing-partition behavior. Failure-first host/native proofs and affected consumer gates precede publication; all frozen browser/consumer paths stay unchanged.
+
+Actual Codex 3996269954 also identifies unreadable generic property names: JS keywordization can admit a printed name that EDN cannot read back. Discovery confirms direct Clio keyword/symbol constructors have the same canonical admission gap. Scope: reproduce both the public JS persistence path and portable canonical names before changing implementation, reject non-round-trippable identifiers before bytes are appended, preserve valid names and existing hashes, then repeat host and downstream gates. Singular-reader gates are green after correcting two explicit JS inference hints; publication remains pending this newly confirmed integrity finding.
+
+Combined singular-reader and identifier-integrity checkpoint is freshly green. Actual RED: cross-host public singular reads 69/210 with5 failures; portable identifier admission26/107 with14 failures; public JS top-level/nested bad-key calls2 missing-rejection failures. Final ClioBB26/107,JVM70/242,NBB+Shadow66/218; protocols71/217+17 native; Sol142/607+1 native. All final compilers zero warnings, lint/boundaries0/0, strict TypeScript clean. Exact descriptor/inode alias guard and canonical kind/namespace/name roundtrip self-reviewed; accepted bytes survive refusal and reopen. Initial warning-positive builds were rejected and rerun after explicit host hint. Reports docs/verification/clio-single-reader-process-proof.md and clio-identifier-integrity.md. Card remains active until actual successor reviewers and hosted gates converge.
 
 ---

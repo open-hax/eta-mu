@@ -6,6 +6,7 @@
             [axxium.law.identity :as law]
             [clio.domain.projection :as projection]
             [clio.extern.js.fs :as fs]
+            [clio.infra.event :as event]
             [clio.infra.ledger :as ledger]
             [clio.infra.runtime :as runtime]))
 
@@ -61,19 +62,34 @@
   (if (ceremonies/private-reference? reference) (ceremonies/unseal store reference)
       (host/unseal (:vault store) reference)))
 
+(defn- append-prepared-event! [store prepared]
+  (let [revisions (:schema/revisions (runtime/refresh (:runtime store)))]
+    (try
+      (ledger/append-event! revisions (:file store) prepared)
+      (catch :default cause
+        ;; An append can become visible before its durability fence fails. Keep
+        ;; the original decision/result in this invocation and re-fence only
+        ;; that exact accepted event. Never repeat the authority or crypto work.
+        (if (some #(= prepared %) (:canonical/events (history store)))
+          (ledger/append-event! revisions (:file store) prepared)
+          (throw cause))))))
+
 (defn- append-transaction! [store decide]
   (let [canonical (history store)
         current (projection/state canonical {:challenges (ceremonies/entries store)} domain/apply-event)
         {:keys [operation actor changes result]} (decide current)]
     (if (seq changes)
       (let [previous (last (:canonical/events canonical))]
-        (runtime/append! (:runtime store) (:file store) :axxium/identity-changed
-                         {:event/stream "axxium/identity"
-                          :event/seq (inc (or (:event/seq previous) 0))
-                          :event/causes (if previous [(:event/id previous)] [])
-                          :event/actor (or actor "axxium")
-                          :event/subject "axxium/identity"
-                          :event/data {:operation operation :changes (vec changes)}}))
+        (append-prepared-event!
+         store
+         (event/make-event
+          (:schema/current (:runtime store)) :axxium/identity-changed
+          {:event/stream "axxium/identity"
+           :event/seq (inc (or (:event/seq previous) 0))
+           :event/causes (if previous [(:event/id previous)] [])
+           :event/actor (or actor "axxium")
+           :event/subject "axxium/identity"
+           :event/data {:operation operation :changes (vec changes)}})))
       (ledger/ensure-durable! (:schema/revisions (runtime/refresh (:runtime store))) (:file store)))
     result))
 
