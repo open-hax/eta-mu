@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789215148197-0.jrnhipl281orsngyil5"
+write-id: "1789217930622-0.kmtp1kptxhsxdfbs0qe"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "in_progress"
@@ -70,5 +70,9 @@ Fresh successor verification: actual creation/reopen fault regressions failed fi
 Scoped stack-recovery successor: Epiphany source card labels [graph, relationships, code, provenance] disappear from a regenerated Rheos snapshot because the shared inline sequence decoder accepts quoted members only. In recovery/rheos-inline-labels, extend the bounded shared string sequence grammar to plain YAML string members, retain malformed/nested/typed refusals, add a real read-task and board projection regression proving original card bytes remain unchanged, and rebuild/test/lint the same Rheos CLI. Models lane owns regeneration of Epiphany snapshot; no historic card or ledger rewrite is authorized.
 
 Rheos inline-label successor verified: actual filesystem read-task/snapshot RED3 then GREEN208 tests/1124 assertions; portable grammar RED4 then JVM GREEN7/39; lint0/0; complete server111/CLI115/projector75/UI95 file releases all zero compiler warnings. Actual CLI projects 116 Epiphany cards and preserves graph, relationships, code, provenance on the unchanged source card. Independent peer review found no confirmed defect within the explicitly partial string-only YAML subset. Evidence and exact CLI/parser/card hashes are in docs/verification/rheos-inline-label-projection.md. Two existing cold-start external :paths warnings are documented, not suppressed.
+
+Scoped review repair for actual PR335 Codex3996227835: replace overlapping-whitespace inline-label regex validation with a bounded linear scanner preserving the declared partial string grammar; reproduce a malformed long member stall, add portable refusal/performance regression, rerun Rheos JVM/Shadow tests, lint and all release builds, and retain card bytes during reads/snapshots.
+
+Actual PR335 Codex3996227835 resolved: both overlapping-whitespace validators replaced by one monotonic portable scanner. Failure-first 50k-space malformed inputs took5827.8ms and3739.0ms; new actualNBB parse39.5ms and18.2ms. Rheos209tests1128assertions and JVM8/43 allgreen; lint0/0 and four release targets0warnings. Fresh CLI still projects the original Epiphany four labels with source card bytes unchanged. Bounded independent scanner review found no confirmed defect; publication and fresh actual reviewer completion remain pending.
 
 ---

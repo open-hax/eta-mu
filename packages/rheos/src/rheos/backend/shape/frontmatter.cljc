@@ -3,42 +3,65 @@
 
 (def ^:private unsupported ::unsupported)
 
-(def ^:private canonical-string-sequence-pattern
-  #"^\[\s*(?:\"[^\"]*\"(?:\s*,\s*\"[^\"]*\")*)?\s*\]$")
-
-(def ^:private quoted-string-pattern
-  #"\"([^\"]*)\"")
-
-(def ^:private plain-and-quoted-sequence-pattern
-  #"^\[\s*(?:\"[^\"]*\"|[A-Za-z_][A-Za-z0-9_./: \t-]*)(?:\s*,\s*(?:\"[^\"]*\"|[A-Za-z_][A-Za-z0-9_./: \t-]*))*\s*\]$")
-
-(def ^:private sequence-member-pattern
-  #"\"([^\"]*)\"|([A-Za-z_][A-Za-z0-9_./: \t-]*)")
-
 (defn- plain-string [value]
   (let [value (str/trim value)]
     (when-not (or (contains? #{"true" "false" "null"} (str/lower-case value))
                   (re-find #":[ \t]|:$" value))
       value)))
 
-(defn- parse-mixed-string-sequence [value]
-  (when (re-matches plain-and-quoted-sequence-pattern value)
-    (let [members (mapv (fn [[_ quoted plain]]
-                          (if (some? quoted) quoted (plain-string plain)))
-                        (re-seq sequence-member-pattern value))]
-      (when (every? some? members) members))))
+(defn- character-at [text index]
+  (when (< index (count text)) (subs text index (inc index))))
+
+(defn- matching-character? [pattern text index]
+  (when-let [character (character-at text index)]
+    (some? (re-matches pattern character))))
+
+(defn- skip-whitespace [text start]
+  (loop [index start]
+    (if (matching-character? #"\s" text index)
+      (recur (inc index))
+      index)))
+
+(defn- plain-member-end [text start]
+  (loop [index (inc start)]
+    (if (matching-character? #"[A-Za-z0-9_./: \t-]" text index)
+      (recur (inc index))
+      index)))
+
+(defn- sequence-member [text start]
+  (cond
+    (= "\"" (character-at text start))
+    (when-let [end (str/index-of text "\"" (inc start))]
+      {:value (subs text (inc start) end) :next (inc end)})
+
+    (matching-character? #"[A-Za-z_]" text start)
+    (let [end (plain-member-end text start)]
+      (when-let [value (plain-string (subs text start end))]
+        {:value value :next end}))
+
+    :else nil))
 
 (defn parse-canonical-string-sequence
   "Decode Rheos's supported YAML subset for one inline string sequence.
 
    Quoted members and plain word/path labels can be mixed. Plain booleans,
    nulls, numeric values, mappings, and nested collections remain unsupported.
-   Returns nil for syntax outside that subset so every consumer can make the
-   same fail-closed decision instead of growing a second comma-splitting parser."
-  [value]
-  (if (re-matches canonical-string-sequence-pattern value)
-    (mapv second (re-seq quoted-string-pattern value))
-    (parse-mixed-string-sequence value)))
+   The scanner advances monotonically, including on malformed whitespace-heavy
+   input, so synchronous card reads never retry overlapping whitespace matches.
+   Returns nil for syntax outside that subset."
+  [text]
+  (when (= "[" (character-at text 0))
+    (let [start (skip-whitespace text 1)]
+      (if (= "]" (character-at text start))
+        (when (= (inc start) (count text)) [])
+        (loop [index start members []]
+          (when-let [{:keys [value] next-index :next} (sequence-member text index)]
+            (let [end (skip-whitespace text next-index)
+                  members (conj members value)]
+              (case (character-at text end)
+                "," (recur (skip-whitespace text (inc end)) members)
+                "]" (when (= (inc end) (count text)) members)
+                nil))))))))
 
 (defn- flat-value [raw]
   (let [value (str/trim raw)]

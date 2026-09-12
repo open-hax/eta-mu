@@ -2,11 +2,13 @@
   #?(:clj (:require [clojure.string :as str]
                     [clojure.test :refer [deftest is testing]]
                     [rheos.backend.law.markdown-document :as law]
+                    [rheos.backend.shape.frontmatter :as frontmatter]
                     [rheos.backend.shape.markdown-document :as markdown])
      :cljs (:require [clojure.string :as str]
                      [cljs.test :refer-macros [deftest is testing]]
                      [rheos.backend.law.markdown-document :as law]
-                     [rheos.backend.shape.markdown-document :as markdown])))
+                     [rheos.backend.shape.frontmatter :as frontmatter]
+                    [rheos.backend.shape.markdown-document :as markdown])))
 
 (deftest flat-compatibility-view-declares-partial-provenance
   (let [document (markdown/parse "---\ntitle: Card\nstatus: ready\n---\nBody")]
@@ -92,3 +94,18 @@
   (let [document (markdown/parse "# Plain")]
     (is (law/valid? document))
     (is (not (contains? document :document/frontmatter-decoding)))))
+
+(defn- milliseconds []
+  #?(:clj (/ (System/nanoTime) 1000000.0)
+     :cljs (.now js/performance)))
+
+(deftest malformed-whitespace-heavy-sequences-have-bounded-refusal-cost
+  (let [padding (apply str (repeat 50000 " "))]
+    (doseq [prefix ["[a" "["]]
+      (let [input (str prefix padding "!]")
+            started (milliseconds)
+            result (frontmatter/parse-canonical-string-sequence input)
+            elapsed (- (milliseconds) started)]
+        (is (nil? result) "Malformed input must remain outside the declared string subset")
+        (is (< elapsed 2000)
+            (str "50,000 padding characters must not stall synchronous task reads: " elapsed "ms"))))))
