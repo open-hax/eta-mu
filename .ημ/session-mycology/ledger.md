@@ -411,3 +411,13 @@
   spore: none
   receipt-refs: bf3b2de5-2c74-42a9-a09b-eb9a5c557cca
   note: A controlled FIFO/native-worker barrier converted the intermittent subscription observation into an actual missed-event reproduction. The owned canonical polling timer passes first-write delivery without a second write, deduplication, unsubscribe and existing error-closure contracts. Full provider78/332 plus22native and strict gates pass. Idle full-history read cost is explicit; no fixture sleeps or hidden retries were added. Existing mechanism-verification lesson reused.
+
+- ts: 2026-09-12T18:42:37Z
+  session: foresight-sandbox-clio-alias-parent
+  task: Repair Codex3997117083 canonical target parent durability on Node and JVM
+  p-efficiency: 0.9
+  p-friction: 0.3
+  p-skill-candidate: 0.7
+  spore: none
+  receipt-refs: 9aff7874-6812-4984-9c0b-a5ac1d027b4c
+  note: Native Node12/101 and JVM10/93 each produced11 actual failures before repair, including symlink retarget after lock. Canonical resolution before open now binds the later inode and parent fences while retaining caller returns. All four host suites and zero-warning gates pass; root independent adapter review clear. Existing native-mechanism and explicit-worktree lessons reused. The receipt CLI refused unsupported verification kind without writing; the declared test-run kind succeeded. Source30090a67 and verification document retain scope and evidence. No remote writes.

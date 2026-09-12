@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "clio, providers, sandbox"
 type: "task"
-write-id: "1789233124964-0.lsmbgh8hkv9fqn9vto5"
+write-id: "1789238558734-0.yor7cv2iu2khu0jzp3"
 title: "Clio local EDN service providers and deprecated ledger retirement"
 priority: "P1"
 status: "in_progress"
@@ -103,5 +103,9 @@ Recovered ff48 after workspace maintenance and repaired actual public append rec
 Protocol query successor plan from published 1ef5c1ca: reproduce actual Codex3996993467 false/nil membership inversion and3996993469 NaN range matches. Preserve missing-field/null equality policy, true membership and empty sequence behavior, compatible finite ranges and existing incomparable-value nonmatches. Add portable domain and real compiled public-service regressions before the minimal pure-domain correction, then run the full protocol suite, native consumers, strict types, compiler and lint with zero warnings. Discovery: JVM boxed NaN can equal itself under generic equality, so any numeric ordering guard must use numeric equality and be verified on both hosts. No Clio, identity, Rheos, dependency pin or remote review mutation is in this slice.
 
 Query fixes are verified in501f7906: JVM2/50, CLJS78/332,21native and strict types/lint pass; builds140/112inputs0warnings, independent read-only peer review clear. Retaining the first unexpected four subscription failures exposed a genuine startup notification race. With a real FIFO occupying the single native filesystem worker, subscribe and append occur before watchFile establishes its initial stat; releasing the worker leaves the event undelivered until another write. Root authorized a separate protocol notification repair: preserve this native barrier regression, deliver the first event without a second write, retain cursor deduplication, error closure and unsubscribe, and run complete provider/native gates. No sleeps masking startup readiness or hidden write retries.
+
+Review repair 3997117083 on published e2e440c5: prove alias-parent durability refusal with native Node and JVM regressions, retain exact retries and caller-facing return paths, bind the canonical target before opening its owning lock descriptor, then run complete Clio host and lint gates. Worktree: eta-clio-alias-review; no remote writes. Initial Node RED: 11 tests / 96 assertions / 10 failures; initial JVM RED: 79 tests / 383 assertions / 10 failures. Both reveal acknowledgment while the real target parent is refused.
+
+Clio Codex3997117083 repaired in 30090a67 atop published e2e440c5. Actual alias-parent RED: Node12/101 with11 failures; JVM10/93 with11 failures. Bind canonical target before owning descriptor open on Node and JVM; preserve caller-facing path, inode ownership, and hard-link/read-only locks. New regressions cover interrupted creation, new append, exact retry, relative/absolute symlinks and retargeting after lock. Final BB29/182, JVM80/388, NBB78/395, Shadow78/395 with118 inputs0warnings; kondo0errors0warnings and extern boundary clean. Root independent adapter review clear. No remote writes; evidence docs/verification/clio-alias-parent-durability.md.
 
 ---
