@@ -1,12 +1,12 @@
 (ns open-hax.sol.shape.episode-event
-  "Pure Sol projection onto the standalone event-ledger envelope.
+  "Pure Sol episode payload projection for the Clio event ledger.
 
    This namespace shapes references only. Axxium remains the authority for live
    principals; Katamorph remains the authority for actor/agent resources;
-   event-ledger remains the authority for envelope validation and append
-   semantics."
+   Sol owns its wire payload contract; Clio owns durable envelope validation,
+   admission, and replay semantics."
   (:require [clojure.string :as str]
-            [open-hax.event-ledger :as event-ledger]))
+            [open-hax.sol.law.episode-event :as episode-law]))
 
 (def principal-kinds
   #{"human" "agent" "service" "automation"})
@@ -93,7 +93,7 @@
              (nonblank-string (:contract-revision agent-spec))))))
 
 (defn principal-binding
-  "Build the event-ledger PrincipalBindingV1 only from supplied Axxium identity.
+  "Build the Sol principal reference only from supplied Axxium identity.
 
    Accepted input includes Axxium's canonical RuntimePrincipalBinding map,
    a nested `:principal/binding`, Axxium `:auth/*` identity keys accompanied by
@@ -184,7 +184,7 @@
              :contract/refs [contract-ref]))))
 
 (defn envelope
-  "Build and validate one canonical event-ledger envelope.
+  "Build and validate one Sol episode wire envelope, stored as a Clio payload.
 
    `parent-id` is nil for the first event. The caller owns sequencing and only
    advances the parent after successful append/acceptance."
@@ -209,9 +209,9 @@
                     (:contracts episode) (assoc :contracts (:contracts episode))
                     (:contract/refs episode) (assoc :contract/refs
                                                     (:contract/refs episode)))
-        validation (event-ledger/validate-envelope candidate)]
+        validation (episode-law/validate-envelope candidate)]
     (when-not (:valid validation)
-      (throw (ex-info "Sol produced an invalid event-ledger envelope"
+      (throw (ex-info "Sol produced an invalid episode envelope"
                       {:event/type event-type
                        :errors (:errors validation)})))
     candidate))

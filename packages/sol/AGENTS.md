@@ -54,9 +54,9 @@ dependency DAG.
 - Node and npm modules (`node:*`, `fastify`, `ws`, `typebox`,
   `@modelcontextprotocol/sdk`) are runtime imports via
   `:keep-as-import`; do not let them leak above `extern/`.
-- The shadow build pulls sibling packages `../katamorph/src/cljs` and
-  `../event-ledger/src` onto the source path. Treat those as read-only upstream
-  dependencies — fix them in their own packages, not here.
+- The shadow build resolves pinned standalone Katamorph plus workspace Clio,
+  eta-mu, and turn-processor through `deps.edn`. Treat those as read-only
+  upstream dependencies — fix them in their own packages, not here.
 - No retrieval/RAG layer lives in Sol; `chat` and `direct` routes run the same
   plain turn. If retrieval is added it belongs in front of the turn (context
   injection or a tool), not threaded through the agent loop as a mode.

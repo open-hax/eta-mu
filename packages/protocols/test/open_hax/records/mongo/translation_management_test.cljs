@@ -7,12 +7,12 @@
   (let [docs (atom {})]
     #js {:collection (fn [name]
                        (if (= name "translation_segments")
-                         #js {:insertOne (fn [doc]
+                         #js {:insertOne (fn [^js doc]
                                            (let [id (or (.-_id doc) (str (random-uuid)))
                                                  stored (assoc (js->clj doc :keywordize-keys true) :_id id)]
                                              (swap! docs assoc id stored)
                                              (js/Promise.resolve #js {})))
-                               :findOneAndUpdate (fn [query update _opts]
+                               :findOneAndUpdate (fn [query ^js update _opts]
                                                    (let [id (aget query "_id")
                                                          set-obj (.-$set update)
                                                          existing (get @docs id)]

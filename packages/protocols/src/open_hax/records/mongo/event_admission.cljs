@@ -14,14 +14,14 @@
   (let [ms (* (or ttl-days DEFAULT_TTL_DAYS) 24 60 60 1000)]
     (js/Date. (+ (.now js/Date) ms))))
 
-(defn- ^:async assign-seq! [db]
-  (let [counters (.collection db COUNTERS_COLLECTION)
-        result (await (.findOneAndUpdate
+(defn- ^:async assign-seq! [^js db]
+  (let [^js counters (.collection db COUNTERS_COLLECTION)
+        ^js result (await (.findOneAndUpdate
                         counters
                         #js {"_id" LEDGER_SEQ_KEY}
                         #js {"$inc" #js {"seq" 1}}
                         #js {"upsert" true "returnDocument" "after"}))
-        val (.-value result)]
+        ^js val (.-value result)]
     (when val (.-seq val))))
 
 (defn- ensure-defaults [env]
@@ -40,7 +40,7 @@
            :createdAt now
            :updatedAt now)))
 
-(defn- ^:async insert-or-dup! [coll doc event-id]
+(defn- ^:async insert-or-dup! [^js coll doc event-id]
   (try
     (await (.insertOne coll (clj->js doc)))
     doc
@@ -50,13 +50,13 @@
           (js->clj existing :keywordize-keys true))
         (throw e)))))
 
-(defn- ^:async query-events-impl [coll query]
-  (let [cursor (.find coll query)
-        sorted (.sort cursor #js {"event/time" -1})
+(defn- ^:async query-events-impl [^js coll query]
+  (let [^js cursor (.find coll query)
+        ^js sorted (.sort cursor #js {"event/time" -1})
         docs (await (.toArray sorted))]
     (js->clj docs :keywordize-keys true)))
 
-(defn- ^:async append-event-impl! [db envelope]
+(defn- ^:async append-event-impl! [^js db envelope]
   (let [env (ensure-defaults envelope)
         event-id (:event/id env)
         seq-num (await (assign-seq! db))
@@ -64,7 +64,7 @@
         coll (.collection db LEDGER_COLLECTION)]
     (await (insert-or-dup! coll doc event-id))))
 
-(defrecord MongoEventAdmission [db]
+(defrecord MongoEventAdmission [^js db]
   protocols/EventAdmission
   (append-event! [_ envelope]
     (append-event-impl! db envelope))
@@ -77,14 +77,14 @@
     (query-events-impl (.collection db LEDGER_COLLECTION) (clj->js filter-spec)))
 
   (watch-events [_ filter-spec callback]
-    (let [coll (.collection db LEDGER_COLLECTION)
+    (let [^js coll (.collection db LEDGER_COLLECTION)
           pipeline (if (:event/type filter-spec)
                      [#js {"$match" #js {"fullDocument.event/type" (:event/type filter-spec)}}]
                      [])
-          stream (.watch coll pipeline)
+          ^js stream (.watch coll pipeline)
           id (str (random-uuid))]
       (.on stream "change"
-           (fn [change]
+           (fn [^js change]
              (when-let [doc (.-fullDocument change)]
                (callback (js->clj doc :keywordize-keys true)))))
       {:id id

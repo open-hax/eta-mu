@@ -351,3 +351,73 @@
   spore: none
   receipt-refs: 2026-08-30T05:20:31.845Z
   note: Keeping implementation H and activation A as separate immutable revisions prevents a reusable workflow from loading repaired source while still executing its predecessor. The activation changes only the internal checkout pin, preserves the review card through later consumer proof, and verifies the exact repository/path/credential contract plus the full 25-test GitHub package. Local CLI compilation was bounded by Maven network denial, so hosted exact-head gates remain the authority. No new spore; the existing exact-head and separate-evidence-retention spores already cover this revision topology.
+
+- ts: 2026-09-11T23:59:52.105992+00:00
+  session: foresight-sandbox-clio-local-providers
+  task: Canonical Clio JVM adapters, EDN service protocols, Sol deprecated ledger cutover
+  p-efficiency: 0.8
+  p-friction: 0.4
+  p-skill-candidate: 0.6
+  spore: none
+  receipt-refs: implementation receipt for feat/clio-local-providers
+  note: Protocol suites passed before artifact checks exposed empty ESM exports and namespace loss at clj->js; direct Node artifact verification closed both. Frozen offline lock validation reused native dependencies after unlocked regeneration hit unrelated missing metadata. Cross-host locks and typed replay were tested against the actual Clio kernel.
+
+- ts: 2026-09-12T00:13:24.789835+00:00
+  session: foresight-sandbox-clio-docs-followup
+  task: Reconcile current Clio ownership and Rheos migration guidance
+  p-efficiency: 0.95
+  p-friction: 0.15
+  p-skill-candidate: 0.3
+  spore: none
+  receipt-refs: Clio documentation reconciliation observation
+  note: Preserved dated August survey facts while replacing current ledger adoption guidance; actual Rheos package and BB manifests disagree on build targets, so documented both rather than silently treating them as equivalent.
+
+- ts: 2026-09-12T00:22:11.482392+00:00
+  session: foresight-sandbox-receipt-fixture
+  task: Repair stale Receipt River multi-arity discovery fixture
+  p-efficiency: 0.95
+  p-friction: 0.2
+  p-skill-candidate: 0.6
+  spore: none
+  receipt-refs: receipt-river-fixture-repro/test/build/lint
+  note: Compiled CLJS calls a known multi-arity var through arity dispatch properties; with-redefs fixtures must preserve that shape. Reproduced the exact original failure, restored the supported arities without changing assertions, and verified full package test/build/lint.
+
+- ts: 2026-09-12T17:12:51.568Z
+  session: /workspace/scratch/3655842e43cf/eta-clio-restored
+  task: Recover Clio public append identity and protocol query/subscription contracts
+  p-efficiency: 0.8
+  p-friction: 0.65
+  p-skill-candidate: 0.75
+  spore: none
+  receipt-refs: final Clio recovery receipt for source a9328801
+  note: Restored exact reviewed source after maintenance pruned tools and checkouts. Native failure-first tests exposed missing generated retry identity, NBB stdout error routing, and lexical symbolic-link parent-path redirection. RealpathSync.native was required because Node realpathSync still chose the lexical target. Final Clio BB29/182 JVM77/355 NBB and Shadow75/362 plus protocols76/282 and19native pass; strict gates are clean. Existing binary-verification and absolute-path spores cover the reusable lesson. Actual hosted successor reviews remain required.
+
+- ts: 2026-09-12T17:53:13Z
+  session: foresight-sandbox-protocol-membership-range
+  task: Repair false/null membership and scalar/vector NaN range queries
+  p-efficiency: 0.85
+  p-friction: 0.5
+  p-skill-candidate: 0.75
+  spore: none
+  receipt-refs: 6221a3f7-e2fa-4026-8f47-06a24e91a314
+  note: Real portable and compiled consumer failures preceded the pure query correction. Generic equality was unsafe as a numeric NaN guard on a boxed host; numeric equality plus supported vector recursion passes both hosts. Preserving an unexpected subscription failure led to a native FIFO barrier proving a real missed-event startup gap. Query gates are green; watcher recovery follows separately, with no lucky-rerun dismissal. Existing verification lessons reused.
+
+- ts: 2026-09-12T18:00:01Z
+  session: foresight-sandbox-protocol-watch-startup
+  task: Close the real subscription initial-stat delivery gap
+  p-efficiency: 0.9
+  p-friction: 0.5
+  p-skill-candidate: 0.8
+  spore: none
+  receipt-refs: bf3b2de5-2c74-42a9-a09b-eb9a5c557cca
+  note: A controlled FIFO/native-worker barrier converted the intermittent subscription observation into an actual missed-event reproduction. The owned canonical polling timer passes first-write delivery without a second write, deduplication, unsubscribe and existing error-closure contracts. Full provider78/332 plus22native and strict gates pass. Idle full-history read cost is explicit; no fixture sleeps or hidden retries were added. Existing mechanism-verification lesson reused.
+
+- ts: 2026-09-12T18:42:37Z
+  session: foresight-sandbox-clio-alias-parent
+  task: Repair Codex3997117083 canonical target parent durability on Node and JVM
+  p-efficiency: 0.9
+  p-friction: 0.3
+  p-skill-candidate: 0.7
+  spore: none
+  receipt-refs: 9aff7874-6812-4984-9c0b-a5ac1d027b4c
+  note: Native Node12/101 and JVM10/93 each produced11 actual failures before repair, including symlink retarget after lock. Canonical resolution before open now binds the later inode and parent fences while retaining caller returns. All four host suites and zero-warning gates pass; root independent adapter review clear. Existing native-mechanism and explicit-worktree lessons reused. The receipt CLI refused unsupported verification kind without writing; the declared test-run kind succeeded. Source30090a67 and verification document retain scope and evidence. No remote writes.

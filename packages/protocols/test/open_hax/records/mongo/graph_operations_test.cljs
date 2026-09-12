@@ -9,7 +9,7 @@
     #js {:collection (fn [name]
                        (case name
                          "graph_nodes"
-                         #js {:insertOne (fn [doc]
+                         #js {:insertOne (fn [^js doc]
                                            (let [id (or (.-_id doc) (str (random-uuid)))
                                                  stored (assoc (js->clj doc :keywordize-keys true) :_id id)]
                                              (swap! nodes assoc id stored)
@@ -17,7 +17,7 @@
                               :find (fn [_query]
                                       #js {:toArray (fn [] (js/Promise.resolve (clj->js (vals @nodes))))})}
                          "graph_edges"
-                         #js {:insertOne (fn [doc]
+                         #js {:insertOne (fn [^js doc]
                                            (let [id (or (.-_id doc) (str (random-uuid)))
                                                  stored (assoc (js->clj doc :keywordize-keys true) :_id id)]
                                              (swap! edges assoc id stored)

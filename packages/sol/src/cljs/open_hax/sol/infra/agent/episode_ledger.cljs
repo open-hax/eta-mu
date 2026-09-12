@@ -1,11 +1,11 @@
 (ns open-hax.sol.infra.agent.episode-ledger
-  "Effect seam from one Sol turn episode to the standalone event-ledger.
+  "Effect seam from one Sol turn episode to Clio's durable event ledger.
 
-   Hosts may inject `:event-ledger-append!` or supply `:event-ledger-db`. Without
-   either, Sol still builds and validates the canonical envelopes while keeping
-   its existing local EDN/realtime projections fully compatible."
-  (:require [open-hax.event-ledger :as event-ledger]
-            [open-hax.sol.domain.time :as time]
+   Environment configuration selects :edn on Linux and :disabled on other hosts.
+   Hosts may retain the
+   :event-ledger-append! injection seam; the obsolete Mongo DB option is refused."
+  (:require [open-hax.sol.domain.time :as time]
+            [open-hax.sol.infra.agent.clio-store :as clio-store]
             [open-hax.sol.shape.episode-event :as episode-event]))
 
 (defn- default-id-fn
@@ -15,13 +15,23 @@
 (defn configured-appender
   "Resolve the canonical append capability from Sol config.
 
-   An injected one-argument function is preferred for tests/non-Mongo hosts.
-   A configured Mongo DB delegates directly to event-ledger/append-event."
+   An injected one-argument function remains the explicit custom-provider seam.
+   EDN persistence uses packages/clio, including its immutable schema history."
   [config]
   (or (:event-ledger-append! config)
-      (when-let [db (:event-ledger-db config)]
-        (fn [envelope]
-          (event-ledger/append-event db envelope)))))
+      (do
+        (when (some? (:event-ledger-db config))
+          (throw (ex-info "The Mongo event-ledger provider is retired; configure :clio-provider :edn or inject :event-ledger-append!"
+                          {:sol/error :sol.clio/retired-provider})))
+        (case (:clio-provider config)
+          nil nil
+          :disabled nil
+          :edn (let [store (clio-store/open-store
+                            (or (:clio-directory config) ".ημ/sol/clio"))]
+                 (fn [envelope] (clio-store/append-envelope! store envelope)))
+          (throw (ex-info "Unsupported Sol Clio provider"
+                          {:sol/error :sol.clio/unsupported-provider
+                           :provider (:clio-provider config)}))))))
 
 (defn create-episode
   "Create process-local sequencing state for one send-agent-turn! invocation."

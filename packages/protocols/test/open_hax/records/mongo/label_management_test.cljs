@@ -9,13 +9,13 @@
     #js {:collection (fn [name]
                        (case name
                          "km_labels"
-                         #js {:insertOne (fn [doc]
+                         #js {:insertOne (fn [^js doc]
                                            (let [id (or (.-_id doc) (str (random-uuid)))
                                                  stored (assoc (js->clj doc :keywordize-keys true) :_id id)]
                                              (swap! labels assoc id stored)
                                              (js/Promise.resolve #js {})))}
                          "graph_label_nodes"
-                         #js {:insertOne (fn [doc]
+                         #js {:insertOne (fn [^js doc]
                                            (let [id (or (.-_id doc) (str (random-uuid)))
                                                  stored (assoc (js->clj doc :keywordize-keys true) :_id id)]
                                              (swap! label-nodes assoc id stored)

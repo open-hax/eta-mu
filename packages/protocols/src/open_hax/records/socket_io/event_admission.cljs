@@ -3,7 +3,7 @@
    Emits events to a Socket.IO namespace and listens for responses."
   (:require [open-hax.openplanner-protocols :as protocols]))
 
-(defn ^:async emit-and-await [socket event-type payload timeout-ms]
+(defn ^:async emit-and-await [^js socket event-type payload timeout-ms]
   (let [causal-root (str (random-uuid))
         timeout (or timeout-ms 30000)
         envelope (assoc payload
@@ -26,7 +26,7 @@
           (.on socket (str "response:" causal-root) handler)
           (.emit socket event-type envelope))))))
 
-(defrecord SocketIoEventAdmission [socket]
+(defrecord SocketIoEventAdmission [^js socket]
   protocols/EventAdmission
   (append-event! [_ envelope]
     (emit-and-await socket "event:append" envelope nil))

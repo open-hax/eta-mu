@@ -7,7 +7,7 @@
   (let [docs (atom {})]
     {:db #js {:collection (fn [name]
                             (if (= name coll-name)
-                              #js {:insertOne (fn [doc]
+                              #js {:insertOne (fn [^js doc]
                                                 (let [id (or (.-_id doc) (str (random-uuid)))
                                                       stored (assoc (js->clj doc :keywordize-keys true) :_id id)]
                                                   (swap! docs assoc id stored)
@@ -17,7 +17,7 @@
                                                 (js/Promise.resolve (clj->js (get @docs id)))))
                                    :find (fn [_query]
                                            #js {:toArray (fn [] (js/Promise.resolve (clj->js (vals @docs))))})
-                                   :updateOne (fn [query update]
+                                   :updateOne (fn [query ^js update]
                                                 (let [id (aget query "_id")
                                                       set-obj (.-$set update)
                                                       existing (get @docs id)]

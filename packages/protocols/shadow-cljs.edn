@@ -1,21 +1,26 @@
-{:source-paths ["src" "test"]
- :dependencies [[metosin/malli "0.17.0"]]
+{:source-paths ["src" "test" "../clio/src"]
+ :dependencies [[metosin/malli "0.17.0"]
+                [borkdude/edamame "1.6.42"]
+                [funcool/promesa "11.0.678"]]
  :builds
  {:lib
   {:target :esm
    :runtime :node
    :output-dir "dist"
-   :exports {"createEdnEventAdmission" open-hax.records.edn.event-admission/create-edn-event-admission
-             "validateEnvelope" open-hax.openplanner-protocols/validate-envelope
-             "makeEnvelope" open-hax.openplanner-protocols/make-envelope}
    :js-options {:js-provider :import
                 :keep-as-import #{"fs" "fs/promises" "path"}}
    :modules {:main {:init-fn open-hax.openplanner-protocols/init
-                    :entries [open-hax.records.edn.event-admission]}}
+                    :exports {createEdnEventAdmission open-hax.records.edn.event-admission/create-edn-event-admission-js
+                              createEdnServices open-hax.records.edn.services/create-edn-services-js
+                              validateEnvelope open-hax.openplanner-protocols/validate-envelope-js
+                              makeEnvelope open-hax.services.extern.api/make-envelope}
+                    :entries [open-hax.records.edn.event-admission
+                              open-hax.records.edn.services
+                              open-hax.services.infra.providers]}}
    :compiler-options {:output-feature-set :es-next}}
   :test
   {:target :node-test
    :output-to "target/test.cjs"
    :ns-regex ["open-hax.*-test$"]
-   :autorun true
+   :autorun false
    :compiler-options {:output-feature-set :es-next}}}}

@@ -54,7 +54,7 @@
 
   :bb-and-kondo
   [{:step/action :setup-clojure
-    :step/with {:bb "1.13.219" :clj-kondo "2025.10.23"}}]
+    :step/with {:cli "1.12.5.1654" :bb "1.13.219" :clj-kondo "2025.10.23"}}]
 
   ;; pnpm before node, so setup-node can see the package manager.
   :node-pnpm

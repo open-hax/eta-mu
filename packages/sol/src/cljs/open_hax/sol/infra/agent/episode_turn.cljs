@@ -1,9 +1,9 @@
 (ns open-hax.sol.infra.agent.episode-turn
-  "Canonical event-ledger lifecycle wrapper for one Sol turn.
+  "Clio episode lifecycle wrapper for one Sol turn.
 
    The wrapped turn remains responsible for Sol's existing EDN run projection,
    session state, provider execution, and realtime broadcasts. This namespace
-   adds only the cross-runtime operational envelope owned by event-ledger."
+   persists the Sol operational payload through the canonical Clio kernel."
   (:require [open-hax.sol.extern.agent-turn-node :as xturn-node]
             [open-hax.sol.infra.agent.episode-ledger :as episode-ledger]
             [open-hax.sol.infra.agent.turn :as turn]))

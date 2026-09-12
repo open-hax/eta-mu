@@ -1,6 +1,6 @@
 {:http {:port 9633},
- ;; Classpath (paths + JVM deps) comes from deps.edn. katamorph + event-ledger
- ;; are git-ref deps there — no "../katamorph/src/cljs" sibling source-paths.
+ ;; Classpath comes from deps.edn: pinned standalone Katamorph and workspace
+ ;; Clio/eta-mu/turn-processor dependencies. No deprecated event-ledger package.
  :deps true,
  :nrepl {:port 4501},
  :js-options {:js-provider :import},

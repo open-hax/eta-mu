@@ -1,6 +1,5 @@
 (ns open-hax.sol.infra.agent.episode-ledger-test
   (:require [cljs.test :refer [deftest is]]
-            [open-hax.event-ledger :as event-ledger]
             [open-hax.sol.infra.agent.episode-ledger :as episode-ledger]))
 
 (defn- sequential-id-fn
@@ -75,18 +74,19 @@
     (is (= "actor.agent.research" (get-in envelope [:event/from :actor-id])))
     (is (not (contains? (:event/from envelope) :principal/binding)))))
 
-(deftest ^:async configured-db-delegates-to-event-ledger-test
-  (let [calls* (atom [])
-        db {:name "ledger-db"}
-        append! (episode-ledger/configured-appender
-                 {:event-ledger-db db})]
-    (with-redefs [event-ledger/append-event
-                  (fn [actual-db envelope]
-                    (swap! calls* conj [actual-db envelope])
-                    (js/Promise.resolve envelope))]
-      (let [result (await (append! {:event/type "test"}))]
-        (is (= {:event/type "test"} result))
-        (is (= [[db {:event/type "test"}]] @calls*))))))
+(deftest retired-db-provider-is-explicitly-refused-test
+  (try
+    (episode-ledger/configured-appender {:event-ledger-db {:name "old-db"}})
+    (is false "a retired provider must not silently disable persistence")
+    (catch :default error
+      (is (= :sol.clio/retired-provider (:sol/error (ex-data error)))))))
+
+(deftest unsupported-provider-is-explicitly-refused-test
+  (try
+    (episode-ledger/configured-appender {:clio-provider :typo})
+    (is false "an unknown provider must not silently disable persistence")
+    (catch :default error
+      (is (= :sol.clio/unsupported-provider (:sol/error (ex-data error)))))))
 
 (deftest ^:async rejected-append-does-not-advance-causality-test
   (let [attempts* (atom 0)

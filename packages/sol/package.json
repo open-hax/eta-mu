@@ -15,7 +15,7 @@
     "watch": "shadow-cljs watch server-dev",
     "start": "node dist/server.js",
     "start:dev": "node dist-dev/server.js",
-    "test": "shadow-cljs compile test",
+    "test": "shadow-cljs compile test && node --test test/js/*.test.mjs",
     "lint": "clj-kondo --lint src/cljs test/cljs && node ../../scripts/contract-guard.mjs src/cljs test/cljs",
     "lint:kondo": "clj-kondo --lint src/cljs test/cljs && node ../../scripts/contract-guard.mjs src/cljs test/cljs",
     "typecheck": "shadow-cljs compile server"
@@ -25,7 +25,8 @@
     "@fastify/formbody": "^8.0.2",
     "@fastify/websocket": "^11.2.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "fastify": "^5.6.1"
+    "fastify": "^5.6.1",
+    "fs-ext-extra-prebuilt": "2.2.9"
   },
   "devDependencies": {
     "shadow-cljs": "^3.4.10",

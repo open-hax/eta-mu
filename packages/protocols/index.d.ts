@@ -1,4 +1,4 @@
-declare module "@promethean-os/openplanner-protocols" {
+declare module "@open-hax/protocols" {
   // ---------------------------------------------------------------------------
   // Envelope helpers
   // ---------------------------------------------------------------------------
@@ -54,16 +54,27 @@ declare module "@promethean-os/openplanner-protocols" {
 
   export function createEdnEventAdmission(ledgerDir: string): EdnFileEventAdmission;
 
+  export interface ClioEdnServices extends EventAdmission, SessionManagement,
+    DocumentStorage, GraphOperations, TranslationManagement, LabelManagement,
+    UserManagement, RealtimeSubscription {}
+
+  export function createEdnServices(directory: string): ClioEdnServices;
+
   // ---------------------------------------------------------------------------
   // Protocol: SessionManagement
   // ---------------------------------------------------------------------------
 
-  export interface Session {
+  /** A persisted generic map. Narrow application fields before using them. */
+  export interface StoredRecord {
     id: string;
-    "actor-id": string;
-    "created-at": string;
-    "updated-at": string;
-    metadata?: Record<string, unknown>;
+    [field: string]: unknown;
+  }
+
+  export interface Session extends StoredRecord {
+    "actor-id"?: unknown;
+    createdAt: unknown;
+    updatedAt: unknown;
+    metadata?: unknown;
   }
 
   export interface SessionManagement {
@@ -72,7 +83,7 @@ declare module "@promethean-os/openplanner-protocols" {
     "update-session"(
       sessionId: string,
       updates: Record<string, unknown>
-    ): Promise<Session>;
+    ): Promise<Session | null>;
     "close-session"(sessionId: string): Promise<void>;
   }
 
@@ -80,13 +91,12 @@ declare module "@promethean-os/openplanner-protocols" {
   // Protocol: DocumentStorage
   // ---------------------------------------------------------------------------
 
-  export interface StoredDocument {
-    id: string;
-    type: string;
-    content: Record<string, unknown>;
-    "created-at": string;
-    "updated-at": string;
-    archived?: boolean;
+  export interface StoredDocument extends StoredRecord {
+    type?: unknown;
+    content?: unknown;
+    "created-at": unknown;
+    "updated-at": unknown;
+    archived?: unknown;
   }
 
   export interface DocumentStorage {
@@ -102,28 +112,27 @@ declare module "@promethean-os/openplanner-protocols" {
   // Protocol: GraphOperations
   // ---------------------------------------------------------------------------
 
-  export interface GraphNode {
-    id: string;
-    type: string;
-    label: string;
-    metadata?: Record<string, unknown>;
+  export interface GraphNode extends StoredRecord {
+    type?: unknown;
+    label?: unknown;
+    metadata?: unknown;
   }
 
-  export interface GraphEdge {
-    id: string;
-    source: string;
-    target: string;
-    type: string;
-    metadata?: Record<string, unknown>;
+  export interface GraphEdge extends StoredRecord {
+    source?: unknown;
+    target?: unknown;
+    type?: unknown;
+    metadata?: unknown;
   }
 
   export interface GraphOperations {
     "add-node"(node: Record<string, unknown>): Promise<GraphNode>;
     "add-edge"(edge: Record<string, unknown>): Promise<GraphEdge>;
+    /** Returns neighboring node IDs; use traverse for full node records. */
     "query-neighbors"(
       nodeId: string,
       opts?: { direction?: "in" | "out" | "both"; "edge-types"?: string[] }
-    ): Promise<GraphNode[]>;
+    ): Promise<string[]>;
     traverse(
       start: string,
       opts?: { depth?: number; "edge-types"?: string[] }
@@ -134,13 +143,12 @@ declare module "@promethean-os/openplanner-protocols" {
   // Protocol: TranslationManagement
   // ---------------------------------------------------------------------------
 
-  export interface TranslationSegment {
-    id: string;
-    source: string;
-    target: string;
-    "source-lang": string;
-    "target-lang": string;
-    label?: string;
+  export interface TranslationSegment extends StoredRecord {
+    source?: unknown;
+    target?: unknown;
+    "source-lang"?: unknown;
+    "target-lang"?: unknown;
+    label?: unknown;
   }
 
   export interface TranslationManagement {
@@ -150,7 +158,7 @@ declare module "@promethean-os/openplanner-protocols" {
     "label-translation"(
       segmentId: string,
       label: string
-    ): Promise<TranslationSegment>;
+    ): Promise<TranslationSegment | null>;
     "batch-translate"(
       batch: Record<string, unknown>[]
     ): Promise<string>;
@@ -160,11 +168,10 @@ declare module "@promethean-os/openplanner-protocols" {
   // Protocol: LabelManagement
   // ---------------------------------------------------------------------------
 
-  export interface Label {
-    id: string;
-    name: string;
-    color?: string;
-    metadata?: Record<string, unknown>;
+  export interface Label extends StoredRecord {
+    name?: unknown;
+    color?: unknown;
+    metadata?: unknown;
   }
 
   export interface LabelManagement {
@@ -184,12 +191,11 @@ declare module "@promethean-os/openplanner-protocols" {
   // Protocol: UserManagement
   // ---------------------------------------------------------------------------
 
-  export interface User {
-    id: string;
+  export interface User extends StoredRecord {
     username: string;
-    email?: string;
+    email?: unknown;
     "created-at": string;
-    metadata?: Record<string, unknown>;
+    metadata?: unknown;
   }
 
   export interface UserManagement {
@@ -222,6 +228,6 @@ declare module "@promethean-os/openplanner-protocols" {
       room: string,
       eventType: string,
       data: unknown
-    ): void;
+    ): Promise<void>;
   }
 }

@@ -8,9 +8,9 @@
             [malli.error :as me]))
 
 ;; ---------------------------------------------------------------------------
-;; Envelope schema (canonical shape for all events)
-;; Mirror of event-ledger/schema.cljs — keep in sync.
-;; TODO: Extract shared schema package if this drifts.
+;; Compatibility wire envelope for the existing OpenPlanner service protocols.
+;; Clio owns canonical storage identity, schema history, admission and replay.
+;; This envelope is a payload inside a Clio event, not a second ledger contract.
 ;; ---------------------------------------------------------------------------
 
 (def ^:private from-to-schema
@@ -115,9 +115,9 @@
   (add-edge [this edge]
     "Add an edge between two nodes. Returns the edge with ID.")
   (query-neighbors [this node-id opts]
-    "Query neighboring nodes. opts: {:direction :in|:out|:both :edge-types [...]}.")
+    "Query neighboring node IDs. opts: {:direction :in|:out|:both :edge-types [...]}.")
   (traverse [this start opts]
-    "Traverse the graph from start node. opts: {:depth N :edge-types [...]}."))
+    "Return full node records reached from start. opts: {:depth N :edge-types [...]}."))
 
 ;; ---------------------------------------------------------------------------
 ;; Translation Management

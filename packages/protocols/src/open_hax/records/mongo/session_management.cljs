@@ -6,15 +6,15 @@
 
 (defn- now-iso [] (.toISOString (js/Date.)))
 
-(defn- ^:async insert-session! [coll doc]
+(defn- ^:async insert-session! [^js coll doc]
   (await (.insertOne coll doc))
   (js->clj doc :keywordize-keys true))
 
-(defn- ^:async find-session [coll session-id]
+(defn- ^:async find-session [^js coll session-id]
   (let [result (await (.findOne coll #js {"_id" session-id}))]
     (when result (js->clj result :keywordize-keys true))))
 
-(defn- ^:async update-session! [coll session-id update-doc]
+(defn- ^:async update-session! [^js coll session-id update-doc]
   (let [result (await (.findOneAndUpdate
                         coll
                         #js {"_id" session-id}
@@ -22,14 +22,14 @@
                         #js {"returnDocument" "after"}))]
     (js->clj (.-value result) :keywordize-keys true)))
 
-(defn- ^:async delete-session! [coll session-id]
+(defn- ^:async delete-session! [^js coll session-id]
   (await (.deleteOne coll #js {"_id" session-id}))
   nil)
 
-(defrecord MongoSessionManagement [db]
+(defrecord MongoSessionManagement [^js db]
   protocols/SessionManagement
   (create-session [_ opts]
-    (let [coll (.collection db SESSION_COLLECTION)
+    (let [^js coll (.collection db SESSION_COLLECTION)
           id (str (random-uuid))
           doc (clj->js (merge {:_id id
                                :actor-id "unknown"
