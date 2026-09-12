@@ -68,11 +68,11 @@
             browser (host/random-token)
             state (state! service :github browser)]
         (is (= :injected-publication-failure
-               (await (with-redefs [host/replace-private-text!
-                                   (fn [file text]
-                                     (replace! file text)
-                                     (throw (ex-info "Injected post-publication failure" {:code :injected-publication-failure})))]
-                        (refusal service :github browser state)))))
+               (with-redefs [host/replace-private-text!
+                             (fn [file text]
+                               (replace! file text)
+                               (throw (ex-info "Injected post-publication failure" {:code :injected-publication-failure})))]
+                 (await (refusal service :github browser state)))))
         (is (= 0 @calls))
         (dotimes [_ 2]
           (is (= :provider-unavailable (await (refusal (identity/open! config) :github browser state)))))

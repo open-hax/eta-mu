@@ -4,6 +4,7 @@
             [axxium.domain.identity-bootstrap :as bootstrap]
             [axxium.domain.identity-external :as external]
             [axxium.domain.identity-grants :as grants]
+            [axxium.domain.identity-passkey :as passkey-domain]
             [axxium.domain.identity-password :as password-domain]
             [axxium.extern.credential-crypto :as crypto]
             [axxium.extern.identity-host :as host]
@@ -280,21 +281,18 @@
     (let [proof (await (verify-proof! #(crypto/verify-authentication
                         {:response response :challenge (:challenge data) :origin (:public-base-url options)
                          :rp-id (:rp-id options) :credential (:credential record)})))
-          token (host/random-token)]
-      (law/require! (:verified? proof) :invalid-credentials "Invalid passkey signature")
-      (when-let [user-handle (get-in response [:response :userHandle])]
-        (law/require! (= (host/base64url (:principal-id record)) user-handle)
-                      :invalid-credentials "Passkey user handle mismatch"))
+          token (host/random-token)
+          input {:credential-id (:id response) :expected-record record :proof proof
+                 :user-handle (get-in response [:response :userHandle])
+                 :expected-user-handle (host/base64url (:principal-id record))
+                 :challenge-id challenge-id :browser-hash (host/sha256 browser-token)
+                 :token token :token-hash (host/sha256 token)}]
       (store/transact!
-       store (fn [state]
-               (let [actor (get-in state [:principals (:principal-id record)])]
-                 (law/require! (and (law/active? actor) (= record (get-in state [:credentials key])))
-                               :invalid-credentials "Passkey changed during authentication")
-                 {:operation :passkey-login :actor (:principal/id actor)
-                  :changes (into (consume-changes state challenge-id :passkey-login browser-token)
-                                 [(domain/put :credentials key (assoc-in record [:credential :counter] (:counter proof)))
-                                  (session-change actor token)])
-                  :result (login-result actor token)}))))))
+       store
+       (fn [state]
+         (let [issued-at (host/now)]
+           (passkey-domain/login-transition state (assoc input :issued-at issued-at
+                                                               :expires-at (+ issued-at session-ttl-ms)))))))))
 
 (defn accept-external!
   "Bind a verified issuer/subject; email alone never links or claims an existing account."

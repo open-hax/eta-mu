@@ -53,6 +53,8 @@ syncBuiltinESMExports();
 const { createProvider } = await import(moduleUrl);
 createProvider({ provider: 'edn', directory, 'public-base-url': 'http://localhost' });
 console.log(JSON.stringify({ key: crypto.createHash('sha256').update(fs.readFileSync(directory + '/private/master-key')).digest('hex') }));
+await new Promise(resolve => setTimeout(resolve, 20));
+process.stderr.write('startup fixture diagnostic\\n');
 `;
 
 async function until(predicate, description) {
@@ -65,12 +67,12 @@ async function until(predicate, description) {
 
 function start(moduleUrl, directory, barrier, role) {
   const child = spawn(process.execPath, ['--input-type=module', '-e', worker, moduleUrl, directory, barrier, role]);
-  let output = '';
-  child.stdout.on('data', value => { output += value; });
+  let output = '', stdout = '';
+  child.stdout.on('data', value => { output += value; stdout += value; });
   child.stderr.on('data', value => { output += value; });
   const finished = new Promise((resolve, reject) => {
     child.once('error', reject);
-    child.once('close', code => resolve({ code, output }));
+    child.once('close', code => resolve({ code, output, stdout }));
   });
   return { child, finished };
 }
@@ -88,7 +90,7 @@ test('concurrent first openers do not mistake an in-progress vault for lost hist
     fs.writeFileSync(path.join(root, 'release'), 'release');
     const results = await Promise.all(children.map(child => child.finished));
     for (const result of results) assert.equal(result.code, 0, result.output);
-    assert.equal(JSON.parse(results[0].output).key, JSON.parse(results[1].output).key);
+    assert.equal(JSON.parse(results[0].stdout).key, JSON.parse(results[1].stdout).key);
   } finally {
     fs.writeFileSync(path.join(root, 'release'), 'release');
     for (const { child } of children) if (child.exitCode === null) child.kill();

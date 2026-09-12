@@ -40,7 +40,10 @@ The guard is necessary for a reproduced compiler-runner behavior: a native async
 test can reject before its first assertion after the wrapper has already called
 `done`. An immediate `process.exit(0)` can then hide the unhandled rejection. The
 guard reports it and defers explicit exit through two event-loop check phases.
-It does not wait indefinitely for detached timers or replace native async tests.
+This covers the demonstrated `done`-before-rejection ordering; it is not a
+general guarantee that every detached asynchronous operation has completed.
+Tests must await their work. Detached timers beyond the two check phases are
+outside this guard's observation window.
 
 To reproduce against the same compiled artifact:
 

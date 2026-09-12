@@ -2,7 +2,7 @@
 category: "tasks"
 dependency: []
 type: "task"
-write-id: "1789224966015-0.2ukxnvz8zgdnciaadi"
+write-id: "1789232806543-0.0syl76xqm1fhlj02n8dh"
 title: "Make Axxium the identity owner for local Wiki CMS"
 priority: "P0"
 status: "in_progress"
@@ -63,5 +63,7 @@ Combined Axxium successor on immutable cb4 GREEN:118tests1001assertions; test191
 Prepare a separate immutable restack for the final Clio canonicalize CLI ordering correction after its published checkpoint is available. Current identity runtime/browser979c9fb/cbeadca remains frozen and has actual Codex no-major-issues plus CodeRabbit no-concrete-issue review, with hosted evidence pending. The restack must preserve identity runtime bytes, merge append-only provenance exactly, and run final advertised identity build/test/lint/native consumer gates before publishing and requesting fresh reviewers.
 
 Fresh immutable ff48 Clio CLI restack GREEN118tests1001assertions; test191files,server/lib127files0compilerwarnings,lint0/0,boundary clean,actual ESM/TCP+3native startup tests pass without skips. Direct Git diff verifies Axxium runtime and Clio runtime/kernel/canonical source unchanged from independently reviewed979 identity. Prior979/cbeadca browser sources/dist remain frozen. Actual CodeRabbit ff48 confirms CLI finding addressed without new scoped findings; new identity successor review/hosted checks remain required. External OAuth consent remains operator-configured and unclaimed.
+
+Post-maintenance PR333 review successor from64598f0: scope on axxium-wiki-identity covers current encrypted-reference readiness, pure passkey admission, retained dummy bcrypt, strict Google audience evidence, callback replay exchange counting and native fixture lifetime/stdout corrections. Actual RED126tests1074assertions16failures0errors; final guarded GREEN127tests1078assertions. Test197files/server129/lib129 all0compilerwarnings; lint0/0,boundaryclean, real compiled ESM/TCP consumer and3native startup tests0skips. Combined-stream native parsing reproduced3failures thenpassed with separate stdout. EDN24h absolute session migration is explicit; legacyJWT7days retained. Canonical CLI was rebuilt in the sibling recovery worktree and read-only-probed here before these provenance writes. Packages-only source stays frozen; published-head reviewers and root browser/global gates still required. Live external OAuth consent and PostgreSQL service remain unclaimed. Details: packages/axxium/docs/identity-review-post-recovery.md and evidence/identity-review-post-recovery.json.
 
 ---

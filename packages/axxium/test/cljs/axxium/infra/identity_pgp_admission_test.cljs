@@ -93,11 +93,11 @@
                                         (swap! calls inc)
                                         (throw (ex-info "Invalid signature" {:code :invalid-signature})))]
           (is (= :injected-publication-failure
-                 (await (with-redefs [host/replace-private-text!
-                                     (fn [file text]
-                                       (replace! file text)
-                                       (throw (ex-info "Injected post-publication failure" {:code :injected-publication-failure})))]
-                          (failure #(identity/pgp-login! service browser request))))))
+                 (with-redefs [host/replace-private-text!
+                               (fn [file text]
+                                 (replace! file text)
+                                 (throw (ex-info "Injected post-publication failure" {:code :injected-publication-failure})))]
+                   (await (failure #(identity/pgp-login! service browser request))))))
           (is (= 0 @calls) "The crypto boundary runs only after durable admission returns")
           (let [reopened (identity/open! (options directory))]
             (dotimes [_ 2]

@@ -114,11 +114,11 @@
         (with-redefs [crypto/verify-authentication (fn ^:async counted-proof [input]
                                                    (swap! calls inc) (await (verify! input)))]
           (is (= :injected-publication-failure
-                 (await (with-redefs [host/replace-private-text!
-                                     (fn [file text]
-                                       (replace! file text)
-                                       (throw (ex-info "Injected post-publication failure" {:code :injected-publication-failure})))]
-                          (failure #(identity/passkey-authentication-verify! service browser request))))))
+                 (with-redefs [host/replace-private-text!
+                               (fn [file text]
+                                 (replace! file text)
+                                 (throw (ex-info "Injected post-publication failure" {:code :injected-publication-failure})))]
+                   (await (failure #(identity/passkey-authentication-verify! service browser request))))))
           (is (= 0 @calls))
           (dotimes [_ 2]
             (is (= :invalid-credentials

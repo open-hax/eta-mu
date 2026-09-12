@@ -52,8 +52,9 @@
     (if (or (str/blank? email) (str/blank? secret))
       {:status 400 :body {:error "email and password are required"}}
       (try
-        (let [actor (await (db/query-one "SELECT * FROM actors WHERE email = $1 AND status = 'active'" [email]))]
-          (when-not (and actor (await (password/verify-password secret (:password_hash actor))))
+        (let [actor (await (db/query-one "SELECT * FROM actors WHERE email = $1 AND status = 'active'" [email]))
+              verified? (await (password/verify-password-or-dummy secret (:password_hash actor)))]
+          (when-not (and actor verified?)
             (throw (http-error 401 "invalid_credentials" "Invalid email or password")))
           (let [{:keys [token]} (await (session/create-session! actor))]
             (login-result actor token)))

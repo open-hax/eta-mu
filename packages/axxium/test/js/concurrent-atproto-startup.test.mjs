@@ -64,6 +64,8 @@ try {
   console.log(JSON.stringify({ jwksStatus: jwks.status, metadataStatus: metadata.status,
     publicKeyDigest: crypto.createHash('sha256').update(JSON.stringify(publicKeys)).digest('hex'),
     keyCount: publicKeys.keys.length }));
+await new Promise(resolve => setTimeout(resolve, 20));
+process.stderr.write('startup fixture diagnostic\\n');
 } finally { await app.close(); }
 `;
 
@@ -77,12 +79,12 @@ async function until(predicate, description) {
 
 function start(moduleUrl, directory, barrier, role, scenario) {
   const child = spawn(process.execPath, ['--input-type=module', '-e', worker, moduleUrl, directory, barrier, role, scenario]);
-  let output = '';
-  child.stdout.on('data', value => { output += value; });
+  let output = '', stdout = '';
+  child.stdout.on('data', value => { output += value; stdout += value; });
   child.stderr.on('data', value => { output += value; });
   const finished = new Promise((resolve, reject) => {
     child.once('error', reject);
-    child.once('close', code => resolve({ code, output }));
+    child.once('close', code => resolve({ code, output, stdout }));
   });
   return { child, finished };
 }
@@ -112,7 +114,7 @@ for (const scenario of ['winner-committed', 'contention']) {
       }
       const results = await Promise.all(children.map(child => child.finished));
       for (const result of results) assert.equal(result.code, 0, result.output);
-      const proofs = results.map(result => JSON.parse(result.output.trim().split('\n').at(-1)));
+      const proofs = results.map(result => JSON.parse(result.stdout.trim().split('\n').at(-1)));
       for (const proof of proofs) {
         assert.equal(proof.jwksStatus, 200);
         assert.equal(proof.metadataStatus, 200);

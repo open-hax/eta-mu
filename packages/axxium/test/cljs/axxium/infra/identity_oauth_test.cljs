@@ -76,7 +76,9 @@
         (try
           (await (oauth/exchange! :google (assoc config :client-id "different-client") {:code "code" :verifier "verifier" :nonce nonce :redirect-uri "http://localhost/callback"}))
           (is false "audience mismatch must reject a validly signed ID token")
-          (catch :default _ (is true))))
+          (catch :default error
+            (is (= :invalid-provider-response (:code (ex-data error))))
+            (is (= "aud" (:claim (ex-data error)))))))
       (finally (await (http/close! issuer))))))
 
 (deftest ^:async atproto-client-key-and-metadata-restart-test

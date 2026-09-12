@@ -24,10 +24,10 @@
                  :atproto {:client-id (host/env "ATPROTO_OAUTH_CLIENT_ID")}}}))
 
 (defn health-response
-  "A healthy process must still replay its current authoritative identity facts."
+  "Readiness requires current identity facts and their authenticated private material."
   [{:keys [store]}]
   (try
-    (store/state store)
+    (store/check-readiness! store)
     {:body {:ok true :service "axxium" :provider (name (:provider store))}}
     (catch :default _
       {:status 503 :body {:ok false :service "axxium" :provider (name (:provider store))}})))

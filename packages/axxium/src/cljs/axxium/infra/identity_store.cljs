@@ -22,6 +22,18 @@
   ;; Durable consumption facts win even if a crash preceded checkpoint cleanup.
   (projection/state (history store) {:challenges (ceremonies/entries store)} domain/apply-event))
 
+(defn check-readiness!
+  "Authenticate current private references while excluding concurrent checkpoint cleanup."
+  [store]
+  (ceremonies/locked!
+   store
+   (fn []
+     (let [current (state store)
+           records (concat (vals (:credentials current)) (vals (:challenges current)))]
+       (doseq [reference (distinct (keep :private-ref records))]
+         (law/require! (some? (unseal store reference)) :missing-secret "Referenced identity material is unavailable"))
+       true))))
+
 (defn- ensure-ledger! [file]
   (when-not (fs/exists? file)
     (try (ledger/create-ledger! file)
