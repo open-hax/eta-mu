@@ -152,6 +152,9 @@ if (command === 'build') { fs.mkdirSync('packages/sol/dist', { recursive: true }
     { SOL_FIXTURE_LINT: "src/private.cljs:1:1: warning: private diagnostic" },
     { SOL_FIXTURE_LINT: "linting took 10ms, errors: 0, warnings: 1" },
     { SOL_FIXTURE_TEST: "warning: private diagnostic" },
+    { SOL_FIXTURE_TEST: "[WARNING] private diagnostic" },
+    { SOL_FIXTURE_BUILD: "[Warning] private diagnostic" },
+    { SOL_FIXTURE_BUILD: "Build completed. (12 files, 1 compiled, 2 warnings, 0.1s)" },
     { SOL_FIXTURE_BUILD: "WARNING: private diagnostic" },
   ]) {
     const result = run(fixture);

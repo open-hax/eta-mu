@@ -53,6 +53,13 @@
   (boolean (and (string? value) (<= (count value) 254)
                 (re-matches #"[^\s@]+@[^\s@]+\.[^\s@]+" value))))
 
+(defn validate-display-name!
+  "An optional display name is bounded text, never an arbitrary client value."
+  [value]
+  (require! (or (nil? value) (and (string? value) (<= (count value) 256)))
+            :invalid-display-name "Display name must be text of at most 256 characters")
+  value)
+
 (defn active?
   "Inactive identities cannot authenticate even with an unexpired session."
   [principal]

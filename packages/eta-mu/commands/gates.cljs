@@ -182,7 +182,7 @@
         ms (- (js/Date.now) started)
         warn (when no-warning
                (->> (str/split-lines combined)
-                    (filter #(re-find #"(^|\s)warning([,:\s]|$)" (str/lower-case %)))
+                    (filter #(re-find #"(^|\s|\[)warning([,:\s]|\]|$)|(^|\s|\()[1-9][0-9]*\s+warnings([,:\s]|\)|$)|(^|\s)warnings:\s*[1-9][0-9]*([,:\s]|$)" (str/lower-case %)))
                     seq))
         fail (cond
                (not (zero? exit)) (str "exit " exit)

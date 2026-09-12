@@ -1,100 +1,75 @@
 (ns axxium.routes.actor
-  "Actor registry routes for Axxium."
+  "Retained actor registry operations; native route adapters live in extern."
   (:require [axxium.auth.session :as session]
             [axxium.db :as db]
-            [axxium.extern.fastify :as fastify]
+            [axxium.extern.legacy-http :as http]
             [axxium.infra.principal-binding :as principal-binding]))
 
-(defn- sanitize-actor [actor]
-  (dissoc actor :password_hash))
+(defn- sanitize-actor [actor] (dissoc actor :password_hash))
+(def unauthorized {:status 401 :body {:error "Unauthorized"}})
 
-(defn- ^:async handle-list-actors [req reply]
-  (let [ctx (await (session/resolve-auth-context req))]
-    (if-not ctx
-      (.send (.code reply 401) (clj->js {:error "Unauthorized"}))
-      (let [limit (js/parseInt (or (aget (aget req "query") "limit") "50"))
-            offset (js/parseInt (or (aget (aget req "query") "offset") "0"))
-            actors (await (db/query-all
-                           "SELECT * FROM actors WHERE status = 'active' ORDER BY created_at DESC LIMIT $1 OFFSET $2"
-                           [limit offset]))]
-        (.send reply (clj->js {:ok true
-                              :actors (map sanitize-actor actors)
-                              :count (count actors)}))))))
+(defn- wrap [handler]
+  (http/handler handler {:read-token session/extract-auth-token}))
 
-(defn- ^:async handle-get-actor [req reply]
-  (let [ctx (await (session/resolve-auth-context req))]
-    (if-not ctx
-      (.send (.code reply 401) (clj->js {:error "Unauthorized"}))
-      (let [actor-id (aget (aget req "params") "id")
-            actor (await (db/query-one "SELECT * FROM actors WHERE id = $1" [actor-id]))]
-        (if-not actor
-          (.send (.code reply 404) (clj->js {:error "Actor not found"}))
-          (.send reply (clj->js {:ok true
-                                :actor (sanitize-actor actor)})))))))
+(defn- ^:async list-actors [request]
+  (if-not (await (session/resolve-auth-context request)) unauthorized
+    (let [limit (http/parse-integer (get-in request [:query :limit]) "50")
+          offset (http/parse-integer (get-in request [:query :offset]) "0")
+          actors (await (db/query-all
+                         "SELECT * FROM actors WHERE status = 'active' ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+                         [limit offset]))]
+      {:body {:ok true :actors (mapv sanitize-actor actors) :count (count actors)}})))
 
-(defn- ^:async handle-get-me [req reply]
-  (let [ctx (await (session/resolve-auth-context req))]
-    (if-not ctx
-      (.send (.code reply 401) (clj->js {:error "Unauthorized"}))
-      (let [actor (await (db/query-one "SELECT * FROM actors WHERE id = $1" [(:auth/actor-id ctx)]))]
-        (if-not actor
-          (.send (.code reply 404) (clj->js {:error "Actor not found"}))
-          (.send reply (clj->js {:ok true
-                                :actor (sanitize-actor actor)})))))))
+(defn- ^:async get-actor [request]
+  (if-not (await (session/resolve-auth-context request)) unauthorized
+    (if-let [actor (await (db/query-one "SELECT * FROM actors WHERE id = $1" [(get-in request [:params :id])]))]
+      {:body {:ok true :actor (sanitize-actor actor)}}
+      {:status 404 :body {:error "Actor not found"}})))
 
-(defn- ^:async handle-get-entity [req reply]
-  (let [ctx (await (session/resolve-auth-context req))]
-    (if-not ctx
-      (.send (.code reply 401) (clj->js {:error "Unauthorized"}))
-      (let [entity-id (aget (aget req "params") "id")
-            entity (await (db/query-one "SELECT * FROM entities WHERE id = $1" [entity-id]))]
-        (if-not entity
-          (.send (.code reply 404) (clj->js {:error "Entity not found"}))
-          (.send reply (clj->js {:ok true
-                                :entity entity})))))))
+(defn- ^:async get-me [request]
+  (if-let [context (await (session/resolve-auth-context request))]
+    (if-let [actor (await (db/query-one "SELECT * FROM actors WHERE id = $1" [(:auth/actor-id context)]))]
+      {:body {:ok true :actor (sanitize-actor actor)}}
+      {:status 404 :body {:error "Actor not found"}})
+    unauthorized))
 
-(defn ^:async handle-get-runtime-binding
-  "Authenticated projection of one active actor/entity identity for runtime
-   event attribution. Does not return roles or capabilities."
-  [req reply]
-  (let [ctx (await (session/resolve-auth-context req))]
-    (if-not ctx
-      (fastify/send-json! reply 401 {:error "Unauthorized"})
-      (let [actor-id (fastify/request-param req "id")]
-        (try
-          (if-let [binding (await (principal-binding/resolve-runtime-binding actor-id))]
-            (fastify/send-json! reply 200 {:ok true :binding binding})
-            (fastify/send-json! reply 404 {:error "Runtime principal not found"}))
-          (catch :default error
-            (let [reason (:reason (ex-data error))]
-              (if (= :unsupported-principal-kind reason)
-                (fastify/send-json! reply 422
-                                    {:error "Unsupported runtime principal kind"
-                                     :code "unsupported_principal_kind"})
-                (throw error)))))))))
+(defn- ^:async get-entity [request]
+  (if-not (await (session/resolve-auth-context request)) unauthorized
+    (if-let [entity (await (db/query-one "SELECT * FROM entities WHERE id = $1" [(get-in request [:params :id])]))]
+      {:body {:ok true :entity entity}}
+      {:status 404 :body {:error "Entity not found"}})))
 
-(defn- ^:async handle-update-capabilities [req reply]
-  (let [ctx (await (session/resolve-auth-context req))]
-    (if-not ctx
-      (.send (.code reply 401) (clj->js {:error "Unauthorized"}))
-      (let [actor-id (aget (aget req "params") "id")
-            requester-caps (set (or (:auth/capabilities ctx) []))
-            body (js->clj (or (aget req "body") #js {}) :keywordize-keys true)
-            capabilities (:capabilities body)]
-        (if (contains? requester-caps :axxium/admin)
-          (do
-            (await (db/query
-                    "UPDATE actors SET capabilities = $1, updated_at = NOW() WHERE id = $2"
-                    [(clj->js capabilities) actor-id]))
-            (.send reply (clj->js {:ok true})))
-          (.send (.code reply 403) (clj->js {:error "Forbidden"})))))))
+(defn- ^:async get-runtime-binding [request]
+  (if-not (await (session/resolve-auth-context request)) unauthorized
+    (try
+      (if-let [binding (await (principal-binding/resolve-runtime-binding (get-in request [:params :id])))]
+        {:body {:ok true :binding binding}}
+        {:status 404 :body {:error "Runtime principal not found"}})
+      (catch :default error
+        (if (= :unsupported-principal-kind (:reason (ex-data error)))
+          {:status 422 :body {:error "Unsupported runtime principal kind" :code "unsupported_principal_kind"}}
+          (throw error))))))
 
-(defn register-actor-routes!
-  "Register actor registry routes on the Fastify app."
-  [app]
-  (.get app "/api/actors" handle-list-actors)
-  (fastify/register-get! app "/api/actors/:id/runtime-binding" handle-get-runtime-binding)
-  (.get app "/api/actors/:id" handle-get-actor)
-  (.get app "/api/actors/me" handle-get-me)
-  (.get app "/api/entities/:id" handle-get-entity)
-  (.post app "/api/actors/:id/capabilities" handle-update-capabilities))
+(def handle-get-runtime-binding
+  "Compatible native handler created by the extern transport adapter."
+  (wrap get-runtime-binding))
+
+(defn- ^:async update-capabilities [request]
+  (if-let [context (await (session/resolve-auth-context request))]
+    (if (contains? (set (or (:auth/capabilities context) [])) :axxium/admin)
+      (do
+        (await (db/query "UPDATE actors SET capabilities = $1, updated_at = NOW() WHERE id = $2"
+                         [(get-in request [:body :capabilities]) (get-in request [:params :id])]))
+        {:body {:ok true}})
+      {:status 403 :body {:error "Forbidden"}})
+    unauthorized))
+
+(def register-actor-routes!
+  "Register actor routes through the retained native function signature."
+  (http/route-registrar
+   [{:method "GET" :path "/api/actors" :handler (wrap list-actors)}
+    {:method "GET" :path "/api/actors/:id/runtime-binding" :handler handle-get-runtime-binding}
+    {:method "GET" :path "/api/actors/:id" :handler (wrap get-actor)}
+    {:method "GET" :path "/api/actors/me" :handler (wrap get-me)}
+    {:method "GET" :path "/api/entities/:id" :handler (wrap get-entity)}
+    {:method "POST" :path "/api/actors/:id/capabilities" :handler (wrap update-capabilities)}]))

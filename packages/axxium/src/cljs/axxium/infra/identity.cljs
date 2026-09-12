@@ -44,6 +44,7 @@
     principal))
 
 (defn- principal [username email display-name]
+  (law/validate-display-name! display-name)
   (law/validate-principal!
    (cond-> {:principal/id (str "actor_" (host/id))
             :principal/entity-id (str "entity_" (host/id))
@@ -65,6 +66,7 @@
 (defn ^:async signup!
   "Atomically register username/email aliases, credential and the first session."
   [{:keys [store]} {:keys [username email password display-name]}]
+  (law/validate-display-name! display-name)
   (let [email (shape/normalize-identifier email)
         username (shape/normalize-identifier username)]
     (law/require! (law/valid-username? username) :invalid-username "Username must be 3–64 letters, numbers, dots, underscores or hyphens")
@@ -105,6 +107,7 @@
 (defn ^:async bootstrap!
   "Provision the explicit first administrator atomically; never promote an existing signup."
   [{:keys [store]} {:keys [username email password display-name principal-id]}]
+  (law/validate-display-name! display-name)
   (let [username (shape/normalize-identifier username)
         email (shape/normalize-identifier email)
         state (store/state store)

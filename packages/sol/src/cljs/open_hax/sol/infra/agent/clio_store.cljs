@@ -5,6 +5,7 @@
             [clio.extern.js.fs :as fs]
             [clojure.string :as str]
             [open-hax.sol.domain.episode-ledger :as episode-ledger]
+            [open-hax.sol.extern.node-fs :as node-fs]
             [open-hax.sol.law.episode-event :as episode-law]))
 
 (defn canonical-events
@@ -24,12 +25,19 @@
   (let [ledger-file (str directory "/events.edn")
         schema-directory (str directory "/schemas")]
     (when-not (fs/exists? ledger-file)
-      (when (seq (fs/list-files directory))
+      (when (and (seq (fs/list-files directory))
+                 (not (fs/exists? ledger-file)))
         (throw (ex-info "Sol Clio ledger is missing from an initialized directory"
                         {:sol/error :sol.clio/missing-ledger
                          :path ledger-file})))
       (fs/ensure-dir! directory)
-      (ledger/create-ledger! ledger-file))
+      (try
+        (ledger/create-ledger! ledger-file)
+        (catch :default cause
+          ;; Another opener may have won after the existence check. Only that
+          ;; collision is recoverable; the winning history is validated below.
+          (when-not (node-fs/already-exists-error? cause)
+            (throw cause)))))
     (let [store {:ledger-file ledger-file
                  :clio-runtime (runtime/open schema-directory episode-law/catalog)}]
       (canonical-events store)

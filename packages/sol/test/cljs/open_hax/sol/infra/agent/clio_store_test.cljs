@@ -3,6 +3,7 @@
             ["node:os" :as os]
             ["node:path" :as path]
             [cljs.test :refer [deftest is testing]]
+            [clio.extern.js.fs :as clio-fs]
             [clio.infra.ledger :as ledger]
             [clio.infra.runtime :as clio-runtime]
             [open-hax.sol.infra.agent.clio-store :as clio-store]
@@ -36,6 +37,55 @@
 (def second-envelope
   (episode-event/envelope context "wire-event-2" "2026-09-11T00:00:01.000Z"
                           "wire-event-1" "sol.turn.started" {:status "running"}))
+
+(deftest concurrent-first-open-reuses-and-validates-the-winning-ledger
+  (doseq [corrupt? [false true]]
+    (let [directory (temporary-directory)
+          create! ledger/create-ledger!
+          intercepted? (atom false)]
+      (try
+        (with-redefs [ledger/create-ledger!
+                      (fn [file]
+                        (when (compare-and-set! intercepted? false true)
+                          (create! file)
+                          (when corrupt? (fs/appendFileSync file "{:unfinished\n")))
+                        (create! file))]
+          (let [result (try {:store (clio-store/open-store directory)}
+                            (catch :default cause {:error (ex-data cause)}))]
+            (if corrupt?
+              (is (= :clio.ledger/invalid-edn (get-in result [:error :clio/error])))
+              (do
+                (is (some? (:store result)))
+                (when-let [store (:store result)]
+                  (is (empty? (clio-store/canonical-events store)))
+                  (clio-store/append-envelope! store first-envelope)
+                  (is (= [first-envelope] (clio-store/read-envelopes store))))))))
+        (finally (remove-directory! directory))))))
+
+(deftest winner-appearing-during-directory-inspection-preserves-history
+  (let [directory (temporary-directory)
+        list-files clio-fs/list-files
+        pending? (atom true)]
+    (try
+      (with-redefs [clio-fs/list-files
+                    (fn [path]
+                      (when (compare-and-set! pending? true false)
+                        (clio-store/append-envelope! (clio-store/open-store directory)
+                                                     first-envelope))
+                      (list-files path))]
+        (is (= [first-envelope]
+               (clio-store/read-envelopes (clio-store/open-store directory)))))
+      (finally (remove-directory! directory)))))
+
+(deftest non-collision-create-errors-remain-errors
+  (let [directory (temporary-directory)
+        failure (ex-info "Injected write failure" {:test/failure :write})]
+    (try
+      (with-redefs [ledger/create-ledger! (fn [_] (throw failure))]
+        (is (identical? failure
+                        (try (clio-store/open-store directory)
+                             (catch :default cause cause)))))
+      (finally (remove-directory! directory)))))
 
 (defn- append-with-overlap!
   "Preempt one already-planned append with a second store's real kernel write."

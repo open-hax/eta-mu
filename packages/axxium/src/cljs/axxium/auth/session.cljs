@@ -5,15 +5,12 @@
   (:require [axxium.auth.token :as token]
             [axxium.config :as cfg]
             [axxium.db :as db]
-            [clojure.string :as str]
-            ["node:crypto" :as crypto]))
+            [axxium.extern.identity-host :as host]
+            [axxium.extern.legacy-http :as http]))
 
 (def COOKIE-NAME (cfg/get-in-config [:session/cookie-name]))
 
-(defn- hash-token [token]
-  (-> (.createHash crypto "sha256")
-      (.update token)
-      (.digest "hex")))
+(defn- hash-token [token] (host/sha256 token))
 
 (defn ^:async create-session!
   "Create a session for an actor. Returns {:token token :actor actor}."
@@ -22,7 +19,7 @@
         token-hash (hash-token token)
         actor-id (or (:actor/id actor) (:id actor))
         expiry-hours (cfg/get-in-config [:jwt/expiry-hours])
-        expires-at (js/Date. (+ (.getTime (js/Date.)) (* expiry-hours 3600000)))]
+        expires-at (http/expiry-iso expiry-hours)]
     (await (db/query
             "INSERT INTO sessions (actor_id, token_hash, expires_at) VALUES ($1, $2, $3)"
             [actor-id token-hash expires-at]))
@@ -40,8 +37,7 @@
                          JOIN sessions s ON a.id = s.actor_id
                          WHERE a.id = $1 AND a.status = 'active' AND s.token_hash = $2 AND s.expires_at > NOW()"
                         [actor-id (hash-token token)]))]
-      (when actor
-        (js->clj actor :keywordize-keys true)))
+      (when actor (http/decode actor)))
     (catch :default _ nil)))
 
 (defn delete-session!
@@ -50,31 +46,22 @@
   (db/query "DELETE FROM sessions WHERE token_hash = $1"
             [(hash-token token)]))
 
-(defn set-session-cookie
+(def set-session-cookie
   "Set the session cookie on a Fastify reply."
-  [reply token]
-  (let [cookie-opts #js {:path "/"
+  (http/cookie-setter COOKIE-NAME
+                     (fn [] {:path "/"
                          :httpOnly true
                          :secure (cfg/get-in-config [:session/cookie-secure])
                          :sameSite (cfg/get-in-config [:session/cookie-same-site])
-                         :maxAge (* (cfg/get-in-config [:jwt/expiry-hours]) 3600000)}]
-    (.setCookie reply COOKIE-NAME token cookie-opts)))
+                         :maxAge (* (cfg/get-in-config [:jwt/expiry-hours]) 3600000)})))
 
-(defn clear-session-cookie
+(def clear-session-cookie
   "Clear the session cookie."
-  [reply]
-  (.clearCookie reply COOKIE-NAME #js {:path "/"}))
+  (http/cookie-clearer COOKIE-NAME))
 
-(defn extract-auth-token
+(def extract-auth-token
   "Extract bearer token from request headers or cookie."
-  [req]
-  (let [headers (aget req "headers")
-        auth-header (str (or (aget headers "authorization") ""))
-        cookie-token (some-> req (aget "cookies") (aget COOKIE-NAME))]
-    (or
-     (when (str/starts-with? (str/lower-case auth-header) "bearer ")
-       (str/trim (subs auth-header 7)))
-     cookie-token)))
+  (http/token-reader COOKIE-NAME))
 
 (defn actor->auth-context
   "Project an authenticated actor row into the canonical request context."
@@ -82,12 +69,11 @@
   (cond-> {:auth/actor-id (:id actor)
            :auth/entity-id (:entity_id actor)
            :auth/email (:email actor)
-           :auth/capabilities (js->clj (:capabilities actor) :keywordize-keys true)
-           :auth/roles (js->clj (:roles actor) :keywordize-keys true)}
+           :auth/capabilities (http/decode (:capabilities actor))
+           :auth/roles (http/decode (:roles actor))}
     (:org_id actor) (assoc :auth/org-id (:org_id actor))))
 
-(defn ^:async resolve-auth-context
+(def resolve-auth-context
   "Resolve auth context from request. Returns promise of context map or nil."
-  [req]
-  (when-let [actor (await (verify-session (extract-auth-token req)))]
-    (actor->auth-context actor)))
+  (http/context-resolver extract-auth-token
+                         (fn [token] (verify-session token)) actor->auth-context))

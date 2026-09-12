@@ -1,22 +1,25 @@
 (ns axxium.config
   "Axxium runtime configuration from environment."
-  (:require [clojure.string :as str]))
+  (:require [axxium.extern.environment :as environment]
+            [clojure.string :as str]))
 
 (defn- env
   ([key] (env key nil))
   ([key default]
-   (or (aget (.-env js/process) key)
+   (or (environment/read-env key)
        default)))
 
 (defn- env-int [key default]
   (let [v (env key)]
-    (if v (js/parseInt v 10) default)))
+    (if v (environment/parse-integer v) default)))
 
 (defn- env-bool [key default]
   (let [v (env key)]
     (if v (= "true" (str/lower-case v)) default)))
 
-(def config
+(defn read-config
+  "Read the legacy environment configuration as a CLJS map."
+  []
   {:axxium/env (or (env "NODE_ENV") "development")
    :axxium/port (env-int "AXXIUM_PORT" 8787)
    :axxium/host (env "AXXIUM_HOST" "0.0.0.0")
@@ -47,6 +50,8 @@
    
    ;; Password hashing
    :password/salt-rounds (env-int "BCRYPT_SALT_ROUNDS" 12)})
+
+(def config (read-config))
 
 (defn get-in-config
   "Retrieve a value from config by keyword key or vector path.

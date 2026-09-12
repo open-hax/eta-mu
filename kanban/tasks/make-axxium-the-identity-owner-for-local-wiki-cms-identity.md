@@ -2,10 +2,10 @@
 category: "tasks"
 dependency: []
 type: "task"
-write-id: "1789189650496-0.0fzv9duv8loky8hv9gum"
+write-id: "1789201478366-0.lsl0vl4h7ur45avk6v4"
 title: "Make Axxium the identity owner for local Wiki CMS"
 priority: "P0"
-status: "breakdown"
+status: "in_progress"
 uuid: "axxium-wiki-identity"
 created_at: "2026-09-12T05:07:20.177Z"
 ---
@@ -24,3 +24,8 @@ Axxium owns identity for the local Wiki CMS and provides the same verified princ
 
 ## Verification
 Run package build/test/lint, focused cryptographic and replay tests, then the live Knoxx browser tour with source review and agent updates. Record failures and fixes in the sandbox obstacle report.
+
+---
+Recovery and current proof: restored missing lawful ready/todo/in_progress transitions from retained breakdown state after the external worktree loss; no hand-edited status. Axxium correctness checkpoint published a7b19825fb5d7c624c38f1d41043c42e92d7f0c3 (exact local c512bd8). Integrated 66 tests/632 assertions, both release outputs118files with0warnings, lint0/0, built ESM/realTCP identity proof pass. Added fresh-session credential inventory/revocation with configured-provider last-method protection; fixed all seven Codex findings through pure external admission, native Fastify/SDK interfaces, dummy password work, browser-cookie refresh, retained-ledger vault guard and safe cleanup contention. Strict legacy boundary remains56violations/exit1 and live OAuth consent remains uncompleted pending provider configuration. PR333 current-head three-reviewer loop is active; root owns browser integration and no merge occurs before remaining issues/gates resolve.
+
+---

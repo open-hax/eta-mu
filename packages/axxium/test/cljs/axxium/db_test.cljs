@@ -66,7 +66,7 @@
                   [invalid-actor-id agent-entity-id human-id]))
           (is false "non-organization entity must not be accepted as org_id")
           (catch :default error
-            (is (= "23514" (.-code error)))))
+            (is (= "23514" (:code (ex-data error))))))
 
         (try
           (await (db/query
@@ -74,7 +74,7 @@
                   [org-id]))
           (is false "referenced organization entity kind must remain org")
           (catch :default error
-            (is (= "23514" (.-code error)))))
+            (is (= "23514" (:code (ex-data error))))))
 
         (finally
           (try
@@ -82,4 +82,4 @@
             (await (db/query "DELETE FROM entities WHERE id IN ($1, $2, $3)"
                              [org-id human-id agent-entity-id]))
             (catch :default _ nil))
-          (await (.end @db/pool)))))))
+          (await (db/close!)))))))

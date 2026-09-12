@@ -195,7 +195,7 @@
              (str "if ! grep -Fq -- " (shell-quote expect) " \"$eta_gate_log\"; then\n"
                   "  echo '::error::Gate expected output was not found'\n  exit 1\nfi\n"))
            (when no-warning
-             "if grep -Eiq '(^|[[:space:]])warning([,:[:space:]]|$)' \"$eta_gate_log\"; then\n  echo '::error::Gate emitted warning diagnostics'\n  exit 1\nfi\n")))))
+             "if grep -Eiq '(^|[[:space:]]|\\[)warning([,:[:space:]]|\\]|$)|(^|[[:space:]]|\\()[1-9][0-9]*[[:space:]]+warnings([,:[:space:]]|\\)|$)|(^|[[:space:]])warnings:[[:space:]]*[1-9][0-9]*([,:[:space:]]|$)' \"$eta_gate_log\"; then\n  echo '::error::Gate emitted warning diagnostics'\n  exit 1\nfi\n")))))
 
 (defn- gh-step [registry s]
   (cond-> {}

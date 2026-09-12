@@ -26,3 +26,26 @@
           (is (= original (fs/readFileSync ledger "utf8")))
           (is (fs/existsSync (str directory "/private/" reference)))))
       (finally (fs/rmSync directory #js {:recursive true :force true})))))
+
+(deftest retained-private-state-never-authorizes-a-new-identity-history
+  (doseq [survivor [:key :blob]]
+    (let [directory (fs/mkdtempSync (path/join (os/tmpdir) "axxium-private-restore-"))
+          ledger (str directory "/identity.edn")
+          key (str directory "/private/master-key")]
+      (try
+        (let [provider (store/create-provider {:provider :edn :directory directory})
+              reference (store/seal! provider {:fixture "private survivor"})
+              blob (str directory "/private/" reference)]
+          (fs/unlinkSync ledger)
+          (fs/rmSync (str directory "/schemas") #js {:recursive true :force true})
+          (fs/unlinkSync (if (= survivor :key) blob key))
+          (let [surviving-file (if (= survivor :key) key blob)
+                original (.toString (fs/readFileSync surviving-file) "base64")]
+            (is (= :missing-ledger
+                   (try (store/create-provider {:provider :edn :directory directory})
+                        nil (catch :default cause (:code (ex-data cause))))))
+            (is (false? (fs/existsSync ledger)))
+            (is (false? (fs/existsSync (str directory "/schemas"))))
+            (is (= original (.toString (fs/readFileSync surviving-file) "base64")))
+            (when (= survivor :blob) (is (false? (fs/existsSync key))))))
+        (finally (fs/rmSync directory #js {:recursive true :force true}))))))

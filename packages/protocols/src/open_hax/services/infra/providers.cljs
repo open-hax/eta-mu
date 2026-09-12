@@ -15,6 +15,7 @@
 (defmulti create-provider :provider)
 
 (defmethod create-provider :edn [{:keys [directory overrides]}]
+  (law/validate-overrides! overrides)
   (law/require! (and (string? directory) (seq directory)) :missing-directory
                 "The EDN service provider requires a directory")
   (let [provider (edn/create-edn-services directory)]
@@ -27,6 +28,7 @@
 
 (defmethod create-provider :mongo [{:keys [db document-collection overrides]
                                    :or {document-collection "documents"}}]
+  (law/validate-overrides! overrides)
   (law/require! (some? db) :missing-database
                 "The Mongo provider requires an explicitly connected database")
   (services/compose

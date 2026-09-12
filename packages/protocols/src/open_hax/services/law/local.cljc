@@ -27,6 +27,18 @@
   (when-not condition
     (throw (ex-info message {:services/error type}))))
 
+(def service-keys
+  #{:events :sessions :documents :graph :translations :labels :users :realtime})
+
+(defn validate-overrides!
+  "Refuse misspelled or malformed service selection before any provider is opened."
+  [overrides]
+  (require! (or (nil? overrides) (map? overrides)) :invalid-service-overrides
+            "Service overrides must be a map")
+  (require! (every? service-keys (keys overrides)) :unknown-service-override
+            "Service overrides must name an existing service protocol")
+  overrides)
+
 (def ^:private field-operators
   #{:$eq :$ne :$in :$nin :$exists :$gt :$gte :$lt :$lte})
 

@@ -109,6 +109,14 @@
         (await (run))
         (finally (fs/closeSync fd))))))
 
+(defn private-state-exists?
+  "Surviving vault contents prove initialization even if public files were lost."
+  [directory]
+  (let [private-path (str directory "/private")]
+    (and (fs/existsSync private-path)
+         (or (.isSymbolicLink (fs/lstatSync private-path))
+             (seq (fs/readdirSync private-path))))))
+
 (defn open-vault!
   "Keep a persistent AES key outside identity facts, with owner-only permissions."
   [directory existing?]

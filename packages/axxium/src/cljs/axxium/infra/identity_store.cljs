@@ -28,10 +28,12 @@
         schemas (str directory "/schemas")
         ;; Surviving facts are proof of an existing encrypted identity store
         ;; even when its schema directory was lost during a partial restore.
-        existing? (or (fs/exists? schemas) (fs/exists? file))
+        existing? (or (fs/exists? schemas) (fs/exists? file) (host/private-state-exists? directory))
+        _ (when-not (fs/exists? file)
+            (law/require! (not existing?) :missing-ledger
+                          "Identity state survives but identity.edn is missing; restore the original history"))
         vault (host/open-vault! directory existing?)]
     (when-not (fs/exists? file)
-      (law/require! (not existing?) :missing-ledger "Identity schemas exist but identity.edn is missing")
       (ledger/create-ledger! file))
     (let [ceremony-file (str directory "/ceremonies.edn")
           _ (when-not (fs/exists? ceremony-file) (ledger/create-ledger! ceremony-file))

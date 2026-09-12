@@ -10,7 +10,7 @@
     "watch": "shadow-cljs watch server",
     "start": "node dist/server.js",
     "typecheck": "shadow-cljs compile server",
-    "test": "shadow-cljs compile test && node target/test.cjs",
+    "test": "node scripts/run-tests.mjs",
     "verify:identity": "node scripts/verify-identity.mjs",
     "lint": "clj-kondo --lint src/cljs test/cljs",
     "lint:kondo": "pnpm lint",
