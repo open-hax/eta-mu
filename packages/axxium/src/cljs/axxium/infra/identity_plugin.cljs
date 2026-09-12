@@ -10,9 +10,12 @@
   "One method registry drives provider selection for human and agent clients."
   [service]
   (let [methods (mapv (fn [[id label kind]]
-                        {:id (name id) :label label :kind kind
-                         :available (if (#{:password :pgp :passkey} id) true (identity-oauth/configured? service id))
-                         :loginUrl (str "/api/auth/providers/" (name id) "/login")})
+                        (cond-> {:id (name id) :label label :kind kind
+                                 :available (if (#{:password :pgp :passkey} id) true (identity-oauth/configured? service id))}
+                          (= id :password) (assoc :loginUrl "/api/auth/local/login" :loginMethod "POST")
+                          (#{:github :discord :google :atproto} id)
+                          (assoc :loginUrl (str "/api/auth/providers/" (name id) "/login") :loginMethod "GET"
+                                 :linkUrl (str "/api/auth/providers/" (name id) "/link") :linkMethod "POST")))
                       [[:password "Username or email and password" "password"]
                        [:github "GitHub" "oauth"] [:discord "Discord" "oauth"]
                        [:google "Google" "oauth"] [:atproto "Bluesky / ATProto" "atproto"]
@@ -56,16 +59,28 @@
                       (http/send! reply 200 {:ok true})))
     (http/register! app "GET" "/api/auth/login"
                     (fn ^:async handle [request reply]
-                      (when (= "true" (get-in request [:query :link])) (mutation! service request))
+                      (law/require! (not= "true" (get-in request [:query :link]))
+                                    :link-requires-post "Initiate account linking with POST to the provider link route")
                       (http/redirect! reply (await (identity-oauth/begin! service :github (browser! request reply)
                                                                          (:token request) (:query request) atproto-client)))))
     (http/register! app "GET" "/api/auth/providers/:provider/login"
                     (fn ^:async handle [request reply]
-                      (when (= "true" (get-in request [:query :link])) (mutation! service request))
+                      (law/require! (not= "true" (get-in request [:query :link]))
+                                    :link-requires-post "Initiate account linking with POST to the provider link route")
                       (http/redirect! reply
                                       (await (identity-oauth/begin! service (keyword (get-in request [:params :provider]))
                                                                     (browser! request reply) (:token request)
                                                                     (:query request) atproto-client)))))
+    (http/register! app "POST" "/api/auth/providers/:provider/link"
+                    (fn ^:async handle [request reply]
+                      (mutation! service request)
+                      (identity/require-principal! service (:token request))
+                      (http/send! reply 200
+                                  {:authorizationUrl
+                                   (await (identity-oauth/begin!
+                                           service (keyword (get-in request [:params :provider]))
+                                           (browser! request reply) (:token request)
+                                           (assoc (:body request) :link "true") atproto-client))})))
     (http/register! app "GET" "/api/auth/callback/:provider"
                     (fn ^:async handle [request reply]
                       (let [provider (keyword (get-in request [:params :provider]))]

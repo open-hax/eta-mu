@@ -4,6 +4,7 @@
             [axxium.extern.identity-host :as host]
             [axxium.extern.oauth :as oauth]
             [axxium.infra.identity :as identity]
+            [axxium.infra.identity-ceremonies :as ceremonies]
             [axxium.infra.identity-store :as store]
             [axxium.law.identity :as law]
             [clojure.string :as str]))
@@ -36,6 +37,13 @@
                                             :changes (when (get-in state [:credentials (str prefix key)])
                                                        [(domain/remove-entry :credentials (str prefix key))])})))})
 
+(defn- pending-sdk-store [identity-store]
+  {:get! (fn [key] (ceremonies/private-value identity-store (str "atproto-state:" key)))
+   :put! (fn [key value]
+           (ceremonies/issue! identity-store (str "atproto-state:" key) (host/sha256 key)
+                              :atproto/pending value identity/challenge-ttl-ms))
+   :delete! (fn [key] (ceremonies/remove! identity-store (str "atproto-state:" key)))})
+
 (defn ^:async create-atproto-client!
   "Create one SDK client per service process with protected persistent stores."
   [{:keys [store options] :as service}]
@@ -55,7 +63,7 @@
       (await (oauth/atproto-client! {:client-id (:client-id (provider-config service :atproto))
                                      :origin (:public-base-url options) :private-key (:private-key private-key)
                                      :lock-directory (get-in store [:vault :directory])
-                                     :state-store (private-sdk-store store "atproto-state:")
+                                     :state-store (pending-sdk-store store)
                                      :session-store (private-sdk-store store "atproto-session:")})))))
 
 (defmulti begin!
@@ -95,7 +103,9 @@
   "Validate browser-bound callback state before accepting any external identity."
   [service provider browser query client]
   (if (= :atproto provider)
-    (let [{:keys [state identity]} (await (oauth/atproto-callback! client query))]
+    (let [_ (identity/read-challenge service browser (:state query) :oauth/atproto)
+          {:keys [state identity]} (await (oauth/atproto-callback! client query))]
+      (law/require! (= state (:state query)) :invalid-callback "OAuth callback state changed")
       (identity/read-challenge service browser state :oauth/atproto)
       (identity/accept-external! service browser state :oauth/atproto identity))
     (let [state (:state query)

@@ -10,7 +10,8 @@ import * as axxium from '../dist-lib/index.js';
 
 const directory = mkdtempSync(join(tmpdir(), 'axxium-consumer-'));
 const origin = 'http://localhost:8787';
-const options = {provider: 'edn', directory, 'public-base-url': origin};
+const options = {provider: 'edn', directory, 'public-base-url': origin,
+  providers: {github: {'client-id': 'local-consumer-client', 'client-secret': 'local-consumer-secret'}}};
 const app = Fastify();
 const password = 'temporary consumer verification password';
 try {
@@ -38,6 +39,13 @@ try {
     headers: {'x-knoxx-user-email': 'consumer@example.test'},
   });
   assert.equal(forged.status, 401);
+  const oldLink = await fetch(`${address}/api/auth/providers/github/login?link=true`, {headers: {cookie}});
+  assert.equal(oldLink.status, 405);
+  const link = await fetch(`${address}/api/auth/providers/github/link`, {
+    method: 'POST', headers: {cookie, origin, 'content-type': 'application/json'}, body: '{}',
+  });
+  assert.equal(link.status, 200, await link.clone().text());
+  assert.equal(new URL((await link.json()).authorizationUrl).origin, 'https://github.com');
   const refused = await fetch(`${address}/api/auth/logout`, {
     method: 'POST', headers: {cookie, origin: 'https://attacker.example'},
   });
@@ -47,6 +55,7 @@ try {
   assert.equal(axxium.resolvePrincipal(reopened, token), null);
   console.log('PASS compiled ESM exports → real TCP signup → private Clio restart → authenticated read');
   console.log('PASS forged identity header and foreign Origin refused → committed logout invalidates reopened session');
+  console.log('PASS navigational GET linking refused → authenticated POST returns provider authorization URL');
   console.log('WARN real external OAuth logins need operator provider configuration; this fixture makes no such claim');
 } finally {
   await app.close();

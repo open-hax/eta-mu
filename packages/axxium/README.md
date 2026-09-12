@@ -117,6 +117,12 @@ requires the already authenticated account and a browser-bound linking flow;
 a subject already attached to a different account is refused. An ATProto
 principal can lawfully have no email.
 
+Linking starts with an authenticated same-origin `POST` to the registry's
+`linkUrl` (`/api/auth/providers/:provider/link`), with optional `redirect` and
+an ATProto `handle`. The JSON response contains `authorizationUrl`; the browser
+navigates there. Browsers supply Origin on that POST naturally. A GET login URL
+with `?link=true` returns 405 and never starts a linking transaction.
+
 ## Storage and authority
 
 `identity.edn` is an append-only Clio ledger with content-addressed schemas in
@@ -125,6 +131,19 @@ credential, challenge and session projections involved in an operation.
 Concurrent writers claiming the same stream slot fail visibly; callers retry
 the complete command. Projections rebuild from validated history. A missing
 initialized ledger, missing encryption key or corrupt history fails startup.
+
+Unauthenticated ceremonies use a separate expiring Clio checkpoint,
+`ceremonies.edn`, and encrypted blobs in `private/ceremonies/`. Their five-minute
+retention does not compact durable identity facts. Successful acceptance records
+challenge consumption and the identity/session changes in the same durable
+event; that consumption still wins after a crash or restart. Issuance permits
+at most 8 attempts per browser and 64 globally per minute, with 256 retained
+entries and a 64 KiB private payload limit. Quotas are checked before encryption.
+Checkpoint replacement and identity admission share a stable OS lock. Expired
+entries and unreferenced ceremony blobs are collected on startup and subsequent
+issuance, keeping abandoned requests bounded even if browser cookies rotate.
+ATProto pending SDK state uses this same expiring store; accepted SDK sessions
+and long-lived client keys retain their private durable storage.
 
 The event facts contain private credential references, never plaintext
 passwords, password hashes, bearer tokens, OAuth tokens or DPoP private keys.

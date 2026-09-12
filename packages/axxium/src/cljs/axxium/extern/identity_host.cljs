@@ -13,6 +13,8 @@
   (.digest (.update (crypto/createHash "sha256") value) "hex"))
 (defn base64url "Encode a stable WebAuthn user handle." [value]
   (.toString (js/Buffer.from value "utf8") "base64url"))
+(defn utf8-length "Return a string's encoded byte length for crypto admission." [value]
+  (js/Buffer.byteLength value "utf8"))
 (defn resolve-path "Resolve a configured identity directory." [directory] (path/resolve directory))
 
 (defn private-directory!
@@ -31,6 +33,48 @@
          (finally (fs/closeSync fd))))
   (let [parent (fs/openSync (path/dirname file) "r")]
     (try (fs/fsyncSync parent) (finally (fs/closeSync parent)))))
+
+(defn with-operation-lock!
+  "Serialize local admission and ceremony compaction on a stable lock inode."
+  [directory run]
+  (let [file (str directory "/identity-operation.lock")]
+    (try (write-exclusive! file "")
+         (catch :default error (when-not (= "EEXIST" (.-code error)) (throw error))))
+    (when (.isSymbolicLink (fs/lstatSync file))
+      (throw (ex-info "Identity lock cannot be a symlink" {:code :unsafe-storage})))
+    (let [fd (fs/openSync file "r+")]
+      (try
+        (try (fs-ext/flockSync fd "exnb")
+             (catch :default error
+               (if (#{"EAGAIN" "EWOULDBLOCK" "EACCES"} (.-code error))
+                 (throw (ex-info "Identity changed concurrently; retry" {:clio/error :clio.ledger/concurrent-stream-write}))
+                 (throw error))))
+        (run)
+        (finally (fs/closeSync fd))))))
+
+(defn replace-private-text!
+  "Atomically replace a bounded checkpoint; callers hold the stable operation lock."
+  [file text]
+  (let [temporary (str file "." (id) ".tmp")]
+    (try
+      (write-exclusive! temporary text)
+      (fs/renameSync temporary file)
+      (let [fd (fs/openSync (path/dirname file) "r")]
+        (try (fs/fsyncSync fd) (finally (fs/closeSync fd))))
+      (finally (when (fs/existsSync temporary) (fs/unlinkSync temporary))))))
+
+(defn collect-private-blobs!
+  "Remove unreferenced blobs only in the dedicated short-lived ceremony vault."
+  [{:keys [directory]} retained]
+  (doseq [file (array-seq (fs/readdirSync directory))
+          :when (and (re-matches #"[0-9a-f]{64}" file) (not (contains? retained file)))]
+    (fs/unlinkSync (str directory "/" file))))
+
+(defn bounded-private-value!
+  "Reject oversized unauthenticated payloads before creating any encrypted blob."
+  [value]
+  (when (> (js/Buffer.byteLength (pr-str value) "utf8") 65536)
+    (throw (ex-info "Authentication state is too large" {:code :invalid-challenge}))))
 
 (defn ^:async with-private-lock!
   "Hold a nonblocking OS file lock across provider refresh I/O; crash releases it."

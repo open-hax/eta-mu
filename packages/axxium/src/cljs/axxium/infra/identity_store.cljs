@@ -2,6 +2,7 @@
   "Identity provider boundary; EDN state is replayed from canonical Clio facts."
   (:require [axxium.domain.identity :as domain]
             [axxium.extern.identity-host :as host]
+            [axxium.infra.identity-ceremonies :as ceremonies]
             [axxium.law.identity :as law]
             [clio.domain.projection :as projection]
             [clio.extern.js.fs :as fs]
@@ -17,7 +18,8 @@
 (defmulti unseal "Read private credential material by immutable reference." (fn [store _] (:provider store)))
 
 (defn state "Rebuild disposable identity state." [store]
-  (projection/state (history store) {} domain/apply-event))
+  ;; Durable consumption facts win even if a crash preceded checkpoint cleanup.
+  (projection/state (history store) {:challenges (ceremonies/entries store)} domain/apply-event))
 
 (defmethod create-provider :edn [{:keys [directory]}]
   (law/require! (and (string? directory) (seq directory)) :missing-directory "EDN identity directory is required")
@@ -29,18 +31,24 @@
     (when-not (fs/exists? file)
       (law/require! (not existing?) :missing-ledger "Identity schemas exist but identity.edn is missing")
       (ledger/create-ledger! file))
-    (let [store {:provider :edn :file file :vault vault :runtime (runtime/open schemas law/catalog)}]
+    (let [ceremony-file (str directory "/ceremonies.edn")
+          _ (when-not (fs/exists? ceremony-file) (ledger/create-ledger! ceremony-file))
+          store {:provider :edn :directory directory :file file :ceremony-file ceremony-file
+                 :vault vault :runtime (runtime/open schemas law/catalog)}]
       (history store)
+      (ceremonies/prune! store)
       store)))
 
 (defmethod history :edn [{:keys [file runtime]}]
   (ledger/canonicalize-files (:schema/revisions (runtime/refresh runtime)) [file]))
 (defmethod seal! :edn [store value] (host/seal! (:vault store) value))
-(defmethod unseal :edn [store reference] (host/unseal (:vault store) reference))
+(defmethod unseal :edn [store reference]
+  (if (ceremonies/private-reference? reference) (ceremonies/unseal store reference)
+      (host/unseal (:vault store) reference)))
 
-(defmethod transact! :edn [store decide]
+(defn- append-transaction! [store decide]
   (let [canonical (history store)
-        current (projection/state canonical {} domain/apply-event)
+        current (projection/state canonical {:challenges (ceremonies/entries store)} domain/apply-event)
         {:keys [operation actor changes result]} (decide current)]
     (when (seq changes)
       (let [previous (last (:canonical/events canonical))]
@@ -53,8 +61,11 @@
                           :event/data {:operation operation :changes (vec changes)}})))
     result))
 
+(defmethod transact! :edn [store decide]
+  (ceremonies/locked! store #(append-transaction! store decide)))
+
 (defmethod create-provider :memory [_]
-  {:provider :memory :events (atom []) :private (atom {})})
+  {:provider :memory :events (atom []) :private (atom {}) :ceremonies (atom {})})
 (defmethod history :memory [store] {:canonical/events @(:events store)})
 (defmethod seal! :memory [store value]
   (let [reference (host/id)] (swap! (:private store) assoc reference value) reference))

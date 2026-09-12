@@ -5,6 +5,7 @@
             [axxium.extern.identity-host :as host]
             [axxium.extern.identity-http :as http]
             [axxium.infra.identity-store :as store]
+            [axxium.infra.identity-ceremonies :as ceremonies]
             [axxium.law.identity :as law]
             [clojure.string :as str]))
 
@@ -65,8 +66,8 @@
         username (law/normalize-identifier username)]
     (law/require! (law/valid-username? username) :invalid-username "Username must be 3–64 letters, numbers, dots, underscores or hyphens")
     (law/require! (law/valid-email? email) :invalid-email "A valid email is required")
-    (law/require! (and (string? password) (<= 12 (count password) 1024))
-                  :invalid-password "Password must contain 12–1024 characters")
+    (law/require! (and (string? password) (<= 12 (count password)) (<= (host/utf8-length password) 1024))
+                  :invalid-password "Password must contain at least 12 characters and at most 1024 UTF-8 bytes")
     (let [credential (await (crypto/hash-password password))
           reference (store/seal! store credential)
           actor (principal username email display-name)
@@ -112,7 +113,7 @@
         state (store/state store)
         marker (get-in state [:credentials "system:bootstrap"])]
     (law/require! (and (law/valid-username? username) (law/valid-email? email)
-                       (string? password) (<= 12 (count password) 1024))
+                       (string? password) (<= 12 (count password)) (<= (host/utf8-length password) 1024))
                   :invalid-bootstrap "Bootstrap requires a valid username, email and 12+ character password")
     (if marker
       (let [actor (get-in state [:principals (:principal-id marker)])
@@ -178,12 +179,7 @@
   "Persist single-use browser-bound state; sensitive payload is encrypted separately."
   [{:keys [store]} browser-token purpose data]
   (law/require! (and (string? browser-token) (>= (count browser-token) 32)) :invalid-browser "Authentication browser binding required")
-  (let [id (host/id)
-        reference (store/seal! store data)
-        value {:purpose purpose :browser-hash (host/sha256 browser-token)
-               :expires-at (+ (host/now) challenge-ttl-ms) :private-ref reference}]
-    (store/transact! store (fn [_] {:operation :challenge-issued
-                                    :changes [(domain/put :challenges id value)] :result id}))))
+  (ceremonies/issue! store (host/id) (host/sha256 browser-token) purpose data challenge-ttl-ms))
 
 (defn read-challenge
   "Load the protected challenge after its browser and expiry guards pass."

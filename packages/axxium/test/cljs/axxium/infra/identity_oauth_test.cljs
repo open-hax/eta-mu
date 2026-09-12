@@ -91,3 +91,21 @@
         (is (= ["https://identity.example.test/api/auth/callback/atproto"] (:redirect_uris metadata)))
         (is (= (oauth/atproto-jwks first-client) (oauth/atproto-jwks second-client))))
       (finally (fs/rmSync directory #js {:recursive true :force true})))))
+
+(deftest ^:async atproto-rejects-browser-state-before-consuming-provider-code
+  (let [service (identity/open! {:provider :memory :public-base-url "http://localhost"})
+        browser (host/random-token)
+        state (identity/challenge! service browser :oauth/atproto {})
+        calls (atom 0)]
+    (with-redefs [oauth/atproto-callback!
+                  (fn ^:async callback [_ query]
+                    (swap! calls inc)
+                    {:state (:state query) :identity {:issuer "https://bsky.social" :subject "did:plc:test" :display-name "Alice"}})]
+      (doseq [[browser query] [[(host/random-token) {:state state}] [browser {:state "missing"}]]]
+        (try
+          (await (identity-oauth/finish! service :atproto browser query :client))
+          (is false "Invalid browser state must reject")
+          (catch :default error (is (= :invalid-challenge (:code (ex-data error)))))))
+      (is (zero? @calls) "Rejected browser state never reaches the effectful SDK callback")
+      (is (:ok (await (identity-oauth/finish! service :atproto browser {:state state} :client))))
+      (is (= 1 @calls)))))

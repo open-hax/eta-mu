@@ -100,6 +100,8 @@
                                              concurrent? 409
                                              (#{:unauthenticated :invalid-credentials} code) 401
                                              (#{:forbidden :forbidden-origin} code) 403
+                                             (= :link-requires-post code) 405
+                                             (= :ceremony-rate-limit code) 429
                                              (#{:identifier-exists :credential-exists :identity-already-linked} code) 409
                                              (#{:provider-not-configured :provider-unavailable} code) 503
                                              code 400
@@ -112,8 +114,11 @@
 (defn ^:async ensure-cookies!
   "Let an embedding Fastify host keep its existing cookie plugin."
   [app]
-  (when-not (.hasRequestDecorator app "cookies")
-    (await (.register app fastify-cookie))))
+  ;; Inspect after earlier queued plugins execute, before queuing a missing dependency.
+  (await (.after app (fn [error]
+                       (when error (throw error))
+                       (when-not (.hasRequestDecorator app "cookies")
+                         (.register app fastify-cookie))))))
 
 (defn create-app "Create an independently runnable identity server." [] (Fastify #js {:logger false}))
 (defn ^:async listen! "Bind the identity server." [app host port]
