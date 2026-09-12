@@ -6,7 +6,8 @@
             [rheos.backend.domain.board :as board]
             [rheos.backend.infra.agent-tools :as agent-tools]
             [rheos.backend.infra.projects :as projects]
-            [rheos.backend.infra.task-store :as task-store]))
+            [rheos.backend.infra.task-store :as task-store]
+            [rheos.backend.shape.content-parser :as content-parser]))
 
 (def card-markdown
   (str "---\n"
@@ -22,6 +23,38 @@
               (str "---\nuuid: \"" uuid "\"\ntitle: \"" title "\"\n"
                    "status: \"incoming\"\npriority: \"P3\"\n---\n\n# " title "\n\nBody")
               "utf8"))
+
+(deftest ^:async trailing-array-whitespace-preserves-task-board-and-rewrite-values
+  (let [root (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-trailing-labels-")))
+        card-path (path/join root "labelled-card.md")
+        saved-projects {:projects (projects/all) :default-project-id (projects/default-id)}]
+    (try
+      (projects/set-projects!
+        {:projects [{:id "labels" :title "Labels" :tasks-dir root :meta {}}]
+         :default-project-id "labels"})
+      (doseq [[value expected] [["[]  " []]
+                                ["[\"ci\"]\t" ["ci"]]
+                                ["[graph, provenance] \t " ["graph" "provenance"]]
+                                ["[ci, \"security,review\"]   " ["ci" "security,review"]]]]
+        (let [raw (str "---\nuuid: \"labelled-card\"\ntitle: \"Labelled Card\"\n"
+                       "status: \"incoming\"\npriority: \"P1\"\nlabels: " value "\n"
+                       "dependency: [\"dep-a\", \"dep-b\"] \t\n---\n\n# Labelled Card\n")]
+          (await (.writeFile fsp card-path raw "utf8"))
+          (let [read-task (await (agent-tools/dispatch "kanban_read_task" {:uuid "labelled-card" :project "labels"}))
+                snapshot (board/build-board-snapshot (await (task-store/load-tasks root)))
+                projected (->> (:columns snapshot) (mapcat :tasks)
+                               (filter #(= "labelled-card" (:uuid %))) first)
+                rewritten (content-parser/parse-task-content (content-parser/append-comment raw "Review note"))]
+            (is (= expected (get-in read-task [:frontmatter :labels])))
+            (is (= expected (:labels projected)))
+            (is (= ["dep-a" "dep-b"] (get-in read-task [:frontmatter :dependency])))
+            (is (= expected (get-in rewritten [:frontmatter :labels])))
+            (is (= ["dep-a" "dep-b"] (get-in rewritten [:frontmatter :dependency])))
+            (is (= raw (await (.readFile fsp card-path "utf8")))
+                "Task and board inspection must leave the original whitespace untouched"))))
+      (finally
+        (projects/set-projects! saved-projects)
+        (await (.rm fsp root #js {:recursive true :force true}))))))
 
 (deftest ^:async canonical-inline-labels-match-read-task-and-board-projection
   (let [root (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-label-projection-")))
@@ -58,6 +91,48 @@
             "read-task and board snapshot must expose the same ordered labels")
         (is (seq (:labels projected-task))
             "a type-valid empty label vector is still semantic data loss"))
+      (finally
+        (projects/set-projects! saved-projects)
+        (await (.rm fsp root #js {:recursive true :force true}))))))
+
+(deftest ^:async plain-inline-labels-match-read-task-and-board-projection
+  (let [root (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-label-projection-")))
+        expected ["graph" "relationships" "code" "provenance"]
+        card-path (path/join root "labelled-card.md")
+        saved-projects {:projects (projects/all)
+                        :default-project-id (projects/default-id)}]
+    (try
+      (await (.writeFile
+              fsp card-path
+              (str "---\n"
+                   "uuid: \"labelled-card\"\n"
+                   "title: \"Labelled Card\"\n"
+                   "status: \"incoming\"\n"
+                   "priority: \"P1\"\n"
+                   "labels: [graph, relationships, code, provenance]\n"
+                   "---\n\n# Labelled Card\n")
+              "utf8"))
+      (projects/set-projects!
+       {:projects [{:id "labels" :title "Labels" :tasks-dir root :meta {}}]
+        :default-project-id "labels"})
+      (let [original-bytes (await (.readFile fsp card-path "utf8"))
+            read-task (await (agent-tools/dispatch
+                              "kanban_read_task"
+                              {:uuid "labelled-card" :project "labels"}))
+            snapshot (board/build-board-snapshot (await (task-store/load-tasks root)))
+            projected-task (->> (:columns snapshot)
+                                (mapcat :tasks)
+                                (filter #(= "labelled-card" (:uuid %)))
+                                first)
+            read-labels (get-in read-task [:frontmatter :labels])]
+        (is (= expected read-labels))
+        (is (some? projected-task))
+        (is (= read-labels (:labels projected-task))
+            "read-task and board snapshot must expose the same ordered labels")
+        (is (seq (:labels projected-task))
+            "a type-valid empty label vector is still semantic data loss")
+        (is (= original-bytes (await (.readFile fsp card-path "utf8")))
+            "Reading and projecting a card must not rewrite its source history"))
       (finally
         (projects/set-projects! saved-projects)
         (await (.rm fsp root #js {:recursive true :force true}))))))

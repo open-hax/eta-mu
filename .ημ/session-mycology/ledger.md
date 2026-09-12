@@ -391,3 +391,33 @@
   spore: none
   receipt-refs: final Clio recovery receipt for source a9328801
   note: Restored exact reviewed source after maintenance pruned tools and checkouts. Native failure-first tests exposed missing generated retry identity, NBB stdout error routing, and lexical symbolic-link parent-path redirection. RealpathSync.native was required because Node realpathSync still chose the lexical target. Final Clio BB29/182 JVM77/355 NBB and Shadow75/362 plus protocols76/282 and19native pass; strict gates are clean. Existing binary-verification and absolute-path spores cover the reusable lesson. Actual hosted successor reviews remain required.
+
+- ts: 2026-09-12T17:30:35.544278+00:00
+  session: foresight-sandbox-rheos-trailing-whitespace-recovery
+  task: Repair PR335 trailing inline-array whitespace and cold local dependency gates
+  p-efficiency: 0.85
+  p-friction: 0.45
+  p-skill-candidate: 0.75
+  spore: none
+  receipt-refs: latest Rheos PR335 Codex3996586754 test-run receipt
+  note: Failure-first portable and real filesystem tests exposed raw-versus-trimmed parser disagreement; both closing-delimiter branches now consume whitespace monotonically while retaining the 50k timing bound. Fresh router output resolved an older Rheos companion and dropped Epiphany labels; direct artifact hash pairing restored all116 cards without changing Markdown bytes. Forced dependency-basis regeneration reproduced then eliminated sibling-path warnings through local/root metadata. All required Rheos and CLI gates pass; existing artifact-verification lesson reused; root owns remote reviews and publication.
+
+- ts: 2026-09-12T17:47:08.712645+00:00
+  session: foresight-sandbox-rheos-published-base-restack
+  task: Ordinary Rheos merge onto published Clio/Axxium recovery and exact-source verification
+  p-efficiency: 0.9
+  p-friction: 0.4
+  p-skill-candidate: 0.6
+  spore: none
+  receipt-refs: latest Rheos ordinary merge707e132e test-run receipt
+  note: Five metadata conflicts required complete incoming prefix preservation plus unique ordered Rheos-only records and complete historical card comments. Independent ID and byte audit confirmed preservation while identifying inherited ordering differences relative to an older ancestor. Rebuilt direct CLI retained all 116 immutable Epiphany Markdown hashes and labels. Full current-base Rheos and CLI gates pass; newer protocol findings remain separately owned and open. No source rewrite or new environment was needed.
+
+- ts: 2026-09-12T18:55:18Z
+  session: foresight-sandbox-rheos-single-line
+  task: Repair CodeRabbit5647795596 physical inline whitespace and projection trimming
+  p-efficiency: 0.9
+  p-friction: 0.3
+  p-skill-candidate: 0.75
+  spore: none
+  receipt-refs: 34c77f19-4310-42a0-a48b-ed72bc888c8f
+  note: Native and JVM RED each produced30 failures before horizontal scanner whitespace and physical LF/CR/form-feed admission were repaired. Adjacent flat-reader trimming then reproduced3 failures; preserving the original sequence suffix fixes that discrepancy. Full Rheos215/1227, JVM13/118, CLI174/391 plus workflows6/78 and all four isolated releases/lint pass. Original 50k timing guards remain. Both shared CLI hashes are unchanged. Existing artifact-verification lesson reused; root scoped review clear; no remote writes. Sourcec11d5e84 and the verification report retain exact evidence.

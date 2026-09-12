@@ -1,0 +1,23 @@
+{
+  "rheosSource": "707e132e50a151aec0583af77a82d6ebc347d0e9",
+  "epiphanySource": "c72b41eee96d22915a79487148df453c34627e48",
+  "epiphanyTree": "143ae8e49d2d4897ac8a076097059417ee672c6e",
+  "cliSha256": "35eb33a238f4a869091302b1ec0c7aa7a46f7a2b0ab9f069899ee6539d5795d4",
+  "markdownFiles": 116,
+  "allMarkdownHashesUnchanged": true,
+  "tasks": 116,
+  "columns": 12,
+  "allTaskLabelsMatchCommittedSnapshot": true,
+  "epiphanyWorktreeStillClean": true,
+  "example": {
+    "uuid": "epic-10-program-relationship-graph",
+    "labels": [
+      "graph",
+      "relationships",
+      "code",
+      "provenance"
+    ],
+    "cardPath": "docs/kanban/epics/epic-10-program-relationship-graph.md",
+    "cardSha256": "b15484ac464c23c0da6f57433c81f0ce6681f45e0d4bca2fe5c1cb41f7a8c5cd"
+  }
+}

@@ -1,0 +1,3 @@
+{:paths ["src"]
+ :deps {lilactown/helix {:mvn/version "0.2.2"}
+        metosin/malli {:mvn/version "0.17.0"}}}

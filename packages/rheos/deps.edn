@@ -1,9 +1,9 @@
-{:paths ["src" "test"
-         "../protocols/src"
-         "../chat-ui/src"]
+{:paths ["src" "test"]
 
  :deps
- {thheller/shadow-cljs         {:mvn/version "3.4.10"}
+ {open-hax/protocols          {:local/root "../protocols"}
+  open-hax/chat-ui            {:local/root "../chat-ui"}
+  thheller/shadow-cljs         {:mvn/version "3.4.10"}
   lilactown/helix              {:mvn/version "0.2.2"}
   metosin/malli                {:mvn/version "0.16.4"}
   ;; Katamorph owns the condition kernel; Rheos consumes it. Pin the immutable
