@@ -1,0 +1,167 @@
+{
+  "continuation": {
+    "axxium": {
+      "next": "Add eta-mu requested explicit 30-second/finite-attempt outer accept-verified! bound and native lock exhaustion test, then docs/full regate",
+      "pendingChanges": [
+        "infra/identity_sdk_store.cljs",
+        "infra/identity_oauth.cljs",
+        "extern/oauth.cljs",
+        "extern/identity_http.cljs",
+        "infra/identity_sdk_store_test.cljs",
+        "extern/identity_proxy_test.cljs"
+      ],
+      "verified": {
+        "assertions": 766,
+        "capturedAt": "2026-09-12",
+        "compiler": {
+          "compiled": 22,
+          "files": 172,
+          "warnings": 0
+        },
+        "errors": 0,
+        "failures": 0,
+        "gates": [
+          [
+            "test",
+            0,
+            25.325
+          ],
+          [
+            "build",
+            0,
+            33.047
+          ],
+          [
+            "lint",
+            0,
+            0.763
+          ],
+          [
+            "boundary",
+            0,
+            0.478
+          ],
+          [
+            "consumer",
+            0,
+            2.61
+          ]
+        ],
+        "sourceBackup": "/tmp/eta-identity-rescue/axxium",
+        "sourceWasUncommitted": true,
+        "tests": 86
+      }
+    },
+    "protocol": {
+      "next": "Actual compiled typed consumer/runtime tests plus protected created-at failure-first; adopt ledger/ensure-durable! in no-change transactions once kernel provided",
+      "typeGreenExit": 0,
+      "typeRedDefects": 8,
+      "typeRedExit": 2
+    },
+    "remote": {
+      "allWorkflowsSuccess": true,
+      "coderabbitWithdrawal": 5645254899,
+      "foundation": "fd7cd25645d6acf80c3e5909f3ceecb65b7b1148",
+      "identity": "dbbe64154895e6e63af04054059c4bf34bc5a297",
+      "pendingFoundationThreads": [
+        "PRRT_kwDORu27H86hvQPM",
+        "PRRT_kwDORu27H86hvQPN",
+        "PRRT_kwDORu27H86hvRHd"
+      ],
+      "pendingIdentityThreads": [
+        "PRRT_kwDORu27H86hvRGE",
+        "PRRT_kwDORu27H86hvRGG",
+        "PRRT_kwDORu27H86hvRGI"
+      ]
+    },
+    "rescue": "/tmp/eta-identity-rescue",
+    "rootBuild": {
+      "buildResult": "16 packages succeeded, 3 failed due legacy AI tsx IPC pipe EPERM cascade; models direct Node fix passed AI build before relocation",
+      "chatFixCommit": "bba1f439",
+      "modelsOwnManifests": true
+    },
+    "source": "Exact cp -a of Axxium and protocols from renamed retained worktree before runtime disconnected"
+  },
+  "files": [
+    {
+      "content": "(ns axxium.infra.identity-sdk-store\n  \"Local ATProto SDK storage retries never repeat a provider token exchange.\"\n  (:require [axxium.domain.identity :as domain]\n            [axxium.extern.identity-host :as host]\n            [axxium.infra.identity-ceremonies :as ceremonies]\n            [axxium.infra.identity-store :as store]))\n\n(def write-timeout-ms \"Bounded local SDK mutation wait.\" 30000)\n\n(defn- ^:async write! [operation]\n  (let [deadline (+ (host/now) write-timeout-ms)]\n    (loop []\n      (let [outcome (try {:result (operation)} (catch :default cause {:cause cause}))]\n        (if-let [cause (:cause outcome)]\n          (if (and (= :clio.ledger/concurrent-stream-write (:clio/error (ex-data cause)))\n                   (< (host/now) deadline))\n            (do (await (host/delay! 25)) (recur))\n            (throw cause))\n          (:result outcome))))))\n\n(defn private-store\n  \"Persist SDK sessions privately; prepare one immutable blob before retrying admission.\"\n  [identity-store prefix]\n  {:get! (fn [key]\n           (when-let [record (get-in (store/state identity-store) [:credentials (str prefix key)])]\n             (store/unseal identity-store (:private-ref record))))\n   :put! (fn ^:async put-private [key value]\n           (let [reference (store/seal! identity-store value)]\n             (await (write! #(store/transact!\n                             identity-store\n                             (fn [_] {:operation :oauth-private-state\n                                      :changes [(domain/put :credentials (str prefix key) {:private-ref reference})]}))))))\n   :delete! (fn ^:async delete-private [key]\n              (await (write! #(store/transact!\n                               identity-store\n                               (fn [state] {:operation :oauth-private-state-deleted\n                                            :changes (when (get-in state [:credentials (str prefix key)])\n                                                       [(domain/remove-entry :credentials (str prefix key))])})))))})\n\n(defn pending-store\n  \"Bounded SDK authorization state, including retry-safe local consumption.\"\n  [identity-store ttl-ms]\n  {:get! (fn [key] (ceremonies/private-value identity-store (str \"atproto-state:\" key)))\n   :put! (fn ^:async put-pending [key value]\n           (await (write! #(ceremonies/issue! identity-store (str \"atproto-state:\" key) (host/sha256 key)\n                                              :atproto/pending value ttl-ms))))\n   :delete! (fn ^:async delete-pending [key]\n              (await (write! #(ceremonies/remove! identity-store (str \"atproto-state:\" key)))))})\n",
+      "path": "packages/axxium/src/cljs/axxium/infra/identity_sdk_store.cljs"
+    },
+    {
+      "content": "import assert from 'node:assert/strict';\nimport { execFileSync } from 'node:child_process';\nimport fs from 'node:fs';\nimport os from 'node:os';\nimport path from 'node:path';\nimport { createRequire } from 'node:module';\nimport { pathToFileURL } from 'node:url';\nimport { test } from 'node:test';\nimport { createEdnServices } from '../../dist/main.js';\n\ntest('actual typed consumer narrows generic records and observes nullable updates', async () => {\n  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'services-typed-records-'));\n  try {\n    const require = createRequire(import.meta.url);\n    execFileSync(process.execPath, [require.resolve('typescript/lib/tsc.js'), '--strict', '--target', 'es2022',\n      '--module', 'nodenext', '--outDir', path.join(directory, 'consumer'), 'test/types/graph-neighbors.mts'], { stdio: 'pipe' });\n    const consumer = await import(pathToFileURL(path.join(directory, 'consumer', 'graph-neighbors.mjs')).href);\n    await consumer.verifyGenericRecordConsumer(createEdnServices(path.join(directory, 'ledger')));\n    const services = createEdnServices(path.join(directory, 'users'));\n    const created = await services['create-user']({ username: 'immutable-time', password: 'fixture' });\n    const id = created.payload.userId;\n    const before = await services['get-user'](id);\n    await assert.rejects(services['update-user'](id, { 'created-at': 42 }), /identity is immutable/);\n    assert.equal((await createEdnServices(path.join(directory, 'users'))['get-user'](id))['created-at'], before['created-at']);\n  } finally {\n    fs.rmSync(directory, { recursive: true, force: true });\n  }\n});\n",
+      "path": "packages/protocols/test/js/typed-records.test.mjs"
+    }
+  ],
+  "kind": "offline-source-recovery",
+  "publishedBase": "dbbe64154895e6e63af04054059c4bf34bc5a297",
+  "schema": 1,
+  "sourceOrigin": "Literal files read from /tmp/eta-identity-rescue after cp -a from the retained renamed worktree; only these two complete files were visible before environment_offline. Verify against rescued filesystem bytes on reconnect.",
+  "status": "partial-transcript-rescue-not-a-verified-successor",
+  "validationLimit": "86/766 and all Axxium gates ran on the full local source before disconnection. This partial rescue payload is not that full source tree and does not inherit its test result. Protocol TypeScript RED/GREEN ran; new actual JS runtime test was not yet executed. No current PR ref or gate status changes.",
+  "requiredFiles": [
+    {
+      "path": "packages/axxium/src/cljs/axxium/infra/identity_sdk_store.cljs",
+      "status": "full literal content included"
+    },
+    {
+      "path": "packages/axxium/src/cljs/axxium/infra/identity_oauth.cljs",
+      "status": "pending bytes at /tmp only",
+      "rebuild": "Require axxium.infra.identity-sdk-store; replace private SDK store helpers with sdk-store/private-store and sdk-store/pending-store using identity/challenge-ttl-ms. Make :atproto begin! method native async using (defmethod begin! :atproto ^:async begin-atproto ...), await oauth/atproto-authorize!. Preserve current complete callback/auth/linking checks. Next eta-mu review additionally requests a finite outer accept-verified! retry deadline plus regression; that was not yet implemented or tested."
+    },
+    {
+      "path": "packages/axxium/src/cljs/axxium/extern/oauth.cljs",
+      "status": "pending bytes at /tmp only",
+      "rebuild": "Expose sdk-store as a documented named host adapter; named native async get/set/del callbacks await the defined store operation. get awaits before clj->js conversion. Preserve actual NodeOAuthClient SDK, DPoP and local exclusive request-lock behavior."
+    },
+    {
+      "path": "packages/axxium/src/cljs/axxium/extern/identity_http.cljs",
+      "status": "pending bytes at /tmp only",
+      "rebuild": "Hash (or request.ip socket.remoteAddress \"unknown-local-client\") as client admission identity. Fastify owns trustProxy; do not directly trust x-forwarded-for or a submitted cookie. Preserve default false trust policy."
+    },
+    {
+      "path": "packages/axxium/test/cljs/axxium/infra/identity_sdk_store_test.cljs",
+      "status": "pending bytes at /tmp only",
+      "rebuild": "Use actual NodeOAuthClient and real DpopJoseKey/JWK serialization, SDK sessionGetter and local stores. Only issuer exchange serverFactory is controlled, actual SDK callback is not stubbed. Hold native separate-FD exclusive operation lock: one case acquires in exchangeCode (one-use exchange already consumed), second holds before callback state consumption. Release asynchronously; prove exactly one exchange, stored/reopened SDK session, pending state consumed and no grant revocations. Third test retains lock and advances host clock after delay beyond30000ms, proving conflict exhaustion and no session. Finally release locks before reopen/cleanup. Avoid assertions printing private test JWKs."
+    },
+    {
+      "path": "packages/axxium/test/cljs/axxium/extern/identity_proxy_test.cljs",
+      "status": "pending bytes at /tmp only",
+      "rebuild": "Use actual Fastify trustProxy false and explicit127.0.0.1. Inject remoteAddress plus forwarded values. Trusted proxy clients get distinct hashed admission keys; untrusted forwarding is ignored. Exhaust eight password admissions for one trusted client and prove another is admitted; untrusted spoof shares exhausted key. Preserve existing forged forwarding/cookie rotation regression."
+    },
+    {
+      "path": "packages/protocols/index.d.ts",
+      "status": "pending bytes at /tmp only",
+      "rebuild": "Preserve generic map protocol behavior. Introduce StoredRecord with required string id and string index signature unknown. Session/StoredDocument/GraphNode/GraphEdge/TranslationSegment/Label extend it; unvalidated application fields are optional unknown, including content. update-session and label-translation return nullable results, create-translation remains nonnull. User email/metadata are optional unknown; generated id/username/created-at remain required string."
+    },
+    {
+      "path": "packages/protocols/src/open_hax/records/edn/services.cljs",
+      "status": "pending bytes at /tmp only",
+      "rebuild": "Protect :created-at along with :id :_id :credentials in update-user! immutable identity guard; otherwise a public update can violate the now explicitly promised server-generated string timestamp. Separate future Clio uncertain-write no-change reflush adoption remains pending."
+    },
+    {
+      "path": "packages/protocols/test/types/graph-neighbors.mts",
+      "status": "pending bytes at /tmp only",
+      "rebuild": "Append exported async verifyGenericRecordConsumer(ClioEdnServices). Create partial node/edge/document/translation/label records; ensure generated IDs typed string. Six @ts-expect-error sites in nonexecuted branch refuse treating unvalidated fields as known strings/maps. Actually narrow document content at runtime and preserve arbitrary numeric label. Require null for missing session update and missing translation labeling."
+    },
+    {
+      "path": "packages/protocols/test/js/typed-records.test.mjs",
+      "status": "full literal content included"
+    },
+    {
+      "path": "packages/protocols/README.md",
+      "status": "pending bytes at /tmp only",
+      "rebuild": "Document generic record result fields as unknown/optional requiring caller narrowing, nullable missing update results, and immutable server-created user timestamp."
+    },
+    {
+      "path": "kanban/tasks/make-axxium-the-identity-owner-for-local-wiki-cms-identity.md",
+      "status": "plan comment copied to /tmp/eta-identity-rescue/provenance",
+      "rebuild": "Preserve canonical plan comment and append final verification through Rheos; do not hand-edit lifecycle state or claim unavailable exact source tests."
+    }
+  ],
+  "additionalPendingWork": {
+    "foundationChatFix": "Local bba1f439 changed packages/chat-ui/src/eta_mu/chat_ui/mock_session.cljs only by removing ineffective ^:async metadata from send-message argvector; preserve Promise semantics. Full chat3tests6assertions and lint0/0 passed. Canonical card/ledger changes accompanied it but were not published.",
+    "foundationBuildOwner": "models_runtime rescuing four manifests on isolated branch; Clio fsync kernel and Sol worker-close cleanup owned clio_application_stores.",
+    "durabilityConsumers": "After ledger/ensure-durable! kernel API is proven, adopt in protocols local/transact! and Axxium identity-store append-transaction! no-change success branches with uncertain-append fsync failure/retry regressions.",
+    "proofSources": "Final process-session transcript retains all Axxium gate exits. Raw final logs were not rescued before offline; do not invent a retained log artifact."
+  }
+}
