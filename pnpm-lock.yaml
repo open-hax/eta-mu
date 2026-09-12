@@ -491,6 +491,9 @@ importers:
 
   packages/protocols:
     dependencies:
+      fs-ext-extra-prebuilt:
+        specifier: 2.2.9
+        version: 2.2.9
       shadow-cljs:
         specifier: ^3.0.0
         version: 3.4.11
@@ -582,6 +585,9 @@ importers:
       fastify:
         specifier: ^5.6.1
         version: 5.8.4
+      fs-ext-extra-prebuilt:
+        specifier: 2.2.9
+        version: 2.2.9
     devDependencies:
       shadow-cljs:
         specifier: ^3.4.10

@@ -25,7 +25,8 @@
     "@fastify/formbody": "^8.0.2",
     "@fastify/websocket": "^11.2.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "fastify": "^5.6.1"
+    "fastify": "^5.6.1",
+    "fs-ext-extra-prebuilt": "2.2.9"
   },
   "devDependencies": {
     "shadow-cljs": "^3.4.10",

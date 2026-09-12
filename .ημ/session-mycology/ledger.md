@@ -351,3 +351,33 @@
   spore: none
   receipt-refs: 2026-08-30T05:20:31.845Z
   note: Keeping implementation H and activation A as separate immutable revisions prevents a reusable workflow from loading repaired source while still executing its predecessor. The activation changes only the internal checkout pin, preserves the review card through later consumer proof, and verifies the exact repository/path/credential contract plus the full 25-test GitHub package. Local CLI compilation was bounded by Maven network denial, so hosted exact-head gates remain the authority. No new spore; the existing exact-head and separate-evidence-retention spores already cover this revision topology.
+
+- ts: 2026-09-11T23:59:52.105992+00:00
+  session: foresight-sandbox-clio-local-providers
+  task: Canonical Clio JVM adapters, EDN service protocols, Sol deprecated ledger cutover
+  p-efficiency: 0.8
+  p-friction: 0.4
+  p-skill-candidate: 0.6
+  spore: none
+  receipt-refs: implementation receipt for feat/clio-local-providers
+  note: Protocol suites passed before artifact checks exposed empty ESM exports and namespace loss at clj->js; direct Node artifact verification closed both. Frozen offline lock validation reused native dependencies after unlocked regeneration hit unrelated missing metadata. Cross-host locks and typed replay were tested against the actual Clio kernel.
+
+- ts: 2026-09-12T00:13:24.789835+00:00
+  session: foresight-sandbox-clio-docs-followup
+  task: Reconcile current Clio ownership and Rheos migration guidance
+  p-efficiency: 0.95
+  p-friction: 0.15
+  p-skill-candidate: 0.3
+  spore: none
+  receipt-refs: Clio documentation reconciliation observation
+  note: Preserved dated August survey facts while replacing current ledger adoption guidance; actual Rheos package and BB manifests disagree on build targets, so documented both rather than silently treating them as equivalent.
+
+- ts: 2026-09-12T00:22:11.482392+00:00
+  session: foresight-sandbox-receipt-fixture
+  task: Repair stale Receipt River multi-arity discovery fixture
+  p-efficiency: 0.95
+  p-friction: 0.2
+  p-skill-candidate: 0.6
+  spore: none
+  receipt-refs: receipt-river-fixture-repro/test/build/lint
+  note: Compiled CLJS calls a known multi-arity var through arity dispatch properties; with-redefs fixtures must preserve that shape. Reproduced the exact original failure, restored the supported arities without changing assertions, and verified full package test/build/lint.

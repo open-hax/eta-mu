@@ -3,6 +3,7 @@
    Append-only EDN file, one event per line. No MongoDB dependency.
    Uses an async mutex for concurrent write safety."
   (:require [open-hax.openplanner-protocols :as protocols]
+            [open-hax.services.extern.api :as api]
             [cljs.reader :as reader]
             ["fs" :as fs]
             ["fs/promises" :as fsp]
@@ -175,3 +176,6 @@
     ;; flag creates the file when missing without truncating an existing ledger.
     (.closeSync fs (.openSync fs file-path "a"))
     (->EdnFileEventAdmission file-path (create-mutex))))
+
+(defn create-edn-event-admission-js [directory]
+  (api/wrap (create-edn-event-admission directory)))

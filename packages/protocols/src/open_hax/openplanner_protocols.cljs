@@ -8,9 +8,9 @@
             [malli.error :as me]))
 
 ;; ---------------------------------------------------------------------------
-;; Envelope schema (canonical shape for all events)
-;; Mirror of event-ledger/schema.cljs — keep in sync.
-;; TODO: Extract shared schema package if this drifts.
+;; Compatibility wire envelope for the existing OpenPlanner service protocols.
+;; Clio owns canonical storage identity, schema history, admission and replay.
+;; This envelope is a payload inside a Clio event, not a second ledger contract.
 ;; ---------------------------------------------------------------------------
 
 (def ^:private from-to-schema

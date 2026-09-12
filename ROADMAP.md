@@ -4,7 +4,10 @@ One page for where the parts are going and in what order. Every repo in the
 constellation carries a short `ROADMAP.md` summarising the slice that affects it
 and pointing back here. **This file is the hub; those are satellites.**
 
-Last surveyed: 2026-08-06 (second pass, after #167/#168/#172/#176 merged).
+Last full survey: 2026-08-06 (second pass, after #167/#168/#172/#176 merged).
+Ledger ownership and dependency guidance reconciled: 2026-09-12. The dated
+board and copy surveys below retain their historical findings; consult the
+boards for present task status.
 
 ## How to use this
 
@@ -46,10 +49,42 @@ One contract language, many interpreters. Not one runtime.
 | **Turn Processor** | The host-neutral turn loop and its message/tool lifecycle | Provider catalogs, host config files, service deployment |
 | **Sol** | A service deployment of Turn Processor with HTTP/streaming/session adapters | A second contract language or turn algorithm |
 | **eta-mu agent** | CLI client, EDN session UX, transport selection | Hardcoded model/provider truth |
-| **event-ledger** | The append-only envelope contract and its storage | Contract vocabulary |
+| **Clio** (`packages/clio`) | Canonical event sourcing: identity, content-addressed schemas, admission, causal ordering, replay and durable JVM/Node ledger transports | Service-specific wire payloads, application policy or provider selection |
+| **service protocols** (`packages/protocols`) | Eight service contracts, their compatibility wire envelope, and selectable Clio EDN/Mongo/REST/Socket.IO implementations | A competing canonical event ledger or storage identity scheme |
 | **knoxx** | A later application composition using stable upstream parts | Defining the upstream seams while they are still moving |
 | **openplanner** | (being dismantled) | — |
 | **services deploy repo** | Host contract, image build, deploy order, health gates | Application behaviour |
+
+### Ledger retirement and migration — 2026-09-12
+
+`eta-mu/packages/clio` is the canonical event ledger provider. The former
+standalone `event-ledger` package is deprecated and is retired from active
+eta-mu dependencies; do not add a new consumer or point a migration at it.
+Sol now stores operational episode events through Clio, with a regression guard
+against the old imports/dependency. Its existing mutable session/run projections
+still use their established EDN paths; complete reconstruction from Clio remains
+follow-up work.
+
+The service protocols' EDN provider implements all eight contracts using Clio.
+The existing OpenPlanner envelope is compatibility payload data inside a Clio
+event, not the canonical ledger envelope. Provider selection remains explicit,
+with existing remote implementations and per-service overrides available.
+
+Rheos still uses the raw-envelope adapter at
+`open-hax.records.edn.event-admission` for `.events/ledger.edn`. That adapter is
+part of `packages/protocols` and has no dependency on the deprecated package.
+Keeping existing board history readable is not a claim that Rheos has already
+switched its ledger to Clio. An explicit importer must validate old envelopes,
+resolve incompatible identities or causal links without silently dropping
+records, write a separate Clio ledger, and compare rebuilt board projections
+before switching the adapter. Do not replace or rewrite the old ledger merely
+by opening it with a new provider.
+
+See [Clio](packages/clio/README.md),
+[service providers](packages/protocols/README.md#legacy-edn-compatibility), and
+[Sol](packages/sol/README.md) for the implemented boundaries. The completed
+implementation slice is recorded by
+`eta-mu:clio-local-edn-service-providers-and-deprecated-ledger-retirement`.
 
 ## The sequencing rule
 
@@ -74,7 +109,7 @@ Diagnosed in `eta-mu:katamorph-canonical-cutover` and worth memorising:
 Every "make X comply" card on this roadmap should therefore ship an
 *enforcement* mechanism, not a cleanup pass. A cleanup without a gate regresses.
 
-## Current state
+## Board survey — 2026-08-06
 
 ### Done
 
@@ -139,10 +174,11 @@ is `done`. Moved to Done below.
 - `eta-mu:knoxx-katamorph-cutover` (icebox) — by design; last.
 - openplanner teardown — no epic yet. See below.
 
-## The drift ledger
+## Copy survey — 2026-08-06
 
-Duplicate copies of the same thing, and which one consumers actually use. This
-table is the backlog for the cutover; it is not aspirational.
+Duplicate copies and consumers found during the dated survey. These findings
+are retained as history; the 2026-09-12 ledger retirement above supersedes the
+old `event-ledger` adoption target.
 
 | Thing | Copies | Who consumes which |
 |---|---|---|
@@ -192,17 +228,20 @@ translations utils vexx workers`.
 
 **Do not bulk-copy `packages/**` into eta-mu.** Two reasons:
 
-1. `contract-runtime` and `event-ledger` are already standalone repos. A bulk
-   copy creates a *third* copy of each — the exact failure this roadmap exists
-   to stop.
+1. The 2026-08-06 survey found standalone `contract-runtime` and `event-ledger`
+   copies already existed. A bulk copy would create a third copy instead of
+   adopting the canonical owner. For event sourcing that owner is now Clio;
+   the deprecated `event-ledger` copies are retirement candidates.
 2. `eta-mu/kanban/eta-mu-charter-v1.md` is explicit: *"This repo is not meant to
    be 'the place where every absorbed package goes forever.' It is meant to be
    the canonical home of that orchestration loop."*
 
 The order that actually reduces copies:
 
-1. **Repoint consumers at the standalone repos.** knoxx's shadow-cljs source
-   path is the concrete one. Then delete the openplanner copies.
+1. **Repoint consumers at the canonical owners.** For event sourcing, adopt
+   `eta-mu/packages/clio`, not the deprecated standalone `event-ledger`. Verify
+   consumer behavior and explicit history migration before deleting obsolete
+   copies; other package homes remain separate decisions.
 2. **Per package, decide a home before moving it** — eta-mu (orchestration
    loop), its own repo (a real product), or delete (superseded). Record the
    decision; do not move first and decide later.
@@ -242,7 +281,10 @@ Not decisions yet. Flagged so they stop being re-derived.
    Katamorph is different: it *is* the canon, so its separate repo and the
    `contract-redefinition-guard` are doing real change-control work. Submodule
    later is cosmetic; the guard is the substance.
-3. **Is the split too fine?** Asked of axxium / event-ledger / katamorph, which
+3. **Historical split question (2026-08-06): is the split too fine?** The
+   analysis below preserves that survey's composition argument; it does not
+   recommend adopting the now-deprecated `event-ledger`. Asked of axxium /
+   event-ledger / katamorph, which
    feel like they do not work without each other. The declared dependencies say
    otherwise: `katamorph/deps.edn` names neither event-ledger nor axxium, and
    `event-ledger/deps.edn` names neither katamorph nor axxium. They are already

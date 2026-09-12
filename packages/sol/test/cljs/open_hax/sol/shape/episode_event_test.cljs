@@ -1,6 +1,6 @@
 (ns open-hax.sol.shape.episode-event-test
   (:require [cljs.test :refer [deftest is testing]]
-            [open-hax.event-ledger :as event-ledger]
+            [open-hax.sol.law.episode-event :as episode-law]
             [open-hax.sol.shape.episode-event :as episode-event]))
 
 (def agent-spec
@@ -128,4 +128,4 @@
            (:contract/refs envelope)))
     (is (= expected-ledger-binding
            (get-in envelope [:event/from :principal/binding])))
-    (is (true? (:valid (event-ledger/validate-envelope envelope))))))
+    (is (true? (:valid (episode-law/validate-envelope envelope))))))

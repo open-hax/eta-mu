@@ -1,4 +1,4 @@
-declare module "@promethean-os/openplanner-protocols" {
+declare module "@open-hax/protocols" {
   // ---------------------------------------------------------------------------
   // Envelope helpers
   // ---------------------------------------------------------------------------
@@ -54,6 +54,12 @@ declare module "@promethean-os/openplanner-protocols" {
 
   export function createEdnEventAdmission(ledgerDir: string): EdnFileEventAdmission;
 
+  export interface ClioEdnServices extends EventAdmission, SessionManagement,
+    DocumentStorage, GraphOperations, TranslationManagement, LabelManagement,
+    UserManagement, RealtimeSubscription {}
+
+  export function createEdnServices(directory: string): ClioEdnServices;
+
   // ---------------------------------------------------------------------------
   // Protocol: SessionManagement
   // ---------------------------------------------------------------------------
@@ -61,8 +67,8 @@ declare module "@promethean-os/openplanner-protocols" {
   export interface Session {
     id: string;
     "actor-id": string;
-    "created-at": string;
-    "updated-at": string;
+    createdAt: string;
+    updatedAt: string;
     metadata?: Record<string, unknown>;
   }
 

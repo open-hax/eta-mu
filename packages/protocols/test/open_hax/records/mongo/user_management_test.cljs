@@ -7,7 +7,7 @@
   (let [users (atom {})]
     #js {:collection (fn [name]
                        (if (= name "knoxx_users")
-                         #js {:insertOne (fn [doc]
+                         #js {:insertOne (fn [^js doc]
                                            (let [id (or (.-_id doc) (str (random-uuid)))
                                                  stored (assoc (js->clj doc :keywordize-keys true) :_id id)]
                                              (swap! users assoc id stored)
@@ -21,7 +21,7 @@
                                                         (clj->js
                                                           (first (filter #(= (:username %) username) (vals @users)))))
                                              :else (js/Promise.resolve nil))))
-                              :findOneAndUpdate (fn [query update _opts]
+                              :findOneAndUpdate (fn [query ^js update _opts]
                                                   (let [id (aget query "_id")
                                                         set-obj (.-$set update)
                                                         existing (get @users id)]

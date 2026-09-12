@@ -132,7 +132,7 @@ bb build    # shadow-cljs release server cli
 | sol (Knoxx-derived backend control plane) | `@eta-mu/sol` | `build` | `watch` | `test` |
 | chat-ui (Reagent chat component lib) | `@open-hax/chat-ui` | `build` (lib) / `build:app` | `dev` | `test` |
 | extensions (Pi/OpenCode contract runtimes) | `@eta-mu/extensions` | `build` | `watch` | `test` |
-| event-ledger (append-only event store lib) | `@promethean-os/event-ledger` | `build` | `watch` | `test` |
+| Clio (canonical EDN event sourcing kernel) | `@eta-mu/clio` | JVM/NBB source | — | `test` |
 
 Examples:
 
@@ -140,7 +140,7 @@ Examples:
 pnpm --filter @open-hax/chat-ui build          # compile the lib target
 pnpm --filter @open-hax/chat-ui build:app      # compile the app target
 pnpm --filter @open-hax/eta-mu-extensions build
-pnpm --filter @promethean-os/event-ledger test
+pnpm --filter @eta-mu/clio test
 ```
 
 ## Lint and typecheck

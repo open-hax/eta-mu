@@ -43,8 +43,8 @@ matched by the `:test` build's `open-hax\.sol\..*-test$` regex.
 
 ## Build targets
 
-Defined in `shadow-cljs.edn` (nREPL `4501`, dev HTTP `9633`). Source-paths
-include sibling packages `../katamorph/src/cljs` and `../event-ledger/src`. All
+Defined in `shadow-cljs.edn` (nREPL `4501`, dev HTTP `9633`). `deps.edn` resolves
+the pinned standalone Katamorph and workspace Clio, eta-mu, and turn-processor. All
 runtime builds are `:target :esm` with `:js-provider :import`; Node and npm
 modules (`node:*`, `fastify`, `ws`, `typebox`, `@modelcontextprotocol/sdk`)
 stay runtime imports via `:keep-as-import`.
@@ -135,6 +135,8 @@ shell cannot re-point Sol:
 SOL_HOST=0.0.0.0          # falls back to HOST, then 0.0.0.0
 SOL_PORT=8001             # falls back to PORT, then 8001 (Sol's own port, NOT 8000)
 SOL_PUBLIC_BASE_URL=
+SOL_CLIO_PROVIDER=edn
+SOL_CLIO_DIRECTORY=.ημ/sol/clio
 APP_NAME="Sol CLJS"
 CONTRACTS_DIR=contracts
 WORKSPACE_ROOT=/app/workspace
@@ -144,6 +146,49 @@ PROXX_AUTH_TOKEN=
 PROXX_DEFAULT_MODEL=
 PROXX_EMBED_MODEL=nomic-embed-text:latest
 ```
+
+### Durable local episodes
+
+Sol records operational run/turn lifecycle events through `packages/clio` by
+default. `SOL_CLIO_DIRECTORY` contains an append-only `events.edn` partition and
+content-addressed historical Malli catalogs in `schemas/`. No MongoDB server,
+database driver, or deprecated `open-hax/event-ledger` checkout is required.
+The existing session/run EDN projections retain their current API and paths.
+
+Each Clio `:sol/episode-emitted` event stores the unchanged Sol wire envelope in
+`:event/data`, including Axxium principal bindings and Katamorph resource refs.
+Clio owns its UUIDs, historical validation, inode locking, stream revisions,
+causal order, and replay. Sol translates its wire predecessor into the
+corresponding Clio predecessor; it does not invent another ledger engine.
+Exact wire retries preserve the original Clio event. Changed duplicates and
+stale predecessors fail before accepting a new fact.
+
+In ClojureScript hosts, configure `{:clio-provider :edn :clio-directory "..."}`.
+The existing one-argument `:event-ledger-append!` function remains an explicit
+custom-provider/test seam and receives the same Sol payload as before. Supplying
+the retired `:event-ledger-db` option without an injected appender throws a
+migration error. Unknown provider names throw rather than disabling persistence.
+An embedded host that supplies neither provider nor appender retains the
+historical validation-only behavior; the environment-based server selects EDN.
+
+`open-hax.sol.infra.agent.clio-store/open-store` reopens durable history, and
+`read-envelopes` returns the original payloads in canonical order. Corrupt EDN,
+missing historical schemas, and a missing ledger in an initialized directory
+fail explicitly. To create a fresh development history, choose a new empty
+directory; do not delete a ledger while retaining its schema directory.
+
+The `clio-store-test` suite exercises restart replay, idempotent wire retries,
+causal conflicts, corrupted/missing history, and an actual `service/send-agent-turn!`
+lifecycle with an injected deterministic turn executor and real disk persistence.
+That executor verifies persistence integration; it is not a model-quality test.
+
+This cutover covers operational turn/run episode events. Existing mutable
+session/run EDN files and the `ISessionStore` surface still use their established
+storage path; rebuilding every one of those projections from the Clio episode
+history is follow-up work. Existing Mongo ledger data is not automatically
+imported or rewritten. The new EDN directory should be initialized separately;
+a deliberate import must validate and preserve old wire payloads before the old
+store can be removed.
 
 ### KNOXX_* environment lineage
 

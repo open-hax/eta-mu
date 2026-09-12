@@ -1,80 +1,100 @@
-# @promethean-os/openplanner-protocols
+# @open-hax/protocols
 
-Cross-package ClojureScript protocol and schema definitions for OpenPlanner
-system domains. This package owns the **shape layer**: the canonical event
-envelope, its Malli schema and validators, and the `defprotocol` contracts that
-describe how clients interact with each OpenPlanner domain (event admission,
-sessions, documents, graph, translations, labels, users, realtime). It defines
-contracts only — concrete record implementations back onto Mongo change
-streams, REST, Socket.IO, or an append-only EDN file.
+Eight ClojureScript service protocols with selectable implementations. The
+local provider implements every protocol with canonical Clio events in EDN.
+Mongo, REST and Socket.IO records remain available for existing integrations.
 
-## Scope and layer ownership
+## Local development
 
-- **Canonical envelope** — `promethean.openplanner-protocols` defines the
-  event-ledger envelope schema (`:event/type`, `:event/from`, `:causal/root`,
-  `:delivery/mode`, `:payload`, …) as Malli data and a `validate-envelope`
-  predicate over it. The schema is a deliberate mirror of
-  `event-ledger/schema.cljs` (see the in-source TODO about extracting a shared
-  schema package if the two drift).
-- **Domain protocols** — eight `defprotocol`s: `EventAdmission`,
-  `SessionManagement`, `DocumentStorage`, `GraphOperations`,
-  `TranslationManagement`, `LabelManagement`, `UserManagement`,
-  `RealtimeSubscription`.
-- **Transport-specific implementations** under `src/promethean/records/`:
-  - `records/edn/` — `EdnFileEventAdmission`, an append-only EDN-file-backed
-    `EventAdmission` with an atom-based async write mutex (no MongoDB).
-  - `records/mongo/` — Mongo change-stream backed records for every domain.
-  - `records/rest/` — REST-adapter records (with a shared `rest/http` helper).
-  - `records/socket-io/` — Socket.IO transport records (the realtime path).
+```clojure
+(require '[open-hax.openplanner-protocols :as p]
+         '[open-hax.services.infra.providers :as providers])
 
-## Build and test
+(def services
+  (providers/create-provider {:provider :edn :directory ".local/services"}))
 
-This is an active CLJS package built with shadow-cljs (Malli `0.17.0` is the
-only CLJS dependency; `socket.io-client` is a runtime JS dependency for the
-Socket.IO records). Run scripts from this package directory:
-
-```bash
-# Compile the ESM library build (-> dist/, entry promethean.records.edn.event-admission)
-pnpm -C packages/protocols run compile:lib
-
-# Compile and run the node-test suite (ns matching promethean.*-test)
-pnpm -C packages/protocols run compile:test
-pnpm -C packages/protocols run test
-
-# Lint with the shared OpenHax clj-kondo config
-pnpm -C packages/protocols run lint:kondo
+;; In a ^:async ClojureScript function:
+(await (p/store-document services {:id "notes" :content "Inspectable EDN"}))
+(await (p/get-document services "notes"))
 ```
 
-`compile:test` emits `target/test.cjs` (autorun); the `test` script just runs
-that compiled output with `node`. See `AGENTS.md` for CLJS construction-order
-conventions.
+Node consumers can use the compiled ESM entrypoint. The bridge returns ordinary
+JavaScript objects and promises, preserving namespaced event keys as strings:
 
-## Public surface
+```javascript
+import { createEdnServices } from "@open-hax/protocols";
+const services = createEdnServices(".local/services");
+await services["store-document"]({ id: "notes", content: "Inspectable EDN" });
+await services["get-document"]("notes");
+```
 
-ESM consumers import `@promethean-os/openplanner-protocols`. The `:lib`
-shadow-cljs build exports three functions:
+`create-provider` is a multimethod. `:mongo` requires an explicitly connected
+`:db`, with optional `:document-collection`; it composes the existing Mongo
+records and existing in-process realtime adapter. Neither missing configuration
+nor remote errors silently select EDN. `:overrides` accepts independently chosen
+implementations under `:events`, `:sessions`, `:documents`, `:graph`,
+`:translations`, `:labels`, `:users`, or `:realtime`; every override must satisfy
+its public protocol. An EDN instance can supply `:documents` while the other
+domains use Mongo. Existing REST and Socket.IO records can be supplied the same
+way for the protocols they support.
 
-| Export | Source ns | Purpose |
-|--------|-----------|---------|
-| `makeEnvelope(eventType, payload)` | `promethean.openplanner-protocols/make-envelope` | Build a minimal envelope with the required fields |
-| `validateEnvelope(envelope)` | `promethean.openplanner-protocols/validate-envelope` | Validate against the canonical schema → `{valid, errors?}` |
-| `createEdnEventAdmission(ledgerDir)` | `promethean.records.edn.event-admission/create-edn-event-admission` | Factory for an EDN-file-backed `EventAdmission` (writes `ledger.edn` in `ledgerDir`) |
+## EDN behavior
 
-`edn-entry.mjs` is a thin bridge that imports `dist/main.js` and re-exports
-`createEdnEventAdmission` (also as the module default). TypeScript consumers get
-hand-written typings from `index.d.ts`, which declares the `EventEnvelope` shape
-plus interfaces for all eight protocols (`EventAdmission`,
-`EdnFileEventAdmission`, `SessionManagement`, `DocumentStorage`,
-`GraphOperations`, `TranslationManagement`, `LabelManagement`, `UserManagement`,
-`RealtimeSubscription`).
+| Protocol | Local behavior |
+|---|---|
+| EventAdmission | Validated wire envelopes, stable retries, conflicting identity refused, durable subscriptions |
+| SessionManagement | Create/get/update/close, all replayed from Clio |
+| DocumentStorage | Store/get/query/archive, archived documents remain inspectable |
+| GraphOperations | Nodes/edges, directional and typed neighbors, bounded traversal |
+| TranslationManagement | Store supplied segments/labels and atomically queue batches |
+| LabelManagement | Create/apply/query, repeated application is idempotent |
+| UserManagement | Local users, salted scrypt password digests, authentication and updates; get-user redacts credentials |
+| RealtimeSubscription | Durable room messages, polling subscriptions, explicit close/unsubscribe |
 
-CLJS consumers require the namespaces directly: `promethean.openplanner-protocols`
-for the schema/validators/protocols, and the relevant `promethean.records.*`
-namespace for a transport implementation.
+Translation batches record requests; this storage provider does not generate
+translations or fabricate model responses. Local authentication follows the
+existing success/failure event interface and grants no production identity.
 
-## Consumers
+`services.edn` contains Clio events, one per line. `schemas/` holds their
+content-addressed historical schemas. The existing OpenPlanner wire envelope is
+stored as payload data; **Clio** owns canonical identity, schema hashing,
+admission, causal ordering and replay. Each accepted transaction is one Clio
+event. Reads reconstruct projections from validated history. Exact event
+retries do not append twice; malformed history, missing ledger beside known
+schemas, conflicting IDs and stale concurrent writes are refused.
 
-OpenPlanner-stack packages that speak the event-ledger envelope. The protocol
-definitions are designed to be implemented by per-transport record types so a
-client can swap Mongo / REST / Socket.IO / EDN-file backends behind the same
-contract.
+All services share one stream. Concurrent processes may receive a stream
+conflict and should retry the whole operation. Reads and appends validate all
+history, favoring inspection and correctness over speed. Subscriptions poll
+every 50 ms and deliver new matching events in canonical order, including bursts
+from other process instances. Handles are process-local and must be closed.
+
+Queries support equality, nested field paths, `$and`, `$or`, `$eq`, `$ne`, `$in`,
+`$nin`, `$exists`, `$gt`, `$gte`, `$lt`, and `$lte`. Other operators are refused;
+this is a service adapter, not a Mongo wire-protocol or aggregation emulator.
+The existing Mongo/REST adapter semantics are preserved by this change.
+
+## Legacy EDN compatibility
+
+`createEdnEventAdmission` / `open-hax.records.edn.event-admission` remains the
+legacy raw-envelope adapter used by existing Rheos board histories. New service
+instances use `createEdnServices` / `open-hax.records.edn.services` and a separate
+`services.edn` file. Old board data is never silently rewritten. A deliberate
+importer is required before an existing board ledger can be retired. The
+deprecated standalone `event-ledger` package is not a dependency of either
+implementation.
+
+## Build, run and verify
+
+```bash
+pnpm -C packages/protocols run compile:lib
+pnpm -C packages/protocols test
+pnpm -C packages/protocols lint:kondo
+```
+
+The test script compiles and then runs the bundle once. Real-file tests cover all
+eight EDN protocols, replay, credential redaction, admission conflicts, malformed
+history, stale writers, subscription bursts and independent provider selection.
+Existing remote-record tests remain in the same suite. NBB consumes `nbb.edn`;
+CLJS consumers use `deps.edn` or the shadow configuration. Node uses Clio's pinned
+native lock addon, shared through the workspace package manager.
