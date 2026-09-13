@@ -24,17 +24,17 @@
     "watch": "shadow-cljs watch cli"
   },
   "dependencies": {
-    "@eta-mu/fork-tax": "workspace:*",
-    "@eta-mu/receipt-river": "workspace:*",
-    "@eta-mu/rheos": "workspace:*",
-    "@eta-mu/session-mycology": "workspace:*",
-    "@eta-mu/sol": "workspace:*",
+    "@eta-mu/fork-tax": "github:open-hax/eta-mu#0ed56aa74a53a1d1e9c2e55ce95451817a7f3a90&path:/packages/fork-tax",
+    "@eta-mu/receipt-river": "github:open-hax/eta-mu#0ed56aa74a53a1d1e9c2e55ce95451817a7f3a90&path:/packages/receipt-river",
+    "@eta-mu/rheos": "github:open-hax/rheos#fbf6aa0c7745765528a0a6cc7bd3fdbd344032d7",
+    "@eta-mu/session-mycology": "github:open-hax/session-mycology#30339f9aa3df83ef8c335d4544307272abfbb131",
+    "@eta-mu/sol": "github:open-hax/sol#1276955c86ff46936cd1ce7d81fbc790f7068e1e",
     "get-east-asian-width": "^1.3.0"
   },
   "devDependencies": {
-    "@eta-mu/contracts-output": "workspace:*",
-    "@eta-mu/terminal-ui": "workspace:*",
-    "@eta-mu/turn-processor": "workspace:*",
+    "@eta-mu/contracts-output": "github:open-hax/eta-mu#0ed56aa74a53a1d1e9c2e55ce95451817a7f3a90&path:/packages/contracts/output",
+    "@eta-mu/terminal-ui": "github:open-hax/eta-mu#0ed56aa74a53a1d1e9c2e55ce95451817a7f3a90&path:/packages/terminal-ui",
+    "@eta-mu/turn-processor": "github:open-hax/eta-mu#0ed56aa74a53a1d1e9c2e55ce95451817a7f3a90&path:/packages/turn-processor",
     "c8": "^10.1.2",
     "shadow-cljs": "^3.4.11"
   },

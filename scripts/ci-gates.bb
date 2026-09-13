@@ -32,24 +32,7 @@
 ;; ---------------------------------------------------------------------------
 
 (def gates
-  [{:name "rheos"
-    :workflow "rheos.yml" :job "test" :check "Rheos tests and lint"
-    :paths ["packages/rheos/" "packages/protocols/" "packages/chat-ui/"
-            "openhax.kanban.edn" "openhax.kanban.json" "kanban/openhax.kanban"
-            "package.json" "pnpm-lock.yaml" "pnpm-workspace.yaml"
-            ".github/workflows/rheos.yml"]
-    ;; `:no-warning` on the build is STRICTER THAN CI, deliberately. The rheos
-    ;; job runs only test + lint:kondo, and the one CI job that does build rheos
-    ;; ignores compiler warnings — so a shadow-cljs :infer-warning reaches main
-    ;; unchallenged, which is exactly how one did on 2026-08-06. sol and axxium
-    ;; already fail on any WARNING; rheos should too. Tracked as
-    ;; `rheos-ci-does-not-gate-build-warnings`; when CI catches up this stops
-    ;; being an intentional divergence and becomes a plain mirror.
-    :steps [{:cmd ["pnpm" "--dir" "packages/rheos" "test"] :expect "0 failures, 0 errors"}
-            {:cmd ["pnpm" "--dir" "packages/rheos" "lint:kondo"]}
-            {:cmd ["pnpm" "--dir" "packages/rheos" "build"] :no-warning true}]}
-
-   {:name "eta-mu-cljs"
+  [{:name "eta-mu-cljs"
     :workflow "coverage.yml" :job "eta-mu-cljs" :check "eta-mu CLI + turn-processor + terminal-ui"
     :paths :always
     :steps [{:cmd ["pnpm" "--dir" "packages/turn-processor" "test"] :expect "0 failures, 0 errors"}
@@ -65,25 +48,6 @@
     :paths :always
     :steps [{:cmd ["pnpm" "--dir" "packages/legacy/github" "test"]}
             {:cmd ["bash" "-c" "node --test packages/legacy/docs/tests/*.test.cjs"]}]}
-
-   {:name "sol"
-    :workflow "sol-ci.yml" :job "verify" :check "Sol CI"
-    :paths ["packages/sol/" "packages/turn-processor/" "packages/eta-mu/"
-            ".github/workflows/sol-ci.yml" "package.json" "pnpm-lock.yaml" "pnpm-workspace.yaml"]
-    ;; packages/sol/deps.edn is the only deps.edn in the workspace that reaches
-    ;; outside it: katamorph and event-ledger are private repos consumed as
-    ;; immutable git refs. eta-mu is public, and a workflow's default
-    ;; GITHUB_TOKEN only covers the repo it runs in, so CI mints a scoped
-    ;; GitHub App token to read those two.
-    ;;
-    ;; None of that applies locally — a developer's git credential helper
-    ;; usually already has access. So check what actually matters (can we read
-    ;; the repos?) rather than for CI's specific credential, which would skip a
-    ;; gate that can perfectly well run.
-    :needs-repos ["katamorph" "event-ledger"]
-    :steps [{:cmd ["pnpm" "--dir" "packages/sol" "lint"]}
-            {:cmd ["pnpm" "--dir" "packages/sol" "test"] :expect "0 failures, 0 errors" :no-warning true}
-            {:cmd ["pnpm" "--dir" "packages/sol" "build"] :no-warning true}]}
 
    {:name "axxium"
     :workflow "axxium-ci.yml" :job "verify" :check "Axxium CI"
@@ -114,12 +78,8 @@
 
    {:name "eta-mu-lint"
     :workflow "main-pr-gate.yml" :job "eta-mu-lint" :check "eta-mu-lint"
-    ;; GitHub Actions has no per-job path filter — the whole workflow triggers
-    ;; or not as a unit on `on.pull_request.paths`, so every gate mirroring one
-    ;; of this workflow's jobs must list that whole path set, not just the
-    ;; subset its own job happens to care about.
-    :paths ["packages/legacy/docs/" "packages/legacy/github/" "packages/clio/"
-            "packages/kondo-config/" "scripts/test.bb" "scripts/lint.bb"
+    :paths ["packages/legacy/docs/" "packages/legacy/github/"
+            "scripts/test.bb" "scripts/lint.bb"
             "pnpm-lock.yaml" "package.json" "pnpm-workspace.yaml"
             ".github/workflows/"]
     :steps [{:cmd ["pnpm" "--dir" "packages/extensions" "build"]}
@@ -127,32 +87,11 @@
 
    {:name "main-tests"
     :workflow "main-pr-gate.yml" :job "main-tests" :check "main-tests"
-    :paths ["packages/legacy/docs/" "packages/legacy/github/" "packages/clio/"
-            "packages/kondo-config/" "scripts/test.bb" "scripts/lint.bb"
+    :paths ["packages/legacy/docs/" "packages/legacy/github/"
+            "scripts/test.bb" "scripts/lint.bb"
             "pnpm-lock.yaml" "package.json" "pnpm-workspace.yaml"
             ".github/workflows/"]
-    :steps [{:cmd ["bash" "-c" "node --test packages/legacy/docs/tests/*.test.cjs"]}]}
-
-   {:name "clio"
-    :workflow "main-pr-gate.yml" :job "clio" :check "clio-nbb-shadow-lint"
-    :paths ["packages/legacy/docs/" "packages/legacy/github/" "packages/clio/"
-            "packages/kondo-config/" "scripts/test.bb" "scripts/lint.bb"
-            "pnpm-lock.yaml" "package.json" "pnpm-workspace.yaml"
-            ".github/workflows/"]
-    :steps [{:cmd ["pnpm" "--dir" "packages/clio" "lint"]}
-            {:cmd ["pnpm" "--dir" "packages/clio" "test"] :expect "0 failures, 0 errors"}
-            {:cmd ["bb" "scripts/lint.bb" "--only" "clio" "--kondo-only"]}
-            {:cmd ["bb" "scripts/test.bb" "--only" "clio"] :expect "0 failures, 0 errors"}]}
-
-   {:name "rheos-github-sync"
-    :workflow "rheos-github-sync-ci.yml" :job "rheos-github-sync" :check "rheos-github-sync"
-    :paths ["packages/rheos/" ".github/workflows/kanban-sync.yml"
-            ".github/workflows/eta-mu-kanban-sync.yml"
-            ".github/workflows/rheos-github-sync-ci.yml"]
-    :steps [{:cmd ["pnpm" "--dir" "packages/rheos" "test"] :expect "0 failures, 0 errors"}
-            {:cmd ["pnpm" "--dir" "packages/rheos" "build"]}
-            {:cmd ["bash" "-c" "node packages/rheos/dist/cli.cjs board snapshot --tasks-dir \"$PWD/kanban\" --out /tmp/ci-gates-snapshot.json"]}
-            {:cmd ["bash" "-c" "node packages/rheos/dist/cli.cjs drift --tasks-dir \"$PWD/kanban\""]}]}])
+    :steps [{:cmd ["bash" "-c" "node --test packages/legacy/docs/tests/*.test.cjs"]}]}])
 
 ;; ---------------------------------------------------------------------------
 ;; Plumbing

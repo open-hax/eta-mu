@@ -36,14 +36,10 @@
      @eta-mu/e2e — browser/server suite, run by .github/workflows/e2e.yml"
   [{:label "contract-guard" :cmd ["node" "--test" "scripts/contract-guard.test.mjs"]}
    {:label "eta-mu" :pkg "eta-mu"}
-   {:label "clio" :pkg "@eta-mu/clio"}
-   {:label "rheos" :pkg "@eta-mu/rheos"}
-   {:label "sol" :pkg "@eta-mu/sol"}
    {:label "terminal-ui" :pkg "@eta-mu/terminal-ui"}
    {:label "turn-processor" :pkg "@eta-mu/turn-processor"}
    {:label "extensions" :pkg "@eta-mu/extensions"}
    {:label "protocols" :pkg "@open-hax/protocols"}
-   {:label "chat-ui" :pkg "@open-hax/chat-ui"}
    {:label "axxium" :pkg "@open-hax/axxium"}
    {:label "kanban-legacy" :pkg "@open-hax/kanban-legacy"}])
 

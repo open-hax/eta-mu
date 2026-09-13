@@ -1,2 +1,0 @@
-{:config-paths ["../../kondo-config/clj-kondo.exports/open-hax/kondo-config"]
- :hooks {:analyze-call {open-hax.sol.macros/defroute hooks.defroute/defroute}}}

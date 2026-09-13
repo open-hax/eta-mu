@@ -1,9 +1,12 @@
 {:source-paths ["src/cljs" "test/cljs" "test-e2e/cljs"
                 "../fork-tax/src/cljs"
                 "../receipt-river/src/cljs"
-                "../session-mycology/src/cljs"
                 "../turn-processor/src/cljs"
-                "../terminal-ui/src/cljs"]
+                "../terminal-ui/src/cljs"
+                ;; session-mycology source from installed npm package (new repo)
+                ;; After E1.11, when session-mycology is fully removed from eta-mu,
+                ;; this path will resolve from node_modules instead of sibling
+                "deps/session-mycology/src/cljs"]
  :dependencies [[metosin/malli "0.16.4"]]
  :js-options {:js-provider :import}
  :builds
