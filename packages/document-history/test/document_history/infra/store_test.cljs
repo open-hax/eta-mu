@@ -1,5 +1,6 @@
 (ns document-history.infra.store-test
   (:require [cljs.test :refer [async deftest is testing]]
+            [clio.infra.event :as event]
             [clio.infra.ledger :as ledger]
             [clio.infra.projection :as projection]
             [clio.infra.runtime :as runtime]
@@ -24,6 +25,50 @@
    (ledger/canonicalize-files
     (:schema/revisions (runtime/refresh (:store/runtime db)))
     (fs/finalized-ledgers (:store/ledgers db)))))
+
+(deftest finalized-clio-identities-remain-extendable-without-case-rewriting
+  (let [root (temporary-root)]
+    (try
+      (let [db (store/open! root)
+            rt (runtime/refresh (:store/runtime db))
+            imported-id "ABCDEF01-2345-8ABC-BDEF-0123456789AB"
+            imported (assoc (event/make-event
+                             (:schema/current rt) :document-history/revision-recorded
+                             {:event/stream "external:document-revision" :event/seq 1
+                              :event/actor "test:external-editor" :event/subject "doc"
+                              :event/data {:document/metadata {:title "external"}
+                                           :document/markdown "external"}})
+                            :event/id imported-id)
+            partition (fs/join (:store/ledgers db) "external.edn")]
+        (ledger/create-ledger! partition)
+        (ledger/append-event! (:schema/revisions rt) partition imported)
+        (is (= [imported-id] (:revision/heads (store/read! db "doc"))))
+        (is (= "external" (:document/markdown (store/read-revision! db "doc" imported-id))))
+        (let [sibling (store/commit! db (command "doc" "independent root"))
+              child (try
+                      (store/commit! db (command "doc" "extended imported root" [imported-id]))
+                      (catch :default cause
+                        {:test/error (:document-history/error (ex-data cause))}))]
+          (is (:commit/revision child) (pr-str child))
+          (when-let [child-id (:commit/revision child)]
+            (let [branch (store/read-revision! db "doc" child-id)]
+              (is (= #{(:commit/revision sibling) child-id} (set (:revision/heads child))))
+              (is (:revision/conflicted? child))
+              (is (= [imported-id child-id] (mapv :revision/id (:revision/history branch))))
+              (is (= [imported-id] (:revision/parents (last (:revision/history branch)))))
+              (is (= imported (first (filter #(= imported-id (:event/id %)) (accepted-events db)))))
+              (let [resolved (store/commit! db (command "doc" "resolved" (:revision/heads child)))]
+                (is (false? (:revision/conflicted? resolved)))
+                (is (= 4 (count (:revision/history resolved))))
+                (is (= (set (:revision/heads child))
+                       (set (:revision/parents (last (:revision/history resolved))))))))))
+        (let [before (accepted-events db)]
+          (doseq [invalid-id ["aaaaaaaa-aaaa-0aaa-8aaa-aaaaaaaaaaaa"
+                             "aaaaaaaa-aaaa-4aaa-0aaa-aaaaaaaaaaaa"]]
+            (is (= :invalid-command
+                   (error-type #(store/commit! db (command "doc" "invalid" [invalid-id])))))
+            (is (= before (accepted-events db))))))
+      (finally (fs/remove-tree! root)))))
 
 (deftest revisions-preserve-both-siblings-and-explicit-resolution
   (let [root (temporary-root)]

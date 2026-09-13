@@ -119,6 +119,10 @@ sequences, keywords, symbols, strings, booleans, nil, and supported finite numbe
 Host objects, functions, tagged records, and unsupported numeric values are refused.
 Applications should enforce their own content-size and field-level policies.
 
+Revision parents use Clio's UUID identity predicate directly, matching finalized
+ledger admission. Accepted uppercase or mixed-case identity strings are preserved
+exactly in history and causal references; document-history does not normalize them.
+
 ## Rheos and Knoxx ownership
 
 Rheos already describes canonical lifecycle events and disposable EDN snapshots in
@@ -149,6 +153,6 @@ rather than trusting compiler output that can print failed tests and still exit 
 independent writer processes, including equal timestamp siblings and concurrent
 initial imports. It also verifies 1/10/100 partitions, duplicate records, explicit
 resolution, immutable branch snapshots, deleted snapshots, stale projection writes,
-invalid command refusal, interrupted unpublished files, initialization-lock interleavings,
+invalid command refusal, imported UUID extension and resolution, interrupted unpublished files, initialization-lock interleavings,
 symlink refusal before directory creation, and bounded worker startup failures. `.github/workflows/document-history-ci.yml`
 runs the root-selected package gates on relevant PRs and main/staging changes.

@@ -369,3 +369,12 @@
   spore: none
   receipt-refs: none
   note: A review with an incorrect explanation still exposed a real gate failure: compiled assertions executed, but the compiler returned zero. Deliberate failure probes distinguish printed evidence from exit authority. Async fixture supervision also needs to await terminal callbacks before deleting fixture directories. Existing terminal-truth and falsify-every-new-test spores cover these lessons.
+- ts: 2026-09-13T06:36:46.546193230Z
+  session: /home/err/Documents/Codex/2026-09-11/operator-in-clojure/work/eta-mu-document-history
+  task: Align public document revision identity with Clio ledger admission
+  p-efficiency: 0.92
+  p-friction: 0.22
+  p-skill-candidate: 0.4
+  spore: none
+  receipt-refs: none
+  note: A duplicated UUID regex made accepted imported ledger heads unextendable. Reusing the canonical Clio predicate preserves existing identities and aligns command admission with replay. A real finalized-partition regression failed before repair and passed under both runtimes afterward. Existing falsify-every-new-test spore covers the reusable proof discipline; no new spore.
