@@ -40,7 +40,6 @@
    {:label "turn-processor" :pkg "@eta-mu/turn-processor"}
    {:label "extensions" :pkg "@eta-mu/extensions"}
    {:label "protocols" :pkg "@open-hax/protocols"}
-   {:label "axxium" :pkg "@open-hax/axxium"}
    {:label "kanban-legacy" :pkg "@open-hax/kanban-legacy"}])
 
 (def rule (apply str (repeat 60 "=")))

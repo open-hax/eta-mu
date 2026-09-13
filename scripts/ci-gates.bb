@@ -49,25 +49,6 @@
     :steps [{:cmd ["pnpm" "--dir" "packages/legacy/github" "test"]}
             {:cmd ["bash" "-c" "node --test packages/legacy/docs/tests/*.test.cjs"]}]}
 
-   {:name "axxium"
-    :workflow "axxium-ci.yml" :job "verify" :check "Axxium CI"
-    :paths ["packages/axxium/" ".github/workflows/axxium-ci.yml" "pnpm-lock.yaml"]
-    :steps [{:cmd ["bash" "-c" "cd packages/axxium && clj-kondo --lint src/cljs test/cljs"]}
-            ;; The JS-boundary debt ratchet, from axxium-ci.yml. Omitting it let a
-            ;; branch pass `--only axxium` while exceeding the boundary maximum,
-            ;; or while accepting a malformed --max. Both halves are mirrored:
-            ;; malformed maxima must be rejected, then the ratchet must hold.
-            {:cmd ["bash" "-c"
-                   (str "cd packages/axxium && set -o pipefail && "
-                        "for invalid in 56oops 56.5 1e2; do "
-                        "  if node scripts/check-js-boundary.mjs \"--max=${invalid}\" >/dev/null 2>&1; then "
-                        "    echo \"Malformed boundary maximum was accepted: ${invalid}\"; exit 1; "
-                        "  fi; "
-                        "done && "
-                        "node scripts/check-js-boundary.mjs --max=56")]}
-            {:cmd ["pnpm" "--dir" "packages/axxium" "test"] :expect "0 failures, 0 errors" :no-warning true}
-            {:cmd ["pnpm" "--dir" "packages/axxium" "build"] :no-warning true}]}
-
    {:name "extensions"
     :workflow "eta-mu-extensions-tests.yml" :job "test" :check "eta-mu-extensions-tests"
     :paths ["packages/extensions/" "packages/e2e/" ".github/workflows/eta-mu-extensions-tests.yml"]

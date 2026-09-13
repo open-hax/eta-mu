@@ -60,7 +60,6 @@ pnpm -C packages/extensions watch      # dev
 
 ### Active ClojureScript packages
 
-- [`packages/axxium`](packages/axxium/README.md) — `@open-hax/axxium`: axiomatic identity/auth kernel. All-CLJS (shadow-cljs `:esm`/Node) Fastify + Postgres server providing password auth, JWT/cookie sessions, an actor read surface, and an entity read endpoint; intended shared identity provider for proxx/knoxx/openplanner.
 - [`packages/contracts/output`](packages/contracts/output) — `@eta-mu/contracts-output`: CLJS output-contract gate (rewrite of `legacy/output-contract-gate`), shipped as a CLI binary and spawned by `eta-mu contracts output`.
 - [`packages/eta-mu`](packages/eta-mu/README.md) — `eta-mu`: the global CLI entry point and sub-command router (bins `eta-mu` and `pi`), shadow-cljs `:node-script` bundling the turn-processor agent loop; `npm install -g eta-mu` is the intended install path. **This supersedes `packages/legacy/coding-agent` as the CLI.**
 - [`packages/fork-tax`](packages/fork-tax/README.md) — `@eta-mu/fork-tax`: Fork Tax handoff plans, snapshot artifacts, owned/concurrent/blocked classifications, and versioned handoff events.
