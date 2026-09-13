@@ -1,0 +1,27 @@
+{
+  "name": "@eta-mu/document-history",
+  "version": "0.1.0",
+  "description": "Clio-backed immutable document revisions and EDN/Markdown projections",
+  "type": "module",
+  "license": "LGPL-3.0-or-later",
+  "files": [
+    "src",
+    "deps.edn",
+    "nbb.edn",
+    "README.md"
+  ],
+  "dependencies": {
+    "fs-ext-extra-prebuilt": "2.2.9",
+    "nbb": "1.5.211"
+  },
+  "scripts": {
+    "test": "pnpm run test:nbb && pnpm run test:shadow",
+    "test:nbb": "nbb -cp test test/run.nbb",
+    "test:shadow": "shadow-cljs compile test",
+    "lint:kondo": "clj-kondo --lint src test",
+    "lint": "pnpm run lint:kondo"
+  },
+  "devDependencies": {
+    "shadow-cljs": "3.4.11"
+  }
+}

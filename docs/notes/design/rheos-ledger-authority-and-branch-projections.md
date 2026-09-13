@@ -384,3 +384,28 @@ current CLJS implementation can deliver compatibility and validate the contracts
 Pure laws, folds, config normalization, and projection transforms should remain
 portable to nbb, bb, or JVM Clojure. Host-specific file watching, Git processes,
 and UI/server adapters stay at infra boundaries.
+
+
+## Document history package seam (2026-09-13)
+
+`packages/document-history` now implements generic immutable document revisions,
+causal heads/conflicts, and EDN/Markdown snapshots directly over Clio. Knoxx is its
+first application integration. Its accepted ledger partitions, schema history, and
+disposable snapshots live beneath `.ημ/`; separate physical partitions canonicalize
+as one logical history. This is the shared document responsibility, not a second
+kanban engine and not CMS-specific policy inside Clio.
+
+Rheos still has the related implementation gaps described above. Task creation now
+records body and basic placement, but omits some rendered metadata. Status, comment,
+and frontmatter writes still mutate Markdown before emitting older EventAdmission
+events. Timestamp-derived IDs can collide; task reads still start from Markdown.
+No generic task fold or conflict resolution runtime is being claimed by this package
+addition. The existing `rheos-canonical-task-fold-and-snapshots` and
+`rheos-markdown-projection-push-pull-sync` cards own adopting this seam for Rheos,
+including typed kanban metadata, Git/worldline visibility, and legacy event import.
+
+A shared adoption should call `document-history.infra.store` and its pure revision
+projection rather than copy Clio admission or canonicalization. Rheos retains workflow
+admissibility; Knoxx retains org authorization and publication policy. Each consumer
+must prove deletion-and-rebuild and concurrent-edit retention before replacing its
+current authority.

@@ -1,0 +1,18 @@
+(ns document-history.worker
+  (:require [clio.extern.js.runtime :as clock]
+            [clio.shape.edn :as edn]
+            [document-history.extern.fs :as fs]
+            [document-history.extern.process :as process]
+            [document-history.infra.store :as store]))
+
+(let [[root raw-command result ready gate mode] *command-line-args*]
+  (try
+    (let [db (store/open! root)
+          command (edn/read-one raw-command)]
+      (fs/write-text! ready "ready")
+      (process/await-files! [gate])
+      (with-redefs [clock/now-iso (constantly "2026-09-13T12:00:00.000Z")]
+        (fs/write-text! result
+                        (pr-str ((if (= mode "seed") store/seed! store/commit!) db command)))))
+    (catch :default cause
+      (fs/write-text! result (pr-str {:error (str cause) :data (ex-data cause)})))))

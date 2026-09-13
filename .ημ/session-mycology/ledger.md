@@ -351,3 +351,12 @@
   spore: none
   receipt-refs: 2026-08-30T05:20:31.845Z
   note: Keeping implementation H and activation A as separate immutable revisions prevents a reusable workflow from loading repaired source while still executing its predecessor. The activation changes only the internal checkout pin, preserves the review card through later consumer proof, and verifies the exact repository/path/credential contract plus the full 25-test GitHub package. Local CLI compilation was bounded by Maven network denial, so hosted exact-head gates remain the authority. No new spore; the existing exact-head and separate-evidence-retention spores already cover this revision topology.
+- ts: 2026-09-13T05:37:07.974707155Z
+  session: /home/err/Documents/Codex/2026-09-11/operator-in-clojure/work/eta-mu-document-history
+  task: Implement reusable Clio document history and causal snapshots
+  p-efficiency: 0.85
+  p-friction: 0.4
+  p-skill-candidate: 0.55
+  spore: none
+  receipt-refs: none
+  note: Real partition/process tests caught an unanchored Malli regex before the consumer cutover. Parent revisions must come from the editor, canonical ordering is display order only, and snapshots need immutable source addresses. Existing falsify-every-new-test and extraction-adoption spores cover the reusable lessons; no new spore.

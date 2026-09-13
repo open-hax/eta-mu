@@ -30,6 +30,7 @@
    Keep this complete — a CLJS package absent here is unlinted by the gate."
   ["eta-mu"
    "@eta-mu/clio"
+   "@eta-mu/document-history"
    "@eta-mu/rheos"
    "@eta-mu/sol"
    "@eta-mu/terminal-ui"

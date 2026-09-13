@@ -1,0 +1,5 @@
+{:config-paths ["../../kondo-config/clj-kondo.exports/open-hax/kondo-config"]
+ :linters {:layer-boundary/upward-require {:level :error}
+           :layer-boundary/host-require {:level :error}
+           :layer-boundary/js-star-interop {:level :error}}
+ :config-in-ns {document-history.extern.fs {:linters {:layer-boundary/js-star-interop {:level :off}}}}}
