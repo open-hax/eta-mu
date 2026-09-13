@@ -14,16 +14,32 @@
 (defn- eta-mu-path? [value]
   (boolean (some #{".ημ"} (str/split value #"[/\\]+"))))
 
+(defn- existing-ancestor [root]
+  (loop [candidate root]
+    (let [present? (try
+                     (fs/lstatSync candidate)
+                     true
+                     (catch :default cause
+                       (if (= "ENOENT" (.-code cause)) false (throw cause))))]
+      (if present? candidate (recur (path/dirname candidate))))))
+
 (defn root! [root]
   (when-not (and (string? root) (eta-mu-path? (path/resolve root)))
     (throw (ex-info "Document histories and snapshots must reside under .ημ"
                     {:document-history/error :invalid-root})))
-  (directory! root)
-  (let [resolved (fs/realpathSync root)]
-    (when-not (eta-mu-path? resolved)
+  (let [absolute (path/resolve root)
+        ancestor (existing-ancestor absolute)
+        intended (path/resolve (fs/realpathSync ancestor) (path/relative ancestor absolute))]
+    ;; A pre-existing .ημ symlink must be validated before mkdir can follow it.
+    (when-not (eta-mu-path? intended)
       (throw (ex-info "Resolved document history root escapes .ημ"
                       {:document-history/error :invalid-root})))
-    resolved))
+    (directory! intended)
+    (let [resolved (fs/realpathSync intended)]
+      (when-not (eta-mu-path? resolved)
+        (throw (ex-info "Resolved document history root escapes .ημ"
+                        {:document-history/error :invalid-root})))
+      resolved)))
 
 (defn exists? [file] (boolean (fs/existsSync file)))
 (defn read-text [file] (fs/readFileSync file "utf8"))

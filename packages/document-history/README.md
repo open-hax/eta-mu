@@ -47,7 +47,11 @@ exact saved branch and its immutable Markdown source path.
 `seed!` accepts the same command with empty parents. It imports only if the document
 has no accepted history, returning `:seed/created?`. A stable per-document Clio kernel
 lock covers read-check-and-commit. Its inode remains in place permanently, and process
-exit releases the kernel lock. Normal saves never take this initialization lock.
+exit releases the kernel lock. Parentless normal commits share this lock so a seed's
+empty check and append are linearizable. If normal creation won, the seed returns the
+existing projection. If the seed won, a later independent normal root claim is still
+retained. Parented edits remain independent partitions; initialization is not a
+permanent uniqueness constraint.
 
 ## Authority and conflict semantics
 
@@ -138,9 +142,13 @@ bb scripts/test.bb --only document-history
 bb scripts/lint.bb --only document-history --kondo-only
 ```
 
-The same real-filesystem suite runs in NBB and compiled ClojureScript. It starts two
+The same real-filesystem suite runs in NBB and compiled ClojureScript. Shadow's automatic
+post-compile execution is disabled; the script explicitly runs the resulting Node
+bundle once. A deliberate failing-assertion probe verifies the script exits nonzero,
+rather than trusting compiler output that can print failed tests and still exit zero. It starts two
 independent writer processes, including equal timestamp siblings and concurrent
 initial imports. It also verifies 1/10/100 partitions, duplicate records, explicit
 resolution, immutable branch snapshots, deleted snapshots, stale projection writes,
-invalid command refusal, and interrupted unpublished files. `.github/workflows/document-history-ci.yml`
+invalid command refusal, interrupted unpublished files, initialization-lock interleavings,
+symlink refusal before directory creation, and bounded worker startup failures. `.github/workflows/document-history-ci.yml`
 runs the root-selected package gates on relevant PRs and main/staging changes.

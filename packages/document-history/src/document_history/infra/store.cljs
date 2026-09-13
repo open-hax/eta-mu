@@ -79,11 +79,7 @@
         ids (sort (distinct (map :event/subject (:canonical/events canonical-history))))]
     (mapv #(project-document! store canonical-history %) ids)))
 
-(defn commit!
-  "Append one full document revision. Parents are the editor's observed
-   revisions, including multiple heads for an explicit resolution. The event
-   survives projection failure; callers can always recover it through replay."
-  [store command]
+(defn- require-command! [command]
   (law/require-command! command)
   ;; Reuse Clio's portable EDN rules and strict reader before publishing data.
   (canonical/canonical-edn (:document/metadata command))
@@ -91,6 +87,16 @@
                (edn/read-one (pr-str (:document/metadata command))))
     (throw (ex-info "Metadata must round-trip as plain EDN"
                     {:document-history/error :invalid-command})))
+  command)
+
+(defn- with-initialization-lock! [store document-id operation]
+  (let [file (fs/ensure-lock-file! (fs/join (:store/seeds store) (str document-id ".lock")))
+        lock (clio-fs/acquire-lock! file)]
+    (try
+      (operation)
+      (finally (clio-fs/release-lock! lock)))))
+
+(defn- append-revision! [store command]
   (let [accepted (canonical-history store)
         document-id (:document/id command)]
     (doseq [parent (:revision/parents command)]
@@ -114,6 +120,17 @@
         (finally (fs/remove-file! pending)))
       (assoc (read! store document-id) :commit/revision id))))
 
+(defn commit!
+  "Append one full revision with the editor's observed parents. Parentless
+   commits coordinate with seed initialization, but retain independent root
+   claims. Parented edits remain independent ledger partitions."
+  [store command]
+  (require-command! command)
+  (if (empty? (:revision/parents command))
+    (with-initialization-lock! store (:document/id command)
+      #(append-revision! store command))
+    (append-revision! store command)))
+
 (defn read-revision!
   "Materialize one immutable revision and its complete causal ancestry. Other
    concurrent branches remain in the ledger and in read!'s full history."
@@ -134,19 +151,15 @@
     (project-document! store scoped document-id)))
 
 (defn seed!
-  "Import an initial revision at most once. The stable per-document lock inode
-   is retained permanently; a killed importer releases its Clio kernel lock.
-   Ordinary saves never use this initialization lock."
+  "Import only when history is empty at the locked initialization check. All
+   parentless writers share this stable inode. A later independent root claim
+   is retained; this is not a permanent uniqueness constraint on the document."
   [store command]
-  (law/require-command! command)
+  (require-command! command)
   (when (seq (:revision/parents command))
     (throw (ex-info "A document seed must have no parents"
                     {:document-history/error :invalid-command})))
-  (let [document-id (:document/id command)
-        file (fs/ensure-lock-file! (fs/join (:store/seeds store) (str document-id ".lock")))
-        lock (clio-fs/acquire-lock! file)]
-    (try
-      (if-let [existing (read! store document-id)]
-        (assoc existing :seed/created? false)
-        (assoc (commit! store command) :seed/created? true))
-      (finally (clio-fs/release-lock! lock)))))
+  (with-initialization-lock! store (:document/id command)
+    #(if-let [existing (read! store (:document/id command))]
+       (assoc existing :seed/created? false)
+       (assoc (append-revision! store command) :seed/created? true))))

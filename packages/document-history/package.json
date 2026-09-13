@@ -17,11 +17,12 @@
   "scripts": {
     "test": "pnpm run test:nbb && pnpm run test:shadow",
     "test:nbb": "nbb -cp test test/run.nbb",
-    "test:shadow": "shadow-cljs compile test",
+    "test:shadow": "shadow-cljs compile test && node target/test.cjs",
     "lint:kondo": "clj-kondo --lint src test",
     "lint": "pnpm run lint:kondo"
   },
   "devDependencies": {
-    "shadow-cljs": "3.4.11"
+    "shadow-cljs": "3.4.11",
+    "source-map-support": "0.5.21"
   }
 }

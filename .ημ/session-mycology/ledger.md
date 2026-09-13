@@ -360,3 +360,12 @@
   spore: none
   receipt-refs: none
   note: Real partition/process tests caught an unanchored Malli regex before the consumer cutover. Parent revisions must come from the editor, canonical ordering is display order only, and snapshots need immutable source addresses. Existing falsify-every-new-test and extraction-adoption spores cover the reusable lessons; no new spore.
+- ts: 2026-09-13T06:14:41.987956939Z
+  session: /home/err/Documents/Codex/2026-09-11/operator-in-clojure/work/eta-mu-document-history
+  task: Repair reviewed document history initialization and verification boundaries
+  p-efficiency: 0.88
+  p-friction: 0.48
+  p-skill-candidate: 0.65
+  spore: none
+  receipt-refs: none
+  note: A review with an incorrect explanation still exposed a real gate failure: compiled assertions executed, but the compiler returned zero. Deliberate failure probes distinguish printed evidence from exit authority. Async fixture supervision also needs to await terminal callbacks before deleting fixture directories. Existing terminal-truth and falsify-every-new-test spores cover these lessons.

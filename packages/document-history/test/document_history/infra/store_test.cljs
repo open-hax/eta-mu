@@ -1,5 +1,5 @@
 (ns document-history.infra.store-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [async deftest is testing]]
             [clio.infra.ledger :as ledger]
             [clio.infra.projection :as projection]
             [clio.infra.runtime :as runtime]
@@ -55,14 +55,17 @@
       (finally (fs/remove-tree! root)))))
 
 (deftest real-processes-keep-concurrent-writes-and-identical-timestamps
+  (async done
+    ((^:async fn []
+       (try
   (let [root (temporary-root)]
     (try
       (let [db (store/open! root)
             base (store/commit! db (command "doc" "base"))
             parents [(:commit/revision base)]
             results (mapv edn/read-one
-                          (process/writers! root [(command "doc" "worker A" parents)
-                                                  (command "doc" "worker B" parents)] "commit"))
+                          (await (process/writers! root [(command "doc" "worker A" parents)
+                                                         (command "doc" "worker B" parents)] "commit")))
             value (store/read! db "doc")
             children (filterv #(seq (:revision/parents %)) (:revision/history value))]
         (is (every? :commit/revision results) (pr-str results))
@@ -71,21 +74,28 @@
         (is (= #{"worker A" "worker B"} (set (map :document/markdown children))))
         (is (= ["2026-09-13T12:00:00.000Z"] (vec (distinct (map :revision/at children)))))
         (is (= (set parents) (set (mapcat :revision/parents children)))))
-      (finally (fs/remove-tree! root)))))
+      (finally (fs/remove-tree! root))))
+         (catch :default cause (is false (str cause)))
+         (finally (done)))))))
 
 (deftest concurrent-seeds-import-exactly-once
+  (async done
+    ((^:async fn []
+       (try
   (let [root (temporary-root)]
     (try
       (let [db (store/open! root)
             results (mapv edn/read-one
-                          (process/writers! root [(command "legacy" "migration")
-                                                  (command "legacy" "migration")] "seed"))
+                          (await (process/writers! root [(command "legacy" "migration")
+                                                         (command "legacy" "migration")] "seed")))
             value (store/read! db "legacy")]
         (is (= #{true false} (set (map :seed/created? results))) (pr-str results))
         (is (= 1 (count (:revision/history value))))
         (is (= 1 (count (fs/finalized-ledgers (:store/ledgers db)))))
         (is (fs/exists? (fs/join (:store/seeds db) "legacy.lock"))))
-      (finally (fs/remove-tree! root)))))
+      (finally (fs/remove-tree! root))))
+         (catch :default cause (is false (str cause)))
+         (finally (done)))))))
 
 (deftest ledger-partitions-order-and-duplicates-do-not-change-state
   (let [root (temporary-root)]
@@ -169,3 +179,63 @@
 (deftest storage-root-must-be-under-eta-mu
   (is (= :invalid-root (error-type #(store/open! "/tmp/not-eta-mu"))))
   (is (= :invalid-root (error-type #(store/open! "/tmp/.ημ/../outside")))))
+
+
+(deftest seed-and-normal-genesis-have-linearizable-empty-checks
+  (async done
+    ((^:async fn []
+       (let [root (temporary-root)]
+         (try
+           (let [db (store/open! root)
+                 first-results (mapv edn/read-one
+                                     (await (process/writers!
+                                             root [(command "seed-first" "imported")
+                                                   (command "seed-first" "independent normal root")]
+                                             ["seed-first" "commit-after-seed"])))
+                 first-value (store/read! db "seed-first")]
+             (is (true? (:seed/created? (first first-results))) (pr-str first-results))
+             (is (true? (:test/observed-publication? (second first-results))))
+             (is (= #{"imported" "independent normal root"}
+                    (set (map :document/markdown (:revision/history first-value)))))
+             (is (:revision/conflicted? first-value))
+             (let [second-results (mapv edn/read-one
+                                       (await (process/writers!
+                                               root [(command "commit-first" "normal creation")
+                                                     (command "commit-first" "legacy import")]
+                                               ["commit-first" "seed-after-commit"])))
+                   second-value (store/read! db "commit-first")]
+               (is (:commit/revision (first second-results)) (pr-str second-results))
+               (is (false? (:seed/created? (second second-results))))
+               (is (true? (:test/observed-publication? (second second-results))))
+               (is (= ["normal creation"] (mapv :document/markdown (:revision/history second-value))))))
+           (catch :default cause (is false (str cause)))
+           (finally (fs/remove-tree! root) (done))))))))
+
+(deftest escaped-root-is-refused-before-directory-creation
+  (let [base (str "/tmp/document-history-root-" (fs/unique-name))
+        outside (fs/join base "outside")
+        alias (fs/join base ".ημ")]
+    (try
+      (fs/directory! outside)
+      (process/symbolic-link! outside alias)
+      (is (= :invalid-root (error-type #(store/open! (fs/join alias "must-not-exist" "documents")))))
+      (is (= [] (process/directory-names outside)))
+      (is (not (fs/exists? (fs/join outside "must-not-exist"))))
+      (finally (fs/remove-tree! base)))))
+
+(deftest worker-failures-complete-both-markers-promptly
+  (async done
+    ((^:async fn []
+       (let [root (temporary-root)]
+         (try
+           (store/open! root)
+           (doseq [[mode options] [["fail-before-ready" {}]
+                                  ["commit" {:binary "document-history-command-that-does-not-exist"}]
+                                  ["commit" {:worker-script "test/document_history/absent-worker.nbb"}]]]
+             (let [started (process/now-ms)
+                   values (mapv edn/read-one
+                                (await (process/writers! root [(command "doc" "test")] mode options)))]
+               (is (:error (first values)) (pr-str values))
+               (is (< (- (process/now-ms) started) 10000))))
+           (catch :default cause (is false (str cause)))
+           (finally (fs/remove-tree! root) (done))))))))
