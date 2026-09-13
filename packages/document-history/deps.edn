@@ -1,0 +1,2 @@
+{:paths ["src"]
+ :deps {eta-mu/clio {:local/root "../clio"}}}

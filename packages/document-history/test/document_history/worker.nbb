@@ -1,0 +1,84 @@
+(ns document-history.worker
+  (:require [clio.extern.js.runtime :as clock]
+            [clio.extern.js.fs :as clio-fs]
+            [clio.shape.edn :as edn]
+            [clojure.string :as str]
+            [document-history.extern.fs :as fs]
+            [document-history.extern.process :as process]
+            [document-history.infra.store :as store]))
+
+(defn invoke! [db command mode control]
+  (let [signal #(fs/write-text! (fs/join control %) "reached")
+        wait-for #(process/await-files-sync! [(fs/join control %)])
+        reached? #(fs/exists? (fs/join control %))
+        original-read store/read!
+        original-publish fs/publish-ledger!
+        original-lock clio-fs/acquire-lock!
+        observed (atom nil)
+        initialization? #(str/ends-with? % (str "/seeds/" (:document/id command) ".lock"))]
+    (case mode
+      "seed-first"
+      (with-redefs [store/read!
+                    (fn [db id]
+                      (let [value (original-read db id)]
+                        (when-not value
+                          (signal "seed-empty")
+                          (wait-for "commit-lock-attempt"))
+                        value))
+                    fs/publish-ledger!
+                    (fn [pending final]
+                      (let [value (original-publish pending final)]
+                        (signal "seed-published")
+                        value))]
+        (store/seed! db command))
+
+      "commit-after-seed"
+      (do
+        (wait-for "seed-empty")
+        (with-redefs [clio-fs/acquire-lock!
+                      (fn [file]
+                        (when (initialization? file) (signal "commit-lock-attempt"))
+                        (let [lock (original-lock file)]
+                          (when (initialization? file)
+                            (reset! observed (reached? "seed-published")))
+                          lock))]
+          (assoc (store/commit! db command) :test/observed-publication? @observed)))
+
+      "commit-first"
+      (with-redefs [fs/publish-ledger!
+                    (fn [pending final]
+                      (signal "commit-pending")
+                      (wait-for "seed-lock-attempt")
+                      (let [value (original-publish pending final)]
+                        (signal "commit-published")
+                        value))]
+        (store/commit! db command))
+
+      "seed-after-commit"
+      (do
+        (wait-for "commit-pending")
+        (with-redefs [clio-fs/acquire-lock!
+                      (fn [file]
+                        (when (initialization? file) (signal "seed-lock-attempt"))
+                        (let [lock (original-lock file)]
+                          (when (initialization? file)
+                            (reset! observed (reached? "commit-published")))
+                          lock))]
+          (assoc (store/seed! db command) :test/observed-publication? @observed)))
+
+      "seed" (store/seed! db command)
+      (store/commit! db command))))
+
+(let [[root raw-command result ready gate mode control] *command-line-args*]
+  (try
+    (when (= mode "fail-before-ready")
+      (throw (ex-info "Deliberate worker startup failure" {})))
+    (let [db (store/open! root)
+          command (edn/read-one raw-command)]
+      (fs/write-text! ready "ready")
+      (process/await-files-sync! [gate])
+      (with-redefs [clock/now-iso (constantly "2026-09-13T12:00:00.000Z")]
+        (fs/write-text! result (pr-str (invoke! db command mode control)))))
+    (catch :default cause
+      (fs/write-text! result (pr-str {:error (str cause) :data (ex-data cause)}))
+      (when-not (fs/exists? ready) (fs/write-text! ready "failed")))))

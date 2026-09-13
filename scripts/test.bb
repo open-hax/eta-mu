@@ -40,6 +40,7 @@
    {:label "contract-guard" :cmd ["node" "--test" "scripts/contract-guard.test.mjs"]}
    {:label "eta-mu" :pkg "eta-mu"}
    {:label "clio" :pkg "@eta-mu/clio"}
+   {:label "document-history" :pkg "@eta-mu/document-history"}
    {:label "rheos" :pkg "@eta-mu/rheos"}
    {:label "sol" :pkg "@eta-mu/sol"}
    {:label "terminal-ui" :pkg "@eta-mu/terminal-ui"}
