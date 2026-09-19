@@ -1,35 +1,33 @@
 (ns axxium.db
   "PostgreSQL database layer for Axxium.
-   Uses pg via JS interop — following knoxx/proxx patterns."
+   Composes the PostgreSQL adapter using CLJS query results."
   (:require [axxium.config :as cfg]
-            ["pg" :refer [Pool]]))
+            [axxium.extern.postgres :as postgres]))
 
 (defonce pool
-  (delay
-    (let [pool-config #js {:connectionString (cfg/db-url)
-                           :max 20
-                           :idleTimeoutMillis 30000
-                           :connectionTimeoutMillis 2000}]
-      (new Pool pool-config))))
+  (delay (postgres/open-pool (cfg/db-url))))
 
 (defn query
   "Execute a parameterized SQL query.
-   Returns a promise of rows."
+   Returns a promise of {:rows [...], :row-count n, :command string}.
+   Multi-statement SQL returns a vector of those results."
   [sql params]
-  (.query @pool sql (clj->js params)))
+  ((:query! @pool) sql params))
 
 (defn ^:async query-one
   "Execute query and return first row or nil."
   [sql params]
-  (let [result (await (query sql params))
-        rows (js->clj (.-rows result) :keywordize-keys true)]
-    (first rows)))
+  (first (:rows (await (query sql params)))))
 
 (defn ^:async query-all
   "Execute query and return all rows."
   [sql params]
-  (let [result (await (query sql params))]
-    (js->clj (.-rows result) :keywordize-keys true)))
+  (:rows (await (query sql params))))
+
+(defn ^:async close!
+  "Close the PostgreSQL pool without exposing its native handle."
+  []
+  (await ((:close! @pool))))
 
 (def schema-sql
   "CREATE TABLE IF NOT EXISTS entities (
@@ -152,4 +150,4 @@
 (defn init-schema!
   "Initialize database schema. Idempotent."
   []
-  (.query @pool schema-sql #js []))
+  (query schema-sql []))

@@ -9,3 +9,5 @@ session-*.md
 .shadow-cljs/
 .cpcache/
 .nrepl-port
+
+/dist-lib/

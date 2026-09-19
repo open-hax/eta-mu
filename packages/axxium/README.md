@@ -1,150 +1,251 @@
 # Axxium
 
-`@open-hax/axxium` — the axiomatic identity and auth kernel for the Promethean
-system. A ClojureScript (shadow-cljs `:esm`/Node) Fastify + Postgres server that
-proxx, knoxx, and openplanner are intended to consume as a shared identity
-provider.
+Axxium owns authentication and stable principal identity for Foresight products.
+The independently runnable server and Knoxx use the same ClojureScript Fastify
+plugin. Provider verification, credential enrollment, cookies and login state do
+not belong to each consuming application. Knoxx continues to own its content
+permissions, organization membership and review workflow.
 
-> **Scope note.** This README documents the **currently implemented** surface
-> only. Axxium's design specs (`docs/axxium-kernel-spec.md`,
-> `docs/axxium-kernel-spec-v2.md`) describe a much larger kernel — receipts,
-> contract evaluation, an epistemic truth pipeline, DID auth, a full OAuth
-> provider. Those are **aspirational**; see the spec files' reconciliation notes
-> for what is real today.
+## Run and embed
 
-## What is actually implemented
+From the eta-mu workspace, install with pnpm, then:
 
-- **Password auth** — signup/login with `bcryptjs` hashing.
-- **Sessions** — JWT (`jose`) issued as a cookie (`@fastify/cookie`); session
-  rows persisted in Postgres.
-- **Actor registry (read)** — list actors, fetch by id / current actor, update
-  an actor's capabilities (self-or-admin gated).
-- **Entity (single read)** — `GET /api/entities/:id`. Entities are created as a
-  side effect of signup; there is **no** entity create/update/delete API and no
-  general entity-registry surface yet.
-- **Portal** — a **static landing page** (`resources/public/index.html`) served
-  under `/portal/`. It is informational, not an identity-management UI.
-
-Not yet implemented (despite appearing in specs/config/schemas): the OAuth
-provider (only config flags, a Malli `OAuthClient` schema, and an
-`oauth_clients` table exist — no authorization/callback/token routes), DID
-auth, receipts, and contract/truth evaluation.
-
-## Quick Start
-
-This package is part of the eta-mu pnpm workspace. Run commands with pnpm.
-
-```bash
-# from the repo root, target this package
-pnpm -C packages/axxium install   # workspace install (or `pnpm install` at root)
-
-# environment
-cp packages/axxium/.env.example packages/axxium/.env
-# edit .env with your Postgres credentials and a real JWT_SECRET
-
-# dev (shadow-cljs watch -> dist/server.js)
-pnpm -C packages/axxium watch
-
-# production build + run
+```sh
+pnpm -C packages/axxium test
+pnpm -C packages/axxium lint:kondo
 pnpm -C packages/axxium build
+pnpm -C packages/axxium verify:identity
+AXXIUM_EDN_DIRECTORY=/absolute/path/to/identity \
+AXXIUM_PUBLIC_BASE_URL=http://localhost:8787 \
 pnpm -C packages/axxium start
 ```
 
-`start` runs `node dist/server.js`. On boot the server runs `init-schema!`
-(idempotent `CREATE TABLE IF NOT EXISTS` for `entities`, `actors`, `sessions`,
-`oauth_clients`), so a reachable Postgres is required even in development.
+The default server uses Clio EDN and needs no PostgreSQL or MongoDB service.
+`AXXIUM_HOST` defaults to `127.0.0.1`; `AXXIUM_PORT` defaults to `8787`.
 
-## Scripts
+```clojure
+(require '[axxium.infra.identity :as identity]
+         '[axxium.api :as api])
 
-| Script | Command | Notes |
-|--------|---------|-------|
-| `build` | `shadow-cljs release server` | Optimized build to `dist/` |
-| `watch` | `shadow-cljs watch server` | Dev rebuild loop |
-| `start` | `node dist/server.js` | Runs the built server |
-| `typecheck` | `shadow-cljs compile server` | Non-release compile |
-| `test` | `shadow-cljs compile test && node target/test.cjs` | **No test sources exist** — see below |
-| `lint:kondo` | `clj-kondo --lint src/cljs` | |
-| `boundary:check` | `node scripts/check-js-boundary.mjs --check` | See boundary policy below |
+(def service
+  (identity/open! {:provider :edn
+                   :directory "/absolute/path/to/identity"
+                   :public-base-url "http://localhost:5173"
+                   :rp-id "localhost"}))
 
-## API Endpoints
+(await (api/register-routes fastify-app service))
+(identity/resolve-principal service opaque-token)
+```
 
-All actor/entity reads require an authenticated session (401 otherwise).
+`resolve-principal` synchronously replays current canonical identity facts and
+returns an active principal only when its session remains unexpired and
+unrevoked. Its map uses `:principal/id`, `:principal/entity-id`,
+`:principal/kind`, `:principal/username`, optional `:principal/email`,
+`:principal/display-name`, `:principal/status`, `:principal/roles` and
+`:principal/capabilities`. Identity kinds include human, agent, service and
+automation. JSON exports preserve these namespaced keys.
 
-### Auth (`routes/auth.cljs`)
-- `GET /api/auth/config` — public auth configuration
-- `POST /api/auth/signup` — email/password registration (creates entity + actor, opens a session, sets cookie)
-- `POST /api/auth/login` — email/password login
-- `POST /api/auth/logout` — clears session + cookie
-- `GET /api/auth/me` — resolves auth context, returns current actor
+The `:lib` build exports `createProvider`, `registerIdentityRoutes`,
+`resolvePrincipal` and `requestToken` for JavaScript consumers. Application
+code should prefer the CLJS API. Client objects and raw HTTP objects are decoded
+by named `extern` adapters.
 
-### Actors (`routes/actor.cljs`)
-- `GET /api/actors` — list active actors (auth-gated, `limit`/`offset` query)
-- `GET /api/actors/:id` — actor by id
-- `GET /api/actors/me` — current actor
-- `POST /api/actors/:id/capabilities` — replace capabilities (self-or-`:axxium/admin`)
+## Authentication methods
 
-### Entities (`routes/actor.cljs`)
-- `GET /api/entities/:id` — read a single entity
+`GET /api/auth/config` returns a method registry. A provider is available only
+when its required server configuration exists. The UI must show missing
+configuration truthfully; a local issuer test does not prove a live third-party
+login completed.
 
-### System (`routes/health.cljs`)
-- `GET /health` — DB ping health check
-- `GET /` — redirect to `/portal/index.html`
-- `GET /portal/*` — static portal assets
+| Method | Commands | Verification |
+| --- | --- | --- |
+| Username/email/password | `POST /api/auth/signup`, `/api/auth/local/login` | Separate unique username and email aliases; salted, versioned scrypt credentials |
+| GitHub | `/api/auth/providers/github/login`, `/api/auth/callback/github` | State, PKCE, code exchange, immutable GitHub subject; only verified primary email is metadata |
+| Discord | Corresponding `discord` routes | State, PKCE, code exchange, immutable Discord subject |
+| Google | Corresponding `google` routes | State, PKCE and nonce; signed ID token issuer/audience/expiry verification |
+| Bluesky/ATProto | Corresponding `atproto` routes; start accepts `handle` | Reference Node SDK discovery, PAR, PKCE, DPoP and token refresh; stable DID subject |
+| PGP | `/api/auth/pgp/challenge`, `/enroll`, `/verify` | Exact byte challenge, full key fingerprint and detached signature |
+| Passkey | `/api/auth/passkey/registration-options`, `/registration-verify`, `/authentication-options`, `/authentication-verify` | Real WebAuthn verification, expected challenge/origin/RP, user verification, credential ownership and counter checks |
 
-## Configuration
+All commands above except provider navigation and callbacks are POST. Signup
+accepts `{username,email,password,"display-name"}`; passwords need at least 12
+characters. Login accepts `{identifier,password}` where identifier is either
+username or email. Successful browser login sets an HTTP-only `axxium_session`
+cookie and returns `{ok,principal}` without returning its bearer secret.
+`GET /api/auth/me` returns the principal. `POST /api/auth/logout` commits
+revocation before clearing the cookie.
 
-All configuration is via environment variables (read in `config.cljs`). See
-`.env.example` for the full set.
+PGP enrollment and passkey registration require an already authenticated
+account. This prevents possession of an arbitrary key from claiming somebody
+else's username. PGP login accepts a registered fingerprint; passkeys support
+discoverable credentials. Enrollment and authentication ceremonies carry a
+single-use, expiring challenge bound to an HTTP-only `axxium_browser` cookie.
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `AXXIUM_PORT` | 8787 | HTTP server port |
-| `AXXIUM_HOST` | 0.0.0.0 | Bind address |
-| `AXXIUM_PUBLIC_BASE_URL` | http://localhost:8787 | Public base URL (portal link) |
-| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | localhost / 5432 / axxium / axxium / (empty) | Postgres connection |
-| `JWT_SECRET` | axxium-dev-secret-change-me | JWT signing secret — **set in production** |
-| `JWT_ISSUER` | axxium | JWT issuer |
-| `JWT_AUDIENCE` | promethean | JWT audience |
-| `JWT_EXPIRY_HOURS` | 168 | Session token lifetime (7 days) |
-| `SESSION_COOKIE_NAME` | axxium_session | Session cookie name |
-| `SESSION_COOKIE_SECURE` | false | `Secure` cookie flag |
-| `SESSION_COOKIE_SAME_SITE` | lax | `SameSite` policy |
-| `BCRYPT_SALT_ROUNDS` | 12 | Password hashing rounds |
-| `GITHUB_OAUTH_CLIENT_ID` / `_SECRET` / `_ENABLED` | (empty) / (empty) / false | Reserved for the unimplemented OAuth provider |
+Cookie-authenticated mutations require the configured exact `Origin`. Agent
+clients may supply a bearer token without a browser Origin. Explicit foreign
+origins, malformed Authorization headers and simultaneous bearer/cookie
+credentials are refused. External login redirects only accept local paths.
 
-## JS Boundary Policy
+## Provider setup
 
-Axxium follows the workspace CLJS layering rules (see `AGENTS.md`): raw JS
-interop (`aget`, `aset`, `js->clj`, `clj->js`) belongs at `extern.*`
-adapters, not scattered through domain/route code.
-`scripts/check-js-boundary.mjs` enforces this by scanning `src/cljs` (excluding
-files whose path contains `extern`) for those patterns.
+Standalone configuration accepts these environment variables:
 
-**Current status: 56 boundary violations.** They are raw `clj->js` / `js->clj`
-calls in `routes/auth.cljs`, `routes/actor.cljs`, and `routes/health.cljs` —
-these routes do request/response marshalling inline rather than through an
-extern adapter. `boundary:check` (i.e. `--check`) **exits non-zero (1)** on
-violations, so this gate currently fails; it is not yet wired into a passing CI
-step. Driving this to zero (by moving marshalling into an `extern.*` layer) is
-outstanding work.
+- `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET`
+- `DISCORD_OAUTH_CLIENT_ID` and `DISCORD_OAUTH_CLIENT_SECRET`
+- `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET`
+- `ATPROTO_OAUTH_CLIENT_ID`, the public client metadata URL
 
-## Testing
+Embedded consumers pass corresponding `:providers` maps with `:client-id` and
+`:client-secret`. Callbacks are `<public-base-url>/api/auth/callback/<provider>`.
+Real GitHub, Discord and Google authentication requires application registration
+and the operator's account consent. These credentials are not fabricated by the
+sandbox or supplied by the test fixtures.
 
-There is a `test` script (`shadow-cljs compile test && node target/test.cjs`)
-and a `:test` shadow-cljs build (ns-regexp `axxium\..*-test$`), but **there are
-currently no `*-test.cljs` source files** under `src/cljs`. The build matches
-nothing, so the suite is effectively empty. Real test coverage is outstanding.
+For ATProto, publish the SDK-generated metadata at the configured client ID.
+The plugin serves `/api/auth/atproto/client-metadata.json` and
+`/api/auth/atproto/jwks.json`. A persistent ES256 client signing key and SDK
+DPoP/session state are encrypted in the private vault. The SDK owns discovery,
+PKCE, PAR, DPoP nonces and refresh. Refresh is serialized per session locally and
+with OS file locks between processes sharing the EDN directory. Metadata,
+callback and JWKS reachability must be verified for the chosen public origin;
+local crypto tests are not a substitute for the external authorization flow.
+See [ATProto OAuth patterns](https://atproto.com/guides/oauth-patterns).
 
-## Known mismatch: bcrypt vs bcryptjs
+External identities are keyed by verified issuer and subject. Matching email
+never merges accounts or claims an existing password account. Explicit linking
+requires the already authenticated account and a browser-bound linking flow;
+a subject already attached to a different account is refused. An ATProto
+principal can lawfully have no email.
 
-The dependency and the code use **`bcryptjs`** (pure JS): `package.json` pins
-`bcryptjs ^3.0.3` and `routes/auth.cljs` requires `["bcryptjs" :default
-bcrypt]`. However, `shadow-cljs.edn` lists `"bcrypt"` (the native module) in
-`:keep-as-import` for both the `:server` and `:server-dev` builds. That
-`:keep-as-import` entry is **stale** — it names a module that is neither a
-dependency nor imported. The canonical password library is `bcryptjs`; the
-`"bcrypt"` entry in `shadow-cljs.edn` should be corrected to `"bcryptjs"`.
+Linking starts with an authenticated same-origin `POST` to the registry's
+`linkUrl` (`/api/auth/providers/:provider/link`), with optional `redirect` and
+an ATProto `handle`. The JSON response contains `authorizationUrl`; the browser
+navigates there. Browsers supply Origin on that POST naturally. A GET login URL
+with `?link=true` returns 405 and never starts a linking transaction.
 
-## License
+## Storage and authority
 
-GPL-3.0-or-later (per `package.json`).
+`identity.edn` is an append-only Clio ledger with content-addressed schemas in
+`schemas/`. One accepted event atomically changes all identity, alias,
+credential, challenge and session projections involved in an operation.
+Concurrent writers claiming the same stream slot fail visibly; callers retry
+the complete command. Projections rebuild from validated history. A missing
+initialized ledger, missing encryption key or corrupt history fails startup.
+An open identity store also refuses reads and decisions if its ledger disappears;
+it cannot silently recreate an empty identity history.
+
+Unauthenticated ceremonies use a separate expiring Clio checkpoint,
+`ceremonies.edn`, and encrypted blobs in `private/ceremonies/`. Their five-minute
+retention does not compact durable identity facts. Successful acceptance records
+challenge consumption and the identity/session changes in the same durable
+event; that consumption still wins after a crash or restart. Issuance permits
+at most 8 attempts per browser and 64 globally per minute, with 256 retained
+entries and a 64 KiB private payload limit. Quotas are checked before encryption.
+Checkpoint replacement and identity admission share a stable OS lock. Expired
+entries and unreferenced ceremony blobs are collected on startup and subsequent
+issuance, keeping abandoned requests bounded even if browser cookies rotate.
+ATProto pending SDK state uses this same expiring store; accepted SDK sessions
+and long-lived client keys retain their private durable storage.
+
+Public password signup and login reserve capacity in this checkpoint before
+deriving a password hash. At most two unexpired password reservations may exist
+across processes sharing the store. The shared global limit is 64 attempts per minute,
+and password attempts additionally have an 8-per-minute socket-address limit;
+changing browser cookies or forwarded headers cannot reset that client bucket.
+Completion releases the active slot while retaining its rate record. Cleanup
+retries brief lock contention; a remaining failure is reported and leaves the
+expiring lease in place without replacing a committed result or original work
+error. Unknown, inactive, and credentialless identifiers perform the same
+fixed-cost scrypt comparison using a non-authorizing dummy record. A process
+crash leaves a lease that expires after five minutes; a stalled job that outlives
+its lease may overlap later work, so this is a leased concurrency bound rather
+than cancellation of native crypto. Rejected admission returns
+429 without invoking scrypt. These bounds protect the standalone plugin; trusted
+in-process identity functions are available separately for controlled bootstrap
+and service composition. Known duplicate signup aliases are refused before
+hashing or allocating a credential blob and checked again at atomic admission.
+
+Infra constructs defined handler descriptions without receiving a native app.
+`axxium.api/register-routes` composes those descriptions with the extern plugin;
+the exported JavaScript function keeps its existing two-argument interface.
+Infra route handlers accept defined request maps and return response data:
+body/status, redirects and explicit session/browser cookie effects. Only the
+extern HTTP adapter validates and applies those effects to native Fastify replies.
+Each new ceremony renews its browser-binding cookie. The ATProto SDK remains
+inside an extern-owned operation facade; only defined functions and public
+metadata cross into orchestration.
+
+`GET /api/auth/credentials` lists the current account's public sign-in methods.
+`POST /api/auth/credentials/revoke` accepts `{credentialId}` and requires an
+active Axxium session issued within the last 15 minutes. Every login method can
+issue a fresh session; old sessions without recorded `issued-at` require another
+login, and expiry is never used to guess freshness. The transaction rechecks
+ownership, refuses removing the last available method or server-managed bootstrap password,
+then removes the selected method and all Axxium sessions in one Clio event.
+An unconfigured OAuth issuer remains visible in inventory but cannot count as
+the only alternative login. Configuration availability does not promise a
+third-party provider's current network health.
+Successful removal clears the cookie and requires sign-in again. OAuth removal
+disconnects the local issuer/subject binding; it does not revoke the external
+provider account or independent Knoxx MCP grants. Historical encrypted blobs
+remain part of the immutable identity history, but cannot authenticate after
+their current credential binding is removed.
+
+The event facts contain private credential references, never plaintext
+passwords, password hashes, bearer tokens, OAuth tokens or DPoP private keys.
+Private values are immutable AES-256-GCM encrypted EDN blobs under `private/`.
+The directory has owner-only permissions and the persistent master key and
+blobs have mode `0600`. A private blob is fsynced before its reference is
+committed; rejected transactions may leave unreferenced encrypted blobs. Keep
+this directory private and back it up together with the ledger. Encryption
+protects separation of public facts from credentials; it does not protect
+against someone who can read both the blobs and their local master key.
+
+`:memory` is an explicit second provider for bounded tests; it has no restart
+persistence. `create-provider`, `history`, `transact!`, `seal!` and `unseal` are
+multimethods. Neither production PostgreSQL nor MongoDB is silently emulated.
+The retained PostgreSQL namespaces document compatibility code and are not used
+by the new default server; adoption requires explicit identity migration, not
+reinterpretation of old SQL rows as new Clio events.
+
+Initial administrator setup is an explicit trusted-server command:
+`(await (identity/bootstrap! service {:username ... :email ... :password ...}))`.
+It atomically creates its own marker and administrator. Repeating the same
+configuration verifies the existing credential; changed credentials or a
+collision with a prior signup fails. Signup cannot grant administrator rights,
+and users cannot grant themselves arbitrary capabilities.
+The host prepares password material; pure bootstrap transitions admit the
+creation or revalidate the unchanged marker, aliases, actor and credential after
+password verification and before the atomic commit.
+
+OAuth callbacks exchange a provider's one-use code once. If the local Clio
+admission lock is temporarily held, they retry admission with that verified
+result, rechecking the current challenge, expiry and linking session each time.
+Only lock contention is retried, and challenge expiry stops the wait. A process
+crash after the provider exchange still requires starting a new login.
+
+## Verification and limits
+
+The suite tests encrypted restart replay, username/email uniqueness, session
+revocation, inactive identities, duplicate challenge refusal, explicit linking,
+bootstrap collision, HTTP cookie/origin handling, real OpenPGP signatures and
+real signed WebAuthn fixtures. Browser tests should additionally use an actual
+browser authenticator. Live external OAuth completion remains a separate gate
+requiring the provider configuration above.
+
+`verify:identity` imports the built ESM library as an independent Node consumer,
+starts a real TCP Fastify listener, signs up, reopens the encrypted Clio store,
+checks session identity, refuses forged headers and a foreign Origin, and proves
+that logout invalidates the reopened session. It removes its own temporary data.
+Both emitted builds use `:simple` optimization: an actual consumer probe caught
+advanced optimization renaming a Node crypto property despite clean compilation.
+
+The local provider favors inspectable history over speed: it replays on every
+read. No legacy identity history is silently imported. Credential rotation and
+recovery policy still need explicit contracts
+before broad production adoption. Named extern adapters now own raw host interop
+for both current identity and retained PostgreSQL compatibility paths; the
+unchanged strict `boundary:check` reports zero violations.
+
+Axxium's older kernel specifications remain design references, not claims that
+all described authorization-server or DID authentication endpoints exist.

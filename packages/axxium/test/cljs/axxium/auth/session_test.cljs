@@ -1,25 +1,25 @@
 (ns axxium.auth.session-test
   (:require [axxium.auth.session :as session]
-            [axxium.schema :as schema]
-            [cljs.test :refer [deftest is testing]]))
+            [axxium.config :as config]
+            [cljs.test :refer [deftest is]]
+            [clojure.string :as str]
+            ["@fastify/cookie" :as cookie]
+            ["fastify" :as fastify]))
 
-(def actor-row
-  {:id "actor.agent.research"
-   :entity_id "entity.agent.research"
-   :email "agent@example.com"
-   :capabilities [:research/read]
-   :roles [:research/agent]})
-
-(deftest actor->auth-context-test
-  (testing "organization scope is propagated"
-    (let [actual (session/actor->auth-context
-                  (assoc actor-row :org_id "org.open-hax"))]
-      (is (= "org.open-hax" (:auth/org-id actual)))
-      (is (= "actor.agent.research" (:auth/actor-id actual)))
-      (is (= "entity.agent.research" (:auth/entity-id actual)))
-      (is (schema/valid? schema/AuthContext actual))))
-
-  (testing "legacy rows remain valid without organization scope"
-    (let [actual (session/actor->auth-context actor-row)]
-      (is (not (contains? actual :auth/org-id)))
-      (is (schema/valid? schema/AuthContext actual)))))
+(deftest ^:async legacy-cookie-max-age-uses-http-seconds
+  (let [app (fastify/fastify)]
+    (try
+      (await (.register app cookie/default))
+      (.get app "/fixture" (fn [_ reply]
+                              (session/set-session-cookie reply "opaque-fixture")
+                              (.send reply #js {:ok true})))
+      (with-redefs [config/get-in-config (fn [key]
+                                          (case key [:jwt/expiry-hours] 2 [:session/cookie-secure] false
+                                                [:session/cookie-same-site] "lax" nil))]
+        (let [response (await (.inject app #js {:method "GET" :url "/fixture"}))
+              header (aget (.-headers response) "set-cookie")]
+          (is (= 200 (.-statusCode response)))
+          (is (str/includes? header "Max-Age=7200;") header)
+          (is (not (str/includes? header "Max-Age=7200000;")))
+          (is (str/includes? header "HttpOnly"))))
+      (finally (await (.close app))))))

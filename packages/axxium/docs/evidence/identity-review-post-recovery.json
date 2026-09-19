@@ -1,0 +1,107 @@
+{
+  "schema-version": 1,
+  "base-commit": "64598f0ba9a3cd0f014bf634f834a74712e2aa65",
+  "foundation-commit": "ff48f090965be5c17cca1e3662d7402b383510c1",
+  "review-comments": [
+    3996616830,
+    3996616831,
+    3996646774,
+    3996646778,
+    3996590328
+  ],
+  "test": {
+    "command": "pnpm -C packages/axxium test",
+    "tests": 127,
+    "assertions": 1078,
+    "failures": 0,
+    "errors": 0,
+    "exit": 0,
+    "compiler-files": 197,
+    "compiler-warnings": 0
+  },
+  "behavior-red": {
+    "tests": 126,
+    "assertions": 1074,
+    "failures": 16,
+    "errors": 0,
+    "groups": {
+      "actual-passkey-session-collision": 6,
+      "missing-bcrypt-work": 4,
+      "current-ciphertext-health": 4,
+      "oidc-audience-code-and-claim": 2
+    },
+    "note": "Restored HEAD infra file for baseline; final infra restored in finally. Pure domain tests passed on both runs."
+  },
+  "intermediate-harness-error": "First post-fix run failed parsing an extra closing parenthesis in the new dummy-password test; fixed before both successful full runs.",
+  "release": {
+    "command": "pnpm -C packages/axxium build",
+    "exit": 0,
+    "server": {
+      "files": 129,
+      "warnings": 0
+    },
+    "lib": {
+      "files": 129,
+      "warnings": 0
+    }
+  },
+  "native": {
+    "command": "pnpm -C packages/axxium verify:identity",
+    "exit": 0,
+    "compiled-esm-tcp-consumer": "passed",
+    "tests": 3,
+    "failures": 0,
+    "skipped": 0,
+    "stdout-baseline-failures": 3
+  },
+  "lint": {
+    "command": "pnpm -C packages/axxium lint",
+    "errors": 0,
+    "warnings": 0,
+    "exit": 0
+  },
+  "boundary": {
+    "command": "pnpm -C packages/axxium boundary:check",
+    "violations": 0,
+    "exit": 0
+  },
+  "limits": [
+    "Live external OAuth consent requires operator configuration and was not executed.",
+    "PostgreSQL service was not exercised; its retained handler tests inject defined database results and run actual bcrypt.",
+    "Dummy bcrypt cost12 matches the default, not all configurable historical costs.",
+    "No Clio, protocols or Rheos source was changed."
+  ],
+  "sources-sha256": {
+    "packages/axxium/src/cljs/axxium/domain/identity_passkey.cljc": "310a05cfd14ccbeda48257cc42df6fd8ec73a99302edc3e736b4b1fc011d5c7b",
+    "packages/axxium/src/cljs/axxium/extern/legacy_password.cljs": "6ba3be6933900ac731e1cb7802c9c12404f2d7857e4192d4c5e2b581000d674d",
+    "packages/axxium/src/cljs/axxium/extern/oauth.cljs": "501e78eaa667601c96ab17df08d41b0a3805b8204971b099b548c54170f6393a",
+    "packages/axxium/src/cljs/axxium/infra/identity.cljs": "e75787ae5f4cca011c03f92005d338a05bffda75f9c6fc52a2b0b75a60988674",
+    "packages/axxium/src/cljs/axxium/infra/identity_store.cljs": "021508919ed89f96decc71e521b445a7d2b53bac5f98314a7a378108ae1be888",
+    "packages/axxium/src/cljs/axxium/law/identity_passkey.cljc": "de4f277c554b8475339c2b5989441637f4e40cf80579b2e0c124733c8dd5eda4",
+    "packages/axxium/src/cljs/axxium/routes/auth.cljs": "0832b66ff856d152b0cd2da3910dbbadbf60db9a8c3eab369affb07f682b433c",
+    "packages/axxium/src/cljs/axxium/server.cljs": "365cc7db6c855f1ac20bf6188c0b6e6d5fd240587d55e907b03c903e66717c2a",
+    "packages/axxium/test/cljs/axxium/domain/identity_passkey_test.cljs": "325acfd56d9edee85ee9adcd1e1de96209ae25c001472e5e777e6769afff544e",
+    "packages/axxium/test/cljs/axxium/extern/legacy_password_test.cljs": "04ad574b3061bbadeda18241b22515c797de4f96fa740c59c6da6b65068c9bbc",
+    "packages/axxium/test/cljs/axxium/infra/identity_oauth_admission_test.cljs": "c09fd89ed422e9c9ec9d1c268df37340e4309665415e7c7f45442e461c626a4c",
+    "packages/axxium/test/cljs/axxium/infra/identity_oauth_completion_test.cljs": "3a6743d410aa642909114c8a1c3be07060979f9fff81cce32f3ae974c239850b",
+    "packages/axxium/test/cljs/axxium/infra/identity_oauth_test.cljs": "90267656293f7d82c5fd0d94a049721c06b19b250a3f4cfc3d3198b93a7645eb",
+    "packages/axxium/test/cljs/axxium/infra/identity_passkey_admission_test.cljs": "b187300dc09882d5e599510af718b53752ad5ab1b3355337b7bb81d641075979",
+    "packages/axxium/test/cljs/axxium/infra/identity_passkey_collision_test.cljs": "c75f3276d8049078922c4ef23dd03520b6418d958773c3f2606b7182be300bdf",
+    "packages/axxium/test/cljs/axxium/infra/identity_pgp_admission_test.cljs": "50cdb19231ad59d7b2df212552f885be800fea0f151d5918b49175bceabe0f08",
+    "packages/axxium/test/cljs/axxium/routes/auth_password_work_test.cljs": "5b0f3770d265d1f75a072ad8d79d98f33797d4152eb9d45cdb469e14f0f5bc4b",
+    "packages/axxium/test/cljs/axxium/server_health_test.cljs": "d269d215ad8124c5bd17414391d70bb850bdf860ebd7cd292de4987483c4a3b3",
+    "packages/axxium/test/js/concurrent-atproto-startup.test.mjs": "8a2cd8d0a5f6d07d40467964ce53acb1f9ada99ec325176412395cde1106cd8d",
+    "packages/axxium/test/js/concurrent-initialization.test.mjs": "7cecb3245e1345caab906ce66823e62d1522d9d7d8cf49c117dfdf18035e9773"
+  },
+  "logs-sha256": {
+    "axxium-review-red.log": "85a29d7144bd63a17c3acafd5bd32b1996b940791d15bc2940f7e00ffdc6ebfa",
+    "axxium-review-green.log": "6d40c7113bed1fe90b9626053d903adc34065e10dd7094b3268d7f981fde57e9",
+    "axxium-review-green-02.log": "e91d2834678c7d154141a86ea2c2bfd67fea15e76a6c571e0aa4bec9306a4d1e",
+    "axxium-review-final-test.log": "ad0da8286a39f2e62729160c9d3427e609ed41a055d60fec61497f643ae526ee",
+    "axxium-review-build.log": "dba8b6b75cbcbddcd03c7b7c06827bfb374f1eddeb7f85e48826563cc97da5c6",
+    "axxium-review-native-red.log": "7f5c47de0a5cd9b7a373044b445ec893166ce7a817fd1ee67483b046927f41c0",
+    "axxium-review-native-green.log": "29a3ecd1f8386d3a4f66ec9dee84588661a80d56862685c31780baef15eef1fe",
+    "axxium-review-lint.log": "9e1df759b006ae2492b666b58812de23a81999043a3516f1ac4debee6cff05a9",
+    "axxium-review-boundary.log": "916fd6e6b7cceb6b6b317f97260ad1070ff2df51f1a76f9455d83ce7ba0c784c"
+  }
+}
