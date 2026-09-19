@@ -12,10 +12,10 @@ editing build/test flows.
 
 ## Build, test, lint
 
-All commands run from this package directory via pnpm:
+Run these commands from the repository root:
 
 ```bash
-pnpm -C packages/rheos build        # shadow-cljs release server cli  -> dist/server.js, dist/cli.cjs
+pnpm -C packages/rheos build        # shadow-cljs release server cli github-sync app -> dist/
 pnpm -C packages/rheos watch        # shadow-cljs watch server-dev (hot reload, dist-dev)
 pnpm -C packages/rheos start        # node dist/server.js  (production build output)
 pnpm -C packages/rheos start:dev    # node dist-dev/server.js  (dev build output)
@@ -25,10 +25,10 @@ pnpm -C packages/rheos lint:kondo   # alias of lint
 pnpm -C packages/rheos clean        # rm -rf dist dist-dev target
 ```
 
-`build` releases both the `server` and `cli` shadow-cljs builds. The browser
-`app` build is not wired into `build`; it is the `:app` shadow target (see
-below) and emits to `dist/web/js`, which the server then serves statically. A
-`bb.edn` mirrors `build`/`watch`/`test`/`lint`/`clean` for Babashka users.
+`build` releases the `server`, `cli`, `github-sync` and browser `app` targets.
+The browser output is `dist/web/js`, served statically by the server. The local
+`bb.edn` also offers build/watch/test/lint/clean tasks, but its `build` currently
+releases only `server` and `cli`; use the pnpm command for all four targets.
 
 > The `test` package script runs `node dist/test.cjs`; the `:test` shadow build
 > writes its bundle to `dist/test.cjs` with `:autorun true`.
@@ -36,13 +36,16 @@ below) and emits to `dist/web/js`, which the server then serves statically. A
 ## shadow-cljs targets
 
 Defined in `shadow-cljs.edn`. Source paths pull in sibling workspace packages:
-`../protocols/src`, `../event-ledger/src`, and `../chat-ui/src`.
+`../protocols/src` and `../chat-ui/src`, alongside Rheos's own `src` and `test`.
+The deprecated `event-ledger` package is not on the source path or in the npm
+manifest.
 
 | Build | Target | Output | Entry / notes |
 |-------|--------|--------|---------------|
 | `server` | `:esm` `:node` | `dist/` | init-fn `rheos.backend.infra.http-server/init`; `:optimizations :simple` (bare JS interop, no `:advanced`) |
 | `server-dev` | `:esm` `:node` | `dist-dev/` | same init-fn; hot reload via `stop-http-before-load!` / `start-http-after-load!` |
 | `cli` | `:node-script` | `dist/cli.cjs` | main `rheos.backend.infra.cli/main`; `.cjs` so node runs it as CommonJS under `"type":"module"` |
+| `github-sync` | `:node-script` | `dist/github-sync.cjs` | main `rheos.backend.infra.github-sync-cli/main`; explicit GitHub projection boundary |
 | `app` | `:browser` | `dist/web/js` | init-fn `rheos.ui.infra.mount/init`; asset-path `/js` |
 | `test` | `:node-test` | `dist/test.cjs` | ns-regexp `-test$`, autorun |
 
@@ -111,7 +114,23 @@ UI, each using a domain / law / shape / infra layering:
 - `rheos.ui.law` — `url`
 - `rheos.ui.infra` — `mount`, `api`, `chat-session`, `ledger-stream`
 
-The ledger and protocol contracts come from the sibling
-`@promethean-os/event-ledger` and `@promethean-os/openplanner-protocols`
-packages; the chat UI components come from `@open-hax/chat-ui` (all wired via
-shadow-cljs source paths).
+The eight service protocols and compatibility wire envelope come from
+`@open-hax/protocols`, declared as `workspace:*` in `package.json` and consumed
+through `../protocols/src`. Chat components come from `@open-hax/chat-ui` through
+`../chat-ui/src`. Neither is a reason to add the deprecated `event-ledger`
+package back to Rheos.
+
+## Ledger ownership and existing board history
+
+[Clio](../clio/README.md) owns canonical event sourcing for eta-mu. Rheos's
+current `rheos.backend.infra.ledger/get-ledger` still constructs
+`open-hax.records.edn.event-admission/create-edn-event-admission` and reads/writes
+raw service envelopes in `<board-dir>/.events/ledger.edn`. This is a compatibility
+adapter inside `packages/protocols`, not a dependency on the retired standalone
+package and not a completed Clio migration.
+
+The [Clio-backed service provider](../protocols/README.md#legacy-edn-compatibility)
+uses a separate `services.edn` plus historical schema snapshots. Moving an
+existing board requires an explicit importer, preservation and validation of
+its event history, and a comparison of rebuilt board projections before the
+adapter changes. Opening old board data does not automatically rewrite it.

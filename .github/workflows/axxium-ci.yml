@@ -5,12 +5,14 @@ on:
     paths:
       - "packages/axxium/**"
       - ".github/workflows/axxium-ci.yml"
+      - ".github/scripts/package-warning-gates.test.mjs"
       - "pnpm-lock.yaml"
   push:
     branches: [main]
     paths:
       - "packages/axxium/**"
       - ".github/workflows/axxium-ci.yml"
+      - ".github/scripts/package-warning-gates.test.mjs"
       - "pnpm-lock.yaml"
 
 permissions:
@@ -69,6 +71,9 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify warning gate regressions
+        run: node --test .github/scripts/package-warning-gates.test.mjs
+
       - name: Install clj-kondo
         uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
         with:
@@ -100,7 +105,7 @@ jobs:
           set -o pipefail
           pnpm --dir packages/axxium test 2>&1 | tee axxium-test.log
           grep -q "0 failures, 0 errors" axxium-test.log
-          if grep -E "(^|[[:space:]])WARNING([:[:space:]]|$)" axxium-test.log; then
+          if grep -Eiq '(^|[[:space:]]|\[)warning([,:[:space:]]|\]|$)|(^|[[:space:]]|\()[1-9][0-9]*[[:space:]]+warnings([,:[:space:]]|\)|$)|(^|[[:space:]])warnings:[[:space:]]*[1-9][0-9]*([,:[:space:]]|$)' axxium-test.log; then
             echo "Axxium test compilation emitted warnings"
             exit 1
           fi
@@ -110,7 +115,7 @@ jobs:
         run: |
           set -o pipefail
           pnpm --dir packages/axxium build 2>&1 | tee axxium-build.log
-          if grep -E "(^|[[:space:]])WARNING([:[:space:]]|$)" axxium-build.log; then
+          if grep -Eiq '(^|[[:space:]]|\[)warning([,:[:space:]]|\]|$)|(^|[[:space:]]|\()[1-9][0-9]*[[:space:]]+warnings([,:[:space:]]|\)|$)|(^|[[:space:]])warnings:[[:space:]]*[1-9][0-9]*([,:[:space:]]|$)' axxium-build.log; then
             echo "Axxium server compilation emitted warnings"
             exit 1
           fi

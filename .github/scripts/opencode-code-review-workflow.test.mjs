@@ -245,17 +245,17 @@ test("default deterministic gates mirror private Git dependencies without persis
 
   const token = namedStep("deterministic_evidence", "Create cross-repository read token");
   assert.match(token.uses, /^actions\/create-github-app-token@[0-9a-f]{40}$/);
-  assert.match(token.with.repositories, /^katamorph\nevent-ledger\s*$/);
+  assert.match(token.with.repositories, /^katamorph\s*$/);
 
   const mirror = namedStep("deterministic_evidence", "Mirror private Git dependencies");
   assert.match(mirror.if, /dependency-token\.outputs\.token/);
   assert.match(mirror.run, /clone --mirror/);
   assert.match(mirror.run, /mirror_repository katamorph/);
-  assert.match(mirror.run, /mirror_repository event-ledger/);
+  assert.doesNotMatch(mirror.run, /event-ledger/);
 
   const gates = namedStep("deterministic_evidence", "Run deterministic gates").run;
   assert.match(gates, /url\.file:\/\/\$mirrors\/katamorph\.git\.insteadOf/);
-  assert.match(gates, /url\.file:\/\/\$mirrors\/event-ledger\.git\.insteadOf/);
+  assert.doesNotMatch(gates, /event-ledger/);
   assert.match(gates, /trap remove_mirror_rewrites EXIT/);
 });
 

@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   verify:
-    name: Clio NBB + Shadow + lint
+    name: Clio BB + JVM + NBB + Shadow + lint
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -33,9 +33,10 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Set up Babashka and clj-kondo
+      - name: Set up Clojure CLI, Babashka and clj-kondo
         uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360
         with:
+          cli: "1.12.5.1654"
           bb: "1.13.219"
           clj-kondo: "2025.10.23"
 
@@ -58,7 +59,7 @@ jobs:
       - name: Lint Clio
         run: pnpm --dir packages/clio lint
 
-      - name: Test Clio under NBB and Shadow CLJS
+      - name: Test Clio under BB, JVM, NBB and Shadow CLJS
         run: pnpm --dir packages/clio test
 
       - name: Prove root gates select Clio

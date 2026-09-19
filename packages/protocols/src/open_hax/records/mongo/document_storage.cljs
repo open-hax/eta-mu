@@ -4,27 +4,27 @@
 
 (defn- now-iso [] (.toISOString (js/Date.)))
 
-(defn- ^:async insert-doc! [coll doc]
+(defn- ^:async insert-doc! [^js coll doc]
   (await (.insertOne coll (clj->js doc)))
   doc)
 
-(defn- ^:async find-doc [coll query]
+(defn- ^:async find-doc [^js coll query]
   (let [result (await (.findOne coll query))]
     (when result (js->clj result :keywordize-keys true))))
 
-(defn- ^:async find-docs [coll query]
-  (let [cursor (.find coll (clj->js query))
+(defn- ^:async find-docs [^js coll query]
+  (let [^js cursor (.find coll (clj->js query))
         result (await (.toArray cursor))]
     (js->clj result :keywordize-keys true)))
 
-(defn- ^:async update-doc! [coll query update]
+(defn- ^:async update-doc! [^js coll query update]
   (await (.updateOne coll query update))
   nil)
 
-(defrecord MongoDocumentStorage [db collection-name]
+(defrecord MongoDocumentStorage [^js db collection-name]
   protocols/DocumentStorage
   (store-document [_ doc]
-    (let [coll (.collection db collection-name)
+    (let [^js coll (.collection db collection-name)
           id (or (:id doc) (str (random-uuid)))
           stored (merge doc {:id id
                              :_id id

@@ -246,22 +246,26 @@
         in-flight (atom 0)
         maximum-in-flight (atom 0)
         delayed-git
-        (fn [_path args]
-          (let [active (swap! in-flight inc)
-                stdout (if (= ["rev-parse" "--git-dir"] (vec args))
-                         ".git"
-                         "value")]
-            (swap! maximum-in-flight max active)
-            (js/Promise.
-             (fn [resolve _reject]
-               (js/setTimeout
-                (fn []
-                  (swap! in-flight dec)
-                  (resolve {:exit 0
-                            :signal nil
-                            :stdout stdout
-                            :stderr ""}))
-                5)))))]
+        ;; Match exec-at's multi-arity boundary: compiled callers dispatch
+        ;; through its arity-2 entry, which a single-arity replacement lacks.
+        (fn delayed-git
+          ([path args] (delayed-git path args {}))
+          ([_path args _options]
+           (let [active (swap! in-flight inc)
+                 stdout (if (= ["rev-parse" "--git-dir"] (vec args))
+                          ".git"
+                          "value")]
+             (swap! maximum-in-flight max active)
+             (js/Promise.
+              (fn [resolve _reject]
+                (js/setTimeout
+                 (fn []
+                   (swap! in-flight dec)
+                   (resolve {:exit 0
+                             :signal nil
+                             :stdout stdout
+                             :stderr ""}))
+                 5))))))]
     (try
       (doseq [index (range 9)]
         (.mkdirSync fs

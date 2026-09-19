@@ -152,6 +152,9 @@ if (command === 'build') { fs.mkdirSync('packages/sol/dist', { recursive: true }
     { SOL_FIXTURE_LINT: "src/private.cljs:1:1: warning: private diagnostic" },
     { SOL_FIXTURE_LINT: "linting took 10ms, errors: 0, warnings: 1" },
     { SOL_FIXTURE_TEST: "warning: private diagnostic" },
+    { SOL_FIXTURE_TEST: "[WARNING] private diagnostic" },
+    { SOL_FIXTURE_BUILD: "[Warning] private diagnostic" },
+    { SOL_FIXTURE_BUILD: "Build completed. (12 files, 1 compiled, 2 warnings, 0.1s)" },
     { SOL_FIXTURE_BUILD: "WARNING: private diagnostic" },
   ]) {
     const result = run(fixture);
@@ -200,7 +203,7 @@ test("Sol protected execution has a fresh dispatch, immutable machinery, and no 
   assert.ok(index("Revalidate candidate immediately before execution") < index("Check out approved exact candidate"));
   assert.ok(index("Check out approved exact candidate") < index("Verify and test approved candidate"));
   const token = steps[index("Create private-dependency read token")];
-  assert.match(token.with.repositories, /^katamorph\nevent-ledger\s*$/);
+  assert.match(token.with.repositories, /^katamorph\s*$/);
   assert.equal(token.with["permission-contents"], "read");
   assert.equal(token.with["app-id"], "${{ secrets.SOL_PREMERGE_APP_ID }}");
   assert.equal(token.with["private-key"], "${{ secrets.SOL_PREMERGE_APP_PRIVATE_KEY }}");

@@ -2,13 +2,13 @@
   "Mongo implementation of UserManagement protocol."
   (:require [open-hax.openplanner-protocols :as protocols]))
 
-(defn- ^:async insert-user! [coll user-data]
+(defn- ^:async insert-user! [^js coll user-data]
   (await (.insertOne coll (clj->js user-data)))
   {:event/type "user.create.success"
    :payload {:userId (:_id user-data)}})
 
-(defn- ^:async find-user-by-username [coll username credentials]
-  (let [result (await (.findOne coll #js {:username username}))]
+(defn- ^:async find-user-by-username [^js coll username credentials]
+  (let [^js result (await (.findOne coll #js {:username username}))]
     (if result
       (let [stored-password (.-password result)
             provided-password (:password credentials)]
@@ -20,11 +20,11 @@
       {:event/type "user.login.failure"
        :payload {:reason "user not found"}})))
 
-(defn- ^:async find-user-by-id [coll user-id]
-  (let [result (await (.findOne coll #js {"_id" user-id}))]
+(defn- ^:async find-user-by-id [^js coll user-id]
+  (let [^js result (await (.findOne coll #js {"_id" user-id}))]
     (when result (js->clj result :keywordize-keys true))))
 
-(defn- ^:async update-user! [coll user-id updates]
+(defn- ^:async update-user! [^js coll user-id updates]
   (let [result (await (.findOneAndUpdate
                         coll
                         #js {"_id" user-id}
@@ -36,10 +36,10 @@
       {:event/type "user.update.failure"
        :payload {:reason "user not found"}})))
 
-(defrecord MongoUserManagement [db]
+(defrecord MongoUserManagement [^js db]
   protocols/UserManagement
   (create-user [_ user-data]
-    (let [coll (.collection db "knoxx_users")
+    (let [^js coll (.collection db "knoxx_users")
           id (or (:id user-data) (str (random-uuid)))
           stored (assoc user-data :_id id :id id)]
       (insert-user! coll stored)))

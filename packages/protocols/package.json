@@ -1,8 +1,9 @@
 {
   "name": "@open-hax/protocols",
   "version": "0.1.0",
+  "license": "LGPL-3.0-or-later",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/main.js",
   "types": "index.d.ts",
   "files": [
     "dist",
@@ -11,11 +12,17 @@
   "scripts": {
     "compile:lib": "shadow-cljs compile lib",
     "compile:test": "shadow-cljs compile test",
-    "test": "shadow-cljs compile test && node target/test.cjs",
+    "test": "shadow-cljs compile test lib && node target/test.cjs && node --test test/js/*.test.mjs",
+    "test:types": "tsc --strict --noEmit --target es2022 --module nodenext test/types/graph-neighbors.mts",
+    "test:concurrent-open": "pnpm compile:lib && node --test test/js/concurrent-open.test.mjs",
     "lint": "clj-kondo --lint src test",
     "lint:kondo": "clj-kondo --lint src test"
   },
+  "devDependencies": {
+    "source-map-support": "0.5.21"
+  },
   "dependencies": {
+    "fs-ext-extra-prebuilt": "2.2.9",
     "shadow-cljs": "^3.0.0",
     "socket.io-client": "^4.8.3"
   }

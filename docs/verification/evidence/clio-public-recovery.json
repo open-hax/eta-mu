@@ -1,0 +1,80 @@
+{
+  "implementation_commit": "a93288017c9c1d620c90ebce863e84b5d7ea1f44",
+  "implementation_tree": "8950cab3ac81b89b33be1e1047672562529a54d1",
+  "reviewed_base": "ff48f090965be5c17cca1e3662d7402b383510c1",
+  "clio": {
+    "bb": {
+      "tests": 29,
+      "assertions": 182
+    },
+    "jvm": {
+      "tests": 77,
+      "assertions": 355
+    },
+    "nbb": {
+      "tests": 75,
+      "assertions": 362
+    },
+    "shadow": {
+      "tests": 75,
+      "assertions": 362,
+      "inputs": 118,
+      "warnings": 0
+    }
+  },
+  "protocols": {
+    "tests": 76,
+    "assertions": 282,
+    "native_tests": 19,
+    "native_skips": 0,
+    "test_inputs": 139,
+    "library_inputs": 112,
+    "warnings": 0
+  },
+  "eta_cli": {
+    "tests": 174,
+    "assertions": 391,
+    "workflow_tests": 6,
+    "workflow_assertions": 78,
+    "release_inputs": 166,
+    "warnings": 0
+  },
+  "logs": {
+    "clio-public-jvm-red.log": {
+      "sha256": "a30f79c974dc08ba658b79bcecbcc09f5d579c1ea91c3d3ed6c3b4867ad7d511"
+    },
+    "clio-public-node-cli-red.log": {
+      "sha256": "2aa7a2b2b9beb4d89c911a5d7b4c62b403cff829a756ca6424de7b6d0b18ce1e"
+    },
+    "clio-symlink-jvm-red.log": {
+      "sha256": "d22c94d364e3a3aed473d37fb9849372aa11558ae2f4d2e93aa97568ef972094"
+    },
+    "clio-symlink-node-red.log": {
+      "sha256": "3173b8eeafef2b516c2c4b2d57df52da9307d80aac704bf0b9c09bab77db2fe9"
+    },
+    "clio-public-final2-test.log": {
+      "sha256": "c5b319adf9288de19f52c50570900d7e241687183350977978bdb9a2e558d1b9"
+    },
+    "clio-public-final2-lint.log": {
+      "sha256": "21af2be95182896799f0ff74127b4035bb81852a4ad66fe948827986196937d1"
+    },
+    "clio-protocol-final-test.log": {
+      "sha256": "5f50adfb55147f21b8255272ac610f5dfe57a5bfcac18a99a7c73e43343e3ac5"
+    },
+    "clio-protocol-final-lint.log": {
+      "sha256": "c234a9306d50b7e74669ed2769d84f7edbb6309e0ebb69c230f90ce395766746"
+    },
+    "clio-protocol-final-types.log": {
+      "sha256": "eb709dd1c268dc63b5ccc6ca35b8d2106f7cbae38659e944ffe85edfd3b4c3d5"
+    },
+    "clio-eta-cli-test.log": {
+      "sha256": "1d713208db6ebd641d1c9d032b4ed9b6ca33a99bc84e7f73bd3951772dab369a"
+    },
+    "clio-eta-cli-lint.log": {
+      "sha256": "14cab84767e1e4f7fc98d334979f7b9a8b7fdcdcac92651a5e6e2c1cebf1d714"
+    },
+    "clio-eta-cli-build.log": {
+      "sha256": "4c3b7745d29fefd9335be9ba9a634dc3c714066dbc739ade446eedea7b3c1a2c"
+    }
+  }
+}

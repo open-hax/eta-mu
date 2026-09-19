@@ -1,6 +1,11 @@
 (ns open-hax.sol.extern.node-fs
   "Node fs/path boundary helpers used by route adapters.")
 
+(defn already-exists-error?
+  "Decode the exclusive-create collision without classifying other I/O failures."
+  [cause]
+  (= "EEXIST" (.-code cause)))
+
 (defn mkdir!
   [node-fs p opts]
   (.mkdir node-fs p (clj->js opts)))

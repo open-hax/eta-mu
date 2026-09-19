@@ -8,7 +8,7 @@
     #js {:collection (fn [name]
                        (case name
                          "knoxx_sessions"
-                         #js {:insertOne (fn [doc]
+                         #js {:insertOne (fn [^js doc]
                                            (let [id (or (.-_id doc) (str (random-uuid)))
                                                  stored (assoc (js->clj doc :keywordize-keys true) :_id id)]
                                              (swap! sessions assoc id stored)
@@ -16,7 +16,7 @@
                               :findOne (fn [query]
                                          (let [id (aget query "_id")]
                                            (js/Promise.resolve (clj->js (get @sessions id)))))
-                              :findOneAndUpdate (fn [query update _opts]
+                              :findOneAndUpdate (fn [query ^js update _opts]
                                                   (let [id (aget query "_id")
                                                         doc (get @sessions id)
                                                         set-doc (js->clj (.-$set update) :keywordize-keys true)

@@ -3,6 +3,7 @@
    Append-only EDN file, one event per line. No MongoDB dependency.
    Uses an async mutex for concurrent write safety."
   (:require [open-hax.openplanner-protocols :as protocols]
+            [open-hax.services.extern.api :as api]
             [cljs.reader :as reader]
             ["fs" :as fs]
             ["fs/promises" :as fsp]
@@ -83,7 +84,7 @@
 (defn- ^:async append-to-file! [file-path event-str]
   (await (fsp/appendFile file-path event-str "utf8")))
 
-(defn- ^:async read-file-for-watch [file-path callback filter-spec]
+(defn- read-file-for-watch [file-path callback filter-spec]
   (let [watcher (.watch fs file-path)
         pred (when (seq filter-spec)
                (fn [event]
@@ -98,8 +99,8 @@
                      (callback last-event)))))
              (catch :default e
                (js/console.error "EDN watch error:" e)))))
-    {:id (str (random-uuid))
-     :close! (fn [] (.close watcher))}))
+    (let [close! (fn [] (.close watcher))]
+      {:id (str (random-uuid)) :close! close! :close close!})))
 
 ;; ---------------------------------------------------------------------------
 ;; Protocol implementation helpers
@@ -175,3 +176,6 @@
     ;; flag creates the file when missing without truncating an existing ledger.
     (.closeSync fs (.openSync fs file-path "a"))
     (->EdnFileEventAdmission file-path (create-mutex))))
+
+(defn create-edn-event-admission-js [directory]
+  (api/wrap (create-edn-event-admission directory)))

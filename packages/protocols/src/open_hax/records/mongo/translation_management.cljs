@@ -2,11 +2,11 @@
   "Mongo implementation of TranslationManagement protocol."
   (:require [open-hax.openplanner-protocols :as protocols]))
 
-(defn- ^:async insert-translation! [coll translation]
+(defn- ^:async insert-translation! [^js coll translation]
   (await (.insertOne coll (clj->js translation)))
   translation)
 
-(defn- ^:async update-translation-label! [coll segment-id label]
+(defn- ^:async update-translation-label! [^js coll segment-id label]
   (let [result (await (.findOneAndUpdate
                         coll
                         #js {"_id" segment-id}
@@ -14,14 +14,14 @@
                         #js {"returnDocument" "after"}))]
     (js->clj (.-value result) :keywordize-keys true)))
 
-(defn- ^:async insert-batch! [coll docs batch-id]
+(defn- ^:async insert-batch! [^js coll docs batch-id]
   (await (.insertMany coll (clj->js docs)))
   batch-id)
 
-(defrecord MongoTranslationManagement [db]
+(defrecord MongoTranslationManagement [^js db]
   protocols/TranslationManagement
   (create-translation [_ translation]
-    (let [coll (.collection db "translation_segments")
+    (let [^js coll (.collection db "translation_segments")
           id (or (:id translation) (str (random-uuid)))
           stored (assoc translation :_id id :id id)]
       (insert-translation! coll stored)))

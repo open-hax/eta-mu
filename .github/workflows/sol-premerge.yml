@@ -103,7 +103,6 @@ jobs:
           owner: open-hax
           repositories: |
             katamorph
-            event-ledger
           permission-contents: read
           skip-token-revoke: true
 
@@ -162,7 +161,7 @@ jobs:
           grep -Eq '^0 failures, 0 errors\.' "$RUNNER_TEMP/sol-test.log"
           pnpm --dir packages/sol build > "$RUNNER_TEMP/sol-build.log" 2>&1
           test -s packages/sol/dist/server.js
-          if grep -Eiq '(^|[[:space:]])warning([:[:space:]]|$)|(^|[[:space:]])warnings:[[:space:]]*[1-9][0-9]*' "$RUNNER_TEMP/sol-lint.log" "$RUNNER_TEMP/sol-test.log" "$RUNNER_TEMP/sol-build.log"; then
+          if grep -Eiq '(^|[[:space:]]|\[)warning([,:[:space:]]|\]|$)|(^|[[:space:]]|\()[1-9][0-9]*[[:space:]]+warnings([,:[:space:]]|\)|$)|(^|[[:space:]])warnings:[[:space:]]*[1-9][0-9]*([,:[:space:]]|$)' "$RUNNER_TEMP/sol-lint.log" "$RUNNER_TEMP/sol-test.log" "$RUNNER_TEMP/sol-build.log"; then
             echo '::error::Sol validation emitted warnings.'
             exit 1
           fi

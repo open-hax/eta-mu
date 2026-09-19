@@ -119,7 +119,6 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: |
             katamorph
-            event-ledger
           permission-contents: read
 
       - name: Mirror private Git dependencies
@@ -154,7 +153,6 @@ jobs:
           }
 
           mirror_repository katamorph
-          mirror_repository event-ledger
 
       - name: Install, validate, test, and build
         id: validate
@@ -168,8 +166,6 @@ jobs:
           remove_mirror_rewrites() {
             git config --global --unset-all \
               "url.file://$mirrors/katamorph.git.insteadOf" || true
-            git config --global --unset-all \
-              "url.file://$mirrors/event-ledger.git.insteadOf" || true
           }
           trap remove_mirror_rewrites EXIT
 
@@ -177,11 +173,6 @@ jobs:
             git config --global \
               "url.file://$mirrors/katamorph.git.insteadOf" \
               "https://github.com/open-hax/katamorph.git"
-          fi
-          if [[ -d "$mirrors/event-ledger.git" ]]; then
-            git config --global \
-              "url.file://$mirrors/event-ledger.git.insteadOf" \
-              "https://github.com/open-hax/event-ledger.git"
           fi
 
           {
