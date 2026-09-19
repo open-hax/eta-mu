@@ -1,0 +1,332 @@
+(ns eta-mu.domain.evidence-test
+  (:require [cljs.test :refer [deftest is testing]]
+            [eta-mu.domain.evidence :as evidence]
+            [eta-mu.law.evidence :as law]))
+
+(def ^:private target
+  {:repository/id 654321
+   :pull-request/object-id "PR_kwDOexample"
+   :base "fedcba9876543210"
+   :head "0123456789abcdef"
+   :review-input/hash "sha256:review-input"
+   :snapshot/hash "sha256:snapshot"
+   :dependency-closure/hash "sha256:closure"})
+
+(def ^:private episode
+  "axxium:episode:review-1")
+
+(def ^:private required-lanes
+  [:contracts :tests :ci-provenance])
+
+(defn- artifact
+  [lane]
+  {:artifact/kind lane
+   :artifact/hash (str "sha256:" (name lane))
+   :artifact/location {:lane lane}})
+
+(defn- lane-result
+  ([lane]
+   (lane-result lane []))
+  ([lane findings]
+   {:schema/version 1
+    :evidence/lane lane
+    :evidence/lane-revision (str "sha256:" (name lane) "-v1")
+    :evidence/producer
+    {:actor/binding (str "axxium:binding:" (name lane) "-reviewer")
+     :attestation/hash (str "sha256:" (name lane) "-attestation")}
+    :review/target target
+    :review/episode episode
+    :coverage/status :complete
+    :coverage/inspected (vec (distinct (cons (artifact lane)
+                                            (mapcat :finding/evidence findings))))
+    :findings findings}))
+
+(defn- request
+  [results]
+  {:schema/version 1
+   :required/lanes required-lanes
+   :review/target target
+   :review/episode episode
+   :lane/results results})
+
+(defn- clean-results
+  []
+  (mapv lane-result required-lanes))
+
+(def ^:private advisory-finding
+  {:finding/id "finding:docs:1"
+   :finding/status :confirmed
+   :finding/disposition :advisory
+   :finding/severity :low
+   :finding/claim "The operator diagram omits the retry state."
+   :finding/path "docs/workflow.md"
+   :finding/line 18
+   :finding/evidence [(artifact :docs)]})
+
+(def ^:private blocking-finding
+  {:finding/id "finding:contracts:1"
+   :finding/status :confirmed
+   :finding/disposition :blocking
+   :finding/severity :high
+   :finding/claim "The resource cannot be instantiated."
+   :finding/path "contracts/github.edn"
+   :finding/line 12
+   :finding/failure-trace "Malli rejected the unresolved schema."
+   :finding/evidence [(artifact :contracts)]})
+
+(deftest clean-complete-evidence-is-approved
+  (let [decision (evidence/aggregate-verdict (request (clean-results)))]
+    (is (= :approved (:aggregate/status decision)))
+    (is (= [:ci-provenance :contracts :tests]
+           (:complete/lanes decision)))
+    (is (empty? (:missing/lanes decision)))
+    (is (empty? (:findings decision)))
+    (is (empty? (:problems decision)))
+    (is (law/valid-aggregate-decision? decision))))
+
+(deftest supported-findings-determine-advisory-or-blocked
+  (testing "a retained advisory does not become an approval"
+    (let [results (assoc (clean-results)
+                         0 (lane-result :contracts [advisory-finding]))
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :advisory (:aggregate/status decision)))
+      (is (= {:blocking 0 :advisory 1 :contradicted 0}
+             (:finding/counts decision)))))
+  (testing "one supported blocker blocks despite other clean lanes"
+    (let [results (assoc (clean-results)
+                         0 (lane-result :contracts [blocking-finding]))
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :evidence-blocked (:aggregate/status decision)))
+      (is (= {:blocking 1 :advisory 0 :contradicted 0}
+             (:finding/counts decision))))))
+
+(deftest unsupported-or-incomplete-evidence-fails-closed
+  (testing "a blocking claim without a concrete failure trace is unavailable"
+    (let [unsupported (dissoc blocking-finding :finding/failure-trace)
+          results (assoc (clean-results)
+                         0 (lane-result :contracts [unsupported]))
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (some #(re-find #"failure trace" %) (:problems decision)))))
+  (testing "a required partial lane is not silence-as-success"
+    (let [results (assoc (clean-results)
+                         1 (assoc (lane-result :tests)
+                                  :coverage/status :partial))
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (some #(re-find #"not complete" %) (:problems decision)))))
+  (testing "a complete lane cannot claim it inspected nothing"
+    (let [results (assoc (clean-results)
+                         2 (assoc (lane-result :ci-provenance)
+                                  :coverage/inspected []))
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (some #(re-find #"inspected no retained artifacts" %)
+                (:problems decision)))))
+  (testing "a malformed lane result is retained as unavailable evidence"
+    (let [results (assoc (clean-results)
+                         1 (assoc (lane-result :tests)
+                                  :coverage/status :probably-complete))
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (some #(re-find #"closed schema" %) (:problems decision)))
+      (is (law/valid-aggregate-decision? decision)))))
+
+(deftest missing-duplicate-and-stale-lanes-fail-closed
+  (testing "a required lane must be present"
+    (let [decision (evidence/aggregate-verdict
+                    (request (mapv lane-result [:contracts :tests])))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (= [:ci-provenance] (:missing/lanes decision)))))
+  (testing "duplicate lane results are ambiguous rather than votes"
+    (let [decision (evidence/aggregate-verdict
+                    (request (conj (clean-results)
+                                   (lane-result :contracts))))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (some #(re-find #"duplicated" %) (:problems decision)))))
+  (testing "a result for another exact head is stale input"
+    (let [stale-result (assoc-in (lane-result :tests)
+                                 [:review/target :head]
+                                 "different-head")
+          results (assoc (clean-results) 1 stale-result)
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (some #(re-find #"does not match" %) (:problems decision))))))
+
+(deftest contradictions-remain-visible
+  (let [contradicted
+        {:finding/id "finding:tests:contradiction"
+         :finding/status :contradicted
+         :finding/disposition :blocking
+         :finding/severity :high
+         :finding/claim "Two trusted artifacts disagree about the executed tree."
+         :finding/evidence [(artifact :tests)]
+         :finding/contradicts ["finding:tests:pass"]}
+        results (assoc (clean-results)
+                       1 (lane-result :tests [contradicted]))
+        decision (evidence/aggregate-verdict (request results))]
+    (is (= :evidence-conflicted (:aggregate/status decision)))
+    (is (= 1 (get-in decision [:finding/counts :contradicted])))
+    (is (some #(re-find #"contradiction" %) (:problems decision)))))
+
+(deftest aggregation-is-order-invariant-and-deduplicates-identical-findings
+  (let [results [(lane-result :tests [advisory-finding])
+                 (lane-result :ci-provenance)
+                 (lane-result :contracts [advisory-finding])]
+        forward (evidence/aggregate-verdict (request results))
+        reversed (evidence/aggregate-verdict (request (vec (reverse results))))]
+    (is (= forward reversed))
+    (is (= :advisory (:aggregate/status forward)))
+    (is (= 1 (count (:findings forward))))
+    (is (= 1 (get-in forward [:finding/counts :advisory])))))
+
+(deftest malformed-outer-request-is-unavailable-not-an-exception
+  (let [decision (evidence/aggregate-verdict
+                  (dissoc (request (clean-results)) :review/target))]
+    (is (= :evidence-unavailable (:aggregate/status decision)))
+    (is (= ["aggregate request failed its closed schema"]
+           (:problems decision)))
+    (is (law/valid-aggregate-decision? decision))))
+
+(deftest malformed-collections-fail-closed
+  (doseq [field [:required/lanes :lane/results]
+          value [nil 42 :contracts "contracts" {} #{:contracts}]]
+    (let [decision (evidence/aggregate-verdict
+                    (assoc (request (clean-results)) field value))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (= ["aggregate request failed its closed schema"]
+             (:problems decision)))
+      (is (law/valid-aggregate-decision? decision)))))
+
+(deftest anonymous-malformed-results-are-order-invariant
+  (doseq [malformed [nil 42 {} {:evidence/lane "contracts"}
+                     {:evidence/lane {:unexpected :value}}]]
+    (let [results (conj (clean-results) malformed)
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (= ["lane result failed its closed schema: anonymous"]
+             (:problems decision)))
+      (is (= decision
+             (evidence/aggregate-verdict (request (vec (reverse results)))))))))
+
+(deftest duplicate-coverage-and-inspection-are-order-invariant
+  (doseq [duplicate [(assoc (lane-result :tests) :coverage/status :partial)
+                     (assoc (lane-result :tests) :coverage/inspected [])]]
+    (let [results (conj (clean-results) duplicate)
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (some #(re-find #"duplicated" %) (:problems decision)))
+      (is (some #(re-find #"not complete|inspected no retained artifacts" %)
+                (:problems decision)))
+      (is (= decision
+             (evidence/aggregate-verdict (request (vec (reverse results)))))))))
+
+(deftest exact-bindings-cannot-be-omitted-or-substituted
+  (doseq [field [:base :review-input/hash]]
+    (testing (str "request omission: " field)
+      (let [decision (evidence/aggregate-verdict
+                      (update (request (clean-results)) :review/target dissoc field))]
+        (is (= :evidence-unavailable (:aggregate/status decision)))
+        (is (= ["aggregate request failed its closed schema"]
+               (:problems decision)))))
+    (testing (str "lane mismatch: " field)
+      (let [result (assoc-in (lane-result :tests) [:review/target field] "different")
+            decision (evidence/aggregate-verdict
+                      (request (assoc (clean-results) 1 result)))]
+        (is (= :evidence-unavailable (:aggregate/status decision)))
+        (is (= [:ci-provenance :contracts] (:complete/lanes decision)))
+        (is (some #(re-find #"does not match" %) (:problems decision)))))))
+
+(deftest contradiction-claims-require-retained-evidence
+  (doseq [contradiction [(assoc advisory-finding :finding/status :contradicted)
+                        (assoc advisory-finding
+                               :finding/status :retracted
+                               :finding/contradicts ["finding:other"])]]
+    (let [unsupported (assoc contradiction :finding/evidence [])
+          decide (fn [finding]
+                   (evidence/aggregate-verdict
+                    (request (assoc (clean-results) 0
+                                    (lane-result :contracts [finding])))))
+          decision (decide unsupported)]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (some #(= (str "contradiction finding lacks retained evidence: "
+                        (:finding/id contradiction)) %)
+                (:problems decision)))
+      (is (= [unsupported] (:findings decision)))
+      (is (= :evidence-conflicted (:aggregate/status (decide contradiction)))))))
+
+(deftest optional-complete-lanes-require-retained-inspection
+  (doseq [[findings expected-status]
+          [[[] :approved]
+           [[advisory-finding] :advisory]
+           [[blocking-finding] :evidence-blocked]
+           [[(assoc advisory-finding :finding/status :contradicted)]
+            :evidence-conflicted]]]
+    (let [optional (lane-result :optional-review findings)
+          decide (fn [result]
+                   (evidence/aggregate-verdict
+                    (request (conj (clean-results) result))))
+          unsupported (decide (assoc optional :coverage/inspected []))
+          supported (decide optional)]
+      (is (= :evidence-unavailable (:aggregate/status unsupported)))
+      (is (some #(and (re-find #"inspected no retained artifacts" %)
+                      (re-find #"optional-review" %))
+                (:problems unsupported)))
+      (is (law/valid-aggregate-decision? unsupported))
+      (is (= expected-status (:aggregate/status supported)))
+      (is (some #{:optional-review} (:complete/lanes supported)))
+      (is (law/valid-aggregate-decision? supported)))))
+
+(deftest supplied-incomplete-lanes-fail-closed
+  (doseq [coverage [:partial :blocked :unavailable :timed-out :stale]
+          findings [[] [blocking-finding]]]
+    (let [optional (assoc (lane-result :optional-review findings)
+                          :coverage/status coverage)
+          results (conj (clean-results) optional)
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (some #(and (re-find #"not complete" %)
+                      (re-find #"optional-review" %)) (:problems decision)))
+      (is (= decision (evidence/aggregate-verdict
+                       (request (vec (reverse results)))))))))
+
+(deftest finding-evidence-must-belong-to-its-lane-inspection
+  (doseq [finding [advisory-finding blocking-finding
+                   (assoc advisory-finding :finding/status :contradicted)
+                   (assoc advisory-finding :finding/status :retracted
+                          :finding/contradicts ["finding:other"])]]
+    (let [cited {:artifact/kind :trace :artifact/hash "sha256:lane-local"}
+          finding (assoc finding :finding/evidence [cited])
+          unsupported (assoc (lane-result :contracts [finding])
+                              :coverage/inspected [(artifact :contracts)])
+          other-lane (assoc (lane-result :tests) :coverage/inspected [cited])
+          results [unsupported other-lane (lane-result :ci-provenance)]
+          decision (evidence/aggregate-verdict (request results))]
+      (is (= :evidence-unavailable (:aggregate/status decision)))
+      (is (seq (:problems decision)))
+      (is (= decision (evidence/aggregate-verdict
+                       (request (vec (reverse results)))))))))
+
+(deftest artifact-identity-uses-kind-and-hash-with-location-independent
+  (let [cited {:artifact/kind :trace :artifact/hash "sha256:same"
+               :artifact/location {:path "src/example.cljs" :line-start 2}}
+        finding (assoc advisory-finding :finding/evidence [cited])
+        decide (fn [inspected]
+                 (evidence/aggregate-verdict
+                  (request (assoc (clean-results) 0
+                                  (assoc (lane-result :contracts [finding])
+                                         :coverage/inspected [inspected])))))
+        located (assoc cited :artifact/location {:path "retained/trace.edn"})]
+    (is (= :advisory (:aggregate/status (decide located))))
+    (is (= :evidence-unavailable
+           (:aggregate/status (decide (assoc located :artifact/kind :diff)))))
+    (is (= :evidence-unavailable
+           (:aggregate/status (decide (assoc located :artifact/hash "sha256:other")))))))
+
+(deftest every-cited-artifact-must-be-inspected
+  (let [cited (artifact :contracts)
+        finding (assoc advisory-finding :finding/evidence [cited (artifact :docs)])
+        result (assoc (lane-result :contracts [finding]) :coverage/inspected [cited])
+        decision (evidence/aggregate-verdict
+                  (request (assoc (clean-results) 0 result)))]
+    (is (= :evidence-unavailable (:aggregate/status decision)))))
