@@ -430,3 +430,12 @@
   spore: none
   receipt-refs: none
   note: Provider support is not proof of catalog membership; compile omission fixtures to preserve absent-provider behavior.
+- ts: 2026-10-02T22:45:09.098576250Z
+  session: /home/err/spaces/review-repair/eta-mu
+  task: eta-mu#339 repair three verified CodeRabbit findings
+  p-efficiency: 0.75
+  p-friction: 0.35
+  p-skill-candidate: 0.3
+  spore: none
+  receipt-refs: eta-mu#339 comments4170384835,4170384852,4170384866
+  note: Conditional return types preserve present-provider precision while unions remain optional. Synthetic catalogs must not depend on live catalogs. Use vitest run with direct file filters; pnpm test -- launched the network suite and was stopped. Main receipt bytes preserved, only authorized unmerged suffix repaired. No spore; review quota and dependency merge hold remain.

@@ -22,12 +22,16 @@ type ModelApi<
 	TModelId extends keyof ProviderModels<TProvider>,
 > = ProviderModels<TProvider>[TModelId] extends { api: infer TApi } ? (TApi extends Api ? TApi : never) : never;
 
+type ModelLookup<TProvider extends KnownProvider, TModelId extends keyof ProviderModels<TProvider>> =
+	TProvider extends keyof typeof MODELS ? Model<ModelApi<TProvider, TModelId>> : Model<Api> | undefined;
+
+/** Look up a catalog model; providers omitted from the catalog may return undefined. */
 export function getModel<TProvider extends KnownProvider, TModelId extends keyof ProviderModels<TProvider>>(
 	provider: TProvider,
 	modelId: TModelId,
-): Model<ModelApi<TProvider, TModelId>> {
+): ModelLookup<TProvider, TModelId> {
 	const providerModels = modelRegistry.get(provider);
-	return providerModels?.get(modelId as string) as Model<ModelApi<TProvider, TModelId>>;
+	return providerModels?.get(modelId as string) as ModelLookup<TProvider, TModelId>;
 }
 
 export function getProviders(): KnownProvider[] {
