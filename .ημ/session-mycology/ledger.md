@@ -421,3 +421,12 @@
   spore: none
   receipt-refs: 9aff7874-6812-4984-9c0b-a5ac1d027b4c
   note: Native Node12/101 and JVM10/93 each produced11 actual failures before repair, including symlink retarget after lock. Canonical resolution before open now binds the later inode and parent fences while retaining caller returns. All four host suites and zero-warning gates pass; root independent adapter review clear. Existing native-mechanism and explicit-worktree lessons reused. The receipt CLI refused unsupported verification kind without writing; the declared test-run kind succeeded. Source30090a67 and verification document retain scope and evidence. No remote writes.
+- ts: 2026-10-02T22:04:36.013544946Z
+  session: /home/err/spaces/review-repair/eta-mu
+  task: Resume evidence review rollout and unblock generated catalog build
+  p-efficiency: 0.7
+  p-friction: 0.5
+  p-skill-candidate: 0.3
+  spore: none
+  receipt-refs: none
+  note: Provider support is not proof of catalog membership; compile omission fixtures to preserve absent-provider behavior.

@@ -12,12 +12,17 @@ for (const [provider, models] of Object.entries(MODELS)) {
 	modelRegistry.set(provider, providerModels);
 }
 
+// A supported provider may have no models in the current upstream catalog.
+type ProviderModels<TProvider extends KnownProvider> = TProvider extends keyof typeof MODELS
+	? (typeof MODELS)[TProvider]
+	: Record<string, Model<Api>>;
+
 type ModelApi<
 	TProvider extends KnownProvider,
-	TModelId extends keyof (typeof MODELS)[TProvider],
-> = (typeof MODELS)[TProvider][TModelId] extends { api: infer TApi } ? (TApi extends Api ? TApi : never) : never;
+	TModelId extends keyof ProviderModels<TProvider>,
+> = ProviderModels<TProvider>[TModelId] extends { api: infer TApi } ? (TApi extends Api ? TApi : never) : never;
 
-export function getModel<TProvider extends KnownProvider, TModelId extends keyof (typeof MODELS)[TProvider]>(
+export function getModel<TProvider extends KnownProvider, TModelId extends keyof ProviderModels<TProvider>>(
 	provider: TProvider,
 	modelId: TModelId,
 ): Model<ModelApi<TProvider, TModelId>> {
@@ -31,9 +36,9 @@ export function getProviders(): KnownProvider[] {
 
 export function getModels<TProvider extends KnownProvider>(
 	provider: TProvider,
-): Model<ModelApi<TProvider, keyof (typeof MODELS)[TProvider]>>[] {
+): Model<ModelApi<TProvider, keyof ProviderModels<TProvider>>>[] {
 	const models = modelRegistry.get(provider);
-	return models ? (Array.from(models.values()) as Model<ModelApi<TProvider, keyof (typeof MODELS)[TProvider]>>[]) : [];
+	return models ? (Array.from(models.values()) as Model<ModelApi<TProvider, keyof ProviderModels<TProvider>>>[]) : [];
 }
 
 export function calculateCost<TApi extends Api>(model: Model<TApi>, usage: Usage): Usage["cost"] {
