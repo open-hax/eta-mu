@@ -62,7 +62,7 @@ This document describes the centralized GitHub automation system owned by `open-
 3. Optionally publish changed packages to npm.
 
 ### 5. `opencode-code-review.yml` reference implementation
-**Purpose**: Produce a bounded, evidence-first pull-request review with OpenCode and `opencode/mimo-v2.5-free`.
+**Purpose**: Produce a bounded, evidence-first pull-request review with OpenCode and `opencode/mimo-v2.6-flash-free`.
 
 **Triggers**: Non-draft, same-repository pull requests opened, updated, reopened, or marked ready.
 
@@ -81,7 +81,7 @@ This document describes the centralized GitHub automation system owned by `open-
 
 The Muse projection intentionally omits write/network-capable multiplexed tools such as `receipt_river`, `edn_ledger`, `session_mycology`, and web search. It also omits actor/agent spawn, actor tell, task execution/control, and phase recording. Observer tools do not make Muse the owner of actor, event, policy, session, or workflow semantics.
 
-The reviewer cannot edit files, execute shell commands, browse the web, or spawn subagents. Skills provide process and environment adaptation, but never count as defect evidence. This avoids same-model consensus theater and limits free-tier quota use. The workflow needs no OpenCode credential — `opencode/mimo-v2.5-free` uses the anonymous public-provider path — and disables public session sharing.
+The reviewer cannot edit files, execute shell commands, browse the web, or spawn subagents. Skills provide process and environment adaptation, but never count as defect evidence. This avoids same-model consensus theater and limits free-tier quota use. The workflow needs no OpenCode credential — `opencode/mimo-v2.6-flash-free` uses the anonymous public-provider path — and disables public session sharing.
 
 The initial pins are explicit inside the workflow so review runs are revision-bound:
 

@@ -14,7 +14,7 @@ on:
         description: OpenCode provider/model the reviewer runs.
         required: false
         type: string
-        default: opencode/mimo-v2.5-free
+        default: opencode/mimo-v2.6-flash-free
       opencode_version:
         description: Pinned opencode-ai npm version for the review runner.
         required: false
@@ -1015,7 +1015,7 @@ jobs:
       - name: Run bounded evidence-first OpenCode review
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          REVIEW_MODEL: ${{ inputs.model || 'opencode/mimo-v2.5-free' }}
+          REVIEW_MODEL: ${{ inputs.model || 'opencode/mimo-v2.6-flash-free' }}
           REVIEW_PROMPT_FILE: .review-context/machinery/evidence-review.md
           REVIEW_EVIDENCE_DIR: ${{ github.workspace }}/.opencode/review-evidence
         run: node .review-context/machinery/run-opencode-review-recovery.mjs
