@@ -132,7 +132,7 @@ The workflow mounts the pinned `riatzukiza/.agents` checkout at `~/.agents`, whi
 The reviewer is deliberately read-only:
 
 - file edits are denied;
-- shell execution is denied;
+- shell commands are denied except the exact no-op `true`, which keeps the Bash tool registered for anonymous free-tier requests;
 - web access is denied;
 - subagent spawning is denied;
 - session sharing is disabled;
