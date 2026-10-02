@@ -83,9 +83,9 @@ The Muse projection intentionally omits write/network-capable multiplexed tools 
 
 The reviewer cannot edit files, browse the web, or spawn subagents. Bash commands are denied except the exact no-op `true`, which retains tool registration without permitting file writes or command chaining. Skills provide process and environment adaptation, but never count as defect evidence. This avoids same-model consensus theater and limits free-tier quota use. The workflow needs no OpenCode credential — `opencode/mimo-v2.6-flash-free` uses the anonymous public-provider path — and disables public session sharing.
 
-The initial pins are explicit inside the workflow so review runs are revision-bound:
+The current default pins are explicit inside the workflow so review runs are revision-bound:
 
-- Muse: `76c57712a48ef48100259231a2e9d54069c2b14a`
+- Muse: `05b4f1c5e5bf2297bccf113a56c17e246d769d47`
 - `.agents`: `7fd3252e7663ad5e68be5e90429d126aa66c38c8`
 
 The first implementation is intentionally eta-mu-specific because its deterministic gates are pnpm workspace commands. Extract a reusable workflow only after the evidence schema, Muse projection, skill discovery, and publication behavior pass the canary PR; consumer repositories may require different deterministic gate commands.

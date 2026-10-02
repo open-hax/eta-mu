@@ -439,3 +439,12 @@
   spore: none
   receipt-refs: eta-mu#339 comments4170384835,4170384852,4170384866
   note: Conditional return types preserve present-provider precision while unions remain optional. Synthetic catalogs must not depend on live catalogs. Use vitest run with direct file filters; pnpm test -- launched the network suite and was stopped. Main receipt bytes preserved, only authorized unmerged suffix repaired. No spore; review quota and dependency merge hold remain.
+- ts: 2026-10-02T23:20:35.250054052Z
+  session: /home/err/spaces/review-repair/eta-mu
+  task: eta-mu#339 settle new evidence reviewer threads
+  p-efficiency: 0.9
+  p-friction: 0.15
+  p-skill-candidate: 0.2
+  spore: none
+  receipt-refs: 4170488366,4170488373
+  note: Verify reviewer commit before repairing stale findings. Catalog fixture now runs through root deterministic gate and coverage CI, without network provider tests. Stale Muse default docs reconciled. No spore; caller pin and merge hold preserved.
