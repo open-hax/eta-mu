@@ -5,8 +5,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { expect, test } from "vitest";
 import type { Model } from "../src/types.js";
 
-// Catalog feeds can omit every model for an otherwise supported provider.
-// Compile the real registry against that boundary, without network access.
+/**
+ * Catalog feeds can omit every model for an otherwise supported provider.
+ * Compile the real registry against that boundary, without network access.
+ */
 test("registry compiles when supported providers are absent from the catalog", () => {
 	const root = fileURLToPath(new URL("../", import.meta.url));
 	const fixture = mkdtempSync(join(root, ".model-catalog-"));

@@ -21,3 +21,6 @@ No automatic switch to a paid provider, no changes to branch protections, no ski
 
 ## Evidence
 eta-mu PR #339; Muse PR #17; successful reviewer run 36979654351. Build reproduced locally with TS2536 after live model generation. Board-state transitions remain pending availability of Rheos.
+
+## PR #339 docstring coverage follow-up
+Document the catalog lookup helpers and offline regression callback without changing behavior. Verify JSDoc presence and unchanged executable tokens, then run the offline catalog contract test.

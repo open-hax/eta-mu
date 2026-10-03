@@ -34,10 +34,12 @@ export function getModel<TProvider extends KnownProvider, TModelId extends keyof
 	return providerModels?.get(modelId as string) as ModelLookup<TProvider, TModelId>;
 }
 
+/** Return the providers present in the model catalog. */
 export function getProviders(): KnownProvider[] {
 	return Array.from(modelRegistry.keys()) as KnownProvider[];
 }
 
+/** Return a provider's catalog models, or an empty array if the provider is absent. */
 export function getModels<TProvider extends KnownProvider>(
 	provider: TProvider,
 ): Model<ModelApi<TProvider, keyof ProviderModels<TProvider>>>[] {
@@ -45,6 +47,7 @@ export function getModels<TProvider extends KnownProvider>(
 	return models ? (Array.from(models.values()) as Model<ModelApi<TProvider, keyof ProviderModels<TProvider>>>[]) : [];
 }
 
+/** Update and return usage costs using the model's prices per million tokens. */
 export function calculateCost<TApi extends Api>(model: Model<TApi>, usage: Usage): Usage["cost"] {
 	usage.cost.input = (model.cost.input / 1000000) * usage.input;
 	usage.cost.output = (model.cost.output / 1000000) * usage.output;
