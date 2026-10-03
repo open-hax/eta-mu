@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: octave-commons/muse
-          ref: 76c57712a48ef48100259231a2e9d54069c2b14a
+          ref: 05b4f1c5e5bf2297bccf113a56c17e246d769d47
           path: muse
           persist-credentials: false
 

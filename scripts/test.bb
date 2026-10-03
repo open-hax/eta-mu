@@ -37,6 +37,9 @@
      @eta-mu/e2e — browser/server suite, run by .github/workflows/e2e.yml"
   [{:label "review-workflow"
     :cmd ["node" "--test" ".github/scripts/opencode-code-review-workflow.test.mjs"]}
+   {:label "legacy-ai-catalog"
+    :cmd ["pnpm" "--dir" "packages/legacy/ai" "exec" "vitest" "run"
+          "test/model-catalog-types.test.ts"]}
    {:label "contract-guard" :cmd ["node" "--test" "scripts/contract-guard.test.mjs"]}
    {:label "eta-mu" :pkg "eta-mu"}
    {:label "clio" :pkg "@eta-mu/clio"}

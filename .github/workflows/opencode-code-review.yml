@@ -14,7 +14,7 @@ on:
         description: OpenCode provider/model the reviewer runs.
         required: false
         type: string
-        default: opencode/mimo-v2.5-free
+        default: opencode/mimo-v2.6-flash-free
       opencode_version:
         description: Pinned opencode-ai npm version for the review runner.
         required: false
@@ -24,7 +24,7 @@ on:
         description: Pinned octave-commons/muse commit used to compile the review observer projection.
         required: false
         type: string
-        default: 3510440a01bac8c8ecbe8d5b8d08eb4a5cd46cac
+        default: 05b4f1c5e5bf2297bccf113a56c17e246d769d47
       agents_revision:
         description: Pinned riatzukiza/.agents commit mounted as global skills.
         required: false
@@ -557,7 +557,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: octave-commons/muse
-          ref: ${{ inputs.muse_revision || '3510440a01bac8c8ecbe8d5b8d08eb4a5cd46cac' }}
+          ref: ${{ inputs.muse_revision || '05b4f1c5e5bf2297bccf113a56c17e246d769d47' }}
           path: .review-context/muse
           persist-credentials: false
 
@@ -712,7 +712,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MUSE_REVISION="${{ inputs.muse_revision || '3510440a01bac8c8ecbe8d5b8d08eb4a5cd46cac' }}"
+          MUSE_REVISION="${{ inputs.muse_revision || '05b4f1c5e5bf2297bccf113a56c17e246d769d47' }}"
           AGENTS_REVISION="${{ inputs.agents_revision || '7fd3252e7663ad5e68be5e90429d126aa66c38c8' }}"
           CONTEXT_OUT="$RUNNER_TEMP/opencode-review-context"
           rm -rf "$CONTEXT_OUT"
@@ -1015,7 +1015,7 @@ jobs:
       - name: Run bounded evidence-first OpenCode review
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          REVIEW_MODEL: ${{ inputs.model || 'opencode/mimo-v2.5-free' }}
+          REVIEW_MODEL: ${{ inputs.model || 'opencode/mimo-v2.6-flash-free' }}
           REVIEW_PROMPT_FILE: .review-context/machinery/evidence-review.md
           REVIEW_EVIDENCE_DIR: ${{ github.workspace }}/.opencode/review-evidence
         run: node .review-context/machinery/run-opencode-review-recovery.mjs

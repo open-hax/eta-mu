@@ -41,6 +41,9 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
 
+      - name: legacy-ai catalog contract (offline)
+        run: pnpm --dir packages/legacy/ai exec vitest run test/model-catalog-types.test.ts
+
       - name: eta-mu-github
         run: pnpm --dir packages/legacy/github test
 

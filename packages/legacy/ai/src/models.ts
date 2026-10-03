@@ -12,30 +12,42 @@ for (const [provider, models] of Object.entries(MODELS)) {
 	modelRegistry.set(provider, providerModels);
 }
 
+// A supported provider may have no models in the current upstream catalog.
+type ProviderModels<TProvider extends KnownProvider> = TProvider extends keyof typeof MODELS
+	? (typeof MODELS)[TProvider]
+	: Record<string, Model<Api>>;
+
 type ModelApi<
 	TProvider extends KnownProvider,
-	TModelId extends keyof (typeof MODELS)[TProvider],
-> = (typeof MODELS)[TProvider][TModelId] extends { api: infer TApi } ? (TApi extends Api ? TApi : never) : never;
+	TModelId extends keyof ProviderModels<TProvider>,
+> = ProviderModels<TProvider>[TModelId] extends { api: infer TApi } ? (TApi extends Api ? TApi : never) : never;
 
-export function getModel<TProvider extends KnownProvider, TModelId extends keyof (typeof MODELS)[TProvider]>(
+type ModelLookup<TProvider extends KnownProvider, TModelId extends keyof ProviderModels<TProvider>> =
+	TProvider extends keyof typeof MODELS ? Model<ModelApi<TProvider, TModelId>> : Model<Api> | undefined;
+
+/** Look up a catalog model; providers omitted from the catalog may return undefined. */
+export function getModel<TProvider extends KnownProvider, TModelId extends keyof ProviderModels<TProvider>>(
 	provider: TProvider,
 	modelId: TModelId,
-): Model<ModelApi<TProvider, TModelId>> {
+): ModelLookup<TProvider, TModelId> {
 	const providerModels = modelRegistry.get(provider);
-	return providerModels?.get(modelId as string) as Model<ModelApi<TProvider, TModelId>>;
+	return providerModels?.get(modelId as string) as ModelLookup<TProvider, TModelId>;
 }
 
+/** Return the providers present in the model catalog. */
 export function getProviders(): KnownProvider[] {
 	return Array.from(modelRegistry.keys()) as KnownProvider[];
 }
 
+/** Return a provider's catalog models, or an empty array if the provider is absent. */
 export function getModels<TProvider extends KnownProvider>(
 	provider: TProvider,
-): Model<ModelApi<TProvider, keyof (typeof MODELS)[TProvider]>>[] {
+): Model<ModelApi<TProvider, keyof ProviderModels<TProvider>>>[] {
 	const models = modelRegistry.get(provider);
-	return models ? (Array.from(models.values()) as Model<ModelApi<TProvider, keyof (typeof MODELS)[TProvider]>>[]) : [];
+	return models ? (Array.from(models.values()) as Model<ModelApi<TProvider, keyof ProviderModels<TProvider>>>[]) : [];
 }
 
+/** Update and return usage costs using the model's prices per million tokens. */
 export function calculateCost<TApi extends Api>(model: Model<TApi>, usage: Usage): Usage["cost"] {
 	usage.cost.input = (model.cost.input / 1000000) * usage.input;
 	usage.cost.output = (model.cost.output / 1000000) * usage.output;

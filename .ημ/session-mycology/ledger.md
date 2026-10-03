@@ -421,3 +421,40 @@
   spore: none
   receipt-refs: 9aff7874-6812-4984-9c0b-a5ac1d027b4c
   note: Native Node12/101 and JVM10/93 each produced11 actual failures before repair, including symlink retarget after lock. Canonical resolution before open now binds the later inode and parent fences while retaining caller returns. All four host suites and zero-warning gates pass; root independent adapter review clear. Existing native-mechanism and explicit-worktree lessons reused. The receipt CLI refused unsupported verification kind without writing; the declared test-run kind succeeded. Source30090a67 and verification document retain scope and evidence. No remote writes.
+- ts: 2026-10-02T22:04:36.013544946Z
+  session: /home/err/spaces/review-repair/eta-mu
+  task: Resume evidence review rollout and unblock generated catalog build
+  p-efficiency: 0.7
+  p-friction: 0.5
+  p-skill-candidate: 0.3
+  spore: none
+  receipt-refs: none
+  note: Provider support is not proof of catalog membership; compile omission fixtures to preserve absent-provider behavior.
+- ts: 2026-10-02T22:45:09.098576250Z
+  session: /home/err/spaces/review-repair/eta-mu
+  task: eta-mu#339 repair three verified CodeRabbit findings
+  p-efficiency: 0.75
+  p-friction: 0.35
+  p-skill-candidate: 0.3
+  spore: none
+  receipt-refs: eta-mu#339 comments4170384835,4170384852,4170384866
+  note: Conditional return types preserve present-provider precision while unions remain optional. Synthetic catalogs must not depend on live catalogs. Use vitest run with direct file filters; pnpm test -- launched the network suite and was stopped. Main receipt bytes preserved, only authorized unmerged suffix repaired. No spore; review quota and dependency merge hold remain.
+- ts: 2026-10-02T23:20:35.250054052Z
+  session: /home/err/spaces/review-repair/eta-mu
+  task: eta-mu#339 settle new evidence reviewer threads
+  p-efficiency: 0.9
+  p-friction: 0.15
+  p-skill-candidate: 0.2
+  spore: none
+  receipt-refs: 4170488366,4170488373
+  note: Verify reviewer commit before repairing stale findings. Catalog fixture now runs through root deterministic gate and coverage CI, without network provider tests. Stale Muse default docs reconciled. No spore; caller pin and merge hold preserved.
+
+- ts: 2026-10-03T02:37:45.397512+00:00
+  session: coderabbit-pr339-docstring-coverage
+  task: Document PR339 catalog functions and regression test
+  p-efficiency: 0.9
+  p-friction: 0.1
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: none
+  note: Verified PR head867da5c5 before edits. Added JSDoc only; scanner confirms unchanged executable tokens and seven documented declarations. Offline catalog contract passes1/1. Hosted coverage needs rerun. Session CLI is unavailable in this sandbox; reflection recorded directly.
