@@ -963,18 +963,23 @@ jobs:
           path: .opencode/review-evidence
 
       - name: Verify full review input against independent Git snapshot
+        id: review_input
         shell: bash
         env:
+          REVIEW_INPUT_PHASE: fresh
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}
           REVIEW_EVIDENCE_ARTIFACT_NAME: ${{ needs.deterministic_evidence.outputs.artifact_name }}
-        run: |
+        run: &verify_review_input |
           set -euo pipefail
-          # This fresh checkout has not executed caller source or gates. The
-          # downloaded diff and its manifest are both untrusted gate output.
+          # Reuse this Git authority check before the model and after recovery.
+          # Downloaded input and final submission metadata cannot authorize themselves.
+          [[ "$REVIEW_INPUT_PHASE" == fresh || "$REVIEW_INPUT_PHASE" == final ]]
           evidence_dir="$GITHUB_WORKSPACE/.opencode/review-evidence"
-          # An artifact cannot supply its own successful verification receipt.
-          rm -f "$evidence_dir/input-verification.json"
+          if [[ "$REVIEW_INPUT_PHASE" == fresh ]]; then
+            # An artifact cannot supply its own successful verification receipt.
+            rm -f "$evidence_dir/input-verification.json"
+          fi
           [[ "$PR_BASE_SHA" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]]
           [[ "$PR_HEAD_SHA" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]]
           test "$(git rev-parse HEAD)" = "$PR_HEAD_SHA"
@@ -992,14 +997,17 @@ jobs:
           const fs = require('node:fs');
           const path = require('node:path');
           const { createHash } = require('node:crypto');
+          const { execFileSync } = require('node:child_process');
           const env = process.env;
           const dir = path.join(env.GITHUB_WORKSPACE, '.opencode/review-evidence');
           const proofFile = path.join(dir, 'input-verification.json');
           const event = JSON.parse(fs.readFileSync(env.GITHUB_EVENT_PATH, 'utf8'));
-          const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'input-manifest.json'), 'utf8'));
+          const manifestBytes = fs.readFileSync(path.join(dir, 'input-manifest.json'));
+          const manifest = JSON.parse(manifestBytes.toString('utf8'));
+          const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
           const expected = fs.readFileSync(env.REVIEW_INPUT_EXPECTED_DIFF);
           const downloaded = fs.readFileSync(path.join(dir, 'basehead.diff'));
-          const digest = createHash('sha256').update(expected).digest('hex');
+          const digest = sha256(expected);
           const fullDiff = { path: 'basehead.diff', bytes: expected.length, sha256: digest };
           const truncated = expected.length > 300000;
           const verificationProvenance = {
@@ -1033,14 +1041,67 @@ jobs:
           const preview = truncated ? Buffer.concat([expected.subarray(0, 300000),
             Buffer.from(`\n[eta-mu review] diff truncated at 300000 bytes (was ${expected.length}).\n`)]) : expected;
           assert.ok(fs.readFileSync(path.join(dir, 'pr.diff')).equals(preview), 'Preview differs from independent Git input');
-          fs.writeFileSync(proofFile, `${JSON.stringify({
+          const proof = {
             schema: 'open-hax.review-input-verification/v1', input_verified: true,
             verification_stage: 'fresh-review-job-before-model', base_sha: env.PR_BASE_SHA,
             head_sha: env.PR_HEAD_SHA, diff_base_sha: env.REVIEW_INPUT_DIFF_BASE_SHA,
-            full_diff: fullDiff, provenance,
+            full_diff: fullDiff, manifest_sha256: sha256(manifestBytes), provenance,
             evidence_artifact_name: env.REVIEW_EVIDENCE_ARTIFACT_NAME,
             verification_provenance: verificationProvenance,
-          }, null, 2)}\n`);
+          };
+          if (env.REVIEW_INPUT_PHASE === 'fresh') {
+            const bytes = Buffer.from(`${JSON.stringify(proof, null, 2)}\n`);
+            fs.writeFileSync(proofFile, bytes);
+            fs.appendFileSync(env.GITHUB_OUTPUT, `input_verification_sha256=${sha256(bytes)}\n`);
+          } else {
+            // These digests came from completed pre-model steps, outside the
+            // writable evidence/context trees. Never trust a replaced receipt.
+            assert.match(env.REVIEW_INPUT_VERIFICATION_SHA256 || '', /^[0-9a-f]{64}$/, 'Missing trusted input receipt digest');
+            const proofBytes = fs.readFileSync(proofFile);
+            assert.equal(sha256(proofBytes), env.REVIEW_INPUT_VERIFICATION_SHA256, 'Original input receipt changed after model/recovery');
+            assert.deepEqual(JSON.parse(proofBytes.toString('utf8')), proof, 'Input/provenance changed after initial verification');
+            const contextDir = path.join(env.GITHUB_WORKSPACE, '.review-context');
+            assert.match(env.REVIEW_CONTEXT_SHA256 || '', /^[0-9a-f]{64}$/, 'Missing trusted review context digest');
+            assert.equal(sha256(fs.readFileSync(path.join(contextDir, 'SHA256SUMS'))), env.REVIEW_CONTEXT_SHA256, 'Review context checksum list changed');
+            execFileSync('sha256sum', ['--check', '--strict', 'SHA256SUMS'], { cwd: contextDir, stdio: 'inherit' });
+
+            const submissionBytes = fs.readFileSync(path.join(dir, 'submission.json'));
+            const submission = JSON.parse(submissionBytes.toString('utf8'));
+            // Consume Muse0b's serialized tool envelope. This is transport
+            // closure, not another review state machine or cognitive proof.
+            assert.deepEqual(submission['input-source'], manifest, 'Submission input identity differs from independently verified input');
+            const assessments = submission['input-assessments'];
+            assert.ok(Array.isArray(assessments), 'Missing tool-written input assessments');
+            const chunks = assessments.length;
+            assert.deepEqual(submission['input-coverage'], { chunks, delivered: chunks, assessed: chunks, missing: [] }, 'Submission full-input coverage is incomplete');
+            const text = new TextDecoder('utf-8', { fatal: true }).decode(expected);
+            let cursor = 0;
+            for (const [index, assessment] of assessments.entries()) {
+              assert.ok(assessment && assessment.id === index + 1, 'Missing or duplicate assessment identity');
+              assert.ok(Number.isInteger(assessment.start) && Number.isInteger(assessment.end)
+                && assessment.start === cursor && assessment.end > cursor && assessment.end <= text.length,
+                'Assessment intervals do not cover the verified UTF-16 input');
+              assert.ok(typeof assessment.note === 'string' && assessment.note.trim().length > 0, 'Missing substantive assessment note');
+              cursor = assessment.end;
+            }
+            assert.equal(cursor, text.length, 'Submission omits verified full-input ranges');
+
+            // Publication consumes these exact validated bytes, never a later
+            // reread of the model-writable evidence file. No metadata is added.
+            const frozenDir = fs.mkdtempSync(path.join(env.RUNNER_TEMP, 'opencode-verified-submission-'));
+            const frozenFile = path.join(frozenDir, 'submission.json');
+            fs.writeFileSync(frozenFile, submissionBytes, { mode: 0o400 });
+            const submissionSha256 = sha256(submissionBytes);
+            fs.writeFileSync(path.join(dir, 'submission-verification.json'), `${JSON.stringify({
+              ...proof, schema: 'open-hax.review-submission-verification/v1',
+              verification_stage: 'after-review-and-recovery-before-publication',
+              input_verification_sha256: env.REVIEW_INPUT_VERIFICATION_SHA256,
+              context_sha256: env.REVIEW_CONTEXT_SHA256, submission_sha256: submissionSha256,
+              input_coverage: submission['input-coverage'],
+            }, null, 2)}\n`);
+            fs.appendFileSync(env.GITHUB_OUTPUT, `submission_file=${frozenFile}\nsubmission_sha256=${submissionSha256}\n`);
+            console.log(`Bound unchanged tool submission (${submissionSha256}) to complete verified input.`);
+          }
           console.log(`Verified ${expected.length} full-input bytes against independent Git input (${digest}).`);
           NODE
 
@@ -1051,10 +1112,12 @@ jobs:
           path: .review-context
 
       - name: Verify and install the bounded review context
+        id: review_context
         shell: bash
         run: |
           set -euo pipefail
           (cd .review-context && sha256sum -c SHA256SUMS)
+          echo "context_sha256=$(sha256sum .review-context/SHA256SUMS | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
 
           # Install into the runner-global opencode config. Caller repositories
           # may track their own .opencode/ tree; nothing in this step may write
@@ -1131,10 +1194,22 @@ jobs:
           REVIEW_EVIDENCE_DIR: ${{ github.workspace }}/.opencode/review-evidence
         run: node .review-context/machinery/run-opencode-review-recovery.mjs
 
+      - name: Reverify full input and bind final submission
+        id: final_review_input
+        shell: bash
+        env:
+          REVIEW_INPUT_PHASE: final
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}
+          REVIEW_EVIDENCE_ARTIFACT_NAME: ${{ needs.deterministic_evidence.outputs.artifact_name }}
+          REVIEW_INPUT_VERIFICATION_SHA256: ${{ steps.review_input.outputs.input_verification_sha256 }}
+          REVIEW_CONTEXT_SHA256: ${{ steps.review_context.outputs.context_sha256 }}
+        run: *verify_review_input
+
       - name: Validate final review submission
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
-          REVIEW_SUBMISSION_FILE: .opencode/review-evidence/submission.json
+          REVIEW_SUBMISSION_FILE: ${{ steps.final_review_input.outputs.submission_file }}
         with:
           script: |
             const {
@@ -1154,6 +1229,7 @@ jobs:
           name: review-attempt-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             .opencode/review-evidence/input-verification.json
+            .opencode/review-evidence/submission-verification.json
             .opencode/review-evidence/model-response-attempt-1.txt
             .opencode/review-evidence/model-response-attempt-2.txt
             .opencode/review-evidence/opencode-stderr-attempt-1.log
@@ -1216,7 +1292,7 @@ jobs:
       - name: Publish actual GitHub pull request review
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
-          REVIEW_SUBMISSION_FILE: .opencode/review-evidence/submission.json
+          REVIEW_SUBMISSION_FILE: ${{ steps.final_review_input.outputs.submission_file }}
         with:
           github-token: ${{ steps.eta_mu_publish_token.outputs.token }}
           script: |

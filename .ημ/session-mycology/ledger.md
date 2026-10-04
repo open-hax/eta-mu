@@ -521,3 +521,21 @@
   spore: none
   receipt-refs: Eta340/current-pair-publication
   note: Keep initial missing test-runner dependency separate from executed tests; use a scoped existing dependency path and verify current source. Allow an exact caller Node patch while retaining default behavior and unchanged Bash semantics. Native proof and production activation remain separate.
+
+- ts: "2026-10-04T04:27:09.182348915Z"
+  origin: Eta340/final-publication-binding
+  p-efficiency: 0.9
+  p-friction: 0.2
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: Eta340/shared final-publication verification boundary; Eta340/final-publication actual Muse RED GREEN
+  note: Carry initial verification authority outside mutable evidence, reuse the actual Git guard at publication, and freeze the unchanged submitted bytes. Validate real immutable producer/tool output rather than guessed fixture keys; full transport closure is separate from cognitive review and native qualification. Preserve bootstrap errors, mutation RED, every historical prefix and frozen neighboring handoff. No new spore or promotion; parent owns publication.
+
+- ts: "2026-10-04T04:42:01.390226472Z"
+  origin: Eta340/native-dc4-final-boundary-fixture
+  p-efficiency: 0.9
+  p-friction: 0.1
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: Eta340/native-dc4 final-boundary fixture correction
+  note: Prefer the newly available genuine current-head tool output over a prior native shape excerpt. Reconstruct its actual Git input and prove unchanged-byte acceptance through the production guard while retaining previous frozen evidence. Native dc4 completion, local retrospective gate proof and future successor qualification are separate facts. Preserve every received receipt/reflection prefix and frozen Agents source; no operational action or new spore.
