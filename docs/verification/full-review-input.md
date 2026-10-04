@@ -12,8 +12,10 @@ Parent subsequently merged Muse18 at
 The paired Muse branch now uses that existing merge as its base without creating
 a repair commit or rewriting history.
 Parent subsequently committed the Muse19 input/transition corrections as
-`7a8788d36d2aed3bf62e405f93d3c24d3fd410ea`. This preparation now selects that
-immutable candidate; hosted paired qualification remains pending.
+`7a8788d36d2aed3bf62e405f93d3c24d3fd410ea`. That immutable candidate was
+selected in the initial `a791f29` publication. The subsequent
+integrity correction below selects Muse `446b199`; hosted paired qualification
+remains pending.
 
 Staging formerly overwrote the complete diff when producing the 300 KB preview.
 The repair writes exact Git merge-base/head bytes to `basehead.diff` first.
@@ -54,7 +56,7 @@ intentional historical provenance. This change introduces new functionality;
 parent must qualify and select exact new workflow and Muse sources together.
 The workflow-call default, compiler checkout fallback and context-provenance
 fallback now all select corrected Muse19 commit
-`7a8788d36d2aed3bf62e405f93d3c24d3fd410ea`. The workflow tests require exact
+`446b1999816890a8f3c63f8d1db77c49182a9444`. The workflow tests require exact
 agreement at all three sites while preserving an explicit `muse_revision`
 override. Native paired qualification is pending. Publish the eta-mu PR before
 Muse merges if needed:
@@ -111,3 +113,69 @@ selection strings with their old value reproduces the exact prior prepared
 workflow hash, so existing staging/gates/credentials are retained. The b187
 receipt prefix and the existing prepared receipts remain byte-for-byte
 unchanged; tracked board state and the manual incoming card are unchanged.
+
+## Independent input verification after untrusted gates
+
+Eta340 CodeRabbit review `5403670832` at exact head
+`a791f29aa53a46852ff2cf3f2a3d28b9f1022ad3` raised P1 `4175602381`:
+pull-request gates run after staging and can replace both `basehead.diff` and
+its matching manifest. A digest stored alongside untrusted bytes is not Git
+authority. Regenerating only in that producer job would retain this boundary
+problem.
+
+The fresh review job now verifies downloaded input immediately after download,
+before installing review tools, executing the publisher tests, invoking the
+model or creating a publication token. It independently validates checkout
+head against the native event, validates the native base, computes the Git
+merge base, and generates `git diff --no-ext-diff --find-renames` into runner
+temporary storage. Exact downloaded bytes, manifest schema/base/head/diff-base,
+byte count/hash, preview and native repository/PR/run/attempt/workflow identity
+must match this independent snapshot. A mismatch fails the job before review
+or publication. A successful comparison writes `input-verification.json` for
+the native attempt artifact; producer-supplied verification receipts are
+removed first. Existing stream/recovery, clean/head, named-secret, bot and
+terminal-gate guards remain in place.
+
+The meaningful RED fixture runs the actual deterministic gate wrapper with a
+successful malicious gate that empties both diffs and updates the manifest's
+byte count/hash. Its deterministic summary reports success. The prior review
+path accepts that artifact and reaches the synthetic model boundary. With
+the independent verification step, the same fixture refuses it, writes no
+successful verification receipt and never reaches that boundary. Exact large
+Unicode-tail, empty and divergent-native-base inputs pass; altered metadata,
+equal-length changed bytes and altered preview are rejected. The full workflow
+suite is **44/44**, zero failures, cancellations or skips, on Node 22.
+An isolated joint replay requires the clean committed Muse `446b199` and all
+three matching selections, executes this workflow's actual observer compiler
+and fresh-review comparison step, and passes **22** tools / **390,358** bytes /
+**204** pages with zero compiler warnings. Forged matching input is rejected
+before any tool, missing tail refuses begin, complete recovery passes, and a
+recovered Unicode tail finding survives publisher validation. These fixtures
+contain no model invocation or native approval.
+
+Structural actionlint passes with its supported `-shellcheck= -pyflakes=`
+flags. Direct ShellCheck, with the same actionlint sanitization and exclusions
+and a child started before stdin is supplied, passes all **20** scripts with
+zero findings. The initial actionlint external-command stdin stall and exit 2
+remain separate historical evidence; no stalled invocation is relabeled a
+pass. Logs, native artifacts, immutable RED source and the joint replay are in
+the repair evidence directory's `eta340-native-37166085319/` checkpoint.
+
+The initial native run `37166085319` compiled **22** tools from Muse `7a8788d`
+with zero warnings (job `111329136270`, context artifact `11289348404`). Its
+deterministic artifact `11289329684` contains all seven changed files,
+**39,176** bytes, SHA-256
+`231d78f3f3567e40a88312497bdd2240b4f7ec50571d2fb25d7e92fc5c5dc172`,
+matching immutable Git bytes exactly; all deterministic statuses were zero.
+That historical successful artifact does not disprove the replacement risk
+or qualify the corrected source. The model was still running at observation.
+
+All three Muse selections and the fixture expectations now select immutable
+`446b1999816890a8f3c63f8d1db77c49182a9444`, supplied by parent after its
+64-character manifest-ID repair. Earlier Muse MiMo review `5403657875` at
+`7a8788d` is stale for that changed head. Local verification supplies no native
+approval. Parent must publish the new Eta candidate, obtain actual clean-job
+input proof plus current-head model scope and required CI, settle findings,
+and qualify both repositories before caller activation. Existing callers
+remain on the historical `b5b28237` pair; this worker performs no commit,
+push, GitHub write, settlement, merge or deployment.

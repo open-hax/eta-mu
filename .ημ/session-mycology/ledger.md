@@ -485,3 +485,21 @@
   spore: none
   receipt-refs: full-input-repair/immutable-Muse-selection
   note: Require the same exact committed source at workflow default, checkout fallback and artifact provenance, then test actual producer and compiled consumer. Local immutable-source proof remains separate from pending native qualification and caller activation. Parent retains publication.
+
+- ts: "2026-10-04T01:20:11.369816+00:00"
+  origin: Eta340/independent-full-input-verification
+  p-efficiency: 0.85
+  p-friction: 0.25
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: Eta340/independent-full-input-verification
+  note: Gate-controlled bytes and a matching digest do not establish Git authority. Verify in a fresh job before source-dependent review, exercise a successful malicious gate in RED, retain exact native artifact truth without qualification credit, and freeze a bounded local handoff. Existing spore covers falsifying every new test; no promotion or global skill write.
+
+- ts: "2026-10-04T01:42:38.682649+00:00"
+  origin: Eta340/companion-source-alignment
+  p-efficiency: 0.9
+  p-friction: 0.15
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: Eta340/companion-source-alignment
+  note: A native review caught a stale diagnostic and operator-facing default after the main pin moved. Align the actual compiler source and state its subset boundary; preserve earlier frozen handoff evidence separately from publication and hosted qualification.

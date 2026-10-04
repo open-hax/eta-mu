@@ -270,7 +270,7 @@ test("staging preserves empty input and distinguishes the native base from the m
 });
 
 test("the compiled observer contract pins compatible Muse and allows both full-input tools", () => {
-  const museSha = "7a8788d36d2aed3bf62e405f93d3c24d3fd410ea";
+  const museSha = "446b1999816890a8f3c63f8d1db77c49182a9444";
   const expectedRef = "${{ inputs.muse_revision || '" + museSha + "' }}";
   assert.equal(workflow.on.workflow_call.inputs.muse_revision.default, museSha,
     "workflow-call default must select the corrected immutable Muse source");
@@ -283,6 +283,176 @@ test("the compiled observer contract pins compatible Muse and allows both full-i
     assert.ok(workflowText.includes(`:${name}`), `missing permission for ${name}`);
     assert.ok(workflowText.includes(`'${name}'`), `missing compiled registry assertion for ${name}`);
   }
+});
+
+const inputVerificationName = "Verify full review input against independent Git snapshot";
+
+function fullInputFixture(t, { large = false, baseAhead = false, empty = false } = {}) {
+  const { directory, sha: ancestor } = makeRepository(t);
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-review-input-"));
+  t.after(() => fs.rmSync(scratch, { recursive: true, force: true }));
+  if (!empty) {
+    fs.writeFileSync(path.join(directory, "large.txt"), "changed input\n".repeat(large ? 26000 : 2));
+    fs.writeFileSync(path.join(directory, "尾-ημ.txt"), "tail hunk must be reviewed\n");
+    execFileSync("git", ["add", "large.txt", "尾-ημ.txt"], { cwd: directory });
+    execFileSync("git", ["commit", "-qm", "review input head"], { cwd: directory });
+  }
+  const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: directory, encoding: "utf8" }).trim();
+  let base = ancestor;
+  if (baseAhead) {
+    execFileSync("git", ["checkout", "-qb", "advanced-base", ancestor], { cwd: directory });
+    fs.writeFileSync(path.join(directory, "base-only.txt"), "unrelated base change\n");
+    execFileSync("git", ["add", "base-only.txt"], { cwd: directory });
+    execFileSync("git", ["commit", "-qm", "base advanced independently"], { cwd: directory });
+    base = execFileSync("git", ["rev-parse", "HEAD"], { cwd: directory, encoding: "utf8" }).trim();
+    execFileSync("git", ["checkout", "-q", "--detach", head], { cwd: directory });
+  }
+  const eventFile = path.join(scratch, "event.json");
+  const event = { pull_request: { number: 42, title: "input fixture", user: { login: "fixture" },
+    head: { ref: "review", sha: head }, base: { ref: "main", sha: base }, draft: false } };
+  fs.writeFileSync(eventFile, JSON.stringify(event));
+  const env = {
+    GITHUB_WORKSPACE: directory, GITHUB_EVENT_PATH: eventFile, PR_BASE_SHA: base, PR_HEAD_SHA: head,
+    GITHUB_REPOSITORY: "open-hax/fixture", GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "2",
+    GITHUB_WORKFLOW_SHA: head, GITHUB_WORKFLOW_REF: "open-hax/fixture/.github/workflows/review.yml@refs/pull/42/merge",
+    RUNNER_TEMP: scratch,
+  };
+  const staged = runScript(namedStep("deterministic_evidence", "Stage pull request diff and context").run, directory, env);
+  assert.equal(staged.status, 0, staged.stderr);
+  return { directory, scratch, base, head, ancestor, env, event,
+    evidence: path.join(directory, ".opencode/review-evidence") };
+}
+
+function freshReviewInputCheck(fixture, overrides = {}) {
+  const consumer = fs.mkdtempSync(path.join(fixture.scratch, "fresh-review-"));
+  execFileSync("git", ["clone", "-q", "--no-hardlinks", fixture.directory, consumer]);
+  execFileSync("git", ["checkout", "-q", "--detach", fixture.head], { cwd: consumer });
+  const evidence = path.join(consumer, ".opencode/review-evidence");
+  const env = { ...fixture.env, GITHUB_WORKSPACE: consumer,
+    ...guardEnvironment(consumer, path.join(fixture.scratch, "guard-output"), fixture.head),
+    EXPECTED_SHA: fixture.head, ...overrides };
+  const guard = runScript(namedStep("review", "Verify exact and clean review checkout").run, consumer, env);
+  assert.equal(guard.status, 0, guard.stderr || guard.stdout);
+  fs.cpSync(fixture.evidence, evidence, { recursive: true });
+  // On the immutable pre-fix workflow the exact-head guard was the only Git
+  // check before consuming downloaded input. Preserve that real RED behavior.
+  const verification = workflow.jobs.review.steps.find((step) => step.name === inputVerificationName);
+  const result = verification ? runScript(verification.run, consumer, env) : guard;
+  const invocation = path.join(consumer, "model-or-publication-invoked");
+  if (result.status === 0) fs.writeFileSync(invocation, "synthetic invocation boundary\n");
+  return { result, evidence, invocation };
+}
+
+test("a fresh review job verifies downloaded input before tools, model or publication", () => {
+  const steps = workflow.jobs.review.steps;
+  const verification = namedStep("review", inputVerificationName);
+  assert.equal(verification.if, undefined);
+  assert.notEqual(verification["continue-on-error"], true);
+  const index = steps.indexOf(verification);
+  assert.ok(index > steps.indexOf(namedStep("review", "Download deterministic evidence")));
+  for (const name of ["Verify and install the bounded review context", "Test deterministic review publisher",
+    "Run bounded evidence-first OpenCode review", "Create eta-mu GitHub App token for review publication",
+    "Publish actual GitHub pull request review"]) {
+    assert.ok(index < steps.indexOf(namedStep("review", name)), `input must be verified before ${name}`);
+  }
+  assert.match(verification.run, /git diff --no-ext-diff --find-renames/);
+  assert.match(verification.run, /git merge-base/);
+  assert.match(namedStep("review", "Upload review attempt artifacts").with.path, /input-verification\.json/);
+});
+
+test("a successful malicious gate cannot replace full input and its matching manifest", (t) => {
+  const fixture = fullInputFixture(t);
+  const gateFile = path.join(fixture.scratch, "malicious-gate.cjs");
+  fs.writeFileSync(gateFile, `
+    const fs = require('node:fs'), crypto = require('node:crypto');
+    const dir = process.env.GITHUB_WORKSPACE + '/.opencode/review-evidence/';
+    const manifest = JSON.parse(fs.readFileSync(dir + 'input-manifest.json'));
+    const replacement = Buffer.alloc(0);
+    fs.writeFileSync(dir + 'basehead.diff', replacement);
+    fs.writeFileSync(dir + 'pr.diff', replacement);
+    manifest.full_diff.bytes = 0;
+    manifest.full_diff.sha256 = crypto.createHash('sha256').update(replacement).digest('hex');
+    manifest.preview.truncated = false;
+    fs.writeFileSync(dir + 'input-manifest.json', JSON.stringify(manifest));
+  `);
+  const gates = runScript(namedStep("deterministic_evidence", "Run deterministic gates").run, fixture.directory,
+    { ...fixture.env, CHECKOUT_EXACT_HEAD: "true", CHECKOUT_CLEAN: "true",
+      EVIDENCE_GATES_SCRIPT: 'run_gate malicious node "$MALICIOUS_GATE_SCRIPT"', MALICIOUS_GATE_SCRIPT: gateFile });
+  assert.equal(gates.status, 0, gates.stderr);
+  assert.equal(fs.readFileSync(path.join(fixture.evidence, "statuses.env"), "utf8").trim(), "malicious=0");
+  const manifest = JSON.parse(fs.readFileSync(path.join(fixture.evidence, "input-manifest.json")));
+  assert.equal(manifest.full_diff.bytes, 0);
+  assert.equal(manifest.full_diff.sha256, createHash("sha256").update(Buffer.alloc(0)).digest("hex"));
+  const summary = runScript(namedStep("deterministic_evidence", "Summarize deterministic evidence").run,
+    fixture.directory, summaryEnvironment(fixture.directory, path.join(fixture.scratch, "summary-output"), fixture.head,
+      { PR_BASE_SHA: fixture.base }));
+  assert.equal(summary.status, 0, summary.stderr);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(fixture.evidence, "summary.json"))).result, "success");
+  const checked = freshReviewInputCheck(fixture);
+  assert.notEqual(checked.result.status, 0, "a forged empty diff with matching manifest reached the model boundary");
+  assert.equal(fs.existsSync(checked.invocation), false, "mismatch must stop model and API publication");
+  assert.equal(fs.existsSync(path.join(checked.evidence, "input-verification.json")), false);
+});
+
+test("independent review accepts exact large, empty and divergent-base input", (t) => {
+  for (const options of [{ large: true }, { empty: true }, { baseAhead: true }]) {
+    const fixture = fullInputFixture(t, options);
+    const checked = freshReviewInputCheck(fixture);
+    assert.equal(checked.result.status, 0, checked.result.stderr);
+    const proof = JSON.parse(fs.readFileSync(path.join(checked.evidence, "input-verification.json")));
+    assert.equal(proof.schema, "open-hax.review-input-verification/v1");
+    assert.equal(proof.input_verified, true);
+    assert.equal(proof.base_sha, fixture.base);
+    assert.equal(proof.diff_base_sha, fixture.ancestor);
+    assert.equal(proof.head_sha, fixture.head);
+    assert.equal(proof.full_diff.sha256, createHash("sha256").update(
+      fs.readFileSync(path.join(fixture.evidence, "basehead.diff"))).digest("hex"));
+    assert.equal(proof.provenance.run_id, "123");
+    if (options.large) assert.ok(proof.full_diff.bytes > 300000);
+  }
+});
+
+test("independent review refuses altered manifest identities, size, hash and provenance", (t) => {
+  const fixture = fullInputFixture(t);
+  const file = path.join(fixture.evidence, "input-manifest.json");
+  const original = JSON.parse(fs.readFileSync(file));
+  const mutations = [
+    (m) => { m.base_sha = "a".repeat(40); },
+    (m) => { m.head_sha = "b".repeat(40); },
+    (m) => { m.diff_base_sha = "c".repeat(40); },
+    (m) => { m.full_diff.bytes += 1; },
+    (m) => { m.full_diff.sha256 = "d".repeat(64); },
+    (m) => { m.full_diff.path = "pr.diff"; },
+    (m) => { m.preview.truncated = true; },
+    (m) => { m.provenance.repository = "other/repo"; },
+    (m) => { m.provenance.pull_request = "43"; },
+    (m) => { m.provenance.run_id = "122"; },
+    (m) => { m.provenance.run_attempt = "1"; },
+    (m) => { m.provenance.workflow_sha = "e".repeat(40); },
+    (m) => { m.provenance.workflow_ref = "other/workflow"; },
+  ];
+  for (const mutate of mutations) {
+    const changed = structuredClone(original); mutate(changed);
+    fs.writeFileSync(file, JSON.stringify(changed));
+    const checked = freshReviewInputCheck(fixture);
+    assert.notEqual(checked.result.status, 0, "mismatched artifact metadata was accepted");
+    assert.equal(fs.existsSync(checked.invocation), false);
+  }
+  fs.writeFileSync(file, JSON.stringify(original));
+  const fullPath = path.join(fixture.evidence, "basehead.diff");
+  const full = fs.readFileSync(fullPath);
+  const altered = Buffer.from(full); altered[altered.length - 2] ^= 1;
+  fs.writeFileSync(fullPath, altered);
+  const changedBytes = freshReviewInputCheck(fixture);
+  assert.notEqual(changedBytes.result.status, 0, "equal-length changed bytes with untouched manifest were accepted");
+  assert.match(changedBytes.result.stderr, /Downloaded full diff differs/);
+  assert.equal(fs.existsSync(changedBytes.invocation), false);
+  fs.writeFileSync(fullPath, full);
+  fs.writeFileSync(path.join(fixture.evidence, "pr.diff"), "altered preview\n");
+  const changedPreview = freshReviewInputCheck(fixture);
+  assert.notEqual(changedPreview.result.status, 0);
+  assert.match(changedPreview.result.stderr, /Preview differs/);
+  assert.equal(fs.existsSync(changedPreview.invocation), false);
 });
 
 test("both checkout guards reject a valid caller SHA that is not the event PR head", (t) => {

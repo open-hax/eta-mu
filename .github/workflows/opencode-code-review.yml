@@ -24,7 +24,7 @@ on:
         description: Pinned octave-commons/muse commit used to compile the review observer projection.
         required: false
         type: string
-        default: 7a8788d36d2aed3bf62e405f93d3c24d3fd410ea
+        default: 446b1999816890a8f3c63f8d1db77c49182a9444
       agents_revision:
         description: Pinned riatzukiza/.agents commit mounted as global skills.
         required: false
@@ -576,7 +576,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: octave-commons/muse
-          ref: ${{ inputs.muse_revision || '7a8788d36d2aed3bf62e405f93d3c24d3fd410ea' }}
+          ref: ${{ inputs.muse_revision || '446b1999816890a8f3c63f8d1db77c49182a9444' }}
           path: .review-context/muse
           persist-credentials: false
 
@@ -735,7 +735,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MUSE_REVISION="${{ inputs.muse_revision || '7a8788d36d2aed3bf62e405f93d3c24d3fd410ea' }}"
+          MUSE_REVISION="${{ inputs.muse_revision || '446b1999816890a8f3c63f8d1db77c49182a9444' }}"
           AGENTS_REVISION="${{ inputs.agents_revision || '7fd3252e7663ad5e68be5e90429d126aa66c38c8' }}"
           CONTEXT_OUT="$RUNNER_TEMP/opencode-review-context"
           rm -rf "$CONTEXT_OUT"
@@ -956,6 +956,73 @@ jobs:
           name: ${{ needs.deterministic_evidence.outputs.artifact_name }}
           path: .opencode/review-evidence
 
+      - name: Verify full review input against independent Git snapshot
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # This fresh checkout has not executed caller source or gates. The
+          # downloaded diff and its manifest are both untrusted gate output.
+          evidence_dir="$GITHUB_WORKSPACE/.opencode/review-evidence"
+          # An artifact cannot supply its own successful verification receipt.
+          rm -f "$evidence_dir/input-verification.json"
+          [[ "$PR_BASE_SHA" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]]
+          [[ "$PR_HEAD_SHA" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]]
+          test "$(git rev-parse HEAD)" = "$PR_HEAD_SHA"
+          test "$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")" = "$PR_HEAD_SHA"
+          test "$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")" = "$PR_BASE_SHA"
+          diff_base_sha="$(git merge-base "$PR_BASE_SHA" "$PR_HEAD_SHA")"
+          expected_diff="$(mktemp "$RUNNER_TEMP/opencode-authoritative-diff.XXXXXX")"
+          trap 'rm -f "$expected_diff"' EXIT
+          git diff --no-ext-diff --find-renames "$diff_base_sha" "$PR_HEAD_SHA" > "$expected_diff"
+          export REVIEW_INPUT_EXPECTED_DIFF="$expected_diff"
+          export REVIEW_INPUT_DIFF_BASE_SHA="$diff_base_sha"
+
+          node <<'NODE'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const { createHash } = require('node:crypto');
+          const env = process.env;
+          const dir = path.join(env.GITHUB_WORKSPACE, '.opencode/review-evidence');
+          const proofFile = path.join(dir, 'input-verification.json');
+          const event = JSON.parse(fs.readFileSync(env.GITHUB_EVENT_PATH, 'utf8'));
+          const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'input-manifest.json'), 'utf8'));
+          const expected = fs.readFileSync(env.REVIEW_INPUT_EXPECTED_DIFF);
+          const downloaded = fs.readFileSync(path.join(dir, 'basehead.diff'));
+          const digest = createHash('sha256').update(expected).digest('hex');
+          const fullDiff = { path: 'basehead.diff', bytes: expected.length, sha256: digest };
+          const truncated = expected.length > 300000;
+          const provenance = {
+            repository: env.GITHUB_REPOSITORY, pull_request: String(event.pull_request.number),
+            run_id: env.GITHUB_RUN_ID, run_attempt: env.GITHUB_RUN_ATTEMPT,
+            workflow_sha: env.GITHUB_WORKFLOW_SHA, workflow_ref: env.GITHUB_WORKFLOW_REF,
+          };
+          for (const [name, value] of Object.entries(provenance)) {
+            assert.ok(typeof value === 'string' && value.length > 0, `Missing native input provenance: ${name}`);
+          }
+          assert.equal(manifest.schema, 'open-hax.review-input/v1');
+          assert.equal(manifest.base_sha, env.PR_BASE_SHA, 'Input base is not the native event base');
+          assert.equal(manifest.head_sha, env.PR_HEAD_SHA, 'Input head is not the exact review checkout');
+          assert.equal(manifest.diff_base_sha, env.REVIEW_INPUT_DIFF_BASE_SHA, 'Input diff base is not the Git merge base');
+          assert.deepEqual(manifest.full_diff, fullDiff, 'Input byte count/hash differs from independent Git input');
+          assert.deepEqual(manifest.preview, { path: 'pr.diff', limit_bytes: 300000, truncated });
+          assert.deepEqual(manifest.provenance, provenance, 'Input belongs to another native run or workflow');
+          assert.ok(downloaded.equals(expected), 'Downloaded full diff differs from independent Git input');
+          const preview = truncated ? Buffer.concat([expected.subarray(0, 300000),
+            Buffer.from(`\n[eta-mu review] diff truncated at 300000 bytes (was ${expected.length}).\n`)]) : expected;
+          assert.ok(fs.readFileSync(path.join(dir, 'pr.diff')).equals(preview), 'Preview differs from independent Git input');
+          fs.writeFileSync(proofFile, `${JSON.stringify({
+            schema: 'open-hax.review-input-verification/v1', input_verified: true,
+            verification_stage: 'fresh-review-job-before-model', base_sha: env.PR_BASE_SHA,
+            head_sha: env.PR_HEAD_SHA, diff_base_sha: env.REVIEW_INPUT_DIFF_BASE_SHA,
+            full_diff: fullDiff, provenance,
+          }, null, 2)}\n`);
+          console.log(`Verified ${expected.length} full-input bytes against independent Git input (${digest}).`);
+          NODE
+
       - name: Download Muse tools and global skills
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -1065,6 +1132,7 @@ jobs:
         with:
           name: review-attempt-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
+            .opencode/review-evidence/input-verification.json
             .opencode/review-evidence/model-response-attempt-1.txt
             .opencode/review-evidence/model-response-attempt-2.txt
             .opencode/review-evidence/opencode-stderr-attempt-1.log

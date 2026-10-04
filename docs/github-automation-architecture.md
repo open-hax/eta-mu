@@ -85,10 +85,10 @@ The reviewer cannot edit files, browse the web, or spawn subagents. Bash command
 
 The current default pins are explicit inside the workflow so review runs are revision-bound:
 
-- Muse: `05b4f1c5e5bf2297bccf113a56c17e246d769d47`
+- Muse: `446b1999816890a8f3c63f8d1db77c49182a9444`
 - `.agents`: `7fd3252e7663ad5e68be5e90429d126aa66c38c8`
 
-The first implementation is intentionally eta-mu-specific because its deterministic gates are pnpm workspace commands. Extract a reusable workflow only after the evidence schema, Muse projection, skill discovery, and publication behavior pass the canary PR; consumer repositories may require different deterministic gate commands.
+The reusable workflow accepts repository-specific deterministic gates. Its full-input observer registry includes the immutable diff reader and assessment tools; the companion Muse diagnostic uses the same source revision but compiles only the actor observer subset, so it does not qualify the full review contract. Existing callers retain their recorded pin until the new Eta/Muse pair qualifies and merges.
 
 ## CLI Commands (in `packages/eta-mu-github`)
 
