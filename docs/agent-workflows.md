@@ -40,6 +40,28 @@ The workflow has three bounded stages:
 2. **Review-context compilation** — check out pinned revisions of `octave-commons/muse` and `riatzukiza/.agents`. Muse compiles a review-specific OpenCode projection containing only observer tools; the `.agents` repository is packaged as the global skill source. Both revisions and the skill inventory are recorded in the context artifact.
 3. **Model review with omission-only recovery** — map the change, reconstruct relevant contracts and invariants, generate candidate findings, attempt to disprove each candidate, and publish only findings that survive the evidence threshold. A completed first invocation that leaves a missing `review_submit` artifact receives exactly one corrective model invocation. The recovery starts the state machine again and must finish with a real tool-written submission; it never synthesizes a review from free-form output. A malformed submission does not consume the recovery attempt, and malformed or repeatedly missing submissions fail closed before publication.
 
+Diff staging preserves the complete Git merge-base/head bytes in `basehead.diff`
+before making the 300,000-byte `pr.diff` preview. `input-manifest.json` records
+the native base, independently computed merge base, exact head, full byte count,
+SHA-256 and observed workflow/run identity. Missing bases and mismatched heads
+fail staging; an empty diff is valid input rather than a reason to change bases.
+The existing evidence artifact carries both files and the manifest unchanged.
+
+The matching Muse review profile verifies the full input against that manifest.
+Its read-only `review_read_diff_chunk` tool delivers bounded lossless pages, and
+`review_assess_diff_chunk` records the reviewer's assessment of each delivered
+page. Submission requires assessment of every page; a preview, successful read
+or empty finding list cannot satisfy this requirement. Review every changed
+hunk, reading unchanged surrounding code as needed to assess its contracts.
+This does not require exhaustive proof or reading every unchanged file.
+
+The workflow-call default and both direct-PR fallbacks select immutable Muse
+`7a8788d36d2aed3bf62e405f93d3c24d3fd410ea`, including context provenance.
+This candidate pair still requires native hosted qualification. Existing
+production callers select the pair only after both candidates qualify and
+merge; historical callers pinned to b5 retain their original functional source
+until a separately reviewed revision update selects the new pair.
+
 The two model invocations write separate response and stderr files plus a small
 `recovery.json` decision record. The attempt artifact therefore preserves the
 first response even when the corrective invocation succeeds or fails.

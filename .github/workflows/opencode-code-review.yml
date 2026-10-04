@@ -24,7 +24,7 @@ on:
         description: Pinned octave-commons/muse commit used to compile the review observer projection.
         required: false
         type: string
-        default: 05b4f1c5e5bf2297bccf113a56c17e246d769d47
+        default: 7a8788d36d2aed3bf62e405f93d3c24d3fd410ea
       agents_revision:
         description: Pinned riatzukiza/.agents commit mounted as global skills.
         required: false
@@ -254,21 +254,40 @@ jobs:
         shell: bash
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           evidence_dir="$GITHUB_WORKSPACE/.opencode/review-evidence"
           mkdir -p "$evidence_dir"
 
-          git diff --find-renames "${PR_BASE_SHA}...HEAD" > "$evidence_dir/pr.diff" || true
-          if [[ ! -s "$evidence_dir/pr.diff" ]]; then
-            git diff --find-renames "${PR_BASE_SHA}" HEAD > "$evidence_dir/pr.diff"
-          fi
-          bytes="$(wc -c < "$evidence_dir/pr.diff")"
+          [[ "$PR_BASE_SHA" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]]
+          [[ "$PR_HEAD_SHA" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]]
+          test "$(git rev-parse HEAD)" = "$PR_HEAD_SHA"
+          test "$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")" = "$PR_HEAD_SHA"
+          test "$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")" = "$PR_BASE_SHA"
+          diff_base_sha="$(git merge-base "$PR_BASE_SHA" "$PR_HEAD_SHA")"
+          git diff --no-ext-diff --find-renames "$diff_base_sha" "$PR_HEAD_SHA" > "$evidence_dir/basehead.diff"
+          bytes="$(wc -c < "$evidence_dir/basehead.diff")"
+          digest="$(sha256sum "$evidence_dir/basehead.diff" | cut -d ' ' -f 1)"
+          cp "$evidence_dir/basehead.diff" "$evidence_dir/pr.diff"
+          truncated=false
           if [[ "$bytes" -gt 300000 ]]; then
-            head -c 300000 "$evidence_dir/pr.diff" > "$evidence_dir/pr.diff.truncated"
-            mv "$evidence_dir/pr.diff.truncated" "$evidence_dir/pr.diff"
+            head -c 300000 "$evidence_dir/basehead.diff" > "$evidence_dir/pr.diff"
             printf '\n[eta-mu review] diff truncated at 300000 bytes (was %s).\n' "$bytes" >> "$evidence_dir/pr.diff"
+            truncated=true
           fi
+          jq -n \
+            --arg base "$PR_BASE_SHA" --arg head "$PR_HEAD_SHA" --arg diff_base "$diff_base_sha" \
+            --arg digest "$digest" --argjson bytes "$bytes" --argjson truncated "$truncated" \
+            --arg repository "${GITHUB_REPOSITORY:-}" --arg number "$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")" \
+            --arg run_id "${GITHUB_RUN_ID:-}" --arg run_attempt "${GITHUB_RUN_ATTEMPT:-}" \
+            --arg workflow_sha "${GITHUB_WORKFLOW_SHA:-}" --arg workflow_ref "${GITHUB_WORKFLOW_REF:-}" \
+            '{schema: "open-hax.review-input/v1", base_sha: $base, head_sha: $head, diff_base_sha: $diff_base,
+              full_diff: {path: "basehead.diff", bytes: $bytes, sha256: $digest},
+              preview: {path: "pr.diff", limit_bytes: 300000, truncated: $truncated},
+              provenance: {repository: $repository, pull_request: $number, run_id: $run_id,
+                run_attempt: $run_attempt, workflow_sha: $workflow_sha, workflow_ref: $workflow_ref}}' \
+            > "$evidence_dir/input-manifest.json"
 
           jq -r '
             "# Pull request context",
@@ -557,7 +576,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: octave-commons/muse
-          ref: ${{ inputs.muse_revision || '05b4f1c5e5bf2297bccf113a56c17e246d769d47' }}
+          ref: ${{ inputs.muse_revision || '7a8788d36d2aed3bf62e405f93d3c24d3fd410ea' }}
           path: .review-context/muse
           persist-credentials: false
 
@@ -632,6 +651,8 @@ jobs:
              :policy :allow}
             {:id :review/allow-review-pipeline
              :applies #{:review_begin
+                        :review_read_diff_chunk
+                        :review_assess_diff_chunk
                         :review_record_evidence
                         :review_propose_finding
                         :review_classify_finding
@@ -680,6 +701,8 @@ jobs:
             'phase_observations',
             'phase_tail',
             'review_begin',
+            'review_read_diff_chunk',
+            'review_assess_diff_chunk',
             'review_classify_finding',
             'review_propose_finding',
             'review_record_evidence',
@@ -712,7 +735,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MUSE_REVISION="${{ inputs.muse_revision || '05b4f1c5e5bf2297bccf113a56c17e246d769d47' }}"
+          MUSE_REVISION="${{ inputs.muse_revision || '7a8788d36d2aed3bf62e405f93d3c24d3fd410ea' }}"
           AGENTS_REVISION="${{ inputs.agents_revision || '7fd3252e7663ad5e68be5e90429d126aa66c38c8' }}"
           CONTEXT_OUT="$RUNNER_TEMP/opencode-review-context"
           rm -rf "$CONTEXT_OUT"

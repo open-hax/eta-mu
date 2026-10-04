@@ -2,6 +2,7 @@
 
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -174,6 +175,113 @@ test("a required reusable head input drives both exact checkout guards", () => {
     assert.match(guard.run, /event_head_matches/);
     assert.match(guard.run, /\^\[0-9a-f\]\{40\}\$/);
     assert.match(guard.run, /\^\[0-9a-f\]\{64\}\$/);
+  }
+});
+
+test("staging preserves the full immutable diff beyond its bounded preview", (t) => {
+  const { directory, sha: base } = makeRepository(t);
+  fs.writeFileSync(path.join(directory, "large.txt"), "changed input\n".repeat(26000));
+  fs.writeFileSync(path.join(directory, "尾-ημ.txt"), "tail hunk must be reviewed\n");
+  execFileSync("git", ["add", "large.txt", "尾-ημ.txt"], { cwd: directory });
+  execFileSync("git", ["commit", "-qm", "large full-input fixture"], { cwd: directory });
+  const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: directory, encoding: "utf8" }).trim();
+  const event = path.join(directory, "event.json");
+  fs.writeFileSync(event, JSON.stringify({ pull_request: {
+    number: 42, title: "full input", user: { login: "fixture" },
+    head: { ref: "review", sha: head }, base: { ref: "main", sha: base }, draft: false,
+  } }));
+  const step = namedStep("deterministic_evidence", "Stage pull request diff and context");
+  const result = runScript(step.run, directory, {
+    GITHUB_WORKSPACE: directory, GITHUB_EVENT_PATH: event, PR_BASE_SHA: base, PR_HEAD_SHA: head,
+    GITHUB_REPOSITORY: "open-hax/fixture", GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "2",
+    GITHUB_WORKFLOW_SHA: head, GITHUB_WORKFLOW_REF: "open-hax/fixture/.github/workflows/review.yml@refs/heads/review",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const evidence = path.join(directory, ".opencode/review-evidence");
+  assert.ok(fs.existsSync(path.join(evidence, "basehead.diff")), "full input was discarded while making the preview");
+  const full = fs.readFileSync(path.join(evidence, "basehead.diff"));
+  const expected = execFileSync("git", ["diff", "--find-renames", base, head], { cwd: directory });
+  assert.ok(full.equals(expected), "full staged bytes must equal exact merge-base/head Git input");
+  assert.ok(full.length > 300000);
+  assert.match(full.toString("utf8"), /tail hunk must be reviewed/);
+  const preview = fs.readFileSync(path.join(evidence, "pr.diff"));
+  assert.ok(preview.subarray(0, 300000).equals(full.subarray(0, 300000)));
+  assert.doesNotMatch(preview.toString("utf8"), /tail hunk must be reviewed/);
+  const manifest = JSON.parse(fs.readFileSync(path.join(evidence, "input-manifest.json"), "utf8"));
+  assert.equal(manifest.schema, "open-hax.review-input/v1");
+  assert.equal(manifest.base_sha, base);
+  assert.equal(manifest.diff_base_sha, base);
+  assert.equal(manifest.head_sha, head);
+  assert.deepEqual(manifest.full_diff, {
+    path: "basehead.diff", bytes: full.length, sha256: createHash("sha256").update(full).digest("hex"),
+  });
+  assert.equal(manifest.preview.truncated, true);
+  assert.equal(manifest.preview.limit_bytes, 300000);
+  assert.equal(manifest.provenance.run_id, "123");
+  assert.equal(manifest.provenance.run_attempt, "2");
+});
+
+test("staging fails closed for an absent base or a mismatched selected head", (t) => {
+  const { directory, sha } = makeRepository(t);
+  const event = path.join(directory, "event.json");
+  fs.writeFileSync(event, JSON.stringify({ pull_request: { number: 42, head: { sha }, base: { sha } } }));
+  for (const [base, head] of [["a".repeat(40), sha], [sha, "b".repeat(40)]]) {
+    const result = runScript(namedStep("deterministic_evidence", "Stage pull request diff and context").run, directory, {
+      GITHUB_WORKSPACE: directory, GITHUB_EVENT_PATH: event, PR_BASE_SHA: base, PR_HEAD_SHA: head,
+    });
+    assert.notEqual(result.status, 0, "invalid revision must not produce qualified input");
+  }
+});
+
+test("staging preserves empty input and distinguishes the native base from the merge base", (t) => {
+  const { directory, sha: ancestor } = makeRepository(t);
+  const step = namedStep("deterministic_evidence", "Stage pull request diff and context");
+  const event = path.join(directory, "event.json");
+  const stage = (base, head) => {
+    fs.writeFileSync(event, JSON.stringify({ pull_request: { number: 42, head: { sha: head }, base: { sha: base } } }));
+    const result = runScript(step.run, directory, {
+      GITHUB_WORKSPACE: directory, GITHUB_EVENT_PATH: event, PR_BASE_SHA: base, PR_HEAD_SHA: head,
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const evidence = path.join(directory, ".opencode/review-evidence");
+    return {manifest: JSON.parse(fs.readFileSync(path.join(evidence, "input-manifest.json"), "utf8")),
+      full: fs.readFileSync(path.join(evidence, "basehead.diff"), "utf8")};
+  };
+  const empty = stage(ancestor, ancestor);
+  assert.equal(empty.full, "");
+  assert.equal(empty.manifest.full_diff.bytes, 0);
+  assert.equal(empty.manifest.preview.truncated, false);
+  fs.writeFileSync(path.join(directory, "head-only.txt"), "head change\n");
+  execFileSync("git", ["add", "head-only.txt"], {cwd: directory});
+  execFileSync("git", ["commit", "-qm", "head change"], {cwd: directory});
+  const head = execFileSync("git", ["rev-parse", "HEAD"], {cwd: directory, encoding: "utf8"}).trim();
+  execFileSync("git", ["checkout", "-qb", "base-ahead", ancestor], {cwd: directory});
+  fs.writeFileSync(path.join(directory, "base-only.txt"), "unrelated base advance\n");
+  execFileSync("git", ["add", "base-only.txt"], {cwd: directory});
+  execFileSync("git", ["commit", "-qm", "base advance"], {cwd: directory});
+  const base = execFileSync("git", ["rev-parse", "HEAD"], {cwd: directory, encoding: "utf8"}).trim();
+  execFileSync("git", ["checkout", "-q", "--detach", head], {cwd: directory});
+  const divergent = stage(base, head);
+  assert.equal(divergent.manifest.base_sha, base);
+  assert.equal(divergent.manifest.diff_base_sha, ancestor);
+  assert.equal(divergent.manifest.head_sha, head);
+  assert.match(divergent.full, /head change/);
+  assert.doesNotMatch(divergent.full, /unrelated base advance/);
+});
+
+test("the compiled observer contract pins compatible Muse and allows both full-input tools", () => {
+  const museSha = "7a8788d36d2aed3bf62e405f93d3c24d3fd410ea";
+  const expectedRef = "${{ inputs.muse_revision || '" + museSha + "' }}";
+  assert.equal(workflow.on.workflow_call.inputs.muse_revision.default, museSha,
+    "workflow-call default must select the corrected immutable Muse source");
+  assert.equal(namedStep("prepare_review_context", "Checkout Muse compatibility compiler").with.ref,
+    expectedRef, "direct-PR compiler fallback must match the workflow-call default");
+  const assembly = namedStep("prepare_review_context", "Assemble revision-bound review context");
+  assert.equal(assembly.run.match(/^MUSE_REVISION="([^"]+)"$/m)?.[1], expectedRef,
+    "artifact provenance must record the same effective Muse selection");
+  for (const name of ["review_read_diff_chunk", "review_assess_diff_chunk"]) {
+    assert.ok(workflowText.includes(`:${name}`), `missing permission for ${name}`);
+    assert.ok(workflowText.includes(`'${name}'`), `missing compiled registry assertion for ${name}`);
   }
 });
 
