@@ -458,3 +458,93 @@
   spore: none
   receipt-refs: none
   note: Verified PR head867da5c5 before edits. Added JSDoc only; scanner confirms unchanged executable tokens and seven documented declarations. Offline catalog contract passes1/1. Hosted coverage needs rerun. Session CLI is unavailable in this sandbox; reflection recorded directly.
+
+- ts: 2026-10-03T23:21:12.317331Z
+  task: Prepare complete immutable review input
+  p-efficiency: 0.85
+  p-friction: 0.25
+  p-skill-candidate: 0.2
+  spore: none
+  receipt-refs: full-input-repair/preparation
+  note: Keep preview and full source distinct; preserve delivery versus assessment, source hashes and historical prefixes. Extend the existing reviewer instead of adding an alternate engine. User hold keeps all source uncommitted; no provider retry or native approval claimed.
+
+- ts: "2026-10-04T00:14:27.593028+00:00"
+  origin: Muse19/native-review-followup
+  p-efficiency: 0.85
+  p-friction: 0.2
+  p-skill-candidate: 0.2
+  spore: none
+  receipt-refs: Muse19/native-review-followup
+  note: Guard the transition that closes candidate admission, retain the submission guard, and verify actual producer-to-compiled-consumer recovery. Candidate commits can qualify together before merge; caller activation waits for both qualified merges. No source installation, provider request or native approval fabricated.
+
+- ts: "2026-10-04T00:28:37.838205+00:00"
+  origin: full-input-repair/immutable-Muse-selection
+  p-efficiency: 0.9
+  p-friction: 0.1
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: full-input-repair/immutable-Muse-selection
+  note: Require the same exact committed source at workflow default, checkout fallback and artifact provenance, then test actual producer and compiled consumer. Local immutable-source proof remains separate from pending native qualification and caller activation. Parent retains publication.
+
+- ts: "2026-10-04T01:20:11.369816+00:00"
+  origin: Eta340/independent-full-input-verification
+  p-efficiency: 0.85
+  p-friction: 0.25
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: Eta340/independent-full-input-verification
+  note: Gate-controlled bytes and a matching digest do not establish Git authority. Verify in a fresh job before source-dependent review, exercise a successful malicious gate in RED, retain exact native artifact truth without qualification credit, and freeze a bounded local handoff. Existing spore covers falsifying every new test; no promotion or global skill write.
+
+- ts: "2026-10-04T01:42:38.682649+00:00"
+  origin: Eta340/companion-source-alignment
+  p-efficiency: 0.9
+  p-friction: 0.15
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: Eta340/companion-source-alignment
+  note: A native review caught a stale diagnostic and operator-facing default after the main pin moved. Align the actual compiler source and state its subset boundary; preserve earlier frozen handoff evidence separately from publication and hosted qualification.
+
+- ts: "2026-10-04T01:57:51.319019+00:00"
+  origin: Eta340/current-immutable-Muse-selection
+  p-efficiency: 0.9
+  p-friction: 0.2
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: Eta340/current-immutable-Muse-selection
+  note: Verify reviewer arithmetic against immutable source before claiming a defect. Preserve actual baseline pass and mutation RED as different evidence, align every active immutable source selector, and requalify the candidate pair before production activation.
+
+- ts: "2026-10-04T02:10:00.350294+00:00"
+  origin: Eta340/current-pair-publication
+  p-efficiency: 0.85
+  p-friction: 0.2
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: Eta340/current-pair-publication
+  note: Keep initial missing test-runner dependency separate from executed tests; use a scoped existing dependency path and verify current source. Allow an exact caller Node patch while retaining default behavior and unchanged Bash semantics. Native proof and production activation remain separate.
+
+- ts: "2026-10-04T04:27:09.182348915Z"
+  origin: Eta340/final-publication-binding
+  p-efficiency: 0.9
+  p-friction: 0.2
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: Eta340/shared final-publication verification boundary; Eta340/final-publication actual Muse RED GREEN
+  note: Carry initial verification authority outside mutable evidence, reuse the actual Git guard at publication, and freeze the unchanged submitted bytes. Validate real immutable producer/tool output rather than guessed fixture keys; full transport closure is separate from cognitive review and native qualification. Preserve bootstrap errors, mutation RED, every historical prefix and frozen neighboring handoff. No new spore or promotion; parent owns publication.
+
+- ts: "2026-10-04T04:42:01.390226472Z"
+  origin: Eta340/native-dc4-final-boundary-fixture
+  p-efficiency: 0.9
+  p-friction: 0.1
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: Eta340/native-dc4 final-boundary fixture correction
+  note: Prefer the newly available genuine current-head tool output over a prior native shape excerpt. Reconstruct its actual Git input and prove unchanged-byte acceptance through the production guard while retaining previous frozen evidence. Native dc4 completion, local retrospective gate proof and future successor qualification are separate facts. Preserve every received receipt/reflection prefix and frozen Agents source; no operational action or new spore.
+
+- ts: "2026-10-04T05:31:36.343874134Z"
+  origin: Eta340/fresh-fatal-UTF8-admission
+  p-efficiency: 0.85
+  p-friction: 0.25
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: Eta340/fresh fatal UTF8 admission RED GREEN; Eta340/bounded lint diagnostic and frozen scope
+  note: Move validation to the earliest shared admission boundary and reproduce it with actual Git bytes, not a guessed transport shape. Preserve immutable predecessor RED and genuine compiler/tool GREEN separately from native successor qualification. Stop stalled tools within the authorized scope, retain their actual signal/time outcome, and label a parser-only diagnostic with external checks disabled precisely. Unknown lint cause stays unknown; no new spore or promotion, and parent owns independent lint/publication.

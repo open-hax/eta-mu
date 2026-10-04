@@ -40,6 +40,28 @@ The workflow has three bounded stages:
 2. **Review-context compilation** — check out pinned revisions of `octave-commons/muse` and `riatzukiza/.agents`. Muse compiles a review-specific OpenCode projection containing only observer tools; the `.agents` repository is packaged as the global skill source. Both revisions and the skill inventory are recorded in the context artifact.
 3. **Model review with omission-only recovery** — map the change, reconstruct relevant contracts and invariants, generate candidate findings, attempt to disprove each candidate, and publish only findings that survive the evidence threshold. A completed first invocation that leaves a missing `review_submit` artifact receives exactly one corrective model invocation. The recovery starts the state machine again and must finish with a real tool-written submission; it never synthesizes a review from free-form output. A malformed submission does not consume the recovery attempt, and malformed or repeatedly missing submissions fail closed before publication.
 
+Diff staging preserves the complete Git merge-base/head bytes in `basehead.diff`
+before making the 300,000-byte `pr.diff` preview. `input-manifest.json` records
+the native base, independently computed merge base, exact head, full byte count,
+SHA-256 and observed workflow/run identity. Missing bases and mismatched heads
+fail staging; an empty diff is valid input rather than a reason to change bases.
+The existing evidence artifact carries both files and the manifest unchanged.
+
+The matching Muse review profile verifies the full input against that manifest.
+Its read-only `review_read_diff_chunk` tool delivers bounded lossless pages, and
+`review_assess_diff_chunk` records the reviewer's assessment of each delivered
+page. Submission requires assessment of every page; a preview, successful read
+or empty finding list cannot satisfy this requirement. Review every changed
+hunk, reading unchanged surrounding code as needed to assess its contracts.
+This does not require exhaustive proof or reading every unchanged file.
+
+The workflow-call default and both direct-PR fallbacks select immutable Muse
+`0b9a91492c8355e6933dc2164d35668cb76d9e60`, including context provenance.
+This candidate pair still requires native hosted qualification. Existing
+production callers select the pair only after both candidates qualify and
+merge; historical callers pinned to b5 retain their original functional source
+until a separately reviewed revision update selects the new pair.
+
 The two model invocations write separate response and stderr files plus a small
 `recovery.json` decision record. The attempt artifact therefore preserves the
 first response even when the corrective invocation succeeds or fails.
@@ -58,6 +80,71 @@ job outputs, rather than rebuilding names from the new `github.run_attempt`.
 Consequently a review-only re-run reuses the original deterministic evidence and
 compiled context. A full workflow re-run executes those prerequisites again and
 emits new attempt-scoped names.
+
+The fresh review job binds the manifest's producer attempt to the passed-through
+`review-evidence-<PR>-<run ID>-<producer attempt>` artifact name. It requires the
+same native PR and run, a positive producer attempt no later than the current
+verification attempt, and the unchanged repository, workflow, head, base and
+independent Git byte/hash checks. Its review-owned `input-verification.json`
+retains producer `provenance` and `evidence_artifact_name`, and separately records
+the current consumer in `verification_provenance`; a reused artifact never
+claims it was produced during the later verification attempt.
+
+After the model and omission-only recovery, the workflow runs the same Git input
+verification command again, before final schema validation, App token creation
+and publication. The first verification exports its receipt SHA-256 as a step
+output; context installation exports the checksum-list SHA-256. The final check
+requires the original receipt and manifest bytes, independently regenerated
+Git diff, preview and provenance to match, and rechecks the original context
+checksum list and its files. Replacing both a file and its local checksum list
+cannot supply new authority. Producer and verification provenance remain
+separate, including retained attempt 1 input verified during attempt 2.
+
+The final check consumes Muse's tool-written `input-source`, `input-coverage`
+and `input-assessments` unchanged. Source identity must match the verified
+manifest, coverage counters must be complete, and nonblank assessment notes must
+cover contiguous UTF-16 ranges from zero through the full decoded diff. Empty
+input has zero chunks and an empty assessment vector. The workflow freezes the
+exact submitted bytes in runner-temporary storage; both publisher validation and
+publication read that copy. `submission-verification.json` records the input,
+context and submission digests. It does not add missing model metadata, decide
+the review event, implement Muse's review state machine or prove cognitive
+review quality. The unchanged publisher still validates the envelope and actual
+changed-line locations before submitting it through the App.
+
+The final-boundary fixtures have serialized-shape provenance from the retained
+native dc4 submission (artifact `11293745387`,
+`review-attempt-340-37173972128-1`) generated by immutable Muse
+`0b9a91492c8355e6933dc2164d35668cb76d9e60`. The local paired probe also runs the
+actual retained compiled tools to generate submissions for empty, full large
+Unicode, divergent-base, retained-attempt and recovery cases; fixture notes are
+synthetic and are not native model reviews. Its genuine submission reports complete 13/13-page coverage of the 95,938-byte
+Git-bound diff; the retained artifact records one completed invocation without
+corrective recovery. The final-boundary local probe independently reconstructs
+that Git input and accepts the exact unchanged native submission through the new
+shared verifier. That retrospective fixture does not qualify a successor head.
+The 54 workflow tests include the original 47, six final-boundary tests and one
+fresh UTF-8 admission test. Negative execution cases mutate input,
+manifest, receipt or context after the first guard and refuse absent, mismatched
+or incomplete submission metadata before the publisher boundary.
+The shared verifier also decodes the authoritative Git diff with fatal UTF-8
+validation before writing the initial proof or allowing model execution. A real
+Git text diff containing an invalid byte is refused at that boundary; the final
+coverage check reuses the decoded text for its UTF-16 ranges. Valid Unicode,
+empty input, recovery and retained-producer cases remain covered by the suite.
+
+This repairs missing final transport validation. The inspected read-only tool
+profile does not establish a reachable model-write exploit: the agent denies
+edits and arbitrary Bash, and the fixed review tools write only review artifacts.
+The literal producer marker
+`[eta-mu review] diff truncated at 300000 bytes (was 400000).`
+matches the immutable Muse domain marker and is refused as truncated input;
+there is no producer/domain marker mismatch. The retained dc4 artifact records
+a completed tool submission at that head and still predates this final boundary.
+Earlier cancelled or incomplete attempts do not demonstrate completed full
+review. This successor
+requires parent publication and native qualification before held callers select
+it; local probes do not qualify the pair or authorize production activation.
 
 The reusable workflow has one stable terminal check, **OpenCode evidence review
 gate**. Configure that job as the required check in callers. It runs under
