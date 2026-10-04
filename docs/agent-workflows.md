@@ -123,10 +123,15 @@ Git-bound diff; the retained artifact records one completed invocation without
 corrective recovery. The final-boundary local probe independently reconstructs
 that Git input and accepts the exact unchanged native submission through the new
 shared verifier. That retrospective fixture does not qualify a successor head.
-The 53 workflow tests include the
-original 47 and six final-boundary tests. Negative execution cases mutate input,
+The 54 workflow tests include the original 47, six final-boundary tests and one
+fresh UTF-8 admission test. Negative execution cases mutate input,
 manifest, receipt or context after the first guard and refuse absent, mismatched
 or incomplete submission metadata before the publisher boundary.
+The shared verifier also decodes the authoritative Git diff with fatal UTF-8
+validation before writing the initial proof or allowing model execution. A real
+Git text diff containing an invalid byte is refused at that boundary; the final
+coverage check reuses the decoded text for its UTF-16 ranges. Valid Unicode,
+empty input, recovery and retained-producer cases remain covered by the suite.
 
 This repairs missing final transport validation. The inspected read-only tool
 profile does not establish a reachable model-write exploit: the agent denies

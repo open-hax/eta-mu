@@ -539,3 +539,12 @@
   spore: none
   receipt-refs: Eta340/native-dc4 final-boundary fixture correction
   note: Prefer the newly available genuine current-head tool output over a prior native shape excerpt. Reconstruct its actual Git input and prove unchanged-byte acceptance through the production guard while retaining previous frozen evidence. Native dc4 completion, local retrospective gate proof and future successor qualification are separate facts. Preserve every received receipt/reflection prefix and frozen Agents source; no operational action or new spore.
+
+- ts: "2026-10-04T05:31:36.343874134Z"
+  origin: Eta340/fresh-fatal-UTF8-admission
+  p-efficiency: 0.85
+  p-friction: 0.25
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: Eta340/fresh fatal UTF8 admission RED GREEN; Eta340/bounded lint diagnostic and frozen scope
+  note: Move validation to the earliest shared admission boundary and reproduce it with actual Git bytes, not a guessed transport shape. Preserve immutable predecessor RED and genuine compiler/tool GREEN separately from native successor qualification. Stop stalled tools within the authorized scope, retain their actual signal/time outcome, and label a parser-only diagnostic with external checks disabled precisely. Unknown lint cause stays unknown; no new spore or promotion, and parent owns independent lint/publication.

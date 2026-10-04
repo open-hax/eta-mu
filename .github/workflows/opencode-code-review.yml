@@ -1041,6 +1041,7 @@ jobs:
           const preview = truncated ? Buffer.concat([expected.subarray(0, 300000),
             Buffer.from(`\n[eta-mu review] diff truncated at 300000 bytes (was ${expected.length}).\n`)]) : expected;
           assert.ok(fs.readFileSync(path.join(dir, 'pr.diff')).equals(preview), 'Preview differs from independent Git input');
+          const text = new TextDecoder('utf-8', { fatal: true }).decode(expected);
           const proof = {
             schema: 'open-hax.review-input-verification/v1', input_verified: true,
             verification_stage: 'fresh-review-job-before-model', base_sha: env.PR_BASE_SHA,
@@ -1074,7 +1075,6 @@ jobs:
             assert.ok(Array.isArray(assessments), 'Missing tool-written input assessments');
             const chunks = assessments.length;
             assert.deepEqual(submission['input-coverage'], { chunks, delivered: chunks, assessed: chunks, missing: [] }, 'Submission full-input coverage is incomplete');
-            const text = new TextDecoder('utf-8', { fatal: true }).decode(expected);
             let cursor = 0;
             for (const [index, assessment] of assessments.entries()) {
               assert.ok(assessment && assessment.id === index + 1, 'Missing or duplicate assessment identity');

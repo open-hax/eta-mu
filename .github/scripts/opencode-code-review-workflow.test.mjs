@@ -342,13 +342,14 @@ const inputVerificationName = "Verify full review input against independent Git 
 const finalInputVerificationName = "Reverify full input and bind final submission";
 
 /** Stage native-shaped producer input, including empty, large and retained-attempt cases. */
-function fullInputFixture(t, { large = false, baseAhead = false, empty = false, unicode = false, producerAttempt = "2" } = {}) {
+function fullInputFixture(t, { large = false, baseAhead = false, empty = false, unicode = false, invalidUtf8 = false, producerAttempt = "2" } = {}) {
   const { directory, sha: ancestor } = makeRepository(t);
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-review-input-"));
   t.after(() => fs.rmSync(scratch, { recursive: true, force: true }));
   if (!empty) {
     fs.writeFileSync(path.join(directory, "large.txt"),
-      (unicode ? "changed 😀 ημ input\n" : "changed input\n").repeat(large ? 26000 : 2));
+      invalidUtf8 ? Buffer.concat([Buffer.from("changed input "), Buffer.from([0xff]), Buffer.from("\n")])
+        : (unicode ? "changed 😀 ημ input\n" : "changed input\n").repeat(large ? 26000 : 2));
     fs.writeFileSync(path.join(directory, "尾-ημ.txt"), "tail hunk must be reviewed\n");
     execFileSync("git", ["add", "large.txt", "尾-ημ.txt"], { cwd: directory });
     execFileSync("git", ["commit", "-qm", "review input head"], { cwd: directory });
@@ -793,6 +794,23 @@ test("a successful malicious gate cannot replace full input and its matching man
   assert.notEqual(checked.result.status, 0, "a forged empty diff with matching manifest reached the model boundary");
   assert.equal(fs.existsSync(checked.invocation), false, "mismatch must stop model and API publication");
   assert.equal(fs.existsSync(path.join(checked.evidence, "input-verification.json")), false);
+});
+
+test("fresh input rejects a genuine non-UTF8 Git text diff before proof and model", (t) => {
+  const fixture = fullInputFixture(t, { invalidUtf8: true });
+  const bytes = fs.readFileSync(path.join(fixture.evidence, "basehead.diff"));
+  assert.ok(bytes.includes(0xff), "Git must retain the invalid UTF-8 byte in its text diff");
+  assert.equal(bytes.includes(0), false, "The fixture must not be a NUL-delimited binary diff");
+  assert.doesNotMatch(bytes.toString("ascii"), /Binary files|GIT binary patch/);
+  assert.throws(() => new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+    { code: "ERR_ENCODING_INVALID_ENCODED_DATA" });
+  const checked = freshReviewInputCheck(fixture);
+  assert.deepEqual({
+    rejected: checked.result.status !== 0,
+    proofWritten: fs.existsSync(path.join(checked.evidence, "input-verification.json")),
+    modelInvoked: fs.existsSync(checked.invocation),
+  }, { rejected: true, proofWritten: false, modelInvoked: false });
+  assert.match(checked.result.stderr, /ERR_ENCODING_INVALID_ENCODED_DATA/);
 });
 
 test("independent review accepts exact large, empty and divergent-base input", (t) => {
