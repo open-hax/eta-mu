@@ -20,11 +20,16 @@ on:
         required: false
         type: string
         default: 1.18.18
+      node_version:
+        description: Node 22 release used by evidence, compilation and review jobs; callers can select an exact frozen patch version.
+        required: false
+        type: string
+        default: "22"
       muse_revision:
         description: Pinned octave-commons/muse commit used to compile the review observer projection.
         required: false
         type: string
-        default: 446b1999816890a8f3c63f8d1db77c49182a9444
+        default: 0b9a91492c8355e6933dc2164d35668cb76d9e60
       agents_revision:
         description: Pinned riatzukiza/.agents commit mounted as global skills.
         required: false
@@ -187,7 +192,7 @@ jobs:
       - name: Set up Node 22
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "22"
+          node-version: ${{ inputs.node_version || '22' }}
 
       - name: Detect eta-mu app credentials
         id: dependency-credentials
@@ -576,7 +581,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: octave-commons/muse
-          ref: ${{ inputs.muse_revision || '446b1999816890a8f3c63f8d1db77c49182a9444' }}
+          ref: ${{ inputs.muse_revision || '0b9a91492c8355e6933dc2164d35668cb76d9e60' }}
           path: .review-context/muse
           persist-credentials: false
 
@@ -602,7 +607,7 @@ jobs:
       - name: Set up Node 22
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "22"
+          node-version: ${{ inputs.node_version || '22' }}
           cache: npm
           cache-dependency-path: .review-context/muse/package-lock.json
 
@@ -735,7 +740,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MUSE_REVISION="${{ inputs.muse_revision || '446b1999816890a8f3c63f8d1db77c49182a9444' }}"
+          MUSE_REVISION="${{ inputs.muse_revision || '0b9a91492c8355e6933dc2164d35668cb76d9e60' }}"
           AGENTS_REVISION="${{ inputs.agents_revision || '7fd3252e7663ad5e68be5e90429d126aa66c38c8' }}"
           CONTEXT_OUT="$RUNNER_TEMP/opencode-review-context"
           rm -rf "$CONTEXT_OUT"
@@ -948,7 +953,7 @@ jobs:
       - name: Set up Node 22
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "22"
+          node-version: ${{ inputs.node_version || '22' }}
 
       - name: Download deterministic evidence
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4

@@ -503,3 +503,21 @@
   spore: none
   receipt-refs: Eta340/companion-source-alignment
   note: A native review caught a stale diagnostic and operator-facing default after the main pin moved. Align the actual compiler source and state its subset boundary; preserve earlier frozen handoff evidence separately from publication and hosted qualification.
+
+- ts: "2026-10-04T01:57:51.319019+00:00"
+  origin: Eta340/current-immutable-Muse-selection
+  p-efficiency: 0.9
+  p-friction: 0.2
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: Eta340/current-immutable-Muse-selection
+  note: Verify reviewer arithmetic against immutable source before claiming a defect. Preserve actual baseline pass and mutation RED as different evidence, align every active immutable source selector, and requalify the candidate pair before production activation.
+
+- ts: "2026-10-04T02:10:00.350294+00:00"
+  origin: Eta340/current-pair-publication
+  p-efficiency: 0.85
+  p-friction: 0.2
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: Eta340/current-pair-publication
+  note: Keep initial missing test-runner dependency separate from executed tests; use a scoped existing dependency path and verify current source. Allow an exact caller Node patch while retaining default behavior and unchanged Bash semantics. Native proof and production activation remain separate.

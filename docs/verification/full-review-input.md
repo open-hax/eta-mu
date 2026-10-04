@@ -179,3 +179,9 @@ input proof plus current-head model scope and required CI, settle findings,
 and qualify both repositories before caller activation. Existing callers
 remain on the historical `b5b28237` pair; this worker performs no commit,
 push, GitHub write, settlement, merge or deployment.
+
+## Current immutable Muse selection after review follow-up
+
+All three reusable selectors, the exact-pin fixture, the companion diagnostic and the architecture default now select `0b9a91492c8355e6933dc2164d35668cb76d9e60`. This successor makes the existing high-surrogate bound explicit, adds both page-boundary and independent page UTF-8 encoding regressions, and reconciles retryable begin wording. The original `56319` bound already equals `0xDBFF`; the reported low-half defect does not reproduce on immutable `446b199`. The widened-bound mutation is separate RED evidence, not a fabricated original defect. The new source passes 212 tests / 606 assertions and the cold eight-tool recovery fixture. Earlier 446 joint evidence above remains historical; current paired native qualification and caller activation remain pending.
+
+The reusable interface now accepts optional `node_version` (default22) consistently in its three Node setup steps. A caller with a frozen Node22.20.0 closure can request that exact release; existing callers retain22. This uses the existing pinned setup action and changes no Bash gate, provider or permission contract. The new immutable0b9a pair was independently compiled before this setup-only interface change:22tools,204pages, fresh Git comparison and forgery refusal passed, zero compiler warnings. Current source workflow tests and structural checks are recorded separately below; native qualification remains required.

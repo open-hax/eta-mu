@@ -85,7 +85,7 @@ The reviewer cannot edit files, browse the web, or spawn subagents. Bash command
 
 The current default pins are explicit inside the workflow so review runs are revision-bound:
 
-- Muse: `446b1999816890a8f3c63f8d1db77c49182a9444`
+- Muse: `0b9a91492c8355e6933dc2164d35668cb76d9e60`
 - `.agents`: `7fd3252e7663ad5e68be5e90429d126aa66c38c8`
 
 The reusable workflow accepts repository-specific deterministic gates. Its full-input observer registry includes the immutable diff reader and assessment tools; the companion Muse diagnostic uses the same source revision but compiles only the actor observer subset, so it does not qualify the full review contract. Existing callers retain their recorded pin until the new Eta/Muse pair qualifies and merges.
