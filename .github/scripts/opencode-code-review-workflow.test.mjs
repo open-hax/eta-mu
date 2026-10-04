@@ -32,6 +32,130 @@ function namedStep(jobId, name) {
   return step;
 }
 
+// Run the actual github-script adapter with no native network or credentials.
+function discordStepFixture(comments, { webhook = "https://example.invalid/diagnostic", httpFailureAt } = {}) {
+  const payloads = [];
+  const pagination = [];
+  const context = { repo: { owner: "open-hax", repo: "proxx" }, payload: { pull_request: {
+    number: 451, html_url: "https://github.com/open-hax/proxx/pull/451",
+  } } };
+  const listReviewComments = () => {};
+  const github = { rest: { pulls: { listReviewComments } }, paginate: async (method, params) => {
+    assert.equal(method, listReviewComments);
+    pagination.push(params);
+    return comments;
+  } };
+  const fetch = async (url, options) => {
+    assert.equal(url, webhook);
+    assert.equal(options.method, "POST");
+    assert.deepEqual(options.headers, { "content-type": "application/json" });
+    const payload = JSON.parse(options.body);
+    payloads.push(payload);
+    const size = discordPayloadTextSize(payload);
+    if (size > 6000 || payload.embeds.length > 10) {
+      return { ok: false, status: 400, text: async () => "Embed size exceeds maximum size of 6000" };
+    }
+    if (payloads.length === httpFailureAt) {
+      return { ok: false, status: 429, text: async () => "diagnostic rate limit" };
+    }
+    return { ok: true, status: 204 };
+  };
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  const step = namedStep("review", "Send new inline review comments to Discord");
+  const delivery = new AsyncFunction("github", "context", "core", "fetch", "process", step.with.script)(
+    github, context, { info: () => {} }, fetch,
+    { env: { DISCORD_REVIEW_WEBHOOK_URL: webhook, REVIEW_STARTED_AT: "2026-10-04T08:31:49Z" } },
+  );
+  return { delivery, payloads, pagination, context };
+}
+
+// Discord's aggregate rule includes every text-bearing embed field, not URLs.
+function discordPayloadTextSize(payload) {
+  return payload.embeds.flatMap((embed) => [
+    embed.title, embed.description, embed.author?.name, embed.footer?.text,
+    ...(embed.fields ?? []).flatMap((field) => [field.name, field.value]),
+  ]).reduce((total, value) => total + String(value ?? "").trim().length, 0);
+}
+
+function discordComment(index, body = "short evidence") {
+  return {
+    body, user: { login: "eta-mu-ai[bot]" }, path: `.github/尾-${index}.yml`, line: index + 1,
+    html_url: `https://github.com/open-hax/proxx/pull/451#discussion_r${index}`,
+    created_at: new Date(Date.parse("2026-10-04T08:49:00Z") + index * 1000).toISOString(),
+  };
+}
+
+test("Discord actual adapter batches ten long Unicode comments by all embed text", async (t) => {
+  const comments = Array.from({ length: 10 }, (_, index) => discordComment(index, "🙂尾 evidence ".repeat(250)));
+  const old = { ...discordComment(99), created_at: "2026-10-04T08:00:00Z" };
+  const fixture = discordStepFixture([old, ...comments.toReversed()]);
+  await fixture.delivery;
+  assert.ok(fixture.payloads.length > 1);
+  assert.deepEqual(fixture.pagination, [{ owner: "open-hax", repo: "proxx", pull_number: 451, per_page: 100 }]);
+  const embeds = fixture.payloads.flatMap((payload) => payload.embeds);
+  assert.equal(embeds.length, 10);
+  for (const [index, embed] of embeds.entries()) {
+    const comment = comments[index];
+    assert.deepEqual(embed, {
+      title: "open-hax/proxx#451: evidence review comment", url: comment.html_url, color: 0x8b5cf6,
+      description: `${comment.body.slice(0, 1499)}…`, timestamp: comment.created_at,
+      fields: [
+        { name: "Author", value: comment.user.login, inline: true },
+        { name: "File", value: comment.path, inline: true },
+        { name: "Line", value: String(comment.line), inline: true },
+        { name: "PR", value: fixture.context.payload.pull_request.html_url, inline: false },
+      ],
+    });
+  }
+  for (const payload of fixture.payloads) {
+    assert.ok(payload.embeds.length <= 10 && discordPayloadTextSize(payload) <= 6000);
+    assert.equal(payload.username, "MiMo Evidence Review");
+    assert.equal(payload.content, `New evidence-backed review comment${payload.embeds.length === 1 ? "" : "s"} on open-hax/proxx#451`);
+    assert.deepEqual(payload.allowed_mentions, { parse: [] });
+  }
+  t.diagnostic(`mock Discord accepted ${fixture.payloads.map((payload) => `${payload.embeds.length} embeds/${discordPayloadTextSize(payload)} text units`).join(", ")}`);
+});
+
+test("Discord actual adapter retains the ten-embed count bound for short comments", async () => {
+  const fixture = discordStepFixture(Array.from({ length: 21 }, (_, index) => discordComment(index)));
+  await fixture.delivery;
+  assert.deepEqual(fixture.payloads.map((payload) => payload.embeds.length), [10, 10, 1]);
+  assert.equal(fixture.payloads.flatMap((payload) => payload.embeds).length, 21);
+});
+
+test("Discord actual adapter includes title and fields at the inclusive 6000 boundary", async () => {
+  // A short real send measures the fixed rendered title/author/path/line/PR
+  // overhead. Four descriptions alone fit; their additional fields decide batching.
+  const probe = discordStepFixture(Array.from({ length: 4 }, (_, index) => discordComment(index, "x")));
+  await probe.delivery;
+  const overhead = probe.payloads.flatMap((payload) => payload.embeds)
+    .map((embed) => discordPayloadTextSize({ embeds: [embed] }) - 1);
+  for (const excess of [0, 1]) {
+    const comments = overhead.map((size, index) => discordComment(index, "x".repeat(1500 - size + (index === 3 ? excess : 0))));
+    assert.ok(comments.every((comment) => comment.body.length <= 1500));
+    const fixture = discordStepFixture(comments);
+    await fixture.delivery;
+    assert.deepEqual(fixture.payloads.map((payload) => payload.embeds.length), excess ? [3, 1] : [4]);
+    assert.equal(fixture.payloads.reduce((total, payload) => total + discordPayloadTextSize(payload), 0), 6000 + excess);
+  }
+});
+
+test("Discord actual adapter propagates an HTTP failure and stops remaining sends", async () => {
+  const fixture = discordStepFixture(Array.from({ length: 21 }, (_, index) => discordComment(index)), { httpFailureAt: 2 });
+  await assert.rejects(fixture.delivery, /Discord webhook failed: 429 diagnostic rate limit/);
+  assert.equal(fixture.payloads.length, 2);
+});
+
+test("Discord actual adapter sends nothing without a webhook or fresh comments", async () => {
+  const absent = discordStepFixture([discordComment(1)], { webhook: "" });
+  await absent.delivery;
+  assert.equal(absent.pagination.length, 0);
+  assert.equal(absent.payloads.length, 0);
+  const stale = discordStepFixture([{ ...discordComment(1), created_at: "2026-10-04T08:00:00Z" }]);
+  await stale.delivery;
+  assert.equal(stale.payloads.length, 0);
+});
+
 function runScript(script, cwd, env = {}) {
   return spawnSync("bash", ["-c", script], {
     cwd,

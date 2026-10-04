@@ -1338,8 +1338,8 @@ jobs:
               return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
             };
             const embeds = fresh.map((comment) => ({
-              // Discord rejects embeds whose total size exceeds 6000 chars; the
-              // description cap must leave room for title, fields, and footer.
+              // Keep individual fields bounded; the message-wide limit is
+              // enforced separately when batching these embeds below.
               title: truncate(`${owner}/${repo}#${pr.number}: evidence review comment`, 256),
               url: comment.html_url,
               color: 0x8b5cf6,
@@ -1353,8 +1353,27 @@ jobs:
               timestamp: comment.created_at,
             }));
 
-            for (let i = 0; i < embeds.length; i += 10) {
-              const chunk = embeds.slice(i, i + 10);
+            const batches = [];
+            let batch = [];
+            let batchSize = 0;
+            for (const embed of embeds) {
+              // UTF-16 length conservatively counts Unicode text. Discord's
+              // 6000-character limit includes all text across every embed.
+              const size = [embed.title, embed.description, embed.author?.name, embed.footer?.text,
+                ...embed.fields.flatMap((field) => [field.name, field.value])]
+                .reduce((total, value) => total + String(value || '').length, 0);
+              if (size > 6000) throw new Error('Discord review embed exceeds the 6000-character limit');
+              if (batch.length && (batch.length === 10 || batchSize + size > 6000)) {
+                batches.push(batch);
+                batch = [];
+                batchSize = 0;
+              }
+              batch.push(embed);
+              batchSize += size;
+            }
+            if (batch.length) batches.push(batch);
+
+            for (const chunk of batches) {
               const response = await fetch(webhookUrl, {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },

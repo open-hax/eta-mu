@@ -548,3 +548,12 @@
   spore: none
   receipt-refs: Eta340/fresh fatal UTF8 admission RED GREEN; Eta340/bounded lint diagnostic and frozen scope
   note: Move validation to the earliest shared admission boundary and reproduce it with actual Git bytes, not a guessed transport shape. Preserve immutable predecessor RED and genuine compiler/tool GREEN separately from native successor qualification. Stop stalled tools within the authorized scope, retain their actual signal/time outcome, and label a parser-only diagnostic with external checks disabled precisely. Unknown lint cause stays unknown; no new spore or promotion, and parent owns independent lint/publication.
+
+- ts: "2026-10-04T09:32:01.487719Z"
+  origin: Discord review batch/actual adapter RED GREEN
+  p-efficiency: 0.9
+  p-friction: 0.2
+  p-skill-candidate: 0.2
+  spore: none
+  receipt-refs: Discord review batch/native failure scoped repair; Discord review batch/actual adapter RED GREEN
+  note: Execute the actual effect adapter before changing it. Per-field truncation does not establish a message-wide budget; preserve payload fields and bound combined text and embed count independently. Retain native publication separately from notification failure, and preserve genuine HTTP errors. Keep initial harness setup error distinct from causal RED. Existing spores suffice; no model, native probe, operational board write, new spore or promotion. Parent owns publication and successor qualification.
