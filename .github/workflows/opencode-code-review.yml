@@ -738,10 +738,11 @@ jobs:
 
       - name: Assemble revision-bound review context
         shell: bash
+        env:
+          MUSE_REVISION: ${{ inputs.muse_revision || '0b9a91492c8355e6933dc2164d35668cb76d9e60' }}
+          AGENTS_REVISION: ${{ inputs.agents_revision || '7fd3252e7663ad5e68be5e90429d126aa66c38c8' }}
         run: |
           set -euo pipefail
-          MUSE_REVISION="${{ inputs.muse_revision || '0b9a91492c8355e6933dc2164d35668cb76d9e60' }}"
-          AGENTS_REVISION="${{ inputs.agents_revision || '7fd3252e7663ad5e68be5e90429d126aa66c38c8' }}"
           CONTEXT_OUT="$RUNNER_TEMP/opencode-review-context"
           rm -rf "$CONTEXT_OUT"
           mkdir -p "$CONTEXT_OUT/muse/opencode" "$CONTEXT_OUT/agents" "$CONTEXT_OUT/metadata" \
@@ -966,6 +967,7 @@ jobs:
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ inputs.pr_head_sha || github.event.pull_request.head.sha }}
+          REVIEW_EVIDENCE_ARTIFACT_NAME: ${{ needs.deterministic_evidence.outputs.artifact_name }}
         run: |
           set -euo pipefail
           # This fresh checkout has not executed caller source or gates. The
@@ -1000,14 +1002,26 @@ jobs:
           const digest = createHash('sha256').update(expected).digest('hex');
           const fullDiff = { path: 'basehead.diff', bytes: expected.length, sha256: digest };
           const truncated = expected.length > 300000;
-          const provenance = {
+          const verificationProvenance = {
             repository: env.GITHUB_REPOSITORY, pull_request: String(event.pull_request.number),
             run_id: env.GITHUB_RUN_ID, run_attempt: env.GITHUB_RUN_ATTEMPT,
             workflow_sha: env.GITHUB_WORKFLOW_SHA, workflow_ref: env.GITHUB_WORKFLOW_REF,
           };
-          for (const [name, value] of Object.entries(provenance)) {
+          for (const [name, value] of Object.entries(verificationProvenance)) {
             assert.ok(typeof value === 'string' && value.length > 0, `Missing native input provenance: ${name}`);
           }
+          assert.match(verificationProvenance.run_attempt, /^[1-9][0-9]*$/, 'Malformed verification attempt');
+          const artifact = typeof env.REVIEW_EVIDENCE_ARTIFACT_NAME === 'string'
+            ? env.REVIEW_EVIDENCE_ARTIFACT_NAME.match(/^review-evidence-([1-9][0-9]*)-([1-9][0-9]*)-([1-9][0-9]*)$/)
+            : null;
+          assert.ok(artifact, 'Missing or malformed deterministic artifact name');
+          const [, producerPr, producerRun, producerAttempt] = artifact;
+          assert.equal(producerPr, verificationProvenance.pull_request, 'Artifact belongs to another pull request');
+          assert.equal(producerRun, verificationProvenance.run_id, 'Artifact belongs to another native run');
+          assert.ok(BigInt(producerAttempt) <= BigInt(verificationProvenance.run_attempt), 'Artifact producer attempt is in the future');
+          // Failed-job reruns retain successful producer artifacts. Only the
+          // trusted job output can supply that earlier attempt, not the manifest.
+          const provenance = { ...verificationProvenance, run_attempt: producerAttempt };
           assert.equal(manifest.schema, 'open-hax.review-input/v1');
           assert.equal(manifest.base_sha, env.PR_BASE_SHA, 'Input base is not the native event base');
           assert.equal(manifest.head_sha, env.PR_HEAD_SHA, 'Input head is not the exact review checkout');
@@ -1024,6 +1038,8 @@ jobs:
             verification_stage: 'fresh-review-job-before-model', base_sha: env.PR_BASE_SHA,
             head_sha: env.PR_HEAD_SHA, diff_base_sha: env.REVIEW_INPUT_DIFF_BASE_SHA,
             full_diff: fullDiff, provenance,
+            evidence_artifact_name: env.REVIEW_EVIDENCE_ARTIFACT_NAME,
+            verification_provenance: verificationProvenance,
           }, null, 2)}\n`);
           console.log(`Verified ${expected.length} full-input bytes against independent Git input (${digest}).`);
           NODE

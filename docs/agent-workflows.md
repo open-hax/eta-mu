@@ -56,7 +56,7 @@ hunk, reading unchanged surrounding code as needed to assess its contracts.
 This does not require exhaustive proof or reading every unchanged file.
 
 The workflow-call default and both direct-PR fallbacks select immutable Muse
-`7a8788d36d2aed3bf62e405f93d3c24d3fd410ea`, including context provenance.
+`0b9a91492c8355e6933dc2164d35668cb76d9e60`, including context provenance.
 This candidate pair still requires native hosted qualification. Existing
 production callers select the pair only after both candidates qualify and
 merge; historical callers pinned to b5 retain their original functional source
@@ -80,6 +80,15 @@ job outputs, rather than rebuilding names from the new `github.run_attempt`.
 Consequently a review-only re-run reuses the original deterministic evidence and
 compiled context. A full workflow re-run executes those prerequisites again and
 emits new attempt-scoped names.
+
+The fresh review job binds the manifest's producer attempt to the passed-through
+`review-evidence-<PR>-<run ID>-<producer attempt>` artifact name. It requires the
+same native PR and run, a positive producer attempt no later than the current
+verification attempt, and the unchanged repository, workflow, head, base and
+independent Git byte/hash checks. Its review-owned `input-verification.json`
+retains producer `provenance` and `evidence_artifact_name`, and separately records
+the current consumer in `verification_provenance`; a reused artifact never
+claims it was produced during the later verification attempt.
 
 The reusable workflow has one stable terminal check, **OpenCode evidence review
 gate**. Configure that job as the required check in callers. It runs under

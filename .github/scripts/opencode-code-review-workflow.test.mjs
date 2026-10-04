@@ -277,7 +277,7 @@ test("the compiled observer contract pins compatible Muse and allows both full-i
   assert.equal(namedStep("prepare_review_context", "Checkout Muse compatibility compiler").with.ref,
     expectedRef, "direct-PR compiler fallback must match the workflow-call default");
   const assembly = namedStep("prepare_review_context", "Assemble revision-bound review context");
-  assert.equal(assembly.run.match(/^MUSE_REVISION="([^"]+)"$/m)?.[1], expectedRef,
+  assert.equal(assembly.env.MUSE_REVISION, expectedRef,
     "artifact provenance must record the same effective Muse selection");
   for (const name of ["review_read_diff_chunk", "review_assess_diff_chunk"]) {
     assert.ok(workflowText.includes(`:${name}`), `missing permission for ${name}`);
@@ -285,9 +285,62 @@ test("the compiled observer contract pins compatible Muse and allows both full-i
   }
 });
 
+test("context assembly records Muse and Agents inputs literally without executing ref text", (t) => {
+  const { directory, sha } = makeRepository(t);
+  const runnerTemp = path.join(directory, "runner-temp");
+  fs.mkdirSync(runnerTemp);
+  for (const [relativePath, content] of [
+    [".review-context/muse/.opencode/dist/fixture.cjs", "// compiled fixture\n"],
+    [".review-context/muse/.opencode/plugins/fixture.mjs", "// plugin fixture\n"],
+    [".review-context/muse/.opencode/agents/github-reviewer.md", "reviewer fixture\n"],
+    [".review-context/muse/.opencode/opencode.json", "{}\n"],
+    [".review-context/muse/.opencode/package.json", "{}\n"],
+    [".review-context/muse/.opencode/exposed-tools.txt", "observer fixture\n"],
+    [".review-context/muse/.ημ/review/evidence-review.md", "prompt fixture\n"],
+    [".review-context/muse/.ημ/review/publish-opencode-review.cjs", "// publisher fixture\n"],
+    [".review-context/muse/.ημ/review/publish-opencode-review.test.cjs", "// test fixture\n"],
+    [".review-context/agents/skills/fixture/SKILL.md", "skill fixture\n"],
+  ]) {
+    const file = path.join(directory, relativePath);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, content);
+  }
+
+  const assembly = namedStep("prepare_review_context", "Assemble revision-bound review context");
+  const canary = path.join(directory, "ref-command-canary.txt");
+  const adversarialRef = "ref-$(printf${IFS}injected>ref-command-canary.txt)";
+  execFileSync("git", ["check-ref-format", "--branch", adversarialRef]);
+  for (const [museRevision, agentsRevision] of [
+    [undefined, undefined], [sha, sha], [adversarialRef, undefined], [undefined, adversarialRef],
+  ]) {
+    const inputs = { muse_revision: museRevision, agents_revision: agentsRevision };
+    // Actions substitutes expressions in run text but transports env values as
+    // data. Exercise that boundary with the complete native assembly script.
+    const renderInputs = (text) => text.replace(
+      /\$\{\{\s*inputs\.(muse_revision|agents_revision)\s*\|\|\s*'([^']+)'\s*\}\}/g,
+      (_expression, input, fallback) => inputs[input] || fallback,
+    );
+    const result = runScript(renderInputs(assembly.run), directory, {
+      RUNNER_TEMP: runnerTemp,
+      ...Object.fromEntries(Object.entries(assembly.env ?? {}).map(
+        ([name, value]) => [name, renderInputs(value)],
+      )),
+    });
+    assert.equal(fs.existsSync(canary), false, "Review-context ref text executed as Bash source");
+    assert.equal(result.status, 0, result.stderr);
+    const context = path.join(runnerTemp, "opencode-review-context");
+    assert.equal(fs.readFileSync(path.join(context, "metadata/muse-revision.txt"), "utf8"),
+      `${museRevision || workflow.on.workflow_call.inputs.muse_revision.default}\n`);
+    assert.equal(fs.readFileSync(path.join(context, "metadata/agents-revision.txt"), "utf8"),
+      `${agentsRevision || workflow.on.workflow_call.inputs.agents_revision.default}\n`);
+    const checksums = runScript("sha256sum --check SHA256SUMS", context);
+    assert.equal(checksums.status, 0, checksums.stderr);
+  }
+});
+
 const inputVerificationName = "Verify full review input against independent Git snapshot";
 
-function fullInputFixture(t, { large = false, baseAhead = false, empty = false } = {}) {
+function fullInputFixture(t, { large = false, baseAhead = false, empty = false, producerAttempt = "2" } = {}) {
   const { directory, sha: ancestor } = makeRepository(t);
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-review-input-"));
   t.after(() => fs.rmSync(scratch, { recursive: true, force: true }));
@@ -313,13 +366,20 @@ function fullInputFixture(t, { large = false, baseAhead = false, empty = false }
   fs.writeFileSync(eventFile, JSON.stringify(event));
   const env = {
     GITHUB_WORKSPACE: directory, GITHUB_EVENT_PATH: eventFile, PR_BASE_SHA: base, PR_HEAD_SHA: head,
-    GITHUB_REPOSITORY: "open-hax/fixture", GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "2",
+    GITHUB_REPOSITORY: "open-hax/fixture", GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: producerAttempt,
     GITHUB_WORKFLOW_SHA: head, GITHUB_WORKFLOW_REF: "open-hax/fixture/.github/workflows/review.yml@refs/pull/42/merge",
     RUNNER_TEMP: scratch,
   };
   const staged = runScript(namedStep("deterministic_evidence", "Stage pull request diff and context").run, directory, env);
   assert.equal(staged.status, 0, staged.stderr);
+  const artifactOutput = path.join(scratch, "artifact-output");
+  const bound = runScript(namedStep("deterministic_evidence", "Bind deterministic artifact name").run, directory, {
+    PR_NUMBER: String(event.pull_request.number), RUN_ID: env.GITHUB_RUN_ID,
+    RUN_ATTEMPT: env.GITHUB_RUN_ATTEMPT, GITHUB_OUTPUT: artifactOutput,
+  });
+  assert.equal(bound.status, 0, bound.stderr);
   return { directory, scratch, base, head, ancestor, env, event,
+    artifactName: parseOutput(artifactOutput).name,
     evidence: path.join(directory, ".opencode/review-evidence") };
 }
 
@@ -330,7 +390,7 @@ function freshReviewInputCheck(fixture, overrides = {}) {
   const evidence = path.join(consumer, ".opencode/review-evidence");
   const env = { ...fixture.env, GITHUB_WORKSPACE: consumer,
     ...guardEnvironment(consumer, path.join(fixture.scratch, "guard-output"), fixture.head),
-    EXPECTED_SHA: fixture.head, ...overrides };
+    EXPECTED_SHA: fixture.head, REVIEW_EVIDENCE_ARTIFACT_NAME: fixture.artifactName, ...overrides };
   const guard = runScript(namedStep("review", "Verify exact and clean review checkout").run, consumer, env);
   assert.equal(guard.status, 0, guard.stderr || guard.stdout);
   fs.cpSync(fixture.evidence, evidence, { recursive: true });
@@ -350,6 +410,8 @@ test("a fresh review job verifies downloaded input before tools, model or public
   assert.notEqual(verification["continue-on-error"], true);
   const index = steps.indexOf(verification);
   assert.ok(index > steps.indexOf(namedStep("review", "Download deterministic evidence")));
+  assert.equal(verification.env.REVIEW_EVIDENCE_ARTIFACT_NAME,
+    namedStep("review", "Download deterministic evidence").with.name);
   for (const name of ["Verify and install the bounded review context", "Test deterministic review publisher",
     "Run bounded evidence-first OpenCode review", "Create eta-mu GitHub App token for review publication",
     "Publish actual GitHub pull request review"]) {
@@ -409,6 +471,49 @@ test("independent review accepts exact large, empty and divergent-base input", (
       fs.readFileSync(path.join(fixture.evidence, "basehead.diff"))).digest("hex"));
     assert.equal(proof.provenance.run_id, "123");
     if (options.large) assert.ok(proof.full_diff.bytes > 300000);
+  }
+});
+
+test("failed-job rerun verifies retained producer input and records both attempts", (t) => {
+  const fixture = fullInputFixture(t, { producerAttempt: "1" });
+  assert.equal(fixture.artifactName, "review-evidence-42-123-1");
+  const checked = freshReviewInputCheck(fixture, { GITHUB_RUN_ATTEMPT: "2" });
+  assert.equal(checked.result.status, 0, checked.result.stderr);
+  const proof = JSON.parse(fs.readFileSync(path.join(checked.evidence, "input-verification.json")));
+  const manifest = JSON.parse(fs.readFileSync(path.join(fixture.evidence, "input-manifest.json")));
+  assert.deepEqual(proof.provenance, manifest.provenance);
+  assert.deepEqual(proof.verification_provenance, { ...manifest.provenance, run_attempt: "2" });
+  assert.equal(proof.evidence_artifact_name, fixture.artifactName);
+  assert.equal(fs.existsSync(checked.invocation), true);
+});
+
+test("retained input refuses forged artifact scope, attempts and producer provenance before model", (t) => {
+  const fixture = fullInputFixture(t, { producerAttempt: "1" });
+  const manifestFile = path.join(fixture.evidence, "input-manifest.json");
+  const original = JSON.parse(fs.readFileSync(manifestFile));
+  for (const [artifactName, consumerAttempt, producerAttempt] of [
+    [undefined, "2", "1"], ["", "2", "1"],
+    ["review-context-123-1", "2", "1"], ["review-evidence-42-123-1-extra", "2", "1"],
+    ["review-evidence-42-123-1\n", "2", "1"],
+    ["review-evidence-43-123-1", "2", "1"], ["review-evidence-42-124-1", "2", "1"],
+    ["review-evidence-42-123-0", "2", "0"], ["review-evidence-42-123-01", "2", "01"],
+    ["review-evidence-42-123-3", "2", "3"],
+    ["review-evidence-42-123-9007199254740993", "2", "9007199254740993"],
+    [fixture.artifactName, "2", "2"], [fixture.artifactName, "2", 1],
+    [fixture.artifactName, "0", "1"], [fixture.artifactName, "01", "1"],
+    [fixture.artifactName, "", "1"], [fixture.artifactName, "2.0", "1"],
+    [fixture.artifactName, "2\n", "1"],
+  ]) {
+    const manifest = structuredClone(original);
+    manifest.provenance.run_attempt = producerAttempt;
+    fs.writeFileSync(manifestFile, JSON.stringify(manifest));
+    fs.writeFileSync(path.join(fixture.evidence, "input-verification.json"), JSON.stringify({ input_verified: true }));
+    const checked = freshReviewInputCheck(fixture, {
+      REVIEW_EVIDENCE_ARTIFACT_NAME: artifactName, GITHUB_RUN_ATTEMPT: consumerAttempt,
+    });
+    assert.notEqual(checked.result.status, 0, `invalid producer identity accepted: ${artifactName}/${consumerAttempt}/${producerAttempt}`);
+    assert.equal(fs.existsSync(checked.invocation), false);
+    assert.equal(fs.existsSync(path.join(checked.evidence, "input-verification.json")), false);
   }
 });
 
