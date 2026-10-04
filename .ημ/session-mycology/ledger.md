@@ -458,3 +458,30 @@
   spore: none
   receipt-refs: none
   note: Verified PR head867da5c5 before edits. Added JSDoc only; scanner confirms unchanged executable tokens and seven documented declarations. Offline catalog contract passes1/1. Hosted coverage needs rerun. Session CLI is unavailable in this sandbox; reflection recorded directly.
+
+- ts: 2026-10-03T23:21:12.317331Z
+  task: Prepare complete immutable review input
+  p-efficiency: 0.85
+  p-friction: 0.25
+  p-skill-candidate: 0.2
+  spore: none
+  receipt-refs: full-input-repair/preparation
+  note: Keep preview and full source distinct; preserve delivery versus assessment, source hashes and historical prefixes. Extend the existing reviewer instead of adding an alternate engine. User hold keeps all source uncommitted; no provider retry or native approval claimed.
+
+- ts: "2026-10-04T00:14:27.593028+00:00"
+  origin: Muse19/native-review-followup
+  p-efficiency: 0.85
+  p-friction: 0.2
+  p-skill-candidate: 0.2
+  spore: none
+  receipt-refs: Muse19/native-review-followup
+  note: Guard the transition that closes candidate admission, retain the submission guard, and verify actual producer-to-compiled-consumer recovery. Candidate commits can qualify together before merge; caller activation waits for both qualified merges. No source installation, provider request or native approval fabricated.
+
+- ts: "2026-10-04T00:28:37.838205+00:00"
+  origin: full-input-repair/immutable-Muse-selection
+  p-efficiency: 0.9
+  p-friction: 0.1
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: full-input-repair/immutable-Muse-selection
+  note: Require the same exact committed source at workflow default, checkout fallback and artifact provenance, then test actual producer and compiled consumer. Local immutable-source proof remains separate from pending native qualification and caller activation. Parent retains publication.
