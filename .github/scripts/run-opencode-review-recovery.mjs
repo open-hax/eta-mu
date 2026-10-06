@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { finished } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
+import { stripVTControlCharacters } from "node:util";
 
 const RECOVERY_SCHEMA = "open-hax.review-recovery/v1";
 const MAX_ATTEMPTS = 2;
@@ -19,11 +20,53 @@ function submissionState(submissionFile) {
   }
 }
 
-function correctivePrompt(basePrompt) {
+function unavailableReviewTool(responseFile, stderrFile, reviewTools) {
+  // Only host-produced structured tool events can identify the failed call.
+  // Model prose and tool output are nested strings, never control messages.
+  try {
+    const response = new TextDecoder("utf-8", { fatal: true }).decode(fs.readFileSync(responseFile));
+    const events = response.split(/\r?\n/).filter((line) => line.trim()).map((line) => JSON.parse(line));
+    const sessionID = events[0]?.sessionID;
+    if (typeof sessionID !== "string" || !sessionID) return null;
+    if (events.some((event) => event.sessionID !== sessionID || !Number.isSafeInteger(event.timestamp))) return null;
+    const errors = events.filter((event) => event.type === "error");
+    const permissionError = "The user rejected permission to use this specific tool call.";
+    if (errors.length === 0 || events.at(-1).type !== "error" ||
+        errors.some((event) => event.error?.name !== "UnknownError" || event.error?.data?.message !== permissionError)) return null;
+
+    // The third internal call is rejected before it completes. The pinned CLI
+    // emits the preceding two completed calls and then a session error, not a
+    // third permission-error tool result. Retain only actually emitted IDs.
+    const calls = events.filter((event) => event.type === "tool_use").slice(-2);
+    if (calls.length !== 2) return null;
+    const requested = calls[0].part?.state?.input?.tool;
+    if (typeof requested !== "string" || !/^[a-z][a-z0-9_]+$/.test(requested)) return null;
+    const corrected = `review_${requested}`;
+    if (!reviewTools.includes(corrected)) return null;
+    const expectedError = `Model tried to call unavailable tool '${requested}'. Available tools: `;
+    if (calls.some(({ part }) => part?.type !== "tool" || part.sessionID !== sessionID ||
+        part.tool !== "invalid" || part.state?.status !== "completed" ||
+        part.state.input?.tool !== requested || typeof part.state.input?.error !== "string" ||
+        !part.state.input.error.startsWith(expectedError) ||
+        !part.state.input.error.slice(expectedError.length).replace(/\.$/, "").split(", ").includes(corrected) ||
+        typeof part.callID !== "string" || !part.callID)) return null;
+    if (new Set(calls.map(({ part }) => part.callID)).size !== 2) return null;
+    const stderr = stripVTControlCharacters(fs.readFileSync(stderrFile, "utf8"));
+    if (!stderr.split(/\r?\n/).some((line) => /^!\s+permission requested: doom_loop \(invalid\); auto-rejecting$/.test(line.trim()))) return null;
+    return { tool: requested, corrected_tool: corrected, session_id: sessionID,
+      call_ids: calls.map(({ part }) => part.callID) };
+  } catch {
+    return null;
+  }
+}
+
+function correctivePrompt(basePrompt, toolFailure) {
+  const cause = toolFailure
+    ? `the first model invocation failed without a review after repeatedly calling the unavailable tool ${toolFailure.tool}. Use the actual exposed name ${toolFailure.corrected_tool}; do not call the unavailable spelling again.`
+    : "the first completed model invocation omitted the required review_submit artifact.";
   return `${basePrompt.trimEnd()}
 
-Corrective attempt 2 of 2: the first completed model invocation omitted the
-required review_submit artifact. Start the evidence-first review state machine
+Corrective attempt 2 of 2: ${cause} Start the evidence-first review state machine
 again with review_begin; do not assume any in-memory state survived the first
 process. Complete every required stage and do not end until review_submit has
 returned ok. This is the only recovery attempt.
@@ -68,7 +111,8 @@ function recordAttempt({
 
 /**
  * Run one review attempt and exactly one corrective attempt when, and only
- * when, the first completed invocation omitted the review_submit artifact.
+ * when the first invocation omitted review_submit, or failed in a verified
+ * unavailable-review-tool loop without a submission. All other failures stop.
  * Schema validation remains a separate pre-publication boundary because it
  * requires the live pull-request changed-line index.
  */
@@ -77,6 +121,7 @@ export async function runReviewRecovery({
   basePrompt,
   submissionFile = path.join(evidenceDirectory, "submission.json"),
   invokeAttempt,
+  reviewTools = [],
 }) {
   if (!evidenceDirectory) throw new Error("evidenceDirectory is required");
   if (typeof basePrompt !== "string" || basePrompt.trim().length === 0) {
@@ -128,7 +173,10 @@ export async function runReviewRecovery({
       submissionFile,
     });
 
-    if (result?.exitCode !== 0) {
+    const toolFailure = attempt === 1 && result?.exitCode === 1 && state === "missing"
+      ? unavailableReviewTool(responseFile, stderrFile, reviewTools)
+      : null;
+    if (result?.exitCode !== 0 && !toolFailure) {
       throw new Error(`OpenCode review attempt ${attempt} exited ${result?.exitCode ?? "without a code"}`);
     }
     if (state === "present") return metadata;
@@ -139,9 +187,10 @@ export async function runReviewRecovery({
       throw new Error(`reviewer omitted review_submit after ${MAX_ATTEMPTS} attempts`);
     }
 
-    metadata.recovery_reason = "missing_review_submit";
+    metadata.recovery_reason = toolFailure ? "unavailable_review_tool" : "missing_review_submit";
+    if (toolFailure) metadata.attempts.at(-1).tool_failure = toolFailure;
     writeRecovery(metadataFile, metadata);
-    prompt = correctivePrompt(basePrompt);
+    prompt = correctivePrompt(basePrompt, toolFailure);
   }
 
   throw new Error("unreachable review recovery state");
@@ -160,7 +209,7 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile }) {
   try {
     const child = spawn(
       opencodeBin,
-      ["run", "--agent", "github-reviewer", "--model", reviewModel, prompt],
+      ["run", "--format", "json", "--agent", "github-reviewer", "--model", reviewModel, prompt],
       { stdio: ["ignore", "pipe", "pipe"] },
     );
 
@@ -204,7 +253,10 @@ async function main() {
 
   const promptTemplate = fs.readFileSync(promptFile, "utf8");
   const basePrompt = promptTemplate.replaceAll("{{PR_NUMBER}}", prNumber);
-  await runReviewRecovery({ evidenceDirectory, basePrompt, invokeAttempt: invokeOpenCode });
+  const registryFile = process.env.REVIEW_TOOL_REGISTRY_FILE;
+  const reviewTools = registryFile ? fs.readFileSync(registryFile, "utf8").trim().split(/\r?\n/)
+    .filter((tool) => /^review_[a-z0-9_]+$/.test(tool)) : [];
+  await runReviewRecovery({ evidenceDirectory, basePrompt, reviewTools, invokeAttempt: invokeOpenCode });
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

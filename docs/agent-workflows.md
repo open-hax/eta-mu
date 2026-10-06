@@ -38,7 +38,7 @@ The workflow has three bounded stages:
 
 1. **Deterministic evidence** — install from the committed lockfile, then run the repository lint, test, and build gates. Exit codes and logs are serialized under `.opencode/review-evidence/`. A failed environment or dependency install is evidence about the run, not automatically evidence of a code defect.
 2. **Review-context compilation** — check out pinned revisions of `octave-commons/muse` and `riatzukiza/.agents`. Muse compiles a review-specific OpenCode projection containing only observer tools; the `.agents` repository is packaged as the global skill source. Both revisions and the skill inventory are recorded in the context artifact.
-3. **Model review with omission-only recovery** — map the change, reconstruct relevant contracts and invariants, generate candidate findings, attempt to disprove each candidate, and publish only findings that survive the evidence threshold. A completed first invocation that leaves a missing `review_submit` artifact receives exactly one corrective model invocation. The recovery starts the state machine again and must finish with a real tool-written submission; it never synthesizes a review from free-form output. A malformed submission does not consume the recovery attempt, and malformed or repeatedly missing submissions fail closed before publication.
+3. **Model review with bounded recovery** — map the change, reconstruct relevant contracts and invariants, generate candidate findings, attempt to disprove each candidate, and publish only findings that survive the evidence threshold. A completed first invocation that leaves a missing `review_submit` artifact receives exactly one corrective model invocation. An invocation that exits 1 without a submission after the host invalid-tool doom-loop rejection, with two distinct completed unavailable-review-tool events followed by the terminal session error can use that same corrective invocation. Structured OpenCode JSON events must bind the calls and terminal permission error to one session, and the corrected `review_` name must exist in the checksummed staged registry. A quoted tool error, an unknown tool mapping, mixed sessions, malformed events, provider quota/authentication failure, spawn rejection, or a failed invocation with any submission does not authorize recovery. The recovery starts the state machine again and must finish with a real tool-written submission; it never synthesizes a review from free-form output. A malformed submission does not consume the recovery attempt, and malformed or repeatedly missing submissions fail closed before publication.
 
 Diff staging preserves the complete Git merge-base/head bytes in `basehead.diff`
 before making the 300,000-byte `pr.diff` preview. `input-manifest.json` records
@@ -62,12 +62,12 @@ production callers select the pair only after both candidates qualify and
 merge; historical callers pinned to b5 retain their original functional source
 until a separately reviewed revision update selects the new pair.
 
-The two model invocations write separate response and stderr files plus a small
+The two model invocations write separate response (raw OpenCode JSON event stream) and stderr files plus a small
 `recovery.json` decision record. The attempt artifact therefore preserves the
 first response even when the corrective invocation succeeds or fails.
 An invocation that rejects is recorded once with a null exit code before its
 original error is rethrown; both stream files are finalized, and that failure
-never consumes the omission-only corrective attempt.
+never consumes the corrective attempt. Unknown nonzero exit failures also remain terminal. A recognized unavailable-tool failure is retained with its original exit code, session and call IDs and exact tool-name correction; it is not a completed review. No tool alias, permission rule, stage or evidence guard is relaxed. The two-attempt bound applies across both recovery causes; attempt 2 cannot trigger another invocation.
 The bounded runner itself travels in the checksummed review-context artifact.
 That is required for reusable callers: their review job checks out the caller's
 pull-request tree, which does not contain eta-mu's repository-local scripts.
@@ -90,7 +90,7 @@ retains producer `provenance` and `evidence_artifact_name`, and separately recor
 the current consumer in `verification_provenance`; a reused artifact never
 claims it was produced during the later verification attempt.
 
-After the model and omission-only recovery, the workflow runs the same Git input
+After the model and bounded recovery, the workflow runs the same Git input
 verification command again, before final schema validation, App token creation
 and publication. The first verification exports its receipt SHA-256 as a step
 output; context installation exports the checksum-list SHA-256. The final check

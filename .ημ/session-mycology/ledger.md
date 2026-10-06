@@ -557,3 +557,13 @@
   spore: none
   receipt-refs: Discord review batch/native failure scoped repair; Discord review batch/actual adapter RED GREEN
   note: Execute the actual effect adapter before changing it. Per-field truncation does not establish a message-wide budget; preserve payload fields and bound combined text and embed count independently. Retain native publication separately from notification failure, and preserve genuine HTTP errors. Keep initial harness setup error distinct from causal RED. Existing spores suffice; no model, native probe, operational board write, new spore or promotion. Parent owns publication and successor qualification.
+
+
+- ts: "2026-10-06T13:09:01.765Z"
+  origin: unfinished review recovery and append-only correction
+  p-efficiency: 0.82
+  p-friction: 0.31
+  p-skill-candidate: 0.54
+  spore: none
+  receipt-refs: mimo-tool-recovery-source-20261006
+  note: Keep failed attempts as failed evidence. Recovery requires a real new complete review, not a translated tool receipt. Historical malformed records remain untouched; append an explicit correction. Reuse documented bounded recovery and OpenCode-first design; no new spore or promotion.
