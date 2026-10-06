@@ -33,12 +33,12 @@ function fixture(t) {
 }
 
 /** Exercise recovery with configurable synthetic failures and captured invocation prompts. */
-async function invokeFailure(directory, { events = failureEvents(), stderr = "! permission requested: doom_loop (invalid); auto-rejecting\n", exitCode = 1, submission, secondFails = false } = {}) {
+async function invokeFailure(directory, { events = failureEvents(), stderr = "! permission requested: doom_loop (invalid); auto-rejecting\n", exitCode = 1, submission, secondFails = false, reviewTools = ["review_begin", "review_assess_diff_chunk", "review_submit"] } = {}) {
   const calls = [];
   const promise = runReviewRecovery({
     evidenceDirectory: directory,
     basePrompt: "Complete the full current input using review_begin and review_submit.",
-    reviewTools: ["review_begin", "review_assess_diff_chunk", "review_submit"],
+    reviewTools,
     invokeAttempt: async ({ attempt, prompt, responseFile, stderrFile }) => {
       calls.push({ attempt, prompt });
       if (attempt === 1 || secondFails) {
@@ -75,6 +75,14 @@ test("repeated invalid tool failure stops at the shared two invocation bound", a
   const { promise, calls } = await invokeFailure(fixture(t), { secondFails: true });
   await assert.rejects(promise, /attempt 2 exited 1/);
   assert.deepEqual(calls.map(({ attempt }) => attempt), [1, 2]);
+});
+
+test("an unexposed corrected tool does not authorize recovery", async (t) => {
+  const { promise, calls } = await invokeFailure(fixture(t), {
+    reviewTools: ["review_begin", "review_submit"],
+  });
+  await assert.rejects(promise, /attempt 1 exited 1/);
+  assert.equal(calls.length, 1);
 });
 
 for (const [name, transform] of [

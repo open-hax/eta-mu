@@ -577,3 +577,13 @@
   spore: none
   receipt-refs: eta342-docstring-parent-source-20261006T1443Z/new-source-receipt.edn
   note: A no-actionable summary does not waive a concrete documentation warning. Add only accurate helper comments, verify executable bytes and all original tests, then qualify the actual new native head. Preserve inherited Biome failures and old literal audit failures separately. No spore or promotion.
+
+
+- ts: "2026-10-06T15:21:25.876Z"
+  origin: Eta342 staged-registry rejection coverage
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: eta342-registry-rejection-test-source-20261006T1521Z/new-source-receipt.edn
+  note: A correct production guard still needs its rejection path exercised. Add the exact missing negative case, preserve existing tests and defaults, and demonstrate mutation sensitivity in a disposable copy. Keep missing-dependency diagnostics separate from corrected full-suite execution and native qualification. Preserve whole histories, no spore or promotion.
