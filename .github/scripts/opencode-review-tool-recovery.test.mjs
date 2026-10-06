@@ -89,6 +89,7 @@ for (const [name, transform] of [
   ["quoted model prose", () => [{ type: "text", part: { text: JSON.stringify(failureEvents()) } }]],
   ["cross-session event", (events) => events.map((e, n) => n === 1 ? { ...e, sessionID: "foreign" } : e)],
   ["provider quota terminal error", (events) => events.slice(0, -1).concat({ ...events.at(-1), error: { name: "APIError", data: { message: "quota exceeded" } } })],
+  ["nonmatching error before the terminal tool error", (events) => events.slice(0, -1).concat({ ...events.at(-1), timestamp: 3, error: { name: "APIError", data: { message: "quota exceeded" } } }, events.at(-1))],
   ["unknown tool", (events) => events.map((e) => e.part ? { ...e, part: { ...e.part, state: { ...e.part.state, input: { tool: "arbitrary_tool", error: "unavailable" } } } } : e)],
   ["valid tool permission denial", (events) => events.map((e) => e.part ? { ...e, part: { ...e.part, tool: "bash" } } : e)],
   ["duplicate event representations", (events) => [events[0], events[0], events[0], events.at(-1)]],
@@ -99,6 +100,12 @@ for (const [name, transform] of [
     assert.equal(calls.length, 1);
   });
 }
+
+test("an exit other than 1 does not authorize unavailable-tool recovery", async (t) => {
+  const { promise, calls } = await invokeFailure(fixture(t), { exitCode: 2 });
+  await assert.rejects(promise, /attempt 1 exited 2/);
+  assert.equal(calls.length, 1);
+});
 
 for (const submission of ["{broken", "{}", JSON.stringify({ event: "APPROVE" })]) {
   test(`a failed invocation with a present submission cannot recover: ${submission}`, async (t) => {
