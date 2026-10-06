@@ -557,3 +557,43 @@
   spore: none
   receipt-refs: Discord review batch/native failure scoped repair; Discord review batch/actual adapter RED GREEN
   note: Execute the actual effect adapter before changing it. Per-field truncation does not establish a message-wide budget; preserve payload fields and bound combined text and embed count independently. Retain native publication separately from notification failure, and preserve genuine HTTP errors. Keep initial harness setup error distinct from causal RED. Existing spores suffice; no model, native probe, operational board write, new spore or promotion. Parent owns publication and successor qualification.
+
+
+- ts: "2026-10-06T13:09:01.765Z"
+  origin: unfinished review recovery and append-only correction
+  p-efficiency: 0.82
+  p-friction: 0.31
+  p-skill-candidate: 0.54
+  spore: none
+  receipt-refs: mimo-tool-recovery-source-20261006
+  note: Keep failed attempts as failed evidence. Recovery requires a real new complete review, not a translated tool receipt. Historical malformed records remain untouched; append an explicit correction. Reuse documented bounded recovery and OpenCode-first design; no new spore or promotion.
+
+
+- ts: "2026-10-06T14:53:22.156Z"
+  origin: Eta342 helper documentation warning
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: eta342-docstring-parent-source-20261006T1443Z/new-source-receipt.edn
+  note: A no-actionable summary does not waive a concrete documentation warning. Add only accurate helper comments, verify executable bytes and all original tests, then qualify the actual new native head. Preserve inherited Biome failures and old literal audit failures separately. No spore or promotion.
+
+
+- ts: "2026-10-06T15:21:25.876Z"
+  origin: Eta342 staged-registry rejection coverage
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: eta342-registry-rejection-test-source-20261006T1521Z/new-source-receipt.edn
+  note: A correct production guard still needs its rejection path exercised. Add the exact missing negative case, preserve existing tests and defaults, and demonstrate mutation sensitivity in a disposable copy. Keep missing-dependency diagnostics separate from corrected full-suite execution and native qualification. Preserve whole histories, no spore or promotion.
+
+
+- ts: "2026-10-06T15:35:00.169Z"
+  origin: Eta342 all native rejection-test gaps
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: eta342-all-native-rejection-test-source-20261006T1534Z/new-source-receipt.edn
+  note: Read the whole completed review before publishing a pending test successor. Include all genuine rejection gaps in one publication, retain each prior passing/failing observation literally, and qualify the new native head independently. No spore or promotion.
