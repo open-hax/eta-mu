@@ -10,6 +10,7 @@ import { stripVTControlCharacters } from "node:util";
 const RECOVERY_SCHEMA = "open-hax.review-recovery/v1";
 const MAX_ATTEMPTS = 2;
 
+/** Return whether the submission file is missing, parseable JSON, or malformed. */
 function submissionState(submissionFile) {
   if (!fs.existsSync(submissionFile)) return "missing";
   try {
@@ -20,6 +21,7 @@ function submissionState(submissionFile) {
   }
 }
 
+/** Return verified unavailable-tool evidence, or null when any recovery guard fails. */
 function unavailableReviewTool(responseFile, stderrFile, reviewTools) {
   // Only host-produced structured tool events can identify the failed call.
   // Model prose and tool output are nested strings, never control messages.
@@ -60,6 +62,7 @@ function unavailableReviewTool(responseFile, stderrFile, reviewTools) {
   }
 }
 
+/** Append the sole corrective-attempt instructions to the original review prompt. */
 function correctivePrompt(basePrompt, toolFailure) {
   const cause = toolFailure
     ? `the first model invocation failed without a review after repeatedly calling the unavailable tool ${toolFailure.tool}. Use the actual exposed name ${toolFailure.corrected_tool}; do not call the unavailable spelling again.`
@@ -73,10 +76,12 @@ returned ok. This is the only recovery attempt.
 `;
 }
 
+/** Write the current recovery metadata as formatted JSON with a trailing newline. */
 function writeRecovery(metadataFile, metadata) {
   fs.writeFileSync(metadataFile, `${JSON.stringify(metadata, null, 2)}\n`);
 }
 
+/** Retain attempt output files and metadata, then return the submission state. */
 function recordAttempt({
   metadata,
   metadataFile,
@@ -196,6 +201,7 @@ export async function runReviewRecovery({
   throw new Error("unreachable review recovery state");
 }
 
+/** Run the configured OpenCode review and mirror stdout and stderr to retained files. */
 async function invokeOpenCode({ prompt, responseFile, stderrFile }) {
   const opencodeBin = process.env.OPENCODE_BIN || "opencode";
   const reviewModel = process.env.REVIEW_MODEL;
@@ -243,6 +249,7 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile }) {
   }
 }
 
+/** Read the configured prompt and tool registry, then run bounded review recovery. */
 async function main() {
   const prNumber = process.env.PR_NUMBER;
   const promptFile = process.env.REVIEW_PROMPT_FILE;

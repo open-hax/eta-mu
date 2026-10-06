@@ -567,3 +567,13 @@
   spore: none
   receipt-refs: mimo-tool-recovery-source-20261006
   note: Keep failed attempts as failed evidence. Recovery requires a real new complete review, not a translated tool receipt. Historical malformed records remain untouched; append an explicit correction. Reuse documented bounded recovery and OpenCode-first design; no new spore or promotion.
+
+
+- ts: "2026-10-06T14:53:22.156Z"
+  origin: Eta342 helper documentation warning
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: eta342-docstring-parent-source-20261006T1443Z/new-source-receipt.edn
+  note: A no-actionable summary does not waive a concrete documentation warning. Add only accurate helper comments, verify executable bytes and all original tests, then qualify the actual new native head. Preserve inherited Biome failures and old literal audit failures separately. No spore or promotion.

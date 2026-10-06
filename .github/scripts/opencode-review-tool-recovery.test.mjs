@@ -14,6 +14,7 @@ const invalidInput = {
   error: "Model tried to call unavailable tool 'assess_diff_chunk'. Available tools: invalid, review_assess_diff_chunk, review_begin, review_submit.",
 };
 
+/** Build fixture events for two completed invalid calls and terminal permission rejection. */
 function failureEvents() {
   const sessionID = "ses_fixture";
   return [1, 2].map((n) => ({
@@ -24,12 +25,14 @@ function failureEvents() {
     error: { name: "UnknownError", data: { message: permissionError } } });
 }
 
+/** Create an isolated test directory and register its removal after the test. */
 function fixture(t) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "review-tool-recovery-"));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   return directory;
 }
 
+/** Exercise recovery with configurable synthetic failures and captured invocation prompts. */
 async function invokeFailure(directory, { events = failureEvents(), stderr = "! permission requested: doom_loop (invalid); auto-rejecting\n", exitCode = 1, submission, secondFails = false } = {}) {
   const calls = [];
   const promise = runReviewRecovery({
