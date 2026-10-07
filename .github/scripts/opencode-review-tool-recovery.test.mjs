@@ -7,6 +7,8 @@ import test from "node:test";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { runReviewRecovery } from "./run-opencode-review-recovery.mjs";
+import { stageTransportVerifier, transportResponse, transportReviewTools,
+  transportSha256 } from "./review-invocation-fixture.mjs";
 
 const permissionError = "The user rejected permission to use this specific tool call.";
 const invalidInput = {
@@ -140,7 +142,7 @@ if (attempt === 1) {
 } else {
   if (!args.at(-1).includes("review_assess_diff_chunk") || !args.at(-1).includes("review_begin")) process.exit(8);
   fs.writeFileSync(path.join(directory, "submission.json"), JSON.stringify({ schema: "open-hax.github-review/v1", event: "APPROVE", summary: "fixture", comments: [] }));
-  console.log(JSON.stringify({ type: "text", timestamp: 5, sessionID: "ses_recovery", part: { text: "new full review fixture" } }));
+  process.stdout.write(${JSON.stringify(transportResponse({ sessionID: "ses_recovery", text: "new full review fixture" }).toString())});
 }
 `);
   fs.chmodSync(child, 0o755);
@@ -148,10 +150,12 @@ if (attempt === 1) {
   const registry = path.join(directory, "tools.txt");
   fs.writeFileSync(prompt, "Complete review #{{PR_NUMBER}} with review_begin and review_submit.\n");
   fs.writeFileSync(registry, "review_begin\nreview_assess_diff_chunk\nreview_submit\n");
+  // Explicit mock transport authority; canonical compiled Muse law is tested separately.
+  const invocation = stageTransportVerifier(directory, { registryFile: registry, reviewTools: transportReviewTools });
   const result = spawnSync(process.execPath, [runner], {
     encoding: "utf8", timeout: 10_000,
     env: { ...process.env, OPENCODE_BIN: child, REVIEW_EVIDENCE_DIR: directory,
-      REVIEW_PROMPT_FILE: prompt, REVIEW_MODEL: "fixture/model", REVIEW_TOOL_REGISTRY_FILE: registry, PR_NUMBER: "342" },
+      REVIEW_PROMPT_FILE: prompt, REVIEW_MODEL: "fixture/model", ...invocation.env, PR_NUMBER: "342" },
   });
   assert.equal(result.status, 0, result.stderr);
   const receipt = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8"));
@@ -160,4 +164,340 @@ if (attempt === 1) {
   assert.equal(receipt.attempts[0].tool_failure.corrected_tool, "review_assess_diff_chunk");
   assert.match(fs.readFileSync(path.join(directory, "model-response-attempt-1.txt"), "utf8"), /call_2/);
   assert.match(fs.readFileSync(path.join(directory, "model-response-attempt-2.txt"), "utf8"), /ses_recovery/);
+  assert.equal(receipt.accepted_invocation.attempt, 2);
+  assert.equal(receipt.accepted_invocation.session_id, "ses_recovery");
+  assert.equal(receipt.accepted_invocation.verifier_sha256, invocation.verifierSha256);
+  assert.equal(receipt.accepted_invocation.expected_context_sha256,
+    transportSha256(JSON.stringify(invocation.expectedContext)));
+  assert.equal(fs.readFileSync(invocation.output, "utf8"),
+    `review_invocation_sha256=${transportSha256(JSON.stringify(receipt.accepted_invocation))}\n`);
 });
+
+// ETA-RECEIVING-001: these callbacks exercise retry transport, not Muse law.
+/** Prefix a recognized invalid-tool tail with one emitted structured tool call. */
+function mixedUnavailableEvents(tool, state) {
+  const events = failureEvents().map((event) => ({ ...event, timestamp: event.timestamp + 1 }));
+  return [{ type: "tool_use", timestamp: 1, sessionID: "ses_fixture",
+    part: { type: "tool", id: "part_prefix", callID: "call_prefix", sessionID: "ses_fixture",
+      tool, state } }, ...events];
+}
+
+/** Exercise strict transport with a retained first refusal and a mock second success. */
+function strictUnavailableFailure(directory, events, { secondFails = false, exposedTools } = {}) {
+  const calls = [];
+  const checks = [];
+  const refusal = { ok: false, reason: "unestablished-review-trace",
+    reasonKind: "unestablished-review-trace", code: "transport-mock-refusal",
+    violations: [], acceptedInvocation: null, fixtureAuthority: "TRANSPORT_MOCK_ONLY" };
+  const promise = runReviewRecovery({ evidenceDirectory: directory,
+    basePrompt: "Review all input using the caller's canonical callback.",
+    reviewTools: transportReviewTools, expectedContext: { fixtureAuthority: "TRANSPORT_MOCK_ONLY", ...(exposedTools ? { reviewTools: exposedTools } : {}) },
+    /**
+     * Capture verifier arguments and return the configured transport-only verdict.
+     * @param {Buffer} response - Captured fixture response bytes.
+     * @param {Buffer|null} body - Submission bytes, or null for a missing file.
+     * @returns {Object} Injected refusal or transport mock success.
+     */
+    verifyReviewInvocation(response, body) {
+      assert.ok(Buffer.isBuffer(response));
+      assert.ok(body === null || Buffer.isBuffer(body));
+      checks.push({ response: Buffer.from(response), body: body && Buffer.from(body) });
+      if (checks.length === 1 || secondFails) return refusal;
+      return { ok: true, reason: null, reasonKind: null, code: "transport-mock-success",
+        violations: [], sessionID: "ses_recovery", fixtureAuthority: "TRANSPORT_MOCK_ONLY",
+        acceptedInvocation: { sessionID: "ses_recovery", submissionCallID: "call_mock_submit" } };
+    },
+    invokeAttempt: async ({ attempt, responseFile, stderrFile }) => {
+      calls.push(attempt);
+      if (attempt === 1 || secondFails) {
+        fs.writeFileSync(responseFile, events.map((event) => JSON.stringify(event)).join("\n") + "\n");
+        fs.writeFileSync(stderrFile, "! permission requested: doom_loop (invalid); auto-rejecting\n");
+        return { exitCode: 1 };
+      }
+      fs.writeFileSync(responseFile, transportResponse({ sessionID: "ses_recovery" }));
+      fs.writeFileSync(stderrFile, "");
+      fs.writeFileSync(path.join(directory, "submission.json"), JSON.stringify({
+        schema: "open-hax.github-review/v1", event: "APPROVE", summary: "TRANSPORT_MOCK_ONLY", comments: [] }));
+      return { exitCode: 0 };
+    } });
+  return { promise, calls, checks, refusal };
+}
+
+for (const [name, tool, state] of [
+  ["failed bash", "bash", { status: "error", input: {}, error: "permission denied" }],
+  ["failed read", "read", { status: "error", input: {}, error: "file unavailable" }],
+  ["failed grep", "grep", { status: "error", input: {}, error: "output overflow" }],
+  ["completed HOST with an explicit error", "bash", { status: "completed", input: {}, output: "partial", error: "failure" }],
+  ["completed HOST with an empty error string", "bash", { status: "completed", input: {}, output: "partial", error: "" }],
+  ["completed HOST with a zero error value", "bash", { status: "completed", input: {}, output: "partial", error: 0 }],
+  ["unfinished HOST", "read", { status: "running", input: {} }],
+  ["failed review_begin", "review_begin", { status: "completed", input: {}, output: '{"ok?":false,"error":"refused"}' }],
+  ["failed review stage", "review_record_stage", { status: "completed", input: {}, output: '{"ok?":false,"error":"refused"}' }],
+  ["failed review_submit", "review_submit", { status: "completed", input: {}, output: '{"ok?":false,"error":"refused"}' }],
+  ["review return with no literal success", "review_begin", { status: "completed", input: {}, output: '{"ok?":"true"}' }],
+  ["malformed review return", "review_begin", { status: "completed", input: {}, output: "{broken" }],
+  ["missing review return", "review_begin", { status: "completed", input: {} }],
+  ["additional earlier invalid call", "invalid", { status: "completed", input: invalidInput }],
+]) {
+  test(`known-unavailable mixed prefix refuses ${name} before a second process`, async (t) => {
+    const directory = fixture(t);
+    const events = mixedUnavailableEvents(tool, state);
+    const { promise, calls, checks, refusal } = strictUnavailableFailure(directory, events);
+    await assert.rejects(promise, /attempt 1 exited 1/);
+    assert.deepEqual(calls, [1]);
+    assert.equal(checks.length, 1);
+    assert.equal(checks[0].body, null);
+    const receipt = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8"));
+    assert.equal(receipt.accepted_invocation, null);
+    assert.equal(receipt.recovery_reason, null);
+    assert.equal(receipt.attempts.length, 1);
+    assert.deepEqual(receipt.attempts[0].canonical_verdict, refusal);
+    assert.equal(receipt.attempts[0].response_sha256, transportSha256(checks[0].response));
+    assert.deepEqual(fs.readFileSync(path.join(directory, "model-response-attempt-1.txt")), checks[0].response);
+    assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
+  });
+}
+
+for (const [name, events] of [
+  ["clean recognized tail", failureEvents()],
+  ["successful HOST prefix", mixedUnavailableEvents("bash", { status: "completed", input: {}, output: "success", error: null })],
+  ["successful review prefix", mixedUnavailableEvents("review_begin", { status: "completed", input: {}, output: '{"ok?":true}' })],
+  ["false HOST error flag", mixedUnavailableEvents("read", { status: "completed", input: {}, output: "success", error: false })],
+  ["failure-shaped nested HOST output", mixedUnavailableEvents("bash", { status: "completed", input: {},
+    output: JSON.stringify({ "ok?": false, error: "quoted inert data", type: "error", state: { status: "error" } }) })],
+]) {
+  test(`known-unavailable mixed prefix retains recovery for ${name}`, async (t) => {
+    const directory = fixture(t);
+    const { promise, calls, checks, refusal } = strictUnavailableFailure(directory, events);
+    const receipt = await promise;
+    assert.deepEqual(calls, [1, 2]);
+    assert.equal(checks.length, 2);
+    assert.equal(receipt.max_attempts, 2);
+    assert.equal(receipt.recovery_reason, "unavailable_review_tool");
+    assert.deepEqual(receipt.attempts[0].canonical_verdict, refusal);
+    assert.deepEqual(receipt.attempts[0].tool_failure.call_ids, ["call_1", "call_2"]);
+    assert.equal(receipt.accepted_invocation.attempt, 2);
+    assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-3.txt")), false);
+  });
+}
+
+test("known-unavailable mixed prefix keeps the strict two-process bound for a clean repeated failure", async (t) => {
+  const directory = fixture(t);
+  const { promise, calls, checks } = strictUnavailableFailure(directory, failureEvents(), { secondFails: true });
+  await assert.rejects(promise, /attempt 2 exited 1/);
+  assert.deepEqual(calls, [1, 2]);
+  assert.equal(checks.length, 2);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"))).accepted_invocation, null);
+  assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-3.txt")), false);
+});
+
+// Complete observer/review registry fixture, matching retained staged DATA.
+const prefixRegistry = ["actor_list", "actor_mailbox", "actor_monitor", "agent_list", "muse_phases",
+  "phase_conclusions", "phase_filter", "phase_head", "phase_list_active", "phase_list_idle",
+  "phase_observations", "phase_tail", "review_assess_diff_chunk", "review_begin", "review_classify_finding",
+  "review_propose_finding", "review_read_diff_chunk", "review_record_evidence", "review_status", "review_submit",
+  "task_list", "task_status"];
+
+/** Build a healthy HOST prefix and two matching HOST-reported availability lists. */
+function registeredUnavailableEvents() {
+  const available = [...prefixRegistry, "bash", "glob", "grep", "read", "skill", "invalid"].sort();
+  const events = mixedUnavailableEvents("actor_list", { status: "completed", input: {}, output: "inert" });
+  for (const event of events.slice(1, -1)) event.part = { ...event.part,
+    state: { ...event.part.state, input: { ...invalidInput,
+      error: `Model tried to call unavailable tool 'assess_diff_chunk'. Available tools: ${available.join(", ")}.` } } };
+  return events;
+}
+
+for (const [name, change] of [
+  ["missing part type", (e) => { delete e[0].part.type; }],
+  ["wrong part type", (e) => { e[0].part.type = "text"; }],
+  ["missing part ID", (e) => { delete e[0].part.id; }],
+  ["blank part ID", (e) => { e[0].part.id = " "; }],
+  ["duplicate part ID across prefix and tail", (e) => { e[0].part.id = e[1].part.id; }],
+  ["missing call ID", (e) => { delete e[0].part.callID; }],
+  ["blank call ID", (e) => { e[0].part.callID = " "; }],
+  ["duplicate call ID across prefix and tail", (e) => { e[0].part.callID = e[1].part.callID; }],
+  ["part session mismatch", (e) => { e[0].part.sessionID = "foreign"; }],
+  ["missing HOST tool name", (e) => { delete e[0].part.tool; }],
+  ["blank HOST tool name", (e) => { e[0].part.tool = " "; }],
+  ["missing HOST input", (e) => { delete e[0].part.state.input; }],
+  ["array HOST input", (e) => { e[0].part.state.input = []; }],
+  ["null HOST input", (e) => { e[0].part.state.input = null; }],
+  ["missing HOST output", (e) => { delete e[0].part.state.output; }],
+  ["object HOST output", (e) => { e[0].part.state.output = {}; }],
+  ["negative timestamp", (e) => { e[0].timestamp = -1; }],
+  ["backwards prefix timestamp", (e) => { e[0].timestamp = 3; }],
+  ["unknown completed HOST absent from availability", (e) => { e[0].part.tool = "unknown_external_tool"; }],
+  ["unexposed review despite advertised availability", (e) => {
+    e[0].part.tool = "review_new_control"; e[0].part.state.output = '{"ok?":true}';
+    for (const event of e.slice(1, -1)) event.part.state.input.error =
+      event.part.state.input.error.replace("Available tools: ", "Available tools: review_new_control, ");
+  }],
+  ["builtin HOST outside the prepared registry", (e) => { e[0].part.tool = "read"; }],
+  ["unknown HOST advertised by both tails but outside the prepared registry", (e) => {
+    e[0].part.tool = "unknown_external_tool";
+    for (const event of e.slice(1, -1)) event.part.state.input.error =
+      event.part.state.input.error.replace("Available tools: ", "Available tools: unknown_external_tool, ");
+  }],
+  ["prefix tool absent from one tail availability list", (e) => {
+    e[2].part.state.input.error = e[2].part.state.input.error.replace("actor_list, ", "");
+  }],
+]) {
+  test(`known-unavailable mixed prefix refuses ${name} with the trusted registry`, async (t) => {
+    const directory = fixture(t);
+    const events = registeredUnavailableEvents(); change(events);
+    const { promise, calls, checks } = strictUnavailableFailure(directory, events, { exposedTools: prefixRegistry });
+    await assert.rejects(promise, /attempt 1 exited 1/);
+    assert.deepEqual(calls, [1]);
+    assert.equal(checks.length, 1);
+    const receipt = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json")));
+    assert.equal(receipt.accepted_invocation, null);
+    assert.equal(receipt.recovery_reason, null);
+    assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
+  });
+}
+
+test("known-unavailable mixed prefix retains complete-registry observer recovery", async (t) => {
+  const events = registeredUnavailableEvents();
+  events.unshift({ ...events[0], timestamp: 0, part: { ...events[0].part,
+    id: "part_observer", callID: "call_observer", tool: "actor_mailbox" } });
+  const { promise, calls } = strictUnavailableFailure(fixture(t), events, { exposedTools: prefixRegistry });
+  const receipt = await promise;
+  assert.deepEqual(calls, [1, 2]);
+  assert.equal(receipt.recovery_reason, "unavailable_review_tool");
+});
+
+test("known-unavailable mixed prefix retains fourteen healthy review reads before the recognized tail", async (t) => {
+  const tail = registeredUnavailableEvents().slice(1).map((event) => ({ ...event, timestamp: event.timestamp + 20 }));
+  const prefix = Array.from({ length: 14 }, (_, i) => ({ type: "tool_use", timestamp: i + 1,
+    sessionID: "ses_fixture", part: { type: "tool", id: `part_read_${i}`, callID: `call_read_${i}`,
+      sessionID: "ses_fixture", tool: "review_read_diff_chunk", state: { status: "completed",
+        input: { id: i + 1 }, output: JSON.stringify({ "ok?": true, chunk: { id: i + 1, text: "synthetic page" } }) } } }));
+  const { promise, calls } = strictUnavailableFailure(fixture(t), [...prefix, ...tail], { exposedTools: prefixRegistry });
+  const receipt = await promise;
+  assert.deepEqual(calls, [1, 2]);
+  assert.deepEqual(receipt.attempts[0].tool_failure.call_ids, ["call_1", "call_2"]);
+});
+
+for (const [name, events] of [
+  ["failed HOST", mixedUnavailableEvents("bash", { status: "error", input: {}, error: "legacy fixture" })],
+  ["failed review", mixedUnavailableEvents("review_begin", { status: "completed", input: {}, output: '{"ok?":false,"error":"legacy fixture"}' })],
+  ["malformed prior input", mixedUnavailableEvents("read", { status: "completed", input: [], output: "legacy fixture" })],
+  ["unknown prior name", mixedUnavailableEvents("unknown_external_tool", { status: "completed", input: {}, output: "legacy fixture" })],
+  ["incomplete prior tool", mixedUnavailableEvents("read", { status: "running", input: {} })],
+]) {
+  test(`known-unavailable mixed prefix keeps no-callback library behavior for ${name}`, async (t) => {
+    // Library compatibility only. The production CLI always supplies Muse.
+    const { promise, calls } = await invokeFailure(fixture(t), { events });
+    const receipt = await promise;
+    assert.deepEqual(calls.map(({ attempt }) => attempt), [1, 2]);
+    assert.equal(receipt.recovery_reason, "unavailable_review_tool");
+    assert.equal(Object.hasOwn(receipt, "accepted_invocation"), false);
+  });
+}
+
+// ETA-51A-SOURCE-001: actual supervisor/child transport, not canonical Muse law.
+/** Run a locally authored child that emits the supplied strict tail before a mock full recovery. */
+function strictTailCLI(t, events) {
+  const directory = fixture(t);
+  const child = path.join(directory, "tail-transport-child.mjs");
+  const runner = fileURLToPath(new URL("./run-opencode-review-recovery.mjs", import.meta.url));
+  fs.writeFileSync(child, `#!${process.execPath}
+import fs from "node:fs";
+import path from "node:path";
+const directory = process.env.REVIEW_EVIDENCE_DIR;
+const counter = path.join(directory, "child-count.txt");
+const attempt = fs.existsSync(counter) ? Number(fs.readFileSync(counter, "utf8")) + 1 : 1;
+fs.writeFileSync(counter, String(attempt));
+fs.appendFileSync(path.join(directory, "child-pids.txt"), String(process.pid) + "\\n");
+if (attempt === 1) {
+  for (const event of ${JSON.stringify(events)}) console.log(JSON.stringify(event));
+  console.error("! permission requested: doom_loop (invalid); auto-rejecting");
+  process.exitCode = 1;
+} else {
+  fs.writeFileSync(path.join(directory, "submission.json"), JSON.stringify({
+    schema: "open-hax.github-review/v1", event: "APPROVE", summary: "TRANSPORT_MOCK_ONLY", comments: [] }));
+  process.stdout.write(${JSON.stringify(transportResponse({ sessionID: "ses_recovery" }).toString())});
+}
+`);
+  fs.chmodSync(child, 0o755);
+  const prompt = path.join(directory, "prompt.md");
+  fs.writeFileSync(prompt, "Review all current input #{{PR_NUMBER}}.\n");
+  const invocation = stageTransportVerifier(directory, { reviewTools: prefixRegistry });
+  const result = spawnSync(process.execPath, [runner], {
+    encoding: "utf8", timeout: 10_000,
+    env: { ...process.env, OPENCODE_BIN: child, REVIEW_EVIDENCE_DIR: directory,
+      REVIEW_PROMPT_FILE: prompt, REVIEW_MODEL: "synthetic/fixture", ...invocation.env, PR_NUMBER: "345" },
+  });
+  const receipt = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8"));
+  const children = Number(fs.readFileSync(path.join(directory, "child-count.txt"), "utf8"));
+  const pids = fs.readFileSync(path.join(directory, "child-pids.txt"), "utf8").trim().split("\n");
+  t.diagnostic(`tail-only actual CLI observation: ${JSON.stringify({ exit: result.status, children,
+    pids, recoveryReason: receipt.recovery_reason, firstVerdict: receipt.attempts[0].canonical_verdict,
+    firstResponseSha256: receipt.attempts[0].response_sha256 })}`);
+  return { directory, invocation, result, receipt, children, pids };
+}
+
+for (const [name, change] of [
+  ["negative timestamp", (events) => { events[0].timestamp = -1; }],
+  ["backwards tool timestamp", (events) => { events[1].timestamp = 0; }],
+  ["backwards terminal timestamp", (events) => { events[2].timestamp = 1; }],
+  ["duplicate part ID", (events) => { events[1].part.id = events[0].part.id; }],
+  ["blank part ID", (events) => { events[0].part.id = " \t "; }],
+  ["missing part ID", (events) => { delete events[0].part.id; }],
+  ["nonstring part ID", (events) => { events[0].part.id = 42; }],
+  ["whitespace call ID", (events) => { events[0].part.callID = " \t "; }],
+]) {
+  test(`strict tail-only actual CLI refuses ${name} before a second child`, (t) => {
+    const events = failureEvents(); change(events);
+    const { directory, invocation, result, receipt, children, pids } = strictTailCLI(t, events);
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /attempt 1 exited 1/);
+    assert.equal(children, 1);
+    assert.equal(pids.length, 1);
+    assert.equal(receipt.max_attempts, 2);
+    assert.equal(receipt.recovery_reason, null);
+    assert.equal(receipt.accepted_invocation, null);
+    assert.equal(receipt.attempts.length, 1);
+    assert.equal(receipt.attempts[0].exit_code, 1);
+    assert.equal(receipt.attempts[0].verification_state, "returned");
+    assert.equal(receipt.attempts[0].canonical_verdict.reason, "unestablished-review-trace");
+    assert.equal(receipt.attempts[0].canonical_verdict.fixtureAuthority, "TRANSPORT_MOCK_ONLY");
+    const firstResponse = events.map((event) => JSON.stringify(event)).join("\n") + "\n";
+    assert.equal(fs.readFileSync(path.join(directory, "model-response-attempt-1.txt"), "utf8"), firstResponse);
+    assert.equal(receipt.attempts[0].response_sha256, transportSha256(firstResponse));
+    assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
+    assert.equal(fs.existsSync(path.join(directory, "submission.json")), false);
+    assert.equal(fs.readFileSync(invocation.output, "utf8"), "");
+  });
+}
+
+for (const prefix of [false, true]) {
+  test(`strict tail-only actual CLI retains one fresh child for healthy ${prefix ? "read/assessment prefix" : "clean tail"}`, (t) => {
+    const events = prefix ? registeredUnavailableEvents().slice(1) : failureEvents();
+    if (prefix) {
+      for (const event of events) event.timestamp += 2;
+      events.unshift(...["review_read_diff_chunk", "review_assess_diff_chunk"].map((tool, i) => ({
+        type: "tool_use", timestamp: i + 1, sessionID: "ses_fixture",
+        part: { type: "tool", id: `part_healthy_${i}`, callID: `call_healthy_${i}`,
+          sessionID: "ses_fixture", tool, state: { status: "completed", input: {},
+            output: JSON.stringify({ "ok?": true, fixtureAuthority: "TRANSPORT_MOCK_ONLY" }) } },
+      })));
+    }
+    const { directory, invocation, result, receipt, children, pids } = strictTailCLI(t, events);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(children, 2);
+    assert.equal(pids.length, 2);
+    assert.equal(new Set(pids).size, 2);
+    assert.equal(receipt.max_attempts, 2);
+    assert.equal(receipt.recovery_reason, "unavailable_review_tool");
+    assert.deepEqual(receipt.attempts.map(({ exit_code }) => exit_code), [1, 0]);
+    assert.equal(receipt.attempts[0].canonical_verdict.reason, "unestablished-review-trace");
+    assert.deepEqual(receipt.attempts[0].tool_failure.call_ids, ["call_1", "call_2"]);
+    assert.equal(receipt.accepted_invocation.attempt, 2);
+    assert.equal(receipt.accepted_invocation.session_id, "ses_recovery");
+    assert.equal(fs.readFileSync(invocation.output, "utf8"),
+      `review_invocation_sha256=${transportSha256(JSON.stringify(receipt.accepted_invocation))}\n`);
+    assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-3.txt")), false);
+  });
+}

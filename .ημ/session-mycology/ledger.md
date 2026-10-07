@@ -597,3 +597,93 @@
   spore: none
   receipt-refs: eta342-all-native-rejection-test-source-20261006T1534Z/new-source-receipt.edn
   note: Read the whole completed review before publishing a pending test successor. Include all genuine rejection gaps in one publication, retain each prior passing/failing observation literally, and qualify the new native head independently. No spore or promotion.
+
+- ts: "2026-10-07T05:06:22.736Z"
+  origin: Canonical invocation custody and failed-prefix receiving repair
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: eta-prefix-guard-parent-integration-20261007T0447Z/new-source-receipt.edn
+  note: The retry exception must establish the complete prefix before trusting a known tail; canonical Muse owns semantic verdicts. Exercise the actual compiled producer-to-publisher boundary without granting fixture output native agreement. Attribute parent-authored task requirements honestly, retain actual native protection facts, and preserve all original failures and historical bytes. No spore or promotion.
+
+- ts: "2026-10-07T06:03:11.638Z"
+  origin: Current native docstring dependency and warning obligations
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: eta345-docstring-parent-integration-20261007T0536Z/new-source-receipt.edn
+  note: Declare dependencies at the actual resolver boundary and exercise tests without hidden global lookup. Use UTF-8 and owned writable mount paths for the isolated compiler; retain failed harness preparations. Preserve every original finding and failed native attempt, and require fresh successor native coverage and CI. No spore or promotion.
+
+- ts: "2026-10-07T06:58:22.650Z"
+  origin: Append-only receipt-reference correction for Eta345 native root4203725552
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T06:58:22.650Z, 2026-10-07T05:06:22.736Z, 2026-10-07T06:03:11.638Z
+  note: Append-only reference correction for historical reflection entries 2026-10-07T05:06:22.736Z and 2026-10-07T06:03:11.638Z: eta-prefix-guard-parent-integration-20261007T0447Z/new-source-receipt.edn maps to in-repository receipts.edn :ts "2026-10-07T05:06:22.736Z" (captured line262); eta345-docstring-parent-integration-20261007T0536Z/new-source-receipt.edn maps to in-repository receipts.edn :ts "2026-10-07T06:03:11.638Z" (captured line263). This additive association addresses captured CodeRabbit root4203725552, threadPRRT_kwDORu27H86px_tZ, review5438413683 at exact heade8c336697f7c1a2244255b28c9c2a966c695034d. Original reflection fields, notes and entire receipt/reflection prefixes remain unchanged. Readers must consider this later correction with the original entries; no automatic path dereference or rewrite is claimed. The capture shows the finding unresolved; native acceptance/settlement remains parent-owned and unestablished. No spore or promotion. Environment custody regression and full178 selector pass on the exact three-file candidate; failed e8 host-tool-schema trace remains rejected and receives no native credit. The prepared registry controls are local evidence only. Fresh successor full native qualification remains required.
+
+- ts: "2026-10-07T08:31:33.377Z"
+  origin: Eta strict tail-only unavailable-tool transport validation
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T08:31:33.377Z
+  note: A bounded retry still needs valid transport evidence when there is no earlier call prefix. Apply existing checks uniformly, retain malformed negative controls and both healthy recovery paths, and preserve canonical authority. Distinguish source gaps from unrelated failed model traces; local transport mocks and passing tests do not confer native review credit. Preserve every historical receipt and reflection byte. No spore or promotion.
+
+- ts: "2026-10-07T10:20:01.720Z"
+  origin: Scoped HOST evidence reads and declared Rheos local dependencies
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T10:20:01.720Z
+  note: Preserve failed native evidence and original strict prompt suffixes. Use exact-file read continuation and scoped grep; do not infer the specific native overflow cause from a source counterexample. Consume canonical dependency declarations and record actual transitive resolution rather than claiming every version stayed unchanged. Baseline/candidate original execution precedes publication; append corrections while old histories stay byteexact. No spore or promotion.
+
+- ts: "2026-10-07T11:25:23.864Z"
+  origin: Explicit Chat UI manifest and retained failed native tool trace
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T11:25:23.864Z
+  note: Make package metadata explicit without claiming a reproduced namespace defect. Preserve complete failed HOST evidence and every old source/history byte; supporting prompt guidance does not prove future model compliance. Local original suites and current hosted deterministic execution remain separate from full native review admission. Append corrections only; no spore or promotion.
+
+- ts: "2026-10-07T12:59:36.946Z"
+  origin: Review-host tool descriptions and bounded publication budget
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T12:59:36.946Z
+  note: Tool descriptions guide usage without granting permissions or replacing strict admission. A longer finite job budget addresses the observed cutoff but cannot cure earlier failed HOST operations. Keep failed native evidence literal; qualify new source independently. Preserve all historical bytes through appended corrections. No spore or promotion.
+
+- ts: "2026-10-07T13:53:40.339Z"
+  origin: Actual appended receipt attribution correction and verified metadata parity
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T13:53:40.339Z
+  note: A flat Foresight envelope omitted Eta's required repository field. Validate actual new records against both real consumers before append. Preserve every old byte and distinguish a valid appended attribution correction from historical row repair; all57 original reader failures remain. The independently verified197-test parity candidate is local preparation, with no hosted review or approval credit. No spore or promotion.
+
+- ts: "2026-10-07T15:29:43.813Z"
+  origin: Verified bounded final-submit JSON transport recovery source
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T15:29:43.813Z
+  note: Preserve failed traces and separate retry eligibility from review acceptance. Reuse canonical admission over the derived incomplete history, then qualify a fresh whole process. Keep original prompt suffix and original test bytes exact. Final235 tests and21 local canonical controls pass; original38 controls retain two genuine failures. No hosted approval or source adoption; no historical edits, spore or promotion.
+
+- ts: "2026-10-07T17:00:20.815Z"
+  origin: Bounded final input-page assessment recovery source
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T17:00:20.815Z
+  note: Keep failed native outcome literal; separate retry eligibility from review acceptance. Original235 tests preserved, candidate282 pass, same final47 old45PASS2FAIL and candidate47PASS, unchanged source-built C136 composition24PASS. SharedMAX2, healthy review deduplication and final guards unchanged. No source adoption, native agreement, historical edits or skill promotion.
