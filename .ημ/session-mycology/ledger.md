@@ -669,3 +669,12 @@
   spore: none
   receipt-refs: 2026-10-07T13:53:40.339Z
   note: A flat Foresight envelope omitted Eta's required repository field. Validate actual new records against both real consumers before append. Preserve every old byte and distinguish a valid appended attribution correction from historical row repair; all57 original reader failures remain. The independently verified197-test parity candidate is local preparation, with no hosted review or approval credit. No spore or promotion.
+
+- ts: "2026-10-07T15:29:43.813Z"
+  origin: Verified bounded final-submit JSON transport recovery source
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T15:29:43.813Z
+  note: Preserve failed traces and separate retry eligibility from review acceptance. Reuse canonical admission over the derived incomplete history, then qualify a fresh whole process. Keep original prompt suffix and original test bytes exact. Final235 tests and21 local canonical controls pass; original38 controls retain two genuine failures. No hosted approval or source adoption; no historical edits, spore or promotion.

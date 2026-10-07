@@ -328,3 +328,31 @@ When working on this repo:
 3. Keep status labels consistent with actual task progress.
 4. Mention or link the synced issue/PR relationship when opening fixes.
 5. Preserve auditability: receipts, PR descriptions, and comments should explain what changed and why.
+
+
+### One fresh process after the known final submit-JSON transport diagnostic
+
+The trusted supervisor may consume its sole remaining attempt when the stopped
+first process exits zero, writes no submission, and emits exactly one final
+completed `invalid` tool event requesting the exposed `review_submit` name with
+the retained unterminated-string JSON parsing diagnostic. This is transport
+failure before an actual review-submit executor call; it grants no same-process
+repair or acceptance. Unknown diagnostics, actual failed review calls, later or
+multiple invalid calls, malformed HOST history and changed evidence remain
+terminal. The recorded failure alone is not retry authority.
+
+The original whole trace and its canonical `unavailable-host-tool` refusal stay
+unchanged. A separately retained DERIVED projection omits only that recognized
+raw event line, keeping every other byte and the actual terminal stop. The same
+unchanged Muse callback must return exactly `missing-review-submit` /
+`healthy-unfinished-review`, with no violations or accepted invocation, before
+the caller may start one fresh process over the complete unchanged input.
+Projection custody records hashes and the omitted line; it is retry-eligibility
+evidence, never an accepted review, stage/coverage proof or native approval.
+
+The second whole invocation still needs the unchanged canonical verifier and
+all SOURCE, HOST, LAST, five-stage, input, submission and final publication
+guards. All recovery causes share MAX2; a second failure cannot start a third
+process. No tool alias, executor, permissions, metadata, credential or token
+ordering changes are made. Local tests prepare source; fresh native
+qualification and parent publication remain separate.

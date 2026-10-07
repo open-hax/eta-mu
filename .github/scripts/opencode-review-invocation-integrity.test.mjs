@@ -716,3 +716,184 @@ or reassessment to erase its failed history. This is the only recovery attempt.
   assert.equal(metadata.max_attempts, 2);
   assert.equal(metadata.accepted_invocation, undefined);
 });
+
+// Final submit-JSON controls exercise the actual CLI with local child processes.
+// The injected callback is a transport spy, never a replacement for Muse law.
+/** Create a native-shaped, locally authored final invalid-submit stream. */
+function submitJsonEvents() {
+  const sessionID = "ses_json_first";
+  const event = (type, timestamp, part) => ({ type, timestamp, sessionID,
+    part: { id: `json_part_${timestamp}`, sessionID, ...part } });
+  const error = 'Invalid input for tool review_submit: JSON parsing failed: Text: {"summary":"broken\nError message: JSON Parse error: Unterminated string';
+  return [event("step_start", 1, { type: "step-start" }),
+    event("tool_use", 2, { type: "tool", tool: "review_begin", callID: "json_begin", state: {
+      status: "completed", input: {}, output: '{"ok?":true}' } }),
+    event("tool_use", 3, { type: "tool", tool: "invalid", callID: "json_invalid", state: {
+      status: "completed", input: { tool: "review_submit", error },
+      output: `The arguments provided to the tool are invalid: ${error}`, metadata: { truncated: false } } }),
+    event("step_finish", 4, { type: "step-finish", reason: "tool-calls" }),
+    event("text", 5, { type: "text", text: "Stopped; host alone controls any fresh process." }),
+    event("step_finish", 6, { type: "step-finish", reason: "stop" })];
+}
+
+/** Stage inspected local transport children and a byte-exact callback spy. */
+function submitJsonCli(t, { mutate, original = { ...refused("unestablished-review-trace"), code: "unavailable-host-tool" },
+  projected = { ...refused("missing-review-submit"), code: "healthy-unfinished-review" },
+  mode = "", present = false, secondFailure = false, healthy = false, exitCode = 0,
+  registry = ["review_begin", "review_submit"], raw, collision } = {}) {
+  const directory = fixture(t), events = submitJsonEvents();
+  mutate?.(events);
+  const lines = events.map((event) => JSON.stringify(event) + "\r\n");
+  const first = raw ?? Buffer.from("\r\n" + lines.join("") + "\r\n");
+  // Expected projection is fixture DATA, not a semantic validator.
+  const projection = Buffer.from("\r\n" + lines.filter((_, index) => index !== 2).join("") + "\r\n");
+  const second = Buffer.from('local complete second transport fixture\n');
+  for (const [name, bytes] of [["first.ndjson", first], ["projection.expected", projection], ["second.ndjson", second]])
+    fs.writeFileSync(path.join(directory, name), bytes);
+  const passing = accepted(); passing.sessionID = "ses_json_second";
+  passing.acceptedInvocation.sessionID = passing.sessionID;
+  if (collision) fs.writeFileSync(path.join(directory, collision), "retained collision sentinel");
+  const plan = { original, projected, passing, mode, present, secondFailure, healthy, exitCode };
+  fs.writeFileSync(path.join(directory, "plan.json"), JSON.stringify(plan));
+  const child = path.join(directory, "json-child.mjs"), verifier = path.join(directory, "json-verifier.cjs");
+  fs.writeFileSync(child, `#!${process.execPath}
+import fs from 'node:fs'; import path from 'node:path';
+const dir=process.env.REVIEW_EVIDENCE_DIR, plan=JSON.parse(fs.readFileSync(path.join(dir,'plan.json')));
+if(process.env.GITHUB_OUTPUT!==undefined) throw Error('trusted output leaked to child');
+const ledger=path.join(dir,'children.ndjson');
+const attempt=fs.existsSync(ledger)?fs.readFileSync(ledger,'utf8').trim().split('\\n').length+1:1;
+fs.appendFileSync(ledger,JSON.stringify({attempt,pid:process.pid,prompt:process.argv.at(-1)})+'\\n');
+const first=attempt===1;
+if((!first&&!plan.secondFailure)||plan.present||plan.healthy) fs.writeFileSync(path.join(dir,'submission.json'),${JSON.stringify(submission.toString())});
+process.stdout.write(fs.readFileSync(path.join(dir,first||plan.secondFailure?'first.ndjson':'second.ndjson')));
+process.exitCode=first?plan.exitCode:0;
+`);
+  fs.chmodSync(child, 0o755);
+  fs.writeFileSync(verifier, `// TRANSPORT SPY ONLY: all review semantics remain canonical Muse.
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+exports.prepareReviewInvocationContext=(full,manifest,tools,file)=>{
+ assert.ok(Buffer.isBuffer(full));assert.ok(Buffer.isBuffer(manifest));
+ fs.appendFileSync(path.join(path.dirname(file),'prepare.ndjson'),'prepare\\n');
+ return {reviewTools:tools,submissionFile:file};
+};
+exports.verifyReviewInvocation=(response,body,ctx)=>{
+ const dir=path.dirname(ctx.submissionFile),plan=JSON.parse(fs.readFileSync(path.join(dir,'plan.json')));
+ const count=fs.readFileSync(path.join(dir,'children.ndjson'),'utf8').trim().split('\\n').length;
+ const first=fs.readFileSync(path.join(dir,'first.ndjson')),projected=fs.readFileSync(path.join(dir,'projection.expected'));
+ let kind;
+ if(count===2&&!plan.secondFailure){assert.deepEqual(response,fs.readFileSync(path.join(dir,'second.ndjson')));kind='second';}
+ else if(response.equals(first))kind='original';
+ else {assert.deepEqual(response,projected);assert.equal(body,null);kind='projection';}
+ fs.appendFileSync(path.join(dir,'checks.ndjson'),JSON.stringify({kind,bodyNull:body===null})+'\\n');
+ if(kind==='projection'){
+  if(plan.mode==='throw')throw Error('projection callback fault');
+  if(plan.mode==='response')fs.appendFileSync(path.join(dir,'model-response-attempt-1.txt'),' ');
+  if(plan.mode==='stderr')fs.appendFileSync(path.join(dir,'opencode-stderr-attempt-1.log'),' ');
+  if(plan.mode==='projection')fs.appendFileSync(path.join(dir,'review-submit-json-attempt-1.DERIVED.ndjson'),' ');
+  if(plan.mode==='omitted')fs.appendFileSync(path.join(dir,'review-submit-json-attempt-1.OMITTED.ndjson'),' ');
+  if(plan.mode==='buffer')response[0]=32;
+  if(plan.mode==='context')ctx.reviewTools.push('unexpected');
+  if(plan.mode==='submission')fs.writeFileSync(ctx.submissionFile,'{}');
+  return plan.projected;
+ }
+ return kind==='second'||plan.healthy?plan.passing:plan.original;
+};
+`);
+  const prompt = path.join(directory, "prompt.md"), output = path.join(directory, "trusted-output");
+  fs.writeFileSync(prompt, "Review complete unchanged input #{{PR_NUMBER}}.\n");
+  fs.writeFileSync(path.join(directory, "basehead.diff"), "owned transport fixture\n");
+  fs.writeFileSync(path.join(directory, "input-manifest.json"), "{}\n");
+  const tools = path.join(directory, "tools.txt"); fs.writeFileSync(tools, registry.join("\n"));
+  const result = spawnSync(process.execPath, [runner], { encoding: "utf8", timeout: 10_000,
+    env: { ...process.env, PR_NUMBER: "345", REVIEW_PROMPT_FILE: prompt, REVIEW_EVIDENCE_DIR: directory,
+      REVIEW_INVOCATION_VERIFIER_FILE: verifier, REVIEW_TOOL_REGISTRY_FILE: tools,
+      GITHUB_OUTPUT: output, OPENCODE_BIN: child, REVIEW_MODEL: "local/transport-fixture" } });
+  assert.equal(result.signal, null, result.stderr);
+  const metadata = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json")));
+  const children = fs.readFileSync(path.join(directory, "children.ndjson"), "utf8").trim().split("\n").map(JSON.parse);
+  const checks = fs.readFileSync(path.join(directory, "checks.ndjson"), "utf8").trim().split("\n").map(JSON.parse);
+  return { directory, output, result, metadata, children, checks, first, projection };
+}
+
+test("submit JSON transport: one stopped invalid event admits only the fresh whole second child", (t) => {
+  const c = submitJsonCli(t);
+  assert.equal(c.result.status, 0, c.result.stderr);
+  assert.deepEqual(c.children.map(({ attempt }) => attempt), [1, 2]);
+  assert.equal(new Set(c.children.map(({ pid }) => pid)).size, 2);
+  assert.deepEqual(c.checks.map(({ kind }) => kind), ["original", "projection", "second"]);
+  assert.equal(fs.readFileSync(path.join(c.directory, "prepare.ndjson"), "utf8"), "prepare\n");
+  assert.equal(c.metadata.recovery_reason, "review_submit_json_transport");
+  const first = c.metadata.attempts[0], proof = first.submit_json_transport;
+  assert.equal(first.canonical_verdict.code, "unavailable-host-tool");
+  assert.equal(first.canonical_verdict.acceptedInvocation, null);
+  assert.equal(first.submission_sha256, null);
+  assert.equal(proof.tier, "DERIVED_RETRY_ELIGIBILITY_ONLY");
+  assert.equal(proof.accepted_review, false);
+  assert.equal(proof.canonical_verdict.code, "healthy-unfinished-review");
+  assert.deepEqual(fs.readFileSync(path.join(c.directory, first.response_file)), c.first);
+  assert.deepEqual(fs.readFileSync(path.join(c.directory, proof.projection_file)), c.projection);
+  assert.equal(proof.projection_sha256, sha256(c.projection));
+  assert.equal(c.metadata.accepted_invocation.attempt, 2);
+  assert.equal(fs.readFileSync(c.output, "utf8"), `review_invocation_sha256=${sha256(JSON.stringify(c.metadata.accepted_invocation))}\n`);
+});
+
+for (const [name, options] of [
+  ["wrong requested tool", { mutate: (e) => { e[2].part.state.input.tool = "review_status"; } }],
+  ["unknown diagnostic", { mutate: (e) => { e[2].part.state.input.error = "unknown failure"; } }],
+  ["different JSON error", { mutate: (e) => { e[2].part.state.input.error = e[2].part.state.input.error.replace("Unterminated string", "Unexpected token"); } }],
+  ["mismatched diagnostic output", { mutate: (e) => { e[2].part.state.output = "different output"; } }],
+  ["parseable diagnostic Text", { mutate: (e) => { const input = e[2].part.state.input; input.error = 'Invalid input for tool review_submit: JSON parsing failed: Text: {"summary":"valid"}\nError message: JSON Parse error: Unterminated string'; e[2].part.state.output = `The arguments provided to the tool are invalid: ${input.error}`; } }],
+  ["projection conflicting kinds", { projected: { ...refused("missing-review-submit"), code: "healthy-unfinished-review", reasonKind: "unknown" } }],
+  ["projection false accepted binding", { projected: { ...refused("missing-review-submit"), code: "healthy-unfinished-review", acceptedInvocation: accepted().acceptedInvocation } }],
+  ["projection wrong code", { projected: { ...refused("missing-review-submit"), code: "unknown" } }],
+  ...["review-submit-json-attempt-1.DERIVED.ndjson", "review-submit-json-attempt-1.OMITTED.ndjson"].map((collision) => [`pre-existing ${collision}`, { collision }]),
+  ["false invalid lifecycle", { mutate: (e) => { e[2].part.state.error = "failed"; } }],
+  ["clipped diagnostic", { mutate: (e) => { e[2].part.state.metadata.truncated = true; } }],
+  ["multiple invalid events", { mutate: (e) => { e.splice(2, 0, structuredClone(e[2])); } }],
+  ["later tool call", { mutate: (e) => { e.splice(4, 0, structuredClone(e[1])); } }],
+  ["actual submit call", { mutate: (e) => { e[1].part.tool = "review_submit"; } }],
+  ["absent submit registry", { registry: ["review_begin"] }],
+  ["present submission", { present: true }],
+  ["nonzero child exit", { exitCode: 1 }],
+  ["malformed raw event", { raw: Buffer.from('{broken\n'), original: { ...refused("unestablished-review-trace"), code: "host-decode" } }],
+  ["out of order events", { mutate: (e) => { e[2].timestamp = 0; }, original: { ...refused("unestablished-review-trace"), code: "host-event-time-order" } }],
+  ["mixed session", { mutate: (e) => { e[2].sessionID = "other"; }, original: { ...refused("unestablished-review-trace"), code: "host-event-schema" } }],
+  ["duplicate call identity", { mutate: (e) => { e[2].part.callID = e[1].part.callID; }, original: { ...refused("unestablished-review-trace"), code: "host-call-cardinality" } }],
+  ["previous failed review result", { mutate: (e) => { e[1].part.state.output = '{"ok?":false,"error":"failed"}'; }, projected: refused("unestablished-review-trace") }],
+  ["previous failed HOST lifecycle", { mutate: (e) => { e[1].part.tool = "read"; e[1].part.state.status = "error"; }, original: { ...refused("unestablished-review-trace"), code: "host-tool-schema" } }],
+  ["projection callback throw", { mode: "throw" }],
+  ["projection passing contradiction", { projected: accepted() }],
+  ["projection wrong refusal", { projected: refused("stale-review-coverage") }],
+  ["projection violation", { projected: { ...refused("missing-review-submit"), code: "healthy-unfinished-review", violations: [{}] } }],
+  ...["response", "stderr", "projection", "omitted", "buffer", "context", "submission"].map((mode) => [`mutated ${mode} custody`, { mode }]),
+]) {
+  test(`submit JSON transport: ${name} grants no second child`, (t) => {
+    const c = submitJsonCli(t, options);
+    assert.equal(c.result.status, 1, c.result.stdout);
+    assert.equal(c.children.length, 1);
+    assert.equal(c.metadata.accepted_invocation, null);
+    assert.equal(c.metadata.recovery_reason, null);
+    assert.equal(fs.existsSync(c.output), false);
+    assert.equal(fs.existsSync(path.join(c.directory, "model-response-attempt-2.txt")), false);
+    if (options.collision) assert.equal(fs.readFileSync(path.join(c.directory, options.collision), "utf8"), "retained collision sentinel");
+  });
+}
+
+test("submit JSON transport: second failure stops without a third process", (t) => {
+  const c = submitJsonCli(t, { secondFailure: true });
+  assert.equal(c.result.status, 1);
+  assert.equal(c.children.length, 2);
+  assert.deepEqual(c.checks.map(({ kind }) => kind), ["original", "projection", "original"]);
+  assert.equal(c.metadata.accepted_invocation, null);
+  assert.equal(fs.existsSync(path.join(c.directory, "model-response-attempt-3.txt")), false);
+  assert.equal(fs.existsSync(c.output), false);
+});
+
+test("submit JSON transport: healthy accepted review is not duplicated", (t) => {
+  const c = submitJsonCli(t, { healthy: true });
+  assert.equal(c.result.status, 0, c.result.stderr);
+  assert.equal(c.children.length, 1);
+  assert.equal(c.metadata.recovery_reason, null);
+  assert.equal(c.metadata.attempts[0].submit_json_transport, undefined);
+  assert.equal(c.metadata.accepted_invocation.attempt, 1);
+});

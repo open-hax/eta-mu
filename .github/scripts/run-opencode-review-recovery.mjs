@@ -114,10 +114,95 @@ function unavailableReviewTool(responseFile, stderrFile, reviewTools, exposedToo
   }
 }
 
+/**
+ * Retain one known final submit-JSON transport projection for retry eligibility.
+ * The original whole-trace refusal stays authoritative and is never accepted.
+ * All review semantics, including prefix validity, remain the Muse callback's.
+ */
+async function submitJsonTransport({ metadata, metadataFile, responseFile, stderrFile,
+  submissionFile, reviewTools, verifyReviewInvocation, expectedContext, contextSha256 }) {
+  const record = metadata.attempts.at(-1);
+  const original = record.canonical_verdict;
+  if (original.ok !== false || original.reason !== "unestablished-review-trace" ||
+      original.code !== "unavailable-host-tool" || original.violations.length !== 0 ||
+      !reviewTools.includes("review_submit") || !Array.isArray(expectedContext.reviewTools) ||
+      !expectedContext.reviewTools.includes("review_submit")) return null;
+  const response = fs.readFileSync(responseFile);
+  let lines, events, omitted;
+  try {
+    // Keep every other raw line and ending, including the actual final stop.
+    lines = new TextDecoder("utf-8", { fatal: true }).decode(response).match(/[^\n]*\n|[^\n]+$/g) ?? [];
+    if (!Buffer.from(lines.join("")).equals(response)) return null;
+    events = lines.map((line, index) => line.trim() ? { event: JSON.parse(line), index } : null).filter(Boolean);
+    const calls = events.filter(({ event }) => event.type === "tool_use");
+    const invalid = calls.filter(({ event }) => event.part?.tool === "invalid");
+    if (invalid.length !== 1 || invalid[0] !== calls.at(-1) ||
+        calls.some(({ event }) => event.part?.tool === "review_submit")) return null;
+    const { event, index } = invalid[0];
+    const part = event.part, state = part.state, input = state?.input;
+    const prefix = "Invalid input for tool review_submit: JSON parsing failed: Text: ";
+    const suffix = "\nError message: JSON Parse error: Unterminated string";
+    if (part.type !== "tool" || state?.status !== "completed" ||
+        (state.error != null && state.error !== false) || input?.tool !== "review_submit" ||
+        Object.keys(input).sort().join(",") !== "error,tool" || typeof input.error !== "string" ||
+        !input.error.startsWith(prefix) || !input.error.endsWith(suffix) ||
+        state.output !== `The arguments provided to the tool are invalid: ${input.error}` ||
+        state.metadata?.truncated !== false) return null;
+    const text = input.error.slice(prefix.length, -suffix.length);
+    if (!text) return null;
+    try { JSON.parse(text); return null; } catch { /* Actual malformed transport DATA only. */ }
+    omitted = index;
+  } catch { return null; }
+  const projection = Buffer.from(lines.filter((_, index) => index !== omitted).join(""));
+  const omittedBytes = Buffer.from(lines[omitted]);
+  const directory = path.dirname(responseFile);
+  const projectionFile = path.join(directory, "review-submit-json-attempt-1.DERIVED.ndjson");
+  const omittedFile = path.join(directory, "review-submit-json-attempt-1.OMITTED.ndjson");
+  const proof = { tier: "DERIVED_RETRY_ELIGIBILITY_ONLY", accepted_review: false,
+    original_response_sha256: record.response_sha256,
+    projection_file: path.basename(projectionFile), projection_sha256: sha256(projection),
+    omitted_file: path.basename(omittedFile), omitted_sha256: sha256(omittedBytes),
+    omitted_line: omitted + 1, tool: "review_submit",
+    call_id: events.find(({ index }) => index === omitted).event.part.callID };
+  record.submit_json_transport = proof;
+  /** Recheck the original and derived custody; no callback may change evidence. */
+  const unchanged = () => {
+    if (sha256(response) !== record.response_sha256 ||
+        sha256(fs.readFileSync(responseFile)) !== record.response_sha256 ||
+        sha256(fs.readFileSync(stderrFile)) !== record.stderr_sha256 || fs.existsSync(submissionFile) ||
+        sha256(JSON.stringify(expectedContext)) !== contextSha256 ||
+        sha256(projection) !== proof.projection_sha256 ||
+        sha256(fs.readFileSync(projectionFile)) !== proof.projection_sha256 ||
+        sha256(fs.readFileSync(omittedFile)) !== proof.omitted_sha256) {
+      throw new Error("submit JSON transport evidence changed during verification");
+    }
+  };
+  try {
+    fs.writeFileSync(projectionFile, projection, { flag: "wx" });
+    fs.writeFileSync(omittedFile, omittedBytes, { flag: "wx" });
+    unchanged();
+    const verdict = verifierEnvelope(await verifyReviewInvocation(projection, null, expectedContext));
+    proof.canonical_verdict = verdict;
+    unchanged();
+    proof.verification_state = "returned";
+    writeRecovery(metadataFile, metadata);
+    if (verdict.ok !== false || verdict.reason !== "missing-review-submit" ||
+        verdict.code !== "healthy-unfinished-review" || verdict.violations.length !== 0) return null;
+    return proof;
+  } catch (error) {
+    proof.verification_state = "rejected";
+    proof.verification_error = error instanceof Error ? error.message : String(error);
+    writeRecovery(metadataFile, metadata);
+    throw error;
+  }
+}
+
 /** Append the sole corrective-attempt instructions to the original review prompt. */
-function correctivePrompt(basePrompt, toolFailure, staleCoverage = false) {
+function correctivePrompt(basePrompt, toolFailure, staleCoverage = false, submitJsonFailure = false) {
   const cause = toolFailure
     ? `the first model invocation failed without a review after repeatedly calling the unavailable tool ${toolFailure.tool}. Use the actual exposed name ${toolFailure.corrected_tool}; do not call the unavailable spelling again.`
+    : submitJsonFailure
+      ? "the first stopped process produced the known final review_submit JSON transport diagnostic without an actual submit or artifact. Its whole trace remains refused; the retained derived projection establishes retry eligibility only. In this fresh process, pass well-formed JSON arguments to the exposed review_submit tool."
     : staleCoverage
       ? "the canonical host-trace verifier established stale review coverage in the first completed invocation. Its assessment history cannot be repaired. Perform one fresh bounded model invocation over the whole unchanged input; finish all reads before assessing each page."
     : "the first completed model invocation omitted the required review_submit artifact.";
@@ -163,6 +248,17 @@ Supporting-file HOST read contract for this restricted reviewer:
   and no accepted review.
 - These instructions preserve every immutable full-diff page, assessment,
   stage, finding, source, submission, permission and verification guard.
+Caller-only final submit-JSON transport exception:
+A completed invalid-tool diagnostic for the already exposed review_submit name
+is transport before an actual review tool call. STOP without any further calls
+or submission. The failure alone is not retry authority. Only the caller may
+admit one fresh process when its narrowly typed JSON-transport policy and the
+unchanged canonical callback establish eligibility. The whole failed trace
+remains refused; any separately retained derived projection is retry evidence
+only, never an accepted review. All failed actual review calls, unknown HOST
+failures, strict input/chronology guards and the existing two-attempt bound stay
+unchanged. The fresh process must complete the whole review anew.
+
 Strict invocation instructions override any earlier retry or repair instructions:
 Every review tool call must succeed. If ANY review tool call fails, including
 review_begin, any stage call, or review_submit, stop the current invocation
@@ -294,6 +390,8 @@ function recordAttempt({
  * A supplied canonical Muse callback is mandatory for accepting a present
  * artifact. Its unambiguous stale or established omission verdict can consume
  * the existing sole recovery, alongside the original unavailable-tool path.
+ * The known final submit-JSON transport path additionally requires a retained
+ * derived projection's exact healthy-omission refusal from that same callback.
  * Omitting the callback preserves the historical library contract for legacy
  * fixtures only; the CLI always requires the staged canonical implementation.
  * Live-head and changed-line publication validation remain separate.
@@ -340,6 +438,7 @@ export async function runReviewRecovery({
   }
 
   let prompt = strict ? strictInvocationPrompt(basePrompt) : basePrompt;
+  const contextSha256 = strict ? sha256(JSON.stringify(expectedContext)) : null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     const responseFile = path.join(evidenceDirectory, `model-response-attempt-${attempt}.txt`);
     const stderrFile = path.join(evidenceDirectory, `opencode-stderr-attempt-${attempt}.log`);
@@ -383,6 +482,9 @@ export async function runReviewRecovery({
       : null;
     const verdict = strict ? await verifyAttempt({ metadata, metadataFile, responseFile, stderrFile,
       submissionFile, verifyReviewInvocation, expectedContext }) : null;
+    const submitJsonFailure = strict && attempt === 1 && result?.exitCode === 0 && state === "missing"
+      ? await submitJsonTransport({ metadata, metadataFile, responseFile, stderrFile, submissionFile,
+        reviewTools, verifyReviewInvocation, expectedContext, contextSha256 }) : null;
     if (result?.exitCode !== 0 && !toolFailure) {
       throw new Error(`OpenCode review attempt ${attempt} exited ${result?.exitCode ?? "without a code"}`);
     }
@@ -409,7 +511,7 @@ export async function runReviewRecovery({
     }
     const staleCoverage = strict && verdict.ok === false && verdict.reason === "stale-review-coverage" && result?.exitCode === 0;
     const omittedSubmission = strict && verdict.ok === false && verdict.reason === "missing-review-submit" && state === "missing" && result?.exitCode === 0;
-    if (strict && !toolFailure && !staleCoverage && !omittedSubmission) {
+    if (strict && !toolFailure && !staleCoverage && !omittedSubmission && !submitJsonFailure) {
       throw new Error(`review invocation verification failed after attempt ${attempt}: ${verdict.reason ?? "submission-not-established"}`);
     }
     if (attempt === MAX_ATTEMPTS) {
@@ -419,13 +521,13 @@ export async function runReviewRecovery({
       throw new Error(`reviewer omitted review_submit after ${MAX_ATTEMPTS} attempts`);
     }
 
-    metadata.recovery_reason = toolFailure ? "unavailable_review_tool" : staleCoverage ? "stale-review-coverage" : "missing_review_submit";
+    metadata.recovery_reason = toolFailure ? "unavailable_review_tool" : submitJsonFailure ? "review_submit_json_transport" : staleCoverage ? "stale-review-coverage" : "missing_review_submit";
     if (toolFailure) metadata.attempts.at(-1).tool_failure = toolFailure;
     writeRecovery(metadataFile, metadata);
     if (staleCoverage && state === "present") {
       retainStaleSubmission({ metadata, metadataFile, submissionFile, evidenceDirectory });
     }
-    prompt = correctivePrompt(basePrompt, toolFailure, staleCoverage);
+    prompt = correctivePrompt(basePrompt, toolFailure, staleCoverage, submitJsonFailure);
     if (strict) prompt = strictInvocationPrompt(prompt);
   }
 
