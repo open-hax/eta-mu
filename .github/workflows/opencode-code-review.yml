@@ -25,6 +25,11 @@ on:
         required: false
         type: string
         default: "22"
+      review_timeout_minutes:
+        description: Review-job budget in minutes. Only 45 (default) or an explicit 120 for large complete inputs is supported.
+        required: false
+        type: number
+        default: 45
       muse_revision:
         description: Pinned octave-commons/muse commit used to compile the review observer projection.
         required: false
@@ -1001,7 +1006,7 @@ jobs:
     needs: [deterministic_evidence, prepare_review_context]
     if: ${{ always() && needs.deterministic_evidence.result == 'success' && needs.prepare_review_context.result == 'success' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: ${{ inputs.review_timeout_minutes == 120 && 120 || 45 }}
     outputs:
       expected_sha: ${{ steps.review_completion.outputs.expected_sha }}
       executed_sha: ${{ steps.review_completion.outputs.executed_sha }}
@@ -1014,6 +1019,22 @@ jobs:
       contents: read
       pull-requests: read
     steps:
+      - name: Validate review job budget
+        shell: bash
+        env:
+          REVIEW_TIMEOUT_CONFIGURED: ${{ contains(toJSON(inputs), '"review_timeout_minutes"') }}
+          REVIEW_TIMEOUT_MINUTES: ${{ inputs.review_timeout_minutes }}
+        run: |
+          set -euo pipefail
+          if [[ "$REVIEW_TIMEOUT_CONFIGURED" == false ]]; then
+            echo "Review job budget: 45 minutes"
+          elif [[ "$REVIEW_TIMEOUT_MINUTES" == 45 || "$REVIEW_TIMEOUT_MINUTES" == 120 ]]; then
+            echo "Review job budget: $REVIEW_TIMEOUT_MINUTES minutes"
+          else
+            echo "::error::review_timeout_minutes must be 45 or 120" >&2
+            exit 1
+          fi
+
       - name: Checkout pull request
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:

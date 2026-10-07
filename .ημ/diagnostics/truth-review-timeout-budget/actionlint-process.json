@@ -1,0 +1,15 @@
+{
+  "command": [
+    "strace",
+    "-f",
+    "-e",
+    "trace=process,wait4",
+    "-o",
+    ".\u03b7\u03bc/diagnostics/truth-review-timeout-budget/actionlint-process.trace",
+    "actionlint",
+    ".github/workflows/opencode-code-review.yml"
+  ],
+  "exit": "timeout3/terminated-owned-group",
+  "stdout_bytes": 0,
+  "stderr_bytes": 0
+}

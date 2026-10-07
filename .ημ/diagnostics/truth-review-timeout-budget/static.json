@@ -1,0 +1,28 @@
+[
+  {
+    "name": "syntax",
+    "command": [
+      "/home/err/.volta/tools/image/node/22.20.0/bin/node",
+      "--check",
+      ".github/scripts/opencode-code-review-workflow.test.mjs"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "actionlint",
+    "command": [
+      "actionlint",
+      ".github/workflows/opencode-code-review.yml"
+    ],
+    "exit": -15
+  },
+  {
+    "name": "whitespace",
+    "command": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "exit": 0
+  }
+]

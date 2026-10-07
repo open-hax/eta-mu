@@ -1,0 +1,9 @@
+{
+  "exit": "timeout15",
+  "command": [
+    "actionlint",
+    ".github/workflows/opencode-code-review.yml"
+  ],
+  "stdin": "DEVNULL",
+  "elapsed_s": 15.020591405002051
+}

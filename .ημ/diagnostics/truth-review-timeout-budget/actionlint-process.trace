@@ -1,0 +1,301 @@
+3819504 execve("/home/err/go/bin/actionlint", ["actionlint", ".github/workflows/opencode-code-"...], 0x7ffeca006250 /* 102 vars */) = 0
+3819504 clone(child_stack=0xc000034000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc00004e090) = 3819505
+3819504 clone(child_stack=0xc00006a000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc00004e890) = 3819506
+3819504 clone(child_stack=0xc000066000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc00004f090) = 3819507
+3819504 clone(child_stack=0xc000096000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc000080090) = 3819508
+3819507 waitid(P_PIDFD, 12, 0xc00009e8b0, WEXITED, NULL) = -1 ECHILD (No child processes)
+3819507 pidfd_send_signal(12, 0, NULL, 0) = 0
+3819507 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK <unfinished ...>
+3819514 exit_group(0)                   = ?
+3819507 <... clone resumed>, parent_tid=[13]) = 3819514
+3819514 +++ exited with 0 +++
+3819507 waitid(P_PIDFD, 13, {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819514, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED|__WCLONE, NULL) = 0
+3819507 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819504 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819515 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000386008 /* 102 vars */ <unfinished ...>
+3819516 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000145c08 /* 102 vars */ <unfinished ...>
+3819504 <... clone resumed>, parent_tid=[20]) = 3819516
+3819507 <... clone resumed>, parent_tid=[17]) = 3819515
+3819516 <... execve resumed>)           = 0
+3819515 <... execve resumed>)           = 0
+3819504 waitid(P_PIDFD, 20,  <unfinished ...>
+3819507 waitid(P_PIDFD, 17,  <unfinished ...>
+3819508 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819506 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819524 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000320008 /* 102 vars */ <unfinished ...>
+3819523 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000386388 /* 102 vars */ <unfinished ...>
+3819506 <... clone resumed>, parent_tid=[26]) = 3819524
+3819508 <... clone resumed>, parent_tid=[25]) = 3819523
+3819524 <... execve resumed>)           = 0
+3819523 <... execve resumed>)           = 0
+3819506 waitid(P_PIDFD, 26,  <unfinished ...>
+3819508 waitid(P_PIDFD, 25,  <unfinished ...>
+3819505 clone(child_stack=0xc0003aa000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc00004f890) = 3819525
+3819505 clone(child_stack=0xc0003a6000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc000081090) = 3819526
+3819526 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819525 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819528 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000386708 /* 102 vars */ <unfinished ...>
+3819527 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000320388 /* 102 vars */ <unfinished ...>
+3819526 <... clone resumed>, parent_tid=[31]) = 3819527
+3819525 <... clone resumed>, parent_tid=[32]) = 3819528
+3819528 <... execve resumed>)           = 0
+3819527 <... execve resumed>)           = 0
+3819526 waitid(P_PIDFD, 31,  <unfinished ...>
+3819525 waitid(P_PIDFD, 32,  <unfinished ...>
+3819505 clone(child_stack=0xc0003c8000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc0003b6090) = 3819530
+3819505 clone(child_stack=0xc0003c4000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc000081890) = 3819531
+3819530 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819531 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819534 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000320708 /* 102 vars */ <unfinished ...>
+3819533 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000386a88 /* 102 vars */ <unfinished ...>
+3819530 <... clone resumed>, parent_tid=[35]) = 3819533
+3819534 <... execve resumed>)           = 0
+3819533 <... execve resumed>)           = 0
+3819531 <... clone resumed>, parent_tid=[38]) = 3819534
+3819516 exit_group(0)                   = ?
+3819530 waitid(P_PIDFD, 35,  <unfinished ...>
+3819531 waitid(P_PIDFD, 38,  <unfinished ...>
+3819505 clone(child_stack=0xc0003ea000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS <unfinished ...>
+3819516 +++ exited with 0 +++
+3819504 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819516, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=6531}, ru_stime={tv_sec=0, tv_usec=3265}, ...}) = 0
+3819504 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819516, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+3819515 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819505 <... clone resumed>, tls=0xc0003b6890) = 3819536
+3819524 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819523 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819505 clone(child_stack=0xc0003e6000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc000360090) = 3819547
+3819528 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819515 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819536 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819527 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819547 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819524 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819523 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819505 tgkill(3819504, 3819536, SIGURG) = 0
+3819505 tgkill(3819504, 3819547, SIGURG) = 0
+3819528 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819527 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819515 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819549 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000386e08 /* 102 vars */ <unfinished ...>
+3819536 <... clone resumed>, parent_tid=[40]) = 3819549
+3819550 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000320a88 /* 102 vars */ <unfinished ...>
+3819536 --- SIGURG {si_signo=SIGURG, si_code=SI_TKILL, si_pid=3819504, si_uid=1000} ---
+3819549 <... execve resumed>)           = 0
+3819547 <... clone resumed>, parent_tid=[43]) = 3819550
+3819550 <... execve resumed>)           = 0
+3819547 --- SIGURG {si_signo=SIGURG, si_code=SI_TKILL, si_pid=3819504, si_uid=1000} ---
+3819536 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819524 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819547 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819515 exit_group(0)                   = ?
+3819523 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819557 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000387188 /* 102 vars */ <unfinished ...>
+3819515 +++ exited with 0 +++
+3819507 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819515, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=11025}, ru_stime={tv_sec=0, tv_usec=4410}, ...}) = 0
+3819505 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819515, si_uid=1000, si_status=0, si_utime=1 /* 0.01 s */, si_stime=0} ---
+3819558 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000320e08 /* 102 vars */ <unfinished ...>
+3819547 <... clone resumed>, parent_tid=[59]) = 3819558
+3819536 <... clone resumed>, parent_tid=[56]) = 3819557
+3819558 <... execve resumed>)           = 0
+3819557 <... execve resumed>)           = 0
+3819536 waitid(P_PIDFD, 56,  <unfinished ...>
+3819547 waitid(P_PIDFD, 59,  <unfinished ...>
+3819505 clone(child_stack=0xc000418000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc0003b7090) = 3819559
+3819505 clone(child_stack=0xc000414000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc000360890) = 3819560
+3819528 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819527 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819534 exit_group(0)                   = ?
+3819533 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819534 +++ exited with 0 +++
+3819559 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819534, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+3819531 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819534, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=4007}, ru_stime={tv_sec=0, tv_usec=5009}, ...}) = 0
+3819531 waitid(P_PIDFD, 43,  <unfinished ...>
+3819524 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819523 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819559 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819549 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819561 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000321188 /* 102 vars */ <unfinished ...>
+3819550 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819559 <... clone resumed>, parent_tid=[28]) = 3819561
+3819561 <... execve resumed>)           = 0
+3819559 waitid(P_PIDFD, 28,  <unfinished ...>
+3819558 exit_group(0)                   = ?
+3819524 exit_group(0)                   = ?
+3819507 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819558 +++ exited with 0 +++
+3819547 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819558, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=2617}, ru_stime={tv_sec=0, tv_usec=3926}, ...}) = 0
+3819547 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819558, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+3819528 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819524 +++ exited with 0 +++
+3819506 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819524, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=23171}, ru_stime={tv_sec=0, tv_usec=4413}, ...}) = 0
+3819560 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819524, si_uid=1000, si_status=0, si_utime=2 /* 0.02 s */, si_stime=0} ---
+3819557 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819527 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819550 exit_group(0)                   = ?
+3819550 +++ exited with 0 +++
+3819531 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819550, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=5504}, ru_stime={tv_sec=0, tv_usec=7339}, ...}) = 0
+3819505 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819550, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+3819533 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819504 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819564 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000387508 /* 102 vars */ <unfinished ...>
+3819504 <... clone resumed>, parent_tid=[66]) = 3819564
+3819564 <... execve resumed>)           = 0
+3819504 waitid(P_PIDFD, 66,  <unfinished ...>
+3819531 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819565 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000387888 /* 102 vars */ <unfinished ...>
+3819523 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819531 <... clone resumed>, parent_tid=[69]) = 3819565
+3819565 <... execve resumed>)           = 0
+3819531 waitid(P_PIDFD, 69,  <unfinished ...>
+3819562 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000321508 /* 102 vars */ <unfinished ...>
+3819506 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819507 <... clone resumed>, parent_tid=[36]) = 3819562
+3819562 <... execve resumed>)           = 0
+3819549 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819572 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000387c08 /* 102 vars */ <unfinished ...>
+3819506 <... clone resumed>, parent_tid=[72]) = 3819572
+3819572 <... execve resumed>)           = 0
+3819561 exit_group(0 <unfinished ...>
+3819507 waitid(P_PIDFD, 36,  <unfinished ...>
+3819506 waitid(P_PIDFD, 72,  <unfinished ...>
+3819561 <... exit_group resumed>)       = ?
+3819547 waitid(P_PIDFD, 40,  <unfinished ...>
+3819505 clone(child_stack=0xc000448000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS <unfinished ...>
+3819561 +++ exited with 0 +++
+3819559 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819561, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=4347}, ru_stime={tv_sec=0, tv_usec=5434}, ...}) = 0
+3819505 <... clone resumed>, tls=0xc000361090) = 3819573
+3819560 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819561, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+3819528 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819557 exit_group(0)                   = ?
+3819560 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819527 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819573 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819557 +++ exited with 0 +++
+3819536 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819557, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=14890}, ru_stime={tv_sec=0, tv_usec=3722}, ...}) = 0
+3819536 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819557, si_uid=1000, si_status=0, si_utime=1 /* 0.01 s */, si_stime=0} ---
+3819574 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc0004a6008 /* 102 vars */ <unfinished ...>
+3819575 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000321888 /* 102 vars */ <unfinished ...>
+3819573 <... clone resumed>, parent_tid=[57]) = 3819575
+3819560 <... clone resumed>, parent_tid=[37]) = 3819574
+3819575 <... execve resumed>)           = 0
+3819574 <... execve resumed>)           = 0
+3819533 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819560 waitid(P_PIDFD, 37,  <unfinished ...>
+3819573 waitid(P_PIDFD, 57,  <unfinished ...>
+3819559 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819536 clone(child_stack=NULL, flags=CLONE_VM|CLONE_PIDFD|CLONE_VFORK|SIGCHLD <unfinished ...>
+3819577 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc0004a6388 /* 102 vars */ <unfinished ...>
+3819576 execve("/usr/bin/shellcheck", ["/usr/bin/shellcheck", "--norc", "-f", "json", "-x", "--shell", "bash", "-e", "SC1091,SC2194,SC2050,SC2153,SC21"..., "-"], 0xc000321c08 /* 102 vars */ <unfinished ...>
+3819536 <... clone resumed>, parent_tid=[38]) = 3819577
+3819559 <... clone resumed>, parent_tid=[29]) = 3819576
+3819577 <... execve resumed>)           = 0
+3819576 <... execve resumed>)           = 0
+3819536 waitid(P_PIDFD, 38,  <unfinished ...>
+3819559 waitid(P_PIDFD, 29,  <unfinished ...>
+3819505 clone(child_stack=0xc000444000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc0003b7890) = 3819578
+3819505 clone(child_stack=0xc000470000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc000361890) = 3819579
+3819523 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819564 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819549 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819528 exit_group(0)                   = ?
+3819565 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819528 +++ exited with 0 +++
+3819578 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819528, si_uid=1000, si_status=0, si_utime=3 /* 0.03 s */, si_stime=0} ---
+3819525 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819528, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=33904}, ru_stime={tv_sec=0, tv_usec=5983}, ...}) = 0
+3819575 exit_group(0)                   = ?
+3819575 +++ exited with 0 +++
+3819562 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819573 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819575, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=2402}, ru_stime={tv_sec=0, tv_usec=3603}, ...}) = 0
+3819525 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819575, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+3819527 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819572 exit_group(0)                   = ?
+3819533 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819572 +++ exited with 0 +++
+3819573 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819572, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+3819506 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819572, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=5614}, ru_stime={tv_sec=0, tv_usec=3743}, ...}) = 0
+3819574 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819523 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819576 exit_group(0)                   = ?
+3819576 +++ exited with 0 +++
+3819559 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819576, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=1141}, ru_stime={tv_sec=0, tv_usec=5708}, ...}) = 0
+3819559 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819576, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+3819527 exit_group(0)                   = ?
+3819527 +++ exited with 0 +++
+3819573 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819527, si_uid=1000, si_status=0, si_utime=3 /* 0.03 s */, si_stime=0} ---
+3819526 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819527, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=35203}, ru_stime={tv_sec=0, tv_usec=7247}, ...}) = 0
+3819574 exit_group(0)                   = ?
+3819564 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819577 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819549 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819533 exit_group(0)                   = ?
+3819574 +++ exited with 0 +++
+3819573 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819574, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+3819560 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819574, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=8971}, ru_stime={tv_sec=0, tv_usec=2563}, ...}) = 0
+3819565 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819533 +++ exited with 0 +++
+3819573 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819533, si_uid=1000, si_status=0, si_utime=3 /* 0.03 s */, si_stime=0} ---
+3819530 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819533, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=33895}, ru_stime={tv_sec=0, tv_usec=6355}, ...}) = 0
+3819523 exit_group(0 <unfinished ...>
+3819562 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819523 <... exit_group resumed>)       = ?
+3819523 +++ exited with 0 +++
+3819508 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819523, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=44774}, ru_stime={tv_sec=0, tv_usec=4070}, ...}) = 0
+3819508 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819523, si_uid=1000, si_status=0, si_utime=4 /* 0.04 s */, si_stime=0} ---
+3819577 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819549 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819564 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819565 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819564 exit_group(0)                   = ?
+3819562 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819564 +++ exited with 0 +++
+3819573 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819564, si_uid=1000, si_status=0, si_utime=2 /* 0.02 s */, si_stime=0} ---
+3819504 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819564, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=17950}, ru_stime={tv_sec=0, tv_usec=7180}, ...}) = 0
+3819577 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819549 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819565 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819562 exit_group(0)                   = ?
+3819562 +++ exited with 0 +++
+3819507 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819562, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=25342}, ru_stime={tv_sec=0, tv_usec=5509}, ...}) = 0
+3819507 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819562, si_uid=1000, si_status=0, si_utime=2 /* 0.02 s */, si_stime=0} ---
+3819577 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819549 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819565 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819577 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819549 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819565 exit_group(0)                   = ?
+3819577 exit_group(0)                   = ?
+3819577 +++ exited with 0 +++
+3819565 +++ exited with 0 +++
+3819508 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819577, si_uid=1000, si_status=0, si_utime=3 /* 0.03 s */, si_stime=0} ---
+3819536 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819577, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=32661}, ru_stime={tv_sec=0, tv_usec=9185}, ...}) = 0
+3819531 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819565, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=35393}, ru_stime={tv_sec=0, tv_usec=5739}, ...}) = 0
+3819536 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819565, si_uid=1000, si_status=0, si_utime=3 /* 0.03 s */, si_stime=0} ---
+3819549 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819549 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819549 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819549 --- SIGVTALRM {si_signo=SIGVTALRM, si_code=SI_TIMER, si_timerid=0, si_overrun=0, si_int=0, si_ptr=NULL} ---
+3819549 exit_group(0)                   = ?
+3819549 +++ exited with 0 +++
+3819547 <... waitid resumed>{si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819549, si_uid=1000, si_status=0, si_utime=0, si_stime=0}, WEXITED, {ru_utime={tv_sec=0, tv_usec=87423}, ru_stime={tv_sec=0, tv_usec=16077}, ...}) = 0
+3819536 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3819549, si_uid=1000, si_status=0, si_utime=8 /* 0.08 s */, si_stime=1 /* 0.01 s */} ---
+3819504 --- SIGTERM {si_signo=SIGTERM, si_code=SI_USER, si_pid=3819499, si_uid=1000} ---
+3819504 tgkill(3819504, 3819504, SIGTERM) = 0
+3819504 --- SIGTERM {si_signo=SIGTERM, si_code=SI_TKILL, si_pid=3819504, si_uid=1000} ---
+3819504 tgkill(3819504, 3819504, SIGTERM) = 0
+3819504 --- SIGTERM {si_signo=SIGTERM, si_code=SI_TKILL, si_pid=3819504, si_uid=1000} ---
+3819573 +++ killed by SIGTERM +++
+3819559 +++ killed by SIGTERM +++
+3819547 +++ killed by SIGTERM +++
+3819536 +++ killed by SIGTERM +++
+3819531 +++ killed by SIGTERM +++
+3819530 +++ killed by SIGTERM +++
+3819526 +++ killed by SIGTERM +++
+3819525 +++ killed by SIGTERM +++
+3819508 +++ killed by SIGTERM +++
+3819507 +++ killed by SIGTERM +++
+3819506 +++ killed by SIGTERM +++
+3819505 +++ killed by SIGTERM +++
+3819579 +++ killed by SIGTERM +++
+3819578 +++ killed by SIGTERM +++
+3819560 +++ killed by SIGTERM +++
+3819504 +++ killed by SIGTERM +++

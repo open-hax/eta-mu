@@ -1,7 +1,7 @@
 ---
 category: "tasks"
 labels: ["tasks", "github", "opencode", "review", "automation"]
-write-id: "1791372336897-0.nfwf4qyjllo43xi00u"
+write-id: "1791372876937-0.ubst073l9u9r66h6co"
 points: "5"
 source: "operator request 2026-07-27"
 title: "Build an evidence-first OpenCode GitHub review agent using MiMo V2.5 Free"
@@ -90,5 +90,7 @@ force the bounded reviewer through inline config, and complete the deterministic
 environment.
 
 2026-10-07 scoped hygiene under the existing InProgress 5-point review-runtime owner: Truth PR54 at aa1fd95be217f21056160327fe695104e945331b, run37605835577/job112741288496, exhausted the actual 45-minute review-job limit after 401 of 807 immutable diff chunks were assessed; it published no review. Implement a bounded workflow_call review_timeout_minutes option with unchanged default45 and explicit120 only; reject unsupported values before model invocation. Preserve the full verified input, final submission/coverage gates, free model, embedded recovery runner/MAX_ATTEMPTS2 and every other job deadline. Add actual parsed-YAML/admission tests for absent/default45/explicit45/120 and invalid inputs, plus existing workflow/recovery regression gates and static checks. The explicit120 option is a prospective large-evidence budget experiment (roughly90 minutes assessment plus finalization inferred from the failed run), not a proven completion/approval, new retry, source omission or caller activation. Local scope is approximately3 points within this owner. No status/estimate change; root reviews before push, hosted qualification and immutable consumer update remain separate.
+
+2026-10-07 bounded review-job budget local verification: RED e222afbf contains3 expected missing-input/guard failures. GREEN exact workflow SHA2566e0dc6e0bd6b3606e84695a398d87ea82beb07f4afa66cbe6af859af26d52a00 passes77/77 existing workflow/recovery tests with Node22.20.0 and existing yaml2.8.3. Parsed-YAML reversal preserves all prior workflow content except the new input/first admission guard/review timeout; original tests and recovery runner bytes are exact. Syntax/whitespace pass. Standard actionlint stalled on its inherited pre-start stdin transport; failed runs are retained. Existing isolated actionlint1.7.11 transport repair passes all standard rules and ShellCheck without filters;97 official Go files compared, only process.go stdin transport differs. Independent source review found no blocker. No provider/native/JVM run, push, review request, caller activation or status transition.120 remains a prospective budget experiment requiring actual complete hosted qualification; diagnostic proof lives at .ημ/diagnostics/truth-review-timeout-budget.
 
 ---

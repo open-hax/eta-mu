@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-07T11:29:29.711792+00:00",
+  "owned_pid": 3801736,
+  "action": "SIGTERM after no output for over60seconds",
+  "identity_checked": [
+    "exe",
+    "cwd",
+    "cmdline"
+  ],
+  "reason": "Bound stalled static check; no pass inferred"
+}
