@@ -2238,3 +2238,30 @@ test("bounded review budget keeps publication App mint after validated revision-
   assert.equal(publish.with["github-token"], "${{ steps.eta_mu_publish_token.outputs.token }}");
   assert.equal(publish.env.REVIEW_SUBMISSION_FILE, "${{ steps.final_review_input.outputs.submission_file }}");
 });
+
+// Babashka is the declared test runtime; use its EDN reader and bundled JSON renderer.
+function renderReviewHostMetadataFromEdn() {
+  const rendered = spawnSync("bb", ["-e", `
+    (require '[clojure.edn :as edn] '[cheshire.core :as json])
+    (let [metadata (edn/read-string (slurp (first *command-line-args*)))]
+      (assert (and (map? metadata)
+                   (every? string? (keys metadata))
+                   (every? string? (vals metadata))))
+      (print (json/generate-string metadata)))
+  `, path.join(root, ".github/review-host-tool-metadata.edn")], {
+    cwd: root, encoding: "utf8", timeout: 10000,
+  });
+  assert.ifError(rendered.error);
+  assert.equal(rendered.status, 0, rendered.stderr);
+  assert.equal(rendered.stderr, "");
+  return JSON.parse(rendered.stdout);
+}
+
+test("embedded review metadata JSON matches canonical tracked EDN rendering", () => {
+  const assembly = namedStep("prepare_review_context", "Assemble revision-bound review context");
+  const embedded = assembly.run.match(
+    /<<'ETA_MU_REVIEW_HOST_METADATA_JSON'\n([\s\S]*?)\nETA_MU_REVIEW_HOST_METADATA_JSON/,
+  );
+  assert.ok(embedded, "review context must carry the rendered metadata JSON");
+  assert.deepEqual(JSON.parse(embedded[1]), renderReviewHostMetadataFromEdn());
+});

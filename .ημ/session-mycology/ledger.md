@@ -660,3 +660,12 @@
   spore: none
   receipt-refs: 2026-10-07T12:59:36.946Z
   note: Tool descriptions guide usage without granting permissions or replacing strict admission. A longer finite job budget addresses the observed cutoff but cannot cure earlier failed HOST operations. Keep failed native evidence literal; qualify new source independently. Preserve all historical bytes through appended corrections. No spore or promotion.
+
+- ts: "2026-10-07T13:53:40.339Z"
+  origin: Actual appended receipt attribution correction and verified metadata parity
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T13:53:40.339Z
+  note: A flat Foresight envelope omitted Eta's required repository field. Validate actual new records against both real consumers before append. Preserve every old byte and distinguish a valid appended attribution correction from historical row repair; all57 original reader failures remain. The independently verified197-test parity candidate is local preparation, with no hosted review or approval credit. No spore or promotion.
