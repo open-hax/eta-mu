@@ -1,0 +1,52 @@
+{
+  "started_at": "2026-10-07T02:00:29.413808+00:00",
+  "finished_at": "2026-10-07T02:00:30.239846+00:00",
+  "cwd": "/home/err/spaces/foresight/.worktrees/eta-mu-rheos-todo-replan",
+  "base": "09a4454480baa67f6fdc40f6f73f5e48ef0457d1",
+  "branch": "codex/rheos-todo-replan-plan",
+  "runtime_source": "ab6b227becd8585742b5130df9ae624d8744928e",
+  "runtime_sha256": "83c6b397278d418d69ce6509b8c3d9fe87e88cca9141b28143d9efb5d78a75a7",
+  "body_input_sha256": "b154a89d74b85c5440841c9c086a4a9901cee497059892eb1c9023c813f13226",
+  "argv": [
+    "/home/err/.volta/tools/image/node/22.20.0/bin/node",
+    "/home/err/spaces/review-repair/rheos-comment-rendering/dist/cli.cjs",
+    "create",
+    "--uuid",
+    "rheos-todo-breakdown-replan",
+    "--type",
+    "task",
+    "--parent",
+    "rheos-cli-card-lifecycle-authority",
+    "--title",
+    "Allow Todo to return directly to Breakdown in the promethean preset",
+    "--priority",
+    "P1",
+    "--points",
+    "3",
+    "--labels",
+    "rheos,fsm,lifecycle,planning",
+    "--body-file",
+    "/tmp/rheos-todo-breakdown-replan-body.md",
+    "--config",
+    "openhax.kanban.edn"
+  ],
+  "exit_code": 0,
+  "stdout": "created task rheos-todo-breakdown-replan [incoming] Allow Todo to return directly to Breakdown in the promethean preset\n  /home/err/spaces/foresight/.worktrees/eta-mu-rheos-todo-replan/kanban/tasks/allow-todo-to-return-directly-to-breakdown-in-the-promethean-preset-n-replan.md\n",
+  "stderr": "",
+  "preflight_read_task": {
+    "uuid": "rheos-todo-breakdown-replan",
+    "exit_code": 2,
+    "stderr": "rheos: unknown task: rheos-todo-breakdown-replan\n"
+  },
+  "byte_provenance": {
+    "ledger_before_bytes": 1725349,
+    "ledger_before_sha256": "3a7e813e4c1373de728df75d9a45b5011c4e8f33869a2640ce068d227d0f81ca",
+    "ledger_after_bytes": 1734341,
+    "ledger_after_sha256": "679962e86299f4b01a8791c6d8aed7a6f22e22b3f605b246ff9b3109e40dd55b",
+    "ledger_before_prefix_preserved": true,
+    "added_newline_count": 1,
+    "reflection_before_bytes": 44076,
+    "reflection_before_sha256": "2bd7cee73ac1b11bf1892282749f252651bff46022920462be43071629ef65c6",
+    "legacy_root_receipt_sha256": "1d6d0f9e653b34eede0453308c1bd11e52f4731313f2512ac9919aaaa336900b"
+  }
+}
