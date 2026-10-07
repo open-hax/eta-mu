@@ -136,6 +136,33 @@ or reassessment to erase its failed history. This is the only recovery attempt.
 function strictInvocationPrompt(prompt) {
   return `${prompt.trimEnd()}
 
+
+Supporting-file HOST read contract for this restricted reviewer:
+- Use the host read tool's exact filePath to read summary.json and
+  deterministic.log under .opencode/review-evidence. Start at offset 1 with
+  limit 200. Follow the tool's returned next offset until End of file; a byte
+  cap can return fewer lines than requested. Retain all gate statuses, failure
+  context and environment limits. Line-content clipping is not complete input;
+  do not claim coverage of material you could not retrieve.
+- The pinned host grep path parameter is a directory selector. A file-valued
+  path can search its parent and generated artifacts. Optional grep must use
+  path .opencode/review-evidence with include deterministic.log; use equivalent
+  explicit file inclusion for other searches. Grep supplements, never replaces,
+  the required complete deterministic evidence reading.
+- Never use bash for file inspection, listing, size/count checks or executing
+  commands. Its true-only registration is compatibility, not shell authority.
+  General tool help suggesting Bash or Task does not override this reviewer.
+- If a HOST tool has an actual lifecycle error (status:error or state.error),
+  such as a denied bash operation or a failed read/search, STOP this invocation
+  without further tool calls or submission. Only the caller may admit its
+  existing narrowly typed fresh recovery. A completed invalid-tool transport
+  diagnostic is distinct: it remains governed by the existing unavailable-tool
+  protocol, not a new recovery rule. Do not repeat calls to manufacture a
+  recoverable tail. Failed review_* results and restart-required replies retain
+  their existing STOP protocol. Unknown HOST failures grant no retry authority
+  and no accepted review.
+- These instructions preserve every immutable full-diff page, assessment,
+  stage, finding, source, submission, permission and verification guard.
 Strict invocation instructions override any earlier retry or repair instructions:
 Every review tool call must succeed. If ANY review tool call fails, including
 review_begin, any stage call, or review_submit, stop the current invocation

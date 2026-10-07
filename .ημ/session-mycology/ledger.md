@@ -633,3 +633,12 @@
   spore: none
   receipt-refs: 2026-10-07T08:31:33.377Z
   note: A bounded retry still needs valid transport evidence when there is no earlier call prefix. Apply existing checks uniformly, retain malformed negative controls and both healthy recovery paths, and preserve canonical authority. Distinguish source gaps from unrelated failed model traces; local transport mocks and passing tests do not confer native review credit. Preserve every historical receipt and reflection byte. No spore or promotion.
+
+- ts: "2026-10-07T10:20:01.720Z"
+  origin: Scoped HOST evidence reads and declared Rheos local dependencies
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T10:20:01.720Z
+  note: Preserve failed native evidence and original strict prompt suffixes. Use exact-file read continuation and scoped grep; do not infer the specific native overflow cause from a source counterexample. Consume canonical dependency declarations and record actual transitive resolution rather than claiming every version stayed unchanged. Baseline/candidate original execution precedes publication; append corrections while old histories stay byteexact. No spore or promotion.
