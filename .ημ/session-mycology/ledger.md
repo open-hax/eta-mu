@@ -642,3 +642,12 @@
   spore: none
   receipt-refs: 2026-10-07T10:20:01.720Z
   note: Preserve failed native evidence and original strict prompt suffixes. Use exact-file read continuation and scoped grep; do not infer the specific native overflow cause from a source counterexample. Consume canonical dependency declarations and record actual transitive resolution rather than claiming every version stayed unchanged. Baseline/candidate original execution precedes publication; append corrections while old histories stay byteexact. No spore or promotion.
+
+- ts: "2026-10-07T11:25:23.864Z"
+  origin: Explicit Chat UI manifest and retained failed native tool trace
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T11:25:23.864Z
+  note: Make package metadata explicit without claiming a reproduced namespace defect. Preserve complete failed HOST evidence and every old source/history byte; supporting prompt guidance does not prove future model compliance. Local original suites and current hosted deterministic execution remain separate from full native review admission. Append corrections only; no spore or promotion.
