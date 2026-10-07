@@ -651,3 +651,12 @@
   spore: none
   receipt-refs: 2026-10-07T11:25:23.864Z
   note: Make package metadata explicit without claiming a reproduced namespace defect. Preserve complete failed HOST evidence and every old source/history byte; supporting prompt guidance does not prove future model compliance. Local original suites and current hosted deterministic execution remain separate from full native review admission. Append corrections only; no spore or promotion.
+
+- ts: "2026-10-07T12:59:36.946Z"
+  origin: Review-host tool descriptions and bounded publication budget
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T12:59:36.946Z
+  note: Tool descriptions guide usage without granting permissions or replacing strict admission. A longer finite job budget addresses the observed cutoff but cannot cure earlier failed HOST operations. Keep failed native evidence literal; qualify new source independently. Preserve all historical bytes through appended corrections. No spore or promotion.

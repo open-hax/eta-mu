@@ -2007,3 +2007,234 @@ test("terminal gate fails closed without pull request context", (t) => {
     assert.match(result.stderr, /pull_request_context=missing/);
   }
 });
+
+// Exercise the emitted native adapter, not a second implementation of its hook.
+import { pathToFileURL } from "node:url";
+
+function reviewMetadataFixture(t) {
+  const { directory } = makeRepository(t);
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "review-metadata-"));
+  t.after(() => fs.rmSync(scratch, { recursive: true, force: true }));
+  const runnerTemp = path.join(scratch, "runner-temp");
+  const runnerHome = path.join(scratch, "runner-home");
+  const bin = path.join(scratch, "bin");
+  for (const dir of [runnerTemp, runnerHome, bin]) fs.mkdirSync(dir);
+  const registrySource = namedStep("prepare_review_context",
+    "Compile and verify a read-only Muse review profile").run
+    .match(/const expected = (\[[\s\S]+?\])\.sort\(\);/)[1];
+  const names = [...registrySource.matchAll(/'([^']+)'/g)].map((match) => match[1]).sort();
+  const tools = Object.fromEntries(names.map((name) => [name, {
+    args: { fixture: name }, execute: async () => { throw new Error("executor must not run"); },
+  }]));
+  const otherHook = async () => {};
+  const hooks = { tool: tools, "tool.execute.before": otherHook, fixtureMetadata: { intact: true } };
+  globalThis.__reviewMetadataFixture = { hooks, calls: [] };
+  t.after(() => { delete globalThis.__reviewMetadataFixture; });
+  const plugin = `export async function EtaMuActorsPlugin(input) {
+    const fixture = globalThis.__reviewMetadataFixture;
+    fixture.calls.push(input);
+    if (fixture.error) throw fixture.error;
+    return fixture.hooks;
+  }\n`;
+  for (const [relativePath, content] of [
+    ["muse/.opencode/dist/eta-mu-actors.js", plugin],
+    ["muse/.opencode/dist/review-invocation.cjs", transportVerifierSource],
+    ["muse/.opencode/plugins/eta-mu-actors.js", "// pinned shim fixture\n"],
+    ["muse/.opencode/agents/github-reviewer.md", "reviewer fixture\n"],
+    ["muse/.opencode/opencode.json", JSON.stringify({ permission: { bash: { true: "allow" } } })],
+    ["muse/.opencode/package.json", '{"type":"module"}\n'],
+    ["muse/.opencode/exposed-tools.txt", `${names.join("\n")}\n`],
+    ["muse/.ημ/review/evidence-review.md", "prompt fixture\n"],
+    ["muse/.ημ/review/publish-opencode-review.cjs", "// publisher fixture\n"],
+    ["muse/.ημ/review/publish-opencode-review.test.cjs", "// test fixture\n"],
+    ["agents/skills/work-cycle/SKILL.md", "skill fixture\n"],
+  ]) {
+    const file = path.join(directory, ".review-context", relativePath);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, content);
+  }
+  // Caller config is immutable input even though the disposable global fixture differs.
+  fs.mkdirSync(path.join(directory, ".opencode"));
+  fs.writeFileSync(path.join(directory, ".opencode/caller.txt"), "caller-owned\n");
+  execFileSync("git", ["add", ".opencode/caller.txt"], { cwd: directory });
+  execFileSync("git", ["commit", "-qm", "caller config fixture"], { cwd: directory });
+  const assembly = namedStep("prepare_review_context", "Assemble revision-bound review context");
+  const result = runScript(assembly.run, directory, {
+    RUNNER_TEMP: runnerTemp, MUSE_REVISION: "fixture-muse", AGENTS_REVISION: "fixture-agents",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  fs.rmSync(path.join(directory, ".review-context"), { recursive: true });
+  fs.cpSync(path.join(runnerTemp, "opencode-review-context"), path.join(directory, ".review-context"),
+    { recursive: true });
+  const npmLog = path.join(scratch, "npm.log");
+  // The real install adapter runs; only its existing npm install effect is mocked.
+  fs.writeFileSync(path.join(bin, "npm"), '#!/bin/sh\nprintf "%s\\n" "$@" > "$REVIEW_METADATA_NPM_LOG"\n');
+  fs.chmodSync(path.join(bin, "npm"), 0o755);
+  const install = () => runScript(namedStep("review", "Verify and install the bounded review context").run,
+    directory, { HOME: runnerHome, GITHUB_WORKSPACE: directory, GITHUB_OUTPUT: path.join(scratch, "output"),
+      REVIEW_METADATA_NPM_LOG: npmLog, PATH: `${bin}:${process.env.PATH}` });
+  const wrapper = path.join(runnerHome, ".config/opencode/plugins/eta-mu-actors.js");
+  const data = path.join(directory, ".review-context/machinery/review-host-tool-metadata.json");
+  return { directory, scratch, runnerHome, names, tools, hooks, otherHook, data, wrapper, npmLog, install,
+    load: () => import(pathToFileURL(wrapper).href), state: globalThis.__reviewMetadataFixture };
+}
+
+test("review metadata actual context carries rendered data and copies exact verified bytes", async (t) => {
+  const f = reviewMetadataFixture(t);
+  assert.ok(fs.existsSync(f.data), "rendered metadata must be staged before context checksums");
+  const bytes = fs.readFileSync(f.data);
+  const descriptions = JSON.parse(bytes);
+  assert.deepEqual(Object.keys(descriptions).sort(), ["bash", "glob", "grep", "read"]);
+  assert.ok(Object.values(descriptions).every((description) => typeof description === "string" && description.trim()));
+  const sums = fs.readFileSync(path.join(f.directory, ".review-context/SHA256SUMS"), "utf8");
+  assert.ok(sums.includes(`${createHash("sha256").update(bytes).digest("hex")}  ./machinery/review-host-tool-metadata.json\n`));
+  const installed = f.install();
+  assert.equal(installed.status, 0, installed.stderr);
+  assert.deepEqual(fs.readFileSync(path.join(f.runnerHome, ".eta-mu-review/review-host-tool-metadata.json")), bytes);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(f.runnerHome, ".config/opencode/opencode.json"))),
+    { permission: { bash: { true: "allow" } } });
+  assert.deepEqual(fs.readFileSync(path.join(f.directory, ".opencode/caller.txt")), Buffer.from("caller-owned\n"));
+  assert.deepEqual(fs.readFileSync(f.npmLog, "utf8").trim().split("\n"),
+    ["install", "--prefix", path.join(f.runnerHome, ".eta-mu-review"), "--ignore-scripts", "--no-audit", "--no-fund"]);
+});
+
+test("review metadata actual generated wrapper preserves one plugin and all registry ABI identities", async (t) => {
+  const f = reviewMetadataFixture(t);
+  const result = f.install();
+  assert.equal(result.status, 0, result.stderr);
+  const module = await f.load();
+  assert.deepEqual(Object.keys(module), ["EtaMuActorsPlugin"]);
+  const input = { client: { fixture: true }, directory: f.directory };
+  const hooks = await module.EtaMuActorsPlugin(input);
+  assert.deepEqual(f.state.calls, [input]);
+  assert.equal(f.state.calls[0], input);
+  assert.equal(hooks, f.hooks);
+  assert.equal(hooks.tool, f.tools);
+  assert.deepEqual(Object.keys(hooks.tool).sort(), f.names);
+  assert.equal(f.names.length, 22);
+  for (const name of f.names) {
+    assert.equal(hooks.tool[name], f.tools[name]);
+    assert.equal(hooks.tool[name].args, f.tools[name].args);
+    assert.equal(hooks.tool[name].execute, f.tools[name].execute);
+  }
+  assert.equal(hooks["tool.execute.before"], f.otherHook);
+  assert.equal(hooks.fixtureMetadata, f.hooks.fixtureMetadata);
+  assert.equal(typeof hooks["tool.definition"], "function");
+});
+
+test("review metadata actual hook changes only four descriptions and preserves unknown own-key cases", async (t) => {
+  const f = reviewMetadataFixture(t);
+  assert.equal(f.install().status, 0);
+  const hooks = await (await f.load()).EtaMuActorsPlugin({});
+  assert.equal(typeof hooks["tool.definition"], "function");
+  const descriptions = JSON.parse(fs.readFileSync(f.data));
+  for (const toolID of ["bash", "grep", "read", "glob", ...f.names,
+    "unknown", "constructor", "__proto__", "toString", "hasOwnProperty"]) {
+    const input = { toolID };
+    const parameters = { nativeSchema: true };
+    const jsonSchema = { nativeInternalSchema: true };
+    const extra = { nativeMetadata: true };
+    const output = { description: "original", parameters, jsonSchema, extra };
+    await hooks["tool.definition"](input, output);
+    assert.deepEqual(input, { toolID });
+    assert.equal(output.parameters, parameters);
+    assert.equal(output.jsonSchema, jsonSchema);
+    assert.equal(output.extra, extra);
+    assert.deepEqual(Object.keys(output), ["description", "parameters", "jsonSchema", "extra"]);
+    assert.equal(output.description, Object.hasOwn(descriptions, toolID) ? descriptions[toolID] : "original");
+  }
+});
+
+test("review metadata actual hook awaits the prior hook once with original input and output", async (t) => {
+  const f = reviewMetadataFixture(t);
+  const seen = [];
+  f.hooks["tool.definition"] = async (input, output) => {
+    seen.push([input, output]);
+    await new Promise((resolve) => setImmediate(resolve));
+    output.description = "prior description";
+    output.priorMetadata = input;
+  };
+  assert.equal(f.install().status, 0);
+  const hooks = await (await f.load()).EtaMuActorsPlugin({});
+  for (const toolID of ["read", "unknown"]) {
+    const input = { toolID }; const output = { description: "original", parameters: {} };
+    await hooks["tool.definition"](input, output);
+    assert.equal(seen.at(-1)[0], input);
+    assert.equal(seen.at(-1)[1], output);
+    assert.equal(output.priorMetadata, input);
+    assert.equal(output.description, toolID === "read" ? JSON.parse(fs.readFileSync(f.data)).read : "prior description");
+  }
+  assert.equal(seen.length, 2);
+});
+
+test("review metadata actual hook preserves prior rejection without overriding output", async (t) => {
+  const f = reviewMetadataFixture(t);
+  const error = new Error("prior hook failure");
+  let calls = 0;
+  f.hooks["tool.definition"] = async () => { calls += 1; await Promise.resolve(); throw error; };
+  assert.equal(f.install().status, 0);
+  const hooks = await (await f.load()).EtaMuActorsPlugin({});
+  const output = { description: "original", parameters: {} };
+  await assert.rejects(hooks["tool.definition"]({ toolID: "read" }, output), (actual) => actual === error);
+  assert.equal(calls, 1);
+  assert.equal(output.description, "original");
+});
+
+test("review metadata actual wrapper propagates Muse activation failure once", async (t) => {
+  const f = reviewMetadataFixture(t);
+  const error = new Error("Muse activation failure");
+  f.state.error = error;
+  assert.equal(f.install().status, 0);
+  const module = await f.load();
+  const input = {};
+  await assert.rejects(module.EtaMuActorsPlugin(input), (actual) => actual === error);
+  assert.deepEqual(f.state.calls, [input]);
+});
+
+test("review metadata actual checksum rejects changed data before runtime or plugin copy", (t) => {
+  const f = reviewMetadataFixture(t);
+  assert.ok(fs.existsSync(f.data), "metadata must already be in the authenticated checksum set");
+  fs.appendFileSync(f.data, "\n");
+  const result = f.install();
+  assert.notEqual(result.status, 0);
+  assert.match(result.stdout, /review-host-tool-metadata.json: FAILED/);
+  assert.equal(fs.existsSync(path.join(f.runnerHome, ".eta-mu-review")), false);
+  assert.equal(fs.existsSync(f.wrapper), false);
+  assert.equal(fs.existsSync(f.npmLog), false);
+  assert.equal(fs.readFileSync(path.join(f.directory, ".opencode/caller.txt"), "utf8"), "caller-owned\n");
+});
+
+test("bounded review budget keeps publication App mint after validated revision-bound completion", () => {
+  assert.deepEqual(Object.fromEntries(Object.entries(workflow.jobs).map(([name, job]) =>
+    [name, job["timeout-minutes"]])), {
+    deterministic_evidence: 60, prepare_review_context: 45, review: 60, review_gate: 5,
+  });
+  assert.ok(Number.isInteger(workflow.jobs.review["timeout-minutes"]));
+  assert.ok(workflow.jobs.review["timeout-minutes"] <= 60, "review must retain a finite one-hour cap");
+  const steps = workflow.jobs.review.steps;
+  const beforeMint = [
+    "Run bounded evidence-first OpenCode review",
+    "Reverify full input and bind final submission",
+    "Validate final review submission",
+    "Verify review remained revision-bound",
+  ].map((name) => namedStep("review", name));
+  const token = namedStep("review", "Create eta-mu GitHub App token for review publication");
+  const publish = namedStep("review", "Publish actual GitHub pull request review");
+  const positions = [...beforeMint, token, publish].map((step) => steps.indexOf(step));
+  assert.ok(positions.every((position, index) => index === 0 || position > positions[index - 1]),
+    "publication token must be newly minted after the complete review and every final guard");
+  for (const step of [...beforeMint, token, publish]) {
+    assert.notEqual(step["continue-on-error"], true, `${step.name} cannot bypass failure`);
+  }
+  assert.equal(token.if, undefined, "App mint keeps the default success prerequisite");
+  assert.equal(publish.if, undefined, "publication keeps the default success prerequisite");
+  assert.equal(token.id, "eta_mu_publish_token");
+  assert.match(token.uses, /^actions\/create-github-app-token@[0-9a-f]{40}$/);
+  assert.deepEqual(steps.filter((step) => step.uses?.startsWith("actions/create-github-app-token@"))
+    .map((step) => step.id), ["eta_mu_publish_token"]);
+  assert.equal(token.with["skip-token-revoke"], undefined, "the existing default revocation is retained");
+  assert.equal(token.with["permission-metadata"], "read");
+  assert.equal(token.with["permission-pull-requests"], "write");
+  assert.equal(publish.with["github-token"], "${{ steps.eta_mu_publish_token.outputs.token }}");
+  assert.equal(publish.env.REVIEW_SUBMISSION_FILE, "${{ steps.final_review_input.outputs.submission_file }}");
+});
