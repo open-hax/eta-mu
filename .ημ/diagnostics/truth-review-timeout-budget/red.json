@@ -1,0 +1,12 @@
+{
+  "command": [
+    "/home/err/.volta/tools/image/node/22.20.0/bin/node",
+    "--test",
+    "--test-name-pattern=review budget",
+    ".github/scripts/opencode-code-review-workflow.test.mjs"
+  ],
+  "exit": 1,
+  "node_path": "/home/err/spaces/review-repair/.\u03b7\u03bc/eta345-tail-only-parent-integration-20261007T0820Z/full-selector-corrected-source/node_modules",
+  "test_sha256": "48fda7fce0c77f2c0c6eccde305619ef42d0f1e171b3f0dc12949f2d5894309b",
+  "workflow_sha256": "9408499fed18a2a0ebda79d7d7147c47eff51bdc7dd0bd4a1a1aa975a6dbc5d9"
+}

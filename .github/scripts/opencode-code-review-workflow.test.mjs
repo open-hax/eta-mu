@@ -164,6 +164,48 @@ function runScript(script, cwd, env = {}) {
   });
 }
 
+test("review budget keeps the default and bounds the explicit workflow-call option", () => {
+  const input = workflow.on.workflow_call.inputs.review_timeout_minutes;
+  assert.ok(input, "missing reusable review budget input");
+  assert.equal(input.type, "number");
+  assert.equal(input.required, false);
+  assert.equal(input.default, 45);
+  assert.equal(workflow.jobs.review["timeout-minutes"],
+    "${{ inputs.review_timeout_minutes == 120 && 120 || 45 }}");
+  assert.equal(workflow.jobs.deterministic_evidence["timeout-minutes"], 60);
+  assert.equal(workflow.jobs.prepare_review_context["timeout-minutes"], 45);
+  const guard = namedStep("review", "Validate review job budget");
+  assert.equal(workflow.jobs.review.steps[0], guard);
+  assert.equal(guard.env.REVIEW_TIMEOUT_CONFIGURED,
+    '${{ contains(toJSON(inputs), \'"review_timeout_minutes"\') }}');
+  assert.equal(guard.env.REVIEW_TIMEOUT_MINUTES, "${{ inputs.review_timeout_minutes }}");
+});
+
+test("review budget actual admission accepts direct PR, default, and explicit choices", () => {
+  const guard = namedStep("review", "Validate review job budget");
+  for (const [configured, value, expected] of [
+    ["false", "", 45], ["true", "45", 45], ["true", "120", 120],
+  ]) {
+    const result = runScript(guard.run, root, {
+      REVIEW_TIMEOUT_CONFIGURED: configured, REVIEW_TIMEOUT_MINUTES: value,
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, new RegExp(`Review job budget: ${expected} minutes`));
+  }
+});
+
+test("review budget actual admission rejects unsupported values before checkout or provider", () => {
+  const guard = namedStep("review", "Validate review job budget");
+  for (const value of ["", "0", "-1", "44", "46", "120.5", "121", "720", "NaN", "45\n120"]) {
+    const result = runScript(guard.run, root, {
+      REVIEW_TIMEOUT_CONFIGURED: "true", REVIEW_TIMEOUT_MINUTES: value,
+    });
+    assert.equal(result.status, 1, `unsupported value ${JSON.stringify(value)} was admitted`);
+    assert.match(result.stderr, /review_timeout_minutes must be 45 or 120/);
+    assert.doesNotMatch(result.stdout, /Review job budget:/);
+  }
+});
+
 function parseOutput(file) {
   return Object.fromEntries(
     fs

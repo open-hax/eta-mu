@@ -1,7 +1,7 @@
 ---
 category: "tasks"
 labels: ["tasks", "github", "opencode", "review", "automation"]
-write-id: "1785194140000-0.mimo-review-agent"
+write-id: "1791372336897-0.nfwf4qyjllo43xi00u"
 points: "5"
 source: "operator request 2026-07-27"
 title: "Build an evidence-first OpenCode GitHub review agent using MiMo V2.5 Free"
@@ -88,3 +88,7 @@ ignored its `agent` input and fell back to the mutable built-in `build` agent. C
 `574f37f`, `fc40dd1`, and `e9146d4` preserve the full context, remove the false API-key gate,
 force the bounded reviewer through inline config, and complete the deterministic Clojure/build
 environment.
+
+2026-10-07 scoped hygiene under the existing InProgress 5-point review-runtime owner: Truth PR54 at aa1fd95be217f21056160327fe695104e945331b, run37605835577/job112741288496, exhausted the actual 45-minute review-job limit after 401 of 807 immutable diff chunks were assessed; it published no review. Implement a bounded workflow_call review_timeout_minutes option with unchanged default45 and explicit120 only; reject unsupported values before model invocation. Preserve the full verified input, final submission/coverage gates, free model, embedded recovery runner/MAX_ATTEMPTS2 and every other job deadline. Add actual parsed-YAML/admission tests for absent/default45/explicit45/120 and invalid inputs, plus existing workflow/recovery regression gates and static checks. The explicit120 option is a prospective large-evidence budget experiment (roughly90 minutes assessment plus finalization inferred from the failed run), not a proven completion/approval, new retry, source omission or caller activation. Local scope is approximately3 points within this owner. No status/estimate change; root reviews before push, hosted qualification and immutable consumer update remain separate.
+
+---
