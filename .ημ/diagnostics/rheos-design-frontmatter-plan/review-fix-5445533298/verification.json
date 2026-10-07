@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-07T17:03:35.358182+00:00",
+  "canonical_prefix_preserved_bytes": 327742,
+  "canonical_prefix_sha256": "1d6d0f9e653b34eede0453308c1bd11e52f4731313f2512ac9919aaaa336900b",
+  "appended_bytes": 1901,
+  "appended_record_sha256": "5a49e836a442ff4265750f310253dbcbd32a1854b5f5cf03224b8fccf6a65129",
+  "archive_byte_exact": true,
+  "alternate_active_ledger_absent": true,
+  "canonical_validate_last_one": "receipts valid: 1 event; exit0",
+  "schema_note": "Package-owned envelope includes required :repo; root ledger historical records not rewritten or revalidated as newly authored records.",
+  "diff_check": "PASS",
+  "production_and_card": "No changes in this correction; original planning scope retained."
+}
