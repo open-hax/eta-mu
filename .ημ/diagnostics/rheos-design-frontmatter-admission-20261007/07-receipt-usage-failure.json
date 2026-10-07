@@ -1,0 +1,6 @@
+{
+  "at": "2026-10-07T18:15:35.297572+00:00",
+  "exit": 1,
+  "stdout": "Usage: eta-mu receipt append <kind> <note>",
+  "attempt": "unsupported flag syntax; no receipt written"
+}

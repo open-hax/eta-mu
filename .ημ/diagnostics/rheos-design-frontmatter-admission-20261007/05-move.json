@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-07T18:10:50.120181+00:00",
+  "argv": [
+    "/home/err/.volta/tools/image/node/22.20.0/bin/node",
+    "/home/err/spaces/review-repair/rheos-comment-rendering/dist/cli.cjs",
+    "move",
+    "rheos-design-frontmatter-key",
+    "--to",
+    "in_progress",
+    "--config",
+    "openhax.kanban.edn"
+  ],
+  "exit": 0,
+  "stdout": "moved rheos-design-frontmatter-key: todo -> in_progress\n",
+  "stderr": ""
+}

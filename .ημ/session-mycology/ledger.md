@@ -597,3 +597,12 @@
   spore: none
   receipt-refs: eta342-all-native-rejection-test-source-20261006T1534Z/new-source-receipt.edn
   note: Read the whole completed review before publishing a pending test successor. Include all genuine rejection gaps in one publication, retain each prior passing/failing observation literally, and qualify the new native head independently. No spore or promotion.
+- ts: 2026-10-07T18:15:35.899207939Z
+  session: /home/err/spaces/foresight/.worktrees/eta-rheos-design-metadata-plan
+  task: Admit shared Rheos design metadata repair
+  p-efficiency: 0.83
+  p-friction: 0.32
+  p-skill-candidate: 0.22
+  spore: none
+  receipt-refs: PR347,5445961334,rheos-design-frontmatter-admission-20261007
+  note: Use canonical planning availability evidence for the admission instant and preserve raw lawful transitions. Shared runtime owns implementation while eta-mu retains canonical lifecycle card. Public refusal and internal no-op are distinct existing boundaries. CLI receipt positional usage failure retained; canonical append/validate succeeded. No spore.

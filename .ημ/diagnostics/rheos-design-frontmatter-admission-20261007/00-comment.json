@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-07T18:10:46.602591+00:00",
+  "argv": [
+    "/home/err/.volta/tools/image/node/22.20.0/bin/node",
+    "/home/err/spaces/review-repair/rheos-comment-rendering/dist/cli.cjs",
+    "comment",
+    "rheos-design-frontmatter-key",
+    "--text",
+    "Planning admission at 9f33ae0a56fc479a824fb754d3b7fa9493adb791: fresh pr-flow PASS with 11 passing checks, native exact-head MiMo APPROVED review5445961334 and zero unresolved findings. The one available planning cohort is complete; authenticated CodeRabbit quota6043679214 is bound to request6043676716 until 2026-10-07T18:42:20Z, not an approval; Codex6042134501 has UNKNOWN reset. Root read the full current review. Admit only this three-point shared design-key slice in standalone open-hax/rheos at ef3c4abf1ea75199486f693e9470df3fec88dd49. RED proposal SHA256 98f68e7769c751c4f10dfca41a1faf4c74d23b3e772225d2cb887c93228dace4 exercises existing pure policy, actual tool/CLI/HTTP writer and refusal/event boundaries. Public empty updates retain refusals and inner writer no-op; successful serialization preserves supported parsed content, not arbitrary raw YAML. No Truth implementation admission, merge, auto-merge, runtime release or board policy duplication.",
+    "--config",
+    "openhax.kanban.edn"
+  ],
+  "exit": 0,
+  "stdout": "{\n  \"ok\": true,\n  \"uuid\": \"rheos-design-frontmatter-key\",\n  \"comment\": \"Planning admission at 9f33ae0a56fc479a824fb754d3b7fa9493adb791: fresh pr-flow PASS with 11 passing checks, native exact-head MiMo APPROVED review5445961334 and zero unresolved findings. The one available planning cohort is complete; authenticated CodeRabbit quota6043679214 is bound to request6043676716 until 2026-10-07T18:42:20Z, not an approval; Codex6042134501 has UNKNOWN reset. Root read the full current review. Admit only this three-point shared design-key slice in standalone open-hax/rheos at ef3c4abf1ea75199486f693e9470df3fec88dd49. RED proposal SHA256 98f68e7769c751c4f10dfca41a1faf4c74d23b3e772225d2cb887c93228dace4 exercises existing pure policy, actual tool/CLI/HTTP writer and refusal/event boundaries. Public empty updates retain refusals and inner writer no-op; successful serialization preserves supported parsed content, not arbitrary raw YAML. No Truth implementation admission, merge, auto-merge, runtime release or board policy duplication.\"\n}\n",
+  "stderr": ""
+}

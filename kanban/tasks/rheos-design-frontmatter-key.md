@@ -1,13 +1,14 @@
 ---
-uuid: "rheos-design-frontmatter-key"
-title: "Admit design links through Rheos shared frontmatter updates"
-status: "incoming"
-type: "task"
-priority: "P1"
-points: "3"
+category: "tasks"
 labels: "rheos, frontmatter, hygiene, truth"
 parent: "rheos-cli-card-lifecycle-authority"
-category: "tasks"
+type: "task"
+write-id: "1791396650086-0.bf5k1qgffo6iaxsjajt"
+points: "3"
+title: "Admit design links through Rheos shared frontmatter updates"
+priority: "P1"
+status: "in_progress"
+uuid: "rheos-design-frontmatter-key"
 created_at: "2026-10-07T16:20:00Z"
 ---
 
@@ -91,3 +92,9 @@ fresh standalone source controls implementation facts. An unknown or missing
 design file remains descriptive text under the existing value policy, not an
 automatically verified design. New parser or coercion work would exceed this
 three-point repair and belongs in a separately reviewed slice.
+
+---
+
+Planning admission at 9f33ae0a56fc479a824fb754d3b7fa9493adb791: fresh pr-flow PASS with 11 passing checks, native exact-head MiMo APPROVED review5445961334 and zero unresolved findings. The one available planning cohort is complete; authenticated CodeRabbit quota6043679214 is bound to request6043676716 until 2026-10-07T18:42:20Z, not an approval; Codex6042134501 has UNKNOWN reset. Root read the full current review. Admit only this three-point shared design-key slice in standalone open-hax/rheos at ef3c4abf1ea75199486f693e9470df3fec88dd49. RED proposal SHA256 98f68e7769c751c4f10dfca41a1faf4c74d23b3e772225d2cb887c93228dace4 exercises existing pure policy, actual tool/CLI/HTTP writer and refusal/event boundaries. Public empty updates retain refusals and inner writer no-op; successful serialization preserves supported parsed content, not arbitrary raw YAML. No Truth implementation admission, merge, auto-merge, runtime release or board policy duplication.
+
+---
