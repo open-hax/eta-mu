@@ -597,3 +597,12 @@
   spore: none
   receipt-refs: eta342-all-native-rejection-test-source-20261006T1534Z/new-source-receipt.edn
   note: Read the whole completed review before publishing a pending test successor. Include all genuine rejection gaps in one publication, retain each prior passing/failing observation literally, and qualify the new native head independently. No spore or promotion.
+- ts: 2026-10-07T02:03:17.498016231Z
+  session: /home/err/spaces/foresight/.worktrees/eta-mu-rheos-todo-replan
+  task: Plan one upstream Todo-to-Breakdown replan edge without activating policy
+  p-efficiency: 0.88
+  p-friction: 0.24
+  p-skill-candidate: 0.35
+  spore: none
+  receipt-refs: rheos-todo-breakdown-replan
+  note: A process diagram is not an executable edge or evidence of regression. Bind the refusal to the actual compiled runtime and source checkpoint, author the smallest proposed correction on the existing canonical board in an isolated worktree, and keep source qualification, rebuilt artifact and consumer activation distinct. Existing binary/cwd spores cover the reusable lesson; no spore or promotion. Root owns publication and admission.

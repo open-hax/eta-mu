@@ -1,0 +1,225 @@
+{
+  "recorded_at": "2026-10-07T02:05:12.604105+00:00",
+  "base": "09a4454480baa67f6fdc40f6f73f5e48ef0457d1",
+  "branch": "codex/rheos-todo-replan-plan",
+  "canonical_readback": {
+    "uuid": "rheos-todo-breakdown-replan",
+    "frontmatter": {
+      "category": "tasks",
+      "labels": "rheos, fsm, lifecycle, planning",
+      "parent": "rheos-cli-card-lifecycle-authority",
+      "type": "task",
+      "write-id": "1791338430178-0.w6gbcdnxf4mlda3hvye",
+      "points": "3",
+      "title": "Allow Todo to return directly to Breakdown in the promethean preset",
+      "priority": "P1",
+      "status": "incoming",
+      "uuid": "rheos-todo-breakdown-replan",
+      "created_at": "2026-10-07T02:00:30.178Z"
+    },
+    "body_matches_authored_input": true
+  },
+  "canonical_state_validation": "Performed by canonical Rheos create/read-task, not a repository-local implementation. Comparisons here are file/byte provenance only.",
+  "checks": [
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "",
+      "interpretation": "Passed."
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--no-index",
+        "--check",
+        "/dev/null",
+        "kanban/tasks/allow-todo-to-return-directly-to-breakdown-in-the-promethean-preset-n-replan.md"
+      ],
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "",
+      "interpretation": "New file differs from /dev/null; exit1 is the no-index difference result and no whitespace diagnostics were emitted."
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--no-index",
+        "--check",
+        "/dev/null",
+        ".ημ/diagnostics/rheos-todo-replan-plan/HANDOFF.md"
+      ],
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "",
+      "interpretation": "New file differs from /dev/null; exit1 is the no-index difference result and no whitespace diagnostics were emitted."
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--exit-code",
+        "09a4454480baa67f6fdc40f6f73f5e48ef0457d1",
+        "--",
+        "AGENTS.md",
+        "PROCESS.md",
+        "openhax.kanban.edn",
+        "receipts.edn",
+        "src",
+        "packages",
+        "scripts",
+        "test",
+        ".github"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "",
+      "interpretation": "Passed."
+    }
+  ],
+  "closure_attempt1": {
+    "tool_output_chunk": "5592c2",
+    "exit_code": 1,
+    "error": "AssertionError at line10",
+    "cause": "The one-off closure script incorrectly required exit0 from git diff --no-index --check for a new file. Explicit per-command readback showed exit1 with empty stdout/stderr for both new Markdown files, the normal difference result. No production/source changes or board mutation occurred during this failed provenance closure.",
+    "repair": "Record actual exits and require the documented difference result with no whitespace diagnostics; do not relabel the first attempt as passing."
+  },
+  "prior_prefixes": [
+    {
+      "path": "kanban/.events/ledger.edn",
+      "before_bytes": 1725349,
+      "before_sha256": "3a7e813e4c1373de728df75d9a45b5011c4e8f33869a2640ce068d227d0f81ca",
+      "after_bytes": 1734341,
+      "after_sha256": "679962e86299f4b01a8791c6d8aed7a6f22e22b3f605b246ff9b3109e40dd55b",
+      "prior_prefix_preserved": true,
+      "new_newline_count": 1
+    },
+    {
+      "path": ".ημ/session-mycology/ledger.md",
+      "before_bytes": 44076,
+      "before_sha256": "2bd7cee73ac1b11bf1892282749f252651bff46022920462be43071629ef65c6",
+      "after_bytes": 44836,
+      "after_sha256": "e95809c3465400601c678478c585c25f00d5d23c9fe7149798924316f64fc204",
+      "prior_prefix_preserved": true,
+      "new_newline_count": 9
+    },
+    {
+      "path": "receipts.edn",
+      "before_bytes": 327742,
+      "before_sha256": "1d6d0f9e653b34eede0453308c1bd11e52f4731313f2512ac9919aaaa336900b",
+      "after_bytes": 327742,
+      "after_sha256": "1d6d0f9e653b34eede0453308c1bd11e52f4731313f2512ac9919aaaa336900b",
+      "prior_prefix_preserved": true,
+      "new_newline_count": 0
+    }
+  ],
+  "source_links_verified_against_local_git_blobs": [
+    {
+      "repository": "/home/err/spaces/review-repair/rheos-comment-rendering",
+      "commit": "ab6b227becd8585742b5130df9ae624d8744928e",
+      "path": "src/rheos/backend/law/fsm.cljs",
+      "bytes": 7007,
+      "sha256": "db3b500a6590e21aaef11e12e6ba6db8c0ba4244b8ca85f22e76f717272effc0"
+    },
+    {
+      "repository": "/home/err/spaces/review-repair/rheos-comment-rendering",
+      "commit": "ab6b227becd8585742b5130df9ae624d8744928e",
+      "path": "src/rheos/backend/infra/transition.cljs",
+      "bytes": 2485,
+      "sha256": "ec6d8e9aee087d0b525845b9b5fff4d6c975a73d6249d31c9b16f06344655005"
+    },
+    {
+      "repository": "/home/err/spaces/review-repair/rheos-comment-rendering",
+      "commit": "ab6b227becd8585742b5130df9ae624d8744928e",
+      "path": "test/rheos/backend/law/fsm_test.cljs",
+      "bytes": 5377,
+      "sha256": "cb2cbd892be527d7fc658da415f185803921b4bf145d099d48c55dc1fdcbe948"
+    },
+    {
+      "repository": "/home/err/spaces/review-repair/rheos-comment-rendering",
+      "commit": "ab6b227becd8585742b5130df9ae624d8744928e",
+      "path": "test/rheos/backend/infra/transition_test.cljs",
+      "bytes": 6067,
+      "sha256": "9d358cc12c83e015748193f7f257bad3e96b173a6d52b0b305888fc44aac351d"
+    },
+    {
+      "repository": "/home/err/spaces/foresight/.worktrees/eta-mu-rheos-todo-replan",
+      "commit": "09a4454480baa67f6fdc40f6f73f5e48ef0457d1",
+      "path": "PROCESS.md",
+      "bytes": 9813,
+      "sha256": "b9270572674a0af4f0c2b20676e1a1c9c33b9782fb985c65d9d55713c54947d8"
+    },
+    {
+      "repository": "/home/err/spaces/foresight/.worktrees/truth-star-heating-research",
+      "commit": "d0005096f4909df617bcee99e21de6477547e198",
+      "path": ".ημ/diagnostics/star-substep-triage/2026-10-07/transition-refusal.json",
+      "bytes": 776,
+      "sha256": "ddf30c31bff0e4f1f90c343632df86079792265973dfc1fa6c6da85d299e6136"
+    }
+  ],
+  "independent_review": {
+    "status": "requested_pending_at_closure",
+    "reviewer": "/root/intent_research",
+    "scope": "Source-only planning scope/acceptance; no tests or authority to promote card."
+  },
+  "qualification_limits": [
+    "No implementation admission",
+    "No source/test/config changes",
+    "No automated RED, test, build, JVM or proposed edge execution",
+    "No consumer activation or Truth card move",
+    "No commit, staging, push, PR or reviewer request by this lane; root owns publication"
+  ],
+  "staging_inventory": [
+    "kanban/tasks/allow-todo-to-return-directly-to-breakdown-in-the-promethean-preset-n-replan.md",
+    "kanban/.events/ledger.edn",
+    ".ημ/receipts.edn",
+    ".ημ/session-mycology/ledger.md",
+    ".ημ/diagnostics/rheos-todo-replan-plan/authoring.json",
+    ".ημ/diagnostics/rheos-todo-replan-plan/readback.json",
+    ".ημ/diagnostics/rheos-todo-replan-plan/HANDOFF.md",
+    ".ημ/diagnostics/rheos-todo-replan-plan/verification.json"
+  ],
+  "hashes_excluding_this_file": [
+    {
+      "path": "kanban/tasks/allow-todo-to-return-directly-to-breakdown-in-the-promethean-preset-n-replan.md",
+      "bytes": 8497,
+      "sha256": "ce9d147adc05196bf1f2c89f2fd459328604078f365f20cf957c5210bd52990e"
+    },
+    {
+      "path": "kanban/.events/ledger.edn",
+      "bytes": 1734341,
+      "sha256": "679962e86299f4b01a8791c6d8aed7a6f22e22b3f605b246ff9b3109e40dd55b"
+    },
+    {
+      "path": ".ημ/receipts.edn",
+      "bytes": 2460,
+      "sha256": "2d5824256564513315a398cd1af30acd9c27596ff30b34de4b1f217617de85c8"
+    },
+    {
+      "path": ".ημ/session-mycology/ledger.md",
+      "bytes": 44836,
+      "sha256": "e95809c3465400601c678478c585c25f00d5d23c9fe7149798924316f64fc204"
+    },
+    {
+      "path": ".ημ/diagnostics/rheos-todo-replan-plan/authoring.json",
+      "bytes": 2219,
+      "sha256": "a24581a0a3a728d54816e252148221521d94d0c1554ef500fe0f708027dab5ce"
+    },
+    {
+      "path": ".ημ/diagnostics/rheos-todo-replan-plan/readback.json",
+      "bytes": 9537,
+      "sha256": "cad0cf4cab74dd13b3a7202109ee71c997f81207da7c0745ab94d10c0b799e5e"
+    },
+    {
+      "path": ".ημ/diagnostics/rheos-todo-replan-plan/HANDOFF.md",
+      "bytes": 3847,
+      "sha256": "d19e0c0d04ed42cf9e4cd50ce40ec15f9d9574384e81a503e132589896653b95"
+    }
+  ]
+}
