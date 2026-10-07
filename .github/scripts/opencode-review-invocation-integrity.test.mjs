@@ -10,10 +10,20 @@ import { fileURLToPath } from "node:url";
 import { runReviewRecovery } from "./run-opencode-review-recovery.mjs";
 
 const runner = fileURLToPath(new URL("./run-opencode-review-recovery.mjs", import.meta.url));
+/**
+ * Hash fixture data without interpreting its contents.
+ * @param {string|Buffer|TypedArray|DataView} bytes - Hash input.
+ * @returns {string} Hexadecimal SHA-256 digest.
+ */
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const submission = Buffer.from('{"schema":"open-hax.github-review/v1","summary":"fixture"}\n');
 const context = { fixture: "caller-owned context" };
 
+/**
+ * Create a temporary fixture directory and register test cleanup.
+ * @param {import('node:test').TestContext} t - Owning test context.
+ * @returns {string} Temporary directory path.
+ */
 function fixture(t) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "invocation-integrity-"));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -21,6 +31,10 @@ function fixture(t) {
 }
 
 // These injected verdicts test transport, not a second implementation of Muse law.
+/**
+ * Create an injected accepted verdict for transport tests, not Muse law.
+ * @returns {Object} Fixed synthetic verifier result and invocation binding.
+ */
 function accepted() {
   return { ok: true, reason: null, reasonKind: null, code: "verified-review-invocation",
     violations: [], sessionID: "ses_fixture", pageCount: 1, reviewCallCount: 9,
@@ -28,11 +42,22 @@ function accepted() {
       submissionPosition: 9, submissionFile: "/fixture/submission.json",
       fullInputSha256: "a".repeat(64), pageCount: 1 } };
 }
+/**
+ * Create an injected refusal with no accepted invocation.
+ * @param {string} [reason="stale-review-coverage"] - Fixture refusal kind.
+ * @returns {Object} Synthetic refusal result.
+ */
 function refused(reason = "stale-review-coverage") {
   return { ok: false, reason, reasonKind: reason, code: "fixture-refusal",
     violations: [], acceptedInvocation: null };
 }
 
+/**
+ * Start the supervisor with injected transport fixtures and retain its calls.
+ * @param {string} directory - Fixture evidence directory.
+ * @param {Object} [options] - Verdicts, exits, submissions, verifier and beforeInvoke overrides.
+ * @returns {{promise: Promise<Object>, invocations: Object[], checks: Object[]}} Completion promise and recorded calls.
+ */
 function exercise(directory, { verdicts = [refused(), accepted()], exits = [0, 0],
   submissions = [submission, submission], verifier, beforeInvoke } = {}) {
   const invocations = [];
@@ -252,6 +277,10 @@ test("strict rejected invocation retains diagnostics and rethrows its original e
   assert.equal(metadata.accepted_invocation, null);
 });
 
+/**
+ * Build a synthetic repeated unavailable-tool tail and permission error.
+ * @returns {Object[]} Fixture events; not a native host trace.
+ */
 function unavailableEvents() {
   const sessionID = "ses_failure";
   return [1, 2].map((n) => ({ type: "tool_use", timestamp: n, sessionID,
@@ -286,6 +315,11 @@ for (const secondStale of [false, true]) {
   });
 }
 
+/**
+ * Stage a synthetic child, transport verifier and CLI inputs for a test.
+ * @param {import('node:test').TestContext} t - Context owning fixture cleanup.
+ * @returns {Object} Directory, child, verifier, output paths and fixture environment.
+ */
 function cliFixture(t) {
   const directory = fixture(t);
   const child = path.join(directory, "synthetic-child.mjs");
@@ -407,6 +441,12 @@ test("real fresh child recovers only canonically established structured omission
   assert.equal(fs.readFileSync(output, "utf8"), `review_invocation_sha256=${sha256(JSON.stringify(recovery.accepted_invocation))}\n`);
 });
 
+/**
+ * Assert that a corrective prompt requires stopping on restart-required.
+ * @param {string} prompt - Corrective prompt under test.
+ * @returns {void}
+ * @throws {AssertionError} If a required stop or recovery-bound instruction is absent.
+ */
 function assertRestartStopPrompt(prompt) {
   assert.match(prompt, /returned ok, unless a tool reports restart-required\?/);
   assert.match(prompt, /If restart-required\? is\s+true, stop this invocation without calling review_submit/);
@@ -543,6 +583,12 @@ test("actual publication preparation adapter forwards the full trusted registry 
   assert.equal(calls[0][3], path.join(directory, "submission.json"));
 });
 
+/**
+ * Assert that a prompt retains the strict failed-call stop instructions.
+ * @param {string} prompt - Initial or corrective prompt under test.
+ * @returns {void}
+ * @throws {AssertionError} If a required failure-stop or shared-bound instruction is absent.
+ */
 function assertStrictFailedCallStopPrompt(prompt) {
   assert.match(prompt, /Strict invocation instructions override any earlier retry or repair instructions/);
   assert.match(prompt, /Every review tool call must succeed/);

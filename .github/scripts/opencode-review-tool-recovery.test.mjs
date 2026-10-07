@@ -192,6 +192,12 @@ function strictUnavailableFailure(directory, events, { secondFails = false, expo
   const promise = runReviewRecovery({ evidenceDirectory: directory,
     basePrompt: "Review all input using the caller's canonical callback.",
     reviewTools: transportReviewTools, expectedContext: { fixtureAuthority: "TRANSPORT_MOCK_ONLY", ...(exposedTools ? { reviewTools: exposedTools } : {}) },
+    /**
+     * Capture verifier arguments and return the configured transport-only verdict.
+     * @param {Buffer} response - Captured fixture response bytes.
+     * @param {Buffer|null} body - Submission bytes, or null for a missing file.
+     * @returns {Object} Injected refusal or transport mock success.
+     */
     verifyReviewInvocation(response, body) {
       assert.ok(Buffer.isBuffer(response));
       assert.ok(body === null || Buffer.isBuffer(body));

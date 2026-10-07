@@ -54,7 +54,7 @@
       (feed! handler ["\u001b[B" "\r"])
       (let [chosen (await (selector/choose term sample-sessions))]
         (is (= "bbbb2222-1111" (:session-id chosen)))
-        (is (str/includes? @(.-buf term) "resume a session")
+        (is (str/includes? @(.-buf ^FakeTerminal term) "resume a session")
             "overlay rendered the hint row")))))
 
 (deftest ^:async selector-type-to-filter-test

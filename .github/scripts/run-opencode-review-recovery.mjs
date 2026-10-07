@@ -12,6 +12,11 @@ import { stripVTControlCharacters } from "node:util";
 const RECOVERY_SCHEMA = "open-hax.review-recovery/v1";
 const MAX_ATTEMPTS = 2;
 
+/**
+ * Hash captured bytes without interpreting their contents.
+ * @param {string|Buffer|TypedArray|DataView} bytes - Hash input.
+ * @returns {string} Hexadecimal SHA-256 digest.
+ */
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
@@ -76,6 +81,11 @@ function unavailableReviewTool(responseFile, stderrFile, reviewTools, exposedToo
     if (new Set(calls.map(({ part }) => part.callID)).size !== 2) return null;
     const prefix = toolCalls.slice(0, -2);
     if (strict && prefix.length) {
+      /**
+       * Check that a transport identity field is a nonempty string after trimming.
+       * @param {*} value - Field to check without coercion.
+       * @returns {boolean} Whether the value is a string with non-whitespace content.
+       */
       const nonblank = (value) => typeof value === "string" && value.trim().length > 0;
       if (events.some((event, index) => event.timestamp < 0 ||
           (index > 0 && event.timestamp < events[index - 1].timestamp))) return null;

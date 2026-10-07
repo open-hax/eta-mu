@@ -695,7 +695,17 @@ function contextFixture(checked) {
     "machinery/review-invocation.cjs", "metadata/exposed-tools.txt"], { cwd: context });
   fs.writeFileSync(path.join(context, "SHA256SUMS"), checksum);
   return { context, invocation, digest: createHash("sha256").update(checksum).digest("hex"),
+    /**
+     * Bind this transport fixture and store its invocation digest.
+     * @returns {void}
+     */
     bind() { this.invocationDigest = bindTransportInvocation(checked.evidence, invocation); },
+    /**
+     * Record a completed transport recovery binding in the fixture output.
+     * @param {Object} result - Recovery metadata with an accepted invocation.
+     * @returns {void}
+     * @throws {AssertionError} If the accepted invocation is missing.
+     */
     acceptRecovery(result) {
       assert.ok(result.accepted_invocation, "strict transport recovery must select a completed invocation");
       this.invocationDigest = transportSha256(JSON.stringify(result.accepted_invocation));

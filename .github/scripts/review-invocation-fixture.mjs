@@ -6,6 +6,11 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 
+/**
+ * Hash transport fixture data without granting review-policy credit.
+ * @param {string|Buffer|TypedArray|DataView} bytes - Hash input.
+ * @returns {string} Hexadecimal SHA-256 digest.
+ */
 export const transportSha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 export const transportReviewTools = ["review_begin", "review_assess_diff_chunk", "review_submit"];
 
