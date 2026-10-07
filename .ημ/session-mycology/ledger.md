@@ -597,3 +597,12 @@
   spore: none
   receipt-refs: eta342-all-native-rejection-test-source-20261006T1534Z/new-source-receipt.edn
   note: Read the whole completed review before publishing a pending test successor. Include all genuine rejection gaps in one publication, retain each prior passing/failing observation literally, and qualify the new native head independently. No spore or promotion.
+
+- ts: "2026-10-07T05:06:22.736Z"
+  origin: Canonical invocation custody and failed-prefix receiving repair
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: eta-prefix-guard-parent-integration-20261007T0447Z/new-source-receipt.edn
+  note: The retry exception must establish the complete prefix before trusting a known tail; canonical Muse owns semantic verdicts. Exercise the actual compiled producer-to-publisher boundary without granting fixture output native agreement. Attribute parent-authored task requirements honestly, retain actual native protection facts, and preserve all original failures and historical bytes. No spore or promotion.

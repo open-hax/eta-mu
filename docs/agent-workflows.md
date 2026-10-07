@@ -55,12 +55,17 @@ or empty finding list cannot satisfy this requirement. Review every changed
 hunk, reading unchanged surrounding code as needed to assess its contracts.
 This does not require exhaustive proof or reading every unchanged file.
 
-The workflow-call default and both direct-PR fallbacks select immutable Muse
-`0b9a91492c8355e6933dc2164d35668cb76d9e60`, including context provenance.
-This candidate pair still requires native hosted qualification. Existing
-production callers select the pair only after both candidates qualify and
-merge; historical callers pinned to b5 retain their original functional source
-until a separately reviewed revision update selects the new pair.
+The workflow-call default and both direct-PR fallbacks select merged Muse
+`c1369c223cf3c57e3e31934a6d746bfcdfe73f5a`, including context provenance.
+Muse PR #20 merged normally with tree `9c01c3b1ad207c640922202d8d2047fe48e1f9e2`;
+its branch was not natively protected. The candidate compiles both the observer
+and canonical invocation verifier from that exact source. The verifier retains
+strict LAST-read order, five actual ordered stages and refusal of failed HOST
+calls; an APPROVED review alone cannot satisfy invocation acceptance.
+This Eta candidate still requires native hosted qualification and its own
+authorized merge. Production callers select it only through a separately
+reviewed revision update. Existing callers and historical fixture provenance
+retain their original source; this pin preparation activates no receiver.
 
 The two model invocations write separate response (raw OpenCode JSON event stream) and stderr files plus a small
 `recovery.json` decision record. The attempt artifact therefore preserves the
@@ -68,6 +73,28 @@ first response even when the corrective invocation succeeds or fails.
 An invocation that rejects is recorded once with a null exit code before its
 original error is rethrown; both stream files are finalized, and that failure
 never consumes the corrective attempt. Unknown nonzero exit failures also remain terminal. A recognized unavailable-tool failure is retained with its original exit code, session and call IDs and exact tool-name correction; it is not a completed review. No tool alias, permission rule, stage or evidence guard is relaxed. The two-attempt bound applies across both recovery causes; attempt 2 cannot trigger another invocation.
+The invocation-integrity repair extends that same two-attempt bound to a
+completed first invocation whose canonical Muse verifier establishes a
+successful read after assessment. The tool latches that violation; another
+assessment, another `review_begin`, or a changed host session ID cannot erase
+the history. The reviewer keeps returned pages for later stages and stops when
+the tool reports `restart-required?`. The supervisor may start one fresh model
+process over the whole unchanged input. A parseable rejected submission is
+retained as `submission-attempt-1.json` before recovery. A tool error, including
+failed removal of an old submission, establishes no successful returned reread
+and cannot authorize this recovery path.
+
+Muse owns the pure invocation decision and its compiled CJS boundary. The
+supervisor prepares canonical page geometry from the actual full diff and
+manifest before the child starts, and checks the completed structured host
+stream against that context and the actual submission bytes. Acceptance needs
+all page reads and assessments in the original last-read chronology, five
+actual successful stage calls and the successful submit call. Generated
+submission notes supply no missing stage calls. A healthy structured omission
+can use the original corrective attempt; malformed or ambiguous output cannot.
+These deterministic checks establish tool history and custody, while fresh
+independent native qualification still assesses substantive review coverage.
+
 The bounded runner itself travels in the checksummed review-context artifact.
 That is required for reusable callers: their review job checks out the caller's
 pull-request tree, which does not contain eta-mu's repository-local scripts.
@@ -106,7 +133,14 @@ manifest, coverage counters must be complete, and nonblank assessment notes must
 cover contiguous UTF-16 ranges from zero through the full decoded diff. Empty
 input has zero chunks and an empty assessment vector. The workflow freezes the
 exact submitted bytes in runner-temporary storage; both publisher validation and
-publication read that copy. `submission-verification.json` records the input,
+publication read that copy. The supervisor exports a trusted step digest of
+the selected attempt binding after the child closes. The final Git check binds
+that digest to the retained response, submission, compiled verifier and prepared
+context bytes, then repeats the same canonical Muse verification and compares
+the complete verdict before freezing the submission. The child does not receive
+the supervisor's `GITHUB_OUTPUT` path.
+
+`submission-verification.json` records the input,
 context and submission digests. It does not add missing model metadata, decide
 the review event, implement Muse's review state machine or prove cognitive
 review quality. The unchanged publisher still validates the envelope and actual
