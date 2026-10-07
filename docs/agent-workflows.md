@@ -356,3 +356,8 @@ guards. All recovery causes share MAX2; a second failure cannot start a third
 process. No tool alias, executor, permissions, metadata, credential or token
 ordering changes are made. Local tests prepare source; fresh native
 qualification and parent publication remain separate.
+
+
+### Final unassessed input-page recovery
+
+The host adapter may admit one fresh whole process only for the exact terminal adversarial-validation refusal when all full-input pages were read and only the final page was not assessed. The original stopped invocation, complete bytes and canonical stage-order refusal remain failed. A separate retained DERIVED projection omits only that refused final call; the unchanged pinned Muse callback must return healthy-unfinished-review with null acceptance and no violations. This is retry eligibility only. Earlier/unknown failures, later calls, changed input or custody, a submission, contradictory projection and a second failure do not authorize another process. Every recovery cause shares MAX2; a healthy accepted review runs once. The fresh process must independently satisfy all existing input/SOURCE/HOST/LAST/five-stage/submission/publication guards. This is unpublished local preparation; no native approval, source adoption or original-review acceptance is supplied.

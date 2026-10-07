@@ -897,3 +897,156 @@ test("submit JSON transport: healthy accepted review is not duplicated", (t) => 
   assert.equal(c.metadata.attempts[0].submit_json_transport, undefined);
   assert.equal(c.metadata.accepted_invocation.attempt, 1);
 });
+
+// Final unassessed-page controls call the real supervisor. Injected verdicts
+// below are transport spies only; separate source-built C136 controls own law.
+function finalCoverageEvents() {
+  const sessionID = "ses_coverage_first";
+  let timestamp = 0;
+  const event = (type, part) => ({ type, timestamp: ++timestamp, sessionID,
+    part: { id: `coverage_part_${timestamp}`, sessionID, ...part } });
+  const call = (tool, input, output = '{"ok?":true}', callID) => event("tool_use", {
+    type: "tool", tool, callID: callID ?? `coverage_call_${timestamp + 1}`,
+    state: { status: "completed", input, output, metadata: { truncated: false } } });
+  const events = [event("step_start", { type: "step-start" }), call("review_begin", {})];
+  for (let id = 1; id <= 3; id++) {
+    events.push(call("review_read_diff_chunk", { id }));
+    if (id < 3) events.push(call("review_assess_diff_chunk", { id, note: "Local fixture assessment" }));
+  }
+  for (const stage of ["deterministic", "map-change", "generate-candidates"])
+    events.push(call("review_record_evidence", { stage, note: "Local fixture stage" }));
+  events.push(call("review_record_evidence", { stage: "adversarial-validate", note: "Local final stage" },
+    '{"ok?":false,"error":"Unassessed full-input chunks remain: 3. Read and assess every changed hunk before publishing."}', "coverage_final"),
+    event("step_finish", { type: "step-finish", reason: "tool-calls" }),
+    event("text", { type: "text", text: "STOP. Original failed invocation remains failed." }),
+    event("step_finish", { type: "step-finish", reason: "stop" }));
+  return events;
+}
+
+async function finalCoverageExercise(t, { mutate, original, projected, mode = "", present = false,
+  secondFailure = false, healthy = false, exitCode = 0, registry = true, collision,
+  changedInput = false } = {}) {
+  const directory = fixture(t), events = finalCoverageEvents(); mutate?.(events);
+  const raw = Buffer.from("\r\n" + events.map(x => JSON.stringify(x) + "\r\n").join("") + "\r\n");
+  const projection = Buffer.from("\r\n" + events.filter(x => x.part.callID !== "coverage_final")
+    .map(x => JSON.stringify(x) + "\r\n").join("") + "\r\n");
+  const full = Buffer.from("owned complete input transport fixture\n"), inputSource = { full_diff: { sha256: sha256(full) } };
+  const ctx = { pageCount: 3, fullInputSha256: sha256(full), inputSource,
+    reviewTools: registry ? ["review_begin", "review_read_diff_chunk", "review_assess_diff_chunk", "review_record_evidence", "review_submit"] : ["review_submit"] };
+  fs.writeFileSync(path.join(directory, "basehead.diff"), full);
+  fs.writeFileSync(path.join(directory, "input-manifest.json"), JSON.stringify(inputSource));
+  if (changedInput) fs.appendFileSync(path.join(directory, "basehead.diff"), "changed");
+  if (collision) fs.writeFileSync(path.join(directory, collision), "existing custody sentinel");
+  const failed = original ?? { ...refused("unestablished-review-trace"), code: "stage-order" };
+  const omission = projected ?? { ...refused("missing-review-submit"), code: "healthy-unfinished-review" };
+  const invocations = [], checks = [];
+  const promise = runReviewRecovery({ evidenceDirectory: directory, basePrompt: "Full unchanged review.\n",
+    reviewTools: ctx.reviewTools, expectedContext: ctx, verifyReviewInvocation(response, body, expected) {
+      assert.equal(expected, ctx);
+      if (invocations.length === 2 && !secondFailure) {
+        assert.deepEqual(response, Buffer.from("whole fresh second fixture\n")); assert.deepEqual(body, submission);
+        checks.push("second"); return accepted();
+      }
+      if (response.equals(raw)) { checks.push("original"); return healthy ? accepted() : failed; }
+      assert.deepEqual(response, projection); assert.equal(body, null); checks.push("projection");
+      if (mode === "throw") throw Error("local coverage callback fault");
+      const files = { response: "model-response-attempt-1.txt", stderr: "opencode-stderr-attempt-1.log",
+        projection: "final-input-coverage-attempt-1.DERIVED.ndjson", omitted: "final-input-coverage-attempt-1.OMITTED.ndjson",
+        full: "basehead.diff", manifest: "input-manifest.json" };
+      if (files[mode]) fs.appendFileSync(path.join(directory, files[mode]), " ");
+      if (mode === "context") ctx.pageCount++;
+      if (mode === "buffer") response[0] = 32;
+      if (mode === "submission") fs.writeFileSync(path.join(directory, "submission.json"), "{}");
+      return omission;
+    }, async invokeAttempt({ attempt, prompt, responseFile, stderrFile }) {
+      invocations.push({ attempt, prompt });
+      fs.writeFileSync(responseFile, attempt === 1 || secondFailure ? raw : "whole fresh second fixture\n");
+      fs.writeFileSync(stderrFile, "");
+      if (present || healthy || (attempt === 2 && !secondFailure)) fs.writeFileSync(path.join(directory, "submission.json"), submission);
+      return { exitCode: attempt === 1 ? exitCode : 0 };
+    } });
+  let metadata, error;
+  try { metadata = await promise; } catch (e) { error = e; }
+  return { directory, raw, projection, invocations, checks, metadata,
+    retained: JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"))), error };
+}
+
+test("final input coverage: exact failed final page permits only a fresh whole second invocation", async t => {
+  const f = await finalCoverageExercise(t);
+  assert.equal(f.error, undefined); assert.equal(f.invocations.length, 2);
+  assert.deepEqual(f.checks, ["original", "projection", "second"]);
+  assert.equal(f.metadata.recovery_reason, "final_input_coverage");
+  assert.equal(f.metadata.accepted_invocation.attempt, 2);
+  assert.equal(f.metadata.attempts[0].canonical_verdict.ok, false);
+  assert.equal(f.metadata.attempts[0].canonical_verdict.code, "stage-order");
+  const proof = f.metadata.attempts[0].final_input_coverage;
+  assert.equal(proof.tier, "DERIVED_RETRY_ELIGIBILITY_ONLY"); assert.equal(proof.accepted_review, false);
+  assert.equal(proof.canonical_verdict.acceptedInvocation, null);
+  assert.deepEqual(fs.readFileSync(path.join(f.directory, proof.projection_file)), f.projection);
+  assert.deepEqual(fs.readFileSync(path.join(f.directory, "model-response-attempt-1.txt")), f.raw);
+  assert.equal(proof.original_response_sha256, sha256(f.raw));
+  assert.equal(proof.projection_sha256, sha256(f.projection));
+  assert.match(f.invocations[1].prompt, /read but not assessed/);
+  assert.match(f.invocations[1].prompt, /sole fresh process/);
+  assert.ok(f.invocations[1].prompt.endsWith("verification guard, or the two-attempt bound.\n"));
+  assert.equal(f.metadata.max_attempts, 2);
+});
+
+test("final input coverage: second failed process cannot launch a third or accept either trace", async t => {
+  const f = await finalCoverageExercise(t, { secondFailure: true });
+  assert.ok(f.error); assert.equal(f.invocations.length, 2);
+  assert.equal(f.retained.accepted_invocation, null);
+  assert.equal(fs.existsSync(path.join(f.directory, "model-response-attempt-3.txt")), false);
+  assert.equal(f.retained.attempts[1].canonical_verdict.ok, false);
+});
+
+const coverageMutations = [
+  ["incomplete earlier stage prefix", e => { const i = e.findIndex(x => x.part.tool === "review_record_evidence"); e.splice(i, 3); }],
+  ["unknown refusal", e => { e.find(x => x.part.callID === "coverage_final").part.state.output = '{"ok?":false,"error":"unknown"}'; }],
+  ["wrong stage", e => { e.find(x => x.part.callID === "coverage_final").part.state.input.stage = "publish"; }],
+  ["failed actual submit", e => { e.find(x => x.part.callID === "coverage_final").part.tool = "review_submit"; }],
+  ["earlier failed begin", e => { e.find(x => x.part.tool === "review_begin").part.state.output = '{"ok?":false,"error":"earlier failure"}'; }],
+  ["earlier failed HOST", e => { e[2].part.state.status = "error"; e[2].part.state.error = "HOST error"; }],
+  ["multiple failures", e => { e[3].part.state.output = '{"ok?":false,"error":"earlier assessment failure"}'; }],
+  ["later call", e => { const x = structuredClone(e[2]); x.timestamp = e.at(-1).timestamp; x.part.id = "later_part"; x.part.callID = "later_call"; e.splice(-1, 0, x); }],
+  ["mixed session", e => { e[0].sessionID = "other"; }],
+  ["out of order", e => { e.at(-1).timestamp = 0; }],
+  ["duplicate call", e => { e.at(-4).part.callID = e[1].part.callID; }],
+  ["blank call", e => { e.at(-4).part.callID = " "; }],
+  ["missing part", e => { delete e.at(-4).part.id; }],
+  ["missing stop", e => { e.at(-1).part.reason = "tool-calls"; }],
+  ["no final read", e => { e.splice(e.findIndex(x => x.part.tool === "review_read_diff_chunk" && x.part.state.input.id === 3), 1); }],
+  ["final already assessed", e => { const x = structuredClone(e[3]); x.timestamp = e.at(-4).timestamp; x.part.id = "extra_part"; x.part.callID = "extra_call"; x.part.state.input.id = 3; e.splice(-4, 0, x); }],
+  ["missing earlier assessment", e => { e.splice(e.findIndex(x => x.part.tool === "review_assess_diff_chunk"), 1); }],
+  ["wrong missing page", e => { e.at(-4).part.state.output = e.at(-4).part.state.output.replace("remain: 3.", "remain: 2."); }],
+  ["ambiguous false output", e => { e.at(-4).part.state.output = '{"ok?":false,"error":"Unassessed full-input chunks remain: 3. Read and assess every changed hunk before publishing.","restart-required?":true}'; }],
+  ["malformed output", e => { e.at(-4).part.state.output = "{"; }],
+  ["truncated output", e => { e.at(-4).part.state.metadata.truncated = true; }],
+];
+for (const [name, mutate] of coverageMutations) test(`final input coverage: denies ${name}`, async t => {
+  const f = await finalCoverageExercise(t, { mutate }); assert.ok(f.error); assert.equal(f.invocations.length, 1);
+  assert.equal(f.retained.accepted_invocation, null);
+});
+for (const [name, options] of [
+  ["contradictory original reasonKind", { original: { ...refused("unestablished-review-trace"), code: "stage-order", reasonKind: "other" } }],
+  ["contradictory projection reasonKind", { projected: { ...refused("missing-review-submit"), code: "healthy-unfinished-review", reasonKind: "other" } }],
+  ["unknown original verdict", { original: { ...refused("unestablished-review-trace"), code: "unknown" } }],
+  ["original LAST violation", { original: { ...refused("unestablished-review-trace"), code: "stage-order", violations: [{ id: 1 }] } }],
+  ["unregistered stage tool", { registry: false }], ["submission present", { present: true }],
+  ["child exit nonzero", { exitCode: 1 }], ["changed input before admission", { changedInput: true }],
+  ["projection refusal", { projected: { ...refused("unestablished-review-trace"), code: "failed-review-tool" } }],
+  ["projection violation", { projected: { ...refused("missing-review-submit"), code: "healthy-unfinished-review", violations: [{ id: 1 }] } }],
+  ["projection acceptance", { projected: accepted() }], ["callback exception", { mode: "throw" }],
+  ["projection collision", { collision: "final-input-coverage-attempt-1.DERIVED.ndjson" }],
+  ["omitted collision", { collision: "final-input-coverage-attempt-1.OMITTED.ndjson" }],
+  ...["response", "stderr", "projection", "omitted", "full", "manifest", "context", "buffer", "submission"]
+    .map(mode => [`${mode} custody mutation`, { mode }]),
+]) test(`final input coverage: denies ${name}`, async t => {
+  const f = await finalCoverageExercise(t, options); assert.ok(f.error); assert.equal(f.invocations.length, 1);
+  assert.equal(f.retained.accepted_invocation, null);
+});
+test("final input coverage: healthy accepted first invocation is never duplicated", async t => {
+  const f = await finalCoverageExercise(t, { healthy: true }); assert.equal(f.error, undefined);
+  assert.equal(f.invocations.length, 1); assert.equal(f.metadata.accepted_invocation.attempt, 1);
+  assert.equal(f.metadata.recovery_reason, null); assert.equal(f.metadata.attempts[0].final_input_coverage, undefined);
+});

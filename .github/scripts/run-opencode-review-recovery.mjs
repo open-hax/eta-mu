@@ -7,7 +7,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { finished } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
-import { stripVTControlCharacters } from "node:util";
+import { isDeepStrictEqual, stripVTControlCharacters } from "node:util";
 
 const RECOVERY_SCHEMA = "open-hax.review-recovery/v1";
 const MAX_ATTEMPTS = 2;
@@ -197,12 +197,114 @@ async function submitJsonTransport({ metadata, metadataFile, responseFile, stder
   }
 }
 
+/**
+ * Recognize only the final adversarial-validation refusal for one unassessed
+ * final input page. The same canonical callback validates the retained prefix;
+ * this host-only projection grants retry eligibility, never review acceptance.
+ */
+async function finalInputCoverage({ metadata, metadataFile, responseFile, stderrFile,
+  submissionFile, reviewTools, verifyReviewInvocation, expectedContext, contextSha256 }) {
+  const record = metadata.attempts.at(-1), original = record.canonical_verdict;
+  const count = expectedContext.pageCount;
+  if (original.ok !== false || original.reason !== "unestablished-review-trace" ||
+      original.code !== "stage-order" || original.violations.length !== 0 ||
+      !reviewTools.includes("review_record_evidence") || !Array.isArray(expectedContext.reviewTools) ||
+      !expectedContext.reviewTools.includes("review_record_evidence") ||
+      !Number.isSafeInteger(count) || count < 1) return null;
+  const response = fs.readFileSync(responseFile), directory = path.dirname(responseFile);
+  const fullFile = path.join(directory, "basehead.diff"), manifestFile = path.join(directory, "input-manifest.json");
+  let lines, omitted, call, fullDigest, manifestDigest;
+  try {
+    const full = fs.readFileSync(fullFile), manifest = fs.readFileSync(manifestFile);
+    if (sha256(full) !== expectedContext.fullInputSha256 ||
+        !isDeepStrictEqual(JSON.parse(manifest.toString("utf8")), expectedContext.inputSource)) return null;
+    fullDigest = sha256(full); manifestDigest = sha256(manifest);
+    lines = new TextDecoder("utf-8", { fatal: true }).decode(response).match(/[^\n]*\n|[^\n]+$/g) ?? [];
+    if (!Buffer.from(lines.join("")).equals(response)) return null;
+    const events = lines.map((line, index) => line.trim() ? { event: JSON.parse(line), index } : null).filter(Boolean);
+    const session = events[0]?.event.sessionID, nonblank = (x) => typeof x === "string" && x.trim().length > 0;
+    if (!nonblank(session) || events.some(({ event }, i) => event.sessionID !== session ||
+        !Number.isSafeInteger(event.timestamp) || event.timestamp < 0 ||
+        (i > 0 && event.timestamp < events[i - 1].event.timestamp)) ||
+        events.at(-1)?.event.type !== "step_finish" || events.at(-1).event.part?.reason !== "stop") return null;
+    const calls = events.filter(({ event }) => event.type === "tool_use");
+    if (calls.some(({ event }) => event.part?.type !== "tool" || event.part.sessionID !== session ||
+        !nonblank(event.part.id) || !nonblank(event.part.callID) ||
+        event.part.state?.status !== "completed" || (event.part.state.error != null && event.part.state.error !== false)) ||
+        new Set(calls.map(({ event }) => event.part.id)).size !== calls.length ||
+        new Set(calls.map(({ event }) => event.part.callID)).size !== calls.length) return null;
+    const failed = calls.filter(({ event }) => event.part.tool?.startsWith("review_") &&
+      JSON.parse(event.part.state.output)?.["ok?"] !== true);
+    if (failed.length !== 1 || failed[0] !== calls.at(-1) ||
+        calls.some(({ event }) => event.part.tool === "review_submit" || event.part.tool === "invalid")) return null;
+    const target = failed[0], part = target.event.part, state = part.state, output = JSON.parse(state.output);
+    if (part.tool !== "review_record_evidence" || state.input?.stage !== "adversarial-validate" ||
+        !nonblank(state.input.note) || Object.keys(output).sort().join(",") !== "error,ok?" ||
+        output["ok?"] !== false || output.error !== `Unassessed full-input chunks remain: ${count}. Read and assess every changed hunk before publishing.` ||
+        state.metadata?.truncated !== false) return null;
+    // Extra narrow transport eligibility binds the recorded omission to the
+    // prepared final page; canonical Muse still owns all review validity.
+    const ids = (name) => calls.filter(({ event }) => event.part.tool === name).map(({ event }) => event.part.state.input?.id);
+    const reads = ids("review_read_diff_chunk"), assessments = ids("review_assess_diff_chunk");
+    const exact = (xs, size) => xs.length === size && new Set(xs).size === size &&
+      xs.every((id) => Number.isSafeInteger(id) && id >= 1 && id <= size);
+    const stages = calls.filter(({ event }) => event.part.tool === "review_record_evidence")
+      .map(({ event }) => event.part.state.input?.stage);
+    if (!exact(reads, count) || !exact(assessments, count - 1) ||
+        stages.join(",") !== "deterministic,map-change,generate-candidates,adversarial-validate" ||
+        stages.length !== 4) return null;
+    omitted = target.index; call = part.callID;
+  } catch { return null; }
+  const projection = Buffer.from(lines.filter((_, index) => index !== omitted).join(""));
+  const omittedBytes = Buffer.from(lines[omitted]);
+  const projectionFile = path.join(directory, "final-input-coverage-attempt-1.DERIVED.ndjson");
+  const omittedFile = path.join(directory, "final-input-coverage-attempt-1.OMITTED.ndjson");
+  const proof = { tier: "DERIVED_RETRY_ELIGIBILITY_ONLY", accepted_review: false,
+    original_response_sha256: record.response_sha256,
+    projection_file: path.basename(projectionFile), projection_sha256: sha256(projection),
+    omitted_file: path.basename(omittedFile), omitted_sha256: sha256(omittedBytes),
+    omitted_line: omitted + 1, tool: "review_record_evidence", call_id: call,
+    missing_final_page: expectedContext.pageCount, full_input_sha256: fullDigest,
+    input_manifest_sha256: manifestDigest };
+  record.final_input_coverage = proof;
+  const unchanged = () => {
+    if (sha256(response) !== record.response_sha256 ||
+        sha256(fs.readFileSync(responseFile)) !== record.response_sha256 ||
+        sha256(fs.readFileSync(stderrFile)) !== record.stderr_sha256 || fs.existsSync(submissionFile) ||
+        sha256(JSON.stringify(expectedContext)) !== contextSha256 ||
+        sha256(fs.readFileSync(fullFile)) !== fullDigest || sha256(fs.readFileSync(manifestFile)) !== manifestDigest ||
+        sha256(projection) !== proof.projection_sha256 ||
+        sha256(fs.readFileSync(projectionFile)) !== proof.projection_sha256 ||
+        sha256(fs.readFileSync(omittedFile)) !== proof.omitted_sha256) {
+      throw new Error("final input coverage evidence changed during verification");
+    }
+  };
+  try {
+    fs.writeFileSync(projectionFile, projection, { flag: "wx" });
+    fs.writeFileSync(omittedFile, omittedBytes, { flag: "wx" });
+    unchanged();
+    const verdict = verifierEnvelope(await verifyReviewInvocation(projection, null, expectedContext));
+    proof.canonical_verdict = verdict;
+    unchanged(); proof.verification_state = "returned";
+    writeRecovery(metadataFile, metadata);
+    if (verdict.ok !== false || verdict.reason !== "missing-review-submit" ||
+        verdict.code !== "healthy-unfinished-review" || verdict.violations.length !== 0) return null;
+    return proof;
+  } catch (error) {
+    proof.verification_state = "rejected";
+    proof.verification_error = error instanceof Error ? error.message : String(error);
+    writeRecovery(metadataFile, metadata); throw error;
+  }
+}
+
 /** Append the sole corrective-attempt instructions to the original review prompt. */
-function correctivePrompt(basePrompt, toolFailure, staleCoverage = false, submitJsonFailure = false) {
+function correctivePrompt(basePrompt, toolFailure, staleCoverage = false, submitJsonFailure = false, coverageFailure = false) {
   const cause = toolFailure
     ? `the first model invocation failed without a review after repeatedly calling the unavailable tool ${toolFailure.tool}. Use the actual exposed name ${toolFailure.corrected_tool}; do not call the unavailable spelling again.`
     : submitJsonFailure
       ? "the first stopped process produced the known final review_submit JSON transport diagnostic without an actual submit or artifact. Its whole trace remains refused; the retained derived projection establishes retry eligibility only. In this fresh process, pass well-formed JSON arguments to the exposed review_submit tool."
+    : coverageFailure
+      ? "the first stopped process failed final adversarial validation because the final full-input page was read but not assessed. Its whole trace remains failed; a separately retained canonical healthy-omission projection supplies only retry eligibility. Read and assess every full-input page anew before completing all five stages and submitting in this sole fresh process."
     : staleCoverage
       ? "the canonical host-trace verifier established stale review coverage in the first completed invocation. Its assessment history cannot be repaired. Perform one fresh bounded model invocation over the whole unchanged input; finish all reads before assessing each page."
     : "the first completed model invocation omitted the required review_submit artifact.";
@@ -258,6 +360,15 @@ remains refused; any separately retained derived projection is retry evidence
 only, never an accepted review. All failed actual review calls, unknown HOST
 failures, strict input/chronology guards and the existing two-attempt bound stay
 unchanged. The fresh process must complete the whole review anew.
+
+Caller-only final input-coverage exception:
+STOP after the exact final adversarial-validation refusal for the unassessed
+final input page. Do not repair or resume that invocation. The failure alone
+is not retry authority. Only the caller may admit the sole fresh whole process
+when its narrow recorded-failure policy and the unchanged canonical callback
+establish retry eligibility over a separately retained projection. The original
+failed invocation remains refused. All existing input, HOST, LAST, five-stage,
+source, submission and two-attempt guards remain mandatory for the fresh review.
 
 Strict invocation instructions override any earlier retry or repair instructions:
 Every review tool call must succeed. If ANY review tool call fails, including
@@ -485,6 +596,9 @@ export async function runReviewRecovery({
     const submitJsonFailure = strict && attempt === 1 && result?.exitCode === 0 && state === "missing"
       ? await submitJsonTransport({ metadata, metadataFile, responseFile, stderrFile, submissionFile,
         reviewTools, verifyReviewInvocation, expectedContext, contextSha256 }) : null;
+    const coverageFailure = strict && attempt === 1 && result?.exitCode === 0 && state === "missing"
+      ? await finalInputCoverage({ metadata, metadataFile, responseFile, stderrFile, submissionFile,
+        reviewTools, verifyReviewInvocation, expectedContext, contextSha256 }) : null;
     if (result?.exitCode !== 0 && !toolFailure) {
       throw new Error(`OpenCode review attempt ${attempt} exited ${result?.exitCode ?? "without a code"}`);
     }
@@ -511,7 +625,7 @@ export async function runReviewRecovery({
     }
     const staleCoverage = strict && verdict.ok === false && verdict.reason === "stale-review-coverage" && result?.exitCode === 0;
     const omittedSubmission = strict && verdict.ok === false && verdict.reason === "missing-review-submit" && state === "missing" && result?.exitCode === 0;
-    if (strict && !toolFailure && !staleCoverage && !omittedSubmission && !submitJsonFailure) {
+    if (strict && !toolFailure && !staleCoverage && !omittedSubmission && !submitJsonFailure && !coverageFailure) {
       throw new Error(`review invocation verification failed after attempt ${attempt}: ${verdict.reason ?? "submission-not-established"}`);
     }
     if (attempt === MAX_ATTEMPTS) {
@@ -521,13 +635,13 @@ export async function runReviewRecovery({
       throw new Error(`reviewer omitted review_submit after ${MAX_ATTEMPTS} attempts`);
     }
 
-    metadata.recovery_reason = toolFailure ? "unavailable_review_tool" : submitJsonFailure ? "review_submit_json_transport" : staleCoverage ? "stale-review-coverage" : "missing_review_submit";
+    metadata.recovery_reason = toolFailure ? "unavailable_review_tool" : submitJsonFailure ? "review_submit_json_transport" : coverageFailure ? "final_input_coverage" : staleCoverage ? "stale-review-coverage" : "missing_review_submit";
     if (toolFailure) metadata.attempts.at(-1).tool_failure = toolFailure;
     writeRecovery(metadataFile, metadata);
     if (staleCoverage && state === "present") {
       retainStaleSubmission({ metadata, metadataFile, submissionFile, evidenceDirectory });
     }
-    prompt = correctivePrompt(basePrompt, toolFailure, staleCoverage, submitJsonFailure);
+    prompt = correctivePrompt(basePrompt, toolFailure, staleCoverage, submitJsonFailure, coverageFailure);
     if (strict) prompt = strictInvocationPrompt(prompt);
   }
 
