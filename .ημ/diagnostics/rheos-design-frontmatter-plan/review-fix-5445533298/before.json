@@ -1,0 +1,18 @@
+{
+  "at": "2026-10-07T17:03:02.305187+00:00",
+  "finding_review": 5445533298,
+  "thread": "PRRT_kwDORu27H86qAZ36",
+  "root_comment": 4209592640,
+  "old_head": "2ef82febd1a2884d41a3b5ac99b2d31b21d76137",
+  "archive_path": ".\u03b7\u03bc/diagnostics/rheos-design-frontmatter-plan/review-fix-5445533298/initial-misplaced-receipt.edn",
+  "archive_sha256": "811741eb90104e335914bb993a5f9bdfe4f745918c6e8c7b19bc019275cf9ac4",
+  "archive_bytes": 1093,
+  "canonical_ledger": "receipts.edn",
+  "canonical_prefix_bytes": 327742,
+  "canonical_prefix_sha256": "1d6d0f9e653b34eede0453308c1bd11e52f4731313f2512ac9919aaaa336900b",
+  "writer": "/home/err/spaces/eta-mu/packages/eta-mu/dist-cli/index.cjs",
+  "writer_sha256": "c13f08d31eb99fb1101eb3f78ef89066ed0a70ba7ce52a21f694ae548ea00b86",
+  "finding": "Confirmed independent eta repository uses root receipts.edn; root Foresight State does not migrate this child. Newly introduced .\u03b7\u03bc/receipts.edn was an erroneous active alternate path; preserve its complete original bytes as explicitly noncanonical diagnostic, then append correction through package-owned writer.",
+  "independent_assessment": "intent_research verified eta AGENTS92-93, CLI40-46 and law16-17. No rejection or approval credit claimed.",
+  "earlier_tool_gap": "Installed eta-mu Volta shim lacked receipt command and routed to unconfigured agent; exit0 did not establish receipt capability. Explicit existing compiled package CLI receipt status verified correct root path."
+}
