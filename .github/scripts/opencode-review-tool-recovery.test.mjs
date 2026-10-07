@@ -395,3 +395,109 @@ for (const [name, events] of [
     assert.equal(Object.hasOwn(receipt, "accepted_invocation"), false);
   });
 }
+
+// ETA-51A-SOURCE-001: actual supervisor/child transport, not canonical Muse law.
+/** Run a locally authored child that emits the supplied strict tail before a mock full recovery. */
+function strictTailCLI(t, events) {
+  const directory = fixture(t);
+  const child = path.join(directory, "tail-transport-child.mjs");
+  const runner = fileURLToPath(new URL("./run-opencode-review-recovery.mjs", import.meta.url));
+  fs.writeFileSync(child, `#!${process.execPath}
+import fs from "node:fs";
+import path from "node:path";
+const directory = process.env.REVIEW_EVIDENCE_DIR;
+const counter = path.join(directory, "child-count.txt");
+const attempt = fs.existsSync(counter) ? Number(fs.readFileSync(counter, "utf8")) + 1 : 1;
+fs.writeFileSync(counter, String(attempt));
+fs.appendFileSync(path.join(directory, "child-pids.txt"), String(process.pid) + "\\n");
+if (attempt === 1) {
+  for (const event of ${JSON.stringify(events)}) console.log(JSON.stringify(event));
+  console.error("! permission requested: doom_loop (invalid); auto-rejecting");
+  process.exitCode = 1;
+} else {
+  fs.writeFileSync(path.join(directory, "submission.json"), JSON.stringify({
+    schema: "open-hax.github-review/v1", event: "APPROVE", summary: "TRANSPORT_MOCK_ONLY", comments: [] }));
+  process.stdout.write(${JSON.stringify(transportResponse({ sessionID: "ses_recovery" }).toString())});
+}
+`);
+  fs.chmodSync(child, 0o755);
+  const prompt = path.join(directory, "prompt.md");
+  fs.writeFileSync(prompt, "Review all current input #{{PR_NUMBER}}.\n");
+  const invocation = stageTransportVerifier(directory, { reviewTools: prefixRegistry });
+  const result = spawnSync(process.execPath, [runner], {
+    encoding: "utf8", timeout: 10_000,
+    env: { ...process.env, OPENCODE_BIN: child, REVIEW_EVIDENCE_DIR: directory,
+      REVIEW_PROMPT_FILE: prompt, REVIEW_MODEL: "synthetic/fixture", ...invocation.env, PR_NUMBER: "345" },
+  });
+  const receipt = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8"));
+  const children = Number(fs.readFileSync(path.join(directory, "child-count.txt"), "utf8"));
+  const pids = fs.readFileSync(path.join(directory, "child-pids.txt"), "utf8").trim().split("\n");
+  t.diagnostic(`tail-only actual CLI observation: ${JSON.stringify({ exit: result.status, children,
+    pids, recoveryReason: receipt.recovery_reason, firstVerdict: receipt.attempts[0].canonical_verdict,
+    firstResponseSha256: receipt.attempts[0].response_sha256 })}`);
+  return { directory, invocation, result, receipt, children, pids };
+}
+
+for (const [name, change] of [
+  ["negative timestamp", (events) => { events[0].timestamp = -1; }],
+  ["backwards tool timestamp", (events) => { events[1].timestamp = 0; }],
+  ["backwards terminal timestamp", (events) => { events[2].timestamp = 1; }],
+  ["duplicate part ID", (events) => { events[1].part.id = events[0].part.id; }],
+  ["blank part ID", (events) => { events[0].part.id = " \t "; }],
+  ["missing part ID", (events) => { delete events[0].part.id; }],
+  ["nonstring part ID", (events) => { events[0].part.id = 42; }],
+  ["whitespace call ID", (events) => { events[0].part.callID = " \t "; }],
+]) {
+  test(`strict tail-only actual CLI refuses ${name} before a second child`, (t) => {
+    const events = failureEvents(); change(events);
+    const { directory, invocation, result, receipt, children, pids } = strictTailCLI(t, events);
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /attempt 1 exited 1/);
+    assert.equal(children, 1);
+    assert.equal(pids.length, 1);
+    assert.equal(receipt.max_attempts, 2);
+    assert.equal(receipt.recovery_reason, null);
+    assert.equal(receipt.accepted_invocation, null);
+    assert.equal(receipt.attempts.length, 1);
+    assert.equal(receipt.attempts[0].exit_code, 1);
+    assert.equal(receipt.attempts[0].verification_state, "returned");
+    assert.equal(receipt.attempts[0].canonical_verdict.reason, "unestablished-review-trace");
+    assert.equal(receipt.attempts[0].canonical_verdict.fixtureAuthority, "TRANSPORT_MOCK_ONLY");
+    const firstResponse = events.map((event) => JSON.stringify(event)).join("\n") + "\n";
+    assert.equal(fs.readFileSync(path.join(directory, "model-response-attempt-1.txt"), "utf8"), firstResponse);
+    assert.equal(receipt.attempts[0].response_sha256, transportSha256(firstResponse));
+    assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
+    assert.equal(fs.existsSync(path.join(directory, "submission.json")), false);
+    assert.equal(fs.readFileSync(invocation.output, "utf8"), "");
+  });
+}
+
+for (const prefix of [false, true]) {
+  test(`strict tail-only actual CLI retains one fresh child for healthy ${prefix ? "read/assessment prefix" : "clean tail"}`, (t) => {
+    const events = prefix ? registeredUnavailableEvents().slice(1) : failureEvents();
+    if (prefix) {
+      for (const event of events) event.timestamp += 2;
+      events.unshift(...["review_read_diff_chunk", "review_assess_diff_chunk"].map((tool, i) => ({
+        type: "tool_use", timestamp: i + 1, sessionID: "ses_fixture",
+        part: { type: "tool", id: `part_healthy_${i}`, callID: `call_healthy_${i}`,
+          sessionID: "ses_fixture", tool, state: { status: "completed", input: {},
+            output: JSON.stringify({ "ok?": true, fixtureAuthority: "TRANSPORT_MOCK_ONLY" }) } },
+      })));
+    }
+    const { directory, invocation, result, receipt, children, pids } = strictTailCLI(t, events);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(children, 2);
+    assert.equal(pids.length, 2);
+    assert.equal(new Set(pids).size, 2);
+    assert.equal(receipt.max_attempts, 2);
+    assert.equal(receipt.recovery_reason, "unavailable_review_tool");
+    assert.deepEqual(receipt.attempts.map(({ exit_code }) => exit_code), [1, 0]);
+    assert.equal(receipt.attempts[0].canonical_verdict.reason, "unestablished-review-trace");
+    assert.deepEqual(receipt.attempts[0].tool_failure.call_ids, ["call_1", "call_2"]);
+    assert.equal(receipt.accepted_invocation.attempt, 2);
+    assert.equal(receipt.accepted_invocation.session_id, "ses_recovery");
+    assert.equal(fs.readFileSync(invocation.output, "utf8"),
+      `review_invocation_sha256=${transportSha256(JSON.stringify(receipt.accepted_invocation))}\n`);
+    assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-3.txt")), false);
+  });
+}

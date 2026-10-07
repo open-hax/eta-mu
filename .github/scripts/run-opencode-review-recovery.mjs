@@ -80,7 +80,7 @@ function unavailableReviewTool(responseFile, stderrFile, reviewTools, exposedToo
         typeof part.callID !== "string" || !part.callID)) return null;
     if (new Set(calls.map(({ part }) => part.callID)).size !== 2) return null;
     const prefix = toolCalls.slice(0, -2);
-    if (strict && prefix.length) {
+    if (strict) {
       /**
        * Check that a transport identity field is a nonempty string after trimming.
        * @param {*} value - Field to check without coercion.

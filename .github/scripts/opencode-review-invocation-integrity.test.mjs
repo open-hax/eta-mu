@@ -284,7 +284,7 @@ test("strict rejected invocation retains diagnostics and rethrows its original e
 function unavailableEvents() {
   const sessionID = "ses_failure";
   return [1, 2].map((n) => ({ type: "tool_use", timestamp: n, sessionID,
-    part: { type: "tool", callID: `call_${n}`, sessionID, tool: "invalid",
+    part: { type: "tool", id: `part_${n}`, callID: `call_${n}`, sessionID, tool: "invalid",
       state: { status: "completed", input: { tool: "assess_diff_chunk",
         error: "Model tried to call unavailable tool 'assess_diff_chunk'. Available tools: invalid, review_assess_diff_chunk, review_begin, review_submit." } } } }))
     .concat({ type: "error", timestamp: 4, sessionID,

@@ -624,3 +624,12 @@
   spore: none
   receipt-refs: 2026-10-07T06:58:22.650Z, 2026-10-07T05:06:22.736Z, 2026-10-07T06:03:11.638Z
   note: Append-only reference correction for historical reflection entries 2026-10-07T05:06:22.736Z and 2026-10-07T06:03:11.638Z: eta-prefix-guard-parent-integration-20261007T0447Z/new-source-receipt.edn maps to in-repository receipts.edn :ts "2026-10-07T05:06:22.736Z" (captured line262); eta345-docstring-parent-integration-20261007T0536Z/new-source-receipt.edn maps to in-repository receipts.edn :ts "2026-10-07T06:03:11.638Z" (captured line263). This additive association addresses captured CodeRabbit root4203725552, threadPRRT_kwDORu27H86px_tZ, review5438413683 at exact heade8c336697f7c1a2244255b28c9c2a966c695034d. Original reflection fields, notes and entire receipt/reflection prefixes remain unchanged. Readers must consider this later correction with the original entries; no automatic path dereference or rewrite is claimed. The capture shows the finding unresolved; native acceptance/settlement remains parent-owned and unestablished. No spore or promotion. Environment custody regression and full178 selector pass on the exact three-file candidate; failed e8 host-tool-schema trace remains rejected and receives no native credit. The prepared registry controls are local evidence only. Fresh successor full native qualification remains required.
+
+- ts: "2026-10-07T08:31:33.377Z"
+  origin: Eta strict tail-only unavailable-tool transport validation
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T08:31:33.377Z
+  note: A bounded retry still needs valid transport evidence when there is no earlier call prefix. Apply existing checks uniformly, retain malformed negative controls and both healthy recovery paths, and preserve canonical authority. Distinguish source gaps from unrelated failed model traces; local transport mocks and passing tests do not confer native review credit. Preserve every historical receipt and reflection byte. No spore or promotion.
