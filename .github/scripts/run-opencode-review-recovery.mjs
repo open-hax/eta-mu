@@ -755,7 +755,7 @@ async function main() {
     }
     throw error;
   }
-  const metadata = await runReviewRecovery({ evidenceDirectory, basePrompt, reviewTools,
+  const metadata = await runKnownGrepOverflowReviewRecovery({ evidenceDirectory, basePrompt, reviewTools,
     submissionFile, invokeAttempt: invokeOpenCode,
     verifyReviewInvocation: verifier.verifyReviewInvocation, expectedContext,
     verifierSha256: sha256(verifierBytes) });
@@ -781,4 +781,208 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.error(`::error::${error.message}`);
     process.exitCode = 1;
   });
+}
+
+// Bounded caller extension; canonical Muse retains review admission authority.
+/**
+ * Retain the exact known grep overflow as retry DATA, never review evidence.
+ * Remove only that failed call and, when present, the sole successful submit
+ * call. Every other raw line remains for the SAME canonical callback to judge.
+ * The original submission and whole failed trace stay rejected and in custody.
+ */
+async function knownGrepOverflowTransport({ metadata, metadataFile, responseFile,
+  stderrFile, submissionFile, reviewTools, verifyReviewInvocation,
+  expectedContext, contextSha256 }) {
+  const record = metadata.attempts[0], original = record?.canonical_verdict;
+  if (metadata.max_attempts !== MAX_ATTEMPTS || metadata.attempts.length !== 1 ||
+      metadata.accepted_invocation !== null || metadata.recovery_reason !== null ||
+      record.attempt !== 1 || record.exit_code !== 0 || record.invocation_state !== "completed" ||
+      record.verification_state !== "returned" || !["present", "missing"].includes(record.submission_state) ||
+      original?.ok !== false || original.reason !== "unestablished-review-trace" ||
+      original.code !== "host-tool-schema" || original.violations.length !== 0 ||
+      !reviewTools.includes("review_submit") || !Array.isArray(expectedContext.reviewTools) ||
+      !expectedContext.reviewTools.includes("review_submit")) return null;
+  const response = fs.readFileSync(responseFile), directory = path.dirname(responseFile);
+  const submission = fs.existsSync(submissionFile) ? fs.readFileSync(submissionFile) : null;
+  let lines, excluded, failure;
+  try {
+    lines = new TextDecoder("utf-8", { fatal: true }).decode(response).match(/[^\n]*\n|[^\n]+$/g) ?? [];
+    if (!Buffer.from(lines.join("")).equals(response)) return null;
+    const events = lines.map((line, index) => line.trim() ? { event: JSON.parse(line), index } : null).filter(Boolean);
+    const native = (x, prefix) => typeof x === "string" && new RegExp(`^${prefix}_[A-Za-z0-9]+$`).test(x);
+    const natural = (x) => Number.isSafeInteger(x) && x >= 0;
+    const session = events[0]?.event.sessionID;
+    if (!native(session, "ses") || events.some(({ event }, i) =>
+        !["step_start", "step_finish", "text", "tool_use"].includes(event.type) ||
+        event.sessionID !== session || event.part?.sessionID !== session ||
+        !native(event.part?.id, "prt") || !native(event.part?.messageID, "msg") ||
+        !natural(event.timestamp) || (i > 0 && event.timestamp < events[i - 1].event.timestamp)) ||
+        new Set(events.map(({ event }) => event.part.id)).size !== events.length ||
+        events.at(-1)?.event.type !== "step_finish" || events.at(-1).event.part?.reason !== "stop") return null;
+    const calls = events.filter(({ event }) => event.type === "tool_use");
+    if (calls.some(({ event }) => event.part.type !== "tool" || !native(event.part.callID, "call") ||
+        !natural(event.part.state?.time?.start) || !natural(event.part.state.time.end) ||
+        event.part.state.time.start > event.part.state.time.end || event.part.state.time.end > event.timestamp) ||
+        new Set(calls.map(({ event }) => event.part.callID)).size !== calls.length) return null;
+    const failed = calls.filter(({ event }) => event.part.state.status !== "completed" ||
+      (event.part.state.error != null && event.part.state.error !== false));
+    if (failed.length !== 1) return null;
+    const target = failed[0], { part } = target.event, state = part.state;
+    if (part.tool !== "grep" || state.status !== "error" ||
+        state.error !== "Ripgrep JSON record exceeded 65536 bytes" ||
+        Object.keys(state).sort().join(",") !== "error,input,status,time" ||
+        Object.keys(state.time).sort().join(",") !== "end,start" ||
+        !isDeepStrictEqual(state.input, { path: "/home/runner/work/proxx/proxx", pattern: "complete-input eta-mu" }) ||
+        (target.index > 0 && state.time.start < JSON.parse(lines[target.index - 1]).timestamp)) return null;
+    const submits = calls.filter(({ event }) => event.part.tool === "review_submit");
+    if (submission === null ? submits.length !== 0 : submits.length !== 1) return null;
+    if (submits.length && (submits[0] !== calls.at(-1) || submits[0].index < target.index ||
+        JSON.parse(submits[0].event.part.state.output)?.["ok?"] !== true ||
+        JSON.parse(submits[0].event.part.state.output)?.["restart-required?"] === true)) return null;
+    // Do not hide actual unsuccessful review calls, invalid-tool loops, or a
+    // second HOST error in the omitted submit. Muse owns the rest of the law.
+    if (calls.some(({ event }) => event.part.tool === "invalid")) return null;
+    excluded = [target.index, ...submits.map(({ index }) => index)];
+    failure = { session_id: session, call_id: part.callID, part_id: part.id,
+      message_id: part.messageID, timestamp: target.event.timestamp, time: state.time,
+      input: state.input, error: state.error };
+  } catch { return null; }
+  const projection = Buffer.from(lines.filter((_, index) => !excluded.includes(index)).join(""));
+  const omitted = Buffer.from(lines.filter((_, index) => excluded.includes(index)).join(""));
+  const projectionFile = path.join(directory, "known-grep-overflow-attempt-1.DERIVED.ndjson");
+  const omittedFile = path.join(directory, "known-grep-overflow-attempt-1.OMITTED.ndjson");
+  const proof = { tier: "DERIVED_RETRY_ELIGIBILITY_ONLY", accepted_review: false, ...failure,
+    original_response_sha256: record.response_sha256, original_submission_sha256: record.submission_sha256,
+    projection_file: path.basename(projectionFile), projection_sha256: sha256(projection),
+    omitted_file: path.basename(omittedFile), omitted_sha256: sha256(omitted),
+    omitted_lines: excluded.map((index) => index + 1), omitted_submit: submission !== null };
+  record.known_grep_overflow_transport = proof;
+  const unchanged = () => {
+    const currentSubmission = fs.existsSync(submissionFile) ? sha256(fs.readFileSync(submissionFile)) : null;
+    if (sha256(response) !== record.response_sha256 ||
+        sha256(fs.readFileSync(responseFile)) !== record.response_sha256 ||
+        sha256(fs.readFileSync(stderrFile)) !== record.stderr_sha256 ||
+        (submission === null ? null : sha256(submission)) !== record.submission_sha256 ||
+        currentSubmission !== record.submission_sha256 ||
+        sha256(JSON.stringify(expectedContext)) !== contextSha256 ||
+        sha256(projection) !== proof.projection_sha256 ||
+        sha256(fs.readFileSync(projectionFile)) !== proof.projection_sha256 ||
+        sha256(fs.readFileSync(omittedFile)) !== proof.omitted_sha256) {
+      throw new Error("known grep overflow evidence changed during verification");
+    }
+  };
+  try {
+    fs.writeFileSync(projectionFile, projection, { flag: "wx" });
+    fs.writeFileSync(omittedFile, omitted, { flag: "wx" });
+    unchanged();
+    const verdict = verifierEnvelope(await verifyReviewInvocation(projection, null, expectedContext));
+    proof.canonical_verdict = verdict;
+    unchanged(); proof.verification_state = "returned";
+    writeRecovery(metadataFile, metadata);
+    if (verdict.ok !== false || verdict.reason !== "missing-review-submit" ||
+        verdict.code !== "healthy-unfinished-review" || verdict.violations.length !== 0) return null;
+    return proof;
+  } catch (error) {
+    proof.verification_state = "rejected";
+    proof.verification_error = error instanceof Error ? error.message : String(error);
+    writeRecovery(metadataFile, metadata); throw error;
+  }
+}
+
+/**
+ * Delegate all existing behavior unchanged, and admit
+ * at most one fresh invocation after its exact single-attempt overflow refusal.
+ */
+export async function runKnownGrepOverflowReviewRecovery(options) {
+  const { evidenceDirectory, basePrompt, invokeAttempt, verifyReviewInvocation,
+    expectedContext, reviewTools = [], verifierSha256 = null } = options;
+  const submissionFile = options.submissionFile ?? path.join(evidenceDirectory, "submission.json");
+  const strict = typeof verifyReviewInvocation === "function";
+  const contextSha256 = strict ? sha256(JSON.stringify(expectedContext)) : null;
+  let originalFailure, firstCompleted = false;
+  const delegatedCalls = [];
+  const delegatedOptions = { ...options, invokeAttempt: async (args) => {
+    delegatedCalls.push(args.attempt);
+    const result = await invokeAttempt(args);
+    if (args.attempt === 1 && result?.exitCode === 0) firstCompleted = true;
+    return result;
+  } };
+  try { return await runReviewRecovery(delegatedOptions); } catch (error) { originalFailure = error; }
+  if (!strict || !firstCompleted || delegatedCalls.length !== 1 || delegatedCalls[0] !== 1 ||
+      !fs.existsSync(path.join(evidenceDirectory, "recovery.json"))) throw originalFailure;
+  const metadataFile = path.join(evidenceDirectory, "recovery.json");
+  const metadata = JSON.parse(fs.readFileSync(metadataFile, "utf8"));
+  // Completed attempts only. Setup, verification faults and consumed MAX2 are
+  // never routed through the new transport path.
+  if (metadata.attempts?.length !== 1 || metadata.attempts[0].verification_state !== "returned") throw originalFailure;
+  const proof = await knownGrepOverflowTransport({ metadata, metadataFile,
+    responseFile: path.join(evidenceDirectory, "model-response-attempt-1.txt"),
+    stderrFile: path.join(evidenceDirectory, "opencode-stderr-attempt-1.log"),
+    submissionFile, reviewTools, verifyReviewInvocation, expectedContext, contextSha256 });
+  if (!proof) throw originalFailure;
+  if (metadata.attempts[0].submission_state === "present") {
+    retainStaleSubmission({ metadata, metadataFile, submissionFile, evidenceDirectory });
+  }
+  metadata.recovery_reason = "known_grep_overflow_transport";
+  writeRecovery(metadataFile, metadata);
+  const first = metadata.attempts[0];
+  const checkFirstCustody = () => {
+    if (sha256(fs.readFileSync(path.join(evidenceDirectory, first.response_file))) !== first.response_sha256 ||
+        sha256(fs.readFileSync(path.join(evidenceDirectory, first.stderr_file))) !== first.stderr_sha256 ||
+        sha256(fs.readFileSync(path.join(evidenceDirectory, proof.projection_file))) !== proof.projection_sha256 ||
+        sha256(fs.readFileSync(path.join(evidenceDirectory, proof.omitted_file))) !== proof.omitted_sha256 ||
+        (first.retained_submission_file && sha256(fs.readFileSync(path.join(evidenceDirectory,
+          first.retained_submission_file))) !== first.submission_sha256) ||
+        sha256(JSON.stringify(expectedContext)) !== contextSha256) {
+      throw new Error("known grep overflow first-attempt custody changed");
+    }
+  };
+  checkFirstCustody();
+  const attempt = MAX_ATTEMPTS;
+  const responseFile = path.join(evidenceDirectory, `model-response-attempt-${attempt}.txt`);
+  const stderrFile = path.join(evidenceDirectory, `opencode-stderr-attempt-${attempt}.log`);
+  if ([responseFile, stderrFile, submissionFile].some((file) => fs.existsSync(file))) {
+    throw new Error("refusing pre-existing corrective evidence after grep overflow");
+  }
+  const prompt = strictInvocationPrompt(`${basePrompt.trimEnd()}
+
+Corrective attempt 2 of 2: the first process failed the exact readonly grep
+with Ripgrep JSON record exceeded 65536 bytes. Its entire invocation and any
+submission remain rejected. The same canonical callback supplied only typed
+retry eligibility over separately retained DERIVED DATA. Start one fresh whole
+process with review_begin and complete all input, assessments and five stages
+anew. Use explicit grep include selection under .opencode/review-evidence;
+never repeat the unrestricted repository grep. STOP on any actual HOST or
+review tool error, without further calls or submission. No third attempt.
+`);
+  let result;
+  try { result = await invokeAttempt({ attempt, prompt, responseFile, stderrFile }); }
+  catch (invocationError) {
+    recordAttempt({ metadata, metadataFile, attempt, invocationError, invocationRejected: true,
+      responseFile, stderrFile, submissionFile });
+    const record = metadata.attempts.at(-1);
+    record.verification_state = "not-run-invocation-rejected";
+    record.response_sha256 = sha256(fs.readFileSync(responseFile));
+    record.stderr_sha256 = sha256(fs.readFileSync(stderrFile));
+    record.submission_sha256 = fs.existsSync(submissionFile) ? sha256(fs.readFileSync(submissionFile)) : null;
+    writeRecovery(metadataFile, metadata); throw invocationError;
+  }
+  const state = recordAttempt({ metadata, metadataFile, attempt, result, responseFile, stderrFile, submissionFile });
+  const verdict = await verifyAttempt({ metadata, metadataFile, responseFile, stderrFile,
+    submissionFile, verifyReviewInvocation, expectedContext });
+  checkFirstCustody();
+  if (sha256(fs.readFileSync(stderrFile)) !== metadata.attempts.at(-1).stderr_sha256) {
+    throw new Error("known grep overflow corrective stderr custody changed");
+  }
+  if (result?.exitCode !== 0 || state !== "present" || !verdict.ok || verdict.sessionID === proof.session_id ||
+      sha256(JSON.stringify(expectedContext)) !== contextSha256) {
+    throw new Error(`review invocation verification failed after attempt 2: ${verdict.reason ?? "fresh-process-binding"}`);
+  }
+  const record = metadata.attempts.at(-1);
+  metadata.accepted_invocation = { attempt, response_file: record.response_file,
+    response_sha256: record.response_sha256, submission_file: path.relative(evidenceDirectory, submissionFile),
+    submission_sha256: record.submission_sha256, session_id: verdict.sessionID,
+    canonical_verdict: verdict, verifier_sha256: verifierSha256, expected_context_sha256: contextSha256 };
+  writeRecovery(metadataFile, metadata);
+  return metadata;
 }

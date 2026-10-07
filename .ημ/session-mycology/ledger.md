@@ -687,3 +687,21 @@
   spore: none
   receipt-refs: 2026-10-07T17:00:20.815Z
   note: Keep failed native outcome literal; separate retry eligibility from review acceptance. Original235 tests preserved, candidate282 pass, same final47 old45PASS2FAIL and candidate47PASS, unchanged source-built C136 composition24PASS. SharedMAX2, healthy review deduplication and final guards unchanged. No source adoption, native agreement, historical edits or skill promotion.
+
+- ts: "2026-10-07T23:36:37.191Z"
+  origin: Exact known grep transport recovery with portable canonical tests
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T23:36:37.191Z
+  note: Keep original failed invocation and receipt outcomes literal. Reuse unchanged canonical admission for derived retry eligibility; require one independently complete fresh process. Original282 tests unchanged, final344 pass, identical62 old49PASS13FAIL. Actual CLI recovery and healthy single-process controls pass. No source adoption, native agreement, historical edit or promotion.
+
+- ts: "2026-10-07T23:37:20.213Z"
+  origin: Evidence filename attribution correction
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T23:37:20.213Z
+  note: Correct the source receipt's seal filename by a new record; retain the original receipt. Actual SEAL.json hash verified. No native verdict or source guard changes.
