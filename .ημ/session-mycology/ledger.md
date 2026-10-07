@@ -606,3 +606,12 @@
   spore: none
   receipt-refs: rheos-todo-breakdown-replan
   note: A process diagram is not an executable edge or evidence of regression. Bind the refusal to the actual compiled runtime and source checkpoint, author the smallest proposed correction on the existing canonical board in an isolated worktree, and keep source qualification, rebuilt artifact and consumer activation distinct. Existing binary/cwd spores cover the reusable lesson; no spore or promotion. Root owns publication and admission.
+- ts: 2026-10-07T02:38:18.890048712Z
+  session: /home/err/spaces/foresight/.worktrees/eta-mu-rheos-todo-replan
+  task: PR344 append-only exact receipt-reference clarification
+  p-efficiency: 0.9
+  p-friction: 0.18
+  p-skill-candidate: 0.15
+  spore: none
+  receipt-refs: 2026-10-07T02:03:17.473976854Z
+  note: Clarifies original reflection2026-10-07T02:03:17.498016231Z in response to CodeRabbit review5436829621/threadPRRT_kwDORu27H86puseT/comment4202360861. Its ambiguous rheos-todo-breakdown-replan reference denotes the catalog receipt2026-10-07T02:03:17.473976854Z, not the earlier observation2026-10-07T02:00:14.909401034Z. Original reflection and receipts remain unchanged. Use exact resolvable receipt timestamps in new reflections; preserve canonical historical events and distinguish local assessment from native approval. No spore or promotion.

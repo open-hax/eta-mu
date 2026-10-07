@@ -1,0 +1,212 @@
+{
+  "recorded_at": "2026-10-07T02:42:07.155240+00:00",
+  "base": "e8060a6b418ff7640a6cdd3b7ee716dd63c036b5",
+  "branch": "codex/rheos-todo-replan-plan",
+  "review": {
+    "id": 5436829621,
+    "receipt_thread": "PRRT_kwDORu27H86puseT",
+    "receipt_comment": 4202360861,
+    "path_thread": "PRRT_kwDORu27H86puseZ",
+    "path_comment": 4202360870
+  },
+  "reference_clarification": {
+    "original_reflection_ts": "2026-10-07T02:03:17.498016231Z",
+    "catalog_receipt_ts": "2026-10-07T02:03:17.473976854Z",
+    "catalog_receipt_line_sha256": "bbfba003bda235858506fbfe3a443d7c97bb9886d995d6953615e7c4502034bf",
+    "unique_exact_catalog_timestamp_in_original_receipts": true,
+    "earlier_observation_ts": "2026-10-07T02:00:14.909401034Z"
+  },
+  "append_only_checks": [
+    {
+      "path": ".ημ/receipts.edn",
+      "before_bytes": 2460,
+      "before_sha256": "2d5824256564513315a398cd1af30acd9c27596ff30b34de4b1f217617de85c8",
+      "after_bytes": 6164,
+      "after_sha256": "ac37165e26edfe83be5bce2f0e64124bde0de250a9bb00d56f87c85cfa32712b",
+      "prefix_preserved": true,
+      "added_newlines": 3
+    },
+    {
+      "path": ".ημ/session-mycology/ledger.md",
+      "before_bytes": 44836,
+      "before_sha256": "e95809c3465400601c678478c585c25f00d5d23c9fe7149798924316f64fc204",
+      "after_bytes": 45691,
+      "after_sha256": "bf7ab89096fb53319b3f88ed241ed2548ce0498b97db2925688935d4b3ac825d",
+      "prefix_preserved": true,
+      "added_newlines": 9
+    }
+  ],
+  "unchanged_historical_files": [
+    {
+      "path": "kanban/.events/ledger.edn",
+      "bytes": 1734341,
+      "sha256": "679962e86299f4b01a8791c6d8aed7a6f22e22b3f605b246ff9b3109e40dd55b",
+      "matches_base": true
+    },
+    {
+      "path": "kanban/tasks/allow-todo-to-return-directly-to-breakdown-in-the-promethean-preset-n-replan.md",
+      "bytes": 8497,
+      "sha256": "ce9d147adc05196bf1f2c89f2fd459328604078f365f20cf957c5210bd52990e",
+      "matches_base": true
+    },
+    {
+      "path": "receipts.edn",
+      "bytes": 327742,
+      "sha256": "1d6d0f9e653b34eede0453308c1bd11e52f4731313f2512ac9919aaaa336900b",
+      "matches_base": true
+    },
+    {
+      "path": ".ημ/diagnostics/rheos-todo-replan-plan/HANDOFF.md",
+      "bytes": 3847,
+      "sha256": "d19e0c0d04ed42cf9e4cd50ce40ec15f9d9574384e81a503e132589896653b95",
+      "matches_base": true
+    },
+    {
+      "path": ".ημ/diagnostics/rheos-todo-replan-plan/authoring.json",
+      "bytes": 2219,
+      "sha256": "a24581a0a3a728d54816e252148221521d94d0c1554ef500fe0f708027dab5ce",
+      "matches_base": true
+    },
+    {
+      "path": ".ημ/diagnostics/rheos-todo-replan-plan/readback.json",
+      "bytes": 9537,
+      "sha256": "cad0cf4cab74dd13b3a7202109ee71c997f81207da7c0745ab94d10c0b799e5e",
+      "matches_base": true
+    },
+    {
+      "path": ".ημ/diagnostics/rheos-todo-replan-plan/verification.json",
+      "bytes": 8399,
+      "sha256": "11988034d333b9e1f046036a4da66d816044bcf4495c4d9a0889e107bc363687",
+      "matches_base": true
+    }
+  ],
+  "pinned_source_checks": [
+    {
+      "path": "src/rheos/backend/infra/task_create.cljs",
+      "bytes": 6353,
+      "sha256": "a815ac16a98853be34fba470a769d1ec1642853f8c13fc1797742f7582abd980",
+      "commit": "ab6b227becd8585742b5130df9ae624d8744928e",
+      "working_bytes_equal_pinned_blob": true
+    },
+    {
+      "path": "src/rheos/backend/domain/events.cljs",
+      "bytes": 7541,
+      "sha256": "5fd19ce700a47ec7bf2645f9086d5feb1bc1f0b2f6345f7f878c3fc393f2edd3",
+      "commit": "ab6b227becd8585742b5130df9ae624d8744928e",
+      "working_bytes_equal_pinned_blob": true
+    },
+    {
+      "path": "test/rheos/backend/infra/task_create_test.cljs",
+      "bytes": 11155,
+      "sha256": "3492692d1b6ee764c1514a2a110ce66a8f4c8bf3849bfa46e14fa82e6ac06a74",
+      "commit": "ab6b227becd8585742b5130df9ae624d8744928e",
+      "working_bytes_equal_pinned_blob": true
+    },
+    {
+      "path": "src/rheos/backend/infra/task_store.cljs",
+      "bytes": 8190,
+      "sha256": "8983f678c5b8e54552f444373c46b954688e8b25777e806e03e6a85ac36a4f58",
+      "commit": "ab6b227becd8585742b5130df9ae624d8744928e",
+      "working_bytes_equal_pinned_blob": true
+    }
+  ],
+  "inspected_cli": {
+    "path": "/home/err/spaces/review-repair/rheos-comment-rendering/dist/cli.cjs",
+    "source_commit": "ab6b227becd8585742b5130df9ae624d8744928e",
+    "sha256": "83c6b397278d418d69ce6509b8c3d9fe87e88cca9141b28143d9efb5d78a75a7",
+    "invoked_for_this_clarification": false
+  },
+  "checks": [
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--exit-code",
+        "e8060a6b418ff7640a6cdd3b7ee716dd63c036b5",
+        "--",
+        "src",
+        "packages",
+        "scripts",
+        "test",
+        ".github",
+        "AGENTS.md",
+        "PROCESS.md",
+        "openhax.kanban.edn",
+        "receipts.edn",
+        "kanban"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--no-index",
+        "--check",
+        "/dev/null",
+        ".ημ/diagnostics/rheos-todo-replan-review-clarification/README.md"
+      ],
+      "exit": 1,
+      "stdout": "",
+      "stderr": "",
+      "interpretation": "Normal new-file difference with no whitespace diagnostics."
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--no-index",
+        "--check",
+        "/dev/null",
+        ".ημ/diagnostics/rheos-todo-replan-review-clarification/source-path-assessment.md"
+      ],
+      "exit": 1,
+      "stdout": "",
+      "stderr": "",
+      "interpretation": "Normal new-file difference with no whitespace diagnostics."
+    }
+  ],
+  "closure_attempt1": {
+    "tool_output": "02fa84",
+    "python_exit": 1,
+    "shell_exit": 0,
+    "cause": "git ls-tree without -z quoted the Unicode .ημ paths; pathlib received the quoted representation and raised FileNotFoundError.",
+    "completed_before_failure": [
+      "both old appended-ledger prefixes",
+      "card/event/legacy receipt equality checks before the first quoted diagnostic path"
+    ],
+    "not_completed_before_failure": [
+      "original four-file diagnostics checks",
+      "whitespace checks"
+    ],
+    "premature_catalog_receipt_preserved": true,
+    "correction": "A separate guarded rerun used git ls-tree -rz and verified its subprocess exit before appending an explicit :refutation receipt.",
+    "successful_rerun_tool_output": "8ed794",
+    "correction_receipt_tool_output": "a000cb"
+  },
+  "independent_local_review": {
+    "reviewer": "/root/intent_research",
+    "scope": "README, source-path assessment and three draft replies; claim/policy boundaries only",
+    "verdict": "No blocker",
+    "limits": "Did not rerun hashes/tests or inspect fresh GitHub API bodies. Local review is not native agreement/approval."
+  },
+  "qualification_limits": [
+    "No source/test/config/card/event changes",
+    "No board invocation, automated tests, build, JVM or service action",
+    "No commit, push, GitHub write, native review agreement, settlement or approval",
+    "No spore or promotion",
+    "Root owns publication and fresh review"
+  ]
+}
