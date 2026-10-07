@@ -418,7 +418,9 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile }) {
 
   try {
     const childEnvironment = { ...process.env };
-    delete childEnvironment.GITHUB_OUTPUT;
+    for (const name of ["GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_PATH", "GITHUB_STATE", "GITHUB_STEP_SUMMARY"]) {
+      delete childEnvironment[name];
+    }
     const child = spawn(
       opencodeBin,
       ["run", "--format", "json", "--agent", "github-reviewer", "--model", reviewModel, prompt],

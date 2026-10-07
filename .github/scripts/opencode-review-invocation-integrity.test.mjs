@@ -393,7 +393,25 @@ test("canonical preparation fault records rejection without child invocation", (
 });
 
 test("real child boundary requires strict CJS and prepares once before both fresh processes", (t) => {
-  const { directory, verifier, output, env } = cliFixture(t);
+  const { directory, child, verifier, output, env } = cliFixture(t);
+  const commandFiles = ["GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_PATH", "GITHUB_STATE", "GITHUB_STEP_SUMMARY"];
+  const sentinels = new Map(commandFiles.slice(1).map((name) => {
+    const file = path.join(directory, `${name}.txt`);
+    const bytes = `supervisor-only ${name}\n`;
+    fs.writeFileSync(file, bytes);
+    env[name] = file;
+    return [name, { file, bytes }];
+  }));
+  env.REVIEW_CHILD_ENV_SENTINEL = "benign-child-environment-control";
+  const counterWrite = "fs.writeFileSync(counter, String(attempt));\n";
+  const probe = [
+    `const commandFiles = ${JSON.stringify(commandFiles)};`,
+    "fs.appendFileSync(path.join(dir, 'child-environment.ndjson'), JSON.stringify({ attempt, pid: process.pid, present: Object.fromEntries(commandFiles.map(name => [name, Object.hasOwn(process.env, name)])), benign: process.env.REVIEW_CHILD_ENV_SENTINEL }) + '\\n');",
+    "for (const name of commandFiles.slice(1)) if (process.env[name]) fs.appendFileSync(process.env[name], 'child-write-attempt-' + attempt + '\\n');",
+  ].join("\n") + "\n";
+  const childSource = fs.readFileSync(child, "utf8");
+  assert.equal(childSource.split(counterWrite).length, 2);
+  fs.writeFileSync(child, childSource.replace(counterWrite, counterWrite + probe));
   const result = spawnSync(process.execPath, [runner], { env, encoding: "utf8", timeout: 10_000 });
   assert.equal(result.status, 0, result.stderr);
   const recovery = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json")));
@@ -410,6 +428,20 @@ test("real child boundary requires strict CJS and prepares once before both fres
   }
   recovery.accepted_invocation.attempt = 1;
   assert.notEqual(sha256(JSON.stringify(recovery.accepted_invocation)), digest);
+  const observations = fs.readFileSync(path.join(directory, "child-environment.ndjson"), "utf8")
+    .trim().split("\n").map((line) => JSON.parse(line));
+  t.diagnostic(`actual child environment observations: ${JSON.stringify(observations)}`);
+  assert.deepEqual(observations.map(({ attempt }) => attempt), [1, 2]);
+  assert.equal(new Set(observations.map(({ pid }) => pid)).size, 2);
+  for (const observation of observations) {
+    assert.equal(observation.benign, env.REVIEW_CHILD_ENV_SENTINEL);
+    assert.deepEqual(observation.present, Object.fromEntries(commandFiles.map((name) => [name, false])));
+  }
+  for (const [name, { file, bytes }] of sentinels) {
+    assert.equal(fs.readFileSync(file, "utf8"), bytes);
+    assert.equal(env[name], file);
+  }
+  assert.equal(env.GITHUB_OUTPUT, output);
 });
 
 test("CLI canonical rejection records diagnostics and emits no trusted acceptance digest", (t) => {
