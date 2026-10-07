@@ -1,0 +1,20 @@
+{
+  "command": [
+    "/home/err/spaces/review-repair/.\u03b7\u03bc/eta340-utf8-parent-verification/actionlint-transport",
+    ".github/workflows/opencode-code-review.yml"
+  ],
+  "exit": 0,
+  "elapsed_s": 0.20045191499957582,
+  "executable_sha256": "9c76166dec2f915a08e1e982fbbbe1f0b9746a6f12e2092c0eb6e28e4b05be62",
+  "workflow_sha256": "6e0dc6e0bd6b3606e84695a398d87ea82beb07f4afa66cbe6af859af26d52a00",
+  "source_transport_proof": {
+    "source": "https://raw.githubusercontent.com/rhysd/actionlint/v1.7.11/process.go",
+    "original_sha256": "93431096768939a34aad0b5a7656ff39afc02d6944ce5f2d398e0e52c043ac72",
+    "temporary_sha256": "5d2f2e90cbce4f0b21bc3fcbb9bbe033eedda44ffddb83d27e0dca227085b09d",
+    "current_pipe_capacity_bytes": 65536,
+    "change": "Only subprocess stdin transport: standard strings.NewReader starts transfer concurrently with child; all checker flags/rules retained",
+    "global_tool_modified": false,
+    "source_copy": "/home/err/spaces/review-repair/.\u03b7\u03bc/eta340-utf8-parent-verification/actionlint-1.7.11-transport"
+  },
+  "scope": "Existing isolated actionlint1.7.11 with subprocess stdin transport fix only; unchanged standard rules and actual ShellCheck enabled. Global actionlint not changed. Original stalled invocations retained."
+}

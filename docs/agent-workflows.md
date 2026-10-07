@@ -40,6 +40,22 @@ The workflow has three bounded stages:
 2. **Review-context compilation** — check out pinned revisions of `octave-commons/muse` and `riatzukiza/.agents`. Muse compiles a review-specific OpenCode projection containing only observer tools; the `.agents` repository is packaged as the global skill source. Both revisions and the skill inventory are recorded in the context artifact.
 3. **Model review with bounded recovery** — map the change, reconstruct relevant contracts and invariants, generate candidate findings, attempt to disprove each candidate, and publish only findings that survive the evidence threshold. A completed first invocation that leaves a missing `review_submit` artifact receives exactly one corrective model invocation. An invocation that exits 1 without a submission after the host invalid-tool doom-loop rejection, with two distinct completed unavailable-review-tool events followed by the terminal session error can use that same corrective invocation. Structured OpenCode JSON events must bind the calls and terminal permission error to one session, and the corrected `review_` name must exist in the checksummed staged registry. A quoted tool error, an unknown tool mapping, mixed sessions, malformed events, provider quota/authentication failure, spawn rejection, or a failed invocation with any submission does not authorize recovery. The recovery starts the state machine again and must finish with a real tool-written submission; it never synthesizes a review from free-form output. A malformed submission does not consume the recovery attempt, and malformed or repeatedly missing submissions fail closed before publication.
 
+The review job defaults to **45 minutes**, including direct pull-request runs.
+A reusable caller can explicitly select `with: {review_timeout_minutes: 120}`
+at a qualified immutable workflow revision. Only 45 and 120 are admitted; other
+values fail before checkout or model invocation. This is the whole review-job
+budget, shared by both permitted model attempts and finalization, not a new
+per-attempt timeout or retry. Other job deadlines, the free model, complete-input
+assessment, submission and terminal evidence gates stay unchanged.
+
+The 120-minute option is a prospective large-input budget experiment. Truth
+PR54 run `37605835577` exhausted 45 minutes after assessing 401 of 807 chunks,
+without a submission or published review. Extrapolating that observed rate gives
+roughly 90 minutes for assessment alone; 120 leaves a proposed finalization
+margin. Local admission tests cannot establish that such a review will finish.
+A caller must still qualify the actual complete input and final native outcome;
+timeout, partial coverage and missing submission remain failures.
+
 Diff staging preserves the complete Git merge-base/head bytes in `basehead.diff`
 before making the 300,000-byte `pr.diff` preview. `input-manifest.json` records
 the native base, independently computed merge base, exact head, full byte count,

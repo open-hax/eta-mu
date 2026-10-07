@@ -1,0 +1,5 @@
+{
+  "ok": true,
+  "uuid": "opencode-mimo-evidence-review-agent",
+  "comment": "2026-10-07 bounded review-job budget local verification: RED e222afbf contains3 expected missing-input/guard failures. GREEN exact workflow SHA2566e0dc6e0bd6b3606e84695a398d87ea82beb07f4afa66cbe6af859af26d52a00 passes77/77 existing workflow/recovery tests with Node22.20.0 and existing yaml2.8.3. Parsed-YAML reversal preserves all prior workflow content except the new input/first admission guard/review timeout; original tests and recovery runner bytes are exact. Syntax/whitespace pass. Standard actionlint stalled on its inherited pre-start stdin transport; failed runs are retained. Existing isolated actionlint1.7.11 transport repair passes all standard rules and ShellCheck without filters;97 official Go files compared, only process.go stdin transport differs. Independent source review found no blocker. No provider/native/JVM run, push, review request, caller activation or status transition.120 remains a prospective budget experiment requiring actual complete hosted qualification; diagnostic proof lives at .ημ/diagnostics/truth-review-timeout-budget."
+}

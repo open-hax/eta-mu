@@ -1,0 +1,17 @@
+{
+  "command": [
+    "/home/err/.volta/tools/image/node/22.20.0/bin/node",
+    "--test",
+    ".github/scripts/opencode-code-review-workflow.test.mjs",
+    ".github/scripts/opencode-review-tool-recovery.test.mjs"
+  ],
+  "exit": 0,
+  "node_path": "/home/err/spaces/review-repair/.\u03b7\u03bc/eta345-tail-only-parent-integration-20261007T0820Z/full-selector-corrected-source/node_modules",
+  "node_version": "v22.20.0",
+  "input_hashes": {
+    ".github/scripts/opencode-code-review-workflow.test.mjs": "48fda7fce0c77f2c0c6eccde305619ef42d0f1e171b3f0dc12949f2d5894309b",
+    ".github/scripts/opencode-review-tool-recovery.test.mjs": "dc99093784e8457513ba257fc2be3ba936c8f092debb2a596ffbe6e632516e13",
+    ".github/workflows/opencode-code-review.yml": "6e0dc6e0bd6b3606e84695a398d87ea82beb07f4afa66cbe6af859af26d52a00",
+    ".github/scripts/run-opencode-review-recovery.mjs": "26ba646300a8e12d9766c362a2690d9f60209021682719c8b1dcc2c0a5caaa73"
+  }
+}

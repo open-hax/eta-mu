@@ -1,0 +1,9 @@
+{
+  "command": [
+    "actionlint",
+    "-debug",
+    ".github/workflows/opencode-code-review.yml"
+  ],
+  "exit": "timeout5",
+  "GOMAXPROCS": "2"
+}

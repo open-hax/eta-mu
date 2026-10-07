@@ -597,3 +597,12 @@
   spore: none
   receipt-refs: eta342-all-native-rejection-test-source-20261006T1534Z/new-source-receipt.edn
   note: Read the whole completed review before publishing a pending test successor. Include all genuine rejection gaps in one publication, retain each prior passing/failing observation literally, and qualify the new native head independently. No spore or promotion.
+
+- ts: "2026-10-07T11:34:37.544189+00:00"
+  origin: Truth complete-input review budget
+  p-efficiency: 0.84
+  p-friction: 0.30
+  p-skill-candidate: 0.25
+  spore: none
+  receipt-refs: truth-review-timeout-budget/red; truth-review-timeout-budget/green
+  note: Preserve full input and failed review coverage while changing only the bounded caller budget. Local admission and model completion are separate proofs. Reuse the existing stdin transport repair without disabling static rules; preserve original tool stalls and verify its isolated source delta. No spore or promotion.

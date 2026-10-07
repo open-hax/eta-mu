@@ -1,0 +1,473 @@
+TAP version 13
+# Subtest: Discord actual adapter batches ten long Unicode comments by all embed text
+ok 1 - Discord actual adapter batches ten long Unicode comments by all embed text
+  ---
+  duration_ms: 12.869017
+  type: 'test'
+  ...
+# mock Discord accepted 3 embeds/4893 text units, 3 embeds/4893 text units, 3 embeds/4893 text units, 1 embeds/1632 text units
+# Subtest: Discord actual adapter retains the ten-embed count bound for short comments
+ok 2 - Discord actual adapter retains the ten-embed count bound for short comments
+  ---
+  duration_ms: 1.726797
+  type: 'test'
+  ...
+# Subtest: Discord actual adapter includes title and fields at the inclusive 6000 boundary
+ok 3 - Discord actual adapter includes title and fields at the inclusive 6000 boundary
+  ---
+  duration_ms: 1.205832
+  type: 'test'
+  ...
+# Subtest: Discord actual adapter propagates an HTTP failure and stops remaining sends
+ok 4 - Discord actual adapter propagates an HTTP failure and stops remaining sends
+  ---
+  duration_ms: 1.194
+  type: 'test'
+  ...
+# Subtest: Discord actual adapter sends nothing without a webhook or fresh comments
+ok 5 - Discord actual adapter sends nothing without a webhook or fresh comments
+  ---
+  duration_ms: 0.389877
+  type: 'test'
+  ...
+# Subtest: review budget keeps the default and bounds the explicit workflow-call option
+ok 6 - review budget keeps the default and bounds the explicit workflow-call option
+  ---
+  duration_ms: 0.231873
+  type: 'test'
+  ...
+# Subtest: review budget actual admission accepts direct PR, default, and explicit choices
+ok 7 - review budget actual admission accepts direct PR, default, and explicit choices
+  ---
+  duration_ms: 13.588892
+  type: 'test'
+  ...
+# Subtest: review budget actual admission rejects unsupported values before checkout or provider
+ok 8 - review budget actual admission rejects unsupported values before checkout or provider
+  ---
+  duration_ms: 27.227732
+  type: 'test'
+  ...
+# Subtest: workflow exposes one stable always-running terminal gate
+ok 9 - workflow exposes one stable always-running terminal gate
+  ---
+  duration_ms: 0.65025
+  type: 'test'
+  ...
+# Subtest: a required reusable head input drives both exact checkout guards
+ok 10 - a required reusable head input drives both exact checkout guards
+  ---
+  duration_ms: 0.674891
+  type: 'test'
+  ...
+# Subtest: staging preserves the full immutable diff beyond its bounded preview
+ok 11 - staging preserves the full immutable diff beyond its bounded preview
+  ---
+  duration_ms: 116.41322
+  type: 'test'
+  ...
+# Subtest: staging fails closed for an absent base or a mismatched selected head
+ok 12 - staging fails closed for an absent base or a mismatched selected head
+  ---
+  duration_ms: 51.677925
+  type: 'test'
+  ...
+# Subtest: staging preserves empty input and distinguishes the native base from the merge base
+ok 13 - staging preserves empty input and distinguishes the native base from the merge base
+  ---
+  duration_ms: 158.864199
+  type: 'test'
+  ...
+# Subtest: the compiled observer contract pins compatible Muse and allows both full-input tools
+ok 14 - the compiled observer contract pins compatible Muse and allows both full-input tools
+  ---
+  duration_ms: 1.652122
+  type: 'test'
+  ...
+# Subtest: context assembly records Muse and Agents inputs literally without executing ref text
+ok 15 - context assembly records Muse and Agents inputs literally without executing ref text
+  ---
+  duration_ms: 259.804526
+  type: 'test'
+  ...
+# Subtest: fresh and final input verification share one command before App mint and publication
+ok 16 - fresh and final input verification share one command before App mint and publication
+  ---
+  duration_ms: 0.260157
+  type: 'test'
+  ...
+# Subtest: post-guard input, manifest, proof and context mutation stops before publisher
+ok 17 - post-guard input, manifest, proof and context mutation stops before publisher
+  ---
+  duration_ms: 2001.455132
+  type: 'test'
+  ...
+# Subtest: final binding refuses absent, mismatched and incomplete submission metadata
+ok 18 - final binding refuses absent, mismatched and incomplete submission metadata
+  ---
+  duration_ms: 3863.172053
+  type: 'test'
+  ...
+# Subtest: final binding accepts complete empty, large, Unicode and retained producer input
+ok 19 - final binding accepts complete empty, large, Unicode and retained producer input
+  ---
+  duration_ms: 1611.92384
+  type: 'test'
+  ...
+# Subtest: final binding follows real omission-only recovery and freezes the unchanged submission
+ok 20 - final binding follows real omission-only recovery and freezes the unchanged submission
+  ---
+  duration_ms: 344.990896
+  type: 'test'
+  ...
+# Subtest: post-guard mutation during the recovery invocation still stops publication
+ok 21 - post-guard mutation during the recovery invocation still stops publication
+  ---
+  duration_ms: 277.195231
+  type: 'test'
+  ...
+# Subtest: a fresh review job verifies downloaded input before tools, model or publication
+ok 22 - a fresh review job verifies downloaded input before tools, model or publication
+  ---
+  duration_ms: 0.218312
+  type: 'test'
+  ...
+# Subtest: a successful malicious gate cannot replace full input and its matching manifest
+ok 23 - a successful malicious gate cannot replace full input and its matching manifest
+  ---
+  duration_ms: 377.497762
+  type: 'test'
+  ...
+# Subtest: fresh input rejects a genuine non-UTF8 Git text diff before proof and model
+ok 24 - fresh input rejects a genuine non-UTF8 Git text diff before proof and model
+  ---
+  duration_ms: 283.416377
+  type: 'test'
+  ...
+# Subtest: independent review accepts exact large, empty and divergent-base input
+ok 25 - independent review accepts exact large, empty and divergent-base input
+  ---
+  duration_ms: 709.50444
+  type: 'test'
+  ...
+# Subtest: failed-job rerun verifies retained producer input and records both attempts
+ok 26 - failed-job rerun verifies retained producer input and records both attempts
+  ---
+  duration_ms: 266.619013
+  type: 'test'
+  ...
+# Subtest: retained input refuses forged artifact scope, attempts and producer provenance before model
+ok 27 - retained input refuses forged artifact scope, attempts and producer provenance before model
+  ---
+  duration_ms: 2282.956206
+  type: 'test'
+  ...
+# Subtest: independent review refuses altered manifest identities, size, hash and provenance
+ok 28 - independent review refuses altered manifest identities, size, hash and provenance
+  ---
+  duration_ms: 1880.542569
+  type: 'test'
+  ...
+# Subtest: both checkout guards reject a valid caller SHA that is not the event PR head
+ok 29 - both checkout guards reject a valid caller SHA that is not the event PR head
+  ---
+  duration_ms: 118.036877
+  type: 'test'
+  ...
+# Subtest: toolchain setup defaults on when the input is absent and honors an explicit false
+ok 30 - toolchain setup defaults on when the input is absent and honors an explicit false
+  ---
+  duration_ms: 0.194943
+  type: 'test'
+  ...
+# Subtest: default deterministic gates mirror private Git dependencies without persisting auth
+ok 31 - default deterministic gates mirror private Git dependencies without persisting auth
+  ---
+  duration_ms: 0.159443
+  type: 'test'
+  ...
+# Subtest: the default reusable evidence script executes every declared gate
+ok 32 - the default reusable evidence script executes every declared gate
+  ---
+  duration_ms: 173.12983
+  type: 'test'
+  ...
+# Subtest: artifact names do not claim an unverified head revision
+ok 33 - artifact names do not claim an unverified head revision
+  ---
+  duration_ms: 1.310652
+  type: 'test'
+  ...
+# Subtest: review downloads the immutable artifact names emitted by prerequisite jobs
+ok 34 - review downloads the immutable artifact names emitted by prerequisite jobs
+  ---
+  duration_ms: 0.846282
+  type: 'test'
+  ...
+# Subtest: review context packages the exact runner for reusable-workflow callers
+ok 35 - review context packages the exact runner for reusable-workflow callers
+  ---
+  duration_ms: 2.369935
+  type: 'test'
+  ...
+# Subtest: workflow bounds recovery before validating and publishing the submission
+ok 36 - workflow bounds recovery before validating and publishing the submission
+  ---
+  duration_ms: 1.439807
+  type: 'test'
+  ...
+# Subtest: operator docs distinguish in-job recovery from a failed-job rerun
+ok 37 - operator docs distinguish in-job recovery from a failed-job rerun
+  ---
+  duration_ms: 4.194448
+  type: 'test'
+  ...
+# Subtest: first-pass submission does not invoke recovery
+ok 38 - first-pass submission does not invoke recovery
+  ---
+  duration_ms: 6.296388
+  type: 'test'
+  ...
+# Subtest: one omitted submission receives exactly one corrective attempt
+ok 39 - one omitted submission receives exactly one corrective attempt
+  ---
+  duration_ms: 7.776059
+  type: 'test'
+  ...
+# Subtest: repeated omission fails closed after two retained attempts
+ok 40 - repeated omission fails closed after two retained attempts
+  ---
+  duration_ms: 7.703685
+  type: 'test'
+  ...
+# Subtest: malformed submission fails closed without consuming the recovery attempt
+ok 41 - malformed submission fails closed without consuming the recovery attempt
+  ---
+  duration_ms: 5.524616
+  type: 'test'
+  ...
+# Subtest: non-zero completed invocation records its evidence and does not retry
+ok 42 - non-zero completed invocation records its evidence and does not retry
+  ---
+  duration_ms: 11.851602
+  type: 'test'
+  ...
+# Subtest: rejected invocation is recorded once and rethrows the original error
+ok 43 - rejected invocation is recorded once and rethrows the original error
+  ---
+  duration_ms: 7.722456
+  type: 'test'
+  ...
+# Subtest: recovery CLI preserves both real child-process streams
+ok 44 - recovery CLI preserves both real child-process streams
+  ---
+  duration_ms: 159.899436
+  type: 'test'
+  ...
+# Subtest: recovery CLI finalizes streams and records a spawn failure
+ok 45 - recovery CLI finalizes streams and records a spawn failure
+  ---
+  duration_ms: 60.875933
+  type: 'test'
+  ...
+# Subtest: deterministic checkout guard records independently executed SHA
+ok 46 - deterministic checkout guard records independently executed SHA
+  ---
+  duration_ms: 50.039022
+  type: 'test'
+  ...
+# Subtest: deterministic checkout guard rejects a copied expected SHA mismatch
+ok 47 - deterministic checkout guard rejects a copied expected SHA mismatch
+  ---
+  duration_ms: 71.675698
+  type: 'test'
+  ...
+# Subtest: deterministic checkout guard rejects a non-commit reusable target
+ok 48 - deterministic checkout guard rejects a non-commit reusable target
+  ---
+  duration_ms: 124.7062
+  type: 'test'
+  ...
+# Subtest: deterministic checkout guard rejects a dirty tree
+ok 49 - deterministic checkout guard rejects a dirty tree
+  ---
+  duration_ms: 48.107288
+  type: 'test'
+  ...
+# Subtest: review checkout independently rejects an expected SHA mismatch
+ok 50 - review checkout independently rejects an expected SHA mismatch
+  ---
+  duration_ms: 60.143991
+  type: 'test'
+  ...
+# Subtest: deterministic summary reports success only for exact clean zero exits
+ok 51 - deterministic summary reports success only for exact clean zero exits
+  ---
+  duration_ms: 85.231412
+  type: 'test'
+  ...
+# Subtest: deterministic summary stays available and red when a gate fails
+ok 52 - deterministic summary stays available and red when a gate fails
+  ---
+  duration_ms: 80.754722
+  type: 'test'
+  ...
+# Subtest: deterministic summary never labels mismatched evidence exact-head
+ok 53 - deterministic summary never labels mismatched evidence exact-head
+  ---
+  duration_ms: 91.831041
+  type: 'test'
+  ...
+# Subtest: deterministic summary fails closed when status output is missing
+ok 54 - deterministic summary fails closed when status output is missing
+  ---
+  duration_ms: 174.565787
+  type: 'test'
+  ...
+# Subtest: build gate archives and restores every explicit tracked generated output
+ok 55 - build gate archives and restores every explicit tracked generated output
+  ---
+  duration_ms: 126.516485
+  type: 'test'
+  ...
+# Subtest: build gate never hides a generated-output mutation that predates the build
+ok 56 - build gate never hides a generated-output mutation that predates the build
+  ---
+  duration_ms: 77.821974
+  type: 'test'
+  ...
+# Subtest: review completion permits only review artifacts and preserves revision
+ok 57 - review completion permits only review artifacts and preserves revision
+  ---
+  duration_ms: 53.112542
+  type: 'test'
+  ...
+# Subtest: review completion rejects tracked mutation
+ok 58 - review completion rejects tracked mutation
+  ---
+  duration_ms: 39.31806
+  type: 'test'
+  ...
+# Subtest: review completion rejects untracked files outside bounded artifacts
+ok 59 - review completion rejects untracked files outside bounded artifacts
+  ---
+  duration_ms: 123.184595
+  type: 'test'
+  ...
+# Subtest: terminal gate passes only the complete successful exact-head tuple
+ok 60 - terminal gate passes only the complete successful exact-head tuple
+  ---
+  duration_ms: 531.626238
+  type: 'test'
+  ...
+# Subtest: terminal gate treats unsupported pull requests as explicitly not applicable
+ok 61 - terminal gate treats unsupported pull requests as explicitly not applicable
+  ---
+  duration_ms: 66.106288
+  type: 'test'
+  ...
+# Subtest: terminal gate fails closed without pull request context
+ok 62 - terminal gate fails closed without pull request context
+  ---
+  duration_ms: 93.690289
+  type: 'test'
+  ...
+# Subtest: a terminal unavailable review tool loop gets one full corrective invocation
+ok 63 - a terminal unavailable review tool loop gets one full corrective invocation
+  ---
+  duration_ms: 7.034009
+  type: 'test'
+  ...
+# Subtest: repeated invalid tool failure stops at the shared two invocation bound
+ok 64 - repeated invalid tool failure stops at the shared two invocation bound
+  ---
+  duration_ms: 3.490997
+  type: 'test'
+  ...
+# Subtest: an unexposed corrected tool does not authorize recovery
+ok 65 - an unexposed corrected tool does not authorize recovery
+  ---
+  duration_ms: 1.975252
+  type: 'test'
+  ...
+# Subtest: quoted model prose never authorizes recovery
+ok 66 - quoted model prose never authorizes recovery
+  ---
+  duration_ms: 3.868182
+  type: 'test'
+  ...
+# Subtest: cross-session event never authorizes recovery
+ok 67 - cross-session event never authorizes recovery
+  ---
+  duration_ms: 1.953755
+  type: 'test'
+  ...
+# Subtest: provider quota terminal error never authorizes recovery
+ok 68 - provider quota terminal error never authorizes recovery
+  ---
+  duration_ms: 1.486491
+  type: 'test'
+  ...
+# Subtest: nonmatching error before the terminal tool error never authorizes recovery
+ok 69 - nonmatching error before the terminal tool error never authorizes recovery
+  ---
+  duration_ms: 1.418357
+  type: 'test'
+  ...
+# Subtest: unknown tool never authorizes recovery
+ok 70 - unknown tool never authorizes recovery
+  ---
+  duration_ms: 1.242627
+  type: 'test'
+  ...
+# Subtest: valid tool permission denial never authorizes recovery
+ok 71 - valid tool permission denial never authorizes recovery
+  ---
+  duration_ms: 1.269174
+  type: 'test'
+  ...
+# Subtest: duplicate event representations never authorizes recovery
+ok 72 - duplicate event representations never authorizes recovery
+  ---
+  duration_ms: 1.356728
+  type: 'test'
+  ...
+# Subtest: an exit other than 1 does not authorize unavailable-tool recovery
+ok 73 - an exit other than 1 does not authorize unavailable-tool recovery
+  ---
+  duration_ms: 0.604459
+  type: 'test'
+  ...
+# Subtest: a failed invocation with a present submission cannot recover: {broken
+ok 74 - a failed invocation with a present submission cannot recover: {broken
+  ---
+  duration_ms: 0.700704
+  type: 'test'
+  ...
+# Subtest: a failed invocation with a present submission cannot recover: {}
+ok 75 - a failed invocation with a present submission cannot recover: {}
+  ---
+  duration_ms: 0.551089
+  type: 'test'
+  ...
+# Subtest: a failed invocation with a present submission cannot recover: {"event":"APPROVE"}
+ok 76 - a failed invocation with a present submission cannot recover: {"event":"APPROVE"}
+  ---
+  duration_ms: 0.583353
+  type: 'test'
+  ...
+# Subtest: packaged CLI uses structured output and the staged registry for a real child recovery
+ok 77 - packaged CLI uses structured output and the staged registry for a real child recovery
+  ---
+  duration_ms: 228.651167
+  type: 'test'
+  ...
+1..77
+# tests 77
+# suites 0
+# pass 77
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 17287.368191

@@ -1,0 +1,12 @@
+{
+  "original_root": "/home/err/go/pkg/mod/github.com/rhysd/actionlint@v1.7.11",
+  "adapted_root": "/home/err/spaces/review-repair/.\u03b7\u03bc/eta340-utf8-parent-verification/actionlint-1.7.11-transport",
+  "go_files_compared": 97,
+  "changed_files": [
+    "process.go"
+  ],
+  "missing_files": [],
+  "original_process_sha256": "93431096768939a34aad0b5a7656ff39afc02d6944ce5f2d398e0e52c043ac72",
+  "adapted_process_sha256": "5d2f2e90cbce4f0b21bc3fcbb9bbe033eedda44ffddb83d27e0dca227085b09d",
+  "patch": "--- official/process.go\n+++ adapted/process.go\n@@ -3,7 +3,7 @@\n import (\n \t\"context\"\n \t\"fmt\"\n-\t\"io\"\n+\t\"strings\"\n \t\"os/exec\"\n \t\"sync\"\n \n@@ -25,15 +25,8 @@\n \tcmd := exec.Command(e.cmd, e.args...)\n \tcmd.Stderr = nil\n \n-\tp, err := cmd.StdinPipe()\n-\tif err != nil {\n-\t\treturn nil, fmt.Errorf(\"could not make stdin pipe for %s process: %w\", e.cmd, err)\n-\t}\n-\tif _, err := io.WriteString(p, e.stdin); err != nil {\n-\t\tp.Close()\n-\t\treturn nil, fmt.Errorf(\"could not write to stdin of %s process: %w\", e.cmd, err)\n-\t}\n-\tp.Close()\n+\tcmd.Stdin = strings.NewReader(e.stdin)\n+\tvar err error\n \n \tvar stdout []byte\n \tif e.combineOutput {\n"
+}

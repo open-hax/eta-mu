@@ -1,0 +1,10 @@
+{
+  "prior_body_exact": true,
+  "prior_comment_prefix_exact": true,
+  "frontmatter_except_write_id_exact": true,
+  "ledger_prefix_sha256": "56649c10f713f3d1c6262b1a83feee65c2eafdfea68fafd8bf26a4b8182a2816",
+  "ledger_prefix_bytes": 1726938,
+  "new_events": 1,
+  "status": "in_progress",
+  "points": "5"
+}

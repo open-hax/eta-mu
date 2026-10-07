@@ -1,0 +1,28 @@
+{
+  "kanban/.events/ledger.edn": {
+    "bytes": 1725349,
+    "sha256": "3a7e813e4c1373de728df75d9a45b5011c4e8f33869a2640ce068d227d0f81ca"
+  },
+  "receipts.edn": {
+    "bytes": 327742,
+    "sha256": "1d6d0f9e653b34eede0453308c1bd11e52f4731313f2512ac9919aaaa336900b"
+  },
+  ".\u03b7\u03bc/session-mycology/ledger.md": {
+    "bytes": 44076,
+    "sha256": "2bd7cee73ac1b11bf1892282749f252651bff46022920462be43071629ef65c6"
+  },
+  "kanban/tasks/opencode-mimo-evidence-review-agent.md": {
+    "bytes": 4843,
+    "sha256": "bf35cb1f448f5678e97b04154c5a00bfa492fb1dffe2d81628cf2bd8651094a2"
+  },
+  "base": "09a4454480baa67f6fdc40f6f73f5e48ef0457d1",
+  "rheos_cli_sha256": "83c6b397278d418d69ce6509b8c3d9fe87e88cca9141b28143d9efb5d78a75a7",
+  "canonical_scope": {
+    "prior_body_exact": true,
+    "prior_comment_prefix_exact": true,
+    "frontmatter_except_write_id_exact": true,
+    "ledger_prefix_exact": true,
+    "new_events": 1
+  },
+  "verification_correction": "Initial assertion expected separate canonical comment sections and failed after the successful one-time comment. Canonical read merges comments in one section; corrected checks preserve the exact old prefix plus one scoped suffix. No retry or history edit."
+}

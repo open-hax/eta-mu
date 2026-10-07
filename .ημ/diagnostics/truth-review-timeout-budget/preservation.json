@@ -1,0 +1,9 @@
+{
+  "base": "09a4454480baa67f6fdc40f6f73f5e48ef0457d1",
+  "workflow_parsed_equal_after_removing_only_budget_input_guard_timeout": true,
+  "all_existing_workflow_tests_exact": true,
+  "recovery_runner_exact": true,
+  "recovery_runner_sha256": "26ba646300a8e12d9766c362a2690d9f60209021682719c8b1dcc2c0a5caaa73",
+  "recovery_tests_exact": true,
+  "embedded_runner_model_permissions_gates_and_other_jobs_preserved": true
+}

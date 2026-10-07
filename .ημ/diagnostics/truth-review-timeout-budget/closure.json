@@ -1,0 +1,52 @@
+{
+  "base": "09a4454480baa67f6fdc40f6f73f5e48ef0457d1",
+  "red_commit": "e222afbf6e342c9836c5fc5accf0d9a60b8f014d",
+  "branch": "codex/truth-review-timeout-budget",
+  "source_hashes": {
+    ".github/workflows/opencode-code-review.yml": "6e0dc6e0bd6b3606e84695a398d87ea82beb07f4afa66cbe6af859af26d52a00",
+    ".github/scripts/opencode-code-review-workflow.test.mjs": "48fda7fce0c77f2c0c6eccde305619ef42d0f1e171b3f0dc12949f2d5894309b",
+    "docs/agent-workflows.md": "abc2e027f52230e6040cb0945b63e39b005821b17792ba04c7fef5f7537395a5"
+  },
+  "prefixes": {
+    "receipts.edn": {
+      "old_bytes": 327742,
+      "old_sha256": "1d6d0f9e653b34eede0453308c1bd11e52f4731313f2512ac9919aaaa336900b",
+      "appended_bytes": 2367,
+      "prefix_exact": true
+    },
+    ".\u03b7\u03bc/session-mycology/ledger.md": {
+      "old_bytes": 44076,
+      "old_sha256": "2bd7cee73ac1b11bf1892282749f252651bff46022920462be43071629ef65c6",
+      "appended_bytes": 575,
+      "prefix_exact": true
+    },
+    "kanban/.events/ledger.edn": {
+      "old_bytes": 1725349,
+      "old_sha256": "3a7e813e4c1373de728df75d9a45b5011c4e8f33869a2640ce068d227d0f81ca",
+      "appended_bytes": 3060,
+      "prefix_exact": true
+    }
+  },
+  "rheos_new_events": 2,
+  "canonical_status": "in_progress",
+  "canonical_points": "5",
+  "tests": {
+    "red_expected_failures": 3,
+    "green_tests": 77,
+    "green_pass": 77,
+    "green_fail": 0,
+    "green_skipped": 0
+  },
+  "independent_review": {
+    "agent": "intent_research",
+    "method": "read-only source review",
+    "verdict": "no blocker",
+    "not_native_approval": true
+  },
+  "qualification_limits": [
+    "No provider, native or JVM run",
+    "No push, PR, review request, caller adoption or status transition",
+    "Standard actionlint transport stalls remain failures; adapted existing isolated transport passes standard rules and ShellCheck",
+    "120-minute completion is prospective; full 807-chunk native qualification is still required"
+  ]
+}
