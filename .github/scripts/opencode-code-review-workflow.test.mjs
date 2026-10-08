@@ -396,7 +396,7 @@ test("staging preserves empty input and distinguishes the native base from the m
 });
 
 test("the compiled observer contract pins compatible Muse and allows both full-input tools", () => {
-  const museSha = "c1369c223cf3c57e3e31934a6d746bfcdfe73f5a";
+  const museSha = "ba7f47dc6db26096a2a821d7a3c7ef62cb00c879";
   const expectedRef = "${{ inputs.muse_revision || '" + museSha + "' }}";
   assert.equal(workflow.on.workflow_call.inputs.muse_revision.default, museSha,
     "workflow-call default must select the corrected immutable Muse source");

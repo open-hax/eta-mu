@@ -723,3 +723,12 @@
   spore: none
   receipt-refs: 2026-10-08T02:05:56.163Z
   note: Correction to the action-pin note recorded at 2026-10-08T00:46:46.588Z (historical line 716): 344 total tests comprise 282 unchanged tests plus 62 new controls added by PR348. The earlier original344 wording meant tests already present on f1a before the action-pin correction, not tests all predating this PR. Read and57 as and 57. Every historical receipt and note byte, and all 57 invalid-record outcomes, are preserved. This new clarification grants no new execution, approval, retroactive validation or successor review credit. No spore or promotion.
+
+- ts: "2026-10-08T06:18:03.044Z"
+  origin: Protected-merged Muse ba7f integration into the existing Eta shared MAX2 caller
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-08T06:18:03.044Z
+  note: Local full four-file suite413PASS equals344 prior current controls plus69 new, or282 originals plus131 total additions relative to PR base. Full original test prefixes/assertions and all historical receipt/reflection bytes and57 invalid outcomes remain exact. First terminal-length trace remains refused; a separate source-bound classifier grants eligibility only for the one remaining shared slot, with full input before FIRST, healthy HOST and immutable custody. Fresh second process must pass normal acceptance/publication. Real assembly requires all3 exports; generic context/hash stays stable while canonical ba7f law strengthens before-FIRST. Independent static source review supplies no native agreement. Initial private-/dev harness104 failures and corrected413PASS, previous343/68 and current344/69 worker results, and whole auxiliary actionlint exit-15 are retained literally. Actual ShellCheck exists; all3 exact new shell blocks passed separately. Fresh actual successor hosted/full-native/CodeRabbit/findings/gate/protected merge remain required. Finite3-component scope only; specific Proxx permission remains pending. No historical rewrite, approval transfer, source adoption, spore or promotion.
