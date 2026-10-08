@@ -297,14 +297,145 @@ async function finalInputCoverage({ metadata, metadataFile, responseFile, stderr
   }
 }
 
-/** Append the sole corrective-attempt instructions to the original review prompt. */
-function correctivePrompt(basePrompt, toolFailure, staleCoverage = false, submitJsonFailure = false, coverageFailure = false) {
+/**
+ * Require all three callable exports at revision-bound production assembly.
+ * Older two-export CLI/library fixtures remain supported; a malformed present
+ * classifier refuses. This capability check supplies no eligibility or approval.
+ * @param {Object} verifier - Loaded module from the pinned source assembly.
+ * @returns {void} Returns only when every required export is callable.
+ * @throws {Error} When preparation, verification or length classification is absent or malformed.
+ */
+export function assertLengthRecoveryExports(verifier) {
+  if (!verifier || ["prepareReviewInvocationContext", "verifyReviewInvocation", "classifyLengthEndedReview"]
+      .some(name => typeof verifier[name] !== "function")) {
+    throw new Error("staged length source must export prepareReviewInvocationContext, verifyReviewInvocation and classifyLengthEndedReview");
+  }
+}
+
+/**
+ * Bind immutable input, source and first-attempt custody for length recovery.
+ * The source-bound Muse callback owns eligibility; the generic context stays
+ * byte-exact and a separate context receives fatal-decoded fullDiff.
+ * @param {Object} options - Trusted supervisor context, paths, callbacks and metadata.
+ * @returns {{check: Function, bind: Function, classify: Function, fail: Function}|null} Custody operations, or null for a legacy caller without a classifier.
+ * @throws {Error} On malformed setup, source/context changes or callback faults.
+ */
+function prepareLengthRecovery({ evidenceDirectory, expectedContext, verifierFile, verifierSha256,
+  classifyLengthEndedReview, verifyReviewInvocation, metadata, metadataFile, submissionFile }) {
+  if (classifyLengthEndedReview === undefined) return null;
+  const fail = (error) => {
+    metadata.accepted_invocation = null;
+    metadata.length_recovery = { ...metadata.length_recovery, state: "rejected",
+      error: error instanceof Error ? error.message : String(error) };
+    writeRecovery(metadataFile, metadata);
+    throw error;
+  };
+  try {
+    if (typeof verifyReviewInvocation !== "function" || !expectedContext ||
+        typeof expectedContext !== "object" || Array.isArray(expectedContext)) {
+      throw new Error("length recovery requires strict invocation verification and context");
+    }
+    if (typeof classifyLengthEndedReview !== "function" ||
+        !verifierFile || !path.isAbsolute(verifierFile) || !/^[a-f0-9]{64}$/.test(verifierSha256 || "")) {
+      throw new Error("length recovery requires a source-bound classifier");
+    }
+    const fullFile = path.join(evidenceDirectory, "basehead.diff");
+    const manifestFile = path.join(evidenceDirectory, "input-manifest.json");
+    const full = fs.readFileSync(fullFile), manifest = fs.readFileSync(manifestFile);
+    // Retain exact UTF-8, including BOM; canonical Muse revalidates geometry.
+    const fullDiff = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(full);
+    const contextJSON = JSON.stringify(expectedContext);
+    const lengthContext = { ...JSON.parse(contextJSON), fullDiff };
+    const lengthJSON = JSON.stringify(lengthContext);
+    const source = { verifier_file: verifierFile, full_diff_file: path.basename(fullFile),
+      manifest_file: path.basename(manifestFile), verifier_sha256: verifierSha256, full_diff_sha256: sha256(full),
+      manifest_sha256: sha256(manifest), expected_context_sha256: sha256(contextJSON),
+      length_context_sha256: sha256(lengthJSON) };
+    metadata.length_recovery = { state: "prepared", ...source };
+    let first = null;
+    const check = () => {
+      try {
+        if (sha256(fs.readFileSync(verifierFile)) !== verifierSha256 ||
+            sha256(fs.readFileSync(fullFile)) !== source.full_diff_sha256 ||
+            sha256(fs.readFileSync(manifestFile)) !== source.manifest_sha256 ||
+            JSON.stringify(expectedContext) !== contextJSON || JSON.stringify(lengthContext) !== lengthJSON ||
+            (first && (sha256(fs.readFileSync(first.responseFile)) !== first.response_sha256 ||
+                       sha256(fs.readFileSync(first.stderrFile)) !== first.stderr_sha256))) {
+          throw new Error("length recovery source/context/first-attempt custody changed");
+        }
+      } catch (error) { fail(error); }
+    };
+    const bind = (responseFile, stderrFile) => {
+      if (!first) first = { responseFile, stderrFile,
+        response_sha256: sha256(fs.readFileSync(responseFile)), stderr_sha256: sha256(fs.readFileSync(stderrFile)) };
+      check();
+    };
+    const classify = async (record) => {
+      const proof = record.length_ended_review = { verification_state: "checking", ...source,
+        response_sha256: record.response_sha256, stderr_sha256: record.stderr_sha256,
+        submission_sha256: record.submission_sha256 };
+      writeRecovery(metadataFile, metadata);
+      try {
+        check();
+        const response = fs.readFileSync(first.responseFile);
+        const custody = { invocationState: record.invocation_state, exitCode: record.exit_code,
+          submissionState: record.submission_state, responseSha256Before: record.response_sha256,
+          responseSha256After: record.response_sha256,
+          contextBefore: JSON.parse(lengthJSON), contextAfter: JSON.parse(lengthJSON) };
+        const custodyJSON = JSON.stringify(custody);
+        const raw = await classifyLengthEndedReview(response, null, lengthContext, custody);
+        check();
+        if (fs.existsSync(submissionFile) || sha256(response) !== record.response_sha256 ||
+            JSON.stringify(custody) !== custodyJSON) throw new Error("length classifier changed callback custody");
+        let result;
+        try { result = JSON.parse(JSON.stringify(raw)); }
+        catch { throw new Error("length classifier returned non-serializable output"); }
+        if (!result || typeof result.eligible !== "boolean" || typeof result.code !== "string" ||
+            !Array.isArray(result.violations) || Object.hasOwn(result, "ok") ||
+            Object.hasOwn(result, "acceptedInvocation") || Object.hasOwn(result, "approval") ||
+            (result.eligible ? (result.classification !== "length-ended-unfinished-review" ||
+              result.code !== "new-complete-invocation-required" || result.requiredAction !== "new-complete-review-invocation" ||
+              result.terminalReason !== "length" || typeof result.sessionID !== "string" || !result.sessionID ||
+              result.pageCount !== expectedContext.pageCount || !Number.isInteger(result.pageCount) ||
+              result.pageCount < 1 || !Array.isArray(result.recordedStages) || !Number.isInteger(result.terminalPosition) ||
+              result.terminalPosition < 1 || result.responseSha256 !== record.response_sha256 ||
+              result.fullInputSha256 !== source.full_diff_sha256 || result.violations.length !== 0)
+              : result.classification !== "unestablished-length-ended-review")) {
+          throw new Error("length classifier returned malformed eligibility output");
+        }
+        proof.result = result; proof.verification_state = "returned";
+        writeRecovery(metadataFile, metadata);
+        return result.eligible ? proof : null;
+      } catch (error) {
+        proof.verification_state = "rejected";
+        proof.verification_error = error instanceof Error ? error.message : String(error);
+        fail(error);
+      }
+    };
+    check(); writeRecovery(metadataFile, metadata);
+    return { check, bind, classify, fail };
+  } catch (error) { fail(error); }
+}
+
+/**
+ * Append the sole fresh-invocation instructions to the original review prompt.
+ * @param {string} basePrompt - Original immutable-input review instructions.
+ * @param {Object|null} toolFailure - Established unavailable-tool recovery detail.
+ * @param {boolean} [staleCoverage=false] - Established stale-coverage refusal.
+ * @param {boolean} [submitJsonFailure=false] - Established submit-JSON transport refusal.
+ * @param {boolean} [coverageFailure=false] - Established final-input omission refusal.
+ * @param {boolean} [lengthFailure=false] - Source-classified terminal-length eligibility.
+ * @returns {string} Instructions for attempt two of the shared two-attempt bound.
+ */
+function correctivePrompt(basePrompt, toolFailure, staleCoverage = false, submitJsonFailure = false, coverageFailure = false, lengthFailure = false) {
   const cause = toolFailure
     ? `the first model invocation failed without a review after repeatedly calling the unavailable tool ${toolFailure.tool}. Use the actual exposed name ${toolFailure.corrected_tool}; do not call the unavailable spelling again.`
     : submitJsonFailure
       ? "the first stopped process produced the known final review_submit JSON transport diagnostic without an actual submit or artifact. Its whole trace remains refused; the retained derived projection establishes retry eligibility only. In this fresh process, pass well-formed JSON arguments to the exposed review_submit tool."
     : coverageFailure
       ? "the first stopped process failed final adversarial validation because the final full-input page was read but not assessed. Its whole trace remains failed; a separately retained canonical healthy-omission projection supplies only retry eligibility. Read and assess every full-input page anew before completing all five stages and submitting in this sole fresh process."
+    : lengthFailure
+      ? "the completed first process ended at length without submission. Canonical verification still refuses its original trace. The source-bound classifier established eligibility only for this sole fresh whole invocation; reread and reassess all immutable pages before FIRST and complete all five stages."
     : staleCoverage
       ? "the canonical host-trace verifier established stale review coverage in the first completed invocation. Its assessment history cannot be repaired. Perform one fresh bounded model invocation over the whole unchanged input; finish all reads before assessing each page."
     : "the first completed model invocation omitted the required review_submit artifact.";
@@ -495,17 +626,17 @@ function recordAttempt({
 }
 
 /**
- * Run one review attempt and exactly one corrective attempt when, and only
- * when the first invocation omitted review_submit, or failed in a verified
- * unavailable-review-tool loop without a submission. All other failures stop.
- * A supplied canonical Muse callback is mandatory for accepting a present
- * artifact. Its unambiguous stale or established omission verdict can consume
- * the existing sole recovery, alongside the original unavailable-tool path.
- * The known final submit-JSON transport path additionally requires a retained
- * derived projection's exact healthy-omission refusal from that same callback.
- * Omitting the callback preserves the historical library contract for legacy
- * fixtures only; the CLI always requires the staged canonical implementation.
- * Live-head and changed-line publication validation remain separate.
+ * Run the first review and at most one eligible fresh corrective invocation.
+ * Unavailable-tool, established omission, stale coverage, submit-JSON transport,
+ * final-input omission and source-classified terminal length share MAX_ATTEMPTS=2.
+ * A supplied canonical Muse callback owns acceptance of a present artifact.
+ * Length eligibility never accepts the first trace; callback/source/custody
+ * faults stop, and the fresh second session must pass normal verification.
+ * Omitting callbacks preserves historical library fixtures only; the CLI always
+ * requires the staged canonical verifier. Publication validation is separate.
+ * @param {Object} options - Evidence paths, prompt, child adapter and trusted callbacks/context.
+ * @returns {Promise<Object>} Retained recovery metadata after an accepted invocation.
+ * @throws {Error} On setup, custody, lifecycle or verification refusal, or exhausted MAX2.
  */
 export async function runReviewRecovery({
   evidenceDirectory,
@@ -516,6 +647,8 @@ export async function runReviewRecovery({
   verifyReviewInvocation,
   expectedContext,
   verifierSha256 = null,
+  verifierFile,
+  classifyLengthEndedReview,
 }) {
   if (!evidenceDirectory) throw new Error("evidenceDirectory is required");
   if (typeof basePrompt !== "string" || basePrompt.trim().length === 0) {
@@ -523,14 +656,14 @@ export async function runReviewRecovery({
   }
   if (typeof invokeAttempt !== "function") throw new Error("invokeAttempt is required");
   const strict = verifyReviewInvocation !== undefined;
-  if (strict && typeof verifyReviewInvocation !== "function") throw new Error("verifyReviewInvocation must be a function");
-  if (strict && (!expectedContext || typeof expectedContext !== "object" || Array.isArray(expectedContext))) {
+  if (strict && classifyLengthEndedReview === undefined && typeof verifyReviewInvocation !== "function") throw new Error("verifyReviewInvocation must be a function");
+  if (strict && classifyLengthEndedReview === undefined && (!expectedContext || typeof expectedContext !== "object" || Array.isArray(expectedContext))) {
     throw new Error("expectedContext is required for canonical invocation verification");
   }
 
   fs.mkdirSync(evidenceDirectory, { recursive: true });
   const metadataFile = path.join(evidenceDirectory, "recovery.json");
-  if (strict && [metadataFile, ...[1, 2].flatMap((attempt) => [
+  if ((strict || classifyLengthEndedReview !== undefined) && [metadataFile, ...[1, 2].flatMap((attempt) => [
     path.join(evidenceDirectory, `model-response-attempt-${attempt}.txt`),
     path.join(evidenceDirectory, `opencode-stderr-attempt-${attempt}.log`),
   ])].some((file) => fs.existsSync(file))) {
@@ -549,10 +682,27 @@ export async function runReviewRecovery({
   }
 
   let prompt = strict ? strictInvocationPrompt(basePrompt) : basePrompt;
+  const lengthRecovery = prepareLengthRecovery({ evidenceDirectory, expectedContext, verifierFile, verifierSha256,
+    classifyLengthEndedReview, verifyReviewInvocation, metadata, metadataFile, submissionFile });
   const contextSha256 = strict ? sha256(JSON.stringify(expectedContext)) : null;
+  const verifyBoundInvocation = lengthRecovery ? async (response, body, ctx) => {
+    const responseHash = sha256(response), bodyHash = body === null ? null : sha256(body);
+    lengthRecovery.check();
+    const result = await verifyReviewInvocation(response, body, ctx);
+    lengthRecovery.check();
+    if (sha256(response) !== responseHash || (body === null ? null : sha256(body)) !== bodyHash) {
+      lengthRecovery.fail(new Error("canonical callback changed length buffer custody"));
+    }
+    return result;
+  } : verifyReviewInvocation;
+  let lengthFailure = null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    lengthRecovery?.check();
     const responseFile = path.join(evidenceDirectory, `model-response-attempt-${attempt}.txt`);
     const stderrFile = path.join(evidenceDirectory, `opencode-stderr-attempt-${attempt}.log`);
+    if (lengthRecovery && attempt === 2 && [responseFile, stderrFile, submissionFile].some(file => fs.existsSync(file))) {
+      lengthRecovery.fail(new Error("refusing pre-existing corrective length evidence"));
+    }
     let result;
     try {
       result = await invokeAttempt({ attempt, prompt, responseFile, stderrFile });
@@ -588,21 +738,38 @@ export async function runReviewRecovery({
       submissionFile,
     });
 
+    lengthRecovery?.bind(responseFile, stderrFile);
+    const callbackSubmissionSha = fs.existsSync(submissionFile) ? sha256(fs.readFileSync(submissionFile)) : null;
+    const callbackStderrSha = sha256(fs.readFileSync(stderrFile));
     const toolFailure = attempt === 1 && result?.exitCode === 1 && state === "missing"
       ? unavailableReviewTool(responseFile, stderrFile, reviewTools, strict ? expectedContext.reviewTools : undefined, strict)
       : null;
     const verdict = strict ? await verifyAttempt({ metadata, metadataFile, responseFile, stderrFile,
-      submissionFile, verifyReviewInvocation, expectedContext }) : null;
+      submissionFile, verifyReviewInvocation: verifyBoundInvocation, expectedContext }) : null;
     const submitJsonFailure = strict && attempt === 1 && result?.exitCode === 0 && state === "missing"
       ? await submitJsonTransport({ metadata, metadataFile, responseFile, stderrFile, submissionFile,
-        reviewTools, verifyReviewInvocation, expectedContext, contextSha256 }) : null;
+        reviewTools, verifyReviewInvocation: verifyBoundInvocation, expectedContext, contextSha256 }) : null;
     const coverageFailure = strict && attempt === 1 && result?.exitCode === 0 && state === "missing"
       ? await finalInputCoverage({ metadata, metadataFile, responseFile, stderrFile, submissionFile,
-        reviewTools, verifyReviewInvocation, expectedContext, contextSha256 }) : null;
+        reviewTools, verifyReviewInvocation: verifyBoundInvocation, expectedContext, contextSha256 }) : null;
+    if (lengthRecovery) {
+      lengthRecovery.check();
+      if (sha256(fs.readFileSync(stderrFile)) !== callbackStderrSha ||
+          (fs.existsSync(submissionFile) ? sha256(fs.readFileSync(submissionFile)) : null) !== callbackSubmissionSha) {
+        lengthRecovery.fail(new Error("canonical callback changed length custody"));
+      }
+    }
+    if (lengthRecovery && attempt === 1 && result?.exitCode === 0 && state === "missing" &&
+        verdict.ok === false && !submitJsonFailure && !coverageFailure) {
+      lengthFailure = await lengthRecovery.classify(metadata.attempts.at(-1));
+    }
     if (result?.exitCode !== 0 && !toolFailure) {
       throw new Error(`OpenCode review attempt ${attempt} exited ${result?.exitCode ?? "without a code"}`);
     }
     if (state === "present" && (!strict || verdict.ok)) {
+      if (lengthFailure && verdict.sessionID === lengthFailure.result.sessionID) {
+        lengthRecovery.fail(new Error("length corrective invocation must have a fresh session"));
+      }
       if (strict) {
         const record = metadata.attempts.at(-1);
         metadata.accepted_invocation = {
@@ -625,7 +792,7 @@ export async function runReviewRecovery({
     }
     const staleCoverage = strict && verdict.ok === false && verdict.reason === "stale-review-coverage" && result?.exitCode === 0;
     const omittedSubmission = strict && verdict.ok === false && verdict.reason === "missing-review-submit" && state === "missing" && result?.exitCode === 0;
-    if (strict && !toolFailure && !staleCoverage && !omittedSubmission && !submitJsonFailure && !coverageFailure) {
+    if (strict && !toolFailure && !staleCoverage && !omittedSubmission && !submitJsonFailure && !coverageFailure && !(attempt === 1 && lengthFailure)) {
       throw new Error(`review invocation verification failed after attempt ${attempt}: ${verdict.reason ?? "submission-not-established"}`);
     }
     if (attempt === MAX_ATTEMPTS) {
@@ -635,13 +802,13 @@ export async function runReviewRecovery({
       throw new Error(`reviewer omitted review_submit after ${MAX_ATTEMPTS} attempts`);
     }
 
-    metadata.recovery_reason = toolFailure ? "unavailable_review_tool" : submitJsonFailure ? "review_submit_json_transport" : coverageFailure ? "final_input_coverage" : staleCoverage ? "stale-review-coverage" : "missing_review_submit";
+    metadata.recovery_reason = toolFailure ? "unavailable_review_tool" : submitJsonFailure ? "review_submit_json_transport" : coverageFailure ? "final_input_coverage" : lengthFailure ? "length_ended_unfinished_review" : staleCoverage ? "stale-review-coverage" : "missing_review_submit";
     if (toolFailure) metadata.attempts.at(-1).tool_failure = toolFailure;
     writeRecovery(metadataFile, metadata);
     if (staleCoverage && state === "present") {
       retainStaleSubmission({ metadata, metadataFile, submissionFile, evidenceDirectory });
     }
-    prompt = correctivePrompt(basePrompt, toolFailure, staleCoverage, submitJsonFailure, coverageFailure);
+    prompt = correctivePrompt(basePrompt, toolFailure, staleCoverage, submitJsonFailure, coverageFailure, !!lengthFailure);
     if (strict) prompt = strictInvocationPrompt(prompt);
   }
 
@@ -700,7 +867,13 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile }) {
   }
 }
 
-/** Read the configured prompt and tool registry, then run bounded review recovery. */
+/**
+ * Load the staged source and trusted input before bounded CLI review recovery.
+ * Keep source/input hashes bound through preparation, each callback and output;
+ * publish only the accepted invocation digest after those checks succeed.
+ * @returns {Promise<void>} Completes after writing trusted output and recovery metadata.
+ * @throws {Error} On invalid configuration, source mutation or bounded review refusal.
+ */
 async function main() {
   const prNumber = process.env.PR_NUMBER;
   const promptFile = process.env.REVIEW_PROMPT_FILE;
@@ -724,6 +897,7 @@ async function main() {
   let verifierBytes;
   let verifier;
   let expectedContext;
+  let checkSource;
   try {
     verifierBytes = fs.readFileSync(verifierFile);
     verifier = createRequire(import.meta.url)(verifierFile);
@@ -734,11 +908,21 @@ async function main() {
     if (sha256(fs.readFileSync(verifierFile)) !== sha256(verifierBytes)) {
       throw new Error("staged invocation verifier changed while loading");
     }
+    if (verifier.classifyLengthEndedReview !== undefined) assertLengthRecoveryExports(verifier);
+    const fullBytes = fs.readFileSync(path.join(evidenceDirectory, "basehead.diff"));
+    const manifestBytes = fs.readFileSync(path.join(evidenceDirectory, "input-manifest.json"));
+    const fullHash = sha256(fullBytes), manifestHash = sha256(manifestBytes);
+    checkSource = () => {
+      if (sha256(fs.readFileSync(verifierFile)) !== sha256(verifierBytes) ||
+          sha256(fs.readFileSync(path.join(evidenceDirectory, "basehead.diff"))) !== fullHash ||
+          sha256(fs.readFileSync(path.join(evidenceDirectory, "input-manifest.json"))) !== manifestHash) {
+        throw new Error("staged invocation source/input changed");
+      }
+    };
     // Canonical Muse prepares the actual lossless geometry once, before any
     // child. Keep it in trusted supervisor memory across the two-attempt bound.
     expectedContext = verifier.prepareReviewInvocationContext(
-      fs.readFileSync(path.join(evidenceDirectory, "basehead.diff")),
-      fs.readFileSync(path.join(evidenceDirectory, "input-manifest.json")),
+      fullBytes, manifestBytes,
       exposedTools, submissionFile,
     );
     if (!expectedContext || typeof expectedContext !== "object" || Array.isArray(expectedContext)) {
@@ -755,12 +939,15 @@ async function main() {
     }
     throw error;
   }
-  const metadata = await runReviewRecovery({ evidenceDirectory, basePrompt, reviewTools,
-    submissionFile, invokeAttempt: invokeOpenCode,
-    verifyReviewInvocation: verifier.verifyReviewInvocation, expectedContext,
+  const metadata = await runKnownGrepOverflowReviewRecovery({ evidenceDirectory, basePrompt, reviewTools,
+    submissionFile, invokeAttempt: async args => { checkSource(); return invokeOpenCode(args); },
+    verifyReviewInvocation: async (...args) => {
+      checkSource(); const verdict = await verifier.verifyReviewInvocation(...args); checkSource(); return verdict;
+    }, expectedContext, verifierFile, classifyLengthEndedReview: verifier.classifyLengthEndedReview,
     verifierSha256: sha256(verifierBytes) });
   const accepted = metadata.accepted_invocation;
   try {
+    checkSource();
     if (!accepted || sha256(fs.readFileSync(path.join(evidenceDirectory, accepted.response_file))) !== accepted.response_sha256 ||
         sha256(fs.readFileSync(submissionFile)) !== accepted.submission_sha256) {
       throw new Error("accepted invocation bytes changed before trusted output");
@@ -781,4 +968,238 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.error(`::error::${error.message}`);
     process.exitCode = 1;
   });
+}
+
+// Bounded caller extension; canonical Muse retains review admission authority.
+/**
+ * Retain the exact known grep overflow as retry DATA, never review evidence.
+ * Remove only that failed call and, when present, the sole successful submit
+ * call. Every other raw line remains for the SAME canonical callback to judge.
+ * The original submission and whole failed trace stay rejected and in custody.
+ */
+async function knownGrepOverflowTransport({ metadata, metadataFile, responseFile,
+  stderrFile, submissionFile, reviewTools, verifyReviewInvocation,
+  expectedContext, contextSha256 }) {
+  const record = metadata.attempts[0], original = record?.canonical_verdict;
+  if (metadata.max_attempts !== MAX_ATTEMPTS || metadata.attempts.length !== 1 ||
+      metadata.accepted_invocation !== null || metadata.recovery_reason !== null ||
+      record.attempt !== 1 || record.exit_code !== 0 || record.invocation_state !== "completed" ||
+      record.verification_state !== "returned" || !["present", "missing"].includes(record.submission_state) ||
+      original?.ok !== false || original.reason !== "unestablished-review-trace" ||
+      original.code !== "host-tool-schema" || original.violations.length !== 0 ||
+      !reviewTools.includes("review_submit") || !Array.isArray(expectedContext.reviewTools) ||
+      !expectedContext.reviewTools.includes("review_submit")) return null;
+  const response = fs.readFileSync(responseFile), directory = path.dirname(responseFile);
+  const submission = fs.existsSync(submissionFile) ? fs.readFileSync(submissionFile) : null;
+  let lines, excluded, failure;
+  try {
+    lines = new TextDecoder("utf-8", { fatal: true }).decode(response).match(/[^\n]*\n|[^\n]+$/g) ?? [];
+    if (!Buffer.from(lines.join("")).equals(response)) return null;
+    const events = lines.map((line, index) => line.trim() ? { event: JSON.parse(line), index } : null).filter(Boolean);
+    const native = (x, prefix) => typeof x === "string" && new RegExp(`^${prefix}_[A-Za-z0-9]+$`).test(x);
+    const natural = (x) => Number.isSafeInteger(x) && x >= 0;
+    const session = events[0]?.event.sessionID;
+    if (!native(session, "ses") || events.some(({ event }, i) =>
+        !["step_start", "step_finish", "text", "tool_use"].includes(event.type) ||
+        event.sessionID !== session || event.part?.sessionID !== session ||
+        !native(event.part?.id, "prt") || !native(event.part?.messageID, "msg") ||
+        !natural(event.timestamp) || (i > 0 && event.timestamp < events[i - 1].event.timestamp)) ||
+        new Set(events.map(({ event }) => event.part.id)).size !== events.length ||
+        events.at(-1)?.event.type !== "step_finish" || events.at(-1).event.part?.reason !== "stop") return null;
+    const calls = events.filter(({ event }) => event.type === "tool_use");
+    if (calls.some(({ event }) => event.part.type !== "tool" || !native(event.part.callID, "call") ||
+        !natural(event.part.state?.time?.start) || !natural(event.part.state.time.end) ||
+        event.part.state.time.start > event.part.state.time.end || event.part.state.time.end > event.timestamp) ||
+        new Set(calls.map(({ event }) => event.part.callID)).size !== calls.length) return null;
+    const failed = calls.filter(({ event }) => event.part.state.status !== "completed" ||
+      (event.part.state.error != null && event.part.state.error !== false));
+    if (failed.length !== 1) return null;
+    const target = failed[0], { part } = target.event, state = part.state;
+    if (part.tool !== "grep" || state.status !== "error" ||
+        state.error !== "Ripgrep JSON record exceeded 65536 bytes" ||
+        Object.keys(state).sort().join(",") !== "error,input,status,time" ||
+        Object.keys(state.time).sort().join(",") !== "end,start" ||
+        !isDeepStrictEqual(state.input, { path: "/home/runner/work/proxx/proxx", pattern: "complete-input eta-mu" }) ||
+        (target.index > 0 && state.time.start < JSON.parse(lines[target.index - 1]).timestamp)) return null;
+    const submits = calls.filter(({ event }) => event.part.tool === "review_submit");
+    if (submission === null ? submits.length !== 0 : submits.length !== 1) return null;
+    if (submits.length && (submits[0] !== calls.at(-1) || submits[0].index < target.index ||
+        JSON.parse(submits[0].event.part.state.output)?.["ok?"] !== true ||
+        JSON.parse(submits[0].event.part.state.output)?.["restart-required?"] === true)) return null;
+    // Do not hide actual unsuccessful review calls, invalid-tool loops, or a
+    // second HOST error in the omitted submit. Muse owns the rest of the law.
+    if (calls.some(({ event }) => event.part.tool === "invalid")) return null;
+    excluded = [target.index, ...submits.map(({ index }) => index)];
+    failure = { session_id: session, call_id: part.callID, part_id: part.id,
+      message_id: part.messageID, timestamp: target.event.timestamp, time: state.time,
+      input: state.input, error: state.error };
+  } catch { return null; }
+  const projection = Buffer.from(lines.filter((_, index) => !excluded.includes(index)).join(""));
+  const omitted = Buffer.from(lines.filter((_, index) => excluded.includes(index)).join(""));
+  const projectionFile = path.join(directory, "known-grep-overflow-attempt-1.DERIVED.ndjson");
+  const omittedFile = path.join(directory, "known-grep-overflow-attempt-1.OMITTED.ndjson");
+  const proof = { tier: "DERIVED_RETRY_ELIGIBILITY_ONLY", accepted_review: false, ...failure,
+    original_response_sha256: record.response_sha256, original_submission_sha256: record.submission_sha256,
+    projection_file: path.basename(projectionFile), projection_sha256: sha256(projection),
+    omitted_file: path.basename(omittedFile), omitted_sha256: sha256(omitted),
+    omitted_lines: excluded.map((index) => index + 1), omitted_submit: submission !== null };
+  record.known_grep_overflow_transport = proof;
+  const unchanged = () => {
+    const currentSubmission = fs.existsSync(submissionFile) ? sha256(fs.readFileSync(submissionFile)) : null;
+    if (sha256(response) !== record.response_sha256 ||
+        sha256(fs.readFileSync(responseFile)) !== record.response_sha256 ||
+        sha256(fs.readFileSync(stderrFile)) !== record.stderr_sha256 ||
+        (submission === null ? null : sha256(submission)) !== record.submission_sha256 ||
+        currentSubmission !== record.submission_sha256 ||
+        sha256(JSON.stringify(expectedContext)) !== contextSha256 ||
+        sha256(projection) !== proof.projection_sha256 ||
+        sha256(fs.readFileSync(projectionFile)) !== proof.projection_sha256 ||
+        sha256(fs.readFileSync(omittedFile)) !== proof.omitted_sha256) {
+      throw new Error("known grep overflow evidence changed during verification");
+    }
+  };
+  try {
+    fs.writeFileSync(projectionFile, projection, { flag: "wx" });
+    fs.writeFileSync(omittedFile, omitted, { flag: "wx" });
+    unchanged();
+    const verdict = verifierEnvelope(await verifyReviewInvocation(projection, null, expectedContext));
+    proof.canonical_verdict = verdict;
+    unchanged(); proof.verification_state = "returned";
+    writeRecovery(metadataFile, metadata);
+    if (verdict.ok !== false || verdict.reason !== "missing-review-submit" ||
+        verdict.code !== "healthy-unfinished-review" || verdict.violations.length !== 0) return null;
+    return proof;
+  } catch (error) {
+    proof.verification_state = "rejected";
+    proof.verification_error = error instanceof Error ? error.message : String(error);
+    writeRecovery(metadataFile, metadata); throw error;
+  }
+}
+
+/**
+ * Delegate the existing recovery loop within one shared two-invocation budget.
+ * Admit the exact known grep overflow only after one completed refused attempt;
+ * preserve raw first-attempt custody and require a separately verified fresh
+ * invocation. Setup/callback/custody faults and consumed slots remain terminal.
+ * @param {Object} options - Supervisor options with source-bound canonical callbacks.
+ * @returns {Promise<Object>} Metadata for the independently accepted invocation.
+ * @throws {Error} On ineligible transport, changed custody or second-attempt refusal.
+ */
+export async function runKnownGrepOverflowReviewRecovery(options) {
+  const { evidenceDirectory, basePrompt, invokeAttempt, verifyReviewInvocation: originalVerifier,
+    expectedContext, reviewTools = [], verifierSha256 = null } = options;
+  const submissionFile = options.submissionFile ?? path.join(evidenceDirectory, "submission.json");
+  const strict = typeof originalVerifier === "function";
+  const contextSha256 = strict && expectedContext !== undefined ? sha256(JSON.stringify(expectedContext)) : null;
+  // Retain the same caller source/input binding across the existing grep wrapper.
+  // This is custody only; every verdict still comes from the original callback.
+  let lengthSourceSnapshot = null;
+  const sourceSnapshot = () => [options.verifierFile, path.join(evidenceDirectory, "basehead.diff"),
+    path.join(evidenceDirectory, "input-manifest.json")].map(file => sha256(fs.readFileSync(file)));
+  const checkLengthSource = () => {
+    if (lengthSourceSnapshot && (!isDeepStrictEqual(sourceSnapshot(), lengthSourceSnapshot) ||
+        sha256(JSON.stringify(expectedContext)) !== contextSha256)) {
+      throw new Error("length/grep shared caller source or context custody changed");
+    }
+  };
+  const verifyReviewInvocation = strict && options.classifyLengthEndedReview !== undefined ? async (response, body, ctx) => {
+    const responseHash = sha256(response), bodyHash = body === null ? null : sha256(body);
+    checkLengthSource();
+    const verdict = await originalVerifier(response, body, ctx);
+    checkLengthSource();
+    if (sha256(response) !== responseHash || (body === null ? null : sha256(body)) !== bodyHash) {
+      throw new Error("length/grep canonical callback changed buffer custody");
+    }
+    return verdict;
+  } : originalVerifier;
+  let originalFailure, firstCompleted = false;
+  const delegatedCalls = [];
+  const delegatedOptions = { ...options, verifyReviewInvocation, invokeAttempt: async (args) => {
+    if (args.attempt === 1 && options.classifyLengthEndedReview !== undefined) lengthSourceSnapshot = sourceSnapshot();
+    checkLengthSource();
+    delegatedCalls.push(args.attempt);
+    const result = await invokeAttempt(args);
+    if (args.attempt === 1 && result?.exitCode === 0) firstCompleted = true;
+    return result;
+  } };
+  try { return await runReviewRecovery(delegatedOptions); } catch (error) { originalFailure = error; }
+  if (!strict || !firstCompleted || delegatedCalls.length !== 1 || delegatedCalls[0] !== 1 ||
+      !fs.existsSync(path.join(evidenceDirectory, "recovery.json"))) throw originalFailure;
+  const metadataFile = path.join(evidenceDirectory, "recovery.json");
+  const metadata = JSON.parse(fs.readFileSync(metadataFile, "utf8"));
+  // Completed attempts only. Setup, verification faults and consumed MAX2 are
+  // never routed through the new transport path.
+  if (metadata.attempts?.length !== 1 || metadata.attempts[0].verification_state !== "returned" ||
+      metadata.length_recovery?.state === "rejected" || metadata.attempts[0].length_ended_review?.verification_state === "rejected") throw originalFailure;
+  const proof = await knownGrepOverflowTransport({ metadata, metadataFile,
+    responseFile: path.join(evidenceDirectory, "model-response-attempt-1.txt"),
+    stderrFile: path.join(evidenceDirectory, "opencode-stderr-attempt-1.log"),
+    submissionFile, reviewTools, verifyReviewInvocation, expectedContext, contextSha256 });
+  if (!proof) throw originalFailure;
+  if (metadata.attempts[0].submission_state === "present") {
+    retainStaleSubmission({ metadata, metadataFile, submissionFile, evidenceDirectory });
+  }
+  metadata.recovery_reason = "known_grep_overflow_transport";
+  writeRecovery(metadataFile, metadata);
+  const first = metadata.attempts[0];
+  const checkFirstCustody = () => {
+    checkLengthSource();
+    if (sha256(fs.readFileSync(path.join(evidenceDirectory, first.response_file))) !== first.response_sha256 ||
+        sha256(fs.readFileSync(path.join(evidenceDirectory, first.stderr_file))) !== first.stderr_sha256 ||
+        sha256(fs.readFileSync(path.join(evidenceDirectory, proof.projection_file))) !== proof.projection_sha256 ||
+        sha256(fs.readFileSync(path.join(evidenceDirectory, proof.omitted_file))) !== proof.omitted_sha256 ||
+        (first.retained_submission_file && sha256(fs.readFileSync(path.join(evidenceDirectory,
+          first.retained_submission_file))) !== first.submission_sha256) ||
+        sha256(JSON.stringify(expectedContext)) !== contextSha256) {
+      throw new Error("known grep overflow first-attempt custody changed");
+    }
+  };
+  checkFirstCustody();
+  const attempt = MAX_ATTEMPTS;
+  const responseFile = path.join(evidenceDirectory, `model-response-attempt-${attempt}.txt`);
+  const stderrFile = path.join(evidenceDirectory, `opencode-stderr-attempt-${attempt}.log`);
+  if ([responseFile, stderrFile, submissionFile].some((file) => fs.existsSync(file))) {
+    throw new Error("refusing pre-existing corrective evidence after grep overflow");
+  }
+  const prompt = strictInvocationPrompt(`${basePrompt.trimEnd()}
+
+Corrective attempt 2 of 2: the first process failed the exact readonly grep
+with Ripgrep JSON record exceeded 65536 bytes. Its entire invocation and any
+submission remain rejected. The same canonical callback supplied only typed
+retry eligibility over separately retained DERIVED DATA. Start one fresh whole
+process with review_begin and complete all input, assessments and five stages
+anew. Use explicit grep include selection under .opencode/review-evidence;
+never repeat the unrestricted repository grep. STOP on any actual HOST or
+review tool error, without further calls or submission. No third attempt.
+`);
+  let result;
+  try { result = await invokeAttempt({ attempt, prompt, responseFile, stderrFile }); }
+  catch (invocationError) {
+    recordAttempt({ metadata, metadataFile, attempt, invocationError, invocationRejected: true,
+      responseFile, stderrFile, submissionFile });
+    const record = metadata.attempts.at(-1);
+    record.verification_state = "not-run-invocation-rejected";
+    record.response_sha256 = sha256(fs.readFileSync(responseFile));
+    record.stderr_sha256 = sha256(fs.readFileSync(stderrFile));
+    record.submission_sha256 = fs.existsSync(submissionFile) ? sha256(fs.readFileSync(submissionFile)) : null;
+    writeRecovery(metadataFile, metadata); throw invocationError;
+  }
+  const state = recordAttempt({ metadata, metadataFile, attempt, result, responseFile, stderrFile, submissionFile });
+  const verdict = await verifyAttempt({ metadata, metadataFile, responseFile, stderrFile,
+    submissionFile, verifyReviewInvocation, expectedContext });
+  checkFirstCustody();
+  if (sha256(fs.readFileSync(stderrFile)) !== metadata.attempts.at(-1).stderr_sha256) {
+    throw new Error("known grep overflow corrective stderr custody changed");
+  }
+  if (result?.exitCode !== 0 || state !== "present" || !verdict.ok || verdict.sessionID === proof.session_id ||
+      sha256(JSON.stringify(expectedContext)) !== contextSha256) {
+    throw new Error(`review invocation verification failed after attempt 2: ${verdict.reason ?? "fresh-process-binding"}`);
+  }
+  const record = metadata.attempts.at(-1);
+  metadata.accepted_invocation = { attempt, response_file: record.response_file,
+    response_sha256: record.response_sha256, submission_file: path.relative(evidenceDirectory, submissionFile),
+    submission_sha256: record.submission_sha256, session_id: verdict.sessionID,
+    canonical_verdict: verdict, verifier_sha256: verifierSha256, expected_context_sha256: contextSha256 };
+  writeRecovery(metadataFile, metadata);
+  return metadata;
 }

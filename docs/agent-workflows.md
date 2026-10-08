@@ -55,17 +55,21 @@ or empty finding list cannot satisfy this requirement. Review every changed
 hunk, reading unchanged surrounding code as needed to assess its contracts.
 This does not require exhaustive proof or reading every unchanged file.
 
-The workflow-call default and both direct-PR fallbacks select merged Muse
-`c1369c223cf3c57e3e31934a6d746bfcdfe73f5a`, including context provenance.
-Muse PR #20 merged normally with tree `9c01c3b1ad207c640922202d8d2047fe48e1f9e2`;
-its branch was not natively protected. The candidate compiles both the observer
-and canonical invocation verifier from that exact source. The verifier retains
-strict LAST-read order, five actual ordered stages and refusal of failed HOST
-calls; an APPROVED review alone cannot satisfy invocation acceptance.
-This Eta candidate still requires native hosted qualification and its own
-authorized merge. Production callers select it only through a separately
-reviewed revision update. Existing callers and historical fixture provenance
-retain their original source; this pin preparation activates no receiver.
+The workflow-call default and both direct-PR fallbacks select protected-merged
+Muse `ba7f47dc6db26096a2a821d7a3c7ef62cb00c879`, including context provenance.
+Muse PR #22 merged normally with reviewed tree
+`f8c0441373786fb1ec3cb0b7fee2e54f69298ec3` and actual parents
+`c1369c223cf3c57e3e31934a6d746bfcdfe73f5a` and
+`d76892a3cab40227d88ab8e209f17a6984e24e72`. The compiler provides the unchanged
+canonical invocation verifier and the narrow unfinished-length classifier.
+Strict LAST-read order, full input before FIRST, five actual ordered stages,
+and refusal of failed HOST calls remain required for acceptance; classifier
+eligibility and a GitHub APPROVED state alone supply no accepted invocation.
+This Eta candidate still requires fresh native hosted qualification and its own
+normal protected merge. Production callers select it through a separately
+reviewed revision update. Original C136 caller controls keep their immutable
+source and callback hash; new length controls compile the actual merged ba7f
+source. This preparation activates no credential receiver.
 
 The two model invocations write separate response (raw OpenCode JSON event stream) and stderr files plus a small
 `recovery.json` decision record. The attempt artifact therefore preserves the
@@ -361,3 +365,25 @@ qualification and parent publication remain separate.
 ### Final unassessed input-page recovery
 
 The host adapter may admit one fresh whole process only for the exact terminal adversarial-validation refusal when all full-input pages were read and only the final page was not assessed. The original stopped invocation, complete bytes and canonical stage-order refusal remain failed. A separate retained DERIVED projection omits only that refused final call; the unchanged pinned Muse callback must return healthy-unfinished-review with null acceptance and no violations. This is retry eligibility only. Earlier/unknown failures, later calls, changed input or custody, a submission, contradictory projection and a second failure do not authorize another process. Every recovery cause shares MAX2; a healthy accepted review runs once. The fresh process must independently satisfy all existing input/SOURCE/HOST/LAST/five-stage/submission/publication guards. This is unpublished local preparation; no native approval, source adoption or original-review acceptance is supplied.
+
+### Source-bound unfinished-length recovery
+
+The caller may use its existing sole corrective invocation when the compiled
+Muse classifier establishes a completed first child with exit zero, no
+submission, and terminal `length` over the exact full input. All pages must
+have been returned and assessed in LAST-read order before FIRST; later reads
+or reassessments cannot repair that history. The original whole trace remains
+failed. Eligibility never sets `ok`, accepted invocation, review approval, or
+stage credit.
+
+The supervisor retains the first response and stderr, frozen manifest, full
+UTF-8 diff, canonical source digest, and both contexts. The length context adds
+full diff text without changing the generic invocation context hash used by
+final publication. Source/context/custody mutation, malformed classifier
+output, failed tools, a rejected child, unknown terminal reason, existing
+submission, or an already consumed retry slot supplies no length recovery.
+The second process must use a fresh session and independently pass unchanged
+canonical invocation and publication guards. Length, malformed-tool, final
+submit transport, stale coverage, and known-grep recovery share the same two
+invocations; second-attempt failure cannot start a third. A healthy accepted
+first review is neither repeated nor cancelled.

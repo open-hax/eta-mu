@@ -687,3 +687,57 @@
   spore: none
   receipt-refs: 2026-10-07T17:00:20.815Z
   note: Keep failed native outcome literal; separate retry eligibility from review acceptance. Original235 tests preserved, candidate282 pass, same final47 old45PASS2FAIL and candidate47PASS, unchanged source-built C136 composition24PASS. SharedMAX2, healthy review deduplication and final guards unchanged. No source adoption, native agreement, historical edits or skill promotion.
+
+- ts: "2026-10-07T23:36:37.191Z"
+  origin: Exact known grep transport recovery with portable canonical tests
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T23:36:37.191Z
+  note: Keep original failed invocation and receipt outcomes literal. Reuse unchanged canonical admission for derived retry eligibility; require one independently complete fresh process. Original282 tests unchanged, final344 pass, identical62 old49PASS13FAIL. Actual CLI recovery and healthy single-process controls pass. No source adoption, native agreement, historical edit or promotion.
+
+- ts: "2026-10-07T23:37:20.213Z"
+  origin: Evidence filename attribution correction
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-07T23:37:20.213Z
+  note: Correct the source receipt's seal filename by a new record; retain the original receipt. Actual SEAL.json hash verified. No native verdict or source guard changes.
+
+- ts: "2026-10-08T00:46:46.588Z"
+  origin: Immutable action pins with literal failed native stage chronology
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-08T00:46:46.588Z
+  note: Pin exact official source, preserve existing executable payload and original344 tests, and require fresh hosted compilation and full successor review. Native success and canonical replay do not erase a failed independent chronology predicate. Entire history and57 old invalid outcomes remain unchanged. No spore or promotion.
+
+- ts: "2026-10-08T02:05:56.163Z"
+  origin: Append-only correction to historical test-count wording
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-08T02:05:56.163Z
+  note: Correction to the action-pin note recorded at 2026-10-08T00:46:46.588Z (historical line 716): 344 total tests comprise 282 unchanged tests plus 62 new controls added by PR348. The earlier original344 wording meant tests already present on f1a before the action-pin correction, not tests all predating this PR. Read and57 as and 57. Every historical receipt and note byte, and all 57 invalid-record outcomes, are preserved. This new clarification grants no new execution, approval, retroactive validation or successor review credit. No spore or promotion.
+
+- ts: "2026-10-08T06:18:03.044Z"
+  origin: Protected-merged Muse ba7f integration into the existing Eta shared MAX2 caller
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-08T06:18:03.044Z
+  note: Local full four-file suite413PASS equals344 prior current controls plus69 new, or282 originals plus131 total additions relative to PR base. Full original test prefixes/assertions and all historical receipt/reflection bytes and57 invalid outcomes remain exact. First terminal-length trace remains refused; a separate source-bound classifier grants eligibility only for the one remaining shared slot, with full input before FIRST, healthy HOST and immutable custody. Fresh second process must pass normal acceptance/publication. Real assembly requires all3 exports; generic context/hash stays stable while canonical ba7f law strengthens before-FIRST. Independent static source review supplies no native agreement. Initial private-/dev harness104 failures and corrected413PASS, previous343/68 and current344/69 worker results, and whole auxiliary actionlint exit-15 are retained literally. Actual ShellCheck exists; all3 exact new shell blocks passed separately. Fresh actual successor hosted/full-native/CodeRabbit/findings/gate/protected merge remain required. Finite3-component scope only; specific Proxx permission remains pending. No historical rewrite, approval transfer, source adoption, spore or promotion.
+
+- ts: "2026-10-08T07:27:52.318Z"
+  origin: Default review-workflow test isolation with strict canonical length controls
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-08T07:27:52.318Z
+  note: The genuine current CR default-loader finding was reproduced under unchanged scripts/test.bb selection without verifier environment, with282 passed and one module failure. Candidate restores entire original69080 integrity bytes and passes282; all69 length control bodies/names/assertions moved unchanged into a dedicated file selected by the existing source-bound canonical job, full413PASS with no skips. Six runner JSDoc-only edits and exact regenerated payload preserve runtime/MAX2/admission guards. Actual future provider docstring threshold remains UNKNOWN. All396278/55264 prior receipt/reflection bytes and57 invalid outcomes stay exact; new verification append only. Initial owned no-index diff-exit wrapper diagnostic retained; actual read-only worktree patch/whitespace check passes. Current healthy42b review is preserved through actual terminal custody; successor fresh native/check/fullCR/gate/protected merge remain required. Finite3 scope, specific Proxx permission pending already asked. No historical rewrite, native agreement/approval transfer, source adoption, spore or promotion.

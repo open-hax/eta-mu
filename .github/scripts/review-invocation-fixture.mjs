@@ -52,6 +52,10 @@ exports.verifyReviewInvocation = (response, submission, context) => {
       submissionPosition: position, submissionFile: context.submissionFile,
       fullInputSha256: context.fullInputSha256 } };
 };
+// Transport fixture cannot establish unfinished-review eligibility.
+exports.classifyLengthEndedReview = () => ({ eligible: false,
+  classification: "unestablished-length-ended-review", code: "transport-mock-has-no-length-law", violations: [] });
+
 `;
 
 /** Serialize inert host events for transport tests, with a genuine fixture EOF marker. */
