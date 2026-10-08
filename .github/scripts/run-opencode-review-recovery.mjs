@@ -297,8 +297,14 @@ async function finalInputCoverage({ metadata, metadataFile, responseFile, stderr
   }
 }
 
-/** The revision-bound production assembly calls this BEFORE starting the CLI.
- * Older two-export CLI/library callers remain supported; malformed present exports refuse. */
+/**
+ * Require all three callable exports at revision-bound production assembly.
+ * Older two-export CLI/library fixtures remain supported; a malformed present
+ * classifier refuses. This capability check supplies no eligibility or approval.
+ * @param {Object} verifier - Loaded module from the pinned source assembly.
+ * @returns {void} Returns only when every required export is callable.
+ * @throws {Error} When preparation, verification or length classification is absent or malformed.
+ */
 export function assertLengthRecoveryExports(verifier) {
   if (!verifier || ["prepareReviewInvocationContext", "verifyReviewInvocation", "classifyLengthEndedReview"]
       .some(name => typeof verifier[name] !== "function")) {
@@ -306,7 +312,14 @@ export function assertLengthRecoveryExports(verifier) {
   }
 }
 
-/** Caller custody only; the source-bound Muse callback owns length eligibility. */
+/**
+ * Bind immutable input, source and first-attempt custody for length recovery.
+ * The source-bound Muse callback owns eligibility; the generic context stays
+ * byte-exact and a separate context receives fatal-decoded fullDiff.
+ * @param {Object} options - Trusted supervisor context, paths, callbacks and metadata.
+ * @returns {{check: Function, bind: Function, classify: Function, fail: Function}|null} Custody operations, or null for a legacy caller without a classifier.
+ * @throws {Error} On malformed setup, source/context changes or callback faults.
+ */
 function prepareLengthRecovery({ evidenceDirectory, expectedContext, verifierFile, verifierSha256,
   classifyLengthEndedReview, verifyReviewInvocation, metadata, metadataFile, submissionFile }) {
   if (classifyLengthEndedReview === undefined) return null;
@@ -404,7 +417,16 @@ function prepareLengthRecovery({ evidenceDirectory, expectedContext, verifierFil
   } catch (error) { fail(error); }
 }
 
-/** Append the sole corrective-attempt instructions to the original review prompt. */
+/**
+ * Append the sole fresh-invocation instructions to the original review prompt.
+ * @param {string} basePrompt - Original immutable-input review instructions.
+ * @param {Object|null} toolFailure - Established unavailable-tool recovery detail.
+ * @param {boolean} [staleCoverage=false] - Established stale-coverage refusal.
+ * @param {boolean} [submitJsonFailure=false] - Established submit-JSON transport refusal.
+ * @param {boolean} [coverageFailure=false] - Established final-input omission refusal.
+ * @param {boolean} [lengthFailure=false] - Source-classified terminal-length eligibility.
+ * @returns {string} Instructions for attempt two of the shared two-attempt bound.
+ */
 function correctivePrompt(basePrompt, toolFailure, staleCoverage = false, submitJsonFailure = false, coverageFailure = false, lengthFailure = false) {
   const cause = toolFailure
     ? `the first model invocation failed without a review after repeatedly calling the unavailable tool ${toolFailure.tool}. Use the actual exposed name ${toolFailure.corrected_tool}; do not call the unavailable spelling again.`
@@ -604,17 +626,17 @@ function recordAttempt({
 }
 
 /**
- * Run one review attempt and exactly one corrective attempt when, and only
- * when the first invocation omitted review_submit, or failed in a verified
- * unavailable-review-tool loop without a submission. All other failures stop.
- * A supplied canonical Muse callback is mandatory for accepting a present
- * artifact. Its unambiguous stale or established omission verdict can consume
- * the existing sole recovery, alongside the original unavailable-tool path.
- * The known final submit-JSON transport path additionally requires a retained
- * derived projection's exact healthy-omission refusal from that same callback.
- * Omitting the callback preserves the historical library contract for legacy
- * fixtures only; the CLI always requires the staged canonical implementation.
- * Live-head and changed-line publication validation remain separate.
+ * Run the first review and at most one eligible fresh corrective invocation.
+ * Unavailable-tool, established omission, stale coverage, submit-JSON transport,
+ * final-input omission and source-classified terminal length share MAX_ATTEMPTS=2.
+ * A supplied canonical Muse callback owns acceptance of a present artifact.
+ * Length eligibility never accepts the first trace; callback/source/custody
+ * faults stop, and the fresh second session must pass normal verification.
+ * Omitting callbacks preserves historical library fixtures only; the CLI always
+ * requires the staged canonical verifier. Publication validation is separate.
+ * @param {Object} options - Evidence paths, prompt, child adapter and trusted callbacks/context.
+ * @returns {Promise<Object>} Retained recovery metadata after an accepted invocation.
+ * @throws {Error} On setup, custody, lifecycle or verification refusal, or exhausted MAX2.
  */
 export async function runReviewRecovery({
   evidenceDirectory,
@@ -845,7 +867,13 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile }) {
   }
 }
 
-/** Read the configured prompt and tool registry, then run bounded review recovery. */
+/**
+ * Load the staged source and trusted input before bounded CLI review recovery.
+ * Keep source/input hashes bound through preparation, each callback and output;
+ * publish only the accepted invocation digest after those checks succeed.
+ * @returns {Promise<void>} Completes after writing trusted output and recovery metadata.
+ * @throws {Error} On invalid configuration, source mutation or bounded review refusal.
+ */
 async function main() {
   const prNumber = process.env.PR_NUMBER;
   const promptFile = process.env.REVIEW_PROMPT_FILE;
@@ -1049,8 +1077,13 @@ async function knownGrepOverflowTransport({ metadata, metadataFile, responseFile
 }
 
 /**
- * Delegate all existing behavior unchanged, and admit
- * at most one fresh invocation after its exact single-attempt overflow refusal.
+ * Delegate the existing recovery loop within one shared two-invocation budget.
+ * Admit the exact known grep overflow only after one completed refused attempt;
+ * preserve raw first-attempt custody and require a separately verified fresh
+ * invocation. Setup/callback/custody faults and consumed slots remain terminal.
+ * @param {Object} options - Supervisor options with source-bound canonical callbacks.
+ * @returns {Promise<Object>} Metadata for the independently accepted invocation.
+ * @throws {Error} On ineligible transport, changed custody or second-attempt refusal.
  */
 export async function runKnownGrepOverflowReviewRecovery(options) {
   const { evidenceDirectory, basePrompt, invokeAttempt, verifyReviewInvocation: originalVerifier,

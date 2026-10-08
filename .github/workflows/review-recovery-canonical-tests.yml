@@ -7,6 +7,7 @@ on:
       - '.github/scripts/opencode-code-review-workflow.test.mjs'
       - '.github/scripts/opencode-review-tool-recovery.test.mjs'
       - '.github/scripts/opencode-review-invocation-integrity.test.mjs'
+      - '.github/scripts/opencode-review-length-source.test.mjs'
       - '.github/scripts/review-invocation-fixture.mjs'
       - '.github/scripts/opencode-known-grep-overflow-source.test.mjs'
       - '.github/scripts/review-invocation-canonical-source-fixture.mjs'
@@ -82,4 +83,4 @@ jobs:
           set -euo pipefail
           export REVIEW_TEST_CANONICAL_VERIFIER_FILE="$GITHUB_WORKSPACE/.review-test-muse/.opencode/dist/review-invocation.cjs"
           export REVIEW_TEST_LENGTH_VERIFIER_FILE="$GITHUB_WORKSPACE/.review-test-length-muse/.opencode/dist/review-invocation.cjs"
-          node --test .github/scripts/opencode-code-review-workflow.test.mjs .github/scripts/opencode-review-tool-recovery.test.mjs .github/scripts/opencode-review-invocation-integrity.test.mjs .github/scripts/opencode-known-grep-overflow-source.test.mjs
+          node --test .github/scripts/opencode-code-review-workflow.test.mjs .github/scripts/opencode-review-tool-recovery.test.mjs .github/scripts/opencode-review-invocation-integrity.test.mjs .github/scripts/opencode-known-grep-overflow-source.test.mjs .github/scripts/opencode-review-length-source.test.mjs
