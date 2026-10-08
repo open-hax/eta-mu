@@ -714,3 +714,12 @@
   spore: none
   receipt-refs: 2026-10-08T00:46:46.588Z
   note: Pin exact official source, preserve existing executable payload and original344 tests, and require fresh hosted compilation and full successor review. Native success and canonical replay do not erase a failed independent chronology predicate. Entire history and57 old invalid outcomes remain unchanged. No spore or promotion.
+
+- ts: "2026-10-08T02:05:56.163Z"
+  origin: Append-only correction to historical test-count wording
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-08T02:05:56.163Z
+  note: Correction to the action-pin note recorded at 2026-10-08T00:46:46.588Z (historical line 716): 344 total tests comprise 282 unchanged tests plus 62 new controls added by PR348. The earlier original344 wording meant tests already present on f1a before the action-pin correction, not tests all predating this PR. Read and57 as and 57. Every historical receipt and note byte, and all 57 invalid-record outcomes, are preserved. This new clarification grants no new execution, approval, retroactive validation or successor review credit. No spore or promotion.
