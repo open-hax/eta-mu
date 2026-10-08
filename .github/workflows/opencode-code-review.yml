@@ -176,7 +176,7 @@ jobs:
 
       - name: Set up Clojure CLI 1.12.5.1654
         if: ${{ !contains(toJSON(inputs), '"setup_eta_mu_toolchain"') || inputs.setup_eta_mu_toolchain }}
-        uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360 # 13.4
+        uses: DeLaGuardo/setup-clojure@3fe9b3ae632c6758d0b7757b0838606ef4287b08 # 13.4
         with:
           cli: 1.12.5.1654
           bb: "1.13.219"

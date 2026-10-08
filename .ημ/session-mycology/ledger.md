@@ -705,3 +705,12 @@
   spore: none
   receipt-refs: 2026-10-07T23:37:20.213Z
   note: Correct the source receipt's seal filename by a new record; retain the original receipt. Actual SEAL.json hash verified. No native verdict or source guard changes.
+
+- ts: "2026-10-08T00:46:46.588Z"
+  origin: Immutable action pins with literal failed native stage chronology
+  p-efficiency: 0.83
+  p-friction: 0.29
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 2026-10-08T00:46:46.588Z
+  note: Pin exact official source, preserve existing executable payload and original344 tests, and require fresh hosted compilation and full successor review. Native success and canonical replay do not erase a failed independent chronology predicate. Entire history and57 old invalid outcomes remain unchanged. No spore or promotion.
