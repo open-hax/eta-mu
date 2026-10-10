@@ -34,6 +34,15 @@ in the first review step. Verify the authored timeout selection and validation,
 including zero, fractional, out-of-range, malformed and opaque input controls.
 Document that the budget includes setup and both possible model invocations.
 
+Native PR #349 head `397357dc36474d6d8c7f39d5145d40f34e510bea`, run
+`38059635545`, review job `114237079301`, exposed a direct-route validation
+defect: the absent timeout property serialized as JSON `null`, while the
+validator assumed an empty string. Repair only that boundary by reading the
+complete inputs context, defaulting when the timeout property is absent and
+rejecting an explicitly present invalid value. Preserve caller input when the
+caller event is also `pull_request`, and falsify the native serialization
+regression against the published failing validator before the repair.
+
 ## Non-goals
 
 Changing models or provider payment routes, shrinking diff scope, altering
@@ -70,3 +79,12 @@ Receipt River and the session reflection retain the exact source base, native
 run identifiers, preserved review artifact and local verification provenance.
 The manually authored initial card is not a board transition or board
 validation claim.
+
+The native direct-route correction first reproduces the published validator's
+failure on the observed JSON `null`. The repaired validator passes all five
+focused controls and all 286 configured review-workflow tests with zero failures,
+skips or cancellations. Actionlint, Node syntax and diff hygiene pass; parsed
+workflow equality against the failed `397357` revision confirms that every
+field outside the first timeout validation step is unchanged. These local
+checks preserve the failed native review and terminal-gate outcomes; hosted
+qualification remains pending for the successor.

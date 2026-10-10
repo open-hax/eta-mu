@@ -696,3 +696,12 @@
   spore: none
   receipt-refs: 2026-10-10T14:18:01.184526053Z
   note: Preserve complete failed native traces and distinguish an observed timeout from canonical review completion. Provide a finite caller-selectable whole-minute budget, validate raw input before setup, retain direct defaults and every acceptance and publication guard, and test the actual authored surface against its predecessor. Scratch YAML resolution was a test environment issue, then all285 configured review-workflow tests passed. The actual worktree contains the exact independently reviewed source. New upstream and caller revisions still need normal native review; longer time does not guarantee completion. No spore or promotion.
+- ts: 2026-10-10T14:48:53.829121845Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-review-worktree
+  task: Correct native direct PR timeout input serialization
+  p-efficiency: 0.78
+  p-friction: 0.46
+  p-skill-candidate: 0.55
+  spore: none
+  receipt-refs: 2026-10-10T14:48:23.009697114Z
+  note: Native Actions supplied null for a missing direct timeout property; a scalar fixture assumed an empty string. Preserve the failed head and logs, falsify the actual authored validator with native null, then distinguish a missing own input property from explicit invalid data using the complete inputs context. Caller event names do not identify reusable invocation, so honor PR caller120 while direct absence defaults60. All286 configured local tests pass and every other workflow field is identical; successor hosted qualification remains pending. Preserve historical bytes and append corrections only. No spore or promotion.

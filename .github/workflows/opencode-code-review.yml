@@ -1320,19 +1320,24 @@ jobs:
       - name: Validate review timeout
         shell: bash
         env:
-          REVIEW_TIMEOUT_JSON: ${{ toJSON(inputs.review_timeout_minutes) }}
+          REVIEW_INPUTS_JSON: ${{ toJSON(inputs) }}
         run: |
           set -euo pipefail
           node <<'NODE'
           const error = '::error::review_timeout_minutes must be a whole number from 60 through 180.';
-          let requested;
+          let inputs;
           try {
-            requested = JSON.parse(process.env.REVIEW_TIMEOUT_JSON);
+            inputs = JSON.parse(process.env.REVIEW_INPUTS_JSON);
           } catch {
             console.error(error);
             process.exit(1);
           }
-          const minutes = requested === '' ? 60 : requested;
+          if (inputs !== null && (typeof inputs !== 'object' || Array.isArray(inputs))) {
+            console.error(error);
+            process.exit(1);
+          }
+          const minutes = inputs !== null && Object.prototype.hasOwnProperty.call(inputs, 'review_timeout_minutes')
+            ? inputs.review_timeout_minutes : 60;
           if (!Number.isInteger(minutes) || minutes < 60 || minutes > 180) {
             console.error(error);
             process.exit(1);
