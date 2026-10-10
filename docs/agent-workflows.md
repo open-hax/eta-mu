@@ -34,6 +34,18 @@ Kimi must not close ambiguous issues or make broad/destructive changes.
 
 `.github/workflows/opencode-code-review.yml` reviews non-draft, same-repository pull requests with the project-local `github-reviewer` OpenCode agent and the `opencode/mimo-v2.6-flash-free` model.
 
+Direct pull requests and reusable callers default to a 60-minute review job.
+Reusable callers may set numeric `review_timeout_minutes` to a whole number from
+60 through 180 when a complete diff needs a longer pass. The job timeout is
+bounded to that range, and its first step rejects an invalid raw request before
+checkout or reviewer setup. An absent inputs context or timeout property selects
+60; an explicitly supplied null, zero or fractional timeout is invalid. Reusable
+caller input is honored even when the caller's event is `pull_request`.
+This budget includes setup and both possible model
+invocations; a timeout never establishes review completion or authorizes partial
+scope publication. The deterministic evidence, context compilation and terminal
+gate budgets remain 60, 45 and 5 minutes respectively.
+
 The workflow has three bounded stages:
 
 1. **Deterministic evidence** — install from the committed lockfile, then run the repository lint, test, and build gates. Exit codes and logs are serialized under `.opencode/review-evidence/`. A failed environment or dependency install is evidence about the run, not automatically evidence of a code defect.

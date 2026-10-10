@@ -2204,13 +2204,103 @@ test("review metadata actual checksum rejects changed data before runtime or plu
   assert.equal(fs.readFileSync(path.join(f.directory, ".opencode/caller.txt"), "utf8"), "caller-owned\n");
 });
 
-test("bounded review budget keeps publication App mint after validated revision-bound completion", () => {
-  assert.deepEqual(Object.fromEntries(Object.entries(workflow.jobs).map(([name, job]) =>
-    [name, job["timeout-minutes"]])), {
-    deterministic_evidence: 60, prepare_review_context: 45, review: 60, review_gate: 5,
+test("review timeout defaults keep the direct PR route and other stage budgets unchanged", () => {
+  const input = workflow.on.workflow_call.inputs.review_timeout_minutes;
+  assert.equal(input.type, "number");
+  assert.equal(input.required, false);
+  assert.equal(input.default, 60);
+  assert.deepEqual(workflow.on.pull_request.types, ["opened", "synchronize", "reopened", "ready_for_review"]);
+  assert.equal(workflow.on.workflow_call.inputs.model.default, "opencode/mimo-v2.6-flash-free");
+  assert.deepEqual(Object.fromEntries(Object.entries(workflow.jobs)
+    .filter(([name]) => name !== "review").map(([name, job]) => [name, job["timeout-minutes"]])), {
+    deterministic_evidence: 60, prepare_review_context: 45, review_gate: 5,
   });
-  assert.ok(Number.isInteger(workflow.jobs.review["timeout-minutes"]));
-  assert.ok(workflow.jobs.review["timeout-minutes"] <= 60, "review must retain a finite one-hour cap");
+});
+
+test("authored review job timeout clamps numeric requests before step validation", () => {
+  const authored = workflow.jobs.review["timeout-minutes"];
+  assert.equal(typeof authored, "string");
+  const expression = authored.match(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/)?.[1];
+  assert.ok(expression, "job timeout must select the requested finite budget");
+  // This authored expression uses only numeric comparisons and &&/||, whose
+  // operand-returning behavior is shared by GitHub expressions and JavaScript.
+  assert.match(expression.replaceAll("inputs.review_timeout_minutes", ""), /^[\s\d><=&|().]+$/);
+  const selected = new Function("inputs", `"use strict"; return (${expression});`);
+  for (const [request, expected] of [
+    ["", 60], [undefined, 60], [0, 60], [-1, 60], [59, 60], [60, 60],
+    [61, 61], [120, 120], [180, 180], [181, 180], [1e9, 180],
+    [60.5, 60.5], [NaN, 60], [Infinity, 180],
+  ]) {
+    const minutes = selected({ review_timeout_minutes: request });
+    assert.equal(minutes, expected);
+    assert.ok(Number.isFinite(minutes) && minutes >= 60 && minutes <= 180);
+  }
+});
+
+test("authored timeout validation handles native absent input without overriding PR caller input", (t) => {
+  const validation = namedStep("review", "Validate review timeout");
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-review-timeout-native-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  // Native direct run 38059635545 reported the absent input property as null.
+  // The whole absent context may be null or an object with no timeout property.
+  for (const [inputs, property, expected] of [
+    ["null", "null", 60], ["{}", "null", 60],
+    ['{"pr_head_sha":"caller-head"}', "null", 60],
+    ['{"review_timeout_minutes":120}', "120", 120],
+  ]) {
+    const result = runScript(validation.run, directory, {
+      REVIEW_INPUTS_JSON: inputs, REVIEW_TIMEOUT_JSON: property,
+      GITHUB_EVENT_NAME: "pull_request",
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stderr, "");
+    assert.equal(result.stdout.trim(), `Review job timeout: ${expected} minutes.`);
+  }
+});
+
+test("authored timeout validation accepts only default or whole minutes before any setup", (t) => {
+  const validation = namedStep("review", "Validate review timeout");
+  assert.equal(workflow.jobs.review.steps[0], validation,
+    "invalid requests must fail before checkout, dependency setup, credentials or model invocation");
+  assert.equal(validation.env.REVIEW_INPUTS_JSON, "${{ toJSON(inputs) }}",
+    "distinguish a missing input property from an explicitly supplied null or zero");
+  assert.doesNotMatch(validation.run, /\$\{\{/, "input belongs in env, never shell source");
+  assert.equal(validation["continue-on-error"], undefined);
+  assert.equal(validation.if, undefined);
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-review-timeout-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  for (const [request, expected] of [[60, 60], [61, 61], [120, 120], [179, 179], [180, 180]]) {
+    const result = runScript(validation.run, directory, {
+      REVIEW_INPUTS_JSON: JSON.stringify({ review_timeout_minutes: request }),
+      GITHUB_EVENT_NAME: "pull_request",
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stderr, "");
+    assert.equal(result.stdout.trim(), `Review job timeout: ${expected} minutes.`);
+  }
+  const canary = path.join(directory, "injected");
+  const opaque = `$(touch ${canary})\n::warning::untrusted-timeout`;
+  const invalidRequests = [null, false, true, [], {}, 0, -1, 59, 181, 1e9, 60.5, 120.25, "", "120", opaque]
+    .map((review_timeout_minutes) => JSON.stringify({ review_timeout_minutes }));
+  const invalidContexts = ["", "NaN", "Infinity", "{", "false", "true", "[]", "0", "120", '""', JSON.stringify(opaque)];
+  for (const raw of [...invalidRequests, ...invalidContexts]) {
+    const result = runScript(validation.run, directory, { REVIEW_INPUTS_JSON: raw });
+    assert.notEqual(result.status, 0, `invalid raw request accepted: ${raw}`);
+    assert.equal(result.stdout, "");
+    assert.equal(result.stderr.trim(),
+      "::error::review_timeout_minutes must be a whole number from 60 through 180.");
+    assert.equal(fs.existsSync(canary), false, "opaque input must never execute or enter workflow commands");
+  }
+  const absentWithOpaqueSibling = runScript(validation.run, directory, {
+    REVIEW_INPUTS_JSON: JSON.stringify({ unrelated: opaque }),
+  });
+  assert.equal(absentWithOpaqueSibling.status, 0, absentWithOpaqueSibling.stderr);
+  assert.equal(absentWithOpaqueSibling.stderr, "");
+  assert.equal(absentWithOpaqueSibling.stdout.trim(), "Review job timeout: 60 minutes.");
+  assert.equal(fs.existsSync(canary), false, "other input properties must never execute or enter workflow commands");
+});
+
+test("bounded review budget keeps publication App mint after validated revision-bound completion", () => {
   const steps = workflow.jobs.review.steps;
   const beforeMint = [
     "Run bounded evidence-first OpenCode review",

@@ -15,6 +15,11 @@ on:
         required: false
         type: string
         default: opencode/mimo-v2.6-flash-free
+      review_timeout_minutes:
+        description: Whole-minute review job budget from 60 through 180; direct pull requests use 60.
+        required: false
+        type: number
+        default: 60
       opencode_version:
         description: Pinned opencode-ai npm version for the review runner.
         required: false
@@ -1299,7 +1304,7 @@ jobs:
     needs: [deterministic_evidence, prepare_review_context]
     if: ${{ always() && needs.deterministic_evidence.result == 'success' && needs.prepare_review_context.result == 'success' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: ${{ inputs.review_timeout_minutes > 180 && 180 || (inputs.review_timeout_minutes > 60 && inputs.review_timeout_minutes || 60) }}
     outputs:
       expected_sha: ${{ steps.review_completion.outputs.expected_sha }}
       executed_sha: ${{ steps.review_completion.outputs.executed_sha }}
@@ -1312,6 +1317,34 @@ jobs:
       contents: read
       pull-requests: read
     steps:
+      - name: Validate review timeout
+        shell: bash
+        env:
+          REVIEW_INPUTS_JSON: ${{ toJSON(inputs) }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const error = '::error::review_timeout_minutes must be a whole number from 60 through 180.';
+          let inputs;
+          try {
+            inputs = JSON.parse(process.env.REVIEW_INPUTS_JSON);
+          } catch {
+            console.error(error);
+            process.exit(1);
+          }
+          if (inputs !== null && (typeof inputs !== 'object' || Array.isArray(inputs))) {
+            console.error(error);
+            process.exit(1);
+          }
+          const minutes = inputs !== null && Object.prototype.hasOwnProperty.call(inputs, 'review_timeout_minutes')
+            ? inputs.review_timeout_minutes : 60;
+          if (!Number.isInteger(minutes) || minutes < 60 || minutes > 180) {
+            console.error(error);
+            process.exit(1);
+          }
+          console.log(`Review job timeout: ${minutes} minutes.`);
+          NODE
+
       - name: Checkout pull request
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
