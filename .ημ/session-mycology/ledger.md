@@ -732,3 +732,12 @@
   spore: none
   receipt-refs: 8677cacf1b62ccce7762578158404f917f82453574f20abaf734ba451dea5129
   note: Pinned upload-artifact excludes dot-directory payloads by default. Explicit named hidden evidence/profile directories need include-hidden-files. Inspect writers and selected paths before enabling; retain exact permission and pin refusal boundaries. Source-only qualification does not supply hosted publication credit.
+- ts: 2026-10-12T05:14:35.610278846Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Pin reviewed actionability dependencies and require a fresh run
+  p-efficiency: 0.85
+  p-friction: 0.31
+  p-skill-candidate: 0.57
+  spore: none
+  receipt-refs: 3c95f0f7-337c-42e0-aef5-72554eb006da,2604e507052763ab246e69133e17aaf0d37030e6779f33c1b5dc924df66b9f9f
+  note: Activate dependency pins only after reviewed protected sources and an actual compiled consumer check. A failed-job rerun cannot reuse a predecessor attempt; refuse before native reads and later effects, and retain in-job model correction separately. Preserve setup failures, unexecuted carrier mistake and default linter timeout without pass credit. Actual custody and tests remain separate from native semantic review, App publication and adoption. No new spore or promotion.

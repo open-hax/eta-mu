@@ -318,8 +318,22 @@
                               (swap! state update-in [:issues 1 :body] str " changed"))) 1 false))
   :complete)
 
+(def expected-dependency-pins
+  {:canonical "80b8993bbd43cf0265c5e558c678845edc8929d9" :muse "45c7a8d572bf44202f52cae2aa8c0f771736a617"})
+(defn dependency-pin-controls
+  "Check exact protected source agreement and retain nil/malformed shape refusal."
+  []
+  (check "source pins match the protected dependency commits" assessment/dependency-pins expected-dependency-pins)
+  (check "well-formed source pins pass the shape guard" (assessment/require-protected-dependencies!) expected-dependency-pins)
+  (doseq [key [:canonical :muse]
+          value [nil "" "main" "malformed" (apply str (repeat 39 "a")) (apply str (repeat 40 "A"))]]
+    (with-redefs [assessment/dependency-pins (assoc expected-dependency-pins key value)]
+      (check "nil or malformed dependency pins refuse"
+             (refused assessment/require-protected-dependencies!) :unadopted-dependency-pins)))
+  :complete)
+
 (defn ^:async main []
-  (let [_pin-check (check "unadopted source pins cannot run a live phase" (refused assessment/require-protected-dependencies!) :unadopted-dependency-pins)
+  (let [_pin-check (dependency-pin-controls)
         _run-check (run-controls)
         _source-check (removed-source-controls)
         _transport-check (await (transport-controls))
@@ -362,6 +376,7 @@
         (await (main))
         (do
           (case only
+            "dependency-pins" (dependency-pin-controls)
             "removed-source" (removed-source-controls)
             "http-transport" (await (http-status-controls [500 502 503 504 599 400 401 403 404 422 429]))
             "server-readback" (await (server-error-controls))

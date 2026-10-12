@@ -30,11 +30,11 @@ permissions:
   pull-requests: read
   actions: read
 
-# Preparation only. These are intentionally empty, and the canonical source
-# lock is nil. A later reviewed protected-pin commit must bind both surfaces.
+# Immutable protected dependency sources. Fresh native/custody checks and
+# complete applicable history remain prerequisites for live publication.
 env:
-  CANONICAL_REVISION: ''
-  MUSE_REVISION: ''
+  CANONICAL_REVISION: '80b8993bbd43cf0265c5e558c678845edc8929d9'
+  MUSE_REVISION: '45c7a8d572bf44202f52cae2aa8c0f771736a617'
   ETA_SOURCE_SHA: ${{ inputs.eta_revision || github.workflow_sha }}
   ACTIONABILITY_CALLED_REVISION: ${{ inputs.eta_revision }}
   TARGET_REPOSITORY: ${{ inputs.target_repository }}
@@ -82,6 +82,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
+            echo '::error::Actionability assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
+            exit 1
+          }
           [[ "$ETA_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           default=$(gh api repos/open-hax/eta-mu --jq .default_branch)
           branch=$(gh api "repos/open-hax/eta-mu/branches/$default")
@@ -183,6 +187,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
+            echo '::error::Actionability assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
+            exit 1
+          }
           [[ "$ETA_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           default=$(gh api repos/open-hax/eta-mu --jq .default_branch)
           branch=$(gh api "repos/open-hax/eta-mu/branches/$default")
@@ -290,6 +298,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
+            echo '::error::Actionability assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
+            exit 1
+          }
           [[ "$ETA_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           default=$(gh api repos/open-hax/eta-mu --jq .default_branch)
           branch=$(gh api "repos/open-hax/eta-mu/branches/$default")

@@ -6,9 +6,9 @@
             [pr-flow.actionability :as actionability] [pr-flow.actionability-history :as history]
             [pr-flow.law :as law] [eta-mu.extern.actionability-host :as host]))
 
-;; Source preparation deliberately cannot authorize unprotected dependencies.
-;; These pins must be reviewed in this repository after the stacked dependencies merge.
-(def dependency-pins {:canonical nil :muse nil})
+;; Immutable protected dependency revisions; fresh runtime custody still applies.
+;; These pins alone supply no history, publication or native-resolution authority.
+(def dependency-pins {:canonical "80b8993bbd43cf0265c5e558c678845edc8929d9" :muse "45c7a8d572bf44202f52cae2aa8c0f771736a617"})
 (defn require-protected-dependencies! []
   (when-not (every? #(and (string? %) (re-matches #"[0-9a-f]{40}" %)) (vals dependency-pins))
     (host/refuse! :unadopted-dependency-pins))

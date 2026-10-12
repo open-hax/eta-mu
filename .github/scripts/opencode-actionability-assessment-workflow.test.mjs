@@ -202,18 +202,31 @@ test("unknown purpose and nonprivate or redirected model home refuse before the 
 const workflowFile = path.join(root, ".github/workflows/opencode-actionability-assessment.yml");
 const workflow = (await import("yaml")).parse(fs.readFileSync(workflowFile, "utf8"));
 
-test("direct and reusable routes share pending protected source locks", () => {
+test("direct and reusable routes share exact protected dependency pins", () => {
   assert.ok(workflow.on.workflow_call && workflow.on.workflow_dispatch);
-  assert.equal(workflow.env.CANONICAL_REVISION, "");
-  assert.equal(workflow.env.MUSE_REVISION, "");
+  const expectedPins = { canonical: "80b8993bbd43cf0265c5e558c678845edc8929d9", muse: "45c7a8d572bf44202f52cae2aa8c0f771736a617" };
+  assert.equal(workflow.env.CANONICAL_REVISION, expectedPins.canonical);
+  assert.equal(workflow.env.MUSE_REVISION, expectedPins.muse);
+  assert.equal(workflow.env.ETA_SOURCE_SHA, "${{ inputs.eta_revision || github.workflow_sha }}");
   assert.equal(workflow.env.ACTIONABILITY_CALLED_REVISION, "${{ inputs.eta_revision }}");
   assert.equal(workflow.on.workflow_call.inputs.eta_revision.required, true);
   assert.equal(Object.hasOwn(workflow.on.workflow_dispatch.inputs, "eta_revision"), false);
   const hostEntry = fs.readFileSync(path.join(root, ".github/scripts/opencode_actionability_assessment.cljs"), "utf8");
   assert.match(hostEntry, /direct\? \(or \(nil\? called-revision\) \(= "" called-revision\)\)/);
   assert.match(hostEntry, /:eta-revision eta-revision :direct\? direct\?/);
-  assert.match(fs.readFileSync(path.join(root, "packages/eta-mu/src/cljs/eta_mu/infra/actionability_assessment.cljs"), "utf8"),
-    /dependency-pins \{:canonical nil :muse nil\}/);
+  const infra = fs.readFileSync(path.join(root, "packages/eta-mu/src/cljs/eta_mu/infra/actionability_assessment.cljs"), "utf8");
+  const sourcePins = infra.match(/dependency-pins \{:canonical "([0-9a-f]{40})" :muse "([0-9a-f]{40})"\}/);
+  assert.ok(sourcePins, "the canonical source lock must contain both immutable revisions");
+  assert.deepEqual({ canonical: sourcePins[1], muse: sourcePins[2] }, expectedPins);
+  const guard = workflow.jobs.prepare.steps[0].run;
+  const runPins = (changes = {}) => spawnSync("bash", ["-c", guard], { encoding: "utf8", timeout: 15000,
+    env: { PATH: process.env.PATH, TIMEOUT_INPUT: "60", CANONICAL_REVISION: expectedPins.canonical,
+      MUSE_REVISION: expectedPins.muse, ...changes } });
+  assert.equal(runPins().status, 0, "valid dependency values pass the existing shape guard");
+  for (const changes of [{ CANONICAL_REVISION: "" }, { MUSE_REVISION: "" },
+    { CANONICAL_REVISION: "main" }, { MUSE_REVISION: "malformed" },
+    { CANONICAL_REVISION: "a".repeat(39) }, { MUSE_REVISION: "A".repeat(40) }])
+    assert.notEqual(runPins(changes).status, 0, "nil or malformed dependency values refuse before native bootstrap");
   assert.equal(workflow.concurrency["cancel-in-progress"], false);
   assert.deepEqual(Object.keys(workflow.jobs), ["prepare", "assess", "publish"]);
   assert.match(workflow.jobs.prepare.steps[0].run, /CANONICAL_REVISION.*MUSE_REVISION/s);
@@ -298,4 +311,56 @@ test("authored bootstrap authenticates source before every checkout on both rout
     { GITHUB_EVENT_NAME: "pull_request", ACTIONABILITY_CALLED_REVISION: sha, TEST_COMPARE_STATUS: "diverged" },
     { GITHUB_EVENT_NAME: "pull_request", ACTIONABILITY_CALLED_REVISION: sha, TEST_RUN_JSON: JSON.stringify({ id: 31, run_attempt: 1, repository: { full_name: "open-hax/eta-mu" }, referenced_workflows: [] }) },
   ]) assert.notEqual(run(changes).status, 0, "untrusted source refuses before checkout");
+});
+
+
+test("every job refuses reruns before native reads and later artifact or token steps", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-actionability-attempt-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const sha = "d".repeat(40);
+  const inputName = "actionability-input-${{ github.run_id }}-${{ github.run_attempt }}";
+  const profileName = "actionability-profile-${{ github.run_id }}-${{ github.run_attempt }}";
+  const resultName = "actionability-result-${{ github.run_id }}-${{ github.run_attempt }}";
+  const uploads = (job) => job.steps.filter((step) => step.uses?.startsWith("actions/upload-artifact@"));
+  const downloads = (job) => job.steps.filter((step) => step.uses?.startsWith("actions/download-artifact@"));
+  assert.deepEqual(uploads(workflow.jobs.prepare).map((step) => step.with.name), [inputName, profileName]);
+  assert.deepEqual(downloads(workflow.jobs.assess).map((step) => step.with.name), [inputName, profileName]);
+  assert.ok(uploads(workflow.jobs.assess).some((step) => step.with.name === resultName));
+  assert.deepEqual(downloads(workflow.jobs.publish).map((step) => step.with.name), [resultName, profileName]);
+  const ghSpy = '() { printf "native-read\\n" >> "$TEST_EFFECTS"; case "$2" in repos/open-hax/eta-mu) printf "%s\\n" main;; repos/open-hax/eta-mu/branches/main) printf "%s\\n" "$TEST_BRANCH_JSON";; repos/open-hax/eta-mu/actions/runs/31|repos/open-hax/knoxx/actions/runs/31) printf "%s\\n" "$TEST_RUN_JSON";; repos/open-hax/eta-mu/compare/*) printf "%s\\n" identical;; *) return 97;; esac; }';
+  for (const [jobName, job] of Object.entries(workflow.jobs)) {
+    const guardIndex = job.steps.findIndex((step) => step.name === "Authenticate protected called source before checkout");
+    assert.ok(guardIndex >= 0);
+    for (const [index, step] of job.steps.entries()) {
+      if (step.uses?.startsWith("actions/checkout@") || step.uses?.startsWith("actions/download-artifact@") || step.uses?.startsWith("actions/create-github-app-token@"))
+        assert.ok(guardIndex < index, "the actual guard precedes every checkout/download/token action");
+    }
+    for (const called of [false, true]) for (const attempt of [1, 2, 3]) {
+      const effects = path.join(directory, `${jobName}-${called}-${attempt}.txt`);
+      const repo = called ? "open-hax/knoxx" : "open-hax/eta-mu";
+      const env = { PATH: process.env.PATH, ETA_SOURCE_SHA: sha, GITHUB_REPOSITORY: repo, GITHUB_RUN_ID: "31",
+        GITHUB_RUN_ATTEMPT: String(attempt), GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_WORKFLOW_SHA: called ? "e".repeat(40) : sha,
+        GITHUB_WORKFLOW_REF: called ? "open-hax/knoxx/.github/workflows/caller.yml@refs/heads/main" : "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main",
+        ACTIONABILITY_CALLED_REVISION: called ? sha : "", TEST_EFFECTS: effects,
+        TEST_BRANCH_JSON: JSON.stringify({ protected: true, commit: { sha } }),
+        TEST_RUN_JSON: JSON.stringify({ id: 31, run_attempt: attempt, head_sha: called ? "f".repeat(40) : sha,
+          repository: { full_name: repo }, referenced_workflows: [{ sha, path: `open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@${sha}` }] }),
+        "BASH_FUNC_gh%%": ghSpy };
+      // The appended marker models continuation after the real authored guard.
+      // Native download/token actions are never invoked by this inert test.
+      const child = spawnSync("bash", ["-c", `${job.steps[guardIndex].run}\nprintf 'later-step\\n' >> "$TEST_EFFECTS"\n`],
+        { env, encoding: "utf8", timeout: 15000 });
+      assert.equal(child.error, undefined);
+      assert.equal(child.signal, null);
+      if (attempt === 1) {
+        assert.equal(child.status, 0, `${jobName} fresh ${called ? "called" : "direct"} run admits`);
+        assert.match(fs.readFileSync(effects, "utf8"), /native-read/);
+        assert.match(fs.readFileSync(effects, "utf8"), /later-step/);
+      } else {
+        assert.equal(child.status, 1, `${jobName} matching native attempt ${attempt} refuses`);
+        assert.equal(fs.existsSync(effects), false, "no native spy read or modeled later effect occurs");
+        assert.match(child.stdout, /requires a fresh workflow run/);
+      }
+    }
+  }
 });
