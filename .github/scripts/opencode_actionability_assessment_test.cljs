@@ -289,6 +289,79 @@
             (check "ambiguous ancestry leaves selected checkout unchanged" (git "rev-parse" "HEAD") left-merge))))
       (finally (.rmSync fs directory #js {:recursive true :force true})))))
 
+(defn immutable-object-controls
+  "Owned actual Git objects only; no native call, nested repository or symlink target read."
+  []
+  (let [directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-immutable-objects-"))
+        git (fn [& args]
+              (let [result (.spawnSync child-process "git"
+                             (clj->js (into ["--no-pager" "-c" "core.fsmonitor=false"
+                                            "-c" "user.name=Inert fixture" "-c" "user.email=inert@example.invalid"
+                                            "-C" directory] args))
+                             #js {:env #js {:PATH (host/env "PATH") :HOME directory :LANG "C.UTF-8"
+                                            :GIT_CONFIG_NOSYSTEM "1" :GIT_CONFIG_GLOBAL "/dev/null"}
+                                  :encoding "utf8" :timeout 15000 :maxBuffer 1048576})]
+                (when-not (= 0 (.-status result))
+                  (throw (ex-info "Owned Git object fixture preparation failed" {:args args :status (.-status result)})))
+                (str/trim (.-stdout result))))
+        binary (js/Buffer.from #js [255 0 128 65])
+        link-target "../../../inert-dangling-target-must-not-be-opened"
+        text "immutable regular ημ\n"]
+    (try
+      (.chmodSync fs directory 448)
+      (git "init" "--initial-branch=fixture")
+      (.writeFileSync fs (.join path directory "regular.cljc") text)
+      (git "add" "--" "regular.cljc") (git "commit" "-m" "Owned gitlink target identity")
+      (let [target (git "rev-parse" "HEAD")]
+        (.writeFileSync fs (.join path directory "executable.sh") text #js {:mode 493})
+        (.writeFileSync fs (.join path directory "binary.dat") binary)
+        (.symlinkSync fs link-target (.join path directory "link"))
+        (git "add" "--" "executable.sh" "binary.dat" "link")
+        (git "update-index" "--add" "--cacheinfo" (str "160000," target ",submodule"))
+        (git "commit" "-m" "Owned binary symlink and gitlink carrier")
+        (let [head (git "rev-parse" "HEAD") paths ["regular.cljc" "executable.sh" "binary.dat" "link" "submodule"]
+              before (git "status" "--porcelain=v1") index (.readFileSync fs (.join path directory ".git/index"))
+              attempted (mapv (fn [p]
+                                (try {:path p :value (host/immutable-source directory head [p])}
+                                     (catch :default e {:path p :refused (or (:code (ex-data e)) :decoded-source-refusal)}))) paths)
+              _supported (check "each ordinary Git object kind is supported independently"
+                                (mapv :refused attempted) [nil nil nil nil nil])
+              selected (host/immutable-source directory head paths)
+              entries (into {} (map (juxt :path identity) (:files selected)))
+              inventory (host/source-inventory
+                         (fn [_ resource & _]
+                           (case resource
+                             "repos/synthetic/native-context/pulls/1" {:number 1 :state "open" :head {:sha head} :base {:sha target} :changed_files 5}
+                             "repos/synthetic/native-context/pulls/1/files?per_page=100"
+                             [(mapv (fn [p] {:filename p :status "modified"}) paths)]
+                             (throw (ex-info "Unexpected owned object inventory read" {:resource resource}))))
+                         directory "synthetic/native-context" 1 head)]
+          (check "all five changed Git objects retain exact selected order" (mapv :path (:files inventory)) paths)
+          (check "object-kind/carrier identities are explicit in versioned manifest" (first (:manifest selected)) 2)
+          (check "regular UTF8 text is retained" (get-in entries ["regular.cljc" :text]) text)
+          (check "executable UTF8 text is retained" (get-in entries ["executable.sh" :text]) text)
+          (doseq [[p mode] [["regular.cljc" "100644"] ["executable.sh" "100755"] ["binary.dat" "100644"] ["link" "120000"] ["submodule" "160000"]]]
+            (check "Git mode is exact" (get-in entries [p :git-mode]) mode)
+            (check "Git object identity is exact" (get-in entries [p :blob]) (git "rev-parse" (str head ":" p))))
+          (doseq [p ["binary.dat" "link" "submodule"]]
+            (check "nontext carrier has no text projection" (contains? (entries p) :text) false))
+          (doseq [[p bytes] [["binary.dat" binary] ["link" (js/Buffer.from link-target "utf8")]]]
+            (check "raw blob carrier type" (get-in entries [p :object-type]) "blob")
+            (check "raw blob carrier label" (get-in entries [p :byte-carrier]) "blob")
+            (check "raw blob carrier byte size" (get-in entries [p :bytes]) (.-length bytes))
+            (check "raw blob carrier SHA256" (get-in entries [p :sha256]) (host/sha256 bytes)))
+          (check "gitlink has commit object type" (get-in entries ["submodule" :object-type]) "commit")
+          (check "gitlink carrier is explicitly object-ID bytes" (get-in entries ["submodule" :byte-carrier]) "gitlink-object-id")
+          (check "gitlink ASCII object-ID carrier is 40 bytes" (get-in entries ["submodule" :bytes]) 40)
+          (check "gitlink SHA256 hashes its actual object-ID carrier" (get-in entries ["submodule" :sha256]) (host/sha256 (js/Buffer.from target "ascii")))
+          (check "gitlink never initializes a nested checkout" (.existsSync fs (.join path directory "submodule")) false)
+          (check "missing source refuses" (refused #(host/immutable-source directory head ["absent"])) :source-entry)
+          (check "wrong checkout identity refuses" (refused #(host/immutable-source directory head paths target)) :source-selection)
+          (check "object reads preserve actual checkout HEAD" (git "rev-parse" "HEAD") head)
+          (check "object reads preserve exact raw fixture index" (.equals index (.readFileSync fs (.join path directory ".git/index"))) true)
+          (check "object reads preserve fixture status" (git "status" "--porcelain=v1") before)))
+      (finally (.rmSync fs directory #js {:recursive true :force true})))))
+
 (defn ^:async http-status-controls [remaining]
   (when-let [status (first remaining)]
     (let [calls (atom 0)
@@ -336,6 +409,7 @@
   (let [_pin-check (dependency-pin-controls)
         _run-check (run-controls)
         _source-check (removed-source-controls)
+         _object-check (immutable-object-controls)
         _transport-check (await (transport-controls))
         _http-check (await (http-status-controls [500 502 503 504 599 400 401 403 404 422 429]))
         positive (await (publish-case (fn [d c _] [d c]) 1 true))
@@ -378,6 +452,7 @@
           (case only
             "dependency-pins" (dependency-pin-controls)
             "removed-source" (removed-source-controls)
+             "immutable-objects" (immutable-object-controls)
             "http-transport" (await (http-status-controls [500 502 503 504 599 400 401 403 404 422 429]))
             "server-readback" (await (server-error-controls))
             (throw (ex-info "Unknown owned test selector" {:only only})))

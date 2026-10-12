@@ -741,3 +741,12 @@
   spore: none
   receipt-refs: 3c95f0f7-337c-42e0-aef5-72554eb006da,2604e507052763ab246e69133e17aaf0d37030e6779f33c1b5dc924df66b9f9f
   note: Activate dependency pins only after reviewed protected sources and an actual compiled consumer check. A failed-job rerun cannot reuse a predecessor attempt; refuse before native reads and later effects, and retain in-job model correction separately. Preserve setup failures, unexecuted carrier mistake and default linter timeout without pass credit. Actual custody and tests remain separate from native semantic review, App publication and adoption. No new spore or promotion.
+- ts: 2026-10-12T07:46:25.210413985Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Qualify full staged review prompts and text-only Git object source admission
+  p-efficiency: 0.80
+  p-friction: 0.55
+  p-skill-candidate: 0.42
+  spore: none
+  receipt-refs: 25826e52-aaee-4a57-b2ab-bcd870f002ce,f5dfb9adf692edeca056d63e6471a9be19b50091292a88693982acc35e65d65b
+  note: Genuine missing staged-input prompt and binary or symbolic Git object predecessor assertions became green with six source edits. Both first and corrective prompts include staged purpose input; text-only domain admission rejects binary symlink and gitlink source objects. Actual13 accepted captures include12workflow tests36object checks282NBB checks140ordinary Node tests and full194tests587assertions plus6workflowtests78assertions. Mixed ESM setup and missing actionlint PATH failures retained without causal credit; identical relocated carrier and installed actionlint V2 completed. Preserve exact runner mirror and card frontmatter. Native review and protected merge remain pending. No new spore or promotion.

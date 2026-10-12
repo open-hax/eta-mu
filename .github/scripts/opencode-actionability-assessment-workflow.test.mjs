@@ -8,6 +8,8 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { runReviewRecovery } from "./run-opencode-review-recovery.mjs";
+import { stageTransportVerifier, transportResponse, transportReviewTools } from "./review-invocation-fixture.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const runner = path.join(root, ".github/scripts/run-opencode-review-recovery.mjs");
@@ -107,8 +109,10 @@ function nativeFixture(t, { legacy = true, partial = false, finalCoverage = fals
   const home = path.join(directory, "model-home");
   fs.mkdirSync(home, { mode: 0o700 });
   const probe = path.join(directory, "child-environment.json");
+  const prompts = path.join(directory, "child-prompts.json");
   const child = path.join(directory, "fixture-child.cjs");
   fs.writeFileSync(child, `#!${process.execPath}\nconst fs=require("node:fs");\n`
+    + `const prompts=${JSON.stringify(prompts)}; const previous=fs.existsSync(prompts)?JSON.parse(fs.readFileSync(prompts,"utf8")):[]; fs.writeFileSync(prompts,JSON.stringify([...previous,process.argv.at(-1)]));\n`
     + `fs.writeFileSync(${JSON.stringify(probe)}, JSON.stringify({HOME:process.env.HOME,`
     + `GH_TOKEN:process.env.GH_TOKEN,GITHUB_TOKEN:process.env.GITHUB_TOKEN,NODE_OPTIONS:process.env.NODE_OPTIONS,`
     + `GITHUB_OUTPUT:process.env.GITHUB_OUTPUT}));\n`
@@ -128,7 +132,7 @@ function nativeFixture(t, { legacy = true, partial = false, finalCoverage = fals
     REVIEW_INPUT_PURPOSE: "actionability", REVIEW_CHILD_HOME: home,
     REVIEW_MODEL: "opencode/mimo-v2.6-flash-free", OPENCODE_BIN: child,
     GH_TOKEN: "inert-token-sentinel", GITHUB_TOKEN: "inert-other-sentinel" };
-  return { directory, home, probe, env, verifier, context };
+  return { directory, home, probe, prompts, env, verifier, context };
 }
 
 test("actual canonical runner accepts only the complete fixed native file", (t) => {
@@ -158,6 +162,50 @@ test("final native page omission recovers once using only the exact actionabilit
     assert.equal(recovery.accepted_invocation.canonical_verdict.ok, true);
     assert.equal(fs.readFileSync(path.join(fixture.directory, "invocations.txt"), "utf8"), "2");
   }
+});
+
+/** Check actual first and corrective prompts without inventing supporting gate results. */
+test("native first and corrective prompts name only the staged full input", (t) => {
+  for (const finalCoverage of [false, true]) {
+    const fixture = nativeFixture(t, { legacy: false, finalCoverage });
+    assert.equal(fs.existsSync(path.join(fixture.directory, "summary.json")), false);
+    assert.equal(fs.existsSync(path.join(fixture.directory, "deterministic.log")), false);
+    const child = spawnSync(process.execPath, [runner], { env: fixture.env, encoding: "utf8", timeout: 15000 });
+    childNetworkAudit(child);
+    assert.equal(child.status, 0, child.stderr);
+    const prompts = JSON.parse(fs.readFileSync(fixture.prompts, "utf8"));
+    assert.equal(prompts.length, finalCoverage ? 2 : 1);
+    for (const prompt of prompts) {
+      assert.match(prompt, /Complete fixed native input: actionability-input\.txt/);
+      assert.match(prompt, /only the review_\* page tools/);
+      assert.doesNotMatch(prompt, /summary\.json|deterministic\.log|\.opencode\/review-evidence/);
+      assert.match(prompt, /Every review tool call must succeed/);
+      assert.match(prompt, /No ordinary diff supporting-file artifacts are staged/);
+    }
+  }
+});
+
+/** Existing mock proves prompt composition only; it grants no canonical verifier credit. */
+test("ordinary strict diff prompt retains complete supporting-file reads", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-diff-supporting-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const fixture = stageTransportVerifier(directory);
+  const prompts = [];
+  await runReviewRecovery({ evidenceDirectory: directory, basePrompt: "Ordinary transport fixture.",
+    reviewTools: transportReviewTools, expectedContext: fixture.expectedContext,
+    verifyReviewInvocation: fixture.verifyReviewInvocation, verifierSha256: fixture.verifierSha256,
+    invokeAttempt: async ({ prompt, responseFile, stderrFile }) => {
+      prompts.push(prompt);
+      fs.writeFileSync(responseFile, transportResponse()); fs.writeFileSync(stderrFile, "");
+      fs.writeFileSync(path.join(directory, "submission.json"), JSON.stringify({
+        schema: "open-hax.github-review/v1", event: "APPROVE", summary: "Transport fixture only.", comments: [] }));
+      return { exitCode: 0 };
+    } });
+  assert.equal(prompts.length, 1);
+  assert.match(prompts[0], /read summary\.json and/);
+  assert.match(prompts[0], /deterministic\.log under \.opencode\/review-evidence/);
+  assert.match(prompts[0], /required complete deterministic evidence reading/);
+  assert.doesNotMatch(prompts[0], /No ordinary diff supporting-file artifacts are staged/);
 });
 
 test("a complete legacy file cannot replace a partial native file", (t) => {

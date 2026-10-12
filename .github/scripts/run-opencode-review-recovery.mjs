@@ -320,11 +320,14 @@ or reassessment to erase its failed history. This is the only recovery attempt.
 }
 
 /** Override same-process repair instructions when canonical verification is required. */
-function strictInvocationPrompt(prompt) {
-  return `${prompt.trimEnd()}
-
-
-Supporting-file HOST read contract for this restricted reviewer:
+function strictInvocationPrompt(prompt, fullInputName = "basehead.diff") {
+  const supporting = fullInputName === "actionability-input.txt"
+    ? `Complete fixed native input: ${fullInputName}.
+- Use only the review_* page tools to read and assess every full-input page.
+  No ordinary diff supporting-file artifacts are staged for this route; do not
+  request them through HOST read or grep. Native context and selected source
+  material are included in the fixed input. This supplies no deterministic pass.`
+    : `Supporting-file HOST read contract for this restricted reviewer:
 - Use the host read tool's exact filePath to read summary.json and
   deterministic.log under .opencode/review-evidence. Start at offset 1 with
   limit 200. Follow the tool's returned next offset until End of file; a byte
@@ -335,7 +338,11 @@ Supporting-file HOST read contract for this restricted reviewer:
   path can search its parent and generated artifacts. Optional grep must use
   path .opencode/review-evidence with include deterministic.log; use equivalent
   explicit file inclusion for other searches. Grep supplements, never replaces,
-  the required complete deterministic evidence reading.
+  the required complete deterministic evidence reading.`;
+  return `${prompt.trimEnd()}
+
+
+${supporting}
 - Never use bash for file inspection, listing, size/count checks or executing
   commands. Its true-only registration is compatibility, not shell authority.
   General tool help suggesting Bash or Task does not override this reviewer.
@@ -552,7 +559,7 @@ export async function runReviewRecovery({
     throw new Error(`refusing pre-existing review submission: ${submissionFile}`);
   }
 
-  let prompt = strict ? strictInvocationPrompt(basePrompt) : basePrompt;
+  let prompt = strict ? strictInvocationPrompt(basePrompt, fullInputName) : basePrompt;
   const contextSha256 = strict ? sha256(JSON.stringify(expectedContext)) : null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     const responseFile = path.join(evidenceDirectory, `model-response-attempt-${attempt}.txt`);
@@ -646,7 +653,7 @@ export async function runReviewRecovery({
       retainStaleSubmission({ metadata, metadataFile, submissionFile, evidenceDirectory });
     }
     prompt = correctivePrompt(basePrompt, toolFailure, staleCoverage, submitJsonFailure, coverageFailure);
-    if (strict) prompt = strictInvocationPrompt(prompt);
+    if (strict) prompt = strictInvocationPrompt(prompt, fullInputName);
   }
 
   throw new Error("unreachable review recovery state");

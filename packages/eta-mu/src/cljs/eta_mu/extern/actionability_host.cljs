@@ -109,12 +109,23 @@
       (refuse! :source-selection))
     (let [files (mapv (fn [p]
                         (let [entry (.toString (run "ls-tree" "-z" head "--" p) "utf8")
-                              [_ mode blob found] (re-matches #"(100644|100755) blob ([0-9a-f]{40})\t([^\u0000]+)\u0000" entry)
-                              bytes (run "show" (str head ":" p))]
-                          (when-not (= p found) (refuse! :source-entry))
-                          {:path p :git-mode mode :blob blob :bytes (.-length bytes) :sha256 (sha256 bytes)
-                           :text (.decode (js/TextDecoder. "utf-8" #js {:fatal true}) bytes)})) paths)
-          manifest [1 head (mapv #(mapv % [:path :git-mode :blob :bytes :sha256]) files)]]
+                              [_ mode kind object found] (re-matches #"(100644|100755|120000|160000) (blob|commit) ([0-9a-f]{40})\t([^\u0000]+)\u0000" entry)]
+                          (when-not (and (= p found)
+                                         (if (= "160000" mode) (= "commit" kind) (= "blob" kind)))
+                            (refuse! :source-entry))
+                          ;; Symlinks are Git blob bytes, never filesystem targets.
+                          ;; A gitlink carries only its committed object ID; no
+                          ;; nested repository or external commit bytes are read.
+                          (let [carrier (if (= "commit" kind) "gitlink-object-id" "blob")
+                                bytes (if (= "commit" kind) (js/Buffer.from object "ascii")
+                                          (run "cat-file" "blob" object))
+                                text (when (#{"100644" "100755"} mode)
+                                       (try (.decode (js/TextDecoder. "utf-8" #js {:fatal true}) bytes)
+                                            (catch :default _ nil)))]
+                            (cond-> {:path p :git-mode mode :object-type kind :blob object
+                                     :byte-carrier carrier :bytes (.-length bytes) :sha256 (sha256 bytes)}
+                              (some? text) (assoc :text text))))) paths)
+          manifest [2 head (mapv #(mapv % [:path :git-mode :object-type :blob :byte-carrier :bytes :sha256]) files)]]
       {:head head :files files :manifest manifest :sha256 (sha256 (pr-str manifest))}))))
 
 (defn verify-checkouts!
