@@ -10,7 +10,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { runReviewRecovery } from "./run-opencode-review-recovery.mjs";
+import { discoverFreeMiMoFlash, runReviewRecovery } from "./run-opencode-review-recovery.mjs";
 import { bindTransportInvocation, stageTransportVerifier, transportResponse,
   transportSha256, transportVerifierSource } from "./review-invocation-fixture.mjs";
 
@@ -2071,11 +2071,12 @@ function reviewMetadataFixture(t) {
   fs.writeFileSync(path.join(bin, "npm"), '#!/bin/sh\nprintf "%s\\n" "$@" > "$REVIEW_METADATA_NPM_LOG"\n');
   fs.chmodSync(path.join(bin, "npm"), 0o755);
   const install = () => runScript(namedStep("review", "Verify and install the bounded review context").run,
-    directory, { HOME: runnerHome, GITHUB_WORKSPACE: directory, GITHUB_OUTPUT: path.join(scratch, "output"),
+    directory, { HOME: runnerHome, RUNNER_TEMP: runnerTemp, GITHUB_WORKSPACE: directory, GITHUB_OUTPUT: path.join(scratch, "output"),
       REVIEW_METADATA_NPM_LOG: npmLog, PATH: `${bin}:${process.env.PATH}` });
-  const wrapper = path.join(runnerHome, ".config/opencode/plugins/eta-mu-actors.js");
+  const childHome = path.join(runnerTemp, "opencode-review-child-home");
+  const wrapper = path.join(childHome, ".config/opencode/plugins/eta-mu-actors.js");
   const data = path.join(directory, ".review-context/machinery/review-host-tool-metadata.json");
-  return { directory, scratch, runnerHome, names, tools, hooks, otherHook, data, wrapper, npmLog, install,
+  return { directory, scratch, runnerHome: childHome, initialRunnerHome: runnerHome, names, tools, hooks, otherHook, data, wrapper, npmLog, install,
     load: () => import(pathToFileURL(wrapper).href), state: globalThis.__reviewMetadataFixture };
 }
 
@@ -2427,5 +2428,88 @@ test("actual final workflow requires unchanged selected model provenance before 
     assert.equal(final.result.status === 0, pass, `${name}: ${final.result.stderr}`);
     assert.equal(fs.existsSync(final.publication), pass, name);
     if (!pass && fs.existsSync(final.output)) assert.equal(parseOutput(final.output).submission_file, undefined, name);
+  }
+});
+
+
+test("ordinary setup owns a fresh model home without loading runner or candidate config", (t) => {
+  const f = reviewMetadataFixture(t);
+  fs.mkdirSync(path.join(f.initialRunnerHome, ".config/opencode"), { recursive: true });
+  const original = '{"provider":{"opencode":{"options":{"baseURL":"https://inert-runner.invalid"}}}}\n';
+  fs.writeFileSync(path.join(f.initialRunnerHome, ".config/opencode/opencode.json"), original);
+  const result = f.install(); assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.statSync(f.runnerHome).mode & 0o777, 0o700);
+  assert.equal(fs.realpathSync(f.runnerHome), f.runnerHome);
+  assert.notEqual(f.runnerHome, f.initialRunnerHome);
+  assert.equal(fs.readFileSync(path.join(f.initialRunnerHome, ".config/opencode/opencode.json"), "utf8"), original);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(f.runnerHome, ".config/opencode/opencode.json"))),
+    { permission: { bash: { true: "allow" } } });
+  assert.equal(fs.realpathSync(path.join(f.runnerHome, ".agents")), path.join(f.directory, ".review-context/agents"));
+  const modelStep = namedStep("review", "Run bounded evidence-first OpenCode review");
+  assert.equal(modelStep.env.REVIEW_CHILD_HOME, "${{ steps.review_context.outputs.child_home }}");
+  const repeat = f.install(); assert.notEqual(repeat.status, 0);
+  assert.match(repeat.stdout, /Refusing an existing ordinary model home/);
+});
+
+
+test("uploaded model discovery retains actual producer streams consumed by final verification", async (t) => {
+  const checked = freshReviewInputCheck(fullInputFixture(t));
+  assert.equal(checked.result.status, 0, checked.result.stderr);
+  const binary = path.join(checked.evidence, "inert-catalog-executable");
+  const selected = { id: "mimo-v9.1-flash-free", providerID: "opencode", family: "mimo",
+    status: "active", release_date: "2027-01-01", api: { id: "mimo-v9.1-flash-free" },
+    capabilities: { toolcall: true, input: { text: true }, output: { text: true } },
+    cost: { input: 0, output: 0, cache: { read: 0, write: 0 } } };
+  // This executable emits inert catalog bytes only. The actual producer owns
+  // capture filenames, closed streams, output digests and proof serialization.
+  fs.writeFileSync(binary, `#!/bin/sh
+case "$1" in
+  --version) printf '1.18.18\n'; printf 'inert version stderr\n' >&2 ;;
+  models) cat <<'INERT_CATALOG'
+opencode/${selected.id}
+${JSON.stringify(selected, null, 2)}
+INERT_CATALOG
+    printf 'inert catalog stderr\n' >&2 ;;
+  *) exit 64 ;;
+esac
+`, { mode: 0o700 });
+  const model = await discoverFreeMiMoFlash({ evidenceDirectory: checked.evidence,
+    expectedVersion: "1.18.18", binary,
+    environment: { PATH: process.env.PATH || "/usr/bin:/bin", HOME: checked.consumer,
+      LANG: "C.UTF-8", LC_ALL: "C.UTF-8" } });
+  const files = [path.basename(model.file), ...model.proof.commands.flatMap(command =>
+    [command.stdout_file, command.stderr_file])];
+  assert.equal(new Set(files).size, 5, "one proof and both actual closed command streams are required");
+  const uploadPaths = new Set(namedStep("review", "Upload review attempt artifacts").with.path.trim().split(/\s+/));
+  const archive = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-discovery-archive-"));
+  t.after(() => fs.rmSync(archive, { recursive: true, force: true }));
+  for (const file of files) {
+    assert.ok(uploadPaths.has(`.opencode/review-evidence/${file}`), `actual producer evidence is absent from upload: ${file}`);
+    fs.copyFileSync(path.join(checked.evidence, file), path.join(archive, file));
+  }
+  const archivedProof = JSON.parse(fs.readFileSync(path.join(archive, path.basename(model.file))));
+  assert.equal(transportSha256(fs.readFileSync(path.join(archive, path.basename(model.file)))), model.sha256);
+  for (const command of archivedProof.commands) for (const stream of ["stdout", "stderr"]) {
+    assert.equal(transportSha256(fs.readFileSync(path.join(archive, command[`${stream}_file`]))), command[`${stream}_sha256`]);
+  }
+  const context = contextFixture(checked);
+  fs.writeFileSync(path.join(checked.evidence, "submission.json"), JSON.stringify(completeInputSubmission(checked)));
+  context.bind();
+  const recoveryFile = path.join(checked.evidence, "recovery.json");
+  const recovery = JSON.parse(fs.readFileSync(recoveryFile));
+  recovery.model_discovery = { file: path.basename(model.file), sha256: model.sha256, selected_model: model.proof.selected_model };
+  recovery.accepted_invocation.model_discovery_sha256 = model.sha256;
+  recovery.accepted_invocation.model = model.proof.selected_model;
+  fs.writeFileSync(recoveryFile, JSON.stringify(recovery));
+  context.invocationDigest = transportSha256(JSON.stringify(recovery.accepted_invocation));
+  const environment = { REVIEW_MODEL_DISCOVERY: "opencode-free-mimo-flash-v1", REVIEW_EXPECTED_OPENCODE_VERSION: "1.18.18" };
+  for (const omitted of [null, ...files]) {
+    fs.rmSync(path.join(checked.evidence, "publisher-invoked"), { force: true });
+    fs.rmSync(path.join(checked.evidence, "final-outputs"), { force: true });
+    for (const file of files) fs.copyFileSync(path.join(archive, file), path.join(checked.evidence, file));
+    if (omitted) fs.rmSync(path.join(checked.evidence, omitted));
+    const final = finalReviewInputCheck(checked, context, environment);
+    assert.equal(final.result.status === 0, omitted === null, `${omitted || "intact archive"}: ${final.result.stderr}`);
+    assert.equal(fs.existsSync(final.publication), omitted === null);
   }
 });

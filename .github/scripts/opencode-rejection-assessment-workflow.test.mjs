@@ -269,11 +269,31 @@ test("actual protected canonical API and Muse pins are identical across both rou
   assert.match(workflow.env.REJECTION_HISTORY_CLI_FILE, /canonical\/skills\/pr-flow\/scripts\/pr\.cljs$/);
 });
 
-test("only the separate protected publisher job can access App write credentials", () => {
+test("target-native read credentials remain separate from protected publication", () => {
   for (const job of [workflow.jobs.prepare, workflow.jobs.assess]) {
-    assert.equal(JSON.stringify(job).includes("secrets.ETA_MU_APP"), false);
-    assert.equal(JSON.stringify(job).includes("create-github-app-token"), false);
-    assert.equal(JSON.stringify(job).includes("HOST_RUN_READ_TOKEN"), false);
+    const sourceGuard = job.steps.findIndex((step) => step.name === "Authenticate protected called source before checkout");
+    const publicGuard = job.steps.findIndex((step) => step.name === "Require public native target before checkout");
+    const readIndex = job.steps.findIndex((step) => step.id === "target_reader");
+    assert.ok(sourceGuard >= 0 && sourceGuard < publicGuard && publicGuard < readIndex);
+    const reader = job.steps[readIndex];
+    assert.equal(reader.uses, "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1");
+    assert.equal(reader.with.owner, "open-hax");
+    assert.equal(reader.with.repositories, "${{ inputs.target_repository }}");
+    assert.deepEqual(Object.fromEntries(Object.entries(reader.with).filter(([key]) => key.startsWith("permission-"))),
+      { "permission-metadata": "read", "permission-pull-requests": "read", "permission-issues": "read" });
+    assert.equal(reader.with["app-id"], "${{ secrets.ETA_MU_APP_ID }}");
+    assert.equal(reader.with["private-key"], "${{ secrets.ETA_MU_APP_PRIVATE_KEY }}");
+    const nativeSteps = job.steps.filter((step) => ["Fresh native collection and immutable source input",
+      "Bind staged input before model execution", "Reverify actual accepted invocation and fresh custody"].includes(step.name));
+    assert.equal(nativeSteps.length, job === workflow.jobs.prepare ? 1 : 2);
+    for (const step of nativeSteps) {
+      assert.equal(step.env.GH_TOKEN, "${{ steps.target_reader.outputs.token }}", "target author permission reads use the target installation");
+      assert.equal(step.env.HOST_RUN_READ_TOKEN, "${{ github.token }}", "owning workflow provenance retains its own read token");
+      assert.ok(readIndex < job.steps.indexOf(step));
+    }
+    for (const step of job.steps.filter((step) => step !== reader))
+      assert.equal(JSON.stringify(step).includes("secrets.ETA_MU_APP"), false, "the read-token mint is the only earlier App secret consumer");
+    assert.equal(JSON.stringify(job.outputs || {}).includes("target_reader"), false, "read tokens never cross jobs as outputs");
   }
   assert.equal(workflow.jobs.publish.environment, "rejection-assessment-publication");
   const token = workflow.jobs.publish.steps.find((step) => step.id === "publisher");
@@ -551,6 +571,44 @@ test("every target checkout requires exact native identity and known public visi
         assert.notEqual(child.status, 0, jobName + " refuses " + name + " native metadata");
         assert.equal(fs.existsSync(effects), false, "refusal occurs before modeled checkout/App continuation");
       }
+    }
+  }
+});
+
+/** Execute the actual shell carrier with inert host outcomes, never a native write. */
+test("publication carrier preserves terminal bytes and an honest startup-crash fallback", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-rejection-publication-terminal-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const write = workflow.jobs.publish.steps.find((step) => step.name?.startsWith("Fresh canonical eligibility"));
+  const posted = { status: "unestablished", outcome: "posted", "refusal-code": "native-readback-error",
+    "actual-write-outcome": { outcome: "posted", "http-status": 201 }, "actual-post-response": { id: 7002 },
+    "write-intent-performed": true, "retry-performed": false, admitted: false };
+  const observed = { status: "observed", "record-id": 7002, "review-credit": false };
+  const deduplicated = { ...observed, outcome: "already-observed", "write-performed": false };
+  for (const [name, exitCode, terminal] of [["startup-crash", 71, null], ["empty-success", 0, null],
+    ["refused-readback", 1, posted], ["observed", 0, observed], ["deduplicated", 0, deduplicated]]) {
+    const file = path.join(directory, name + ".json");
+    const terminalBytes = terminal ? JSON.stringify(terminal) + "\n" : "";
+    const child = spawnSync("bash", ["-c", write.run],
+      { env: { PATH: process.env.PATH, PUBLICATION_RESULT_FILE: file, ETA_CHECKOUT: "/inert/eta", CANONICAL_CHECKOUT: "/inert/canonical",
+        TEST_HOST_EXIT: String(exitCode), TEST_TERMINAL: terminalBytes,
+        "BASH_FUNC_node%%": '() { if [[ -n "$TEST_TERMINAL" ]]; then printf "%s" "$TEST_TERMINAL" > "$PUBLICATION_RESULT_FILE"; fi; return "$TEST_HOST_EXIT"; }' },
+        encoding: "utf8", timeout: 15000 });
+    assert.equal(child.error, undefined);
+    assert.equal(child.signal, null);
+    assert.equal(child.status, terminal || exitCode !== 0 ? exitCode : 1);
+    assert.equal(fs.existsSync(file), true, name + " must retain a terminal result after the actual shell invocation");
+    const retainedBytes = fs.readFileSync(file, "utf8");
+    const retained = JSON.parse(retainedBytes);
+    if (terminal) assert.equal(retainedBytes, terminalBytes, "host-written terminal bytes survive both failure and success");
+    else {
+      assert.equal(retained.status, "unestablished");
+      assert.equal(retained.outcome, "unknown", "startup failure cannot establish whether a write occurred");
+      assert.equal(retained["write-intent-performed"], null);
+      assert.equal(retained["retry-performed"], false);
+      assert.equal(retained.admitted, false);
+      assert.equal(retained["native-resolution-performed"], false);
+      assert.equal(retained["review-credit"], false);
     }
   }
 });

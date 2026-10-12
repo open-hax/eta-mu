@@ -148,6 +148,17 @@ jobs:
             echo '::error::Assessment requires known public target repository visibility and matching native identity.'
             exit 1
           }
+      - name: Create target-scoped native read token
+        id: target_reader
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          app-id: ${{ secrets.ETA_MU_APP_ID }}
+          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          owner: open-hax
+          repositories: ${{ inputs.target_repository }}
+          permission-metadata: read
+          permission-pull-requests: read
+          permission-issues: read
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .actionability/eta, persist-credentials: false}
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -199,7 +210,8 @@ jobs:
         id: prepare
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.target_reader.outputs.token }}
+          HOST_RUN_READ_TOKEN: ${{ github.token }}
           ACTIONABILITY_HOST_HOME: ${{ runner.temp }}/actionability-host-home
           PREPARED_PROFILE_SHA256: ${{ steps.profile.outputs.profile_sha256 }}
           REVIEW_INVOCATION_VERIFIER_SHA256: ${{ steps.profile.outputs.verifier_sha256 }}
@@ -289,6 +301,17 @@ jobs:
             echo '::error::Assessment requires known public target repository visibility and matching native identity.'
             exit 1
           }
+      - name: Create target-scoped native read token
+        id: target_reader
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          app-id: ${{ secrets.ETA_MU_APP_ID }}
+          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          owner: open-hax
+          repositories: ${{ inputs.target_repository }}
+          permission-metadata: read
+          permission-pull-requests: read
+          permission-issues: read
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .actionability/eta, persist-credentials: false}
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -325,7 +348,8 @@ jobs:
       - name: Bind staged input before model execution
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.target_reader.outputs.token }}
+          HOST_RUN_READ_TOKEN: ${{ github.token }}
           ACTIONABILITY_HOST_HOME: ${{ runner.temp }}/actionability-host-home
           PREPARED_INPUT_SHA256: ${{ needs.prepare.outputs.input_sha256 }}
           PREPARED_PROFILE_SHA256: ${{ needs.prepare.outputs.profile_sha256 }}
@@ -349,7 +373,8 @@ jobs:
       - name: Reverify actual accepted invocation and fresh custody
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.target_reader.outputs.token }}
+          HOST_RUN_READ_TOKEN: ${{ github.token }}
           ACTIONABILITY_HOST_HOME: ${{ runner.temp }}/actionability-host-home
           PREPARED_INPUT_SHA256: ${{ needs.prepare.outputs.input_sha256 }}
           PREPARED_PROFILE_SHA256: ${{ needs.prepare.outputs.profile_sha256 }}

@@ -394,8 +394,13 @@ Every job reads native repository metadata before checkout and requires the exac
 configured repository name/database ID, `visibility: public` and `private: false`.
 Unknown, private, internal or contradictory metadata refuses before target source
 or App credentials are made available. No cross-repository private read credential
-is provided. The separate publication token remains scoped to the selected target;
-model input and its process environment remain credential-free.
+is provided. After protected-source and public-target preflight, prepare and assess
+mint separate App installation tokens for exactly the selected target with only
+Metadata, pull-request and issue read grants. Native target context and author
+permission checks use these tokens; owning-workflow run/provenance reads retain
+`github.token` through `HOST_RUN_READ_TOKEN`. Unavailable target installation or
+read grants fail closed. The separate publication token remains scoped to the
+selected target; model input and its process environment remain credential-free.
 
 Start a fresh workflow run for this route. Whole-job and failed-job reruns are
 refused by every job before native reads, checkout, artifact downloads or App
@@ -433,12 +438,21 @@ history source and its custody. Missing or invalid history refuses; there is no
 healthy-empty fallback. Complete native records, original bodies/hunks, source
 bytes, proposal/body digests and every page remain in the model input.
 
-Only the publisher job receives App secrets. Its built-in RSA boundary signs an
-ephemeral AppJWT, reads actual App and installation metadata, checks the actual
-issue-write grant, installation outputs and token repository access, then passes
-the native Bot tuple to canonical identity admission. A label, `/user` assumption
-or requested grant does not authenticate the principal. JWT, private key and
-token never enter the model environment or output artifacts.
+Protected host token-minting steps receive the existing App secrets; prepare and
+assess request read-only tokens, while only the separate publisher requests issue
+write access. Its built-in RSA boundary signs an ephemeral AppJWT, reads actual
+App and installation metadata, checks the actual issue-write grant, installation
+outputs and token repository access, then passes the native Bot tuple to canonical
+identity admission. A label, `/user` assumption or requested grant does not
+authenticate the principal. JWT, private key and token never enter the model
+environment or output artifacts.
+
+The native `gh` reader directs complete stdout to an exclusively created file in
+an owned private temporary directory, so paginated API responses are not cut off
+by a 16 MiB process capture buffer. It retains the existing process timeout and
+HTTP/JSON refusal behavior, buffers only stderr, and closes/removes its temporary
+resources on success or failure. Canonical input byte/page limits still apply;
+this does not guarantee arbitrary input fits available memory or disk.
 
 The model receives a fresh private HOME/XDG tree and an explicit environment
 allowlist, without host credentials or GitHub output channels. This is a bounded

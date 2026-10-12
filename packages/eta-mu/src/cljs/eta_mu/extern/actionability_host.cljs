@@ -74,14 +74,25 @@
 (defn gh-json
   "Synchronous canonical reader ABI. Token stays in the protected child environment."
   [home token & args]
-  (let [r (.spawnSync process "gh" (clj->js (into (vec args) ["--hostname" "github.com"]))
-                      #js {:env (host-environment home token) :encoding "utf8"
-                           :timeout 15000 :maxBuffer 16777216})]
-    (when-not (= 0 (.-status r))
-      (let [status (some-> (re-find #"HTTP ([0-9]{3})" (or (.-stderr r) "")) second js/Number)]
-        (throw (ex-info "Native read failed" {:code :native-read :status status}))))
-    (try (js->clj (js/JSON.parse (.-stdout r)) :keywordize-keys true)
-         (catch :default _ (refuse! :native-json)))))
+  ;; Paginated native stdout goes directly to an owned descriptor, without a
+  ;; host capture ceiling. Canonical input/page rules still govern its use.
+  (let [directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-native-read-"))]
+    (try
+      (private-directory! directory)
+      (let [file (.join path directory "stdout")
+            fd (.openSync fs file "wx" 384)]
+        (try
+          (let [r (.spawnSync process "gh" (clj->js (into (vec args) ["--hostname" "github.com"]))
+                              #js {:env (host-environment home token) :encoding "utf8"
+                                   :stdio #js ["ignore" fd "pipe"]
+                                   :timeout 15000 :maxBuffer 1048576})]
+            (when-not (= 0 (.-status r))
+              (let [status (some-> (re-find #"HTTP ([0-9]{3})" (or (.-stderr r) "")) second js/Number)]
+                (throw (ex-info "Native read failed" {:code :native-read :status status}))))
+            (try (read-json file)
+                 (catch :default _ (refuse! :native-json))))
+          (finally (.closeSync fs fd))))
+      (finally (.rmSync fs directory #js {:recursive true :force true})))))
 
 (defn- source-git [checkout & args]
   ;; Git writes stdout directly to an owned descriptor: blob size is not a

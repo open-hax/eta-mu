@@ -228,6 +228,120 @@
     (check "source inventory mutation during publisher authentication refuses before POST" (:refused source-change) :fresh-input-binding)
     :complete))
 
+(defn native-read-controls
+  "Actual gh-json boundary with an owned inert executable, never a native API."
+  []
+  (let [directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-native-reader-control-"))
+        home (.join path directory "home")
+        audit (.join path directory "audit.json")
+        executable (.join path directory "gh")
+        process-env (.-env js/process)
+        old-path (aget process-env "PATH")
+        network-directory (host/env "ETA_MU_TEST_NETWORK_AUDIT_DIR")
+        network-capture (host/env "ETA_MU_TEST_NETWORK_AUDIT_CAPTURE")
+        preload-token (second (re-matches #"--require (\"[^\"]+\"|/[^ \t\r\n]+)" (or (host/env "NODE_OPTIONS") "")))
+        preload-file (when preload-token (if (str/starts-with? preload-token "\"") (js/JSON.parse preload-token) preload-token))
+        node-require (.createRequire module (.join path directory "fixture-loader.cjs"))
+        native-process (node-require "node:child_process")
+        original-spawn (.-spawnSync native-process)
+        spawned (atom [])
+        permission-resource "repos/open-hax/another-installed-repo/collaborators/inert/permission"
+        run-resource "repos/open-hax/eta-mu/actions/runs/31"
+        read-error (fn [token resource]
+                     (try (host/gh-json home token "api" resource) nil
+                          (catch :default e (ex-data e))))
+        cleaned (fn []
+                  (let [fixture-audit (host/read-json audit)
+                        pid (:pid fixture-audit)
+                        record-file (.join path network-directory (str pid ".json"))
+                        record (host/read-json record-file)
+                        stdout-file (:stdoutFile fixture-audit)]
+                    (check "inert gh PID matches the actual completed spawn" pid (peek @spawned))
+                    (check "inert gh actual spawn PID is positive" (pos-int? pid) true)
+                    (check "inert gh preload audit schema is exact" (:schema record) "eta-mu.test-network-denial/v1")
+                    (check "inert gh preload audit uses the owning capture" (:capture record) network-capture)
+                    (check "inert gh preload audit binds the actual child PID" (:pid record) pid)
+                    (check "inert gh preload audit binds the actual parent PID" (:parentPid record) (.-pid js/process))
+                    (check "inert gh fixture parent matches the actual parent" (:parentPid fixture-audit) (.-pid js/process))
+                    (check "inert gh actual preload recorded zero network attempts" (:deniedAttempts record) 0)
+                    (check "inert gh kernel ancestry binds child and parent"
+                           (boolean (some #(and (= pid (:pid %)) (= (.-pid js/process) (:parentPid %))) (:kernelAncestry record))) true)
+                    (check "inert gh preload record remains a private owned file"
+                           [(bit-and (.-mode (.lstatSync fs record-file)) 511) (.-uid (.lstatSync fs record-file))]
+                           [384 (.getuid js/process)])
+                    (check "native stdout uses an owned file descriptor" (str/starts-with? (.basename path (.dirname path stdout-file)) "eta-native-read-") true)
+                    (check "native stdout descriptor file is removed" (.existsSync fs stdout-file) false)
+                    (check "native stdout private directory is removed" (.existsSync fs (.dirname path stdout-file)) false)))]
+    (try
+      (check "inert gh fixture requires the existing parent audit binding"
+             (and (string? network-directory) (.isAbsolute path network-directory)
+                  (string? network-capture) (boolean (re-matches #"[a-zA-Z0-9-]+" network-capture))
+                  (string? preload-file) (.isAbsolute path preload-file)) true)
+      (host/private-directory! network-directory)
+      (host/read-bytes preload-file)
+      (check "the exact child preload was already loaded by the parent"
+             (some? (aget (.-cache node-require) preload-file)) true)
+      ;; Test-only observation of actual spawned PIDs; command/args/env/options
+      ;; remain unchanged, including the protected host credential allowlist.
+      (aset native-process "spawnSync"
+            (fn [command arguments options]
+              (let [result (.call original-spawn native-process command arguments options)]
+                (when (= command "gh") (swap! spawned conj (.-pid result)))
+                result)))
+      (.syncBuiltinESMExports module)
+      (.mkdirSync fs home #js {:mode 448})
+      (.writeFileSync fs executable
+                      (str "#!" (.-execPath js/process) "\n"
+                           "process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR=" (host/json network-directory) ";\n"
+                           "process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE=" (host/json network-capture) ";\n"
+                           "require(" (host/json preload-file) ");\n"
+                           "const AUDIT=" (host/json audit) ";\n"
+                           "const fs = require(\"node:fs\");\nconst args = process.argv.slice(2);\nif (args[0] !== \"api\" || args.at(-2) !== \"--hostname\" || args.at(-1) !== \"github.com\") process.exit(97);\nconst resource = args[1];\nconst stdoutFile = fs.readlinkSync(\"/proc/self/fd/1\");\nfs.writeFileSync(AUDIT, JSON.stringify({resource, args, stdoutFile, pid:process.pid, parentPid:process.ppid}));\nif (resource === \"fixture/large\") {\n  if (args.length !== 6 || args[2] !== \"--paginate\" || args[3] !== \"--slurp\") process.exit(96);\n  fs.writeFileSync(1, JSON.stringify([{nodes:[{body:\"x\".repeat(16777216+257), tail:\"last byte eta-mu \\u03b7\\u03bc \\ud83d\\ude00\"}],pageInfo:{hasNextPage:false,endCursor:null}}, {files:[{filename:\"last-page.cljc\"}],complete:true}]));\n} else if (resource === \"repos/open-hax/another-installed-repo/collaborators/inert/permission\") {\n  if (process.env.GH_TOKEN !== \"inert-target-read-token\") { fs.writeSync(2, \"HTTP 404\\n\"); process.exit(1); }\n  fs.writeFileSync(1, JSON.stringify({permission:\"write\",role_name:\"maintain\"}));\n} else if (resource === \"repos/open-hax/eta-mu/actions/runs/31\") {\n  if (process.env.GH_TOKEN !== \"inert-owning-run-token\") { fs.writeSync(2, \"HTTP 404\\n\"); process.exit(1); }\n  fs.writeFileSync(1, JSON.stringify({id:31,repository:{full_name:\"open-hax/eta-mu\"}}));\n} else if (resource === \"fixture/http404\") {\n  fs.writeSync(2, \"HTTP 404\\n\"); process.exit(1);\n} else if (resource === \"fixture/invalid-json\") {\n  fs.writeFileSync(1, \"{incomplete\");\n} else if (resource === \"fixture/partial-error\") {\n  fs.writeFileSync(1, JSON.stringify({permission:\"write\"})); fs.writeSync(2, \"HTTP 503\\n\"); process.exit(1);\n} else process.exit(95);\n")
+                      #js {:mode 448 :flag "wx"})
+      (aset process-env "PATH" (str directory ":" (or old-path "/usr/bin:/bin")))
+      (let [result (host/gh-json home "inert-target-read-token" "api" "fixture/large" "--paginate" "--slurp")
+            payload (get-in result [0 :nodes 0 :body])
+            expected (.repeat "x" (+ 16777216 257))]
+        (check "native response exceeds the predecessor stdout ceiling" (> (host/utf8-length (host/json result)) 16777216) true)
+        (check "every slurped native page remains present" (count result) 2)
+        (check "large native body retains its exact byte length" (host/utf8-length payload) (+ 16777216 257))
+        (check "large native body retains exact content" (host/sha256 payload) (host/sha256 expected))
+        (check "native body terminal Unicode is retained" (get-in result [0 :nodes 0 :tail]) "last byte eta-mu ημ 😀")
+        (check "native pagination completion remains explicit" (get-in result [0 :pageInfo]) {:hasNextPage false :endCursor nil})
+        (check "last native file inventory page is retained" (second result) {:files [{:filename "last-page.cljc"}] :complete true})
+        (cleaned))
+      (check "target installation can read a writer on another admitted public repository"
+             (host/gh-json home "inert-target-read-token" "api" permission-resource)
+             {:permission "write" :role_name "maintain"})
+      (cleaned)
+      (check "owning workflow token cannot substitute for target Metadata access"
+             (read-error "inert-owning-run-token" permission-resource) {:code :native-read :status 404})
+      (cleaned)
+      (check "owning workflow run provenance uses its separate read token"
+             (host/gh-json home "inert-owning-run-token" "api" run-resource)
+             {:id 31 :repository {:full_name "open-hax/eta-mu"}})
+      (cleaned)
+      (check "target-only token cannot replace owning workflow run access"
+             (read-error "inert-target-read-token" run-resource) {:code :native-read :status 404})
+      (cleaned)
+      (check "native HTTP refusal preserves its actual status"
+             (read-error "inert-target-read-token" "fixture/http404") {:code :native-read :status 404})
+      (cleaned)
+      (check "successful process with malformed native JSON refuses"
+             (read-error "inert-target-read-token" "fixture/invalid-json") {:code :native-json})
+      (cleaned)
+      (check "partial stdout from a failed process is never accepted"
+             (read-error "inert-target-read-token" "fixture/partial-error") {:code :native-read :status 503})
+      (cleaned)
+      (check "every one of the eight inert gh invocations has a distinct audited spawn"
+             [(count @spawned) (count (set @spawned))] [8 8])
+      :complete
+      (finally
+        (aset native-process "spawnSync" original-spawn)
+        (.syncBuiltinESMExports module)
+        (if (nil? old-path) (js-delete process-env "PATH") (aset process-env "PATH" old-path))
+        (.rmSync fs directory #js {:recursive true :force true})))))
+
 (defn run-controls []
   (let [sha (apply str (repeat 40 "d"))
         cfg {:run-repo "open-hax/eta-mu" :run-id 31 :run-attempt 1 :workflow-sha sha :eta-revision sha :direct? true
@@ -731,6 +845,7 @@
 (defn ^:async main []
   (let [_pin-check (dependency-pin-controls)
         _run-check (run-controls)
+        _native-read-check (native-read-controls)
         _source-check (removed-source-controls)
         _copied-check (copied-source-controls)
         _large-check (large-blob-controls)
@@ -780,6 +895,7 @@
                                     (case only
                                       "dependency-pins" (dependency-pin-controls)
                                       "host-run" (run-controls)
+                                      "native-read" (native-read-controls)
                                       "removed-source" (removed-source-controls)
                                       "copied-source" (copied-source-controls)
                                       "large-blobs" (large-blob-controls)

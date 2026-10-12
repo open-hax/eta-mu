@@ -119,8 +119,9 @@
     (host/output! {:status :verified :accepted-sha256 (:accepted-sha256 invocation)})))
 
 (defn ^:async entry []
-  (try
-    (let [[phase] (host/argv) pins (assessment/require-protected-dependencies!)]
+  (let [[phase] (host/argv) terminal (atom nil)]
+    (try
+      (let [pins (assessment/require-protected-dependencies!)]
       (case phase
         "pins" (host/output! pins)
         "profile" (host/write-text! (required "PROFILE_SCRIPT_FILE")
@@ -135,9 +136,19 @@
             "verify" (verify! deps cfg)
             "publish" (let [result (await (assessment/publish deps cfg))]
                         ;; A failed post-readback must retain the actual one-shot outcome.
+                        (reset! terminal result)
                         (host/write-json! (required "PUBLICATION_RESULT_FILE") result)
                         (if (= :observed (:status result)) (host/output! result)
                           (host/refuse! :unestablished-native-write)))
             (host/refuse! :host-phase)))))
-    (catch :default e (host/fail-exit! e))))
+      (catch :default e
+        (when (and (= phase "publish") (nil? @terminal))
+          ;; A thrown host boundary without a returned result cannot establish write absence.
+          (host/write-json! (required "PUBLICATION_RESULT_FILE")
+                            {:status :unestablished :outcome :unknown
+                             :refusal-code (or (:code (ex-data e)) :host-publication-error)
+                             :write-intent-performed nil :retry-performed false :admitted false
+                             :native-agreement-admitted false :settlement-performed false
+                             :resolution-performed false :review-credit false}))
+        (host/fail-exit! e)))))
 (entry)

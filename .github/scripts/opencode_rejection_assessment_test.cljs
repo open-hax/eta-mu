@@ -235,7 +235,12 @@
     (is (false? (:native-agreement-admitted result)))
     (is (false? (:settlement-performed result))) (is (false? (:resolution-performed result)))
     (is (false? (:review-credit result))))
-  (doseq [variant [:digest :principal :adverse :comments :summary :source :run :history :inventory :permission]]
+  (doseq [[variant expected-code] [[:digest :trusted-invocation-digest]
+                                 [:principal :publisher-repository-or-principal]
+                                 [:adverse :adverse-submission] [:comments :adverse-submission]
+                                 [:summary :prospective-body] [:source :inert-source-drift]
+                                 [:run :inert-producer-drift] [:history :history-source-reconciliation]
+                                 [:inventory :input-source-head] [:permission :canonical-proposal]]]
     (let [{:keys [deps]} (ready (fixture-deps)) count (atom 0)
           d (case variant
               :digest (assoc deps :accepted-sha256 nil)
@@ -254,7 +259,9 @@
                                                  {:permission "read"} (apply read args))))))]
       (try (await (assessment/publish (assoc d :post! (fn [& _] (swap! count inc))) config))
            (is false "Adverse fixture must refuse")
-           (catch :default _ (is (= 0 @count))))))
+           (catch :default e
+             (is (= expected-code (:code (ex-data e))) (str "Expected refusal for " variant))
+             (is (= 0 @count))))))
   (let [{:keys [deps issues]} (ready (fixture-deps)) count (atom 0)
         result (await (assessment/publish
                       (assoc deps :post! (fn [_ _ body]

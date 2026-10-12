@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import os from "node:os";
 import { finished } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual, stripVTControlCharacters } from "node:util";
@@ -97,7 +98,7 @@ export function selectFreeMiMoFlash(rows, requested = "") {
 }
 
 /** Capture one catalog command under the shared discovery deadline, retaining all output bytes. */
-async function captureModelCommand({ binary, args, environment, deadline, directory, stem }) {
+async function captureModelCommand({ binary, args, environment, cwd, deadline, directory, stem }) {
   const stdoutFile = path.join(directory, `${stem}.stdout`), stderrFile = path.join(directory, `${stem}.stderr`);
   const stdout = fs.createWriteStream(stdoutFile, { flags: "wx", mode: 0o600 });
   const stderr = fs.createWriteStream(stderrFile, { flags: "wx", mode: 0o600 });
@@ -106,7 +107,7 @@ async function captureModelCommand({ binary, args, environment, deadline, direct
   try {
     const remaining = deadline - performance.now();
     if (remaining <= 0) throw new Error("OpenCode model discovery deadline expired");
-    const child = spawn(binary, args, { stdio: ["ignore", "pipe", "pipe"], env: environment });
+    const child = spawn(binary, args, { stdio: ["ignore", "pipe", "pipe"], env: environment, cwd });
     child.stdout.pipe(stdout); child.stderr.pipe(stderr);
     timeout = setTimeout(() => {
       timedOut = true; child.kill("SIGTERM");
@@ -124,7 +125,7 @@ async function captureModelCommand({ binary, args, environment, deadline, direct
     capturesClosed = closed.every(({ status }) => status === "fulfilled");
     if (!failure && closed.some(({ status }) => status === "rejected")) failure = new Error("OpenCode catalog capture failed");
   }
-  const record = { command: [binary, ...args], exit_code: exit?.code ?? null,
+  const record = { command: [binary, ...args], cwd, exit_code: exit?.code ?? null,
     signal: exit?.signal ?? null, timed_out: timedOut, captures_closed: capturesClosed,
     stdout_file: path.basename(stdoutFile), stderr_file: path.basename(stderrFile),
     stdout_sha256: sha256(fs.readFileSync(stdoutFile)), stderr_sha256: sha256(fs.readFileSync(stderrFile)) };
@@ -146,8 +147,50 @@ function modelBinaryIdentity(binary, environment) {
   throw new Error("OpenCode executable is unavailable for model discovery");
 }
 
+/** Construct a model environment without inherited credentials or OpenCode overrides. */
+function isolatedModelEnvironment(environment, home) {
+  return {
+    PATH: environment.PATH || "/usr/bin:/bin", HOME: home,
+    XDG_CONFIG_HOME: path.join(home, ".config"), XDG_DATA_HOME: path.join(home, ".local/share"),
+    XDG_CACHE_HOME: path.join(home, ".cache"), XDG_STATE_HOME: path.join(home, ".local/state"),
+    TMPDIR: path.join(home, "tmp"),
+    OPENCODE_CONFIG_DIR: path.join(home, ".config/opencode"),
+    OPENCODE_DISABLE_PROJECT_CONFIG: "true", LANG: "C.UTF-8", LC_ALL: "C.UTF-8", TZ: "UTC",
+  };
+}
+
+/** Bind the three trusted review configuration carriers staged by the owning workflow. */
+function ordinaryInferenceConfiguration() {
+  const home = process.env.REVIEW_CHILD_HOME;
+  if (!home || !path.isAbsolute(home)) throw new Error("owned ordinary review child home is required");
+  const info = fs.lstatSync(home);
+  if (!info.isDirectory() || info.isSymbolicLink() || fs.realpathSync(home) !== path.resolve(home)
+      || (info.mode & 0o777) !== 0o700
+      || (typeof process.getuid === "function" && info.uid !== process.getuid())) {
+    throw new Error("ordinary review child home must be an owned private real directory");
+  }
+  const files = ["opencode.json", "agents/github-reviewer.md", "plugins/eta-mu-actors.js"].map((relative) => {
+    const file = path.join(home, ".config/opencode", relative), stat = fs.lstatSync(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || fs.realpathSync(file) !== file || stat.size === 0) {
+      throw new Error("trusted ordinary review configuration must be nonempty regular physical files");
+    }
+    return { path: file, sha256: sha256(fs.readFileSync(file)) };
+  });
+  for (const relative of [".opencode", ".config/opencode/config", ".config/opencode/config.json", ".config/opencode/opencode.jsonc"]) {
+    if (fs.existsSync(path.join(home, relative))) throw new Error("unexpected ordinary review configuration overlay");
+  }
+  return { home, files };
+}
+
+/** Recheck the trusted carriers without reading an auth store or permitting project overlays. */
+function assertInferenceConfiguration(configuration) {
+  const current = ordinaryInferenceConfiguration();
+  if (!isDeepStrictEqual(current, configuration)) throw new Error("trusted ordinary review configuration changed");
+}
+
 /** Recheck the exact discovery proof/output/executable before and after every model attempt. */
 function assertModelDiscovery(binding) {
+  if (binding.proof.inference_configuration) assertInferenceConfiguration(binding.proof.inference_configuration);
   if (sha256(fs.readFileSync(binding.file)) !== binding.sha256 ||
       sha256(fs.readFileSync(binding.proof.binary.real_path)) !== binding.proof.binary.sha256) {
     throw new Error("OpenCode model discovery proof/executable changed");
@@ -161,7 +204,7 @@ function assertModelDiscovery(binding) {
 
 /** Discover a fresh anonymous OpenCode catalog once; selection is provenance, never review admission. */
 export async function discoverFreeMiMoFlash({ evidenceDirectory, requested = "", expectedVersion,
-  binary = process.env.OPENCODE_BIN || "opencode", environment = { ...process.env } }) {
+  binary = process.env.OPENCODE_BIN || "opencode", environment = { ...process.env }, inferenceConfiguration = null }) {
   if (typeof expectedVersion !== "string" || !/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(expectedVersion)) {
     throw new Error("declared OpenCode version is required for model discovery");
   }
@@ -171,19 +214,24 @@ export async function discoverFreeMiMoFlash({ evidenceDirectory, requested = "",
   if (names.some((name) => fs.existsSync(path.join(evidenceDirectory, name)))) {
     throw new Error("refusing pre-existing model discovery/invocation evidence");
   }
-  const childEnvironment = { ...environment };
-  for (const name of ["GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_PATH", "GITHUB_STATE", "GITHUB_STEP_SUMMARY"]) delete childEnvironment[name];
+  const isolationRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "opencode-model-discovery-")));
+  const home = path.join(isolationRoot, "home"), cwd = path.join(isolationRoot, "work");
+  for (const directory of [home, cwd, path.join(home, "tmp")]) fs.mkdirSync(directory, { mode: 0o700 });
+  const childEnvironment = { ...isolatedModelEnvironment(environment, home), OPENCODE_PURE: "true" };
   const proof = { schema: "open-hax.review-model-discovery/v1", mode: requested === "" ? "latest" : "explicit",
-    requested_model: requested, declared_version: expectedVersion, status: "refused", commands: [], selected_model: null };
+    requested_model: requested, declared_version: expectedVersion, status: "refused", commands: [], selected_model: null,
+    discovery_context: { cwd, home, project_configuration: "disabled", inherited_environment: false },
+    inference_configuration: inferenceConfiguration };
   const deadline = performance.now() + MODEL_DISCOVERY_BUDGET_MS;
+  let failure;
   try {
     proof.binary = modelBinaryIdentity(binary, childEnvironment);
-    const version = await captureModelCommand({ binary: proof.binary.real_path, args: ["--version"], environment: childEnvironment, deadline, directory: evidenceDirectory, stem: "model-version" });
+    const version = await captureModelCommand({ binary: proof.binary.real_path, args: ["--version"], environment: childEnvironment, cwd, deadline, directory: evidenceDirectory, stem: "model-version" });
     proof.commands.push(version);
     if (version.exit_code !== 0 || version.signal !== null || version.timed_out || !version.captures_closed || version.capture_error) throw new Error("OpenCode version discovery failed");
     proof.observed_version = stripVTControlCharacters(fs.readFileSync(path.join(evidenceDirectory, version.stdout_file), "utf8")).trim();
     if (proof.observed_version !== expectedVersion) throw new Error("OpenCode installed/declared version mismatch");
-    const catalog = await captureModelCommand({ binary: proof.binary.real_path, args: ["models", "opencode", "--refresh", "--verbose"], environment: childEnvironment, deadline, directory: evidenceDirectory, stem: "model-catalog" });
+    const catalog = await captureModelCommand({ binary: proof.binary.real_path, args: ["models", "opencode", "--refresh", "--verbose"], environment: childEnvironment, cwd, deadline, directory: evidenceDirectory, stem: "model-catalog" });
     proof.commands.push(catalog);
     if (catalog.exit_code !== 0 || catalog.signal !== null || catalog.timed_out || !catalog.captures_closed || catalog.capture_error) throw new Error("OpenCode model catalog discovery failed");
     const rows = parseOpenCodeModelCatalog(fs.readFileSync(path.join(evidenceDirectory, catalog.stdout_file)));
@@ -191,10 +239,16 @@ export async function discoverFreeMiMoFlash({ evidenceDirectory, requested = "",
     proof.catalog_sha256 = catalog.stdout_sha256;
     proof.selected_row = selected; proof.selected_row_sha256 = sha256(JSON.stringify(selected));
     proof.selected_model = `opencode/${selected.id}`; proof.status = "selected";
-  } catch (error) {
-    proof.error = error instanceof Error ? error.message : "OpenCode model discovery failed";
+  } catch (error) { failure = error; }
+  finally {
+    try { fs.rmSync(isolationRoot, { recursive: true, force: true }); proof.discovery_context.removed = true; }
+    catch (error) { proof.cleanup_error = "OpenCode discovery home cleanup failed"; failure ??= error; }
+  }
+  if (failure) {
+    proof.status = "refused";
+    proof.error = failure instanceof Error ? failure.message : "OpenCode model discovery failed";
     fs.writeFileSync(proofFile, `${JSON.stringify(proof, null, 2)}\n`, { flag: "wx", mode: 0o600 });
-    throw error;
+    throw failure;
   }
   fs.writeFileSync(proofFile, `${JSON.stringify(proof, null, 2)}\n`, { flag: "wx", mode: 0o600 });
   const binding = { file: proofFile, sha256: sha256(fs.readFileSync(proofFile)), proof };
@@ -875,7 +929,7 @@ function actionabilityChildEnvironment(purpose = "actionability") {
 
 /** Run the configured OpenCode review and mirror stdout and stderr to retained files. */
 async function invokeOpenCode({ prompt, responseFile, stderrFile, reviewModel = process.env.REVIEW_MODEL,
-  opencodeBin = process.env.OPENCODE_BIN || "opencode" }) {
+  opencodeBin = process.env.OPENCODE_BIN || "opencode", environment = null }) {
   if (!reviewModel) throw new Error("REVIEW_MODEL is required");
 
   const response = fs.createWriteStream(responseFile, { flags: "w" });
@@ -884,8 +938,8 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile, reviewModel = 
   let invocationRejected = false;
 
   try {
-    const childEnvironment = ["actionability", "rejection-assessment"].includes(process.env.REVIEW_INPUT_PURPOSE)
-      ? actionabilityChildEnvironment(process.env.REVIEW_INPUT_PURPOSE) : { ...process.env };
+    const childEnvironment = environment ?? (["actionability", "rejection-assessment"].includes(process.env.REVIEW_INPUT_PURPOSE)
+      ? actionabilityChildEnvironment(process.env.REVIEW_INPUT_PURPOSE) : { ...process.env });
     for (const name of ["GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_PATH", "GITHUB_STATE", "GITHUB_STEP_SUMMARY"]) {
       delete childEnvironment[name];
     }
@@ -991,13 +1045,14 @@ async function main() {
     }
     throw error;
   }
-  let discovery = null;
+  let discovery = null, inferenceConfiguration = null;
   try {
     if (process.env.REVIEW_MODEL_DISCOVERY !== undefined) {
       if (process.env.REVIEW_MODEL_DISCOVERY !== MODEL_DISCOVERY_MODE ||
           (process.env.REVIEW_INPUT_PURPOSE || "diff") !== "diff") throw new Error("unsupported ordinary model discovery mode");
+      inferenceConfiguration = ordinaryInferenceConfiguration();
       discovery = await discoverFreeMiMoFlash({ evidenceDirectory, requested: process.env.REVIEW_MODEL || "",
-        expectedVersion: process.env.REVIEW_EXPECTED_OPENCODE_VERSION });
+        expectedVersion: process.env.REVIEW_EXPECTED_OPENCODE_VERSION, inferenceConfiguration });
     }
   } catch (error) {
     const file = path.join(evidenceDirectory, "recovery.json");
@@ -1008,8 +1063,11 @@ async function main() {
   }
   const invoke = discovery ? async (arguments_) => {
     assertModelDiscovery(discovery);
+    const environment = { ...isolatedModelEnvironment(process.env, inferenceConfiguration.home),
+      OPENCODE_CONFIG: path.join(inferenceConfiguration.home, ".config/opencode/opencode.json"),
+      REVIEW_EVIDENCE_DIR: evidenceDirectory, REVIEW_INPUT_PURPOSE: "diff" };
     const result = await invokeOpenCode({ ...arguments_, reviewModel: discovery.proof.selected_model,
-      opencodeBin: discovery.proof.binary.real_path });
+      opencodeBin: discovery.proof.binary.real_path, environment });
     assertModelDiscovery(discovery);
     return result;
   } : invokeOpenCode;

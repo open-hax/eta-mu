@@ -5,12 +5,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { spawnSync } from "node:child_process";
+import { spawnSync as nativeSpawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { runReviewRecovery } from "./run-opencode-review-recovery.mjs";
 import * as modelDiscovery from "./run-opencode-review-recovery.mjs";
 
 const runner = fileURLToPath(new URL("./run-opencode-review-recovery.mjs", import.meta.url));
+const discoveryAuditFixtures = new WeakMap();
 /**
  * Hash fixture data without interpreting its contents.
  * @param {string|Buffer|TypedArray|DataView} bytes - Hash input.
@@ -1078,13 +1080,108 @@ function verboseModelCatalog(rows) {
     `opencode/${row.id}\n${JSON.stringify(row, null, 2)}`).join("\n")}\n`;
 }
 
+// Test-only enrollment for model fixtures whose production environment is deliberately sanitized.
+/** Retain the actual outer runner PID without changing any spawn arguments or environment. */
+function spawnSync(command, args, options) {
+  const result = nativeSpawnSync(command, args, options);
+  const fixture = discoveryAuditFixtures.get(options?.env);
+  if (fixture) {
+    assert.ok(Number.isSafeInteger(result.pid) && result.pid > 0, "actual fixture runner PID");
+    fixture.runnerPids.push(result.pid);
+  }
+  return result;
+}
+
+/** Bind only the exact preload already active in the parent test harness. */
+function discoveryFixtureAuditBinding() {
+  const directory = process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR;
+  const capture = process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE;
+  if (directory === undefined && capture === undefined) return null;
+  const match = /^--require ("[^"]+"|\/[^ \t\r\n]+)$/.exec(process.env.NODE_OPTIONS ?? "");
+  assert.ok(match, "one already-loaded audit preload is required");
+  const preload = match[1].startsWith('"') ? JSON.parse(match[1]) : match[1];
+  const require = createRequire(import.meta.url);
+  assert.ok(path.isAbsolute(preload) && require.cache[preload], "parent actually loaded the exact preload");
+  const preloadStat = fs.lstatSync(preload), directoryStat = fs.lstatSync(directory);
+  assert.ok(preloadStat.isFile() && !preloadStat.isSymbolicLink() && fs.realpathSync(preload) === preload);
+  assert.equal(sha256(fs.readFileSync(preload)), "eaa05a70b4a32e219bad2b16feb79d344c85c8f902f4d2c17556ee50980a8c25");
+  assert.ok(path.isAbsolute(directory) && directoryStat.isDirectory() && !directoryStat.isSymbolicLink());
+  assert.equal(fs.realpathSync(directory), path.resolve(directory));
+  assert.equal(directoryStat.mode & 0o777, 0o700);
+  assert.equal(directoryStat.uid, process.getuid());
+  assert.match(capture, /^[a-zA-Z0-9-]+$/);
+  return { preload, directory, capture };
+}
+
+/** Validate real child records, including refused and timed-out catalog invocations, before cleanup. */
+function verifyDiscoveryFixtureAudits(fixture, binding) {
+  const identities = fs.existsSync(fixture.processFile)
+    ? fs.readFileSync(fixture.processFile, "utf8").trim().split("\n").map(JSON.parse) : [];
+  assert.equal(new Set(identities.map(identity => identity.pid)).size, identities.length, "distinct actual child PIDs");
+  assert.equal(identities.length, fixture.commands().length, "every actual inert command has one child identity");
+  for (const identity of identities) {
+    assert.ok(Number.isSafeInteger(identity.pid) && identity.pid > 0);
+    assert.ok(fixture.runnerPids.includes(identity.parentPid), "child parent is the actual completed outer runner");
+    assert.deepEqual(identity.argv, fixture.commands()[identities.indexOf(identity)]);
+    const file = path.join(binding.directory, `${identity.pid}.json`), info = fs.lstatSync(file);
+    assert.ok(info.isFile() && !info.isSymbolicLink() && fs.realpathSync(file) === file);
+    assert.equal(info.mode & 0o777, 0o600); assert.equal(info.uid, process.getuid());
+    const record = JSON.parse(fs.readFileSync(file, "utf8"));
+    assert.equal(record.schema, "eta-mu.test-network-denial/v1");
+    assert.equal(record.capture, binding.capture); assert.equal(record.pid, identity.pid);
+    assert.equal(record.parentPid, identity.parentPid); assert.equal(record.deniedAttempts, 0);
+    assert.ok(record.kernelAncestry.some(row => row.pid === identity.pid && row.parentPid === identity.parentPid
+      && /^[0-9]+$/.test(row.startTicks)), "actual child kernel identity");
+    assert.ok(record.kernelAncestry.some(row => row.pid === identity.parentPid && row.parentPid === process.pid),
+      "actual runner belongs to the owning test process");
+    const parentFile = path.join(binding.directory, `${identity.parentPid}.json`), parentInfo = fs.lstatSync(parentFile);
+    assert.ok(parentInfo.isFile() && !parentInfo.isSymbolicLink() && fs.realpathSync(parentFile) === parentFile);
+    assert.equal(parentInfo.mode & 0o777, 0o600); assert.equal(parentInfo.uid, process.getuid());
+    const parent = JSON.parse(fs.readFileSync(parentFile, "utf8"));
+    assert.equal(parent.schema, record.schema); assert.equal(parent.capture, binding.capture);
+    assert.equal(parent.pid, identity.parentPid); assert.equal(parent.parentPid, process.pid);
+    assert.equal(parent.deniedAttempts, 0);
+  }
+}
+
 /** Add measured version/catalog/run argv to the existing process fixture, never real OpenCode. */
 function discoveryCliFixture(t, { rows = [freeMiMoRow()], catalog, version = "1.18.18",
   catalogExit = 0, catalogWait = false, runTail = "" } = {}) {
-  const f = cliFixture(t);
+  const auditBinding = discoveryFixtureAuditBinding();
+  let f;
+  // Register first so real audit checks run before fixture(t)'s directory cleanup.
+  if (auditBinding) t.after(() => verifyDiscoveryFixtureAudits(f, auditBinding));
+  f = cliFixture(t);
+  f.runnerPids = [];
+  f.processFile = path.join(f.directory, "discovery-process-identities.ndjson");
+  if (auditBinding) discoveryAuditFixtures.set(f.env, f);
+  f.childHome = path.join(f.directory, "trusted-review-home");
+  fs.mkdirSync(f.childHome, { mode: 0o700 });
+  fs.mkdirSync(path.join(f.childHome, "tmp"), { mode: 0o700 });
+  for (const [relative, bytes] of [
+    ["opencode.json", '{"trusted":"review-fixture"}\n'],
+    ["agents/github-reviewer.md", "trusted reviewer fixture\n"],
+    ["plugins/eta-mu-actors.js", "// trusted compiled-plugin transport fixture\n"],
+  ]) {
+    const file = path.join(f.childHome, ".config/opencode", relative);
+    fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, bytes);
+  }
+  f.env.REVIEW_CHILD_HOME = f.childHome;
   const anchor = "if (process.env.GITHUB_OUTPUT !== undefined) process.exit(19);\n";
   const source = fs.readFileSync(f.child, "utf8");
   assert.equal(source.split(anchor).length, 2);
+  const enrollment = auditBinding ? `
+const fixtureRequire = (await import('node:module')).createRequire(import.meta.url);
+process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR = ${JSON.stringify(auditBinding.directory)};
+process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE = ${JSON.stringify(auditBinding.capture)};
+const fixturePreload = ${JSON.stringify(auditBinding.preload)};
+if (fixtureRequire('node:crypto').createHash('sha256').update(fs.readFileSync(fixturePreload)).digest('hex') !==
+    'eaa05a70b4a32e219bad2b16feb79d344c85c8f902f4d2c17556ee50980a8c25') throw Error('TEST_PRELOAD_BYTES_REFUSED');
+if (!fixtureRequire.cache[fixturePreload]) fixtureRequire(fixturePreload);
+${catalogWait ? "process.once('SIGTERM', () => process.exit(143));" : ""}
+fs.appendFileSync(${JSON.stringify(f.processFile)}, JSON.stringify({pid:process.pid, parentPid:process.ppid,
+  argv:process.argv.slice(2)})+'\\n');
+` : "";
   const commands = `const args = process.argv.slice(2);
 fs.appendFileSync(${JSON.stringify(path.join(f.directory, "argv.ndjson"))}, JSON.stringify(args) + '\\n');
 if (args[0] === '--version') { console.log(${JSON.stringify(version)}); process.exit(0); }
@@ -1093,7 +1190,7 @@ if (args[0] === 'models') {
   process.stdout.write(${JSON.stringify(catalog ?? verboseModelCatalog(rows))}); process.exit(${catalogExit});
 }
 `;
-  fs.writeFileSync(f.child, source.replace(anchor, anchor + commands) + runTail);
+  fs.writeFileSync(f.child, source.replace(anchor, enrollment + anchor + commands) + runTail);
   f.env.REVIEW_MODEL_DISCOVERY = "opencode-free-mimo-flash-v1";
   f.env.REVIEW_EXPECTED_OPENCODE_VERSION = "1.18.18";
   f.env.REVIEW_MODEL = "";
@@ -1267,4 +1364,94 @@ test("dynamic discovery executes the bound binary after its requested symlink is
   assert.equal(proof.binary.real_path, fs.realpathSync(f.child));
   assert.ok(proof.commands.every(command => command.command[0] === proof.binary.real_path));
   assert.equal(f.commands().length, 4);
+});
+
+
+test("ordinary discovery isolates candidate config and inference keeps only the trusted profile", (t) => {
+  const f = discoveryCliFixture(t);
+  const project = path.join(f.directory, "candidate");
+  fs.mkdirSync(path.join(project, ".opencode"), { recursive: true });
+  const candidateBytes = '{"provider":{"opencode":{"options":{"baseURL":"https://candidate.invalid"}}}}\n';
+  fs.writeFileSync(path.join(project, "opencode.json"), candidateBytes);
+  fs.writeFileSync(path.join(project, ".opencode/opencode.json"), candidateBytes);
+  const polluted = {
+    OPENCODE_CONFIG: path.join(project, "opencode.json"), OPENCODE_CONFIG_DIR: path.join(project, ".opencode"),
+    OPENCODE_CONFIG_CONTENT: candidateBytes, OPENCODE_MODELS_URL: "https://candidate.invalid/catalog",
+    OPENCODE_MODELS_PATH: path.join(project, "catalog.json"), OPENCODE_PERMISSION: '{"*":"allow"}',
+    OPENCODE_PURE: "true", GH_TOKEN: "inert-parent-token", GITHUB_TOKEN: "inert-parent-token",
+    OPENAI_API_KEY: "inert-parent-key", OPENCODE_API_KEY: "inert-parent-key",
+  };
+  Object.assign(f.env, polluted);
+  const probe = `fs.appendFileSync(${JSON.stringify(path.join(f.directory, "configuration-context.ndjson"))}, JSON.stringify({
+    command: args[0], cwd: process.cwd(), home: process.env.HOME,
+    env: Object.fromEntries(${JSON.stringify([...Object.keys(polluted), "OPENCODE_DISABLE_PROJECT_CONFIG", "XDG_CONFIG_HOME", "XDG_DATA_HOME"])}.map(name=>[name, process.env[name] ?? null])),
+    config: args[0] === 'run' && process.env.OPENCODE_CONFIG ? fs.readFileSync(process.env.OPENCODE_CONFIG, 'utf8') : null,
+    agent: args[0] === 'run' && process.env.REVIEW_INPUT_PURPOSE === 'diff' ? fs.readFileSync(path.join(process.env.HOME,'.config/opencode/agents/github-reviewer.md'),'utf8') : null,
+    plugin: args[0] === 'run' && process.env.REVIEW_INPUT_PURPOSE === 'diff' ? fs.readFileSync(path.join(process.env.HOME,'.config/opencode/plugins/eta-mu-actors.js'),'utf8') : null,
+  })+'\\n');
+`;
+  const anchor = "const args = process.argv.slice(2);\n";
+  const source = fs.readFileSync(f.child, "utf8"); assert.equal(source.split(anchor).length, 2);
+  fs.writeFileSync(f.child, source.replace(anchor, anchor + probe));
+  const result = spawnSync(process.execPath, [runner], { cwd: project, env: f.env, encoding: "utf8", timeout: 10_000 });
+  assert.equal(result.status, 0, result.stderr);
+  const contexts = fs.readFileSync(path.join(f.directory, "configuration-context.ndjson"), "utf8").trim().split("\n").map(JSON.parse);
+  assert.equal(contexts.length, 4, "both catalog commands and both inert review attempts must run");
+  for (const current of contexts.slice(0, 2)) {
+    assert.notEqual(current.cwd, project); assert.notEqual(current.home, f.env.HOME);
+    assert.notEqual(current.home, f.childHome);
+    assert.equal(current.env.OPENCODE_DISABLE_PROJECT_CONFIG, "true");
+    assert.equal(current.env.OPENCODE_PURE, "true");
+    for (const name of Object.keys(polluted).filter(name=>!["OPENCODE_CONFIG_DIR", "OPENCODE_PURE"].includes(name))) {
+      assert.equal(current.env[name], null, `${current.command}: ${name}`);
+    }
+    assert.equal(current.env.OPENCODE_CONFIG_DIR, path.join(current.home, ".config/opencode"));
+    assert.equal(current.env.XDG_CONFIG_HOME, path.join(current.home, ".config"));
+    assert.equal(current.env.XDG_DATA_HOME, path.join(current.home, ".local/share"));
+  }
+  for (const current of contexts.slice(2)) {
+    assert.equal(current.cwd, project, "Muse tools still read the actual candidate checkout");
+    assert.equal(current.home, f.childHome);
+    assert.equal(current.env.OPENCODE_CONFIG, path.join(f.childHome, ".config/opencode/opencode.json"));
+    assert.equal(current.env.OPENCODE_CONFIG_DIR, path.join(f.childHome, ".config/opencode"));
+    assert.equal(current.env.OPENCODE_DISABLE_PROJECT_CONFIG, "true");
+    for (const name of Object.keys(polluted).filter(name=>!["OPENCODE_CONFIG", "OPENCODE_CONFIG_DIR"].includes(name))) {
+      assert.equal(current.env[name], null, `run: ${name}`);
+    }
+    assert.equal(current.config, '{"trusted":"review-fixture"}\n');
+    assert.equal(current.agent, "trusted reviewer fixture\n");
+    assert.equal(current.plugin, "// trusted compiled-plugin transport fixture\n");
+  }
+  const proof = JSON.parse(fs.readFileSync(path.join(f.directory, "model-discovery.json")));
+  assert.equal(proof.discovery_context.removed, true);
+  assert.equal(fs.existsSync(proof.discovery_context.home), false);
+  assert.equal(proof.inference_configuration.home, f.childHome);
+  assert.equal(proof.inference_configuration.files.length, 3);
+  for (const file of proof.inference_configuration.files) assert.equal(file.sha256, sha256(fs.readFileSync(file.path)));
+  assert.equal(fs.readFileSync(path.join(project, "opencode.json"), "utf8"), candidateBytes);
+  assert.equal(fs.readFileSync(path.join(project, ".opencode/opencode.json"), "utf8"), candidateBytes);
+});
+
+test("ordinary inference refuses changed trusted configuration before retry or acceptance", (t) => {
+  const f = discoveryCliFixture(t);
+  const source = fs.readFileSync(f.child, "utf8");
+  fs.writeFileSync(f.child, source + `fs.appendFileSync(${JSON.stringify(path.join(f.childHome, ".config/opencode/opencode.json"))}, 'tampered\\n');\n`);
+  const result = spawnSync(process.execPath, [runner], { env: f.env, encoding: "utf8", timeout: 10_000 });
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stderr, /trusted ordinary review configuration changed/);
+  assert.equal(f.commands().filter(([command]) => command === "run").length, 1);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(f.directory, "recovery.json"))).accepted_invocation, null);
+  assert.equal(fs.existsSync(f.output), false);
+});
+
+test("ordinary inference missing or overlaid trusted profile stops before catalog and review", (t) => {
+  for (const overlay of [false, true]) {
+    const f = discoveryCliFixture(t);
+    if (overlay) fs.writeFileSync(path.join(f.childHome, ".config/opencode/opencode.jsonc"), "{}\n");
+    else fs.rmSync(path.join(f.childHome, ".config/opencode/plugins/eta-mu-actors.js"));
+    const result = spawnSync(process.execPath, [runner], { env: f.env, encoding: "utf8", timeout: 10_000 });
+    assert.equal(result.status, 1, result.stderr); assert.deepEqual(f.commands(), []);
+    const recovery = JSON.parse(fs.readFileSync(path.join(f.directory, "recovery.json")));
+    assert.equal(recovery.accepted_invocation, null); assert.deepEqual(recovery.attempts, []);
+  }
 });

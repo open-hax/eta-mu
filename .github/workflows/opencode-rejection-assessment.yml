@@ -164,6 +164,17 @@ jobs:
             echo '::error::Assessment requires known public target repository visibility and matching native identity.'
             exit 1
           }
+      - name: Create target-scoped native read token
+        id: target_reader
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          app-id: ${{ secrets.ETA_MU_APP_ID }}
+          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          owner: open-hax
+          repositories: ${{ inputs.target_repository }}
+          permission-metadata: read
+          permission-pull-requests: read
+          permission-issues: read
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .rejection-assessment/eta, persist-credentials: false}
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -215,7 +226,8 @@ jobs:
         id: prepare
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.target_reader.outputs.token }}
+          HOST_RUN_READ_TOKEN: ${{ github.token }}
           REJECTION_HOST_HOME: ${{ runner.temp }}/rejection-assessment-host-home
           PREPARED_PROFILE_SHA256: ${{ steps.profile.outputs.profile_sha256 }}
           REVIEW_INVOCATION_VERIFIER_SHA256: ${{ steps.profile.outputs.verifier_sha256 }}
@@ -305,6 +317,17 @@ jobs:
             echo '::error::Assessment requires known public target repository visibility and matching native identity.'
             exit 1
           }
+      - name: Create target-scoped native read token
+        id: target_reader
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          app-id: ${{ secrets.ETA_MU_APP_ID }}
+          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          owner: open-hax
+          repositories: ${{ inputs.target_repository }}
+          permission-metadata: read
+          permission-pull-requests: read
+          permission-issues: read
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .rejection-assessment/eta, persist-credentials: false}
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -341,7 +364,8 @@ jobs:
       - name: Bind staged input before model execution
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.target_reader.outputs.token }}
+          HOST_RUN_READ_TOKEN: ${{ github.token }}
           REJECTION_HOST_HOME: ${{ runner.temp }}/rejection-assessment-host-home
           PREPARED_INPUT_SHA256: ${{ needs.prepare.outputs.input_sha256 }}
           PREPARED_PROFILE_SHA256: ${{ needs.prepare.outputs.profile_sha256 }}
@@ -365,7 +389,8 @@ jobs:
       - name: Reverify actual accepted invocation and fresh custody
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.target_reader.outputs.token }}
+          HOST_RUN_READ_TOKEN: ${{ github.token }}
           REJECTION_HOST_HOME: ${{ runner.temp }}/rejection-assessment-host-home
           PREPARED_INPUT_SHA256: ${{ needs.prepare.outputs.input_sha256 }}
           PREPARED_PROFILE_SHA256: ${{ needs.prepare.outputs.profile_sha256 }}
@@ -503,7 +528,14 @@ jobs:
           PUBLICATION_RESULT_FILE: ${{ runner.temp }}/rejection-assessment-publication-result.json
         run: |
           set -euo pipefail
-          node .rejection-assessment/runtime/node_modules/nbb/cli.js -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts" "$ETA_CHECKOUT/.github/scripts/opencode_rejection_assessment.cljs" publish
+          publication_exit=0
+          node .rejection-assessment/runtime/node_modules/nbb/cli.js -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts" "$ETA_CHECKOUT/.github/scripts/opencode_rejection_assessment.cljs" publish || publication_exit=$?
+          # Preserve exclusive host-written bytes. A missing terminal file establishes no effect.
+          if [[ ! -e "$PUBLICATION_RESULT_FILE" ]]; then
+            printf '%s\n' '{"status":"unestablished","outcome":"unknown","refusal-code":"host-did-not-complete","write-intent-performed":null,"retry-performed":false,"admitted":false,"native-resolution-performed":false,"review-credit":false}' > "$PUBLICATION_RESULT_FILE"
+            (( publication_exit != 0 )) || publication_exit=1
+          fi
+          exit "$publication_exit"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with: {name: 'rejection-assessment-publication-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: '${{ runner.temp }}/rejection-assessment-publication-result.json', if-no-files-found: error}

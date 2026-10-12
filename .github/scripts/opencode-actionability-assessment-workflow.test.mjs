@@ -283,11 +283,31 @@ test("direct and reusable routes share exact protected dependency pins", () => {
   assert.match(workflow.jobs.assess["timeout-minutes"], /> 180 && 180/);
 });
 
-test("only the separate protected publisher job can access App write credentials", () => {
+test("target-native read credentials remain separate from protected publication", () => {
   for (const job of [workflow.jobs.prepare, workflow.jobs.assess]) {
-    assert.equal(JSON.stringify(job).includes("secrets.ETA_MU_APP"), false);
-    assert.equal(JSON.stringify(job).includes("create-github-app-token"), false);
-    assert.equal(JSON.stringify(job).includes("HOST_RUN_READ_TOKEN"), false);
+    const sourceGuard = job.steps.findIndex((step) => step.name === "Authenticate protected called source before checkout");
+    const publicGuard = job.steps.findIndex((step) => step.name === "Require public native target before checkout");
+    const readIndex = job.steps.findIndex((step) => step.id === "target_reader");
+    assert.ok(sourceGuard >= 0 && sourceGuard < publicGuard && publicGuard < readIndex);
+    const reader = job.steps[readIndex];
+    assert.equal(reader.uses, "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1");
+    assert.equal(reader.with.owner, "open-hax");
+    assert.equal(reader.with.repositories, "${{ inputs.target_repository }}");
+    assert.deepEqual(Object.fromEntries(Object.entries(reader.with).filter(([key]) => key.startsWith("permission-"))),
+      { "permission-metadata": "read", "permission-pull-requests": "read", "permission-issues": "read" });
+    assert.equal(reader.with["app-id"], "${{ secrets.ETA_MU_APP_ID }}");
+    assert.equal(reader.with["private-key"], "${{ secrets.ETA_MU_APP_PRIVATE_KEY }}");
+    const nativeSteps = job.steps.filter((step) => ["Fresh native collection and immutable source input",
+      "Bind staged input before model execution", "Reverify actual accepted invocation and fresh custody"].includes(step.name));
+    assert.equal(nativeSteps.length, job === workflow.jobs.prepare ? 1 : 2);
+    for (const step of nativeSteps) {
+      assert.equal(step.env.GH_TOKEN, "${{ steps.target_reader.outputs.token }}", "target author permission reads use the target installation");
+      assert.equal(step.env.HOST_RUN_READ_TOKEN, "${{ github.token }}", "owning workflow provenance retains its own read token");
+      assert.ok(readIndex < job.steps.indexOf(step));
+    }
+    for (const step of job.steps.filter((step) => step !== reader))
+      assert.equal(JSON.stringify(step).includes("secrets.ETA_MU_APP"), false, "the read-token mint is the only earlier App secret consumer");
+    assert.equal(JSON.stringify(job.outputs || {}).includes("target_reader"), false, "read tokens never cross jobs as outputs");
   }
   assert.equal(workflow.jobs.publish.environment, "actionability-publication");
   const token = workflow.jobs.publish.steps.find((step) => step.id === "publisher");
