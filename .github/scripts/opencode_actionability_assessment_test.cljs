@@ -184,13 +184,18 @@
 (defn run-controls []
   (let [sha (apply str (repeat 40 "d"))
         cfg {:run-repo "open-hax/eta-mu" :run-id 31 :run-attempt 1 :workflow-sha sha :eta-revision sha :direct? true
-             :workflow-ref "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main"}
+             :workflow-ref "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main"
+             :job-workflow-sha sha
+             :job-workflow-ref "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main"
+             :prepare-check-run-id 101 :assess-check-run-id 102}
         facts {"repos/open-hax/eta-mu" {:id 5 :full_name "open-hax/eta-mu" :default_branch "main"}
                "repos/open-hax/eta-mu/actions/runs/31" {:id 31 :run_attempt 1 :head_sha sha :repository {:id 5 :full_name "open-hax/eta-mu"}}
                "repos/open-hax/eta-mu/branches/main" {:protected true :commit {:sha sha}}
                "repos/open-hax/eta-mu/actions/runs/31/attempts/1/jobs"
-               [{:jobs [{:name "Prepare actionability input" :status "completed" :conclusion "success"}
-                        {:name "Assess complete actionability input" :status "completed" :conclusion "success"}]}]}
+               [{:jobs [{:name "Prepare actionability input" :status "completed" :conclusion "success"
+                         :run_id 31 :check_run_url "https://api.github.com/repos/open-hax/eta-mu/check-runs/101"}
+                        {:name "Assess complete actionability input" :status "completed" :conclusion "success"
+                         :run_id 31 :check_run_url "https://api.github.com/repos/open-hax/eta-mu/check-runs/102"}]}]}
         read (fn [f] (fn [_ resource & _] (get f resource)))]
     (check "actual-shaped direct default protected run binding" (host/verify-run! (read facts) cfg true) nil)
     (let [called (assoc cfg :direct? false)
@@ -205,6 +210,12 @@
                               {:id 31 :run_attempt 1 :repository {:id 9 :full_name "open-hax/knoxx"}
                                :referenced_workflows referenced})]
       (check "same owning repository admits exact reusable source" (host/verify-run! (read called-facts) called false) nil)
+      (doseq [changed [(assoc called :job-workflow-sha (apply str (repeat 40 "e")))
+                       (assoc called :job-workflow-ref "open-hax/eta-mu/.github/workflows/other.yml@refs/heads/main")
+                       (assoc called :job-workflow-ref "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@")
+                       (assoc called :job-workflow-sha nil)]]
+        (check "a matching sibling aggregate never authenticates the current reusable job"
+               (refused #(host/verify-run! (read called-facts) changed false)) :host-run-source))
       (check "foreign caller refuses repository-scoped publication lock bypass"
              (refused #(host/verify-run! (read foreign-facts) foreign false)) :host-run-source))
     (doseq [c [(assoc cfg :run-attempt 2) (assoc cfg :workflow-ref "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/feature")
@@ -215,7 +226,28 @@
       (check "unprotected or foreign native host binding refuses" (refused #(host/verify-run! (read f) cfg true)) :host-run-source))
     (check "unfinished assessor job refuses before mutation"
            (refused #(host/verify-run! (read (assoc-in facts ["repos/open-hax/eta-mu/actions/runs/31/attempts/1/jobs" 0 :jobs 1 :conclusion] nil)) cfg true))
-           :trusted-job-completion)))
+           :trusted-job-completion)
+    (let [resource "repos/open-hax/eta-mu/actions/runs/31/attempts/1/jobs"
+          sibling-jobs [{:name "Sibling / Prepare actionability input" :status "completed" :conclusion "success"
+                         :run_id 31 :check_run_url "https://api.github.com/repos/open-hax/eta-mu/check-runs/201"}
+                        {:name "Sibling / Assess complete actionability input" :status "completed" :conclusion "success"
+                         :run_id 31 :check_run_url "https://api.github.com/repos/open-hax/eta-mu/check-runs/202"}]
+          multiple (update-in facts [resource 0 :jobs] into sibling-jobs)]
+      (check "same-run sibling invocation does not make the exact required jobs ambiguous"
+             (host/verify-run! (read multiple) cfg true) nil)
+      (doseq [changed [(assoc cfg :prepare-check-run-id nil) (assoc cfg :prepare-check-run-id 0)]]
+        (check "missing native prepare coordinate refuses"
+               (refused #(host/verify-run! (read multiple) changed true)) :host-run-source))
+      (doseq [changed [(assoc cfg :assess-check-run-id nil) (assoc cfg :assess-check-run-id 101)
+                       (assoc cfg :assess-check-run-id 999)]]
+        (check "missing or mismatched exact assessor coordinate refuses"
+               (refused #(host/verify-run! (read multiple) changed true)) :trusted-job-completion))
+      (doseq [changed [(assoc-in multiple [resource 0 :jobs 1 :conclusion] "failure")
+                       (assoc-in multiple [resource 0 :jobs 1 :run_id] 32)
+                       (assoc-in multiple [resource 0 :jobs 1 :check_run_url] "https://api.github.com/repos/open-hax/knoxx/check-runs/102")
+                       (update-in multiple [resource 0 :jobs] conj (get-in multiple [resource 0 :jobs 1]))]]
+        (check "sibling success cannot replace failed, foreign, absent or duplicated selected evidence"
+               (refused #(host/verify-run! (read changed) cfg true)) :trusted-job-completion)))))
 
 (defn ^:async transport-controls []
   (let [calls (atom [])
@@ -329,24 +361,25 @@
       (let [target (git "rev-parse" "HEAD")]
         (.writeFileSync fs (.join path directory "executable.sh") text #js {:mode 493})
         (.writeFileSync fs (.join path directory "binary.dat") binary)
+        (.writeFileSync fs (.join path directory "binary-executable") binary #js {:mode 493})
         (.symlinkSync fs link-target (.join path directory "link"))
         (.symlinkSync fs (js/Buffer.from #js [255 128]) (.join path directory "raw-link"))
-        (git "add" "--" "executable.sh" "binary.dat" "link" "raw-link")
+        (git "add" "--" "executable.sh" "binary.dat" "binary-executable" "link" "raw-link")
         (git "update-index" "--add" "--cacheinfo" (str "160000," target ",submodule"))
         (git "commit" "-m" "Owned binary symlink and gitlink carrier")
-        (let [head (git "rev-parse" "HEAD") paths ["regular.cljc" "executable.sh" "binary.dat" "link" "raw-link" "submodule"]
+        (let [head (git "rev-parse" "HEAD") paths ["regular.cljc" "executable.sh" "binary.dat" "binary-executable" "link" "raw-link" "submodule"]
               before (git "status" "--porcelain=v1") index (.readFileSync fs (.join path directory ".git/index"))
               attempted (mapv (fn [p]
                                 (try {:path p :value (host/immutable-source directory head [p])}
                                      (catch :default e {:path p :refused (or (:code (ex-data e)) :decoded-source-refusal)}))) paths)
               _supported (check "each ordinary Git object kind is supported independently"
-                                (mapv :refused attempted) [nil nil nil nil nil nil])
+                                (mapv :refused attempted) [nil nil nil nil nil nil nil])
               selected (host/immutable-source directory head paths)
               entries (into {} (map (juxt :path identity) (:files selected)))
               inventory (host/source-inventory
                          (fn [_ resource & _]
                            (case resource
-                             "repos/synthetic/native-context/pulls/1" {:number 1 :state "open" :head {:sha head} :base {:sha target} :changed_files 6}
+                             "repos/synthetic/native-context/pulls/1" {:number 1 :state "open" :head {:sha head} :base {:sha target} :changed_files 7}
                              "repos/synthetic/native-context/pulls/1/files?per_page=100"
                              [(mapv (fn [p] {:filename p :status "modified"}) paths)]
                              (throw (ex-info "Unexpected owned object inventory read" {:resource resource}))))
@@ -355,7 +388,7 @@
           (check "object-kind/carrier identities are explicit in versioned manifest" (first (:manifest selected)) 2)
           (check "regular UTF8 text is retained" (get-in entries ["regular.cljc" :text]) text)
           (check "executable UTF8 text is retained" (get-in entries ["executable.sh" :text]) text)
-          (doseq [[p mode] [["regular.cljc" "100644"] ["executable.sh" "100755"] ["binary.dat" "100644"] ["link" "120000"] ["raw-link" "120000"] ["submodule" "160000"]]]
+          (doseq [[p mode] [["regular.cljc" "100644"] ["executable.sh" "100755"] ["binary.dat" "100644"] ["binary-executable" "100755"] ["link" "120000"] ["raw-link" "120000"] ["submodule" "160000"]]]
             (check "Git mode is exact" (get-in entries [p :git-mode]) mode)
             (check "Git object identity is exact" (get-in entries [p :blob]) (git "rev-parse" (str head ":" p))))
           (check "symlink target text reaches complete input without following the target"
@@ -366,13 +399,21 @@
           (check "non-UTF8 symlink projection exposes exact base64"
                  (get-in entries ["raw-link" :content-base64]) (.toString (js/Buffer.from #js [255 128]) "base64"))
           (check "non-UTF8 dangling symlink is never followed" (.existsSync fs (.join path directory "raw-link")) false)
-          (doseq [p ["binary.dat" "raw-link" "submodule"]]
+          (doseq [p ["binary.dat" "binary-executable" "raw-link" "submodule"]]
             (check "nontext carrier has no text projection" (contains? (entries p) :text) false))
-          (doseq [[p bytes] [["binary.dat" binary] ["link" (js/Buffer.from link-target "utf8")] ["raw-link" (js/Buffer.from #js [255 128])]]]
+          (doseq [[p bytes] [["binary.dat" binary] ["binary-executable" binary] ["link" (js/Buffer.from link-target "utf8")] ["raw-link" (js/Buffer.from #js [255 128])]]]
             (check "raw blob carrier type" (get-in entries [p :object-type]) "blob")
             (check "raw blob carrier label" (get-in entries [p :byte-carrier]) "blob")
             (check "raw blob carrier byte size" (get-in entries [p :bytes]) (.-length bytes))
             (check "raw blob carrier SHA256" (get-in entries [p :sha256]) (host/sha256 bytes)))
+          (doseq [p ["binary.dat" "binary-executable"]]
+            (check "non-UTF8 regular/executable blobs expose exact base64"
+                   (get-in entries [p :content-base64]) (.toString binary "base64"))
+            (let [serialized (js->clj (js/JSON.parse (host/json inventory)) :keywordize-keys true)
+                  record (first (filter #(= p (:path %)) (:files serialized)))
+                  decoded (js/Buffer.from (:content-base64 record) "base64")]
+              (check "complete source JSON carries reconstructible binary bytes" (.equals binary decoded) true)
+              (check "binary carrier digest survives full-input serialization" (host/sha256 decoded) (:sha256 record))))
           (check "gitlink has commit object type" (get-in entries ["submodule" :object-type]) "commit")
           (check "gitlink carrier is explicitly object-ID bytes" (get-in entries ["submodule" :byte-carrier]) "gitlink-object-id")
           (check "gitlink ASCII object-ID carrier is 40 bytes" (get-in entries ["submodule" :bytes]) 40)

@@ -268,7 +268,7 @@ test("direct and reusable routes share exact protected dependency pins", () => {
   assert.deepEqual({ canonical: sourcePins[1], muse: sourcePins[2] }, expectedPins);
   const guard = workflow.jobs.prepare.steps[0].run;
   const runPins = (changes = {}) => spawnSync("bash", ["-c", guard], { encoding: "utf8", timeout: 15000,
-    env: { PATH: process.env.PATH, TIMEOUT_INPUT: "60", CANONICAL_REVISION: expectedPins.canonical,
+    env: { PATH: process.env.PATH, TARGET_REPOSITORY: "open-hax/eta-mu", TIMEOUT_INPUT: "60", CANONICAL_REVISION: expectedPins.canonical,
       MUSE_REVISION: expectedPins.muse, ...changes } });
   assert.equal(runPins().status, 0, "valid dependency values pass the existing shape guard");
   for (const changes of [{ CANONICAL_REVISION: "" }, { MUSE_REVISION: "" },
@@ -321,7 +321,9 @@ test("actual model step is credential-free with independent input and result bin
   }
 });
 
-test("authored bootstrap authenticates source before every checkout on both routes", () => {
+test("authored bootstrap authenticates source before every checkout on both routes", (t) => {
+  const contextDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-job-identity-"));
+  t.after(() => fs.rmSync(contextDirectory, { recursive: true, force: true }));
   const guards = Object.values(workflow.jobs).map((job) => {
     const index = job.steps.findIndex((step) => step.name === "Authenticate protected called source before checkout");
     const checkout = job.steps.findIndex((step) => step.uses?.startsWith("actions/checkout@"));
@@ -331,6 +333,10 @@ test("authored bootstrap authenticates source before every checkout on both rout
   assert.equal(new Set(guards).size, 1, "same source bootstrap on all three jobs");
   const sha = "d".repeat(40);
   const env = { ...process.env, ETA_SOURCE_SHA: sha, GITHUB_REPOSITORY: "open-hax/eta-mu", GITHUB_RUN_ID: "31",
+    ACTIONABILITY_JOB_WORKFLOW_SHA: sha,
+    ACTIONABILITY_JOB_WORKFLOW_REF: "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main",
+    ACTIONABILITY_JOB_CHECK_RUN_ID: "103", ACTIONABILITY_PREPARE_CHECK_RUN_ID: "101",
+    GITHUB_ENV: path.join(contextDirectory, "github-env"),
     GITHUB_RUN_ATTEMPT: "1", GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_WORKFLOW_SHA: sha, ACTIONABILITY_CALLED_REVISION: "",
     GITHUB_WORKFLOW_REF: "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main",
     TEST_BRANCH_JSON: JSON.stringify({ protected: true, commit: { sha } }),
@@ -341,6 +347,21 @@ test("authored bootstrap authenticates source before every checkout on both rout
   const run = (changes = {}) => spawnSync("bash", ["-c", guards[0]], { env: { ...env, ...changes }, encoding: "utf8", timeout: 15000 });
   assert.equal(run().status, 0, "inert native default-branch source admits");
   assert.equal(run({ GITHUB_EVENT_NAME: "pull_request", ACTIONABILITY_CALLED_REVISION: sha }).status, 0, "inert called exact referenced source admits");
+  for (const changes of [
+    { ACTIONABILITY_JOB_WORKFLOW_SHA: "e".repeat(40) },
+    { ACTIONABILITY_JOB_WORKFLOW_REF: "open-hax/eta-mu/.github/workflows/sibling.yml@refs/heads/main" },
+    { ACTIONABILITY_JOB_WORKFLOW_REF: "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@" },
+    { ACTIONABILITY_JOB_WORKFLOW_SHA: "" },
+  ]) {
+    const effects = path.join(contextDirectory, `mismatch-${Object.keys(changes)[0]}-${Object.values(changes)[0].length}.txt`);
+    const child = spawnSync("bash", ["-c", `${guards[0]}\nprintf 'checkout-reached\n' >> "$TEST_EFFECTS"\n`],
+      { env: { ...env, GITHUB_EVENT_NAME: "pull_request", ACTIONABILITY_CALLED_REVISION: sha,
+        ...changes, TEST_EFFECTS: effects,
+        "BASH_FUNC_gh%%": env["BASH_FUNC_gh%%"].replace("() {", '() { printf "native-read\\n" >> "$TEST_EFFECTS";') },
+        encoding: "utf8", timeout: 15000 });
+    assert.equal(child.status, 1, "a sibling aggregate does not authenticate this job");
+    assert.equal(fs.existsSync(effects), false, "mismatch refuses before source reads or modeled checkout");
+  }
   const manuallyCalled = { ACTIONABILITY_CALLED_REVISION: sha, GITHUB_REPOSITORY: "open-hax/knoxx",
     GITHUB_WORKFLOW_SHA: "e".repeat(40), GITHUB_WORKFLOW_REF: "open-hax/knoxx/.github/workflows/caller.yml@refs/heads/main",
     TEST_RUN_JSON: JSON.stringify({ id: 31, run_attempt: 1, head_sha: "f".repeat(40), repository: { full_name: "open-hax/knoxx" },
@@ -380,12 +401,14 @@ test("every job refuses reruns before native reads and later artifact or token s
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-actionability-attempt-"));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const sha = "d".repeat(40);
-  const inputName = "actionability-input-${{ github.run_id }}-${{ github.run_attempt }}";
-  const profileName = "actionability-profile-${{ github.run_id }}-${{ github.run_attempt }}";
-  const resultName = "actionability-result-${{ github.run_id }}-${{ github.run_attempt }}";
+  const inputUpload = "actionability-input-${{ github.run_id }}-${{ github.run_attempt }}-${{ job.check_run_id }}";
+  const profileUpload = "actionability-profile-${{ github.run_id }}-${{ github.run_attempt }}-${{ job.check_run_id }}";
+  const inputName = "actionability-input-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}";
+  const profileName = "actionability-profile-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}";
+  const resultName = "actionability-result-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}";
   const uploads = (job) => job.steps.filter((step) => step.uses?.startsWith("actions/upload-artifact@"));
   const downloads = (job) => job.steps.filter((step) => step.uses?.startsWith("actions/download-artifact@"));
-  assert.deepEqual(uploads(workflow.jobs.prepare).map((step) => step.with.name), [inputName, profileName]);
+  assert.deepEqual(uploads(workflow.jobs.prepare).map((step) => step.with.name), [inputUpload, profileUpload]);
   assert.deepEqual(downloads(workflow.jobs.assess).map((step) => step.with.name), [inputName, profileName]);
   assert.ok(uploads(workflow.jobs.assess).some((step) => step.with.name === resultName));
   assert.deepEqual(downloads(workflow.jobs.publish).map((step) => step.with.name), [resultName, profileName]);
@@ -401,6 +424,10 @@ test("every job refuses reruns before native reads and later artifact or token s
       const effects = path.join(directory, `${jobName}-${called}-${attempt}.txt`);
       const repo = "open-hax/eta-mu";
       const env = { PATH: process.env.PATH, ETA_SOURCE_SHA: sha, GITHUB_REPOSITORY: repo, GITHUB_RUN_ID: "31",
+        ACTIONABILITY_JOB_WORKFLOW_SHA: sha,
+        ACTIONABILITY_JOB_WORKFLOW_REF: "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main",
+        ACTIONABILITY_JOB_CHECK_RUN_ID: "103", ACTIONABILITY_PREPARE_CHECK_RUN_ID: "101",
+        GITHUB_ENV: path.join(directory, `${jobName}-${called}-${attempt}-github-env`),
         GITHUB_RUN_ATTEMPT: String(attempt), GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_WORKFLOW_SHA: called ? "e".repeat(40) : sha,
         GITHUB_WORKFLOW_REF: called ? "open-hax/eta-mu/.github/workflows/caller.yml@refs/heads/main" : "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main",
         ACTIONABILITY_CALLED_REVISION: called ? sha : "", TEST_EFFECTS: effects,
@@ -424,5 +451,66 @@ test("every job refuses reruns before native reads and later artifact or token s
         assert.match(child.stdout, /requires a fresh workflow run/);
       }
     }
+  }
+});
+
+/** The exact first guard rejects unsupported App-owner input before setup. */
+test("publisher token scopes exactly the validated installed target", (t) => {
+  const token = workflow.jobs.publish.steps.find((step) => step.id === "publisher");
+  assert.equal(token.with.owner, "open-hax");
+  const render = (repository) => token.with.repositories === "${{ inputs.target_repository }}"
+    ? repository : token.with.repositories;
+  const expectedPins = { CANONICAL_REVISION: "80b8993bbd43cf0265c5e558c678845edc8929d9",
+    MUSE_REVISION: "45c7a8d572bf44202f52cae2aa8c0f771736a617" };
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-target-scope-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  for (const target of ["open-hax/another-installed-repo", "open-hax/eta-mu", "open-hax/knoxx"]) {
+    const effects = path.join(directory, target.split("/")[1]);
+    const child = spawnSync("bash", ["-c", `${workflow.jobs.prepare.steps[0].run}\nprintf 'setup-reached\n' >> "$TEST_EFFECTS"\n`],
+      { env: { PATH: process.env.PATH, ...expectedPins, TIMEOUT_INPUT: "60", TARGET_REPOSITORY: target,
+        TEST_EFFECTS: effects }, encoding: "utf8", timeout: 15000 });
+    assert.equal(child.status, 0, child.stderr);
+    assert.equal(render(target), target, "the explicit token list contains only this target, not an incumbent allowlist");
+  }
+  for (const [n, target] of ["other-owner/repo", "open-hax/repo,other", "open-hax/repo\nother", "", "open-hax/"].entries()) {
+    const effects = path.join(directory, `refusal-${n}`);
+    const child = spawnSync("bash", ["-c", `${workflow.jobs.prepare.steps[0].run}\nprintf 'setup-reached\n' >> "$TEST_EFFECTS"\n`],
+      { env: { PATH: process.env.PATH, ...expectedPins, TIMEOUT_INPUT: "60", TARGET_REPOSITORY: target,
+        TEST_EFFECTS: effects }, encoding: "utf8", timeout: 15000 });
+    assert.equal(child.status, 1);
+    assert.equal(fs.existsSync(effects), false, "malformed/foreign targets refuse before modeled setup");
+  }
+});
+
+/** Emulate immutable artifact-name lookup only; no upload/download API is called. */
+test("same-run reusable invocations have unique artifacts and consume their own producer", () => {
+  const upload = (job) => job.steps.filter((s) => s.uses?.startsWith("actions/upload-artifact@"));
+  const download = (job) => job.steps.filter((s) => s.uses?.startsWith("actions/download-artifact@"));
+  const render = (name, id) => name.replaceAll("${{ github.run_id }}", "31")
+    .replaceAll("${{ github.run_attempt }}", "1")
+    .replaceAll("${{ job.check_run_id }}", id)
+    .replaceAll("${{ needs.prepare.outputs.invocation_id }}", id);
+  const artifacts = new Map();
+  for (const id of ["101", "201"]) {
+    for (const [phase, job] of Object.entries(workflow.jobs)) {
+      for (const step of download(job)) {
+        const name = render(step.with.name, id);
+        assert.equal(artifacts.get(name), id, "every consumer selects its own exact producer");
+      }
+      for (const step of upload(job)) {
+        const name = render(step.with.name, id);
+        assert.equal(artifacts.has(name), false, `a repeated identical target still needs a distinct ${phase} artifact`);
+        artifacts.set(name, id);
+      }
+    }
+  }
+  assert.equal(artifacts.size, 8, "input, profile, result, publication for each invocation");
+  assert.equal(workflow.jobs.prepare.outputs.invocation_id, "${{ job.check_run_id }}");
+  assert.equal(workflow.jobs.assess.outputs.check_run_id, "${{ job.check_run_id }}");
+  for (const job of Object.values(workflow.jobs)) {
+    const guard = job.steps.find((step) => step.name === "Authenticate protected called source before checkout");
+    assert.equal(guard.env.ACTIONABILITY_JOB_WORKFLOW_SHA, "${{ job.workflow_sha }}");
+    assert.equal(guard.env.ACTIONABILITY_JOB_WORKFLOW_REF, "${{ job.workflow_ref }}");
+    assert.equal(guard.env.ACTIONABILITY_JOB_CHECK_RUN_ID, "${{ job.check_run_id }}");
   }
 });

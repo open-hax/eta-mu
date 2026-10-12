@@ -125,7 +125,7 @@
                             (cond-> {:path p :git-mode mode :object-type kind :blob object
                                      :byte-carrier carrier :bytes (.-length bytes) :sha256 (sha256 bytes)}
                               (some? text) (assoc :text text)
-                              (and (= "120000" mode) (nil? text))
+                              (and (= "blob" kind) (nil? text))
                               (assoc :content-base64 (.toString bytes "base64")))))) paths)
           manifest [2 head (mapv #(mapv % [:path :git-mode :object-type :blob :byte-carrier :bytes :sha256]) files)]]
       {:head head :files files :manifest manifest :sha256 (sha256 (pr-str manifest))}))))
@@ -171,7 +171,8 @@
 (defn verify-run!
   "Bind host-run/caller coordinates separately from target PR coordinates."
   [read config publication?]
-  (let [{:keys [run-repo run-id run-attempt workflow-sha workflow-ref eta-revision direct?]} config
+  (let [{:keys [run-repo run-id run-attempt workflow-sha workflow-ref eta-revision direct?
+                job-workflow-sha job-workflow-ref prepare-check-run-id assess-check-run-id]} config
         repository (read "api" (str "repos/" run-repo))
         run (read "api" (str "repos/" run-repo "/actions/runs/" run-id))
         eta (read "api" "repos/open-hax/eta-mu")
@@ -180,11 +181,15 @@
         full-ref (str "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/" default)]
     (when-not (and (= "open-hax/eta-mu" run-repo)
                    (= run-id (:id run)) (= run-attempt (:run_attempt run))
+                   (= eta-revision job-workflow-sha)
+                   (string? job-workflow-ref)
+                   (re-matches #"open-hax/eta-mu/\.github/workflows/opencode-actionability-assessment\.yml@.+" job-workflow-ref)
+                   (pos-int? prepare-check-run-id)
                    (true? (:protected branch))
                    (= (:id repository) (get-in run [:repository :id]))
                    (= run-repo (get-in run [:repository :full_name]))
                    (if direct?
-                     (and (= "open-hax/eta-mu" run-repo) (= workflow-ref full-ref)
+                     (and (= "open-hax/eta-mu" run-repo) (= workflow-ref job-workflow-ref full-ref)
                           (= workflow-sha eta-revision (:head_sha run))
                           (= eta-revision (get-in branch [:commit :sha])))
                      (and (some #(and (= eta-revision (:sha %))
@@ -199,10 +204,16 @@
             _ (when-not (and (vector? pages) (seq pages) (every? #(vector? (:jobs %)) pages))
                 (refuse! :trusted-job-pages))
             jobs (mapcat :jobs pages)]
-        (doseq [label ["Prepare actionability input" "Assess complete actionability input"]]
-          (let [matches (filter #(or (= label (:name %)) (str/ends-with? (:name %) (str " / " label))) jobs)]
-            (when-not (and (= 1 (count matches)) (= "completed" (:status (first matches)))
-                           (= "success" (:conclusion (first matches))))
+        (when-not (and (pos-int? assess-check-run-id) (not= prepare-check-run-id assess-check-run-id))
+          (refuse! :trusted-job-completion))
+        (doseq [[label check-run-id] [["Prepare actionability input" prepare-check-run-id]
+                                     ["Assess complete actionability input" assess-check-run-id]]]
+          (let [check-url (str "https://api.github.com/repos/" run-repo "/check-runs/" check-run-id)
+                matches (filter #(= check-url (:check_run_url %)) jobs)
+                job (first matches)]
+            (when-not (and (= 1 (count matches)) (= run-id (:run_id job))
+                           (or (= label (:name job)) (str/ends-with? (:name job) (str " / " label)))
+                           (= "completed" (:status job)) (= "success" (:conclusion job)))
               (refuse! :trusted-job-completion))))))))
 
 (defn invocation

@@ -66,6 +66,7 @@ jobs:
       input_sha256: ${{ steps.prepare.outputs.input_sha256 }}
       profile_sha256: ${{ steps.profile.outputs.profile_sha256 }}
       verifier_sha256: ${{ steps.profile.outputs.verifier_sha256 }}
+      invocation_id: ${{ job.check_run_id }}
     steps:
       - name: Refuse pending dependency pins and malformed time budget
         shell: bash
@@ -73,6 +74,8 @@ jobs:
           TIMEOUT_INPUT: ${{ inputs.review_timeout_minutes }}
         run: |
           set -euo pipefail
+          # The publisher App remains scoped to the configured open-hax owner.
+          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]]
           [[ "$TIMEOUT_INPUT" =~ ^[0-9]+$ ]] && (( TIMEOUT_INPUT >= 60 && TIMEOUT_INPUT <= 180 ))
           [[ "$CANONICAL_REVISION" =~ ^[0-9a-f]{40}$ && "$MUSE_REVISION" =~ ^[0-9a-f]{40}$ ]] || {
             echo '::error::Protected canonical/Muse dependency pins are not adopted.'
@@ -82,6 +85,10 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          ACTIONABILITY_JOB_WORKFLOW_SHA: ${{ job.workflow_sha }}
+          ACTIONABILITY_JOB_WORKFLOW_REF: ${{ job.workflow_ref }}
+          ACTIONABILITY_JOB_CHECK_RUN_ID: ${{ job.check_run_id }}
+          ACTIONABILITY_PREPARE_CHECK_RUN_ID: ${{ job.check_run_id }}
         run: |
           set -euo pipefail
           [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
@@ -93,6 +100,11 @@ jobs:
             exit 1
           }
           [[ "$ETA_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          # Authenticate this job's defining workflow; a sibling entry in the
+          # run's referenced_workflows aggregate cannot supply this identity.
+          [[ "$ACTIONABILITY_JOB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
+          [[ "$ACTIONABILITY_JOB_WORKFLOW_REF" =~ ^open-hax/eta-mu/\.github/workflows/opencode-actionability-assessment\.yml@.+$ ]]
+          [[ "$ACTIONABILITY_JOB_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ && "$ACTIONABILITY_PREPARE_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
           default=$(gh api repos/open-hax/eta-mu --jq .default_branch)
           branch=$(gh api "repos/open-hax/eta-mu/branches/$default")
           jq -e '.protected == true' <<< "$branch" > /dev/null
@@ -106,6 +118,7 @@ jobs:
             [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]]
             [[ "$GITHUB_WORKFLOW_REF" == "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/$default" ]]
             [[ "$GITHUB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
+            [[ "$ACTIONABILITY_JOB_WORKFLOW_REF" == "$GITHUB_WORKFLOW_REF" ]]
             [[ $(jq -r .commit.sha <<< "$branch") == "$ETA_SOURCE_SHA" ]]
             jq -e --arg sha "$ETA_SOURCE_SHA" '.head_sha == $sha' <<< "$run" > /dev/null
           else
@@ -113,6 +126,13 @@ jobs:
             jq -e --arg sha "$ETA_SOURCE_SHA" \
               '.referenced_workflows | any(.sha == $sha and (.path | startswith("open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@")))' <<< "$run" > /dev/null
             gh api "repos/open-hax/eta-mu/compare/$ETA_SOURCE_SHA...$default" --jq .status | grep -Ex 'ahead|identical' > /dev/null
+          fi
+          # Carry only validated step context into later host entrypoints.
+          printf 'ACTIONABILITY_JOB_WORKFLOW_SHA=%s\nACTIONABILITY_JOB_WORKFLOW_REF=%s\nACTIONABILITY_PREPARE_CHECK_RUN_ID=%s\n' \
+            "$ACTIONABILITY_JOB_WORKFLOW_SHA" "$ACTIONABILITY_JOB_WORKFLOW_REF" "$ACTIONABILITY_PREPARE_CHECK_RUN_ID" >> "$GITHUB_ENV"
+          if [[ -n "${ACTIONABILITY_ASSESS_CHECK_RUN_ID:-}" ]]; then
+            [[ "$ACTIONABILITY_ASSESS_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+            printf 'ACTIONABILITY_ASSESS_CHECK_RUN_ID=%s\n' "$ACTIONABILITY_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
           fi
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .actionability/eta, persist-credentials: false}
@@ -175,9 +195,9 @@ jobs:
           input_sha=$(node .actionability/runtime/node_modules/nbb/cli.js -e '(require (quote ["node:fs" :as f])) (println (aget (js/JSON.parse (.readFileSync f (str (.-RUNNER_TEMP (.-env js/process)) "/actionability-prepared.json") "utf8")) "input-sha256"))')
           echo "input_sha256=$input_sha" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with: {name: 'actionability-input-${{ github.run_id }}-${{ github.run_attempt }}', path: .actionability/model-root/.opencode/review-evidence, if-no-files-found: error, include-hidden-files: true}
+        with: {name: 'actionability-input-${{ github.run_id }}-${{ github.run_attempt }}-${{ job.check_run_id }}', path: .actionability/model-root/.opencode/review-evidence, if-no-files-found: error, include-hidden-files: true}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with: {name: 'actionability-profile-${{ github.run_id }}-${{ github.run_attempt }}', path: .actionability/profile, if-no-files-found: error, include-hidden-files: true}
+        with: {name: 'actionability-profile-${{ github.run_id }}-${{ github.run_attempt }}-${{ job.check_run_id }}', path: .actionability/profile, if-no-files-found: error, include-hidden-files: true}
 
   assess:
     name: Assess complete actionability input
@@ -186,11 +206,16 @@ jobs:
     timeout-minutes: ${{ inputs.review_timeout_minutes > 180 && 180 || (inputs.review_timeout_minutes > 60 && inputs.review_timeout_minutes || 60) }}
     outputs:
       accepted_sha256: ${{ steps.assess.outputs.review_invocation_sha256 }}
+      check_run_id: ${{ job.check_run_id }}
     steps:
       - name: Authenticate protected called source before checkout
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          ACTIONABILITY_JOB_WORKFLOW_SHA: ${{ job.workflow_sha }}
+          ACTIONABILITY_JOB_WORKFLOW_REF: ${{ job.workflow_ref }}
+          ACTIONABILITY_JOB_CHECK_RUN_ID: ${{ job.check_run_id }}
+          ACTIONABILITY_PREPARE_CHECK_RUN_ID: ${{ needs.prepare.outputs.invocation_id }}
         run: |
           set -euo pipefail
           [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
@@ -202,6 +227,11 @@ jobs:
             exit 1
           }
           [[ "$ETA_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          # Authenticate this job's defining workflow; a sibling entry in the
+          # run's referenced_workflows aggregate cannot supply this identity.
+          [[ "$ACTIONABILITY_JOB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
+          [[ "$ACTIONABILITY_JOB_WORKFLOW_REF" =~ ^open-hax/eta-mu/\.github/workflows/opencode-actionability-assessment\.yml@.+$ ]]
+          [[ "$ACTIONABILITY_JOB_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ && "$ACTIONABILITY_PREPARE_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
           default=$(gh api repos/open-hax/eta-mu --jq .default_branch)
           branch=$(gh api "repos/open-hax/eta-mu/branches/$default")
           jq -e '.protected == true' <<< "$branch" > /dev/null
@@ -215,6 +245,7 @@ jobs:
             [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]]
             [[ "$GITHUB_WORKFLOW_REF" == "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/$default" ]]
             [[ "$GITHUB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
+            [[ "$ACTIONABILITY_JOB_WORKFLOW_REF" == "$GITHUB_WORKFLOW_REF" ]]
             [[ $(jq -r .commit.sha <<< "$branch") == "$ETA_SOURCE_SHA" ]]
             jq -e --arg sha "$ETA_SOURCE_SHA" '.head_sha == $sha' <<< "$run" > /dev/null
           else
@@ -222,6 +253,13 @@ jobs:
             jq -e --arg sha "$ETA_SOURCE_SHA" \
               '.referenced_workflows | any(.sha == $sha and (.path | startswith("open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@")))' <<< "$run" > /dev/null
             gh api "repos/open-hax/eta-mu/compare/$ETA_SOURCE_SHA...$default" --jq .status | grep -Ex 'ahead|identical' > /dev/null
+          fi
+          # Carry only validated step context into later host entrypoints.
+          printf 'ACTIONABILITY_JOB_WORKFLOW_SHA=%s\nACTIONABILITY_JOB_WORKFLOW_REF=%s\nACTIONABILITY_PREPARE_CHECK_RUN_ID=%s\n' \
+            "$ACTIONABILITY_JOB_WORKFLOW_SHA" "$ACTIONABILITY_JOB_WORKFLOW_REF" "$ACTIONABILITY_PREPARE_CHECK_RUN_ID" >> "$GITHUB_ENV"
+          if [[ -n "${ACTIONABILITY_ASSESS_CHECK_RUN_ID:-}" ]]; then
+            [[ "$ACTIONABILITY_ASSESS_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+            printf 'ACTIONABILITY_ASSESS_CHECK_RUN_ID=%s\n' "$ACTIONABILITY_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
           fi
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .actionability/eta, persist-credentials: false}
@@ -234,9 +272,9 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with: {node-version: '24'}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with: {name: 'actionability-input-${{ github.run_id }}-${{ github.run_attempt }}', path: .actionability/model-root/.opencode/review-evidence}
+        with: {name: 'actionability-input-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: .actionability/model-root/.opencode/review-evidence}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with: {name: 'actionability-profile-${{ github.run_id }}-${{ github.run_attempt }}', path: .actionability/profile}
+        with: {name: 'actionability-profile-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: .actionability/profile}
       - name: Install isolated credential-free model profile
         shell: bash
         run: |
@@ -293,7 +331,7 @@ jobs:
           node .actionability/runtime/node_modules/nbb/cli.js -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts" "$ETA_CHECKOUT/.github/scripts/opencode_actionability_assessment.cljs" verify
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
-        with: {name: 'actionability-result-${{ github.run_id }}-${{ github.run_attempt }}', path: .actionability/model-root/.opencode/review-evidence, if-no-files-found: error, include-hidden-files: true}
+        with: {name: 'actionability-result-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: .actionability/model-root/.opencode/review-evidence, if-no-files-found: error, include-hidden-files: true}
 
   publish:
     name: Publish qualified actionability issue comment
@@ -306,6 +344,11 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          ACTIONABILITY_JOB_WORKFLOW_SHA: ${{ job.workflow_sha }}
+          ACTIONABILITY_JOB_WORKFLOW_REF: ${{ job.workflow_ref }}
+          ACTIONABILITY_JOB_CHECK_RUN_ID: ${{ job.check_run_id }}
+          ACTIONABILITY_PREPARE_CHECK_RUN_ID: ${{ needs.prepare.outputs.invocation_id }}
+          ACTIONABILITY_ASSESS_CHECK_RUN_ID: ${{ needs.assess.outputs.check_run_id }}
         run: |
           set -euo pipefail
           [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
@@ -317,6 +360,11 @@ jobs:
             exit 1
           }
           [[ "$ETA_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          # Authenticate this job's defining workflow; a sibling entry in the
+          # run's referenced_workflows aggregate cannot supply this identity.
+          [[ "$ACTIONABILITY_JOB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
+          [[ "$ACTIONABILITY_JOB_WORKFLOW_REF" =~ ^open-hax/eta-mu/\.github/workflows/opencode-actionability-assessment\.yml@.+$ ]]
+          [[ "$ACTIONABILITY_JOB_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ && "$ACTIONABILITY_PREPARE_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
           default=$(gh api repos/open-hax/eta-mu --jq .default_branch)
           branch=$(gh api "repos/open-hax/eta-mu/branches/$default")
           jq -e '.protected == true' <<< "$branch" > /dev/null
@@ -330,6 +378,7 @@ jobs:
             [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]]
             [[ "$GITHUB_WORKFLOW_REF" == "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/$default" ]]
             [[ "$GITHUB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
+            [[ "$ACTIONABILITY_JOB_WORKFLOW_REF" == "$GITHUB_WORKFLOW_REF" ]]
             [[ $(jq -r .commit.sha <<< "$branch") == "$ETA_SOURCE_SHA" ]]
             jq -e --arg sha "$ETA_SOURCE_SHA" '.head_sha == $sha' <<< "$run" > /dev/null
           else
@@ -337,6 +386,13 @@ jobs:
             jq -e --arg sha "$ETA_SOURCE_SHA" \
               '.referenced_workflows | any(.sha == $sha and (.path | startswith("open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@")))' <<< "$run" > /dev/null
             gh api "repos/open-hax/eta-mu/compare/$ETA_SOURCE_SHA...$default" --jq .status | grep -Ex 'ahead|identical' > /dev/null
+          fi
+          # Carry only validated step context into later host entrypoints.
+          printf 'ACTIONABILITY_JOB_WORKFLOW_SHA=%s\nACTIONABILITY_JOB_WORKFLOW_REF=%s\nACTIONABILITY_PREPARE_CHECK_RUN_ID=%s\n' \
+            "$ACTIONABILITY_JOB_WORKFLOW_SHA" "$ACTIONABILITY_JOB_WORKFLOW_REF" "$ACTIONABILITY_PREPARE_CHECK_RUN_ID" >> "$GITHUB_ENV"
+          if [[ -n "${ACTIONABILITY_ASSESS_CHECK_RUN_ID:-}" ]]; then
+            [[ "$ACTIONABILITY_ASSESS_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+            printf 'ACTIONABILITY_ASSESS_CHECK_RUN_ID=%s\n' "$ACTIONABILITY_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
           fi
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .actionability/eta, persist-credentials: false}
@@ -349,9 +405,9 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with: {node-version: '24'}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with: {name: 'actionability-result-${{ github.run_id }}-${{ github.run_attempt }}', path: .actionability/model-root/.opencode/review-evidence}
+        with: {name: 'actionability-result-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: .actionability/model-root/.opencode/review-evidence}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with: {name: 'actionability-profile-${{ github.run_id }}-${{ github.run_attempt }}', path: .actionability/profile}
+        with: {name: 'actionability-profile-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: .actionability/profile}
       - name: Install protected one-shot publisher runtime
         shell: bash
         run: |
@@ -367,9 +423,7 @@ jobs:
           app-id: ${{ secrets.ETA_MU_APP_ID }}
           private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
           owner: open-hax
-          repositories: |
-            eta-mu
-            knoxx
+          repositories: ${{ inputs.target_repository }}
           permission-issues: write
           permission-pull-requests: read
           permission-contents: read
@@ -392,4 +446,4 @@ jobs:
           set -euo pipefail
           node .actionability/runtime/node_modules/nbb/cli.js -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts" "$ETA_CHECKOUT/.github/scripts/opencode_actionability_assessment.cljs" publish > "$RUNNER_TEMP/actionability-publication-result.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with: {name: 'actionability-publication-${{ github.run_id }}-${{ github.run_attempt }}', path: '${{ runner.temp }}/actionability-publication-result.json', if-no-files-found: error}
+        with: {name: 'actionability-publication-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: '${{ runner.temp }}/actionability-publication-result.json', if-no-files-found: error}

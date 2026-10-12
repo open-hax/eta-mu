@@ -759,3 +759,12 @@
   spore: none
   receipt-refs: bae8f4f2ea624e62fe5c9247b5ec101742a7acbbdfa82bdc35a5bafe44a3b5b8
   note: Preserve real RED and forecast/refusal evidence; exact owned source application qualified locally; native review and production qualification remain separate.
+- ts: 2026-10-12T11:48:47.052049497Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Persist current-c3 lossless-source and invocation identity repairs
+  p-efficiency: 0.9
+  p-friction: 0.25
+  p-skill-candidate: 0.2
+  spore: none
+  receipt-refs: b8cc75fd-ffaa-4fc9-b20a-35a77fdb1bb1,571991a9e665476c3291cc6c2c0833d2a8a2cffb56a2faa922919fd08456fc37
+  note: Seven causal RED/GREEN pairs and full local gates passed. Preserve raw actionlint schema failure alongside exact bounded adjustment and unrelated typo refusal. Root stages only five sources and two existing ledgers. No pin/native/approval/campaign/deployment credit.
