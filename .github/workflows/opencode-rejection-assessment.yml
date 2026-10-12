@@ -151,6 +151,7 @@ jobs:
             printf 'REJECTION_ASSESS_CHECK_RUN_ID=%s\n' "$REJECTION_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
           fi
       - name: Require public native target before checkout
+        id: target_identity
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -164,6 +165,7 @@ jobs:
             echo '::error::Assessment requires known public target repository visibility and matching native identity.'
             exit 1
           }
+          printf 'repository_name=%s\n' "${TARGET_REPOSITORY#open-hax/}" >> "$GITHUB_OUTPUT"
       - name: Create target-scoped native read token
         id: target_reader
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
@@ -171,7 +173,7 @@ jobs:
           app-id: ${{ secrets.ETA_MU_APP_ID }}
           private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
           owner: open-hax
-          repositories: ${{ inputs.target_repository }}
+          repositories: ${{ steps.target_identity.outputs.repository_name }}
           permission-metadata: read
           permission-pull-requests: read
           permission-issues: read
@@ -304,6 +306,7 @@ jobs:
             printf 'REJECTION_ASSESS_CHECK_RUN_ID=%s\n' "$REJECTION_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
           fi
       - name: Require public native target before checkout
+        id: target_identity
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -317,6 +320,7 @@ jobs:
             echo '::error::Assessment requires known public target repository visibility and matching native identity.'
             exit 1
           }
+          printf 'repository_name=%s\n' "${TARGET_REPOSITORY#open-hax/}" >> "$GITHUB_OUTPUT"
       - name: Create target-scoped native read token
         id: target_reader
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
@@ -324,7 +328,7 @@ jobs:
           app-id: ${{ secrets.ETA_MU_APP_ID }}
           private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
           owner: open-hax
-          repositories: ${{ inputs.target_repository }}
+          repositories: ${{ steps.target_identity.outputs.repository_name }}
           permission-metadata: read
           permission-pull-requests: read
           permission-issues: read
@@ -464,6 +468,7 @@ jobs:
             printf 'REJECTION_ASSESS_CHECK_RUN_ID=%s\n' "$REJECTION_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
           fi
       - name: Require public native target before checkout
+        id: target_identity
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -477,6 +482,7 @@ jobs:
             echo '::error::Assessment requires known public target repository visibility and matching native identity.'
             exit 1
           }
+          printf 'repository_name=%s\n' "${TARGET_REPOSITORY#open-hax/}" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .rejection-assessment/eta, persist-credentials: false}
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -506,7 +512,7 @@ jobs:
           app-id: ${{ secrets.ETA_MU_APP_ID }}
           private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
           owner: open-hax
-          repositories: ${{ inputs.target_repository }}
+          repositories: ${{ steps.target_identity.outputs.repository_name }}
           permission-issues: write
           permission-pull-requests: read
           permission-contents: read

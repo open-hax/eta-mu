@@ -292,7 +292,7 @@ test("target-native read credentials remain separate from protected publication"
     const reader = job.steps[readIndex];
     assert.equal(reader.uses, "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1");
     assert.equal(reader.with.owner, "open-hax");
-    assert.equal(reader.with.repositories, "${{ inputs.target_repository }}");
+    assert.equal(reader.with.repositories, "${{ steps.target_identity.outputs.repository_name }}");
     assert.deepEqual(Object.fromEntries(Object.entries(reader.with).filter(([key]) => key.startsWith("permission-"))),
       { "permission-metadata": "read", "permission-pull-requests": "read", "permission-issues": "read" });
     assert.equal(reader.with["app-id"], "${{ secrets.ETA_MU_APP_ID }}");
@@ -484,8 +484,9 @@ test("every job refuses reruns before native reads and later artifact or token s
 test("publisher token scopes exactly the validated installed target", (t) => {
   const token = workflow.jobs.publish.steps.find((step) => step.id === "publisher");
   assert.equal(token.with.owner, "open-hax");
-  const render = (repository) => token.with.repositories === "${{ inputs.target_repository }}"
-    ? repository : token.with.repositories;
+  assert.equal(token.with.repositories, "${{ steps.target_identity.outputs.repository_name }}");
+  const nativeGuard = workflow.jobs.publish.steps.find((step) => step.id === "target_identity");
+  assert.ok(nativeGuard, "the token consumes only the guarded native-target output");
   const expectedPins = { CANONICAL_REVISION: "80b8993bbd43cf0265c5e558c678845edc8929d9",
     MUSE_REVISION: "45c7a8d572bf44202f52cae2aa8c0f771736a617" };
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-target-scope-"));
@@ -496,7 +497,20 @@ test("publisher token scopes exactly the validated installed target", (t) => {
       { env: { PATH: process.env.PATH, ...expectedPins, TIMEOUT_INPUT: "60", TARGET_REPOSITORY: target,
         TEST_EFFECTS: effects }, encoding: "utf8", timeout: 15000 });
     assert.equal(child.status, 0, child.stderr);
-    assert.equal(render(target), target, "the explicit token list contains only this target, not an incumbent allowlist");
+    const output = effects + ".outputs";
+    const native = spawnSync("bash", ["-c", nativeGuard.run],
+      { env: { PATH: process.env.PATH, TARGET_REPOSITORY: target, TARGET_REPOSITORY_ID: "3",
+        GITHUB_OUTPUT: output, TEST_METADATA: JSON.stringify({ full_name: target, id: 3, visibility: "public", private: false }),
+        "BASH_FUNC_gh%%": '() { [[ "$#" == 2 && "$1" == api && "$2" == "repos/$TARGET_REPOSITORY" ]] || return 97; printf "%s\\n" "$TEST_METADATA"; }' },
+        encoding: "utf8", timeout: 15000 });
+    assert.equal(native.error, undefined);
+    assert.equal(native.signal, null);
+    assert.equal(native.status, 0, native.stderr);
+    const names = fs.readFileSync(output, "utf8");
+    assert.equal(names, `repository_name=${target.split("/")[1]}\n`);
+    const repositoryName = names.slice("repository_name=".length).trimEnd();
+    assert.equal(`${token.with.owner}/${repositoryName}`, target,
+      "the explicit token list contains only this validated native target, not an incumbent allowlist");
   }
   for (const [n, target] of ["other-owner/repo", "open-hax/repo,other", "open-hax/repo\nother", "", "open-hax/"].entries()) {
     const effects = path.join(directory, `refusal-${n}`);
@@ -563,6 +577,10 @@ test("every target checkout requires exact native identity and known public visi
     const index = job.steps.findIndex((step) => step.name === "Require public native target before checkout");
     assert.ok(index >= 0, "every job needs the public-target gate");
     const guard = job.steps[index];
+    assert.equal(guard.id, "target_identity");
+    const token = job.steps.find((step) => step.uses?.startsWith("actions/create-github-app-token@"));
+    assert.equal(token.with.owner, "open-hax");
+    assert.equal(token.with.repositories, "${{ steps.target_identity.outputs.repository_name }}");
     assert.equal(guard.env.GH_TOKEN, "${{ github.token }}");
     assert.equal(Object.keys(guard.env).some((key) => /KEY|SECRET/.test(key)), false);
     for (const [later, step] of job.steps.entries()) {
@@ -571,9 +589,10 @@ test("every target checkout requires exact native identity and known public visi
     }
     for (const [name, metadata, readExit] of cases) {
       const effects = path.join(directory, jobName + "-" + name);
+      const output = effects + ".outputs";
       const child = spawnSync("bash", ["-c", guard.run + '\nprintf \'checkout-reached\\n\' >> "$TEST_EFFECTS"\n'],
         { env: { PATH: process.env.PATH, TARGET_REPOSITORY: publicTarget.full_name, TARGET_REPOSITORY_ID: "3",
-          TEST_EFFECTS: effects, TEST_METADATA: typeof metadata === "string" ? metadata : JSON.stringify(metadata),
+          GITHUB_OUTPUT: output, TEST_EFFECTS: effects, TEST_METADATA: typeof metadata === "string" ? metadata : JSON.stringify(metadata),
           TEST_READ_EXIT: String(readExit),
           "BASH_FUNC_gh%%": '() { [[ "$#" == 2 && "$1" == api && "$2" == "repos/$TARGET_REPOSITORY" ]] || return 97; [[ "$TEST_READ_EXIT" == 0 ]] || return "$TEST_READ_EXIT"; printf "%s\\n" "$TEST_METADATA"; }' },
           encoding: "utf8", timeout: 15000 });
@@ -582,9 +601,11 @@ test("every target checkout requires exact native identity and known public visi
       if (name === "public") {
         assert.equal(child.status, 0, jobName + " admits the exact public target");
         assert.match(fs.readFileSync(effects, "utf8"), /checkout-reached/);
+        assert.equal(fs.readFileSync(output, "utf8"), "repository_name=another-installed-repo\n");
       } else {
         assert.notEqual(child.status, 0, jobName + " refuses " + name + " native metadata");
         assert.equal(fs.existsSync(effects), false, "refusal occurs before modeled checkout/App continuation");
+        assert.equal(fs.existsSync(output), false, "native refusal emits no token repository selection");
       }
     }
   }

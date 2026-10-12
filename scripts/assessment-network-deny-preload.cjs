@@ -62,6 +62,26 @@ net.connect = deny("net.connect");
 net.createConnection = deny("net.createConnection");
 net.Socket.prototype.connect = deny("net.Socket.connect");
 require("node:tls").connect = deny("tls.connect");
+// This is a Node API test boundary, not an OS network sandbox. Native/internal
+// handles, alternate runtimes and non-Node descendants are outside this claim.
+const dgram = require("node:dgram");
+dgram.createSocket = deny("dgram.createSocket");
+for (const name of ["bind", "connect", "send", "sendto", "addMembership", "dropMembership",
+  "addSourceSpecificMembership", "dropSourceSpecificMembership"]) {
+  if (typeof dgram.Socket.prototype[name] === "function") dgram.Socket.prototype[name] = deny("dgram.Socket." + name);
+}
+const dns = require("node:dns");
+const dnsPromises = require("node:dns/promises");
+for (const [module, surface] of [[dns, "dns"], [dnsPromises, "dns.promises"],
+  [dns.Resolver.prototype, "dns.Resolver"], [dnsPromises.Resolver.prototype, "dns.promises.Resolver"]]) {
+  // Cover available query APIs on the approved Node runtime, including newer
+  // resolve variants. Config-only methods are retained. Both prototypes matter:
+  // either setServers() can rebind exports to their resolver query functions.
+  for (const name of Object.getOwnPropertyNames(module)) {
+    if ((name === "lookup" || name === "lookupService" || name === "reverse" || name.startsWith("resolve"))
+        && typeof module[name] === "function") module[name] = deny(surface + "." + name);
+  }
+}
 require("node:module").syncBuiltinESMExports();
 process.on("exit", () => {
   try {
