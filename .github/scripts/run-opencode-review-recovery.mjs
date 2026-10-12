@@ -198,12 +198,12 @@ async function submitJsonTransport({ metadata, metadataFile, responseFile, stder
 }
 
 /**
- * Recognize only the final adversarial-validation refusal for one unassessed
+ * Recognize only the first deterministic-stage refusal for one unassessed
  * final input page. The same canonical callback validates the retained prefix;
  * this host-only projection grants retry eligibility, never review acceptance.
  */
 async function finalInputCoverage({ metadata, metadataFile, responseFile, stderrFile,
-  submissionFile, reviewTools, verifyReviewInvocation, expectedContext, contextSha256 }) {
+  submissionFile, reviewTools, verifyReviewInvocation, expectedContext, contextSha256, fullInputName }) {
   const record = metadata.attempts.at(-1), original = record.canonical_verdict;
   const count = expectedContext.pageCount;
   if (original.ok !== false || original.reason !== "unestablished-review-trace" ||
@@ -212,7 +212,7 @@ async function finalInputCoverage({ metadata, metadataFile, responseFile, stderr
       !expectedContext.reviewTools.includes("review_record_evidence") ||
       !Number.isSafeInteger(count) || count < 1) return null;
   const response = fs.readFileSync(responseFile), directory = path.dirname(responseFile);
-  const fullFile = path.join(directory, "basehead.diff"), manifestFile = path.join(directory, "input-manifest.json");
+  const fullFile = path.join(directory, fullInputName), manifestFile = path.join(directory, "input-manifest.json");
   let lines, omitted, call, fullDigest, manifestDigest;
   try {
     const full = fs.readFileSync(fullFile), manifest = fs.readFileSync(manifestFile);
@@ -238,7 +238,7 @@ async function finalInputCoverage({ metadata, metadataFile, responseFile, stderr
     if (failed.length !== 1 || failed[0] !== calls.at(-1) ||
         calls.some(({ event }) => event.part.tool === "review_submit" || event.part.tool === "invalid")) return null;
     const target = failed[0], part = target.event.part, state = part.state, output = JSON.parse(state.output);
-    if (part.tool !== "review_record_evidence" || state.input?.stage !== "adversarial-validate" ||
+    if (part.tool !== "review_record_evidence" || state.input?.stage !== "deterministic" ||
         !nonblank(state.input.note) || Object.keys(output).sort().join(",") !== "error,ok?" ||
         output["ok?"] !== false || output.error !== `Unassessed full-input chunks remain: ${count}. Read and assess every changed hunk before publishing.` ||
         state.metadata?.truncated !== false) return null;
@@ -251,8 +251,8 @@ async function finalInputCoverage({ metadata, metadataFile, responseFile, stderr
     const stages = calls.filter(({ event }) => event.part.tool === "review_record_evidence")
       .map(({ event }) => event.part.state.input?.stage);
     if (!exact(reads, count) || !exact(assessments, count - 1) ||
-        stages.join(",") !== "deterministic,map-change,generate-candidates,adversarial-validate" ||
-        stages.length !== 4) return null;
+        stages.join(",") !== "deterministic" ||
+        stages.length !== 1) return null;
     omitted = target.index; call = part.callID;
   } catch { return null; }
   const projection = Buffer.from(lines.filter((_, index) => index !== omitted).join(""));
@@ -304,7 +304,7 @@ function correctivePrompt(basePrompt, toolFailure, staleCoverage = false, submit
     : submitJsonFailure
       ? "the first stopped process produced the known final review_submit JSON transport diagnostic without an actual submit or artifact. Its whole trace remains refused; the retained derived projection establishes retry eligibility only. In this fresh process, pass well-formed JSON arguments to the exposed review_submit tool."
     : coverageFailure
-      ? "the first stopped process failed final adversarial validation because the final full-input page was read but not assessed. Its whole trace remains failed; a separately retained canonical healthy-omission projection supplies only retry eligibility. Read and assess every full-input page anew before completing all five stages and submitting in this sole fresh process."
+      ? "the first stopped process failed the first deterministic stage because the final full-input page was read but not assessed. Its whole trace remains failed; a separately retained canonical healthy-omission projection supplies only retry eligibility. Read and assess every full-input page anew before completing all five stages and submitting in this sole fresh process."
     : staleCoverage
       ? "the canonical host-trace verifier established stale review coverage in the first completed invocation. Its assessment history cannot be repaired. Perform one fresh bounded model invocation over the whole unchanged input; finish all reads before assessing each page."
     : "the first completed model invocation omitted the required review_submit artifact.";
@@ -362,8 +362,8 @@ failures, strict input/chronology guards and the existing two-attempt bound stay
 unchanged. The fresh process must complete the whole review anew.
 
 Caller-only final input-coverage exception:
-STOP after the exact final adversarial-validation refusal for the unassessed
-final input page. Do not repair or resume that invocation. The failure alone
+STOP after the exact first deterministic-stage refusal for the unassessed
+final input page, before any successful stage. Do not repair or resume that invocation. The failure alone
 is not retry authority. Only the caller may admit the sole fresh whole process
 when its narrow recorded-failure policy and the unchanged canonical callback
 establish retry eligibility over a separately retained projection. The original
@@ -516,8 +516,12 @@ export async function runReviewRecovery({
   verifyReviewInvocation,
   expectedContext,
   verifierSha256 = null,
+  fullInputName = "basehead.diff",
 }) {
   if (!evidenceDirectory) throw new Error("evidenceDirectory is required");
+  if (!["basehead.diff", "actionability-input.txt"].includes(fullInputName)) {
+    throw new Error("unsupported full input file");
+  }
   if (typeof basePrompt !== "string" || basePrompt.trim().length === 0) {
     throw new Error("basePrompt must be a non-empty string");
   }
@@ -598,7 +602,7 @@ export async function runReviewRecovery({
         reviewTools, verifyReviewInvocation, expectedContext, contextSha256 }) : null;
     const coverageFailure = strict && attempt === 1 && result?.exitCode === 0 && state === "missing"
       ? await finalInputCoverage({ metadata, metadataFile, responseFile, stderrFile, submissionFile,
-        reviewTools, verifyReviewInvocation, expectedContext, contextSha256 }) : null;
+        reviewTools, verifyReviewInvocation, expectedContext, contextSha256, fullInputName }) : null;
     if (result?.exitCode !== 0 && !toolFailure) {
       throw new Error(`OpenCode review attempt ${attempt} exited ${result?.exitCode ?? "without a code"}`);
     }
@@ -744,9 +748,11 @@ async function main() {
   let verifierBytes;
   let verifier;
   let expectedContext;
+  let fullInputName;
   try {
     const purpose = process.env.REVIEW_INPUT_PURPOSE || "diff";
     if (!["diff", "actionability"].includes(purpose)) throw new Error("unsupported review input purpose");
+    fullInputName = purpose === "actionability" ? "actionability-input.txt" : "basehead.diff";
     if (purpose === "actionability") actionabilityChildEnvironment();
     verifierBytes = fs.readFileSync(verifierFile);
     verifier = createRequire(import.meta.url)(verifierFile);
@@ -760,8 +766,7 @@ async function main() {
     // Canonical Muse prepares the actual lossless geometry once, before any
     // child. Keep it in trusted supervisor memory across the two-attempt bound.
     expectedContext = verifier.prepareReviewInvocationContext(
-      fs.readFileSync(path.join(evidenceDirectory,
-        purpose === "actionability" ? "actionability-input.txt" : "basehead.diff")),
+      fs.readFileSync(path.join(evidenceDirectory, fullInputName)),
       fs.readFileSync(path.join(evidenceDirectory, "input-manifest.json")),
       exposedTools, submissionFile,
     );
@@ -786,7 +791,7 @@ async function main() {
   const metadata = await runReviewRecovery({ evidenceDirectory, basePrompt, reviewTools,
     submissionFile, invokeAttempt: invokeOpenCode,
     verifyReviewInvocation: verifier.verifyReviewInvocation, expectedContext,
-    verifierSha256: sha256(verifierBytes) });
+    verifierSha256: sha256(verifierBytes), fullInputName });
   const accepted = metadata.accepted_invocation;
   try {
     if (!accepted || sha256(fs.readFileSync(path.join(evidenceDirectory, accepted.response_file))) !== accepted.response_sha256 ||

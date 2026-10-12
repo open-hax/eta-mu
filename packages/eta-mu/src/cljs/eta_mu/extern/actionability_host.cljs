@@ -58,7 +58,7 @@
     (when-not (and (= 1 (count matches)) (= "bash" (:shell (first matches)))
                    (string? (:run (first matches)))) (refuse! :protected-profile-step))
     (:run (first matches))))
-(defn argv [] (vec (.slice (.-argv js/process) 2)))
+(defn argv [] (vec *command-line-args*))
 (defn fail-exit! [e]
   (.error js/console (json {:status "refused" :code (name (or (:code (ex-data e)) :host-error))}))
   (set! (.-exitCode js/process) 1))
@@ -80,18 +80,27 @@
     (try (js->clj (js/JSON.parse (.-stdout r)) :keywordize-keys true)
          (catch :default _ (refuse! :native-json)))))
 
+(defn- source-git [checkout & args]
+  (let [r (.spawnSync process "git" (clj->js (into ["--no-pager" "--literal-pathspecs" "-c" "core.fsmonitor=false"
+                                                   "-C" checkout] args))
+                      #js {:env #js {:PATH (or (env "PATH") "/usr/bin:/bin")
+                                     :GIT_OPTIONAL_LOCKS "0" :GIT_CONFIG_NOSYSTEM "1"}
+                           :timeout 15000 :maxBuffer 16777216})]
+    (when-not (= 0 (.-status r)) (refuse! :source-object))
+    (.-stdout r)))
+
+(defn- source-merge-base [checkout head base]
+  (let [bases (str/split-lines (str/trim (.toString (source-git checkout "merge-base" "--all" head base) "utf8")))]
+    ;; Refuse unavailable or ambiguous ancestry rather than select a preimage.
+    (when-not (and (= 1 (count bases)) (re-matches #"[0-9a-f]{40}" (first bases)))
+      (refuse! :source-merge-base))
+    (first bases)))
+
 (defn immutable-source
   "Read selected exact Git objects; never execute candidate source or follow its paths."
   ([checkout head paths] (immutable-source checkout head paths head))
   ([checkout head paths checkout-head]
-  (let [env #js {:PATH (or (.-PATH (.-env js/process)) "/usr/bin:/bin")
-                :GIT_OPTIONAL_LOCKS "0" :GIT_CONFIG_NOSYSTEM "1"}
-        run (fn [& args]
-              (let [r (.spawnSync process "git" (clj->js (into ["--no-pager" "--literal-pathspecs" "-c" "core.fsmonitor=false"
-                                                               "-C" checkout] args))
-                                  #js {:env env :timeout 15000 :maxBuffer 16777216})]
-                (when-not (= 0 (.-status r)) (refuse! :source-object))
-                (.-stdout r)))
+  (let [run (partial source-git checkout)
         actual (str/trim (.toString (run "rev-parse" "HEAD") "utf8"))]
     (when-not (and (= checkout-head actual) (re-matches #"[0-9a-f]{40}" (or head ""))
                    (vector? paths) (seq paths)
@@ -139,10 +148,11 @@
     (let [live (filterv #(not= "removed" (:status %)) files)
           removed (filterv #(= "removed" (:status %)) files)
           current (when (seq live) (immutable-source checkout head (mapv :filename live)))
-          old (when (seq removed) (immutable-source checkout base (mapv :filename removed) head))
+          merge-base (when (seq removed) (source-merge-base checkout head base))
+          old (when (seq removed) (immutable-source checkout merge-base (mapv :filename removed) head))
           manifest [1 repo n head base (mapv #(select-keys % [:filename :previous_filename :status]) files)
                     (:manifest current) (:manifest old)]]
-      {:head head :base base :files (:files current) :removed-files (:files old) :changed-files files
+      {:head head :base base :merge-base merge-base :files (:files current) :removed-files (:files old) :changed-files files
        :manifest manifest :sha256 (sha256 (pr-str manifest))})))
 
 (defn verify-run!
@@ -312,5 +322,8 @@
               bytes (await (response-bytes reader [] 0))
               text (.decode (js/TextDecoder. "utf-8" #js {:fatal true}) bytes)]
           {:outcome :posted :record (js->clj (js/JSON.parse text) :keywordize-keys true)})
-        {:outcome :refused :http-status (.-status response)}))
+        ;; A server failure can follow a committed write. Preserve the one
+        ;; intent and require the same fresh readback used after transport loss.
+        {:outcome (if (<= 500 (.-status response) 599) :uncertain :refused)
+         :http-status (.-status response)}))
     (catch :default _ {:outcome :uncertain}))))

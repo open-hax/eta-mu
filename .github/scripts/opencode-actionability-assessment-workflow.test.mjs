@@ -27,7 +27,7 @@ function childNetworkAudit(child) {
 }
 
 /** Stage inert host events, checked by the actual selected source-built Muse export. */
-function nativeFixture(t, { legacy = true, partial = false } = {}) {
+function nativeFixture(t, { legacy = true, partial = false, finalCoverage = false, decoyLegacy = false } = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-actionability-host-"));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const verifierFile = process.env.ETA_MU_ACTIONABILITY_VERIFIER_FILE;
@@ -79,8 +79,30 @@ function nativeFixture(t, { legacy = true, partial = false } = {}) {
     part: { type: "step-finish", id: "part-stop", sessionID, reason: "stop" } });
   const response = events.map((event) => JSON.stringify(event)).join("\n") + "\n";
   assert.equal(verifier.verifyReviewInvocation(response, JSON.stringify(body), context).ok, true);
+  let firstResponse = response;
+  if (finalCoverage) {
+    const prefix = events.filter((event) => event.type === "tool_use" &&
+      event.part.tool !== "review_submit" &&
+      !(event.part.tool === "review_assess_diff_chunk" && event.part.state.input.id === notes.length) &&
+      event.part.tool !== "review_record_evidence");
+    const n = events.length + 1;
+    const omitted = { type: "tool_use", timestamp: n, sessionID,
+      part: { type: "tool", id: `part-${n}`, callID: `call-${n}`, sessionID, tool: "review_record_evidence",
+        state: { status: "completed", input: { stage: "deterministic", note: "Synthetic final-page omission." },
+          output: JSON.stringify({ "ok?": false,
+            error: `Unassessed full-input chunks remain: ${notes.length}. Read and assess every changed hunk before publishing.` }),
+          metadata: { truncated: false } } } };
+    const stop = { type: "step_finish", timestamp: n + 1, sessionID,
+      part: { type: "step-finish", id: "part-stop", sessionID, reason: "stop" } };
+    firstResponse = [...prefix, omitted, stop].map((event) => JSON.stringify(event)).join("\n") + "\n";
+    const original = verifier.verifyReviewInvocation(firstResponse, null, context);
+    assert.equal(original.ok, false); assert.equal(original.code, "stage-order");
+    const projected = verifier.verifyReviewInvocation([...prefix, stop].map((event) => JSON.stringify(event)).join("\n") + "\n", null, context);
+    assert.equal(projected.ok, false); assert.equal(projected.code, "healthy-unfinished-review");
+    assert.equal(projected.reason, "missing-review-submit");
+  }
   fs.writeFileSync(path.join(directory, "actionability-input.txt"), partial ? full.subarray(0, 10) : full);
-  if (legacy) fs.writeFileSync(path.join(directory, "basehead.diff"), full);
+  if (legacy) fs.writeFileSync(path.join(directory, "basehead.diff"), decoyLegacy ? "unrelated legacy bytes" : full);
   fs.writeFileSync(path.join(directory, "input-manifest.json"), manifest);
   const home = path.join(directory, "model-home");
   fs.mkdirSync(home, { mode: 0o700 });
@@ -90,8 +112,11 @@ function nativeFixture(t, { legacy = true, partial = false } = {}) {
     + `fs.writeFileSync(${JSON.stringify(probe)}, JSON.stringify({HOME:process.env.HOME,`
     + `GH_TOKEN:process.env.GH_TOKEN,GITHUB_TOKEN:process.env.GITHUB_TOKEN,NODE_OPTIONS:process.env.NODE_OPTIONS,`
     + `GITHUB_OUTPUT:process.env.GITHUB_OUTPUT}));\n`
-    + `fs.writeFileSync(${JSON.stringify(submissionFile)},${JSON.stringify(JSON.stringify(body))});\n`
-    + `process.stdout.write(${JSON.stringify(response)});\n`, { mode: 0o700 });
+    + (finalCoverage
+      ? `const counter=${JSON.stringify(path.join(directory, "invocations.txt"))}; const attempt=fs.existsSync(counter)?Number(fs.readFileSync(counter,"utf8"))+1:1; fs.writeFileSync(counter,String(attempt));\n`
+        + `if(attempt===1){process.stdout.write(${JSON.stringify(firstResponse)});}else{fs.writeFileSync(${JSON.stringify(submissionFile)},${JSON.stringify(JSON.stringify(body))});process.stdout.write(${JSON.stringify(response)}); }\n`
+      : `fs.writeFileSync(${JSON.stringify(submissionFile)},${JSON.stringify(JSON.stringify(body))});\n`
+        + `process.stdout.write(${JSON.stringify(response)});\n`), { mode: 0o700 });
   const output = path.join(directory, "outputs");
   const prompt = path.join(directory, "prompt.txt");
   const registry = path.join(directory, "tools.txt");
@@ -114,6 +139,25 @@ test("actual canonical runner accepts only the complete fixed native file", (t) 
   const recovery = JSON.parse(fs.readFileSync(path.join(fixture.directory, "recovery.json")));
   assert.equal(recovery.accepted_invocation.canonical_verdict.ok, true);
   assert.equal(recovery.attempts.length, 1, "healthy actual trace has no second invocation");
+});
+
+test("final native page omission recovers once using only the exact actionability input", (t) => {
+  for (const options of [{ legacy: false }, { legacy: true, decoyLegacy: true }]) {
+    const fixture = nativeFixture(t, { ...options, finalCoverage: true });
+    const child = spawnSync(process.execPath, [runner], { env: fixture.env, encoding: "utf8", timeout: 15000 });
+    childNetworkAudit(child);
+    assert.equal(child.status, 0, child.stderr);
+    const recovery = JSON.parse(fs.readFileSync(path.join(fixture.directory, "recovery.json")));
+    assert.equal(recovery.recovery_reason, "final_input_coverage");
+    assert.equal(recovery.attempts.length, 2);
+    assert.equal(recovery.attempts[0].canonical_verdict.ok, false, "original stopped trace stays refused");
+    assert.equal(recovery.attempts[0].final_input_coverage.accepted_review, false);
+    assert.equal(recovery.attempts[0].final_input_coverage.verification_state, "returned");
+    assert.equal(recovery.attempts[0].final_input_coverage.full_input_sha256, fixture.context.fullInputSha256);
+    assert.equal(recovery.accepted_invocation.attempt, 2);
+    assert.equal(recovery.accepted_invocation.canonical_verdict.ok, true);
+    assert.equal(fs.readFileSync(path.join(fixture.directory, "invocations.txt"), "utf8"), "2");
+  }
 });
 
 test("a complete legacy file cannot replace a partial native file", (t) => {
@@ -162,6 +206,12 @@ test("direct and reusable routes share pending protected source locks", () => {
   assert.ok(workflow.on.workflow_call && workflow.on.workflow_dispatch);
   assert.equal(workflow.env.CANONICAL_REVISION, "");
   assert.equal(workflow.env.MUSE_REVISION, "");
+  assert.equal(workflow.env.ACTIONABILITY_CALLED_REVISION, "${{ inputs.eta_revision }}");
+  assert.equal(workflow.on.workflow_call.inputs.eta_revision.required, true);
+  assert.equal(Object.hasOwn(workflow.on.workflow_dispatch.inputs, "eta_revision"), false);
+  const hostEntry = fs.readFileSync(path.join(root, ".github/scripts/opencode_actionability_assessment.cljs"), "utf8");
+  assert.match(hostEntry, /direct\? \(or \(nil\? called-revision\) \(= "" called-revision\)\)/);
+  assert.match(hostEntry, /:eta-revision eta-revision :direct\? direct\?/);
   assert.match(fs.readFileSync(path.join(root, "packages/eta-mu/src/cljs/eta_mu/infra/actionability_assessment.cljs"), "utf8"),
     /dependency-pins \{:canonical nil :muse nil\}/);
   assert.equal(workflow.concurrency["cancel-in-progress"], false);
@@ -220,22 +270,32 @@ test("authored bootstrap authenticates source before every checkout on both rout
   assert.equal(new Set(guards).size, 1, "same source bootstrap on all three jobs");
   const sha = "d".repeat(40);
   const env = { ...process.env, ETA_SOURCE_SHA: sha, GITHUB_REPOSITORY: "open-hax/eta-mu", GITHUB_RUN_ID: "31",
-    GITHUB_RUN_ATTEMPT: "1", GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_WORKFLOW_SHA: sha,
+    GITHUB_RUN_ATTEMPT: "1", GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_WORKFLOW_SHA: sha, ACTIONABILITY_CALLED_REVISION: "",
     GITHUB_WORKFLOW_REF: "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main",
     TEST_BRANCH_JSON: JSON.stringify({ protected: true, commit: { sha } }),
     TEST_RUN_JSON: JSON.stringify({ id: 31, run_attempt: 1, head_sha: sha, repository: { full_name: "open-hax/eta-mu" },
       referenced_workflows: [{ sha, path: `open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@${sha}` }] }),
     TEST_COMPARE_STATUS: "identical",
-    "BASH_FUNC_gh%%": '() { case "$2" in repos/open-hax/eta-mu) printf "%s\\n" main;; repos/open-hax/eta-mu/branches/main) printf "%s\\n" "$TEST_BRANCH_JSON";; repos/open-hax/eta-mu/actions/runs/31) printf "%s\\n" "$TEST_RUN_JSON";; repos/open-hax/eta-mu/compare/*) printf "%s\\n" "$TEST_COMPARE_STATUS";; *) return 97;; esac; }' };
+    "BASH_FUNC_gh%%": '() { case "$2" in repos/open-hax/eta-mu) printf "%s\\n" main;; repos/open-hax/eta-mu/branches/main) printf "%s\\n" "$TEST_BRANCH_JSON";; repos/open-hax/eta-mu/actions/runs/31|repos/open-hax/knoxx/actions/runs/31) printf "%s\\n" "$TEST_RUN_JSON";; repos/open-hax/eta-mu/compare/*) printf "%s\\n" "$TEST_COMPARE_STATUS";; *) return 97;; esac; }' };
   const run = (changes = {}) => spawnSync("bash", ["-c", guards[0]], { env: { ...env, ...changes }, encoding: "utf8", timeout: 15000 });
   assert.equal(run().status, 0, "inert native default-branch source admits");
-  assert.equal(run({ GITHUB_EVENT_NAME: "pull_request" }).status, 0, "inert called exact referenced source admits");
+  assert.equal(run({ GITHUB_EVENT_NAME: "pull_request", ACTIONABILITY_CALLED_REVISION: sha }).status, 0, "inert called exact referenced source admits");
+  const manuallyCalled = { ACTIONABILITY_CALLED_REVISION: sha, GITHUB_REPOSITORY: "open-hax/knoxx",
+    GITHUB_WORKFLOW_SHA: "e".repeat(40), GITHUB_WORKFLOW_REF: "open-hax/knoxx/.github/workflows/caller.yml@refs/heads/main",
+    TEST_RUN_JSON: JSON.stringify({ id: 31, run_attempt: 1, head_sha: "f".repeat(40), repository: { full_name: "open-hax/knoxx" },
+      referenced_workflows: [{ sha, path: `open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@${sha}` }] }) };
+  assert.equal(run(manuallyCalled).status, 0, "manual caller event remains an authenticated reusable route");
+  assert.notEqual(run({ ...manuallyCalled, ACTIONABILITY_CALLED_REVISION: "" }).status, 0);
+  assert.notEqual(run({ ...manuallyCalled, ACTIONABILITY_CALLED_REVISION: "malformed" }).status, 0);
+  assert.notEqual(run({ ...manuallyCalled, ACTIONABILITY_CALLED_REVISION: "e".repeat(40) }).status, 0);
+  assert.notEqual(run({ ...manuallyCalled, TEST_RUN_JSON: JSON.stringify({ id: 31, run_attempt: 1,
+    repository: { full_name: "open-hax/knoxx" }, referenced_workflows: [] }) }).status, 0);
   for (const changes of [
     { GITHUB_WORKFLOW_REF: env.GITHUB_WORKFLOW_REF.replace("/main", "/feature") },
     { TEST_BRANCH_JSON: JSON.stringify({ protected: false, commit: { sha } }) },
     { GITHUB_RUN_ATTEMPT: "2" },
     { ETA_SOURCE_SHA: "e".repeat(40) },
-    { GITHUB_EVENT_NAME: "pull_request", TEST_COMPARE_STATUS: "diverged" },
-    { GITHUB_EVENT_NAME: "pull_request", TEST_RUN_JSON: JSON.stringify({ id: 31, run_attempt: 1, repository: { full_name: "open-hax/eta-mu" }, referenced_workflows: [] }) },
+    { GITHUB_EVENT_NAME: "pull_request", ACTIONABILITY_CALLED_REVISION: sha, TEST_COMPARE_STATUS: "diverged" },
+    { GITHUB_EVENT_NAME: "pull_request", ACTIONABILITY_CALLED_REVISION: sha, TEST_RUN_JSON: JSON.stringify({ id: 31, run_attempt: 1, repository: { full_name: "open-hax/eta-mu" }, referenced_workflows: [] }) },
   ]) assert.notEqual(run(changes).status, 0, "untrusted source refuses before checkout");
 });

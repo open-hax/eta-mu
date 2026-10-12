@@ -1,7 +1,8 @@
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 (ns eta-mu.infra.actionability-assessment
   "Compose canonical decisions and explicit host readers; never resolve or review a PR."
-  (:require [pr-flow.native-context :as native] [pr-flow.permissions :as permissions]
+  (:require [pr-flow.native-context :as native] [pr-flow.native-context-law :as context-law]
+            [pr-flow.permissions :as permissions]
             [pr-flow.actionability :as actionability] [pr-flow.actionability-history :as history]
             [pr-flow.law :as law] [eta-mu.extern.actionability-host :as host]))
 
@@ -15,7 +16,7 @@
 
 (defn collect
   "Always collect and classify fresh native input; no supplied eligibility flags."
-  [{:keys [read-json history-text]} {:keys [repo repository-database-id pr-number head thread-id policy] :as config}]
+  [{:keys [read-json history-text]} {:keys [repo pr-number policy] :as config}]
   (let [authorized (fn [r login]
                      (when (and login (not (law/bot? login)))
                        (try
@@ -25,14 +26,9 @@
                            (if (= 404 (:status (ex-data e))) false (throw e))))))
         snapshot (native/collect-context {:read-json read-json :authorized-author? authorized
                                           :read-history #(history/observations history-text %)} repo pr-number)
-        matches (filterv #(= thread-id (:id %)) (:threads snapshot))]
-    (when-not (and (= repo (get-in snapshot [:repository :nameWithOwner]))
-                   (= repository-database-id (get-in snapshot [:repository :databaseId]))
-                   (= pr-number (get-in snapshot [:pr :number])) (= head (:head snapshot))
-                   (= "OPEN" (get-in snapshot [:pr :state])) (false? (:draft? snapshot))
-                   (false? (:incomplete? snapshot)) (vector? (:history snapshot)) (= 1 (count matches)))
-      (host/refuse! :fresh-context))
-    (let [thread (law/classify-thread (assoc (first matches)
+        selection (context-law/select-fresh-context snapshot config)]
+    (when (:refusal selection) (host/refuse! :fresh-context))
+    (let [thread (law/classify-thread (assoc (:selected selection)
                                            :actionability-policy (:review/actionability policy)
                                            :actionability-observations (:history snapshot)
                                            :identities (:review/identities policy)))]

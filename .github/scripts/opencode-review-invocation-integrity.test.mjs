@@ -913,9 +913,7 @@ function finalCoverageEvents() {
     events.push(call("review_read_diff_chunk", { id }));
     if (id < 3) events.push(call("review_assess_diff_chunk", { id, note: "Local fixture assessment" }));
   }
-  for (const stage of ["deterministic", "map-change", "generate-candidates"])
-    events.push(call("review_record_evidence", { stage, note: "Local fixture stage" }));
-  events.push(call("review_record_evidence", { stage: "adversarial-validate", note: "Local final stage" },
+  events.push(call("review_record_evidence", { stage: "deterministic", note: "Local first stage" },
     '{"ok?":false,"error":"Unassessed full-input chunks remain: 3. Read and assess every changed hunk before publishing."}', "coverage_final"),
     event("step_finish", { type: "step-finish", reason: "tool-calls" }),
     event("text", { type: "text", text: "STOP. Original failed invocation remains failed." }),
@@ -1001,7 +999,20 @@ test("final input coverage: second failed process cannot launch a third or accep
 });
 
 const coverageMutations = [
-  ["incomplete earlier stage prefix", e => { const i = e.findIndex(x => x.part.tool === "review_record_evidence"); e.splice(i, 3); }],
+  ["missing failed first stage", e => { const i = e.findIndex(x => x.part.tool === "review_record_evidence"); e.splice(i, 1); }],
+  ["successful earlier stage prefix", e => {
+    const i = e.findIndex(x => x.part.tool === "review_record_evidence");
+    const prior = ["deterministic", "map-change", "generate-candidates"].map((stage, index) => {
+      const event = structuredClone(e[i]);
+      event.part.id = `prior_stage_part_${index}`; event.part.callID = `prior_stage_call_${index}`;
+      event.part.state.input = { stage, note: "Former successful-stage prefix" };
+      event.part.state.output = '{"ok?":true}';
+      return event;
+    });
+    e[i].part.state.input.stage = "adversarial-validate";
+    e.splice(i, 0, ...prior); e.forEach((event, index) => { event.timestamp = index + 1; });
+  }],
+  ["failed later stage", e => { e.find(x => x.part.callID === "coverage_final").part.state.input.stage = "adversarial-validate"; }],
   ["unknown refusal", e => { e.find(x => x.part.callID === "coverage_final").part.state.output = '{"ok?":false,"error":"unknown"}'; }],
   ["wrong stage", e => { e.find(x => x.part.callID === "coverage_final").part.state.input.stage = "publish"; }],
   ["failed actual submit", e => { e.find(x => x.part.callID === "coverage_final").part.tool = "review_submit"; }],

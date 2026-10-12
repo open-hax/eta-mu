@@ -17,6 +17,13 @@
         canonical (required "CANONICAL_CHECKOUT")
         policy (host/read-edn (host/join canonical "skills/pr-flow/flow.edn"))
         workflow-sha (required "GITHUB_WORKFLOW_SHA")
+        called-revision (host/env "ACTIONABILITY_CALLED_REVISION")
+        eta-revision (required "ETA_SOURCE_SHA")
+        direct? (or (nil? called-revision) (= "" called-revision))
+        _ (when-not (and (re-matches #"[0-9a-f]{40}" eta-revision)
+                         (if direct?
+                           (= "workflow_dispatch" (required "GITHUB_EVENT_NAME"))
+                           (= eta-revision called-revision))) (host/refuse! :host-input))
         _ (when-not (and (re-matches #"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+" repo)
                          (re-matches #"[0-9a-f]{40}" head)
                          (re-matches #"[0-9a-f]{40}" workflow-sha)
@@ -28,7 +35,7 @@
      :proposal-id (number! (required "TARGET_PROPOSAL_ID")) :policy (:flow/defaults policy)
      :run-repo (required "GITHUB_REPOSITORY") :run-id run-id :run-attempt attempt
      :workflow-sha workflow-sha :workflow-ref (required "GITHUB_WORKFLOW_REF")
-     :eta-revision (required "ETA_SOURCE_SHA") :direct? (= "workflow_dispatch" (required "GITHUB_EVENT_NAME"))
+     :eta-revision eta-revision :direct? direct?
      :provenance {:repository repo :pull_request (str n) :run_id (str run-id) :run_attempt (str attempt)
                   :workflow_sha workflow-sha :workflow_ref (required "GITHUB_WORKFLOW_REF")}}))
 

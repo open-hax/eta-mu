@@ -714,3 +714,12 @@
   spore: none
   receipt-refs: 9340bbe5bbe84636d7b8bd98eab6d263bdbf56823f7d94e22f12630964a42f44
   note: Complete source transport tests do not confer authentic App identity, model judgment or native publication. Preserve failed historical captures and former NOT RUN statement; append actual compiled package results. Restore only independently observed mode difference with exact byte guards. Review and adopt source bindings separately; complete current authoritative history needs fresh canonical decoding before effects. No spore or promotion.
+- ts: 2026-10-12T03:04:13.792961127Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Reuse canonical native context and repair bounded invocation transport
+  p-efficiency: 0.68
+  p-friction: 0.70
+  p-skill-candidate: 0.49
+  spore: none
+  receipt-refs: 2fcca2b62d0623efb064c9574d3a24fadc6ccfbd61de8cac5b351631e8738b36,0fd7090e04567bd180a9d6aa0eeeed961f3acba966900329714f299301de79ab
+  note: Whole context, immutable preimage and uncertain write readback must precede native effect. Match the sole failed first-stage guard with ordinary fixtures and preserve its old stageful trace adverse. Historical invalid receipts require new canonical observations, never rewrite. Retain all setup and audit failures. Pins remain inactive; no native agreement, resolver, model or deployment authority.

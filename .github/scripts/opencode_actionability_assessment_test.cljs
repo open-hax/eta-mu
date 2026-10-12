@@ -5,7 +5,8 @@
             [eta-mu.extern.actionability-host :as host]
             [pr-flow.actionability :as actionability]
             ["node:fs" :as fs] ["node:path" :as path] ["node:os" :as os]
-            ["node:module" :as module] ["node:crypto" :as crypto] [clojure.string :as str]))
+            ["node:module" :as module] ["node:crypto" :as crypto]
+            ["node:child_process" :as child-process] [clojure.string :as str]))
 
 (def checks (atom 0))
 (defn check [label actual expected]
@@ -218,10 +219,111 @@
     (check "native mutation target" (ffirst @calls) "https://api.github.com/repos/open-hax/knoxx/issues/387/comments")
     (check "transport does not follow redirects" (.-redirect (second (first @calls))) "error")))
 
+(defn removed-source-controls []
+  (let [directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-removed-preimage-"))
+        git (fn [& args]
+              (let [result (.spawnSync child-process "git"
+                                       (clj->js (into ["--no-pager" "-c" "core.hooksPath=/dev/null"
+                                                        "-c" "commit.gpgSign=false" "-c" "init.templateDir="
+                                                        "-c" "user.name=Inert fixture" "-c" "user.email=inert@example.invalid"
+                                                        "-C" directory] args))
+                                       #js {:env #js {:PATH (host/env "PATH") :HOME directory :LANG "C.UTF-8"
+                                                      :GIT_CONFIG_NOSYSTEM "1" :GIT_CONFIG_GLOBAL "/dev/null"}
+                                            :encoding "utf8" :timeout 15000 :maxBuffer 1048576})]
+                (when-not (= 0 (.-status result))
+                  (throw (ex-info "Owned Git fixture preparation failed" {:args args :status (.-status result)})))
+                (str/trim (.-stdout result))))
+        original "original merge-base preimage ημ\n"
+        collect (fn [head base]
+                  (host/source-inventory
+                   (fn [_ resource & _]
+                     (case resource
+                       "repos/synthetic/native-context/pulls/1" {:number 1 :state "open" :head {:sha head} :base {:sha base} :changed_files 2}
+                       "repos/synthetic/native-context/pulls/1/files?per_page=100"
+                       [[{:filename "gone.cljc" :status "removed"} {:filename "kept.cljc" :status "modified"}]]
+                       (throw (ex-info "Unexpected owned inventory read" {:resource resource}))))
+                   directory "synthetic/native-context" 1 head))]
+    (try
+      (.chmodSync fs directory 448)
+      (git "init" "--initial-branch=base")
+      (.writeFileSync fs (.join path directory "gone.cljc") original)
+      (.writeFileSync fs (.join path directory "kept.cljc") "original current file\n")
+      (git "add" "--all") (git "commit" "-m" "Owned common ancestor")
+      (let [ancestor (git "rev-parse" "HEAD") ancestor-tree (git "rev-parse" "HEAD^{tree}")]
+        (git "checkout" "-b" "topic")
+        (.unlinkSync fs (.join path directory "gone.cljc"))
+        (.writeFileSync fs (.join path directory "kept.cljc") "topic immutable source\n")
+        (git "add" "--all") (git "commit" "-m" "Owned removal candidate")
+        (let [head (git "rev-parse" "HEAD") topic-tree (git "rev-parse" "HEAD^{tree}")]
+          (git "checkout" "base")
+          (.writeFileSync fs (.join path directory "gone.cljc") "advancing base changed this file\n")
+          (git "add" "--all") (git "commit" "-m" "Owned advancing base")
+          (let [base (git "rev-parse" "HEAD")]
+            (git "checkout" "--detach" head)
+            (let [before (git "status" "--porcelain=v1")
+                  index (.readFileSync fs (.join path directory ".git/index")) inventory (collect head base)]
+              (check "advancing base preimage uses exact merge base" (:merge-base inventory) ancestor)
+              (check "removed source reads ancestor bytes, not changed base bytes" (get-in inventory [:removed-files 0 :text]) original)
+              (check "removed preimage byte digest is exact" (get-in inventory [:removed-files 0 :sha256]) (host/sha256 original))
+              (check "preimage commit is bound inside aggregate manifest" (get-in inventory [:manifest 7 1]) ancestor)
+              (check "inventory keeps native advancing base coordinate" (:base inventory) base)
+              (check "current source remains exact candidate bytes" (get-in inventory [:files 0 :text]) "topic immutable source\n")
+              (check "inventory does not change selected checkout" (git "rev-parse" "HEAD") head)
+              (check "inventory leaves raw fixture index bytes unchanged" (.equals index (.readFileSync fs (.join path directory ".git/index"))) true)
+              (check "inventory leaves checkout status unchanged" (git "status" "--porcelain=v1") before)))
+          (git "checkout" "base") (.unlinkSync fs (.join path directory "gone.cljc"))
+          (git "add" "--all") (git "commit" "-m" "Owned base also removes file")
+          (let [base (git "rev-parse" "HEAD")]
+            (git "checkout" "--detach" head)
+            (check "base-tip removal cannot erase PR preimage" (get-in (collect head base) [:removed-files 0 :text]) original)
+            (check "missing base object refuses" (refused #(collect head (apply str (repeat 40 "e")))) :source-object))
+          ;; Synthetic criss-cross ancestry has two real merge bases; selecting
+          ;; either would claim an unqualified preimage. No product Git is used.
+          (let [left (git "commit-tree" ancestor-tree "-p" ancestor "-m" "Owned left")
+                right (git "commit-tree" ancestor-tree "-p" ancestor "-m" "Owned right")
+                left-merge (git "commit-tree" topic-tree "-p" left "-p" right "-m" "Owned left merge")
+                right-merge (git "commit-tree" ancestor-tree "-p" right "-p" left "-m" "Owned right merge")]
+            (git "checkout" "--detach" left-merge)
+            (check "multiple actual merge bases refuse preimage selection"
+                   (refused #(collect left-merge right-merge)) :source-merge-base)
+            (check "ambiguous ancestry leaves selected checkout unchanged" (git "rev-parse" "HEAD") left-merge))))
+      (finally (.rmSync fs directory #js {:recursive true :force true})))))
+
+(defn ^:async http-status-controls [remaining]
+  (when-let [status (first remaining)]
+    (let [calls (atom 0)
+          result (await (host/post-comment! "open-hax/knoxx" 387 "inert body" "inert-token"
+                                           (fn [_ _] (swap! calls inc)
+                                             (js/Promise.resolve (js/Response. "inert response" #js {:status status})))))]
+      (check "ambiguous server outcome versus definitive client refusal"
+             result {:outcome (if (<= 500 status 599) :uncertain :refused) :http-status status})
+      (check "HTTP error preserves one POST intent without retry" @calls 1)
+      (await (http-status-controls (next remaining))))))
+
+(defn server-error-case [status alter]
+  (fn [d c state]
+    [(assoc d :post! (fn [r n body]
+                      (host/post-comment! r n body "inert-token"
+                                          (fn [_ _]
+                                            ((:post! d) r n body)
+                                            (alter state body)
+                                            (js/Promise.resolve (js/Response. "inert server failure" #js {:status status})))))) c]))
+
+(defn ^:async server-error-controls []
+  (await (publish-case (server-error-case 502 (fn [_ _] nil)) 1 true))
+  (await (publish-case (server-error-case 504 (fn [state _] (swap! state update :issues pop))) 1 false))
+  (await (publish-case (server-error-case 503 (fn [state body]
+                              (swap! state update :issues conj (issue 7003 bot "2026-10-11T01:01:01Z" body)))) 1 false))
+  (await (publish-case (server-error-case 500 (fn [state _]
+                              (swap! state update-in [:issues 1 :body] str " changed"))) 1 false))
+  :complete)
+
 (defn ^:async main []
   (let [_pin-check (check "unadopted source pins cannot run a live phase" (refused assessment/require-protected-dependencies!) :unadopted-dependency-pins)
         _run-check (run-controls)
+        _source-check (removed-source-controls)
         _transport-check (await (transport-controls))
+        _http-check (await (http-status-controls [500 502 503 504 599 400 401 403 404 422 429]))
         positive (await (publish-case (fn [d c _] [d c]) 1 true))
         adverse (await (check-adverse adverse-controls))
         existing (await (publish-case (fn [d c state]
@@ -230,11 +332,12 @@
         uncertain (await (publish-case (fn [d c _]
                         [(assoc d :post! (fn [r n body]
                                           ((:post! d) r n body) {:outcome :uncertain})) c]) 1 true))
+        server-cases (await (server-error-controls))
         wrong-id (await (publish-case (fn [d c _] [(assoc d :post! (fn [r n b] ((:post! d) r n b) {:outcome :posted :record {:id 1}})) c]) 1 false))
         wrong-get (await (publish-case (fn [d c _] [(assoc d :get-comment! (fn [id] (assoc ((:get-comment! d) id) :body "changed"))) c]) 1 false))
         changed-context (await (publish-case (fn [d c s] [(assoc d :post! (fn [r n b] (let [result ((:post! d) r n b)]
                                                               (swap! s assoc-in [:thread :isResolved] true) result))) c]) 1 false))]
-    (check "complete sequential asynchronous cases" (and positive adverse existing uncertain wrong-id wrong-get changed-context (> @checks 100)) true)
+    (check "complete sequential asynchronous cases" (and positive adverse existing uncertain server-cases wrong-id wrong-get changed-context (> @checks 100)) true)
   (doseq [alter [(fn [r] (assoc r :app_id 3)) (fn [r] (assoc-in r [:permissions :issues] "read"))]]
     (check "native App/installation/grant mismatch refuses"
            (refused #(host/publisher-proof
@@ -253,7 +356,19 @@
   (host/output! {:tests "actual NBB/canonical/Muse source with inert transport" :checks @checks :failed 0
                  :transport "supplied inert callbacks" :model "not invoked" :credentials "inert test values only" :node (.-version js/process)})))
 (defn ^:async entry []
-  (try (await (main)) (catch :default e
-                        (.error js/console (.-message e) (pr-str (ex-data e)))
-                        (host/fail-exit! e))))
+  (try
+    (let [only (first (host/argv))]
+      (if (nil? only)
+        (await (main))
+        (do
+          (case only
+            "removed-source" (removed-source-controls)
+            "http-transport" (await (http-status-controls [500 502 503 504 599 400 401 403 404 422 429]))
+            "server-readback" (await (server-error-controls))
+            (throw (ex-info "Unknown owned test selector" {:only only})))
+          (host/output! {:tests "focused inert actionability host control" :only only :checks @checks :failed 0
+                         :native-or-model-credit false}))))
+    (catch :default e
+      (.error js/console (.-message e) (pr-str (ex-data e)))
+      (host/fail-exit! e))))
 (entry)

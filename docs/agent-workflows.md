@@ -372,7 +372,7 @@ qualification and parent publication remain separate.
 
 ### Final unassessed input-page recovery
 
-The host adapter may admit one fresh whole process only for the exact terminal adversarial-validation refusal when all full-input pages were read and only the final page was not assessed. The original stopped invocation, complete bytes and canonical stage-order refusal remain failed. A separate retained DERIVED projection omits only that refused final call; the unchanged pinned Muse callback must return healthy-unfinished-review with null acceptance and no violations. This is retry eligibility only. Earlier/unknown failures, later calls, changed input or custody, a submission, contradictory projection and a second failure do not authorize another process. Every recovery cause shares MAX2; a healthy accepted review runs once. The fresh process must independently satisfy all existing input/SOURCE/HOST/LAST/five-stage/submission/publication guards. This is unpublished local preparation; no native approval, source adoption or original-review acceptance is supplied.
+The host adapter may admit one fresh whole process only for the exact terminal deterministic-stage refusal before any successful stage, when all full-input pages were read and only the final page was not assessed. The original stopped invocation, complete bytes and canonical stage-order refusal remain failed. A separate retained DERIVED projection omits only that refused final call; the unchanged pinned Muse callback must return healthy-unfinished-review with null acceptance and no violations. This is retry eligibility only. Earlier/unknown failures, later calls, changed input or custody, a submission, contradictory projection and a second failure do not authorize another process. Every recovery cause shares MAX2; a healthy accepted review runs once. The fresh process must independently satisfy all existing input/SOURCE/HOST/LAST/five-stage/submission/publication guards. This is unpublished local preparation; no native approval, source adoption or original-review acceptance is supplied.
 
 ## Native actionability assessment source preparation
 
@@ -382,8 +382,12 @@ with Muse, then publish one canonical issue comment in the protected
 `actionability-publication` environment. It supports `workflow_call` and direct
 `workflow_dispatch` through the same implementation. Direct use requires the
 fresh protected eta default branch; a called workflow must match its actual
-native run reference and an ancestor of that protected branch. Host run/caller
-coordinates remain separate from target repository/PR/thread coordinates.
+native run reference and an ancestor of that protected branch. The required
+`workflow_call` input `eta_revision` identifies a called route; a manually
+dispatched caller retains that route even though GitHub supplies its
+`workflow_dispatch` event to the called workflow. Bootstrap and the host use the
+same input signal. Host run/caller coordinates remain separate from target
+repository/PR/thread coordinates.
 
 The dependency pins are intentionally empty and the host source lock is nil.
 This preparation cannot run a model or publish until a later reviewed commit pins
@@ -394,7 +398,13 @@ supplies no native assessment, review, merge or production credit.
 The Node-adjacent host uses NBB1.5.211, canonical collector/permission/history/law
 namespaces and the actual selected source-built Muse CJS verifier. It does not
 import operational `pr.cljs`, implement another protocol parser, or grant
-eligibility from supplied booleans. NBB asynchronous orchestration uses a single
+eligibility from supplied booleans. Canonical `native-context-law/select-fresh-context`
+owns the structural fresh snapshot and exact target selection. The host invokes
+canonical classification separately; structural selection grants no admission.
+Removed files are read from the unique merge base of the exact native head and
+base commits, with that preimage commit and its byte hashes retained in the
+source manifest. Missing or ambiguous ancestry refuses rather than substituting
+the advancing base tip. NBB asynchronous orchestration uses a single
 awaited body and explicit awaited recursive function boundaries; an asynchronous
 `doseq` or `loop` must not be treated as completed sequential work.
 
@@ -420,7 +430,8 @@ verifier and accepted invocation bytes outside the child. Publication rechecks
 fresh native context, source, permissions, proposal, history and run/job provenance.
 
 There is at most one issue-comment write intent, with redirects disabled and no
-application retry. A transport timeout triggers complete paginated readback;
+application retry. A transport timeout or HTTP 5xx response triggers complete
+paginated readback because a server failure can follow a committed write;
 zero, multiple or mismatched records remain uncertain. An existing exact record
 is verified with its native GET and canonical disposition instead of duplicated.
 The actual record's ID, principal, creation/edit times and current context determine
@@ -428,3 +439,10 @@ admission. A context race can invalidate a comment; GitHub supplies no context
 compare-and-swap. The route never posts an ordinary pull review, replies inline,
 resolves a conversation, merges, writes a ledger, or enables deployment. Unresolved
 informational context remains unsettled and all-thread merge-blocking.
+
+Final-page recovery uses the same fixed full-input file selected for canonical
+context preparation: `actionability-input.txt` for this route and `basehead.diff`
+for ordinary review. It rechecks those exact bytes and the original manifest; a
+legacy diff cannot replace the native carrier. A failed original trace remains
+refused, and only a separately checked projection can authorize the existing
+sole fresh complete invocation.

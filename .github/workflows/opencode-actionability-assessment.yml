@@ -36,6 +36,7 @@ env:
   CANONICAL_REVISION: ''
   MUSE_REVISION: ''
   ETA_SOURCE_SHA: ${{ inputs.eta_revision || github.workflow_sha }}
+  ACTIONABILITY_CALLED_REVISION: ${{ inputs.eta_revision }}
   TARGET_REPOSITORY: ${{ inputs.target_repository }}
   TARGET_REPOSITORY_ID: ${{ inputs.target_repository_id }}
   TARGET_PR_NUMBER: ${{ inputs.pr_number }}
@@ -88,13 +89,17 @@ jobs:
           run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
           jq -e --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT" --arg repo "$GITHUB_REPOSITORY" \
             '.id == $run and .run_attempt == $attempt and .repository.full_name == $repo' <<< "$run" > /dev/null
-          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+          # A called workflow inherits the caller event, including manual
+          # dispatch. Only workflow_call declares the required eta_revision.
+          if [[ -z "$ACTIONABILITY_CALLED_REVISION" ]]; then
+            [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]
             [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]]
             [[ "$GITHUB_WORKFLOW_REF" == "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/$default" ]]
             [[ "$GITHUB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
             [[ $(jq -r .commit.sha <<< "$branch") == "$ETA_SOURCE_SHA" ]]
             jq -e --arg sha "$ETA_SOURCE_SHA" '.head_sha == $sha' <<< "$run" > /dev/null
           else
+            [[ "$ACTIONABILITY_CALLED_REVISION" =~ ^[0-9a-f]{40}$ && "$ACTIONABILITY_CALLED_REVISION" == "$ETA_SOURCE_SHA" ]]
             jq -e --arg sha "$ETA_SOURCE_SHA" \
               '.referenced_workflows | any(.sha == $sha and (.path | startswith("open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@")))' <<< "$run" > /dev/null
             gh api "repos/open-hax/eta-mu/compare/$ETA_SOURCE_SHA...$default" --jq .status | grep -Ex 'ahead|identical' > /dev/null
@@ -185,13 +190,17 @@ jobs:
           run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
           jq -e --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT" --arg repo "$GITHUB_REPOSITORY" \
             '.id == $run and .run_attempt == $attempt and .repository.full_name == $repo' <<< "$run" > /dev/null
-          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+          # A called workflow inherits the caller event, including manual
+          # dispatch. Only workflow_call declares the required eta_revision.
+          if [[ -z "$ACTIONABILITY_CALLED_REVISION" ]]; then
+            [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]
             [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]]
             [[ "$GITHUB_WORKFLOW_REF" == "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/$default" ]]
             [[ "$GITHUB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
             [[ $(jq -r .commit.sha <<< "$branch") == "$ETA_SOURCE_SHA" ]]
             jq -e --arg sha "$ETA_SOURCE_SHA" '.head_sha == $sha' <<< "$run" > /dev/null
           else
+            [[ "$ACTIONABILITY_CALLED_REVISION" =~ ^[0-9a-f]{40}$ && "$ACTIONABILITY_CALLED_REVISION" == "$ETA_SOURCE_SHA" ]]
             jq -e --arg sha "$ETA_SOURCE_SHA" \
               '.referenced_workflows | any(.sha == $sha and (.path | startswith("open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@")))' <<< "$run" > /dev/null
             gh api "repos/open-hax/eta-mu/compare/$ETA_SOURCE_SHA...$default" --jq .status | grep -Ex 'ahead|identical' > /dev/null
@@ -288,13 +297,17 @@ jobs:
           run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
           jq -e --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT" --arg repo "$GITHUB_REPOSITORY" \
             '.id == $run and .run_attempt == $attempt and .repository.full_name == $repo' <<< "$run" > /dev/null
-          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+          # A called workflow inherits the caller event, including manual
+          # dispatch. Only workflow_call declares the required eta_revision.
+          if [[ -z "$ACTIONABILITY_CALLED_REVISION" ]]; then
+            [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]
             [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]]
             [[ "$GITHUB_WORKFLOW_REF" == "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/$default" ]]
             [[ "$GITHUB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
             [[ $(jq -r .commit.sha <<< "$branch") == "$ETA_SOURCE_SHA" ]]
             jq -e --arg sha "$ETA_SOURCE_SHA" '.head_sha == $sha' <<< "$run" > /dev/null
           else
+            [[ "$ACTIONABILITY_CALLED_REVISION" =~ ^[0-9a-f]{40}$ && "$ACTIONABILITY_CALLED_REVISION" == "$ETA_SOURCE_SHA" ]]
             jq -e --arg sha "$ETA_SOURCE_SHA" \
               '.referenced_workflows | any(.sha == $sha and (.path | startswith("open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@")))' <<< "$run" > /dev/null
             gh api "repos/open-hax/eta-mu/compare/$ETA_SOURCE_SHA...$default" --jq .status | grep -Ex 'ahead|identical' > /dev/null
