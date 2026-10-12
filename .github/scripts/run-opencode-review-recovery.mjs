@@ -648,6 +648,25 @@ export async function runReviewRecovery({
   throw new Error("unreachable review recovery state");
 }
 
+/** Build the opt-in actionability child's credential-free, owned-home environment. */
+function actionabilityChildEnvironment() {
+  const home = process.env.REVIEW_CHILD_HOME;
+  if (!home || !path.isAbsolute(home)) throw new Error("owned actionability child home is required");
+  const info = fs.lstatSync(home);
+  if (!info.isDirectory() || info.isSymbolicLink() || fs.realpathSync(home) !== path.resolve(home)
+      || (info.mode & 0o777) !== 0o700
+      || (typeof process.getuid === "function" && info.uid !== process.getuid())) {
+    throw new Error("actionability child home must be an owned private real directory");
+  }
+  return {
+    PATH: process.env.PATH || "/usr/bin:/bin", HOME: home,
+    XDG_CONFIG_HOME: path.join(home, ".config"), XDG_DATA_HOME: path.join(home, ".local/share"),
+    XDG_CACHE_HOME: path.join(home, ".cache"), OPENCODE_CONFIG_DIR: path.join(home, ".config/opencode"),
+    LANG: "C.UTF-8", LC_ALL: "C.UTF-8", TZ: "UTC",
+    REVIEW_EVIDENCE_DIR: process.env.REVIEW_EVIDENCE_DIR, REVIEW_INPUT_PURPOSE: "actionability",
+  };
+}
+
 /** Run the configured OpenCode review and mirror stdout and stderr to retained files. */
 async function invokeOpenCode({ prompt, responseFile, stderrFile }) {
   const opencodeBin = process.env.OPENCODE_BIN || "opencode";
@@ -660,7 +679,8 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile }) {
   let invocationRejected = false;
 
   try {
-    const childEnvironment = { ...process.env };
+    const childEnvironment = process.env.REVIEW_INPUT_PURPOSE === "actionability"
+      ? actionabilityChildEnvironment() : { ...process.env };
     for (const name of ["GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_PATH", "GITHUB_STATE", "GITHUB_STEP_SUMMARY"]) {
       delete childEnvironment[name];
     }
@@ -725,6 +745,9 @@ async function main() {
   let verifier;
   let expectedContext;
   try {
+    const purpose = process.env.REVIEW_INPUT_PURPOSE || "diff";
+    if (!["diff", "actionability"].includes(purpose)) throw new Error("unsupported review input purpose");
+    if (purpose === "actionability") actionabilityChildEnvironment();
     verifierBytes = fs.readFileSync(verifierFile);
     verifier = createRequire(import.meta.url)(verifierFile);
     if (typeof verifier.verifyReviewInvocation !== "function" ||
@@ -737,12 +760,17 @@ async function main() {
     // Canonical Muse prepares the actual lossless geometry once, before any
     // child. Keep it in trusted supervisor memory across the two-attempt bound.
     expectedContext = verifier.prepareReviewInvocationContext(
-      fs.readFileSync(path.join(evidenceDirectory, "basehead.diff")),
+      fs.readFileSync(path.join(evidenceDirectory,
+        purpose === "actionability" ? "actionability-input.txt" : "basehead.diff")),
       fs.readFileSync(path.join(evidenceDirectory, "input-manifest.json")),
       exposedTools, submissionFile,
     );
     if (!expectedContext || typeof expectedContext !== "object" || Array.isArray(expectedContext)) {
       throw new Error("canonical verifier context preparation returned no context");
+    }
+    if (purpose === "actionability" && (expectedContext.inputSource?.schema !== "open-hax.actionability-input/v1"
+        || expectedContext.inputSource?.purpose !== "actionability")) {
+      throw new Error("canonical verifier did not bind actionability input");
     }
   } catch (error) {
     const metadataFile = path.join(evidenceDirectory, "recovery.json");

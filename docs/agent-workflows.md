@@ -373,3 +373,58 @@ qualification and parent publication remain separate.
 ### Final unassessed input-page recovery
 
 The host adapter may admit one fresh whole process only for the exact terminal adversarial-validation refusal when all full-input pages were read and only the final page was not assessed. The original stopped invocation, complete bytes and canonical stage-order refusal remain failed. A separate retained DERIVED projection omits only that refused final call; the unchanged pinned Muse callback must return healthy-unfinished-review with null acceptance and no violations. This is retry eligibility only. Earlier/unknown failures, later calls, changed input or custody, a submission, contradictory projection and a second failure do not authorize another process. Every recovery cause shares MAX2; a healthy accepted review runs once. The fresh process must independently satisfy all existing input/SOURCE/HOST/LAST/five-stage/submission/publication guards. This is unpublished local preparation; no native approval, source adoption or original-review acceptance is supplied.
+
+## Native actionability assessment source preparation
+
+`opencode-actionability-assessment.yml` is a separate three-job route: collect
+complete native context and immutable changed source, assess the fixed full input
+with Muse, then publish one canonical issue comment in the protected
+`actionability-publication` environment. It supports `workflow_call` and direct
+`workflow_dispatch` through the same implementation. Direct use requires the
+fresh protected eta default branch; a called workflow must match its actual
+native run reference and an ancestor of that protected branch. Host run/caller
+coordinates remain separate from target repository/PR/thread coordinates.
+
+The dependency pins are intentionally empty and the host source lock is nil.
+This preparation cannot run a model or publish until a later reviewed commit pins
+protected canonical collector/publication and Muse input-purpose sources. The
+current local controls use explicit candidate source and inert transport, which
+supplies no native assessment, review, merge or production credit.
+
+The Node-adjacent host uses NBB1.5.211, canonical collector/permission/history/law
+namespaces and the actual selected source-built Muse CJS verifier. It does not
+import operational `pr.cljs`, implement another protocol parser, or grant
+eligibility from supplied booleans. NBB asynchronous orchestration uses a single
+awaited body and explicit awaited recursive function boundaries; an asynchronous
+`doseq` or `loop` must not be treated as completed sequential work.
+
+The complete protected canonical receipt text is hashed and decoded by the
+canonical history reader. This is a scoped source binding, not proof that the
+checkout contains all private/local observations used by another CLI. Enabling
+this route requires explicit qualification of the whole applicable authoritative
+history source and its custody. Missing or invalid history refuses; there is no
+healthy-empty fallback. Complete native records, original bodies/hunks, source
+bytes, proposal/body digests and every page remain in the model input.
+
+Only the publisher job receives App secrets. Its built-in RSA boundary signs an
+ephemeral AppJWT, reads actual App and installation metadata, checks the actual
+issue-write grant, installation outputs and token repository access, then passes
+the native Bot tuple to canonical identity admission. A label, `/user` assumption
+or requested grant does not authenticate the principal. JWT, private key and
+token never enter the model environment or output artifacts.
+
+The model receives a fresh private HOME/XDG tree and an explicit environment
+allowlist, without host credentials or GitHub output channels. This is a bounded
+host boundary, not a kernel sandbox. Protected job outputs bind input, profile,
+verifier and accepted invocation bytes outside the child. Publication rechecks
+fresh native context, source, permissions, proposal, history and run/job provenance.
+
+There is at most one issue-comment write intent, with redirects disabled and no
+application retry. A transport timeout triggers complete paginated readback;
+zero, multiple or mismatched records remain uncertain. An existing exact record
+is verified with its native GET and canonical disposition instead of duplicated.
+The actual record's ID, principal, creation/edit times and current context determine
+admission. A context race can invalidate a comment; GitHub supplies no context
+compare-and-swap. The route never posts an ordinary pull review, replies inline,
+resolves a conversation, merges, writes a ledger, or enables deployment. Unresolved
+informational context remains unsettled and all-thread merge-blocking.

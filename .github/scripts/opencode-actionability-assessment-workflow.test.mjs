@@ -1,0 +1,241 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const runner = path.join(root, ".github/scripts/run-opencode-review-recovery.mjs");
+const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
+const tools = ["review_begin", "review_read_diff_chunk", "review_assess_diff_chunk",
+  "review_record_evidence", "review_propose_finding", "review_classify_finding",
+  "review_status", "review_submit"];
+const stages = ["deterministic", "map-change", "generate-candidates", "adversarial-validate", "publish"];
+function childNetworkAudit(child) {
+  const directory = process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR;
+  assert.ok(directory, "the controlled early network blocker is required");
+  const audit = JSON.parse(fs.readFileSync(path.join(directory, `${child.pid}.json`), "utf8"));
+  assert.equal(audit.schema, "eta-mu.test-network-denial/v1");
+  assert.equal(audit.capture, process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE);
+  assert.equal(audit.pid, child.pid);
+  assert.equal(audit.deniedAttempts, 0);
+}
+
+/** Stage inert host events, checked by the actual selected source-built Muse export. */
+function nativeFixture(t, { legacy = true, partial = false } = {}) {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-actionability-host-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const verifierFile = process.env.ETA_MU_ACTIONABILITY_VERIFIER_FILE;
+  const verifierSha = process.env.ETA_MU_ACTIONABILITY_VERIFIER_SHA256;
+  assert.ok(verifierFile && path.isAbsolute(verifierFile), "source-built Muse verifier is required");
+  assert.match(verifierSha || "", /^[0-9a-f]{64}$/);
+  assert.equal(digest(fs.readFileSync(verifierFile)), verifierSha);
+  const verifier = createRequire(import.meta.url)(verifierFile);
+  const full = Buffer.from(JSON.stringify({ fixture: "inert full native carrier; no native or model call",
+    body: "original body ημ 😀\nquoted context retained as data", source: "selected source\n".repeat(1100) }));
+  const source = { schema: "open-hax.actionability-input/v1", purpose: "actionability",
+    head_sha: "b".repeat(40), context_sha256: "c".repeat(64), proposal_id: 71,
+    proposal_body_sha256: "d".repeat(64), source_inventory_sha256: "e".repeat(64),
+    target: { repository_id: "R_fixture", repository_database_id: 3, pr_id: "PR_fixture",
+      pr_number: 1, thread_id: "PRRT_fixture", root_comment_id: 7 },
+    full_input: { path: "actionability-input.txt", bytes: full.length, sha256: digest(full) },
+    provenance: { repository: "synthetic/native-context", pull_request: "1", run_id: "2", run_attempt: "1",
+      workflow_sha: "d".repeat(40), workflow_ref: "synthetic/native-context/workflow@refs/heads/main" } };
+  const submissionFile = path.join(directory, "submission.json");
+  const manifest = Buffer.from(JSON.stringify(source));
+  const context = verifier.prepareReviewInvocationContext(full, manifest, tools, submissionFile);
+  const text = full.toString("utf8");
+  const notes = context.pages.map((page) => ({ ...page, note: `Synthetic complete carrier page ${page.id}.` }));
+  const body = { schema: "open-hax.github-review/v1", event: "COMMENT", comments: [],
+    summary: "Synthetic carrier only; no native assessment or publication.", "input-source": source,
+    "input-coverage": { chunks: notes.length, delivered: notes.length, assessed: notes.length, missing: [] },
+    "input-assessments": notes };
+  const events = [];
+  const sessionID = "session-native-carrier-fixture";
+  const call = (tool, input, output) => {
+    const n = events.length + 1;
+    events.push({ type: "tool_use", timestamp: n, sessionID,
+      part: { type: "tool", id: `part-${n}`, callID: `call-${n}`, sessionID, tool,
+        state: { status: "completed", input, output: JSON.stringify(output) } } });
+  };
+  call("review_begin", {}, { "ok?": true, stage: stages[0], stages, "input-source": source,
+    "diff-stats": { files: 1, bytes: text.length, "truncated?": false },
+    "input-coverage": { chunks: notes.length, delivered: 0, assessed: 0, missing: notes.map((p) => p.id) } });
+  for (const [i, page] of context.pages.entries()) {
+    call("review_read_diff_chunk", { id: page.id }, { "ok?": true,
+      chunk: { ...page, text: text.slice(page.start, page.end) } });
+    call("review_assess_diff_chunk", { id: page.id, note: notes[i].note }, { "ok?": true, "chunk-id": page.id,
+      coverage: { chunks: notes.length, delivered: i + 1, assessed: i + 1,
+        missing: notes.slice(i + 1).map((p) => p.id) } });
+  }
+  for (const stage of stages) call("review_record_evidence", { stage, note: "Synthetic complete stage." }, { "ok?": true });
+  call("review_submit", { summary: body.summary }, { "ok?": true, event: "COMMENT", file: submissionFile, "inline-comments": 0 });
+  events.push({ type: "step_finish", timestamp: events.length + 1, sessionID,
+    part: { type: "step-finish", id: "part-stop", sessionID, reason: "stop" } });
+  const response = events.map((event) => JSON.stringify(event)).join("\n") + "\n";
+  assert.equal(verifier.verifyReviewInvocation(response, JSON.stringify(body), context).ok, true);
+  fs.writeFileSync(path.join(directory, "actionability-input.txt"), partial ? full.subarray(0, 10) : full);
+  if (legacy) fs.writeFileSync(path.join(directory, "basehead.diff"), full);
+  fs.writeFileSync(path.join(directory, "input-manifest.json"), manifest);
+  const home = path.join(directory, "model-home");
+  fs.mkdirSync(home, { mode: 0o700 });
+  const probe = path.join(directory, "child-environment.json");
+  const child = path.join(directory, "fixture-child.cjs");
+  fs.writeFileSync(child, `#!${process.execPath}\nconst fs=require("node:fs");\n`
+    + `fs.writeFileSync(${JSON.stringify(probe)}, JSON.stringify({HOME:process.env.HOME,`
+    + `GH_TOKEN:process.env.GH_TOKEN,GITHUB_TOKEN:process.env.GITHUB_TOKEN,NODE_OPTIONS:process.env.NODE_OPTIONS,`
+    + `GITHUB_OUTPUT:process.env.GITHUB_OUTPUT}));\n`
+    + `fs.writeFileSync(${JSON.stringify(submissionFile)},${JSON.stringify(JSON.stringify(body))});\n`
+    + `process.stdout.write(${JSON.stringify(response)});\n`, { mode: 0o700 });
+  const output = path.join(directory, "outputs");
+  const prompt = path.join(directory, "prompt.txt");
+  const registry = path.join(directory, "tools.txt");
+  fs.writeFileSync(output, ""); fs.writeFileSync(prompt, "Assess complete inert native carrier for {{PR_NUMBER}}.");
+  fs.writeFileSync(registry, tools.join("\n") + "\n");
+  const env = { ...process.env, PR_NUMBER: "1", REVIEW_PROMPT_FILE: prompt,
+    REVIEW_EVIDENCE_DIR: directory, REVIEW_INVOCATION_VERIFIER_FILE: verifierFile,
+    REVIEW_TOOL_REGISTRY_FILE: registry, GITHUB_OUTPUT: output,
+    REVIEW_INPUT_PURPOSE: "actionability", REVIEW_CHILD_HOME: home,
+    REVIEW_MODEL: "opencode/mimo-v2.6-flash-free", OPENCODE_BIN: child,
+    GH_TOKEN: "inert-token-sentinel", GITHUB_TOKEN: "inert-other-sentinel" };
+  return { directory, home, probe, env, verifier, context };
+}
+
+test("actual canonical runner accepts only the complete fixed native file", (t) => {
+  const fixture = nativeFixture(t, { legacy: false });
+  const child = spawnSync(process.execPath, [runner], { env: fixture.env, encoding: "utf8", timeout: 15000 });
+  childNetworkAudit(child);
+  assert.equal(child.status, 0, "valid native purpose must not require basehead.diff");
+  const recovery = JSON.parse(fs.readFileSync(path.join(fixture.directory, "recovery.json")));
+  assert.equal(recovery.accepted_invocation.canonical_verdict.ok, true);
+  assert.equal(recovery.attempts.length, 1, "healthy actual trace has no second invocation");
+});
+
+test("a complete legacy file cannot replace a partial native file", (t) => {
+  const fixture = nativeFixture(t, { partial: true });
+  const child = spawnSync(process.execPath, [runner], { env: fixture.env, encoding: "utf8", timeout: 15000 });
+  childNetworkAudit(child);
+  assert.equal(child.status, 1);
+  assert.equal(fs.existsSync(fixture.probe), false, "invalid bytes refuse before the child");
+  assert.equal(JSON.parse(fs.readFileSync(path.join(fixture.directory, "recovery.json"))).accepted_invocation, null);
+});
+
+test("actionability child uses its fresh home and receives no host credentials", (t) => {
+  const fixture = nativeFixture(t);
+  const child = spawnSync(process.execPath, [runner], { env: fixture.env, encoding: "utf8", timeout: 15000 });
+  childNetworkAudit(child);
+  assert.equal(child.status, 0);
+  const probe = JSON.parse(fs.readFileSync(fixture.probe));
+  assert.equal(Object.hasOwn(probe, "GH_TOKEN"), false);
+  assert.equal(Object.hasOwn(probe, "GITHUB_TOKEN"), false);
+  assert.equal(probe.HOME, fixture.home);
+  assert.equal(Object.hasOwn(probe, "GITHUB_OUTPUT"), false);
+});
+
+test("unknown purpose and nonprivate or redirected model home refuse before the child", (t) => {
+  for (const variant of ["purpose", "mode", "symlink"]) {
+    const fixture = nativeFixture(t);
+    if (variant === "purpose") fixture.env.REVIEW_INPUT_PURPOSE = "unknown";
+    if (variant === "mode") fs.chmodSync(fixture.home, 0o755);
+    if (variant === "symlink") {
+      const alias = path.join(fixture.directory, "home-alias");
+      fs.symlinkSync(fixture.home, alias);
+      fixture.env.REVIEW_CHILD_HOME = alias;
+    }
+    const child = spawnSync(process.execPath, [runner], { env: fixture.env, encoding: "utf8", timeout: 15000 });
+    childNetworkAudit(child);
+    assert.equal(child.status, 1);
+    assert.equal(fs.existsSync(fixture.probe), false);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(fixture.directory, "recovery.json"))).accepted_invocation, null);
+  }
+});
+
+const workflowFile = path.join(root, ".github/workflows/opencode-actionability-assessment.yml");
+const workflow = (await import("yaml")).parse(fs.readFileSync(workflowFile, "utf8"));
+
+test("direct and reusable routes share pending protected source locks", () => {
+  assert.ok(workflow.on.workflow_call && workflow.on.workflow_dispatch);
+  assert.equal(workflow.env.CANONICAL_REVISION, "");
+  assert.equal(workflow.env.MUSE_REVISION, "");
+  assert.match(fs.readFileSync(path.join(root, "packages/eta-mu/src/cljs/eta_mu/infra/actionability_assessment.cljs"), "utf8"),
+    /dependency-pins \{:canonical nil :muse nil\}/);
+  assert.equal(workflow.concurrency["cancel-in-progress"], false);
+  assert.deepEqual(Object.keys(workflow.jobs), ["prepare", "assess", "publish"]);
+  assert.match(workflow.jobs.prepare.steps[0].run, /CANONICAL_REVISION.*MUSE_REVISION/s);
+  assert.match(workflow.jobs.prepare.steps[0].run, /TIMEOUT_INPUT >= 60.*TIMEOUT_INPUT <= 180/);
+  assert.equal(workflow.on.workflow_call.inputs.review_timeout_minutes.default, 60);
+  assert.match(workflow.jobs.assess["timeout-minutes"], /> 180 && 180/);
+});
+
+test("only the separate protected publisher job can access App write credentials", () => {
+  for (const job of [workflow.jobs.prepare, workflow.jobs.assess]) {
+    assert.equal(JSON.stringify(job).includes("secrets.ETA_MU_APP"), false);
+    assert.equal(JSON.stringify(job).includes("create-github-app-token"), false);
+    assert.equal(JSON.stringify(job).includes("HOST_RUN_READ_TOKEN"), false);
+  }
+  assert.equal(workflow.jobs.publish.environment, "actionability-publication");
+  const token = workflow.jobs.publish.steps.find((step) => step.id === "publisher");
+  assert.equal(token.uses, "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1");
+  assert.equal(token.with["permission-issues"], "write");
+  const write = workflow.jobs.publish.steps.find((step) => step.name?.startsWith("Fresh canonical eligibility"));
+  assert.match(write.env.ACTIONABILITY_INSTALLATION_ID, /outputs.installation-id/);
+  assert.match(write.env.ACTIONABILITY_APP_SLUG, /outputs.app-slug/);
+  assert.match(write.env.ACCEPTED_INVOCATION_SHA256, /needs.assess.outputs.accepted_sha256/);
+  assert.match(write.env.HOST_RUN_READ_TOKEN, /github.token/);
+  assert.match(write.env.PREPARED_INPUT_SHA256, /needs.prepare.outputs.input_sha256/);
+  assert.match(write.env.PREPARED_PROFILE_SHA256, /needs.prepare.outputs.profile_sha256/);
+  assert.match(write.run, /opencode_actionability_assessment.cljs.*publish/);
+  assert.equal(JSON.stringify(workflow).includes("publish-opencode-review"), false);
+  assert.equal(JSON.stringify(workflow).includes("resolveReviewThread"), false);
+});
+
+test("actual model step is credential-free with independent input and result bindings", () => {
+  const model = workflow.jobs.assess.steps.find((step) => step.id === "assess");
+  assert.equal(model.env.REVIEW_INPUT_PURPOSE, "actionability");
+  assert.match(model.env.REVIEW_CHILD_HOME, /actionability-model-home/);
+  assert.equal(Object.keys(model.env).some((key) => /TOKEN|KEY|SECRET/.test(key)), false);
+  assert.equal(model["working-directory"], ".actionability/model-root");
+  assert.equal(workflow.jobs.assess.outputs.accepted_sha256, "${{ steps.assess.outputs.review_invocation_sha256 }}");
+  const verify = workflow.jobs.assess.steps.find((step) => step.name === "Reverify actual accepted invocation and fresh custody");
+  assert.match(verify.env.REVIEW_INVOCATION_VERIFIER_SHA256, /needs.prepare.outputs.verifier_sha256/);
+  for (const job of Object.values(workflow.jobs)) {
+    for (const step of job.steps.filter((step) => step.uses?.startsWith("actions/checkout@"))) {
+      assert.equal(step.with["persist-credentials"], false);
+    }
+  }
+});
+
+test("authored bootstrap authenticates source before every checkout on both routes", () => {
+  const guards = Object.values(workflow.jobs).map((job) => {
+    const index = job.steps.findIndex((step) => step.name === "Authenticate protected called source before checkout");
+    const checkout = job.steps.findIndex((step) => step.uses?.startsWith("actions/checkout@"));
+    assert.ok(index >= 0 && index < checkout);
+    return job.steps[index].run;
+  });
+  assert.equal(new Set(guards).size, 1, "same source bootstrap on all three jobs");
+  const sha = "d".repeat(40);
+  const env = { ...process.env, ETA_SOURCE_SHA: sha, GITHUB_REPOSITORY: "open-hax/eta-mu", GITHUB_RUN_ID: "31",
+    GITHUB_RUN_ATTEMPT: "1", GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_WORKFLOW_SHA: sha,
+    GITHUB_WORKFLOW_REF: "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main",
+    TEST_BRANCH_JSON: JSON.stringify({ protected: true, commit: { sha } }),
+    TEST_RUN_JSON: JSON.stringify({ id: 31, run_attempt: 1, head_sha: sha, repository: { full_name: "open-hax/eta-mu" },
+      referenced_workflows: [{ sha, path: `open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@${sha}` }] }),
+    TEST_COMPARE_STATUS: "identical",
+    "BASH_FUNC_gh%%": '() { case "$2" in repos/open-hax/eta-mu) printf "%s\\n" main;; repos/open-hax/eta-mu/branches/main) printf "%s\\n" "$TEST_BRANCH_JSON";; repos/open-hax/eta-mu/actions/runs/31) printf "%s\\n" "$TEST_RUN_JSON";; repos/open-hax/eta-mu/compare/*) printf "%s\\n" "$TEST_COMPARE_STATUS";; *) return 97;; esac; }' };
+  const run = (changes = {}) => spawnSync("bash", ["-c", guards[0]], { env: { ...env, ...changes }, encoding: "utf8", timeout: 15000 });
+  assert.equal(run().status, 0, "inert native default-branch source admits");
+  assert.equal(run({ GITHUB_EVENT_NAME: "pull_request" }).status, 0, "inert called exact referenced source admits");
+  for (const changes of [
+    { GITHUB_WORKFLOW_REF: env.GITHUB_WORKFLOW_REF.replace("/main", "/feature") },
+    { TEST_BRANCH_JSON: JSON.stringify({ protected: false, commit: { sha } }) },
+    { GITHUB_RUN_ATTEMPT: "2" },
+    { ETA_SOURCE_SHA: "e".repeat(40) },
+    { GITHUB_EVENT_NAME: "pull_request", TEST_COMPARE_STATUS: "diverged" },
+    { GITHUB_EVENT_NAME: "pull_request", TEST_RUN_JSON: JSON.stringify({ id: 31, run_attempt: 1, repository: { full_name: "open-hax/eta-mu" }, referenced_workflows: [] }) },
+  ]) assert.notEqual(run(changes).status, 0, "untrusted source refuses before checkout");
+});
