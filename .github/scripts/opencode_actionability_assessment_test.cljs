@@ -4,6 +4,7 @@
   (:require [eta-mu.infra.actionability-assessment :as assessment]
             [eta-mu.extern.actionability-host :as host]
             [pr-flow.actionability :as actionability]
+            [nbb.core :as nbb]
             ["node:fs" :as fs] ["node:path" :as path] ["node:os" :as os]
             ["node:module" :as module] ["node:crypto" :as crypto]
             ["node:child_process" :as child-process] [clojure.string :as str]))
@@ -181,6 +182,49 @@
       (await (check-adverse (next remaining))))
     :complete))
 
+(defn publisher-authentication-change [alter]
+  (fn [d c state]
+    [(assoc d :publisher-proof!
+            (fn []
+              (let [proof ((:publisher-proof! d))]
+                (alter state)
+                proof))) c]))
+
+(defn ^:async publisher-authentication-controls []
+  ;; SCI sequences awaited let bindings; every case must finish before completion.
+  (let [_positive (await (publish-case (publisher-authentication-change (fn [_] nil)) 1 true))
+        thread-change (await (publish-case
+                              (publisher-authentication-change
+                               #(swap! % assoc-in [:thread :comments :nodes 0 :body] "A real defect; fix it."))
+                              0 false))
+        proposal-change (await (publish-case
+                                (publisher-authentication-change
+                                 #(swap! % update-in [:issues 0 :body] str " changed"))
+                                0 false))
+        proposal-edit (await (publish-case
+                              (publisher-authentication-change
+                               #(swap! % assoc-in [:issues 0 :updated_at] "2026-10-11T01:00:01Z"))
+                              0 false))
+        later-proposal (await (publish-case
+                               (publisher-authentication-change
+                                #(swap! % update :issues conj
+                                        (assoc (first (:issues @%)) :id 7003 :node_id "IC_fixture_7003"
+                                               :html_url "https://github.com/open-hax/knoxx/pull/387#issuecomment-7003"
+                                               :created_at "2026-10-11T01:00:01Z" :updated_at "2026-10-11T01:00:01Z")))
+                               0 false))
+        source-change (await (publish-case
+                              (fn [d c state]
+                                ((publisher-authentication-change
+                                  #(swap! % assoc :inventory (assoc inventory :sha256 (host/sha256 "changed during authentication"))))
+                                 (assoc d :inventory! #(get @state :inventory inventory)) c state))
+                              0 false))]
+    (check "thread mutation during publisher authentication refuses before POST" (:refused thread-change) :fresh-input-binding)
+    (check "proposal mutation during publisher authentication refuses before POST" (:refused proposal-change) :fresh-proposal-binding)
+    (check "proposal edit chronology during publisher authentication refuses before POST" (:refused proposal-edit) :pre-write-context-change)
+    (check "new latest proposal during publisher authentication refuses before POST" (:refused later-proposal) :pre-write-context-change)
+    (check "source inventory mutation during publisher authentication refuses before POST" (:refused source-change) :fresh-input-binding)
+    :complete))
+
 (defn run-controls []
   (let [sha (apply str (repeat 40 "d"))
         cfg {:run-repo "open-hax/eta-mu" :run-id 31 :run-attempt 1 :workflow-sha sha :eta-revision sha :direct? true
@@ -280,13 +324,22 @@
                   (throw (ex-info "Owned Git fixture preparation failed" {:args args :status (.-status result)})))
                 (str/trim (.-stdout result))))
         original "original merge-base preimage ημ\n"
+        old-modified (js/Buffer.from #js [255 0 128 65])
+        old-renamed (js/Buffer.from #js [255 0 129 66])
+        new-modified (js/Buffer.from #js [255 1 130 67])
+        new-renamed (js/Buffer.from #js [255 1 131 68])
+        added-binary (js/Buffer.from #js [255 2 132 69])
         collect (fn [head base]
                   (host/source-inventory
                    (fn [_ resource & _]
                      (case resource
-                       "repos/synthetic/native-context/pulls/1" {:number 1 :state "open" :head {:sha head} :base {:sha base} :changed_files 2}
+                       "repos/synthetic/native-context/pulls/1" {:number 1 :state "open" :head {:sha head} :base {:sha base} :changed_files 5}
                        "repos/synthetic/native-context/pulls/1/files?per_page=100"
-                       [[{:filename "gone.cljc" :status "removed"} {:filename "kept.cljc" :status "modified"}]]
+                       [[{:filename "gone.cljc" :status "removed"}
+                         {:filename "kept.cljc" :status "modified"}
+                         {:filename "modified.bin" :status "modified"}
+                         {:filename "after-name.bin" :previous_filename "before-name.bin" :status "renamed"}
+                         {:filename "added.bin" :status "added"}]]
                        (throw (ex-info "Unexpected owned inventory read" {:resource resource}))))
                    directory "synthetic/native-context" 1 head))]
     (try
@@ -294,20 +347,61 @@
       (git "init" "--initial-branch=base")
       (.writeFileSync fs (.join path directory "gone.cljc") original)
       (.writeFileSync fs (.join path directory "kept.cljc") "original current file\n")
+      (.writeFileSync fs (.join path directory "modified.bin") old-modified #js {:mode 493})
+      (.writeFileSync fs (.join path directory "before-name.bin") old-renamed)
       (git "add" "--all") (git "commit" "-m" "Owned common ancestor")
       (let [ancestor (git "rev-parse" "HEAD") ancestor-tree (git "rev-parse" "HEAD^{tree}")]
         (git "checkout" "-b" "topic")
         (.unlinkSync fs (.join path directory "gone.cljc"))
         (.writeFileSync fs (.join path directory "kept.cljc") "topic immutable source\n")
+        (.writeFileSync fs (.join path directory "modified.bin") new-modified)
+        (.chmodSync fs (.join path directory "modified.bin") 420)
+        (.renameSync fs (.join path directory "before-name.bin") (.join path directory "after-name.bin"))
+        (.writeFileSync fs (.join path directory "after-name.bin") new-renamed)
+        (.chmodSync fs (.join path directory "after-name.bin") 493)
+        (.writeFileSync fs (.join path directory "added.bin") added-binary)
         (git "add" "--all") (git "commit" "-m" "Owned removal candidate")
         (let [head (git "rev-parse" "HEAD") topic-tree (git "rev-parse" "HEAD^{tree}")]
           (git "checkout" "base")
           (.writeFileSync fs (.join path directory "gone.cljc") "advancing base changed this file\n")
+          (.writeFileSync fs (.join path directory "modified.bin") (js/Buffer.from #js [255 9 140 70]))
+          (.writeFileSync fs (.join path directory "before-name.bin") (js/Buffer.from #js [255 9 141 71]))
           (git "add" "--all") (git "commit" "-m" "Owned advancing base")
           (let [base (git "rev-parse" "HEAD")]
             (git "checkout" "--detach" head)
             (let [before (git "status" "--porcelain=v1")
                   index (.readFileSync fs (.join path directory ".git/index")) inventory (collect head base)]
+              (check "complete ancestor manifest includes every non-added native preimage"
+                     (mapv first (get-in inventory [:manifest 7 2]))
+                     ["gone.cljc" "kept.cljc" "modified.bin" "before-name.bin"])
+              (check "complete preimage source order follows original native file order"
+                     (mapv :path (:preimage-files inventory))
+                     ["gone.cljc" "kept.cljc" "modified.bin" "before-name.bin"])
+              (check "removed-only projection preserves its established contract"
+                     (mapv :path (:removed-files inventory)) ["gone.cljc"])
+              (check "added binary has no ancestor preimage"
+                     (some #(= "added.bin" (:path %)) (:preimage-files inventory)) nil)
+              (let [serialized (js->clj (js/JSON.parse (host/json inventory)) :keywordize-keys true)
+                    before (into {} (map (juxt :path identity) (:preimage-files serialized)))
+                    after (into {} (map (juxt :path identity) (:files serialized)))]
+                (doseq [[p bytes mode] [["modified.bin" old-modified "100755"]
+                                       ["before-name.bin" old-renamed "100644"]]]
+                  (check "binary preimage has exact merge-base mode" (get-in before [p :git-mode]) mode)
+                  (check "binary preimage binds actual immutable ancestor object"
+                         (get-in before [p :blob]) (git "rev-parse" (str ancestor ":" p)))
+                  (check "binary preimage is raw blob carrier" (get-in before [p :byte-carrier]) "blob")
+                  (check "binary preimage bytes survive complete input JSON"
+                         (get-in before [p :content-base64]) (.toString bytes "base64"))
+                  (check "binary preimage byte length is exact" (get-in before [p :bytes]) (.-length bytes))
+                  (check "binary preimage SHA256 is exact" (get-in before [p :sha256]) (host/sha256 bytes))
+                  (check "binary preimage has no invented UTF8 text" (contains? (before p) :text) false))
+                (doseq [[p bytes mode] [["modified.bin" new-modified "100644"]
+                                       ["after-name.bin" new-renamed "100755"]
+                                       ["added.bin" added-binary "100644"]]]
+                  (check "head binary mode is exact" (get-in after [p :git-mode]) mode)
+                  (check "head binary object is exact" (get-in after [p :blob]) (git "rev-parse" (str head ":" p)))
+                  (check "head binary complete JSON payload is exact" (get-in after [p :content-base64]) (.toString bytes "base64"))
+                  (check "head binary SHA256 is exact" (get-in after [p :sha256]) (host/sha256 bytes))))
               (check "advancing base preimage uses exact merge base" (:merge-base inventory) ancestor)
               (check "removed source reads ancestor bytes, not changed base bytes" (get-in inventory [:removed-files 0 :text]) original)
               (check "removed preimage byte digest is exact" (get-in inventory [:removed-files 0 :sha256]) (host/sha256 original))
@@ -381,7 +475,7 @@
                            (case resource
                              "repos/synthetic/native-context/pulls/1" {:number 1 :state "open" :head {:sha head} :base {:sha target} :changed_files 7}
                              "repos/synthetic/native-context/pulls/1/files?per_page=100"
-                             [(mapv (fn [p] {:filename p :status "modified"}) paths)]
+                             [(mapv (fn [p] {:filename p :status (if (= p "regular.cljc") "modified" "added")}) paths)]
                              (throw (ex-info "Unexpected owned object inventory read" {:resource resource}))))
                          directory "synthetic/native-context" 1 head)]
           (check "all selected changed Git objects retain exact order" (mapv :path (:files inventory)) paths)
@@ -447,13 +541,13 @@
                                             (js/Promise.resolve (js/Response. "inert server failure" #js {:status status})))))) c]))
 
 (defn ^:async server-error-controls []
-  (await (publish-case (server-error-case 502 (fn [_ _] nil)) 1 true))
-  (await (publish-case (server-error-case 504 (fn [state _] (swap! state update :issues pop))) 1 false))
-  (await (publish-case (server-error-case 503 (fn [state body]
-                              (swap! state update :issues conj (issue 7003 bot "2026-10-11T01:01:01Z" body)))) 1 false))
-  (await (publish-case (server-error-case 500 (fn [state _]
-                              (swap! state update-in [:issues 1 :body] str " changed"))) 1 false))
-  :complete)
+  (let [_qualified (await (publish-case (server-error-case 502 (fn [_ _] nil)) 1 true))
+        _absent (await (publish-case (server-error-case 504 (fn [state _] (swap! state update :issues pop))) 1 false))
+        _ambiguous (await (publish-case (server-error-case 503 (fn [state body]
+                                         (swap! state update :issues conj (issue 7003 bot "2026-10-11T01:01:01Z" body)))) 1 false))
+        _changed (await (publish-case (server-error-case 500 (fn [state _]
+                                       (swap! state update-in [:issues 1 :body] str " changed"))) 1 false))]
+    :complete))
 
 (def expected-dependency-pins
   {:canonical "80b8993bbd43cf0265c5e558c678845edc8929d9" :muse "45c7a8d572bf44202f52cae2aa8c0f771736a617"})
@@ -477,6 +571,7 @@
         _transport-check (await (transport-controls))
         _http-check (await (http-status-controls [500 502 503 504 599 400 401 403 404 422 429]))
         positive (await (publish-case (fn [d c _] [d c]) 1 true))
+        authentication (await (publisher-authentication-controls))
         adverse (await (check-adverse adverse-controls))
         existing (await (publish-case (fn [d c state]
                                       (swap! state update :issues conj (issue 7002 bot "2026-10-11T01:01:00Z" (:summary (setup))))
@@ -489,7 +584,7 @@
         wrong-get (await (publish-case (fn [d c _] [(assoc d :get-comment! (fn [id] (assoc ((:get-comment! d) id) :body "changed"))) c]) 1 false))
         changed-context (await (publish-case (fn [d c s] [(assoc d :post! (fn [r n b] (let [result ((:post! d) r n b)]
                                                               (swap! s assoc-in [:thread :isResolved] true) result))) c]) 1 false))]
-    (check "complete sequential asynchronous cases" (and positive adverse existing uncertain server-cases wrong-id wrong-get changed-context (> @checks 100)) true)
+    (check "complete sequential asynchronous cases" (and positive authentication adverse existing uncertain server-cases wrong-id wrong-get changed-context (> @checks 100)) true)
   (doseq [alter [(fn [r] (assoc r :app_id 3)) (fn [r] (assoc-in r [:permissions :issues] "read"))]]
     (check "native App/installation/grant mismatch refuses"
            (refused #(host/publisher-proof
@@ -505,25 +600,32 @@
     (check "JWT claims are finite" (js->clj (js/JSON.parse (.toString (js/Buffer.from (second pieces) "base64url"))) :keywordize-keys true)
            {:iat 940 :exp 1480 :iss "1"})
     (check "invalid private key refuses without a key body" (refused #(host/app-jwt "1" "inert-invalid-key" 1000)) :publisher-credentials))
-  (host/output! {:tests "actual NBB/canonical/Muse source with inert transport" :checks @checks :failed 0
-                 :transport "supplied inert callbacks" :model "not invoked" :credentials "inert test values only" :node (.-version js/process)})))
+  {:tests "actual NBB/canonical/Muse source with inert transport" :checks @checks :failed 0
+   :completion "opencode-actionability-assessment/v1" :completed? true
+   :transport "supplied inert callbacks" :model "not invoked" :credentials "inert test values only" :node (.-version js/process)}))
 (defn ^:async entry []
   (try
-    (let [only (first (host/argv))]
-      (if (nil? only)
-        (await (main))
-        (do
-          (case only
-            "dependency-pins" (dependency-pin-controls)
-            "host-run" (run-controls)
-            "removed-source" (removed-source-controls)
-             "immutable-objects" (immutable-object-controls)
-            "http-transport" (await (http-status-controls [500 502 503 504 599 400 401 403 404 422 429]))
-            "server-readback" (await (server-error-controls))
-            (throw (ex-info "Unknown owned test selector" {:only only})))
-          (host/output! {:tests "focused inert actionability host control" :only only :checks @checks :failed 0
-                         :native-or-model-credit false}))))
+    (let [only (first (host/argv))
+          result (if (nil? only)
+                   (await (main))
+                   (let [_complete (await
+                                    (case only
+                                      "dependency-pins" (dependency-pin-controls)
+                                      "host-run" (run-controls)
+                                      "removed-source" (removed-source-controls)
+                                      "immutable-objects" (immutable-object-controls)
+                                      "http-transport" (http-status-controls [500 502 503 504 599 400 401 403 404 422 429])
+                                      "server-readback" (server-error-controls)
+                                      "publisher-authentication" (publisher-authentication-controls)
+                                      (throw (ex-info "Unknown owned test selector" {:only only}))))]
+                     {:tests "focused inert actionability host control" :only only :checks @checks :failed 0
+                      :completion "opencode-actionability-assessment/v1" :completed? true
+                      :native-or-model-credit false}))]
+      (host/output! result)
+      result)
     (catch :default e
       (.error js/console (.-message e) (pr-str (ex-data e)))
-      (host/fail-exit! e))))
-(entry)
+      (host/fail-exit! e)
+      (throw e))))
+;; Mark the final Promise so both the CLI and nbb.core/load-file await this result.
+(nbb/await (entry))

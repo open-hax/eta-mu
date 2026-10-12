@@ -148,7 +148,7 @@
         (refuse! :source-checkout)))))
 
 (defn source-inventory
-  "Bind all changed native paths, including removed files, to immutable Git bytes."
+  "Bind changed paths and every non-added preimage to immutable Git bytes."
   [read checkout repo n head]
   (let [pr (read "api" (str "repos/" repo "/pulls/" n))
         pages (read "api" (str "repos/" repo "/pulls/" n "/files?per_page=100") "--paginate" "--slurp")
@@ -159,16 +159,26 @@
                    (re-matches #"[0-9a-f]{40}" (or base ""))
                    (pos-int? (:changed_files pr)) (= (:changed_files pr) (count files))
                    (= (count paths) (count (set paths))) (every? string? paths)
-                   (every? #(#{"added" "modified" "removed" "renamed" "copied" "changed" "unchanged"} (:status %)) files))
+                   (every? #(#{"added" "modified" "removed" "renamed" "copied" "changed" "unchanged"} (:status %)) files)
+                   (every? #(or (not= "renamed" (:status %))
+                                (and (string? (:previous_filename %))
+                                     (not (str/blank? (:previous_filename %))))) files))
       (refuse! :source-file-inventory))
     (let [live (filterv #(not= "removed" (:status %)) files)
           removed (filterv #(= "removed" (:status %)) files)
+          preimages (filterv #(not= "added" (:status %)) files)
+          preimage-paths (vec (distinct (map #(if (= "renamed" (:status %))
+                                               (:previous_filename %) (:filename %)) preimages)))
+          removed-paths (set (map :filename removed))
           current (when (seq live) (immutable-source checkout head (mapv :filename live)))
-          merge-base (when (seq removed) (source-merge-base checkout head base))
-          old (when (seq removed) (immutable-source checkout merge-base (mapv :filename removed) head))
+          merge-base (when (seq preimages) (source-merge-base checkout head base))
+          old (when (seq preimages) (immutable-source checkout merge-base preimage-paths head))
           manifest [1 repo n head base (mapv #(select-keys % [:filename :previous_filename :status]) files)
                     (:manifest current) (:manifest old)]]
-      {:head head :base base :merge-base merge-base :files (:files current) :removed-files (:files old) :changed-files files
+      {:head head :base base :merge-base merge-base :files (:files current)
+       :preimage-files (:files old)
+       :removed-files (when (seq removed) (filterv #(contains? removed-paths (:path %)) (:files old)))
+       :changed-files files
        :manifest manifest :sha256 (sha256 (pr-str manifest))})))
 
 (defn verify-run!

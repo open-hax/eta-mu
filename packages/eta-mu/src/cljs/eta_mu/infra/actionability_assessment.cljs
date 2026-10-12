@@ -125,6 +125,13 @@
         body (:body prospective)
         prior (body-matches before body user)]
     (when (> (count prior) 1) (host/refuse! :ambiguous-existing-assessment))
+    ;; Publisher authentication performs native reads. Rebind after those reads,
+    ;; before either dedup readback or the sole write, including issue chronology.
+    (let [last-before (rebind-input deps config source)
+          context-keys [:repository :pr :selected :raw-issue-comments :issue-comments :history]]
+      (when-not (= (select-keys before context-keys)
+                   (select-keys last-before context-keys))
+        (host/refuse! :pre-write-context-change)))
     (if (= 1 (count prior))
       (let [record (first prior) actual (get-comment! (:id record))]
         (when-not (= (select-keys record [:id :node_id :body :user :created_at :updated_at :html_url])

@@ -777,3 +777,12 @@
   spore: none
   receipt-refs: 34e36cec-01fa-4eee-a9bd-5a82ee73144f,cc222f6eebbddfe748d5af9cdb7a9277d2e9ba51e18004cec7d93bddc5666c47
   note: Scope prior source-bound observations separately from nine fresh recovery phases. Preserve genuine failed lint and exact two intended mutant failures. Root verified saved bytes and custody before eight-source application and three-file accepted canonical adoption; no extra qualification scaffold or spore. Full package194tests587assertions remains distinct from absent workflow resources. Native judgment/publication and deployment gates remain separate.
+- ts: 2026-10-12T15:26:58.843275626Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Repair native review source and publisher boundaries and register settled assessment gates
+  p-efficiency: 0.82
+  p-friction: 0.38
+  p-skill-candidate: 0.55
+  spore: none
+  receipt-refs: 447d197c-6097-4611-90e0-a80e49f0f4e3,f7e6f5da46a960d5caefc92419f7c91c9cc293479386b86a9537f14d98afeb16
+  note: SCI async functions must sequence awaited cases in one let and mark the returned Promise; actual completion marker and predecessor RED guard against false exit-zero evidence. Normal registered gate builds both exact protected Muse profiles and runs allfour suites; complete preimages and authentication-time rebind pass controls. Native/provider/deployment gates remain separate.
