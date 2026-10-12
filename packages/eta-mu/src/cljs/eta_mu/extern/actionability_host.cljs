@@ -1,7 +1,7 @@
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 (ns eta-mu.extern.actionability-host
   "Protected host I/O. No actionability, permission or protocol policy."
-  (:require ["node:fs" :as fs] ["node:path" :as path]
+  (:require ["node:fs" :as fs] ["node:path" :as path] ["node:os" :as os]
             ["node:crypto" :as crypto] ["node:child_process" :as process]
             ["node:module" :as module] ["yaml" :as yaml] [clojure.string :as str]
             [edamame.core :as edamame]))
@@ -84,13 +84,24 @@
          (catch :default _ (refuse! :native-json)))))
 
 (defn- source-git [checkout & args]
-  (let [r (.spawnSync process "git" (clj->js (into ["--no-pager" "--literal-pathspecs" "-c" "core.fsmonitor=false"
-                                                   "-C" checkout] args))
-                      #js {:env #js {:PATH (or (env "PATH") "/usr/bin:/bin")
-                                     :GIT_OPTIONAL_LOCKS "0" :GIT_CONFIG_NOSYSTEM "1"}
-                           :timeout 15000 :maxBuffer 16777216})]
-    (when-not (= 0 (.-status r)) (refuse! :source-object))
-    (.-stdout r)))
+  ;; Git writes stdout directly to an owned descriptor: blob size is not a
+  ;; spawnSync capture limit. Only stderr remains buffered for process failure.
+  (let [directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-source-git-"))]
+    (try
+      (private-directory! directory)
+      (let [file (.join path directory "stdout")
+            fd (.openSync fs file "wx" 384)]
+        (try
+          (let [r (.spawnSync process "git" (clj->js (into ["--no-pager" "--literal-pathspecs" "-c" "core.fsmonitor=false"
+                                                           "-C" checkout] args))
+                              #js {:env #js {:PATH (or (env "PATH") "/usr/bin:/bin")
+                                             :GIT_OPTIONAL_LOCKS "0" :GIT_CONFIG_NOSYSTEM "1"}
+                                   :stdio #js ["ignore" fd "pipe"]
+                                   :timeout 15000 :maxBuffer 1048576})]
+            (when-not (= 0 (.-status r)) (refuse! :source-object))
+            (read-bytes file))
+          (finally (.closeSync fs fd))))
+      (finally (.rmSync fs directory #js {:recursive true :force true})))))
 
 (defn- source-merge-base [checkout head base]
   (let [bases (str/split-lines (str/trim (.toString (source-git checkout "merge-base" "--all" head base) "utf8")))]
@@ -160,14 +171,14 @@
                    (pos-int? (:changed_files pr)) (= (:changed_files pr) (count files))
                    (= (count paths) (count (set paths))) (every? string? paths)
                    (every? #(#{"added" "modified" "removed" "renamed" "copied" "changed" "unchanged"} (:status %)) files)
-                   (every? #(or (not= "renamed" (:status %))
+                   (every? #(or (not (#{"renamed" "copied"} (:status %)))
                                 (and (string? (:previous_filename %))
                                      (not (str/blank? (:previous_filename %))))) files))
       (refuse! :source-file-inventory))
     (let [live (filterv #(not= "removed" (:status %)) files)
           removed (filterv #(= "removed" (:status %)) files)
           preimages (filterv #(not= "added" (:status %)) files)
-          preimage-paths (vec (distinct (map #(if (= "renamed" (:status %))
+          preimage-paths (vec (distinct (map #(if (#{"renamed" "copied"} (:status %))
                                                (:previous_filename %) (:filename %)) preimages)))
           removed-paths (set (map :filename removed))
           current (when (seq live) (immutable-source checkout head (mapv :filename live)))

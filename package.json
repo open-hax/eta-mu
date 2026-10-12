@@ -13,7 +13,7 @@
     "gates": "eta-mu gates",
     "lint": "bb scripts/lint.bb",
     "lint:fix": "node scripts/lint.mjs --fix",
-    "lint:kondo": "pnpm -r --no-bail --if-present lint:kondo",
+    "lint:kondo": "bb scripts/lint.bb --kondo-only",
     "docs:cljs": "clojure -X:codox",
     "docs": "pnpm docs:cljs",
     "start": "pnpm --filter @eta-mu/rheos start",

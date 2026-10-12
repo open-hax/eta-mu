@@ -138,20 +138,33 @@
                      (select-keys actual [:id :node_id :body :user :created_at :updated_at :html_url]))
           (host/refuse! :native-get-mismatch))
         (qualified-record! before record body user))
-      (let [result (await (post! (:repo config) (:pr-number config) body))]
-        (when-not (#{:posted :refused :uncertain} (:outcome result)) (host/refuse! :native-write-outcome))
-        (when (= :refused (:outcome result)) (host/refuse! :native-write-refused))
-        ;; The record may exist even after a transport timeout. Recollect once,
-        ;; never retry a write or infer that an absent response means no effect.
-        (verify-sources!) (verify-run!)
-        (let [after (collect deps config) current-inventory (inventory!)
-              _ (bound-source! after current-inventory source config)
-              matches (body-matches after body user)]
-          (when-not (= 1 (count matches)) (host/refuse! :uncertain-native-write))
-          (let [record (first matches) actual (get-comment! (:id record))]
-            (when (and (= :posted (:outcome result)) (not= (:id record) (get-in result [:record :id])))
-              (host/refuse! :native-post-record-mismatch))
-            (when-not (= (select-keys record [:id :node_id :body :user :created_at :updated_at :html_url])
-                         (select-keys actual [:id :node_id :body :user :created_at :updated_at :html_url]))
-              (host/refuse! :native-get-mismatch))
-            (qualified-record! after record body user)))))))
+      (let [result (try (await (post! (:repo config) (:pr-number config) body))
+                        (catch :default _ {:outcome :uncertain :transport-boundary-threw true}))]
+        ;; Retain the one-shot outcome even when recollection or GET fails.
+        ;; The host writes this terminal record before making the step fail.
+        (try
+          (when-not (#{:posted :refused :uncertain} (:outcome result)) (host/refuse! :native-write-outcome))
+          (when (= :refused (:outcome result)) (host/refuse! :native-write-refused))
+          ;; A transport failure can follow a committed write; never retry it.
+          (verify-sources!) (verify-run!)
+          (let [after (collect deps config) current-inventory (inventory!)
+                _ (bound-source! after current-inventory source config)
+                matches (body-matches after body user)]
+            (when-not (= 1 (count matches)) (host/refuse! :uncertain-native-write))
+            (let [record (first matches) actual (get-comment! (:id record))]
+              (when (and (= :posted (:outcome result)) (not= (:id record) (get-in result [:record :id])))
+                (host/refuse! :native-post-record-mismatch))
+              (when-not (= (select-keys record [:id :node_id :body :user :created_at :updated_at :html_url])
+                           (select-keys actual [:id :node_id :body :user :created_at :updated_at :html_url]))
+                (host/refuse! :native-get-mismatch))
+              (assoc (qualified-record! after record body user)
+                     :outcome (:outcome result)
+                     :actual-write-outcome (select-keys result [:outcome :http-status :transport-boundary-threw])
+                     :write-performed true :retry-performed false)))
+          (catch :default e
+            {:status :unestablished :outcome (:outcome result)
+             :actual-write-outcome (select-keys result [:outcome :http-status :transport-boundary-threw])
+             :actual-post-response (select-keys (:record result) [:id :node_id :body :user :created_at :updated_at :html_url])
+             :refusal-code (or (:code (ex-data e)) :native-readback-error)
+             :write-intent-performed true :retry-performed false :admitted false
+             :native-resolution-performed false :review-credit false}))))))

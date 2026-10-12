@@ -505,3 +505,52 @@ test("same-run reusable invocations have unique artifacts and consume their own 
     assert.equal(guard.env.REJECTION_JOB_CHECK_RUN_ID, "${{ job.check_run_id }}");
   }
 });
+
+/** Exercise the actual authored visibility guard with native-shaped inert reads. */
+test("every target checkout requires exact native identity and known public visibility", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-public-target-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const publicTarget = { full_name: "open-hax/another-installed-repo", id: 3, visibility: "public", private: false };
+  const cases = [
+    ["public", publicTarget, 0],
+    ["private", { ...publicTarget, visibility: "private", private: true }, 0],
+    ["internal", { ...publicTarget, visibility: "internal", private: true }, 0],
+    ["contradictory", { ...publicTarget, private: true }, 0],
+    ["unknown", { ...publicTarget, visibility: null }, 0],
+    ["missing-visibility", { full_name: publicTarget.full_name, id: 3, private: false }, 0],
+    ["missing-private", { full_name: publicTarget.full_name, id: 3, visibility: "public" }, 0],
+    ["wrong-id", { ...publicTarget, id: 4 }, 0],
+    ["wrong-name", { ...publicTarget, full_name: "open-hax/other" }, 0],
+    ["unavailable", {}, 44],
+    ["malformed", "not JSON", 0],
+  ];
+  for (const [jobName, job] of Object.entries(workflow.jobs)) {
+    const index = job.steps.findIndex((step) => step.name === "Require public native target before checkout");
+    assert.ok(index >= 0, "every job needs the public-target gate");
+    const guard = job.steps[index];
+    assert.equal(guard.env.GH_TOKEN, "${{ github.token }}");
+    assert.equal(Object.keys(guard.env).some((key) => /KEY|SECRET/.test(key)), false);
+    for (const [later, step] of job.steps.entries()) {
+      if (step.uses?.startsWith("actions/checkout@") || step.uses?.startsWith("actions/create-github-app-token@"))
+        assert.ok(index < later, "native visibility is checked before every checkout or App credential");
+    }
+    for (const [name, metadata, readExit] of cases) {
+      const effects = path.join(directory, jobName + "-" + name);
+      const child = spawnSync("bash", ["-c", guard.run + '\nprintf \'checkout-reached\\n\' >> "$TEST_EFFECTS"\n'],
+        { env: { PATH: process.env.PATH, TARGET_REPOSITORY: publicTarget.full_name, TARGET_REPOSITORY_ID: "3",
+          TEST_EFFECTS: effects, TEST_METADATA: typeof metadata === "string" ? metadata : JSON.stringify(metadata),
+          TEST_READ_EXIT: String(readExit),
+          "BASH_FUNC_gh%%": '() { [[ "$#" == 2 && "$1" == api && "$2" == "repos/$TARGET_REPOSITORY" ]] || return 97; [[ "$TEST_READ_EXIT" == 0 ]] || return "$TEST_READ_EXIT"; printf "%s\\n" "$TEST_METADATA"; }' },
+          encoding: "utf8", timeout: 15000 });
+      assert.equal(child.error, undefined);
+      assert.equal(child.signal, null);
+      if (name === "public") {
+        assert.equal(child.status, 0, jobName + " admits the exact public target");
+        assert.match(fs.readFileSync(effects, "utf8"), /checkout-reached/);
+      } else {
+        assert.notEqual(child.status, 0, jobName + " refuses " + name + " native metadata");
+        assert.equal(fs.existsSync(effects), false, "refusal occurs before modeled checkout/App continuation");
+      }
+    }
+  }
+});

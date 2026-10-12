@@ -140,10 +140,13 @@
                                            {:outcome :posted :record record}))
                                 :get-comment! (fn [id] (swap! gets conj id) (first (filter #(= id (:id %)) (:issues @state)))))
             [modified cfg] (change dependencies config state)
-            result (try {:value (await (assessment/publish modified cfg))}
+            result (try (let [value (await (assessment/publish modified cfg))]
+                          (if (= :qualified (:status value))
+                            {:value value}
+                            {:terminal value :refused (or (:refusal-code value) :unestablished)}))
                         (catch :default e {:refused (or (:code (ex-data e)) :decoded-source-refusal)}))]
         (check "publication write count" (count @writes) expected-writes)
-        (check "publication success/refusal" (contains? result :value) expect-success?)
+        (check "publication success/refusal" (= :qualified (get-in result [:value :status])) expect-success?)
         (when expect-success?
           (check "actual canonical readback qualified" (get-in result [:value :status]) :qualified)
           (check "unresolved conversation remains unresolved" (get-in result [:value :resolved?]) false)
@@ -429,6 +432,113 @@
             (check "ambiguous ancestry leaves selected checkout unchanged" (git "rev-parse" "HEAD") left-merge))))
       (finally (.rmSync fs directory #js {:recursive true :force true})))))
 
+(defn owned-source-fixture-git
+  "Run only explicit Git fixture commands under a private disposable checkout."
+  [directory]
+  (fn [& args]
+    (let [result (.spawnSync child-process "git"
+                            (clj->js (into ["--no-pager" "-c" "core.hooksPath=/dev/null"
+                                           "-c" "commit.gpgSign=false" "-c" "init.templateDir="
+                                           "-c" "user.name=Inert fixture" "-c" "user.email=inert@example.invalid"
+                                           "-C" directory] args))
+                            #js {:env #js {:PATH (host/env "PATH") :HOME directory :LANG "C.UTF-8"
+                                           :GIT_CONFIG_NOSYSTEM "1" :GIT_CONFIG_GLOBAL "/dev/null"
+                                           :GIT_OPTIONAL_LOCKS "0"}
+                                 :encoding "utf8" :timeout 15000 :maxBuffer 1048576})]
+      (when-not (= 0 (.-status result))
+        (throw (ex-info "Owned source fixture preparation failed" {:args args :status (.-status result)})))
+      (str/trim (.-stdout result)))))
+
+(defn copied-source-controls
+  "Copied destinations bind their actual merge-base source, never an absent destination."
+  []
+  (let [directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-copied-preimage-"))
+        git (owned-source-fixture-git directory)
+        bytes (js/Buffer.from #js [255 0 128 65])
+        collect (fn [head base file]
+                  (host/source-inventory
+                   (fn [_ resource & _]
+                     (case resource
+                       "repos/synthetic/native-context/pulls/1" {:number 1 :state "open" :head {:sha head} :base {:sha base} :changed_files 1}
+                       "repos/synthetic/native-context/pulls/1/files?per_page=100" [[file]]
+                       (throw (ex-info "Unexpected copied inventory read" {:resource resource}))))
+                   directory "synthetic/native-context" 1 head))]
+    (try
+      (.chmodSync fs directory 448)
+      (git "init" "--initial-branch=fixture")
+      (.writeFileSync fs (.join path directory "source.bin") bytes)
+      (git "add" "--" "source.bin") (git "commit" "-m" "Owned copy source")
+      (let [base (git "rev-parse" "HEAD")]
+        (.copyFileSync fs (.join path directory "source.bin") (.join path directory "copied.bin"))
+        (git "add" "--" "copied.bin") (git "commit" "-m" "Owned copied destination")
+        (let [head (git "rev-parse" "HEAD")
+              index (.readFileSync fs (.join path directory ".git/index"))
+              status (git "status" "--porcelain=v1")
+              file {:filename "copied.bin" :previous_filename "source.bin" :status "copied"}
+              inventory (collect head base file)
+              preimage (first (:preimage-files inventory))
+              current (first (:files inventory))]
+          (check "copied destination is absent at the actual merge base" (git "ls-tree" base "--" "copied.bin") "")
+          (check "copied inventory preserves its native status and source path" (:changed-files inventory) [file])
+          (check "copy source is the complete preimage path" (mapv :path (:preimage-files inventory)) ["source.bin"])
+          (check "copy destination remains the selected current path" (mapv :path (:files inventory)) ["copied.bin"])
+          (check "copy source is bound to actual merge-base object" (:blob preimage) (git "rev-parse" (str base ":source.bin")))
+          (check "copy destination is bound to actual head object" (:blob current) (git "rev-parse" (str head ":copied.bin")))
+          (doseq [record [preimage current]]
+            (check "copied binary bytes are lossless" (:content-base64 record) (.toString bytes "base64"))
+            (check "copied binary byte size is exact" (:bytes record) (.-length bytes))
+            (check "copied binary SHA256 is exact" (:sha256 record) (host/sha256 bytes)))
+          (check "copied file does not become a removed projection" (:removed-files inventory) nil)
+          (doseq [previous [nil "" " \t" 1]]
+            (check "copied source name must be a nonblank native string"
+                   (refused #(collect head base (assoc file :previous_filename previous))) :source-file-inventory))
+          (check "missing copied source object is refused, never treated as added"
+                 (refused #(collect head base (assoc file :previous_filename "missing.bin"))) :source-entry)
+          (check "copy source existing only at head cannot supply a merge-base preimage"
+                 (refused #(collect head base (assoc file :previous_filename "copied.bin"))) :source-entry)
+          (check "copy reads preserve checkout HEAD" (git "rev-parse" "HEAD") head)
+          (check "copy reads preserve exact raw index" (.equals index (.readFileSync fs (.join path directory ".git/index"))) true)
+          (check "copy reads preserve checkout status" (git "status" "--porcelain=v1") status)))
+      (finally (.rmSync fs directory #js {:recursive true :force true})))))
+
+(defn large-blob-controls
+  "Read actual Git blobs above the old stdout ceiling with exact text and binary carriers."
+  []
+  (let [directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-large-source-"))
+        git (owned-source-fixture-git directory)
+        size (inc (* 16 1024 1024))
+        text-bytes (js/Buffer.alloc size 97)
+        binary-bytes (js/Buffer.alloc size 0)]
+    (aset text-bytes (dec size) 98)
+    (aset binary-bytes 0 255)
+    (aset binary-bytes 1 128)
+    (aset binary-bytes (dec size) 65)
+    (try
+      (.chmodSync fs directory 448)
+      (git "init" "--initial-branch=fixture")
+      (.writeFileSync fs (.join path directory "large-text.txt") text-bytes)
+      (.writeFileSync fs (.join path directory "large-binary.bin") binary-bytes)
+      (git "add" "--" "large-text.txt" "large-binary.bin") (git "commit" "-m" "Owned large Git blobs")
+      (let [head (git "rev-parse" "HEAD") index (.readFileSync fs (.join path directory ".git/index"))
+            status (git "status" "--porcelain=v1")
+            selected (host/immutable-source directory head ["large-text.txt" "large-binary.bin"])
+            entries (into {} (map (juxt :path identity) (:files selected)))]
+        (doseq [[p bytes] [["large-text.txt" text-bytes] ["large-binary.bin" binary-bytes]]]
+          (check "fixture exceeds the prior 16MiB stdout capture ceiling" (> (.-length bytes) 16777216) true)
+          (check "large blob byte count is exact" (get-in entries [p :bytes]) size)
+          (check "large blob SHA256 is exact" (get-in entries [p :sha256]) (host/sha256 bytes))
+          (check "large blob binds its actual Git object" (get-in entries [p :blob]) (git "rev-parse" (str head ":" p)))
+          (check "large blob carrier remains explicit" (get-in entries [p :byte-carrier]) "blob"))
+        (check "large UTF8 text retains every committed byte"
+               (.equals text-bytes (js/Buffer.from (get-in entries ["large-text.txt" :text]) "utf8")) true)
+        (check "large binary base64 retains every committed byte"
+               (.equals binary-bytes (js/Buffer.from (get-in entries ["large-binary.bin" :content-base64]) "base64")) true)
+        (check "large binary has no invented UTF8 text" (contains? (entries "large-binary.bin") :text) false)
+        (check "large object reads preserve checkout HEAD" (git "rev-parse" "HEAD") head)
+        (check "large object reads preserve exact raw index" (.equals index (.readFileSync fs (.join path directory ".git/index"))) true)
+        (check "large object reads preserve checkout status" (git "status" "--porcelain=v1") status))
+      (finally (.rmSync fs directory #js {:recursive true :force true})))))
+
 (defn immutable-object-controls
   "Owned actual Git objects only; no native call, nested repository or symlink target read."
   []
@@ -549,6 +659,61 @@
                                        (swap! state update-in [:issues 1 :body] str " changed"))) 1 false))]
     :complete))
 
+(defn ^:async publisher-readback-controls
+  "A committed write keeps its actual outcome when later native readback fails."
+  []
+  (let [fail-get (fn [_] (throw (ex-info "Inert native readback error" {})))
+        posted (await (publish-case (fn [d c _] [(assoc d :get-comment! fail-get) c]) 1 false))
+        recollection (await (publish-case
+                             (fn [d c _]
+                               (let [written (atom false) read (:read-json d) post (:post! d)]
+                                 [(assoc d :read-json (fn [& args]
+                                                       (if @written
+                                                         (throw (ex-info "Inert post-write recollection error" {}))
+                                                         (apply read args)))
+                                           :post! (fn [r n body]
+                                                    (let [result (post r n body)]
+                                                      (reset! written true)
+                                                      result))) c]))
+                             1 false))
+        uncertain (await (publish-case
+                          (fn [d c _]
+                            [(assoc d :get-comment! fail-get
+                                      :post! (fn [r n body]
+                                               ((:post! d) r n body)
+                                               {:outcome :uncertain :http-status 504})) c])
+                          1 false))
+        callback-threw (await (publish-case
+                              (fn [d c _]
+                                [(assoc d :get-comment! fail-get
+                                          :post! (fn [r n body]
+                                                   ((:post! d) r n body)
+                                                   (throw (ex-info "Inert committed transport error" {})))) c])
+                              1 false))]
+    (doseq [result [posted recollection uncertain callback-threw]]
+      (let [terminal (:terminal result)]
+        (check "post-write failure returns a terminal unestablished record" (:status terminal) :unestablished)
+        (check "native readback failure remains the terminal refusal" (:refused result) :native-readback-error)
+        (check "post-write terminal retains the one intent" (:write-intent-performed terminal) true)
+        (check "post-write terminal never retries" (:retry-performed terminal) false)
+        (check "post-write terminal supplies no admission" (:admitted terminal) false)
+        (check "post-write terminal supplies no resolution" (:native-resolution-performed terminal) false)
+        (check "post-write terminal supplies no review credit" (:review-credit terminal) false)))
+    (doseq [result [posted recollection]]
+      (let [terminal (:terminal result)]
+        (check "successful POST remains posted despite later failure" (:outcome terminal) :posted)
+        (check "actual successful transport outcome is retained" (:actual-write-outcome terminal) {:outcome :posted})
+        (check "actual posted record ID is retained" (get-in terminal [:actual-post-response :id]) 7002)
+        (check "actual posted record principal is retained" (get-in terminal [:actual-post-response :user]) bot)
+        (check "actual posted body is retained" (get-in terminal [:actual-post-response :body]) (:summary (setup)))))
+    (check "uncertain HTTP outcome remains uncertain" (get-in uncertain [:terminal :outcome]) :uncertain)
+    (check "actual uncertain HTTP status is retained"
+           (get-in uncertain [:terminal :actual-write-outcome]) {:outcome :uncertain :http-status 504})
+    (check "throw after a committed write remains uncertain" (get-in callback-threw [:terminal :outcome]) :uncertain)
+    (check "transport boundary throw remains recorded"
+           (get-in callback-threw [:terminal :actual-write-outcome]) {:outcome :uncertain :transport-boundary-threw true})
+    :complete))
+
 (def expected-dependency-pins
   {:canonical "80b8993bbd43cf0265c5e558c678845edc8929d9" :muse "45c7a8d572bf44202f52cae2aa8c0f771736a617"})
 (defn dependency-pin-controls
@@ -567,6 +732,8 @@
   (let [_pin-check (dependency-pin-controls)
         _run-check (run-controls)
         _source-check (removed-source-controls)
+        _copied-check (copied-source-controls)
+        _large-check (large-blob-controls)
          _object-check (immutable-object-controls)
         _transport-check (await (transport-controls))
         _http-check (await (http-status-controls [500 502 503 504 599 400 401 403 404 422 429]))
@@ -580,11 +747,12 @@
                         [(assoc d :post! (fn [r n body]
                                           ((:post! d) r n body) {:outcome :uncertain})) c]) 1 true))
         server-cases (await (server-error-controls))
+        publisher-readback (await (publisher-readback-controls))
         wrong-id (await (publish-case (fn [d c _] [(assoc d :post! (fn [r n b] ((:post! d) r n b) {:outcome :posted :record {:id 1}})) c]) 1 false))
         wrong-get (await (publish-case (fn [d c _] [(assoc d :get-comment! (fn [id] (assoc ((:get-comment! d) id) :body "changed"))) c]) 1 false))
         changed-context (await (publish-case (fn [d c s] [(assoc d :post! (fn [r n b] (let [result ((:post! d) r n b)]
                                                               (swap! s assoc-in [:thread :isResolved] true) result))) c]) 1 false))]
-    (check "complete sequential asynchronous cases" (and positive authentication adverse existing uncertain server-cases wrong-id wrong-get changed-context (> @checks 100)) true)
+    (check "complete sequential asynchronous cases" (and positive authentication adverse existing uncertain server-cases publisher-readback wrong-id wrong-get changed-context (> @checks 100)) true)
   (doseq [alter [(fn [r] (assoc r :app_id 3)) (fn [r] (assoc-in r [:permissions :issues] "read"))]]
     (check "native App/installation/grant mismatch refuses"
            (refused #(host/publisher-proof
@@ -613,10 +781,13 @@
                                       "dependency-pins" (dependency-pin-controls)
                                       "host-run" (run-controls)
                                       "removed-source" (removed-source-controls)
+                                      "copied-source" (copied-source-controls)
+                                      "large-blobs" (large-blob-controls)
                                       "immutable-objects" (immutable-object-controls)
                                       "http-transport" (http-status-controls [500 502 503 504 599 400 401 403 404 422 429])
                                       "server-readback" (server-error-controls)
                                       "publisher-authentication" (publisher-authentication-controls)
+                                      "publisher-readback" (publisher-readback-controls)
                                       (throw (ex-info "Unknown owned test selector" {:only only}))))]
                      {:tests "focused inert actionability host control" :only only :checks @checks :failed 0
                       :completion "opencode-actionability-assessment/v1" :completed? true

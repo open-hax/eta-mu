@@ -2210,7 +2210,12 @@ test("review timeout defaults keep the direct PR route and other stage budgets u
   assert.equal(input.required, false);
   assert.equal(input.default, 60);
   assert.deepEqual(workflow.on.pull_request.types, ["opened", "synchronize", "reopened", "ready_for_review"]);
-  assert.equal(workflow.on.workflow_call.inputs.model.default, "opencode/mimo-v2.6-flash-free");
+  assert.equal(workflow.on.workflow_call.inputs.model.default, "");
+  assert.equal(workflow.jobs.review.env.REVIEW_MODEL_DISCOVERY, "opencode-free-mimo-flash-v1");
+  assert.equal(workflow.jobs.review.env.REVIEW_EXPECTED_OPENCODE_VERSION,
+    "${{ inputs.opencode_version || '1.18.18' }}");
+  assert.equal(namedStep("review", "Run bounded evidence-first OpenCode review").env.REVIEW_MODEL,
+    "${{ inputs.model || '' }}");
   assert.deepEqual(Object.fromEntries(Object.entries(workflow.jobs)
     .filter(([name]) => name !== "review").map(([name, job]) => [name, job["timeout-minutes"]])), {
     deterministic_evidence: 60, prepare_review_context: 45, review_gate: 5,
@@ -2354,4 +2359,73 @@ test("embedded review metadata JSON matches canonical tracked EDN rendering", ()
   );
   assert.ok(embedded, "review context must carry the rendered metadata JSON");
   assert.deepEqual(JSON.parse(embedded[1]), renderReviewHostMetadataFromEdn());
+});
+
+
+/** Bind inert host-owned model-selection evidence to an already bound transport invocation. */
+function bindModelDiscoveryFixture(checked, context) {
+  const binary = path.join(checked.evidence, "inert-opencode-binary");
+  fs.writeFileSync(binary, "inert executable identity fixture\n");
+  const selected = { id: "mimo-v9.1-flash-free", providerID: "opencode", family: "mimo",
+    status: "active", release_date: "2027-01-01", api: { id: "mimo-v9.1-flash-free" },
+    capabilities: { toolcall: true, input: { text: true }, output: { text: true } },
+    cost: { input: 0, output: 0, cache: { read: 0, write: 0 } } };
+  const commands = [["model-version", ["--version"], "1.18.18\n"],
+    ["model-catalog", ["models", "opencode", "--refresh", "--verbose"], `opencode/${selected.id}\n${JSON.stringify(selected, null, 2)}\n`]]
+    .map(([stem, args, stdout]) => {
+      const record = { command: [binary, ...args], exit_code: 0, signal: null, timed_out: false, captures_closed: true };
+      for (const [stream, bytes] of [["stdout", stdout], ["stderr", ""]]) {
+        record[`${stream}_file`] = `${stem}.${stream}`;
+        fs.writeFileSync(path.join(checked.evidence, record[`${stream}_file`]), bytes);
+        record[`${stream}_sha256`] = transportSha256(bytes);
+      }
+      return record;
+    });
+  const proof = { schema: "open-hax.review-model-discovery/v1", status: "selected", mode: "latest",
+    requested_model: "", declared_version: "1.18.18", observed_version: "1.18.18", commands,
+    binary: { requested: binary, real_path: binary, sha256: transportSha256(fs.readFileSync(binary)) },
+    selected_model: `opencode/${selected.id}`, selected_row: selected,
+    selected_row_sha256: transportSha256(JSON.stringify(selected)), catalog_sha256: commands[1].stdout_sha256 };
+  const file = path.join(checked.evidence, "model-discovery.json");
+  fs.writeFileSync(file, JSON.stringify(proof));
+  const digest = transportSha256(fs.readFileSync(file));
+  const recoveryFile = path.join(checked.evidence, "recovery.json");
+  const recovery = JSON.parse(fs.readFileSync(recoveryFile));
+  recovery.model_discovery = { file: "model-discovery.json", sha256: digest, selected_model: proof.selected_model };
+  recovery.accepted_invocation.model_discovery_sha256 = digest;
+  recovery.accepted_invocation.model = proof.selected_model;
+  fs.writeFileSync(recoveryFile, JSON.stringify(recovery));
+  context.invocationDigest = transportSha256(JSON.stringify(recovery.accepted_invocation));
+  return { file, proof, recoveryFile, recovery, binary };
+}
+
+test("actual final workflow requires unchanged selected model provenance before publication", (t) => {
+  const fixture = fullInputFixture(t);
+  const cases = [
+    ["unchanged", () => {}, true],
+    ["proof changed", (_c, model) => fs.appendFileSync(model.file, "\n")],
+    ["catalog changed", (c) => fs.appendFileSync(path.join(c.evidence, "model-catalog.stdout"), "changed\n")],
+    ["version changed", (c) => fs.appendFileSync(path.join(c.evidence, "model-version.stdout"), "changed\n")],
+    ["stderr changed", (c) => fs.appendFileSync(path.join(c.evidence, "model-catalog.stderr"), "changed\n")],
+    ["binary changed", (_c, model) => fs.appendFileSync(model.binary, "changed\n")],
+    ["binding missing", (_c, model) => { delete model.recovery.model_discovery; }],
+    ["bound model differs", (_c, model) => { model.recovery.model_discovery.selected_model = "opencode/other-free"; }],
+    ["unknown mode", (_c, _model, env) => { env.REVIEW_MODEL_DISCOVERY = "unsupported"; }],
+    ["declared version differs", (_c, _model, env) => { env.REVIEW_EXPECTED_OPENCODE_VERSION = "1.19.0"; }],
+  ];
+  for (const [name, mutate, pass = false] of cases) {
+    const checked = freshReviewInputCheck(fixture);
+    assert.equal(checked.result.status, 0, checked.result.stderr);
+    const context = contextFixture(checked);
+    fs.writeFileSync(path.join(checked.evidence, "submission.json"), JSON.stringify(completeInputSubmission(checked)));
+    context.bind();
+    const model = bindModelDiscoveryFixture(checked, context);
+    const env = { REVIEW_MODEL_DISCOVERY: "opencode-free-mimo-flash-v1", REVIEW_EXPECTED_OPENCODE_VERSION: "1.18.18" };
+    mutate(checked, model, env);
+    fs.writeFileSync(model.recoveryFile, JSON.stringify(model.recovery));
+    const final = finalReviewInputCheck(checked, context, env);
+    assert.equal(final.result.status === 0, pass, `${name}: ${final.result.stderr}`);
+    assert.equal(fs.existsSync(final.publication), pass, name);
+    if (!pass && fs.existsSync(final.output)) assert.equal(parseOutput(final.output).submission_file, undefined, name);
+  }
 });

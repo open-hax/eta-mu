@@ -134,6 +134,20 @@ jobs:
             [[ "$ACTIONABILITY_ASSESS_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
             printf 'ACTIONABILITY_ASSESS_CHECK_RUN_ID=%s\n' "$ACTIONABILITY_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
           fi
+      - name: Require public native target before checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]]
+          [[ "$TARGET_REPOSITORY_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+          target=$(gh api "repos/$TARGET_REPOSITORY")
+          jq -e --arg name "$TARGET_REPOSITORY" --argjson id "$TARGET_REPOSITORY_ID" \
+            '.full_name == $name and .id == $id and .visibility == "public" and .private == false' <<< "$target" > /dev/null || {
+            echo '::error::Assessment requires known public target repository visibility and matching native identity.'
+            exit 1
+          }
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .actionability/eta, persist-credentials: false}
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -261,6 +275,20 @@ jobs:
             [[ "$ACTIONABILITY_ASSESS_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
             printf 'ACTIONABILITY_ASSESS_CHECK_RUN_ID=%s\n' "$ACTIONABILITY_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
           fi
+      - name: Require public native target before checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]]
+          [[ "$TARGET_REPOSITORY_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+          target=$(gh api "repos/$TARGET_REPOSITORY")
+          jq -e --arg name "$TARGET_REPOSITORY" --argjson id "$TARGET_REPOSITORY_ID" \
+            '.full_name == $name and .id == $id and .visibility == "public" and .private == false' <<< "$target" > /dev/null || {
+            echo '::error::Assessment requires known public target repository visibility and matching native identity.'
+            exit 1
+          }
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .actionability/eta, persist-credentials: false}
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -394,6 +422,20 @@ jobs:
             [[ "$ACTIONABILITY_ASSESS_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
             printf 'ACTIONABILITY_ASSESS_CHECK_RUN_ID=%s\n' "$ACTIONABILITY_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
           fi
+      - name: Require public native target before checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]]
+          [[ "$TARGET_REPOSITORY_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+          target=$(gh api "repos/$TARGET_REPOSITORY")
+          jq -e --arg name "$TARGET_REPOSITORY" --argjson id "$TARGET_REPOSITORY_ID" \
+            '.full_name == $name and .id == $id and .visibility == "public" and .private == false' <<< "$target" > /dev/null || {
+            echo '::error::Assessment requires known public target repository visibility and matching native identity.'
+            exit 1
+          }
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .actionability/eta, persist-credentials: false}
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -442,8 +484,17 @@ jobs:
           PREPARED_PROFILE_SHA256: ${{ needs.prepare.outputs.profile_sha256 }}
           REVIEW_INVOCATION_VERIFIER_SHA256: ${{ needs.prepare.outputs.verifier_sha256 }}
           ACCEPTED_INVOCATION_SHA256: ${{ needs.assess.outputs.accepted_sha256 }}
+          PUBLICATION_RESULT_FILE: ${{ runner.temp }}/actionability-publication-result.json
         run: |
           set -euo pipefail
-          node .actionability/runtime/node_modules/nbb/cli.js -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts" "$ETA_CHECKOUT/.github/scripts/opencode_actionability_assessment.cljs" publish > "$RUNNER_TEMP/actionability-publication-result.json"
+          publication_exit=0
+          node .actionability/runtime/node_modules/nbb/cli.js -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts" "$ETA_CHECKOUT/.github/scripts/opencode_actionability_assessment.cljs" publish || publication_exit=$?
+          # Preserve exclusive host-written bytes. A missing terminal file establishes no effect.
+          if [[ ! -e "$PUBLICATION_RESULT_FILE" ]]; then
+            printf '%s\n' '{"status":"unestablished","outcome":"unknown","refusal-code":"host-did-not-complete","write-intent-performed":null,"retry-performed":false,"admitted":false,"native-resolution-performed":false,"review-credit":false}' > "$PUBLICATION_RESULT_FILE"
+            (( publication_exit != 0 )) || publication_exit=1
+          fi
+          exit "$publication_exit"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
         with: {name: 'actionability-publication-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: '${{ runner.temp }}/actionability-publication-result.json', if-no-files-found: error}

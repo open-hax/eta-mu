@@ -786,3 +786,12 @@
   spore: none
   receipt-refs: 447d197c-6097-4611-90e0-a80e49f0f4e3,f7e6f5da46a960d5caefc92419f7c91c9cc293479386b86a9537f14d98afeb16
   note: SCI async functions must sequence awaited cases in one let and mark the returned Promise; actual completion marker and predecessor RED guard against false exit-zero evidence. Normal registered gate builds both exact protected Muse profiles and runs allfour suites; complete preimages and authentication-time rebind pass controls. Native/provider/deployment gates remain separate.
+- ts: 2026-10-12T17:46:42.281068121Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify dynamic anonymous MiMo discovery plus assessment source custody repairs
+  p-efficiency: 0.6
+  p-friction: 0.65
+  p-skill-candidate: 0.65
+  spore: none
+  receipt-refs: 1c6719ab-915a-40f2-be16-5a419f09f5ee
+  note: Hold physical CLI and fresh catalog identity across invocation, keep public-target and one-publication custody, preserve copied paths and large blob evidence, and register canonical lint scopes. Completed focused and registered gates; original actionlint external-analyzer hang and precisely allowed prior context diagnostics remain unestablished/retained. No native approval or deployment credit.

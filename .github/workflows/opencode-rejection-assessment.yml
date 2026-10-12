@@ -150,6 +150,20 @@ jobs:
             [[ "$REJECTION_ASSESS_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
             printf 'REJECTION_ASSESS_CHECK_RUN_ID=%s\n' "$REJECTION_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
           fi
+      - name: Require public native target before checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]]
+          [[ "$TARGET_REPOSITORY_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+          target=$(gh api "repos/$TARGET_REPOSITORY")
+          jq -e --arg name "$TARGET_REPOSITORY" --argjson id "$TARGET_REPOSITORY_ID" \
+            '.full_name == $name and .id == $id and .visibility == "public" and .private == false' <<< "$target" > /dev/null || {
+            echo '::error::Assessment requires known public target repository visibility and matching native identity.'
+            exit 1
+          }
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .rejection-assessment/eta, persist-credentials: false}
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -277,6 +291,20 @@ jobs:
             [[ "$REJECTION_ASSESS_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
             printf 'REJECTION_ASSESS_CHECK_RUN_ID=%s\n' "$REJECTION_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
           fi
+      - name: Require public native target before checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]]
+          [[ "$TARGET_REPOSITORY_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+          target=$(gh api "repos/$TARGET_REPOSITORY")
+          jq -e --arg name "$TARGET_REPOSITORY" --argjson id "$TARGET_REPOSITORY_ID" \
+            '.full_name == $name and .id == $id and .visibility == "public" and .private == false' <<< "$target" > /dev/null || {
+            echo '::error::Assessment requires known public target repository visibility and matching native identity.'
+            exit 1
+          }
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .rejection-assessment/eta, persist-credentials: false}
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -410,6 +438,20 @@ jobs:
             [[ "$REJECTION_ASSESS_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
             printf 'REJECTION_ASSESS_CHECK_RUN_ID=%s\n' "$REJECTION_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
           fi
+      - name: Require public native target before checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]]
+          [[ "$TARGET_REPOSITORY_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+          target=$(gh api "repos/$TARGET_REPOSITORY")
+          jq -e --arg name "$TARGET_REPOSITORY" --argjson id "$TARGET_REPOSITORY_ID" \
+            '.full_name == $name and .id == $id and .visibility == "public" and .private == false' <<< "$target" > /dev/null || {
+            echo '::error::Assessment requires known public target repository visibility and matching native identity.'
+            exit 1
+          }
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .rejection-assessment/eta, persist-credentials: false}
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803

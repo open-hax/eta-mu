@@ -70,7 +70,15 @@
    in with `load-file`, which clj-kondo cannot follow without config. That is
    pre-existing debt with its own card — widen this vector once it is clean,
    rather than leaving the exclusion implicit."
-  ["scripts/test.bb" "scripts/lint.bb"])
+  ["scripts/test.bb" "scripts/lint.bb" "scripts/test-assessments.bb"])
+
+(def assessment-scripts
+  "Standalone assessment entrypoints and tests, each linted independently with
+   the eta-mu package configuration rather than merged into one user namespace."
+  [".github/scripts/opencode_actionability_assessment.cljs"
+   ".github/scripts/opencode_actionability_assessment_test.cljs"
+   ".github/scripts/opencode_rejection_assessment.cljs"
+   ".github/scripts/opencode_rejection_assessment_test.cljs"])
 
 (defn lint-bb-scripts
   "clj-kondo over the bb scripts, one file per invocation.
@@ -83,6 +91,17 @@
                                    ["clj-kondo" "--lint" file]))
                       gate-scripts)]
     {:name "clj-kondo (gate scripts)"
+     :ok (every? :ok results)}))
+
+(defn lint-assessment-scripts
+  "Lint each CLJS script from the package cwd so its existing kondo config applies."
+  []
+  (let [results (mapv (fn [file]
+                        (run-check (str "clj-kondo (" file ")")
+                                   ["pnpm" "--dir" "packages/eta-mu" "exec" "clj-kondo"
+                                    "--lint" (str "../../" file)]))
+                      assessment-scripts)]
+    {:name "clj-kondo (assessment scripts)"
      :ok (every? :ok results)}))
 
 (defn -main [& args]
@@ -101,11 +120,17 @@
                       (str/join ", " (map short-name kondo-packages)))))
       (System/exit 1))
     (let [kondo-results
-          (into (mapv (fn [pkg]
-                        (run-check (str "clj-kondo (" pkg ")")
-                                   ["pnpm" "--filter" pkg "lint:kondo"]))
-                      selected)
-                (when-not only [(lint-bb-scripts)]))
+          (into (if (and kondo-only? (not only))
+                  ;; Keep the root script's recursive package coverage; exclude
+                  ;; its own package explicitly so includeWorkspaceRoot cannot recurse.
+                  [(run-check "clj-kondo (recursive packages)"
+                              ["pnpm" "-r" "--no-bail" "--if-present"
+                               "--filter" "!@open-hax/eta-mu-monorepo" "lint:kondo"])]
+                  (mapv (fn [pkg]
+                          (run-check (str "clj-kondo (" pkg ")")
+                                     ["pnpm" "--filter" pkg "lint:kondo"]))
+                        selected))
+                (when-not only [(lint-bb-scripts) (lint-assessment-scripts)]))
           ;; The TS-era checks still live in lint.mjs. Delegate rather than
           ;; extend it — new gate logic belongs in Clojure.
           legacy-results

@@ -120,9 +120,9 @@
     (host/output! {:status :verified :accepted-sha256 (:accepted-sha256 invocation)})))
 
 (defn ^:async entry []
-  (try
-    (let [[phase] (host/argv)
-          pins (assessment/require-protected-dependencies!)]
+  (let [[phase] (host/argv) terminal (atom nil)]
+    (try
+      (let [pins (assessment/require-protected-dependencies!)]
       (if (= phase "pins")
         (host/output! pins)
         (if (= phase "profile")
@@ -137,7 +137,19 @@
                         (assessment/rebind-input deps cfg source)
                         (host/output! {:status :input-bound}))
               "verify" (verify! deps cfg)
-              "publish" (host/output! (await (assessment/publish deps cfg)))
+              "publish" (let [result (await (assessment/publish deps cfg))]
+                          (reset! terminal result)
+                          (host/write-json! (required "PUBLICATION_RESULT_FILE") result)
+                          (if (= :qualified (:status result)) (host/output! result)
+                            (host/refuse! :unestablished-native-write)))
               (host/refuse! :host-phase))))))
-    (catch :default e (host/fail-exit! e))))
+      (catch :default e
+        (when (and (= phase "publish") (nil? @terminal))
+          (host/write-json! (required "PUBLICATION_RESULT_FILE")
+                            (or @terminal
+                                {:status :unestablished :outcome :not-attempted
+                                 :refusal-code (or (:code (ex-data e)) :host-publication-error)
+                                 :write-intent-performed false :retry-performed false :admitted false
+                                 :native-resolution-performed false :review-credit false})))
+        (host/fail-exit! e)))))
 (entry)

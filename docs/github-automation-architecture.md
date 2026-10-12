@@ -62,7 +62,7 @@ This document describes the centralized GitHub automation system owned by `open-
 3. Optionally publish changed packages to npm.
 
 ### 5. `opencode-code-review.yml` reference implementation
-**Purpose**: Produce a bounded, evidence-first pull-request review with OpenCode and `opencode/mimo-v2.6-flash-free`.
+**Purpose**: Produce a bounded, evidence-first pull-request review with OpenCode and a freshly discovered, active, tool-capable, zero-cost MiMo Flash model from its anonymous public provider.
 
 **Triggers**: Non-draft, same-repository pull requests opened, updated, reopened, or marked ready.
 
@@ -81,7 +81,7 @@ This document describes the centralized GitHub automation system owned by `open-
 
 The Muse projection intentionally omits write/network-capable multiplexed tools such as `receipt_river`, `edn_ledger`, `session_mycology`, and web search. It also omits actor/agent spawn, actor tell, task execution/control, and phase recording. Observer tools do not make Muse the owner of actor, event, policy, session, or workflow semantics.
 
-The reviewer cannot edit files, browse the web, or spawn subagents. Bash commands are denied except the exact no-op `true`, which retains tool registration without permitting file writes or command chaining. Skills provide process and environment adaptation, but never count as defect evidence. This avoids same-model consensus theater and limits free-tier quota use. The workflow needs no OpenCode credential — `opencode/mimo-v2.6-flash-free` uses the anonymous public-provider path — and disables public session sharing.
+The reviewer cannot edit files, browse the web, or spawn subagents. Bash commands are denied except the exact no-op `true`, which retains tool registration without permitting file writes or command chaining. Skills provide process and environment adaptation, but never count as defect evidence. This avoids same-model consensus theater and limits free-tier quota use. The workflow needs no OpenCode credential and disables public session sharing. Before review, it captures the installed CLI version and a refreshed verbose OpenCode catalog, then selects the unique latest eligible free MiMo Flash release/version. A reusable caller may request an exact ID only if that fresh catalog verifies its eligibility; missing, paid, inactive or ambiguous selections fail before any review call. The same selected ID and evidence digest bind both permitted attempts and final publication checks. Catalog eligibility does not establish provider health or review approval; inference failures still fail the required gate.
 
 The current default pins are explicit inside the workflow so review runs are revision-bound:
 

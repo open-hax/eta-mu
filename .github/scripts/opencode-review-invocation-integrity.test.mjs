@@ -8,6 +8,7 @@ import test from "node:test";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { runReviewRecovery } from "./run-opencode-review-recovery.mjs";
+import * as modelDiscovery from "./run-opencode-review-recovery.mjs";
 
 const runner = fileURLToPath(new URL("./run-opencode-review-recovery.mjs", import.meta.url));
 /**
@@ -1060,4 +1061,210 @@ test("final input coverage: healthy accepted first invocation is never duplicate
   const f = await finalCoverageExercise(t, { healthy: true }); assert.equal(f.error, undefined);
   assert.equal(f.invocations.length, 1); assert.equal(f.metadata.accepted_invocation.attempt, 1);
   assert.equal(f.metadata.recovery_reason, null); assert.equal(f.metadata.attempts[0].final_input_coverage, undefined);
+});
+
+
+/** Return the observed verbose-catalog field shape with an inert selectable version/date. */
+function freeMiMoRow(id = "mimo-v9.1-flash-free", release = "2027-01-01") {
+  return { id, providerID: "opencode", family: "mimo", status: "active", release_date: release,
+    api: { id, url: "https://example.invalid/inert", npm: "@ai-sdk/openai-compatible" },
+    capabilities: { toolcall: true, input: { text: true }, output: { text: true } },
+    cost: { input: 0, output: 0, cache: { read: 0, write: 0 } } };
+}
+
+/** Encode the actual ID-line/pretty-JSON catalog format without connecting to a provider. */
+function verboseModelCatalog(rows) {
+  return `\x1b[32mModels cache refreshed\x1b[0m\n\n${rows.map((row) =>
+    `opencode/${row.id}\n${JSON.stringify(row, null, 2)}`).join("\n")}\n`;
+}
+
+/** Add measured version/catalog/run argv to the existing process fixture, never real OpenCode. */
+function discoveryCliFixture(t, { rows = [freeMiMoRow()], catalog, version = "1.18.18",
+  catalogExit = 0, catalogWait = false, runTail = "" } = {}) {
+  const f = cliFixture(t);
+  const anchor = "if (process.env.GITHUB_OUTPUT !== undefined) process.exit(19);\n";
+  const source = fs.readFileSync(f.child, "utf8");
+  assert.equal(source.split(anchor).length, 2);
+  const commands = `const args = process.argv.slice(2);
+fs.appendFileSync(${JSON.stringify(path.join(f.directory, "argv.ndjson"))}, JSON.stringify(args) + '\\n');
+if (args[0] === '--version') { console.log(${JSON.stringify(version)}); process.exit(0); }
+if (args[0] === 'models') {
+  ${catalogWait ? "await new Promise(resolve => setTimeout(resolve, 60_000));" : ""}
+  process.stdout.write(${JSON.stringify(catalog ?? verboseModelCatalog(rows))}); process.exit(${catalogExit});
+}
+`;
+  fs.writeFileSync(f.child, source.replace(anchor, anchor + commands) + runTail);
+  f.env.REVIEW_MODEL_DISCOVERY = "opencode-free-mimo-flash-v1";
+  f.env.REVIEW_EXPECTED_OPENCODE_VERSION = "1.18.18";
+  f.env.REVIEW_MODEL = "";
+  f.commands = () => fs.existsSync(path.join(f.directory, "argv.ndjson"))
+    ? fs.readFileSync(path.join(f.directory, "argv.ndjson"), "utf8").trim().split("\n").map(JSON.parse) : [];
+  return f;
+}
+
+test("ordinary runner verifies explicit anonymous MiMo once and freezes its selected ID across recovery", (t) => {
+  const f = discoveryCliFixture(t);
+  f.env.REVIEW_MODEL = "opencode/mimo-v9.1-flash-free";
+  const result = spawnSync(process.execPath, [runner], { env: f.env, encoding: "utf8", timeout: 10_000 });
+  assert.equal(result.status, 0, result.stderr);
+  const commands = f.commands();
+  assert.deepEqual(commands.slice(0, 2), [["--version"], ["models", "opencode", "--refresh", "--verbose"]]);
+  assert.equal(commands.length, 4);
+  for (const argv of commands.slice(2)) {
+    assert.deepEqual(argv.slice(0, 7), ["run", "--format", "json", "--agent", "github-reviewer", "--model", "opencode/mimo-v9.1-flash-free"]);
+  }
+  const proofFile = path.join(f.directory, "model-discovery.json");
+  const proofBytes = fs.readFileSync(proofFile), proof = JSON.parse(proofBytes);
+  const recovery = JSON.parse(fs.readFileSync(path.join(f.directory, "recovery.json")));
+  assert.equal(proof.status, "selected");
+  assert.equal(proof.mode, "explicit");
+  assert.equal(proof.declared_version, proof.observed_version);
+  assert.equal(proof.binary.sha256, sha256(fs.readFileSync(f.child)));
+  assert.equal(proof.selected_row_sha256, sha256(JSON.stringify(freeMiMoRow())));
+  for (const command of proof.commands) {
+    assert.equal(command.captures_closed, true);
+    assert.equal(command.command[0], proof.binary.real_path);
+    for (const stream of ["stdout", "stderr"]) {
+      assert.equal(command[`${stream}_sha256`], sha256(fs.readFileSync(path.join(f.directory, command[`${stream}_file`]))));
+    }
+  }
+  assert.equal(recovery.model_discovery.sha256, sha256(proofBytes));
+  assert.equal(recovery.accepted_invocation.model_discovery_sha256, sha256(proofBytes));
+  assert.equal(recovery.accepted_invocation.model, proof.selected_model);
+  assert.equal(recovery.attempts.length, 2);
+  assert.equal(fs.readFileSync(f.output, "utf8"), `review_invocation_sha256=${sha256(JSON.stringify(recovery.accepted_invocation))}\n`);
+});
+
+test("ordinary empty model input selects the latest eligible native ID without an alias", (t) => {
+  const rows = [freeMiMoRow("mimo-v2.9-flash-free", "2026-09-01"), freeMiMoRow("mimo-v2.10-flash-free", "2026-10-01")];
+  const f = discoveryCliFixture(t, { rows });
+  const result = spawnSync(process.execPath, [runner], { env: f.env, encoding: "utf8", timeout: 10_000 });
+  assert.equal(result.status, 0, result.stderr);
+  const proof = JSON.parse(fs.readFileSync(path.join(f.directory, "model-discovery.json")));
+  assert.equal(proof.mode, "latest");
+  assert.equal(proof.selected_model, "opencode/mimo-v2.10-flash-free");
+  assert.deepEqual(f.commands().slice(2).map(argv => argv[6]), [proof.selected_model, proof.selected_model]);
+});
+
+test("free MiMo selector uses numeric versions and coherent release maxima with verified explicit selection", () => {
+  const older = freeMiMoRow("mimo-v2.9-flash-free", "2026-09-01");
+  const newer = freeMiMoRow("mimo-v2.10-flash-free", "2026-10-01");
+  const rows = modelDiscovery.parseOpenCodeModelCatalog(Buffer.from(verboseModelCatalog([older, newer])));
+  assert.deepEqual(modelDiscovery.selectFreeMiMoFlash(rows), newer);
+  assert.deepEqual(modelDiscovery.selectFreeMiMoFlash(rows, "opencode/mimo-v2.9-flash-free"), older);
+  for (const requested of ["opencode/missing-free", "other/mimo-v2.10-flash-free", "opencode/mimo-v2.10-flash-free "]) {
+    assert.throws(() => modelDiscovery.selectFreeMiMoFlash(rows, requested), /not a unique eligible/);
+  }
+  for (const candidates of [
+    [older, { ...newer, release_date: older.release_date }],
+    [{ ...older, release_date: "2026-11-01" }, newer],
+    [newer, freeMiMoRow("mimo-v2.10.0-flash-free", "2026-11-01")],
+  ]) assert.throws(() => modelDiscovery.selectFreeMiMoFlash(candidates), /ambiguous latest/);
+  for (const date of [undefined, "2026-02-30", "not-a-date"]) {
+    assert.throws(() => modelDiscovery.selectFreeMiMoFlash([{ ...newer, release_date: date }]), /no rankable/);
+  }
+});
+
+test("free MiMo selection rejects paid branches, incompatible roles and malformed native catalog records", () => {
+  const valid = freeMiMoRow();
+  const variants = [
+    { providerID: "other" }, { family: "kimi" }, { status: "deprecated" },
+    { id: "mimo-v9.1-pro-free" }, { capabilities: { ...valid.capabilities, toolcall: false } },
+    { capabilities: { ...valid.capabilities, output: { text: false } } },
+    { cost: { ...valid.cost, input: 1 } }, { cost: { ...valid.cost, output: 1 } },
+    { cost: { ...valid.cost, cache: { read: 1, write: 0 } } },
+    { cost: { ...valid.cost, tiers: [{ ...valid.cost, output: 1 }] } },
+    { cost: { ...valid.cost, experimentalOver200K: { ...valid.cost, input: 1 } } },
+  ];
+  for (const change of variants) assert.throws(() => modelDiscovery.selectFreeMiMoFlash([{ ...valid, ...change }]), /no eligible/);
+  const catalog = verboseModelCatalog([valid]);
+  for (const bytes of [
+    Buffer.from("not a catalog\n" + catalog), Buffer.from(catalog + "trailing diagnostic\n"),
+    Buffer.from(catalog + catalog.replace(/^.*?\n\n/, "")), Buffer.from(catalog.replace('"providerID": "opencode"', '"providerID": "other"')),
+    Buffer.from(catalog.replace('"api": {', '"api": null, "ignored": {')), Buffer.from("opencode/only-id\n"),
+    Buffer.from([0xff, 0x80]),
+  ]) assert.throws(() => modelDiscovery.parseOpenCodeModelCatalog(bytes));
+});
+
+test("ordinary discovery failures preserve zero review calls and no trusted invocation", (t) => {
+  const cases = [
+    { name: "version mismatch", options: { version: "1.19.0" } },
+    { name: "catalog command failure", options: { catalogExit: 1 } },
+    { name: "catalog malformed", options: { catalog: "opencode/id\n{" } },
+    { name: "paid explicit", options: { rows: [{ ...freeMiMoRow(), cost: { ...freeMiMoRow().cost, output: 1 } }] }, model: "opencode/mimo-v9.1-flash-free" },
+    { name: "missing explicit", options: {}, model: "opencode/missing-free" },
+    { name: "output collision", options: {}, collision: true },
+    { name: "invalid declared version", options: {}, expectedVersion: "unknown" },
+  ];
+  for (const { name, options, model, collision, expectedVersion } of cases) {
+    const f = discoveryCliFixture(t, options);
+    if (model) f.env.REVIEW_MODEL = model;
+    if (expectedVersion) f.env.REVIEW_EXPECTED_OPENCODE_VERSION = expectedVersion;
+    if (collision) fs.writeFileSync(path.join(f.directory, "model-catalog.stdout"), "preserved original\n");
+    const result = spawnSync(process.execPath, [runner], { env: f.env, encoding: "utf8", timeout: 10_000 });
+    assert.equal(result.status, 1, `${name}: ${result.stderr}`);
+    assert.equal(f.commands().filter(([command]) => command === "run").length, 0, name);
+    assert.equal(fs.existsSync(path.join(f.directory, "submission.json")), false, name);
+    assert.equal(fs.existsSync(f.output), false, name);
+    const recovery = JSON.parse(fs.readFileSync(path.join(f.directory, "recovery.json")));
+    assert.equal(recovery.accepted_invocation, null, name);
+    assert.deepEqual(recovery.attempts, [], name);
+    if (collision) {
+      assert.deepEqual(f.commands(), []);
+      assert.equal(fs.readFileSync(path.join(f.directory, "model-catalog.stdout"), "utf8"), "preserved original\n");
+    }
+  }
+});
+
+test("ordinary catalog timeout stops discovery without starting a model invocation", { timeout: 36_000 }, (t) => {
+  const f = discoveryCliFixture(t, { catalogWait: true });
+  const result = spawnSync(process.execPath, [runner], { env: f.env, encoding: "utf8", timeout: 35_000 });
+  assert.equal(result.status, 1, result.stderr);
+  assert.equal(result.signal, null, "supervisor's own discovery deadline must stop the inert child");
+  const proof = JSON.parse(fs.readFileSync(path.join(f.directory, "model-discovery.json")));
+  assert.equal(proof.commands.at(-1).timed_out, true);
+  assert.equal(proof.commands.at(-1).captures_closed, true);
+  assert.equal(f.commands().filter(([command]) => command === "run").length, 0);
+  assert.equal(fs.existsSync(f.output), false);
+});
+
+test("changed discovery evidence refuses acceptance and setup faults never discover", (t) => {
+  const f = discoveryCliFixture(t, { runTail: "fs.appendFileSync(path.join(dir, 'model-catalog.stdout'), 'tampered\\n');\n" });
+  const result = spawnSync(process.execPath, [runner], { env: f.env, encoding: "utf8", timeout: 10_000 });
+  assert.equal(result.status, 1, result.stderr);
+  assert.equal(f.commands().filter(([command]) => command === "run").length, 1);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(f.directory, "recovery.json"))).accepted_invocation, null);
+  assert.equal(fs.existsSync(f.output), false);
+  const badSetup = discoveryCliFixture(t);
+  fs.writeFileSync(badSetup.verifier, "exports.verifyReviewInvocation=()=>null; exports.prepareReviewInvocationContext=()=>{throw Error('canonical setup refusal')};\n");
+  const refusedSetup = spawnSync(process.execPath, [runner], { env: badSetup.env, encoding: "utf8", timeout: 10_000 });
+  assert.equal(refusedSetup.status, 1, refusedSetup.stderr);
+  assert.deepEqual(badSetup.commands(), []);
+});
+
+
+test("dynamic discovery executes the bound binary after its requested symlink is retargeted", (t) => {
+  const f = discoveryCliFixture(t);
+  const alias = path.join(f.directory, "opencode-alias"), impostor = path.join(f.directory, "impostor.mjs");
+  const marker = path.join(f.directory, "impostor-invoked.txt");
+  const source = fs.readFileSync(f.child, "utf8");
+  const versionBranch = "if (args[0] === '--version') {";
+  const retarget = `fs.unlinkSync(${JSON.stringify(alias)}); fs.symlinkSync(${JSON.stringify(impostor)}, ${JSON.stringify(alias)});`;
+  assert.equal(source.split(versionBranch).length, 2);
+  fs.writeFileSync(f.child, source.replace(versionBranch, versionBranch + retarget));
+  const imported = "import fs from 'node:fs'; import path from 'node:path';\n";
+  assert.equal(source.split(imported).length, 2);
+  fs.writeFileSync(impostor, source.replace(imported, imported + `fs.appendFileSync(${JSON.stringify(marker)}, 'invoked\\n');\n`));
+  fs.chmodSync(impostor, 0o755);
+  fs.symlinkSync(f.child, alias);
+  f.env.OPENCODE_BIN = alias;
+  const result = spawnSync(process.execPath, [runner], { env: f.env, encoding: "utf8", timeout: 10_000 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.realpathSync(alias), impostor, "the source control must actually retarget the requested alias");
+  assert.equal(fs.existsSync(marker), false, "catalog and both reviews must execute the bound physical file");
+  const proof = JSON.parse(fs.readFileSync(path.join(f.directory, "model-discovery.json")));
+  assert.equal(proof.binary.requested, alias);
+  assert.equal(proof.binary.real_path, fs.realpathSync(f.child));
+  assert.ok(proof.commands.every(command => command.command[0] === proof.binary.real_path));
+  assert.equal(f.commands().length, 4);
 });

@@ -32,7 +32,7 @@ Kimi must not close ambiguous issues or make broad/destructive changes.
 
 ## MiMo evidence-first PR review
 
-`.github/workflows/opencode-code-review.yml` reviews non-draft, same-repository pull requests with the project-local `github-reviewer` OpenCode agent and the `opencode/mimo-v2.6-flash-free` model.
+`.github/workflows/opencode-code-review.yml` reviews non-draft, same-repository pull requests with the project-local `github-reviewer` OpenCode agent and a freshly discovered, active, tool-capable, zero-cost MiMo Flash model from OpenCode's anonymous public provider.
 
 Direct pull requests and reusable callers default to a 60-minute review job.
 Reusable callers may set numeric `review_timeout_minutes` to a whole number from
@@ -282,7 +282,7 @@ A reportable inline finding must:
 
 Test gaps and unresolved questions belong in one concise non-blocking summary. If no candidate survives validation, the agent leaves a short passing summary instead of inventing comments.
 
-The reviewer runs `opencode/mimo-v2.6-flash-free` over OpenCode's anonymous public-provider path, so no `OPENCODE_API_KEY` secret is required — when no OpenCode credential is connected, OpenCode supplies the public credential and disables only models with a non-zero input cost. Inline review comments are mirrored to Discord by the workflow's final notification step.
+The reviewer uses OpenCode's anonymous public-provider path, so no `OPENCODE_API_KEY` secret is required. The installed CLI version and refreshed verbose catalog are retained before review. Empty `model` input selects the unique latest eligible MiMo Flash release/version; an exact caller-selected ID must also be present, active, tool-capable and wholly zero-cost in that catalog. Version, catalog or selection failures stop before inference, and the same selected ID/proof digest binds both allowed review attempts and final publication checks. Catalog eligibility is distinct from provider health: inference failures still fail the required review gate. Inline review comments are mirrored to Discord by the workflow's final notification step.
 
 ## CodeRabbit and review gates
 
@@ -389,6 +389,14 @@ dispatched caller retains that route even though GitHub supplies its
 same input signal. Host run/caller coordinates remain separate from target
 repository/PR/thread coordinates.
 
+Both native assessment routes accept only public `open-hax/*` target repositories.
+Every job reads native repository metadata before checkout and requires the exact
+configured repository name/database ID, `visibility: public` and `private: false`.
+Unknown, private, internal or contradictory metadata refuses before target source
+or App credentials are made available. No cross-repository private read credential
+is provided. The separate publication token remains scoped to the selected target;
+model input and its process environment remain credential-free.
+
 Start a fresh workflow run for this route. Whole-job and failed-job reruns are
 refused by every job before native reads, checkout, artifact downloads or App
 token creation. Input, profile and result artifact names bind the run ID and
@@ -443,6 +451,13 @@ application retry. A transport timeout or HTTP 5xx response triggers complete
 paginated readback because a server failure can follow a committed write;
 zero, multiple or mismatched records remain uncertain. An existing exact record
 is verified with its native GET and canonical disposition instead of duplicated.
+The actionability host retains the actual one-shot outcome, HTTP status and native
+POST response coordinates even if later recollection or GET fails. It writes an
+unestablished terminal result before exiting unsuccessfully, and the workflow
+uploads that result with `always()`. Pre-write refusal records say no intent was
+attempted; the workflow's startup fallback says the effect is unknown if the host
+cannot produce a terminal result. Neither failure record supplies admission or
+permission to retry the write.
 The actual record's ID, principal, creation/edit times and current context determine
 admission. A context race can invalidate a comment; GitHub supplies no context
 compare-and-swap. The route never posts an ordinary pull review, replies inline,

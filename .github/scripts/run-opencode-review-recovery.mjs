@@ -12,6 +12,197 @@ import { isDeepStrictEqual, stripVTControlCharacters } from "node:util";
 const RECOVERY_SCHEMA = "open-hax.review-recovery/v1";
 const MAX_ATTEMPTS = 2;
 
+const MODEL_DISCOVERY_MODE = "opencode-free-mimo-flash-v1";
+const MODEL_DISCOVERY_BUDGET_MS = 30_000;
+
+/** Decode the ID-line/pretty-JSON format emitted by `opencode models --verbose`. */
+export function parseOpenCodeModelCatalog(bytes) {
+  const text = stripVTControlCharacters(new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes));
+  const lines = text.split(/\r?\n/);
+  while (lines[0]?.trim() === "") lines.shift();
+  if (lines[0] === "Models cache refreshed") lines.shift();
+  const rows = [], labels = new Set();
+  let label = null, body = [];
+  const finish = () => {
+    if (label === null) return;
+    let row;
+    try { row = JSON.parse(body.join("\n")); }
+    catch { throw new Error("invalid OpenCode verbose model JSON"); }
+    if (!row || typeof row !== "object" || Array.isArray(row) ||
+        row.providerID !== "opencode" || label !== `opencode/${row.id}` || row.api?.id !== row.id) {
+      throw new Error("OpenCode catalog label/metadata identity mismatch");
+    }
+    rows.push(row);
+  };
+  for (const line of lines) {
+    if (/^opencode\/[a-z0-9][a-z0-9._-]*$/.test(line)) {
+      finish();
+      if (labels.has(line)) throw new Error("duplicate OpenCode catalog model ID");
+      labels.add(line); label = line; body = [];
+    } else if (label !== null) body.push(line);
+    else if (line.trim() !== "") throw new Error("unsupported OpenCode verbose catalog prefix");
+  }
+  finish();
+  if (rows.length === 0) throw new Error("empty OpenCode verbose catalog");
+  return rows;
+}
+
+/** Compare numeric version tuples without lexicographic ordering or changing native IDs. */
+function compareModelVersions(left, right) {
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+    const difference = (left[index] ?? 0) - (right[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
+}
+
+/** Select only an active, tool-capable, wholly zero-cost OpenCode MiMo Flash catalog row. */
+export function selectFreeMiMoFlash(rows, requested = "") {
+  if (typeof requested !== "string") throw new Error("explicit review model must be a string");
+  const zeroPrice = (price) => price && price.input === 0 && price.output === 0 &&
+    price.cache?.read === 0 && price.cache?.write === 0;
+  const eligible = [];
+  for (const row of rows) {
+    const version = /^mimo-v(\d+(?:\.\d+)*)-flash-free$/.exec(row.id);
+    if (row.providerID !== "opencode" || row.family !== "mimo" || !version ||
+        row.status !== "active" || row.capabilities?.toolcall !== true ||
+        row.capabilities.input?.text !== true || row.capabilities.output?.text !== true ||
+        !zeroPrice(row.cost) || (row.cost.tiers !== undefined &&
+          (!Array.isArray(row.cost.tiers) || !row.cost.tiers.every(zeroPrice))) ||
+        (row.cost.experimentalOver200K !== undefined && !zeroPrice(row.cost.experimentalOver200K))) continue;
+    const components = version[1].split(".").map(Number);
+    const date = typeof row.release_date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(row.release_date)
+      ? new Date(`${row.release_date}T00:00:00Z`) : null;
+    if (!components.every(Number.isSafeInteger) || !date || !Number.isFinite(date.getTime()) ||
+        date.toISOString().slice(0, 10) !== row.release_date) {
+      throw new Error("eligible MiMo Flash catalog row has no rankable release/version");
+    }
+    eligible.push({ row, version: components });
+  }
+  if (requested !== "") {
+    const selected = eligible.filter(({ row }) => `opencode/${row.id}` === requested);
+    if (selected.length !== 1) throw new Error("explicit review model is not a unique eligible free MiMo Flash row");
+    return selected[0].row;
+  }
+  if (eligible.length === 0) throw new Error("no eligible free OpenCode MiMo Flash model");
+  const dateMaximum = eligible.reduce((date, { row }) => row.release_date > date ? row.release_date : date, "");
+  const versionMaximum = eligible.reduce((version, candidate) =>
+    compareModelVersions(candidate.version, version) > 0 ? candidate.version : version, []);
+  const byDate = eligible.filter(({ row }) => row.release_date === dateMaximum);
+  const byVersion = eligible.filter(({ version }) => compareModelVersions(version, versionMaximum) === 0);
+  if (byDate.length !== 1 || byVersion.length !== 1 || byDate[0] !== byVersion[0]) {
+    throw new Error("ambiguous latest free MiMo Flash release/version");
+  }
+  return byDate[0].row;
+}
+
+/** Capture one catalog command under the shared discovery deadline, retaining all output bytes. */
+async function captureModelCommand({ binary, args, environment, deadline, directory, stem }) {
+  const stdoutFile = path.join(directory, `${stem}.stdout`), stderrFile = path.join(directory, `${stem}.stderr`);
+  const stdout = fs.createWriteStream(stdoutFile, { flags: "wx", mode: 0o600 });
+  const stderr = fs.createWriteStream(stderrFile, { flags: "wx", mode: 0o600 });
+  const streams = Promise.allSettled([finished(stdout), finished(stderr)]);
+  let timeout, force, timedOut = false, exit, failure, capturesClosed = false;
+  try {
+    const remaining = deadline - performance.now();
+    if (remaining <= 0) throw new Error("OpenCode model discovery deadline expired");
+    const child = spawn(binary, args, { stdio: ["ignore", "pipe", "pipe"], env: environment });
+    child.stdout.pipe(stdout); child.stderr.pipe(stderr);
+    timeout = setTimeout(() => {
+      timedOut = true; child.kill("SIGTERM");
+      force = setTimeout(() => child.kill("SIGKILL"), 250);
+    }, remaining);
+    exit = await new Promise((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", (code, signal) => resolve({ code, signal }));
+    });
+  } catch (error) { failure = error; }
+  finally {
+    clearTimeout(timeout); clearTimeout(force);
+    stdout.end(); stderr.end();
+    const closed = await streams;
+    capturesClosed = closed.every(({ status }) => status === "fulfilled");
+    if (!failure && closed.some(({ status }) => status === "rejected")) failure = new Error("OpenCode catalog capture failed");
+  }
+  const record = { command: [binary, ...args], exit_code: exit?.code ?? null,
+    signal: exit?.signal ?? null, timed_out: timedOut, captures_closed: capturesClosed,
+    stdout_file: path.basename(stdoutFile), stderr_file: path.basename(stderrFile),
+    stdout_sha256: sha256(fs.readFileSync(stdoutFile)), stderr_sha256: sha256(fs.readFileSync(stderrFile)) };
+  if (failure) record.capture_error = "OpenCode catalog command/capture failed";
+  return record;
+}
+
+/** Resolve the same executable selected by Node's PATH lookup and retain its physical bytes. */
+function modelBinaryIdentity(binary, environment) {
+  const candidates = binary.includes(path.sep) ? [path.resolve(binary)] :
+    (environment.PATH || "").split(path.delimiter).map((directory) => path.resolve(directory || ".", binary));
+  for (const candidate of candidates) {
+    try {
+      fs.accessSync(candidate, fs.constants.X_OK);
+      const real = fs.realpathSync(candidate);
+      if (fs.statSync(real).isFile()) return { requested: binary, real_path: real, sha256: sha256(fs.readFileSync(real)) };
+    } catch { /* Try the next actual PATH entry. */ }
+  }
+  throw new Error("OpenCode executable is unavailable for model discovery");
+}
+
+/** Recheck the exact discovery proof/output/executable before and after every model attempt. */
+function assertModelDiscovery(binding) {
+  if (sha256(fs.readFileSync(binding.file)) !== binding.sha256 ||
+      sha256(fs.readFileSync(binding.proof.binary.real_path)) !== binding.proof.binary.sha256) {
+    throw new Error("OpenCode model discovery proof/executable changed");
+  }
+  for (const command of binding.proof.commands) for (const stream of ["stdout", "stderr"]) {
+    if (sha256(fs.readFileSync(path.join(path.dirname(binding.file), command[`${stream}_file`]))) !== command[`${stream}_sha256`]) {
+      throw new Error("OpenCode model discovery output changed");
+    }
+  }
+}
+
+/** Discover a fresh anonymous OpenCode catalog once; selection is provenance, never review admission. */
+export async function discoverFreeMiMoFlash({ evidenceDirectory, requested = "", expectedVersion,
+  binary = process.env.OPENCODE_BIN || "opencode", environment = { ...process.env } }) {
+  if (typeof expectedVersion !== "string" || !/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(expectedVersion)) {
+    throw new Error("declared OpenCode version is required for model discovery");
+  }
+  const proofFile = path.join(evidenceDirectory, "model-discovery.json");
+  const names = ["model-discovery.json", "model-version.stdout", "model-version.stderr", "model-catalog.stdout", "model-catalog.stderr",
+    "recovery.json", "submission.json", ...[1, 2].flatMap((attempt) => [`model-response-attempt-${attempt}.txt`, `opencode-stderr-attempt-${attempt}.log`])];
+  if (names.some((name) => fs.existsSync(path.join(evidenceDirectory, name)))) {
+    throw new Error("refusing pre-existing model discovery/invocation evidence");
+  }
+  const childEnvironment = { ...environment };
+  for (const name of ["GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_PATH", "GITHUB_STATE", "GITHUB_STEP_SUMMARY"]) delete childEnvironment[name];
+  const proof = { schema: "open-hax.review-model-discovery/v1", mode: requested === "" ? "latest" : "explicit",
+    requested_model: requested, declared_version: expectedVersion, status: "refused", commands: [], selected_model: null };
+  const deadline = performance.now() + MODEL_DISCOVERY_BUDGET_MS;
+  try {
+    proof.binary = modelBinaryIdentity(binary, childEnvironment);
+    const version = await captureModelCommand({ binary: proof.binary.real_path, args: ["--version"], environment: childEnvironment, deadline, directory: evidenceDirectory, stem: "model-version" });
+    proof.commands.push(version);
+    if (version.exit_code !== 0 || version.signal !== null || version.timed_out || !version.captures_closed || version.capture_error) throw new Error("OpenCode version discovery failed");
+    proof.observed_version = stripVTControlCharacters(fs.readFileSync(path.join(evidenceDirectory, version.stdout_file), "utf8")).trim();
+    if (proof.observed_version !== expectedVersion) throw new Error("OpenCode installed/declared version mismatch");
+    const catalog = await captureModelCommand({ binary: proof.binary.real_path, args: ["models", "opencode", "--refresh", "--verbose"], environment: childEnvironment, deadline, directory: evidenceDirectory, stem: "model-catalog" });
+    proof.commands.push(catalog);
+    if (catalog.exit_code !== 0 || catalog.signal !== null || catalog.timed_out || !catalog.captures_closed || catalog.capture_error) throw new Error("OpenCode model catalog discovery failed");
+    const rows = parseOpenCodeModelCatalog(fs.readFileSync(path.join(evidenceDirectory, catalog.stdout_file)));
+    const selected = selectFreeMiMoFlash(rows, requested);
+    proof.catalog_sha256 = catalog.stdout_sha256;
+    proof.selected_row = selected; proof.selected_row_sha256 = sha256(JSON.stringify(selected));
+    proof.selected_model = `opencode/${selected.id}`; proof.status = "selected";
+  } catch (error) {
+    proof.error = error instanceof Error ? error.message : "OpenCode model discovery failed";
+    fs.writeFileSync(proofFile, `${JSON.stringify(proof, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+    throw error;
+  }
+  fs.writeFileSync(proofFile, `${JSON.stringify(proof, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+  const binding = { file: proofFile, sha256: sha256(fs.readFileSync(proofFile)), proof };
+  assertModelDiscovery(binding);
+  return binding;
+}
+
+
 /**
  * Hash captured bytes without interpreting their contents.
  * @param {string|Buffer|TypedArray|DataView} bytes - Hash input.
@@ -524,6 +715,7 @@ export async function runReviewRecovery({
   expectedContext,
   verifierSha256 = null,
   fullInputName = "basehead.diff",
+  modelDiscovery = null,
 }) {
   if (!evidenceDirectory) throw new Error("evidenceDirectory is required");
   if (!["basehead.diff", "actionability-input.txt", "rejection-assessment-input.txt"].includes(fullInputName)) {
@@ -554,6 +746,7 @@ export async function runReviewRecovery({
     attempts: [],
   };
   if (strict) metadata.accepted_invocation = null;
+  if (modelDiscovery) metadata.model_discovery = modelDiscovery;
 
   if (fs.existsSync(submissionFile)) {
     throw new Error(`refusing pre-existing review submission: ${submissionFile}`);
@@ -626,6 +819,7 @@ export async function runReviewRecovery({
           canonical_verdict: verdict,
           verifier_sha256: verifierSha256,
           expected_context_sha256: sha256(JSON.stringify(expectedContext)),
+          ...(modelDiscovery ? { model_discovery_sha256: modelDiscovery.sha256, model: modelDiscovery.selected_model } : {}),
         };
         writeRecovery(metadataFile, metadata);
       }
@@ -680,9 +874,8 @@ function actionabilityChildEnvironment(purpose = "actionability") {
 }
 
 /** Run the configured OpenCode review and mirror stdout and stderr to retained files. */
-async function invokeOpenCode({ prompt, responseFile, stderrFile }) {
-  const opencodeBin = process.env.OPENCODE_BIN || "opencode";
-  const reviewModel = process.env.REVIEW_MODEL;
+async function invokeOpenCode({ prompt, responseFile, stderrFile, reviewModel = process.env.REVIEW_MODEL,
+  opencodeBin = process.env.OPENCODE_BIN || "opencode" }) {
   if (!reviewModel) throw new Error("REVIEW_MODEL is required");
 
   const response = fs.createWriteStream(responseFile, { flags: "w" });
@@ -798,12 +991,36 @@ async function main() {
     }
     throw error;
   }
+  let discovery = null;
+  try {
+    if (process.env.REVIEW_MODEL_DISCOVERY !== undefined) {
+      if (process.env.REVIEW_MODEL_DISCOVERY !== MODEL_DISCOVERY_MODE ||
+          (process.env.REVIEW_INPUT_PURPOSE || "diff") !== "diff") throw new Error("unsupported ordinary model discovery mode");
+      discovery = await discoverFreeMiMoFlash({ evidenceDirectory, requested: process.env.REVIEW_MODEL || "",
+        expectedVersion: process.env.REVIEW_EXPECTED_OPENCODE_VERSION });
+    }
+  } catch (error) {
+    const file = path.join(evidenceDirectory, "recovery.json");
+    if (!fs.existsSync(file)) writeRecovery(file, { schema: RECOVERY_SCHEMA, max_attempts: MAX_ATTEMPTS,
+      recovery_reason: null, attempts: [], accepted_invocation: null,
+      setup_error: error instanceof Error ? error.message : "model discovery failed" });
+    throw error;
+  }
+  const invoke = discovery ? async (arguments_) => {
+    assertModelDiscovery(discovery);
+    const result = await invokeOpenCode({ ...arguments_, reviewModel: discovery.proof.selected_model,
+      opencodeBin: discovery.proof.binary.real_path });
+    assertModelDiscovery(discovery);
+    return result;
+  } : invokeOpenCode;
   const metadata = await runReviewRecovery({ evidenceDirectory, basePrompt, reviewTools,
-    submissionFile, invokeAttempt: invokeOpenCode,
+    submissionFile, invokeAttempt: invoke,
+    modelDiscovery: discovery ? { file: "model-discovery.json", sha256: discovery.sha256, selected_model: discovery.proof.selected_model } : null,
     verifyReviewInvocation: verifier.verifyReviewInvocation, expectedContext,
     verifierSha256: sha256(verifierBytes), fullInputName });
   const accepted = metadata.accepted_invocation;
   try {
+    if (discovery) assertModelDiscovery(discovery);
     if (!accepted || sha256(fs.readFileSync(path.join(evidenceDirectory, accepted.response_file))) !== accepted.response_sha256 ||
         sha256(fs.readFileSync(submissionFile)) !== accepted.submission_sha256) {
       throw new Error("accepted invocation bytes changed before trusted output");

@@ -301,6 +301,12 @@ test("only the separate protected publisher job can access App write credentials
   assert.match(write.env.PREPARED_INPUT_SHA256, /needs.prepare.outputs.input_sha256/);
   assert.match(write.env.PREPARED_PROFILE_SHA256, /needs.prepare.outputs.profile_sha256/);
   assert.match(write.run, /opencode_actionability_assessment.cljs.*publish/);
+  assert.equal(write.env.PUBLICATION_RESULT_FILE, "${{ runner.temp }}/actionability-publication-result.json");
+  assert.doesNotMatch(write.run, /publish\s*>/);
+  const observed = workflow.jobs.publish.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
+  assert.equal(observed.if, "always()");
+  assert.equal(observed.with.path, write.env.PUBLICATION_RESULT_FILE);
+  assert.equal(observed.with["if-no-files-found"], "error");
   assert.equal(JSON.stringify(workflow).includes("publish-opencode-review"), false);
   assert.equal(JSON.stringify(workflow).includes("resolveReviewThread"), false);
 });
@@ -512,5 +518,87 @@ test("same-run reusable invocations have unique artifacts and consume their own 
     assert.equal(guard.env.ACTIONABILITY_JOB_WORKFLOW_SHA, "${{ job.workflow_sha }}");
     assert.equal(guard.env.ACTIONABILITY_JOB_WORKFLOW_REF, "${{ job.workflow_ref }}");
     assert.equal(guard.env.ACTIONABILITY_JOB_CHECK_RUN_ID, "${{ job.check_run_id }}");
+  }
+});
+
+/** Exercise the actual authored visibility guard with native-shaped inert reads. */
+test("every target checkout requires exact native identity and known public visibility", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-public-target-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const publicTarget = { full_name: "open-hax/another-installed-repo", id: 3, visibility: "public", private: false };
+  const cases = [
+    ["public", publicTarget, 0],
+    ["private", { ...publicTarget, visibility: "private", private: true }, 0],
+    ["internal", { ...publicTarget, visibility: "internal", private: true }, 0],
+    ["contradictory", { ...publicTarget, private: true }, 0],
+    ["unknown", { ...publicTarget, visibility: null }, 0],
+    ["missing-visibility", { full_name: publicTarget.full_name, id: 3, private: false }, 0],
+    ["missing-private", { full_name: publicTarget.full_name, id: 3, visibility: "public" }, 0],
+    ["wrong-id", { ...publicTarget, id: 4 }, 0],
+    ["wrong-name", { ...publicTarget, full_name: "open-hax/other" }, 0],
+    ["unavailable", {}, 44],
+    ["malformed", "not JSON", 0],
+  ];
+  for (const [jobName, job] of Object.entries(workflow.jobs)) {
+    const index = job.steps.findIndex((step) => step.name === "Require public native target before checkout");
+    assert.ok(index >= 0, "every job needs the public-target gate");
+    const guard = job.steps[index];
+    assert.equal(guard.env.GH_TOKEN, "${{ github.token }}");
+    assert.equal(Object.keys(guard.env).some((key) => /KEY|SECRET/.test(key)), false);
+    for (const [later, step] of job.steps.entries()) {
+      if (step.uses?.startsWith("actions/checkout@") || step.uses?.startsWith("actions/create-github-app-token@"))
+        assert.ok(index < later, "native visibility is checked before every checkout or App credential");
+    }
+    for (const [name, metadata, readExit] of cases) {
+      const effects = path.join(directory, jobName + "-" + name);
+      const child = spawnSync("bash", ["-c", guard.run + '\nprintf \'checkout-reached\\n\' >> "$TEST_EFFECTS"\n'],
+        { env: { PATH: process.env.PATH, TARGET_REPOSITORY: publicTarget.full_name, TARGET_REPOSITORY_ID: "3",
+          TEST_EFFECTS: effects, TEST_METADATA: typeof metadata === "string" ? metadata : JSON.stringify(metadata),
+          TEST_READ_EXIT: String(readExit),
+          "BASH_FUNC_gh%%": '() { [[ "$#" == 2 && "$1" == api && "$2" == "repos/$TARGET_REPOSITORY" ]] || return 97; [[ "$TEST_READ_EXIT" == 0 ]] || return "$TEST_READ_EXIT"; printf "%s\\n" "$TEST_METADATA"; }' },
+          encoding: "utf8", timeout: 15000 });
+      assert.equal(child.error, undefined);
+      assert.equal(child.signal, null);
+      if (name === "public") {
+        assert.equal(child.status, 0, jobName + " admits the exact public target");
+        assert.match(fs.readFileSync(effects, "utf8"), /checkout-reached/);
+      } else {
+        assert.notEqual(child.status, 0, jobName + " refuses " + name + " native metadata");
+        assert.equal(fs.existsSync(effects), false, "refusal occurs before modeled checkout/App continuation");
+      }
+    }
+  }
+});
+
+/** Execute only the shell carrier with an inert failing host, never a native write. */
+test("publication carrier preserves terminal bytes and an honest startup-crash fallback", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-publication-terminal-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const write = workflow.jobs.publish.steps.find((step) => step.name?.startsWith("Fresh canonical eligibility"));
+  const posted = { status: "unestablished", outcome: "posted", "refusal-code": "native-readback-error",
+    "actual-write-outcome": { outcome: "posted", "http-status": 201 }, "actual-post-response": { id: 7002 },
+    "write-intent-performed": true, "retry-performed": false, admitted: false };
+  const qualified = { status: "qualified", "record-id": 7002, "review-credit": false };
+  for (const [name, exitCode, terminal] of [["startup-crash", 71, null], ["empty-success", 0, null], ["refused-readback", 1, posted], ["qualified", 0, qualified]]) {
+    const file = path.join(directory, name + ".json");
+    const child = spawnSync("bash", ["-c", write.run],
+      { env: { PATH: process.env.PATH, PUBLICATION_RESULT_FILE: file, ETA_CHECKOUT: "/inert/eta", CANONICAL_CHECKOUT: "/inert/canonical",
+        TEST_HOST_EXIT: String(exitCode), TEST_TERMINAL: terminal ? JSON.stringify(terminal) : "",
+        "BASH_FUNC_node%%": '() { if [[ -n "$TEST_TERMINAL" ]]; then printf "%s\\n" "$TEST_TERMINAL" > "$PUBLICATION_RESULT_FILE"; fi; return "$TEST_HOST_EXIT"; }' },
+        encoding: "utf8", timeout: 15000 });
+    assert.equal(child.error, undefined);
+    assert.equal(child.signal, null);
+    assert.equal(child.status, terminal || exitCode !== 0 ? exitCode : 1);
+    const retained = JSON.parse(fs.readFileSync(file, "utf8"));
+    if (terminal) assert.deepEqual(retained, terminal, "host-written terminal bytes survive both failure and success");
+    else {
+      assert.equal(retained.status, "unestablished");
+      assert.equal(retained.outcome, "unknown", "startup failure cannot establish whether a write occurred");
+      assert.equal(retained["write-intent-performed"], null);
+      assert.equal(retained["retry-performed"], false);
+      assert.equal(retained.admitted, false);
+      assert.equal(retained["native-resolution-performed"], false);
+      assert.equal(retained["review-credit"], false);
+    }
   }
 });
