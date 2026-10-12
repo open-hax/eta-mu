@@ -723,3 +723,12 @@
   spore: none
   receipt-refs: 2fcca2b62d0623efb064c9574d3a24fadc6ccfbd61de8cac5b351631e8738b36,0fd7090e04567bd180a9d6aa0eeeed961f3acba966900329714f299301de79ab
   note: Whole context, immutable preimage and uncertain write readback must precede native effect. Match the sole failed first-stage guard with ordinary fixtures and preserve its old stageful trace adverse. Historical invalid receipts require new canonical observations, never rewrite. Retain all setup and audit failures. Pins remain inactive; no native agreement, resolver, model or deployment authority.
+- ts: 2026-10-12T03:33:53.070295355Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Repair hidden actionability interjob uploads
+  p-efficiency: 0.87
+  p-friction: 0.32
+  p-skill-candidate: 0.49
+  spore: none
+  receipt-refs: 8677cacf1b62ccce7762578158404f917f82453574f20abaf734ba451dea5129
+  note: Pinned upload-artifact excludes dot-directory payloads by default. Explicit named hidden evidence/profile directories need include-hidden-files. Inspect writers and selected paths before enabling; retain exact permission and pin refusal boundaries. Source-only qualification does not supply hosted publication credit.
