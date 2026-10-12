@@ -345,7 +345,21 @@ test("authored bootstrap authenticates source before every checkout on both rout
     GITHUB_WORKFLOW_SHA: "e".repeat(40), GITHUB_WORKFLOW_REF: "open-hax/knoxx/.github/workflows/caller.yml@refs/heads/main",
     TEST_RUN_JSON: JSON.stringify({ id: 31, run_attempt: 1, head_sha: "f".repeat(40), repository: { full_name: "open-hax/knoxx" },
       referenced_workflows: [{ sha, path: `open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@${sha}` }] }) };
-  assert.equal(run(manuallyCalled).status, 0, "manual caller event remains an authenticated reusable route");
+  assert.notEqual(run(manuallyCalled).status, 0, "foreign callers must dispatch in the owning repository");
+  for (const job of Object.values(workflow.jobs)) {
+    const authored = job.steps.find((step) => step.name === "Authenticate protected called source before checkout").run;
+    const effectsDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-foreign-publication-"));
+    const effects = path.join(effectsDirectory, "effects.txt");
+    try {
+      const foreign = spawnSync("bash", ["-c", `${authored}\nprintf 'publication-reached\n' >> "$TEST_EFFECTS"\n`],
+        { env: { ...env, ...manuallyCalled, TEST_EFFECTS: effects,
+          "BASH_FUNC_gh%%": '() { printf "native-read\\n" >> "$TEST_EFFECTS"; return 97; }' },
+          encoding: "utf8", timeout: 15000 });
+      assert.equal(foreign.status, 1);
+      assert.equal(fs.existsSync(effects), false, "foreign owner refuses before native reads or modeled publication");
+      assert.match(foreign.stdout, /share its publication lock/);
+    } finally { fs.rmSync(effectsDirectory, { recursive: true, force: true }); }
+  }
   assert.notEqual(run({ ...manuallyCalled, ACTIONABILITY_CALLED_REVISION: "" }).status, 0);
   assert.notEqual(run({ ...manuallyCalled, ACTIONABILITY_CALLED_REVISION: "malformed" }).status, 0);
   assert.notEqual(run({ ...manuallyCalled, ACTIONABILITY_CALLED_REVISION: "e".repeat(40) }).status, 0);
@@ -385,10 +399,10 @@ test("every job refuses reruns before native reads and later artifact or token s
     }
     for (const called of [false, true]) for (const attempt of [1, 2, 3]) {
       const effects = path.join(directory, `${jobName}-${called}-${attempt}.txt`);
-      const repo = called ? "open-hax/knoxx" : "open-hax/eta-mu";
+      const repo = "open-hax/eta-mu";
       const env = { PATH: process.env.PATH, ETA_SOURCE_SHA: sha, GITHUB_REPOSITORY: repo, GITHUB_RUN_ID: "31",
         GITHUB_RUN_ATTEMPT: String(attempt), GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_WORKFLOW_SHA: called ? "e".repeat(40) : sha,
-        GITHUB_WORKFLOW_REF: called ? "open-hax/knoxx/.github/workflows/caller.yml@refs/heads/main" : "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main",
+        GITHUB_WORKFLOW_REF: called ? "open-hax/eta-mu/.github/workflows/caller.yml@refs/heads/main" : "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main",
         ACTIONABILITY_CALLED_REVISION: called ? sha : "", TEST_EFFECTS: effects,
         TEST_BRANCH_JSON: JSON.stringify({ protected: true, commit: { sha } }),
         TEST_RUN_JSON: JSON.stringify({ id: 31, run_attempt: attempt, head_sha: called ? "f".repeat(40) : sha,

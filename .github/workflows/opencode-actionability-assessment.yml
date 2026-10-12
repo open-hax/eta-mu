@@ -51,6 +51,8 @@ env:
   ACTIONABILITY_PROFILE_DIR: ${{ github.workspace }}/.actionability/profile
   REVIEW_INVOCATION_VERIFIER_FILE: ${{ github.workspace }}/.actionability/profile/dist/review-invocation.cjs
 
+# Every publishing run is owned by eta-mu; GitHub concurrency is repository-scoped.
+# Other repositories request a dispatch here instead of calling from their own run.
 concurrency:
   group: actionability-${{ inputs.target_repository_id }}-${{ inputs.pr_number }}-${{ inputs.thread_id }}
   cancel-in-progress: false
@@ -84,6 +86,10 @@ jobs:
           set -euo pipefail
           [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
             echo '::error::Actionability assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
+            exit 1
+          }
+          [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]] || {
+            echo '::error::Dispatch actionability assessment in open-hax/eta-mu to share its publication lock.'
             exit 1
           }
           [[ "$ETA_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
@@ -189,6 +195,10 @@ jobs:
           set -euo pipefail
           [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
             echo '::error::Actionability assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
+            exit 1
+          }
+          [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]] || {
+            echo '::error::Dispatch actionability assessment in open-hax/eta-mu to share its publication lock.'
             exit 1
           }
           [[ "$ETA_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
@@ -300,6 +310,10 @@ jobs:
           set -euo pipefail
           [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
             echo '::error::Actionability assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
+            exit 1
+          }
+          [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]] || {
+            echo '::error::Dispatch actionability assessment in open-hax/eta-mu to share its publication lock.'
             exit 1
           }
           [[ "$ETA_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]

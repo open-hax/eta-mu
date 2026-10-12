@@ -193,6 +193,20 @@
                         {:name "Assess complete actionability input" :status "completed" :conclusion "success"}]}]}
         read (fn [f] (fn [_ resource & _] (get f resource)))]
     (check "actual-shaped direct default protected run binding" (host/verify-run! (read facts) cfg true) nil)
+    (let [called (assoc cfg :direct? false)
+          referenced [{:sha sha :path (str "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@" sha)}]
+          called-facts (-> facts
+                           (assoc-in ["repos/open-hax/eta-mu/actions/runs/31" :referenced_workflows] referenced)
+                           (assoc (str "repos/open-hax/eta-mu/compare/" sha "...main") {:status "identical"}))
+          foreign (assoc called :run-repo "open-hax/knoxx")
+          foreign-facts (assoc called-facts
+                              "repos/open-hax/knoxx" {:id 9 :full_name "open-hax/knoxx"}
+                              "repos/open-hax/knoxx/actions/runs/31"
+                              {:id 31 :run_attempt 1 :repository {:id 9 :full_name "open-hax/knoxx"}
+                               :referenced_workflows referenced})]
+      (check "same owning repository admits exact reusable source" (host/verify-run! (read called-facts) called false) nil)
+      (check "foreign caller refuses repository-scoped publication lock bypass"
+             (refused #(host/verify-run! (read foreign-facts) foreign false)) :host-run-source))
     (doseq [c [(assoc cfg :run-attempt 2) (assoc cfg :workflow-ref "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/feature")
                (assoc cfg :eta-revision (apply str (repeat 40 "e")))]]
       (check "wrong host run/source coordinate refuses" (refused #(host/verify-run! (read facts) c true)) :host-run-source))
@@ -305,7 +319,7 @@
                   (throw (ex-info "Owned Git object fixture preparation failed" {:args args :status (.-status result)})))
                 (str/trim (.-stdout result))))
         binary (js/Buffer.from #js [255 0 128 65])
-        link-target "../../../inert-dangling-target-must-not-be-opened"
+        link-target "\ufeff../../../inert-dangling-target-must-not-be-opened"
         text "immutable regular ημ\n"]
     (try
       (.chmodSync fs directory 448)
@@ -316,36 +330,45 @@
         (.writeFileSync fs (.join path directory "executable.sh") text #js {:mode 493})
         (.writeFileSync fs (.join path directory "binary.dat") binary)
         (.symlinkSync fs link-target (.join path directory "link"))
-        (git "add" "--" "executable.sh" "binary.dat" "link")
+        (.symlinkSync fs (js/Buffer.from #js [255 128]) (.join path directory "raw-link"))
+        (git "add" "--" "executable.sh" "binary.dat" "link" "raw-link")
         (git "update-index" "--add" "--cacheinfo" (str "160000," target ",submodule"))
         (git "commit" "-m" "Owned binary symlink and gitlink carrier")
-        (let [head (git "rev-parse" "HEAD") paths ["regular.cljc" "executable.sh" "binary.dat" "link" "submodule"]
+        (let [head (git "rev-parse" "HEAD") paths ["regular.cljc" "executable.sh" "binary.dat" "link" "raw-link" "submodule"]
               before (git "status" "--porcelain=v1") index (.readFileSync fs (.join path directory ".git/index"))
               attempted (mapv (fn [p]
                                 (try {:path p :value (host/immutable-source directory head [p])}
                                      (catch :default e {:path p :refused (or (:code (ex-data e)) :decoded-source-refusal)}))) paths)
               _supported (check "each ordinary Git object kind is supported independently"
-                                (mapv :refused attempted) [nil nil nil nil nil])
+                                (mapv :refused attempted) [nil nil nil nil nil nil])
               selected (host/immutable-source directory head paths)
               entries (into {} (map (juxt :path identity) (:files selected)))
               inventory (host/source-inventory
                          (fn [_ resource & _]
                            (case resource
-                             "repos/synthetic/native-context/pulls/1" {:number 1 :state "open" :head {:sha head} :base {:sha target} :changed_files 5}
+                             "repos/synthetic/native-context/pulls/1" {:number 1 :state "open" :head {:sha head} :base {:sha target} :changed_files 6}
                              "repos/synthetic/native-context/pulls/1/files?per_page=100"
                              [(mapv (fn [p] {:filename p :status "modified"}) paths)]
                              (throw (ex-info "Unexpected owned object inventory read" {:resource resource}))))
                          directory "synthetic/native-context" 1 head)]
-          (check "all five changed Git objects retain exact selected order" (mapv :path (:files inventory)) paths)
+          (check "all selected changed Git objects retain exact order" (mapv :path (:files inventory)) paths)
           (check "object-kind/carrier identities are explicit in versioned manifest" (first (:manifest selected)) 2)
           (check "regular UTF8 text is retained" (get-in entries ["regular.cljc" :text]) text)
           (check "executable UTF8 text is retained" (get-in entries ["executable.sh" :text]) text)
-          (doseq [[p mode] [["regular.cljc" "100644"] ["executable.sh" "100755"] ["binary.dat" "100644"] ["link" "120000"] ["submodule" "160000"]]]
+          (doseq [[p mode] [["regular.cljc" "100644"] ["executable.sh" "100755"] ["binary.dat" "100644"] ["link" "120000"] ["raw-link" "120000"] ["submodule" "160000"]]]
             (check "Git mode is exact" (get-in entries [p :git-mode]) mode)
             (check "Git object identity is exact" (get-in entries [p :blob]) (git "rev-parse" (str head ":" p))))
-          (doseq [p ["binary.dat" "link" "submodule"]]
+          (check "symlink target text reaches complete input without following the target"
+                 (get-in entries ["link" :text]) link-target)
+          (check "dangling symlink is never followed" (.existsSync fs (.join path directory "link")) false)
+          (check "UTF8 symlink projection preserves every byte including initial BOM"
+                 (.equals (js/Buffer.from (get-in entries ["link" :text]) "utf8") (js/Buffer.from link-target "utf8")) true)
+          (check "non-UTF8 symlink projection exposes exact base64"
+                 (get-in entries ["raw-link" :content-base64]) (.toString (js/Buffer.from #js [255 128]) "base64"))
+          (check "non-UTF8 dangling symlink is never followed" (.existsSync fs (.join path directory "raw-link")) false)
+          (doseq [p ["binary.dat" "raw-link" "submodule"]]
             (check "nontext carrier has no text projection" (contains? (entries p) :text) false))
-          (doseq [[p bytes] [["binary.dat" binary] ["link" (js/Buffer.from link-target "utf8")]]]
+          (doseq [[p bytes] [["binary.dat" binary] ["link" (js/Buffer.from link-target "utf8")] ["raw-link" (js/Buffer.from #js [255 128])]]]
             (check "raw blob carrier type" (get-in entries [p :object-type]) "blob")
             (check "raw blob carrier label" (get-in entries [p :byte-carrier]) "blob")
             (check "raw blob carrier byte size" (get-in entries [p :bytes]) (.-length bytes))
@@ -451,6 +474,7 @@
         (do
           (case only
             "dependency-pins" (dependency-pin-controls)
+            "host-run" (run-controls)
             "removed-source" (removed-source-controls)
              "immutable-objects" (immutable-object-controls)
             "http-transport" (await (http-status-controls [500 502 503 504 599 400 401 403 404 422 429]))

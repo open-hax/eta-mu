@@ -119,12 +119,14 @@
                           (let [carrier (if (= "commit" kind) "gitlink-object-id" "blob")
                                 bytes (if (= "commit" kind) (js/Buffer.from object "ascii")
                                           (run "cat-file" "blob" object))
-                                text (when (#{"100644" "100755"} mode)
-                                       (try (.decode (js/TextDecoder. "utf-8" #js {:fatal true}) bytes)
+                                text (when (#{"100644" "100755" "120000"} mode)
+                                       (try (.decode (js/TextDecoder. "utf-8" #js {:fatal true :ignoreBOM true}) bytes)
                                             (catch :default _ nil)))]
                             (cond-> {:path p :git-mode mode :object-type kind :blob object
                                      :byte-carrier carrier :bytes (.-length bytes) :sha256 (sha256 bytes)}
-                              (some? text) (assoc :text text))))) paths)
+                              (some? text) (assoc :text text)
+                              (and (= "120000" mode) (nil? text))
+                              (assoc :content-base64 (.toString bytes "base64")))))) paths)
           manifest [2 head (mapv #(mapv % [:path :git-mode :object-type :blob :byte-carrier :bytes :sha256]) files)]]
       {:head head :files files :manifest manifest :sha256 (sha256 (pr-str manifest))}))))
 
@@ -176,7 +178,8 @@
         default (:default_branch eta)
         branch (read "api" (str "repos/open-hax/eta-mu/branches/" default))
         full-ref (str "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/" default)]
-    (when-not (and (= run-id (:id run)) (= run-attempt (:run_attempt run))
+    (when-not (and (= "open-hax/eta-mu" run-repo)
+                   (= run-id (:id run)) (= run-attempt (:run_attempt run))
                    (true? (:protected branch))
                    (= (:id repository) (get-in run [:repository :id]))
                    (= run-repo (get-in run [:repository :full_name]))

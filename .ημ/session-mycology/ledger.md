@@ -750,3 +750,12 @@
   spore: none
   receipt-refs: 25826e52-aaee-4a57-b2ab-bcd870f002ce,f5dfb9adf692edeca056d63e6471a9be19b50091292a88693982acc35e65d65b
   note: Genuine missing staged-input prompt and binary or symbolic Git object predecessor assertions became green with six source edits. Both first and corrective prompts include staged purpose input; text-only domain admission rejects binary symlink and gitlink source objects. Actual13 accepted captures include12workflow tests36object checks282NBB checks140ordinary Node tests and full194tests587assertions plus6workflowtests78assertions. Mixed ESM setup and missing actionlint PATH failures retained without causal credit; identical relocated carrier and installed actionlint V2 completed. Preserve exact runner mirror and card frontmatter. Native review and protected merge remain pending. No new spore or promotion.
+- ts: 2026-10-12T09:13:17.511881219Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Centralize assessment publication and preserve immutable symlink bytes
+  p-efficiency: 0.68
+  p-friction: 0.75
+  p-skill-candidate: 0.70
+  spore: none
+  receipt-refs: bae8f4f2ea624e62fe5c9247b5ec101742a7acbbdfa82bdc35a5bafe44a3b5b8
+  note: Preserve real RED and forecast/refusal evidence; exact owned source application qualified locally; native review and production qualification remain separate.
