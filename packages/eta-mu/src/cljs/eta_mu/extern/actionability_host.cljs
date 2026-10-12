@@ -24,7 +24,10 @@
                  (= (.resolve path file) (.realpathSync fs file)))
     (refuse! :regular-file))
   (.readFileSync fs file))
-(defn read-text [file] (.decode (js/TextDecoder. "utf-8" #js {:fatal true}) (read-bytes file)))
+(defn read-text
+  ([file] (read-text file false))
+  ([file preserve-bom?]
+   (.decode (js/TextDecoder. "utf-8" #js {:fatal true :ignoreBOM preserve-bom?}) (read-bytes file))))
 (defn read-json [file] (js->clj (js/JSON.parse (read-text file)) :keywordize-keys true))
 (defn read-edn [file]
   (let [forms (edamame/parse-string-all (read-text file))]
@@ -170,7 +173,18 @@
 
 (defn verify-run!
   "Bind host-run/caller coordinates separately from target PR coordinates."
-  [read config publication?]
+  ([read config publication?]
+   (verify-run! read config publication?
+                {:workflow-file "opencode-actionability-assessment.yml"
+                 :producer-jobs ["Prepare actionability input" "Assess complete actionability input"]}))
+  ([read config publication? {:keys [workflow-file producer-jobs]}]
+  ;; Literal source-owned transport routes; no environment-selected policy.
+  (when-not (#{["opencode-actionability-assessment.yml"
+               ["Prepare actionability input" "Assess complete actionability input"]]
+              ["opencode-rejection-assessment.yml"
+               ["Prepare rejection input" "Assess complete rejection input"]]}
+             [workflow-file producer-jobs])
+    (refuse! :host-route))
   (let [{:keys [run-repo run-id run-attempt workflow-sha workflow-ref eta-revision direct?
                 job-workflow-sha job-workflow-ref prepare-check-run-id assess-check-run-id]} config
         repository (read "api" (str "repos/" run-repo))
@@ -178,12 +192,15 @@
         eta (read "api" "repos/open-hax/eta-mu")
         default (:default_branch eta)
         branch (read "api" (str "repos/open-hax/eta-mu/branches/" default))
-        full-ref (str "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/" default)]
+        full-ref (str "open-hax/eta-mu/.github/workflows/" workflow-file "@refs/heads/" default)]
     (when-not (and (= "open-hax/eta-mu" run-repo)
                    (= run-id (:id run)) (= run-attempt (:run_attempt run))
                    (= eta-revision job-workflow-sha)
                    (string? job-workflow-ref)
-                   (re-matches #"open-hax/eta-mu/\.github/workflows/opencode-actionability-assessment\.yml@.+" job-workflow-ref)
+                   (re-matches (if (= "opencode-rejection-assessment.yml" workflow-file)
+                                 #"open-hax/eta-mu/\.github/workflows/opencode-rejection-assessment\.yml@.+"
+                                 #"open-hax/eta-mu/\.github/workflows/opencode-actionability-assessment\.yml@.+")
+                               job-workflow-ref)
                    (pos-int? prepare-check-run-id)
                    (true? (:protected branch))
                    (= (:id repository) (get-in run [:repository :id]))
@@ -193,7 +210,7 @@
                           (= workflow-sha eta-revision (:head_sha run))
                           (= eta-revision (get-in branch [:commit :sha])))
                      (and (some #(and (= eta-revision (:sha %))
-                                      (str/starts-with? (:path %) "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@"))
+                                      (str/starts-with? (:path %) (str "open-hax/eta-mu/.github/workflows/" workflow-file "@")))
                                 (:referenced_workflows run))
                           (#{"ahead" "identical"}
                            (:status (read "api" (str "repos/open-hax/eta-mu/compare/" eta-revision "..." default)))))))
@@ -206,24 +223,27 @@
             jobs (mapcat :jobs pages)]
         (when-not (and (pos-int? assess-check-run-id) (not= prepare-check-run-id assess-check-run-id))
           (refuse! :trusted-job-completion))
-        (doseq [[label check-run-id] [["Prepare actionability input" prepare-check-run-id]
-                                     ["Assess complete actionability input" assess-check-run-id]]]
+        (doseq [[label check-run-id] (map vector producer-jobs [prepare-check-run-id assess-check-run-id])]
           (let [check-url (str "https://api.github.com/repos/" run-repo "/check-runs/" check-run-id)
                 matches (filter #(= check-url (:check_run_url %)) jobs)
                 job (first matches)]
             (when-not (and (= 1 (count matches)) (= run-id (:run_id job))
                            (or (= label (:name job)) (str/ends-with? (:name job) (str " / " label)))
                            (= "completed" (:status job)) (= "success" (:conclusion job)))
-              (refuse! :trusted-job-completion))))))))
+              (refuse! :trusted-job-completion)))))))))
 
 (defn invocation
   "Recompute actual accepted invocation with the selected source-built Muse export."
-  [directory verifier-file verifier-sha]
+  ([directory verifier-file verifier-sha]
+   (invocation directory verifier-file verifier-sha "actionability-input.txt"))
+  ([directory verifier-file verifier-sha input-name]
+  (when-not (#{"actionability-input.txt" "rejection-assessment-input.txt"} input-name)
+    (refuse! :input-file))
   (let [bytes (read-bytes verifier-file)]
     (when-not (= verifier-sha (sha256 bytes)) (refuse! :verifier-source))
     (let [require (.createRequire module verifier-file)
           verifier (require verifier-file)
-          full (read-bytes (.join path directory "actionability-input.txt"))
+          full (read-bytes (.join path directory input-name))
           manifest (read-bytes (.join path directory "input-manifest.json"))
           tools (vec (remove str/blank? (str/split-lines (read-text (.join path directory "tools.txt")))))
           raw-recovery (js/JSON.parse (read-text (.join path directory "recovery.json")))
@@ -253,17 +273,22 @@
         {:source (js->clj (.-inputSource prepared) :keywordize-keys true)
          :submission (js->clj (js/JSON.parse (.toString submission "utf8")) :keywordize-keys true)
          :accepted-sha256 (sha256 (js/JSON.stringify (.-accepted_invocation raw-recovery)))
-         :verifier-sha256 verifier-sha :verdict decoded}))))
+         :verifier-sha256 verifier-sha :verdict decoded})))))
 
-(defn input-source [directory verifier-file verifier-sha]
+(defn input-source
+  ([directory verifier-file verifier-sha]
+   (input-source directory verifier-file verifier-sha "actionability-input.txt"))
+  ([directory verifier-file verifier-sha input-name]
+  (when-not (#{"actionability-input.txt" "rejection-assessment-input.txt"} input-name)
+    (refuse! :input-file))
   (when-not (= verifier-sha (sha256 (read-bytes verifier-file))) (refuse! :verifier-source))
   (let [require (.createRequire module verifier-file) verifier (require verifier-file)
         tools (remove str/blank? (str/split-lines (read-text (join directory "tools.txt"))))
-        context (.prepareReviewInvocationContext verifier (read-bytes (join directory "actionability-input.txt"))
+        context (.prepareReviewInvocationContext verifier (read-bytes (join directory input-name))
                                                 (read-bytes (join directory "input-manifest.json"))
                                                 (clj->js tools) (join directory "submission.json"))]
     (when-not (= verifier-sha (sha256 (read-bytes verifier-file))) (refuse! :verifier-source))
-    (js->clj (.-inputSource context) :keywordize-keys true)))
+    (js->clj (.-inputSource context) :keywordize-keys true))))
 
 (defn app-jwt
   "Sign a short-lived publisher-only JWT; callers must never persist or report it."

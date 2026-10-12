@@ -1,0 +1,467 @@
+name: Independent native rejection assessment
+
+on:
+  workflow_call:
+    inputs:
+      target_repository: {description: Native owner/name, required: true, type: string}
+      target_repository_id: {description: Native numeric repository identity, required: true, type: string}
+      pr_number: {required: true, type: string}
+      head_sha: {required: true, type: string}
+      thread_id: {required: true, type: string}
+      root_comment_id: {required: true, type: string}
+      proposal_id: {required: true, type: string}
+      history_source_sha256: {description: Root-bound complete selected canonical CLI ledger SHA256, required: true, type: string}
+      history_cli_sha256: {description: Root-bound selected canonical CLI script SHA256, required: true, type: string}
+      eta_revision: {description: Exact protected called workflow commit, required: true, type: string}
+      review_timeout_minutes: {description: Whole minutes from 60 through 180, default: 60, type: number}
+    secrets:
+      ETA_MU_APP_ID: {required: true}
+      ETA_MU_APP_PRIVATE_KEY: {required: true}
+  workflow_dispatch:
+    inputs:
+      target_repository: {description: Native owner/name, required: true, type: string}
+      target_repository_id: {description: Native numeric repository identity, required: true, type: string}
+      pr_number: {required: true, type: string}
+      head_sha: {required: true, type: string}
+      thread_id: {required: true, type: string}
+      root_comment_id: {required: true, type: string}
+      proposal_id: {required: true, type: string}
+      history_source_sha256: {description: Root-bound complete selected canonical CLI ledger SHA256, required: true, type: string}
+      history_cli_sha256: {description: Root-bound selected canonical CLI script SHA256, required: true, type: string}
+      review_timeout_minutes: {description: Whole minutes from 60 through 180, default: 60, type: number}
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  actions: read
+
+# Exact protected API32 and Muse rejection-input source pins; host activation is separate.
+# Fresh native/custody checks and
+# complete applicable history remain prerequisites for live publication.
+env:
+  CANONICAL_REVISION: '5cea3e51a15d19277bd642147292c11b82de5369'
+  MUSE_REVISION: 'b7e4f98f550780a7b484b1525f53ad2934e29dad'
+  ETA_SOURCE_SHA: ${{ inputs.eta_revision || github.workflow_sha }}
+  REJECTION_CALLED_REVISION: ${{ inputs.eta_revision }}
+  TARGET_REPOSITORY: ${{ inputs.target_repository }}
+  TARGET_REPOSITORY_ID: ${{ inputs.target_repository_id }}
+  TARGET_PR_NUMBER: ${{ inputs.pr_number }}
+  TARGET_HEAD_SHA: ${{ inputs.head_sha }}
+  TARGET_THREAD_ID: ${{ inputs.thread_id }}
+  TARGET_ROOT_COMMENT_ID: ${{ inputs.root_comment_id }}
+  TARGET_PROPOSAL_ID: ${{ inputs.proposal_id }}
+  # Root confirms this module-relative protected CLI ledger is the current
+  # applicable source before dispatch; prepare carries its complete bytes.
+  REJECTION_HISTORY_SOURCE_KIND: protected-checkout
+  REJECTION_HISTORY_SOURCE_FILE: ${{ github.workspace }}/.rejection-assessment/canonical/.ημ/receipts.edn
+  REJECTION_HISTORY_CLI_FILE: ${{ github.workspace }}/.rejection-assessment/canonical/skills/pr-flow/scripts/pr.cljs
+  REJECTION_HISTORY_SOURCE_SHA256: ${{ inputs.history_source_sha256 }}
+  REJECTION_HISTORY_CLI_SHA256: ${{ inputs.history_cli_sha256 }}
+  CANONICAL_CHECKOUT: ${{ github.workspace }}/.rejection-assessment/canonical
+  MUSE_CHECKOUT: ${{ github.workspace }}/.rejection-assessment/muse
+  TARGET_CHECKOUT: ${{ github.workspace }}/.rejection-assessment/target
+  ETA_CHECKOUT: ${{ github.workspace }}/.rejection-assessment/eta
+  REJECTION_EVIDENCE_DIR: ${{ github.workspace }}/.rejection-assessment/model-root/.opencode/review-evidence
+  REJECTION_PROFILE_DIR: ${{ github.workspace }}/.rejection-assessment/profile
+  REVIEW_INVOCATION_VERIFIER_FILE: ${{ github.workspace }}/.rejection-assessment/profile/dist/review-invocation.cjs
+
+# Every publishing run is owned by eta-mu; GitHub concurrency is repository-scoped.
+# Other repositories request a dispatch here instead of calling from their own run.
+concurrency:
+  group: rejection-assessment-${{ inputs.target_repository_id }}-${{ inputs.pr_number }}-${{ inputs.thread_id }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare rejection input
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      input_sha256: ${{ steps.prepare.outputs.input_sha256 }}
+      profile_sha256: ${{ steps.profile.outputs.profile_sha256 }}
+      verifier_sha256: ${{ steps.profile.outputs.verifier_sha256 }}
+      invocation_id: ${{ job.check_run_id }}
+    steps:
+      - name: Refuse pending dependency pins and malformed time budget
+        shell: bash
+        env:
+          TIMEOUT_INPUT: ${{ inputs.review_timeout_minutes }}
+        run: |
+          set -euo pipefail
+          # The publisher App remains scoped to the configured open-hax owner.
+          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]]
+          [[ "$REJECTION_HISTORY_SOURCE_SHA256" =~ ^[0-9a-f]{64}$ && "$REJECTION_HISTORY_CLI_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$TIMEOUT_INPUT" =~ ^[0-9]+$ ]] && (( TIMEOUT_INPUT >= 60 && TIMEOUT_INPUT <= 180 ))
+          [[ "$CANONICAL_REVISION" =~ ^[0-9a-f]{40}$ && "$MUSE_REVISION" =~ ^[0-9a-f]{40}$ ]] || {
+            echo '::error::Protected canonical/Muse dependency pins are not adopted.'
+            exit 1
+          }
+      - name: Authenticate protected called source before checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REJECTION_JOB_WORKFLOW_SHA: ${{ job.workflow_sha }}
+          REJECTION_JOB_WORKFLOW_REF: ${{ job.workflow_ref }}
+          REJECTION_JOB_CHECK_RUN_ID: ${{ job.check_run_id }}
+          REJECTION_PREPARE_CHECK_RUN_ID: ${{ job.check_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
+            echo '::error::Rejection assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
+            exit 1
+          }
+          [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]] || {
+            echo '::error::Dispatch rejection assessment in open-hax/eta-mu to share its publication lock.'
+            exit 1
+          }
+          [[ "$ETA_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          # Authenticate this job's defining workflow; a sibling entry in the
+          # run's referenced_workflows aggregate cannot supply this identity.
+          [[ "$REJECTION_JOB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
+          [[ "$REJECTION_JOB_WORKFLOW_REF" =~ ^open-hax/eta-mu/\.github/workflows/opencode-rejection-assessment\.yml@.+$ ]]
+          [[ "$REJECTION_JOB_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ && "$REJECTION_PREPARE_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+          default=$(gh api repos/open-hax/eta-mu --jq .default_branch)
+          branch=$(gh api "repos/open-hax/eta-mu/branches/$default")
+          jq -e '.protected == true' <<< "$branch" > /dev/null
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
+          jq -e --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT" --arg repo "$GITHUB_REPOSITORY" \
+            '.id == $run and .run_attempt == $attempt and .repository.full_name == $repo' <<< "$run" > /dev/null
+          # A called workflow inherits the caller event, including manual
+          # dispatch. Only workflow_call declares the required eta_revision.
+          if [[ -z "$REJECTION_CALLED_REVISION" ]]; then
+            [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]
+            [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]]
+            [[ "$GITHUB_WORKFLOW_REF" == "open-hax/eta-mu/.github/workflows/opencode-rejection-assessment.yml@refs/heads/$default" ]]
+            [[ "$GITHUB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
+            [[ "$REJECTION_JOB_WORKFLOW_REF" == "$GITHUB_WORKFLOW_REF" ]]
+            [[ $(jq -r .commit.sha <<< "$branch") == "$ETA_SOURCE_SHA" ]]
+            jq -e --arg sha "$ETA_SOURCE_SHA" '.head_sha == $sha' <<< "$run" > /dev/null
+          else
+            [[ "$REJECTION_CALLED_REVISION" =~ ^[0-9a-f]{40}$ && "$REJECTION_CALLED_REVISION" == "$ETA_SOURCE_SHA" ]]
+            jq -e --arg sha "$ETA_SOURCE_SHA" \
+              '.referenced_workflows | any(.sha == $sha and (.path | startswith("open-hax/eta-mu/.github/workflows/opencode-rejection-assessment.yml@")))' <<< "$run" > /dev/null
+            gh api "repos/open-hax/eta-mu/compare/$ETA_SOURCE_SHA...$default" --jq .status | grep -Ex 'ahead|identical' > /dev/null
+          fi
+          # Carry only validated step context into later host entrypoints.
+          printf 'REJECTION_JOB_WORKFLOW_SHA=%s\nREJECTION_JOB_WORKFLOW_REF=%s\nREJECTION_PREPARE_CHECK_RUN_ID=%s\n' \
+            "$REJECTION_JOB_WORKFLOW_SHA" "$REJECTION_JOB_WORKFLOW_REF" "$REJECTION_PREPARE_CHECK_RUN_ID" >> "$GITHUB_ENV"
+          if [[ -n "${REJECTION_ASSESS_CHECK_RUN_ID:-}" ]]; then
+            [[ "$REJECTION_ASSESS_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+            printf 'REJECTION_ASSESS_CHECK_RUN_ID=%s\n' "$REJECTION_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
+          fi
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .rejection-assessment/eta, persist-credentials: false}
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {repository: riatzukiza/.agents, ref: '${{ env.CANONICAL_REVISION }}', path: .rejection-assessment/canonical, persist-credentials: false}
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {repository: octave-commons/muse, ref: '${{ env.MUSE_REVISION }}', path: .rejection-assessment/muse, persist-credentials: false}
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {repository: '${{ inputs.target_repository }}', ref: '${{ inputs.head_sha }}', path: .rejection-assessment/target, fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '24'}
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with: {distribution: temurin, java-version: '21'}
+      - uses: DeLaGuardo/setup-clojure@3fe9b3ae632c6758d0b7757b0838606ef4287b08
+        with: {cli: 1.12.5.1654}
+      - name: Install pinned one-shot host runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -m 700 -p "$RUNNER_TEMP/rejection-assessment-host-home" "$REJECTION_EVIDENCE_DIR" "$REJECTION_PROFILE_DIR"
+          npm install --prefix .rejection-assessment/runtime --ignore-scripts --no-audit --no-fund nbb@1.5.211 yaml@2.9.0
+          ln -s "$GITHUB_WORKSPACE/.rejection-assessment/runtime/node_modules" "$ETA_CHECKOUT/node_modules"
+      - name: Reuse protected read-only Muse profile compilation
+        shell: bash
+        env:
+          PROFILE_SCRIPT_FILE: ${{ runner.temp }}/rejection-assessment-profile.sh
+          ETA_WORKFLOW_FILE: ${{ github.workspace }}/.rejection-assessment/eta/.github/workflows/opencode-code-review.yml
+        run: |
+          set -euo pipefail
+          node .rejection-assessment/runtime/node_modules/nbb/cli.js -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts" "$ETA_CHECKOUT/.github/scripts/opencode_rejection_assessment.cljs" profile
+          mkdir -m 700 "$RUNNER_TEMP/rejection-assessment-muse-build"
+          git -C "$MUSE_CHECKOUT" archive "$MUSE_REVISION" | tar -x -C "$RUNNER_TEMP/rejection-assessment-muse-build"
+          (cd "$RUNNER_TEMP/rejection-assessment-muse-build" && bash "$PROFILE_SCRIPT_FILE")
+          cp -a "$RUNNER_TEMP/rejection-assessment-muse-build/.opencode/dist" "$REJECTION_PROFILE_DIR/"
+          cp -a "$RUNNER_TEMP/rejection-assessment-muse-build/.opencode/agents" "$REJECTION_PROFILE_DIR/"
+          cp "$RUNNER_TEMP/rejection-assessment-muse-build/.opencode/opencode.json" "$REJECTION_PROFILE_DIR/"
+          cp "$RUNNER_TEMP/rejection-assessment-muse-build/.opencode/package.json" "$REJECTION_PROFILE_DIR/"
+          cp "$RUNNER_TEMP/rejection-assessment-muse-build/.opencode/exposed-tools.txt" "$REJECTION_EVIDENCE_DIR/tools.txt"
+      - name: Bind compiled profile outside the child
+        id: profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          export HOST_CP="$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts"
+          profile_sha=$(node .rejection-assessment/runtime/node_modules/nbb/cli.js -cp "$HOST_CP" -e '(require (quote [eta-mu.extern.actionability-host :as h])) (println (h/directory-digest (h/env "REJECTION_PROFILE_DIR")))')
+          verifier_sha=$(sha256sum "$REVIEW_INVOCATION_VERIFIER_FILE" | cut -d ' ' -f 1)
+          echo "profile_sha256=$profile_sha" >> "$GITHUB_OUTPUT"
+          echo "verifier_sha256=$verifier_sha" >> "$GITHUB_OUTPUT"
+      - name: Fresh native collection and immutable source input
+        id: prepare
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REJECTION_HOST_HOME: ${{ runner.temp }}/rejection-assessment-host-home
+          PREPARED_PROFILE_SHA256: ${{ steps.profile.outputs.profile_sha256 }}
+          REVIEW_INVOCATION_VERIFIER_SHA256: ${{ steps.profile.outputs.verifier_sha256 }}
+        run: |
+          set -euo pipefail
+          node .rejection-assessment/runtime/node_modules/nbb/cli.js -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts" "$ETA_CHECKOUT/.github/scripts/opencode_rejection_assessment.cljs" prepare > "$RUNNER_TEMP/rejection-assessment-prepared.json"
+          input_sha=$(node .rejection-assessment/runtime/node_modules/nbb/cli.js -e '(require (quote ["node:fs" :as f])) (println (aget (js/JSON.parse (.readFileSync f (str (.-RUNNER_TEMP (.-env js/process)) "/rejection-assessment-prepared.json") "utf8")) "input-sha256"))')
+          echo "input_sha256=$input_sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: {name: 'rejection-assessment-input-${{ github.run_id }}-${{ github.run_attempt }}-${{ job.check_run_id }}', path: .rejection-assessment/model-root/.opencode/review-evidence, if-no-files-found: error, include-hidden-files: true}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: {name: 'rejection-assessment-profile-${{ github.run_id }}-${{ github.run_attempt }}-${{ job.check_run_id }}', path: .rejection-assessment/profile, if-no-files-found: error, include-hidden-files: true}
+
+  assess:
+    name: Assess complete rejection input
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.review_timeout_minutes > 180 && 180 || (inputs.review_timeout_minutes > 60 && inputs.review_timeout_minutes || 60) }}
+    outputs:
+      accepted_sha256: ${{ steps.assess.outputs.review_invocation_sha256 }}
+      check_run_id: ${{ job.check_run_id }}
+    steps:
+      - name: Authenticate protected called source before checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REJECTION_JOB_WORKFLOW_SHA: ${{ job.workflow_sha }}
+          REJECTION_JOB_WORKFLOW_REF: ${{ job.workflow_ref }}
+          REJECTION_JOB_CHECK_RUN_ID: ${{ job.check_run_id }}
+          REJECTION_PREPARE_CHECK_RUN_ID: ${{ needs.prepare.outputs.invocation_id }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
+            echo '::error::Rejection assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
+            exit 1
+          }
+          [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]] || {
+            echo '::error::Dispatch rejection assessment in open-hax/eta-mu to share its publication lock.'
+            exit 1
+          }
+          [[ "$ETA_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          # Authenticate this job's defining workflow; a sibling entry in the
+          # run's referenced_workflows aggregate cannot supply this identity.
+          [[ "$REJECTION_JOB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
+          [[ "$REJECTION_JOB_WORKFLOW_REF" =~ ^open-hax/eta-mu/\.github/workflows/opencode-rejection-assessment\.yml@.+$ ]]
+          [[ "$REJECTION_JOB_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ && "$REJECTION_PREPARE_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+          default=$(gh api repos/open-hax/eta-mu --jq .default_branch)
+          branch=$(gh api "repos/open-hax/eta-mu/branches/$default")
+          jq -e '.protected == true' <<< "$branch" > /dev/null
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
+          jq -e --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT" --arg repo "$GITHUB_REPOSITORY" \
+            '.id == $run and .run_attempt == $attempt and .repository.full_name == $repo' <<< "$run" > /dev/null
+          # A called workflow inherits the caller event, including manual
+          # dispatch. Only workflow_call declares the required eta_revision.
+          if [[ -z "$REJECTION_CALLED_REVISION" ]]; then
+            [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]
+            [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]]
+            [[ "$GITHUB_WORKFLOW_REF" == "open-hax/eta-mu/.github/workflows/opencode-rejection-assessment.yml@refs/heads/$default" ]]
+            [[ "$GITHUB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
+            [[ "$REJECTION_JOB_WORKFLOW_REF" == "$GITHUB_WORKFLOW_REF" ]]
+            [[ $(jq -r .commit.sha <<< "$branch") == "$ETA_SOURCE_SHA" ]]
+            jq -e --arg sha "$ETA_SOURCE_SHA" '.head_sha == $sha' <<< "$run" > /dev/null
+          else
+            [[ "$REJECTION_CALLED_REVISION" =~ ^[0-9a-f]{40}$ && "$REJECTION_CALLED_REVISION" == "$ETA_SOURCE_SHA" ]]
+            jq -e --arg sha "$ETA_SOURCE_SHA" \
+              '.referenced_workflows | any(.sha == $sha and (.path | startswith("open-hax/eta-mu/.github/workflows/opencode-rejection-assessment.yml@")))' <<< "$run" > /dev/null
+            gh api "repos/open-hax/eta-mu/compare/$ETA_SOURCE_SHA...$default" --jq .status | grep -Ex 'ahead|identical' > /dev/null
+          fi
+          # Carry only validated step context into later host entrypoints.
+          printf 'REJECTION_JOB_WORKFLOW_SHA=%s\nREJECTION_JOB_WORKFLOW_REF=%s\nREJECTION_PREPARE_CHECK_RUN_ID=%s\n' \
+            "$REJECTION_JOB_WORKFLOW_SHA" "$REJECTION_JOB_WORKFLOW_REF" "$REJECTION_PREPARE_CHECK_RUN_ID" >> "$GITHUB_ENV"
+          if [[ -n "${REJECTION_ASSESS_CHECK_RUN_ID:-}" ]]; then
+            [[ "$REJECTION_ASSESS_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+            printf 'REJECTION_ASSESS_CHECK_RUN_ID=%s\n' "$REJECTION_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
+          fi
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .rejection-assessment/eta, persist-credentials: false}
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {repository: riatzukiza/.agents, ref: '${{ env.CANONICAL_REVISION }}', path: .rejection-assessment/canonical, persist-credentials: false}
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {repository: octave-commons/muse, ref: '${{ env.MUSE_REVISION }}', path: .rejection-assessment/muse, persist-credentials: false}
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {repository: '${{ inputs.target_repository }}', ref: '${{ inputs.head_sha }}', path: .rejection-assessment/target, fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '24'}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: {name: 'rejection-assessment-input-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: .rejection-assessment/model-root/.opencode/review-evidence}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: {name: 'rejection-assessment-profile-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: .rejection-assessment/profile}
+      - name: Install isolated credential-free model profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -m 700 "$RUNNER_TEMP/rejection-assessment-model-home" "$RUNNER_TEMP/rejection-assessment-host-home"
+          chmod 700 "$REJECTION_EVIDENCE_DIR" "$REJECTION_PROFILE_DIR"
+          npm install --prefix .rejection-assessment/runtime --ignore-scripts --no-audit --no-fund nbb@1.5.211 yaml@2.9.0
+          ln -s "$GITHUB_WORKSPACE/.rejection-assessment/runtime/node_modules" "$ETA_CHECKOUT/node_modules"
+          MODEL_HOME="$RUNNER_TEMP/rejection-assessment-model-home"
+          mkdir -p "$MODEL_HOME/.config/opencode/plugins" "$MODEL_HOME/.config/opencode/agents" "$MODEL_HOME/.eta-mu-review"
+          cp -a "$REJECTION_PROFILE_DIR/dist" "$MODEL_HOME/.eta-mu-review/"
+          cp "$REJECTION_PROFILE_DIR/package.json" "$MODEL_HOME/.eta-mu-review/"
+          npm install --prefix "$MODEL_HOME/.eta-mu-review" --ignore-scripts --no-audit --no-fund
+          printf 'export { EtaMuActorsPlugin } from "%s/dist/eta-mu-actors.js";\n' "$MODEL_HOME/.eta-mu-review" > "$MODEL_HOME/.config/opencode/plugins/eta-mu-actors.js"
+          cp "$REJECTION_PROFILE_DIR/agents/github-reviewer.md" "$MODEL_HOME/.config/opencode/agents/"
+          cp "$REJECTION_PROFILE_DIR/opencode.json" "$MODEL_HOME/.config/opencode/"
+          mkdir "$MODEL_HOME/.agents"
+          cp -a "$CANONICAL_CHECKOUT/skills" "$MODEL_HOME/.agents/"
+          npm install --global opencode-ai@1.18.18
+      - name: Bind staged input before model execution
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REJECTION_HOST_HOME: ${{ runner.temp }}/rejection-assessment-host-home
+          PREPARED_INPUT_SHA256: ${{ needs.prepare.outputs.input_sha256 }}
+          PREPARED_PROFILE_SHA256: ${{ needs.prepare.outputs.profile_sha256 }}
+          REVIEW_INVOCATION_VERIFIER_SHA256: ${{ needs.prepare.outputs.verifier_sha256 }}
+        run: |
+          set -euo pipefail
+          node .rejection-assessment/runtime/node_modules/nbb/cli.js -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts" "$ETA_CHECKOUT/.github/scripts/opencode_rejection_assessment.cljs" input
+      - name: Actual bounded credential-free invocation
+        id: assess
+        working-directory: .rejection-assessment/model-root
+        shell: bash
+        env:
+          REVIEW_INPUT_PURPOSE: rejection-assessment
+          REVIEW_CHILD_HOME: ${{ runner.temp }}/rejection-assessment-model-home
+          REVIEW_EVIDENCE_DIR: ${{ github.workspace }}/.rejection-assessment/model-root/.opencode/review-evidence
+          REVIEW_PROMPT_FILE: ${{ github.workspace }}/.rejection-assessment/model-root/.opencode/review-evidence/prompt.txt
+          REVIEW_TOOL_REGISTRY_FILE: ${{ github.workspace }}/.rejection-assessment/model-root/.opencode/review-evidence/tools.txt
+          PR_NUMBER: ${{ inputs.pr_number }}
+          REVIEW_MODEL: opencode/mimo-v2.6-flash-free
+        run: node "$ETA_CHECKOUT/.github/scripts/run-opencode-review-recovery.mjs"
+      - name: Reverify actual accepted invocation and fresh custody
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REJECTION_HOST_HOME: ${{ runner.temp }}/rejection-assessment-host-home
+          PREPARED_INPUT_SHA256: ${{ needs.prepare.outputs.input_sha256 }}
+          PREPARED_PROFILE_SHA256: ${{ needs.prepare.outputs.profile_sha256 }}
+          REVIEW_INVOCATION_VERIFIER_SHA256: ${{ needs.prepare.outputs.verifier_sha256 }}
+        run: |
+          set -euo pipefail
+          node .rejection-assessment/runtime/node_modules/nbb/cli.js -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts" "$ETA_CHECKOUT/.github/scripts/opencode_rejection_assessment.cljs" verify
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with: {name: 'rejection-assessment-result-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: .rejection-assessment/model-root/.opencode/review-evidence, if-no-files-found: error, include-hidden-files: true}
+
+  publish:
+    name: Publish observed rejection assessment issue comment
+    needs: [prepare, assess]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: rejection-assessment-publication
+    steps:
+      - name: Authenticate protected called source before checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REJECTION_JOB_WORKFLOW_SHA: ${{ job.workflow_sha }}
+          REJECTION_JOB_WORKFLOW_REF: ${{ job.workflow_ref }}
+          REJECTION_JOB_CHECK_RUN_ID: ${{ job.check_run_id }}
+          REJECTION_PREPARE_CHECK_RUN_ID: ${{ needs.prepare.outputs.invocation_id }}
+          REJECTION_ASSESS_CHECK_RUN_ID: ${{ needs.assess.outputs.check_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
+            echo '::error::Rejection assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
+            exit 1
+          }
+          [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]] || {
+            echo '::error::Dispatch rejection assessment in open-hax/eta-mu to share its publication lock.'
+            exit 1
+          }
+          [[ "$ETA_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          # Authenticate this job's defining workflow; a sibling entry in the
+          # run's referenced_workflows aggregate cannot supply this identity.
+          [[ "$REJECTION_JOB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
+          [[ "$REJECTION_JOB_WORKFLOW_REF" =~ ^open-hax/eta-mu/\.github/workflows/opencode-rejection-assessment\.yml@.+$ ]]
+          [[ "$REJECTION_JOB_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ && "$REJECTION_PREPARE_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+          default=$(gh api repos/open-hax/eta-mu --jq .default_branch)
+          branch=$(gh api "repos/open-hax/eta-mu/branches/$default")
+          jq -e '.protected == true' <<< "$branch" > /dev/null
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
+          jq -e --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT" --arg repo "$GITHUB_REPOSITORY" \
+            '.id == $run and .run_attempt == $attempt and .repository.full_name == $repo' <<< "$run" > /dev/null
+          # A called workflow inherits the caller event, including manual
+          # dispatch. Only workflow_call declares the required eta_revision.
+          if [[ -z "$REJECTION_CALLED_REVISION" ]]; then
+            [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]
+            [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]]
+            [[ "$GITHUB_WORKFLOW_REF" == "open-hax/eta-mu/.github/workflows/opencode-rejection-assessment.yml@refs/heads/$default" ]]
+            [[ "$GITHUB_WORKFLOW_SHA" == "$ETA_SOURCE_SHA" ]]
+            [[ "$REJECTION_JOB_WORKFLOW_REF" == "$GITHUB_WORKFLOW_REF" ]]
+            [[ $(jq -r .commit.sha <<< "$branch") == "$ETA_SOURCE_SHA" ]]
+            jq -e --arg sha "$ETA_SOURCE_SHA" '.head_sha == $sha' <<< "$run" > /dev/null
+          else
+            [[ "$REJECTION_CALLED_REVISION" =~ ^[0-9a-f]{40}$ && "$REJECTION_CALLED_REVISION" == "$ETA_SOURCE_SHA" ]]
+            jq -e --arg sha "$ETA_SOURCE_SHA" \
+              '.referenced_workflows | any(.sha == $sha and (.path | startswith("open-hax/eta-mu/.github/workflows/opencode-rejection-assessment.yml@")))' <<< "$run" > /dev/null
+            gh api "repos/open-hax/eta-mu/compare/$ETA_SOURCE_SHA...$default" --jq .status | grep -Ex 'ahead|identical' > /dev/null
+          fi
+          # Carry only validated step context into later host entrypoints.
+          printf 'REJECTION_JOB_WORKFLOW_SHA=%s\nREJECTION_JOB_WORKFLOW_REF=%s\nREJECTION_PREPARE_CHECK_RUN_ID=%s\n' \
+            "$REJECTION_JOB_WORKFLOW_SHA" "$REJECTION_JOB_WORKFLOW_REF" "$REJECTION_PREPARE_CHECK_RUN_ID" >> "$GITHUB_ENV"
+          if [[ -n "${REJECTION_ASSESS_CHECK_RUN_ID:-}" ]]; then
+            [[ "$REJECTION_ASSESS_CHECK_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+            printf 'REJECTION_ASSESS_CHECK_RUN_ID=%s\n' "$REJECTION_ASSESS_CHECK_RUN_ID" >> "$GITHUB_ENV"
+          fi
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .rejection-assessment/eta, persist-credentials: false}
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {repository: riatzukiza/.agents, ref: '${{ env.CANONICAL_REVISION }}', path: .rejection-assessment/canonical, persist-credentials: false}
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {repository: octave-commons/muse, ref: '${{ env.MUSE_REVISION }}', path: .rejection-assessment/muse, persist-credentials: false}
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {repository: '${{ inputs.target_repository }}', ref: '${{ inputs.head_sha }}', path: .rejection-assessment/target, fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '24'}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: {name: 'rejection-assessment-result-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: .rejection-assessment/model-root/.opencode/review-evidence}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: {name: 'rejection-assessment-profile-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: .rejection-assessment/profile}
+      - name: Install protected one-shot publisher runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -m 700 "$RUNNER_TEMP/rejection-assessment-host-home"
+          chmod 700 "$REJECTION_EVIDENCE_DIR" "$REJECTION_PROFILE_DIR"
+          npm install --prefix .rejection-assessment/runtime --ignore-scripts --no-audit --no-fund nbb@1.5.211 yaml@2.9.0
+          ln -s "$GITHUB_WORKSPACE/.rejection-assessment/runtime/node_modules" "$ETA_CHECKOUT/node_modules"
+      - name: Create separate protected issue-comment token
+        id: publisher
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          app-id: ${{ secrets.ETA_MU_APP_ID }}
+          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          owner: open-hax
+          repositories: ${{ inputs.target_repository }}
+          permission-issues: write
+          permission-pull-requests: read
+          permission-contents: read
+          permission-actions: read
+      - name: Fresh canonical eligibility, authentic App grants, single write and readback
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.publisher.outputs.token }}
+          HOST_RUN_READ_TOKEN: ${{ github.token }}
+          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
+          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          ACTIONABILITY_INSTALLATION_ID: ${{ steps.publisher.outputs.installation-id }}
+          ACTIONABILITY_APP_SLUG: ${{ steps.publisher.outputs.app-slug }}
+          REJECTION_HOST_HOME: ${{ runner.temp }}/rejection-assessment-host-home
+          PREPARED_INPUT_SHA256: ${{ needs.prepare.outputs.input_sha256 }}
+          PREPARED_PROFILE_SHA256: ${{ needs.prepare.outputs.profile_sha256 }}
+          REVIEW_INVOCATION_VERIFIER_SHA256: ${{ needs.prepare.outputs.verifier_sha256 }}
+          ACCEPTED_INVOCATION_SHA256: ${{ needs.assess.outputs.accepted_sha256 }}
+          PUBLICATION_RESULT_FILE: ${{ runner.temp }}/rejection-assessment-publication-result.json
+        run: |
+          set -euo pipefail
+          node .rejection-assessment/runtime/node_modules/nbb/cli.js -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts" "$ETA_CHECKOUT/.github/scripts/opencode_rejection_assessment.cljs" publish
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with: {name: 'rejection-assessment-publication-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: '${{ runner.temp }}/rejection-assessment-publication-result.json', if-no-files-found: error}

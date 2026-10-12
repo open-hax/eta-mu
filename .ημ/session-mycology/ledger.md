@@ -768,3 +768,12 @@
   spore: none
   receipt-refs: b8cc75fd-ffaa-4fc9-b20a-35a77fdb1bb1,571991a9e665476c3291cc6c2c0833d2a8a2cffb56a2faa922919fd08456fc37
   note: Seven causal RED/GREEN pairs and full local gates passed. Preserve raw actionlint schema failure alongside exact bounded adjustment and unrelated typo refusal. Root stages only five sources and two existing ledgers. No pin/native/approval/campaign/deployment credit.
+- ts: 2026-10-12T14:23:11.891206112Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Persist independent native rejection transport with accepted pins
+  p-efficiency: 0.72
+  p-friction: 0.58
+  p-skill-candidate: 0.4
+  spore: none
+  receipt-refs: 34e36cec-01fa-4eee-a9bd-5a82ee73144f,cc222f6eebbddfe748d5af9cdb7a9277d2e9ba51e18004cec7d93bddc5666c47
+  note: Scope prior source-bound observations separately from nine fresh recovery phases. Preserve genuine failed lint and exact two intended mutant failures. Root verified saved bytes and custody before eight-source application and three-file accepted canonical adoption; no extra qualification scaffold or spore. Full package194tests587assertions remains distinct from absent workflow resources. Native judgment/publication and deployment gates remain separate.

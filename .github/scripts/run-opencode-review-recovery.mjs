@@ -321,7 +321,7 @@ or reassessment to erase its failed history. This is the only recovery attempt.
 
 /** Override same-process repair instructions when canonical verification is required. */
 function strictInvocationPrompt(prompt, fullInputName = "basehead.diff") {
-  const supporting = fullInputName === "actionability-input.txt"
+  const supporting = ["actionability-input.txt", "rejection-assessment-input.txt"].includes(fullInputName)
     ? `Complete fixed native input: ${fullInputName}.
 - Use only the review_* page tools to read and assess every full-input page.
   No ordinary diff supporting-file artifacts are staged for this route; do not
@@ -526,7 +526,7 @@ export async function runReviewRecovery({
   fullInputName = "basehead.diff",
 }) {
   if (!evidenceDirectory) throw new Error("evidenceDirectory is required");
-  if (!["basehead.diff", "actionability-input.txt"].includes(fullInputName)) {
+  if (!["basehead.diff", "actionability-input.txt", "rejection-assessment-input.txt"].includes(fullInputName)) {
     throw new Error("unsupported full input file");
   }
   if (typeof basePrompt !== "string" || basePrompt.trim().length === 0) {
@@ -660,7 +660,8 @@ export async function runReviewRecovery({
 }
 
 /** Build the opt-in actionability child's credential-free, owned-home environment. */
-function actionabilityChildEnvironment() {
+function actionabilityChildEnvironment(purpose = "actionability") {
+  if (!["actionability", "rejection-assessment"].includes(purpose)) throw new Error("unsupported native input purpose");
   const home = process.env.REVIEW_CHILD_HOME;
   if (!home || !path.isAbsolute(home)) throw new Error("owned actionability child home is required");
   const info = fs.lstatSync(home);
@@ -674,7 +675,7 @@ function actionabilityChildEnvironment() {
     XDG_CONFIG_HOME: path.join(home, ".config"), XDG_DATA_HOME: path.join(home, ".local/share"),
     XDG_CACHE_HOME: path.join(home, ".cache"), OPENCODE_CONFIG_DIR: path.join(home, ".config/opencode"),
     LANG: "C.UTF-8", LC_ALL: "C.UTF-8", TZ: "UTC",
-    REVIEW_EVIDENCE_DIR: process.env.REVIEW_EVIDENCE_DIR, REVIEW_INPUT_PURPOSE: "actionability",
+    REVIEW_EVIDENCE_DIR: process.env.REVIEW_EVIDENCE_DIR, REVIEW_INPUT_PURPOSE: purpose,
   };
 }
 
@@ -690,8 +691,8 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile }) {
   let invocationRejected = false;
 
   try {
-    const childEnvironment = process.env.REVIEW_INPUT_PURPOSE === "actionability"
-      ? actionabilityChildEnvironment() : { ...process.env };
+    const childEnvironment = ["actionability", "rejection-assessment"].includes(process.env.REVIEW_INPUT_PURPOSE)
+      ? actionabilityChildEnvironment(process.env.REVIEW_INPUT_PURPOSE) : { ...process.env };
     for (const name of ["GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_PATH", "GITHUB_STATE", "GITHUB_STEP_SUMMARY"]) {
       delete childEnvironment[name];
     }
@@ -758,9 +759,10 @@ async function main() {
   let fullInputName;
   try {
     const purpose = process.env.REVIEW_INPUT_PURPOSE || "diff";
-    if (!["diff", "actionability"].includes(purpose)) throw new Error("unsupported review input purpose");
-    fullInputName = purpose === "actionability" ? "actionability-input.txt" : "basehead.diff";
-    if (purpose === "actionability") actionabilityChildEnvironment();
+    if (!["diff", "actionability", "rejection-assessment"].includes(purpose)) throw new Error("unsupported review input purpose");
+    fullInputName = { diff: "basehead.diff", actionability: "actionability-input.txt",
+      "rejection-assessment": "rejection-assessment-input.txt" }[purpose];
+    if (purpose !== "diff") actionabilityChildEnvironment(purpose);
     verifierBytes = fs.readFileSync(verifierFile);
     verifier = createRequire(import.meta.url)(verifierFile);
     if (typeof verifier.verifyReviewInvocation !== "function" ||
@@ -780,9 +782,10 @@ async function main() {
     if (!expectedContext || typeof expectedContext !== "object" || Array.isArray(expectedContext)) {
       throw new Error("canonical verifier context preparation returned no context");
     }
-    if (purpose === "actionability" && (expectedContext.inputSource?.schema !== "open-hax.actionability-input/v1"
-        || expectedContext.inputSource?.purpose !== "actionability")) {
-      throw new Error("canonical verifier did not bind actionability input");
+    if (purpose !== "diff" && (expectedContext.inputSource?.schema !== {
+      actionability: "open-hax.actionability-input/v1", "rejection-assessment": "open-hax.rejection-assessment-input/v1",
+    }[purpose] || expectedContext.inputSource?.purpose !== purpose)) {
+      throw new Error(`canonical verifier did not bind ${purpose} input`);
     }
   } catch (error) {
     const metadataFile = path.join(evidenceDirectory, "recovery.json");
