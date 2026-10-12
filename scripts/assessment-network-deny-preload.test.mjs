@@ -17,6 +17,10 @@ const preload = path.join(
 const bootstrapSource = String.raw`
 const dns = require("node:dns"), promises = require("node:dns/promises"), dgram = require("node:dgram");
 const control = globalThis.etaNetworkDenialControl = {fallbackCalls:[], surfaces:[]};
+// Preserve the actual availability fact, then make predecessor dispatch inert.
+control.webSocketAvailable = typeof globalThis.WebSocket === "function";
+if (control.webSocketAvailable) globalThis.WebSocket = function () {control.fallbackCalls.push("WebSocket");};
+
 const queries = (owner) => Object.getOwnPropertyNames(owner).filter(name =>
   (name === "lookup" || name === "lookupService" || name === "reverse" || name.startsWith("resolve"))
   && typeof owner[name] === "function");
@@ -63,6 +67,12 @@ if (mode === "esm") {
   attempt(dgramESM, "createSocket", "dgram.createSocket");
 } else if (mode === "queries") {
   for (const {owner, name, surface} of control.surfaces) attempt(owner, name, surface);
+  if (control.webSocketAvailable) {
+    try {Reflect.construct(globalThis.WebSocket, ["wss://inert.invalid"]); results.push({surface:"WebSocket", denied:false});}
+    catch (error) {results.push({surface:"WebSocket", denied:error.code === "TEST_NETWORK_FORBIDDEN",
+      errorCode:error.code ?? null, actualSurface:error.surface ?? null});}
+  }
+
   // Empty server configuration is local state only, with no query. The following
   // query calls must still reach the patched prototypes after native rebinding.
   const dns = require("node:dns"), promises = require("node:dns/promises");
@@ -73,7 +83,7 @@ if (mode === "esm") {
   attempt(promises, "resolve4", "dns.promises.Resolver.resolve4");
 } else if (mode !== "noop") throw new Error("CONTROL_MODE_REFUSED");
 console.log(JSON.stringify({schema:"eta-mu.network-denial-control/v1", mode,
-  pid:process.pid, results, identities, fallbackCalls:control.fallbackCalls}));
+  pid:process.pid, webSocketAvailable:control.webSocketAvailable, results, identities, fallbackCalls:control.fallbackCalls}));
 `;
 
 function control(t, mode) {
@@ -170,6 +180,14 @@ function control(t, mode) {
       result.results.length,
       "every attempted API contributes one actual audit denial",
     );
+  }
+  if (mode === "queries" && Number(process.versions.node.split(".")[0]) >= 24) {
+    assert.equal(
+      result.webSocketAvailable,
+      true,
+      "actual Node24 WebSocket constructor must be exercised",
+    );
+    assert.ok(result.results.some((row) => row.surface === "WebSocket"));
   }
   if (mode === "esm") assert.deepEqual(result.identities, [true, true, true, true]);
 }

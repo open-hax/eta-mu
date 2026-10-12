@@ -2363,16 +2363,25 @@ test("embedded review metadata JSON matches canonical tracked EDN rendering", ()
 });
 
 
+/** Source-shaped inert catalog; only the real producer owns acquisition/proof bytes. */
+function rawCatalogForSelected(selected) {
+  return {opencode:{id:"opencode",api:selected.api.url,npm:selected.api.npm,models:{[selected.id]:{
+    id:selected.id,family:selected.family,status:selected.status,release_date:selected.release_date,
+    tool_call:selected.capabilities.toolcall,modalities:{input:["text"],output:["text"]},
+    cost:{input:selected.cost.input,output:selected.cost.output,cache_read:selected.cost.cache.read,cache_write:selected.cost.cache.write},
+  }}}};
+}
+
 /** Bind inert host-owned model-selection evidence to an already bound transport invocation. */
 function bindModelDiscoveryFixture(checked, context) {
   const binary = path.join(checked.evidence, "inert-opencode-binary");
   fs.writeFileSync(binary, "inert executable identity fixture\n");
   const selected = { id: "mimo-v9.1-flash-free", providerID: "opencode", family: "mimo",
-    status: "active", release_date: "2027-01-01", api: { id: "mimo-v9.1-flash-free" },
+    status: "active", release_date: "2027-01-01", api: { id: "mimo-v9.1-flash-free", url: "https://example.invalid/inert", npm: "@ai-sdk/openai-compatible" },
     capabilities: { toolcall: true, input: { text: true }, output: { text: true } },
     cost: { input: 0, output: 0, cache: { read: 0, write: 0 } } };
   const commands = [["model-version", ["--version"], "1.18.18\n"],
-    ["model-catalog", ["models", "opencode", "--refresh", "--verbose"], `opencode/${selected.id}\n${JSON.stringify(selected, null, 2)}\n`]]
+    ["model-catalog", ["models", "opencode", "--verbose"], `opencode/${selected.id}\n${JSON.stringify(selected, null, 2)}\n`]]
     .map(([stem, args, stdout]) => {
       const record = { command: [binary, ...args], exit_code: 0, signal: null, timed_out: false, captures_closed: true };
       for (const [stream, bytes] of [["stdout", stdout], ["stderr", ""]]) {
@@ -2387,6 +2396,18 @@ function bindModelDiscoveryFixture(checked, context) {
     binary: { requested: binary, real_path: binary, sha256: transportSha256(fs.readFileSync(binary)) },
     selected_model: `opencode/${selected.id}`, selected_row: selected,
     selected_row_sha256: transportSha256(JSON.stringify(selected)), catalog_sha256: commands[1].stdout_sha256 };
+  const rawCatalog = rawCatalogForSelected(selected);
+  const rawBytes = Buffer.from(JSON.stringify(rawCatalog));
+  const sourcePath = path.join(checked.evidence,"model-catalog-source.json");
+  fs.writeFileSync(sourcePath,rawBytes);
+  const responsePath = path.join(checked.evidence,"model-catalog-source-response.json");
+  fs.writeFileSync(responsePath,JSON.stringify({schema:"open-hax.review-model-catalog-response/v1",
+    requested_url:"https://models.opencode.ai/api.json",response_url:"https://models.opencode.ai/api.json",status:200,
+    body_complete:true,json_valid:true,aborted:false,bytes:rawBytes.length,sha256:transportSha256(rawBytes)}));
+  // Explicit inert final-guard fixture, not an observed HTTP response.
+  proof.catalog_source={file:path.basename(sourcePath),path:sourcePath,bytes:rawBytes.length,sha256:transportSha256(rawBytes),
+    response_file:path.basename(responsePath),response_sha256:transportSha256(fs.readFileSync(responsePath))};
+  proof.selected_source_row_sha256=transportSha256(JSON.stringify(rawCatalog.opencode.models[selected.id]));
   const file = path.join(checked.evidence, "model-discovery.json");
   fs.writeFileSync(file, JSON.stringify(proof));
   const digest = transportSha256(fs.readFileSync(file));
@@ -2409,6 +2430,10 @@ test("actual final workflow requires unchanged selected model provenance before 
     ["version changed", (c) => fs.appendFileSync(path.join(c.evidence, "model-version.stdout"), "changed\n")],
     ["stderr changed", (c) => fs.appendFileSync(path.join(c.evidence, "model-catalog.stderr"), "changed\n")],
     ["binary changed", (_c, model) => fs.appendFileSync(model.binary, "changed\n")],
+    ["raw source changed", (c) => fs.appendFileSync(path.join(c.evidence,"model-catalog-source.json"),"changed")],
+    ["response changed", (c) => fs.appendFileSync(path.join(c.evidence,"model-catalog-source-response.json"),"changed")],
+    ["raw source missing", (c) => fs.rmSync(path.join(c.evidence,"model-catalog-source.json"))],
+    ["response missing", (c) => fs.rmSync(path.join(c.evidence,"model-catalog-source-response.json"))],
     ["binding missing", (_c, model) => { delete model.recovery.model_discovery; }],
     ["bound model differs", (_c, model) => { model.recovery.model_discovery.selected_model = "opencode/other-free"; }],
     ["unknown mode", (_c, _model, env) => { env.REVIEW_MODEL_DISCOVERY = "unsupported"; }],
@@ -2457,7 +2482,7 @@ test("uploaded model discovery retains actual producer streams consumed by final
   assert.equal(checked.result.status, 0, checked.result.stderr);
   const binary = path.join(checked.evidence, "inert-catalog-executable");
   const selected = { id: "mimo-v9.1-flash-free", providerID: "opencode", family: "mimo",
-    status: "active", release_date: "2027-01-01", api: { id: "mimo-v9.1-flash-free" },
+    status: "active", release_date: "2027-01-01", api: { id: "mimo-v9.1-flash-free", url: "https://example.invalid/inert", npm: "@ai-sdk/openai-compatible" },
     capabilities: { toolcall: true, input: { text: true }, output: { text: true } },
     cost: { input: 0, output: 0, cache: { read: 0, write: 0 } } };
   // This executable emits inert catalog bytes only. The actual producer owns
@@ -2473,13 +2498,22 @@ INERT_CATALOG
   *) exit 64 ;;
 esac
 `, { mode: 0o700 });
-  const model = await discoverFreeMiMoFlash({ evidenceDirectory: checked.evidence,
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url,"https://models.opencode.ai/api.json"); assert.equal(options.redirect,"error");
+    assert.equal(options.credentials,"omit");
+    const response=new Response(JSON.stringify(rawCatalogForSelected(selected)),{status:200});
+    Object.defineProperty(response,"url",{value:url}); return response;
+  };
+  let model;
+  try { model = await discoverFreeMiMoFlash({ evidenceDirectory: checked.evidence,
     expectedVersion: "1.18.18", binary,
     environment: { PATH: process.env.PATH || "/usr/bin:/bin", HOME: checked.consumer,
       LANG: "C.UTF-8", LC_ALL: "C.UTF-8" } });
-  const files = [path.basename(model.file), ...model.proof.commands.flatMap(command =>
+  } finally {globalThis.fetch=originalFetch;}
+  const files = [path.basename(model.file),model.proof.catalog_source.file,model.proof.catalog_source.response_file, ...model.proof.commands.flatMap(command =>
     [command.stdout_file, command.stderr_file])];
-  assert.equal(new Set(files).size, 5, "one proof and both actual closed command streams are required");
+  assert.equal(new Set(files).size, 7, "proof, raw catalog, response metadata and actual closed command streams are required");
   const uploadPaths = new Set(namedStep("review", "Upload review attempt artifacts").with.path.trim().split(/\s+/));
   const archive = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-discovery-archive-"));
   t.after(() => fs.rmSync(archive, { recursive: true, force: true }));

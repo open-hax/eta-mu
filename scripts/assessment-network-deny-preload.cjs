@@ -51,6 +51,7 @@ const deny = (surface) => function () {
   throw error;
 };
 globalThis.fetch = deny("fetch");
+if (typeof globalThis.WebSocket === "function") globalThis.WebSocket = deny("WebSocket");
 for (const name of ["node:http", "node:https"]) {
   const module = require(name);
   module.request = deny(name + ".request");

@@ -254,6 +254,12 @@ test("actual protected canonical API and Muse pins are identical across both rou
       CANONICAL_REVISION: workflow.env.CANONICAL_REVISION, MUSE_REVISION: workflow.env.MUSE_REVISION,
       REJECTION_HISTORY_SOURCE_SHA256: "e".repeat(64), REJECTION_HISTORY_CLI_SHA256: "f".repeat(64), ...changes } });
   assert.equal(runPins().status, 0);
+  for (const value of ["", "60.5", "not-a-number", "1e2", "59", "181"]) {
+    const refused = runPins({ TIMEOUT_INPUT: value });
+    assert.notEqual(refused.status, 0, `invalid time budget must refuse: ${value}`);
+    assert.match(refused.stdout, /review_timeout_minutes must be a whole number from 60 through 180/);
+  }
+  for (const value of ["60", "180"]) assert.equal(runPins({ TIMEOUT_INPUT: value }).status, 0);
   for (const changes of [{ CANONICAL_REVISION: "" }, { MUSE_REVISION: "" },
     { CANONICAL_REVISION: "main" }, { MUSE_REVISION: "malformed" },
     { CANONICAL_REVISION: "a".repeat(39) }, { MUSE_REVISION: "A".repeat(40) },

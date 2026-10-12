@@ -1080,11 +1080,27 @@ function verboseModelCatalog(rows) {
     `opencode/${row.id}\n${JSON.stringify(row, null, 2)}`).join("\n")}\n`;
 }
 
+/** Inert raw API record paired with an effective CLI row, not a live catalog claim. */
+function rawModelCatalog(rows) {
+  const rawPrice = cost => ({ input: cost.input, output: cost.output,
+    cache_read: cost.cache?.read, cache_write: cost.cache?.write });
+  return { opencode: { id: "opencode", api: "https://example.invalid/inert", npm: "@ai-sdk/openai-compatible",
+    models: Object.fromEntries(rows.map(row => [row.id, { id: row.id, family: row.family, status: row.status,
+      release_date: row.release_date, tool_call: row.capabilities?.toolcall,
+      modalities: { input: row.capabilities?.input?.text ? ["text"] : [], output: row.capabilities?.output?.text ? ["text"] : [] },
+      provider: { api: row.api?.url, npm: row.api?.npm },
+      cost: { ...rawPrice(row.cost),
+        ...(row.cost?.tiers === undefined ? {} : { tiers: row.cost.tiers.map(tier => ({ ...rawPrice(tier), tier: tier.tier })) }),
+        ...(row.cost?.experimentalOver200K === undefined ? {} : { context_over_200k: rawPrice(row.cost.experimentalOver200K) }) },
+    }])) } };
+}
+
 // Test-only enrollment for model fixtures whose production environment is deliberately sanitized.
-/** Retain the actual outer runner PID without changing any spawn arguments or environment. */
+/** Retain actual runner PID; only enrolled inert fixtures add the catalog mock loader. */
 function spawnSync(command, args, options) {
-  const result = nativeSpawnSync(command, args, options);
   const fixture = discoveryAuditFixtures.get(options?.env);
+  const actualArgs = fixture && command === process.execPath ? ["--import", fixture.catalogLoader, ...args] : args;
+  const result = nativeSpawnSync(command, actualArgs, options);
   if (fixture) {
     assert.ok(Number.isSafeInteger(result.pid) && result.pid > 0, "actual fixture runner PID");
     fixture.runnerPids.push(result.pid);
@@ -1104,7 +1120,7 @@ function discoveryFixtureAuditBinding() {
   assert.ok(path.isAbsolute(preload) && require.cache[preload], "parent actually loaded the exact preload");
   const preloadStat = fs.lstatSync(preload), directoryStat = fs.lstatSync(directory);
   assert.ok(preloadStat.isFile() && !preloadStat.isSymbolicLink() && fs.realpathSync(preload) === preload);
-  assert.equal(sha256(fs.readFileSync(preload)), "ad84d3e63852efa085f118d47bf68bdd311d6d39aa16f93c6d9a3220d36c35a4");
+  assert.equal(sha256(fs.readFileSync(preload)), "0224d45dc253ef0af8547596cd95c3f26c683126e3a44270df339230e1082d68");
   assert.ok(path.isAbsolute(directory) && directoryStat.isDirectory() && !directoryStat.isSymbolicLink());
   assert.equal(fs.realpathSync(directory), path.resolve(directory));
   assert.equal(directoryStat.mode & 0o777, 0o700);
@@ -1146,7 +1162,7 @@ function verifyDiscoveryFixtureAudits(fixture, binding) {
 
 /** Add measured version/catalog/run argv to the existing process fixture, never real OpenCode. */
 function discoveryCliFixture(t, { rows = [freeMiMoRow()], catalog, version = "1.18.18",
-  catalogExit = 0, catalogWait = false, runTail = "" } = {}) {
+  catalogExit = 0, catalogWait = false, runTail = "", rawCatalog = rawModelCatalog(rows), fetchFailure = false } = {}) {
   const auditBinding = discoveryFixtureAuditBinding();
   let f;
   // Register first so real audit checks run before fixture(t)'s directory cleanup.
@@ -1154,7 +1170,20 @@ function discoveryCliFixture(t, { rows = [freeMiMoRow()], catalog, version = "1.
   f = cliFixture(t);
   f.runnerPids = [];
   f.processFile = path.join(f.directory, "discovery-process-identities.ndjson");
-  if (auditBinding) discoveryAuditFixtures.set(f.env, f);
+  discoveryAuditFixtures.set(f.env, f);
+  f.catalogLoader = path.join(f.directory, "inert-public-catalog-loader.mjs");
+  f.fetchRequests = path.join(f.directory, "catalog-fetch-requests.ndjson");
+  fs.writeFileSync(f.catalogLoader, `import fs from "node:fs";
+// Test-only replacement runs before product entry; no actual public request.
+globalThis.fetch = async (url, options) => {
+  fs.appendFileSync(${JSON.stringify(f.fetchRequests)}, JSON.stringify({url, redirect:options.redirect,
+    credentials:options.credentials, cache:options.cache, headers:options.headers})+"\\n");
+  ${fetchFailure ? "throw Error(\"INERT_CATALOG_FETCH_FAILURE\");" : ""}
+  const response = new Response(${JSON.stringify(JSON.stringify(rawCatalog))}, {status:200, headers:{"content-type":"application/json"}});
+  Object.defineProperty(response, "url", {value:"https://models.opencode.ai/api.json"});
+  return response;
+};
+`, {flag:"wx", mode:0o600});
   f.childHome = path.join(f.directory, "trusted-review-home");
   fs.mkdirSync(f.childHome, { mode: 0o700 });
   fs.mkdirSync(path.join(f.childHome, "tmp"), { mode: 0o700 });
@@ -1176,7 +1205,7 @@ process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR = ${JSON.stringify(auditBinding.direct
 process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE = ${JSON.stringify(auditBinding.capture)};
 const fixturePreload = ${JSON.stringify(auditBinding.preload)};
 if (fixtureRequire('node:crypto').createHash('sha256').update(fs.readFileSync(fixturePreload)).digest('hex') !==
-    'ad84d3e63852efa085f118d47bf68bdd311d6d39aa16f93c6d9a3220d36c35a4') throw Error('TEST_PRELOAD_BYTES_REFUSED');
+    '0224d45dc253ef0af8547596cd95c3f26c683126e3a44270df339230e1082d68') throw Error('TEST_PRELOAD_BYTES_REFUSED');
 if (!fixtureRequire.cache[fixturePreload]) fixtureRequire(fixturePreload);
 ${catalogWait ? "process.once('SIGTERM', () => process.exit(143));" : ""}
 fs.appendFileSync(${JSON.stringify(f.processFile)}, JSON.stringify({pid:process.pid, parentPid:process.ppid,
@@ -1185,6 +1214,13 @@ fs.appendFileSync(${JSON.stringify(f.processFile)}, JSON.stringify({pid:process.
   const commands = `const args = process.argv.slice(2);
 fs.appendFileSync(${JSON.stringify(path.join(f.directory, "argv.ndjson"))}, JSON.stringify(args) + '\\n');
 if (args[0] === '--version') { console.log(${JSON.stringify(version)}); process.exit(0); }
+if (args[0] === 'models' || args[0] === 'run') {
+  const carrier = process.env.OPENCODE_MODELS_PATH;
+  fs.appendFileSync(${JSON.stringify(path.join(f.directory, "catalog-carrier-uses.ndjson"))}, JSON.stringify({
+    command:args[0], path:carrier ?? null, disabled:process.env.OPENCODE_DISABLE_MODELS_FETCH ?? null,
+    sha256:carrier ? (await import('node:crypto')).createHash('sha256').update(fs.readFileSync(carrier)).digest('hex') : null,
+  })+'\\n');
+}
 if (args[0] === 'models') {
   ${catalogWait ? "await new Promise(resolve => setTimeout(resolve, 60_000));" : ""}
   process.stdout.write(${JSON.stringify(catalog ?? verboseModelCatalog(rows))}); process.exit(${catalogExit});
@@ -1205,7 +1241,7 @@ test("ordinary runner verifies explicit anonymous MiMo once and freezes its sele
   const result = spawnSync(process.execPath, [runner], { env: f.env, encoding: "utf8", timeout: 10_000 });
   assert.equal(result.status, 0, result.stderr);
   const commands = f.commands();
-  assert.deepEqual(commands.slice(0, 2), [["--version"], ["models", "opencode", "--refresh", "--verbose"]]);
+  assert.deepEqual(commands.slice(0, 2), [["--version"], ["models", "opencode", "--verbose"]]);
   assert.equal(commands.length, 4);
   for (const argv of commands.slice(2)) {
     assert.deepEqual(argv.slice(0, 7), ["run", "--format", "json", "--agent", "github-reviewer", "--model", "opencode/mimo-v9.1-flash-free"]);
@@ -1218,6 +1254,15 @@ test("ordinary runner verifies explicit anonymous MiMo once and freezes its sele
   assert.equal(proof.declared_version, proof.observed_version);
   assert.equal(proof.binary.sha256, sha256(fs.readFileSync(f.child)));
   assert.equal(proof.selected_row_sha256, sha256(JSON.stringify(freeMiMoRow())));
+  const sourceBytes = fs.readFileSync(proof.catalog_source.path);
+  assert.equal(sha256(sourceBytes), proof.catalog_source.sha256);
+  assert.deepEqual(JSON.parse(sourceBytes), rawModelCatalog([freeMiMoRow()]));
+  assert.equal(fs.existsSync(proof.discovery_context.home), false, "catalog survives removal of discovery home");
+  const uses = fs.readFileSync(path.join(f.directory, "catalog-carrier-uses.ndjson"), "utf8").trim().split("\n").map(JSON.parse);
+  assert.deepEqual(uses.map(row => row.command), ["models", "run", "run"]);
+  for (const row of uses) { assert.equal(row.path, proof.catalog_source.path); assert.equal(row.sha256, proof.catalog_source.sha256); assert.equal(row.disabled, "true"); }
+  const requests = fs.readFileSync(f.fetchRequests, "utf8").trim().split("\n").map(JSON.parse);
+  assert.deepEqual(requests, [{url:"https://models.opencode.ai/api.json", redirect:"error", credentials:"omit", cache:"no-store", headers:{Accept:"application/json"}}]);
   for (const command of proof.commands) {
     assert.equal(command.captures_closed, true);
     assert.equal(command.command[0], proof.binary.real_path);
@@ -1384,7 +1429,7 @@ test("ordinary discovery isolates candidate config and inference keeps only the 
   Object.assign(f.env, polluted);
   const probe = `fs.appendFileSync(${JSON.stringify(path.join(f.directory, "configuration-context.ndjson"))}, JSON.stringify({
     command: args[0], cwd: process.cwd(), home: process.env.HOME,
-    env: Object.fromEntries(${JSON.stringify([...Object.keys(polluted), "OPENCODE_DISABLE_PROJECT_CONFIG", "XDG_CONFIG_HOME", "XDG_DATA_HOME"])}.map(name=>[name, process.env[name] ?? null])),
+    env: Object.fromEntries(${JSON.stringify([...Object.keys(polluted), "OPENCODE_DISABLE_MODELS_FETCH", "OPENCODE_DISABLE_PROJECT_CONFIG", "XDG_CONFIG_HOME", "XDG_DATA_HOME"])}.map(name=>[name, process.env[name] ?? null])),
     config: args[0] === 'run' && process.env.OPENCODE_CONFIG ? fs.readFileSync(process.env.OPENCODE_CONFIG, 'utf8') : null,
     agent: args[0] === 'run' && process.env.REVIEW_INPUT_PURPOSE === 'diff' ? fs.readFileSync(path.join(process.env.HOME,'.config/opencode/agents/github-reviewer.md'),'utf8') : null,
     plugin: args[0] === 'run' && process.env.REVIEW_INPUT_PURPOSE === 'diff' ? fs.readFileSync(path.join(process.env.HOME,'.config/opencode/plugins/eta-mu-actors.js'),'utf8') : null,
@@ -1402,7 +1447,7 @@ test("ordinary discovery isolates candidate config and inference keeps only the 
     assert.notEqual(current.home, f.childHome);
     assert.equal(current.env.OPENCODE_DISABLE_PROJECT_CONFIG, "true");
     assert.equal(current.env.OPENCODE_PURE, "true");
-    for (const name of Object.keys(polluted).filter(name=>!["OPENCODE_CONFIG_DIR", "OPENCODE_PURE"].includes(name))) {
+    for (const name of Object.keys(polluted).filter(name=>!["OPENCODE_CONFIG_DIR", "OPENCODE_PURE", ...(current.command === "models" ? ["OPENCODE_MODELS_PATH"] : [])].includes(name))) {
       assert.equal(current.env[name], null, `${current.command}: ${name}`);
     }
     assert.equal(current.env.OPENCODE_CONFIG_DIR, path.join(current.home, ".config/opencode"));
@@ -1415,7 +1460,7 @@ test("ordinary discovery isolates candidate config and inference keeps only the 
     assert.equal(current.env.OPENCODE_CONFIG, path.join(f.childHome, ".config/opencode/opencode.json"));
     assert.equal(current.env.OPENCODE_CONFIG_DIR, path.join(f.childHome, ".config/opencode"));
     assert.equal(current.env.OPENCODE_DISABLE_PROJECT_CONFIG, "true");
-    for (const name of Object.keys(polluted).filter(name=>!["OPENCODE_CONFIG", "OPENCODE_CONFIG_DIR"].includes(name))) {
+    for (const name of Object.keys(polluted).filter(name=>!["OPENCODE_CONFIG", "OPENCODE_CONFIG_DIR", "OPENCODE_MODELS_PATH"].includes(name))) {
       assert.equal(current.env[name], null, `run: ${name}`);
     }
     assert.equal(current.config, '{"trusted":"review-fixture"}\n');
@@ -1426,6 +1471,10 @@ test("ordinary discovery isolates candidate config and inference keeps only the 
   assert.equal(proof.discovery_context.removed, true);
   assert.equal(fs.existsSync(proof.discovery_context.home), false);
   assert.equal(proof.inference_configuration.home, f.childHome);
+  for (const current of contexts.slice(1)) {
+    assert.equal(current.env.OPENCODE_MODELS_PATH, proof.catalog_source.path);
+    assert.equal(current.env.OPENCODE_DISABLE_MODELS_FETCH, "true");
+  }
   assert.equal(proof.inference_configuration.files.length, 3);
   for (const file of proof.inference_configuration.files) assert.equal(file.sha256, sha256(fs.readFileSync(file.path)));
   assert.equal(fs.readFileSync(path.join(project, "opencode.json"), "utf8"), candidateBytes);
@@ -1454,4 +1503,104 @@ test("ordinary inference missing or overlaid trusted profile stops before catalo
     const recovery = JSON.parse(fs.readFileSync(path.join(f.directory, "recovery.json")));
     assert.equal(recovery.accepted_invocation, null); assert.deepEqual(recovery.attempts, []);
   }
+});
+
+
+test("fresh raw catalog failures and stale effective rows never start an ordinary review", (t) => {
+  const row = freeMiMoRow();
+  const base = rawModelCatalog([row]);
+  const cases = [
+    ["actual acquisition failure", {fetchFailure:true}],
+    ["effective bundled-only model", {rawCatalog:rawModelCatalog([])}],
+    ["stale subset omits raw future model", {rawCatalog:rawModelCatalog([row, freeMiMoRow("mimo-v999-flash-free", "2099-01-01")])}],
+    ...["cost", "tool_call"].map(field => {const rawCatalog = structuredClone(base); delete rawCatalog.opencode.models[row.id][field]; return [`missing explicit ${field}`, {rawCatalog}];}),
+    ...[{cost:{input:0, output:1}}, {status:"deprecated"}, {release_date:"2020-01-01"}, {modalities:{input:["text"],output:[]}}, {provider:{api:"https://stale.invalid",npm:"@ai-sdk/openai-compatible"}}]
+      .map(change => {const rawCatalog = structuredClone(base); Object.assign(rawCatalog.opencode.models[row.id], change); return [JSON.stringify(change), {rawCatalog}];}),
+  ];
+  for (const [name, options] of cases) {
+    const f = discoveryCliFixture(t, options);
+    const result = spawnSync(process.execPath, [runner], {env:f.env, encoding:"utf8", timeout:10_000});
+    t.diagnostic(JSON.stringify({schema:"eta-mu.inert-catalog-causal-control/v1",name,actualChildExit:result.status,actualCommands:f.commands()}));
+    assert.equal(result.status, 1, `${name}: ${result.stderr}`);
+    assert.equal(f.commands().filter(([command]) => command === "run").length, 0, name);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(f.directory,"recovery.json"))).accepted_invocation, null, name);
+    assert.equal(fs.existsSync(f.output), false, name);
+    assert.equal(fs.existsSync(path.join(f.directory,"model-catalog-source-response.json")), true, "actual acquisition outcome retained");
+  }
+});
+
+test("changed raw catalog or response carrier refuses acceptance after the first inert attempt", (t) => {
+  for (const file of ["model-catalog-source.json", "model-catalog-source-response.json"]) {
+    const f = discoveryCliFixture(t, {runTail:`fs.appendFileSync(path.join(dir, '${file}'), 'tampered\\n');\n`});
+    const result = spawnSync(process.execPath, [runner], {env:f.env, encoding:"utf8", timeout:10_000});
+    assert.equal(result.status, 1, result.stderr);
+    assert.equal(f.commands().filter(([command]) => command === "run").length, 1);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(f.directory,"recovery.json"))).accepted_invocation, null);
+    assert.equal(fs.existsSync(f.output), false);
+  }
+});
+
+test("public catalog acquisition retains bounded transport failures and closes the body", async t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "catalog-acquisition-control-"));
+  t.after(() => fs.rmSync(directory, {recursive:true, force:true}));
+  const original = globalThis.fetch;
+  const good = Buffer.from(JSON.stringify(rawModelCatalog([freeMiMoRow()])));
+  const cases = [
+    ["success", {bytes:good}, true], ["HTTP failure", {status:503}], ["redirect", {redirected:true}],
+    ["wrong URL", {url:"https://inert.invalid/catalog"}], ["UTF8", {bytes:Buffer.from([255])}],
+    ["JSON", {bytes:Buffer.from("{")}], ["shape", {bytes:Buffer.from("{}")}],
+    ["byte cap", {bytes:Buffer.alloc(16*1024*1024+1, 32)}], ["body error", {readError:true}],
+    ["deadline", {waitForAbort:true}],
+  ];
+  try {
+    for (const [name, options, pass=false] of cases) {
+      const owned = fs.mkdtempSync(path.join(directory,"case-"));
+      let cancelled=0, released=0, calls=0, reads=0;
+      globalThis.fetch = async (url, request) => {
+        calls++; assert.equal(url,"https://models.opencode.ai/api.json");
+        assert.equal(request.redirect,"error"); assert.equal(request.credentials,"omit");
+        assert.deepEqual(request.headers,{Accept:"application/json"});
+        const reader = {read:async () => {
+          if (options.readError) throw Error("INERT_BODY_FAILURE");
+          if (options.waitForAbort) return new Promise((_, reject) => request.signal.addEventListener("abort", () => reject(Error("INERT_DEADLINE")), {once:true}));
+          return reads++ === 0 ? {value:options.bytes??good,done:false} : {done:true};
+        }, cancel:async()=>{cancelled++;}, releaseLock:()=>{released++;}};
+        return {status:options.status??200,url:options.url??url,redirected:options.redirected??false,
+          headers:new Headers(), body:{getReader:()=>reader,cancel:async()=>{cancelled++;}}};
+      };
+      let result, error;
+      try {result=await modelDiscovery.acquireOpenCodeModelCatalog(owned,performance.now()+(options.waitForAbort?20:1000));} catch(caught) {error=caught;}
+      assert.equal(error===undefined,pass,name); assert.equal(calls,1,name);
+      const response=JSON.parse(fs.readFileSync(path.join(owned,"model-catalog-source-response.json")));
+      const bytes=fs.readFileSync(path.join(owned,"model-catalog-source.json"));
+      assert.equal(response.sha256,sha256(bytes)); assert.equal(response.bytes,bytes.length);
+      assert.ok(bytes.length<=16*1024*1024);
+      assert.equal(response.error===undefined,pass,name);
+      if (pass) {assert.equal(result.binding.sha256,sha256(good)); assert.equal(cancelled,0); assert.equal(released,1);}
+      else if (["HTTP failure","redirect","wrong URL","byte cap","body error","deadline"].includes(name)) assert.equal(cancelled,1,name);
+    }
+  } finally {globalThis.fetch=original;}
+});
+
+
+test("explicit current raw optional cache and status defaults retain eligible selection", t => {
+  const rawCatalog=rawModelCatalog([freeMiMoRow()]);
+  delete rawCatalog.opencode.models[freeMiMoRow().id].cost.cache_write;
+  delete rawCatalog.opencode.models[freeMiMoRow().id].status;
+  const f=discoveryCliFixture(t,{rawCatalog});
+  const result=spawnSync(process.execPath,[runner],{env:f.env,encoding:"utf8",timeout:10_000});
+  assert.equal(result.status,0,result.stderr);
+  assert.equal(f.commands().filter(([command])=>command==="run").length,2);
+});
+
+
+test("stale CLI subset cannot omit a newly eligible raw future model", t => {
+  const row=freeMiMoRow();
+  const f=discoveryCliFixture(t,{rows:[row],rawCatalog:rawModelCatalog([row,freeMiMoRow("mimo-v999-flash-free","2099-01-01")])});
+  const result=spawnSync(process.execPath,[runner],{env:f.env,encoding:"utf8",timeout:10_000});
+  t.diagnostic(JSON.stringify({schema:"eta-mu.inert-catalog-causal-control/v1",name:"stale-future-subset",actualChildExit:result.status,actualCommands:f.commands()}));
+  assert.equal(result.status,1,result.stderr);
+  assert.match(result.stderr,/effective selection differs from fresh raw catalog selection/);
+  assert.equal(f.commands().filter(([command])=>command==="run").length,0);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(f.directory,"recovery.json"))).accepted_invocation,null);
 });

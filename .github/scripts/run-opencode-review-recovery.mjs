@@ -15,6 +15,8 @@ const MAX_ATTEMPTS = 2;
 
 const MODEL_DISCOVERY_MODE = "opencode-free-mimo-flash-v1";
 const MODEL_DISCOVERY_BUDGET_MS = 30_000;
+const MODEL_CATALOG_URL = "https://models.opencode.ai/api.json";
+const MODEL_CATALOG_MAX_BYTES = 16 * 1024 * 1024;
 
 /** Decode the ID-line/pretty-JSON format emitted by `opencode models --verbose`. */
 export function parseOpenCodeModelCatalog(bytes) {
@@ -133,6 +135,135 @@ async function captureModelCommand({ binary, args, environment, cwd, deadline, d
   return record;
 }
 
+/** Fetch exact public catalog bytes independently of OpenCode's swallowed refresh errors. */
+export async function acquireOpenCodeModelCatalog(directory, deadline) {
+  const file = path.join(directory, "model-catalog-source.json");
+  const responseFile = path.join(directory, "model-catalog-source-response.json");
+  const controller = new AbortController();
+  const remaining = deadline - performance.now();
+  if (remaining <= 0) throw new Error("OpenCode model discovery deadline expired");
+  const timer = setTimeout(() => controller.abort(), remaining);
+  const record = { schema: "open-hax.review-model-catalog-response/v1", requested_url: MODEL_CATALOG_URL,
+    response_url: null, status: null, body_complete: false, json_valid: false, observed_bytes: 0,
+    max_bytes: MODEL_CATALOG_MAX_BYTES, timeout_ms: remaining };
+  const chunks = [];
+  let response, reader, body, catalog, failure;
+  try {
+    response = await globalThis.fetch(MODEL_CATALOG_URL, { redirect: "error", credentials: "omit",
+      cache: "no-store", signal: controller.signal, headers: { "Accept": "application/json" } });
+    record.response_url = response.url; record.status = response.status;
+    record.headers = Object.fromEntries(["content-type", "date", "etag", "last-modified", "cache-control", "cf-cache-status"]
+      .map(name => [name, response.headers.get(name)]).filter(([, value]) => value !== null));
+    if (response.status !== 200 || response.url !== MODEL_CATALOG_URL || response.redirected || !response.body) {
+      throw new Error("OpenCode public model catalog response refused");
+    }
+    reader = response.body.getReader();
+    for (;;) {
+      if (controller.signal.aborted || performance.now() >= deadline) throw new Error("OpenCode public model catalog deadline expired");
+      const next = await reader.read();
+      if (next.done) { record.body_complete = true; break; }
+      const bytes = Buffer.from(next.value);
+      const available = MODEL_CATALOG_MAX_BYTES - record.observed_bytes;
+      record.observed_bytes += bytes.length;
+      if (available > 0) chunks.push(bytes.subarray(0, available));
+      if (record.observed_bytes > MODEL_CATALOG_MAX_BYTES) throw new Error("OpenCode public model catalog exceeds byte bound");
+    }
+    if (controller.signal.aborted || performance.now() >= deadline) throw new Error("OpenCode public model catalog deadline expired");
+    body = Buffer.concat(chunks);
+    catalog = JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(body));
+    if (!catalog || typeof catalog !== "object" || Array.isArray(catalog) ||
+        !catalog.opencode || catalog.opencode.id !== "opencode" ||
+        !catalog.opencode.models || typeof catalog.opencode.models !== "object" || Array.isArray(catalog.opencode.models)) {
+      throw new Error("OpenCode public model catalog shape refused");
+    }
+    if (controller.signal.aborted || performance.now() >= deadline) throw new Error("OpenCode public model catalog deadline expired");
+    record.json_valid = true;
+  } catch (error) { failure = error; }
+  finally {
+    clearTimeout(timer);
+    if (!record.body_complete) {
+      try { if (reader) await reader.cancel(); else if (response?.body) await response.body.cancel(); }
+      catch (error) { failure ??= error; }
+    }
+    if (reader) { try { reader.releaseLock(); } catch (error) { failure ??= error; } }
+    record.aborted = controller.signal.aborted;
+    body ??= Buffer.concat(chunks);
+    record.bytes = body.length; record.sha256 = sha256(body);
+    if (failure) record.error = failure instanceof Error ? failure.message : "OpenCode public model catalog acquisition failed";
+    fs.writeFileSync(file, body, { flag: "wx", mode: 0o600 });
+    fs.writeFileSync(responseFile, `${JSON.stringify(record, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+  }
+  if (failure) throw failure;
+  return { catalog, binding: { file: path.basename(file), path: file, bytes: body.length, sha256: record.sha256,
+    response_file: path.basename(responseFile), response_sha256: sha256(fs.readFileSync(responseFile)) } };
+}
+
+/** Project explicit raw eligibility metadata through the pinned client's field mapping. */
+function sourceModelRows(catalog) {
+  const provider = catalog.opencode;
+  const price = cost => cost && Object.hasOwn(cost, "input") && Object.hasOwn(cost, "output")
+    ? { input: cost.input, output: cost.output, cache: { read: cost.cache_read ?? 0, write: cost.cache_write ?? 0 } } : null;
+  return Object.entries(provider.models).map(([id, raw]) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw) || raw.id !== id) {
+      throw new Error("OpenCode raw catalog model identity mismatch");
+    }
+    const cost = price(raw.cost);
+    if (cost && raw.cost.tiers !== undefined) cost.tiers = Array.isArray(raw.cost.tiers)
+      ? raw.cost.tiers.map(tier => { const value = price(tier); return value ? { ...value, tier: tier.tier } : null; }) : raw.cost.tiers;
+    if (cost && raw.cost.context_over_200k !== undefined) cost.experimentalOver200K = price(raw.cost.context_over_200k);
+    return { id, providerID: provider.id, family: raw.family, status: raw.status ?? "active", release_date: raw.release_date,
+      api: { id: raw.id, url: raw.provider?.api ?? provider.api ?? "", npm: raw.provider?.npm ?? provider.npm ?? "@ai-sdk/openai-compatible" },
+      capabilities: { toolcall: raw.tool_call === true,
+        input: { text: Array.isArray(raw.modalities?.input) && raw.modalities.input.includes("text") },
+        output: { text: Array.isArray(raw.modalities?.output) && raw.modalities.output.includes("text") } }, cost };
+  });
+}
+
+/** Reuse the existing selector on both datasets so a bundled stale subset cannot downgrade selection. */
+function assertCatalogSelection(catalog, selected, requested) {
+  const expected = selectFreeMiMoFlash(sourceModelRows(catalog), requested);
+  const effective = { id: selected.id, providerID: selected.providerID, family: selected.family,
+    status: selected.status, release_date: selected.release_date,
+    api: { id: selected.api.id, url: selected.api.url, npm: selected.api.npm },
+    capabilities: { toolcall: selected.capabilities.toolcall,
+      input: { text: selected.capabilities.input.text }, output: { text: selected.capabilities.output.text } }, cost: selected.cost };
+  if (!isDeepStrictEqual(expected, effective)) {
+    throw new Error("OpenCode effective selection differs from fresh raw catalog selection");
+  }
+  return sha256(JSON.stringify(catalog.opencode.models[expected.id]));
+}
+
+/** Recheck the retained physical catalog carrier before and after every child. */
+function readCatalogSource(source, directory) {
+  if (!source || source.file !== "model-catalog-source.json" ||
+      source.response_file !== "model-catalog-source-response.json" || source.path !== path.join(directory, source.file)) {
+    throw new Error("OpenCode fresh model catalog binding is unavailable");
+  }
+  for (const [file, expected, bytes] of [[source.path, source.sha256, source.bytes],
+    [path.join(directory, source.response_file), source.response_sha256, null]]) {
+    const info = fs.lstatSync(file);
+    if (!info.isFile() || info.isSymbolicLink() || fs.realpathSync(file) !== path.resolve(file) ||
+        (info.mode & 0o777) !== 0o600 || (typeof process.getuid === "function" && info.uid !== process.getuid()) ||
+        (bytes !== null && info.size !== bytes) || sha256(fs.readFileSync(file)) !== expected) {
+      throw new Error("OpenCode fresh model catalog carrier changed");
+    }
+  }
+  const response = JSON.parse(fs.readFileSync(path.join(directory, source.response_file), "utf8"));
+  if (response.requested_url !== MODEL_CATALOG_URL || response.response_url !== MODEL_CATALOG_URL ||
+      response.status !== 200 || !response.body_complete || !response.json_valid || response.aborted || response.error ||
+      response.bytes !== source.bytes || response.sha256 !== source.sha256) {
+    throw new Error("OpenCode fresh model catalog response is unestablished");
+  }
+  return JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(fs.readFileSync(source.path)));
+}
+
+function assertCatalogSource(binding) {
+  const catalog = readCatalogSource(binding.proof.catalog_source, path.dirname(binding.file));
+  if (assertCatalogSelection(catalog, binding.proof.selected_row, binding.proof.requested_model) !== binding.proof.selected_source_row_sha256) {
+    throw new Error("OpenCode fresh selected catalog row changed");
+  }
+}
+
 /** Resolve the same executable selected by Node's PATH lookup and retain its physical bytes. */
 function modelBinaryIdentity(binary, environment) {
   const candidates = binary.includes(path.sep) ? [path.resolve(binary)] :
@@ -191,6 +322,7 @@ function assertInferenceConfiguration(configuration) {
 /** Recheck the exact discovery proof/output/executable before and after every model attempt. */
 function assertModelDiscovery(binding) {
   if (binding.proof.inference_configuration) assertInferenceConfiguration(binding.proof.inference_configuration);
+  assertCatalogSource(binding);
   if (sha256(fs.readFileSync(binding.file)) !== binding.sha256 ||
       sha256(fs.readFileSync(binding.proof.binary.real_path)) !== binding.proof.binary.sha256) {
     throw new Error("OpenCode model discovery proof/executable changed");
@@ -210,7 +342,7 @@ export async function discoverFreeMiMoFlash({ evidenceDirectory, requested = "",
   }
   const proofFile = path.join(evidenceDirectory, "model-discovery.json");
   const names = ["model-discovery.json", "model-version.stdout", "model-version.stderr", "model-catalog.stdout", "model-catalog.stderr",
-    "recovery.json", "submission.json", ...[1, 2].flatMap((attempt) => [`model-response-attempt-${attempt}.txt`, `opencode-stderr-attempt-${attempt}.log`])];
+    "model-catalog-source.json", "model-catalog-source-response.json", "recovery.json", "submission.json", ...[1, 2].flatMap((attempt) => [`model-response-attempt-${attempt}.txt`, `opencode-stderr-attempt-${attempt}.log`])];
   if (names.some((name) => fs.existsSync(path.join(evidenceDirectory, name)))) {
     throw new Error("refusing pre-existing model discovery/invocation evidence");
   }
@@ -231,11 +363,17 @@ export async function discoverFreeMiMoFlash({ evidenceDirectory, requested = "",
     if (version.exit_code !== 0 || version.signal !== null || version.timed_out || !version.captures_closed || version.capture_error) throw new Error("OpenCode version discovery failed");
     proof.observed_version = stripVTControlCharacters(fs.readFileSync(path.join(evidenceDirectory, version.stdout_file), "utf8")).trim();
     if (proof.observed_version !== expectedVersion) throw new Error("OpenCode installed/declared version mismatch");
-    const catalog = await captureModelCommand({ binary: proof.binary.real_path, args: ["models", "opencode", "--refresh", "--verbose"], environment: childEnvironment, cwd, deadline, directory: evidenceDirectory, stem: "model-catalog" });
+    const acquired = await acquireOpenCodeModelCatalog(evidenceDirectory, deadline);
+    proof.catalog_source = acquired.binding;
+    const catalogEnvironment = { ...childEnvironment, OPENCODE_MODELS_PATH: acquired.binding.path,
+      OPENCODE_DISABLE_MODELS_FETCH: "true" };
+    readCatalogSource(proof.catalog_source, evidenceDirectory);
+    const catalog = await captureModelCommand({ binary: proof.binary.real_path, args: ["models", "opencode", "--verbose"], environment: catalogEnvironment, cwd, deadline, directory: evidenceDirectory, stem: "model-catalog" });
     proof.commands.push(catalog);
     if (catalog.exit_code !== 0 || catalog.signal !== null || catalog.timed_out || !catalog.captures_closed || catalog.capture_error) throw new Error("OpenCode model catalog discovery failed");
     const rows = parseOpenCodeModelCatalog(fs.readFileSync(path.join(evidenceDirectory, catalog.stdout_file)));
     const selected = selectFreeMiMoFlash(rows, requested);
+    proof.selected_source_row_sha256 = assertCatalogSelection(readCatalogSource(proof.catalog_source, evidenceDirectory), selected, requested);
     proof.catalog_sha256 = catalog.stdout_sha256;
     proof.selected_row = selected; proof.selected_row_sha256 = sha256(JSON.stringify(selected));
     proof.selected_model = `opencode/${selected.id}`; proof.status = "selected";
@@ -1065,7 +1203,8 @@ async function main() {
     assertModelDiscovery(discovery);
     const environment = { ...isolatedModelEnvironment(process.env, inferenceConfiguration.home),
       OPENCODE_CONFIG: path.join(inferenceConfiguration.home, ".config/opencode/opencode.json"),
-      REVIEW_EVIDENCE_DIR: evidenceDirectory, REVIEW_INPUT_PURPOSE: "diff" };
+      REVIEW_EVIDENCE_DIR: evidenceDirectory, REVIEW_INPUT_PURPOSE: "diff",
+      OPENCODE_MODELS_PATH: discovery.proof.catalog_source.path, OPENCODE_DISABLE_MODELS_FETCH: "true" };
     const result = await invokeOpenCode({ ...arguments_, reviewModel: discovery.proof.selected_model,
       opencodeBin: discovery.proof.binary.real_path, environment });
     assertModelDiscovery(discovery);

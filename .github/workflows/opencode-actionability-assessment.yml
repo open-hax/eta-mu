@@ -76,7 +76,10 @@ jobs:
           set -euo pipefail
           # The publisher App remains scoped to the configured open-hax owner.
           [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]]
-          [[ "$TIMEOUT_INPUT" =~ ^[0-9]+$ ]] && (( TIMEOUT_INPUT >= 60 && TIMEOUT_INPUT <= 180 ))
+          [[ "$TIMEOUT_INPUT" =~ ^[0-9]+$ ]] && (( TIMEOUT_INPUT >= 60 && TIMEOUT_INPUT <= 180 )) || {
+            echo '::error::review_timeout_minutes must be a whole number from 60 through 180.'
+            exit 1
+          }
           [[ "$CANONICAL_REVISION" =~ ^[0-9a-f]{40}$ && "$MUSE_REVISION" =~ ^[0-9a-f]{40}$ ]] || {
             echo '::error::Protected canonical/Muse dependency pins are not adopted.'
             exit 1
