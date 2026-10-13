@@ -849,3 +849,12 @@
   spore: none
   receipt-refs: root-seven-source-repair-canonical-event-v1.edn; qualified source8f20d8beee40bb7a41c09eced9588f7962d939aad9cea7d04103feb3c0073910
   note: Actual paired89controls19pass70fail on predecessor versus89pass final; registered310ordinary,19actionabilityNode,18rejectionNode,685inertchecks,6rejectiontests87assertions pass;84boundNodes0denials,4Muse0warnings;full lintpass. StaticV1getter andV2shellPID limitations retained unapplied. Keep anonymousdynamicMiMo memory discoverable. Native settlement, protected adoption,1000campaign,Servicesstack andliveSpanishCMS remain pending. No spore or promotion.
+- ts: 2026-10-13T04:35:08.702589403Z
+  session: codex/01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify native actionability carrier-law ownership repair
+  p-efficiency: 0.85
+  p-friction: 0.25
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/t350-500f-actionability-submission-law-preparation-v1/root-two-source-law-canonical-event-v1.edn
+  note: Existing predicate moved verbatim to portable law after current native finding; registered gates and CLI pass. Distinct actionability/rejection semantics preserved. No new spore, promotion, native agreement, protected adoption or deployment credit.

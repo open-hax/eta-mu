@@ -4,7 +4,8 @@
   (:require [pr-flow.native-context :as native] [pr-flow.native-context-law :as context-law]
             [pr-flow.permissions :as permissions]
             [pr-flow.actionability :as actionability] [pr-flow.actionability-history :as history]
-            [pr-flow.law :as law] [eta-mu.extern.actionability-host :as host]))
+            [pr-flow.law :as law] [eta-mu.law.actionability-assessment :as assessment-law]
+            [eta-mu.extern.actionability-host :as host]))
 
 ;; Immutable protected dependency revisions; fresh runtime custody still applies.
 ;; These pins alone supply no history, publication or native-resolution authority.
@@ -106,8 +107,7 @@
   (verify-sources!) (verify-run!)
   (let [invocation (verify-invocation!)
         _ (when-not (= accepted-sha256 (:accepted-sha256 invocation)) (host/refuse! :trusted-invocation-digest))
-        _ (when-not (and (vector? (get-in invocation [:submission :comments]))
-                         (empty? (get-in invocation [:submission :comments])))
+        _ (when-not (assessment-law/admissible-submission? invocation)
             (host/refuse! :adverse-submission))
         before (collect deps config) inventory (inventory!) source (:source invocation)
         _ (bound-source! before inventory source config)
