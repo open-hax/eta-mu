@@ -513,6 +513,54 @@
     (check "native mutation target" (ffirst @calls) "https://api.github.com/repos/open-hax/knoxx/issues/387/comments")
     (check "transport does not follow redirects" (.-redirect (second (first @calls))) "error")))
 
+(defn empty-source-controls
+  "A complete native zero-path inventory needs no fabricated immutable object."
+  []
+  (let [head (apply str (repeat 40 "a")) base (apply str (repeat 40 "b"))
+        requests (atom []) immutable-reads (atom 0)
+        collect (fn [count pages]
+                  (host/source-inventory
+                   (fn [verb resource & args]
+                     (swap! requests conj [verb resource (vec args)])
+                     (case resource
+                       "repos/synthetic/native-context/pulls/1"
+                       {:number 1 :state "open" :head {:sha head} :base {:sha base} :changed_files count}
+                       "repos/synthetic/native-context/pulls/1/files?per_page=100" pages
+                       (throw (ex-info "Unexpected zero-path inventory read" {:resource resource}))))
+                   test-root "synthetic/native-context" 1 head))]
+    (with-redefs [host/immutable-source (fn [& _]
+                                         (swap! immutable-reads inc)
+                                         (throw (ex-info "Zero-path inventory must not read a Git object" {})))]
+      (let [inventory (try (collect 0 [[]])
+                          (catch :default error
+                            {:native-refusal (ex-data error) :exception (.-message error)}))]
+        (check "zero native changed-files admits a complete empty inventory"
+               (if (contains? inventory :native-refusal) inventory :accepted) :accepted)
+        (check "zero-path inventory retains exact target head" (:head inventory) head)
+        (check "zero-path inventory retains exact native base" (:base inventory) base)
+        (check "zero-path native pagination remains a complete empty vector" (:changed-files inventory) [])
+        (check "zero-path inventory has no invented live source" (:files inventory) nil)
+        (check "zero-path inventory has no invented preimage source" (:preimage-files inventory) nil)
+        (check "zero-path inventory has no invented removal source" (:removed-files inventory) nil)
+        (check "zero-path inventory has no invented merge-base" (:merge-base inventory) nil)
+        (check "zero-path inventory preserves the existing manifest shape"
+               (:manifest inventory) [1 "synthetic/native-context" 1 head base [] nil nil])
+        (check "zero-path manifest retains its actual digest"
+               (:sha256 inventory) (host/sha256 (pr-str (:manifest inventory))))
+        (check "zero-path input reads exact native metadata and complete files pagination"
+               @requests [["api" "repos/synthetic/native-context/pulls/1" []]
+                          ["api" "repos/synthetic/native-context/pulls/1/files?per_page=100" ["--paginate" "--slurp"]]]))
+      (doseq [count [nil -1 0.5 "0"]]
+        (check "malformed or negative changed-file counts retain source refusal"
+               (refused #(collect count [[]])) :source-file-inventory))
+      (doseq [pages [[] [nil] "not-native-pages"
+                     [[{:filename "unexpected.cljc" :status "added"}]]]]
+        (check "zero count still refuses incomplete, malformed or mismatched native file pages"
+               (refused #(collect 0 pages)) :source-file-inventory))
+      (check "zero-path and refused inventories never synthesize an immutable Git source"
+             @immutable-reads 0)))
+  :complete)
+
 (defn removed-source-controls []
   (let [directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-removed-preimage-"))
         git (fn [& args]
@@ -1097,6 +1145,7 @@
         _model-discovery-check (model-discovery-controls)
         _run-check (run-controls)
         _native-read-check (native-read-controls)
+        _empty-source-check (empty-source-controls)
         _source-check (removed-source-controls)
         _copied-check (copied-source-controls)
         _large-inventory-check (large-inventory-controls)
@@ -1149,6 +1198,7 @@
                                       "model-discovery" (model-discovery-controls)
                                       "host-run" (run-controls)
                                       "native-read" (native-read-controls)
+                                      "empty-source" (empty-source-controls)
                                       "removed-source" (removed-source-controls)
                                       "copied-source" (copied-source-controls)
                                       "large-inventory" (large-inventory-controls)

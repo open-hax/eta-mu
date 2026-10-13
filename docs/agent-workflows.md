@@ -423,9 +423,11 @@ import operational `pr.cljs`, implement another protocol parser, or grant
 eligibility from supplied booleans. Canonical `native-context-law/select-fresh-context`
 owns the structural fresh snapshot and exact target selection. The host invokes
 canonical classification separately; structural selection grants no admission.
-Removed files are read from the unique merge base of the exact native head and
-base commits, with that preimage commit and its byte hashes retained in the
-source manifest. Missing or ambiguous ancestry refuses rather than substituting
+Every non-added preimage (removed, modified, type-changed, and the source path
+of renamed or copied files) is read from the unique merge base of the exact
+native head and base commits, with that preimage commit and its byte hashes
+retained in the source manifest. Above GitHub's 3,000-file API cap, the changed
+inventory comes from an immutable merge-base Git diff. Missing or ambiguous ancestry refuses rather than substituting
 the advancing base tip. NBB asynchronous orchestration uses a single
 awaited body and explicit awaited recursive function boundaries; an asynchronous
 `doseq` or `loop` must not be treated as completed sequential work.
@@ -449,8 +451,10 @@ environment or output artifacts.
 
 The native `gh` reader directs complete stdout to an exclusively created file in
 an owned private temporary directory, so paginated API responses are not cut off
-by a 16 MiB process capture buffer. It retains the existing process timeout and
-HTTP/JSON refusal behavior, buffers only stderr, and closes/removes its temporary
+by a 16 MiB process capture buffer. Paginated reads have a 120-second whole-read
+budget and other reads keep 15 seconds; a genuine timeout refuses as
+`native-read-timeout` before status or JSON parsing. It keeps the HTTP/JSON
+refusal behavior, buffers only stderr, and closes/removes its temporary
 resources on success or failure. Canonical input byte/page limits still apply;
 this does not guarantee arbitrary input fits available memory or disk.
 

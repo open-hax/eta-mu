@@ -545,7 +545,7 @@ const execFileLaunchSource = String.raw`
   }
   try {
     if (mode === "non-node") {
-      const command = "/bin/sh", shellArgs = ["-c", 'umask 077; printf "%s" "$$" > "$1"; printf "%s" "$$"', "marker-control", marker];
+      const command = "/usr/bin/python3", shellArgs = [shellProgram, marker];
       if (api === "execFileSync") {
         observation.stdoutPid = Number(cp.execFileSync(command, shellArgs, {encoding:"utf8", env:{PATH:process.env.PATH}, timeout:5000}));
         observation.status = 0;
@@ -682,16 +682,20 @@ function execFileLaunchControl(t, api, mode) {
   const marker = path.join(work, "executed"),
     program = path.join(work, "marker-child.cjs"),
     childFacts = path.join(work, "child-facts.json"),
-    shellProgram = path.join(work, "marker-child.sh");
+    shellProgram = path.join(work, "marker-child.py");
   fs.writeFileSync(
     program,
     `require("node:fs").writeFileSync(${JSON.stringify(marker)}, String(process.pid), {mode:0o600, flag:"wx"}); require("node:fs").writeFileSync(${JSON.stringify(childFacts)}, JSON.stringify({pid:process.pid, execArgv:process.execArgv}), {mode:0o600, flag:"wx"}); process.stdout.write(String(process.pid)); if(process.connected) process.disconnect();\n`,
     { mode: 0o600, flag: "wx" },
   );
-  fs.writeFileSync(shellProgram, 'umask 077; printf "%s" "$$" > "$1"; printf "%s" "$$"\n', {
-    mode: 0o600,
-    flag: "wx",
-  });
+  fs.writeFileSync(
+    shellProgram,
+    'import os, sys\npid = str(os.getpid())\nfd = os.open(sys.argv[1], os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)\nwith os.fdopen(fd, "w") as marker:\n    marker.write(pid)\nsys.stdout.write(pid)\n',
+    {
+      mode: 0o600,
+      flag: "wx",
+    },
+  );
   const target =
     mode === "longer-path" || mode === "changing-argv"
       ? path.join(work, "target-preload.cjs")
@@ -1280,3 +1284,762 @@ for (const api of ["exec", "execSync"]) {
   test(`shell ${api} non-Node text is deliberately outside supported PID custody`, (t) =>
     shellExecutionControl(t, api, "non-node"));
 }
+
+// Explicit sh/env launchers and Worker isolates cannot establish the gate's
+// PID-only audit custody. Every predecessor payload below only writes owned
+// marker/fact files; it has no network operations or credential-bearing input.
+const unsupportedLaunchSource = String.raw`
+(async () => {
+  const fs = require("node:fs"), cp = require("node:child_process");
+  const api = process.env.TEST_CHILD_API, launcher = process.env.TEST_CHILD_LAUNCHER;
+  const mode = process.env.TEST_CHILD_MODE, program = process.env.TEST_CHILD_PROGRAM;
+  const marker = process.env.TEST_CHILD_MARKER, facts = process.env.TEST_CHILD_FACTS;
+  const observation = {api, launcher, mode, refused:false, errorCode:null, surface:null,
+    commandPid:null, threadId:null, stdout:null, status:null, callbackCalled:false,
+    esmBindingSame:null, innerMessage:null, innerStderr:""};
+  const options = mode === "stripped" ? {env:{PATH:process.env.PATH}, timeout:5000} : {timeout:5000};
+  try {
+    if (launcher === "Worker") {
+      const threads = require("node:worker_threads");
+      const esm = api === "esm-Worker" ? await import("node:worker_threads") : null;
+      if (esm) observation.esmBindingSame = esm.Worker === threads.Worker;
+      const constructor = esm ? esm.Worker : threads.Worker;
+      const workerOptions = {execArgv:[], workerData:{marker, facts}, stdout:true, stderr:true};
+      if (mode === "stripped") workerOptions.env = {PATH:process.env.PATH};
+      const worker = new constructor(program, workerOptions);
+      observation.threadId = worker.threadId;
+      worker.stderr.on("data", chunk => {observation.innerStderr += chunk;});
+      worker.on("message", message => {observation.innerMessage = message;});
+      observation.status = await new Promise((resolve, reject) => {
+        worker.once("error", reject); worker.once("exit", resolve);
+      });
+    } else {
+      const command = launcher === "sh" ? "/bin/sh" : "/usr/bin/env";
+      const args = launcher === "sh" ? ["-c", 'node "$1"', "marker-control", program] : ["node", program];
+      if (api === "spawnSync") {
+        const child = cp.spawnSync(command, args, {...options, encoding:"utf8"});
+        if (child.error) throw child.error;
+        observation.commandPid = child.pid ?? null;
+        observation.status = child.status; observation.stdout = child.stdout;
+        observation.innerStderr = child.stderr;
+      } else if (api === "execFileSync") {
+        observation.stdout = cp.execFileSync(command, args, {...options, encoding:"utf8"});
+        observation.status = 0;
+      } else {
+        let complete, reject;
+        const done = new Promise((resolve, refuse) => {complete = resolve; reject = refuse;});
+        const child = api === "fork" ? cp.fork(program, [], {...options, silent:true, execPath:command,
+          execArgv:launcher === "sh" ? ["-c", 'node "$1"', "marker-control"] : ["node"]})
+          : api === "spawn" ? cp.spawn(command, args, options)
+          : cp.execFile(command, args, {...options, encoding:"utf8"}, (error, stdout, stderr) => {
+            observation.callbackCalled = true; observation.stdout = stdout;
+            observation.innerStderr = stderr; if (error) reject(error);
+          });
+        observation.commandPid = child.pid ?? null;
+        if (api !== "execFile") {
+          observation.stdout = "";
+          child.stdout.on("data", chunk => {observation.stdout += chunk;});
+          child.stderr.on("data", chunk => {observation.innerStderr += chunk;});
+        }
+        child.once("error", reject);
+        child.once("close", status => {observation.status = status; complete();});
+        await done;
+      }
+    }
+  } catch (error) {
+    observation.refused = true; observation.errorCode = error.code ?? null; observation.surface = error.surface ?? null;
+  }
+  observation.markerPresent = fs.existsSync(marker);
+  observation.childFacts = fs.existsSync(facts) ? JSON.parse(fs.readFileSync(facts, "utf8")) : null;
+  console.log(JSON.stringify(observation));
+})().catch(error => {console.error(error); process.exitCode = 1;});
+`;
+
+function unsupportedLaunchControl(t, api, launcher, mode) {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "eta-unsupported-launch-control-"));
+  fs.chmodSync(work, 0o700);
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const auditDirectory = path.join(work, "audits"),
+    home = path.join(work, "home"),
+    temporary = path.join(work, "tmp");
+  for (const directory of [auditDirectory, home, temporary])
+    fs.mkdirSync(directory, { mode: 0o700 });
+  const program = path.join(work, launcher === "Worker" ? "marker-worker.cjs" : "marker-child.cjs"),
+    marker = path.join(work, "executed"),
+    facts = path.join(work, "child-facts.json");
+  const payload =
+    launcher === "Worker"
+      ? `const fs = require("node:fs"), threads = require("node:worker_threads"); const {marker,facts} = threads.workerData; fs.writeFileSync(marker, String(process.pid), {mode:0o600,flag:"wx"}); fs.writeFileSync(facts, JSON.stringify({pid:process.pid,parentPid:process.ppid,threadId:threads.threadId,isMainThread:threads.isMainThread}), {mode:0o600,flag:"wx"}); threads.parentPort.postMessage({pid:process.pid,threadId:threads.threadId});\n`
+      : `const fs = require("node:fs"); fs.writeFileSync(${JSON.stringify(marker)}, String(process.pid), {mode:0o600,flag:"wx"}); fs.writeFileSync(${JSON.stringify(facts)}, JSON.stringify({pid:process.pid,parentPid:process.ppid,execArgv:process.execArgv}), {mode:0o600,flag:"wx"}); process.stdout.write(String(process.pid)); if(process.connected) process.disconnect();\n`;
+  fs.writeFileSync(program, payload, { mode: 0o600, flag: "wx" });
+  const capture = "unsupported-" + api + "-" + launcher + "-" + mode;
+  const parent = spawnSync(process.execPath, ["--eval", unsupportedLaunchSource], {
+    cwd: work,
+    env: {
+      PATH: path.dirname(process.execPath),
+      HOME: home,
+      TMPDIR: temporary,
+      XDG_CONFIG_HOME: path.join(home, ".config"),
+      LANG: "C.UTF-8",
+      LC_ALL: "C.UTF-8",
+      TZ: "UTC",
+      NODE_OPTIONS: "--require " + JSON.stringify(preload),
+      ETA_MU_TEST_NETWORK_AUDIT_DIR: auditDirectory,
+      ETA_MU_TEST_NETWORK_AUDIT_CAPTURE: capture,
+      TEST_CHILD_API: api,
+      TEST_CHILD_LAUNCHER: launcher,
+      TEST_CHILD_MODE: mode,
+      TEST_CHILD_PROGRAM: program,
+      TEST_CHILD_MARKER: marker,
+      TEST_CHILD_FACTS: facts,
+    },
+    encoding: "utf8",
+    timeout: 15000,
+  });
+  assert.equal(parent.error, undefined, parent.stderr);
+  assert.equal(parent.signal, null, parent.stderr);
+  const lines = parent.stdout.trim().split("\n");
+  assert.equal(lines.length, 1, parent.stdout + parent.stderr);
+  const observation = JSON.parse(lines[0]);
+  const records = fs.readdirSync(auditDirectory).map((name) => {
+    const file = path.join(auditDirectory, name),
+      info = fs.lstatSync(file);
+    assert.ok(info.isFile() && !info.isSymbolicLink());
+    assert.equal(info.mode & 0o777, 0o600);
+    assert.equal(info.uid, process.getuid());
+    const record = JSON.parse(fs.readFileSync(file, "utf8"));
+    assert.equal(name, `${record.pid}.json`);
+    assert.equal(record.schema, "eta-mu.test-network-denial/v1");
+    assert.equal(record.capture, capture);
+    assert.ok(
+      record.kernelAncestry.some(
+        (row) =>
+          row.pid === parent.pid &&
+          row.parentPid === process.pid &&
+          /^[0-9]+$/.test(row.startTicks),
+      ),
+    );
+    return record;
+  });
+  // The inherited predecessor Worker may run the marker before its same-PID
+  // audit collides. Preserve actual marker, thread and stderr evidence first;
+  // that later audit collision is not a pre-launch refusal or a healthy pass.
+  t.diagnostic(
+    JSON.stringify({
+      schema: "eta-mu.unsupported-launch-control-evidence/v1",
+      parentExit: parent.status,
+      parentStderr: parent.stderr,
+      observation,
+      records,
+    }),
+  );
+  assert.equal(observation.api, api);
+  assert.equal(observation.launcher, launcher);
+  assert.equal(observation.mode, mode);
+  if (api === "esm-Worker") assert.equal(observation.esmBindingSame, true);
+  assert.equal(
+    observation.refused,
+    true,
+    "unsupported launcher must refuse before its inert payload runs",
+  );
+  assert.equal(
+    observation.errorCode,
+    launcher === "Worker"
+      ? "TEST_WORKER_AUDIT_CUSTODY_UNAVAILABLE"
+      : "TEST_INDIRECT_NODE_PID_CUSTODY_UNAVAILABLE",
+  );
+  assert.equal(
+    observation.surface,
+    launcher === "Worker" ? "worker_threads.Worker" : "child_process." + api,
+  );
+  assert.equal(observation.commandPid, null);
+  assert.equal(observation.threadId, null);
+  assert.equal(observation.stdout, null);
+  assert.equal(observation.status, null);
+  assert.equal(observation.callbackCalled, false);
+  assert.equal(observation.innerMessage, null);
+  assert.equal(observation.innerStderr, "");
+  assert.equal(observation.markerPresent, false);
+  assert.equal(observation.childFacts, null);
+  assert.equal(parent.stderr, "");
+  assert.equal(records.length, 1);
+  const audit = records.find((record) => record.pid === parent.pid);
+  assert.ok(audit);
+  assert.equal(audit.parentPid, process.pid);
+  assert.deepEqual(audit.expectedNodeChildren, []);
+  assert.equal(audit.deniedAttempts, 1);
+  assert.equal(parent.status, 97);
+}
+
+for (const api of ["spawn", "spawnSync", "execFile", "execFileSync", "fork"]) {
+  for (const launcher of ["sh", "env"]) {
+    for (const mode of ["stripped", "inherited"]) {
+      test(`indirect launcher ${api} ${launcher} ${mode} refuses before unaudited Node payload`, (t) =>
+        unsupportedLaunchControl(t, api, launcher, mode));
+    }
+  }
+}
+for (const api of ["Worker", "esm-Worker"]) {
+  for (const mode of ["stripped", "inherited"]) {
+    test(`Worker construction ${api} ${mode} refuses before unaudited isolate payload`, (t) =>
+      unsupportedLaunchControl(t, api, "Worker", mode));
+  }
+}
+
+// Shell selection on a non-Node command uses the same lexical launcher edge.
+// Getters must be captured once: probing false then passing live options would
+// allow a second true read to execute the owned Node marker through a shell.
+const nonNodeShellOptionSource = String.raw`
+(async () => {
+  const fs = require("node:fs"), cp = require("node:child_process");
+  const api = process.env.TEST_CHILD_API, mode = process.env.TEST_CHILD_MODE;
+  const program = process.env.TEST_CHILD_PROGRAM, marker = process.env.TEST_CHILD_MARKER;
+  const facts = process.env.TEST_CHILD_FACTS;
+  const command = "node " + JSON.stringify(program);
+  let getterReads = 0;
+  const options = {shell:true, timeout:5000, encoding:"utf8"};
+  if (mode !== "inherited") options.env = {PATH:process.env.PATH};
+  if (mode.startsWith("getter-")) Object.defineProperty(options, "shell", {
+    enumerable:true,
+    get() {getterReads += 1; return mode === "getter-allow-shell" ? getterReads === 1 : getterReads !== 1;},
+  });
+  const observation = {api, mode, refused:false, errorCode:null, surface:null,
+    commandPid:null, stdout:null, status:null, callbackCalled:false, innerStderr:""};
+  try {
+    if (api === "spawnSync") {
+      const child = cp.spawnSync(command, [], options);
+      if (child.error) throw child.error;
+      observation.commandPid = child.pid ?? null;
+      observation.stdout = child.stdout; observation.status = child.status;
+      observation.innerStderr = child.stderr;
+    } else if (api === "execFileSync") {
+      observation.stdout = cp.execFileSync(command, [], options);
+      observation.status = 0;
+    } else {
+      let complete, reject;
+      const done = new Promise((resolve, refuse) => {complete = resolve; reject = refuse;});
+      const child = api === "spawn" ? cp.spawn(command, [], options)
+        : cp.execFile(command, [], options, (error, stdout, stderr) => {
+          observation.callbackCalled = true; observation.stdout = stdout;
+          observation.innerStderr = stderr; if (error) reject(error);
+        });
+      observation.commandPid = child.pid ?? null;
+      if (api === "spawn") {
+        observation.stdout = "";
+        child.stdout.on("data", chunk => {observation.stdout += chunk;});
+        child.stderr.on("data", chunk => {observation.innerStderr += chunk;});
+      }
+      child.once("error", reject);
+      child.once("close", status => {observation.status = status; complete();});
+      await done;
+    }
+  } catch (error) {
+    observation.refused = true; observation.errorCode = error.code ?? null; observation.surface = error.surface ?? null;
+  }
+  observation.getterReads = getterReads;
+  observation.markerPresent = fs.existsSync(marker);
+  observation.childFacts = fs.existsSync(facts) ? JSON.parse(fs.readFileSync(facts, "utf8")) : null;
+  console.log(JSON.stringify(observation));
+})().catch(error => {console.error(error); process.exitCode = 1;});
+`;
+
+function nonNodeShellOptionControl(t, api, mode) {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "eta-non-node-shell-option-control-"));
+  fs.chmodSync(work, 0o700);
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const auditDirectory = path.join(work, "audits"),
+    home = path.join(work, "home"),
+    temporary = path.join(work, "tmp");
+  for (const directory of [auditDirectory, home, temporary])
+    fs.mkdirSync(directory, { mode: 0o700 });
+  const program = path.join(work, "marker-child.cjs"),
+    marker = path.join(work, "executed"),
+    facts = path.join(work, "child-facts.json");
+  fs.writeFileSync(
+    program,
+    `const fs = require("node:fs"); fs.writeFileSync(${JSON.stringify(marker)}, String(process.pid), {mode:0o600,flag:"wx"}); fs.writeFileSync(${JSON.stringify(facts)}, JSON.stringify({pid:process.pid,parentPid:process.ppid,execArgv:process.execArgv}), {mode:0o600,flag:"wx"}); process.stdout.write(String(process.pid));\n`,
+    { mode: 0o600, flag: "wx" },
+  );
+  const capture = "non-node-shell-" + api + "-" + mode;
+  const parent = spawnSync(process.execPath, ["--eval", nonNodeShellOptionSource], {
+    cwd: work,
+    env: {
+      PATH: path.dirname(process.execPath),
+      HOME: home,
+      TMPDIR: temporary,
+      XDG_CONFIG_HOME: path.join(home, ".config"),
+      LANG: "C.UTF-8",
+      LC_ALL: "C.UTF-8",
+      TZ: "UTC",
+      NODE_OPTIONS: "--require " + JSON.stringify(preload),
+      ETA_MU_TEST_NETWORK_AUDIT_DIR: auditDirectory,
+      ETA_MU_TEST_NETWORK_AUDIT_CAPTURE: capture,
+      TEST_CHILD_API: api,
+      TEST_CHILD_MODE: mode,
+      TEST_CHILD_PROGRAM: program,
+      TEST_CHILD_MARKER: marker,
+      TEST_CHILD_FACTS: facts,
+    },
+    encoding: "utf8",
+    timeout: 15000,
+  });
+  assert.equal(parent.error, undefined, parent.stderr);
+  assert.equal(parent.signal, null, parent.stderr);
+  const lines = parent.stdout.trim().split("\n");
+  assert.equal(lines.length, 1, parent.stdout + parent.stderr);
+  const observation = JSON.parse(lines[0]);
+  const records = fs.readdirSync(auditDirectory).map((name) => {
+    const file = path.join(auditDirectory, name),
+      info = fs.lstatSync(file);
+    assert.ok(info.isFile() && !info.isSymbolicLink());
+    assert.equal(info.mode & 0o777, 0o600);
+    assert.equal(info.uid, process.getuid());
+    const record = JSON.parse(fs.readFileSync(file, "utf8"));
+    assert.equal(name, `${record.pid}.json`);
+    assert.equal(record.schema, "eta-mu.test-network-denial/v1");
+    assert.equal(record.capture, capture);
+    assert.ok(
+      record.kernelAncestry.some(
+        (row) =>
+          row.pid === parent.pid &&
+          row.parentPid === process.pid &&
+          /^[0-9]+$/.test(row.startTicks),
+      ),
+    );
+    return record;
+  });
+  t.diagnostic(
+    JSON.stringify({
+      schema: "eta-mu.non-node-shell-option-control-evidence/v1",
+      parentExit: parent.status,
+      parentStderr: parent.stderr,
+      observation,
+      records,
+    }),
+  );
+  assert.equal(observation.api, api);
+  assert.equal(observation.mode, mode);
+  assert.equal(
+    observation.getterReads,
+    mode.startsWith("getter-") ? 1 : 0,
+    "guard and native dispatch must consume one effective shell value",
+  );
+  assert.equal(observation.refused, true);
+  assert.equal(observation.markerPresent, false);
+  assert.equal(observation.childFacts, null);
+  assert.equal(parent.stderr, "");
+  assert.equal(records.length, 1);
+  const audit = records.find((record) => record.pid === parent.pid);
+  assert.ok(audit);
+  assert.equal(audit.parentPid, process.pid);
+  assert.deepEqual(audit.expectedNodeChildren, []);
+  if (mode === "getter-no-shell") {
+    // With the captured shell:false, this compound text is an ordinary absent
+    // executable. A second true read would run the real Node marker instead.
+    assert.equal(observation.errorCode, "ENOENT");
+    assert.equal(observation.surface, null);
+    assert.equal(audit.deniedAttempts, 0);
+    assert.equal(parent.status, 0);
+  } else {
+    assert.equal(observation.errorCode, "TEST_SHELL_CHILD_PID_CUSTODY_UNAVAILABLE");
+    assert.equal(observation.surface, "child_process." + api);
+    assert.equal(observation.commandPid, null);
+    assert.equal(observation.stdout, null);
+    assert.equal(observation.status, null);
+    assert.equal(observation.callbackCalled, false);
+    assert.equal(observation.innerStderr, "");
+    assert.equal(audit.deniedAttempts, 1);
+    assert.equal(parent.status, 97);
+  }
+}
+
+for (const api of ["spawn", "spawnSync", "execFile", "execFileSync"]) {
+  for (const mode of ["stripped", "inherited", "getter-allow-shell", "getter-no-shell"]) {
+    test(`public shell option ${api} ${mode} consumes stable custody before dispatch`, (t) =>
+      nonNodeShellOptionControl(t, api, mode));
+  }
+}
+
+// Constructor reflection is a public API path, not an arbitrary native handle.
+// A subclass replacement would expose its native Worker superclass. These real
+// inert controls exercise prototype/superclass constructor paths and prove the
+// standalone replacement has no native Worker reference in those chains.
+const workerConstructorSource = String.raw`
+(async () => {
+  const fs = require("node:fs"), threads = require("node:worker_threads");
+  const api = process.env.TEST_CHILD_API, mode = process.env.TEST_CHILD_MODE;
+  const program = process.env.TEST_CHILD_PROGRAM, marker = process.env.TEST_CHILD_MARKER;
+  const facts = process.env.TEST_CHILD_FACTS;
+  const esm = api.startsWith("esm-") ? await import("node:worker_threads") : null;
+  const Worker = esm ? esm.Worker : threads.Worker;
+  const superclass = Object.getPrototypeOf(Worker);
+  const prototypeConstructor = Worker.prototype.constructor;
+  const superPath = api.endsWith("superclass");
+  const parentPrototypeConstructor = Object.getPrototypeOf(Worker.prototype).constructor;
+  const parentPrototypePath = api.endsWith("parent-prototype-constructor");
+  const selected = superPath ? superclass : parentPrototypePath ? parentPrototypeConstructor : prototypeConstructor;
+  const observation = {api, mode, superclassIsFunctionPrototype:superclass === Function.prototype,
+    prototypeIsObjectPrototype:Object.getPrototypeOf(Worker.prototype) === Object.prototype,
+    prototypeConstructorSame:prototypeConstructor === Worker,
+    parentPrototypeConstructorIsObject:parentPrototypeConstructor === Object,
+    esmBindingSame:esm ? esm.Worker === threads.Worker : null,
+    refused:false, errorName:null, errorCode:null, surface:null, threadId:null, status:null,
+    constructedNonWorker:false, innerStderr:""};
+  const options = {execArgv:[], workerData:{marker,facts}, stdout:true, stderr:true};
+  if (mode === "stripped") options.env = {PATH:process.env.PATH};
+  try {
+    const worker = Reflect.construct(selected, [program, options]);
+    if (Number.isSafeInteger(worker.threadId) && worker.threadId > 0) {
+      observation.threadId = worker.threadId;
+      worker.stderr.on("data", chunk => {observation.innerStderr += chunk;});
+      observation.status = await new Promise((resolve, reject) => {
+        worker.once("error", reject); worker.once("exit", resolve);
+      });
+    } else observation.constructedNonWorker = true;
+  } catch (error) {
+    observation.refused = true; observation.errorName = error.name ?? null;
+    observation.errorCode = error.code ?? null; observation.surface = error.surface ?? null;
+  }
+  observation.markerPresent = fs.existsSync(marker);
+  observation.childFacts = fs.existsSync(facts) ? JSON.parse(fs.readFileSync(facts,"utf8")) : null;
+  console.log(JSON.stringify(observation));
+})().catch(error => {console.error(error); process.exitCode = 1;});
+`;
+
+function workerConstructorControl(t, api, mode) {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "eta-worker-constructor-control-"));
+  fs.chmodSync(work, 0o700);
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const auditDirectory = path.join(work, "audits"),
+    home = path.join(work, "home"),
+    temporary = path.join(work, "tmp");
+  for (const directory of [auditDirectory, home, temporary])
+    fs.mkdirSync(directory, { mode: 0o700 });
+  const program = path.join(work, "marker-worker.cjs"),
+    marker = path.join(work, "executed"),
+    facts = path.join(work, "worker-facts.json");
+  fs.writeFileSync(
+    program,
+    'const fs=require("node:fs"),threads=require("node:worker_threads");const {marker,facts}=threads.workerData;fs.writeFileSync(marker,String(process.pid),{mode:0o600,flag:"wx"});fs.writeFileSync(facts,JSON.stringify({pid:process.pid,parentPid:process.ppid,threadId:threads.threadId,isMainThread:threads.isMainThread}),{mode:0o600,flag:"wx"});\n',
+    { mode: 0o600, flag: "wx" },
+  );
+  const capture = "worker-constructor-" + api + "-" + mode;
+  const parent = spawnSync(process.execPath, ["--eval", workerConstructorSource], {
+    cwd: work,
+    env: {
+      PATH: path.dirname(process.execPath),
+      HOME: home,
+      TMPDIR: temporary,
+      XDG_CONFIG_HOME: path.join(home, ".config"),
+      LANG: "C.UTF-8",
+      LC_ALL: "C.UTF-8",
+      TZ: "UTC",
+      NODE_OPTIONS: "--require " + JSON.stringify(preload),
+      ETA_MU_TEST_NETWORK_AUDIT_DIR: auditDirectory,
+      ETA_MU_TEST_NETWORK_AUDIT_CAPTURE: capture,
+      TEST_CHILD_API: api,
+      TEST_CHILD_MODE: mode,
+      TEST_CHILD_PROGRAM: program,
+      TEST_CHILD_MARKER: marker,
+      TEST_CHILD_FACTS: facts,
+    },
+    encoding: "utf8",
+    timeout: 15000,
+  });
+  assert.equal(parent.error, undefined, parent.stderr);
+  assert.equal(parent.signal, null, parent.stderr);
+  const lines = parent.stdout.trim().split("\n");
+  assert.equal(lines.length, 1, parent.stdout + parent.stderr);
+  const observation = JSON.parse(lines[0]);
+  const records = fs.readdirSync(auditDirectory).map((name) => {
+    const file = path.join(auditDirectory, name),
+      info = fs.lstatSync(file);
+    assert.ok(info.isFile() && !info.isSymbolicLink());
+    assert.equal(info.mode & 0o777, 0o600);
+    assert.equal(info.uid, process.getuid());
+    const record = JSON.parse(fs.readFileSync(file, "utf8"));
+    assert.equal(name, `${record.pid}.json`);
+    assert.equal(record.schema, "eta-mu.test-network-denial/v1");
+    assert.equal(record.capture, capture);
+    assert.ok(
+      record.kernelAncestry.some(
+        (row) =>
+          row.pid === parent.pid &&
+          row.parentPid === process.pid &&
+          /^[0-9]+$/.test(row.startTicks),
+      ),
+    );
+    return record;
+  });
+  t.diagnostic(
+    JSON.stringify({
+      schema: "eta-mu.worker-constructor-control-evidence/v1",
+      parentExit: parent.status,
+      parentStderr: parent.stderr,
+      observation,
+      records,
+    }),
+  );
+  assert.equal(observation.api, api);
+  assert.equal(observation.mode, mode);
+  if (api.startsWith("esm-")) assert.equal(observation.esmBindingSame, true);
+  assert.equal(
+    observation.superclassIsFunctionPrototype,
+    true,
+    "replacement must expose no native Worker superclass",
+  );
+  assert.equal(
+    observation.prototypeIsObjectPrototype,
+    true,
+    "replacement prototype must not retain native Worker ancestry",
+  );
+  assert.equal(
+    observation.prototypeConstructorSame,
+    true,
+    "prototype constructor must name the same refusal replacement",
+  );
+  assert.equal(
+    observation.parentPrototypeConstructorIsObject,
+    true,
+    "inherited prototype constructor must be ordinary Object, never native Worker",
+  );
+  assert.equal(observation.refused, !api.endsWith("parent-prototype-constructor"));
+  assert.equal(observation.threadId, null);
+  assert.equal(observation.status, null);
+  assert.equal(observation.constructedNonWorker, api.endsWith("parent-prototype-constructor"));
+  assert.equal(observation.innerStderr, "");
+  assert.equal(observation.markerPresent, false);
+  assert.equal(observation.childFacts, null);
+  assert.equal(parent.stderr, "");
+  assert.equal(records.length, 1);
+  const audit = records.find((record) => record.pid === parent.pid);
+  assert.ok(audit);
+  assert.equal(audit.parentPid, process.pid);
+  assert.deepEqual(audit.expectedNodeChildren, []);
+  if (api.endsWith("parent-prototype-constructor")) {
+    // Ordinary Object construction returns no Worker. This is reference
+    // absence, not a manufactured denial or a native Worker admission.
+    assert.equal(observation.errorName, null);
+    assert.equal(observation.errorCode, null);
+    assert.equal(observation.surface, null);
+    assert.equal(audit.deniedAttempts, 0);
+    assert.equal(parent.status, 0);
+  } else if (api.endsWith("superclass")) {
+    // Function.prototype is not a constructor. This proves reference absence,
+    // not a counted Worker denial or a promised predecessor-marker RED row.
+    assert.equal(observation.errorName, "TypeError");
+    assert.equal(observation.errorCode, null);
+    assert.equal(observation.surface, null);
+    assert.equal(audit.deniedAttempts, 0);
+    assert.equal(parent.status, 0);
+  } else {
+    assert.equal(observation.errorCode, "TEST_WORKER_AUDIT_CUSTODY_UNAVAILABLE");
+    assert.equal(observation.surface, "worker_threads.Worker");
+    assert.equal(audit.deniedAttempts, 1);
+    assert.equal(parent.status, 97);
+  }
+}
+
+for (const api of [
+  "prototype-constructor",
+  "esm-prototype-constructor",
+  "superclass",
+  "esm-superclass",
+  "parent-prototype-constructor",
+  "esm-parent-prototype-constructor",
+]) {
+  for (const mode of ["stripped", "inherited"]) {
+    test(`Worker constructor reference ${api} ${mode} has no public native escape`, (t) =>
+      workerConstructorControl(t, api, mode));
+  }
+}
+
+// Original arguments must reach native validation before snapshotting invalid
+// option types into apparently valid objects. Compare actual native errors;
+// both guarded and reference payloads remain owned inert Python markers.
+const originalOptionsSource = String.raw`
+(async () => {
+  const fs=require("node:fs"),cp=require("node:child_process");
+  const api=process.env.TEST_CHILD_API,mode=process.env.TEST_CHILD_MODE;
+  const program=process.env.TEST_CHILD_PROGRAM,marker=process.env.TEST_CHILD_MARKER,facts=process.env.TEST_CHILD_FACTS;
+  const observation={api,mode,observerPid:process.pid,error:null,commandPid:null,stdoutPid:null,status:null,callbackCalls:0};
+  let complete,reject;const done=new Promise((resolve,refuse)=>{complete=resolve;reject=refuse;});
+  function optionsCallback(error,stdout){observation.callbackCalls+=1;if(error)reject(error);else observation.stdoutPid=Number(stdout);}
+  const options=mode==="string"?"bad":mode==="number"?42:mode==="array"?[]:mode==="null"?null:optionsCallback;
+  if(mode==="function-accepted")optionsCallback.env={PATH:process.env.PATH};
+  const command="/usr/bin/python3",args=[program,marker,facts];
+  try{
+    if(api==="spawnSync"){
+      const child=cp.spawnSync(command,args,options);if(child.error)throw child.error;
+      observation.commandPid=child.pid??null;observation.stdoutPid=Number(child.stdout);observation.status=child.status;
+    }else if(api==="execFileSync"){
+      observation.stdoutPid=Number(cp.execFileSync(command,args,options));observation.status=0;
+    }else{
+      const child=api==="spawn"?cp.spawn(command,args,options)
+        :mode==="function-accepted"?cp.execFile(command,args,options)
+        :cp.execFile(command,args,options,optionsCallback);
+      observation.commandPid=child.pid??null;
+      if(api==="spawn"){let stdout="";child.stdout.on("data",chunk=>{stdout+=chunk;});child.once("close",()=>{observation.stdoutPid=Number(stdout);});}
+      child.once("error",reject);child.once("close",status=>{observation.status=status;complete();});await done;
+    }
+  }catch(error){observation.error={name:error.name??null,code:error.code??null,message:error.message??null};}
+  observation.markerPresent=fs.existsSync(marker);
+  observation.childFacts=fs.existsSync(facts)?JSON.parse(fs.readFileSync(facts,"utf8")):null;
+  console.log(JSON.stringify(observation));
+})().catch(error=>{console.error(error);process.exitCode=1;});
+`;
+
+function originalOptionsRun(t, api, mode, guarded) {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "eta-original-options-control-"));
+  fs.chmodSync(work, 0o700);
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const auditDirectory = path.join(work, "audits"),
+    home = path.join(work, "home"),
+    temporary = path.join(work, "tmp");
+  for (const directory of [auditDirectory, home, temporary])
+    fs.mkdirSync(directory, { mode: 0o700 });
+  const program = path.join(work, "marker.py"),
+    marker = path.join(work, "executed"),
+    facts = path.join(work, "facts.json");
+  fs.writeFileSync(
+    program,
+    'import os,sys,json\npid=os.getpid()\nfd=os.open(sys.argv[1],os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)\nwith os.fdopen(fd,"w") as out: out.write(str(pid))\nfd=os.open(sys.argv[2],os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)\nwith os.fdopen(fd,"w") as out: json.dump({"pid":pid,"parentPid":os.getppid()},out)\nsys.stdout.write(str(pid))\n',
+    { mode: 0o600, flag: "wx" },
+  );
+  const capture = "original-options-" + api + "-" + mode;
+  const environment = {
+    PATH: path.dirname(process.execPath),
+    HOME: home,
+    TMPDIR: temporary,
+    XDG_CONFIG_HOME: path.join(home, ".config"),
+    LANG: "C.UTF-8",
+    LC_ALL: "C.UTF-8",
+    TZ: "UTC",
+    TEST_CHILD_API: api,
+    TEST_CHILD_MODE: mode,
+    TEST_CHILD_PROGRAM: program,
+    TEST_CHILD_MARKER: marker,
+    TEST_CHILD_FACTS: facts,
+  };
+  if (guarded)
+    Object.assign(environment, {
+      NODE_OPTIONS: "--require " + JSON.stringify(preload),
+      ETA_MU_TEST_NETWORK_AUDIT_DIR: auditDirectory,
+      ETA_MU_TEST_NETWORK_AUDIT_CAPTURE: capture,
+    });
+  const parent = spawnSync(process.execPath, ["--eval", originalOptionsSource], {
+    cwd: work,
+    env: environment,
+    encoding: "utf8",
+    timeout: 15000,
+  });
+  assert.equal(parent.error, undefined, parent.stderr);
+  assert.equal(parent.signal, null, parent.stderr);
+  const lines = parent.stdout.trim().split("\n");
+  assert.equal(lines.length, 1, parent.stdout + parent.stderr);
+  const observation = JSON.parse(lines[0]);
+  const records = fs.readdirSync(auditDirectory).map((name) => {
+    const file = path.join(auditDirectory, name),
+      info = fs.lstatSync(file);
+    assert.ok(info.isFile() && !info.isSymbolicLink());
+    assert.equal(info.mode & 0o777, 0o600);
+    assert.equal(info.uid, process.getuid());
+    const record = JSON.parse(fs.readFileSync(file, "utf8"));
+    assert.equal(name, `${record.pid}.json`);
+    assert.equal(record.schema, "eta-mu.test-network-denial/v1");
+    assert.equal(record.capture, capture);
+    assert.ok(
+      record.kernelAncestry.some(
+        (row) =>
+          row.pid === parent.pid &&
+          row.parentPid === process.pid &&
+          /^[0-9]+$/.test(row.startTicks),
+      ),
+    );
+    return record;
+  });
+  t.diagnostic(
+    JSON.stringify({
+      schema: "eta-mu.original-options-control-evidence/v1",
+      guarded,
+      parentPid: parent.pid,
+      parentExit: parent.status,
+      parentStderr: parent.stderr,
+      observation,
+      records,
+    }),
+  );
+  assert.equal(parent.stderr, "");
+  assert.equal(parent.status, 0);
+  assert.equal(observation.api, api);
+  assert.equal(observation.mode, mode);
+  if (guarded) {
+    assert.equal(records.length, 1);
+    const audit = records.find((record) => record.pid === parent.pid);
+    assert.ok(audit);
+    assert.equal(audit.parentPid, process.pid);
+    assert.deepEqual(audit.expectedNodeChildren, []);
+    assert.equal(
+      audit.deniedAttempts,
+      0,
+      "ordinary native argument validation is not a network denial",
+    );
+  } else
+    assert.deepEqual(records, [], "native reference has no installed preload or fabricated audit");
+  return observation;
+}
+
+function originalOptionsControl(t, api, mode, accepted = false) {
+  const native = originalOptionsRun(t, api, mode, false),
+    guarded = originalOptionsRun(t, api, mode, true);
+  assert.deepEqual(
+    guarded.error,
+    native.error,
+    "retain the exact native selected-options error, not a fabricated diagnostic",
+  );
+  if (accepted) {
+    for (const observation of [native, guarded]) {
+      assert.equal(observation.error, null);
+      assert.equal(observation.markerPresent, true);
+      assert.ok(Number.isSafeInteger(observation.stdoutPid) && observation.stdoutPid > 0);
+      assert.equal(observation.childFacts.pid, observation.stdoutPid);
+      assert.equal(observation.childFacts.parentPid, observation.observerPid);
+      if (api !== "execFileSync") assert.equal(observation.commandPid, observation.stdoutPid);
+      assert.equal(observation.status, 0);
+      if (api === "execFile") assert.equal(observation.callbackCalls, 1);
+    }
+  } else {
+    for (const observation of [native, guarded]) {
+      assert.equal(observation.error?.name, "TypeError");
+      assert.equal(observation.error?.code, "ERR_INVALID_ARG_TYPE");
+      assert.match(observation.error.message, /"options" argument/);
+      assert.equal(observation.markerPresent, false);
+      assert.equal(observation.childFacts, null);
+      assert.equal(observation.commandPid, null);
+      assert.equal(observation.stdoutPid, null);
+      assert.equal(observation.status, null);
+      assert.equal(observation.callbackCalls, 0);
+    }
+  }
+}
+
+for (const api of ["spawn", "spawnSync", "execFile", "execFileSync"]) {
+  for (const mode of ["string", "number", "array"]) {
+    test(`original selected options ${api} ${mode} preserves native validation before marker`, (t) =>
+      originalOptionsControl(t, api, mode));
+  }
+}
+for (const api of ["spawn", "spawnSync"]) {
+  for (const mode of ["null", "function"]) {
+    test(`original selected options ${api} ${mode} preserves nonnullable object validation`, (t) =>
+      originalOptionsControl(t, api, mode));
+  }
+}
+test("original selected options execFileSync function retains downstream native validation", (t) =>
+  originalOptionsControl(t, "execFileSync", "function"));
+for (const api of ["execFile", "execFileSync"]) {
+  test(`original selected options ${api} null retains native accepted marker behavior`, (t) =>
+    originalOptionsControl(t, api, "null", true));
+}
+test("original selected options execFile function retains callback and own environment", (t) =>
+  originalOptionsControl(t, "execFile", "function-accepted", true));

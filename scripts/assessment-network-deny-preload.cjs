@@ -106,24 +106,69 @@ const spawnLaunchArguments = (args, options) => {
   else if (typeof args === "object") {options = args; argv = [];}
   return [argv, launchEnvironment({...options})];
 };
+// Explicit sh/env executables can hide unaudited Node descendants. Refuse
+// these concrete launcher names without parsing shell text or guessing a PID.
+// Other non-Node executables retain delegation; arbitrary launchers and native
+// handles are outside this bounded test instrumentation claim.
+const guardIndirectLauncher = (command, surface) => {
+  if (typeof command !== "string" || !["sh", "env"].includes(path.basename(command))) return;
+  audit.deniedAttempts += 1;
+  const error = new Error("TEST_INDIRECT_NODE_PID_CUSTODY_UNAVAILABLE");
+  error.code = "TEST_INDIRECT_NODE_PID_CUSTODY_UNAVAILABLE";
+  error.surface = surface;
+  throw error;
+};
+// A non-Node immediate command can still select Node's lexical shell.
+// Consume the same captured options that native dispatch receives; never
+// probe a live getter and then delegate its original mutable configuration.
+const guardNonNodeShell = (configuration, surface) => {
+  if (!configuration.shell) return;
+  audit.deniedAttempts += 1;
+  const error = new Error("TEST_SHELL_CHILD_PID_CUSTODY_UNAVAILABLE");
+  error.code = "TEST_SHELL_CHILD_PID_CUSTODY_UNAVAILABLE";
+  error.surface = surface;
+  throw error;
+};
+// Preserve native validation of the original overload-selected options before
+// spreading. The original API rejects these invariant types before dispatch,
+// retaining its own exact error and zero network-denial credit.
+const invalidSpawnOptions = (args, options) => {
+  const selected = !Array.isArray(args) && args != null && typeof args === "object" ? args : options;
+  return selected !== undefined && (selected === null || typeof selected !== "object" || Array.isArray(selected));
+};
+const invalidExecFileOptions = (args, options, synchronous) => {
+  const selected = !Array.isArray(args) && args != null && typeof args === "object" ? args
+    : typeof args === "function" ? null : options;
+  if (selected == null) return false;
+  if (typeof selected === "function") return synchronous;
+  return typeof selected !== "object" || Array.isArray(selected);
+};
 const originalSync = childProcess.spawnSync;
 childProcess.spawnSync = function(command, args, options) {
-  if (!directNode(command)) return originalSync.apply(this, arguments);
+  if (invalidSpawnOptions(args, options)) return originalSync.apply(this, arguments);
+  guardIndirectLauncher(command, "child_process.spawnSync");
+  const node = directNode(command);
   const launch = spawnLaunchArguments(args, options);
-  guardNodeChild(command, launch[0], launch[1], "child_process.spawnSync");
-  guardNodeShell(launch[1], "child_process.spawnSync");
+  if (node) {
+    guardNodeChild(command, launch[0], launch[1], "child_process.spawnSync");
+    guardNodeShell(launch[1], "child_process.spawnSync");
+  } else guardNonNodeShell(launch[1], "child_process.spawnSync");
   const result = originalSync.call(this, command, ...launch);
-  if (Number.isSafeInteger(result.pid)) audit.expectedNodeChildren.push(result.pid);
+  if (node && Number.isSafeInteger(result.pid)) audit.expectedNodeChildren.push(result.pid);
   return result;
 };
 const originalSpawn = childProcess.spawn;
 childProcess.spawn = function(command, args, options) {
-  if (!directNode(command)) return originalSpawn.apply(this, arguments);
+  if (invalidSpawnOptions(args, options)) return originalSpawn.apply(this, arguments);
+  guardIndirectLauncher(command, "child_process.spawn");
+  const node = directNode(command);
   const launch = spawnLaunchArguments(args, options);
-  guardNodeChild(command, launch[0], launch[1], "child_process.spawn");
-  guardNodeShell(launch[1], "child_process.spawn");
+  if (node) {
+    guardNodeChild(command, launch[0], launch[1], "child_process.spawn");
+    guardNodeShell(launch[1], "child_process.spawn");
+  } else guardNonNodeShell(launch[1], "child_process.spawn");
   const child = originalSpawn.call(this, command, ...launch);
-  child.once("spawn", () => audit.expectedNodeChildren.push(child.pid));
+  if (node) child.once("spawn", () => audit.expectedNodeChildren.push(child.pid));
   return child;
 };
 // execFile and fork use Node's lexical launcher, so patched exported spawn
@@ -139,13 +184,16 @@ const execFileLaunchArguments = (args, options, callback) => {
 };
 const originalExecFile = childProcess.execFile;
 childProcess.execFile = function(command, args, options, callback) {
+  if (invalidExecFileOptions(args, options, false)) return originalExecFile.apply(this, arguments);
+  guardIndirectLauncher(command, "child_process.execFile");
   const node = directNode(command);
-  if (!node) return originalExecFile.apply(this, arguments);
   const launch = execFileLaunchArguments(args, options, callback);
-  guardNodeChild(command, launch[0], launch[1], "child_process.execFile");
-  guardNodeShell(launch[1], "child_process.execFile");
+  if (node) {
+    guardNodeChild(command, launch[0], launch[1], "child_process.execFile");
+    guardNodeShell(launch[1], "child_process.execFile");
+  } else guardNonNodeShell(launch[1], "child_process.execFile");
   const child = originalExecFile.call(this, command, ...launch);
-  child.once("spawn", () => audit.expectedNodeChildren.push(child.pid));
+  if (node) child.once("spawn", () => audit.expectedNodeChildren.push(child.pid));
   return child;
 };
 // Native custom promisification closes over the original, unguarded execFile.
@@ -164,9 +212,14 @@ Object.defineProperty(childProcess.execFile, require("node:util").promisify.cust
 });
 const originalExecFileSync = childProcess.execFileSync;
 childProcess.execFileSync = function(command, args, options) {
+  if (invalidExecFileOptions(args, options, true)) return originalExecFileSync.apply(this, arguments);
+  guardIndirectLauncher(command, "child_process.execFileSync");
   const node = directNode(command);
-  if (!node) return originalExecFileSync.apply(this, arguments);
   const launch = execFileLaunchArguments(args, options);
+  if (!node) {
+    guardNonNodeShell(launch[1], "child_process.execFileSync");
+    return originalExecFileSync.call(this, command, launch[0], launch[1]);
+  }
   guardNodeChild(command, launch[0], launch[1], "child_process.execFileSync");
   // Native execFileSync returns stdout without its launch PID. Enrollment
   // cannot establish actual parent membership, so refuse before dispatch.
@@ -197,6 +250,7 @@ childProcess.fork = function(modulePath, args, options) {
   else if (args == null) args = [];
   const configuration = {...options, shell:false};
   configuration.execPath ||= process.execPath;
+  guardIndirectLauncher(configuration.execPath, "child_process.fork");
   let execArgv = configuration.execArgv || process.execArgv;
   // Native fork removes the inherited parent eval pair before launching its
   // module. Capture that same choice instead of reintroducing eval recursion.
@@ -212,6 +266,20 @@ childProcess.fork = function(modulePath, args, options) {
   const child = originalFork.call(this, modulePath, argv, effective);
   if (node) child.once("spawn", () => audit.expectedNodeChildren.push(child.pid));
   return child;
+};
+// PID-only audit records cannot enroll a Worker isolate or its denials.
+// Refuse construction before launching even when it inherits this preload;
+// Standalone replacement retains no native constructor/prototype chain. CJS
+// and ESM expose the same replacement after syncBuiltinESMExports below.
+const workerThreads = require("node:worker_threads");
+workerThreads.Worker = class Worker {
+  constructor() {
+    audit.deniedAttempts += 1;
+    const error = new Error("TEST_WORKER_AUDIT_CUSTODY_UNAVAILABLE");
+    error.code = "TEST_WORKER_AUDIT_CUSTODY_UNAVAILABLE";
+    error.surface = "worker_threads.Worker";
+    throw error;
+  }
 };
 const deny = (surface) => function () {
   audit.deniedAttempts += 1;

@@ -216,7 +216,7 @@
     (when-not (and (= n (:number pr)) (= "open" (:state pr)) (= head (get-in pr [:head :sha]))
                    (re-matches #"[0-9a-f]{40}" (or head ""))
                    (re-matches #"[0-9a-f]{40}" (or base ""))
-                   (pos-int? (:changed_files pr)))
+                   (nat-int? (:changed_files pr)))
       (refuse! :source-file-inventory))
     ;; GitHub's paginated files endpoint stops at 3,000 records. Above that
     ;; transport cap, derive every changed path from validated immutable Git
