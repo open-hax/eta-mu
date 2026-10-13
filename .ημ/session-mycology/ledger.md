@@ -903,3 +903,12 @@
   spore: none
   receipt-refs: e7d89afe0252e965cf488a001f4cb131270789cc76a8b26b70a8a2534019923e
   note: ActualMimotrace covered153pages then requested154 withoutstages. ClarifyreturnedmissingIDs andclosedcompletion; preservefailedSTOP/MAX2/admission. ExactMirror andallnormalrelevantgatespass; naturalprose keepsencodedreviewdiffsmall. No new spore/promotion; freshnativeverdict stillrequired.
+- ts: 2026-10-13T22:33:51.507736461Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify four native assessment custody and long-review repairs
+  p-efficiency: 0.74
+  p-friction: 0.77
+  p-skill-candidate: 0.50
+  spore: none
+  receipt-refs: 0e255940df15183173655fe6d349afcd91d41c4673a7ae6508d896549e20820e
+  note: Complete corpus/native write normalization, explicit launcher refusal and authored fixture custody, literal195 job headroom and refreshed read-only token qualified. Full owning checks caught stale token expectations and one fixture formatting error; retain failures, phase-specific assertions and source-only AST equality before affected reruns. Existing source-verification/custody skills cover friction; no new spore. Hosted MiMo read64 ordering failure and protected adoption/deployment remain distinct.

@@ -1285,7 +1285,7 @@ for (const api of ["exec", "execSync"]) {
     shellExecutionControl(t, api, "non-node"));
 }
 
-// Explicit sh/env launchers and Worker isolates cannot establish the gate's
+// Explicit Unix shell/env launchers and Worker isolates cannot establish the gate's
 // PID-only audit custody. Every predecessor payload below only writes owned
 // marker/fact files; it has no network operations or credential-bearing input.
 const unsupportedLaunchSource = String.raw`
@@ -1314,8 +1314,9 @@ const unsupportedLaunchSource = String.raw`
         worker.once("error", reject); worker.once("exit", resolve);
       });
     } else {
-      const command = launcher === "sh" ? "/bin/sh" : "/usr/bin/env";
-      const args = launcher === "sh" ? ["-c", 'node "$1"', "marker-control", program] : ["node", program];
+      const shellLauncher = launcher !== "env";
+      const command = process.env.TEST_CHILD_COMMAND;
+      const args = shellLauncher ? ["-c", 'node "$1"', "marker-control", program] : ["node", program];
       if (api === "spawnSync") {
         const child = cp.spawnSync(command, args, {...options, encoding:"utf8"});
         if (child.error) throw child.error;
@@ -1329,7 +1330,7 @@ const unsupportedLaunchSource = String.raw`
         let complete, reject;
         const done = new Promise((resolve, refuse) => {complete = resolve; reject = refuse;});
         const child = api === "fork" ? cp.fork(program, [], {...options, silent:true, execPath:command,
-          execArgv:launcher === "sh" ? ["-c", 'node "$1"', "marker-control"] : ["node"]})
+          execArgv:shellLauncher ? ["-c", 'node "$1"', "marker-control"] : ["node"]})
           : api === "spawn" ? cp.spawn(command, args, options)
           : cp.execFile(command, args, {...options, encoding:"utf8"}, (error, stdout, stderr) => {
             observation.callbackCalled = true; observation.stdout = stdout;
@@ -1372,6 +1373,23 @@ function unsupportedLaunchControl(t, api, launcher, mode) {
       ? `const fs = require("node:fs"), threads = require("node:worker_threads"); const {marker,facts} = threads.workerData; fs.writeFileSync(marker, String(process.pid), {mode:0o600,flag:"wx"}); fs.writeFileSync(facts, JSON.stringify({pid:process.pid,parentPid:process.ppid,threadId:threads.threadId,isMainThread:threads.isMainThread}), {mode:0o600,flag:"wx"}); threads.parentPort.postMessage({pid:process.pid,threadId:threads.threadId});\n`
       : `const fs = require("node:fs"); fs.writeFileSync(${JSON.stringify(marker)}, String(process.pid), {mode:0o600,flag:"wx"}); fs.writeFileSync(${JSON.stringify(facts)}, JSON.stringify({pid:process.pid,parentPid:process.ppid,execArgv:process.execArgv}), {mode:0o600,flag:"wx"}); process.stdout.write(String(process.pid)); if(process.connected) process.disconnect();\n`;
   fs.writeFileSync(program, payload, { mode: 0o600, flag: "wx" });
+  // Existing sh/env controls keep their actual executable coordinates. New
+  // bash/dash controls execute installed shells; absent shell names use owned
+  // aliases to the actual /bin/sh executable. This proves basename refusal, not
+  // availability or behavior of an uninstalled shell implementation.
+  const command =
+    launcher === "Worker"
+      ? ""
+      : launcher === "env"
+        ? "/usr/bin/env"
+        : launcher === "sh"
+          ? "/bin/sh"
+          : path.join(work, launcher);
+  if (!["Worker", "sh", "env"].includes(launcher)) {
+    const installed = ["bash", "dash"].includes(launcher) ? "/bin/" + launcher : "/bin/sh";
+    assert.ok(fs.statSync(installed).isFile(), "the causal launcher must be a real executable");
+    fs.symlinkSync(installed, command);
+  }
   const capture = "unsupported-" + api + "-" + launcher + "-" + mode;
   const parent = spawnSync(process.execPath, ["--eval", unsupportedLaunchSource], {
     cwd: work,
@@ -1388,6 +1406,7 @@ function unsupportedLaunchControl(t, api, launcher, mode) {
       ETA_MU_TEST_NETWORK_AUDIT_CAPTURE: capture,
       TEST_CHILD_API: api,
       TEST_CHILD_LAUNCHER: launcher,
+      TEST_CHILD_COMMAND: command,
       TEST_CHILD_MODE: mode,
       TEST_CHILD_PROGRAM: program,
       TEST_CHILD_MARKER: marker,
@@ -1473,6 +1492,34 @@ function unsupportedLaunchControl(t, api, launcher, mode) {
 
 for (const api of ["spawn", "spawnSync", "execFile", "execFileSync", "fork"]) {
   for (const launcher of ["sh", "env"]) {
+    for (const mode of ["stripped", "inherited"]) {
+      test(`indirect launcher ${api} ${launcher} ${mode} refuses before unaudited Node payload`, (t) =>
+        unsupportedLaunchControl(t, api, launcher, mode));
+    }
+  }
+}
+// Preserve all existing sh/env/fork controls and add every newly refused
+// shell basename on each requested public direct process surface. Stripped
+// environments expose the predecessor gap using inert marker/fact payloads;
+// inherited environments exercise the same pre-dispatch refusal boundary.
+for (const api of ["spawn", "spawnSync", "execFile", "execFileSync"]) {
+  for (const launcher of [
+    "bash",
+    "dash",
+    "ash",
+    "zsh",
+    "ksh",
+    "ksh93",
+    "mksh",
+    "pdksh",
+    "yash",
+    "fish",
+    "csh",
+    "tcsh",
+    "rbash",
+    "rksh",
+    "rzsh",
+  ]) {
     for (const mode of ["stripped", "inherited"]) {
       test(`indirect launcher ${api} ${launcher} ${mode} refuses before unaudited Node payload`, (t) =>
         unsupportedLaunchControl(t, api, launcher, mode));
@@ -2727,3 +2774,297 @@ for (const api of ["net", "http", "https"])
     test("TCP listener " + api + " " + mode + " refuses before local bind", (t) =>
       listenerSuccessorControl(t, api, mode),
     );
+
+// Named deterministic workflow fixtures retain a separate source/caller/PID
+// capability. Every adverse payload only writes owned marker/fact files; the
+// missing-audit case is retained as a failed post-dispatch custody observation.
+function trustedWorkflowFixtureControl(t, mode) {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "eta-trusted-workflow-control-"));
+  fs.chmodSync(work, 0o700);
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const scripts = path.join(work, "scripts"),
+    ownerDir = path.join(work, ".github/scripts");
+  const auditDirectory = path.join(work, "audits"),
+    binding = path.join(work, "binding");
+  const home = path.join(work, "home"),
+    temporary = path.join(work, "tmp");
+  for (const dir of [scripts, ownerDir, auditDirectory, binding, home, temporary])
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  const heldPreload = path.join(scripts, "assessment-network-deny-preload.cjs");
+  const heldHelper = path.join(ownerDir, "assessment-trusted-workflow-fixture.mjs");
+  fs.copyFileSync(preload, heldPreload);
+  fs.copyFileSync(
+    path.join(path.dirname(preload), "../.github/scripts/assessment-trusted-workflow-fixture.mjs"),
+    heldHelper,
+  );
+  const owner = path.join(ownerDir, "opencode-actionability-assessment-workflow.test.mjs");
+  const marker = path.join(work, "marker"),
+    facts = path.join(work, "node-facts.json"),
+    payload = path.join(work, "payload.cjs");
+  fs.writeFileSync(
+    payload,
+    `const fs=require("node:fs");fs.writeFileSync(${JSON.stringify(marker)},String(process.pid));fs.writeFileSync(${JSON.stringify(facts)},JSON.stringify({pid:process.pid,parentPid:process.ppid,preloadLoaded:!!require.cache[${JSON.stringify(heldPreload)}]}));\n`,
+    { flag: "wx", mode: 0o600 },
+  );
+  const foreign = path.join(work, "foreign.mjs"),
+    child = path.join(work, "child.mjs");
+  fs.writeFileSync(
+    foreign,
+    `import {runTrustedWorkflowFixture as run} from ${JSON.stringify(heldHelper)};export const foreign=(owner,args,options)=>run(owner,args,options);\n`,
+    { flag: "wx", mode: 0o600 },
+  );
+  fs.writeFileSync(
+    child,
+    `import {runTrustedWorkflowFixture as run} from ${JSON.stringify(heldHelper)};let code=null;try{run(${JSON.stringify(new URL("file:" + owner).href)},["-c","printf child"],{encoding:"utf8"});}catch(e){code=e.code;}console.log(JSON.stringify({code}));\n`,
+    { flag: "wx", mode: 0o600 },
+  );
+  const ownerSource = `import test from "node:test";import fs from "node:fs";import cp from "node:child_process";import {createRequire} from "node:module";import {runTrustedWorkflowFixture as run} from ${JSON.stringify(heldHelper)};import {foreign} from ${JSON.stringify(foreign)};
+  test("trusted fixture control",()=>{
+    const mode=${JSON.stringify(mode)}, marker=${JSON.stringify(marker)};
+    const opts={encoding:"utf8",timeout:5000,env:{PATH:${JSON.stringify(path.dirname(process.execPath) + ":/usr/bin:/bin")},FIXTURE_NODE:${JSON.stringify(process.execPath)},FIXTURE_PAYLOAD:${JSON.stringify(payload)}}};
+    const observation={mode,code:null,status:null,pid:null,stdout:null,childStatus:null,markerPresent:false,nodeFacts:null};
+    if(mode.startsWith("getter-mutated-"))Object.defineProperty(opts,"cwd",{enumerable:true,get(){
+      const changed=mode==="getter-mutated-owner"?${JSON.stringify(owner)}:mode==="getter-mutated-helper"?${JSON.stringify(heldHelper)}:${JSON.stringify(path.join(binding, "root.json"))};
+      fs.appendFileSync(changed," ");return ${JSON.stringify(work)};
+    }});
+    opts.env.FIXTURE_OWNER=${JSON.stringify(owner)};
+    try{
+      if(mode==="mutated-owner")fs.appendFileSync(${JSON.stringify(owner)},"\\n// changed\\n");
+      if(mode==="mutated-helper")fs.appendFileSync(${JSON.stringify(heldHelper)},"\\n// changed\\n");
+      if(mode==="mutated-root")fs.appendFileSync(${JSON.stringify(path.join(binding, "root.json"))}," ");
+      if(mode==="source-symlink"){
+        const copy=${JSON.stringify(owner + ".copy")};fs.copyFileSync(${JSON.stringify(owner)},copy);fs.unlinkSync(${JSON.stringify(owner)});fs.symlinkSync(copy,${JSON.stringify(owner)});
+      }
+      let result;
+      if(mode==="generic-shell")result=cp.spawnSync("/bin/bash",["-c",'"$FIXTURE_NODE" "$FIXTURE_PAYLOAD"'],opts);
+      else if(mode==="imported-caller")result=foreign(import.meta.url,["-c","printf imported"],opts);
+      else if(mode==="unregistered-caller")result=createRequire(import.meta.url)(${JSON.stringify(heldPreload)}).registerTrustedWorkflowFixture(import.meta.url,["-c","printf unregistered"]).run(opts);
+      else if(mode==="child-caller"){
+        result=cp.spawnSync(process.execPath,[${JSON.stringify(child)}],{...opts,env:{...process.env},encoding:"utf8"});
+        observation.childStatus=result.status;observation.code=JSON.parse(result.stdout).code;
+      }else{
+        const program=mode==="node-exec"?'exec "$FIXTURE_NODE" "$FIXTURE_PAYLOAD"'
+          :mode==="node-grandchild"?'"$FIXTURE_NODE" "$FIXTURE_PAYLOAD"; printf done'
+          :mode==="node-missing-audit"?'env -u NODE_OPTIONS "$FIXTURE_NODE" "$FIXTURE_PAYLOAD"'
+          :mode==="program-mutated-owner"?'printf changed >> "$FIXTURE_OWNER"; printf trusted'
+          :"printf trusted";
+        const args=["-c",program];
+        if(mode==="captured-program")Object.defineProperty(opts,"cwd",{enumerable:true,get(){args[1]='"$FIXTURE_NODE" "$FIXTURE_PAYLOAD"';return ${JSON.stringify(work)};}});
+        result=run(import.meta.url,args,opts,mode.startsWith("node-")?1:0);
+      }
+      observation.status=result.status;observation.pid=result.pid;observation.stdout=result.stdout;
+    }catch(e){observation.code=e.code??e.message;}
+    observation.markerPresent=fs.existsSync(marker);observation.nodeFacts=fs.existsSync(${JSON.stringify(facts)})?JSON.parse(fs.readFileSync(${JSON.stringify(facts)},"utf8")):null;
+    console.log("TRUSTED_FIXTURE_CONTROL:"+JSON.stringify(observation));
+  });\n`;
+  fs.writeFileSync(owner, ownerSource, { flag: "wx", mode: 0o600 });
+  const entry =
+    mode === "lookalike-entry"
+      ? path.join(work, "lookalike/.github/scripts", path.basename(owner))
+      : owner;
+  if (entry !== owner) {
+    fs.mkdirSync(path.dirname(entry), { recursive: true, mode: 0o700 });
+    fs.copyFileSync(owner, entry);
+  }
+  const capture = "trusted-fixture-" + mode;
+  const parent = spawnSync(process.execPath, ["--test", entry], {
+    cwd: work,
+    encoding: "utf8",
+    timeout: 15000,
+    env: {
+      PATH: path.dirname(process.execPath) + ":/usr/bin:/bin",
+      HOME: home,
+      TMPDIR: temporary,
+      XDG_CONFIG_HOME: path.join(home, ".config"),
+      LANG: "C.UTF-8",
+      LC_ALL: "C.UTF-8",
+      TZ: "UTC",
+      NODE_OPTIONS: "--require " + JSON.stringify(heldPreload),
+      ETA_MU_TEST_NETWORK_AUDIT_DIR: auditDirectory,
+      ETA_MU_TEST_NETWORK_AUDIT_CAPTURE: capture,
+      ETA_MU_TEST_TRUSTED_FIXTURE_BINDING_DIR: binding,
+    },
+  });
+  assert.equal(parent.error, undefined, parent.stderr);
+  assert.equal(parent.signal, null, parent.stderr);
+  const line = parent.stdout
+    .split("\n")
+    .find((value) => value.includes("TRUSTED_FIXTURE_CONTROL:"));
+  assert.ok(line, parent.stdout + parent.stderr);
+  const observation = JSON.parse(line.slice(line.indexOf("TRUSTED_FIXTURE_CONTROL:") + 24));
+  const records = fs
+    .readdirSync(auditDirectory)
+    .map((name) => JSON.parse(fs.readFileSync(path.join(auditDirectory, name), "utf8")));
+  const journal = fs
+    .readdirSync(binding)
+    .filter((name) => name.endsWith(".jsonl"))
+    .flatMap((name) =>
+      fs.readFileSync(path.join(binding, name), "utf8").trim().split("\n").map(JSON.parse),
+    );
+  const bbChecks = [];
+  if (["shell-zero", "node-exec", "node-grandchild", "captured-program"].includes(mode)) {
+    const source = fs.readFileSync(path.join(path.dirname(preload), "test-assessments.bb"), "utf8");
+    const marker = "(let [work (str (.toRealPath";
+    assert.equal(source.split(marker).length, 2, "retain the actual owning BB reader definitions");
+    const check = path.join(work, "actual-journal-check.bb"),
+      rootPid = JSON.parse(fs.readFileSync(path.join(binding, "root.json"), "utf8")).pid;
+    const runCheck = (directory) => {
+      fs.writeFileSync(
+        check,
+        source.slice(0, source.indexOf(marker)) +
+          `\n(audit! ${JSON.stringify(auditDirectory)} ${JSON.stringify(directory)} ${JSON.stringify(capture)} ${rootPid})\n`,
+        { mode: 0o600 },
+      );
+      return spawnSync("bb", [check], {
+        cwd: work,
+        encoding: "utf8",
+        timeout: 15000,
+        env: { PATH: process.env.PATH, HOME: home, LANG: "C.UTF-8", LC_ALL: "C.UTF-8" },
+      });
+    };
+    const healthy = runCheck(binding);
+    bbChecks.push({
+      scope: "actual owning BB audit reader",
+      exit: healthy.status,
+      stdout: healthy.stdout,
+      stderr: healthy.stderr,
+    });
+    assert.equal(healthy.error, undefined, healthy.stderr);
+    assert.equal(healthy.status, 0, healthy.stdout + healthy.stderr);
+    assert.match(healthy.stdout, /bound Node processes, zero denied attempts/);
+    if (mode === "node-grandchild") {
+      const adverse = path.join(work, "adverse-binding");
+      fs.cpSync(binding, adverse, { recursive: true });
+      const name = fs.readdirSync(adverse).find((value) => value.endsWith(".jsonl"));
+      const rows = fs
+        .readFileSync(path.join(adverse, name), "utf8")
+        .trim()
+        .split("\n")
+        .map(JSON.parse);
+      rows[0].actualPid += 1000000;
+      fs.writeFileSync(path.join(adverse, name), rows.map(JSON.stringify).join("\n") + "\n");
+      const refused = runCheck(adverse);
+      bbChecks.push({
+        scope: "copied journal with wrong native Bash PID",
+        exit: refused.status,
+        stdout: refused.stdout,
+        stderr: refused.stderr,
+      });
+      assert.equal(refused.error, undefined, refused.stderr);
+      assert.equal(refused.status, 1);
+      assert.match(refused.stderr, /Trusted workflow fixture Node ancestry refused/);
+    }
+  }
+  t.diagnostic(
+    JSON.stringify({
+      schema: "eta-mu.trusted-workflow-fixture-control/v1",
+      mode,
+      parentExit: parent.status,
+      parentStderr: parent.stderr,
+      observation,
+      records,
+      journal,
+      bbChecks,
+    }),
+  );
+  assert.equal(observation.mode, mode);
+  const success = ["shell-zero", "node-exec", "node-grandchild", "captured-program"].includes(mode);
+  if (success) {
+    assert.equal(parent.status, 0, parent.stdout + parent.stderr);
+    assert.equal(observation.code, null);
+    assert.equal(observation.status, 0);
+    assert.ok(observation.pid > 0);
+    assert.equal(journal.length, 1);
+    const row = journal[0];
+    assert.equal(row.actualPid, observation.pid);
+    assert.equal(row.custodyQualified, true);
+    assert.equal(row.status, 0);
+    assert.equal(row.signal, null);
+    assert.equal(row.errorCode, null);
+    if (mode.startsWith("node-")) {
+      assert.equal(observation.markerPresent, true);
+      assert.equal(observation.nodeFacts.preloadLoaded, true);
+      assert.equal(row.actualNodeChildren.length, 1);
+      const held = row.actualNodeChildren[0];
+      assert.equal(held.pid, observation.nodeFacts.pid);
+      const record = records.find((value) => value.pid === held.pid);
+      assert.ok(record);
+      assert.equal(record.deniedAttempts, 0);
+      assert.ok(
+        record.kernelAncestry.some(
+          (value) =>
+            value.pid === row.actualPid &&
+            value.parentPid === row.ownerPid &&
+            value.startTicks === held.launcherStartTicks,
+        ),
+      );
+      assert.equal(
+        mode === "node-exec" ? held.pid === row.actualPid : held.parentPid === row.actualPid,
+        true,
+      );
+    } else {
+      assert.equal(observation.stdout, "trusted");
+      assert.equal(observation.markerPresent, false);
+      assert.deepEqual(row.actualNodeChildren, []);
+    }
+    assert.ok(records.every((value) => value.deniedAttempts === 0));
+  } else if (mode === "child-caller") {
+    assert.equal(parent.status, 0, parent.stdout + parent.stderr);
+    assert.equal(observation.childStatus, 97);
+    assert.equal(observation.code, "TEST_TRUSTED_FIXTURE_OWNER_REFUSED");
+    assert.equal(observation.markerPresent, false);
+    assert.equal(journal.length, 0);
+    const denied = records.filter((value) => value.deniedAttempts === 1);
+    assert.equal(denied.length, 1);
+    assert.ok(records.some((value) => value.expectedNodeChildren.includes(denied[0].pid)));
+  } else {
+    assert.equal(parent.status, 1, parent.stdout + parent.stderr);
+    const code =
+      mode === "generic-shell"
+        ? "TEST_INDIRECT_NODE_PID_CUSTODY_UNAVAILABLE"
+        : mode === "lookalike-entry"
+          ? "TEST_TRUSTED_FIXTURE_OWNER_REFUSED"
+          : ["imported-caller", "unregistered-caller"].includes(mode)
+            ? "TEST_TRUSTED_FIXTURE_CALLER_REFUSED"
+            : mode === "node-missing-audit"
+              ? "TEST_TRUSTED_FIXTURE_NODE_CUSTODY_REFUSED"
+              : "TEST_TRUSTED_FIXTURE_SOURCE_REFUSED";
+    assert.equal(observation.code, code);
+    assert.ok(records.some((value) => value.deniedAttempts === 1));
+    assert.equal(observation.markerPresent, mode === "node-missing-audit");
+    if (mode === "node-missing-audit") {
+      assert.equal(observation.nodeFacts.preloadLoaded, false);
+      assert.equal(journal.length, 1);
+      assert.equal(journal[0].custodyQualified, false);
+      assert.deepEqual(journal[0].actualNodeChildren, []);
+    } else if (mode === "program-mutated-owner") {
+      assert.equal(journal.length, 1);
+      assert.equal(journal[0].custodyQualified, false);
+      assert.ok(journal[0].actualPid > 0);
+      assert.equal(journal[0].status, 0);
+    } else assert.equal(journal.length, 0);
+  }
+}
+for (const mode of [
+  "shell-zero",
+  "node-exec",
+  "node-grandchild",
+  "captured-program",
+  "generic-shell",
+  "imported-caller",
+  "unregistered-caller",
+  "lookalike-entry",
+  "child-caller",
+  "mutated-owner",
+  "mutated-helper",
+  "mutated-root",
+  "source-symlink",
+  "node-missing-audit",
+  "getter-mutated-owner",
+  "getter-mutated-helper",
+  "getter-mutated-root",
+  "program-mutated-owner",
+]) {
+  test(`trusted workflow fixture ${mode} binds source caller native PID and actual Node custody`, (t) =>
+    trustedWorkflowFixtureControl(t, mode));
+}

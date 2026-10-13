@@ -83,6 +83,56 @@ const guardNodeShell = (configuration, surface) => {
 // filesystem-mutation confinement.
 const nodeExecutableIdentity = fs.statSync(process.execPath, {bigint:true});
 const nativeURL = require("node:url");
+// Named deterministic workflow fixtures are a separate trusted-author surface.
+// A single Node --test root claims the private per-suite binding directory;
+// only its actual immediate test worker may register this capability. Generic
+// child_process APIs keep the shell/env refusal regardless of this capability.
+const fixtureCrypto = require("node:crypto");
+const fixtureCallSites = require("node:util").getCallSites;
+const fixtureRoot = path.resolve(__dirname, "..");
+const fixtureOwnerNames = ["opencode-actionability-assessment-workflow.test.mjs",
+  "opencode-rejection-assessment-workflow.test.mjs", "opencode-positive-cohort-assessment-workflow.test.mjs"];
+const fixtureHelper = path.join(fixtureRoot, ".github/scripts/assessment-trusted-workflow-fixture.mjs");
+const fixtureDigest = bytes => fixtureCrypto.createHash("sha256").update(bytes).digest("hex");
+const fixtureFile = file => {
+  const info = fs.lstatSync(file);
+  if (!info.isFile() || info.isSymbolicLink() || fs.realpathSync(file) !== file || info.uid !== process.getuid())
+    throw new Error("TEST_TRUSTED_FIXTURE_SOURCE_REFUSED");
+  return {path:file, dev:info.dev, ino:info.ino, sha256:fixtureDigest(fs.readFileSync(file))};
+};
+const fixtureUnchanged = held => {
+  const current = fixtureFile(held.path);
+  return current.dev === held.dev && current.ino === held.ino && current.sha256 === held.sha256;
+};
+let fixtureOwner = null;
+const fixtureBindingDirectory = process.env.ETA_MU_TEST_TRUSTED_FIXTURE_BINDING_DIR;
+if (fixtureBindingDirectory && typeof process.argv[1] === "string") {
+  const entry = path.resolve(process.argv[1]);
+  if (fixtureOwnerNames.some(name => entry === path.join(fixtureRoot, ".github/scripts", name))) {
+    const info = fs.lstatSync(fixtureBindingDirectory);
+    if (!info.isDirectory() || info.isSymbolicLink() || fs.realpathSync(fixtureBindingDirectory) !== fixtureBindingDirectory
+        || (info.mode & 511) !== 448 || info.uid !== process.getuid()) throw new Error("TEST_TRUSTED_FIXTURE_BINDING_REFUSED");
+    const bindingFile = path.join(fixtureBindingDirectory, "root.json");
+    const ownerSource = fixtureFile(entry), helperSource = fixtureFile(fixtureHelper);
+    if (process.execArgv.includes("--test") && !fs.existsSync(bindingFile)) {
+      fs.writeFileSync(bindingFile, JSON.stringify({schema:"eta-mu.trusted-fixture-root/v1", capture,
+        pid:process.pid, parentPid:process.ppid, startTicks:audit.kernelAncestry[0].startTicks,
+        ownerSource, helperSource}) + "\n", {mode:0o600, flag:"wx"});
+    } else if (process.env.NODE_TEST_CONTEXT === "child-v8" && fs.existsSync(bindingFile)) {
+      const rootInfo = fs.lstatSync(bindingFile), root = JSON.parse(fs.readFileSync(bindingFile,"utf8"));
+      if (rootInfo.isFile() && !rootInfo.isSymbolicLink() && (rootInfo.mode & 511) === 384 && rootInfo.uid === process.getuid()
+          && root.schema === "eta-mu.trusted-fixture-root/v1" && root.capture === capture && root.pid === process.ppid
+          && root.ownerSource.path === entry && root.ownerSource.sha256 === ownerSource.sha256
+          && root.helperSource.path === fixtureHelper && root.helperSource.sha256 === helperSource.sha256
+          && audit.kernelAncestry.some(row => row.pid === root.pid && row.startTicks === root.startTicks)) {
+        fixtureOwner = {rootPid:root.pid, ownerSource, helperSource, rootFile:fixtureFile(bindingFile)};
+        audit.trustedFixtureOwner = {rootPid:root.pid, ownerPath:entry, ownerSHA256:ownerSource.sha256,
+          helperSHA256:helperSource.sha256};
+        audit.trustedWorkflowFixtureCount = 0;
+      }
+    }
+  }
+}
 const isByteArray = require("node:util").types.isUint8Array;
 const byteArrayPrototype = Object.getPrototypeOf(Uint8Array.prototype);
 const byteArrayLength = Object.getOwnPropertyDescriptor(byteArrayPrototype, "length").get;
@@ -171,12 +221,16 @@ const spawnLaunchArguments = (args, options, synchronous = false) => {
   else if (typeof args === "object") {options = args; argv = [];}
   return [argv, launchEnvironment({...options}, synchronous)];
 };
-// Explicit sh/env executables can hide unaudited Node descendants. Refuse
-// these concrete launcher names without parsing shell text or guessing a PID.
-// Other non-Node executables retain delegation; arbitrary launchers and native
-// handles are outside this bounded test instrumentation claim.
+// Explicit Unix shell/env executables can hide unaudited Node descendants.
+// Refuse these bounded launcher basenames before dispatch, without parsing shell
+// text or guessing a PID. Arbitrary renamed launchers and native handles remain
+// outside this test instrumentation claim; other non-Node commands delegate.
+const indirectLauncherNames = new Set([
+  "sh", "bash", "dash", "ash", "zsh", "ksh", "ksh93", "mksh", "pdksh",
+  "yash", "fish", "csh", "tcsh", "rbash", "rksh", "rzsh", "env",
+]);
 const guardIndirectLauncher = (command, surface) => {
-  if (typeof command !== "string" || !["sh", "env"].includes(path.basename(command))) return;
+  if (typeof command !== "string" || !indirectLauncherNames.has(path.basename(command))) return;
   audit.deniedAttempts += 1;
   const error = new Error("TEST_INDIRECT_NODE_PID_CUSTODY_UNAVAILABLE");
   error.code = "TEST_INDIRECT_NODE_PID_CUSTODY_UNAVAILABLE";
@@ -260,6 +314,105 @@ childProcess.execFile = function(command, args, options, callback) {
   const child = originalExecFile.call(this, command, ...launch);
   if (node) child.once("spawn", () => audit.expectedNodeChildren.push(child.pid));
   return child;
+};
+// The capability accepts only an exact registered Bash argv/program from the
+// captured trusted owner, not a public child_process shell exemption. A source
+// or caller mismatch refuses before dispatch. Actual Node journal/ancestry is
+// checked after the synchronous fixture and before its result is admitted.
+const refuseTrustedFixture = code => {
+  audit.deniedAttempts += 1;
+  const error = new Error(code); error.code = code; error.surface = "trusted-workflow-fixture"; throw error;
+};
+const fixtureCaller = ownerURL => {
+  if (!fixtureOwner) return refuseTrustedFixture("TEST_TRUSTED_FIXTURE_OWNER_REFUSED");
+  let ownerPath;
+  try {ownerPath = nativeURL.fileURLToPath(ownerURL);} catch {return refuseTrustedFixture("TEST_TRUSTED_FIXTURE_CALLER_REFUSED");}
+  const sites = fixtureCallSites(8).map(row => row.scriptName);
+  const normalize = name => name.startsWith("file:") ? nativeURL.fileURLToPath(name) : name;
+  const external = sites.map(normalize).filter(name => name !== __filename);
+  if (ownerPath !== fixtureOwner.ownerSource.path || external[0] !== fixtureHelper || external[1] !== ownerPath)
+    return refuseTrustedFixture("TEST_TRUSTED_FIXTURE_CALLER_REFUSED");
+  try {
+    if (!fixtureUnchanged(fixtureOwner.ownerSource) || !fixtureUnchanged(fixtureOwner.helperSource)
+        || !fixtureUnchanged(fixtureOwner.rootFile))
+      return refuseTrustedFixture("TEST_TRUSTED_FIXTURE_SOURCE_REFUSED");
+  } catch (error) {
+    if (error.surface === "trusted-workflow-fixture") throw error;
+    return refuseTrustedFixture("TEST_TRUSTED_FIXTURE_SOURCE_REFUSED");
+  }
+};
+const fixtureAuditRecords = () => fs.readdirSync(directory).map(name => {
+  const file = path.join(directory,name), info = fs.lstatSync(file);
+  if (!/^[1-9][0-9]*\.json$/.test(name) || !info.isFile() || info.isSymbolicLink() || (info.mode & 511) !== 384
+      || info.uid !== process.getuid() || info.size < 1 || info.size > 65536) throw new Error("TEST_TRUSTED_FIXTURE_AUDIT_REFUSED");
+  const record = JSON.parse(fs.readFileSync(file,"utf8"));
+  if (record.schema !== audit.schema || record.capture !== capture || name !== `${record.pid}.json`
+      || !Array.isArray(record.kernelAncestry) || !Array.isArray(record.expectedNodeChildren))
+    throw new Error("TEST_TRUSTED_FIXTURE_AUDIT_REFUSED");
+  return record;
+});
+module.exports.registerTrustedWorkflowFixture = function(ownerURL, args, expectedNodeChildren = 0) {
+  fixtureCaller(ownerURL);
+  if (!Array.isArray(args) || !Number.isSafeInteger(expectedNodeChildren) || expectedNodeChildren < 0 || expectedNodeChildren > 16)
+    return refuseTrustedFixture("TEST_TRUSTED_FIXTURE_PROGRAM_REFUSED");
+  const argv = launchArgv(args);
+  if (!argv.every(value => typeof value === "string" && !value.includes("\0"))
+      || !((argv.length === 2 && argv[0] === "-c") || (argv.length === 7
+        && JSON.stringify(argv.slice(0,6)) === JSON.stringify(["--noprofile","--norc","-e","-o","pipefail","-c"]))))
+    return refuseTrustedFixture("TEST_TRUSTED_FIXTURE_PROGRAM_REFUSED");
+  Object.freeze(argv);
+  const argvSHA256 = fixtureDigest(JSON.stringify(argv)), programSHA256 = fixtureDigest(argv.at(-1));
+  return Object.freeze({run(options) {
+    fixtureCaller(ownerURL);
+    const configuration = launchEnvironment({...options},true);
+    if (configuration.shell) return refuseTrustedFixture("TEST_TRUSTED_FIXTURE_PROGRAM_REFUSED");
+    configuration.env.NODE_OPTIONS = "--require " + JSON.stringify(__filename);
+    configuration.env.ETA_MU_TEST_NETWORK_AUDIT_DIR = directory;
+    configuration.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE = capture;
+    // Descendants inherit instrumentation but never the trusted fixture root
+    // capability: their native parent is not the one held Node --test root.
+    configuration.env.ETA_MU_TEST_TRUSTED_FIXTURE_BINDING_DIR = fixtureBindingDirectory;
+    const before = new Set(fixtureAuditRecords().map(record => record.pid));
+    // Capturing options/cwd/env may invoke author getters. Rebind afterward,
+    // immediately before dispatch; the native call receives this stable view.
+    fixtureCaller(ownerURL);
+    const result = originalSync.call(childProcess,"bash",argv,configuration);
+    const row = {schema:"eta-mu.trusted-workflow-fixture/v1", capture, ownerPid:process.pid,
+      ownerPath:fixtureOwner.ownerSource.path, ownerSHA256:fixtureOwner.ownerSource.sha256,
+      helperSHA256:fixtureOwner.helperSource.sha256, rootPid:fixtureOwner.rootPid,
+      argvSHA256, programSHA256, actualPid:result.pid ?? null, status:result.status,
+      signal:result.signal, errorCode:result.error?.code ?? null, expectedNodeCount:expectedNodeChildren,
+      actualNodeChildren:[], custodyQualified:false};
+    let failure = null;
+    try {
+      // Actual native execution is not admission. Retain changed source/root
+      // as an unqualified outcome rather than returning fixture proof.
+      if (!fixtureUnchanged(fixtureOwner.ownerSource) || !fixtureUnchanged(fixtureOwner.helperSource)
+          || !fixtureUnchanged(fixtureOwner.rootFile)) throw new Error("TEST_TRUSTED_FIXTURE_SOURCE_REFUSED");
+      if (!Number.isSafeInteger(result.pid) || result.pid <= 0 || result.signal !== null || result.error)
+        throw new Error("TEST_TRUSTED_FIXTURE_OUTCOME_REFUSED");
+      const children = fixtureAuditRecords().filter(record => !before.has(record.pid));
+      if (children.length !== expectedNodeChildren) throw new Error("TEST_TRUSTED_FIXTURE_NODE_CUSTODY_REFUSED");
+      const ids = new Set(children.map(record => record.pid));
+      for (const child of children) {
+        const immediate = child.kernelAncestry[0];
+        const nativeLauncher = child.kernelAncestry.find(held => held.pid === result.pid && held.parentPid === process.pid);
+        if (!immediate || immediate.pid !== child.pid || immediate.parentPid !== child.parentPid
+            || !/^[0-9]+$/.test(immediate.startTicks) || !nativeLauncher || !/^[0-9]+$/.test(nativeLauncher.startTicks)
+            || child.deniedAttempts !== 0 || !child.expectedNodeChildren.every(pid => ids.has(pid)))
+          throw new Error("TEST_TRUSTED_FIXTURE_NODE_CUSTODY_REFUSED");
+        row.actualNodeChildren.push({pid:child.pid,parentPid:child.parentPid,startTicks:immediate.startTicks,
+          launcherStartTicks:nativeLauncher.startTicks});
+      }
+      row.custodyQualified = true;
+      audit.expectedNodeChildren.push(...row.actualNodeChildren.map(child => child.pid));
+    } catch (error) {failure = error.message;}
+    const journal = path.join(fixtureBindingDirectory, `${process.pid}.jsonl`);
+    fs.appendFileSync(journal, JSON.stringify(row)+"\n",{mode:0o600});
+    audit.trustedWorkflowFixtureCount += 1;
+    if (failure) return refuseTrustedFixture(failure);
+    return result;
+  }});
 };
 // Native custom promisification closes over the original, unguarded execFile.
 // Preserve the documented result and actual .child through the guarded API.

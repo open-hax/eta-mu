@@ -179,11 +179,15 @@
    (fn [_ resource & _] (case resource "installation/repositories" [{:total_count 1 :repositories [{:id (:databaseId repository) :full_name (:nameWithOwner repository)}]}]
                                "users/eta-mu-ai[bot]" bot)) "1" "2" "eta-mu-ai"))
 
-(defn ^:async publish-case [change expected-writes expect-success?]
+(defn ^:async publish-case
+  ([change expected-writes expect-success?]
+   (publish-case change expected-writes expect-success? (fn [_ _] nil)))
+  ([change expected-writes expect-success? prepare-state!]
   (let [{:keys [state deps summary]} (setup)
         directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-native-publication-"))
         writes (atom []) gets (atom [])]
     (try
+      (prepare-state! state summary)
       (let [snapshot (assessment/collect deps config)
             invocation (invocation-fixture snapshot summary directory)
             dependencies (assoc deps :verify-sources! (fn [] true) :verify-run! (fn [] true)
@@ -215,7 +219,7 @@
           (check "zero ordinary review credit" (get-in result [:value :review-credit]) false)
           (check "actual GET readback" @gets [7002]))
         result)
-      (finally (.rmSync fs directory #js {:recursive true :force true})))))
+      (finally (.rmSync fs directory #js {:recursive true :force true}))))))
 
 (def adverse-controls [(fn [d c _] [(assoc d :history-text nil) c])
                   (fn [d c _] [(assoc d :history-text "{:broken") c])
@@ -282,9 +286,9 @@
                                  (assoc d :inventory! #(get @state :inventory inventory)) c state))
                               0 false))]
     (check "thread mutation during publisher authentication refuses before POST" (:refused thread-change) :fresh-input-binding)
-    (check "proposal mutation during publisher authentication refuses before POST" (:refused proposal-change) :fresh-proposal-binding)
-    (check "proposal edit chronology during publisher authentication refuses before POST" (:refused proposal-edit) :pre-write-context-change)
-    (check "new latest proposal during publisher authentication refuses before POST" (:refused later-proposal) :pre-write-context-change)
+    (check "proposal mutation during publisher authentication refuses before POST" (:refused proposal-change) :fresh-input-binding)
+    (check "proposal edit chronology during publisher authentication refuses before POST" (:refused proposal-edit) :fresh-input-binding)
+    (check "new latest proposal during publisher authentication refuses before POST" (:refused later-proposal) :fresh-input-binding)
     (check "source inventory mutation during publisher authentication refuses before POST" (:refused source-change) :fresh-input-binding)
     :complete))
 
@@ -1140,6 +1144,51 @@
       :complete
       (finally (.rmSync fs directory #js {:recursive true :force true})))))
 
+(def prepared-corpus-mutations
+  [[:unchanged (fn [_] nil)]
+   [:added #(swap! % update :issues conj
+                   (issue 7102 (get-in @% [:issues 0 :user])
+                          "2026-10-11T01:00:03Z" "A later unrelated native observation."))]
+   [:edited #(swap! % update-in [:issues 1 :body] str " Updated unrelated evidence.")]
+   [:deleted #(swap! % update :issues pop)]
+   [:edit-chronology #(swap! % assoc-in [:issues 1 :updated_at] "2026-10-11T01:00:04Z")]
+   [:identity #(swap! % assoc-in [:issues 1 :node_id] "IC_changed_native_identity")]])
+
+(defn prepared-corpus-controls
+  "Real collect/rebind calls prove whole-corpus drift despite unchanged target/source."
+  []
+  (let [rows (mapv
+              (fn [[variant mutate]]
+                (let [{:keys [state deps]} (setup)
+                      _ (swap! state update :issues conj
+                               (issue 7101 (get-in @state [:issues 0 :user])
+                                      "2026-10-11T01:00:02Z" "Unrelated native evidence present during preparation."))
+                      bound-deps (assoc deps :verify-sources! (fn [] true) :verify-run! (fn [] true)
+                                       :inventory! (fn [] inventory))
+                      prepared (assessment/collect bound-deps config)
+                      input (assessment/prepare-input prepared inventory 7001 provenance)
+                      source (:manifest input)
+                      _ (mutate state)
+                      fresh (assessment/collect bound-deps config)
+                      refusal (refused #(assessment/rebind-input bound-deps config source))
+                      healthy? (= :unchanged variant)
+                      row {:control "inert-actionability-prepared-corpus/v1" :variant variant
+                           :selected-context-unchanged? (= (get-in prepared [:selected :context-digest])
+                                                          (get-in fresh [:selected :context-digest]))
+                           :inventory-unchanged? (= (:source_inventory_sha256 source) (:sha256 inventory))
+                           :complete-corpus-changed? (not= (:raw-issue-comments prepared) (:raw-issue-comments fresh))
+                           :refusal refusal
+                           :passed? (= refusal (when-not healthy? :fresh-input-binding))}]
+                  (host/output! row)
+                  row)) prepared-corpus-mutations)]
+    (doseq [row rows]
+      (check "unrelated corpus controls retain selected native context" (:selected-context-unchanged? row) true)
+      (check "unrelated corpus controls retain immutable source identity" (:inventory-unchanged? row) true)
+      (check "control changes the complete raw issue corpus only"
+             (:complete-corpus-changed? row) (not= :unchanged (:variant row))))
+    (check "complete prepared corpus is freshly bound for every drift" (filterv #(not (:passed? %)) rows) [])
+    :complete))
+
 (def post-get-mutations
   [[:unchanged (fn [_] nil)]
    [:root #(swap! % assoc-in [:thread :comments :nodes 0 :body] "A real defect appeared during the final GET; fix it.")]
@@ -1162,9 +1211,6 @@
                  {:result
                   (await (publish-case
                           (fn [d c state]
-                            (when recovery?
-                              (swap! state update :issues conj
-                                     (issue 7002 bot "2026-10-11T01:01:00Z" (:summary (setup)))))
                             [(assoc d
                                     :post! (fn [repo number body]
                                              (swap! posts inc)
@@ -1179,7 +1225,11 @@
                                                       (reset! diagnostic
                                                               {:record-id id :exact-record-returned? (= expected actual)
                                                                :native-state-changed? (not= before @state)})
-                                                      actual))) c]) writes healthy?))}
+                                                      actual))) c]) writes healthy?
+                          (fn [state summary]
+                            (when recovery?
+                              (swap! state update :issues conj
+                                     (issue 7002 bot "2026-10-11T01:01:00Z" summary))))))}
                  (catch :default e {:error {:message (ex-message e) :data (ex-data e)}}))
         checked (try
                   (check "post-GET control actually reaches exactly one GET" @gets [7002])
@@ -1411,14 +1461,16 @@
         positive (await (publish-case (fn [d c _] [d c]) 1 true))
         authentication (await (publisher-authentication-controls))
         adverse (await (check-adverse adverse-controls))
-        existing (await (publish-case (fn [d c state]
-                                      (swap! state update :issues conj (issue 7002 bot "2026-10-11T01:01:00Z" (:summary (setup))))
-                                      [d c]) 0 true))
+        existing (await (publish-case (fn [d c _] [d c]) 0 true
+                                     (fn [state summary]
+                                       (swap! state update :issues conj
+                                              (issue 7002 bot "2026-10-11T01:01:00Z" summary)))))
         uncertain (await (publish-case (fn [d c _]
                         [(assoc d :post! (fn [r n body]
                                           ((:post! d) r n body) {:outcome :uncertain})) c]) 1 true))
         server-cases (await (server-error-controls))
         publisher-readback (await (publisher-readback-controls))
+        _prepared-corpus (prepared-corpus-controls)
         _post-get-context (await (post-get-context-controls post-get-cases []))
         wrong-id (await (publish-case (fn [d c _] [(assoc d :post! (fn [r n b] ((:post! d) r n b) {:outcome :posted :record {:id 1}})) c]) 1 false))
         wrong-get (await (publish-case (fn [d c _] [(assoc d :get-comment! (fn [id] (assoc ((:get-comment! d) id) :body "changed"))) c]) 1 false))
@@ -1464,6 +1516,7 @@
                                       "server-readback" (server-error-controls)
                                       "publisher-authentication" (publisher-authentication-controls)
                                       "publisher-readback" (publisher-readback-controls)
+                                      "prepared-corpus" (prepared-corpus-controls)
                                       "post-get-context" (post-get-context-controls post-get-cases [])
                                       "git-batching" (batch-source-controls)
                                       (throw (ex-info "Unknown owned test selector" {:only only}))))]

@@ -244,7 +244,7 @@ jobs:
     name: Assess complete actionability input
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ inputs.review_timeout_minutes > 180 && 180 || (inputs.review_timeout_minutes > 60 && inputs.review_timeout_minutes || 60) }}
+    timeout-minutes: 195
     outputs:
       accepted_sha256: ${{ steps.assess.outputs.review_invocation_sha256 }}
       check_run_id: ${{ job.check_run_id }}
@@ -383,6 +383,7 @@ jobs:
           node .actionability/runtime/node_modules/nbb/cli.js -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts" "$ETA_CHECKOUT/.github/scripts/opencode_actionability_assessment.cljs" input
       - name: Actual bounded credential-free invocation
         id: assess
+        timeout-minutes: ${{ inputs.review_timeout_minutes > 180 && 180 || (inputs.review_timeout_minutes > 60 && inputs.review_timeout_minutes || 60) }}
         working-directory: .actionability/model-root
         shell: bash
         env:
@@ -395,10 +396,22 @@ jobs:
           PR_NUMBER: ${{ inputs.pr_number }}
           REVIEW_MODEL: ''
         run: node "$ETA_CHECKOUT/.github/scripts/run-opencode-review-recovery.mjs"
+      - name: Refresh target-scoped native read token after model execution
+        id: target_reader_after_model
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          app-id: ${{ secrets.ETA_MU_APP_ID }}
+          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
+          owner: open-hax
+          repositories: ${{ steps.target_identity.outputs.repository_name }}
+          permission-metadata: read
+          permission-pull-requests: read
+          permission-issues: read
       - name: Reverify actual accepted invocation and fresh custody
         shell: bash
+        timeout-minutes: 5
         env:
-          GH_TOKEN: ${{ steps.target_reader.outputs.token }}
+          GH_TOKEN: ${{ steps.target_reader_after_model.outputs.token }}
           HOST_RUN_READ_TOKEN: ${{ github.token }}
           ACTIONABILITY_HOST_HOME: ${{ runner.temp }}/actionability-host-home
           PREPARED_INPUT_SHA256: ${{ needs.prepare.outputs.input_sha256 }}
@@ -409,6 +422,7 @@ jobs:
           node .actionability/runtime/node_modules/nbb/cli.js -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts" "$ETA_CHECKOUT/.github/scripts/opencode_actionability_assessment.cljs" verify
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
+        timeout-minutes: 5
         with: {name: 'actionability-result-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: .actionability/model-root/.opencode/review-evidence, if-no-files-found: error, include-hidden-files: true}
 
   publish:

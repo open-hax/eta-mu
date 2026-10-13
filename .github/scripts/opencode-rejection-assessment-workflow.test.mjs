@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { runTrustedWorkflowFixture } from "./assessment-trusted-workflow-fixture.mjs";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -45,7 +46,7 @@ function stageNativeDiscoveryFixture(directory, home, child, env) {
   assert.ok(match,"one actual parent-loaded audit preload is required");
   const preload=match[1].startsWith('"')?JSON.parse(match[1]):match[1];
   const require=createRequire(import.meta.url);assert.ok(path.isAbsolute(preload)&&require.cache[preload]);
-  assert.equal(digest(fs.readFileSync(preload)),"5b32fe4ce6f892715502275f345846b363118fe629dc2c2c0ef8bbbacfe9c5bf");
+  assert.equal(digest(fs.readFileSync(preload)),"f69bc9b3a31c4c3c1bc1189d6e5abf220d48a6dfb033c2236f9260a11f168372");
   const auditDirectory=process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR,capture=process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE;
   assert.ok(auditDirectory&&capture);const auditInfo=fs.lstatSync(auditDirectory);
   assert.ok(auditInfo.isDirectory()&&!auditInfo.isSymbolicLink()&&fs.realpathSync(auditDirectory)===auditDirectory);
@@ -53,7 +54,7 @@ function stageNativeDiscoveryFixture(directory, home, child, env) {
   const identities=path.join(directory,"discovery-children.ndjson"),loader=path.join(directory,"inert-catalog-loader.mjs");
   fs.writeFileSync(loader,`globalThis.fetch=async(url,options)=>{if(url!=="https://models.opencode.ai/api.json"||options.redirect!=="error"||options.credentials!=="omit")throw Error("INERT_FETCH_CONTRACT");const r=new Response(${JSON.stringify(JSON.stringify(raw))},{status:200});Object.defineProperty(r,"url",{value:url});return r;};\n`,{flag:"wx",mode:0o600});
   const source=fs.readFileSync(child,"utf8"),anchor='const fs=require("node:fs");\n';assert.equal(source.split(anchor).length,2);
-  const enrollment=`process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR=${JSON.stringify(auditDirectory)};process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE=${JSON.stringify(capture)};const preload=${JSON.stringify(preload)};if(require('node:crypto').createHash('sha256').update(fs.readFileSync(preload)).digest('hex')!=="5b32fe4ce6f892715502275f345846b363118fe629dc2c2c0ef8bbbacfe9c5bf")throw Error("TEST_PRELOAD_BYTES_REFUSED");require(preload);fs.appendFileSync(${JSON.stringify(identities)},JSON.stringify({pid:process.pid,parentPid:process.ppid,argv:process.argv.slice(2)})+'\\n');\nif(process.argv[2]==="--version"){process.stdout.write("1.18.18\\n");process.exit(0);}if(process.argv[2]==="models"){process.stdout.write(${JSON.stringify(`opencode/${id}\n${JSON.stringify(row)}\n`)});process.exit(0);}\n`;
+  const enrollment=`process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR=${JSON.stringify(auditDirectory)};process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE=${JSON.stringify(capture)};const preload=${JSON.stringify(preload)};if(require('node:crypto').createHash('sha256').update(fs.readFileSync(preload)).digest('hex')!=="f69bc9b3a31c4c3c1bc1189d6e5abf220d48a6dfb033c2236f9260a11f168372")throw Error("TEST_PRELOAD_BYTES_REFUSED");require(preload);fs.appendFileSync(${JSON.stringify(identities)},JSON.stringify({pid:process.pid,parentPid:process.ppid,argv:process.argv.slice(2)})+'\\n');\nif(process.argv[2]==="--version"){process.stdout.write("1.18.18\\n");process.exit(0);}if(process.argv[2]==="models"){process.stdout.write(${JSON.stringify(`opencode/${id}\n${JSON.stringify(row)}\n`)});process.exit(0);}\n`;
   fs.writeFileSync(child,source.replace(anchor,anchor+enrollment));
   Object.assign(env,{REVIEW_MODEL_DISCOVERY:"opencode-free-mimo-flash-v1",REVIEW_EXPECTED_OPENCODE_VERSION:"1.18.18",REVIEW_MODEL:""});
   nativeDiscoveryFixtures.set(env,{loader,identities,auditDirectory,capture});
@@ -310,7 +311,7 @@ test("actual protected canonical API and Muse pins are identical across both rou
   assert.match(infra, /dependency-pins \{:canonical "5cea3e51a15d19277bd642147292c11b82de5369" :muse "b7e4f98f550780a7b484b1525f53ad2934e29dad"\}/);
   const guard = workflow.jobs.prepare.steps[0].run;
   // Exact protected source pins below do not grant native/history authority for inert scope hashes.
-  const runPins = (changes = {}) => spawnSync("bash", ["-c", guard], { encoding: "utf8", timeout: 15000,
+  const runPins = (changes = {}) => runTrustedWorkflowFixture(import.meta.url, ["-c", guard], { encoding: "utf8", timeout: 15000,
     env: { PATH: process.env.PATH, TARGET_REPOSITORY: "open-hax/eta-mu", TIMEOUT_INPUT: "60",
       CANONICAL_REVISION: workflow.env.CANONICAL_REVISION, MUSE_REVISION: workflow.env.MUSE_REVISION,
       REJECTION_HISTORY_SOURCE_SHA256: "e".repeat(64), REJECTION_HISTORY_CLI_SHA256: "f".repeat(64), ...changes } });
@@ -330,7 +331,8 @@ test("actual protected canonical API and Muse pins are identical across both rou
   assert.deepEqual(Object.keys(workflow.jobs), ["prepare", "assess", "publish"]);
   assert.match(guard, /TIMEOUT_INPUT >= 60.*TIMEOUT_INPUT <= 180/);
   assert.equal(workflow.on.workflow_call.inputs.review_timeout_minutes.default, 60);
-  assert.match(workflow.jobs.assess["timeout-minutes"], /> 180 && 180/);
+  assert.equal(workflow.jobs.assess["timeout-minutes"], 195);
+  assert.match(workflow.jobs.assess.steps.find(step => step.id === "assess")["timeout-minutes"], /> 180 && 180/);
   assert.equal(workflow.env.REJECTION_HISTORY_SOURCE_KIND, "protected-checkout");
   assert.match(workflow.env.REJECTION_HISTORY_SOURCE_FILE, /canonical\/\.ημ\/receipts\.edn$/);
   assert.match(workflow.env.REJECTION_HISTORY_CLI_FILE, /canonical\/skills\/pr-flow\/scripts\/pr\.cljs$/);
@@ -350,16 +352,29 @@ test("target-native read credentials remain separate from protected publication"
       { "permission-metadata": "read", "permission-pull-requests": "read", "permission-issues": "read" });
     assert.equal(reader.with["app-id"], "${{ secrets.ETA_MU_APP_ID }}");
     assert.equal(reader.with["private-key"], "${{ secrets.ETA_MU_APP_PRIVATE_KEY }}");
+    const readMints = [reader];
+    if (job === workflow.jobs.assess) {
+      const refreshIndex = job.steps.findIndex((step) => step.id === "target_reader_after_model");
+      const refresh = job.steps[refreshIndex];
+      const modelIndex = job.steps.findIndex((step) => step.id === "assess");
+      const verifyIndex = job.steps.findIndex((step) => step.name === "Reverify actual accepted invocation and fresh custody");
+      assert.ok(modelIndex >= 0 && modelIndex < refreshIndex && refreshIndex + 1 === verifyIndex);
+      assert.equal(refresh.uses, reader.uses);
+      assert.deepEqual(refresh.with, reader.with, "refresh preserves the exact target installation and read-only scope");
+      readMints.push(refresh);
+    }
     const nativeSteps = job.steps.filter((step) => ["Fresh native collection and immutable source input",
       "Bind staged input before model execution", "Reverify actual accepted invocation and fresh custody"].includes(step.name));
     assert.equal(nativeSteps.length, job === workflow.jobs.prepare ? 1 : 2);
     for (const step of nativeSteps) {
-      assert.equal(step.env.GH_TOKEN, "${{ steps.target_reader.outputs.token }}", "target author permission reads use the target installation");
+      const expectedToken = step.name === "Reverify actual accepted invocation and fresh custody"
+        ? "${{ steps.target_reader_after_model.outputs.token }}" : "${{ steps.target_reader.outputs.token }}";
+      assert.equal(step.env.GH_TOKEN, expectedToken, "target author permission reads use the phase's exact target-scoped token");
       assert.equal(step.env.HOST_RUN_READ_TOKEN, "${{ github.token }}", "owning workflow provenance retains its own read token");
       assert.ok(readIndex < job.steps.indexOf(step));
     }
-    for (const step of job.steps.filter((step) => step !== reader))
-      assert.equal(JSON.stringify(step).includes("secrets.ETA_MU_APP"), false, "the read-token mint is the only earlier App secret consumer");
+    for (const step of job.steps.filter((step) => !readMints.includes(step)))
+      assert.equal(JSON.stringify(step).includes("secrets.ETA_MU_APP"), false, "only the exact target-scoped read-token mints consume earlier App secrets");
     assert.equal(JSON.stringify(job.outputs || {}).includes("target_reader"), false, "read tokens never cross jobs as outputs");
   }
   assert.equal(workflow.jobs.publish.environment, "rejection-assessment-publication");
@@ -421,7 +436,7 @@ test("authored bootstrap authenticates source before every checkout on both rout
       referenced_workflows: [{ sha, path: `open-hax/eta-mu/.github/workflows/opencode-rejection-assessment.yml@${sha}` }] }),
     TEST_COMPARE_STATUS: "identical",
     "BASH_FUNC_gh%%": '() { case "$2" in repos/open-hax/eta-mu) printf "%s\\n" main;; repos/open-hax/eta-mu/branches/main) printf "%s\\n" "$TEST_BRANCH_JSON";; repos/open-hax/eta-mu/actions/runs/31|repos/open-hax/knoxx/actions/runs/31) printf "%s\\n" "$TEST_RUN_JSON";; repos/open-hax/eta-mu/compare/*) printf "%s\\n" "$TEST_COMPARE_STATUS";; *) return 97;; esac; }' };
-  const run = (changes = {}) => spawnSync("bash", ["-c", guards[0]], { env: { ...env, ...changes }, encoding: "utf8", timeout: 15000 });
+  const run = (changes = {}) => runTrustedWorkflowFixture(import.meta.url, ["-c", guards[0]], { env: { ...env, ...changes }, encoding: "utf8", timeout: 15000 });
   assert.equal(run().status, 0, "inert native default-branch source admits");
   assert.equal(run({ GITHUB_EVENT_NAME: "pull_request", REJECTION_CALLED_REVISION: sha }).status, 0, "inert called exact referenced source admits");
   for (const changes of [
@@ -431,7 +446,7 @@ test("authored bootstrap authenticates source before every checkout on both rout
     { REJECTION_JOB_WORKFLOW_SHA: "" },
   ]) {
     const effects = path.join(contextDirectory, `mismatch-${Object.keys(changes)[0]}-${Object.values(changes)[0].length}.txt`);
-    const child = spawnSync("bash", ["-c", `${guards[0]}\nprintf 'checkout-reached\n' >> "$TEST_EFFECTS"\n`],
+    const child = runTrustedWorkflowFixture(import.meta.url, ["-c", `${guards[0]}\nprintf 'checkout-reached\n' >> "$TEST_EFFECTS"\n`],
       { env: { ...env, GITHUB_EVENT_NAME: "pull_request", REJECTION_CALLED_REVISION: sha,
         ...changes, TEST_EFFECTS: effects,
         "BASH_FUNC_gh%%": env["BASH_FUNC_gh%%"].replace("() {", '() { printf "native-read\\n" >> "$TEST_EFFECTS";') },
@@ -449,7 +464,7 @@ test("authored bootstrap authenticates source before every checkout on both rout
     const effectsDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-foreign-publication-"));
     const effects = path.join(effectsDirectory, "effects.txt");
     try {
-      const foreign = spawnSync("bash", ["-c", `${authored}\nprintf 'publication-reached\n' >> "$TEST_EFFECTS"\n`],
+      const foreign = runTrustedWorkflowFixture(import.meta.url, ["-c", `${authored}\nprintf 'publication-reached\n' >> "$TEST_EFFECTS"\n`],
         { env: { ...env, ...manuallyCalled, TEST_EFFECTS: effects,
           "BASH_FUNC_gh%%": '() { printf "native-read\\n" >> "$TEST_EFFECTS"; return 97; }' },
           encoding: "utf8", timeout: 15000 });
@@ -514,7 +529,7 @@ test("every job refuses reruns before native reads and later artifact or token s
         "BASH_FUNC_gh%%": ghSpy };
       // The appended marker models continuation after the real authored guard.
       // Native download/token actions are never invoked by this inert test.
-      const child = spawnSync("bash", ["-c", `${job.steps[guardIndex].run}\nprintf 'later-step\\n' >> "$TEST_EFFECTS"\n`],
+      const child = runTrustedWorkflowFixture(import.meta.url, ["-c", `${job.steps[guardIndex].run}\nprintf 'later-step\\n' >> "$TEST_EFFECTS"\n`],
         { env, encoding: "utf8", timeout: 15000 });
       assert.equal(child.error, undefined);
       assert.equal(child.signal, null);
@@ -545,12 +560,12 @@ test("publisher token scopes exactly the validated installed target", (t) => {
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   for (const target of ["open-hax/another-installed-repo", "open-hax/eta-mu", "open-hax/knoxx"]) {
     const effects = path.join(directory, target.split("/")[1]);
-    const child = spawnSync("bash", ["-c", `${workflow.jobs.prepare.steps[0].run}\nprintf 'setup-reached\n' >> "$TEST_EFFECTS"\n`],
+    const child = runTrustedWorkflowFixture(import.meta.url, ["-c", `${workflow.jobs.prepare.steps[0].run}\nprintf 'setup-reached\n' >> "$TEST_EFFECTS"\n`],
       { env: { PATH: process.env.PATH, ...expectedPins, TIMEOUT_INPUT: "60", TARGET_REPOSITORY: target,
         TEST_EFFECTS: effects }, encoding: "utf8", timeout: 15000 });
     assert.equal(child.status, 0, child.stderr);
     const output = effects + ".outputs";
-    const native = spawnSync("bash", ["-c", nativeGuard.run],
+    const native = runTrustedWorkflowFixture(import.meta.url, ["-c", nativeGuard.run],
       { env: { PATH: process.env.PATH, TARGET_REPOSITORY: target, TARGET_REPOSITORY_ID: "3",
         GITHUB_OUTPUT: output, TEST_METADATA: JSON.stringify({ full_name: target, id: 3, visibility: "public", private: false }),
         "BASH_FUNC_gh%%": '() { [[ "$#" == 2 && "$1" == api && "$2" == "repos/$TARGET_REPOSITORY" ]] || return 97; printf "%s\\n" "$TEST_METADATA"; }' },
@@ -566,7 +581,7 @@ test("publisher token scopes exactly the validated installed target", (t) => {
   }
   for (const [n, target] of ["other-owner/repo", "open-hax/repo,other", "open-hax/repo\nother", "", "open-hax/"].entries()) {
     const effects = path.join(directory, `refusal-${n}`);
-    const child = spawnSync("bash", ["-c", `${workflow.jobs.prepare.steps[0].run}\nprintf 'setup-reached\n' >> "$TEST_EFFECTS"\n`],
+    const child = runTrustedWorkflowFixture(import.meta.url, ["-c", `${workflow.jobs.prepare.steps[0].run}\nprintf 'setup-reached\n' >> "$TEST_EFFECTS"\n`],
       { env: { PATH: process.env.PATH, ...expectedPins, TIMEOUT_INPUT: "60", TARGET_REPOSITORY: target,
         TEST_EFFECTS: effects }, encoding: "utf8", timeout: 15000 });
     assert.equal(child.status, 1);
@@ -642,7 +657,7 @@ test("every target checkout requires exact native identity and known public visi
     for (const [name, metadata, readExit] of cases) {
       const effects = path.join(directory, jobName + "-" + name);
       const output = effects + ".outputs";
-      const child = spawnSync("bash", ["-c", guard.run + '\nprintf \'checkout-reached\\n\' >> "$TEST_EFFECTS"\n'],
+      const child = runTrustedWorkflowFixture(import.meta.url, ["-c", guard.run + '\nprintf \'checkout-reached\\n\' >> "$TEST_EFFECTS"\n'],
         { env: { PATH: process.env.PATH, TARGET_REPOSITORY: publicTarget.full_name, TARGET_REPOSITORY_ID: "3",
           GITHUB_OUTPUT: output, TEST_EFFECTS: effects, TEST_METADATA: typeof metadata === "string" ? metadata : JSON.stringify(metadata),
           TEST_READ_EXIT: String(readExit),
@@ -677,7 +692,7 @@ test("publication carrier preserves terminal bytes and an honest startup-crash f
     ["refused-readback", 1, posted], ["observed", 0, observed], ["deduplicated", 0, deduplicated]]) {
     const file = path.join(directory, name + ".json");
     const terminalBytes = terminal ? JSON.stringify(terminal) + "\n" : "";
-    const child = spawnSync("bash", ["-c", write.run],
+    const child = runTrustedWorkflowFixture(import.meta.url, ["-c", write.run],
       { env: { PATH: process.env.PATH, PUBLICATION_RESULT_FILE: file, ETA_CHECKOUT: "/inert/eta", CANONICAL_CHECKOUT: "/inert/canonical",
         TEST_HOST_EXIT: String(exitCode), TEST_TERMINAL: terminalBytes,
         "BASH_FUNC_node%%": '() { if [[ -n "$TEST_TERMINAL" ]]; then printf "%s" "$TEST_TERMINAL" > "$PUBLICATION_RESULT_FILE"; fi; return "$TEST_HOST_EXIT"; }' },
@@ -742,7 +757,7 @@ test("all host jobs require the committed lock and propagate npm ci failure with
       if (variant !== "missing-lock") fs.writeFileSync(path.join(source, "package-lock.json"), lockBytes);
       const calls = path.join(owned, "npm-calls.txt");
       const continued = path.join(owned, "continued.txt");
-      const child = spawnSync("bash", ["-c", prefix + '\nprintf "runtime-ready\\n" > "$TEST_CONTINUED"\n'], {
+      const child = runTrustedWorkflowFixture(import.meta.url, ["-c", prefix + '\nprintf "runtime-ready\\n" > "$TEST_CONTINUED"\n'], {
         cwd: owned, encoding: "utf8", timeout: 15000,
         env: { PATH: process.env.PATH, ETA_CHECKOUT: eta, GITHUB_WORKSPACE: owned, RUNNER_TEMP: temp,
           REJECTION_EVIDENCE_DIR: evidence, REJECTION_PROFILE_DIR: profile, TEST_NPM_CALLS: calls,
@@ -850,7 +865,7 @@ test("model child retains a matching profile lock and refuses incomplete locked 
     fs.writeFileSync(path.join(output, "exposed-tools.txt"), "inert tools\n");
     const generatedLock = Buffer.concat([profileLock, Buffer.from("\n")]);
     if (variant === "generated-lock") fs.writeFileSync(path.join(output, "package-lock.json"), generatedLock);
-    const child = spawnSync("bash", ["-c", stageTail + '\nprintf "ready\\n" > "$TEST_CONTINUED"\n'], {
+    const child = runTrustedWorkflowFixture(import.meta.url, ["-c", stageTail + '\nprintf "ready\\n" > "$TEST_CONTINUED"\n'], {
       encoding: "utf8", timeout: 15000,
       env: { PATH: process.env.PATH, RUNNER_TEMP: temp, ETA_CHECKOUT: eta,
         REJECTION_PROFILE_DIR: profile, REJECTION_EVIDENCE_DIR: evidence, TEST_CONTINUED: continued },
@@ -887,7 +902,7 @@ test("model child retains a matching profile lock and refuses incomplete locked 
       if (!(variant === "missing-cli-lock" && name === "assessment-opencode")) fs.writeFileSync(path.join(source, "package-lock.json"), lockBytes);
     }
     const calls = path.join(owned, "npm-calls"), continued = path.join(owned, "continued");
-    const child = spawnSync("bash", ["-c", installTail + '\nprintf "ready\\n" > "$TEST_CONTINUED"\n'], {
+    const child = runTrustedWorkflowFixture(import.meta.url, ["-c", installTail + '\nprintf "ready\\n" > "$TEST_CONTINUED"\n'], {
       encoding: "utf8", timeout: 15000,
       env: { PATH: process.env.PATH, RUNNER_TEMP: temp, ETA_CHECKOUT: eta, CANONICAL_CHECKOUT: canonical,
         REJECTION_PROFILE_DIR: profile, TEST_VARIANT: variant, TEST_NPM_CALLS: calls, TEST_CONTINUED: continued,

@@ -116,7 +116,65 @@
       (throw (ex-info "The actual Muse verifier was not built" {})))
     {:file file :sha256 (sha256 file)}))
 
-(defn audit! [directory capture process-pid]
+(defn trusted-fixture-journal! [binding-directory capture process-pid records]
+  ;; Fixed trusted fixture custody is checked separately from the unchanged
+  ;; zero-denial/process-membership rules. Declared counts alone supply no Node
+  ;; proof: journal PIDs must bind actual audited kernel ancestry.
+  (let [ids (set (map :pid records))
+        owners (filter :trustedFixtureOwner records)]
+    (doseq [owner owners]
+      (let [held (:trustedFixtureOwner owner)
+            root-file (fs/path binding-directory "root.json")
+            journal (fs/path binding-directory (str (:pid owner) ".jsonl"))]
+        (when-not (and (fs/regular-file? root-file {:nofollow-links true})
+                       (<= 1 (fs/size root-file) 65536)
+                       (= 384 (bit-and 511 (Files/getAttribute root-file "unix:mode" nofollow)))
+                       (= (Files/getAttribute (fs/path binding-directory) "unix:uid" nofollow)
+                          (Files/getAttribute root-file "unix:uid" nofollow))
+                       (or (and (zero? (:trustedWorkflowFixtureCount owner)) (not (fs/exists? journal)))
+                           (and (fs/regular-file? journal {:nofollow-links true})
+                                (<= 1 (fs/size journal) 1048576)
+                                (= 384 (bit-and 511 (Files/getAttribute journal "unix:mode" nofollow)))
+                                (= (Files/getAttribute (fs/path binding-directory) "unix:uid" nofollow)
+                                   (Files/getAttribute journal "unix:uid" nofollow)))))
+          (throw (ex-info "Trusted workflow fixture journal refused" {})))
+        (let [binding (json/parse-string (slurp (str root-file)) true)
+              entries (if (fs/exists? journal) (mapv #(json/parse-string % true) (str/split-lines (slurp (str journal)))) [])
+              source (:ownerPath held)]
+          (when-not (and (= "eta-mu.trusted-fixture-root/v1" (:schema binding))
+                         (= capture (:capture binding)) (= process-pid (:pid binding) (:rootPid held))
+                         (= process-pid (:parentPid owner))
+                         (some #(and (= process-pid (:pid %)) (= (:startTicks binding) (:startTicks %)))
+                               (:kernelAncestry owner))
+                         (= source (get-in binding [:ownerSource :path]))
+                         (= (:ownerSHA256 held) (get-in binding [:ownerSource :sha256]) (sha256 source))
+                         (= (:helperSHA256 held) (get-in binding [:helperSource :sha256])
+                            (sha256 (get-in binding [:helperSource :path])))
+                         (= (:trustedWorkflowFixtureCount owner) (count entries)))
+            (throw (ex-info "Trusted workflow fixture owner binding refused" {})))
+          (doseq [entry entries]
+            (when-not (and (= "eta-mu.trusted-workflow-fixture/v1" (:schema entry)) (= capture (:capture entry))
+                           (= (:pid owner) (:ownerPid entry)) (= source (:ownerPath entry))
+                           (= (:ownerSHA256 held) (:ownerSHA256 entry))
+                           (= (:helperSHA256 held) (:helperSHA256 entry))
+                           (= process-pid (:rootPid entry)) (pos-int? (:actualPid entry))
+                           (integer? (:status entry)) (nil? (:signal entry)) (nil? (:errorCode entry))
+                           (re-matches #"[0-9a-f]{64}" (or (:argvSHA256 entry) ""))
+                           (re-matches #"[0-9a-f]{64}" (or (:programSHA256 entry) ""))
+                           (true? (:custodyQualified entry)) (vector? (:actualNodeChildren entry))
+                           (= (:expectedNodeCount entry) (count (:actualNodeChildren entry))))
+              (throw (ex-info "Trusted workflow fixture outcome custody refused" {})))
+            (doseq [child (:actualNodeChildren entry)]
+              (let [record (first (filter #(= (:pid child) (:pid %)) records))]
+                (when-not (and (ids (:pid child)) (= (:parentPid child) (:parentPid record))
+                               (some #(and (= (:pid child) (:pid %)) (= (:startTicks child) (:startTicks %)))
+                                     (:kernelAncestry record))
+                               (some #(and (= (:actualPid entry) (:pid %)) (= (:pid owner) (:parentPid %))
+                                           (= (:launcherStartTicks child) (:startTicks %)))
+                                     (:kernelAncestry record)))
+                  (throw (ex-info "Trusted workflow fixture Node ancestry refused" {})))))))))))
+
+(defn audit! [directory binding-directory capture process-pid]
   ;; Keep the reviewed preload's emitted evidence contract. Missing, malformed,
   ;; unrelated or nonzero-denial records cannot turn a suite into a pass.
   (let [files (vec (fs/list-dir directory))
@@ -142,6 +200,7 @@
     (when-not (and (seq records) (= (count records) (count ids))
                    (every? ids (mapcat :expectedNodeChildren records)))
       (throw (ex-info "Assessment network audit membership is incomplete" {})))
+    (trusted-fixture-journal! binding-directory capture process-pid records)
     (println (str "Network audit: " (count records) " bound Node processes, zero denied attempts."))))
 
 (defn nbb-test-command [canonical test-file]
@@ -180,9 +239,11 @@
 (defn test-suite! [work environment {:keys [label argv variables completion]}]
   (println (str "\nAssessment suite: " label))
   (let [directory (private-directory! (fs/path work (str "audit-" label)))
+        binding-directory (private-directory! (fs/path work (str "trusted-fixture-" label)))
         environment (merge environment variables
                            {"ETA_MU_TEST_NETWORK_AUDIT_DIR" directory
                             "ETA_MU_TEST_NETWORK_AUDIT_CAPTURE" label
+                            "ETA_MU_TEST_TRUSTED_FIXTURE_BINDING_DIR" binding-directory
                             "NODE_OPTIONS" (str "--require " (pr-str preload))})
         child (p/process argv {:dir root :env environment :in :inherit
                                :out (if completion :string :inherit) :err :inherit})
@@ -190,7 +251,7 @@
         result @child]
     (when completion (print (:out result)) (flush))
     (try
-      (audit! directory label pid)
+      (audit! directory binding-directory label pid)
       (when completion (completed-suite! (:out result) completion))
       (zero? (:exit result))
       (catch Exception error

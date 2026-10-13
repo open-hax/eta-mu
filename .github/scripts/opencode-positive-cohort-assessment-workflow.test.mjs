@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { runTrustedWorkflowFixture } from "./assessment-trusted-workflow-fixture.mjs";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -45,7 +46,7 @@ function stageNativeDiscoveryFixture(directory, home, child, env) {
   assert.ok(match,"one actual parent-loaded audit preload is required");
   const preload=match[1].startsWith('"')?JSON.parse(match[1]):match[1];
   const require=createRequire(import.meta.url);assert.ok(path.isAbsolute(preload)&&require.cache[preload]);
-  assert.equal(digest(fs.readFileSync(preload)),"5b32fe4ce6f892715502275f345846b363118fe629dc2c2c0ef8bbbacfe9c5bf");
+  assert.equal(digest(fs.readFileSync(preload)),"f69bc9b3a31c4c3c1bc1189d6e5abf220d48a6dfb033c2236f9260a11f168372");
   const auditDirectory=process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR,capture=process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE;
   assert.ok(auditDirectory&&capture);const auditInfo=fs.lstatSync(auditDirectory);
   assert.ok(auditInfo.isDirectory()&&!auditInfo.isSymbolicLink()&&fs.realpathSync(auditDirectory)===auditDirectory);
@@ -53,7 +54,7 @@ function stageNativeDiscoveryFixture(directory, home, child, env) {
   const identities=path.join(directory,"discovery-children.ndjson"),loader=path.join(directory,"inert-catalog-loader.mjs");
   fs.writeFileSync(loader,`globalThis.fetch=async(url,options)=>{if(url!=="https://models.opencode.ai/api.json"||options.redirect!=="error"||options.credentials!=="omit")throw Error("INERT_FETCH_CONTRACT");const r=new Response(${JSON.stringify(JSON.stringify(raw))},{status:200});Object.defineProperty(r,"url",{value:url});return r;};\n`,{flag:"wx",mode:0o600});
   const source=fs.readFileSync(child,"utf8"),anchor='const fs=require("node:fs");\n';assert.equal(source.split(anchor).length,2);
-  const enrollment=`process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR=${JSON.stringify(auditDirectory)};process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE=${JSON.stringify(capture)};const preload=${JSON.stringify(preload)};if(require('node:crypto').createHash('sha256').update(fs.readFileSync(preload)).digest('hex')!=="5b32fe4ce6f892715502275f345846b363118fe629dc2c2c0ef8bbbacfe9c5bf")throw Error("TEST_PRELOAD_BYTES_REFUSED");require(preload);fs.appendFileSync(${JSON.stringify(identities)},JSON.stringify({pid:process.pid,parentPid:process.ppid,argv:process.argv.slice(2)})+'\\n');\nif(process.argv[2]==="--version"){process.stdout.write("1.18.18\\n");process.exit(0);}if(process.argv[2]==="models"){process.stdout.write(${JSON.stringify(`opencode/${id}\n${JSON.stringify(row)}\n`)});process.exit(0);}\n`;
+  const enrollment=`process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR=${JSON.stringify(auditDirectory)};process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE=${JSON.stringify(capture)};const preload=${JSON.stringify(preload)};if(require('node:crypto').createHash('sha256').update(fs.readFileSync(preload)).digest('hex')!=="f69bc9b3a31c4c3c1bc1189d6e5abf220d48a6dfb033c2236f9260a11f168372")throw Error("TEST_PRELOAD_BYTES_REFUSED");require(preload);fs.appendFileSync(${JSON.stringify(identities)},JSON.stringify({pid:process.pid,parentPid:process.ppid,argv:process.argv.slice(2)})+'\\n');\nif(process.argv[2]==="--version"){process.stdout.write("1.18.18\\n");process.exit(0);}if(process.argv[2]==="models"){process.stdout.write(${JSON.stringify(`opencode/${id}\n${JSON.stringify(row)}\n`)});process.exit(0);}\n`;
   fs.writeFileSync(child,source.replace(anchor,anchor+enrollment));
   Object.assign(env,{REVIEW_MODEL_DISCOVERY:"opencode-free-mimo-flash-v1",REVIEW_EXPECTED_OPENCODE_VERSION:"1.18.18",REVIEW_MODEL:""});
   nativeDiscoveryFixtures.set(env,{loader,identities,auditDirectory,capture});
@@ -265,7 +266,7 @@ test("authored workflow refuses unresolved pins before any native or setup comma
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "eta-positive-cohort-pins-"));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const step = workflow.jobs.prepare.steps[0];
-  const child = spawnSync("bash", ["--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step.run], {
+  const child = runTrustedWorkflowFixture(import.meta.url, ["--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step.run], {
     encoding: "utf8", cwd: dir, env: { ...process.env, TARGET_REPOSITORY: "open-hax/knoxx",
       POSITIVE_COHORT_HISTORY_SOURCE_SHA256: "a".repeat(64), POSITIVE_COHORT_HISTORY_CLI_SHA256: "b".repeat(64),
       TIMEOUT_INPUT: "60", CANONICAL_REVISION: "UNADOPTED_POSITIVE_COHORT_V2", MUSE_REVISION: "UNADOPTED_POSITIVE_COHORT_INPUT" },

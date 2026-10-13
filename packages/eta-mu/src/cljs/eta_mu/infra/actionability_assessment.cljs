@@ -54,6 +54,7 @@
                     :head_sha (:head thread) :context_sha256 (:context-digest thread)
                     :proposal_id (:id proposal) :proposal_body_sha256 (:body-sha256 proposal)
                     :source_inventory_sha256 (:sha256 inventory)
+                    :native_issue_comments_sha256 (host/sha256 (host/json (:raw-issue-comments snapshot)))
                     :target {:repository_id (get-in snapshot [:repository :id])
                              :repository_database_id (get-in snapshot [:repository :databaseId])
                              :pr_id (get-in snapshot [:pr :id]) :pr_number (get-in snapshot [:pr :number])
@@ -67,6 +68,8 @@
     (when-not (and (= "open-hax.actionability-input/v1" (:schema source)) (= "actionability" (:purpose source))
                    (= (:head thread) (:head_sha source)) (= (:context-digest thread) (:context_sha256 source))
                    (= (:sha256 inventory) (:source_inventory_sha256 source))
+                   (= (host/sha256 (host/json (:raw-issue-comments snapshot)))
+                      (:native_issue_comments_sha256 source))
                    (= (get-in snapshot [:repository :id]) (:repository_id target))
                    (= (get-in snapshot [:repository :databaseId]) (:repository_database_id target))
                    (= (get-in snapshot [:pr :id]) (:pr_id target)) (= (:pr-number config) (:pr_number target))
@@ -79,25 +82,36 @@
            (:issue-comments snapshot)))
 (defn- context-material [snapshot]
   (select-keys snapshot [:repository :pr :selected :raw-issue-comments :issue-comments :history]))
+(defn- bound-input! [snapshot inventory source config]
+  (bound-source! snapshot inventory source config)
+  (let [proposals (filterv #(= (:proposal_id source) (:id %)) (:issue-comments snapshot))
+        proposal (first proposals) record (actionability/protocol proposal)]
+    (when-not (and (= 1 (count proposals)) (= :proposal (:kind record))
+                   (= (:proposal_body_sha256 source) (:body-sha256 proposal))
+                   (= (actionability/context-binding (:selected snapshot)) (:payload record)))
+      (host/refuse! :fresh-proposal-binding))))
 (defn rebind-input
   "Fresh custody check before and after the child; this grants no admission."
   [deps config source]
   ((:verify-sources! deps)) ((:verify-run! deps))
-  (let [snapshot (collect deps config) inventory ((:inventory! deps))
-        proposals (filterv #(= (:proposal_id source) (:id %)) (:issue-comments snapshot))
-        proposal (first proposals) record (actionability/protocol proposal)]
-    (bound-source! snapshot inventory source config)
-    (when-not (and (= 1 (count proposals)) (= :proposal (:kind record))
-                   (= (:proposal_body_sha256 source) (:body-sha256 proposal))
-                   (= (actionability/context-binding (:selected snapshot)) (:payload record)))
-      (host/refuse! :fresh-proposal-binding))
+  (let [snapshot (collect deps config) inventory ((:inventory! deps))]
+    (bound-input! snapshot inventory source config)
     snapshot))
-(defn- post-get-context! [deps config source earlier]
+(defn- without-observed [snapshot record-id]
+  (let [drop-record #(filterv (fn [comment] (not= record-id (:id comment))) %)]
+    (-> snapshot (update :raw-issue-comments drop-record) (update :issue-comments drop-record)
+        (update-in [:selected :issue-comments] drop-record))))
+(defn- post-get-context! [deps config source earlier new-record-id]
   ;; The final GET can leave the selected record intact while its context changes.
   ;; Rebind all existing source, run, proposal and native-input custody afterward.
-  (let [latest (rebind-input deps config source)]
+  ((:verify-sources! deps)) ((:verify-run! deps))
+  (let [latest (collect deps config) inventory ((:inventory! deps))]
     (when-not (= (context-material earlier) (context-material latest))
       (host/refuse! :post-get-context-change))
+    ;; Bind the original complete corpus. Only the exact sole new record may
+    ;; be removed; recovery retains its assessment in the prepared input.
+    (bound-input! (if new-record-id (without-observed latest new-record-id) latest)
+                  inventory source config)
     latest))
 (defn- qualified-record! [snapshot record body user]
   (let [thread (:selected snapshot) disposition (actionability/disposition thread)]
@@ -144,7 +158,7 @@
         (when-not (= (select-keys record [:id :node_id :body :user :created_at :updated_at :html_url])
                      (select-keys actual [:id :node_id :body :user :created_at :updated_at :html_url]))
           (host/refuse! :native-get-mismatch))
-        (qualified-record! (post-get-context! deps config source before) record body user))
+        (qualified-record! (post-get-context! deps config source before nil) record body user))
       (let [result (try (await (post! (:repo config) (:pr-number config) body))
                         (catch :default _ {:outcome :uncertain :transport-boundary-threw true}))]
         ;; Retain the one-shot outcome even when recollection or GET fails.
@@ -155,16 +169,17 @@
           ;; A transport failure can follow a committed write; never retry it.
           (verify-sources!) (verify-run!)
           (let [after (collect deps config) current-inventory (inventory!)
-                _ (bound-source! after current-inventory source config)
                 matches (body-matches after body user)]
             (when-not (= 1 (count matches)) (host/refuse! :uncertain-native-write))
-            (let [record (first matches) actual (get-comment! (:id record))]
+            (let [record (first matches)
+                  _ (bound-input! (without-observed after (:id record)) current-inventory source config)
+                  actual (get-comment! (:id record))]
               (when (and (= :posted (:outcome result)) (not= (:id record) (get-in result [:record :id])))
                 (host/refuse! :native-post-record-mismatch))
               (when-not (= (select-keys record [:id :node_id :body :user :created_at :updated_at :html_url])
                            (select-keys actual [:id :node_id :body :user :created_at :updated_at :html_url]))
                 (host/refuse! :native-get-mismatch))
-              (assoc (qualified-record! (post-get-context! deps config source after) record body user)
+              (assoc (qualified-record! (post-get-context! deps config source after (:id record)) record body user)
                      :outcome (:outcome result)
                      :actual-write-outcome (select-keys result [:outcome :http-status :transport-boundary-threw])
                      :write-performed true :retry-performed false)))
