@@ -38,7 +38,7 @@ export function parseOpenCodeModelCatalog(bytes) {
     rows.push(row);
   };
   for (const line of lines) {
-    if (/^opencode\/[a-z0-9][a-z0-9._-]*$/.test(line)) {
+    if (/^opencode\/\S+$/.test(line)) { // IDs stay raw.
       finish();
       if (labels.has(line)) throw new Error("duplicate OpenCode catalog model ID");
       labels.add(line); label = line; body = [];

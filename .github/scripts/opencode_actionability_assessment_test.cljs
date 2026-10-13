@@ -1308,7 +1308,7 @@
               (let [[command argv options] args tokens (vec (array-seq argv))
                     ls? (and (= "git" command) (some #{"ls-tree"} tokens))
                     batch? (and (= "git" command) (some #{"cat-file"} tokens) (some #{"--batch"} tokens))
-                    force-limit? (and (= :argv-limit variant) ls? (not (some #{"-r"} tokens)) (not @injected))
+                    force-limit? (and (#{:argv-limit :budget-fallback} variant) ls? (not (some #{"-r"} tokens)) (not @injected))
                     result (if force-limit?
                              (do (reset! injected true) #js {:status nil :pid 0 :error #js {:code "E2BIG"}})
                              (.apply original native (to-array args)))]
@@ -1444,8 +1444,136 @@
       :complete
       (finally (.rmSync fs directory #js {:recursive true :force true})))))
 
+(defn source-budget-wrapper!
+  "Stage one finite owned Git wrapper; real Git remains the source of bytes."
+  [directory variant]
+  (let [bin (.join path directory "bin") journal (.join path directory "git-processes.jsonl")
+        file (.join path bin "git")]
+    (.mkdirSync fs bin #js {:mode 448})
+    (.writeFileSync fs file
+      (str "#!/usr/bin/python3\nimport os,sys,time,json,subprocess\n"
+           "journal=" (host/json journal) "\nkind=" (host/json (name variant)) "\n"
+           "args=sys.argv[1:]\npid=os.getpid()\n"
+           "delay=(kind=='budget-batch' and 'cat-file' in args and '--batch' in args) or (kind=='budget-fallback' and 'ls-tree' in args and '-r' in args)\n"
+           "def record(value):\n value.update(wrapperPid=pid,parentPid=os.getppid()); fd=os.open(journal,os.O_WRONLY|os.O_CREAT|os.O_APPEND,0o600); os.write(fd,(json.dumps(value)+'\\n').encode()); os.close(fd)\n"
+           "record(dict(event='started',argv=args,delayed=delay,delayMs=16000 if delay else 0))\n"
+           "if delay: time.sleep(16)\n"
+           "child=subprocess.Popen(['/usr/bin/git',*args],stdin=None,stdout=None,stderr=None)\n"
+           "record(dict(event='git-spawned',gitPid=child.pid))\n"
+           "status=child.wait(); record(dict(event='git-exited',gitPid=child.pid,status=status)); sys.exit(status)\n")
+      #js {:mode 448 :flag "wx"})
+    {:path bin :journal journal}))
+
+(defn source-budget-controls
+  "Valid complete batches/fallbacks outlive fifteen seconds within caller custody."
+  []
+  (let [directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-git-caller-budget-"))
+        repo (.join path directory "repository")
+        binary (js/Buffer.from #js [255 0 10 65 128]) text "\ufeffcaller-budget ημ\n"
+        link "\ufeff../../unopened-budget-target" wanted ["binary.bin" "copy.bin" "empty" "text.cljc" "link" "gitlink"]]
+    (try
+      (.chmodSync fs directory 448) (.mkdirSync fs repo #js {:mode 448})
+      (let [git (owned-source-fixture-git repo)]
+        (git "init" "--initial-branch=fixture")
+        (.writeFileSync fs (.join path repo "text.cljc") text)
+        (git "add" "--all") (git "commit" "-m" "Owned slow Git target")
+        (let [target (git "rev-parse" "HEAD")]
+          (.writeFileSync fs (.join path repo "binary.bin") binary)
+          (.writeFileSync fs (.join path repo "copy.bin") binary)
+          (.writeFileSync fs (.join path repo "empty") "")
+          (.symlinkSync fs link (.join path repo "link"))
+          (.mkdirSync fs (.join path repo "nested"))
+          (.writeFileSync fs (.join path repo "nested/unselected") "not selected\n")
+          (git "add" "--all") (git "update-index" "--add" "--cacheinfo" (str "160000," target ",gitlink"))
+          (git "commit" "-m" "Owned complete budget carriers")
+          (let [head (git "rev-parse" "HEAD") index (.readFileSync fs (.join path repo ".git/index"))
+                status (git "status" "--porcelain=v1")
+                expected {"binary.bin" binary "copy.bin" binary "empty" (js/Buffer.from "" "utf8")
+                          "text.cljc" (js/Buffer.from text "utf8") "link" (js/Buffer.from link "utf8")
+                          "gitlink" (js/Buffer.from target "ascii")}
+                objects (into {} (map #(vector % (git "rev-parse" (str head ":" %))) wanted))
+                environment host/env
+                rows (mapv
+                      (fn [variant]
+                        (let [work (.join path directory (name variant)) _ (.mkdirSync fs work #js {:mode 448})
+                              wrapper (source-budget-wrapper! work variant)
+                              prefix (if (= :budget-fallback variant) "../" "")
+                              paths (mapv #(str prefix %) wanted)
+                              checkout (if (= :budget-fallback variant) (.join path repo "nested") repo)
+                              started (.now js/Date)
+                              result (with-redefs [host/env (fn [key] (if (= key "PATH")
+                                                                      (str (:path wrapper) ":" (environment key))
+                                                                      (environment key)))]
+                                       (capture-batch-source checkout head paths variant))
+                              elapsed (- (.now js/Date) started)
+                              records (mapv #(js->clj (js/JSON.parse %) :keywordize-keys true)
+                                            (str/split-lines (host/read-text (:journal wrapper))))
+                              delayed (filterv #(and (= "started" (:event %)) (:delayed %)) records)
+                              real (filterv #(not (:fixture-launch-failure? %)) (:calls result))
+                              value (:value result) entries (:files value)
+                              delayed-pid (:wrapperPid (first delayed))
+                              delayed-call (first (filter #(= delayed-pid (:pid %)) real))
+                              launched (filterv #(= "started" (:event %)) records)
+                              spawned (filterv #(= "git-spawned" (:event %)) records)
+                              completed (filterv #(= "git-exited" (:event %)) records)]
+                          (check "one actual finite delayed wrapper was launched" (count delayed) 1)
+                          (check "delayed wrapper is the actual captured native process" (pos-int? delayed-pid) true)
+                          (check "delay is sixteen seconds, independent of product timeout options" (:delayMs (first delayed)) 16000)
+                          (check "wrapper records its actual owning Node parent" (:parentPid (first delayed)) (.-pid js/process))
+                          (check "actual observer holds delayed native PID" (some? delayed-call) true)
+                          (check "the recursive case actually exercises the explicit E2BIG fixture"
+                                 (:injected? result) (= :budget-fallback variant))
+                          (check "all wrapper launches bind the actual native call PIDs and argv"
+                                 (mapv #(vector (:wrapperPid %) (:argv %)) launched)
+                                 (mapv #(vector (:pid %) (:argv %)) real))
+                          (check "all actual wrappers retain the owning Node parent"
+                                 (every? #(= (.-pid js/process) (:parentPid %)) records) true)
+                          (when value
+                            (check "slow source preserves requested path order" (mapv :path entries) paths)
+                            (doseq [[source-path entry] (map vector wanted entries)]
+                              (check "slow source retains actual immutable Git object" (:blob entry) (objects source-path))
+                              (check "slow source retains exact carrier byte length" (:bytes entry) (.-length (expected source-path)))
+                              (check "slow source retains exact carrier digest" (:sha256 entry) (host/sha256 (expected source-path)))
+                              (when (:text entry)
+                                (check "slow source retains exact UTF8/BOM bytes" (.equals (expected source-path) (js/Buffer.from (:text entry) "utf8")) true))
+                              (when (:content-base64 entry)
+                                (check "slow source retains exact binary bytes" (.equals (expected source-path) (js/Buffer.from (:content-base64 entry) "base64")) true)))
+                            (check "slow source retains exact Git modes" (mapv :git-mode entries)
+                                   ["100644" "100644" "100644" "100644" "120000" "160000"])
+                            (check "slow manifest shape and aggregate digest are unchanged"
+                                   [(:manifest value) (:sha256 value)]
+                                   [[2 head (mapv #(mapv % [:path :git-mode :object-type :blob :byte-carrier :bytes :sha256]) entries)]
+                                    (host/sha256 (pr-str (:manifest value)))])
+                            (check "every wrapper binds a real normal Git child" (count completed) (count real))
+                            (check "each real Git child joins its exact launched wrapper and completion"
+                                   [(mapv :wrapperPid spawned)
+                                    (mapv #(vector (:wrapperPid %) (:gitPid %)) completed)]
+                                   [(mapv :pid real)
+                                    (mapv #(vector (:wrapperPid %) (:gitPid %)) spawned)])
+                            (check "all observed native Git wrappers finish normally"
+                                   (every? #(and (= 0 (:status %)) (nil? (:signal %)) (nil? (:error-code %))) real) true)
+                            (check "actual Git children complete without a truncation substitute"
+                                   (every? #(and (pos-int? (:gitPid %)) (= 0 (:status %))) completed) true)
+                            (check "the selected finite delay actually exceeds the former local deadline" (>= elapsed 16000) true))
+                          (let [row {:control "actual-owned-git-caller-budget/v1" :variant variant
+                                     :elapsedMs elapsed :returned-source? (some? value) :refusal (:refused result)
+                                     :actualNativeCalls real
+                                     :actualDelayedNativeCall delayed-call :actualWrapperJournal records
+                                     :explicitFixtureE2BIG? (:injected? result)
+                                     :passed? (and (some? value) (= 0 (:status delayed-call))
+                                                   (nil? (:signal delayed-call)) (nil? (:error-code delayed-call)))}]
+                            (host/output! row) row))) [:budget-batch :budget-fallback])]
+            (check "source budget controls preserve HEAD" (git "rev-parse" "HEAD") head)
+            (check "source budget controls preserve raw index" (.equals index (.readFileSync fs (.join path repo ".git/index"))) true)
+            (check "source budget controls preserve checkout status" (git "status" "--porcelain=v1") status)
+            (check "slow source never follows the symlink target" (.existsSync fs (.join path repo "link")) false)
+            (check "both complete finite Git paths finish under caller budget" (filterv #(not (:passed? %)) rows) []))))
+      :complete
+      (finally (.rmSync fs directory #js {:recursive true :force true})))))
+
 (defn ^:async main []
-  (let [_batch-source-check (batch-source-controls)
+  (let [_source-budget-check (source-budget-controls)
+        _batch-source-check (batch-source-controls)
         _pin-check (dependency-pin-controls)
         _model-discovery-check (model-discovery-controls)
         _run-check (run-controls)
@@ -1519,6 +1647,7 @@
                                       "prepared-corpus" (prepared-corpus-controls)
                                       "post-get-context" (post-get-context-controls post-get-cases [])
                                       "git-batching" (batch-source-controls)
+                                      "git-budget" (source-budget-controls)
                                       (throw (ex-info "Unknown owned test selector" {:only only}))))]
                      {:tests "focused inert actionability host control" :only only :checks @checks :failed 0
                       :completion "opencode-actionability-assessment/v1" :completed? true

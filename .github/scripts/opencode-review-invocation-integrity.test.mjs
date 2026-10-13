@@ -1288,6 +1288,40 @@ test("ordinary empty model input selects the latest eligible native ID without a
   assert.deepEqual(f.commands().slice(2).map(argv => argv[6]), [proof.selected_model, proof.selected_model]);
 });
 
+// Retain unrelated native IDs without widening the independent MiMo selector.
+for (const id of ["UNRELATED-v1", "unrelated:model", "unrelated+fast"]) {
+  test(`catalog label widening retains unrelated ${id} before valid MiMo selection`, () => {
+    const ordinary = { ...freeMiMoRow("unrelated-plain"), family: "other" };
+    const unrelated = { ...freeMiMoRow(id), family: "other" };
+    const valid = freeMiMoRow();
+    const expected = [ordinary, unrelated, valid];
+    const rows = modelDiscovery.parseOpenCodeModelCatalog(Buffer.from(verboseModelCatalog(expected)));
+    assert.deepEqual(rows, expected, "each native label must retain its exact metadata row");
+    assert.deepEqual(modelDiscovery.selectFreeMiMoFlash(rows), valid);
+    assert.deepEqual(modelDiscovery.selectFreeMiMoFlash(rows, `opencode/${valid.id}`), valid);
+    assert.throws(() => modelDiscovery.selectFreeMiMoFlash(rows, `opencode/${id}`), /not a unique eligible/);
+  });
+}
+
+test("catalog label widening preserves exact row identity, duplicate IDs and whitespace refusal", () => {
+  const unrelated = { ...freeMiMoRow("Unrelated:model+fast"), family: "other" };
+  const valid = freeMiMoRow();
+  const encode = (row) => Buffer.from(verboseModelCatalog([row, valid]));
+  for (const change of [
+    { providerID: "other" }, { api: { ...unrelated.api, id: "different" } },
+  ]) assert.throws(() => modelDiscovery.parseOpenCodeModelCatalog(encode({ ...unrelated, ...change })), /identity mismatch/);
+  const catalog = verboseModelCatalog([unrelated, valid]);
+  assert.throws(() => modelDiscovery.parseOpenCodeModelCatalog(Buffer.from(
+    catalog.replace(`opencode/${unrelated.id}\n`, "opencode/Different:model+fast\n"))), /identity mismatch/);
+  assert.throws(() => modelDiscovery.parseOpenCodeModelCatalog(Buffer.from(
+    verboseModelCatalog([unrelated, unrelated, valid]))), /duplicate/);
+  for (const id of ["unrelated model", "unrelated\tmodel", "unrelated\nmodel"]) {
+    assert.throws(() => modelDiscovery.parseOpenCodeModelCatalog(encode({
+      ...unrelated, id, api: { ...unrelated.api, id },
+    })));
+  }
+});
+
 test("free MiMo selector uses numeric versions and coherent release maxima with verified explicit selection", () => {
   const older = freeMiMoRow("mimo-v2.9-flash-free", "2026-09-01");
   const newer = freeMiMoRow("mimo-v2.10-flash-free", "2026-10-01");

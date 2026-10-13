@@ -106,7 +106,7 @@
         (try
           (let [options (cond-> {:env {:PATH (or (env "PATH") "/usr/bin:/bin")
                                       :GIT_OPTIONAL_LOCKS "0" :GIT_CONFIG_NOSYSTEM "1"}
-                                :stdio ["ignore" fd "pipe"] :timeout 15000 :maxBuffer 1048576}
+                                :stdio ["ignore" fd "pipe"] :maxBuffer 1048576}
                           (some? input) (assoc :stdio ["pipe" fd "pipe"] :input input))
                 result (.spawnSync process "git" (clj->js (into ["--no-pager" "--literal-pathspecs" "-c" "core.fsmonitor=false"
                                                                "-C" checkout] args))

@@ -260,7 +260,7 @@ jobs:
     name: Assess complete positive cohort input
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 195
+    timeout-minutes: 240
     outputs:
       accepted_sha256: ${{ steps.assess.outputs.review_invocation_sha256 }}
       check_run_id: ${{ job.check_run_id }}
@@ -425,7 +425,7 @@ jobs:
           permission-issues: read
       - name: Reverify actual accepted invocation and fresh custody
         shell: bash
-        timeout-minutes: 5
+        timeout-minutes: 30
         env:
           GH_TOKEN: ${{ steps.target_reader_after_model.outputs.token }}
           HOST_RUN_READ_TOKEN: ${{ github.token }}
@@ -445,7 +445,7 @@ jobs:
     name: Publish observed positive cohort assessment issue comment
     needs: [prepare, assess]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 60
     environment: positive-cohort-assessment-publication
     steps:
       - name: Authenticate protected called source before checkout
@@ -556,6 +556,7 @@ jobs:
           permission-actions: read
       - name: Fresh canonical eligibility, authentic App grants, single write and readback
         shell: bash
+        timeout-minutes: 45
         env:
           GH_TOKEN: ${{ steps.publisher.outputs.token }}
           HOST_RUN_READ_TOKEN: ${{ github.token }}
@@ -581,4 +582,5 @@ jobs:
           exit "$publication_exit"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
+        timeout-minutes: 5
         with: {name: 'positive-cohort-assessment-publication-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.prepare.outputs.invocation_id }}', path: '${{ runner.temp }}/positive-cohort-assessment-publication-result.json', if-no-files-found: error}

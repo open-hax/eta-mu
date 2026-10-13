@@ -263,6 +263,10 @@
     (throw (ex-info "Assessment controls require /usr/bin/python3" {})))
   (when-not (fs/directory? "/proc/self") (throw (ex-info "Assessment audits require Linux /proc" {})))
   (let [environment (environment work)
+        node-major (str/trim (command! root environment ["node" "-p" "process.versions.node.split('.')[0]"] true))
+        _runtime (when-not (= "24" node-major)
+                   (throw (ex-info "Assessment controls require deployed Node major 24"
+                                   {:expected-node-major "24" :actual-node-major node-major})))
         ;; Expected-denial controls own distinct audits and exit97 children; run
         ;; outside zero-denial suite admission and before public source/build I/O.
         _denial-controls (command! root environment ["node" "--test" "scripts/assessment-network-deny-preload.test.mjs"])

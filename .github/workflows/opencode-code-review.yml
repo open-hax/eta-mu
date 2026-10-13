@@ -26,7 +26,7 @@ on:
         type: string
         default: 1.18.18
       node_version:
-        description: Node 22 release used by evidence, compilation and review jobs; callers can select an exact frozen patch version.
+        description: Node 22 release used by profile compilation and review jobs; callers can select an exact frozen patch version. Required assessment evidence always runs on Node 24.
         required: false
         type: string
         default: "22"
@@ -194,10 +194,10 @@ jobs:
           version: "10.14.0"
           run_install: false
 
-      - name: Set up Node 22
+      - name: Set up Node 24 for assessment evidence
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: ${{ inputs.node_version || '22' }}
+          node-version: '24'
 
       - name: Detect eta-mu app credentials
         id: dependency-credentials
@@ -821,8 +821,8 @@ jobs:
           IHx8IHJvdy5hcGk/LmlkICE9PSByb3cuaWQpIHsKICAgICAgdGhyb3cgbmV3IEVycm9yKCJP
           cGVuQ29kZSBjYXRhbG9nIGxhYmVsL21ldGFkYXRhIGlkZW50aXR5IG1pc21hdGNoIik7CiAg
           ICB9CiAgICByb3dzLnB1c2gocm93KTsKICB9OwogIGZvciAoY29uc3QgbGluZSBvZiBsaW5l
-          cykgewogICAgaWYgKC9eb3BlbmNvZGVcL1thLXowLTldW2EtejAtOS5fLV0qJC8udGVzdChs
-          aW5lKSkgewogICAgICBmaW5pc2goKTsKICAgICAgaWYgKGxhYmVscy5oYXMobGluZSkpIHRo
+          cykgewogICAgaWYgKC9eb3BlbmNvZGVcL1xTKyQvLnRlc3QobGluZSkpIHsgLy8gSURzIHN0
+          YXkgcmF3LgogICAgICBmaW5pc2goKTsKICAgICAgaWYgKGxhYmVscy5oYXMobGluZSkpIHRo
           cm93IG5ldyBFcnJvcigiZHVwbGljYXRlIE9wZW5Db2RlIGNhdGFsb2cgbW9kZWwgSUQiKTsK
           ICAgICAgbGFiZWxzLmFkZChsaW5lKTsgbGFiZWwgPSBsaW5lOyBib2R5ID0gW107CiAgICB9
           IGVsc2UgaWYgKGxhYmVsICE9PSBudWxsKSBib2R5LnB1c2gobGluZSk7CiAgICBlbHNlIGlm

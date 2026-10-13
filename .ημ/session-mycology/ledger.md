@@ -912,3 +912,12 @@
   spore: none
   receipt-refs: 0e255940df15183173655fe6d349afcd91d41c4673a7ae6508d896549e20820e
   note: Complete corpus/native write normalization, explicit launcher refusal and authored fixture custody, literal195 job headroom and refreshed read-only token qualified. Full owning checks caught stale token expectations and one fixture formatting error; retain failures, phase-specific assertions and source-only AST equality before affected reruns. Existing source-verification/custody skills cover friction; no new spore. Hosted MiMo read64 ordering failure and protected adoption/deployment remain distinct.
+- ts: 2026-10-13T23:50:01.299914020Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify five native roots and shared fixture correction for CMS deployment release path
+  p-efficiency: 0.71
+  p-friction: 0.83
+  p-skill-candidate: 0.18
+  spore: none
+  receipt-refs: b6ddb927f1042f3e7f7f2e16e7ddf0c0d9a57ba8545c242a08891794bf7ac87e
+  note: Exact16 source changes qualify through five normal owners. Metadata Node probes require explicit early audit plus real Popen PID and kernel ancestry even through non-Node launchers; preserve initial apparently passing incomplete audit result and all private failures. Final assessment has102 audited Nodes, three fresh pinned profiles, no skipped controls. Preserve source/control scopes and root-owned composition before native current-head settlement. Existing custody/routing skills cover the lesson; no new spore. Deployment and protected main remain pending.

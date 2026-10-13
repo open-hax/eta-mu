@@ -2566,3 +2566,20 @@ esac
     assert.equal(fs.existsSync(final.publication), omitted === null);
   }
 });
+
+test("required deterministic evidence and Sandbox use Node24 while legacy profile and reviewer retain their caller runtime", () => {
+  const setup = (job) => job.steps.filter((step) => step.uses?.startsWith("actions/setup-node@"));
+  const evidence = setup(workflow.jobs.deterministic_evidence);
+  assert.equal(evidence.length, 1);
+  assert.equal(evidence[0].with["node-version"], "24");
+  const sandbox = YAML.parse(fs.readFileSync(path.join(root, ".github/workflows/sandbox-bundle.yml"), "utf8"));
+  const sandboxSetups = Object.values(sandbox.jobs).flatMap(setup);
+  assert.equal(sandboxSetups.length, 1);
+  assert.equal(sandboxSetups[0].with["node-version"], "24");
+  assert.equal(workflow.on.workflow_call.inputs.node_version.default, "22");
+  for (const job of [workflow.jobs.prepare_review_context, workflow.jobs.review]) {
+    const held = setup(job);
+    assert.equal(held.length, 1);
+    assert.equal(held[0].with["node-version"], "${{ inputs.node_version || '22' }}");
+  }
+});

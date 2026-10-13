@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { runTrustedWorkflowFixture } from "./assessment-trusted-workflow-fixture.mjs";
-import { createHash } from "node:crypto";
+import { createNativeAssessmentFixtures } from "./native-assessment-fixture.mjs";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -13,189 +13,17 @@ import { runReviewRecovery } from "./run-opencode-review-recovery.mjs";
 import { stageTransportVerifier, transportResponse, transportReviewTools } from "./review-invocation-fixture.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const runner = path.join(root, ".github/scripts/run-opencode-review-recovery.mjs");
-const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
-const tools = ["review_begin", "review_read_diff_chunk", "review_assess_diff_chunk",
-  "review_record_evidence", "review_propose_finding", "review_classify_finding",
-  "review_status", "review_submit"];
-const stages = ["deterministic", "map-change", "generate-candidates", "adversarial-validate", "publish"];
 
-// Existing native CLI fixtures use only an inert raw-catalog transport and executable.
-const nativeDiscoveryFixtures = new WeakMap();
-const nativeDiscoveryChildren = new WeakMap();
-function runNativeDiscoveryFixture(fixture) {
-  const discovery = nativeDiscoveryFixtures.get(fixture.env);
-  assert.ok(discovery, "the inert native discovery fixture must be staged");
-  const result = spawnSync(process.execPath, ["--import", discovery.loader, runner],
-    { env: fixture.env, encoding: "utf8", timeout: 15000 });
-  nativeDiscoveryChildren.set(result, discovery);
-  return result;
-}
-function stageNativeDiscoveryFixture(directory, home, child, env) {
-  const id = "mimo-v9.1-flash-free";
-  const row = {id,providerID:"opencode",family:"mimo",status:"active",release_date:"2027-01-01",
-    api:{id,url:"https://example.invalid/inert",npm:"@ai-sdk/openai-compatible"},
-    capabilities:{toolcall:true,input:{text:true},output:{text:true}},cost:{input:0,output:0,cache:{read:0,write:0}}};
-  const raw = {opencode:{id:"opencode",api:row.api.url,npm:row.api.npm,models:{[id]:{id,family:"mimo",status:"active",
-    release_date:row.release_date,tool_call:true,modalities:{input:["text"],output:["text"]},
-    cost:{input:0,output:0,cache_read:0,cache_write:0}}}}};
-  fs.mkdirSync(path.join(home,"tmp"),{mode:0o700});
-  for (const [relative,bytes] of [["opencode.json",'{"trusted":"inert native CLI fixture"}\n'],
-    ["agents/github-reviewer.md","inert native CLI fixture\n"],["plugins/eta-mu-actors.js","// inert native CLI fixture\n"]]) {
-    const file=path.join(home,".config/opencode",relative);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,bytes);
-  }
-  const match=/^--require ("[^"]+"|\/[^ \t\r\n]+)$/.exec(process.env.NODE_OPTIONS??"");
-  assert.ok(match,"one actual parent-loaded audit preload is required");
-  const preload=match[1].startsWith('"')?JSON.parse(match[1]):match[1];
-  const require=createRequire(import.meta.url);assert.ok(path.isAbsolute(preload)&&require.cache[preload]);
-  assert.equal(digest(fs.readFileSync(preload)),"f69bc9b3a31c4c3c1bc1189d6e5abf220d48a6dfb033c2236f9260a11f168372");
-  const auditDirectory=process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR,capture=process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE;
-  assert.ok(auditDirectory&&capture);const auditInfo=fs.lstatSync(auditDirectory);
-  assert.ok(auditInfo.isDirectory()&&!auditInfo.isSymbolicLink()&&fs.realpathSync(auditDirectory)===auditDirectory);
-  assert.equal(auditInfo.mode&0o777,0o700);assert.equal(auditInfo.uid,process.getuid());
-  const identities=path.join(directory,"discovery-children.ndjson"),loader=path.join(directory,"inert-catalog-loader.mjs");
-  fs.writeFileSync(loader,`globalThis.fetch=async(url,options)=>{if(url!=="https://models.opencode.ai/api.json"||options.redirect!=="error"||options.credentials!=="omit")throw Error("INERT_FETCH_CONTRACT");const r=new Response(${JSON.stringify(JSON.stringify(raw))},{status:200});Object.defineProperty(r,"url",{value:url});return r;};\n`,{flag:"wx",mode:0o600});
-  const source=fs.readFileSync(child,"utf8"),anchor='const fs=require("node:fs");\n';assert.equal(source.split(anchor).length,2);
-  const enrollment=`process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR=${JSON.stringify(auditDirectory)};process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE=${JSON.stringify(capture)};const preload=${JSON.stringify(preload)};if(require('node:crypto').createHash('sha256').update(fs.readFileSync(preload)).digest('hex')!=="f69bc9b3a31c4c3c1bc1189d6e5abf220d48a6dfb033c2236f9260a11f168372")throw Error("TEST_PRELOAD_BYTES_REFUSED");require(preload);fs.appendFileSync(${JSON.stringify(identities)},JSON.stringify({pid:process.pid,parentPid:process.ppid,argv:process.argv.slice(2)})+'\\n');\nif(process.argv[2]==="--version"){process.stdout.write("1.18.18\\n");process.exit(0);}if(process.argv[2]==="models"){process.stdout.write(${JSON.stringify(`opencode/${id}\n${JSON.stringify(row)}\n`)});process.exit(0);}\n`;
-  fs.writeFileSync(child,source.replace(anchor,anchor+enrollment));
-  Object.assign(env,{REVIEW_MODEL_DISCOVERY:"opencode-free-mimo-flash-v1",REVIEW_EXPECTED_OPENCODE_VERSION:"1.18.18",REVIEW_MODEL:""});
-  nativeDiscoveryFixtures.set(env,{loader,identities,auditDirectory,capture});
-}
-
-function childNetworkAudit(child) {
-  const directory = process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR;
-  assert.ok(directory, "the controlled early network blocker is required");
-  const audit = JSON.parse(fs.readFileSync(path.join(directory, `${child.pid}.json`), "utf8"));
-  assert.equal(audit.schema, "eta-mu.test-network-denial/v1");
-  assert.equal(audit.capture, process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE);
-  assert.equal(audit.pid, child.pid);
-  assert.equal(audit.deniedAttempts, 0);
-
-  const fixture=nativeDiscoveryChildren.get(child);
-  if (fixture && fs.existsSync(fixture.identities)) {
-    const identities=fs.readFileSync(fixture.identities,"utf8").trim().split("\n").map(JSON.parse);
-    assert.equal(new Set(identities.map(row=>row.pid)).size,identities.length);
-    for (const identity of identities) {
-      assert.equal(identity.parentPid,child.pid);assert.ok(Number.isSafeInteger(identity.pid)&&identity.pid>0);
-      const file=path.join(fixture.auditDirectory,`${identity.pid}.json`),info=fs.lstatSync(file);
-      assert.ok(info.isFile()&&!info.isSymbolicLink()&&fs.realpathSync(file)===file);
-      assert.equal(info.mode&0o777,0o600);assert.equal(info.uid,process.getuid());
-      const record=JSON.parse(fs.readFileSync(file,"utf8"));
-      assert.equal(record.schema,"eta-mu.test-network-denial/v1");assert.equal(record.capture,fixture.capture);
-      assert.equal(record.pid,identity.pid);assert.equal(record.parentPid,child.pid);assert.equal(record.deniedAttempts,0);
-      assert.ok(record.kernelAncestry.some(row=>row.pid===identity.pid&&row.parentPid===child.pid&&/^[0-9]+$/.test(row.startTicks)));
-      assert.ok(record.kernelAncestry.some(row=>row.pid===child.pid&&row.parentPid===process.pid));
-    }
-  }
-}
-
-/** Stage inert host events, checked by the actual selected source-built Muse export. */
-function nativeFixture(t, { legacy = true, partial = false, finalCoverage = false, decoyLegacy = false } = {}) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-actionability-host-"));
-  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
-  const verifierFile = process.env.ETA_MU_ACTIONABILITY_VERIFIER_FILE;
-  const verifierSha = process.env.ETA_MU_ACTIONABILITY_VERIFIER_SHA256;
-  assert.ok(verifierFile && path.isAbsolute(verifierFile), "source-built Muse verifier is required");
-  assert.match(verifierSha || "", /^[0-9a-f]{64}$/);
-  assert.equal(digest(fs.readFileSync(verifierFile)), verifierSha);
-  const verifier = createRequire(import.meta.url)(verifierFile);
-  const full = Buffer.from(JSON.stringify({ fixture: "inert full native carrier; no native or model call",
-    body: "original body ημ 😀\nquoted context retained as data", source: "selected source\n".repeat(1100) }));
-  const source = { schema: "open-hax.actionability-input/v1", purpose: "actionability",
-    head_sha: "b".repeat(40), context_sha256: "c".repeat(64), proposal_id: 71,
-    proposal_body_sha256: "d".repeat(64), source_inventory_sha256: "e".repeat(64),
-    target: { repository_id: "R_fixture", repository_database_id: 3, pr_id: "PR_fixture",
+const { nativeFixture, runNativeDiscoveryFixture, childNetworkAudit } = createNativeAssessmentFixtures({
+  root, purpose: "actionability", inputName: "actionability-input.txt",
+  schema: "open-hax.actionability-input/v1",
+  verifierEnvironmentVariable: "ETA_MU_ACTIONABILITY_VERIFIER_FILE",
+  verifierSHAEnvironmentVariable: "ETA_MU_ACTIONABILITY_VERIFIER_SHA256",
+  directoryPrefix: "eta-actionability-host-",
+  target: { repository_id: "R_fixture", repository_database_id: 3, pr_id: "PR_fixture",
       pr_number: 1, thread_id: "PRRT_fixture", root_comment_id: 7 },
-    full_input: { path: "actionability-input.txt", bytes: full.length, sha256: digest(full) },
-    provenance: { repository: "synthetic/native-context", pull_request: "1", run_id: "2", run_attempt: "1",
-      workflow_sha: "d".repeat(40), workflow_ref: "synthetic/native-context/workflow@refs/heads/main" } };
-  const submissionFile = path.join(directory, "submission.json");
-  const manifest = Buffer.from(JSON.stringify(source));
-  const context = verifier.prepareReviewInvocationContext(full, manifest, tools, submissionFile);
-  const text = full.toString("utf8");
-  const notes = context.pages.map((page) => ({ ...page, note: `Synthetic complete carrier page ${page.id}.` }));
-  const body = { schema: "open-hax.github-review/v1", event: "COMMENT", comments: [],
-    summary: "Synthetic carrier only; no native assessment or publication.", "input-source": source,
-    "input-coverage": { chunks: notes.length, delivered: notes.length, assessed: notes.length, missing: [] },
-    "input-assessments": notes };
-  const events = [];
-  const sessionID = "session-native-carrier-fixture";
-  const call = (tool, input, output) => {
-    const n = events.length + 1;
-    events.push({ type: "tool_use", timestamp: n, sessionID,
-      part: { type: "tool", id: `part-${n}`, callID: `call-${n}`, sessionID, tool,
-        state: { status: "completed", input, output: JSON.stringify(output) } } });
-  };
-  call("review_begin", {}, { "ok?": true, stage: stages[0], stages, "input-source": source,
-    "diff-stats": { files: 1, bytes: text.length, "truncated?": false },
-    "input-coverage": { chunks: notes.length, delivered: 0, assessed: 0, missing: notes.map((p) => p.id) } });
-  for (const [i, page] of context.pages.entries()) {
-    call("review_read_diff_chunk", { id: page.id }, { "ok?": true,
-      chunk: { ...page, text: text.slice(page.start, page.end) } });
-    call("review_assess_diff_chunk", { id: page.id, note: notes[i].note }, { "ok?": true, "chunk-id": page.id,
-      coverage: { chunks: notes.length, delivered: i + 1, assessed: i + 1,
-        missing: notes.slice(i + 1).map((p) => p.id) } });
-  }
-  for (const stage of stages) call("review_record_evidence", { stage, note: "Synthetic complete stage." }, { "ok?": true });
-  call("review_submit", { summary: body.summary }, { "ok?": true, event: "COMMENT", file: submissionFile, "inline-comments": 0 });
-  events.push({ type: "step_finish", timestamp: events.length + 1, sessionID,
-    part: { type: "step-finish", id: "part-stop", sessionID, reason: "stop" } });
-  const response = events.map((event) => JSON.stringify(event)).join("\n") + "\n";
-  assert.equal(verifier.verifyReviewInvocation(response, JSON.stringify(body), context).ok, true);
-  let firstResponse = response;
-  if (finalCoverage) {
-    const prefix = events.filter((event) => event.type === "tool_use" &&
-      event.part.tool !== "review_submit" &&
-      !(event.part.tool === "review_assess_diff_chunk" && event.part.state.input.id === notes.length) &&
-      event.part.tool !== "review_record_evidence");
-    const n = events.length + 1;
-    const omitted = { type: "tool_use", timestamp: n, sessionID,
-      part: { type: "tool", id: `part-${n}`, callID: `call-${n}`, sessionID, tool: "review_record_evidence",
-        state: { status: "completed", input: { stage: "deterministic", note: "Synthetic final-page omission." },
-          output: JSON.stringify({ "ok?": false,
-            error: `Unassessed full-input chunks remain: ${notes.length}. Read and assess every changed hunk before publishing.` }),
-          metadata: { truncated: false } } } };
-    const stop = { type: "step_finish", timestamp: n + 1, sessionID,
-      part: { type: "step-finish", id: "part-stop", sessionID, reason: "stop" } };
-    firstResponse = [...prefix, omitted, stop].map((event) => JSON.stringify(event)).join("\n") + "\n";
-    const original = verifier.verifyReviewInvocation(firstResponse, null, context);
-    assert.equal(original.ok, false); assert.equal(original.code, "stage-order");
-    const projected = verifier.verifyReviewInvocation([...prefix, stop].map((event) => JSON.stringify(event)).join("\n") + "\n", null, context);
-    assert.equal(projected.ok, false); assert.equal(projected.code, "healthy-unfinished-review");
-    assert.equal(projected.reason, "missing-review-submit");
-  }
-  fs.writeFileSync(path.join(directory, "actionability-input.txt"), partial ? full.subarray(0, 10) : full);
-  if (legacy) fs.writeFileSync(path.join(directory, "basehead.diff"), decoyLegacy ? "unrelated legacy bytes" : full);
-  fs.writeFileSync(path.join(directory, "input-manifest.json"), manifest);
-  const home = path.join(directory, "model-home");
-  fs.mkdirSync(home, { mode: 0o700 });
-  const probe = path.join(directory, "child-environment.json");
-  const prompts = path.join(directory, "child-prompts.json");
-  const child = path.join(directory, "fixture-child.cjs");
-  fs.writeFileSync(child, `#!${process.execPath}\nconst fs=require("node:fs");\n`
-    + `const prompts=${JSON.stringify(prompts)}; const previous=fs.existsSync(prompts)?JSON.parse(fs.readFileSync(prompts,"utf8")):[]; fs.writeFileSync(prompts,JSON.stringify([...previous,process.argv.at(-1)]));\n`
-    + `fs.writeFileSync(${JSON.stringify(probe)}, JSON.stringify({HOME:process.env.HOME,`
-    + `GH_TOKEN:process.env.GH_TOKEN,GITHUB_TOKEN:process.env.GITHUB_TOKEN,NODE_OPTIONS:process.env.NODE_OPTIONS,`
-    + `GITHUB_OUTPUT:process.env.GITHUB_OUTPUT}));\n`
-    + (finalCoverage
-      ? `const counter=${JSON.stringify(path.join(directory, "invocations.txt"))}; const attempt=fs.existsSync(counter)?Number(fs.readFileSync(counter,"utf8"))+1:1; fs.writeFileSync(counter,String(attempt));\n`
-        + `if(attempt===1){process.stdout.write(${JSON.stringify(firstResponse)});}else{fs.writeFileSync(${JSON.stringify(submissionFile)},${JSON.stringify(JSON.stringify(body))});process.stdout.write(${JSON.stringify(response)}); }\n`
-      : `fs.writeFileSync(${JSON.stringify(submissionFile)},${JSON.stringify(JSON.stringify(body))});\n`
-        + `process.stdout.write(${JSON.stringify(response)});\n`), { mode: 0o700 });
-  const output = path.join(directory, "outputs");
-  const prompt = path.join(directory, "prompt.txt");
-  const registry = path.join(directory, "tools.txt");
-  fs.writeFileSync(output, ""); fs.writeFileSync(prompt, "Assess complete inert native carrier for {{PR_NUMBER}}.");
-  fs.writeFileSync(registry, tools.join("\n") + "\n");
-  const env = { ...process.env, PR_NUMBER: "1", REVIEW_PROMPT_FILE: prompt,
-    REVIEW_EVIDENCE_DIR: directory, REVIEW_INVOCATION_VERIFIER_FILE: verifierFile,
-    REVIEW_TOOL_REGISTRY_FILE: registry, GITHUB_OUTPUT: output,
-    REVIEW_INPUT_PURPOSE: "actionability", REVIEW_CHILD_HOME: home,
-    REVIEW_MODEL: "opencode/mimo-v2.6-flash-free", OPENCODE_BIN: child,
-    GH_TOKEN: "inert-token-sentinel", GITHUB_TOKEN: "inert-other-sentinel" };
-  stageNativeDiscoveryFixture(directory, home, child, env);
-  return { directory, home, probe, prompts, env, verifier, context };
-}
+  event: "COMMENT", providerSentinels: false
+});
 
 test("actual canonical runner accepts only the complete fixed native file", (t) => {
   const fixture = nativeFixture(t, { legacy: false });
@@ -348,7 +176,7 @@ test("direct and reusable routes share exact protected dependency pins", () => {
   assert.match(workflow.jobs.prepare.steps[0].run, /CANONICAL_REVISION.*MUSE_REVISION/s);
   assert.match(workflow.jobs.prepare.steps[0].run, /TIMEOUT_INPUT >= 60.*TIMEOUT_INPUT <= 180/);
   assert.equal(workflow.on.workflow_call.inputs.review_timeout_minutes.default, 60);
-  assert.equal(workflow.jobs.assess["timeout-minutes"], 195);
+  assert.equal(workflow.jobs.assess["timeout-minutes"], 240);
   assert.match(workflow.jobs.assess.steps.find(step => step.id === "assess")["timeout-minutes"], /> 180 && 180/);
 });
 
@@ -481,12 +309,12 @@ for (const route of ["actionability", "rejection", "positive-cohort"]) {
     for (const requested of [60, 180]) {
       assert.equal(model["timeout-minutes"], "${{ inputs.review_timeout_minutes > 180 && 180 || (inputs.review_timeout_minutes > 60 && inputs.review_timeout_minutes || 60) }}",
         `${route}: inference preserves the existing validated 60–180 clamp`);
-      assert.equal(job["timeout-minutes"], 195, `${route}: job has a literal deadline with no expression arithmetic`);
-      assert.ok(job["timeout-minutes"] - requested >= 15, `${route}: every accepted request has at least 15 minutes of cleanup headroom`);
+      assert.equal(job["timeout-minutes"], 240, `${route}: job has a literal deadline with no expression arithmetic`);
+      assert.ok(job["timeout-minutes"] - requested >= 60, `${route}: every accepted request has at least 60 minutes of cleanup headroom`);
       assert.ok(verify["timeout-minutes"] + upload["timeout-minutes"] < job["timeout-minutes"] - requested,
         `${route}: bounded verifier and artifact writer fit within reserved headroom`);
     }
-    assert.equal(verify["timeout-minutes"], 5);
+    assert.equal(verify["timeout-minutes"], 30);
     assert.equal(upload["timeout-minutes"], 5);
     assert.equal(upload.if, "always()");
     assert.equal(upload.with["if-no-files-found"], "error");
@@ -1024,5 +852,176 @@ test("model child retains a matching profile lock and refuses incomplete locked 
     assert.notEqual(refused.status, 0);
     assert.match(refused.stderr, /EUSAGE|EJSONPARSE/, "actual npm lock validation refuses corrupted profile and CLI locks");
     assert.equal(fs.existsSync(path.join(corrupt, "node_modules")), false);
+  }
+});
+
+test("native reader limits retain bounded assessment and one-shot publication headroom", () => {
+  const YAML = createRequire(path.join(root, "packages/eta-mu/package.json"))("yaml");
+  const source = fs.readFileSync(path.join(root, "packages/eta-mu/src/cljs/eta_mu/extern/actionability_host.cljs"), "utf8");
+  const reader = source.slice(source.indexOf("(defn gh-json"), source.indexOf("(defn- source-git-input"));
+  const limits = reader.match(/:timeout\s+\(if paginated\?\s+(\d+)\s+(\d+)\)/);
+  assert.ok(limits, "actual synchronous native reader must retain distinct bounded deadlines");
+  const [paginatedMilliseconds, singleMilliseconds] = limits.slice(1).map(Number);
+  assert.equal(paginatedMilliseconds, 120000);
+  assert.equal(singleMilliseconds, 15000);
+  for (const name of ["actionability", "rejection", "positive-cohort"]) {
+    const parsed = YAML.parse(fs.readFileSync(path.join(root, `.github/workflows/opencode-${name}-assessment.yml`), "utf8"));
+    const assess = parsed.jobs.assess;
+    const model = assess.steps.find((step) => step.id === "assess");
+    const verify = assess.steps.find((step) => step.name === "Reverify actual accepted invocation and fresh custody");
+    const refresh = assess.steps.findIndex((step) => step.id === "target_reader_after_model");
+    const upload = assess.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
+    assert.equal(model["timeout-minutes"], "${{ inputs.review_timeout_minutes > 180 && 180 || (inputs.review_timeout_minutes > 60 && inputs.review_timeout_minutes || 60) }}");
+    assert.ok(assess["timeout-minutes"] >= 180 + verify["timeout-minutes"] + upload["timeout-minutes"] + 25,
+      "max model execution, final host reads and upload retain separate setup headroom");
+    assert.equal(assess["timeout-minutes"], 240);
+    assert.equal(verify["timeout-minutes"], 30);
+    assert.equal(upload["timeout-minutes"], 5);
+    assert.ok(verify["timeout-minutes"] * 60000 > 2 * paginatedMilliseconds + 2 * singleMilliseconds,
+      "individual native deadlines fit in final verification; author/page growth can still exhaust its bounded budget");
+    assert.equal(refresh + 1, assess.steps.indexOf(verify));
+    assert.equal(verify.env.GH_TOKEN, "${{ steps.target_reader_after_model.outputs.token }}");
+    assert.equal(Object.keys(model.env).some((key) => /TOKEN|KEY|SECRET/.test(key)), false);
+    const publish = parsed.jobs.publish;
+    const operation = publish.steps.find((step) => step.name?.startsWith("Fresh canonical eligibility"));
+    const resultUpload = publish.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
+    const mint = publish.steps.findIndex((step) => step.id === "publisher");
+    assert.equal(publish["timeout-minutes"], 60);
+    assert.equal(operation["timeout-minutes"], 45);
+    assert.equal(resultUpload["timeout-minutes"], 5);
+    assert.ok(publish["timeout-minutes"] >= operation["timeout-minutes"] + resultUpload["timeout-minutes"] + 10);
+    assert.equal(mint + 1, publish.steps.indexOf(operation), "one-shot operation begins immediately after its actual publication token mint");
+    assert.equal(resultUpload.if, "always()");
+    assert.equal(resultUpload.with["if-no-files-found"], "error");
+    assert.match(operation.run, /"retry-performed":false/);
+  }
+});
+
+test("actual BB assessment entry checks deployed Node before denial source or network work", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-bb-node-preflight-control-"));
+  fs.chmodSync(directory, 0o700);
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const scripts = path.join(directory, "scripts");
+  const bin = path.join(directory, "bin");
+  const home = path.join(directory, "home");
+  const temporary = path.join(directory, "tmp");
+  for (const part of [scripts, bin, home, temporary]) fs.mkdirSync(part, { mode: 0o700 });
+  const entry = path.join(scripts, "test-assessments.bb");
+  fs.copyFileSync(path.join(root, "scripts/test-assessments.bb"), entry);
+  const calls = path.join(directory, "calls.jsonl");
+  const forbidden = path.join(directory, "forbidden-stage");
+  const outerAudit = process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR;
+  const outerCapture = process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE;
+  assert.equal(Boolean(outerAudit), Boolean(outerCapture), "partial outer audit bindings refuse");
+  const auditDirectory = outerAudit || path.join(directory, "probe-audit");
+  const auditCapture = outerCapture || "bb-node-preflight-probe";
+  if (!outerAudit) fs.mkdirSync(auditDirectory, { mode: 0o700 });
+  const auditStat = fs.lstatSync(auditDirectory);
+  assert.equal(auditStat.isDirectory(), true);
+  assert.equal(auditStat.isSymbolicLink(), false);
+  assert.equal(auditStat.mode & 0o777, 0o700);
+  assert.equal(auditStat.uid, process.getuid());
+  assert.equal(fs.realpathSync(auditDirectory), path.resolve(auditDirectory));
+  assert.match(auditCapture, /^[a-zA-Z0-9-]+$/);
+  const physicalPreload = fs.realpathSync(path.join(root, "scripts/assessment-network-deny-preload.cjs"));
+  const preloadDigest = (bytes) => createRequire(import.meta.url)("node:crypto").createHash("sha256").update(bytes).digest("hex");
+  const preloadSHA256 = preloadDigest(fs.readFileSync(physicalPreload));
+  const nodeWrapper = `#!/usr/bin/python3\nimport json,os,pathlib,subprocess,sys\nargs=sys.argv[1:]\nfile=pathlib.Path(${JSON.stringify(calls)})\nif args==["-p","process.versions.node.split('.')[0]"]:\n env=dict(os.environ)\n env.update({"NODE_OPTIONS":${JSON.stringify("--require " + JSON.stringify(physicalPreload))},"ETA_MU_TEST_NETWORK_AUDIT_DIR":${JSON.stringify(auditDirectory)},"ETA_MU_TEST_NETWORK_AUDIT_CAPTURE":${JSON.stringify(auditCapture)}})\n child=subprocess.Popen([${JSON.stringify(process.execPath)},*args],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE)\n stdout,stderr=child.communicate()\n with file.open("a") as out:out.write(json.dumps({"kind":"actual-node-major","argv":args,"reported":stdout.decode().strip(),"status":child.returncode,"nodePid":child.pid,"pythonPid":os.getpid(),"pythonParentPid":os.getppid()})+"\\n")\n sys.stdout.buffer.write(stdout);sys.stderr.buffer.write(stderr);sys.exit(child.returncode)\nwith file.open("a") as out:out.write(json.dumps({"kind":"blocked-denial-stage","argv":args})+"\\n")\nsys.exit(97)\n`;
+  fs.writeFileSync(path.join(bin, "node"), nodeWrapper, { flag: "wx", mode: 0o700 });
+  for (const name of ["git", "pnpm", "npm", "bash", "tar", "java", "clojure"]) {
+    fs.writeFileSync(path.join(bin, name), `#!/usr/bin/python3\nimport pathlib,sys\npathlib.Path(${JSON.stringify(forbidden)}).write_text(${JSON.stringify(name)})\nsys.exit(98)\n`, { flag: "wx", mode: 0o700 });
+  }
+  const result = spawnSync("bb", ["-Djava.io.tmpdir=" + temporary, entry], { cwd: directory, encoding: "utf8", timeout: 15000,
+    env: { PATH: `${bin}:/usr/local/bin:/usr/bin:/bin`, HOME: home, TMPDIR: temporary,
+      XDG_CONFIG_HOME: path.join(home, ".config"), LANG: "C.UTF-8", LC_ALL: "C.UTF-8", TZ: "UTC" } });
+  assert.equal(result.error, undefined, result.stderr);
+  assert.equal(result.signal, null, result.stderr);
+  assert.equal(result.status, 1, "controlled entry terminates before registered suite or source traffic");
+  assert.equal(fs.existsSync(forbidden), false, "no public source, build or network stage is dispatched");
+  const rows = fs.existsSync(calls) ? fs.readFileSync(calls, "utf8").trim().split("\n").map(JSON.parse) : [];
+  assert.ok(rows.length > 0, result.stdout + result.stderr);
+  assert.equal(rows[0].kind, "actual-node-major", "real Node major must be checked before the first denial control");
+  assert.equal(rows[0].reported, process.versions.node.split(".")[0]);
+  assert.equal(rows[0].status, 0);
+  assert.ok(Number.isSafeInteger(result.pid) && result.pid > 0);
+  assert.ok(Number.isSafeInteger(rows[0].nodePid) && rows[0].nodePid > 0);
+  assert.ok(Number.isSafeInteger(rows[0].pythonPid) && rows[0].pythonPid > 0);
+  assert.equal(rows[0].pythonParentPid, result.pid);
+  assert.equal(preloadDigest(fs.readFileSync(physicalPreload)), preloadSHA256);
+  const auditFile = path.join(auditDirectory, `${rows[0].nodePid}.json`);
+  const recordStat = fs.lstatSync(auditFile);
+  assert.equal(recordStat.isFile(), true);
+  assert.equal(recordStat.isSymbolicLink(), false);
+  assert.equal(recordStat.mode & 0o777, 0o600);
+  assert.equal(recordStat.uid, process.getuid());
+  assert.ok(recordStat.size > 0 && recordStat.size <= 65536);
+  const nodeAudit = JSON.parse(fs.readFileSync(auditFile, "utf8"));
+  assert.equal(nodeAudit.schema, "eta-mu.test-network-denial/v1");
+  assert.equal(nodeAudit.capture, auditCapture);
+  assert.equal(nodeAudit.pid, rows[0].nodePid);
+  assert.equal(nodeAudit.parentPid, rows[0].pythonPid);
+  assert.equal(nodeAudit.deniedAttempts, 0);
+  assert.deepEqual(nodeAudit.expectedNodeChildren, []);
+  assert.ok(Array.isArray(nodeAudit.kernelAncestry));
+  const expectedChain = [rows[0].nodePid, rows[0].pythonPid, result.pid, process.pid];
+  assert.deepEqual(nodeAudit.kernelAncestry.slice(0, 4).map((entry) => entry.pid), expectedChain);
+  for (const [index, ancestor] of nodeAudit.kernelAncestry.slice(0, 4).entries()) {
+    assert.match(ancestor.startTicks, /^[0-9]+$/);
+    if (index < 3) assert.equal(ancestor.parentPid, expectedChain[index + 1]);
+  }
+  if (rows[0].reported === "24") {
+    assert.equal(rows.length, 2);
+    assert.equal(rows[1].kind, "blocked-denial-stage");
+    assert.deepEqual(rows[1].argv, ["--test", "scripts/assessment-network-deny-preload.test.mjs"]);
+    assert.match(result.stderr, /Assessment prerequisite failed/);
+  } else {
+    assert.equal(rows.length, 1, "unsupported runtime refuses before any denial-control launch");
+    assert.match(result.stderr, /Assessment controls require deployed Node major 24/);
+  }
+  t.diagnostic(JSON.stringify({ schema: "eta-mu.bb-required-node-preflight-control/v1",
+    actualNodeVersion: process.versions.node, bbExit: result.status, bbPID: result.pid,
+    calls: rows, ownerNodePID: process.pid, auditDirectory, auditCapture,
+    auditScope: outerAudit ? "owning outer audit" : "fixture-owned standalone audit",
+    physicalPreload, preloadSHA256, auditFile, nodeAudit,
+    forbiddenStagePresent: fs.existsSync(forbidden), stdout: result.stdout, stderr: result.stderr }));
+});
+
+test("publisher deadline accommodates the concrete bounded two-author read-plan simulation", () => {
+  const YAML = createRequire(path.join(root, "packages/eta-mu/package.json"))("yaml");
+  const source = fs.readFileSync(path.join(root, "packages/eta-mu/src/cljs/eta_mu/extern/actionability_host.cljs"), "utf8");
+  const reader = source.slice(source.indexOf("(defn gh-json"), source.indexOf("(defn- source-git-input"));
+  const limits = reader.match(/:timeout\s+\(if paginated\?\s+(\d+)\s+(\d+)\)/);
+  assert.ok(limits);
+  const [paginated, single] = limits.slice(1).map(Number);
+  assert.match(source, /\/attempts\/" run-attempt "\/jobs"\)[\s\S]*?"--paginate" "--slurp"/);
+  assert.match(source, /\/files\?per_page=100"\) "--paginate" "--slurp"/);
+  // Simulation only: four publication custody boundaries, one native thread page,
+  // two distinct human authors and two selected preservation source paths per
+  // boundary. Additional authors, pages, source paths and local Git work may
+  // exhaust the bounded operation; this is not a real API timing measurement.
+  const plan = [];
+  for (const phase of ["initial eligibility", "pre-write rebind", "post-write recollect", "post-GET rebind"]) {
+    plan.push({ phase, name: "run jobs", milliseconds: paginated });
+    plan.push({ phase, name: "PR changed files", milliseconds: paginated });
+    plan.push({ phase, name: "complete issue corpus", milliseconds: paginated });
+    for (const name of ["owning repository", "owning run", "eta repository", "protected branch", "reusable compare",
+      "one GraphQL thread page", "human permission A", "human permission B", "preservation source A", "preservation source B"])
+      plan.push({ phase, name, milliseconds: single });
+  }
+  plan.push({ phase: "publisher proof", name: "installation repositories", milliseconds: paginated });
+  for (const name of ["App metadata", "installation metadata", "publisher Bot identity", "one POST", "exact comment GET"])
+    plan.push({ phase: "publisher proof and terminal readback", name, milliseconds: single });
+  const milliseconds = plan.reduce((clock, read) => clock + read.milliseconds, 0);
+  assert.equal(plan.filter((read) => read.name === "run jobs").length, 4);
+  assert.equal(plan.filter((read) => read.name === "PR changed files").length, 4);
+  assert.equal(milliseconds, 2235000);
+  for (const purpose of ["actionability", "rejection", "positive-cohort"]) {
+    const parsed = YAML.parse(fs.readFileSync(path.join(root, `.github/workflows/opencode-${purpose}-assessment.yml`), "utf8"));
+    const operation = parsed.jobs.publish.steps.find((step) => step.name?.startsWith("Fresh canonical eligibility"));
+    const upload = parsed.jobs.publish.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
+    assert.ok(operation["timeout-minutes"] * 60000 > milliseconds,
+      `${purpose}: bounded native read-plan simulation must fit before the one-shot operation deadline`);
+    assert.ok(parsed.jobs.publish["timeout-minutes"] >= operation["timeout-minutes"] + upload["timeout-minutes"] + 10,
+      `${purpose}: upload and setup retain separate time after the bounded operation`);
   }
 });

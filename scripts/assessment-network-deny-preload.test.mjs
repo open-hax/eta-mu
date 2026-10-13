@@ -2798,6 +2798,7 @@ function trustedWorkflowFixtureControl(t, mode) {
     heldHelper,
   );
   const owner = path.join(ownerDir, "opencode-actionability-assessment-workflow.test.mjs");
+  const observationFile = path.join(work, "observation.json");
   const marker = path.join(work, "marker"),
     facts = path.join(work, "node-facts.json"),
     payload = path.join(work, "payload.cjs");
@@ -2855,6 +2856,7 @@ function trustedWorkflowFixtureControl(t, mode) {
       observation.status=result.status;observation.pid=result.pid;observation.stdout=result.stdout;
     }catch(e){observation.code=e.code??e.message;}
     observation.markerPresent=fs.existsSync(marker);observation.nodeFacts=fs.existsSync(${JSON.stringify(facts)})?JSON.parse(fs.readFileSync(${JSON.stringify(facts)},"utf8")):null;
+    fs.writeFileSync(${JSON.stringify(observationFile)},JSON.stringify(observation),{flag:"wx",mode:0o600});
     console.log("TRUSTED_FIXTURE_CONTROL:"+JSON.stringify(observation));
   });\n`;
   fs.writeFileSync(owner, ownerSource, { flag: "wx", mode: 0o600 });
@@ -2891,7 +2893,11 @@ function trustedWorkflowFixtureControl(t, mode) {
     .split("\n")
     .find((value) => value.includes("TRUSTED_FIXTURE_CONTROL:"));
   assert.ok(line, parent.stdout + parent.stderr);
-  const observation = JSON.parse(line.slice(line.indexOf("TRUSTED_FIXTURE_CONTROL:") + 24));
+  // Nested TAP reporters may escape stdout; the owned file preserves exact JSON bytes.
+  const observationStat = fs.lstatSync(observationFile);
+  assert.equal(observationStat.isFile(), true);
+  assert.equal(observationStat.mode & 0o777, 0o600);
+  const observation = JSON.parse(fs.readFileSync(observationFile, "utf8"));
   const records = fs
     .readdirSync(auditDirectory)
     .map((name) => JSON.parse(fs.readFileSync(path.join(auditDirectory, name), "utf8")));
