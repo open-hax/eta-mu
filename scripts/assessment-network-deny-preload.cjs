@@ -30,17 +30,49 @@ for (let depth = 0; ancestorPid !== 0 && depth < 64; depth += 1) {
 }
 if (ancestorPid !== 0) throw new Error("TEST_ANCESTRY_INCOMPLETE");
 const childProcess = require("node:child_process");
-const hasPreload = (options) => (options?.env ?? process.env).NODE_OPTIONS?.includes(__filename);
+// Accept the single preload option used by this test gate, or an exact early
+// CLI require. Ambiguous options and program arguments cannot prove enrollment.
+const hasPreload = (args, options) => {
+  const argv = Array.isArray(args) ? args : [];
+  const configuration = Array.isArray(args) ? options : args ?? options;
+  const nodeOptions = (configuration?.env ?? process.env).NODE_OPTIONS;
+  if (["--require " + __filename, "--require " + JSON.stringify(__filename),
+    "--require=" + __filename, "--require=" + JSON.stringify(__filename),
+    "-r " + __filename, "-r " + JSON.stringify(__filename)].includes(nodeOptions)) return true;
+  for (let index = 0; index < argv.length; index += 1) {
+    const option = argv[index];
+    if (option === "--require" || option === "-r") {
+      if (argv[++index] === __filename) return true;
+    } else if (typeof option === "string" && option.startsWith("--require=")) {
+      if (option.slice("--require=".length) === __filename) return true;
+    } else if (option === "--import") index += 1;
+    else if (!(typeof option === "string" && option.startsWith("--import="))) return false;
+  }
+  return false;
+};
+const guardNodeChild = (command, args, options, surface) => {
+  const node = typeof command === "string" && (command === process.execPath || path.basename(command) === "node");
+  if (node && !hasPreload(args, options)) {
+    audit.deniedAttempts += 1;
+    const error = new Error("TEST_NODE_CHILD_PRELOAD_REQUIRED");
+    error.code = "TEST_NODE_CHILD_PRELOAD_REQUIRED";
+    error.surface = surface;
+    throw error;
+  }
+  return node;
+};
 const originalSync = childProcess.spawnSync;
 childProcess.spawnSync = function(command, args, options) {
+  const node = guardNodeChild(command, args, options, "child_process.spawnSync");
   const result = originalSync.apply(this, arguments);
-  if (path.basename(command) === "node" && hasPreload(options) && Number.isSafeInteger(result.pid)) audit.expectedNodeChildren.push(result.pid);
+  if (node && Number.isSafeInteger(result.pid)) audit.expectedNodeChildren.push(result.pid);
   return result;
 };
 const originalSpawn = childProcess.spawn;
 childProcess.spawn = function(command, args, options) {
+  const node = guardNodeChild(command, args, options, "child_process.spawn");
   const child = originalSpawn.apply(this, arguments);
-  if (path.basename(command) === "node" && hasPreload(options)) child.once("spawn", () => audit.expectedNodeChildren.push(child.pid));
+  if (node) child.once("spawn", () => audit.expectedNodeChildren.push(child.pid));
   return child;
 };
 const deny = (surface) => function () {
@@ -52,6 +84,7 @@ const deny = (surface) => function () {
 };
 globalThis.fetch = deny("fetch");
 if (typeof globalThis.WebSocket === "function") globalThis.WebSocket = deny("WebSocket");
+if (typeof globalThis.EventSource === "function") globalThis.EventSource = deny("EventSource");
 for (const name of ["node:http", "node:https"]) {
   const module = require(name);
   module.request = deny(name + ".request");

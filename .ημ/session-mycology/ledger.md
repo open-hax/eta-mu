@@ -822,3 +822,12 @@
   spore: none
   receipt-refs: d9a7d9bdd9915df8b125c707483ea8e0034e323ed345e3172a0590300173ef10,766e5043efb1bf6bd3fee8e172367f24a6ac32100967d34b1e03ed20a3c21b34
   note: Use immutable Git inventory above native transport caps without inferred copy origins. Preserve generated manifest bytes and bind matching locks before custody checks. Prove old workflow staging misses the lock, then qualify corrected authored tails and normal full gates. Retain actual lint failure and binding-only repair without suppressing checks. Existing OpenCode anonymous current-model memory remains discoverable; source qualification and native approval/deployment are separate. No new spore or promotion.
+- ts: 2026-10-13T02:41:38.444205751Z
+  session: codex/01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify direct Node enrollment and EventSource refusal for native assessment source gates
+  p-efficiency: 0.72
+  p-friction: 0.85
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/t350-native-dynamic-mimo-preparation-v1/root-combined-node-eventsource-receipt-event-v1.edn
+  note: Actual causal controls retain missed child dispatch/membership and flagged EventSource predecessor failures; both independently reviewed repairs pass all registered source gates. Preserve source/denial audit scope and anonymous changing-MiMo route; native approval and production remain separate. No new spore/promotion.
