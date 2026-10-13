@@ -1,0 +1,10 @@
+{
+  "name": "@eta-mu/assessment-opencode",
+  "version": "0.0.0",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "opencode-ai": "1.18.18",
+    "opencode-linux-x64-baseline": "1.18.18"
+  }
+}

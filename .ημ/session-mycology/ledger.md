@@ -813,3 +813,12 @@
   spore: none
   receipt-refs: 9ed65d6a1f5d13523fb36c5ca035c324b06d88d531cc4a4a538eb4d6a65c09d6,59d595c4339f15bef7f0132a1304a531302f555f70c658d3883735a0785332c8
   note: Use an explicit fixed Node-only helper for fixture runner enrichment; keep literal Bash and npm launches direct. Exact inverse review preserves fixture events, audit enrollment and assertions. Normal assessment gate passed, while actual scan clearance remains pending. Read complete fresh findings before new review invitations; retain existing requests by their head. No new spore or promotion.
+- ts: 2026-10-13T02:04:20.122661362Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Qualify complete native inventory and locked anonymous model setup
+  p-efficiency: 0.75
+  p-friction: 0.48
+  p-skill-candidate: 0.20
+  spore: none
+  receipt-refs: d9a7d9bdd9915df8b125c707483ea8e0034e323ed345e3172a0590300173ef10,766e5043efb1bf6bd3fee8e172367f24a6ac32100967d34b1e03ed20a3c21b34
+  note: Use immutable Git inventory above native transport caps without inferred copy origins. Preserve generated manifest bytes and bind matching locks before custody checks. Prove old workflow staging misses the lock, then qualify corrected authored tails and normal full gates. Retain actual lint failure and binding-only repair without suppressing checks. Existing OpenCode anonymous current-model memory remains discoverable; source qualification and native approval/deployment are separate. No new spore or promotion.

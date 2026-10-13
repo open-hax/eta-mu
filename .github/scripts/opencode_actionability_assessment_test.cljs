@@ -675,6 +675,134 @@
           (check "copy reads preserve checkout status" (git "status" "--porcelain=v1") status)))
       (finally (.rmSync fs directory #js {:recursive true :force true})))))
 
+(defn large-inventory-controls
+  "Use a real owned PR tree above the native files cap; preserve every immutable byte."
+  []
+  (let [directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-large-inventory-"))
+        git (owned-source-fixture-git directory)
+        added-paths (mapv #(str "bulk/added-" (.padStart (str %) 4 "0") ".cljc") (range 3001))
+        unusual " leading\tline\nημ "
+        source-bytes (js/Buffer.from #js [255 0 128 65])
+        old-bytes (js/Buffer.from #js [255 0 129 66])
+        new-bytes (js/Buffer.from #js [255 1 130 67])
+        native-files (mapv #(hash-map :filename % :status "added") (take 3000 added-paths))
+        files-api-reads (atom 0)
+        decode host/decode-git-name-status
+        collect (fn [head base & [changed-count pages]]
+                  (host/source-inventory
+                   (fn [_ resource & _]
+                     (case resource
+                       "repos/synthetic/native-context/pulls/1"
+                       {:number 1 :state "open" :head {:sha head} :base {:sha base}
+                        :changed_files (or changed-count 3006)}
+                       "repos/synthetic/native-context/pulls/1/files?per_page=100"
+                       (do (swap! files-api-reads inc)
+                           (or pages (mapv vec (partition-all 100 native-files))))
+                       (throw (ex-info "Unexpected large inventory read" {:resource resource}))))
+                   directory "synthetic/native-context" 1 head))]
+    (try
+      (.chmodSync fs directory 448)
+      (git "init" "--initial-branch=fixture")
+      (.writeFileSync fs (.join path directory "gone.cljc") "removed immutable source\n")
+      (.writeFileSync fs (.join path directory "modified.bin") old-bytes #js {:mode 493})
+      (.writeFileSync fs (.join path directory "before-name.bin") source-bytes)
+      (.writeFileSync fs (.join path directory "copy-source.bin") source-bytes)
+      (git "add" "--all") (git "commit" "-m" "Owned large inventory ancestor")
+      (let [base (git "rev-parse" "HEAD") base-tree (git "rev-parse" "HEAD^{tree}")]
+        (.mkdirSync fs (.join path directory "bulk"))
+        (doseq [p added-paths] (.writeFileSync fs (.join path directory p) (str ";; inert exact source " p "\n")))
+        (.writeFileSync fs (.join path directory unusual) "inert unusual path\n")
+        (.unlinkSync fs (.join path directory "gone.cljc"))
+        (.writeFileSync fs (.join path directory "modified.bin") new-bytes)
+        (.chmodSync fs (.join path directory "modified.bin") 420)
+        (.renameSync fs (.join path directory "before-name.bin") (.join path directory "after-name.bin"))
+        (.copyFileSync fs (.join path directory "copy-source.bin") (.join path directory "copied.bin"))
+        (git "add" "--all") (git "commit" "-m" "Owned native API cap successor")
+        (let [head (git "rev-parse" "HEAD") head-tree (git "rev-parse" "HEAD^{tree}")
+              index (.readFileSync fs (.join path directory ".git/index"))
+              status (git "status" "--porcelain=v1")
+              inventory (collect head base)
+              current (into {} (map (juxt :path identity) (:files inventory)))
+              before (into {} (map (juxt :path identity) (:preimage-files inventory)))
+              descriptors (into {} (map (juxt :filename identity) (:changed-files inventory)))
+              proof (:source-provenance inventory)
+              raw (js/Buffer.from (:content-base64 proof) "base64")]
+          ;; Native rename accounting differs from explicit no-renames Git
+          ;; accounting. Neither count nor the truncated native list filters
+          ;; the independently derived complete immutable changed tree.
+          (check "above-cap inventory includes every Git change beyond 3000 native records" (count (:changed-files inventory)) 3007)
+          (check "native count remains observed metadata independent of Git descriptor count" (:native-changed-files proof) 3006)
+          (check "large inventory does not fetch the capped files API" @files-api-reads 0)
+          (check "files API non-fetch is retained explicitly" (:native-files-api proof) "not-requested-above-cap")
+          (check "every added file beyond the native cap retains complete immutable source"
+                 (mapv #(get-in current [% :text]) added-paths)
+                 (mapv #(str ";; inert exact source " % "\n") added-paths))
+          (check "unusual changed path survives real Git framing without normalization"
+                 (get-in current [unusual :text]) "inert unusual path\n")
+          (check "all live changed paths retain exact sorted Git order"
+                 (mapv :path (:files inventory))
+                 (vec (sort (concat added-paths [unusual "after-name.bin" "copied.bin" "modified.bin"]))))
+          (check "no-renames fallback retains both old source and new destination"
+                 [(get-in descriptors ["before-name.bin" :status]) (get-in descriptors ["after-name.bin" :status])]
+                 ["removed" "added"])
+          (check "copy destination is added without an invented unchanged source relationship"
+                 (descriptors "copied.bin") {:filename "copied.bin" :status "added"})
+          (check "unchanged copy source is not misrepresented as a changed preimage" (contains? before "copy-source.bin") false)
+          (check "all actual removed and modified preimages are retained"
+                 (mapv :path (:preimage-files inventory)) ["before-name.bin" "gone.cljc" "modified.bin"])
+          (check "removed-only projection includes rename removal and original removal"
+                 (mapv :path (:removed-files inventory)) ["before-name.bin" "gone.cljc"])
+          (doseq [[p bytes mode commit record] [["modified.bin" old-bytes "100755" base before]
+                                               ["before-name.bin" source-bytes "100644" base before]
+                                               ["modified.bin" new-bytes "100644" head current]
+                                               ["after-name.bin" source-bytes "100644" head current]
+                                               ["copied.bin" source-bytes "100644" head current]]]
+            (check "above-cap binary bytes remain exact lossless carriers" (get-in record [p :content-base64]) (.toString bytes "base64"))
+            (check "above-cap immutable object identity is exact" (get-in record [p :blob]) (git "rev-parse" (str commit ":" p)))
+            (check "above-cap exact Git mode is preserved" (get-in record [p :git-mode]) mode)
+            (check "above-cap binary SHA256 is exact" (get-in record [p :sha256]) (host/sha256 bytes)))
+          (check "large inventory binds the exact merge base even for added records" (:merge-base proof) base)
+          (check "large inventory provenance uses its versioned immutable Git carrier" (:schema proof) "open-hax.git-source-inventory/v1")
+          (check "large inventory has an explicit versioned aggregate manifest" (first (:manifest inventory)) 2)
+          (check "complete raw NUL Git carrier is bound to the descriptor sequence"
+                 (decode raw) (:changed-files inventory))
+          (check "complete raw Git carrier byte count is exact" (:bytes proof) (.-length raw))
+          (check "complete raw Git carrier digest is exact" (:sha256 proof) (host/sha256 raw))
+          (check "retained provenance is inside the aggregate source digest" (peek (:manifest inventory)) proof)
+          (check "complete aggregate digest is exact" (:sha256 inventory) (host/sha256 (pr-str (:manifest inventory))))
+          (doseq [carrier ["" "A\u0000unfinished" "A\u0000one\u0000trailing\u0000"
+                           "R100\u0000old\u0000new\u0000" "X\u0000one\u0000"
+                           "A\u0000\u0000" "A\u0000one\u0000M\u0000one\u0000"]]
+            (check "malformed, unsupported or duplicate Git inventory refuses"
+                   (refused #(decode (js/Buffer.from carrier "utf8"))) :source-file-inventory))
+          (check "invalid UTF8 in Git inventory refuses without replacement"
+                 (refused #(decode (js/Buffer.from #js [77 0 255 0]))) :source-file-inventory)
+          (check "NUL framing preserves whitespace, tabs, newlines and Unicode paths exactly"
+                 (decode (js/Buffer.from "A\u0000 leading\tline\nημ \u0000T\u0000mode.bin\u0000" "utf8"))
+                 [{:filename " leading\tline\nημ " :status "added"} {:filename "mode.bin" :status "changed"}])
+          (check "BOM bytes within a Git path remain part of its exact name"
+                 (decode (js/Buffer.from "A\u0000\ufeffname.cljc\u0000" "utf8"))
+                 [{:filename "\ufeffname.cljc" :status "added"}])
+          (check "at-cap native count mismatch remains refused on the ordinary REST route"
+                 (refused #(collect head base 3000 [[(first native-files)]])) :source-file-inventory)
+          (check "above-cap immutable checkout must match native selected head"
+                 (refused #(collect base base)) :source-selection)
+          (check "above-cap missing immutable base object refuses"
+                 (refused #(collect head (apply str (repeat 40 "e")))) :source-object)
+          (check "large inventory leaves checkout HEAD unchanged" (git "rev-parse" "HEAD") head)
+          (check "large inventory leaves the exact raw index unchanged" (.equals index (.readFileSync fs (.join path directory ".git/index"))) true)
+          (check "large inventory leaves checkout status unchanged" (git "status" "--porcelain=v1") status)
+          (let [left (git "commit-tree" base-tree "-p" base "-m" "Owned large left")
+                right (git "commit-tree" base-tree "-p" base "-m" "Owned large right")
+                left-merge (git "commit-tree" head-tree "-p" left "-p" right "-m" "Owned large left merge")
+                right-merge (git "commit-tree" base-tree "-p" right "-p" left "-m" "Owned large right merge")]
+            (git "checkout" "--detach" left-merge)
+            (check "large inventory refuses ambiguous actual merge bases"
+                   (refused #(collect left-merge right-merge)) :source-merge-base)
+            (check "ambiguous large inventory leaves checkout unchanged" (git "rev-parse" "HEAD") left-merge))))
+      :complete
+      (finally (.rmSync fs directory #js {:recursive true :force true})))))
+
 (defn large-blob-controls
   "Read actual Git blobs above the old stdout ceiling with exact text and binary carriers."
   []
@@ -944,6 +1072,7 @@
         _native-read-check (native-read-controls)
         _source-check (removed-source-controls)
         _copied-check (copied-source-controls)
+        _large-inventory-check (large-inventory-controls)
         _large-check (large-blob-controls)
          _object-check (immutable-object-controls)
         _transport-check (await (transport-controls))
@@ -995,6 +1124,7 @@
                                       "native-read" (native-read-controls)
                                       "removed-source" (removed-source-controls)
                                       "copied-source" (copied-source-controls)
+                                      "large-inventory" (large-inventory-controls)
                                       "large-blobs" (large-blob-controls)
                                       "immutable-objects" (immutable-object-controls)
                                       "http-transport" (http-status-controls [500 502 503 504 599 400 401 403 404 422 429])

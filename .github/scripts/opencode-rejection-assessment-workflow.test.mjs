@@ -808,3 +808,129 @@ test("native workflow requires dynamic anonymous discovery through verification 
   const profile=workflow.jobs.assess.steps.find(step=>step.name==="Install isolated credential-free model profile");
   assert.ok(profile.run.includes('mkdir -m 700 "$MODEL_HOME/tmp"'));
 });
+
+
+/** Run the authored model install/staging tails with inert npm; real npm validates corrupt locks offline. */
+test("model child retains a matching profile lock and refuses incomplete locked installations", (t) => {
+  const profileSource = path.join(root, ".github/assessment-model-profile");
+  const cliSource = path.join(root, ".github/assessment-opencode");
+  const profilePackage = fs.readFileSync(path.join(profileSource, "package.json"));
+  const profileLock = fs.readFileSync(path.join(profileSource, "package-lock.json"));
+  const cliPackage = fs.readFileSync(path.join(cliSource, "package.json"));
+  const cliLock = fs.readFileSync(path.join(cliSource, "package-lock.json"));
+  assert.deepEqual(JSON.parse(profilePackage), { type: "module", dependencies: {
+    "@opencode-ai/plugin": "1.17.18", zod: "4.1.8" } });
+  assert.deepEqual(JSON.parse(cliPackage).dependencies, {
+    "opencode-ai": "1.18.18", "opencode-linux-x64-baseline": "1.18.18" });
+  for (const [manifestBytes, lockBytes] of [[profilePackage, profileLock], [cliPackage, cliLock]]) {
+    const lock = JSON.parse(lockBytes);
+    assert.equal(lock.lockfileVersion, 3);
+    assert.deepEqual(lock.packages[""].dependencies, JSON.parse(manifestBytes).dependencies);
+    for (const [name, entry] of Object.entries(lock.packages)) if (name !== "") {
+      assert.ok(entry.resolved && entry.integrity, `${name} has a locked tarball and integrity`);
+    }
+  }
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-rejection-assessment-model-lock-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const stage = workflow.jobs.prepare.steps.find(step => step.name === "Reuse protected read-only Muse profile compilation");
+  const stageLines = stage.run.trimEnd().split("\n");
+  const stageStart = stageLines.findIndex(line => line.includes('/.opencode/package.json"'));
+  assert.ok(stageStart >= 0);
+  const stageTail = "set -euo pipefail\n" + stageLines.slice(stageStart).join("\n");
+  for (const variant of ["trusted-lock", "generated-lock", "missing-lock", "manifest-mismatch"]) {
+    const owned = path.join(directory, "stage-" + variant), temp = path.join(owned, "temp"), eta = path.join(owned, "eta");
+    const output = path.join(temp, "rejection-assessment-muse-build/.opencode"), profile = path.join(owned, "profile"), evidence = path.join(owned, "evidence");
+    const source = path.join(eta, ".github/assessment-model-profile"), continued = path.join(owned, "continued");
+    for (const folder of [output, profile, evidence, source]) fs.mkdirSync(folder, { recursive: true });
+    fs.writeFileSync(path.join(source, "package.json"), profilePackage);
+    if (variant !== "missing-lock") fs.writeFileSync(path.join(source, "package-lock.json"), profileLock);
+    const generated = variant === "manifest-mismatch"
+      ? Buffer.from(JSON.stringify({ type: "module", dependencies: { "@opencode-ai/plugin": "0.0.0", zod: "4.1.8" } })) : profilePackage;
+    fs.writeFileSync(path.join(output, "package.json"), generated);
+    fs.writeFileSync(path.join(output, "exposed-tools.txt"), "inert tools\n");
+    const generatedLock = Buffer.concat([profileLock, Buffer.from("\n")]);
+    if (variant === "generated-lock") fs.writeFileSync(path.join(output, "package-lock.json"), generatedLock);
+    const child = spawnSync("bash", ["-c", stageTail + '\nprintf "ready\\n" > "$TEST_CONTINUED"\n'], {
+      encoding: "utf8", timeout: 15000,
+      env: { PATH: process.env.PATH, RUNNER_TEMP: temp, ETA_CHECKOUT: eta,
+        REJECTION_PROFILE_DIR: profile, REJECTION_EVIDENCE_DIR: evidence, TEST_CONTINUED: continued },
+    });
+    assert.equal(child.error, undefined); assert.equal(child.signal, null);
+    const success = variant === "trusted-lock" || variant === "generated-lock";
+    assert.equal(child.status === 0, success, child.stderr);
+    assert.equal(fs.existsSync(continued), success, "a missing lock or changed generated manifest stops profile staging");
+    assert.deepEqual(fs.readFileSync(path.join(profile, "package.json")), generated, "the compiler manifest is never replaced");
+    if (success) assert.deepEqual(fs.readFileSync(path.join(profile, "package-lock.json")),
+      variant === "generated-lock" ? generatedLock : profileLock, "the selected lock is staged byte-exactly");
+    else assert.equal(fs.existsSync(path.join(profile, "package-lock.json")), false);
+  }
+  const install = workflow.jobs.assess.steps.find(step => step.name === "Install isolated credential-free model profile");
+  const installLines = install.run.trimEnd().split("\n");
+  const installStart = installLines.findIndex(line => line.trim() === 'MODEL_HOME="$RUNNER_TEMP/rejection-assessment-model-home"');
+  assert.ok(installStart >= 0);
+  const installTail = "set -euo pipefail\n" + installLines.slice(installStart).join("\n");
+  const invoke = workflow.jobs.assess.steps.find(step => step.name === "Actual bounded credential-free invocation");
+  assert.equal(invoke.env.OPENCODE_BIN,
+    "${{ runner.temp }}/rejection-assessment-model-home/.eta-mu-opencode/node_modules/opencode-linux-x64-baseline/bin/opencode");
+  for (const variant of ["intact", "missing-profile-lock", "manifest-mismatch", "profile-ci-failure", "missing-cli-lock", "cli-ci-failure", "missing-cli-executable"]) {
+    const owned = path.join(directory, "install-" + variant), eta = path.join(owned, "eta"), temp = path.join(owned, "temp");
+    const profile = path.join(owned, "profile"), canonical = path.join(owned, "canonical"), modelHome = path.join(temp, "rejection-assessment-model-home");
+    for (const folder of [profile, modelHome, path.join(profile, "dist"), path.join(profile, "agents"), path.join(canonical, "skills")])
+      fs.mkdirSync(folder, { recursive: true, mode: 0o700 });
+    for (const [name, bytes] of [["package.json", profilePackage], ["opencode.json", Buffer.from("{}\n")], ["agents/github-reviewer.md", Buffer.from("inert\n")]])
+      fs.writeFileSync(path.join(profile, name), bytes);
+    if (variant !== "missing-profile-lock") fs.writeFileSync(path.join(profile, "package-lock.json"), profileLock);
+    if (variant === "manifest-mismatch") fs.writeFileSync(path.join(profile, "package.json"), "{}\n");
+    for (const [name, packageBytes, lockBytes] of [["assessment-model-profile", profilePackage, profileLock], ["assessment-opencode", cliPackage, cliLock]]) {
+      const source = path.join(eta, ".github", name); fs.mkdirSync(source, { recursive: true });
+      fs.writeFileSync(path.join(source, "package.json"), packageBytes);
+      if (!(variant === "missing-cli-lock" && name === "assessment-opencode")) fs.writeFileSync(path.join(source, "package-lock.json"), lockBytes);
+    }
+    const calls = path.join(owned, "npm-calls"), continued = path.join(owned, "continued");
+    const child = spawnSync("bash", ["-c", installTail + '\nprintf "ready\\n" > "$TEST_CONTINUED"\n'], {
+      encoding: "utf8", timeout: 15000,
+      env: { PATH: process.env.PATH, RUNNER_TEMP: temp, ETA_CHECKOUT: eta, CANONICAL_CHECKOUT: canonical,
+        REJECTION_PROFILE_DIR: profile, TEST_VARIANT: variant, TEST_NPM_CALLS: calls, TEST_CONTINUED: continued,
+        "BASH_FUNC_npm%%": '() { printf "%s\\n" "$*" >> "$TEST_NPM_CALLS"; [[ "$1" == ci && "$2" == --prefix ]] || return 97; '
+          + 'if [[ "$3" == */.eta-mu-review ]]; then [[ "$TEST_VARIANT" != profile-ci-failure ]] || return 73; '
+          + 'else [[ "$TEST_VARIANT" != cli-ci-failure ]] || return 74; '
+          + 'if [[ "$TEST_VARIANT" != missing-cli-executable ]]; then mkdir -p "$3/node_modules/opencode-linux-x64-baseline/bin"; '
+          + 'printf "#!/bin/sh\\nexit 0\\n" > "$3/node_modules/opencode-linux-x64-baseline/bin/opencode"; '
+          + 'chmod 700 "$3/node_modules/opencode-linux-x64-baseline/bin/opencode"; fi; fi; }' },
+    });
+    assert.equal(child.error, undefined); assert.equal(child.signal, null);
+    assert.equal(child.status === 0, variant === "intact", child.stderr);
+    assert.equal(fs.existsSync(continued), variant === "intact", "failed setup cannot reach model invocation");
+    const profileCall = `ci --prefix ${modelHome}/.eta-mu-review --ignore-scripts --no-audit --no-fund`;
+    const cliCall = `ci --prefix ${modelHome}/.eta-mu-opencode --ignore-scripts --no-audit --no-fund --omit=optional`;
+    const expected = ["missing-profile-lock", "manifest-mismatch"].includes(variant) ? []
+      : ["profile-ci-failure", "missing-cli-lock"].includes(variant) ? [profileCall] : [profileCall, cliCall];
+    assert.deepEqual(fs.existsSync(calls) ? fs.readFileSync(calls, "utf8").trimEnd().split("\n") : [], expected,
+      "only locked prefix installs run; no global install or fallback is allowed");
+    if (variant === "profile-ci-failure") assert.equal(child.status, 73);
+    if (variant === "cli-ci-failure") assert.equal(child.status, 74);
+    if (variant === "intact") {
+      assert.deepEqual(fs.readFileSync(path.join(modelHome, ".eta-mu-review/package.json")), profilePackage);
+      assert.deepEqual(fs.readFileSync(path.join(modelHome, ".eta-mu-review/package-lock.json")), profileLock);
+      assert.deepEqual(fs.readFileSync(path.join(modelHome, ".eta-mu-opencode/package-lock.json")), cliLock);
+    }
+  }
+  for (const [name, packageBytes] of [["profile", profilePackage], ["cli", cliPackage]]) {
+    const corrupt = path.join(directory, "corrupt-" + name); fs.mkdirSync(corrupt);
+    fs.writeFileSync(path.join(corrupt, "package.json"), packageBytes);
+    fs.writeFileSync(path.join(corrupt, "package-lock.json"), "{broken-lock\n");
+    const userConfig = path.join(corrupt, "user.npmrc"), globalConfig = path.join(corrupt, "global.npmrc");
+    fs.writeFileSync(userConfig, ""); fs.writeFileSync(globalConfig, "");
+    const refused = spawnSync("npm", ["ci", "--prefix", corrupt, "--ignore-scripts", "--no-audit", "--no-fund", "--offline", "--cache", path.join(corrupt, "cache")], {
+      encoding: "utf8", timeout: 15000,
+      env: { PATH: process.env.PATH, HOME: corrupt, NPM_CONFIG_USERCONFIG: userConfig, NPM_CONFIG_GLOBALCONFIG: globalConfig,
+        NPM_CONFIG_UPDATE_NOTIFIER: "false", NODE_OPTIONS: process.env.NODE_OPTIONS,
+        ETA_MU_TEST_NETWORK_AUDIT_DIR: process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR,
+        ETA_MU_TEST_NETWORK_AUDIT_CAPTURE: process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE },
+    });
+    assert.equal(refused.error, undefined); assert.equal(refused.signal, null); childNetworkAudit(refused);
+    assert.notEqual(refused.status, 0);
+    assert.match(refused.stderr, /EUSAGE|EJSONPARSE/, "actual npm lock validation refuses corrupted profile and CLI locks");
+    assert.equal(fs.existsSync(path.join(corrupt, "node_modules")), false);
+  }
+});

@@ -220,6 +220,12 @@ jobs:
           cp -a "$RUNNER_TEMP/rejection-assessment-muse-build/.opencode/agents" "$REJECTION_PROFILE_DIR/"
           cp "$RUNNER_TEMP/rejection-assessment-muse-build/.opencode/opencode.json" "$REJECTION_PROFILE_DIR/"
           cp "$RUNNER_TEMP/rejection-assessment-muse-build/.opencode/package.json" "$REJECTION_PROFILE_DIR/"
+          cmp "$RUNNER_TEMP/rejection-assessment-muse-build/.opencode/package.json" "$ETA_CHECKOUT/.github/assessment-model-profile/package.json"
+          if [[ -f "$RUNNER_TEMP/rejection-assessment-muse-build/.opencode/package-lock.json" ]]; then
+            cp "$RUNNER_TEMP/rejection-assessment-muse-build/.opencode/package-lock.json" "$REJECTION_PROFILE_DIR/"
+          else
+            cp "$ETA_CHECKOUT/.github/assessment-model-profile/package-lock.json" "$REJECTION_PROFILE_DIR/"
+          fi
           cp "$RUNNER_TEMP/rejection-assessment-muse-build/.opencode/exposed-tools.txt" "$REJECTION_EVIDENCE_DIR/tools.txt"
       - name: Bind compiled profile outside the child
         id: profile
@@ -367,14 +373,18 @@ jobs:
           mkdir -m 700 "$MODEL_HOME/tmp"
           mkdir -p "$MODEL_HOME/.config/opencode/plugins" "$MODEL_HOME/.config/opencode/agents" "$MODEL_HOME/.eta-mu-review"
           cp -a "$REJECTION_PROFILE_DIR/dist" "$MODEL_HOME/.eta-mu-review/"
-          cp "$REJECTION_PROFILE_DIR/package.json" "$MODEL_HOME/.eta-mu-review/"
-          npm install --prefix "$MODEL_HOME/.eta-mu-review" --ignore-scripts --no-audit --no-fund
+          cmp "$REJECTION_PROFILE_DIR/package.json" "$ETA_CHECKOUT/.github/assessment-model-profile/package.json"
+          cp "$REJECTION_PROFILE_DIR/package.json" "$REJECTION_PROFILE_DIR/package-lock.json" "$MODEL_HOME/.eta-mu-review/"
+          npm ci --prefix "$MODEL_HOME/.eta-mu-review" --ignore-scripts --no-audit --no-fund
           printf 'export { EtaMuActorsPlugin } from "%s/dist/eta-mu-actors.js";\n' "$MODEL_HOME/.eta-mu-review" > "$MODEL_HOME/.config/opencode/plugins/eta-mu-actors.js"
           cp "$REJECTION_PROFILE_DIR/agents/github-reviewer.md" "$MODEL_HOME/.config/opencode/agents/"
           cp "$REJECTION_PROFILE_DIR/opencode.json" "$MODEL_HOME/.config/opencode/"
           mkdir "$MODEL_HOME/.agents"
           cp -a "$CANONICAL_CHECKOUT/skills" "$MODEL_HOME/.agents/"
-          npm install --global opencode-ai@1.18.18
+          mkdir -m 700 "$MODEL_HOME/.eta-mu-opencode"
+          cp "$ETA_CHECKOUT/.github/assessment-opencode/package.json" "$ETA_CHECKOUT/.github/assessment-opencode/package-lock.json" "$MODEL_HOME/.eta-mu-opencode/"
+          npm ci --prefix "$MODEL_HOME/.eta-mu-opencode" --ignore-scripts --no-audit --no-fund --omit=optional
+          test -x "$MODEL_HOME/.eta-mu-opencode/node_modules/opencode-linux-x64-baseline/bin/opencode"
       - name: Bind staged input before model execution
         shell: bash
         env:
@@ -394,6 +404,7 @@ jobs:
         env:
           REVIEW_INPUT_PURPOSE: rejection-assessment
           REVIEW_CHILD_HOME: ${{ runner.temp }}/rejection-assessment-model-home
+          OPENCODE_BIN: ${{ runner.temp }}/rejection-assessment-model-home/.eta-mu-opencode/node_modules/opencode-linux-x64-baseline/bin/opencode
           REVIEW_EVIDENCE_DIR: ${{ github.workspace }}/.rejection-assessment/model-root/.opencode/review-evidence
           REVIEW_PROMPT_FILE: ${{ github.workspace }}/.rejection-assessment/model-root/.opencode/review-evidence/prompt.txt
           REVIEW_TOOL_REGISTRY_FILE: ${{ github.workspace }}/.rejection-assessment/model-root/.opencode/review-evidence/tools.txt

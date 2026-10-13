@@ -2786,6 +2786,7 @@ jobs:
             .opencode/review-evidence/submission.json
             .opencode/review-evidence/submission-attempt-*.json
           if-no-files-found: warn
+          include-hidden-files: true
           retention-days: 14
 
       - name: Verify review remained revision-bound

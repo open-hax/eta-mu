@@ -169,39 +169,90 @@
       (when-not (and (= 0 (.-status head) (.-status dirty)) (= pin (str/trim (.-stdout head))))
         (refuse! :source-checkout)))))
 
+(defn decode-git-name-status
+  "Decode complete NUL-framed Git A/D/M/T records without trimming or unquoting paths."
+  [bytes]
+  (let [text (try (.decode (js/TextDecoder. "utf-8" #js {:fatal true :ignoreBOM true}) bytes)
+                  (catch :default _ (refuse! :source-file-inventory)))
+        parts (vec (.split text "\u0000"))
+        fields (pop parts)]
+    (when-not (and (= "" (peek parts)) (seq fields) (even? (count fields)))
+      (refuse! :source-file-inventory))
+    (let [files (mapv (fn [[status filename]]
+                        (let [kind ({"A" "added" "D" "removed" "M" "modified" "T" "changed"} status)]
+                          (when-not (and kind (not= "" filename)) (refuse! :source-file-inventory))
+                          {:filename filename :status kind})) (partition 2 fields))]
+      (when-not (= (count files) (count (set (map :filename files))))
+        (refuse! :source-file-inventory))
+      files)))
+
+(defn- git-source-inventory [checkout head base native-count]
+  (when-not (= head (str/trim (.toString (source-git checkout "rev-parse" "HEAD") "utf8")))
+    (refuse! :source-selection))
+  (let [merge-base (source-merge-base checkout head base)
+        args ["diff" "--name-status" "-z" "--no-renames" "--no-ext-diff" "--no-textconv"
+              "--ignore-submodules=none" "--no-relative" merge-base head "--"]
+        bytes (apply source-git checkout args)
+        files (decode-git-name-status bytes)
+        provenance {:schema "open-hax.git-source-inventory/v1" :origin "immutable-git-merge-base-diff"
+                    :head head :base base :merge-base merge-base :git-diff-argv args
+                    :native-changed-files native-count :native-files-api "not-requested-above-cap"
+                    ;; A renamed path is removal plus addition. A copied
+                    ;; destination is addition; no unchanged origin is inferred.
+                    :rename-policy "removed-source-and-added-destination"
+                    :copy-policy "added-destination-without-inferred-source"
+                    :byte-carrier "nul-framed-name-status-utf8" :bytes (.-length bytes)
+                    :sha256 (sha256 bytes) :content-base64 (.toString bytes "base64")}]
+    {:files files :merge-base merge-base :provenance provenance}))
+
 (defn source-inventory
   "Bind changed paths and every non-added preimage to immutable Git bytes."
   [read checkout repo n head]
   (let [pr (read "api" (str "repos/" repo "/pulls/" n))
-        pages (read "api" (str "repos/" repo "/pulls/" n "/files?per_page=100") "--paginate" "--slurp")
-        files (when (and (vector? pages) (seq pages) (every? vector? pages)) (vec (mapcat identity pages)))
-        paths (mapv :filename files)
         base (get-in pr [:base :sha])]
     (when-not (and (= n (:number pr)) (= "open" (:state pr)) (= head (get-in pr [:head :sha]))
+                   (re-matches #"[0-9a-f]{40}" (or head ""))
                    (re-matches #"[0-9a-f]{40}" (or base ""))
-                   (pos-int? (:changed_files pr)) (= (:changed_files pr) (count files))
+                   (pos-int? (:changed_files pr)))
+      (refuse! :source-file-inventory))
+    ;; GitHub's paginated files endpoint stops at 3,000 records. Above that
+    ;; transport cap, derive every changed path from validated immutable Git
+    ;; commits. The native count stays evidence, never a Git-count contract.
+    (let [fallback (when (> (:changed_files pr) 3000)
+                     (git-source-inventory checkout head base (:changed_files pr)))
+          pages (when-not fallback
+                  (read "api" (str "repos/" repo "/pulls/" n "/files?per_page=100") "--paginate" "--slurp"))
+          native-files (when (and (vector? pages) (seq pages) (every? vector? pages))
+                         (vec (mapcat identity pages)))
+          files (if fallback (:files fallback) native-files)
+          paths (mapv :filename files)]
+      (when-not (and (vector? files)
+                   (or fallback (= (:changed_files pr) (count files)))
                    (= (count paths) (count (set paths))) (every? string? paths)
                    (every? #(#{"added" "modified" "removed" "renamed" "copied" "changed" "unchanged"} (:status %)) files)
                    (every? #(or (not (#{"renamed" "copied"} (:status %)))
                                 (and (string? (:previous_filename %))
                                      (not (str/blank? (:previous_filename %))))) files))
-      (refuse! :source-file-inventory))
-    (let [live (filterv #(not= "removed" (:status %)) files)
-          removed (filterv #(= "removed" (:status %)) files)
-          preimages (filterv #(not= "added" (:status %)) files)
-          preimage-paths (vec (distinct (map #(if (#{"renamed" "copied"} (:status %))
-                                               (:previous_filename %) (:filename %)) preimages)))
-          removed-paths (set (map :filename removed))
-          current (when (seq live) (immutable-source checkout head (mapv :filename live)))
-          merge-base (when (seq preimages) (source-merge-base checkout head base))
-          old (when (seq preimages) (immutable-source checkout merge-base preimage-paths head))
-          manifest [1 repo n head base (mapv #(select-keys % [:filename :previous_filename :status]) files)
-                    (:manifest current) (:manifest old)]]
-      {:head head :base base :merge-base merge-base :files (:files current)
-       :preimage-files (:files old)
-       :removed-files (when (seq removed) (filterv #(contains? removed-paths (:path %)) (:files old)))
-       :changed-files files
-       :manifest manifest :sha256 (sha256 (pr-str manifest))})))
+        (refuse! :source-file-inventory))
+      (let [live (filterv #(not= "removed" (:status %)) files)
+            removed (filterv #(= "removed" (:status %)) files)
+            preimages (filterv #(not= "added" (:status %)) files)
+            preimage-paths (vec (distinct (map #(if (#{"renamed" "copied"} (:status %))
+                                                 (:previous_filename %) (:filename %)) preimages)))
+            removed-paths (set (map :filename removed))
+            current (when (seq live) (immutable-source checkout head (mapv :filename live)))
+            merge-base (or (:merge-base fallback) (when (seq preimages) (source-merge-base checkout head base)))
+            old (when (seq preimages) (immutable-source checkout merge-base preimage-paths head))
+            manifest (cond-> [(if fallback 2 1) repo n head base
+                              (mapv #(select-keys % [:filename :previous_filename :status]) files)
+                              (:manifest current) (:manifest old)]
+                       fallback (conj (:provenance fallback)))]
+        (cond-> {:head head :base base :merge-base merge-base :files (:files current)
+                 :preimage-files (:files old)
+                 :removed-files (when (seq removed) (filterv #(contains? removed-paths (:path %)) (:files old)))
+                 :changed-files files
+                 :manifest manifest :sha256 (sha256 (pr-str manifest))}
+          fallback (assoc :source-provenance (:provenance fallback)))))))
 
 (defn verify-run!
   "Bind host-run/caller coordinates separately from target PR coordinates."
