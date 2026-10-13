@@ -1120,7 +1120,7 @@ function discoveryFixtureAuditBinding() {
   assert.ok(path.isAbsolute(preload) && require.cache[preload], "parent actually loaded the exact preload");
   const preloadStat = fs.lstatSync(preload), directoryStat = fs.lstatSync(directory);
   assert.ok(preloadStat.isFile() && !preloadStat.isSymbolicLink() && fs.realpathSync(preload) === preload);
-  assert.equal(sha256(fs.readFileSync(preload)), "a7d3479c86845ec9c7087b65b22e260928dad1fb1a936898d94c7fd66dd5de2f");
+  assert.equal(sha256(fs.readFileSync(preload)), "3bfd14ae4394710c796479094b22e3e0847007ee3bd257c90133de8fffa273ce");
   assert.ok(path.isAbsolute(directory) && directoryStat.isDirectory() && !directoryStat.isSymbolicLink());
   assert.equal(fs.realpathSync(directory), path.resolve(directory));
   assert.equal(directoryStat.mode & 0o777, 0o700);
@@ -1205,7 +1205,7 @@ process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR = ${JSON.stringify(auditBinding.direct
 process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE = ${JSON.stringify(auditBinding.capture)};
 const fixturePreload = ${JSON.stringify(auditBinding.preload)};
 if (fixtureRequire('node:crypto').createHash('sha256').update(fs.readFileSync(fixturePreload)).digest('hex') !==
-    'a7d3479c86845ec9c7087b65b22e260928dad1fb1a936898d94c7fd66dd5de2f') throw Error('TEST_PRELOAD_BYTES_REFUSED');
+    '3bfd14ae4394710c796479094b22e3e0847007ee3bd257c90133de8fffa273ce') throw Error('TEST_PRELOAD_BYTES_REFUSED');
 if (!fixtureRequire.cache[fixturePreload]) fixtureRequire(fixturePreload);
 ${catalogWait ? "process.once('SIGTERM', () => process.exit(143));" : ""}
 fs.appendFileSync(${JSON.stringify(f.processFile)}, JSON.stringify({pid:process.pid, parentPid:process.ppid,

@@ -82,10 +82,13 @@
       (let [file (.join path directory "stdout")
             fd (.openSync fs file "wx" 384)]
         (try
-          (let [r (.spawnSync process "gh" (clj->js (into (vec args) ["--hostname" "github.com"]))
+          (let [paginated? (some #{"--paginate"} args)
+                r (.spawnSync process "gh" (clj->js (into (vec args) ["--hostname" "github.com"]))
                               #js {:env (host-environment home token) :encoding "utf8"
                                    :stdio #js ["ignore" fd "pipe"]
-                                   :timeout 15000 :maxBuffer 1048576})]
+                                   :timeout (if paginated? 120000 15000) :maxBuffer 1048576})]
+            (when (= "ETIMEDOUT" (some-> (.-error r) .-code))
+              (refuse! :native-read-timeout))
             (when-not (= 0 (.-status r))
               (let [status (some-> (re-find #"HTTP ([0-9]{3})" (or (.-stderr r) "")) second js/Number)]
                 (throw (ex-info "Native read failed" {:code :native-read :status status}))))

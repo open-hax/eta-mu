@@ -305,6 +305,7 @@
         native-process (node-require "node:child_process")
         original-spawn (.-spawnSync native-process)
         spawned (atom [])
+        selected-timeouts (atom [])
         permission-resource "repos/open-hax/another-installed-repo/collaborators/inert/permission"
         run-resource "repos/open-hax/eta-mu/actions/runs/31"
         read-error (fn [token resource]
@@ -341,11 +342,17 @@
       (host/read-bytes preload-file)
       (check "the exact child preload was already loaded by the parent"
              (some? (aget (.-cache node-require) preload-file)) true)
-      ;; Test-only observation of actual spawned PIDs; command/args/env/options
-      ;; remain unchanged, including the protected host credential allowlist.
+      ;; Observe actual PIDs and the host-selected deadline. Existing eight
+      ;; cases delegate unchanged. Only the explicit forced-timeout case uses
+      ;; a 1000ms actual child timer so timeout diagnosis has causal native input;
+      ;; its production-selected budget is retained separately before dispatch.
       (aset native-process "spawnSync"
             (fn [command arguments options]
-              (let [result (.call original-spawn native-process command arguments options)]
+              (let [resource (aget arguments 1)
+                    _ (when (= command "gh") (swap! selected-timeouts conj [resource (.-timeout options)]))
+                    effective (if (and (= command "gh") (= resource "fixture/forced-timeout"))
+                                (js/Object.assign #js {} options #js {:timeout 1000}) options)
+                    result (.call original-spawn native-process command arguments effective)]
                 (when (= command "gh") (swap! spawned conj (.-pid result)))
                 result)))
       (.syncBuiltinESMExports module)
@@ -356,7 +363,7 @@
                            "process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE=" (host/json network-capture) ";\n"
                            "require(" (host/json preload-file) ");\n"
                            "const AUDIT=" (host/json audit) ";\n"
-                           "const fs = require(\"node:fs\");\nconst args = process.argv.slice(2);\nif (args[0] !== \"api\" || args.at(-2) !== \"--hostname\" || args.at(-1) !== \"github.com\") process.exit(97);\nconst resource = args[1];\nconst stdoutFile = fs.readlinkSync(\"/proc/self/fd/1\");\nfs.writeFileSync(AUDIT, JSON.stringify({resource, args, stdoutFile, pid:process.pid, parentPid:process.ppid}));\nif (resource === \"fixture/large\") {\n  if (args.length !== 6 || args[2] !== \"--paginate\" || args[3] !== \"--slurp\") process.exit(96);\n  fs.writeFileSync(1, JSON.stringify([{nodes:[{body:\"x\".repeat(16777216+257), tail:\"last byte eta-mu \\u03b7\\u03bc \\ud83d\\ude00\"}],pageInfo:{hasNextPage:false,endCursor:null}}, {files:[{filename:\"last-page.cljc\"}],complete:true}]));\n} else if (resource === \"repos/open-hax/another-installed-repo/collaborators/inert/permission\") {\n  if (process.env.GH_TOKEN !== \"inert-target-read-token\") { fs.writeSync(2, \"HTTP 404\\n\"); process.exit(1); }\n  fs.writeFileSync(1, JSON.stringify({permission:\"write\",role_name:\"maintain\"}));\n} else if (resource === \"repos/open-hax/eta-mu/actions/runs/31\") {\n  if (process.env.GH_TOKEN !== \"inert-owning-run-token\") { fs.writeSync(2, \"HTTP 404\\n\"); process.exit(1); }\n  fs.writeFileSync(1, JSON.stringify({id:31,repository:{full_name:\"open-hax/eta-mu\"}}));\n} else if (resource === \"fixture/http404\") {\n  fs.writeSync(2, \"HTTP 404\\n\"); process.exit(1);\n} else if (resource === \"fixture/invalid-json\") {\n  fs.writeFileSync(1, \"{incomplete\");\n} else if (resource === \"fixture/partial-error\") {\n  fs.writeFileSync(1, JSON.stringify({permission:\"write\"})); fs.writeSync(2, \"HTTP 503\\n\"); process.exit(1);\n} else process.exit(95);\n")
+                           "const fs = require(\"node:fs\");\nconst args = process.argv.slice(2);\nif (args[0] !== \"api\" || args.at(-2) !== \"--hostname\" || args.at(-1) !== \"github.com\") process.exit(97);\nconst resource = args[1];\nconst stdoutFile = fs.readlinkSync(\"/proc/self/fd/1\");\nfs.writeFileSync(AUDIT, JSON.stringify({resource, args, stdoutFile, pid:process.pid, parentPid:process.ppid}));\nif (resource === \"fixture/large\") {\n  if (args.length !== 6 || args[2] !== \"--paginate\" || args[3] !== \"--slurp\") process.exit(96);\n  fs.writeFileSync(1, JSON.stringify([{nodes:[{body:\"x\".repeat(16777216+257), tail:\"last byte eta-mu \\u03b7\\u03bc \\ud83d\\ude00\"}],pageInfo:{hasNextPage:false,endCursor:null}}, {files:[{filename:\"last-page.cljc\"}],complete:true}]));\n} else if (resource === \"repos/open-hax/another-installed-repo/collaborators/inert/permission\") {\n  if (process.env.GH_TOKEN !== \"inert-target-read-token\") { fs.writeSync(2, \"HTTP 404\\n\"); process.exit(1); }\n  fs.writeFileSync(1, JSON.stringify({permission:\"write\",role_name:\"maintain\"}));\n} else if (resource === \"repos/open-hax/eta-mu/actions/runs/31\") {\n  if (process.env.GH_TOKEN !== \"inert-owning-run-token\") { fs.writeSync(2, \"HTTP 404\\n\"); process.exit(1); }\n  fs.writeFileSync(1, JSON.stringify({id:31,repository:{full_name:\"open-hax/eta-mu\"}}));\n} else if (resource === \"fixture/delayed-pages\") {\n  if (args.length !== 6 || args[2] !== \"--paginate\" || args[3] !== \"--slurp\") process.exit(96);\n  process.on(\"SIGTERM\", () => process.exit(0));\n  setTimeout(() => fs.writeFileSync(1, JSON.stringify([{page:1},{page:2,complete:true}])), 16000);\n} else if (resource === \"fixture/forced-timeout\") {\n  fs.writeFileSync(1, JSON.stringify({partial:true}));\n  process.on(\"SIGTERM\", () => process.exit(0));\n  setTimeout(() => {}, 5000);\n} else if (resource === \"fixture/http404\") {\n  fs.writeSync(2, \"HTTP 404\\n\"); process.exit(1);\n} else if (resource === \"fixture/invalid-json\") {\n  fs.writeFileSync(1, \"{incomplete\");\n} else if (resource === \"fixture/partial-error\") {\n  fs.writeFileSync(1, JSON.stringify({permission:\"write\"})); fs.writeSync(2, \"HTTP 503\\n\"); process.exit(1);\n} else process.exit(95);\n")
                       #js {:mode 448 :flag "wx"})
       (aset process-env "PATH" (str directory ":" (or old-path "/usr/bin:/bin")))
       (let [result (host/gh-json home "inert-target-read-token" "api" "fixture/large" "--paginate" "--slurp")
@@ -395,6 +402,26 @@
       (cleaned)
       (check "every one of the eight inert gh invocations has a distinct audited spawn"
              [(count @spawned) (count (set @spawned))] [8 8])
+      (check "ordinary native reads retain the previous bounded deadline"
+             (second (first (filter #(= permission-resource (first %)) @selected-timeouts))) 15000)
+      ;; This real 16-second inert completion exceeds the predecessor's whole
+      ;; process timer; no live native API or inference is involved.
+      (let [result (try (host/gh-json home "inert-target-read-token" "api" "fixture/delayed-pages" "--paginate" "--slurp")
+                        (catch :default e {:refused (:code (ex-data e))}))]
+        (check "paginated native completion outlives the predecessor fifteen-second timer"
+               result [{:page 1} {:page 2 :complete true}])
+        (check "the completed paginated read uses its separate bounded deadline"
+               (peek @selected-timeouts) ["fixture/delayed-pages" 120000])
+        (cleaned))
+      (let [result (try (host/gh-json home "inert-target-read-token" "api" "fixture/forced-timeout" "--paginate" "--slurp") nil
+                        (catch :default e (ex-data e)))]
+        (check "actual ETIMEDOUT refuses even when a signal handler exits zero with parseable partial stdout"
+               result {:code :native-read-timeout})
+        (check "forced timeout records the actual host-selected pagination budget before its test timer"
+               (peek @selected-timeouts) ["fixture/forced-timeout" 120000])
+        (cleaned))
+      (check "all ten actual inert gh children retain distinct PID custody"
+             [(count @spawned) (count (set @spawned))] [10 10])
       :complete
       (finally
         (aset native-process "spawnSync" original-spawn)

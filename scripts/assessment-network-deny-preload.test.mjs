@@ -1127,3 +1127,156 @@ for (const api of ["spawn", "spawnSync", "execFile", "fork"]) {
   test(`direct ${api} enrolled shell option preserves honest PID custody`, (t) =>
     shellLaunchControl(t, api));
 }
+
+// Shell execution cannot enroll arbitrary Node descendants. These actual
+// marker-only controls retain the predecessor's dispatch/audit observations;
+// no network call, model invocation or synthetic PID supplies causality.
+const shellExecutionSource = String.raw`
+(async () => {
+  const fs = require("node:fs"), cp = require("node:child_process"), util = require("node:util");
+  const api = process.env.TEST_CHILD_API, mode = process.env.TEST_CHILD_MODE;
+  const program = process.env.TEST_CHILD_PROGRAM, marker = process.env.TEST_CHILD_MARKER;
+  const facts = process.env.TEST_CHILD_FACTS;
+  const command = mode === "non-node" ? "printf inert-non-node-shell" : "node " + JSON.stringify(program);
+  const options = mode === "stripped" ? {env:{PATH:process.env.PATH}, timeout:5000} : {timeout:5000};
+  const observation = {api, mode, refused:false, errorCode:null, surface:null,
+    commandPid:null, stdout:null, callbackCalled:false};
+  try {
+    const esm = api.startsWith("esm-") ? await import("node:child_process") : null;
+    if (api === "execSync" || api === "esm-execSync") {
+      observation.stdout = (api === "execSync" ? cp.execSync : esm.execSync)(command, {...options, encoding:"utf8"});
+    } else if (api === "promisify-exec") {
+      const pending = util.promisify(cp.exec)(command, options);
+      observation.commandPid = pending.child?.pid ?? null;
+      observation.stdout = (await pending).stdout;
+    } else {
+      const call = api === "esm-exec" ? esm.exec : cp.exec;
+      let complete, reject;
+      const done = new Promise((resolve, refuse) => {complete = resolve; reject = refuse;});
+      const child = call(command, options, (error, stdout) => {
+        observation.callbackCalled = true;
+        if (error) reject(error); else complete(stdout);
+      });
+      observation.commandPid = child.pid ?? null;
+      observation.stdout = await done;
+    }
+  } catch (error) {
+    observation.refused = true; observation.errorCode = error.code ?? null; observation.surface = error.surface ?? null;
+  }
+  observation.markerPresent = fs.existsSync(marker);
+  observation.childFacts = fs.existsSync(facts) ? JSON.parse(fs.readFileSync(facts, "utf8")) : null;
+  console.log(JSON.stringify(observation));
+})().catch(error => {console.error(error); process.exitCode = 1;});
+`;
+
+function shellExecutionControl(t, api, mode) {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "eta-shell-execution-control-"));
+  fs.chmodSync(work, 0o700);
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const auditDirectory = path.join(work, "audits"),
+    home = path.join(work, "home"),
+    temporary = path.join(work, "tmp");
+  for (const directory of [auditDirectory, home, temporary])
+    fs.mkdirSync(directory, { mode: 0o700 });
+  const program = path.join(work, "marker-child.cjs"),
+    marker = path.join(work, "executed"),
+    facts = path.join(work, "child-facts.json");
+  fs.writeFileSync(
+    program,
+    `const fs = require("node:fs"); fs.writeFileSync(${JSON.stringify(marker)}, String(process.pid), {mode:0o600, flag:"wx"}); fs.writeFileSync(${JSON.stringify(facts)}, JSON.stringify({pid:process.pid,parentPid:process.ppid,execArgv:process.execArgv}), {mode:0o600,flag:"wx"}); process.stdout.write(String(process.pid));\n`,
+    { mode: 0o600, flag: "wx" },
+  );
+  const capture = "shell-execution-" + api + "-" + mode;
+  const parent = spawnSync(process.execPath, ["--eval", shellExecutionSource], {
+    cwd: work,
+    env: {
+      PATH: path.dirname(process.execPath),
+      HOME: home,
+      TMPDIR: temporary,
+      XDG_CONFIG_HOME: path.join(home, ".config"),
+      LANG: "C.UTF-8",
+      LC_ALL: "C.UTF-8",
+      TZ: "UTC",
+      NODE_OPTIONS: "--require " + JSON.stringify(preload),
+      ETA_MU_TEST_NETWORK_AUDIT_DIR: auditDirectory,
+      ETA_MU_TEST_NETWORK_AUDIT_CAPTURE: capture,
+      TEST_CHILD_API: api,
+      TEST_CHILD_MODE: mode,
+      TEST_CHILD_PROGRAM: program,
+      TEST_CHILD_MARKER: marker,
+      TEST_CHILD_FACTS: facts,
+    },
+    encoding: "utf8",
+    timeout: 15000,
+  });
+  assert.equal(parent.error, undefined, parent.stderr);
+  assert.equal(parent.signal, null, parent.stderr);
+  const lines = parent.stdout.trim().split("\n");
+  assert.equal(lines.length, 1, parent.stdout + parent.stderr);
+  const observation = JSON.parse(lines[0]);
+  const records = fs.readdirSync(auditDirectory).map((name) => {
+    const file = path.join(auditDirectory, name),
+      info = fs.lstatSync(file);
+    assert.ok(info.isFile() && !info.isSymbolicLink());
+    assert.equal(info.mode & 0o777, 0o600);
+    assert.equal(info.uid, process.getuid());
+    const record = JSON.parse(fs.readFileSync(file, "utf8"));
+    assert.equal(name, `${record.pid}.json`);
+    assert.equal(record.schema, "eta-mu.test-network-denial/v1");
+    assert.equal(record.capture, capture);
+    assert.ok(
+      record.kernelAncestry.some(
+        (row) =>
+          row.pid === parent.pid &&
+          row.parentPid === process.pid &&
+          /^[0-9]+$/.test(row.startTicks),
+      ),
+    );
+    return record;
+  });
+  t.diagnostic(
+    JSON.stringify({
+      schema: "eta-mu.shell-execution-control-evidence/v1",
+      parentExit: parent.status,
+      parentStderr: parent.stderr,
+      observation,
+      records,
+    }),
+  );
+  const audit = records.find((record) => record.pid === parent.pid);
+  assert.ok(audit);
+  assert.equal(audit.parentPid, process.pid);
+  assert.equal(observation.api, api);
+  assert.equal(observation.mode, mode);
+  assert.equal(parent.stderr, "");
+  assert.equal(
+    observation.refused,
+    true,
+    "unsupported shell API must refuse before native dispatch",
+  );
+  assert.equal(observation.errorCode, "TEST_SHELL_CHILD_PID_CUSTODY_UNAVAILABLE");
+  assert.equal(
+    observation.surface,
+    api.endsWith("execSync") ? "child_process.execSync" : "child_process.exec",
+  );
+  assert.equal(observation.commandPid, null);
+  assert.equal(observation.stdout, null);
+  assert.equal(observation.callbackCalled, false);
+  assert.equal(observation.markerPresent, false);
+  assert.equal(observation.childFacts, null);
+  assert.equal(records.length, 1);
+  assert.deepEqual(audit.expectedNodeChildren, []);
+  assert.equal(audit.deniedAttempts, 1);
+  assert.equal(parent.status, 97);
+}
+
+for (const api of ["exec", "execSync", "promisify-exec", "esm-exec", "esm-execSync"]) {
+  for (const mode of ["stripped", "inherited"]) {
+    test(`shell ${api} ${mode} refuses before untracked Node dispatch`, (t) =>
+      shellExecutionControl(t, api, mode));
+  }
+}
+for (const api of ["exec", "execSync"]) {
+  test(`shell ${api} non-Node text is deliberately outside supported PID custody`, (t) =>
+    shellExecutionControl(t, api, "non-node"));
+}

@@ -176,6 +176,21 @@ childProcess.execFileSync = function(command, args, options) {
   error.surface = "child_process.execFileSync";
   throw error;
 };
+// exec and execSync interpret arbitrary shell text and expose no trustworthy
+// Node descendant PID. Refuse these two public shell surfaces before dispatch.
+// This deliberately includes non-Node shell commands; use supported direct
+// spawn/execFile APIs instead. No command parsing or guessed PID supplies proof.
+const refuseShellExecution = surface => function() {
+  audit.deniedAttempts += 1;
+  const error = new Error("TEST_SHELL_CHILD_PID_CUSTODY_UNAVAILABLE");
+  error.code = "TEST_SHELL_CHILD_PID_CUSTODY_UNAVAILABLE";
+  error.surface = surface;
+  throw error;
+};
+childProcess.exec = refuseShellExecution("child_process.exec");
+childProcess.execSync = refuseShellExecution("child_process.execSync");
+// The replacement has no copied native custom promisifier closing over exec.
+// util.promisify wraps the actual refusal and rejects before any shell launch.
 const originalFork = childProcess.fork;
 childProcess.fork = function(modulePath, args, options) {
   if (args != null && typeof args === "object" && !Array.isArray(args)) {options = args; args = [];}

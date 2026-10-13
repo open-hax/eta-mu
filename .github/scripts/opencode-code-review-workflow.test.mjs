@@ -691,8 +691,10 @@ function contextFixture(checked) {
     verifierFile: path.join(context, "machinery/review-invocation.cjs"),
     registryFile: path.join(context, "metadata/exposed-tools.txt"),
   });
+  fs.writeFileSync(path.join(context, "machinery/run-opencode-review-recovery.mjs"), recoveryRunnerSource);
   const checksum = execFileSync("sha256sum", ["publisher-fixture.cjs",
-    "machinery/review-invocation.cjs", "metadata/exposed-tools.txt"], { cwd: context });
+    "machinery/review-invocation.cjs", "metadata/exposed-tools.txt",
+    "machinery/run-opencode-review-recovery.mjs"], { cwd: context });
   fs.writeFileSync(path.join(context, "SHA256SUMS"), checksum);
   return { context, invocation, digest: createHash("sha256").update(checksum).digest("hex"),
     /**
@@ -2383,7 +2385,7 @@ function bindModelDiscoveryFixture(checked, context) {
   const commands = [["model-version", ["--version"], "1.18.18\n"],
     ["model-catalog", ["models", "opencode", "--verbose"], `opencode/${selected.id}\n${JSON.stringify(selected, null, 2)}\n`]]
     .map(([stem, args, stdout]) => {
-      const record = { command: [binary, ...args], exit_code: 0, signal: null, timed_out: false, captures_closed: true };
+      const record = { command: [binary, ...args], cwd: checked.consumer, exit_code: 0, signal: null, timed_out: false, captures_closed: true };
       for (const [stream, bytes] of [["stdout", stdout], ["stderr", ""]]) {
         record[`${stream}_file`] = `${stem}.${stream}`;
         fs.writeFileSync(path.join(checked.evidence, record[`${stream}_file`]), bytes);
@@ -2393,6 +2395,7 @@ function bindModelDiscoveryFixture(checked, context) {
     });
   const proof = { schema: "open-hax.review-model-discovery/v1", status: "selected", mode: "latest",
     requested_model: "", declared_version: "1.18.18", observed_version: "1.18.18", commands,
+    discovery_context: { cwd: checked.consumer, removed: true },
     binary: { requested: binary, real_path: binary, sha256: transportSha256(fs.readFileSync(binary)) },
     selected_model: `opencode/${selected.id}`, selected_row: selected,
     selected_row_sha256: transportSha256(JSON.stringify(selected)), catalog_sha256: commands[1].stdout_sha256 };
@@ -2418,7 +2421,17 @@ function bindModelDiscoveryFixture(checked, context) {
   recovery.accepted_invocation.model = proof.selected_model;
   fs.writeFileSync(recoveryFile, JSON.stringify(recovery));
   context.invocationDigest = transportSha256(JSON.stringify(recovery.accepted_invocation));
-  return { file, proof, recoveryFile, recovery, binary };
+  return { file, proof, recoveryFile, recovery, binary,
+    // Source-shaped negative records are rebound BEFORE the trusted fixture
+    // digest, so the shared proof validator rather than a changed hash refuses.
+    rebind() {
+      fs.writeFileSync(file, JSON.stringify(proof));
+      const changed = transportSha256(fs.readFileSync(file));
+      recovery.model_discovery.sha256 = changed;
+      recovery.accepted_invocation.model_discovery_sha256 = changed;
+      fs.writeFileSync(recoveryFile, JSON.stringify(recovery));
+      context.invocationDigest = transportSha256(JSON.stringify(recovery.accepted_invocation));
+    } };
 }
 
 test("actual final workflow requires unchanged selected model provenance before publication", (t) => {
@@ -2436,6 +2449,10 @@ test("actual final workflow requires unchanged selected model provenance before 
     ["response missing", (c) => fs.rmSync(path.join(c.evidence,"model-catalog-source-response.json"))],
     ["binding missing", (_c, model) => { delete model.recovery.model_discovery; }],
     ["bound model differs", (_c, model) => { model.recovery.model_discovery.selected_model = "opencode/other-free"; }],
+    ["cleanup not established", (_c, model) => { model.proof.discovery_context.removed = false; model.rebind(); }],
+    ["version command cwd differs", (_c, model) => { model.proof.commands[0].cwd += "/foreign"; model.rebind(); }],
+    ["catalog command cwd differs", (_c, model) => { model.proof.commands[1].cwd += "/foreign"; model.rebind(); }],
+    ["discovery context missing", (_c, model) => { delete model.proof.discovery_context; model.rebind(); }],
     ["unknown mode", (_c, _model, env) => { env.REVIEW_MODEL_DISCOVERY = "unsupported"; }],
     ["declared version differs", (_c, _model, env) => { env.REVIEW_EXPECTED_OPENCODE_VERSION = "1.19.0"; }],
   ];

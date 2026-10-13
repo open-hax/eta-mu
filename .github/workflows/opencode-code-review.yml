@@ -2268,7 +2268,7 @@ jobs:
   review:
     name: Review pull request with OpenCode MiMo
     needs: [deterministic_evidence, prepare_review_context]
-    if: ${{ always() && needs.deterministic_evidence.result == 'success' && needs.prepare_review_context.result == 'success' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ !cancelled() && needs.deterministic_evidence.result == 'success' && needs.prepare_review_context.result == 'success' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ inputs.review_timeout_minutes > 180 && 180 || (inputs.review_timeout_minutes > 60 && inputs.review_timeout_minutes || 60) }}
     outputs:
@@ -2413,6 +2413,7 @@ jobs:
           export REVIEW_INPUT_DIFF_BASE_SHA="$diff_base_sha"
 
           node <<'NODE'
+          (async () => {
           const assert = require('node:assert/strict');
           const fs = require('node:fs');
           const path = require('node:path');
@@ -2526,50 +2527,9 @@ jobs:
               assert.equal(accepted.model_discovery_sha256, binding.sha256, 'Accepted invocation lost model discovery');
               assert.equal(accepted.model, binding.selected_model, 'Accepted invocation model differs');
               const discovery = JSON.parse(discoveryBytes);
-              assert.equal(discovery.schema, 'open-hax.review-model-discovery/v1');
-              assert.equal(discovery.status, 'selected', 'Model discovery did not select a catalog row');
-              assert.equal(discovery.selected_model, accepted.model);
-              assert.equal(discovery.declared_version, env.REVIEW_EXPECTED_OPENCODE_VERSION);
-              assert.equal(discovery.observed_version, discovery.declared_version);
-              assert.equal(sha256(JSON.stringify(discovery.selected_row)), discovery.selected_row_sha256);
-              assert.equal(`opencode/${discovery.selected_row.id}`, accepted.model);
-              assert.equal(discovery.commands.length, 2);
-              const source = discovery.catalog_source;
-              assert.ok(source && source.file === 'model-catalog-source.json'
-                && source.response_file === 'model-catalog-source-response.json', 'Missing fresh catalog carrier');
-              for (const [file, digest] of [[source.file, source.sha256], [source.response_file, source.response_sha256]]) {
-                const physical = path.join(dir, file), info = fs.lstatSync(physical);
-                assert.ok(info.isFile() && !info.isSymbolicLink(), 'Catalog carrier is not a regular file');
-                assert.equal(sha256(fs.readFileSync(physical)), digest, 'Fresh catalog carrier changed');
-              }
-              const rawBytes = fs.readFileSync(path.join(dir, source.file));
-              assert.equal(rawBytes.length, source.bytes);
-              const response = JSON.parse(fs.readFileSync(path.join(dir, source.response_file), 'utf8'));
-              assert.equal(response.schema, 'open-hax.review-model-catalog-response/v1');
-              assert.equal(response.requested_url, 'https://models.opencode.ai/api.json');
-              assert.equal(response.response_url, response.requested_url);
-              assert.equal(response.status, 200); assert.equal(response.body_complete, true); assert.equal(response.json_valid, true);
-              assert.equal(response.aborted, false); assert.equal(response.error, undefined);
-              assert.equal(response.bytes, source.bytes); assert.equal(response.sha256, source.sha256);
-              const rawCatalog = JSON.parse(new TextDecoder('utf-8', {fatal:true, ignoreBOM:true}).decode(rawBytes));
-              assert.equal(rawCatalog.opencode.id, 'opencode');
-              assert.ok(Object.hasOwn(rawCatalog.opencode.models, discovery.selected_row.id), 'Selected native model lacks a raw source row');
-              const rawRow = rawCatalog.opencode.models[discovery.selected_row.id];
-              assert.equal(rawRow.id, discovery.selected_row.id);
-              assert.equal(sha256(JSON.stringify(rawRow)), discovery.selected_source_row_sha256);
-
-              for (const [index, command] of discovery.commands.entries()) {
-                const stem = index === 0 ? 'model-version' : 'model-catalog';
-                assert.deepEqual(command.command.slice(1), index === 0 ? ['--version'] : ['models', 'opencode', '--verbose']);
-                assert.equal(command.exit_code, 0); assert.equal(command.signal, null); assert.equal(command.timed_out, false);
-                assert.equal(command.captures_closed, true, 'Discovery output did not close');
-                assert.equal(command.capture_error, undefined);
-                for (const stream of ['stdout', 'stderr']) {
-                  assert.equal(command[`${stream}_file`], `${stem}.${stream}`);
-                  assert.equal(sha256(fs.readFileSync(path.join(dir, command[`${stream}_file`]))), command[`${stream}_sha256`], 'Model catalog/version output changed');
-                }
-              }
-              assert.equal(discovery.catalog_sha256, discovery.commands[1].stdout_sha256);
+              const { verifyModelDiscoveryArtifacts } = await import(
+                require('node:url').pathToFileURL(path.join(contextDir, 'machinery/run-opencode-review-recovery.mjs')).href);
+              verifyModelDiscoveryArtifacts(dir, recovery, env.REVIEW_EXPECTED_OPENCODE_VERSION);
               assert.equal(sha256(fs.readFileSync(discovery.binary.real_path)), discovery.binary.sha256, 'Discovered OpenCode executable changed');
               assert.ok(discovery.commands.every(command => command.command[0] === discovery.binary.real_path), 'Discovery command executable differs');
             }
@@ -2613,6 +2573,7 @@ jobs:
             console.log(`Bound unchanged tool submission (${submissionSha256}) to complete verified input.`);
           }
           console.log(`Verified ${expected.length} full-input bytes against independent Git input (${digest}).`);
+          })().catch(error => { console.error(error); process.exitCode = 1; });
           NODE
 
       - name: Download Muse tools and global skills
