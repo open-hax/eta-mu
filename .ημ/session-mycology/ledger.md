@@ -804,3 +804,12 @@
   spore: none
   receipt-refs: 2ecb6d89505c6c82202fa3719b7a079d212cb2970dafcd0789a0582a6fadb437,b5159cea722d3b1959f891160e5c6e6fcb9625c98e5809eba5f431913f94afcc
   note: Existing shared/project memory already records anonymous OpenCode and changing free MiMo slugs. Classify authentic upstream errors separately from healthy unfinished review. Preserve full catalog custody and actual per-page coverage through compaction; prompt healthy completion while retaining failed STOP and MAX2. Keep tests independent of package launcher cwd using documented nbb.core file binding. Retain initial failed gates, then qualify final normal source gates. No new spore or promotion; hosted review and deployment remain separate.
+- ts: 2026-10-13T01:21:11.950307087Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Repair CodeQL process association in native assessment fixtures
+  p-efficiency: 0.85
+  p-friction: 0.45
+  p-skill-candidate: 0.20
+  spore: none
+  receipt-refs: 9ed65d6a1f5d13523fb36c5ca035c324b06d88d531cc4a4a538eb4d6a65c09d6,59d595c4339f15bef7f0132a1304a531302f555f70c658d3883735a0785332c8
+  note: Use an explicit fixed Node-only helper for fixture runner enrichment; keep literal Bash and npm launches direct. Exact inverse review preserves fixture events, audit enrollment and assertions. Normal assessment gate passed, while actual scan clearance remains pending. Read complete fresh findings before new review invitations; retain existing requests by their head. No new spore or promotion.

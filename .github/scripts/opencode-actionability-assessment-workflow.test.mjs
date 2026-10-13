@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import assert from "node:assert/strict";
-import { spawnSync as nativeSpawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -22,11 +22,12 @@ const stages = ["deterministic", "map-change", "generate-candidates", "adversari
 // Existing native CLI fixtures use only an inert raw-catalog transport and executable.
 const nativeDiscoveryFixtures = new WeakMap();
 const nativeDiscoveryChildren = new WeakMap();
-function spawnSync(command, args, options) {
-  const fixture = nativeDiscoveryFixtures.get(options?.env);
-  const result = nativeSpawnSync(command, fixture && command === process.execPath
-    ? ["--import", fixture.loader, ...args] : args, options);
-  if (fixture) nativeDiscoveryChildren.set(result, fixture);
+function runNativeDiscoveryFixture(fixture) {
+  const discovery = nativeDiscoveryFixtures.get(fixture.env);
+  assert.ok(discovery, "the inert native discovery fixture must be staged");
+  const result = spawnSync(process.execPath, ["--import", discovery.loader, runner],
+    { env: fixture.env, encoding: "utf8", timeout: 15000 });
+  nativeDiscoveryChildren.set(result, discovery);
   return result;
 }
 function stageNativeDiscoveryFixture(directory, home, child, env) {
@@ -197,7 +198,7 @@ function nativeFixture(t, { legacy = true, partial = false, finalCoverage = fals
 
 test("actual canonical runner accepts only the complete fixed native file", (t) => {
   const fixture = nativeFixture(t, { legacy: false });
-  const child = spawnSync(process.execPath, [runner], { env: fixture.env, encoding: "utf8", timeout: 15000 });
+  const child = runNativeDiscoveryFixture(fixture);
   childNetworkAudit(child);
   assert.equal(child.status, 0, "valid native purpose must not require basehead.diff");
   const recovery = JSON.parse(fs.readFileSync(path.join(fixture.directory, "recovery.json")));
@@ -208,7 +209,7 @@ test("actual canonical runner accepts only the complete fixed native file", (t) 
 test("final native page omission recovers once using only the exact actionability input", (t) => {
   for (const options of [{ legacy: false }, { legacy: true, decoyLegacy: true }]) {
     const fixture = nativeFixture(t, { ...options, finalCoverage: true });
-    const child = spawnSync(process.execPath, [runner], { env: fixture.env, encoding: "utf8", timeout: 15000 });
+    const child = runNativeDiscoveryFixture(fixture);
     childNetworkAudit(child);
     assert.equal(child.status, 0, child.stderr);
     const recovery = JSON.parse(fs.readFileSync(path.join(fixture.directory, "recovery.json")));
@@ -230,7 +231,7 @@ test("native first and corrective prompts name only the staged full input", (t) 
     const fixture = nativeFixture(t, { legacy: false, finalCoverage });
     assert.equal(fs.existsSync(path.join(fixture.directory, "summary.json")), false);
     assert.equal(fs.existsSync(path.join(fixture.directory, "deterministic.log")), false);
-    const child = spawnSync(process.execPath, [runner], { env: fixture.env, encoding: "utf8", timeout: 15000 });
+    const child = runNativeDiscoveryFixture(fixture);
     childNetworkAudit(child);
     assert.equal(child.status, 0, child.stderr);
     const prompts = JSON.parse(fs.readFileSync(fixture.prompts, "utf8"));
@@ -270,7 +271,7 @@ test("ordinary strict diff prompt retains complete supporting-file reads", async
 
 test("a complete legacy file cannot replace a partial native file", (t) => {
   const fixture = nativeFixture(t, { partial: true });
-  const child = spawnSync(process.execPath, [runner], { env: fixture.env, encoding: "utf8", timeout: 15000 });
+  const child = runNativeDiscoveryFixture(fixture);
   childNetworkAudit(child);
   assert.equal(child.status, 1);
   assert.equal(fs.existsSync(fixture.probe), false, "invalid bytes refuse before the child");
@@ -279,7 +280,7 @@ test("a complete legacy file cannot replace a partial native file", (t) => {
 
 test("actionability child uses its fresh home and receives no host credentials", (t) => {
   const fixture = nativeFixture(t);
-  const child = spawnSync(process.execPath, [runner], { env: fixture.env, encoding: "utf8", timeout: 15000 });
+  const child = runNativeDiscoveryFixture(fixture);
   childNetworkAudit(child);
   assert.equal(child.status, 0);
   const probe = JSON.parse(fs.readFileSync(fixture.probe));
@@ -299,7 +300,7 @@ test("unknown purpose and nonprivate or redirected model home refuse before the 
       fs.symlinkSync(fixture.home, alias);
       fixture.env.REVIEW_CHILD_HOME = alias;
     }
-    const child = spawnSync(process.execPath, [runner], { env: fixture.env, encoding: "utf8", timeout: 15000 });
+    const child = runNativeDiscoveryFixture(fixture);
     childNetworkAudit(child);
     assert.equal(child.status, 1);
     assert.equal(fs.existsSync(fixture.probe), false);
