@@ -2,6 +2,7 @@
 (ns eta-mu.infra.rejection-assessment
   "Compose existing canonical rejection APIs and native readers. Never settle or resolve."
   (:require [clojure.string :as str]
+            [eta-mu.law.rejection-assessment :as assessment-law]
             [pr-flow.native-context :as native] [pr-flow.native-context-law :as context-law]
             [pr-flow.permissions :as permissions] [pr-flow.actionability-history :as history]
             [pr-flow.law :as law] [eta-mu.extern.actionability-host :as host]))
@@ -145,9 +146,7 @@
   (let [invocation (verify-invocation!)
         _ (when-not (and (string? accepted-sha256) (re-matches #"[0-9a-f]{64}" accepted-sha256)
                          (= accepted-sha256 (:accepted-sha256 invocation))) (host/refuse! :trusted-invocation-digest))
-        _ (when-not (and (= "APPROVE" (get-in invocation [:submission :event]))
-                         (vector? (get-in invocation [:submission :comments]))
-                         (empty? (get-in invocation [:submission :comments])))
+        _ (when-not (assessment-law/admissible-submission? (:submission invocation))
             (host/refuse! :adverse-submission))
         before (rebind-input deps config (:source invocation)) _inventory (inventory!)
         proof (publisher-proof!) user (:user proof)

@@ -840,3 +840,12 @@
   spore: none
   receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/t350-native-dynamic-mimo-preparation-v1/root-test-format-ci-repair-v1/root-one-source-format-receipt-event-v1.edn
   note: Full native sandbox logs and package lint both identify the same owned MJS format issue. Apply scoped formatter only, preserve templates/assertions, verify actual eight controls and normal registered lint. Read existing anonymous dynamic MiMo memory before provider investigation. Preserve failed evidence, native obligations and unrelated work; no new spore or promotion.
+- ts: 2026-10-13T04:09:49.478632156Z
+  session: codex/01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify native Node-launch and pure rejection-carrier law source repairs
+  p-efficiency: 0.65
+  p-friction: 0.87
+  p-skill-candidate: 0.15
+  spore: none
+  receipt-refs: root-seven-source-repair-canonical-event-v1.edn; qualified source8f20d8beee40bb7a41c09eced9588f7962d939aad9cea7d04103feb3c0073910
+  note: Actual paired89controls19pass70fail on predecessor versus89pass final; registered310ordinary,19actionabilityNode,18rejectionNode,685inertchecks,6rejectiontests87assertions pass;84boundNodes0denials,4Muse0warnings;full lintpass. StaticV1getter andV2shellPID limitations retained unapplied. Keep anonymousdynamicMiMo memory discoverable. Native settlement, protected adoption,1000campaign,Servicesstack andliveSpanishCMS remain pending. No spore or promotion.

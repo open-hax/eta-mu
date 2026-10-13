@@ -61,17 +61,140 @@ const guardNodeChild = (command, args, options, surface) => {
   }
   return node;
 };
+// A shell-backed direct Node launch returns a shell PID, not a Node PID.
+// Refuse that unsupported custody before dispatch, even with actual preload.
+const guardNodeShell = (configuration, surface) => {
+  if (configuration.shell) {
+    audit.deniedAttempts += 1;
+    const error = new Error("TEST_NODE_CHILD_SHELL_PID_CUSTODY_UNAVAILABLE");
+    error.code = "TEST_NODE_CHILD_SHELL_PID_CUSTODY_UNAVAILABLE";
+    error.surface = surface;
+    throw error;
+  }
+};
+// Guard and native dispatch consume one captured launch view. This current
+// Linux test boundary does not claim arbitrary monkeypatch/native-handle safety.
+const directNode = command => typeof command === "string" && (command === process.execPath || path.basename(command) === "node");
+const launchArgv = args => {
+  if (!Array.isArray(args)) return args;
+  const argv = [], length = args.length;
+  for (let index = 0; index < length; index += 1) argv.push(`${args[index]}`);
+  return argv;
+};
+const launchEnvironment = configuration => {
+  const sourceEnv = configuration.env || {...process.env};
+  const environment = Object.create(null), keys = [];
+  // Node intentionally includes inherited enumerable env keys, then omits
+  // undefined values while constructing actual string environment pairs.
+  for (const key in sourceEnv) keys.push(key);
+  for (const key of keys) {
+    const value = sourceEnv[key];
+    if (value !== undefined) environment[key] = `${value}`;
+  }
+  // Retain Node's Linux coverage propagation and explicit-own omission when
+  // turning the effective environment into stable own data properties.
+  const ownCoverage = Object.prototype.hasOwnProperty.call(sourceEnv, "NODE_V8_COVERAGE");
+  if (process.env.NODE_V8_COVERAGE && !ownCoverage) environment.NODE_V8_COVERAGE = process.env.NODE_V8_COVERAGE;
+  else if (ownCoverage && !Object.prototype.hasOwnProperty.call(environment, "NODE_V8_COVERAGE"))
+    Object.defineProperty(environment, "NODE_V8_COVERAGE", {value:undefined});
+  return {...configuration, env:environment};
+};
+const spawnLaunchArguments = (args, options) => {
+  let argv = args;
+  if (Array.isArray(args)) argv = launchArgv(args);
+  else if (args == null) argv = [];
+  else if (typeof args === "object") {options = args; argv = [];}
+  return [argv, launchEnvironment({...options})];
+};
 const originalSync = childProcess.spawnSync;
 childProcess.spawnSync = function(command, args, options) {
-  const node = guardNodeChild(command, args, options, "child_process.spawnSync");
-  const result = originalSync.apply(this, arguments);
-  if (node && Number.isSafeInteger(result.pid)) audit.expectedNodeChildren.push(result.pid);
+  if (!directNode(command)) return originalSync.apply(this, arguments);
+  const launch = spawnLaunchArguments(args, options);
+  guardNodeChild(command, launch[0], launch[1], "child_process.spawnSync");
+  guardNodeShell(launch[1], "child_process.spawnSync");
+  const result = originalSync.call(this, command, ...launch);
+  if (Number.isSafeInteger(result.pid)) audit.expectedNodeChildren.push(result.pid);
   return result;
 };
 const originalSpawn = childProcess.spawn;
 childProcess.spawn = function(command, args, options) {
-  const node = guardNodeChild(command, args, options, "child_process.spawn");
-  const child = originalSpawn.apply(this, arguments);
+  if (!directNode(command)) return originalSpawn.apply(this, arguments);
+  const launch = spawnLaunchArguments(args, options);
+  guardNodeChild(command, launch[0], launch[1], "child_process.spawn");
+  guardNodeShell(launch[1], "child_process.spawn");
+  const child = originalSpawn.call(this, command, ...launch);
+  child.once("spawn", () => audit.expectedNodeChildren.push(child.pid));
+  return child;
+};
+// execFile and fork use Node's lexical launcher, so patched exported spawn
+// is not sufficient. Their overload rules differ and remain explicit here.
+const execFileLaunchArguments = (args, options, callback) => {
+  let argv = [];
+  if (Array.isArray(args)) argv = launchArgv(args);
+  else if (args != null && typeof args === "object") {callback = options; options = args;}
+  else if (typeof args === "function") {callback = args; options = null;}
+  else if (args != null) argv = args;
+  if (typeof options === "function") callback = options;
+  return [argv, launchEnvironment({...options}), callback];
+};
+const originalExecFile = childProcess.execFile;
+childProcess.execFile = function(command, args, options, callback) {
+  const node = directNode(command);
+  if (!node) return originalExecFile.apply(this, arguments);
+  const launch = execFileLaunchArguments(args, options, callback);
+  guardNodeChild(command, launch[0], launch[1], "child_process.execFile");
+  guardNodeShell(launch[1], "child_process.execFile");
+  const child = originalExecFile.call(this, command, ...launch);
+  child.once("spawn", () => audit.expectedNodeChildren.push(child.pid));
+  return child;
+};
+// Native custom promisification closes over the original, unguarded execFile.
+// Preserve the documented result and actual .child through the guarded API.
+Object.defineProperty(childProcess.execFile, require("node:util").promisify.custom, {
+  enumerable:false,
+  value:function(...args) {
+    let resolve, reject;
+    const promise = new Promise((accept, refuse) => {resolve = accept; reject = refuse;});
+    promise.child = childProcess.execFile(...args, (error, stdout, stderr) => {
+      if (error != null) {error.stdout = stdout; error.stderr = stderr; reject(error);}
+      else resolve({stdout, stderr});
+    });
+    return promise;
+  },
+});
+const originalExecFileSync = childProcess.execFileSync;
+childProcess.execFileSync = function(command, args, options) {
+  const node = directNode(command);
+  if (!node) return originalExecFileSync.apply(this, arguments);
+  const launch = execFileLaunchArguments(args, options);
+  guardNodeChild(command, launch[0], launch[1], "child_process.execFileSync");
+  // Native execFileSync returns stdout without its launch PID. Enrollment
+  // cannot establish actual parent membership, so refuse before dispatch.
+  audit.deniedAttempts += 1;
+  const error = new Error("TEST_NODE_CHILD_PID_CUSTODY_UNAVAILABLE");
+  error.code = "TEST_NODE_CHILD_PID_CUSTODY_UNAVAILABLE";
+  error.surface = "child_process.execFileSync";
+  throw error;
+};
+const originalFork = childProcess.fork;
+childProcess.fork = function(modulePath, args, options) {
+  if (args != null && typeof args === "object" && !Array.isArray(args)) {options = args; args = [];}
+  else if (args == null) args = [];
+  const configuration = {...options, shell:false};
+  configuration.execPath ||= process.execPath;
+  let execArgv = configuration.execArgv || process.execArgv;
+  // Native fork removes the inherited parent eval pair before launching its
+  // module. Capture that same choice instead of reintroducing eval recursion.
+  if (execArgv === process.execArgv && process._eval != null) {
+    const index = execArgv.lastIndexOf(process._eval);
+    if (index > 0) {execArgv = execArgv.slice(); execArgv.splice(index - 1, 2);}
+  }
+  configuration.execArgv = launchArgv(execArgv);
+  const argv = launchArgv(args);
+  const node = directNode(configuration.execPath);
+  const effective = node ? launchEnvironment(configuration) : configuration;
+  if (node) guardNodeChild(configuration.execPath, configuration.execArgv, effective, "child_process.fork");
+  const child = originalFork.call(this, modulePath, argv, effective);
   if (node) child.once("spawn", () => audit.expectedNodeChildren.push(child.pid));
   return child;
 };
