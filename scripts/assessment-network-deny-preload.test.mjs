@@ -2043,3 +2043,687 @@ for (const api of ["execFile", "execFileSync"]) {
 }
 test("original selected options execFile function retains callback and own environment", (t) =>
   originalOptionsControl(t, "execFile", "function-accepted", true));
+
+// Current-a58 causal successor controls: actual executable aliases, ordered
+// preloads and local TCP/HTTP listeners. No model or external connection.
+async function aliasInner(config) {
+  const cp = require("node:child_process");
+  let pathReads = 0,
+    cwdReads = 0,
+    cwdCoercions = 0;
+  const environment = { ...process.env };
+  if (config.mode === "missing") delete environment.NODE_OPTIONS;
+  let command = config.alias;
+  const options = { env: environment, cwd: config.cwd, encoding: "utf8", timeout: 5000 };
+  if (config.locator === "relative") command = "./owned-runtime";
+  if (config.locator === "path" || config.locator === "getters" || config.locator === "shadow") {
+    command = "owned-runtime";
+    environment.PATH =
+      config.locator === "shadow" ? config.shadowDirectory + ":" + config.cwd : config.cwd;
+  }
+  if (config.locator === "getters") {
+    Object.defineProperty(environment, "PATH", {
+      enumerable: true,
+      get() {
+        pathReads += 1;
+        return pathReads === 1 ? config.cwd : "/missing-second-PATH";
+      },
+    });
+    Object.defineProperty(options, "cwd", {
+      enumerable: true,
+      get() {
+        cwdReads += 1;
+        return cwdReads === 1 ? config.cwd : "/missing-second-cwd";
+      },
+    });
+  } else if (config.locator === "url-cwd")
+    options.cwd = require("node:url").pathToFileURL(config.cwd + "/");
+  else if (config.locator === "buffer-cwd") options.cwd = Buffer.from(config.cwd);
+  else if (config.locator === "default-path") {
+    command = "owned-runtime";
+    delete environment.PATH;
+  }
+  if (config.locator === "absolute-parent") command = config.cwd + "/link/../parent-runtime";
+  else if (config.locator === "relative-parent") command = "./link/../parent-runtime";
+  else if (config.locator === "path-parent") {
+    command = "parent-runtime";
+    environment.PATH = "link/..";
+  } else if (config.locator === "cwd-parent") {
+    command = "./parent-runtime";
+    options.cwd = config.cwd + "/link/..";
+  } else if (config.locator === "buffer-relative" || config.locator === "buffer-path") {
+    options.cwd = Buffer.from(config.decoyDirectory);
+    command = config.locator === "buffer-path" ? "owned-runtime" : "./owned-runtime";
+    environment.PATH = ".";
+  } else if (config.locator === "empty-relative" || config.locator === "empty-path") {
+    options.cwd = "";
+    command = config.locator === "empty-path" ? "owned-runtime" : "./owned-runtime";
+    environment.PATH = ".";
+  } else if (config.locator === "sync-empty") {
+    command = "./owned-runtime";
+    options.cwd = "";
+  } else if (config.locator === "sync-custom") {
+    command = "./owned-runtime";
+    options.cwd = Buffer.from(config.cwd);
+    Object.defineProperty(options.cwd, Symbol.toPrimitive, {
+      value: () => {
+        cwdCoercions += 1;
+        return cwdCoercions === 1 ? config.cwd : config.decoyDirectory;
+      },
+    });
+  } else if (config.locator === "sync-byte-string") {
+    command = "./parent-runtime";
+    options.cwd = new Uint8Array([115]);
+  } else if (config.locator === "sync-raw-null") {
+    options.cwd = Buffer.from([0]);
+    Object.defineProperty(options.cwd, Symbol.toPrimitive, {
+      value: () => {
+        cwdCoercions += 1;
+        return config.cwd;
+      },
+    });
+  }
+  if (config.invalid) options.env = environment;
+  const observation = {
+    api: config.api,
+    mode: config.mode,
+    locator: config.locator,
+    refused: false,
+    errorCode: null,
+    errorName: null,
+    errorMessage: null,
+    surface: null,
+    commandPid: null,
+    status: null,
+    pathReads: 0,
+    cwdReads: 0,
+    cwdCoercions: 0,
+  };
+  try {
+    const args = [config.program, config.marker, config.facts];
+    if (config.invalid) {
+      const nativeOptions = "bad";
+      if (config.api === "spawnSync") cp.spawnSync(command, args, nativeOptions);
+      else if (config.api === "spawn") cp.spawn(command, args, nativeOptions);
+      else if (config.api === "execFileSync") cp.execFileSync(command, args, nativeOptions);
+      else cp.execFile(command, args, nativeOptions, () => {});
+    } else if (config.api === "spawnSync") {
+      const result = cp.spawnSync(command, args, options);
+      observation.commandPid = result.pid ?? null;
+      observation.status = result.status;
+      if (result.error) throw result.error;
+    } else if (config.api === "execFileSync") {
+      cp.execFileSync(command, args, options);
+      observation.status = 0;
+    } else if (config.api === "execFile") {
+      await new Promise((resolve, reject) => {
+        const child = cp.execFile(command, args, options, (error) => {
+          if (error) reject(error);
+          else {
+            observation.status = 0;
+            resolve();
+          }
+        });
+        observation.commandPid = child.pid ?? null;
+      });
+    } else {
+      const child =
+        config.api === "fork"
+          ? cp.fork(config.program, [config.marker, config.facts], {
+              ...options,
+              execPath: command,
+              silent: true,
+            })
+          : cp.spawn(command, args, options);
+      observation.commandPid = child.pid ?? null;
+      await new Promise((resolve, reject) => {
+        child.once("error", reject);
+        child.once("close", (code) => {
+          observation.status = code;
+          resolve();
+        });
+      });
+    }
+  } catch (error) {
+    observation.refused = error.code?.startsWith("TEST_") ?? false;
+    observation.errorCode = error.code ?? null;
+    observation.errorName = error.name;
+    observation.errorMessage = error.message;
+    observation.surface = error.surface ?? null;
+  }
+  observation.pathReads = pathReads;
+  observation.cwdReads = cwdReads;
+  observation.cwdCoercions = cwdCoercions;
+  console.log(JSON.stringify(observation));
+}
+async function precedenceInner(config) {
+  const cp = require("node:child_process");
+  const options = { env: { ...process.env }, encoding: "utf8", timeout: 5000 };
+  delete options.env.NODE_OPTIONS;
+  let argv = ["-r", config.before, "-r", config.guard, config.program, config.marker, config.facts];
+  if (config.mode === "equal-before")
+    argv = [
+      "--require=" + config.before,
+      "--require=" + config.guard,
+      config.program,
+      config.marker,
+      config.facts,
+    ];
+  else if (config.mode === "env-before") {
+    options.env.NODE_OPTIONS = "--require " + JSON.stringify(config.before);
+    argv = ["--require", config.guard, config.program, config.marker, config.facts];
+  } else if (config.mode === "guard-first")
+    argv = [
+      "--require",
+      config.guard,
+      "--require",
+      config.before,
+      config.program,
+      config.marker,
+      config.facts,
+    ];
+  else if (config.mode === "env-guard") options.env.NODE_OPTIONS = process.env.NODE_OPTIONS;
+  else if (config.mode === "import-first")
+    argv = [
+      "--import",
+      require("node:url").pathToFileURL(config.before).href,
+      "--require",
+      config.guard,
+      config.program,
+      config.marker,
+      config.facts,
+    ];
+  const observation = {
+    api: config.api,
+    mode: config.mode,
+    refused: false,
+    errorCode: null,
+    surface: null,
+    commandPid: null,
+    status: null,
+  };
+  try {
+    if (config.api === "spawnSync") {
+      const child = cp.spawnSync(process.execPath, argv, options);
+      observation.commandPid = child.pid ?? null;
+      observation.status = child.status;
+      if (child.error) throw child.error;
+    } else if (config.api === "execFile") {
+      await new Promise((resolve, reject) => {
+        const child = cp.execFile(process.execPath, argv, options, (error) => {
+          if (error) reject(error);
+          else {
+            observation.status = 0;
+            resolve();
+          }
+        });
+        observation.commandPid = child.pid ?? null;
+      });
+    } else {
+      const child =
+        config.api === "fork"
+          ? cp.fork(config.program, [config.marker, config.facts], {
+              ...options,
+              execArgv: argv.slice(0, -3),
+              silent: true,
+            })
+          : cp.spawn(process.execPath, argv, options);
+      observation.commandPid = child.pid ?? null;
+      await new Promise((resolve, reject) => {
+        child.once("error", reject);
+        child.once("close", (code) => {
+          observation.status = code;
+          resolve();
+        });
+      });
+    }
+  } catch (error) {
+    observation.refused = error.code?.startsWith("TEST_") ?? false;
+    observation.errorCode = error.code ?? null;
+    observation.surface = error.surface ?? null;
+  }
+  console.log(JSON.stringify(observation));
+}
+function launchSuccessorControl(
+  t,
+  family,
+  api,
+  mode,
+  locator = "absolute",
+  invalid = false,
+  guarded = true,
+) {
+  assert.ok(fs.existsSync("/proc/self"));
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "eta-a58-launch-successor-"));
+  fs.chmodSync(work, 0o700);
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const auditDirectory = path.join(work, "audits"),
+    home = path.join(work, "home"),
+    temporary = path.join(work, "tmp");
+  for (const directory of [auditDirectory, home, temporary])
+    fs.mkdirSync(directory, { mode: 0o700 });
+  const alias = path.join(work, "owned-runtime");
+  fs.symlinkSync(process.execPath, alias);
+  assert.equal(fs.realpathSync(alias), fs.realpathSync(process.execPath));
+  const marker = path.join(work, "marker"),
+    facts = path.join(work, "facts.json"),
+    program = path.join(work, "payload.cjs"),
+    before = path.join(work, "before.cjs"),
+    beforeMarker = path.join(work, "before-marker");
+  fs.writeFileSync(
+    program,
+    'const fs=require("node:fs");const net=require("node:net");fs.writeFileSync(process.argv[2],String(process.pid),{flag:"wx",mode:384});fs.writeFileSync(process.argv[3],JSON.stringify({pid:process.pid,parentPid:process.ppid,cwd:process.cwd(),guardBeforeCapture:globalThis.etaCapturedConnect===undefined?null:globalThis.etaCapturedConnect===net.Socket.prototype.connect}),{flag:"wx",mode:384});\n',
+    { flag: "wx", mode: 0o600 },
+  );
+  fs.writeFileSync(
+    before,
+    'globalThis.etaCapturedConnect=require("node:net").Socket.prototype.connect;require("node:fs").writeFileSync(' +
+      JSON.stringify(beforeMarker) +
+      ',"loaded",{flag:"wx",mode:384});\n',
+    { flag: "wx", mode: 0o600 },
+  );
+  const shadowDirectory = path.join(work, "shadow");
+  fs.mkdirSync(shadowDirectory, { mode: 0o700 });
+  fs.writeFileSync(
+    path.join(shadowDirectory, "owned-runtime"),
+    '#!/usr/bin/python3\nimport os,sys,json\npid=os.getpid()\nwith open(sys.argv[2],"x") as out: out.write(str(pid))\nwith open(sys.argv[3],"x") as out: json.dump({"pid":pid,"parentPid":os.getppid(),"cwd":os.getcwd(),"guardBeforeCapture":None},out)\n',
+    { flag: "wx", mode: 0o700 },
+  );
+  const otherDirectory = path.join(work, "other"),
+    subdirectory = path.join(otherDirectory, "subdir"),
+    decoyDirectory = path.join(work, "decoy");
+  for (const directory of [
+    otherDirectory,
+    subdirectory,
+    decoyDirectory,
+    path.join(work, "s"),
+    path.join(work, "115"),
+  ])
+    fs.mkdirSync(directory, { mode: 0o700 });
+  fs.symlinkSync(subdirectory, path.join(work, "link"));
+  fs.symlinkSync(process.execPath, path.join(otherDirectory, "parent-runtime"));
+  fs.symlinkSync(process.execPath, path.join(work, "115/parent-runtime"));
+  const capture =
+    "a58-" + family + "-" + api + "-" + mode + "-" + locator + (invalid ? "-invalid" : "");
+  const config = {
+    api,
+    mode,
+    locator,
+    invalid,
+    alias,
+    cwd: work,
+    program,
+    marker,
+    facts,
+    before,
+    guard: preload,
+    shadowDirectory,
+    decoyDirectory,
+  };
+  const inner = family === "alias" ? aliasInner : precedenceInner;
+  const parent = spawnSync(
+    process.execPath,
+    [
+      "--eval",
+      "(" +
+        inner.toString() +
+        ")(" +
+        JSON.stringify(config) +
+        ").catch(error=>{console.error(error);process.exitCode=1;});",
+    ],
+    {
+      cwd: work,
+      env: {
+        HOME: home,
+        TMPDIR: temporary,
+        XDG_CONFIG_HOME: path.join(home, ".config"),
+        LANG: "C.UTF-8",
+        LC_ALL: "C.UTF-8",
+        TZ: "UTC",
+        ...(guarded ? { NODE_OPTIONS: "--require " + JSON.stringify(preload) } : {}),
+        ETA_MU_TEST_NETWORK_AUDIT_DIR: auditDirectory,
+        ETA_MU_TEST_NETWORK_AUDIT_CAPTURE: capture,
+      },
+      encoding: "utf8",
+      timeout: 15000,
+    },
+  );
+  assert.equal(parent.error, undefined, parent.stderr);
+  assert.equal(parent.signal, null, parent.stderr);
+  const observation = JSON.parse(parent.stdout.trim()),
+    records = fs.readdirSync(auditDirectory).map((file) => {
+      assert.match(file, /^[1-9][0-9]*\.json$/);
+      const p = path.join(auditDirectory, file),
+        info = fs.lstatSync(p);
+      assert.ok(info.isFile() && !info.isSymbolicLink());
+      assert.equal(info.mode & 0o777, 0o600);
+      return JSON.parse(fs.readFileSync(p, "utf8"));
+    });
+  const markerPresent = fs.existsSync(marker),
+    childFacts = fs.existsSync(facts) ? JSON.parse(fs.readFileSync(facts, "utf8")) : null,
+    beforePresent = fs.existsSync(beforeMarker);
+  t.diagnostic(
+    JSON.stringify({
+      schema: "eta-mu.a58-" + family + "-control-evidence/v1",
+      guarded,
+      parentPid: parent.pid,
+      parentExit: parent.status,
+      parentStderr: parent.stderr,
+      observation,
+      markerPresent,
+      childFacts,
+      beforePresent,
+      records,
+    }),
+  );
+  assert.equal(parent.stderr, "");
+  const parentAudit = records.find((r) => r.pid === parent.pid);
+  if (!guarded) {
+    assert.equal(locator, "sync-raw-null");
+    assert.deepEqual(records, []);
+    assert.equal(parent.status, 0);
+    assert.equal(observation.errorCode, "ERR_INVALID_ARG_VALUE");
+    assert.equal(observation.errorName, "TypeError");
+    assert.equal(observation.cwdCoercions, 0);
+    assert.equal(markerPresent, false);
+    assert.equal(childFacts, null);
+    return { observation, parentExit: parent.status };
+  }
+  assert.ok(parentAudit);
+  for (const record of records) {
+    assert.equal(record.schema, "eta-mu.test-network-denial/v1");
+    assert.equal(record.capture, capture);
+  }
+  const healthy =
+    family === "alias"
+      ? mode === "healthy"
+      : ["guard-first", "env-guard", "import-first"].includes(mode);
+  const nativeRefusal =
+      invalid || ["default-path", "sync-raw-null", "sync-empty"].includes(locator),
+    nonNode = locator === "shadow";
+  const unsupportedSync = family === "alias" && api === "execFileSync" && healthy && !nativeRefusal;
+  if (nativeRefusal) {
+    assert.equal(parent.status, 0);
+    assert.equal(observation.refused, false);
+    assert.equal(
+      observation.errorCode,
+      invalid
+        ? "ERR_INVALID_ARG_TYPE"
+        : locator === "sync-raw-null"
+          ? "ERR_INVALID_ARG_VALUE"
+          : "ENOENT",
+    );
+    assert.equal(markerPresent, false);
+    assert.equal(childFacts, null);
+    assert.equal(parentAudit.deniedAttempts, 0);
+    assert.deepEqual(parentAudit.expectedNodeChildren, []);
+    assert.equal(records.length, 1);
+  } else if ((!healthy && !nonNode) || unsupportedSync) {
+    assert.equal(parent.status, 97);
+    assert.equal(observation.refused, true);
+    assert.equal(
+      observation.errorCode,
+      unsupportedSync
+        ? "TEST_NODE_CHILD_PID_CUSTODY_UNAVAILABLE"
+        : "TEST_NODE_CHILD_PRELOAD_REQUIRED",
+    );
+    assert.equal(markerPresent, false);
+    assert.equal(beforePresent, false);
+    assert.equal(childFacts, null);
+    assert.equal(observation.commandPid, null);
+    assert.equal(parentAudit.deniedAttempts, 1);
+    assert.deepEqual(parentAudit.expectedNodeChildren, []);
+    assert.equal(records.length, 1);
+  } else {
+    assert.equal(parent.status, 0);
+    assert.equal(observation.status, 0);
+    assert.equal(observation.refused, false);
+    assert.equal(markerPresent, true);
+    assert.ok(childFacts);
+    assert.equal(parentAudit.deniedAttempts, 0);
+    if (nonNode) {
+      assert.deepEqual(parentAudit.expectedNodeChildren, []);
+      assert.equal(records.length, 1);
+    } else {
+      assert.equal(records.length, 2);
+      assert.deepEqual(parentAudit.expectedNodeChildren, [childFacts.pid]);
+      assert.equal(childFacts.parentPid, parent.pid);
+      const childAudit = records.find((r) => r.pid === childFacts.pid);
+      assert.ok(childAudit);
+      assert.equal(childAudit.parentPid, parent.pid);
+      assert.equal(childAudit.deniedAttempts, 0);
+      assert.ok(
+        childAudit.kernelAncestry.some(
+          (r) =>
+            r.pid === childFacts.pid && r.parentPid === parent.pid && /^[0-9]+$/.test(r.startTicks),
+        ),
+      );
+      if (family === "precedence") {
+        assert.equal(beforePresent, true);
+        assert.equal(childFacts.guardBeforeCapture, true);
+      }
+    }
+  }
+  if (locator === "getters") {
+    assert.equal(observation.pathReads, 1);
+    assert.equal(observation.cwdReads, 1);
+  }
+  if (locator === "sync-custom") assert.equal(observation.cwdCoercions, 1);
+  if (locator === "sync-raw-null") assert.equal(observation.cwdCoercions, 0);
+  if (childFacts) {
+    const expectedCwd =
+      locator === "cwd-parent"
+        ? otherDirectory
+        : locator === "sync-byte-string"
+          ? path.join(work, "115")
+          : work;
+    assert.equal(childFacts.cwd, expectedCwd);
+  }
+  return { observation, parentExit: parent.status, parentAudit };
+}
+for (const api of ["spawn", "spawnSync", "execFile", "execFileSync", "fork"]) {
+  for (const mode of ["missing", "healthy"])
+    test("physical Node alias " + api + " " + mode, (t) =>
+      launchSuccessorControl(t, "alias", api, mode),
+    );
+}
+for (const locator of ["relative", "path", "getters"]) {
+  for (const mode of ["missing", "healthy"])
+    test("physical Node alias selected " + locator + " " + mode, (t) =>
+      launchSuccessorControl(t, "alias", "spawnSync", mode, locator),
+    );
+}
+for (const locator of ["url-cwd", "buffer-cwd"])
+  test("physical Node alias retains " + locator, (t) =>
+    launchSuccessorControl(t, "alias", "spawnSync", "healthy", locator),
+  );
+test("physical Node alias respects first non-Node PATH executable", (t) =>
+  launchSuccessorControl(t, "alias", "spawnSync", "missing", "shadow"));
+test("physical Node alias retains native default-PATH ENOENT", (t) =>
+  launchSuccessorControl(t, "alias", "spawnSync", "missing", "default-path"));
+for (const api of ["spawn", "spawnSync", "execFile", "execFileSync"])
+  test("physical Node alias preserves original invalid options " + api, (t) =>
+    launchSuccessorControl(t, "alias", api, "missing", "absolute", true),
+  );
+for (const api of ["spawn", "spawnSync", "execFile", "fork"])
+  test("preload precedence refuses earlier CLI require " + api, (t) =>
+    launchSuccessorControl(t, "precedence", api, "cli-before"),
+  );
+for (const mode of ["equal-before", "env-before", "guard-first", "env-guard", "import-first"])
+  test("preload precedence " + mode, (t) =>
+    launchSuccessorControl(t, "precedence", "spawnSync", mode),
+  );
+for (const locator of ["absolute-parent", "relative-parent", "path-parent", "cwd-parent"]) {
+  for (const mode of ["missing", "healthy"])
+    test("physical Node alias kernel " + locator + " " + mode, (t) =>
+      launchSuccessorControl(t, "alias", "spawnSync", mode, locator),
+    );
+}
+for (const api of ["spawn", "execFile", "fork"])
+  for (const locator of ["buffer-relative", "buffer-path"]) {
+    for (const mode of ["missing", "healthy"])
+      test("physical Node alias native async Buffer " + api + " " + locator + " " + mode, (t) =>
+        launchSuccessorControl(t, "alias", api, mode, locator),
+      );
+  }
+for (const locator of ["empty-relative", "empty-path"])
+  test("physical Node alias native async empty cwd " + locator, (t) =>
+    launchSuccessorControl(t, "alias", "spawn", "missing", locator),
+  );
+test("physical Node alias preserves sync empty cwd native ENOENT", (t) =>
+  launchSuccessorControl(t, "alias", "spawnSync", "missing", "sync-empty"));
+test("physical Node alias captures sync custom primitive once", (t) =>
+  launchSuccessorControl(t, "alias", "spawnSync", "healthy", "sync-custom"));
+for (const mode of ["missing", "healthy"])
+  test("physical Node alias native sync Uint8Array string " + mode, (t) =>
+    launchSuccessorControl(t, "alias", "spawnSync", mode, "sync-byte-string"),
+  );
+test("physical Node alias preserves raw-NUL native validation before coercion", (t) => {
+  const reference = launchSuccessorControl(
+    t,
+    "alias",
+    "spawnSync",
+    "missing",
+    "sync-raw-null",
+    false,
+    false,
+  );
+  const guarded = launchSuccessorControl(t, "alias", "spawnSync", "missing", "sync-raw-null");
+  assert.deepEqual(
+    {
+      name: guarded.observation.errorName,
+      code: guarded.observation.errorCode,
+      message: guarded.observation.errorMessage,
+    },
+    {
+      name: reference.observation.errorName,
+      code: reference.observation.errorCode,
+      message: reference.observation.errorMessage,
+    },
+  );
+});
+async function listenerInner(config) {
+  const { createRequire } = await import("node:module"),
+    require = createRequire(config.guard);
+  const netESM = await import("node:net"),
+    moduleESM = await import("node:" + config.api);
+  require(config.guard);
+  const owner = config.mode === "esm" ? moduleESM : require("node:" + config.api);
+  const server = owner.createServer(),
+    observation = {
+      api: config.api,
+      mode: config.mode,
+      denied: false,
+      errorCode: null,
+      surface: null,
+      bound: false,
+      address: null,
+      wildcardAddress: null,
+      closeCompleted: false,
+      listeningAfter: null,
+      esmListenSame: netESM.Server.prototype.listen === require("node:net").Server.prototype.listen,
+    };
+  try {
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, () => {
+        observation.bound = true;
+        observation.address = server.address();
+        observation.wildcardAddress = ["::", "0.0.0.0"].includes(observation.address?.address)
+          ? observation.address.address
+          : null;
+        server.close((error) => {
+          if (error) reject(error);
+          else {
+            observation.closeCompleted = true;
+            resolve();
+          }
+        });
+      });
+    });
+  } catch (error) {
+    observation.denied = error.code === "TEST_NETWORK_FORBIDDEN";
+    observation.errorCode = error.code ?? null;
+    observation.surface = error.surface ?? null;
+  }
+  if (server.listening)
+    await new Promise((resolve, reject) =>
+      server.close((error) => {
+        if (error) reject(error);
+        else {
+          observation.closeCompleted = observation.bound;
+          resolve();
+        }
+      }),
+    );
+  observation.listeningAfter = server.listening;
+  console.log(JSON.stringify(observation));
+}
+function listenerSuccessorControl(t, api, mode) {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "eta-a58-listener-successor-"));
+  fs.chmodSync(work, 0o700);
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const auditDirectory = path.join(work, "audits"),
+    home = path.join(work, "home");
+  for (const dir of [auditDirectory, home]) fs.mkdirSync(dir, { mode: 0o700 });
+  const capture = "a58-listener-" + api + "-" + mode,
+    config = { guard: preload, api, mode };
+  const child = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      "(" +
+        listenerInner.toString() +
+        ")(" +
+        JSON.stringify(config) +
+        ").catch(error=>{console.error(error);process.exitCode=1;});",
+    ],
+    {
+      cwd: work,
+      env: {
+        HOME: home,
+        LANG: "C.UTF-8",
+        LC_ALL: "C.UTF-8",
+        TZ: "UTC",
+        ETA_MU_TEST_NETWORK_AUDIT_DIR: auditDirectory,
+        ETA_MU_TEST_NETWORK_AUDIT_CAPTURE: capture,
+      },
+      encoding: "utf8",
+      timeout: 15000,
+    },
+  );
+  assert.equal(child.error, undefined, child.stderr);
+  assert.equal(child.signal, null, child.stderr);
+  const observation = JSON.parse(child.stdout.trim()),
+    files = fs.readdirSync(auditDirectory);
+  assert.deepEqual(files, [String(child.pid) + ".json"]);
+  const audit = JSON.parse(fs.readFileSync(path.join(auditDirectory, files[0]), "utf8"));
+  t.diagnostic(
+    JSON.stringify({
+      schema: "eta-mu.a58-listener-control-evidence/v1",
+      childExit: child.status,
+      childStderr: child.stderr,
+      observation,
+      audit,
+    }),
+  );
+  assert.equal(child.stderr, "");
+  assert.equal(child.status, 97);
+  assert.equal(observation.denied, true);
+  assert.equal(observation.errorCode, "TEST_NETWORK_FORBIDDEN");
+  assert.equal(observation.surface, "net.Server.listen");
+  assert.equal(observation.bound, false);
+  assert.equal(observation.address, null);
+  assert.equal(observation.esmListenSame, true);
+  assert.equal(audit.schema, "eta-mu.test-network-denial/v1");
+  assert.equal(audit.capture, capture);
+  assert.equal(audit.pid, child.pid);
+  assert.equal(audit.deniedAttempts, 1);
+  assert.deepEqual(audit.expectedNodeChildren, []);
+}
+for (const api of ["net", "http", "https"])
+  for (const mode of ["cjs", "esm"])
+    test("TCP listener " + api + " " + mode + " refuses before local bind", (t) =>
+      listenerSuccessorControl(t, api, mode),
+    );

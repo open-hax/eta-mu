@@ -268,7 +268,9 @@
   (when-not (#{["opencode-actionability-assessment.yml"
                ["Prepare actionability input" "Assess complete actionability input"]]
               ["opencode-rejection-assessment.yml"
-               ["Prepare rejection input" "Assess complete rejection input"]]}
+               ["Prepare rejection input" "Assess complete rejection input"]]
+              ["opencode-positive-cohort-assessment.yml"
+               ["Prepare positive cohort input" "Assess complete positive cohort input"]]}
              [workflow-file producer-jobs])
     (refuse! :host-route))
   (let [{:keys [run-repo run-id run-attempt workflow-sha workflow-ref eta-revision direct?
@@ -285,7 +287,9 @@
                    (string? job-workflow-ref)
                    (re-matches (if (= "opencode-rejection-assessment.yml" workflow-file)
                                  #"open-hax/eta-mu/\.github/workflows/opencode-rejection-assessment\.yml@.+"
-                                 #"open-hax/eta-mu/\.github/workflows/opencode-actionability-assessment\.yml@.+")
+                                 (if (= "opencode-positive-cohort-assessment.yml" workflow-file)
+                                   #"open-hax/eta-mu/\.github/workflows/opencode-positive-cohort-assessment\.yml@.+"
+                                   #"open-hax/eta-mu/\.github/workflows/opencode-actionability-assessment\.yml@.+"))
                                job-workflow-ref)
                    (pos-int? prepare-check-run-id)
                    (true? (:protected branch))
@@ -338,7 +342,7 @@
   ([directory verifier-file verifier-sha]
    (invocation directory verifier-file verifier-sha "actionability-input.txt"))
   ([directory verifier-file verifier-sha input-name]
-  (when-not (#{"actionability-input.txt" "rejection-assessment-input.txt"} input-name)
+  (when-not (#{"actionability-input.txt" "rejection-assessment-input.txt" "positive-cohort-assessment-input.txt"} input-name)
     (refuse! :input-file))
   (let [bytes (read-bytes verifier-file)]
     (when-not (= verifier-sha (sha256 bytes)) (refuse! :verifier-source))
@@ -381,7 +385,7 @@
   ([directory verifier-file verifier-sha]
    (input-source directory verifier-file verifier-sha "actionability-input.txt"))
   ([directory verifier-file verifier-sha input-name]
-  (when-not (#{"actionability-input.txt" "rejection-assessment-input.txt"} input-name)
+  (when-not (#{"actionability-input.txt" "rejection-assessment-input.txt" "positive-cohort-assessment-input.txt"} input-name)
     (refuse! :input-file))
   (when-not (= verifier-sha (sha256 (read-bytes verifier-file))) (refuse! :verifier-source))
   (let [require (.createRequire module verifier-file) verifier (require verifier-file)

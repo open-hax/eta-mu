@@ -1,6 +1,6 @@
 #!/usr/bin/env bb
 ;; SPDX-License-Identifier: GPL-3.0-or-later
-;; Run both Node workflow suites and both NBB host suites with real pinned
+;; Run the registered Node workflow suites and NBB host suites with real pinned
 ;; canonical fixtures and source-built Muse verifiers. Linux /proc is required
 ;; by the reviewed early Node network-denial preload. Setup fetch/build traffic
 ;; is separate from the credential-free, network-denied test processes.
@@ -9,7 +9,8 @@
 ;; ETA_MU_ASSESSMENT_CANONICAL_REPOSITORY / ETA_MU_ASSESSMENT_MUSE_REPOSITORY.
 ;; Without them, fetch the exact workflow pins from their official public repos.
 ;; Requires the normal installed workspace dependencies, Git, tar, Bash, Java,
-;; Clojure CLI, npm, Node and pnpm; unavailable prerequisites fail the gate.
+;; Clojure CLI, npm, Node, pnpm and /usr/bin/python3 (inert non-Node control
+;; child); unavailable prerequisites fail the gate.
 
 (require '[babashka.fs :as fs]
          '[babashka.process :as p]
@@ -69,13 +70,15 @@
              "(let [root (host/env \"ETA_TEST_ROOT\") "
              "read-workflow (fn [name] (js->clj (.parse yaml (host/read-text (host/join root \".github/workflows\" name))) :keywordize-keys true)) "
              "a (read-workflow \"opencode-actionability-assessment.yml\") "
-             "r (read-workflow \"opencode-rejection-assessment.yml\")] "
+             "r (read-workflow \"opencode-rejection-assessment.yml\") "
+             "c (read-workflow \"opencode-positive-cohort-assessment.yml\")] "
              "(host/output! {:actionability {:canonical (get-in a [:env :CANONICAL_REVISION]) :muse (get-in a [:env :MUSE_REVISION])} "
              ":rejection {:canonical (get-in r [:env :CANONICAL_REVISION]) :muse (get-in r [:env :MUSE_REVISION])} "
+             ":positive-cohort {:canonical (get-in c [:env :CANONICAL_REVISION]) :muse (get-in c [:env :MUSE_REVISION])} "
              ":profile (host/source-profile-script (host/join root \".github/workflows/opencode-code-review.yml\"))}))")
         result (json/parse-string (command! root (assoc environment "ETA_TEST_ROOT" root)
                                            (into nbb-command ["--classpath" eta-classpath "-e" expression]) true) true)]
-    (doseq [purpose [:actionability :rejection] dependency [:canonical :muse]]
+    (doseq [purpose [:actionability :rejection :positive-cohort] dependency [:canonical :muse]]
       (when-not (re-matches #"[0-9a-f]{40}" (or (get-in result [purpose dependency]) ""))
         (throw (ex-info "A protected assessment dependency pin is missing" {:purpose purpose :dependency dependency}))))
     (when (str/blank? (:profile result)) (throw (ex-info "Muse profile is missing" {})))
@@ -145,12 +148,13 @@
   ;; cljs.test reports failures without necessarily setting Node's exit code.
   ;; Override only its completion reporter, retaining normal assertion/summary
   ;; reporting. Require completion for the cljs.test suite before process exit.
-  (let [cljs-test? (str/includes? test-file "rejection")
+  (let [cljs-test? (or (str/includes? test-file "rejection") (str/includes? test-file "positive_cohort"))
+        completion (if (str/includes? test-file "positive_cohort") "opencode-positive-cohort-assessment/v1" "opencode-rejection-assessment/v1")
         expression (str "(require '[cljs.test :as t] '[nbb.core :as nbb])\n"
                         "(def completed (atom 0))\n"
                         "(defmethod t/report [:cljs.test/default :end-run-tests] [m] "
                         "(swap! completed inc) (when (pos? (+ (:fail m 0) (:error m 0))) (set! (.-exitCode js/process) 1)) "
-                        "(println (js/JSON.stringify (clj->js {:completion \"opencode-rejection-assessment/v1\" :completed? true "
+                        "(println (js/JSON.stringify (clj->js {:completion " (pr-str completion) " :completed? true "
                         ":tests (:test m) :assertions (+ (:pass m 0) (:fail m 0) (:error m 0)) :failed (+ (:fail m 0) (:error m 0))}))))\n"
                         (when cljs-test?
                           "(.on js/process \"exit\" (fn [] (when-not (= 1 @completed) (set! (.-exitCode js/process) 1))))\n")
@@ -168,7 +172,7 @@
                      "opencode-actionability-assessment/v1"
                      (and (= "actual NBB/canonical/Muse source with inert transport" (:tests result))
                           (nil? (:only result)) (pos-int? (:checks result)))
-                     "opencode-rejection-assessment/v1"
+                     ("opencode-rejection-assessment/v1" "opencode-positive-cohort-assessment/v1")
                      (and (pos-int? (:tests result)) (pos-int? (:assertions result)))
                      false))
       (throw (ex-info "Assessment NBB suite did not complete" {:completion completion})))))
@@ -194,6 +198,8 @@
         false))))
 
 (defn run-assessments! [work]
+  (when-not (fs/executable? "/usr/bin/python3")
+    (throw (ex-info "Assessment controls require /usr/bin/python3" {})))
   (when-not (fs/directory? "/proc/self") (throw (ex-info "Assessment audits require Linux /proc" {})))
   (let [environment (environment work)
         ;; Expected-denial controls own distinct audits and exit97 children; run
@@ -202,15 +208,16 @@
         {:keys [profile] :as inputs} (workflow-inputs environment)
         script (str (fs/path work "muse-profile.sh"))
         _profile (spit script profile)
-        canonical-repository (object-repository! work environment :canonical (map #(get-in inputs [% :canonical]) [:actionability :rejection]))
-        muse-repository (object-repository! work environment :muse (map #(get-in inputs [% :muse]) [:actionability :rejection]))
-        sources (into {} (for [purpose [:actionability :rejection]]
+        canonical-repository (object-repository! work environment :canonical (map #(get-in inputs [% :canonical]) [:actionability :rejection :positive-cohort]))
+        muse-repository (object-repository! work environment :muse (map #(get-in inputs [% :muse]) [:actionability :rejection :positive-cohort]))
+        sources (into {} (for [purpose [:actionability :rejection :positive-cohort]]
                            [purpose {:canonical (archive! work environment canonical-repository :canonical (get-in inputs [purpose :canonical]))
                                      :muse (archive! work environment muse-repository :muse (get-in inputs [purpose :muse]))}]))
         verifiers (into {} (for [[purpose {:keys [muse]}] sources]
                              [purpose (build-verifier! environment script muse)]))
         a (get-in sources [:actionability :canonical])
         r (get-in sources [:rejection :canonical])
+        c (get-in sources [:positive-cohort :canonical])
         a-env {"ETA_MU_ACTIONABILITY_VERIFIER_FILE" (get-in verifiers [:actionability :file])
                "ETA_MU_ACTIONABILITY_VERIFIER_SHA256" (get-in verifiers [:actionability :sha256])
                "ACTIONABILITY_NATIVE_FIXTURE" (str (fs/path a "skills/pr-flow/scripts/fixtures/native-knoxx387-author-review-context.json"))
@@ -218,12 +225,18 @@
         r-env {"ETA_MU_REJECTION_VERIFIER_FILE" (get-in verifiers [:rejection :file])
                "ETA_MU_REJECTION_VERIFIER_SHA256" (get-in verifiers [:rejection :sha256])
                "CANONICAL_CHECKOUT" r}
+        c-env {"ETA_MU_POSITIVE_COHORT_VERIFIER_FILE" (get-in verifiers [:positive-cohort :file])
+               "ETA_MU_POSITIVE_COHORT_VERIFIER_SHA256" (get-in verifiers [:positive-cohort :sha256])
+               "CANONICAL_CHECKOUT" c}
         suites [{:label "actionability-node" :variables a-env :argv ["node" "--test" ".github/scripts/opencode-actionability-assessment-workflow.test.mjs"]}
                 {:label "actionability-nbb" :variables a-env :completion "opencode-actionability-assessment/v1"
                  :argv (nbb-test-command a ".github/scripts/opencode_actionability_assessment_test.cljs")}
                 {:label "rejection-node" :variables r-env :argv ["node" "--test" ".github/scripts/opencode-rejection-assessment-workflow.test.mjs"]}
                 {:label "rejection-nbb" :variables r-env :completion "opencode-rejection-assessment/v1"
-                 :argv (nbb-test-command r ".github/scripts/opencode_rejection_assessment_test.cljs")}]
+                 :argv (nbb-test-command r ".github/scripts/opencode_rejection_assessment_test.cljs")}
+                {:label "positive-cohort-node" :variables c-env :argv ["node" "--test" ".github/scripts/opencode-positive-cohort-assessment-workflow.test.mjs"]}
+                {:label "positive-cohort-nbb" :variables c-env :completion "opencode-positive-cohort-assessment/v1"
+                 :argv (nbb-test-command c ".github/scripts/opencode_positive_cohort_assessment_test.cljs")}]
         results (mapv (fn [suite] [(:label suite) (test-suite! work environment suite)]) suites)]
     (doseq [[label passed?] results] (println (str (if passed? "PASS " "FAIL ") label)))
     (every? second results)))

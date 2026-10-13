@@ -78,7 +78,9 @@
   [".github/scripts/opencode_actionability_assessment.cljs"
    ".github/scripts/opencode_actionability_assessment_test.cljs"
    ".github/scripts/opencode_rejection_assessment.cljs"
-   ".github/scripts/opencode_rejection_assessment_test.cljs"])
+   ".github/scripts/opencode_rejection_assessment_test.cljs"
+   ".github/scripts/opencode_positive_cohort_assessment.cljs"
+   ".github/scripts/opencode_positive_cohort_assessment_test.cljs"])
 
 (defn lint-bb-scripts
   "clj-kondo over the bb scripts, one file per invocation.

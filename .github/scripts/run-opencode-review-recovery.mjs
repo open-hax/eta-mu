@@ -767,7 +767,7 @@ or reassessment to erase its failed history. This is the only recovery attempt.
 
 /** Override same-process repair instructions when canonical verification is required. */
 function strictInvocationPrompt(prompt, fullInputName = "basehead.diff") {
-  const supporting = ["actionability-input.txt", "rejection-assessment-input.txt"].includes(fullInputName)
+  const supporting = ["actionability-input.txt", "rejection-assessment-input.txt", "positive-cohort-assessment-input.txt"].includes(fullInputName)
     ? `Complete fixed native input: ${fullInputName}.
 - Use only the review_* page tools to read and assess every full-input page.
   No ordinary diff supporting-file artifacts are staged for this route; do not
@@ -992,7 +992,7 @@ export async function runReviewRecovery({
   modelDiscovery = null,
 }) {
   if (!evidenceDirectory) throw new Error("evidenceDirectory is required");
-  if (!["basehead.diff", "actionability-input.txt", "rejection-assessment-input.txt"].includes(fullInputName)) {
+  if (!["basehead.diff", "actionability-input.txt", "rejection-assessment-input.txt", "positive-cohort-assessment-input.txt"].includes(fullInputName)) {
     throw new Error("unsupported full input file");
   }
   if (typeof basePrompt !== "string" || basePrompt.trim().length === 0) {
@@ -1129,7 +1129,7 @@ export async function runReviewRecovery({
 
 /** Build the opt-in actionability child's credential-free, owned-home environment. */
 function actionabilityChildEnvironment(purpose = "actionability") {
-  if (!["actionability", "rejection-assessment"].includes(purpose)) throw new Error("unsupported native input purpose");
+  if (!["actionability", "rejection-assessment", "positive-cohort-assessment"].includes(purpose)) throw new Error("unsupported native input purpose");
   const home = process.env.REVIEW_CHILD_HOME;
   if (!home || !path.isAbsolute(home)) throw new Error("owned actionability child home is required");
   const info = fs.lstatSync(home);
@@ -1158,7 +1158,7 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile, reviewModel = 
   let invocationRejected = false;
 
   try {
-    const childEnvironment = environment ?? (["actionability", "rejection-assessment"].includes(process.env.REVIEW_INPUT_PURPOSE)
+    const childEnvironment = environment ?? (["actionability", "rejection-assessment", "positive-cohort-assessment"].includes(process.env.REVIEW_INPUT_PURPOSE)
       ? actionabilityChildEnvironment(process.env.REVIEW_INPUT_PURPOSE) : { ...process.env });
     for (const name of ["GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_PATH", "GITHUB_STATE", "GITHUB_STEP_SUMMARY"]) {
       delete childEnvironment[name];
@@ -1226,12 +1226,13 @@ async function main() {
   let fullInputName;
   const purpose = process.env.REVIEW_INPUT_PURPOSE || "diff";
   try {
-    if (!["diff", "actionability", "rejection-assessment"].includes(purpose)) throw new Error("unsupported review input purpose");
+    if (!["diff", "actionability", "rejection-assessment", "positive-cohort-assessment"].includes(purpose)) throw new Error("unsupported review input purpose");
     if (purpose !== "diff" && process.env.REVIEW_MODEL_DISCOVERY !== MODEL_DISCOVERY_MODE) {
       throw new Error("native review requires checked model discovery");
     }
     fullInputName = { diff: "basehead.diff", actionability: "actionability-input.txt",
-      "rejection-assessment": "rejection-assessment-input.txt" }[purpose];
+      "rejection-assessment": "rejection-assessment-input.txt",
+      "positive-cohort-assessment": "positive-cohort-assessment-input.txt" }[purpose];
     if (purpose !== "diff") actionabilityChildEnvironment(purpose);
     verifierBytes = fs.readFileSync(verifierFile);
     verifier = createRequire(import.meta.url)(verifierFile);
@@ -1254,6 +1255,7 @@ async function main() {
     }
     if (purpose !== "diff" && (expectedContext.inputSource?.schema !== {
       actionability: "open-hax.actionability-input/v1", "rejection-assessment": "open-hax.rejection-assessment-input/v1",
+      "positive-cohort-assessment": "open-hax.positive-cohort-assessment-input/v1",
     }[purpose] || expectedContext.inputSource?.purpose !== purpose)) {
       throw new Error(`canonical verifier did not bind ${purpose} input`);
     }

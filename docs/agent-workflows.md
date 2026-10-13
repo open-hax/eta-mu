@@ -34,12 +34,12 @@ Kimi must not close ambiguous issues or make broad/destructive changes.
 
 `.github/workflows/opencode-code-review.yml` reviews non-draft, same-repository pull requests with the project-local `github-reviewer` OpenCode agent and a freshly discovered, active, tool-capable, zero-cost MiMo Flash model from OpenCode's anonymous public provider.
 
-Direct pull requests and reusable callers default to a 60-minute review job.
+Direct pull requests and reusable callers default to a 120-minute review job.
 Reusable callers may set numeric `review_timeout_minutes` to a whole number from
-60 through 180 when a complete diff needs a longer pass. The job timeout is
+60 through 180 to select a budget for a complete diff. The job timeout is
 bounded to that range, and its first step rejects an invalid raw request before
 checkout or reviewer setup. An absent inputs context or timeout property selects
-60; an explicitly supplied null, zero or fractional timeout is invalid. Reusable
+120; an explicitly supplied null, zero or fractional timeout is invalid. Reusable
 caller input is honored even when the caller's event is `pull_request`.
 This budget includes setup and both possible model
 invocations; a timeout never establishes review completion or authorizes partial
@@ -488,3 +488,43 @@ for ordinary review. It rechecks those exact bytes and the original manifest; a
 legacy diff cannot replace the native carrier. A failed original trace remains
 refused, and only a separately checked projection can authorize the existing
 sole fresh complete invocation.
+
+
+The local assessment test preload resolves stable executable aliases using the
+captured child PATH/cwd and physical Node executable identity. It retains the
+original native command/argv and options validation. A single guard in
+NODE_OPTIONS precedes CLI requires; without it the first CLI require must be
+the guard. A preceding unknown require refuses before dispatch. TCP listeners
+through net.Server.prototype.listen, including HTTP/HTTPS and ESM Server views,
+are denied before binding. These are bounded Linux Node public-API controls,
+not an OS sandbox or a guarantee against changed executable files, alternate
+runtimes or arbitrary launchers. The inert non-Node controls require executable
+Python 3 at /usr/bin/python3; the registered driver checks it before controls.
+
+
+### Separate positive-cohort assessment (source qualification pending)
+
+The proposed `opencode-positive-cohort-assessment.yml` adapter consumes the
+canonical positive Bot-thread cohort contract at merged revision
+`b23845012508fd598a56dea34d6be38ede5c7136` and Muse full-input transport at
+merged revision `b9e47da4f445106310c7b9dc98fe3a3ef9ea50d5`. These immutable
+dependency pins do not adopt this adapter or establish a live assessment. The
+called eta-mu workflow retains its existing protected-source authentication;
+no Muse GitHub branch-protection requirement is added by private author wording.
+
+Prepare, assess and publish retain complete all-thread/issue/review/source/test
+and history input. Accepted anonymous dynamic OpenCode MiMo inference does not
+itself publish or qualify a judgment. Only the canonical accepted-summary API,
+authentic distinct native App grants and an exact sole issue-comment append
+and readback can supply the cohort assessment record. The adapter never replies,
+resolves, approves or merges. Unknown or mixed members, edits, lost history,
+same-App model aliases and uncertain effects remain refused, with no write retry.
+The existing registered assessment and lint gates own qualification.
+
+This source composition preserves the current reviewed pagination, cancellation,
+ordinary verifier and Node boundary repairs. The new purpose is a fixed literal
+enrollment in the current runner, whose workflow mirror is rebuilt from its
+exact bytes; the new inert fixture binds the current preload digest. Normal
+source-built Muse and canonical controls, actual native App custody and fresh
+complete invocation evidence remain required before live use. Historical source
+preparations, failed controls and author-only results remain retained.

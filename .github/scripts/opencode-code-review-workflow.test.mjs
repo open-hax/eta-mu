@@ -2207,11 +2207,11 @@ test("review metadata actual checksum rejects changed data before runtime or plu
   assert.equal(fs.readFileSync(path.join(f.directory, ".opencode/caller.txt"), "utf8"), "caller-owned\n");
 });
 
-test("review timeout defaults keep the direct PR route and other stage budgets unchanged", () => {
+test("review timeout defaults use 120 minutes and preserve the direct PR route and other stage budgets", () => {
   const input = workflow.on.workflow_call.inputs.review_timeout_minutes;
   assert.equal(input.type, "number");
   assert.equal(input.required, false);
-  assert.equal(input.default, 60);
+  assert.equal(input.default, 120);
   assert.deepEqual(workflow.on.pull_request.types, ["opened", "synchronize", "reopened", "ready_for_review"]);
   assert.equal(workflow.on.workflow_call.inputs.model.default, "");
   assert.equal(workflow.jobs.review.env.REVIEW_MODEL_DISCOVERY, "opencode-free-mimo-flash-v1");
@@ -2234,10 +2234,11 @@ test("authored review job timeout clamps numeric requests before step validation
   // operand-returning behavior is shared by GitHub expressions and JavaScript.
   assert.match(expression.replaceAll("inputs.review_timeout_minutes", ""), /^[\s\d><=&|().]+$/);
   const selected = new Function("inputs", `"use strict"; return (${expression});`);
+  assert.equal(selected({}), 120, "direct PR absent input must select the full review default");
   for (const [request, expected] of [
-    ["", 60], [undefined, 60], [0, 60], [-1, 60], [59, 60], [60, 60],
+    ["", 120], [undefined, 120], [0, 120], [-1, 120], [59, 120], [60, 60],
     [61, 61], [120, 120], [180, 180], [181, 180], [1e9, 180],
-    [60.5, 60.5], [NaN, 60], [Infinity, 180],
+    [60.5, 60.5], [NaN, 120], [Infinity, 180],
   ]) {
     const minutes = selected({ review_timeout_minutes: request });
     assert.equal(minutes, expected);
@@ -2252,8 +2253,9 @@ test("authored timeout validation handles native absent input without overriding
   // Native direct run 38059635545 reported the absent input property as null.
   // The whole absent context may be null or an object with no timeout property.
   for (const [inputs, property, expected] of [
-    ["null", "null", 60], ["{}", "null", 60],
-    ['{"pr_head_sha":"caller-head"}', "null", 60],
+    ["null", "null", 120], ["{}", "null", 120],
+    ['{"pr_head_sha":"caller-head"}', "null", 120],
+    ['{"review_timeout_minutes":60}', "60", 60],
     ['{"review_timeout_minutes":120}', "120", 120],
   ]) {
     const result = runScript(validation.run, directory, {
@@ -2304,7 +2306,7 @@ test("authored timeout validation accepts only default or whole minutes before a
   });
   assert.equal(absentWithOpaqueSibling.status, 0, absentWithOpaqueSibling.stderr);
   assert.equal(absentWithOpaqueSibling.stderr, "");
-  assert.equal(absentWithOpaqueSibling.stdout.trim(), "Review job timeout: 60 minutes.");
+  assert.equal(absentWithOpaqueSibling.stdout.trim(), "Review job timeout: 120 minutes.");
   assert.equal(fs.existsSync(canary), false, "other input properties must never execute or enter workflow commands");
 });
 

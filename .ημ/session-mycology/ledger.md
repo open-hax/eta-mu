@@ -876,3 +876,12 @@
   spore: none
   receipt-refs: 32cf274378108bfab2ca1a79012aaf19ed26eac9dd77951838440bd135b4ffe8
   note: Actual original and private controls distinguish launcher/Worker bypass, private normalization regression and complete empty-source refusal.173 launch,310 ordinary,737 inert checks,all registered assessment/CLI/full lint pass. Keep bounded NodeAPI claim, complete failed controls and anonymous dynamic MiMo memory. New prose verified against actual source. No spore, promotion, native settlement, protected adoption or production credit.
+- ts: 2026-10-13T19:37:04.275005269Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify positive preservation transport and repair native Node boundary findings
+  p-efficiency: 0.70
+  p-friction: 0.85
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/t350-nineteen-path-actual-owning-qualification-20261013T1912-v1/canonical-qualified-nineteen-source-receipt-v1.edn
+  note: All nineteen exact sources pass complete normal gates after actual tests exposed omitted deeper filename and native prompt lists. Preserve failed source/filename/prompt controls and require actual child prompt evidence. Missing compact native review body is unknown, not empty: fresh224byte nonempty K387 review uses existing scope; stop unjustified policy expansion. Anonymous current OpenCode free model discovery retained. No spore/promotion or deployment credit.

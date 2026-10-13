@@ -30,8 +30,10 @@ for (let depth = 0; ancestorPid !== 0 && depth < 64; depth += 1) {
 }
 if (ancestorPid !== 0) throw new Error("TEST_ANCESTRY_INCOMPLETE");
 const childProcess = require("node:child_process");
-// Accept the single preload option used by this test gate, or an exact early
-// CLI require. Ambiguous options and program arguments cannot prove enrollment.
+// Accept the single guard NODE_OPTIONS used by this test gate, or the FIRST
+// CLI require. NODE_OPTIONS requires run before CLI requires; an earlier
+// unknown require cannot be rescued by a later guard. CJS requires precede
+// imports on the pinned Node runtime. Ambiguous options prove no enrollment.
 const hasPreload = (args, options) => {
   const argv = Array.isArray(args) ? args : [];
   const configuration = Array.isArray(args) ? options : args ?? options;
@@ -39,27 +41,27 @@ const hasPreload = (args, options) => {
   if (["--require " + __filename, "--require " + JSON.stringify(__filename),
     "--require=" + __filename, "--require=" + JSON.stringify(__filename),
     "-r " + __filename, "-r " + JSON.stringify(__filename)].includes(nodeOptions)) return true;
+  if (nodeOptions != null && nodeOptions !== "") return false;
   for (let index = 0; index < argv.length; index += 1) {
     const option = argv[index];
     if (option === "--require" || option === "-r") {
-      if (argv[++index] === __filename) return true;
+      return argv[++index] === __filename;
     } else if (typeof option === "string" && option.startsWith("--require=")) {
-      if (option.slice("--require=".length) === __filename) return true;
+      return option.slice("--require=".length) === __filename;
     } else if (option === "--import") index += 1;
     else if (!(typeof option === "string" && option.startsWith("--import="))) return false;
   }
   return false;
 };
-const guardNodeChild = (command, args, options, surface) => {
-  const node = typeof command === "string" && (command === process.execPath || path.basename(command) === "node");
-  if (node && !hasPreload(args, options)) {
+const guardNodeChild = (_command, args, options, surface) => {
+  if (!hasPreload(args, options)) {
     audit.deniedAttempts += 1;
     const error = new Error("TEST_NODE_CHILD_PRELOAD_REQUIRED");
     error.code = "TEST_NODE_CHILD_PRELOAD_REQUIRED";
     error.surface = surface;
     throw error;
   }
-  return node;
+  return true;
 };
 // A shell-backed direct Node launch returns a shell PID, not a Node PID.
 // Refuse that unsupported custody before dispatch, even with actual preload.
@@ -74,14 +76,77 @@ const guardNodeShell = (configuration, surface) => {
 };
 // Guard and native dispatch consume one captured launch view. This current
 // Linux test boundary does not claim arbitrary monkeypatch/native-handle safety.
-const directNode = command => typeof command === "string" && (command === process.execPath || path.basename(command) === "node");
+// Resolve the first accessible executable using the captured Linux launch
+// cwd and PATH, then compare physical file identity with this Node executable.
+// Original command/argv remain native dispatch inputs. Failed lookups delegate
+// to native validation/error behavior; this is not arbitrary launcher or
+// filesystem-mutation confinement.
+const nodeExecutableIdentity = fs.statSync(process.execPath, {bigint:true});
+const nativeURL = require("node:url");
+const isByteArray = require("node:util").types.isUint8Array;
+const byteArrayPrototype = Object.getPrototypeOf(Uint8Array.prototype);
+const byteArrayLength = Object.getOwnPropertyDescriptor(byteArrayPrototype, "length").get;
+const byteArraySet = Uint8Array.prototype.set;
+const byteArrayIncludes = Uint8Array.prototype.includes;
+const nativeBufferFrom = Buffer.from;
+const nativeIsBuffer = Buffer.isBuffer;
+// Preserve Node's accepted raw-byte cwd validation. Async process_wrap ignores
+// typed cwd; sync CopyJsString coerces it. Copy bytes without custom iterators,
+// then freeze the one sync primitive so guard and native dispatch agree.
+const captureLaunchCwd = (value, synchronous) => {
+  if (value instanceof nativeURL.URL) return nativeURL.fileURLToPath(value);
+  if (!isByteArray(value)) return value;
+  let copy = new Uint8Array(Reflect.apply(byteArrayLength, value, []));
+  Reflect.apply(byteArraySet, copy, [value]);
+  if (Reflect.apply(nativeIsBuffer, Buffer, [value])) copy = Reflect.apply(nativeBufferFrom, Buffer, [copy]);
+  if (synchronous && !Reflect.apply(byteArrayIncludes, copy, [0])) {
+    const primitive = String(value);
+    Object.defineProperty(copy, Symbol.toPrimitive, {value:() => primitive});
+  }
+  return copy;
+};
+const directNode = (command, configuration, synchronous = false) => {
+  if (typeof command !== "string" || !command || command.includes("\0")) return false;
+  let selectedCwd = configuration.cwd;
+  if (isByteArray(selectedCwd)) {
+    if (Reflect.apply(byteArrayIncludes, selectedCwd, [0])) return false;
+    // Sync native CString uses the captured primitive through its first NUL;
+    // async native ignores accepted byte-array cwd entirely.
+    selectedCwd = synchronous ? String(selectedCwd).split("\0", 1)[0] : undefined;
+  }
+  if (selectedCwd != null && typeof selectedCwd !== "string") return false;
+  if (typeof selectedCwd === "string" && selectedCwd.includes("\0")) return false;
+  if (synchronous && selectedCwd === "") return false;
+  const parentCwd = process.cwd();
+  const cwd = selectedCwd == null || !synchronous && selectedCwd === "" ? parentCwd
+    : path.isAbsolute(selectedCwd) ? selectedCwd : parentCwd + "/" + selectedCwd;
+  try {if (!fs.statSync(cwd).isDirectory()) return false;} catch {return false;}
+  if (command === process.execPath || path.basename(command) === "node") return true;
+  // Never collapse symlink/.. components: native chdir/exec follows them in
+  // kernel order, unlike path.resolve/path.join/fs.realpathSync normalization.
+  const fromCwd = file => path.isAbsolute(file) ? file : cwd + "/" + file;
+  const candidates = command.includes("/") ? [fromCwd(command)]
+    : (configuration.env.PATH ?? "/usr/bin:/bin").split(":").map(entry => fromCwd(entry ? entry + "/" + command : command));
+  for (const candidate of candidates) {
+    try {
+      const identity = fs.statSync(candidate, {bigint:true});
+      if (!identity.isFile()) continue;
+      fs.accessSync(candidate, fs.constants.X_OK);
+      return identity.dev === nodeExecutableIdentity.dev && identity.ino === nodeExecutableIdentity.ino;
+    } catch (error) {
+      if (["ENOENT", "ENOTDIR", "EACCES"].includes(error.code)) continue;
+      return false;
+    }
+  }
+  return false;
+};
 const launchArgv = args => {
   if (!Array.isArray(args)) return args;
   const argv = [], length = args.length;
   for (let index = 0; index < length; index += 1) argv.push(`${args[index]}`);
   return argv;
 };
-const launchEnvironment = configuration => {
+const launchEnvironment = (configuration, synchronous = false) => {
   const sourceEnv = configuration.env || {...process.env};
   const environment = Object.create(null), keys = [];
   // Node intentionally includes inherited enumerable env keys, then omits
@@ -97,14 +162,14 @@ const launchEnvironment = configuration => {
   if (process.env.NODE_V8_COVERAGE && !ownCoverage) environment.NODE_V8_COVERAGE = process.env.NODE_V8_COVERAGE;
   else if (ownCoverage && !Object.prototype.hasOwnProperty.call(environment, "NODE_V8_COVERAGE"))
     Object.defineProperty(environment, "NODE_V8_COVERAGE", {value:undefined});
-  return {...configuration, env:environment};
+  return {...configuration, cwd:captureLaunchCwd(configuration.cwd, synchronous), env:environment};
 };
-const spawnLaunchArguments = (args, options) => {
+const spawnLaunchArguments = (args, options, synchronous = false) => {
   let argv = args;
   if (Array.isArray(args)) argv = launchArgv(args);
   else if (args == null) argv = [];
   else if (typeof args === "object") {options = args; argv = [];}
-  return [argv, launchEnvironment({...options})];
+  return [argv, launchEnvironment({...options}, synchronous)];
 };
 // Explicit sh/env executables can hide unaudited Node descendants. Refuse
 // these concrete launcher names without parsing shell text or guessing a PID.
@@ -147,8 +212,8 @@ const originalSync = childProcess.spawnSync;
 childProcess.spawnSync = function(command, args, options) {
   if (invalidSpawnOptions(args, options)) return originalSync.apply(this, arguments);
   guardIndirectLauncher(command, "child_process.spawnSync");
-  const node = directNode(command);
-  const launch = spawnLaunchArguments(args, options);
+  const launch = spawnLaunchArguments(args, options, true);
+  const node = directNode(command, launch[1], true);
   if (node) {
     guardNodeChild(command, launch[0], launch[1], "child_process.spawnSync");
     guardNodeShell(launch[1], "child_process.spawnSync");
@@ -161,8 +226,8 @@ const originalSpawn = childProcess.spawn;
 childProcess.spawn = function(command, args, options) {
   if (invalidSpawnOptions(args, options)) return originalSpawn.apply(this, arguments);
   guardIndirectLauncher(command, "child_process.spawn");
-  const node = directNode(command);
   const launch = spawnLaunchArguments(args, options);
+  const node = directNode(command, launch[1]);
   if (node) {
     guardNodeChild(command, launch[0], launch[1], "child_process.spawn");
     guardNodeShell(launch[1], "child_process.spawn");
@@ -173,21 +238,21 @@ childProcess.spawn = function(command, args, options) {
 };
 // execFile and fork use Node's lexical launcher, so patched exported spawn
 // is not sufficient. Their overload rules differ and remain explicit here.
-const execFileLaunchArguments = (args, options, callback) => {
+const execFileLaunchArguments = (args, options, callback, synchronous = false) => {
   let argv = [];
   if (Array.isArray(args)) argv = launchArgv(args);
   else if (args != null && typeof args === "object") {callback = options; options = args;}
   else if (typeof args === "function") {callback = args; options = null;}
   else if (args != null) argv = args;
   if (typeof options === "function") callback = options;
-  return [argv, launchEnvironment({...options}), callback];
+  return [argv, launchEnvironment({...options}, synchronous), callback];
 };
 const originalExecFile = childProcess.execFile;
 childProcess.execFile = function(command, args, options, callback) {
   if (invalidExecFileOptions(args, options, false)) return originalExecFile.apply(this, arguments);
   guardIndirectLauncher(command, "child_process.execFile");
-  const node = directNode(command);
   const launch = execFileLaunchArguments(args, options, callback);
+  const node = directNode(command, launch[1]);
   if (node) {
     guardNodeChild(command, launch[0], launch[1], "child_process.execFile");
     guardNodeShell(launch[1], "child_process.execFile");
@@ -214,8 +279,8 @@ const originalExecFileSync = childProcess.execFileSync;
 childProcess.execFileSync = function(command, args, options) {
   if (invalidExecFileOptions(args, options, true)) return originalExecFileSync.apply(this, arguments);
   guardIndirectLauncher(command, "child_process.execFileSync");
-  const node = directNode(command);
-  const launch = execFileLaunchArguments(args, options);
+  const launch = execFileLaunchArguments(args, options, undefined, true);
+  const node = directNode(command, launch[1], true);
   if (!node) {
     guardNonNodeShell(launch[1], "child_process.execFileSync");
     return originalExecFileSync.call(this, command, launch[0], launch[1]);
@@ -260,8 +325,8 @@ childProcess.fork = function(modulePath, args, options) {
   }
   configuration.execArgv = launchArgv(execArgv);
   const argv = launchArgv(args);
-  const node = directNode(configuration.execPath);
-  const effective = node ? launchEnvironment(configuration) : configuration;
+  const effective = launchEnvironment(configuration);
+  const node = directNode(configuration.execPath, effective);
   if (node) guardNodeChild(configuration.execPath, configuration.execArgv, effective, "child_process.fork");
   const child = originalFork.call(this, modulePath, argv, effective);
   if (node) child.once("spawn", () => audit.expectedNodeChildren.push(child.pid));
@@ -301,6 +366,8 @@ const net = require("node:net");
 net.connect = deny("net.connect");
 net.createConnection = deny("net.createConnection");
 net.Socket.prototype.connect = deny("net.Socket.connect");
+// HTTP, HTTPS and ESM Server views inherit this same actual prototype.
+net.Server.prototype.listen = deny("net.Server.listen");
 require("node:tls").connect = deny("tls.connect");
 // This is a Node API test boundary, not an OS network sandbox. Native/internal
 // handles, alternate runtimes and non-Node descendants are outside this claim.
