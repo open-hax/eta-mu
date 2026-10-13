@@ -828,12 +828,20 @@ This review is already authorized. While this invocation is healthy, call the
 next required tool without asking whether to continue or ending with a progress
 report. Follow the returned review contract: finish every read of one full-input
 page, assess that complete page including each changed hunk when present, then
-read the next page. Use returned coverage rather than a remembered or prose count. After automatic compaction, call review_status to recover the current
+read the next page. Choose page IDs only from the missing IDs in
+coverage returned by review_begin, review_assess_diff_chunk or
+review_status. Never derive the next ID as chunk_count + 1 or chunks +
+1, increment beyond that set, or use review_read_diff_chunk as an EOF
+probe. Never increment the last assessed ID for a new read. After
+automatic compaction, call review_status to recover the current
 coverage, stage and candidates. Never reread an assessed page; reread an
-unassessed page only when its contents were lost. After the final page, call
-review_status and complete the reported missing page work before stage
-transitions. When coverage is complete, perform the actual work and record
-evidence for deterministic, map-change, generate-candidates, adversarial-validate
+unassessed page only when its contents were lost. After the final
+advertised page, call review_status and complete any reported missing
+page work before stage transitions. If its missing list is empty and
+delivered and assessed coverage are complete, do not read another page.
+Use the retained complete page contents to perform the actual work and
+record evidence for deterministic, map-change, generate-candidates,
+adversarial-validate
 and publish in order. Classify every proposed finding before the
 adversarial-validate evidence note. Record publish readiness, then call
 review_submit; end the healthy invocation only after it returns ok. Completion
