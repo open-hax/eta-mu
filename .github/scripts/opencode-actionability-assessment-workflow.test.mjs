@@ -649,3 +649,96 @@ test("publication carrier preserves terminal bytes and an honest startup-crash f
     }
   }
 });
+
+
+/** Execute the owned host-runtime prefix only; npm is inert except the offline corrupt-lock refusal. */
+test("all host jobs require the committed lock and propagate npm ci failure without fallback", (t) => {
+  const runtimeSource = path.join(root, ".github/assessment-runtime");
+  const packageBytes = fs.readFileSync(path.join(runtimeSource, "package.json"));
+  const lockBytes = fs.readFileSync(path.join(runtimeSource, "package-lock.json"));
+  const manifest = JSON.parse(packageBytes);
+  const lock = JSON.parse(lockBytes);
+  assert.equal(manifest.private, true);
+  assert.deepEqual(manifest.dependencies, { nbb: "1.5.211", yaml: "2.9.0" });
+  assert.equal(Object.hasOwn(manifest, "scripts"), false);
+  assert.equal(lock.lockfileVersion, 3);
+  assert.deepEqual(lock.packages[""].dependencies, manifest.dependencies);
+  for (const [name, entry] of Object.entries(lock.packages)) if (name !== "") {
+    assert.ok(entry.resolved && entry.integrity, `${name} retains its recorded tarball and integrity`);
+  }
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-actionability-locked-runtime-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const runtime = ".actionability/runtime";
+  const symlink = `ln -s "$GITHUB_WORKSPACE/${runtime}/node_modules" "$ETA_CHECKOUT/node_modules"`;
+  const names = { prepare: "Install pinned one-shot host runtime",
+    assess: "Install isolated credential-free model profile", publish: "Install protected one-shot publisher runtime" };
+  for (const [jobName, job] of Object.entries(workflow.jobs)) {
+    const step = job.steps.find((candidate) => candidate.name === names[jobName]);
+    assert.ok(step, `${jobName} has its actual host-runtime installation step`);
+    const lines = step.run.trimEnd().split("\n");
+    const end = lines.findIndex((line) => line.trim() === symlink);
+    assert.ok(end >= 0, "the checked prefix ends at the actual runtime consumer link");
+    const prefix = lines.slice(0, end + 1).join("\n");
+    for (const variant of ["intact", "missing-lock", "ci-failure"]) {
+      const owned = path.join(directory, `${jobName}-${variant}`);
+      const eta = path.join(owned, ".actionability/eta");
+      const source = path.join(eta, ".github/assessment-runtime");
+      const temp = path.join(owned, "temp");
+      const evidence = path.join(owned, "evidence");
+      const profile = path.join(owned, "profile");
+      for (const file of [source, temp, evidence, profile]) fs.mkdirSync(file, { recursive: true });
+      fs.writeFileSync(path.join(source, "package.json"), packageBytes);
+      if (variant !== "missing-lock") fs.writeFileSync(path.join(source, "package-lock.json"), lockBytes);
+      const calls = path.join(owned, "npm-calls.txt");
+      const continued = path.join(owned, "continued.txt");
+      const child = spawnSync("bash", ["-c", prefix + '\nprintf "runtime-ready\\n" > "$TEST_CONTINUED"\n'], {
+        cwd: owned, encoding: "utf8", timeout: 15000,
+        env: { PATH: process.env.PATH, ETA_CHECKOUT: eta, GITHUB_WORKSPACE: owned, RUNNER_TEMP: temp,
+          ACTIONABILITY_EVIDENCE_DIR: evidence, ACTIONABILITY_PROFILE_DIR: profile, TEST_NPM_CALLS: calls,
+          TEST_CONTINUED: continued, TEST_NPM_EXIT: variant === "ci-failure" ? "73" : "0",
+          "BASH_FUNC_npm%%": '() { printf "%s\\n" "$*" >> "$TEST_NPM_CALLS"; '
+            + '[[ "$*" == "ci --prefix .actionability/runtime --ignore-scripts --no-audit --no-fund" ]] || return 97; '
+            + 'cmp "$ETA_CHECKOUT/.github/assessment-runtime/package.json" .actionability/runtime/package.json || return 98; '
+            + 'cmp "$ETA_CHECKOUT/.github/assessment-runtime/package-lock.json" .actionability/runtime/package-lock.json || return 98; '
+            + 'return "$TEST_NPM_EXIT"; }' },
+      });
+      assert.equal(child.error, undefined);
+      assert.equal(child.signal, null);
+      if (variant === "intact") {
+        assert.equal(child.status, 0, child.stderr);
+        assert.equal(fs.readFileSync(continued, "utf8"), "runtime-ready\n");
+        assert.equal(fs.readlinkSync(path.join(eta, "node_modules")), path.join(owned, runtime, "node_modules"));
+      } else {
+        assert.notEqual(child.status, 0, `${jobName} refuses ${variant}`);
+        assert.equal(fs.existsSync(continued), false, "no host/model/publisher continuation follows a refused install");
+        assert.equal(fs.existsSync(path.join(eta, "node_modules")), false);
+      }
+      const recorded = fs.existsSync(calls) ? fs.readFileSync(calls, "utf8").trimEnd().split("\n") : [];
+      assert.deepEqual(recorded, variant === "missing-lock" ? [] :
+        [`ci --prefix ${runtime} --ignore-scripts --no-audit --no-fund`], "no ad-hoc install or failure fallback is permitted");
+      if (variant === "ci-failure") assert.equal(child.status, 73, "the actual npm failure propagates");
+    }
+  }
+  // Actual npm rejects a corrupted staged lock offline, before running any installed runtime.
+  const corrupt = path.join(directory, "corrupt-lock");
+  fs.mkdirSync(corrupt);
+  fs.writeFileSync(path.join(corrupt, "package.json"), packageBytes);
+  fs.writeFileSync(path.join(corrupt, "package-lock.json"), "{broken-lock\n");
+  const userConfig = path.join(corrupt, "user.npmrc");
+  const globalConfig = path.join(corrupt, "global.npmrc");
+  fs.writeFileSync(userConfig, "");
+  fs.writeFileSync(globalConfig, "");
+  const refused = spawnSync("npm", ["ci", "--prefix", corrupt, "--ignore-scripts", "--no-audit", "--no-fund", "--offline", "--cache", path.join(corrupt, "cache")], {
+    encoding: "utf8", timeout: 15000,
+    env: { PATH: process.env.PATH, HOME: corrupt, NPM_CONFIG_USERCONFIG: userConfig, NPM_CONFIG_GLOBALCONFIG: globalConfig,
+      NPM_CONFIG_UPDATE_NOTIFIER: "false",
+      NODE_OPTIONS: process.env.NODE_OPTIONS, ETA_MU_TEST_NETWORK_AUDIT_DIR: process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR,
+      ETA_MU_TEST_NETWORK_AUDIT_CAPTURE: process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE },
+  });
+  assert.equal(refused.error, undefined);
+  assert.equal(refused.signal, null);
+  childNetworkAudit(refused);
+  assert.notEqual(refused.status, 0, "a corrupt lock cannot produce a runtime");
+  assert.match(refused.stderr, /EUSAGE|EJSONPARSE/, "refusal must be npm lock validation, not an unrelated setup failure");
+  assert.equal(fs.existsSync(path.join(corrupt, "node_modules/nbb/cli.js")), false);
+});

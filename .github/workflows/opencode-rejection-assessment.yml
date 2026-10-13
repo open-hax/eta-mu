@@ -199,7 +199,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -m 700 -p "$RUNNER_TEMP/rejection-assessment-host-home" "$REJECTION_EVIDENCE_DIR" "$REJECTION_PROFILE_DIR"
-          npm install --prefix .rejection-assessment/runtime --ignore-scripts --no-audit --no-fund nbb@1.5.211 yaml@2.9.0
+          mkdir -m 700 .rejection-assessment/runtime
+          cp "$ETA_CHECKOUT/.github/assessment-runtime/package.json" "$ETA_CHECKOUT/.github/assessment-runtime/package-lock.json" .rejection-assessment/runtime/
+          npm ci --prefix .rejection-assessment/runtime --ignore-scripts --no-audit --no-fund
           ln -s "$GITHUB_WORKSPACE/.rejection-assessment/runtime/node_modules" "$ETA_CHECKOUT/node_modules"
       - name: Reuse protected read-only Muse profile compilation
         shell: bash
@@ -355,7 +357,9 @@ jobs:
           set -euo pipefail
           mkdir -m 700 "$RUNNER_TEMP/rejection-assessment-model-home" "$RUNNER_TEMP/rejection-assessment-host-home"
           chmod 700 "$REJECTION_EVIDENCE_DIR" "$REJECTION_PROFILE_DIR"
-          npm install --prefix .rejection-assessment/runtime --ignore-scripts --no-audit --no-fund nbb@1.5.211 yaml@2.9.0
+          mkdir -m 700 .rejection-assessment/runtime
+          cp "$ETA_CHECKOUT/.github/assessment-runtime/package.json" "$ETA_CHECKOUT/.github/assessment-runtime/package-lock.json" .rejection-assessment/runtime/
+          npm ci --prefix .rejection-assessment/runtime --ignore-scripts --no-audit --no-fund
           ln -s "$GITHUB_WORKSPACE/.rejection-assessment/runtime/node_modules" "$ETA_CHECKOUT/node_modules"
           MODEL_HOME="$RUNNER_TEMP/rejection-assessment-model-home"
           mkdir -p "$MODEL_HOME/.config/opencode/plugins" "$MODEL_HOME/.config/opencode/agents" "$MODEL_HOME/.eta-mu-review"
@@ -506,7 +510,9 @@ jobs:
           set -euo pipefail
           mkdir -m 700 "$RUNNER_TEMP/rejection-assessment-host-home"
           chmod 700 "$REJECTION_EVIDENCE_DIR" "$REJECTION_PROFILE_DIR"
-          npm install --prefix .rejection-assessment/runtime --ignore-scripts --no-audit --no-fund nbb@1.5.211 yaml@2.9.0
+          mkdir -m 700 .rejection-assessment/runtime
+          cp "$ETA_CHECKOUT/.github/assessment-runtime/package.json" "$ETA_CHECKOUT/.github/assessment-runtime/package-lock.json" .rejection-assessment/runtime/
+          npm ci --prefix .rejection-assessment/runtime --ignore-scripts --no-audit --no-fund
           ln -s "$GITHUB_WORKSPACE/.rejection-assessment/runtime/node_modules" "$ETA_CHECKOUT/node_modules"
       - name: Create separate protected issue-comment token
         id: publisher
