@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawnSync as nativeSpawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -18,6 +18,48 @@ const tools = ["review_begin", "review_read_diff_chunk", "review_assess_diff_chu
   "review_record_evidence", "review_propose_finding", "review_classify_finding",
   "review_status", "review_submit"];
 const stages = ["deterministic", "map-change", "generate-candidates", "adversarial-validate", "publish"];
+
+// Existing native CLI fixtures use only an inert raw-catalog transport and executable.
+const nativeDiscoveryFixtures = new WeakMap();
+const nativeDiscoveryChildren = new WeakMap();
+function spawnSync(command, args, options) {
+  const fixture = nativeDiscoveryFixtures.get(options?.env);
+  const result = nativeSpawnSync(command, fixture && command === process.execPath
+    ? ["--import", fixture.loader, ...args] : args, options);
+  if (fixture) nativeDiscoveryChildren.set(result, fixture);
+  return result;
+}
+function stageNativeDiscoveryFixture(directory, home, child, env) {
+  const id = "mimo-v9.1-flash-free";
+  const row = {id,providerID:"opencode",family:"mimo",status:"active",release_date:"2027-01-01",
+    api:{id,url:"https://example.invalid/inert",npm:"@ai-sdk/openai-compatible"},
+    capabilities:{toolcall:true,input:{text:true},output:{text:true}},cost:{input:0,output:0,cache:{read:0,write:0}}};
+  const raw = {opencode:{id:"opencode",api:row.api.url,npm:row.api.npm,models:{[id]:{id,family:"mimo",status:"active",
+    release_date:row.release_date,tool_call:true,modalities:{input:["text"],output:["text"]},
+    cost:{input:0,output:0,cache_read:0,cache_write:0}}}}};
+  fs.mkdirSync(path.join(home,"tmp"),{mode:0o700});
+  for (const [relative,bytes] of [["opencode.json",'{"trusted":"inert native CLI fixture"}\n'],
+    ["agents/github-reviewer.md","inert native CLI fixture\n"],["plugins/eta-mu-actors.js","// inert native CLI fixture\n"]]) {
+    const file=path.join(home,".config/opencode",relative);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,bytes);
+  }
+  const match=/^--require ("[^"]+"|\/[^ \t\r\n]+)$/.exec(process.env.NODE_OPTIONS??"");
+  assert.ok(match,"one actual parent-loaded audit preload is required");
+  const preload=match[1].startsWith('"')?JSON.parse(match[1]):match[1];
+  const require=createRequire(import.meta.url);assert.ok(path.isAbsolute(preload)&&require.cache[preload]);
+  assert.equal(digest(fs.readFileSync(preload)),"0224d45dc253ef0af8547596cd95c3f26c683126e3a44270df339230e1082d68");
+  const auditDirectory=process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR,capture=process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE;
+  assert.ok(auditDirectory&&capture);const auditInfo=fs.lstatSync(auditDirectory);
+  assert.ok(auditInfo.isDirectory()&&!auditInfo.isSymbolicLink()&&fs.realpathSync(auditDirectory)===auditDirectory);
+  assert.equal(auditInfo.mode&0o777,0o700);assert.equal(auditInfo.uid,process.getuid());
+  const identities=path.join(directory,"discovery-children.ndjson"),loader=path.join(directory,"inert-catalog-loader.mjs");
+  fs.writeFileSync(loader,`globalThis.fetch=async(url,options)=>{if(url!=="https://models.opencode.ai/api.json"||options.redirect!=="error"||options.credentials!=="omit")throw Error("INERT_FETCH_CONTRACT");const r=new Response(${JSON.stringify(JSON.stringify(raw))},{status:200});Object.defineProperty(r,"url",{value:url});return r;};\n`,{flag:"wx",mode:0o600});
+  const source=fs.readFileSync(child,"utf8"),anchor='const fs=require("node:fs");\n';assert.equal(source.split(anchor).length,2);
+  const enrollment=`process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR=${JSON.stringify(auditDirectory)};process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE=${JSON.stringify(capture)};const preload=${JSON.stringify(preload)};if(require('node:crypto').createHash('sha256').update(fs.readFileSync(preload)).digest('hex')!=="0224d45dc253ef0af8547596cd95c3f26c683126e3a44270df339230e1082d68")throw Error("TEST_PRELOAD_BYTES_REFUSED");require(preload);fs.appendFileSync(${JSON.stringify(identities)},JSON.stringify({pid:process.pid,parentPid:process.ppid,argv:process.argv.slice(2)})+'\\n');\nif(process.argv[2]==="--version"){process.stdout.write("1.18.18\\n");process.exit(0);}if(process.argv[2]==="models"){process.stdout.write(${JSON.stringify(`opencode/${id}\n${JSON.stringify(row)}\n`)});process.exit(0);}\n`;
+  fs.writeFileSync(child,source.replace(anchor,anchor+enrollment));
+  Object.assign(env,{REVIEW_MODEL_DISCOVERY:"opencode-free-mimo-flash-v1",REVIEW_EXPECTED_OPENCODE_VERSION:"1.18.18",REVIEW_MODEL:""});
+  nativeDiscoveryFixtures.set(env,{loader,identities,auditDirectory,capture});
+}
+
 function childNetworkAudit(child) {
   const directory = process.env.ETA_MU_TEST_NETWORK_AUDIT_DIR;
   assert.ok(directory, "the controlled early network blocker is required");
@@ -26,6 +68,23 @@ function childNetworkAudit(child) {
   assert.equal(audit.capture, process.env.ETA_MU_TEST_NETWORK_AUDIT_CAPTURE);
   assert.equal(audit.pid, child.pid);
   assert.equal(audit.deniedAttempts, 0);
+
+  const fixture=nativeDiscoveryChildren.get(child);
+  if (fixture && fs.existsSync(fixture.identities)) {
+    const identities=fs.readFileSync(fixture.identities,"utf8").trim().split("\n").map(JSON.parse);
+    assert.equal(new Set(identities.map(row=>row.pid)).size,identities.length);
+    for (const identity of identities) {
+      assert.equal(identity.parentPid,child.pid);assert.ok(Number.isSafeInteger(identity.pid)&&identity.pid>0);
+      const file=path.join(fixture.auditDirectory,`${identity.pid}.json`),info=fs.lstatSync(file);
+      assert.ok(info.isFile()&&!info.isSymbolicLink()&&fs.realpathSync(file)===file);
+      assert.equal(info.mode&0o777,0o600);assert.equal(info.uid,process.getuid());
+      const record=JSON.parse(fs.readFileSync(file,"utf8"));
+      assert.equal(record.schema,"eta-mu.test-network-denial/v1");assert.equal(record.capture,fixture.capture);
+      assert.equal(record.pid,identity.pid);assert.equal(record.parentPid,child.pid);assert.equal(record.deniedAttempts,0);
+      assert.ok(record.kernelAncestry.some(row=>row.pid===identity.pid&&row.parentPid===child.pid&&/^[0-9]+$/.test(row.startTicks)));
+      assert.ok(record.kernelAncestry.some(row=>row.pid===child.pid&&row.parentPid===process.pid));
+    }
+  }
 }
 
 /** Stage inert host events, checked by the actual selected source-built Muse export. */
@@ -132,6 +191,7 @@ function nativeFixture(t, { legacy = true, partial = false, finalCoverage = fals
     REVIEW_INPUT_PURPOSE: "actionability", REVIEW_CHILD_HOME: home,
     REVIEW_MODEL: "opencode/mimo-v2.6-flash-free", OPENCODE_BIN: child,
     GH_TOKEN: "inert-token-sentinel", GITHUB_TOKEN: "inert-other-sentinel" };
+  stageNativeDiscoveryFixture(directory, home, child, env);
   return { directory, home, probe, prompts, env, verifier, context };
 }
 
@@ -741,4 +801,19 @@ test("all host jobs require the committed lock and propagate npm ci failure with
   assert.notEqual(refused.status, 0, "a corrupt lock cannot produce a runtime");
   assert.match(refused.stderr, /EUSAGE|EJSONPARSE/, "refusal must be npm lock validation, not an unrelated setup failure");
   assert.equal(fs.existsSync(path.join(corrupt, "node_modules/nbb/cli.js")), false);
+});
+
+
+/** All owning jobs declare discovery; an empty input selects the current checked native ID. */
+test("native workflow requires dynamic anonymous discovery through verification and publication", () => {
+  const YAML=createRequire(import.meta.url)("yaml");
+  const workflow=YAML.parse(fs.readFileSync(path.join(root,".github/workflows/opencode-actionability-assessment.yml"),"utf8"));
+  assert.equal(workflow.env.REVIEW_MODEL_DISCOVERY,"opencode-free-mimo-flash-v1");
+  assert.equal(workflow.env.REVIEW_EXPECTED_OPENCODE_VERSION,"1.18.18");
+  const assess=workflow.jobs.assess.steps.find(step=>step.name==="Actual bounded credential-free invocation");
+  assert.equal(assess.env.REVIEW_MODEL,"");
+  assert.equal(assess.env.REVIEW_INPUT_PURPOSE,"actionability");
+  assert.equal(assess["working-directory"],".actionability/model-root");
+  const profile=workflow.jobs.assess.steps.find(step=>step.name==="Install isolated credential-free model profile");
+  assert.ok(profile.run.includes('mkdir -m 700 "$MODEL_HOME/tmp"'));
 });

@@ -234,7 +234,7 @@ function assertCatalogSelection(catalog, selected, requested) {
 }
 
 /** Recheck the retained physical catalog carrier before and after every child. */
-function readCatalogSource(source, directory) {
+function readCatalogSource(source, directory, privateCarrier = true) {
   if (!source || source.file !== "model-catalog-source.json" ||
       source.response_file !== "model-catalog-source-response.json" || source.path !== path.join(directory, source.file)) {
     throw new Error("OpenCode fresh model catalog binding is unavailable");
@@ -243,7 +243,7 @@ function readCatalogSource(source, directory) {
     [path.join(directory, source.response_file), source.response_sha256, null]]) {
     const info = fs.lstatSync(file);
     if (!info.isFile() || info.isSymbolicLink() || fs.realpathSync(file) !== path.resolve(file) ||
-        (info.mode & 0o777) !== 0o600 || (typeof process.getuid === "function" && info.uid !== process.getuid()) ||
+        (privateCarrier && ((info.mode & 0o777) !== 0o600 || (typeof process.getuid === "function" && info.uid !== process.getuid()))) ||
         (bytes !== null && info.size !== bytes) || sha256(fs.readFileSync(file)) !== expected) {
       throw new Error("OpenCode fresh model catalog carrier changed");
     }
@@ -262,6 +262,68 @@ function assertCatalogSource(binding) {
   if (assertCatalogSelection(catalog, binding.proof.selected_row, binding.proof.requested_model) !== binding.proof.selected_source_row_sha256) {
     throw new Error("OpenCode fresh selected catalog row changed");
   }
+}
+
+/** Verify retained discovery artifacts without requiring the assessor's removed HOME or executable. */
+function discoveryArtifactProof(directory, expectedSHA256, expectedVersion) {
+  const read = (name, expected) => {
+    const file = path.join(directory, name), info = fs.lstatSync(file);
+    if (!info.isFile() || info.isSymbolicLink() || fs.realpathSync(file) !== path.resolve(file)) {
+      throw new Error("OpenCode model discovery artifact is not a physical regular file");
+    }
+    const bytes = fs.readFileSync(file);
+    if (sha256(bytes) !== expected) throw new Error("OpenCode model discovery artifact changed");
+    return bytes;
+  };
+  const proof = JSON.parse(read("model-discovery.json", expectedSHA256));
+  if (proof.schema !== "open-hax.review-model-discovery/v1" || proof.status !== "selected" ||
+      typeof expectedVersion !== "string" || proof.declared_version !== expectedVersion ||
+      proof.observed_version !== expectedVersion || typeof proof.requested_model !== "string" ||
+      proof.mode !== (proof.requested_model === "" ? "latest" : "explicit") || proof.error || proof.cleanup_error ||
+      proof.discovery_context?.removed !== true || !path.isAbsolute(proof.binary?.real_path ?? "") ||
+      !/^[0-9a-f]{64}$/.test(proof.binary?.sha256 ?? "") ||
+      !Array.isArray(proof.commands) || proof.commands.length !== 2) {
+    throw new Error("OpenCode model discovery proof is unestablished");
+  }
+  for (const [index, stem, args] of [[0, "model-version", ["--version"]],
+    [1, "model-catalog", ["models", "opencode", "--verbose"]]]) {
+    const command = proof.commands[index];
+    if (!command || !isDeepStrictEqual(command.command, [proof.binary.real_path, ...args]) ||
+        command.cwd !== proof.discovery_context.cwd || command.exit_code !== 0 || command.signal !== null ||
+        command.timed_out !== false || command.captures_closed !== true || command.capture_error ||
+        command.stdout_file !== `${stem}.stdout` || command.stderr_file !== `${stem}.stderr`) {
+      throw new Error("OpenCode model discovery command is unestablished");
+    }
+    for (const stream of ["stdout", "stderr"]) read(command[`${stream}_file`], command[`${stream}_sha256`]);
+  }
+  if (stripVTControlCharacters(read("model-version.stdout", proof.commands[0].stdout_sha256).toString("utf8")).trim() !== expectedVersion ||
+      proof.catalog_sha256 !== proof.commands[1].stdout_sha256) {
+    throw new Error("OpenCode retained model version/catalog mismatch");
+  }
+  // Artifact download relocates files and normalizes Unix modes. The exact
+  // recorded bytes remain bound; assess separately enforces private custody.
+  const source = { ...proof.catalog_source, path: path.join(directory, "model-catalog-source.json") };
+  const catalog = readCatalogSource(source, directory, false);
+  const selected = selectFreeMiMoFlash(parseOpenCodeModelCatalog(read("model-catalog.stdout", proof.catalog_sha256)), proof.requested_model);
+  if (!isDeepStrictEqual(selected, proof.selected_row) ||
+      sha256(JSON.stringify(selected)) !== proof.selected_row_sha256 ||
+      assertCatalogSelection(catalog, selected, proof.requested_model) !== proof.selected_source_row_sha256 ||
+      proof.selected_model !== `opencode/${selected.id}`) {
+    throw new Error("OpenCode retained model selection mismatch");
+  }
+  return proof;
+}
+
+/** Reuse the checked selector at native publication, granting no review or publication authority. */
+export function verifyModelDiscoveryArtifacts(directory, recovery, expectedVersion) {
+  const binding = recovery?.model_discovery, accepted = recovery?.accepted_invocation;
+  if (binding?.file !== "model-discovery.json" || !/^[0-9a-f]{64}$/.test(binding.sha256 ?? "") ||
+      accepted?.model_discovery_sha256 !== binding.sha256 || accepted?.model !== binding.selected_model) {
+    throw new Error("accepted invocation does not bind OpenCode model discovery");
+  }
+  const proof = discoveryArtifactProof(directory, binding.sha256, expectedVersion);
+  if (proof.selected_model !== binding.selected_model) throw new Error("accepted OpenCode model selection changed");
+  return { file: binding.file, sha256: binding.sha256, selected_model: proof.selected_model };
 }
 
 /** Resolve the same executable selected by Node's PATH lookup and retain its physical bytes. */
@@ -323,6 +385,7 @@ function assertInferenceConfiguration(configuration) {
 function assertModelDiscovery(binding) {
   if (binding.proof.inference_configuration) assertInferenceConfiguration(binding.proof.inference_configuration);
   assertCatalogSource(binding);
+  discoveryArtifactProof(path.dirname(binding.file), binding.sha256, binding.proof.declared_version);
   if (sha256(fs.readFileSync(binding.file)) !== binding.sha256 ||
       sha256(fs.readFileSync(binding.proof.binary.real_path)) !== binding.proof.binary.sha256) {
     throw new Error("OpenCode model discovery proof/executable changed");
@@ -689,7 +752,7 @@ function correctivePrompt(basePrompt, toolFailure, staleCoverage = false, submit
     : coverageFailure
       ? "the first stopped process failed the first deterministic stage because the final full-input page was read but not assessed. Its whole trace remains failed; a separately retained canonical healthy-omission projection supplies only retry eligibility. Read and assess every full-input page anew before completing all five stages and submitting in this sole fresh process."
     : staleCoverage
-      ? "the canonical host-trace verifier established stale review coverage in the first completed invocation. Its assessment history cannot be repaired. Perform one fresh bounded model invocation over the whole unchanged input; finish all reads before assessing each page."
+      ? "the canonical host-trace verifier established stale review coverage in the first completed invocation. Its assessment history cannot be repaired. Perform one fresh bounded model invocation over the whole unchanged input; finish every read of a page before assessing that page."
     : "the first completed model invocation omitted the required review_submit artifact.";
   return `${basePrompt.trimEnd()}
 
@@ -759,6 +822,25 @@ when its narrow recorded-failure policy and the unchanged canonical callback
 establish retry eligibility over a separately retained projection. The original
 failed invocation remains refused. All existing input, HOST, LAST, five-stage,
 source, submission and two-attempt guards remain mandatory for the fresh review.
+
+Healthy automated completion:
+This review is already authorized. While this invocation is healthy, call the
+next required tool without asking whether to continue or ending with a progress
+report. Follow the returned review contract: finish every read of one full-input
+page, assess that complete page including each changed hunk when present, then
+read the next page. Use returned coverage rather than a remembered or prose count. After automatic compaction, call review_status to recover the current
+coverage, stage and candidates. Never reread an assessed page; reread an
+unassessed page only when its contents were lost. After the final page, call
+review_status and complete the reported missing page work before stage
+transitions. When coverage is complete, perform the actual work and record
+evidence for deterministic, map-change, generate-candidates, adversarial-validate
+and publish in order. Classify every proposed finding before the
+adversarial-validate evidence note. Record publish readiness, then call
+review_submit; end the healthy invocation only after it returns ok. Completion
+does not require an approval verdict: findings and the review event remain
+subject to the existing law. Any failed review or HOST call, or restart-required
+reply, still requires the immediate STOP above. These completion instructions
+permit neither repair of a failed invocation nor an additional attempt.
 
 Strict invocation instructions override any earlier retry or repair instructions:
 Every review tool call must succeed. If ANY review tool call fails, including
@@ -1142,9 +1224,12 @@ async function main() {
   let verifier;
   let expectedContext;
   let fullInputName;
+  const purpose = process.env.REVIEW_INPUT_PURPOSE || "diff";
   try {
-    const purpose = process.env.REVIEW_INPUT_PURPOSE || "diff";
     if (!["diff", "actionability", "rejection-assessment"].includes(purpose)) throw new Error("unsupported review input purpose");
+    if (purpose !== "diff" && process.env.REVIEW_MODEL_DISCOVERY !== MODEL_DISCOVERY_MODE) {
+      throw new Error("native review requires checked model discovery");
+    }
     fullInputName = { diff: "basehead.diff", actionability: "actionability-input.txt",
       "rejection-assessment": "rejection-assessment-input.txt" }[purpose];
     if (purpose !== "diff") actionabilityChildEnvironment(purpose);
@@ -1186,8 +1271,7 @@ async function main() {
   let discovery = null, inferenceConfiguration = null;
   try {
     if (process.env.REVIEW_MODEL_DISCOVERY !== undefined) {
-      if (process.env.REVIEW_MODEL_DISCOVERY !== MODEL_DISCOVERY_MODE ||
-          (process.env.REVIEW_INPUT_PURPOSE || "diff") !== "diff") throw new Error("unsupported ordinary model discovery mode");
+      if (process.env.REVIEW_MODEL_DISCOVERY !== MODEL_DISCOVERY_MODE) throw new Error("unsupported model discovery mode");
       inferenceConfiguration = ordinaryInferenceConfiguration();
       discovery = await discoverFreeMiMoFlash({ evidenceDirectory, requested: process.env.REVIEW_MODEL || "",
         expectedVersion: process.env.REVIEW_EXPECTED_OPENCODE_VERSION, inferenceConfiguration });
@@ -1203,7 +1287,7 @@ async function main() {
     assertModelDiscovery(discovery);
     const environment = { ...isolatedModelEnvironment(process.env, inferenceConfiguration.home),
       OPENCODE_CONFIG: path.join(inferenceConfiguration.home, ".config/opencode/opencode.json"),
-      REVIEW_EVIDENCE_DIR: evidenceDirectory, REVIEW_INPUT_PURPOSE: "diff",
+      REVIEW_EVIDENCE_DIR: evidenceDirectory, REVIEW_INPUT_PURPOSE: purpose,
       OPENCODE_MODELS_PATH: discovery.proof.catalog_source.path, OPENCODE_DISABLE_MODELS_FETCH: "true" };
     const result = await invokeOpenCode({ ...arguments_, reviewModel: discovery.proof.selected_model,
       opencodeBin: discovery.proof.binary.real_path, environment });

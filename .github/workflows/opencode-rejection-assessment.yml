@@ -65,6 +65,8 @@ env:
   REJECTION_EVIDENCE_DIR: ${{ github.workspace }}/.rejection-assessment/model-root/.opencode/review-evidence
   REJECTION_PROFILE_DIR: ${{ github.workspace }}/.rejection-assessment/profile
   REVIEW_INVOCATION_VERIFIER_FILE: ${{ github.workspace }}/.rejection-assessment/profile/dist/review-invocation.cjs
+  REVIEW_MODEL_DISCOVERY: opencode-free-mimo-flash-v1
+  REVIEW_EXPECTED_OPENCODE_VERSION: '1.18.18'
 
 # Every publishing run is owned by eta-mu; GitHub concurrency is repository-scoped.
 # Other repositories request a dispatch here instead of calling from their own run.
@@ -362,6 +364,7 @@ jobs:
           npm ci --prefix .rejection-assessment/runtime --ignore-scripts --no-audit --no-fund
           ln -s "$GITHUB_WORKSPACE/.rejection-assessment/runtime/node_modules" "$ETA_CHECKOUT/node_modules"
           MODEL_HOME="$RUNNER_TEMP/rejection-assessment-model-home"
+          mkdir -m 700 "$MODEL_HOME/tmp"
           mkdir -p "$MODEL_HOME/.config/opencode/plugins" "$MODEL_HOME/.config/opencode/agents" "$MODEL_HOME/.eta-mu-review"
           cp -a "$REJECTION_PROFILE_DIR/dist" "$MODEL_HOME/.eta-mu-review/"
           cp "$REJECTION_PROFILE_DIR/package.json" "$MODEL_HOME/.eta-mu-review/"
@@ -395,7 +398,7 @@ jobs:
           REVIEW_PROMPT_FILE: ${{ github.workspace }}/.rejection-assessment/model-root/.opencode/review-evidence/prompt.txt
           REVIEW_TOOL_REGISTRY_FILE: ${{ github.workspace }}/.rejection-assessment/model-root/.opencode/review-evidence/tools.txt
           PR_NUMBER: ${{ inputs.pr_number }}
-          REVIEW_MODEL: opencode/mimo-v2.6-flash-free
+          REVIEW_MODEL: ''
         run: node "$ETA_CHECKOUT/.github/scripts/run-opencode-review-recovery.mjs"
       - name: Reverify actual accepted invocation and fresh custody
         shell: bash

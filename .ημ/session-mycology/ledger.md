@@ -795,3 +795,12 @@
   spore: none
   receipt-refs: 1c6719ab-915a-40f2-be16-5a419f09f5ee
   note: Hold physical CLI and fresh catalog identity across invocation, keep public-target and one-publication custody, preserve copied paths and large blob evidence, and register canonical lint scopes. Completed focused and registered gates; original actionlint external-analyzer hang and precisely allowed prior context diagnostics remain unestablished/retained. No native approval or deployment credit.
+- ts: 2026-10-13T01:06:29.781938153Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Qualify anonymous dynamic native MiMo routing and healthy review completion
+  p-efficiency: 0.65
+  p-friction: 0.78
+  p-skill-candidate: 0.25
+  spore: none
+  receipt-refs: 2ecb6d89505c6c82202fa3719b7a079d212cb2970dafcd0789a0582a6fadb437,b5159cea722d3b1959f891160e5c6e6fcb9625c98e5809eba5f431913f94afcc
+  note: Existing shared/project memory already records anonymous OpenCode and changing free MiMo slugs. Classify authentic upstream errors separately from healthy unfinished review. Preserve full catalog custody and actual per-page coverage through compaction; prompt healthy completion while retaining failed STOP and MAX2. Keep tests independent of package launcher cwd using documented nbb.core file binding. Retain initial failed gates, then qualify final normal source gates. No new spore or promotion; hosted review and deployment remain separate.

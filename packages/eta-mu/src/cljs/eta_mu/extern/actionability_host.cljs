@@ -264,6 +264,21 @@
                            (= "completed" (:status job)) (= "success" (:conclusion job)))
               (refuse! :trusted-job-completion)))))))))
 
+(defn model-discovery-artifacts!
+  "Reverify source-selected anonymous model artifacts under the owning workflow's declared mode."
+  [directory recovery]
+  (let [mode (env "REVIEW_MODEL_DISCOVERY")]
+    (when-not (and (= "opencode-free-mimo-flash-v1" mode)
+                   (= "1.18.18" (env "REVIEW_EXPECTED_OPENCODE_VERSION"))
+                   (some? (env "ETA_CHECKOUT")) (.isAbsolute path (env "ETA_CHECKOUT")))
+      (refuse! :model-discovery))
+    (try
+      (let [file (join (env "ETA_CHECKOUT") ".github/scripts/run-opencode-review-recovery.mjs")
+            require (.createRequire module file)
+            runner (require file)]
+        (.verifyModelDiscoveryArtifacts runner directory recovery (env "REVIEW_EXPECTED_OPENCODE_VERSION")))
+      (catch :default _ (refuse! :model-discovery)))))
+
 (defn invocation
   "Recompute actual accepted invocation with the selected source-built Muse export."
   ([directory verifier-file verifier-sha]
@@ -279,6 +294,7 @@
           manifest (read-bytes (.join path directory "input-manifest.json"))
           tools (vec (remove str/blank? (str/split-lines (read-text (.join path directory "tools.txt")))))
           raw-recovery (js/JSON.parse (read-text (.join path directory "recovery.json")))
+          _model-proof (model-discovery-artifacts! directory raw-recovery)
           recovery (js->clj raw-recovery :keywordize-keys true)
           accepted (:accepted_invocation recovery)
           response-file (:response_file accepted)]

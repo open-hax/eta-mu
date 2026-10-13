@@ -9,6 +9,8 @@
             ["node:module" :as module] ["node:crypto" :as crypto]
             ["node:child_process" :as child-process] [clojure.string :as str]))
 
+(def test-root (.resolve path (.dirname path nbb/*file*) ".." ".."))
+
 (def checks (atom 0))
 (defn check [label actual expected]
   (swap! checks inc)
@@ -63,6 +65,63 @@
     (check "real canonical prospective API supports the explicitly synthetic unresolved case" (:eligible? prospective) true)
     {:state state :deps deps :summary summary :prospective prospective}))
 
+(defn stage-model-discovery-fixture!
+  "Synthetic retained artifacts exercise the shared verifier, never real acquisition or inference."
+  [directory]
+  (let [id "mimo-v9.1-flash-free"
+        cost {:input 0 :output 0 :cache {:read 0 :write 0}}
+        api {:id id :url "https://opencode.ai/inference/v1" :npm "@ai-sdk/openai-compatible"}
+        row {:id id :providerID "opencode" :family "mimo" :status "active" :release_date "2026-09-01"
+             :api api :cost cost :capabilities {:toolcall true :input {:text true} :output {:text true}}}
+        raw {:id id :family "mimo" :status "active" :release_date "2026-09-01" :tool_call true
+             :modalities {:input ["text"] :output ["text"]}
+             :cost {:input 0 :output 0 :cache_read 0 :cache_write 0}}
+        catalog {:opencode {:id "opencode" :api (:url api) :npm (:npm api) :models {id raw}}}
+        bytes (host/json catalog) version "1.18.18\n"
+        effective (str "opencode/" id "\n" (host/json row) "\n")
+        response {:schema "open-hax.review-model-catalog-response/v1"
+                  :requested_url "https://models.opencode.ai/api.json" :response_url "https://models.opencode.ai/api.json"
+                  :status 200 :body_complete true :json_valid true :aborted false
+                  :bytes (host/utf8-length bytes) :sha256 (host/sha256 bytes)}
+        source {:file "model-catalog-source.json" :path (host/join directory "model-catalog-source.json")
+                :bytes (host/utf8-length bytes) :sha256 (host/sha256 bytes)
+                :response_file "model-catalog-source-response.json" :response_sha256 (host/sha256 (host/json response))}
+        command (fn [stem args out]
+                  {:command (into ["/inert/not-executed/opencode"] args) :cwd "/inert/removed/discovery-work"
+                   :exit_code 0 :signal nil :timed_out false :captures_closed true
+                   :stdout_file (str stem ".stdout") :stderr_file (str stem ".stderr")
+                   :stdout_sha256 (host/sha256 out) :stderr_sha256 (host/sha256 "")})
+        proof {:schema "open-hax.review-model-discovery/v1" :mode "latest" :requested_model ""
+               :declared_version "1.18.18" :observed_version "1.18.18" :status "selected"
+               :binary {:real_path "/inert/not-executed/opencode" :sha256 (apply str (repeat 64 "a"))}
+               :discovery_context {:cwd "/inert/removed/discovery-work" :removed true}
+               :commands [(command "model-version" ["--version"] version)
+                          (command "model-catalog" ["models" "opencode" "--verbose"] effective)]
+               :catalog_source source :catalog_sha256 (host/sha256 effective)
+               :selected_row row :selected_row_sha256 (host/sha256 (host/json row))
+               :selected_source_row_sha256 (host/sha256 (host/json raw)) :selected_model (str "opencode/" id)}
+        proof-sha (host/sha256 (host/json proof))
+        recovery (-> (host/read-json (host/join directory "recovery.json"))
+                     (assoc :model_discovery {:file "model-discovery.json" :sha256 proof-sha :selected_model (:selected_model proof)})
+                     (assoc-in [:accepted_invocation :model_discovery_sha256] proof-sha)
+                     (assoc-in [:accepted_invocation :model] (:selected_model proof)))]
+    (doseq [[name content] [["model-catalog-source.json" bytes] ["model-catalog-source-response.json" (host/json response)]
+                           ["model-version.stdout" version] ["model-version.stderr" ""]
+                           ["model-catalog.stdout" effective] ["model-catalog.stderr" ""]
+                           ["model-discovery.json" (host/json proof)]]]
+      (host/write-text! (host/join directory name) content))
+    (.writeFileSync fs (host/join directory "recovery.json") (host/json recovery))
+    recovery))
+
+(defn checked-native-invocation [directory file sha]
+  (let [environment host/env]
+    (with-redefs [host/env (fn [name] (case name
+                                      "REVIEW_MODEL_DISCOVERY" "opencode-free-mimo-flash-v1"
+                                      "REVIEW_EXPECTED_OPENCODE_VERSION" "1.18.18"
+                                      "ETA_CHECKOUT" test-root
+                                      (environment name)))]
+      (host/invocation directory file sha))))
+
 (defn invocation-fixture [snapshot summary directory]
   (let [input (assessment/prepare-input snapshot inventory 7001 provenance)
         file (host/env "ETA_MU_ACTIONABILITY_VERIFIER_FILE")
@@ -110,7 +169,8 @@
                                                          :attempts [{:attempt 1 :invocation_state "completed" :exit_code 0}]
                                                          :accepted_invocation accepted})]]]
         (host/write-text! (host/join directory name) content))
-      (host/invocation directory file sha))))
+      (stage-model-discovery-fixture! directory)
+      (checked-native-invocation directory file sha))))
 
 (defn public-proof []
   (host/publisher-proof
@@ -127,7 +187,7 @@
       (let [snapshot (assessment/collect deps config)
             invocation (invocation-fixture snapshot summary directory)
             dependencies (assoc deps :verify-sources! (fn [] true) :verify-run! (fn [] true)
-                                :verify-invocation! #(host/invocation directory (host/env "ETA_MU_ACTIONABILITY_VERIFIER_FILE") (host/env "ETA_MU_ACTIONABILITY_VERIFIER_SHA256"))
+                                :verify-invocation! #(checked-native-invocation directory (host/env "ETA_MU_ACTIONABILITY_VERIFIER_FILE") (host/env "ETA_MU_ACTIONABILITY_VERIFIER_SHA256"))
                                 :corrupt-response! #(.appendFileSync fs (host/join directory "model-response-attempt-1.txt") "broken terminal bytes\n")
                                 :corrupt-submission! #(.appendFileSync fs (host/join directory "submission.json") "not JSON")
                                 :corrupt-full-input! #(.appendFileSync fs (host/join directory "actionability-input.txt") "changed raw input bytes")
@@ -842,8 +902,44 @@
              (refused assessment/require-protected-dependencies!) :unadopted-dependency-pins)))
   :complete)
 
+(defn model-discovery-controls []
+  (let [{:keys [deps summary]} (setup)
+        snapshot (assessment/collect deps config)
+        directory (.mkdtempSync fs (host/join (.tmpdir os) "eta-model-discovery-control-"))
+        file (host/env "ETA_MU_ACTIONABILITY_VERIFIER_FILE")
+        sha (host/env "ETA_MU_ACTIONABILITY_VERIFIER_SHA256")]
+    (try
+      (invocation-fixture snapshot summary directory)
+      (check "native accepted invocation retains source-checked discovery"
+             (some? (:accepted-sha256 (checked-native-invocation directory file sha))) true)
+      (with-redefs [host/env (constantly nil)]
+        (check "missing owning workflow mode cannot skip required discovery"
+               (refused #(host/invocation directory file sha)) :model-discovery))
+      (let [environment host/env
+            expected {"REVIEW_MODEL_DISCOVERY" "opencode-free-mimo-flash-v1"
+                      "REVIEW_EXPECTED_OPENCODE_VERSION" "1.18.18" "ETA_CHECKOUT" test-root}]
+        (doseq [[key value] [["REVIEW_MODEL_DISCOVERY" "unsupported"]
+                            ["REVIEW_EXPECTED_OPENCODE_VERSION" "1.19.0"]
+                            ["ETA_CHECKOUT" "relative/untrusted"]]]
+          (with-redefs [host/env (fn [name] (if (contains? expected name)
+                                            (get (assoc expected key value) name) (environment name)))]
+            (check "wrong owning mode/version/source path refuses"
+                   (refused #(host/invocation directory file sha)) :model-discovery))))
+      (let [recovery-file (host/join directory "recovery.json")
+            recovery (host/read-json recovery-file)]
+        (doseq [changed [(dissoc recovery :model_discovery)
+                         (assoc-in recovery [:accepted_invocation :model] "opencode/mimo-v0-flash-free")
+                         (assoc-in recovery [:model_discovery :sha256] (apply str (repeat 64 "0")))]]
+          (.writeFileSync fs recovery-file (host/json changed))
+          (check "missing or mismatched accepted catalog proof refuses"
+                 (refused #(checked-native-invocation directory file sha)) :model-discovery))
+        (.writeFileSync fs recovery-file (host/json recovery)))
+      :complete
+      (finally (.rmSync fs directory #js {:recursive true :force true})))))
+
 (defn ^:async main []
   (let [_pin-check (dependency-pin-controls)
+        _model-discovery-check (model-discovery-controls)
         _run-check (run-controls)
         _native-read-check (native-read-controls)
         _source-check (removed-source-controls)
@@ -894,6 +990,7 @@
                    (let [_complete (await
                                     (case only
                                       "dependency-pins" (dependency-pin-controls)
+                                      "model-discovery" (model-discovery-controls)
                                       "host-run" (run-controls)
                                       "native-read" (native-read-controls)
                                       "removed-source" (removed-source-controls)

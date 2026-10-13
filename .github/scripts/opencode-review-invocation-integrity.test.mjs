@@ -1604,3 +1604,100 @@ test("stale CLI subset cannot omit a newly eligible raw future model", t => {
   assert.equal(f.commands().filter(([command])=>command==="run").length,0);
   assert.equal(JSON.parse(fs.readFileSync(path.join(f.directory,"recovery.json"))).accepted_invocation,null);
 });
+
+
+/** Native transport reuses the ordinary checked catalog without changing its input purpose or cwd. */
+test("both native purposes discover latest MiMo while preserving native purpose and private profile", (t) => {
+  for (const purpose of ["actionability", "rejection-assessment"]) {
+    const f = discoveryCliFixture(t, { rows: [freeMiMoRow("mimo-v999-flash-free", "2099-01-01")] });
+    const inputName = `${purpose === "actionability" ? "actionability" : "rejection-assessment"}-input.txt`;
+    const full = fs.readFileSync(path.join(f.directory, "basehead.diff"));
+    fs.writeFileSync(path.join(f.directory, inputName), full);
+    fs.unlinkSync(path.join(f.directory, "basehead.diff"));
+    const verifier = fs.readFileSync(f.verifier, "utf8"), anchor = "return {fixture:'prepared-before-child'};";
+    assert.equal(verifier.split(anchor).length, 2);
+    fs.writeFileSync(f.verifier, verifier.replace(anchor, `return {fixture:'prepared-before-child', inputSource:{schema:'open-hax.${purpose}-input/v1', purpose:'${purpose}'}};`));
+    const probe = path.join(f.directory, "native-discovery-probe.ndjson");
+    const child = fs.readFileSync(f.child, "utf8"), runAnchor = "const dir = process.env.REVIEW_EVIDENCE_DIR;";
+    assert.equal(child.split(runAnchor).length, 2);
+    fs.writeFileSync(f.child, child.replace(runAnchor, `fs.appendFileSync(${JSON.stringify(probe)}, JSON.stringify({
+      purpose:process.env.REVIEW_INPUT_PURPOSE,cwd:process.cwd(),home:process.env.HOME,config:process.env.OPENCODE_CONFIG,
+      pure:process.env.OPENCODE_PURE,token:process.env.GH_TOKEN,key:process.env.OPENAI_API_KEY,
+      catalog:process.env.OPENCODE_MODELS_PATH,disabled:process.env.OPENCODE_DISABLE_MODELS_FETCH,
+      args:process.argv.slice(2)})+'\\n');\n` + runAnchor));
+    f.env.REVIEW_INPUT_PURPOSE = purpose;
+    f.env.GH_TOKEN = "inert-native-token"; f.env.OPENAI_API_KEY = "inert-provider-key";
+    const cwd = path.join(f.directory, "native-model-root"); fs.mkdirSync(cwd);
+    const result = spawnSync(process.execPath, [runner], {cwd,env:f.env,encoding:"utf8",timeout:10_000});
+    assert.equal(result.status, 0, result.stderr);
+    const recovery = JSON.parse(fs.readFileSync(path.join(f.directory, "recovery.json")));
+    assert.equal(recovery.accepted_invocation.model, "opencode/mimo-v999-flash-free");
+    assert.equal(recovery.attempts.length, 2, "the existing shared two-attempt transport remains bounded");
+    const records = fs.readFileSync(probe,"utf8").trim().split("\n").map(JSON.parse);
+    assert.equal(records.length, 2);
+    for (const record of records) {
+      assert.equal(record.purpose,purpose); assert.equal(record.cwd,cwd); assert.equal(record.home,f.childHome);
+      assert.equal(record.config,path.join(f.childHome,".config/opencode/opencode.json"));
+      assert.equal(record.pure,undefined,"inference must load the staged review plugin");
+      assert.equal(record.token,undefined); assert.equal(record.key,undefined);
+      assert.equal(record.disabled,"true"); assert.equal(record.catalog,path.join(f.directory,"model-catalog-source.json"));
+      assert.equal(record.args[6],recovery.accepted_invocation.model);
+    }
+    for (const prompt of f.commands().filter(args=>args[0]==="run").map(args=>args.at(-1))) {
+      assert.ok(prompt.includes(`Complete fixed native input: ${inputName}`));
+      assert.ok(!prompt.includes("summary.json"));
+    }
+  }
+});
+
+/** Publication checks exact artifacts after transfer without assuming assessor runtime paths still exist. */
+test("artifact-only discovery validation supports relocation and refuses altered source or accepted binding", (t) => {
+  const f = discoveryCliFixture(t);
+  const result = spawnSync(process.execPath,[runner],{env:f.env,encoding:"utf8",timeout:10_000});
+  assert.equal(result.status,0,result.stderr);
+  const recovery = JSON.parse(fs.readFileSync(path.join(f.directory,"recovery.json")));
+  const destination = fixture(t);
+  for (const name of ["model-discovery.json","model-version.stdout","model-version.stderr","model-catalog.stdout",
+    "model-catalog.stderr","model-catalog-source.json","model-catalog-source-response.json"]) {
+    fs.copyFileSync(path.join(f.directory,name),path.join(destination,name)); fs.chmodSync(path.join(destination,name),0o644);
+  }
+  fs.rmSync(f.childHome,{recursive:true}); fs.unlinkSync(f.child);
+  assert.deepEqual(modelDiscovery.verifyModelDiscoveryArtifacts(destination,recovery,"1.18.18"),recovery.model_discovery);
+  for (const changed of [
+    {...recovery,model_discovery:null},
+    {...recovery,accepted_invocation:{...recovery.accepted_invocation,model:"opencode/mimo-v0-flash-free"}},
+    {...recovery,accepted_invocation:{...recovery.accepted_invocation,model_discovery_sha256:"0".repeat(64)}},
+  ]) assert.throws(()=>modelDiscovery.verifyModelDiscoveryArtifacts(destination,changed,"1.18.18"));
+  assert.throws(()=>modelDiscovery.verifyModelDiscoveryArtifacts(destination,recovery,"1.19.0"));
+  for (const name of ["model-discovery.json","model-version.stdout","model-catalog.stdout","model-catalog-source.json","model-catalog-source-response.json"]) {
+    const file = path.join(destination,name),bytes=fs.readFileSync(file);fs.appendFileSync(file," ");
+    assert.throws(()=>modelDiscovery.verifyModelDiscoveryArtifacts(destination,recovery,"1.18.18"));fs.writeFileSync(file,bytes);
+  }
+  const file=path.join(destination,"model-catalog.stdout"),bytes=fs.readFileSync(file);
+  fs.unlinkSync(file);fs.symlinkSync(path.join(f.directory,"model-catalog.stdout"),file);
+  assert.throws(()=>modelDiscovery.verifyModelDiscoveryArtifacts(destination,recovery,"1.18.18"));
+  fs.unlinkSync(file);fs.writeFileSync(file,bytes);
+});
+
+
+/** Native assess cannot enter the historical fixed-model path by omitting discovery. */
+test("native assessment refuses absent or unsupported discovery before any model child", (t) => {
+  for (const purpose of ["actionability", "rejection-assessment"]) for (const mode of [undefined, "unsupported"]) {
+    const f = discoveryCliFixture(t);
+    const inputName = `${purpose}-input.txt`;
+    fs.renameSync(path.join(f.directory,"basehead.diff"),path.join(f.directory,inputName));
+    const verifier = fs.readFileSync(f.verifier,"utf8"),anchor = "return {fixture:'prepared-before-child'};";
+    assert.equal(verifier.split(anchor).length,2);
+    fs.writeFileSync(f.verifier,verifier.replace(anchor,`return {fixture:'prepared-before-child',inputSource:{schema:'open-hax.${purpose}-input/v1',purpose:'${purpose}'}};`));
+    f.env.REVIEW_INPUT_PURPOSE=purpose; f.env.REVIEW_MODEL="opencode/mimo-v9.1-flash-free";
+    if (mode === undefined) delete f.env.REVIEW_MODEL_DISCOVERY;
+    else f.env.REVIEW_MODEL_DISCOVERY=mode;
+    const result=spawnSync(process.execPath,[runner],{env:f.env,encoding:"utf8",timeout:10_000});
+    assert.equal(result.status,1,result.stderr);
+    assert.deepEqual(f.commands(),[],"no version, catalog or inference child may run");
+    const recovery=JSON.parse(fs.readFileSync(path.join(f.directory,"recovery.json")));
+    assert.equal(recovery.setup_error,"native review requires checked model discovery");
+    assert.deepEqual(recovery.attempts,[]); assert.equal(recovery.accepted_invocation,null);
+    assert.equal(fs.existsSync(f.output),false);
+  }
+});
