@@ -831,3 +831,12 @@
   spore: none
   receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/t350-native-dynamic-mimo-preparation-v1/root-combined-node-eventsource-receipt-event-v1.edn
   note: Actual causal controls retain missed child dispatch/membership and flagged EventSource predecessor failures; both independently reviewed repairs pass all registered source gates. Preserve source/denial audit scope and anonymous changing-MiMo route; native approval and production remain separate. No new spore/promotion.
+- ts: 2026-10-13T03:01:25.587233334Z
+  session: codex/01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Restore existing test formatting contract after actual hosted CI failure
+  p-efficiency: 0.80
+  p-friction: 0.38
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/t350-native-dynamic-mimo-preparation-v1/root-test-format-ci-repair-v1/root-one-source-format-receipt-event-v1.edn
+  note: Full native sandbox logs and package lint both identify the same owned MJS format issue. Apply scoped formatter only, preserve templates/assertions, verify actual eight controls and normal registered lint. Read existing anonymous dynamic MiMo memory before provider investigation. Preserve failed evidence, native obligations and unrelated work; no new spore or promotion.

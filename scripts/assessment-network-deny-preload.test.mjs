@@ -198,7 +198,6 @@ test("already imported ESM UDP and DNS exports receive the same denial boundary"
   control(t, "esm"));
 test("loading the Node boundary alone records a healthy empty audit", (t) => control(t, "noop"));
 
-
 // Real child-launch controls remain outside zero-denial suite admission. A
 // predecessor child can only write an owned marker or read an empty stdin;
 // it contains no network code and receives no credentials or user config.
@@ -243,95 +242,152 @@ const childLaunchSource = String.raw`
 function childLaunchControl(t, api, mode) {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "eta-child-preload-control-"));
   fs.chmodSync(work, 0o700);
-  t.after(() => fs.rmSync(work, {recursive:true, force:true}));
-  const auditDirectory = path.join(work, "audits"), home = path.join(work, "home"), temporary = path.join(work, "tmp");
-  for (const directory of [auditDirectory, home, temporary]) fs.mkdirSync(directory, {mode:0o700});
-  const marker = path.join(work, "executed"), program = path.join(work, "marker-child.cjs");
-  fs.writeFileSync(program, `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "executed", {mode:0o600, flag:"wx"});\n`,
-    {mode:0o600, flag:"wx"});
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const auditDirectory = path.join(work, "audits"),
+    home = path.join(work, "home"),
+    temporary = path.join(work, "tmp");
+  for (const directory of [auditDirectory, home, temporary])
+    fs.mkdirSync(directory, { mode: 0o700 });
+  const marker = path.join(work, "executed"),
+    program = path.join(work, "marker-child.cjs");
+  fs.writeFileSync(
+    program,
+    `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "executed", {mode:0o600, flag:"wx"});\n`,
+    { mode: 0o600, flag: "wx" },
+  );
   // This path contains the actual preload name but has no network behavior or
   // audit enrollment. A substring match must not qualify it as the boundary.
   const target = mode === "longer-path" ? path.join(work, "target-preload.cjs") : preload;
   if (mode === "longer-path") {
-    fs.copyFileSync(preload, target); fs.chmodSync(target, 0o600);
-    fs.writeFileSync(target + ".decoy.cjs", "// inert longer-path control\n", {mode:0o600, flag:"wx"});
+    fs.copyFileSync(preload, target);
+    fs.chmodSync(target, 0o600);
+    fs.writeFileSync(target + ".decoy.cjs", "// inert longer-path control\n", {
+      mode: 0o600,
+      flag: "wx",
+    });
   }
   const capture = "child-preload-" + api + "-" + mode;
   const parent = spawnSync(process.execPath, ["--eval", childLaunchSource], {
-    cwd:work,
-    env:{PATH:path.dirname(process.execPath), HOME:home, TMPDIR:temporary,
-      XDG_CONFIG_HOME:path.join(home, ".config"), LANG:"C.UTF-8", LC_ALL:"C.UTF-8", TZ:"UTC",
-      NODE_OPTIONS:"--require " + JSON.stringify(target), ETA_MU_TEST_NETWORK_AUDIT_DIR:auditDirectory,
-      ETA_MU_TEST_NETWORK_AUDIT_CAPTURE:capture, TEST_CHILD_API:api, TEST_CHILD_MODE:mode,
-      TEST_PRELOAD_FILE:target, TEST_CHILD_MARKER:marker, TEST_CHILD_PROGRAM:program},
-    encoding:"utf8", timeout:15000,
+    cwd: work,
+    env: {
+      PATH: path.dirname(process.execPath),
+      HOME: home,
+      TMPDIR: temporary,
+      XDG_CONFIG_HOME: path.join(home, ".config"),
+      LANG: "C.UTF-8",
+      LC_ALL: "C.UTF-8",
+      TZ: "UTC",
+      NODE_OPTIONS: "--require " + JSON.stringify(target),
+      ETA_MU_TEST_NETWORK_AUDIT_DIR: auditDirectory,
+      ETA_MU_TEST_NETWORK_AUDIT_CAPTURE: capture,
+      TEST_CHILD_API: api,
+      TEST_CHILD_MODE: mode,
+      TEST_PRELOAD_FILE: target,
+      TEST_CHILD_MARKER: marker,
+      TEST_CHILD_PROGRAM: program,
+    },
+    encoding: "utf8",
+    timeout: 15000,
   });
   assert.equal(parent.error, undefined, parent.stderr);
   assert.equal(parent.signal, null, parent.stderr);
   const lines = parent.stdout.trim().split("\n");
   assert.equal(lines.length, 1, parent.stdout + parent.stderr);
   const observation = JSON.parse(lines[0]);
-  const records = fs.readdirSync(auditDirectory).map(name => {
-    const file = path.join(auditDirectory, name), info = fs.lstatSync(file);
+  const records = fs.readdirSync(auditDirectory).map((name) => {
+    const file = path.join(auditDirectory, name),
+      info = fs.lstatSync(file);
     assert.ok(info.isFile() && !info.isSymbolicLink());
-    assert.equal(info.mode & 0o777, 0o600); assert.equal(info.uid, process.getuid());
+    assert.equal(info.mode & 0o777, 0o600);
+    assert.equal(info.uid, process.getuid());
     const record = JSON.parse(fs.readFileSync(file, "utf8"));
     assert.equal(name, `${record.pid}.json`);
-    assert.equal(record.schema, "eta-mu.test-network-denial/v1"); assert.equal(record.capture, capture);
-    assert.ok(record.kernelAncestry.some(row => row.pid === parent.pid && row.parentPid === process.pid
-      && /^[0-9]+$/.test(row.startTicks)));
+    assert.equal(record.schema, "eta-mu.test-network-denial/v1");
+    assert.equal(record.capture, capture);
+    assert.ok(
+      record.kernelAncestry.some(
+        (row) =>
+          row.pid === parent.pid &&
+          row.parentPid === process.pid &&
+          /^[0-9]+$/.test(row.startTicks),
+      ),
+    );
     return record;
   });
-  t.diagnostic(JSON.stringify({schema:"eta-mu.node-child-preload-control-evidence/v1", parentExit:parent.status,
-    observation, records}));
-  const audit = records.find(record => record.pid === parent.pid);
-  assert.ok(audit); assert.equal(audit.parentPid, process.pid);
-  assert.equal(observation.api, api); assert.equal(observation.mode, mode);
+  t.diagnostic(
+    JSON.stringify({
+      schema: "eta-mu.node-child-preload-control-evidence/v1",
+      parentExit: parent.status,
+      observation,
+      records,
+    }),
+  );
+  const audit = records.find((record) => record.pid === parent.pid);
+  assert.ok(audit);
+  assert.equal(audit.parentPid, process.pid);
+  assert.equal(observation.api, api);
+  assert.equal(observation.mode, mode);
   if (mode === "inherited" || mode === "cli") {
     assert.equal(parent.status, 0, parent.stderr);
-    assert.equal(observation.refused, false); assert.equal(observation.status, 0);
+    assert.equal(observation.refused, false);
+    assert.equal(observation.status, 0);
     assert.equal(observation.markerPresent, true);
     assert.ok(Number.isSafeInteger(observation.pid) && observation.pid > 0);
     assert.deepEqual(audit.expectedNodeChildren, [observation.pid]);
     assert.equal(records.length, 2);
-    const child = records.find(record => record.pid === observation.pid);
-    assert.ok(child); assert.equal(child.parentPid, parent.pid); assert.deepEqual(child.expectedNodeChildren, []);
-    assert.ok(child.kernelAncestry.some(row => row.pid === child.pid && row.parentPid === parent.pid
-      && /^[0-9]+$/.test(row.startTicks)));
+    const child = records.find((record) => record.pid === observation.pid);
+    assert.ok(child);
+    assert.equal(child.parentPid, parent.pid);
+    assert.deepEqual(child.expectedNodeChildren, []);
+    assert.ok(
+      child.kernelAncestry.some(
+        (row) =>
+          row.pid === child.pid && row.parentPid === parent.pid && /^[0-9]+$/.test(row.startTicks),
+      ),
+    );
     for (const record of records) assert.equal(record.deniedAttempts, 0);
   } else {
-    assert.equal(observation.refused, true, "a direct Node launch without the actual early preload must be refused");
+    assert.equal(
+      observation.refused,
+      true,
+      "a direct Node launch without the actual early preload must be refused",
+    );
     assert.equal(observation.errorCode, "TEST_NODE_CHILD_PRELOAD_REQUIRED");
     assert.equal(observation.surface, "child_process." + api);
     assert.equal(observation.pid, null, "refusal must precede actual child dispatch");
     assert.equal(observation.markerPresent, false, "unprotected child code must never run");
-    assert.equal(records.length, 1); assert.deepEqual(audit.expectedNodeChildren, []);
+    assert.equal(records.length, 1);
+    assert.deepEqual(audit.expectedNodeChildren, []);
     assert.equal(audit.deniedAttempts, 1);
     assert.equal(parent.status, 97, "catching a refused launch cannot admit a zero-denial suite");
   }
 }
 
 for (const api of ["spawnSync", "spawn"]) {
-  test(`direct Node ${api} refuses missing or misleading preload before child execution`, t => {
+  test(`direct Node ${api} refuses missing or misleading preload before child execution`, (t) => {
     for (const mode of ["missing", "overload", "title-hint", "longer-path", "late-argv"])
       childLaunchControl(t, api, mode);
   });
-  test(`direct Node ${api} retains inherited and explicit early preload audit membership`, t => {
+  test(`direct Node ${api} retains inherited and explicit early preload audit membership`, (t) => {
     for (const mode of ["inherited", "cli"]) childLaunchControl(t, api, mode);
   });
 }
 
-
 // The actual flag must expose the native constructor before an inert replacement
 // is installed. Neither predecessor nor repaired control constructs that client.
-test("flagged EventSource denies before inert constructor dispatch", t => {
+test("flagged EventSource denies before inert constructor dispatch", (t) => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "eta-eventsource-control-"));
   fs.chmodSync(work, 0o700);
-  t.after(() => fs.rmSync(work, {recursive:true, force:true}));
-  const auditDirectory = path.join(work, "audits"), home = path.join(work, "home"), temporary = path.join(work, "tmp");
-  for (const directory of [auditDirectory, home, temporary]) fs.mkdirSync(directory, {mode:0o700});
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const auditDirectory = path.join(work, "audits"),
+    home = path.join(work, "home"),
+    temporary = path.join(work, "tmp");
+  for (const directory of [auditDirectory, home, temporary])
+    fs.mkdirSync(directory, { mode: 0o700 });
   const bootstrap = path.join(work, "inert-eventsource.cjs");
-  fs.writeFileSync(bootstrap, String.raw`
+  fs.writeFileSync(
+    bootstrap,
+    String.raw`
 const control = globalThis.etaEventSourceControl = {
   available:typeof globalThis.EventSource === "function",
   flag:process.execArgv.includes("--experimental-eventsource"),
@@ -339,7 +395,9 @@ const control = globalThis.etaEventSourceControl = {
 };
 if (!control.available || !control.flag) throw Error("CONTROL_ACTUAL_EVENTSOURCE_FLAG_REQUIRED");
 globalThis.EventSource = function () {control.fallbackCalls += 1;};
-`, {mode:0o600, flag:"wx"});
+`,
+    { mode: 0o600, flag: "wx" },
+  );
   const exercise = String.raw`
 let denied = false, errorCode = null, surface = null;
 try {new globalThis.EventSource("https://inert.invalid/events");}
@@ -348,35 +406,79 @@ console.log(JSON.stringify({schema:"eta-mu.eventsource-denial-control/v1", pid:p
   ...globalThis.etaEventSourceControl, denied, errorCode, surface}));
 `;
   const capture = "eventsource-control";
-  const child = spawnSync(process.execPath, ["--require", bootstrap, "--require", preload,
-    "--experimental-eventsource", "--eval", exercise], {
-    cwd:work,
-    env:{HOME:home, TMPDIR:temporary, XDG_CONFIG_HOME:path.join(home, ".config"),
-      LANG:"C.UTF-8", LC_ALL:"C.UTF-8", TZ:"UTC",
-      ETA_MU_TEST_NETWORK_AUDIT_DIR:auditDirectory, ETA_MU_TEST_NETWORK_AUDIT_CAPTURE:capture},
-    encoding:"utf8", timeout:15000,
-  });
-  assert.equal(child.error, undefined, child.stderr); assert.equal(child.signal, null, child.stderr);
+  const child = spawnSync(
+    process.execPath,
+    [
+      "--require",
+      bootstrap,
+      "--require",
+      preload,
+      "--experimental-eventsource",
+      "--eval",
+      exercise,
+    ],
+    {
+      cwd: work,
+      env: {
+        HOME: home,
+        TMPDIR: temporary,
+        XDG_CONFIG_HOME: path.join(home, ".config"),
+        LANG: "C.UTF-8",
+        LC_ALL: "C.UTF-8",
+        TZ: "UTC",
+        ETA_MU_TEST_NETWORK_AUDIT_DIR: auditDirectory,
+        ETA_MU_TEST_NETWORK_AUDIT_CAPTURE: capture,
+      },
+      encoding: "utf8",
+      timeout: 15000,
+    },
+  );
+  assert.equal(child.error, undefined, child.stderr);
+  assert.equal(child.signal, null, child.stderr);
   assert.equal(child.stderr, "", "availability and inert denial must emit no experimental warning");
   const lines = child.stdout.trim().split("\n");
   assert.equal(lines.length, 1, child.stdout);
-  const result = JSON.parse(lines[0]), files = fs.readdirSync(auditDirectory);
+  const result = JSON.parse(lines[0]),
+    files = fs.readdirSync(auditDirectory);
   assert.deepEqual(files, [`${child.pid}.json`]);
-  const auditFile = path.join(auditDirectory, files[0]), info = fs.lstatSync(auditFile);
+  const auditFile = path.join(auditDirectory, files[0]),
+    info = fs.lstatSync(auditFile);
   assert.ok(info.isFile() && !info.isSymbolicLink());
-  assert.equal(info.mode & 0o777, 0o600); assert.equal(info.uid, process.getuid());
+  assert.equal(info.mode & 0o777, 0o600);
+  assert.equal(info.uid, process.getuid());
   const audit = JSON.parse(fs.readFileSync(auditFile, "utf8"));
-  t.diagnostic(JSON.stringify({schema:"eta-mu.eventsource-denial-control-evidence/v1",
-    childExit:child.status, result, audit}));
-  assert.equal(result.schema, "eta-mu.eventsource-denial-control/v1"); assert.equal(result.pid, child.pid);
-  assert.equal(result.available, true, "the real flagged constructor must exist before replacement");
-  assert.equal(result.flag, true); assert.match(result.nodeVersion, /^\d+\.\d+\.\d+$/);
-  assert.equal(result.denied, true); assert.equal(result.errorCode, "TEST_NETWORK_FORBIDDEN");
-  assert.equal(result.surface, "EventSource"); assert.equal(result.fallbackCalls, 0);
-  assert.equal(audit.schema, "eta-mu.test-network-denial/v1"); assert.equal(audit.capture, capture);
-  assert.equal(audit.pid, child.pid); assert.equal(audit.parentPid, process.pid);
-  assert.deepEqual(audit.expectedNodeChildren, []); assert.equal(audit.deniedAttempts, 1);
-  assert.ok(audit.kernelAncestry.some(row => row.pid === child.pid && row.parentPid === process.pid
-    && /^[0-9]+$/.test(row.startTicks)));
+  t.diagnostic(
+    JSON.stringify({
+      schema: "eta-mu.eventsource-denial-control-evidence/v1",
+      childExit: child.status,
+      result,
+      audit,
+    }),
+  );
+  assert.equal(result.schema, "eta-mu.eventsource-denial-control/v1");
+  assert.equal(result.pid, child.pid);
+  assert.equal(
+    result.available,
+    true,
+    "the real flagged constructor must exist before replacement",
+  );
+  assert.equal(result.flag, true);
+  assert.match(result.nodeVersion, /^\d+\.\d+\.\d+$/);
+  assert.equal(result.denied, true);
+  assert.equal(result.errorCode, "TEST_NETWORK_FORBIDDEN");
+  assert.equal(result.surface, "EventSource");
+  assert.equal(result.fallbackCalls, 0);
+  assert.equal(audit.schema, "eta-mu.test-network-denial/v1");
+  assert.equal(audit.capture, capture);
+  assert.equal(audit.pid, child.pid);
+  assert.equal(audit.parentPid, process.pid);
+  assert.deepEqual(audit.expectedNodeChildren, []);
+  assert.equal(audit.deniedAttempts, 1);
+  assert.ok(
+    audit.kernelAncestry.some(
+      (row) =>
+        row.pid === child.pid && row.parentPid === process.pid && /^[0-9]+$/.test(row.startTicks),
+    ),
+  );
   assert.equal(child.status, 97, "a caught EventSource denial still fails the child on exit");
 });
