@@ -336,4 +336,115 @@
         (is (= :unadopted-dependency-pins
                (refusal-code #(assessment/require-protected-dependencies!))))))))
 
+(def post-get-variants [:unchanged :root :proposal-body :proposal-chronology :issue-chronology :permission])
+
+(defn ^:async final-get-context-controls []
+  ;; The normal registered executor builds and binds this exact pinned verifier.
+  ;; Missing setup is a separate failure, never a causal publisher RED.
+  (let [verifier (host/env "ETA_MU_REJECTION_VERIFIER_FILE")
+        expected (host/env "ETA_MU_REJECTION_VERIFIER_SHA256")
+        compiled-bound? (= expected (host/sha256 (host/read-bytes verifier)))]
+    (is (and (string? expected) (re-matches #"[0-9a-f]{64}" expected) compiled-bound?)
+        "The actual source-built pinned Muse verifier is present and bound")
+    (doseq [branch [:recovery :posted :uncertain] variant post-get-variants]
+      (let [{:keys [deps issues proposal]} (fixture-deps)
+            changes (atom {}) gets (atom []) posts (atom 0) diagnostic (atom nil)
+            recovery? (= :recovery branch) healthy? (= :unchanged variant)
+            _ (when recovery? (swap! issues conj (post-record summary)))
+            read (:read-json deps)
+            guarded (assoc deps :read-json
+                           (fn [& args]
+                             (let [actual (apply read args) endpoint (second args)]
+                               (cond
+                                 (and (= endpoint "graphql") (:root-body @changes))
+                                 (assoc-in actual [:data :repository :pullRequest :reviewThreads :nodes 0 :comments :nodes 0 :body]
+                                           (:root-body @changes))
+                                 (and (str/includes? endpoint "/permission") (:permission @changes))
+                                 {:permission (:permission @changes)}
+                                 :else actual))))
+            {:keys [deps]} (ready {:deps guarded :issues issues})
+            result (try
+                     {:value
+                      (await (assessment/publish
+                              (assoc deps
+                                     :post! (fn [_ _ body]
+                                              (swap! posts inc)
+                                              (let [record (post-record body)]
+                                                (swap! issues conj record)
+                                                (if (= :uncertain branch)
+                                                  {:outcome :uncertain :http-status 503}
+                                                  {:outcome :posted :record record})))
+                                     :get-comment! (fn [id]
+                                                     (let [actual ((:get-comment! deps) id)
+                                                           expected (first (filter #(= id (:id %)) @issues))
+                                                           before [@changes @proposal @issues]]
+                                                       (swap! gets conj id)
+                                                       (case variant
+                                                         :root (swap! changes assoc :root-body "A real defect appeared during the final GET; fix it.")
+                                                         :proposal-body (swap! proposal update :body str "\nInert proposal edit during final GET.")
+                                                         :proposal-chronology (swap! proposal assoc :updatedAt "2026-10-03T11:39:01Z")
+                                                         :issue-chronology (swap! issues conj
+                                                                                 {:id 99003 :node_id "inert-later-issue"
+                                                                                  :body "Inert unrelated issue append during final GET."
+                                                                                  :user {:login "inert-later-writer" :type "User"}
+                                                                                  :created_at "2026-10-03T11:40:01Z" :updated_at "2026-10-03T11:40:01Z"
+                                                                                  :html_url "https://example.invalid/inert-issue/99003"})
+                                                         :permission (swap! changes assoc :permission "read")
+                                                         :unchanged nil)
+                                                       (reset! diagnostic
+                                                               {:record-id id :exact-record-returned? (= expected actual)
+                                                                :native-state-changed? (not= before [@changes @proposal @issues])})
+                                                       actual))) config))}
+                     (catch :default e {:refused (:code (ex-data e)) :error (ex-message e)}))
+            value (:value result)
+            setup-ok? (and compiled-bound? (= [99002] @gets) (= (if recovery? 0 1) @posts)
+                           (true? (:exact-record-returned? @diagnostic))
+                           (= (not healthy?) (:native-state-changed? @diagnostic)))]
+        (is setup-ok? (str "Actual unchanged GET and mutation boundary reached: " branch "/" variant))
+        (if healthy?
+          (do
+            (is (= :observed (:status value)))
+            (is (= (if recovery? :already-observed (if (= :uncertain branch) :uncertain :posted)) (:outcome value)))
+            (is (= (not recovery?) (:write-performed value)))
+            (is (= (post-record summary) (:native-record value)))
+            (is (false? (:admitted value)))
+            (is (false? (:native-agreement-admitted value)))
+            (is (false? (:settlement-performed value)))
+            (is (false? (:resolution-performed value)))
+            (is (false? (:review-credit value))))
+          (if recovery?
+            (do
+              (is (some? (:refused result)) "Recovery refuses changed context after actual GET")
+              (is (nil? value) "Recovery returns no stale observed success")
+              (is (= 0 @posts) "Recovery performs no POST"))
+            (do
+              (is (= :unestablished (:status value)))
+              (is (= (if (= :uncertain branch) :uncertain :posted) (:outcome value)))
+              (is (= (if (= :uncertain branch) {:outcome :uncertain :http-status 503} {:outcome :posted})
+                     (:actual-write-outcome value)))
+              (is (true? (:write-intent-performed value)))
+              (is (false? (:retry-performed value)))
+              (is (false? (:admitted value)))
+              (is (false? (:native-agreement-admitted value)))
+              (is (false? (:settlement-performed value)))
+              (is (false? (:resolution-performed value)))
+              (is (false? (:review-credit value)))
+              (when (= :posted branch)
+                (is (= (post-record summary) (:actual-post-response value)))))))
+        (host/output! (merge {:control "inert-rejection-post-get-context/v1" :branch branch :variant variant
+                              :actual-get-ids @gets :actual-posts @posts :compiled-verifier-bound? compiled-bound?
+                              :setup-ok? setup-ok? :returned-status (:status value) :refusal-code (:refused result)}
+                             @diagnostic))))))
+
+(defn ^:async complete-final-get-context-controls [done]
+  (try
+    (await (final-get-context-controls))
+    (catch :default e
+      (is false (str "Unexpected inert final GET setup/control error: " (ex-message e))))
+    (finally (done))))
+
+(deftest final-get-must-recollect-complete-context-in-recovery-and-after-one-write
+  (async done
+    (complete-final-get-context-controls done)))
+
 (run-tests 'opencode-rejection-assessment-test)

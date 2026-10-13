@@ -885,3 +885,12 @@
   spore: none
   receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/t350-nineteen-path-actual-owning-qualification-20261013T1912-v1/canonical-qualified-nineteen-source-receipt-v1.edn
   note: All nineteen exact sources pass complete normal gates after actual tests exposed omitted deeper filename and native prompt lists. Preserve failed source/filename/prompt controls and require actual child prompt evidence. Missing compact native review body is unknown, not empty: fresh224byte nonempty K387 review uses existing scope; stop unjustified policy expansion. Anonymous current OpenCode free model discovery retained. No spore/promotion or deployment credit.
+- ts: 2026-10-13T20:54:44.593853987Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify native assessment publication lock postGET custody and batched source reads
+  p-efficiency: 0.65
+  p-friction: 0.5
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: 04259af01eda24eb1907a4f8db2be1210d3c12f3198b35441048c8f3787c403b
+  note: Retain fullfreshness while removing perpathGit overhead. Actualobserver must synchronize CJS/ESM bindings and require nonempty PID/status witnesses; firstfalseRED keptuncredited, correctedgenuineRED andall5normalgatespass. Newreviewhostadoption/nativeverdict andCMSdeployment stillpending; no new spore/promotion.

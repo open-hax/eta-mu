@@ -71,7 +71,7 @@ env:
 # Every publishing run is owned by eta-mu; GitHub concurrency is repository-scoped.
 # Other repositories request a dispatch here instead of calling from their own run.
 concurrency:
-  group: positive-cohort-assessment-${{ inputs.target_repository_id }}-${{ inputs.pr_number }}
+  group: native-pr-assessment-${{ inputs.target_repository_id }}-${{ inputs.pr_number }}
   cancel-in-progress: false
 
 jobs:
@@ -113,7 +113,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
-            echo '::error::Rejection assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
+            echo '::error::Positive cohort assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
             exit 1
           }
           [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]] || {
@@ -276,7 +276,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
-            echo '::error::Rejection assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
+            echo '::error::Positive cohort assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
             exit 1
           }
           [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]] || {
@@ -446,7 +446,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
-            echo '::error::Rejection assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
+            echo '::error::Positive cohort assessment requires a fresh workflow run; job reruns cannot reuse prior-attempt evidence.'
             exit 1
           }
           [[ "$GITHUB_REPOSITORY" == open-hax/eta-mu ]] || {

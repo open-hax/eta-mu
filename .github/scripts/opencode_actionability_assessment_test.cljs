@@ -1140,8 +1140,263 @@
       :complete
       (finally (.rmSync fs directory #js {:recursive true :force true})))))
 
+(def post-get-mutations
+  [[:unchanged (fn [_] nil)]
+   [:root #(swap! % assoc-in [:thread :comments :nodes 0 :body] "A real defect appeared during the final GET; fix it.")]
+   [:proposal-body #(swap! % update-in [:issues 0 :body] str "\nInert proposal edit during final GET.")]
+   [:proposal-chronology #(swap! % assoc-in [:issues 0 :updated_at] "2026-10-11T01:00:01Z")]
+   [:issue-chronology #(swap! % update :issues conj
+                            (issue 7003 (get-in @% [:issues 0 :user])
+                                   "2026-10-11T01:01:01Z" "Inert unrelated issue append during final GET."))]
+   [:permission #(swap! % assoc :permission "read")]])
+
+(def post-get-cases
+  (vec (for [branch [:recovery :posted :uncertain] [variant mutate] post-get-mutations]
+         {:branch branch :variant variant :mutate mutate})))
+
+(defn ^:async post-get-context-case [{:keys [branch variant mutate]}]
+  (let [gets (atom []) posts (atom 0) diagnostic (atom nil)
+        recovery? (= :recovery branch) healthy? (= :unchanged variant)
+        writes (if recovery? 0 1)
+        result (try
+                 {:result
+                  (await (publish-case
+                          (fn [d c state]
+                            (when recovery?
+                              (swap! state update :issues conj
+                                     (issue 7002 bot "2026-10-11T01:01:00Z" (:summary (setup)))))
+                            [(assoc d
+                                    :post! (fn [repo number body]
+                                             (swap! posts inc)
+                                             (let [actual ((:post! d) repo number body)]
+                                               (if (= :uncertain branch)
+                                                 {:outcome :uncertain :http-status 503} actual)))
+                                    :get-comment! (fn [id]
+                                                    (let [expected (first (filter #(= id (:id %)) (:issues @state)))
+                                                          actual ((:get-comment! d) id) before @state]
+                                                      (swap! gets conj id)
+                                                      (mutate state)
+                                                      (reset! diagnostic
+                                                              {:record-id id :exact-record-returned? (= expected actual)
+                                                               :native-state-changed? (not= before @state)})
+                                                      actual))) c]) writes healthy?))}
+                 (catch :default e {:error {:message (ex-message e) :data (ex-data e)}}))
+        checked (try
+                  (check "post-GET control actually reaches exactly one GET" @gets [7002])
+                  (check "post-GET control preserves exact actual POST count" @posts writes)
+                  (check "post-GET control returns the unchanged exact assessment record"
+                         (:exact-record-returned? @diagnostic) true)
+                  (check "post-GET control mutates surrounding native facts only"
+                         (:native-state-changed? @diagnostic) (not healthy?))
+                  (when-let [error (:error result)]
+                    (throw (ex-info (:message error) (:data error))))
+                  (let [value (:result result) terminal (:terminal value)]
+                    (when (and (not healthy?) (not recovery?))
+                      (check "post-GET churn keeps a terminal unestablished observation" (:status terminal) :unestablished)
+                      (check "post-GET churn retains the actual write outcome" (:outcome terminal)
+                             (if (= :uncertain branch) :uncertain :posted))
+                      (check "post-GET churn retains the actual outcome metadata" (:actual-write-outcome terminal)
+                             (if (= :uncertain branch) {:outcome :uncertain :http-status 503} {:outcome :posted}))
+                      (check "post-GET churn keeps exactly one write intent" (:write-intent-performed terminal) true)
+                      (check "post-GET churn never retries" (:retry-performed terminal) false)
+                      (check "post-GET churn supplies no admission" (:admitted terminal) false)
+                      (check "post-GET churn supplies no resolution" (:native-resolution-performed terminal) false)
+                      (check "post-GET churn supplies no review credit" (:review-credit terminal) false)
+                      (when (= :posted branch)
+                        (check "post-GET churn retains the actual posted record" (get-in terminal [:actual-post-response :id]) 7002))))
+                  {:passed? true}
+                  (catch :default e {:passed? false :error {:message (ex-message e) :data (ex-data e)}}))
+        row (merge {:control "inert-actionability-post-get-context/v1" :branch branch :variant variant
+                    :actual-get-ids @gets :actual-posts @posts
+                    :setup-ok? (and (= [7002] @gets) (= writes @posts)
+                                    (true? (:exact-record-returned? @diagnostic))
+                                    (= (not healthy?) (:native-state-changed? @diagnostic)))}
+                   @diagnostic checked)]
+    (host/output! row)
+    row))
+
+(defn ^:async post-get-context-controls [remaining failures]
+  (if-let [control (first remaining)]
+    (let [row (await (post-get-context-case control))]
+      (await (post-get-context-controls (next remaining)
+                                       (if (:passed? row) failures (conj failures row)))))
+    (do
+      (check "all post-GET context controls complete without a setup or assertion failure" failures [])
+      :complete)))
+
+(defn batch-output-fault [bytes variant]
+  (let [newline (.indexOf bytes 10) header (.toString (.subarray bytes 0 newline) "utf8")
+        [object kind size] (str/split header #" ")
+        replace-header (fn [parts] (js/Buffer.concat #js [(js/Buffer.from (str (str/join " " parts) "\n") "utf8")
+                                                         (.subarray bytes (inc newline))]))]
+    (case variant
+      :wrong-object (replace-header [(apply str (repeat 40 "0")) kind size])
+      :wrong-kind (replace-header [object "commit" size])
+      :invalid-size (replace-header [object kind "invalid"])
+      :unsafe-size (replace-header [object kind "9007199254740992"])
+      :missing-object (js/Buffer.from (str object " missing\n") "utf8")
+      :truncated (.subarray bytes 0 (dec (.-length bytes)))
+      :wrong-separator (let [changed (js/Buffer.from bytes)]
+                         (aset changed (+ (inc newline) (js/Number size)) 65) changed)
+      :trailing (js/Buffer.concat #js [bytes (js/Buffer.from "unrequested trailing bytes" "utf8")]))))
+
+(defn tree-output-fault [bytes variant]
+  (let [end (.indexOf bytes 0) first-record (.subarray bytes 0 (inc end))]
+    (case variant
+      :tree-mode (js/Buffer.concat #js [(js/Buffer.from "040000" "ascii") (.subarray bytes 6)])
+      :tree-kind (js/Buffer.from (str/replace-first (.toString bytes "utf8") " blob " " commit ") "utf8")
+      :tree-duplicate (js/Buffer.concat #js [bytes first-record])
+      :tree-truncated (.subarray bytes 0 (dec (.-length bytes))))))
+
+(defn capture-batch-source [checkout head paths variant]
+  (let [require (.createRequire module (.join path test-root "fixture-source-loader.cjs"))
+        native (require "node:child_process") original (.-spawnSync native)
+        calls (atom []) injected (atom false)]
+    (try
+      (aset native "spawnSync"
+            (fn [& args]
+              (let [[command argv options] args tokens (vec (array-seq argv))
+                    ls? (and (= "git" command) (some #{"ls-tree"} tokens))
+                    batch? (and (= "git" command) (some #{"cat-file"} tokens) (some #{"--batch"} tokens))
+                    force-limit? (and (= :argv-limit variant) ls? (not (some #{"-r"} tokens)) (not @injected))
+                    result (if force-limit?
+                             (do (reset! injected true) #js {:status nil :pid 0 :error #js {:code "E2BIG"}})
+                             (.apply original native (to-array args)))]
+                (when (= "git" command)
+                  (swap! calls conj {:argv tokens :pid (.-pid result) :status (.-status result)
+                                     :signal (.-signal result) :error-code (some-> (.-error result) .-code)
+                                     :fixture-launch-failure? force-limit?
+                                     :input (some-> (aget options "input") (.toString "ascii"))}))
+                (when (and (= 0 (.-status result)) (not @injected)
+                           (or (and batch? (#{:wrong-object :wrong-kind :invalid-size :unsafe-size :missing-object
+                                             :truncated :wrong-separator :trailing} variant))
+                               (and ls? (#{:tree-mode :tree-kind :tree-duplicate :tree-truncated} variant))))
+                  (let [fd (aget (aget options "stdio") 1)
+                        file (.readlinkSync fs (str "/proc/self/fd/" fd)) bytes (.readFileSync fs file)
+                        changed (if batch? (batch-output-fault bytes variant) (tree-output-fault bytes variant))]
+                    (reset! injected true)
+                    (.ftruncateSync fs fd 0)
+                    (.writeSync fs fd changed 0 (.-length changed) 0)))
+                result)))
+      (.syncBuiltinESMExports module)
+      (check "source observer binds the actual CJS and ESM spawnSync exports"
+             (identical? (aget native "spawnSync") (.-spawnSync child-process)) true)
+      (let [result (try {:value (host/immutable-source checkout head paths)}
+                        (catch :default e {:refused (:code (ex-data e))}))]
+        (assoc result :calls @calls :injected? @injected
+                      :observer-live-binding? (identical? (aget native "spawnSync") (.-spawnSync child-process))))
+      (finally
+        (aset native "spawnSync" original)
+        (.syncBuiltinESMExports module)))))
+
+(defn batch-source-controls
+  "Small actual owned Git selection; count real processes and preserve exact carriers."
+  []
+  (let [directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-source-batch-"))
+        git (owned-source-fixture-git directory)
+        binary (js/Buffer.from #js [255 0 10 65 128])
+        text "\ufeffimmutable batch ημ\n"
+        link "\ufeff../../inert-target-never-followed"
+        raw-link (js/Buffer.from #js [255 10 128])
+        wanted ["duplicate.bin" "link" "empty.txt" "gitlink" "binary.bin" "a text.cljc" "raw-link"]]
+    (try
+      (.chmodSync fs directory 448)
+      (git "init" "--initial-branch=fixture")
+      (.writeFileSync fs (.join path directory "a text.cljc") text)
+      (git "add" "--all") (git "commit" "-m" "Owned batch gitlink target")
+      (let [target (git "rev-parse" "HEAD")]
+        (.writeFileSync fs (.join path directory "binary.bin") binary)
+        (.writeFileSync fs (.join path directory "duplicate.bin") binary)
+        (.writeFileSync fs (.join path directory "empty.txt") "")
+        (.symlinkSync fs link (.join path directory "link"))
+        (.symlinkSync fs raw-link (.join path directory "raw-link"))
+        (.mkdirSync fs (.join path directory "nested"))
+        (.writeFileSync fs (.join path directory "nested/child.cljc") "unselected nested source\n")
+        (.writeFileSync fs (js/Buffer.concat #js [(js/Buffer.from (str directory "/") "utf8")
+                                                 (js/Buffer.from #js [255 128])]) "unselected nonUTF8 path\n")
+        (git "add" "--all")
+        (git "update-index" "--add" "--cacheinfo" (str "160000," target ",gitlink"))
+        (git "commit" "-m" "Owned mixed immutable batch objects")
+        (let [head (git "rev-parse" "HEAD") index (.readFileSync fs (.join path directory ".git/index"))
+              status (git "status" "--porcelain=v1")
+              expected-bytes {"duplicate.bin" binary "binary.bin" binary "a text.cljc" (js/Buffer.from text "utf8")
+                              "empty.txt" (js/Buffer.from "" "utf8") "link" (js/Buffer.from link "utf8")
+                              "raw-link" raw-link "gitlink" (js/Buffer.from target "ascii")}
+              objects (into {} (map #(vector % (git "rev-parse" (str head ":" %))) wanted))]
+          (doseq [[variant checkout paths real-count] [[:normal directory wanted 3]
+                                                       [:argv-limit (.join path directory "nested")
+                                                        (mapv #(str "../" %) wanted) 4]]]
+            (let [result (capture-batch-source checkout head paths variant)
+                  value (:value result) entries (:files value)
+                  real (filterv #(not (:fixture-launch-failure? %)) (:calls result))
+                  ls (filterv #(some #{"ls-tree"} (:argv %)) real)
+                  batch (filterv #(some #{"--batch"} (:argv %)) real)
+                  head-calls (filterv #(and (some #{"rev-parse"} (:argv %)) (some #{"HEAD"} (:argv %))) real)
+                  content-calls (filterv #(some #{"cat-file"} (:argv %)) real)
+                  witnessed? (boolean (and (seq real) (= 1 (count head-calls)) (seq ls) (seq content-calls)
+                                           (every? #(and (pos-int? (:pid %)) (= 0 (:status %))
+                                                         (nil? (:signal %)) (nil? (:error-code %))) real)))]
+              (host/output! {:control "inert-actual-git-batching/v1" :variant variant
+                             :returned-source? (some? value) :refusal-code (:refused result)
+                             :actual-real-processes (count real) :actual-ls-tree-processes (count ls)
+                             :actual-batch-processes (count batch)
+                             :actual-head-processes (count head-calls) :actual-content-processes (count content-calls)
+                             :actual-pid-status-witness? witnessed? :observer-live-binding? (:observer-live-binding? result)
+                             :injected-argv-limit? (and (= :argv-limit variant) (:injected? result))
+                             :real-process-results (mapv #(select-keys % [:pid :status :signal :error-code]) real)})
+              (check "actual Git source selection succeeds before process-count assertion" (some? value) true)
+              (check "batch selection preserves exact requested path order" (mapv :path entries) paths)
+              (doseq [[p entry] (map vector wanted entries)]
+                (check "batch object identity remains actual immutable Git" (:blob entry) (objects p))
+                (check "batch byte count is exact" (:bytes entry) (.-length (expected-bytes p)))
+                (check "batch byte SHA256 is exact" (:sha256 entry) (host/sha256 (expected-bytes p)))
+                (when (contains? entry :text)
+                  (check "batch UTF8/BOM content is lossless" (.equals (expected-bytes p) (js/Buffer.from (:text entry) "utf8")) true))
+                (when (contains? entry :content-base64)
+                  (check "batch binary content is lossless" (.equals (expected-bytes p) (js/Buffer.from (:content-base64 entry) "base64")) true)))
+              (check "gitlink remains exact forty-byte object ID, no target traversal"
+                     (select-keys (nth entries 3) [:git-mode :object-type :byte-carrier :bytes])
+                     {:git-mode "160000" :object-type "commit" :byte-carrier "gitlink-object-id" :bytes 40})
+              (check "mixed batch preserves every exact Git mode" (mapv :git-mode entries)
+                     ["100644" "120000" "100644" "160000" "100644" "100644" "120000"])
+              (check "binary and duplicate paths retain exact equal immutable object"
+                     [(:blob (first entries)) (:blob (nth entries 4))] [(objects "binary.bin") (objects "binary.bin")])
+              (check "manifest retains exact original shape and order" (:manifest value)
+                     [2 head (mapv #(mapv % [:path :git-mode :object-type :blob :byte-carrier :bytes :sha256]) entries)])
+              (check "aggregate digest remains exact original EDN digest" (:sha256 value) (host/sha256 (pr-str (:manifest value))))
+              (check "nonempty actual HEAD metadata and content PID/status witness precedes count assertions" witnessed? true)
+              (check "actual source processes all completed normally"
+                     (every? #(and (pos-int? (:pid %)) (= 0 (:status %)) (nil? (:signal %)) (nil? (:error-code %))) real) true)
+              (check "one actual ls-tree process replaces per-path metadata children" (count ls) 1)
+              (check "one actual cat-file batch replaces per-blob children" (count batch) 1)
+              (check "actual Git process count is independent of selected path count" (count real) real-count)
+              (check "batch stdin contains every selected blob request, including duplicates"
+                     (:input (first batch)) (str (str/join "\n" (keep #(when-not (= "gitlink" %) (objects %)) wanted)) "\n"))
+              (check "argv-limit fallback is invoked only by its explicit fixture" (:injected? result) (= :argv-limit variant))))
+          (let [result (capture-batch-source directory head ["gitlink"] :normal)]
+            (check "gitlink-only read succeeds without fetching a nested object" (some? (:value result)) true)
+            (check "gitlink-only selection needs no cat-file process" (count (filter #(some #{"cat-file"} (:argv %)) (:calls result))) 0)
+            (check "gitlink-only selection has two actual Git children" (count (:calls result)) 2))
+          (doseq [variant [:wrong-object :wrong-kind :invalid-size :unsafe-size :missing-object :truncated :wrong-separator :trailing
+                          :tree-mode :tree-kind :tree-duplicate :tree-truncated]]
+            (let [result (capture-batch-source directory head wanted variant)]
+              (check "actual stdout framing fault is injected after normal real Git exit" (:injected? result) true)
+              (check "malformed selected metadata or binary batch response refuses"
+                     (:refused result) (if (str/starts-with? (name variant) "tree-") :source-entry :source-object))
+              (check "malformed response supplies no partial inventory" (contains? result :value) false)
+              (check "framing control real Git calls completed before owned stdout mutation"
+                     (every? #(and (pos-int? (:pid %)) (= 0 (:status %)) (nil? (:error-code %))) (:calls result)) true)))
+          (check "batch inventory preserves checkout HEAD" (git "rev-parse" "HEAD") head)
+          (check "batch inventory preserves raw index" (.equals index (.readFileSync fs (.join path directory ".git/index"))) true)
+          (check "batch inventory preserves checkout status" (git "status" "--porcelain=v1") status)
+          (check "symlink targets remain unopened" (.existsSync fs (.join path directory "link")) false)
+          (check "gitlink never initializes nested checkout" (.existsSync fs (.join path directory "gitlink")) false)))
+      :complete
+      (finally (.rmSync fs directory #js {:recursive true :force true})))))
+
 (defn ^:async main []
-  (let [_pin-check (dependency-pin-controls)
+  (let [_batch-source-check (batch-source-controls)
+        _pin-check (dependency-pin-controls)
         _model-discovery-check (model-discovery-controls)
         _run-check (run-controls)
         _native-read-check (native-read-controls)
@@ -1164,6 +1419,7 @@
                                           ((:post! d) r n body) {:outcome :uncertain})) c]) 1 true))
         server-cases (await (server-error-controls))
         publisher-readback (await (publisher-readback-controls))
+        _post-get-context (await (post-get-context-controls post-get-cases []))
         wrong-id (await (publish-case (fn [d c _] [(assoc d :post! (fn [r n b] ((:post! d) r n b) {:outcome :posted :record {:id 1}})) c]) 1 false))
         wrong-get (await (publish-case (fn [d c _] [(assoc d :get-comment! (fn [id] (assoc ((:get-comment! d) id) :body "changed"))) c]) 1 false))
         changed-context (await (publish-case (fn [d c s] [(assoc d :post! (fn [r n b] (let [result ((:post! d) r n b)]
@@ -1208,6 +1464,8 @@
                                       "server-readback" (server-error-controls)
                                       "publisher-authentication" (publisher-authentication-controls)
                                       "publisher-readback" (publisher-readback-controls)
+                                      "post-get-context" (post-get-context-controls post-get-cases [])
+                                      "git-batching" (batch-source-controls)
                                       (throw (ex-info "Unknown owned test selector" {:only only}))))]
                      {:tests "focused inert actionability host control" :only only :checks @checks :failed 0
                       :completion "opencode-actionability-assessment/v1" :completed? true

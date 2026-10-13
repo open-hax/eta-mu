@@ -77,6 +77,8 @@
 (defn- body-matches [snapshot body user]
   (filterv #(and (= body (:body %)) (= user (select-keys (:user %) [:login :id :node_id :type])))
            (:issue-comments snapshot)))
+(defn- context-material [snapshot]
+  (select-keys snapshot [:repository :pr :selected :raw-issue-comments :issue-comments :history]))
 (defn rebind-input
   "Fresh custody check before and after the child; this grants no admission."
   [deps config source]
@@ -90,6 +92,13 @@
                    (= (actionability/context-binding (:selected snapshot)) (:payload record)))
       (host/refuse! :fresh-proposal-binding))
     snapshot))
+(defn- post-get-context! [deps config source earlier]
+  ;; The final GET can leave the selected record intact while its context changes.
+  ;; Rebind all existing source, run, proposal and native-input custody afterward.
+  (let [latest (rebind-input deps config source)]
+    (when-not (= (context-material earlier) (context-material latest))
+      (host/refuse! :post-get-context-change))
+    latest))
 (defn- qualified-record! [snapshot record body user]
   (let [thread (:selected snapshot) disposition (actionability/disposition thread)]
     (when-not (and (= body (:body record)) (= user (select-keys (:user record) [:login :id :node_id :type]))
@@ -127,17 +136,15 @@
     (when (> (count prior) 1) (host/refuse! :ambiguous-existing-assessment))
     ;; Publisher authentication performs native reads. Rebind after those reads,
     ;; before either dedup readback or the sole write, including issue chronology.
-    (let [last-before (rebind-input deps config source)
-          context-keys [:repository :pr :selected :raw-issue-comments :issue-comments :history]]
-      (when-not (= (select-keys before context-keys)
-                   (select-keys last-before context-keys))
+    (let [last-before (rebind-input deps config source)]
+      (when-not (= (context-material before) (context-material last-before))
         (host/refuse! :pre-write-context-change)))
     (if (= 1 (count prior))
       (let [record (first prior) actual (get-comment! (:id record))]
         (when-not (= (select-keys record [:id :node_id :body :user :created_at :updated_at :html_url])
                      (select-keys actual [:id :node_id :body :user :created_at :updated_at :html_url]))
           (host/refuse! :native-get-mismatch))
-        (qualified-record! before record body user))
+        (qualified-record! (post-get-context! deps config source before) record body user))
       (let [result (try (await (post! (:repo config) (:pr-number config) body))
                         (catch :default _ {:outcome :uncertain :transport-boundary-threw true}))]
         ;; Retain the one-shot outcome even when recollection or GET fails.
@@ -157,7 +164,7 @@
               (when-not (= (select-keys record [:id :node_id :body :user :created_at :updated_at :html_url])
                            (select-keys actual [:id :node_id :body :user :created_at :updated_at :html_url]))
                 (host/refuse! :native-get-mismatch))
-              (assoc (qualified-record! after record body user)
+              (assoc (qualified-record! (post-get-context! deps config source after) record body user)
                      :outcome (:outcome result)
                      :actual-write-outcome (select-keys result [:outcome :http-status :transport-boundary-threw])
                      :write-performed true :retry-performed false)))

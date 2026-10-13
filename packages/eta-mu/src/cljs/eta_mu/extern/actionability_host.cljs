@@ -97,25 +97,90 @@
           (finally (.closeSync fs fd))))
       (finally (.rmSync fs directory #js {:recursive true :force true})))))
 
-(defn- source-git [checkout & args]
-  ;; Git writes stdout directly to an owned descriptor: blob size is not a
-  ;; spawnSync capture limit. Only stderr remains buffered for process failure.
+(defn- source-git-input [checkout input args]
+  ;; Complete stdout still uses an owned descriptor, independent of maxBuffer.
   (let [directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-source-git-"))]
     (try
       (private-directory! directory)
-      (let [file (.join path directory "stdout")
-            fd (.openSync fs file "wx" 384)]
+      (let [file (.join path directory "stdout") fd (.openSync fs file "wx" 384)]
         (try
-          (let [r (.spawnSync process "git" (clj->js (into ["--no-pager" "--literal-pathspecs" "-c" "core.fsmonitor=false"
-                                                           "-C" checkout] args))
-                              #js {:env #js {:PATH (or (env "PATH") "/usr/bin:/bin")
-                                             :GIT_OPTIONAL_LOCKS "0" :GIT_CONFIG_NOSYSTEM "1"}
-                                   :stdio #js ["ignore" fd "pipe"]
-                                   :timeout 15000 :maxBuffer 1048576})]
-            (when-not (= 0 (.-status r)) (refuse! :source-object))
+          (let [options (cond-> {:env {:PATH (or (env "PATH") "/usr/bin:/bin")
+                                      :GIT_OPTIONAL_LOCKS "0" :GIT_CONFIG_NOSYSTEM "1"}
+                                :stdio ["ignore" fd "pipe"] :timeout 15000 :maxBuffer 1048576}
+                          (some? input) (assoc :stdio ["pipe" fd "pipe"] :input input))
+                result (.spawnSync process "git" (clj->js (into ["--no-pager" "--literal-pathspecs" "-c" "core.fsmonitor=false"
+                                                               "-C" checkout] args))
+                                   (clj->js options))]
+            (when-not (= 0 (.-status result))
+              (if (= "E2BIG" (some-> (.-error result) .-code))
+                (throw (ex-info "Source Git argument transport exceeded the host limit"
+                                {:code :source-object :argv-limit? true}))
+                (refuse! :source-object)))
             (read-bytes file))
           (finally (.closeSync fs fd))))
       (finally (.rmSync fs directory #js {:recursive true :force true})))))
+
+(defn- source-git [checkout & args]
+  (source-git-input checkout nil (vec args)))
+
+(defn- source-tree-entries [checkout head paths]
+  (let [bytes (try
+                (apply source-git checkout (into ["ls-tree" "-z" head "--"] paths))
+                (catch :default e
+                  (if (:argv-limit? (ex-data e))
+                    ;; No selected-path cap. Ask Git for root metadata while
+                    ;; retaining its cwd-relative names, including ../ paths.
+                    (let [cdup (str/trim (.toString (source-git checkout "rev-parse" "--show-cdup") "utf8"))]
+                      (when-not (re-matches #"(\.\./)*" cdup) (refuse! :source-object))
+                      (source-git checkout "ls-tree" "-r" "-z" head "--" (if (= "" cdup) "." cdup)))
+                    (throw e))))
+        wanted (into {} (map #(vector (.toString (js/Buffer.from % "utf8") "base64") %) paths))
+        entries (loop [offset 0 selected {}]
+                  (if (= offset (.-length bytes))
+                    selected
+                    (let [end (.indexOf bytes 0 offset) tab (.indexOf bytes 9 offset)]
+                      (when-not (and (< offset end) (< offset tab end)) (refuse! :source-entry))
+                      (let [raw-path (.subarray bytes (inc tab) end)
+                            requested (get wanted (.toString raw-path "base64"))]
+                        ;; Unselected paths may be non-UTF8: never decode them,
+                        ;; and never read their blob content.
+                        (if requested
+                          (let [header (.toString (.subarray bytes offset tab) "utf8")
+                                [_ mode kind object] (re-matches #"(100644|100755|120000|160000) (blob|commit) ([0-9a-f]{40})" header)
+                                found (try (.decode (js/TextDecoder. "utf-8" #js {:fatal true :ignoreBOM true}) raw-path)
+                                           (catch :default _ nil))]
+                            (when-not (and (= requested found) (not (contains? selected requested))
+                                           (if (= "160000" mode) (= "commit" kind) (= "blob" kind)))
+                              (refuse! :source-entry))
+                            (recur (inc end) (assoc selected requested {:path requested :git-mode mode
+                                                                      :object-type kind :blob object})))
+                          (recur (inc end) selected))))))]
+    (when-not (= (set paths) (set (keys entries))) (refuse! :source-entry))
+    (mapv entries paths)))
+
+(defn- source-blob-bytes [checkout entries]
+  (let [blobs (filterv #(= "blob" (:object-type %)) entries)]
+    (if (empty? blobs)
+      {}
+      (let [input (js/Buffer.from (str (str/join "\n" (map :blob blobs)) "\n") "ascii")
+            output (source-git-input checkout input ["cat-file" "--batch"])]
+        (loop [remaining blobs offset 0 by-path {}]
+          (if-let [entry (first remaining)]
+            (let [line-end (.indexOf output 10 offset)]
+              (when (< line-end offset) (refuse! :source-object))
+              (let [header (.toString (.subarray output offset line-end) "utf8")
+                    [_ object kind declared] (re-matches #"([0-9a-f]{40}) (blob) (0|[1-9][0-9]*)" header)
+                    size (js/Number (or declared "NaN")) start (inc line-end) end (+ start size)]
+                (when-not (and (= (:blob entry) object) (= "blob" kind)
+                               (js/Number.isSafeInteger size) (<= 0 size)
+                               (js/Number.isSafeInteger end) (< end (.-length output))
+                               (= 10 (aget output end)))
+                  (refuse! :source-object))
+                (recur (next remaining) (inc end)
+                       (assoc by-path (:path entry) (.subarray output start end)))))
+            (do
+              (when-not (= offset (.-length output)) (refuse! :source-object))
+              by-path)))))))
 
 (defn- source-merge-base [checkout head base]
   (let [bases (str/split-lines (str/trim (.toString (source-git checkout "merge-base" "--all" head base) "utf8")))]
@@ -135,26 +200,19 @@
                    (= (count paths) (count (set paths)))
                    (every? #(and (string? %) (not (str/blank? %)) (not (str/includes? % "\u0000"))) paths))
       (refuse! :source-selection))
-    (let [files (mapv (fn [p]
-                        (let [entry (.toString (run "ls-tree" "-z" head "--" p) "utf8")
-                              [_ mode kind object found] (re-matches #"(100644|100755|120000|160000) (blob|commit) ([0-9a-f]{40})\t([^\u0000]+)\u0000" entry)]
-                          (when-not (and (= p found)
-                                         (if (= "160000" mode) (= "commit" kind) (= "blob" kind)))
-                            (refuse! :source-entry))
-                          ;; Symlinks are Git blob bytes, never filesystem targets.
-                          ;; A gitlink carries only its committed object ID; no
-                          ;; nested repository or external commit bytes are read.
-                          (let [carrier (if (= "commit" kind) "gitlink-object-id" "blob")
-                                bytes (if (= "commit" kind) (js/Buffer.from object "ascii")
-                                          (run "cat-file" "blob" object))
-                                text (when (#{"100644" "100755" "120000"} mode)
-                                       (try (.decode (js/TextDecoder. "utf-8" #js {:fatal true :ignoreBOM true}) bytes)
-                                            (catch :default _ nil)))]
-                            (cond-> {:path p :git-mode mode :object-type kind :blob object
-                                     :byte-carrier carrier :bytes (.-length bytes) :sha256 (sha256 bytes)}
-                              (some? text) (assoc :text text)
-                              (and (= "blob" kind) (nil? text))
-                              (assoc :content-base64 (.toString bytes "base64")))))) paths)
+    (let [entries (source-tree-entries checkout head paths)
+          blob-bytes (source-blob-bytes checkout entries)
+          files (mapv (fn [{:keys [path git-mode object-type blob]}]
+                        (let [carrier (if (= "commit" object-type) "gitlink-object-id" "blob")
+                              bytes (if (= "commit" object-type) (js/Buffer.from blob "ascii") (get blob-bytes path))
+                              text (when (#{"100644" "100755" "120000"} git-mode)
+                                     (try (.decode (js/TextDecoder. "utf-8" #js {:fatal true :ignoreBOM true}) bytes)
+                                          (catch :default _ nil)))]
+                          (cond-> {:path path :git-mode git-mode :object-type object-type :blob blob
+                                   :byte-carrier carrier :bytes (.-length bytes) :sha256 (sha256 bytes)}
+                            (some? text) (assoc :text text)
+                            (and (= "blob" object-type) (nil? text))
+                            (assoc :content-base64 (.toString bytes "base64"))))) entries)
           manifest [2 head (mapv #(mapv % [:path :git-mode :object-type :blob :byte-carrier :bytes :sha256]) files)]]
       {:head head :files files :manifest manifest :sha256 (sha256 (pr-str manifest))}))))
 

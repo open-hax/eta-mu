@@ -278,7 +278,7 @@ test("authored workflow refuses unresolved pins before any native or setup comma
 test("protected prepare assess publish boundaries retain exact source and model custody", () => {
   assert.equal(workflow.env.CANONICAL_REVISION, "b23845012508fd598a56dea34d6be38ede5c7136");
   assert.equal(workflow.env.MUSE_REVISION, "b9e47da4f445106310c7b9dc98fe3a3ef9ea50d5");
-  assert.equal(workflow.concurrency.group, "positive-cohort-assessment-${{ inputs.target_repository_id }}-${{ inputs.pr_number }}");
+  assert.equal(workflow.concurrency.group, "native-pr-assessment-${{ inputs.target_repository_id }}-${{ inputs.pr_number }}");
   assert.equal(workflow.concurrency["cancel-in-progress"], false);
   const model = workflow.jobs.assess.steps.find(step => step.id === "assess");
   assert.equal(model.env.REVIEW_INPUT_PURPOSE, "positive-cohort-assessment");
@@ -303,4 +303,37 @@ test("protected prepare assess publish boundaries retain exact source and model 
   assert.equal(workflow.jobs.publish.environment, "positive-cohort-assessment-publication");
   assert.equal(JSON.stringify(workflow).includes("resolveReviewThread"), false);
   assert.equal(JSON.stringify(workflow).includes("publish-opencode-review"), false);
+});
+
+
+test("all native assessment purposes share one repository and PR publication lock", async () => {
+  const { parse } = await import("yaml");
+  const workflows = [
+    "opencode-actionability-assessment.yml",
+    "opencode-rejection-assessment.yml",
+    "opencode-positive-cohort-assessment.yml",
+  ].map((file) => parse(fs.readFileSync(path.join(root, ".github/workflows", file), "utf8")));
+  const expected = "native-pr-assessment-${{ inputs.target_repository_id }}-${{ inputs.pr_number }}";
+  // Substitute only these known fixture coordinates, not Actions expression semantics.
+  const key = (parsed, repositoryId, pr, thread) => parsed.concurrency.group
+    .replaceAll("${{ inputs.target_repository_id }}", repositoryId)
+    .replaceAll("${{ inputs.pr_number }}", pr)
+    .replaceAll("${{ inputs.thread_id }}", thread);
+  const repositoryId = "1199983316";
+  const pr = "388";
+  const threads = ["PRRT_kwDOR4ZK1M6rn7BT", "PRRT_kwDOR4ZK1M6rn7Bc"];
+  const samePr = key(workflows[0], repositoryId, pr, threads[0]);
+  for (const parsed of workflows) {
+    for (const thread of threads) {
+      assert.equal(key(parsed, repositoryId, pr, thread), samePr);
+      assert.notEqual(key(parsed, "1199983317", pr, thread), samePr);
+      assert.notEqual(key(parsed, repositoryId, "389", thread), samePr);
+    }
+  }
+  assert.equal(samePr, "native-pr-assessment-1199983316-388");
+  for (const parsed of workflows) {
+    assert.equal(parsed.concurrency.group, expected);
+    assert.equal(parsed.concurrency["cancel-in-progress"], false);
+    assert.equal(parsed.concurrency.queue, undefined);
+  }
 });

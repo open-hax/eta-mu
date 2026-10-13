@@ -56,7 +56,7 @@ env:
 # Every publishing run is owned by eta-mu; GitHub concurrency is repository-scoped.
 # Other repositories request a dispatch here instead of calling from their own run.
 concurrency:
-  group: actionability-${{ inputs.target_repository_id }}-${{ inputs.pr_number }}-${{ inputs.thread_id }}
+  group: native-pr-assessment-${{ inputs.target_repository_id }}-${{ inputs.pr_number }}
   cancel-in-progress: false
 
 jobs:

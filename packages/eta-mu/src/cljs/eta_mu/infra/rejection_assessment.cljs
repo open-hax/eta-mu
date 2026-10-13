@@ -138,6 +138,19 @@
    :native-record (select-keys actual [:id :node_id :body :user :created_at :updated_at :html_url])
    :admitted false :native-agreement-admitted false :settlement-performed false :resolution-performed false :review-credit false})
 
+(defn- post-get-context! [deps config source earlier new-record-id]
+  ((:verify-sources! deps)) ((:verify-run! deps))
+  (let [latest (collect deps config) inventory ((:inventory! deps))]
+    (when-not (= (conversation-material earlier (:history-text deps))
+                 (conversation-material latest (:history-text deps)))
+      (host/refuse! :post-get-context-change))
+    ;; Only the exact new assessment is removed for the original input rebind.
+    ;; Recovery keeps its existing record in the complete original input.
+    (let [baseline (if new-record-id (without-observed latest new-record-id) latest)
+          request (request! baseline (:proposal-id config))]
+      (bound-input! deps baseline inventory request source config))
+    latest))
+
 (defn ^:async publish
   "One issue write at most. Native observations never substitute for final canonical rejection admission."
   [{:keys [verify-sources! verify-run! verify-invocation! inventory! publisher-proof!
@@ -166,8 +179,10 @@
                    (conversation-material last-before (:history-text deps)))
         (host/refuse! :pre-write-context-change)))
     (if (= 1 (count prior))
-      (let [record (first prior) actual (get-comment! (:id record))]
-        (assoc (observed-record! record actual body user) :outcome :already-observed :write-performed false))
+      (let [record (first prior) actual (get-comment! (:id record))
+            observed (observed-record! record actual body user)
+            _latest (post-get-context! deps config (:source invocation) before nil)]
+        (assoc observed :outcome :already-observed :write-performed false))
       (let [result (try (await (post! (:repo config) (:pr-number config) body))
                         (catch :default _ {:outcome :uncertain :transport-boundary-threw true}))]
         ;; Preserve the actual one-shot outcome even when later readback fails.
@@ -176,19 +191,18 @@
           (when-not (#{:posted :refused :uncertain} (:outcome result)) (host/refuse! :native-write-outcome))
           (when (= :refused (:outcome result)) (host/refuse! :native-write-refused))
           (verify-sources!) (verify-run!)
-          (let [after (collect deps config) current-inventory (inventory!)
+          (let [after (collect deps config) _current-inventory (inventory!)
                 matches (body-matches after body user)]
             (when-not (= 1 (count matches)) (host/refuse! :uncertain-native-write))
-            (let [record (first matches) actual (get-comment! (:id record))
-                  prior-after (without-observed after (:id record))
-                  request (request! prior-after (:proposal-id config))]
+            (let [record (first matches) actual (get-comment! (:id record))]
               (when (and (= :posted (:outcome result)) (not= (:id record) (get-in result [:record :id])))
                 (host/refuse! :native-post-record-mismatch))
-              (bound-input! deps prior-after current-inventory request (:source invocation) config)
-              (assoc (observed-record! record actual body user)
-                     :outcome (:outcome result)
-                     :actual-write-outcome (select-keys result [:outcome :http-status :transport-boundary-threw])
-                     :write-performed true :retry-performed false)))
+              (let [observed (observed-record! record actual body user)
+                    _latest (post-get-context! deps config (:source invocation) after (:id record))]
+                (assoc observed
+                       :outcome (:outcome result)
+                       :actual-write-outcome (select-keys result [:outcome :http-status :transport-boundary-threw])
+                       :write-performed true :retry-performed false))))
           (catch :default e
             {:status :unestablished :outcome (:outcome result)
              :actual-write-outcome (select-keys result [:outcome :http-status :transport-boundary-threw])
