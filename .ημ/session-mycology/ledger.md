@@ -961,3 +961,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 7b297798665685211e93c01fbf2d57b68136b132c47eb8d60467f2a88ebf7038
   note: Source-only corrections and genuine metadata custody advanced. Keep first-class initial authoring distinct from creation events; preserve protected relationships and shared identity-law ownership. All implementation, native review, qualification and deployment obligations remain; no new spore.
+- ts: 2026-10-14T20:03:44.311579251Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Calibrate existing Rheos775 owner plan and recover complete source4d review failure custody
+  p-efficiency: 0.72
+  p-friction: 0.74
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: 590c72438f77119c6db65d073c9c66a7d9fa1c3ccbaf11b5b6a00349babbe423
+  note: Read complete terminal logs and exact artifact before assigning a provider cause. The actual first assessment omitted its note, then retried in the same session against protected STOP guidance; the strict verifier correctly refused it. Initial Markdown authoring remains distinct from generated creation metadata/event history. Calibrated the existing five-point estimate against an actual three-point metadata comparator, preserving frontmatter, recovery scope and board history. Native creation findings and normal current-head review/readiness remain open. No model, board, production effect or spore.
