@@ -988,3 +988,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 208f8acaf79a99379d81bae13b66af10f580db93cdcbb12d940ee6d1ff7b4c28
   note: A repeated native creation premise cited a blanket repository instruction that did not distinguish first-class initial source from established operational writes. Record the explicit human contract in that owning instruction, preserving canonical creation validation and all operational Rheos authority. This source clarification creates no generated card metadata/event, and original P1s still need actual native withdrawal or qualified independent rejection. No runtime, readiness, provider or production effect and no spore.
+- ts: 2026-10-14T21:55:04.100936842Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Three bounded Rheos metadata/recovery planning corrections
+  p-efficiency: 0.68
+  p-friction: 0.71
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/root-PR352-c830-three-bounded-plan-corrections-publication-v1/canonical-receipt-event.edn
+  note: Law-first named representation, actual atomic append versus already-present publication and durable cross-process watcher custody clarified. Two card bodies only; no frontmatter/status/point/dependency/history change. Remaining source identity, manual initial-state/live-add/unknown-time gaps still upstream and unqualified. No fake birth or replacement board protocol; no runtime/production/model/admission effects.
