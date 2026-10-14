@@ -244,7 +244,7 @@ jobs:
               entrypoint: "pnpm test",
               network_required_after_restore: true,
               restore_requirements: [
-                "Node.js 22 and Java 21 must be installed on the restore host",
+                "Node.js 24 and Java 21 must be installed on the restore host",
                 "Restore the bundled pnpm, Clojure, and Babashka toolchains or install the pinned versions",
                 "Restore the optional dependency-cache artifact or allow network access for dependency installation"
               ]

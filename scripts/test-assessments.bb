@@ -255,7 +255,7 @@
       (when completion (completed-suite! (:out result) completion))
       (zero? (:exit result))
       (catch Exception error
-        (binding [*out* *err*] (println (.getMessage error) (ex-data error)))
+        (binding [*out* *err*] (println (.getMessage error) (ex-data error) {:exit (:exit result)}))
         false))))
 
 (defn run-assessments! [work]

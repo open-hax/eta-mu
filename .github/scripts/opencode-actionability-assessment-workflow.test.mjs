@@ -932,7 +932,7 @@ test("actual BB assessment entry checks deployed Node before denial source or ne
     fs.writeFileSync(path.join(bin, name), `#!/usr/bin/python3\nimport pathlib,sys\npathlib.Path(${JSON.stringify(forbidden)}).write_text(${JSON.stringify(name)})\nsys.exit(98)\n`, { flag: "wx", mode: 0o700 });
   }
   const result = spawnSync("bb", ["-Djava.io.tmpdir=" + temporary, entry], { cwd: directory, encoding: "utf8", timeout: 15000,
-    env: { PATH: `${bin}:/usr/local/bin:/usr/bin:/bin`, HOME: home, TMPDIR: temporary,
+    env: { PATH: `${bin}:${process.env.PATH || "/usr/local/bin:/usr/bin:/bin"}`, HOME: home, TMPDIR: temporary,
       XDG_CONFIG_HOME: path.join(home, ".config"), LANG: "C.UTF-8", LC_ALL: "C.UTF-8", TZ: "UTC" } });
   assert.equal(result.error, undefined, result.stderr);
   assert.equal(result.signal, null, result.stderr);

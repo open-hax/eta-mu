@@ -921,3 +921,25 @@
   spore: none
   receipt-refs: b6ddb927f1042f3e7f7f2e16e7ddf0c0d9a57ba8545c242a08891794bf7ac87e
   note: Exact16 source changes qualify through five normal owners. Metadata Node probes require explicit early audit plus real Popen PID and kernel ancestry even through non-Node launchers; preserve initial apparently passing incomplete audit result and all private failures. Final assessment has102 audited Nodes, three fresh pinned profiles, no skipped controls. Preserve source/control scopes and root-owned composition before native current-head settlement. Existing custody/routing skills cover the lesson; no new spore. Deployment and protected main remain pending.
+- ts: 2026-10-14T00:28:47.234869034Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify five release corrections and clarify historical counts without rewriting the ledger
+  p-efficiency: 0.82
+  p-friction: 0.68
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: e94ce2a896a1d54bdd30743a5185a7011ac7e6cd6140309e2c964a9a25148822
+  note: Five source corrections over C7 pass all three normal owning checks. Ordinary workflow tests: 315 pass, zero failures and skips. Complete assessment: 377 preload tests; Node suites with 28, 18 and 7 tests; 1265 actionability NBB checks; rejection with 7 tests and 307 assertions; positive cohort with 6 tests and 57 assertions. Six outer audit records bind 102 actual Node processes with zero denials. Three fresh pinned Muse profile pairs compile with zero warnings. Full lint passes. Caller PATH remains behind fixture bin; Node 24 restore metadata and actual child exit diagnostics are corrected. Card grammar changes only body prose. Historical records remain unchanged, and their readable renderings below retain the original timestamps and evidence scope.
+
+Readable clarification of historical counts in the append-only session ledger.
+
+The note dated 2026-10-12T07:46:25.210413985Z records 13 accepted captures, 12 workflow tests, 36 object checks, 282 NBB checks, 140 ordinary Node tests, 194 CLI tests with 587 assertions, and 6 workflow tests with 78 assertions. Original record: https://github.com/open-hax/eta-mu/blob/c7debaa97c2042b96a84ca590d756dfd5711573f/.%CE%B7%CE%BC/session-mycology/ledger.md#L752. Its receipt references are 25826e52-aaee-4a57-b2ab-bcd870f002ce and f5dfb9adf692edeca056d63e6471a9be19b50091292a88693982acc35e65d65b.
+
+The note dated 2026-10-12T15:26:58.843275626Z says the normal registered gate built both exact protected Muse profiles and ran all four suites. Original record: https://github.com/open-hax/eta-mu/blob/c7debaa97c2042b96a84ca590d756dfd5711573f/.%CE%B7%CE%BC/session-mycology/ledger.md#L788. Its receipt references are 447d197c-6097-4611-90e0-a80e49f0f4e3 and f7e6f5da46a960d5caefc92419f7c91c9cc293479386b86a9537f14d98afeb16.
+
+The note dated 2026-10-13T21:12:50.746366385Z records that the MiMo trace covered 153 pages and then requested page 154 without stages. Original record: https://github.com/open-hax/eta-mu/blob/c7debaa97c2042b96a84ca590d756dfd5711573f/.%CE%B7%CE%BC/session-mycology/ledger.md#L905. Its receipt reference is e7d89afe0252e965cf488a001f4cb131270789cc76a8b26b70a8a2534019923e.
+
+The note dated 2026-10-13T23:50:01.299914020Z records 16 source changes, five normal owners, 102 audited Node processes and three fresh pinned profiles, with no skipped controls. Original record: https://github.com/open-hax/eta-mu/blob/c7debaa97c2042b96a84ca590d756dfd5711573f/.%CE%B7%CE%BC/session-mycology/ledger.md#L923. Its receipt reference is b6ddb927f1042f3e7f7f2e16e7ddf0c0d9a57ba8545c242a08891794bf7ac87e.
+
+These are readable renderings of the recorded historical values. Each belongs to its original timestamp and evidence scope. The original notes and their receipt references remain the provenance source.
+

@@ -2576,6 +2576,24 @@ test("required deterministic evidence and Sandbox use Node24 while legacy profil
   const sandboxSetups = Object.values(sandbox.jobs).flatMap(setup);
   assert.equal(sandboxSetups.length, 1);
   assert.equal(sandboxSetups[0].with["node-version"], "24");
+  const collector = sandbox.jobs.bundle.steps.find((step) => step.name === "Collect generated outputs and portable toolchains");
+  assert.ok(collector, "the actual bundle collector must produce restore metadata");
+  const query = collector.run.match(/jq -n[\s\S]*?'(\{[\s\S]*?\})' > "\$OUT\/manifest\.json"/);
+  assert.ok(query, "retain the actual jq manifest generator, rather than a separately authored manifest");
+  const produced = spawnSync("jq", ["-n", "--arg", "repository", "synthetic/sandbox",
+    "--arg", "revision", "c".repeat(40), "--arg", "ref", "refs/heads/inert",
+    "--arg", "generated_at", "2026-10-14T00:00:00Z", "--arg", "validation", "success", query[1]],
+    { encoding: "utf8", timeout: 15000 });
+  assert.equal(produced.error, undefined, produced.stderr);
+  assert.equal(produced.signal, null, produced.stderr);
+  assert.equal(produced.status, 0, produced.stderr);
+  const manifest = JSON.parse(produced.stdout);
+  assert.equal(manifest.sandbox_bundle_version, 1);
+  assert.equal(manifest.entrypoint, "pnpm test");
+  assert.equal(manifest.network_required_after_restore, true);
+  assert.equal(manifest.restore_requirements[0],
+    `Node.js ${sandboxSetups[0].with["node-version"]} and Java 21 must be installed on the restore host`,
+    "actual generated restore requirements must match the runtime that produced the bundle evidence");
   assert.equal(workflow.on.workflow_call.inputs.node_version.default, "22");
   for (const job of [workflow.jobs.prepare_review_context, workflow.jobs.review]) {
     const held = setup(job);
