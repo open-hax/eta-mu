@@ -943,3 +943,12 @@ The note dated 2026-10-13T23:50:01.299914020Z records 16 source changes, five no
 
 These are readable renderings of the recorded historical values. Each belongs to its original timestamp and evidence scope. The original notes and their receipt references remain the provenance source.
 
+- ts: 2026-10-14T19:42:47.346375060Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-native-description-preservation-over-0a4-v1
+  task: Prepare and locally rescope the existing native description preservation card for public planning review
+  p-efficiency: 0.78
+  p-friction: 0.46
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: f397bce607843ce1c863347e9baa1e3f399d2d0bbfe2b4d633fc184ba14ca357
+  note: First-party Rheos in_progress to breakdown records a lawful local rescope; body-only authoring preserves historical card content. Existing in_progress alone is not planning/readiness evidence. Private RED4wrong-description failures and GREEN82passes remain preparation. Parent owns public planning review, readiness, RED commit, source adoption and deployment. No new spore.
