@@ -1,12 +1,12 @@
 ---
 category: "tasks"
 labels: ["tasks", "github", "opencode", "review", "automation"]
-write-id: "1785194140000-0.mimo-review-agent"
+write-id: "1792006835974-0.mwklufkd9wd11tj5v57"
 points: "5"
 source: "operator request 2026-07-27"
 title: "Build an evidence-first OpenCode GitHub review agent using MiMo V2.5 Free"
 priority: "P1"
-status: "in_progress"
+status: "breakdown"
 uuid: "opencode-mimo-evidence-review-agent"
 created_at: "2026-07-27T20:35:40Z"
 ---
@@ -77,6 +77,40 @@ environment guidance rather than evidence.
 - Confirm the anonymous free-model path selects `github-reviewer`, not the built-in `build`
   agent.
 - Re-run the pull-request canary and inspect its generated review output before merge.
+
+
+## Native OpenCode definition preservation — separately scored continuation
+
+The one-point compatibility outcome is owned by
+[preserve post-Muse native review tool definitions](preserve-post-muse-native-review-tool-definitions-59d05d0f.md)
+(`4b21cb6f-160c-4c15-8410-46b959d05d0f`). This original five-point card retains
+its historical implementation and unfinished canary. The child has its own
+acceptance and completion; its point is additional capacity, not an unrecorded
+slice of this card's five points. The two source estimates are five plus one.
+Neither outcome is marked complete by this planning correction.
+
+The child's invariant is that eta-mu's outer `tool.definition` adapter adds no
+rewrite after the existing Muse hook. If that prior hook changes a description,
+its changed value remains; the original pre-Muse host string is not declared
+immutable. All schemas, IDs, executor references, input/output object identity,
+other hooks, reviewer prompt and ACL remain subject to the child's preservation
+controls.
+
+The direct/default workflow currently installs OpenCode `1.18.18`; the Foresight
+consumer separately supplies `1.18.31`. The child requires native-definition
+fixtures bound to those actual selections. The dated `1.18.31`/35-ID private
+capture remains historical evidence and cannot qualify default `1.18.18`
+definitions. Client/version selection, compiled Muse/skills pins and the
+anonymous dynamically selected latest eligible zero-cost MiMo route remain.
+The historical model slugs above are dated observations.
+
+Hosted completion is defined in the child by the existing exact-head evidence,
+context, accepted-invocation, publication and final review gates, plus the current
+coverage/CodeQL/sandbox checks. Downstream Foresight caller adoption and the
+Services admission/rollout cards are named handoffs there; their completion is
+separate from this child. This correction does not diagnose a provider 403,
+supply readiness, apply the private RED/GREEN patches, or authorize a model
+health probe, gate weakening or production action.
 
 ---
 
