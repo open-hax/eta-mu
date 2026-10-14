@@ -943,3 +943,39 @@ The note dated 2026-10-13T23:50:01.299914020Z records 16 source changes, five no
 
 These are readable renderings of the recorded historical values. Each belongs to its original timestamp and evidence scope. The original notes and their receipt references remain the provenance source.
 
+- ts: 2026-10-14T08:46:47.056506043Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Author and publish visible independent owner plans for complete supporting review input
+  p-efficiency: 0.85
+  p-friction: 0.28
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: d53d0532b420542397ee8eeda5a3cb3a21ac66b80d393fa4517c1111466eef1f
+  note: Initial first-class Markdown cards are visible to actual canonical read-task, with real owner UUIDs, scoped decomposition and honest downstream qualification. Preserve the old card/frontmatter and historical ledger bytes; exact one-newline correction improves rendering. Source plans are committed and ready for native planning review; no implementation, readiness, complete supporting review scope, native approval or production rollout claimed. Cross-repository links do not invent completion enforcement. No spore.
+- ts: 2026-10-14T09:15:22.165387596Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Correct canonical dependency shapes and external narrative ownership
+  p-efficiency: 0.77
+  p-friction: 0.42
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: d19ac2cb49548d3bbd9b5f423f34011b870ef89f2063f837f81a2bb1bae68026
+  note: Fresh native planning feedback exposed a scalar dependency admitted by raw card readback but invalid under the planning law. Use actual canonical field operations and verify vector plus correlated engine event/write ID; preserve incoming status, points and ledger prefix. Name the narrative task external owner without adding a dependency. Manual initial creation remains authorized and its absent generated event is not fabricated. Native current-head review convergence and full CMS deployment remain outstanding; no spore.
+- ts: 2026-10-14T10:20:42.434101102Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Apply verified owning planning corrections for T351
+  p-efficiency: 0.70
+  p-friction: 0.85
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: 3129037d0fffec977584ae6c8e41357805c40dfffdc6398b83c84688a7f4bd47
+  note: Source-only corrections and genuine metadata custody advanced. Keep first-class initial authoring distinct from creation events; preserve protected relationships and shared identity-law ownership. All implementation, native review, qualification and deployment obligations remain; no new spore.
+- ts: 2026-10-14T11:22:10.996375608Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Record finite native handoff and concrete operator closure correction
+  p-efficiency: 0.65
+  p-friction: 0.84
+  p-skill-candidate: 0.00
+  spore: none
+  receipt-refs: 29ea4b8bd226e394417244bc0fd77fd227ebd00736011f5b8ee5f7b3987665b3
+  note: Follow the actual finding alternatives and accepted owner boundary. Keep source/input/handoff exits finite; private archives do not extend native admission. Preserve canonical one-attempt event/readback custody and distinguish planning/source progress from deployed product. No new spore.
