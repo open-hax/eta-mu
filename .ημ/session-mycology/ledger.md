@@ -952,3 +952,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: f397bce607843ce1c863347e9baa1e3f399d2d0bbfe2b4d633fc184ba14ca357
   note: First-party Rheos in_progress to breakdown records a lawful local rescope; body-only authoring preserves historical card content. Existing in_progress alone is not planning/readiness evidence. Private RED4wrong-description failures and GREEN82passes remain preparation. Parent owns public planning review, readiness, RED commit, source adoption and deployment. No new spore.
+- ts: 2026-10-14T21:26:22.643540804Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: native-definition-preservation-four-planning-findings
+  p-efficiency: 0.86
+  p-friction: 0.39
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: root-four-findings-plan-canonical-receipt.edn
+  note: Keep the parent canary and narrow1pointcompatibility child independently scored. Preservation appliesafterMuse; actualdefault1.18.18 fixture and supportedcaller1.18.31 eachneed honestcustody. Name existinghostedjobs/acceptedinvocation/publication/gate and independentdownstreamhandoffs. Currentmissing-filetoolread refusal is notprovider403 orcredentialevidence; approvaltextalone isnotacceptedtrace. Preserve actualcreation/sourcehistory and GraphQLcleanup rejection; no spore/promotion.
