@@ -979,3 +979,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: baf01e59eec79f3c15dc4cfa2f97c119731a5b33b3232c7b202bf0b524dd739f
   note: Separate schemas, pure domain decisions and infra effect composition. Recovery needs a declared phase grammar and exact per-key completion custody across both initialization and explicit clears. A ledger lock does not protect card files; narrow single-writer qualification and observed-conflict refusal honestly instead of claiming that post-write detection preserves overwritten bytes. Preserve initial Markdown authorization without fake engine events; both creation findings remain open. Two body-only source corrections retain all frontmatter and history, with actual canonical readbacks. No runtime implementation, readiness or deployment credit and no spore.
+- ts: 2026-10-14T20:57:39.536585623Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Align owning source instructions with first-class initial Markdown card authorization
+  p-efficiency: 0.80
+  p-friction: 0.71
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: 208f8acaf79a99379d81bae13b66af10f580db93cdcbb12d940ee6d1ff7b4c28
+  note: A repeated native creation premise cited a blanket repository instruction that did not distinguish first-class initial source from established operational writes. Record the explicit human contract in that owning instruction, preserving canonical creation validation and all operational Rheos authority. This source clarification creates no generated card metadata/event, and original P1s still need actual native withdrawal or qualified independent rejection. No runtime, readiness, provider or production effect and no spore.
