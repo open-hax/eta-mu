@@ -970,3 +970,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 590c72438f77119c6db65d073c9c66a7d9fa1c3ccbaf11b5b6a00349babbe423
   note: Read complete terminal logs and exact artifact before assigning a provider cause. The actual first assessment omitted its note, then retried in the same session against protected STOP guidance; the strict verifier correctly refused it. Initial Markdown authoring remains distinct from generated creation metadata/event history. Calibrated the existing five-point estimate against an actual three-point metadata comparator, preserving frontmatter, recovery scope and board history. Native creation findings and normal current-head review/readiness remain open. No model, board, production effect or spore.
+- ts: 2026-10-14T20:47:33.906618437Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Repair five current Rheos planning boundaries without inflating source capability
+  p-efficiency: 0.73
+  p-friction: 0.75
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: baf01e59eec79f3c15dc4cfa2f97c119731a5b33b3232c7b202bf0b524dd739f
+  note: Separate schemas, pure domain decisions and infra effect composition. Recovery needs a declared phase grammar and exact per-key completion custody across both initialization and explicit clears. A ledger lock does not protect card files; narrow single-writer qualification and observed-conflict refusal honestly instead of claiming that post-write detection preserves overwritten bytes. Preserve initial Markdown authorization without fake engine events; both creation findings remain open. Two body-only source corrections retain all frontmatter and history, with actual canonical readbacks. No runtime implementation, readiness or deployment credit and no spore.
