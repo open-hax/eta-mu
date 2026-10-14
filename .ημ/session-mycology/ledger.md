@@ -705,3 +705,241 @@
   spore: none
   receipt-refs: 2026-10-10T14:48:23.009697114Z
   note: Native Actions supplied null for a missing direct timeout property; a scalar fixture assumed an empty string. Preserve the failed head and logs, falsify the actual authored validator with native null, then distinguish a missing own input property from explicit invalid data using the complete inputs context. Caller event names do not identify reusable invocation, so honor PR caller120 while direct absence defaults60. All286 configured local tests pass and every other workflow field is identical; successor hosted qualification remains pending. Preserve historical bytes and append corrections only. No spore or promotion.
+- ts: 2026-10-12T00:49:07.912087552Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Persist independently reviewed inactive assessment host after required package qualification
+  p-efficiency: 0.64
+  p-friction: 0.64
+  p-skill-candidate: 0.51
+  spore: none
+  receipt-refs: 9340bbe5bbe84636d7b8bd98eab6d263bdbf56823f7d94e22f12630964a42f44
+  note: Complete source transport tests do not confer authentic App identity, model judgment or native publication. Preserve failed historical captures and former NOT RUN statement; append actual compiled package results. Restore only independently observed mode difference with exact byte guards. Review and adopt source bindings separately; complete current authoritative history needs fresh canonical decoding before effects. No spore or promotion.
+- ts: 2026-10-12T03:04:13.792961127Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Reuse canonical native context and repair bounded invocation transport
+  p-efficiency: 0.68
+  p-friction: 0.70
+  p-skill-candidate: 0.49
+  spore: none
+  receipt-refs: 2fcca2b62d0623efb064c9574d3a24fadc6ccfbd61de8cac5b351631e8738b36,0fd7090e04567bd180a9d6aa0eeeed961f3acba966900329714f299301de79ab
+  note: Whole context, immutable preimage and uncertain write readback must precede native effect. Match the sole failed first-stage guard with ordinary fixtures and preserve its old stageful trace adverse. Historical invalid receipts require new canonical observations, never rewrite. Retain all setup and audit failures. Pins remain inactive; no native agreement, resolver, model or deployment authority.
+- ts: 2026-10-12T03:33:53.070295355Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Repair hidden actionability interjob uploads
+  p-efficiency: 0.87
+  p-friction: 0.32
+  p-skill-candidate: 0.49
+  spore: none
+  receipt-refs: 8677cacf1b62ccce7762578158404f917f82453574f20abaf734ba451dea5129
+  note: Pinned upload-artifact excludes dot-directory payloads by default. Explicit named hidden evidence/profile directories need include-hidden-files. Inspect writers and selected paths before enabling; retain exact permission and pin refusal boundaries. Source-only qualification does not supply hosted publication credit.
+- ts: 2026-10-12T05:14:35.610278846Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Pin reviewed actionability dependencies and require a fresh run
+  p-efficiency: 0.85
+  p-friction: 0.31
+  p-skill-candidate: 0.57
+  spore: none
+  receipt-refs: 3c95f0f7-337c-42e0-aef5-72554eb006da,2604e507052763ab246e69133e17aaf0d37030e6779f33c1b5dc924df66b9f9f
+  note: Activate dependency pins only after reviewed protected sources and an actual compiled consumer check. A failed-job rerun cannot reuse a predecessor attempt; refuse before native reads and later effects, and retain in-job model correction separately. Preserve setup failures, unexecuted carrier mistake and default linter timeout without pass credit. Actual custody and tests remain separate from native semantic review, App publication and adoption. No new spore or promotion.
+- ts: 2026-10-12T07:46:25.210413985Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Qualify full staged review prompts and text-only Git object source admission
+  p-efficiency: 0.80
+  p-friction: 0.55
+  p-skill-candidate: 0.42
+  spore: none
+  receipt-refs: 25826e52-aaee-4a57-b2ab-bcd870f002ce,f5dfb9adf692edeca056d63e6471a9be19b50091292a88693982acc35e65d65b
+  note: Genuine missing staged-input prompt and binary or symbolic Git object predecessor assertions became green with six source edits. Both first and corrective prompts include staged purpose input; text-only domain admission rejects binary symlink and gitlink source objects. Actual13 accepted captures include12workflow tests36object checks282NBB checks140ordinary Node tests and full194tests587assertions plus6workflowtests78assertions. Mixed ESM setup and missing actionlint PATH failures retained without causal credit; identical relocated carrier and installed actionlint V2 completed. Preserve exact runner mirror and card frontmatter. Native review and protected merge remain pending. No new spore or promotion.
+- ts: 2026-10-12T09:13:17.511881219Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Centralize assessment publication and preserve immutable symlink bytes
+  p-efficiency: 0.68
+  p-friction: 0.75
+  p-skill-candidate: 0.70
+  spore: none
+  receipt-refs: bae8f4f2ea624e62fe5c9247b5ec101742a7acbbdfa82bdc35a5bafe44a3b5b8
+  note: Preserve real RED and forecast/refusal evidence; exact owned source application qualified locally; native review and production qualification remain separate.
+- ts: 2026-10-12T11:48:47.052049497Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Persist current-c3 lossless-source and invocation identity repairs
+  p-efficiency: 0.9
+  p-friction: 0.25
+  p-skill-candidate: 0.2
+  spore: none
+  receipt-refs: b8cc75fd-ffaa-4fc9-b20a-35a77fdb1bb1,571991a9e665476c3291cc6c2c0833d2a8a2cffb56a2faa922919fd08456fc37
+  note: Seven causal RED/GREEN pairs and full local gates passed. Preserve raw actionlint schema failure alongside exact bounded adjustment and unrelated typo refusal. Root stages only five sources and two existing ledgers. No pin/native/approval/campaign/deployment credit.
+- ts: 2026-10-12T14:23:11.891206112Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Persist independent native rejection transport with accepted pins
+  p-efficiency: 0.72
+  p-friction: 0.58
+  p-skill-candidate: 0.4
+  spore: none
+  receipt-refs: 34e36cec-01fa-4eee-a9bd-5a82ee73144f,cc222f6eebbddfe748d5af9cdb7a9277d2e9ba51e18004cec7d93bddc5666c47
+  note: Scope prior source-bound observations separately from nine fresh recovery phases. Preserve genuine failed lint and exact two intended mutant failures. Root verified saved bytes and custody before eight-source application and three-file accepted canonical adoption; no extra qualification scaffold or spore. Full package194tests587assertions remains distinct from absent workflow resources. Native judgment/publication and deployment gates remain separate.
+- ts: 2026-10-12T15:26:58.843275626Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Repair native review source and publisher boundaries and register settled assessment gates
+  p-efficiency: 0.82
+  p-friction: 0.38
+  p-skill-candidate: 0.55
+  spore: none
+  receipt-refs: 447d197c-6097-4611-90e0-a80e49f0f4e3,f7e6f5da46a960d5caefc92419f7c91c9cc293479386b86a9537f14d98afeb16
+  note: SCI async functions must sequence awaited cases in one let and mark the returned Promise; actual completion marker and predecessor RED guard against false exit-zero evidence. Normal registered gate builds both exact protected Muse profiles and runs allfour suites; complete preimages and authentication-time rebind pass controls. Native/provider/deployment gates remain separate.
+- ts: 2026-10-12T17:46:42.281068121Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify dynamic anonymous MiMo discovery plus assessment source custody repairs
+  p-efficiency: 0.6
+  p-friction: 0.65
+  p-skill-candidate: 0.65
+  spore: none
+  receipt-refs: 1c6719ab-915a-40f2-be16-5a419f09f5ee
+  note: Hold physical CLI and fresh catalog identity across invocation, keep public-target and one-publication custody, preserve copied paths and large blob evidence, and register canonical lint scopes. Completed focused and registered gates; original actionlint external-analyzer hang and precisely allowed prior context diagnostics remain unestablished/retained. No native approval or deployment credit.
+- ts: 2026-10-13T01:06:29.781938153Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Qualify anonymous dynamic native MiMo routing and healthy review completion
+  p-efficiency: 0.65
+  p-friction: 0.78
+  p-skill-candidate: 0.25
+  spore: none
+  receipt-refs: 2ecb6d89505c6c82202fa3719b7a079d212cb2970dafcd0789a0582a6fadb437,b5159cea722d3b1959f891160e5c6e6fcb9625c98e5809eba5f431913f94afcc
+  note: Existing shared/project memory already records anonymous OpenCode and changing free MiMo slugs. Classify authentic upstream errors separately from healthy unfinished review. Preserve full catalog custody and actual per-page coverage through compaction; prompt healthy completion while retaining failed STOP and MAX2. Keep tests independent of package launcher cwd using documented nbb.core file binding. Retain initial failed gates, then qualify final normal source gates. No new spore or promotion; hosted review and deployment remain separate.
+- ts: 2026-10-13T01:21:11.950307087Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Repair CodeQL process association in native assessment fixtures
+  p-efficiency: 0.85
+  p-friction: 0.45
+  p-skill-candidate: 0.20
+  spore: none
+  receipt-refs: 9ed65d6a1f5d13523fb36c5ca035c324b06d88d531cc4a4a538eb4d6a65c09d6,59d595c4339f15bef7f0132a1304a531302f555f70c658d3883735a0785332c8
+  note: Use an explicit fixed Node-only helper for fixture runner enrichment; keep literal Bash and npm launches direct. Exact inverse review preserves fixture events, audit enrollment and assertions. Normal assessment gate passed, while actual scan clearance remains pending. Read complete fresh findings before new review invitations; retain existing requests by their head. No new spore or promotion.
+- ts: 2026-10-13T02:04:20.122661362Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-actionability-host
+  task: Qualify complete native inventory and locked anonymous model setup
+  p-efficiency: 0.75
+  p-friction: 0.48
+  p-skill-candidate: 0.20
+  spore: none
+  receipt-refs: d9a7d9bdd9915df8b125c707483ea8e0034e323ed345e3172a0590300173ef10,766e5043efb1bf6bd3fee8e172367f24a6ac32100967d34b1e03ed20a3c21b34
+  note: Use immutable Git inventory above native transport caps without inferred copy origins. Preserve generated manifest bytes and bind matching locks before custody checks. Prove old workflow staging misses the lock, then qualify corrected authored tails and normal full gates. Retain actual lint failure and binding-only repair without suppressing checks. Existing OpenCode anonymous current-model memory remains discoverable; source qualification and native approval/deployment are separate. No new spore or promotion.
+- ts: 2026-10-13T02:41:38.444205751Z
+  session: codex/01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify direct Node enrollment and EventSource refusal for native assessment source gates
+  p-efficiency: 0.72
+  p-friction: 0.85
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/t350-native-dynamic-mimo-preparation-v1/root-combined-node-eventsource-receipt-event-v1.edn
+  note: Actual causal controls retain missed child dispatch/membership and flagged EventSource predecessor failures; both independently reviewed repairs pass all registered source gates. Preserve source/denial audit scope and anonymous changing-MiMo route; native approval and production remain separate. No new spore/promotion.
+- ts: 2026-10-13T03:01:25.587233334Z
+  session: codex/01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Restore existing test formatting contract after actual hosted CI failure
+  p-efficiency: 0.80
+  p-friction: 0.38
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/t350-native-dynamic-mimo-preparation-v1/root-test-format-ci-repair-v1/root-one-source-format-receipt-event-v1.edn
+  note: Full native sandbox logs and package lint both identify the same owned MJS format issue. Apply scoped formatter only, preserve templates/assertions, verify actual eight controls and normal registered lint. Read existing anonymous dynamic MiMo memory before provider investigation. Preserve failed evidence, native obligations and unrelated work; no new spore or promotion.
+- ts: 2026-10-13T04:09:49.478632156Z
+  session: codex/01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify native Node-launch and pure rejection-carrier law source repairs
+  p-efficiency: 0.65
+  p-friction: 0.87
+  p-skill-candidate: 0.15
+  spore: none
+  receipt-refs: root-seven-source-repair-canonical-event-v1.edn; qualified source8f20d8beee40bb7a41c09eced9588f7962d939aad9cea7d04103feb3c0073910
+  note: Actual paired89controls19pass70fail on predecessor versus89pass final; registered310ordinary,19actionabilityNode,18rejectionNode,685inertchecks,6rejectiontests87assertions pass;84boundNodes0denials,4Muse0warnings;full lintpass. StaticV1getter andV2shellPID limitations retained unapplied. Keep anonymousdynamicMiMo memory discoverable. Native settlement, protected adoption,1000campaign,Servicesstack andliveSpanishCMS remain pending. No spore or promotion.
+- ts: 2026-10-13T04:35:08.702589403Z
+  session: codex/01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify native actionability carrier-law ownership repair
+  p-efficiency: 0.85
+  p-friction: 0.25
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/t350-500f-actionability-submission-law-preparation-v1/root-two-source-law-canonical-event-v1.edn
+  note: Existing predicate moved verbatim to portable law after current native finding; registered gates and CLI pass. Distinct actionability/rejection semantics preserved. No new spore, promotion, native agreement, protected adoption or deployment credit.
+- ts: 2026-10-13T06:13:49.469635622Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify native pagination, shell execution custody and ordinary shared discovery verifier repairs
+  p-efficiency: 0.72
+  p-friction: 0.81
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: 9063768015acfa61835688f0b742b7ee9f1a83e6bbda96aa0ef0a2e59882018b
+  note: Actual predecessor failures isolate three reported behaviors; strict production checks retained. Mode and formatting refusal corrected through scoped original tooling; no new spore or hosted/adoption/deployment credit.
+- ts: 2026-10-13T15:30:07.670087921Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify indirect process, Worker, empty source and deployment workflow documentation repairs
+  p-efficiency: 0.70
+  p-friction: 0.83
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: 32cf274378108bfab2ca1a79012aaf19ed26eac9dd77951838440bd135b4ffe8
+  note: Actual original and private controls distinguish launcher/Worker bypass, private normalization regression and complete empty-source refusal.173 launch,310 ordinary,737 inert checks,all registered assessment/CLI/full lint pass. Keep bounded NodeAPI claim, complete failed controls and anonymous dynamic MiMo memory. New prose verified against actual source. No spore, promotion, native settlement, protected adoption or production credit.
+- ts: 2026-10-13T19:37:04.275005269Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify positive preservation transport and repair native Node boundary findings
+  p-efficiency: 0.70
+  p-friction: 0.85
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/t350-nineteen-path-actual-owning-qualification-20261013T1912-v1/canonical-qualified-nineteen-source-receipt-v1.edn
+  note: All nineteen exact sources pass complete normal gates after actual tests exposed omitted deeper filename and native prompt lists. Preserve failed source/filename/prompt controls and require actual child prompt evidence. Missing compact native review body is unknown, not empty: fresh224byte nonempty K387 review uses existing scope; stop unjustified policy expansion. Anonymous current OpenCode free model discovery retained. No spore/promotion or deployment credit.
+- ts: 2026-10-13T20:54:44.593853987Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify native assessment publication lock postGET custody and batched source reads
+  p-efficiency: 0.65
+  p-friction: 0.5
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: 04259af01eda24eb1907a4f8db2be1210d3c12f3198b35441048c8f3787c403b
+  note: Retain fullfreshness while removing perpathGit overhead. Actualobserver must synchronize CJS/ESM bindings and require nonempty PID/status witnesses; firstfalseRED keptuncredited, correctedgenuineRED andall5normalgatespass. Newreviewhostadoption/nativeverdict andCMSdeployment stillpending; no new spore/promotion.
+- ts: 2026-10-13T21:12:50.746366385Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Clarify finitepage completion using actual hosted MiMo failure
+  p-efficiency: 0.85
+  p-friction: 0.3
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: e7d89afe0252e965cf488a001f4cb131270789cc76a8b26b70a8a2534019923e
+  note: ActualMimotrace covered153pages then requested154 withoutstages. ClarifyreturnedmissingIDs andclosedcompletion; preservefailedSTOP/MAX2/admission. ExactMirror andallnormalrelevantgatespass; naturalprose keepsencodedreviewdiffsmall. No new spore/promotion; freshnativeverdict stillrequired.
+- ts: 2026-10-13T22:33:51.507736461Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify four native assessment custody and long-review repairs
+  p-efficiency: 0.74
+  p-friction: 0.77
+  p-skill-candidate: 0.50
+  spore: none
+  receipt-refs: 0e255940df15183173655fe6d349afcd91d41c4673a7ae6508d896549e20820e
+  note: Complete corpus/native write normalization, explicit launcher refusal and authored fixture custody, literal195 job headroom and refreshed read-only token qualified. Full owning checks caught stale token expectations and one fixture formatting error; retain failures, phase-specific assertions and source-only AST equality before affected reruns. Existing source-verification/custody skills cover friction; no new spore. Hosted MiMo read64 ordering failure and protected adoption/deployment remain distinct.
+- ts: 2026-10-13T23:50:01.299914020Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify five native roots and shared fixture correction for CMS deployment release path
+  p-efficiency: 0.71
+  p-friction: 0.83
+  p-skill-candidate: 0.18
+  spore: none
+  receipt-refs: b6ddb927f1042f3e7f7f2e16e7ddf0c0d9a57ba8545c242a08891794bf7ac87e
+  note: Exact16 source changes qualify through five normal owners. Metadata Node probes require explicit early audit plus real Popen PID and kernel ancestry even through non-Node launchers; preserve initial apparently passing incomplete audit result and all private failures. Final assessment has102 audited Nodes, three fresh pinned profiles, no skipped controls. Preserve source/control scopes and root-owned composition before native current-head settlement. Existing custody/routing skills cover the lesson; no new spore. Deployment and protected main remain pending.
+- ts: 2026-10-14T00:28:47.234869034Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify five release corrections and clarify historical counts without rewriting the ledger
+  p-efficiency: 0.82
+  p-friction: 0.68
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: e94ce2a896a1d54bdd30743a5185a7011ac7e6cd6140309e2c964a9a25148822
+  note: Five source corrections over C7 pass all three normal owning checks. Ordinary workflow tests: 315 pass, zero failures and skips. Complete assessment: 377 preload tests; Node suites with 28, 18 and 7 tests; 1265 actionability NBB checks; rejection with 7 tests and 307 assertions; positive cohort with 6 tests and 57 assertions. Six outer audit records bind 102 actual Node processes with zero denials. Three fresh pinned Muse profile pairs compile with zero warnings. Full lint passes. Caller PATH remains behind fixture bin; Node 24 restore metadata and actual child exit diagnostics are corrected. Card grammar changes only body prose. Historical records remain unchanged, and their readable renderings below retain the original timestamps and evidence scope.
+
+Readable clarification of historical counts in the append-only session ledger.
+
+The note dated 2026-10-12T07:46:25.210413985Z records 13 accepted captures, 12 workflow tests, 36 object checks, 282 NBB checks, 140 ordinary Node tests, 194 CLI tests with 587 assertions, and 6 workflow tests with 78 assertions. Original record: https://github.com/open-hax/eta-mu/blob/c7debaa97c2042b96a84ca590d756dfd5711573f/.%CE%B7%CE%BC/session-mycology/ledger.md#L752. Its receipt references are 25826e52-aaee-4a57-b2ab-bcd870f002ce and f5dfb9adf692edeca056d63e6471a9be19b50091292a88693982acc35e65d65b.
+
+The note dated 2026-10-12T15:26:58.843275626Z says the normal registered gate built both exact protected Muse profiles and ran all four suites. Original record: https://github.com/open-hax/eta-mu/blob/c7debaa97c2042b96a84ca590d756dfd5711573f/.%CE%B7%CE%BC/session-mycology/ledger.md#L788. Its receipt references are 447d197c-6097-4611-90e0-a80e49f0f4e3 and f7e6f5da46a960d5caefc92419f7c91c9cc293479386b86a9537f14d98afeb16.
+
+The note dated 2026-10-13T21:12:50.746366385Z records that the MiMo trace covered 153 pages and then requested page 154 without stages. Original record: https://github.com/open-hax/eta-mu/blob/c7debaa97c2042b96a84ca590d756dfd5711573f/.%CE%B7%CE%BC/session-mycology/ledger.md#L905. Its receipt reference is e7d89afe0252e965cf488a001f4cb131270789cc76a8b26b70a8a2534019923e.
+
+The note dated 2026-10-13T23:50:01.299914020Z records 16 source changes, five normal owners, 102 audited Node processes and three fresh pinned profiles, with no skipped controls. Original record: https://github.com/open-hax/eta-mu/blob/c7debaa97c2042b96a84ca590d756dfd5711573f/.%CE%B7%CE%BC/session-mycology/ledger.md#L923. Its receipt reference is b6ddb927f1042f3e7f7f2e16e7ddf0c0d9a57ba8545c242a08891794bf7ac87e.
+
+These are readable renderings of the recorded historical values. Each belongs to its original timestamp and evidence scope. The original notes and their receipt references remain the provenance source.
+

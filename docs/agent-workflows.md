@@ -32,14 +32,14 @@ Kimi must not close ambiguous issues or make broad/destructive changes.
 
 ## MiMo evidence-first PR review
 
-`.github/workflows/opencode-code-review.yml` reviews non-draft, same-repository pull requests with the project-local `github-reviewer` OpenCode agent and the `opencode/mimo-v2.6-flash-free` model.
+`.github/workflows/opencode-code-review.yml` reviews non-draft, same-repository pull requests with the project-local `github-reviewer` OpenCode agent and a freshly discovered, active, tool-capable, zero-cost MiMo Flash model from OpenCode's anonymous public provider.
 
-Direct pull requests and reusable callers default to a 60-minute review job.
+Direct pull requests and reusable callers default to a 120-minute review job.
 Reusable callers may set numeric `review_timeout_minutes` to a whole number from
-60 through 180 when a complete diff needs a longer pass. The job timeout is
+60 through 180 to select a budget for a complete diff. The job timeout is
 bounded to that range, and its first step rejects an invalid raw request before
 checkout or reviewer setup. An absent inputs context or timeout property selects
-60; an explicitly supplied null, zero or fractional timeout is invalid. Reusable
+120; an explicitly supplied null, zero or fractional timeout is invalid. Reusable
 caller input is honored even when the caller's event is `pull_request`.
 This budget includes setup and both possible model
 invocations; a timeout never establishes review completion or authorizes partial
@@ -282,7 +282,7 @@ A reportable inline finding must:
 
 Test gaps and unresolved questions belong in one concise non-blocking summary. If no candidate survives validation, the agent leaves a short passing summary instead of inventing comments.
 
-The reviewer runs `opencode/mimo-v2.6-flash-free` over OpenCode's anonymous public-provider path, so no `OPENCODE_API_KEY` secret is required — when no OpenCode credential is connected, OpenCode supplies the public credential and disables only models with a non-zero input cost. Inline review comments are mirrored to Discord by the workflow's final notification step.
+The reviewer uses OpenCode's anonymous public-provider path, so no `OPENCODE_API_KEY` secret is required. The installed CLI version, raw public catalog fetched from `https://models.opencode.ai/api.json` over bounded HTTPS, and verbose CLI catalog run against the same file via `OPENCODE_MODELS_PATH` with `OPENCODE_DISABLE_MODELS_FETCH=true` are retained before review. The run is refused if the effective CLI selection differs from the raw-catalog selection. Empty `model` input selects the unique latest eligible MiMo Flash release/version; an exact caller-selected ID must also be present, active, tool-capable and wholly zero-cost in that catalog. Version, catalog or selection failures stop before inference, and the same selected ID/proof digest binds both allowed review attempts and final publication checks. Catalog eligibility is distinct from provider health: inference failures still fail the required review gate. Inline review comments are mirrored to Discord by the workflow's final notification step.
 
 ## CodeRabbit and review gates
 
@@ -372,4 +372,159 @@ qualification and parent publication remain separate.
 
 ### Final unassessed input-page recovery
 
-The host adapter may admit one fresh whole process only for the exact terminal adversarial-validation refusal when all full-input pages were read and only the final page was not assessed. The original stopped invocation, complete bytes and canonical stage-order refusal remain failed. A separate retained DERIVED projection omits only that refused final call; the unchanged pinned Muse callback must return healthy-unfinished-review with null acceptance and no violations. This is retry eligibility only. Earlier/unknown failures, later calls, changed input or custody, a submission, contradictory projection and a second failure do not authorize another process. Every recovery cause shares MAX2; a healthy accepted review runs once. The fresh process must independently satisfy all existing input/SOURCE/HOST/LAST/five-stage/submission/publication guards. This is unpublished local preparation; no native approval, source adoption or original-review acceptance is supplied.
+The host adapter may admit one fresh whole process only for the exact terminal deterministic-stage refusal before any successful stage, when all full-input pages were read and only the final page was not assessed. The original stopped invocation, complete bytes and canonical stage-order refusal remain failed. A separate retained DERIVED projection omits only that refused final call; the unchanged pinned Muse callback must return healthy-unfinished-review with null acceptance and no violations. This is retry eligibility only. Earlier/unknown failures, later calls, changed input or custody, a submission, contradictory projection and a second failure do not authorize another process. Every recovery cause shares MAX2; a healthy accepted review runs once. The fresh process must independently satisfy all existing input/SOURCE/HOST/LAST/five-stage/submission/publication guards. This is unpublished local preparation; no native approval, source adoption or original-review acceptance is supplied.
+
+## Native actionability assessment source preparation
+
+`opencode-actionability-assessment.yml` is a separate three-job route: collect
+complete native context and immutable changed source, assess the fixed full input
+with Muse, then publish one canonical issue comment in the protected
+`actionability-publication` environment. It supports `workflow_call` and direct
+`workflow_dispatch` through the same implementation. Direct use requires the
+fresh protected eta default branch; a called workflow must match its actual
+native run reference and an ancestor of that protected branch. The required
+`workflow_call` input `eta_revision` identifies a called route; a manually
+dispatched caller retains that route even though GitHub supplies its
+`workflow_dispatch` event to the called workflow. Bootstrap and the host use the
+same input signal. Host run/caller coordinates remain separate from target
+repository/PR/thread coordinates.
+
+Both native assessment routes accept only public `open-hax/*` target repositories.
+Every job reads native repository metadata before checkout and requires the exact
+configured repository name/database ID, `visibility: public` and `private: false`.
+Unknown, private, internal or contradictory metadata refuses before target source
+or App credentials are made available. No cross-repository private read credential
+is provided. After protected-source and public-target preflight, prepare and assess
+mint separate App installation tokens for exactly the selected target with only
+Metadata, pull-request and issue read grants. Native target context and author
+permission checks use these tokens; owning-workflow run/provenance reads retain
+`github.token` through `HOST_RUN_READ_TOKEN`. Unavailable target installation or
+read grants fail closed. The separate publication token remains scoped to the
+selected target; model input and its process environment remain credential-free.
+
+Start a fresh workflow run for this route. Whole-job and failed-job reruns are
+refused by every job before native reads, checkout, artifact downloads or App
+token creation. Input, profile and result artifact names bind the run ID and
+attempt; publication also requires successful prepare and assess jobs in that
+same actual attempt. Reusing older-attempt jobs is unsupported. This does not
+change the bounded corrective model invocations within one fresh run.
+
+The workflow and host source lock pin protected canonical
+`80b8993bbd43cf0265c5e558c678845edc8929d9` and Muse
+`45c7a8d572bf44202f52cae2aa8c0f771736a617`. Pins alone grant no execution or
+publication authority: the eta successor must receive protected review/merge,
+and actual checkout, complete applicable history and native provenance guards
+still apply. Local controls use inert transport and supply no native assessment,
+review, merge or production credit.
+
+The Node-adjacent host uses NBB1.5.211, canonical collector/permission/history/law
+namespaces and the actual selected source-built Muse CJS verifier. It does not
+import operational `pr.cljs`, implement another protocol parser, or grant
+eligibility from supplied booleans. Canonical `native-context-law/select-fresh-context`
+owns the structural fresh snapshot and exact target selection. The host invokes
+canonical classification separately; structural selection grants no admission.
+Every non-added preimage (removed, modified, type-changed, and the source path
+of renamed or copied files) is read from the unique merge base of the exact
+native head and base commits, with that preimage commit and its byte hashes
+retained in the source manifest. Above GitHub's 3,000-file API cap, the changed
+inventory comes from an immutable merge-base Git diff. Missing or ambiguous ancestry refuses rather than substituting
+the advancing base tip. NBB asynchronous orchestration uses a single
+awaited body and explicit awaited recursive function boundaries; an asynchronous
+`doseq` or `loop` must not be treated as completed sequential work.
+
+The complete protected canonical receipt text is hashed and decoded by the
+canonical history reader. This is a scoped source binding, not proof that the
+checkout contains all private/local observations used by another CLI. Enabling
+this route requires explicit qualification of the whole applicable authoritative
+history source and its custody. Missing or invalid history refuses; there is no
+healthy-empty fallback. Complete native records, original bodies/hunks, source
+bytes, proposal/body digests and every page remain in the model input.
+
+Protected host token-minting steps receive the existing App secrets; prepare and
+assess request read-only tokens, while only the separate publisher requests issue
+write access. Its built-in RSA boundary signs an ephemeral AppJWT, reads actual
+App and installation metadata, checks the actual issue-write grant, installation
+outputs and token repository access, then passes the native Bot tuple to canonical
+identity admission. A label, `/user` assumption or requested grant does not
+authenticate the principal. JWT, private key and token never enter the model
+environment or output artifacts.
+
+The native `gh` reader directs complete stdout to an exclusively created file in
+an owned private temporary directory, so paginated API responses are not cut off
+by a 16 MiB process capture buffer. Paginated reads have a 120-second whole-read
+budget and other reads keep 15 seconds; a genuine timeout refuses as
+`native-read-timeout` before status or JSON parsing. It keeps the HTTP/JSON
+refusal behavior, buffers only stderr, and closes/removes its temporary
+resources on success or failure. Canonical input byte/page limits still apply;
+this does not guarantee arbitrary input fits available memory or disk.
+
+The model receives a fresh private HOME/XDG tree and an explicit environment
+allowlist, without host credentials or GitHub output channels. This is a bounded
+host boundary, not a kernel sandbox. Protected job outputs bind input, profile,
+verifier and accepted invocation bytes outside the child. Publication rechecks
+fresh native context, source, permissions, proposal, history and run/job provenance.
+
+There is at most one issue-comment write intent, with redirects disabled and no
+application retry. A transport timeout or HTTP 5xx response triggers complete
+paginated readback because a server failure can follow a committed write;
+zero, multiple or mismatched records remain uncertain. An existing exact record
+is verified with its native GET and canonical disposition instead of duplicated.
+The actionability host retains the actual one-shot outcome, HTTP status and native
+POST response coordinates even if later recollection or GET fails. It writes an
+unestablished terminal result before exiting unsuccessfully, and the workflow
+uploads that result with `always()`. Pre-write refusal records say no intent was
+attempted; the workflow's startup fallback says the effect is unknown if the host
+cannot produce a terminal result. Neither failure record supplies admission or
+permission to retry the write.
+The actual record's ID, principal, creation/edit times and current context determine
+admission. A context race can invalidate a comment; GitHub supplies no context
+compare-and-swap. The route never posts an ordinary pull review, replies inline,
+resolves a conversation, merges, writes a ledger, or enables deployment. Unresolved
+informational context remains unsettled and all-thread merge-blocking.
+
+Final-page recovery uses the same fixed full-input file selected for canonical
+context preparation: `actionability-input.txt` for this route and `basehead.diff`
+for ordinary review. It rechecks those exact bytes and the original manifest; a
+legacy diff cannot replace the native carrier. A failed original trace remains
+refused, and only a separately checked projection can authorize the existing
+sole fresh complete invocation.
+
+
+The local assessment test preload resolves stable executable aliases using the
+captured child PATH/cwd and physical Node executable identity. It retains the
+original native command/argv and options validation. A single guard in
+NODE_OPTIONS precedes CLI requires; without it the first CLI require must be
+the guard. A preceding unknown require refuses before dispatch. TCP listeners
+through net.Server.prototype.listen, including HTTP/HTTPS and ESM Server views,
+are denied before binding. These are bounded Linux Node public-API controls,
+not an OS sandbox or a guarantee against changed executable files, alternate
+runtimes or arbitrary launchers. The inert non-Node controls require executable
+Python 3 at /usr/bin/python3; the registered driver checks it before controls.
+
+
+### Separate positive-cohort assessment (source qualification pending)
+
+The proposed `opencode-positive-cohort-assessment.yml` adapter consumes the
+canonical positive Bot-thread cohort contract at merged revision
+`b23845012508fd598a56dea34d6be38ede5c7136` and Muse full-input transport at
+merged revision `b9e47da4f445106310c7b9dc98fe3a3ef9ea50d5`. These immutable
+dependency pins do not adopt this adapter or establish a live assessment. The
+called eta-mu workflow retains its existing protected-source authentication;
+no Muse GitHub branch-protection requirement is added by private author wording.
+
+Prepare, assess and publish retain complete all-thread/issue/review/source/test
+and history input. Accepted anonymous dynamic OpenCode MiMo inference does not
+itself publish or qualify a judgment. Only the canonical accepted-summary API,
+authentic distinct native App grants and an exact sole issue-comment append
+and readback can supply the cohort assessment record. The adapter never replies,
+resolves, approves or merges. Unknown or mixed members, edits, lost history,
+same-App model aliases and uncertain effects remain refused, with no write retry.
+The existing registered assessment and lint gates own qualification.
+
+This source composition preserves the current reviewed pagination, cancellation,
+ordinary verifier and Node boundary repairs. The new purpose is a fixed literal
+enrollment in the current runner, whose workflow mirror is rebuilt from its
+exact bytes; the new inert fixture binds the current preload digest. Normal
+source-built Muse and canonical controls, actual native App custody and fresh
+complete invocation evidence remain required before live use. Historical source
+preparations, failed controls and author-only results remain retained.

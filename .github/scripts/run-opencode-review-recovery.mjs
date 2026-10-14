@@ -5,12 +5,458 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import os from "node:os";
 import { finished } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual, stripVTControlCharacters } from "node:util";
 
 const RECOVERY_SCHEMA = "open-hax.review-recovery/v1";
 const MAX_ATTEMPTS = 2;
+
+const MODEL_DISCOVERY_MODE = "opencode-free-mimo-flash-v1";
+const MODEL_DISCOVERY_BUDGET_MS = 30_000;
+const MODEL_CATALOG_URL = "https://models.opencode.ai/api.json";
+const MODEL_CATALOG_MAX_BYTES = 16 * 1024 * 1024;
+
+/** Decode the ID-line/pretty-JSON format emitted by `opencode models --verbose`. */
+export function parseOpenCodeModelCatalog(bytes) {
+  const text = stripVTControlCharacters(new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes));
+  const lines = text.split(/\r?\n/);
+  while (lines[0]?.trim() === "") lines.shift();
+  if (lines[0] === "Models cache refreshed") lines.shift();
+  const rows = [], labels = new Set();
+  let label = null, body = [];
+  const finish = () => {
+    if (label === null) return;
+    let row;
+    try { row = JSON.parse(body.join("\n")); }
+    catch { throw new Error("invalid OpenCode verbose model JSON"); }
+    if (!row || typeof row !== "object" || Array.isArray(row) ||
+        row.providerID !== "opencode" || label !== `opencode/${row.id}` || row.api?.id !== row.id) {
+      throw new Error("OpenCode catalog label/metadata identity mismatch");
+    }
+    rows.push(row);
+  };
+  for (const line of lines) {
+    if (/^opencode\/\S+$/.test(line)) { // IDs stay raw.
+      finish();
+      if (labels.has(line)) throw new Error("duplicate OpenCode catalog model ID");
+      labels.add(line); label = line; body = [];
+    } else if (label !== null) body.push(line);
+    else if (line.trim() !== "") throw new Error("unsupported OpenCode verbose catalog prefix");
+  }
+  finish();
+  if (rows.length === 0) throw new Error("empty OpenCode verbose catalog");
+  return rows;
+}
+
+/** Compare numeric version tuples without lexicographic ordering or changing native IDs. */
+function compareModelVersions(left, right) {
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+    const difference = (left[index] ?? 0) - (right[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
+}
+
+/** Select only an active, tool-capable, wholly zero-cost OpenCode MiMo Flash catalog row. */
+export function selectFreeMiMoFlash(rows, requested = "") {
+  if (typeof requested !== "string") throw new Error("explicit review model must be a string");
+  const zeroPrice = (price) => price && price.input === 0 && price.output === 0 &&
+    price.cache?.read === 0 && price.cache?.write === 0;
+  const eligible = [];
+  for (const row of rows) {
+    const version = /^mimo-v(\d+(?:\.\d+)*)-flash-free$/.exec(row.id);
+    if (row.providerID !== "opencode" || row.family !== "mimo" || !version ||
+        row.status !== "active" || row.capabilities?.toolcall !== true ||
+        row.capabilities.input?.text !== true || row.capabilities.output?.text !== true ||
+        !zeroPrice(row.cost) || (row.cost.tiers !== undefined &&
+          (!Array.isArray(row.cost.tiers) || !row.cost.tiers.every(zeroPrice))) ||
+        (row.cost.experimentalOver200K !== undefined && !zeroPrice(row.cost.experimentalOver200K))) continue;
+    const components = version[1].split(".").map(Number);
+    const date = typeof row.release_date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(row.release_date)
+      ? new Date(`${row.release_date}T00:00:00Z`) : null;
+    if (!components.every(Number.isSafeInteger) || !date || !Number.isFinite(date.getTime()) ||
+        date.toISOString().slice(0, 10) !== row.release_date) {
+      throw new Error("eligible MiMo Flash catalog row has no rankable release/version");
+    }
+    eligible.push({ row, version: components });
+  }
+  if (requested !== "") {
+    const selected = eligible.filter(({ row }) => `opencode/${row.id}` === requested);
+    if (selected.length !== 1) throw new Error("explicit review model is not a unique eligible free MiMo Flash row");
+    return selected[0].row;
+  }
+  if (eligible.length === 0) throw new Error("no eligible free OpenCode MiMo Flash model");
+  const dateMaximum = eligible.reduce((date, { row }) => row.release_date > date ? row.release_date : date, "");
+  const versionMaximum = eligible.reduce((version, candidate) =>
+    compareModelVersions(candidate.version, version) > 0 ? candidate.version : version, []);
+  const byDate = eligible.filter(({ row }) => row.release_date === dateMaximum);
+  const byVersion = eligible.filter(({ version }) => compareModelVersions(version, versionMaximum) === 0);
+  if (byDate.length !== 1 || byVersion.length !== 1 || byDate[0] !== byVersion[0]) {
+    throw new Error("ambiguous latest free MiMo Flash release/version");
+  }
+  return byDate[0].row;
+}
+
+/** Capture one catalog command under the shared discovery deadline, retaining all output bytes. */
+async function captureModelCommand({ binary, args, environment, cwd, deadline, directory, stem }) {
+  const stdoutFile = path.join(directory, `${stem}.stdout`), stderrFile = path.join(directory, `${stem}.stderr`);
+  const stdout = fs.createWriteStream(stdoutFile, { flags: "wx", mode: 0o600 });
+  const stderr = fs.createWriteStream(stderrFile, { flags: "wx", mode: 0o600 });
+  const streams = Promise.allSettled([finished(stdout), finished(stderr)]);
+  let timeout, force, timedOut = false, exit, failure, capturesClosed = false;
+  try {
+    const remaining = deadline - performance.now();
+    if (remaining <= 0) throw new Error("OpenCode model discovery deadline expired");
+    const child = spawn(binary, args, { stdio: ["ignore", "pipe", "pipe"], env: environment, cwd });
+    child.stdout.pipe(stdout); child.stderr.pipe(stderr);
+    timeout = setTimeout(() => {
+      timedOut = true; child.kill("SIGTERM");
+      force = setTimeout(() => child.kill("SIGKILL"), 250);
+    }, remaining);
+    exit = await new Promise((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", (code, signal) => resolve({ code, signal }));
+    });
+  } catch (error) { failure = error; }
+  finally {
+    clearTimeout(timeout); clearTimeout(force);
+    stdout.end(); stderr.end();
+    const closed = await streams;
+    capturesClosed = closed.every(({ status }) => status === "fulfilled");
+    if (!failure && closed.some(({ status }) => status === "rejected")) failure = new Error("OpenCode catalog capture failed");
+  }
+  const record = { command: [binary, ...args], cwd, exit_code: exit?.code ?? null,
+    signal: exit?.signal ?? null, timed_out: timedOut, captures_closed: capturesClosed,
+    stdout_file: path.basename(stdoutFile), stderr_file: path.basename(stderrFile),
+    stdout_sha256: sha256(fs.readFileSync(stdoutFile)), stderr_sha256: sha256(fs.readFileSync(stderrFile)) };
+  if (failure) record.capture_error = "OpenCode catalog command/capture failed";
+  return record;
+}
+
+/** Fetch exact public catalog bytes independently of OpenCode's swallowed refresh errors. */
+export async function acquireOpenCodeModelCatalog(directory, deadline) {
+  const file = path.join(directory, "model-catalog-source.json");
+  const responseFile = path.join(directory, "model-catalog-source-response.json");
+  const controller = new AbortController();
+  const remaining = deadline - performance.now();
+  if (remaining <= 0) throw new Error("OpenCode model discovery deadline expired");
+  const timer = setTimeout(() => controller.abort(), remaining);
+  const record = { schema: "open-hax.review-model-catalog-response/v1", requested_url: MODEL_CATALOG_URL,
+    response_url: null, status: null, body_complete: false, json_valid: false, observed_bytes: 0,
+    max_bytes: MODEL_CATALOG_MAX_BYTES, timeout_ms: remaining };
+  const chunks = [];
+  let response, reader, body, catalog, failure;
+  try {
+    response = await globalThis.fetch(MODEL_CATALOG_URL, { redirect: "error", credentials: "omit",
+      cache: "no-store", signal: controller.signal, headers: { "Accept": "application/json" } });
+    record.response_url = response.url; record.status = response.status;
+    record.headers = Object.fromEntries(["content-type", "date", "etag", "last-modified", "cache-control", "cf-cache-status"]
+      .map(name => [name, response.headers.get(name)]).filter(([, value]) => value !== null));
+    if (response.status !== 200 || response.url !== MODEL_CATALOG_URL || response.redirected || !response.body) {
+      throw new Error("OpenCode public model catalog response refused");
+    }
+    reader = response.body.getReader();
+    for (;;) {
+      if (controller.signal.aborted || performance.now() >= deadline) throw new Error("OpenCode public model catalog deadline expired");
+      const next = await reader.read();
+      if (next.done) { record.body_complete = true; break; }
+      const bytes = Buffer.from(next.value);
+      const available = MODEL_CATALOG_MAX_BYTES - record.observed_bytes;
+      record.observed_bytes += bytes.length;
+      if (available > 0) chunks.push(bytes.subarray(0, available));
+      if (record.observed_bytes > MODEL_CATALOG_MAX_BYTES) throw new Error("OpenCode public model catalog exceeds byte bound");
+    }
+    if (controller.signal.aborted || performance.now() >= deadline) throw new Error("OpenCode public model catalog deadline expired");
+    body = Buffer.concat(chunks);
+    catalog = JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(body));
+    if (!catalog || typeof catalog !== "object" || Array.isArray(catalog) ||
+        !catalog.opencode || catalog.opencode.id !== "opencode" ||
+        !catalog.opencode.models || typeof catalog.opencode.models !== "object" || Array.isArray(catalog.opencode.models)) {
+      throw new Error("OpenCode public model catalog shape refused");
+    }
+    if (controller.signal.aborted || performance.now() >= deadline) throw new Error("OpenCode public model catalog deadline expired");
+    record.json_valid = true;
+  } catch (error) { failure = error; }
+  finally {
+    clearTimeout(timer);
+    if (!record.body_complete) {
+      try { if (reader) await reader.cancel(); else if (response?.body) await response.body.cancel(); }
+      catch (error) { failure ??= error; }
+    }
+    if (reader) { try { reader.releaseLock(); } catch (error) { failure ??= error; } }
+    record.aborted = controller.signal.aborted;
+    body ??= Buffer.concat(chunks);
+    record.bytes = body.length; record.sha256 = sha256(body);
+    if (failure) record.error = failure instanceof Error ? failure.message : "OpenCode public model catalog acquisition failed";
+    fs.writeFileSync(file, body, { flag: "wx", mode: 0o600 });
+    fs.writeFileSync(responseFile, `${JSON.stringify(record, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+  }
+  if (failure) throw failure;
+  return { catalog, binding: { file: path.basename(file), path: file, bytes: body.length, sha256: record.sha256,
+    response_file: path.basename(responseFile), response_sha256: sha256(fs.readFileSync(responseFile)) } };
+}
+
+/** Project explicit raw eligibility metadata through the pinned client's field mapping. */
+function sourceModelRows(catalog) {
+  const provider = catalog.opencode;
+  const price = cost => cost && Object.hasOwn(cost, "input") && Object.hasOwn(cost, "output")
+    ? { input: cost.input, output: cost.output, cache: { read: cost.cache_read ?? 0, write: cost.cache_write ?? 0 } } : null;
+  return Object.entries(provider.models).map(([id, raw]) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw) || raw.id !== id) {
+      throw new Error("OpenCode raw catalog model identity mismatch");
+    }
+    const cost = price(raw.cost);
+    if (cost && raw.cost.tiers !== undefined) cost.tiers = Array.isArray(raw.cost.tiers)
+      ? raw.cost.tiers.map(tier => { const value = price(tier); return value ? { ...value, tier: tier.tier } : null; }) : raw.cost.tiers;
+    if (cost && raw.cost.context_over_200k !== undefined) cost.experimentalOver200K = price(raw.cost.context_over_200k);
+    return { id, providerID: provider.id, family: raw.family, status: raw.status ?? "active", release_date: raw.release_date,
+      api: { id: raw.id, url: raw.provider?.api ?? provider.api ?? "", npm: raw.provider?.npm ?? provider.npm ?? "@ai-sdk/openai-compatible" },
+      capabilities: { toolcall: raw.tool_call === true,
+        input: { text: Array.isArray(raw.modalities?.input) && raw.modalities.input.includes("text") },
+        output: { text: Array.isArray(raw.modalities?.output) && raw.modalities.output.includes("text") } }, cost };
+  });
+}
+
+/** Reuse the existing selector on both datasets so a bundled stale subset cannot downgrade selection. */
+function assertCatalogSelection(catalog, selected, requested) {
+  const expected = selectFreeMiMoFlash(sourceModelRows(catalog), requested);
+  const effective = { id: selected.id, providerID: selected.providerID, family: selected.family,
+    status: selected.status, release_date: selected.release_date,
+    api: { id: selected.api.id, url: selected.api.url, npm: selected.api.npm },
+    capabilities: { toolcall: selected.capabilities.toolcall,
+      input: { text: selected.capabilities.input.text }, output: { text: selected.capabilities.output.text } }, cost: selected.cost };
+  if (!isDeepStrictEqual(expected, effective)) {
+    throw new Error("OpenCode effective selection differs from fresh raw catalog selection");
+  }
+  return sha256(JSON.stringify(catalog.opencode.models[expected.id]));
+}
+
+/** Recheck the retained physical catalog carrier before and after every child. */
+function readCatalogSource(source, directory, privateCarrier = true) {
+  if (!source || source.file !== "model-catalog-source.json" ||
+      source.response_file !== "model-catalog-source-response.json" || source.path !== path.join(directory, source.file)) {
+    throw new Error("OpenCode fresh model catalog binding is unavailable");
+  }
+  for (const [file, expected, bytes] of [[source.path, source.sha256, source.bytes],
+    [path.join(directory, source.response_file), source.response_sha256, null]]) {
+    const info = fs.lstatSync(file);
+    if (!info.isFile() || info.isSymbolicLink() || fs.realpathSync(file) !== path.resolve(file) ||
+        (privateCarrier && ((info.mode & 0o777) !== 0o600 || (typeof process.getuid === "function" && info.uid !== process.getuid()))) ||
+        (bytes !== null && info.size !== bytes) || sha256(fs.readFileSync(file)) !== expected) {
+      throw new Error("OpenCode fresh model catalog carrier changed");
+    }
+  }
+  const response = JSON.parse(fs.readFileSync(path.join(directory, source.response_file), "utf8"));
+  if (response.requested_url !== MODEL_CATALOG_URL || response.response_url !== MODEL_CATALOG_URL ||
+      response.status !== 200 || !response.body_complete || !response.json_valid || response.aborted || response.error ||
+      response.bytes !== source.bytes || response.sha256 !== source.sha256) {
+    throw new Error("OpenCode fresh model catalog response is unestablished");
+  }
+  return JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(fs.readFileSync(source.path)));
+}
+
+function assertCatalogSource(binding) {
+  const catalog = readCatalogSource(binding.proof.catalog_source, path.dirname(binding.file));
+  if (assertCatalogSelection(catalog, binding.proof.selected_row, binding.proof.requested_model) !== binding.proof.selected_source_row_sha256) {
+    throw new Error("OpenCode fresh selected catalog row changed");
+  }
+}
+
+/** Verify retained discovery artifacts without requiring the assessor's removed HOME or executable. */
+function discoveryArtifactProof(directory, expectedSHA256, expectedVersion) {
+  const read = (name, expected) => {
+    const file = path.join(directory, name), info = fs.lstatSync(file);
+    if (!info.isFile() || info.isSymbolicLink() || fs.realpathSync(file) !== path.resolve(file)) {
+      throw new Error("OpenCode model discovery artifact is not a physical regular file");
+    }
+    const bytes = fs.readFileSync(file);
+    if (sha256(bytes) !== expected) throw new Error("OpenCode model discovery artifact changed");
+    return bytes;
+  };
+  const proof = JSON.parse(read("model-discovery.json", expectedSHA256));
+  if (proof.schema !== "open-hax.review-model-discovery/v1" || proof.status !== "selected" ||
+      typeof expectedVersion !== "string" || proof.declared_version !== expectedVersion ||
+      proof.observed_version !== expectedVersion || typeof proof.requested_model !== "string" ||
+      proof.mode !== (proof.requested_model === "" ? "latest" : "explicit") || proof.error || proof.cleanup_error ||
+      proof.discovery_context?.removed !== true || !path.isAbsolute(proof.binary?.real_path ?? "") ||
+      !/^[0-9a-f]{64}$/.test(proof.binary?.sha256 ?? "") ||
+      !Array.isArray(proof.commands) || proof.commands.length !== 2) {
+    throw new Error("OpenCode model discovery proof is unestablished");
+  }
+  for (const [index, stem, args] of [[0, "model-version", ["--version"]],
+    [1, "model-catalog", ["models", "opencode", "--verbose"]]]) {
+    const command = proof.commands[index];
+    if (!command || !isDeepStrictEqual(command.command, [proof.binary.real_path, ...args]) ||
+        command.cwd !== proof.discovery_context.cwd || command.exit_code !== 0 || command.signal !== null ||
+        command.timed_out !== false || command.captures_closed !== true || command.capture_error ||
+        command.stdout_file !== `${stem}.stdout` || command.stderr_file !== `${stem}.stderr`) {
+      throw new Error("OpenCode model discovery command is unestablished");
+    }
+    for (const stream of ["stdout", "stderr"]) read(command[`${stream}_file`], command[`${stream}_sha256`]);
+  }
+  if (stripVTControlCharacters(read("model-version.stdout", proof.commands[0].stdout_sha256).toString("utf8")).trim() !== expectedVersion ||
+      proof.catalog_sha256 !== proof.commands[1].stdout_sha256) {
+    throw new Error("OpenCode retained model version/catalog mismatch");
+  }
+  // Artifact download relocates files and normalizes Unix modes. The exact
+  // recorded bytes remain bound; assess separately enforces private custody.
+  const source = { ...proof.catalog_source, path: path.join(directory, "model-catalog-source.json") };
+  const catalog = readCatalogSource(source, directory, false);
+  const selected = selectFreeMiMoFlash(parseOpenCodeModelCatalog(read("model-catalog.stdout", proof.catalog_sha256)), proof.requested_model);
+  if (!isDeepStrictEqual(selected, proof.selected_row) ||
+      sha256(JSON.stringify(selected)) !== proof.selected_row_sha256 ||
+      assertCatalogSelection(catalog, selected, proof.requested_model) !== proof.selected_source_row_sha256 ||
+      proof.selected_model !== `opencode/${selected.id}`) {
+    throw new Error("OpenCode retained model selection mismatch");
+  }
+  return proof;
+}
+
+/** Reuse the checked selector at native publication, granting no review or publication authority. */
+export function verifyModelDiscoveryArtifacts(directory, recovery, expectedVersion) {
+  const binding = recovery?.model_discovery, accepted = recovery?.accepted_invocation;
+  if (binding?.file !== "model-discovery.json" || !/^[0-9a-f]{64}$/.test(binding.sha256 ?? "") ||
+      accepted?.model_discovery_sha256 !== binding.sha256 || accepted?.model !== binding.selected_model) {
+    throw new Error("accepted invocation does not bind OpenCode model discovery");
+  }
+  const proof = discoveryArtifactProof(directory, binding.sha256, expectedVersion);
+  if (proof.selected_model !== binding.selected_model) throw new Error("accepted OpenCode model selection changed");
+  return { file: binding.file, sha256: binding.sha256, selected_model: proof.selected_model };
+}
+
+/** Resolve the same executable selected by Node's PATH lookup and retain its physical bytes. */
+function modelBinaryIdentity(binary, environment) {
+  const candidates = binary.includes(path.sep) ? [path.resolve(binary)] :
+    (environment.PATH || "").split(path.delimiter).map((directory) => path.resolve(directory || ".", binary));
+  for (const candidate of candidates) {
+    try {
+      fs.accessSync(candidate, fs.constants.X_OK);
+      const real = fs.realpathSync(candidate);
+      if (fs.statSync(real).isFile()) return { requested: binary, real_path: real, sha256: sha256(fs.readFileSync(real)) };
+    } catch { /* Try the next actual PATH entry. */ }
+  }
+  throw new Error("OpenCode executable is unavailable for model discovery");
+}
+
+/** Construct a model environment without inherited credentials or OpenCode overrides. */
+function isolatedModelEnvironment(environment, home) {
+  return {
+    PATH: environment.PATH || "/usr/bin:/bin", HOME: home,
+    XDG_CONFIG_HOME: path.join(home, ".config"), XDG_DATA_HOME: path.join(home, ".local/share"),
+    XDG_CACHE_HOME: path.join(home, ".cache"), XDG_STATE_HOME: path.join(home, ".local/state"),
+    TMPDIR: path.join(home, "tmp"),
+    OPENCODE_CONFIG_DIR: path.join(home, ".config/opencode"),
+    OPENCODE_DISABLE_PROJECT_CONFIG: "true", LANG: "C.UTF-8", LC_ALL: "C.UTF-8", TZ: "UTC",
+  };
+}
+
+/** Bind the three trusted review configuration carriers staged by the owning workflow. */
+function ordinaryInferenceConfiguration() {
+  const home = process.env.REVIEW_CHILD_HOME;
+  if (!home || !path.isAbsolute(home)) throw new Error("owned ordinary review child home is required");
+  const info = fs.lstatSync(home);
+  if (!info.isDirectory() || info.isSymbolicLink() || fs.realpathSync(home) !== path.resolve(home)
+      || (info.mode & 0o777) !== 0o700
+      || (typeof process.getuid === "function" && info.uid !== process.getuid())) {
+    throw new Error("ordinary review child home must be an owned private real directory");
+  }
+  const files = ["opencode.json", "agents/github-reviewer.md", "plugins/eta-mu-actors.js"].map((relative) => {
+    const file = path.join(home, ".config/opencode", relative), stat = fs.lstatSync(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || fs.realpathSync(file) !== file || stat.size === 0) {
+      throw new Error("trusted ordinary review configuration must be nonempty regular physical files");
+    }
+    return { path: file, sha256: sha256(fs.readFileSync(file)) };
+  });
+  for (const relative of [".opencode", ".config/opencode/config", ".config/opencode/config.json", ".config/opencode/opencode.jsonc"]) {
+    if (fs.existsSync(path.join(home, relative))) throw new Error("unexpected ordinary review configuration overlay");
+  }
+  return { home, files };
+}
+
+/** Recheck the trusted carriers without reading an auth store or permitting project overlays. */
+function assertInferenceConfiguration(configuration) {
+  const current = ordinaryInferenceConfiguration();
+  if (!isDeepStrictEqual(current, configuration)) throw new Error("trusted ordinary review configuration changed");
+}
+
+/** Recheck the exact discovery proof/output/executable before and after every model attempt. */
+function assertModelDiscovery(binding) {
+  if (binding.proof.inference_configuration) assertInferenceConfiguration(binding.proof.inference_configuration);
+  assertCatalogSource(binding);
+  discoveryArtifactProof(path.dirname(binding.file), binding.sha256, binding.proof.declared_version);
+  if (sha256(fs.readFileSync(binding.file)) !== binding.sha256 ||
+      sha256(fs.readFileSync(binding.proof.binary.real_path)) !== binding.proof.binary.sha256) {
+    throw new Error("OpenCode model discovery proof/executable changed");
+  }
+  for (const command of binding.proof.commands) for (const stream of ["stdout", "stderr"]) {
+    if (sha256(fs.readFileSync(path.join(path.dirname(binding.file), command[`${stream}_file`]))) !== command[`${stream}_sha256`]) {
+      throw new Error("OpenCode model discovery output changed");
+    }
+  }
+}
+
+/** Discover a fresh anonymous OpenCode catalog once; selection is provenance, never review admission. */
+export async function discoverFreeMiMoFlash({ evidenceDirectory, requested = "", expectedVersion,
+  binary = process.env.OPENCODE_BIN || "opencode", environment = { ...process.env }, inferenceConfiguration = null }) {
+  if (typeof expectedVersion !== "string" || !/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(expectedVersion)) {
+    throw new Error("declared OpenCode version is required for model discovery");
+  }
+  const proofFile = path.join(evidenceDirectory, "model-discovery.json");
+  const names = ["model-discovery.json", "model-version.stdout", "model-version.stderr", "model-catalog.stdout", "model-catalog.stderr",
+    "model-catalog-source.json", "model-catalog-source-response.json", "recovery.json", "submission.json", ...[1, 2].flatMap((attempt) => [`model-response-attempt-${attempt}.txt`, `opencode-stderr-attempt-${attempt}.log`])];
+  if (names.some((name) => fs.existsSync(path.join(evidenceDirectory, name)))) {
+    throw new Error("refusing pre-existing model discovery/invocation evidence");
+  }
+  const isolationRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "opencode-model-discovery-")));
+  const home = path.join(isolationRoot, "home"), cwd = path.join(isolationRoot, "work");
+  for (const directory of [home, cwd, path.join(home, "tmp")]) fs.mkdirSync(directory, { mode: 0o700 });
+  const childEnvironment = { ...isolatedModelEnvironment(environment, home), OPENCODE_PURE: "true" };
+  const proof = { schema: "open-hax.review-model-discovery/v1", mode: requested === "" ? "latest" : "explicit",
+    requested_model: requested, declared_version: expectedVersion, status: "refused", commands: [], selected_model: null,
+    discovery_context: { cwd, home, project_configuration: "disabled", inherited_environment: false },
+    inference_configuration: inferenceConfiguration };
+  const deadline = performance.now() + MODEL_DISCOVERY_BUDGET_MS;
+  let failure;
+  try {
+    proof.binary = modelBinaryIdentity(binary, childEnvironment);
+    const version = await captureModelCommand({ binary: proof.binary.real_path, args: ["--version"], environment: childEnvironment, cwd, deadline, directory: evidenceDirectory, stem: "model-version" });
+    proof.commands.push(version);
+    if (version.exit_code !== 0 || version.signal !== null || version.timed_out || !version.captures_closed || version.capture_error) throw new Error("OpenCode version discovery failed");
+    proof.observed_version = stripVTControlCharacters(fs.readFileSync(path.join(evidenceDirectory, version.stdout_file), "utf8")).trim();
+    if (proof.observed_version !== expectedVersion) throw new Error("OpenCode installed/declared version mismatch");
+    const acquired = await acquireOpenCodeModelCatalog(evidenceDirectory, deadline);
+    proof.catalog_source = acquired.binding;
+    const catalogEnvironment = { ...childEnvironment, OPENCODE_MODELS_PATH: acquired.binding.path,
+      OPENCODE_DISABLE_MODELS_FETCH: "true" };
+    readCatalogSource(proof.catalog_source, evidenceDirectory);
+    const catalog = await captureModelCommand({ binary: proof.binary.real_path, args: ["models", "opencode", "--verbose"], environment: catalogEnvironment, cwd, deadline, directory: evidenceDirectory, stem: "model-catalog" });
+    proof.commands.push(catalog);
+    if (catalog.exit_code !== 0 || catalog.signal !== null || catalog.timed_out || !catalog.captures_closed || catalog.capture_error) throw new Error("OpenCode model catalog discovery failed");
+    const rows = parseOpenCodeModelCatalog(fs.readFileSync(path.join(evidenceDirectory, catalog.stdout_file)));
+    const selected = selectFreeMiMoFlash(rows, requested);
+    proof.selected_source_row_sha256 = assertCatalogSelection(readCatalogSource(proof.catalog_source, evidenceDirectory), selected, requested);
+    proof.catalog_sha256 = catalog.stdout_sha256;
+    proof.selected_row = selected; proof.selected_row_sha256 = sha256(JSON.stringify(selected));
+    proof.selected_model = `opencode/${selected.id}`; proof.status = "selected";
+  } catch (error) { failure = error; }
+  finally {
+    try { fs.rmSync(isolationRoot, { recursive: true, force: true }); proof.discovery_context.removed = true; }
+    catch (error) { proof.cleanup_error = "OpenCode discovery home cleanup failed"; failure ??= error; }
+  }
+  if (failure) {
+    proof.status = "refused";
+    proof.error = failure instanceof Error ? failure.message : "OpenCode model discovery failed";
+    fs.writeFileSync(proofFile, `${JSON.stringify(proof, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+    throw failure;
+  }
+  fs.writeFileSync(proofFile, `${JSON.stringify(proof, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+  const binding = { file: proofFile, sha256: sha256(fs.readFileSync(proofFile)), proof };
+  assertModelDiscovery(binding);
+  return binding;
+}
+
 
 /**
  * Hash captured bytes without interpreting their contents.
@@ -198,12 +644,12 @@ async function submitJsonTransport({ metadata, metadataFile, responseFile, stder
 }
 
 /**
- * Recognize only the final adversarial-validation refusal for one unassessed
+ * Recognize only the first deterministic-stage refusal for one unassessed
  * final input page. The same canonical callback validates the retained prefix;
  * this host-only projection grants retry eligibility, never review acceptance.
  */
 async function finalInputCoverage({ metadata, metadataFile, responseFile, stderrFile,
-  submissionFile, reviewTools, verifyReviewInvocation, expectedContext, contextSha256 }) {
+  submissionFile, reviewTools, verifyReviewInvocation, expectedContext, contextSha256, fullInputName }) {
   const record = metadata.attempts.at(-1), original = record.canonical_verdict;
   const count = expectedContext.pageCount;
   if (original.ok !== false || original.reason !== "unestablished-review-trace" ||
@@ -212,7 +658,7 @@ async function finalInputCoverage({ metadata, metadataFile, responseFile, stderr
       !expectedContext.reviewTools.includes("review_record_evidence") ||
       !Number.isSafeInteger(count) || count < 1) return null;
   const response = fs.readFileSync(responseFile), directory = path.dirname(responseFile);
-  const fullFile = path.join(directory, "basehead.diff"), manifestFile = path.join(directory, "input-manifest.json");
+  const fullFile = path.join(directory, fullInputName), manifestFile = path.join(directory, "input-manifest.json");
   let lines, omitted, call, fullDigest, manifestDigest;
   try {
     const full = fs.readFileSync(fullFile), manifest = fs.readFileSync(manifestFile);
@@ -238,7 +684,7 @@ async function finalInputCoverage({ metadata, metadataFile, responseFile, stderr
     if (failed.length !== 1 || failed[0] !== calls.at(-1) ||
         calls.some(({ event }) => event.part.tool === "review_submit" || event.part.tool === "invalid")) return null;
     const target = failed[0], part = target.event.part, state = part.state, output = JSON.parse(state.output);
-    if (part.tool !== "review_record_evidence" || state.input?.stage !== "adversarial-validate" ||
+    if (part.tool !== "review_record_evidence" || state.input?.stage !== "deterministic" ||
         !nonblank(state.input.note) || Object.keys(output).sort().join(",") !== "error,ok?" ||
         output["ok?"] !== false || output.error !== `Unassessed full-input chunks remain: ${count}. Read and assess every changed hunk before publishing.` ||
         state.metadata?.truncated !== false) return null;
@@ -251,8 +697,8 @@ async function finalInputCoverage({ metadata, metadataFile, responseFile, stderr
     const stages = calls.filter(({ event }) => event.part.tool === "review_record_evidence")
       .map(({ event }) => event.part.state.input?.stage);
     if (!exact(reads, count) || !exact(assessments, count - 1) ||
-        stages.join(",") !== "deterministic,map-change,generate-candidates,adversarial-validate" ||
-        stages.length !== 4) return null;
+        stages.join(",") !== "deterministic" ||
+        stages.length !== 1) return null;
     omitted = target.index; call = part.callID;
   } catch { return null; }
   const projection = Buffer.from(lines.filter((_, index) => index !== omitted).join(""));
@@ -304,9 +750,9 @@ function correctivePrompt(basePrompt, toolFailure, staleCoverage = false, submit
     : submitJsonFailure
       ? "the first stopped process produced the known final review_submit JSON transport diagnostic without an actual submit or artifact. Its whole trace remains refused; the retained derived projection establishes retry eligibility only. In this fresh process, pass well-formed JSON arguments to the exposed review_submit tool."
     : coverageFailure
-      ? "the first stopped process failed final adversarial validation because the final full-input page was read but not assessed. Its whole trace remains failed; a separately retained canonical healthy-omission projection supplies only retry eligibility. Read and assess every full-input page anew before completing all five stages and submitting in this sole fresh process."
+      ? "the first stopped process failed the first deterministic stage because the final full-input page was read but not assessed. Its whole trace remains failed; a separately retained canonical healthy-omission projection supplies only retry eligibility. Read and assess every full-input page anew before completing all five stages and submitting in this sole fresh process."
     : staleCoverage
-      ? "the canonical host-trace verifier established stale review coverage in the first completed invocation. Its assessment history cannot be repaired. Perform one fresh bounded model invocation over the whole unchanged input; finish all reads before assessing each page."
+      ? "the canonical host-trace verifier established stale review coverage in the first completed invocation. Its assessment history cannot be repaired. Perform one fresh bounded model invocation over the whole unchanged input; finish every read of a page before assessing that page."
     : "the first completed model invocation omitted the required review_submit artifact.";
   return `${basePrompt.trimEnd()}
 
@@ -320,11 +766,14 @@ or reassessment to erase its failed history. This is the only recovery attempt.
 }
 
 /** Override same-process repair instructions when canonical verification is required. */
-function strictInvocationPrompt(prompt) {
-  return `${prompt.trimEnd()}
-
-
-Supporting-file HOST read contract for this restricted reviewer:
+function strictInvocationPrompt(prompt, fullInputName = "basehead.diff") {
+  const supporting = ["actionability-input.txt", "rejection-assessment-input.txt", "positive-cohort-assessment-input.txt"].includes(fullInputName)
+    ? `Complete fixed native input: ${fullInputName}.
+- Use only the review_* page tools to read and assess every full-input page.
+  No ordinary diff supporting-file artifacts are staged for this route; do not
+  request them through HOST read or grep. Native context and selected source
+  material are included in the fixed input. This supplies no deterministic pass.`
+    : `Supporting-file HOST read contract for this restricted reviewer:
 - Use the host read tool's exact filePath to read summary.json and
   deterministic.log under .opencode/review-evidence. Start at offset 1 with
   limit 200. Follow the tool's returned next offset until End of file; a byte
@@ -335,7 +784,11 @@ Supporting-file HOST read contract for this restricted reviewer:
   path can search its parent and generated artifacts. Optional grep must use
   path .opencode/review-evidence with include deterministic.log; use equivalent
   explicit file inclusion for other searches. Grep supplements, never replaces,
-  the required complete deterministic evidence reading.
+  the required complete deterministic evidence reading.`;
+  return `${prompt.trimEnd()}
+
+
+${supporting}
 - Never use bash for file inspection, listing, size/count checks or executing
   commands. Its true-only registration is compatibility, not shell authority.
   General tool help suggesting Bash or Task does not override this reviewer.
@@ -362,13 +815,40 @@ failures, strict input/chronology guards and the existing two-attempt bound stay
 unchanged. The fresh process must complete the whole review anew.
 
 Caller-only final input-coverage exception:
-STOP after the exact final adversarial-validation refusal for the unassessed
-final input page. Do not repair or resume that invocation. The failure alone
+STOP after the exact first deterministic-stage refusal for the unassessed
+final input page, before any successful stage. Do not repair or resume that invocation. The failure alone
 is not retry authority. Only the caller may admit the sole fresh whole process
 when its narrow recorded-failure policy and the unchanged canonical callback
 establish retry eligibility over a separately retained projection. The original
 failed invocation remains refused. All existing input, HOST, LAST, five-stage,
 source, submission and two-attempt guards remain mandatory for the fresh review.
+
+Healthy automated completion:
+This review is already authorized. While this invocation is healthy, call the
+next required tool without asking whether to continue or ending with a progress
+report. Follow the returned review contract: finish every read of one full-input
+page, assess that complete page including each changed hunk when present, then
+read the next page. Choose page IDs only from the missing IDs in
+coverage returned by review_begin, review_assess_diff_chunk or
+review_status. Never derive the next ID as chunk_count + 1 or chunks +
+1, increment beyond that set, or use review_read_diff_chunk as an EOF
+probe. Never increment the last assessed ID for a new read. After
+automatic compaction, call review_status to recover the current
+coverage, stage and candidates. Never reread an assessed page; reread an
+unassessed page only when its contents were lost. After the final
+advertised page, call review_status and complete any reported missing
+page work before stage transitions. If its missing list is empty and
+delivered and assessed coverage are complete, do not read another page.
+Use the retained complete page contents to perform the actual work and
+record evidence for deterministic, map-change, generate-candidates,
+adversarial-validate
+and publish in order. Classify every proposed finding before the
+adversarial-validate evidence note. Record publish readiness, then call
+review_submit; end the healthy invocation only after it returns ok. Completion
+does not require an approval verdict: findings and the review event remain
+subject to the existing law. Any failed review or HOST call, or restart-required
+reply, still requires the immediate STOP above. These completion instructions
+permit neither repair of a failed invocation nor an additional attempt.
 
 Strict invocation instructions override any earlier retry or repair instructions:
 Every review tool call must succeed. If ANY review tool call fails, including
@@ -516,8 +996,13 @@ export async function runReviewRecovery({
   verifyReviewInvocation,
   expectedContext,
   verifierSha256 = null,
+  fullInputName = "basehead.diff",
+  modelDiscovery = null,
 }) {
   if (!evidenceDirectory) throw new Error("evidenceDirectory is required");
+  if (!["basehead.diff", "actionability-input.txt", "rejection-assessment-input.txt", "positive-cohort-assessment-input.txt"].includes(fullInputName)) {
+    throw new Error("unsupported full input file");
+  }
   if (typeof basePrompt !== "string" || basePrompt.trim().length === 0) {
     throw new Error("basePrompt must be a non-empty string");
   }
@@ -543,12 +1028,13 @@ export async function runReviewRecovery({
     attempts: [],
   };
   if (strict) metadata.accepted_invocation = null;
+  if (modelDiscovery) metadata.model_discovery = modelDiscovery;
 
   if (fs.existsSync(submissionFile)) {
     throw new Error(`refusing pre-existing review submission: ${submissionFile}`);
   }
 
-  let prompt = strict ? strictInvocationPrompt(basePrompt) : basePrompt;
+  let prompt = strict ? strictInvocationPrompt(basePrompt, fullInputName) : basePrompt;
   const contextSha256 = strict ? sha256(JSON.stringify(expectedContext)) : null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     const responseFile = path.join(evidenceDirectory, `model-response-attempt-${attempt}.txt`);
@@ -598,7 +1084,7 @@ export async function runReviewRecovery({
         reviewTools, verifyReviewInvocation, expectedContext, contextSha256 }) : null;
     const coverageFailure = strict && attempt === 1 && result?.exitCode === 0 && state === "missing"
       ? await finalInputCoverage({ metadata, metadataFile, responseFile, stderrFile, submissionFile,
-        reviewTools, verifyReviewInvocation, expectedContext, contextSha256 }) : null;
+        reviewTools, verifyReviewInvocation, expectedContext, contextSha256, fullInputName }) : null;
     if (result?.exitCode !== 0 && !toolFailure) {
       throw new Error(`OpenCode review attempt ${attempt} exited ${result?.exitCode ?? "without a code"}`);
     }
@@ -615,6 +1101,7 @@ export async function runReviewRecovery({
           canonical_verdict: verdict,
           verifier_sha256: verifierSha256,
           expected_context_sha256: sha256(JSON.stringify(expectedContext)),
+          ...(modelDiscovery ? { model_discovery_sha256: modelDiscovery.sha256, model: modelDiscovery.selected_model } : {}),
         };
         writeRecovery(metadataFile, metadata);
       }
@@ -642,16 +1129,35 @@ export async function runReviewRecovery({
       retainStaleSubmission({ metadata, metadataFile, submissionFile, evidenceDirectory });
     }
     prompt = correctivePrompt(basePrompt, toolFailure, staleCoverage, submitJsonFailure, coverageFailure);
-    if (strict) prompt = strictInvocationPrompt(prompt);
+    if (strict) prompt = strictInvocationPrompt(prompt, fullInputName);
   }
 
   throw new Error("unreachable review recovery state");
 }
 
+/** Build the opt-in actionability child's credential-free, owned-home environment. */
+function actionabilityChildEnvironment(purpose = "actionability") {
+  if (!["actionability", "rejection-assessment", "positive-cohort-assessment"].includes(purpose)) throw new Error("unsupported native input purpose");
+  const home = process.env.REVIEW_CHILD_HOME;
+  if (!home || !path.isAbsolute(home)) throw new Error("owned actionability child home is required");
+  const info = fs.lstatSync(home);
+  if (!info.isDirectory() || info.isSymbolicLink() || fs.realpathSync(home) !== path.resolve(home)
+      || (info.mode & 0o777) !== 0o700
+      || (typeof process.getuid === "function" && info.uid !== process.getuid())) {
+    throw new Error("actionability child home must be an owned private real directory");
+  }
+  return {
+    PATH: process.env.PATH || "/usr/bin:/bin", HOME: home,
+    XDG_CONFIG_HOME: path.join(home, ".config"), XDG_DATA_HOME: path.join(home, ".local/share"),
+    XDG_CACHE_HOME: path.join(home, ".cache"), OPENCODE_CONFIG_DIR: path.join(home, ".config/opencode"),
+    LANG: "C.UTF-8", LC_ALL: "C.UTF-8", TZ: "UTC",
+    REVIEW_EVIDENCE_DIR: process.env.REVIEW_EVIDENCE_DIR, REVIEW_INPUT_PURPOSE: purpose,
+  };
+}
+
 /** Run the configured OpenCode review and mirror stdout and stderr to retained files. */
-async function invokeOpenCode({ prompt, responseFile, stderrFile }) {
-  const opencodeBin = process.env.OPENCODE_BIN || "opencode";
-  const reviewModel = process.env.REVIEW_MODEL;
+async function invokeOpenCode({ prompt, responseFile, stderrFile, reviewModel = process.env.REVIEW_MODEL,
+  opencodeBin = process.env.OPENCODE_BIN || "opencode", environment = null }) {
   if (!reviewModel) throw new Error("REVIEW_MODEL is required");
 
   const response = fs.createWriteStream(responseFile, { flags: "w" });
@@ -660,7 +1166,8 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile }) {
   let invocationRejected = false;
 
   try {
-    const childEnvironment = { ...process.env };
+    const childEnvironment = environment ?? (["actionability", "rejection-assessment", "positive-cohort-assessment"].includes(process.env.REVIEW_INPUT_PURPOSE)
+      ? actionabilityChildEnvironment(process.env.REVIEW_INPUT_PURPOSE) : { ...process.env });
     for (const name of ["GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_PATH", "GITHUB_STATE", "GITHUB_STEP_SUMMARY"]) {
       delete childEnvironment[name];
     }
@@ -724,7 +1231,17 @@ async function main() {
   let verifierBytes;
   let verifier;
   let expectedContext;
+  let fullInputName;
+  const purpose = process.env.REVIEW_INPUT_PURPOSE || "diff";
   try {
+    if (!["diff", "actionability", "rejection-assessment", "positive-cohort-assessment"].includes(purpose)) throw new Error("unsupported review input purpose");
+    if (purpose !== "diff" && process.env.REVIEW_MODEL_DISCOVERY !== MODEL_DISCOVERY_MODE) {
+      throw new Error("native review requires checked model discovery");
+    }
+    fullInputName = { diff: "basehead.diff", actionability: "actionability-input.txt",
+      "rejection-assessment": "rejection-assessment-input.txt",
+      "positive-cohort-assessment": "positive-cohort-assessment-input.txt" }[purpose];
+    if (purpose !== "diff") actionabilityChildEnvironment(purpose);
     verifierBytes = fs.readFileSync(verifierFile);
     verifier = createRequire(import.meta.url)(verifierFile);
     if (typeof verifier.verifyReviewInvocation !== "function" ||
@@ -737,12 +1254,18 @@ async function main() {
     // Canonical Muse prepares the actual lossless geometry once, before any
     // child. Keep it in trusted supervisor memory across the two-attempt bound.
     expectedContext = verifier.prepareReviewInvocationContext(
-      fs.readFileSync(path.join(evidenceDirectory, "basehead.diff")),
+      fs.readFileSync(path.join(evidenceDirectory, fullInputName)),
       fs.readFileSync(path.join(evidenceDirectory, "input-manifest.json")),
       exposedTools, submissionFile,
     );
     if (!expectedContext || typeof expectedContext !== "object" || Array.isArray(expectedContext)) {
       throw new Error("canonical verifier context preparation returned no context");
+    }
+    if (purpose !== "diff" && (expectedContext.inputSource?.schema !== {
+      actionability: "open-hax.actionability-input/v1", "rejection-assessment": "open-hax.rejection-assessment-input/v1",
+      "positive-cohort-assessment": "open-hax.positive-cohort-assessment-input/v1",
+    }[purpose] || expectedContext.inputSource?.purpose !== purpose)) {
+      throw new Error(`canonical verifier did not bind ${purpose} input`);
     }
   } catch (error) {
     const metadataFile = path.join(evidenceDirectory, "recovery.json");
@@ -755,12 +1278,40 @@ async function main() {
     }
     throw error;
   }
+  let discovery = null, inferenceConfiguration = null;
+  try {
+    if (process.env.REVIEW_MODEL_DISCOVERY !== undefined) {
+      if (process.env.REVIEW_MODEL_DISCOVERY !== MODEL_DISCOVERY_MODE) throw new Error("unsupported model discovery mode");
+      inferenceConfiguration = ordinaryInferenceConfiguration();
+      discovery = await discoverFreeMiMoFlash({ evidenceDirectory, requested: process.env.REVIEW_MODEL || "",
+        expectedVersion: process.env.REVIEW_EXPECTED_OPENCODE_VERSION, inferenceConfiguration });
+    }
+  } catch (error) {
+    const file = path.join(evidenceDirectory, "recovery.json");
+    if (!fs.existsSync(file)) writeRecovery(file, { schema: RECOVERY_SCHEMA, max_attempts: MAX_ATTEMPTS,
+      recovery_reason: null, attempts: [], accepted_invocation: null,
+      setup_error: error instanceof Error ? error.message : "model discovery failed" });
+    throw error;
+  }
+  const invoke = discovery ? async (arguments_) => {
+    assertModelDiscovery(discovery);
+    const environment = { ...isolatedModelEnvironment(process.env, inferenceConfiguration.home),
+      OPENCODE_CONFIG: path.join(inferenceConfiguration.home, ".config/opencode/opencode.json"),
+      REVIEW_EVIDENCE_DIR: evidenceDirectory, REVIEW_INPUT_PURPOSE: purpose,
+      OPENCODE_MODELS_PATH: discovery.proof.catalog_source.path, OPENCODE_DISABLE_MODELS_FETCH: "true" };
+    const result = await invokeOpenCode({ ...arguments_, reviewModel: discovery.proof.selected_model,
+      opencodeBin: discovery.proof.binary.real_path, environment });
+    assertModelDiscovery(discovery);
+    return result;
+  } : invokeOpenCode;
   const metadata = await runReviewRecovery({ evidenceDirectory, basePrompt, reviewTools,
-    submissionFile, invokeAttempt: invokeOpenCode,
+    submissionFile, invokeAttempt: invoke,
+    modelDiscovery: discovery ? { file: "model-discovery.json", sha256: discovery.sha256, selected_model: discovery.proof.selected_model } : null,
     verifyReviewInvocation: verifier.verifyReviewInvocation, expectedContext,
-    verifierSha256: sha256(verifierBytes) });
+    verifierSha256: sha256(verifierBytes), fullInputName });
   const accepted = metadata.accepted_invocation;
   try {
+    if (discovery) assertModelDiscovery(discovery);
     if (!accepted || sha256(fs.readFileSync(path.join(evidenceDirectory, accepted.response_file))) !== accepted.response_sha256 ||
         sha256(fs.readFileSync(submissionFile)) !== accepted.submission_sha256) {
       throw new Error("accepted invocation bytes changed before trusted output");

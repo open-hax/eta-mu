@@ -39,6 +39,7 @@
     :cmd ["node" "--test" ".github/scripts/opencode-code-review-workflow.test.mjs"
           ".github/scripts/opencode-review-tool-recovery.test.mjs"
           ".github/scripts/opencode-review-invocation-integrity.test.mjs"]}
+   {:label "assessment-workflows" :cmd ["bb" "scripts/test-assessments.bb"]}
    {:label "legacy-ai-catalog"
     :cmd ["pnpm" "--dir" "packages/legacy/ai" "exec" "vitest" "run"
           "test/model-catalog-types.test.ts"]}

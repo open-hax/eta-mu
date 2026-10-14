@@ -1,0 +1,10 @@
+{
+  "name": "@eta-mu/assessment-runtime",
+  "version": "0.0.0",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "nbb": "1.5.211",
+    "yaml": "2.9.0"
+  }
+}

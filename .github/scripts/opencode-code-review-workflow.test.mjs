@@ -10,7 +10,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { runReviewRecovery } from "./run-opencode-review-recovery.mjs";
+import { discoverFreeMiMoFlash, runReviewRecovery } from "./run-opencode-review-recovery.mjs";
 import { bindTransportInvocation, stageTransportVerifier, transportResponse,
   transportSha256, transportVerifierSource } from "./review-invocation-fixture.mjs";
 
@@ -691,8 +691,10 @@ function contextFixture(checked) {
     verifierFile: path.join(context, "machinery/review-invocation.cjs"),
     registryFile: path.join(context, "metadata/exposed-tools.txt"),
   });
+  fs.writeFileSync(path.join(context, "machinery/run-opencode-review-recovery.mjs"), recoveryRunnerSource);
   const checksum = execFileSync("sha256sum", ["publisher-fixture.cjs",
-    "machinery/review-invocation.cjs", "metadata/exposed-tools.txt"], { cwd: context });
+    "machinery/review-invocation.cjs", "metadata/exposed-tools.txt",
+    "machinery/run-opencode-review-recovery.mjs"], { cwd: context });
   fs.writeFileSync(path.join(context, "SHA256SUMS"), checksum);
   return { context, invocation, digest: createHash("sha256").update(checksum).digest("hex"),
     /**
@@ -2071,11 +2073,12 @@ function reviewMetadataFixture(t) {
   fs.writeFileSync(path.join(bin, "npm"), '#!/bin/sh\nprintf "%s\\n" "$@" > "$REVIEW_METADATA_NPM_LOG"\n');
   fs.chmodSync(path.join(bin, "npm"), 0o755);
   const install = () => runScript(namedStep("review", "Verify and install the bounded review context").run,
-    directory, { HOME: runnerHome, GITHUB_WORKSPACE: directory, GITHUB_OUTPUT: path.join(scratch, "output"),
+    directory, { HOME: runnerHome, RUNNER_TEMP: runnerTemp, GITHUB_WORKSPACE: directory, GITHUB_OUTPUT: path.join(scratch, "output"),
       REVIEW_METADATA_NPM_LOG: npmLog, PATH: `${bin}:${process.env.PATH}` });
-  const wrapper = path.join(runnerHome, ".config/opencode/plugins/eta-mu-actors.js");
+  const childHome = path.join(runnerTemp, "opencode-review-child-home");
+  const wrapper = path.join(childHome, ".config/opencode/plugins/eta-mu-actors.js");
   const data = path.join(directory, ".review-context/machinery/review-host-tool-metadata.json");
-  return { directory, scratch, runnerHome, names, tools, hooks, otherHook, data, wrapper, npmLog, install,
+  return { directory, scratch, runnerHome: childHome, initialRunnerHome: runnerHome, names, tools, hooks, otherHook, data, wrapper, npmLog, install,
     load: () => import(pathToFileURL(wrapper).href), state: globalThis.__reviewMetadataFixture };
 }
 
@@ -2204,13 +2207,18 @@ test("review metadata actual checksum rejects changed data before runtime or plu
   assert.equal(fs.readFileSync(path.join(f.directory, ".opencode/caller.txt"), "utf8"), "caller-owned\n");
 });
 
-test("review timeout defaults keep the direct PR route and other stage budgets unchanged", () => {
+test("review timeout defaults use 120 minutes and preserve the direct PR route and other stage budgets", () => {
   const input = workflow.on.workflow_call.inputs.review_timeout_minutes;
   assert.equal(input.type, "number");
   assert.equal(input.required, false);
-  assert.equal(input.default, 60);
+  assert.equal(input.default, 120);
   assert.deepEqual(workflow.on.pull_request.types, ["opened", "synchronize", "reopened", "ready_for_review"]);
-  assert.equal(workflow.on.workflow_call.inputs.model.default, "opencode/mimo-v2.6-flash-free");
+  assert.equal(workflow.on.workflow_call.inputs.model.default, "");
+  assert.equal(workflow.jobs.review.env.REVIEW_MODEL_DISCOVERY, "opencode-free-mimo-flash-v1");
+  assert.equal(workflow.jobs.review.env.REVIEW_EXPECTED_OPENCODE_VERSION,
+    "${{ inputs.opencode_version || '1.18.18' }}");
+  assert.equal(namedStep("review", "Run bounded evidence-first OpenCode review").env.REVIEW_MODEL,
+    "${{ inputs.model || '' }}");
   assert.deepEqual(Object.fromEntries(Object.entries(workflow.jobs)
     .filter(([name]) => name !== "review").map(([name, job]) => [name, job["timeout-minutes"]])), {
     deterministic_evidence: 60, prepare_review_context: 45, review_gate: 5,
@@ -2226,10 +2234,11 @@ test("authored review job timeout clamps numeric requests before step validation
   // operand-returning behavior is shared by GitHub expressions and JavaScript.
   assert.match(expression.replaceAll("inputs.review_timeout_minutes", ""), /^[\s\d><=&|().]+$/);
   const selected = new Function("inputs", `"use strict"; return (${expression});`);
+  assert.equal(selected({}), 120, "direct PR absent input must select the full review default");
   for (const [request, expected] of [
-    ["", 60], [undefined, 60], [0, 60], [-1, 60], [59, 60], [60, 60],
+    ["", 120], [undefined, 120], [0, 120], [-1, 120], [59, 120], [60, 60],
     [61, 61], [120, 120], [180, 180], [181, 180], [1e9, 180],
-    [60.5, 60.5], [NaN, 60], [Infinity, 180],
+    [60.5, 60.5], [NaN, 120], [Infinity, 180],
   ]) {
     const minutes = selected({ review_timeout_minutes: request });
     assert.equal(minutes, expected);
@@ -2244,8 +2253,9 @@ test("authored timeout validation handles native absent input without overriding
   // Native direct run 38059635545 reported the absent input property as null.
   // The whole absent context may be null or an object with no timeout property.
   for (const [inputs, property, expected] of [
-    ["null", "null", 60], ["{}", "null", 60],
-    ['{"pr_head_sha":"caller-head"}', "null", 60],
+    ["null", "null", 120], ["{}", "null", 120],
+    ['{"pr_head_sha":"caller-head"}', "null", 120],
+    ['{"review_timeout_minutes":60}', "60", 60],
     ['{"review_timeout_minutes":120}', "120", 120],
   ]) {
     const result = runScript(validation.run, directory, {
@@ -2296,7 +2306,7 @@ test("authored timeout validation accepts only default or whole minutes before a
   });
   assert.equal(absentWithOpaqueSibling.status, 0, absentWithOpaqueSibling.stderr);
   assert.equal(absentWithOpaqueSibling.stderr, "");
-  assert.equal(absentWithOpaqueSibling.stdout.trim(), "Review job timeout: 60 minutes.");
+  assert.equal(absentWithOpaqueSibling.stdout.trim(), "Review job timeout: 120 minutes.");
   assert.equal(fs.existsSync(canary), false, "other input properties must never execute or enter workflow commands");
 });
 
@@ -2354,4 +2364,240 @@ test("embedded review metadata JSON matches canonical tracked EDN rendering", ()
   );
   assert.ok(embedded, "review context must carry the rendered metadata JSON");
   assert.deepEqual(JSON.parse(embedded[1]), renderReviewHostMetadataFromEdn());
+});
+
+
+/** Source-shaped inert catalog; only the real producer owns acquisition/proof bytes. */
+function rawCatalogForSelected(selected) {
+  return {opencode:{id:"opencode",api:selected.api.url,npm:selected.api.npm,models:{[selected.id]:{
+    id:selected.id,family:selected.family,status:selected.status,release_date:selected.release_date,
+    tool_call:selected.capabilities.toolcall,modalities:{input:["text"],output:["text"]},
+    cost:{input:selected.cost.input,output:selected.cost.output,cache_read:selected.cost.cache.read,cache_write:selected.cost.cache.write},
+  }}}};
+}
+
+/** Bind inert host-owned model-selection evidence to an already bound transport invocation. */
+function bindModelDiscoveryFixture(checked, context) {
+  const binary = path.join(checked.evidence, "inert-opencode-binary");
+  fs.writeFileSync(binary, "inert executable identity fixture\n");
+  const selected = { id: "mimo-v9.1-flash-free", providerID: "opencode", family: "mimo",
+    status: "active", release_date: "2027-01-01", api: { id: "mimo-v9.1-flash-free", url: "https://example.invalid/inert", npm: "@ai-sdk/openai-compatible" },
+    capabilities: { toolcall: true, input: { text: true }, output: { text: true } },
+    cost: { input: 0, output: 0, cache: { read: 0, write: 0 } } };
+  const commands = [["model-version", ["--version"], "1.18.18\n"],
+    ["model-catalog", ["models", "opencode", "--verbose"], `opencode/${selected.id}\n${JSON.stringify(selected, null, 2)}\n`]]
+    .map(([stem, args, stdout]) => {
+      const record = { command: [binary, ...args], cwd: checked.consumer, exit_code: 0, signal: null, timed_out: false, captures_closed: true };
+      for (const [stream, bytes] of [["stdout", stdout], ["stderr", ""]]) {
+        record[`${stream}_file`] = `${stem}.${stream}`;
+        fs.writeFileSync(path.join(checked.evidence, record[`${stream}_file`]), bytes);
+        record[`${stream}_sha256`] = transportSha256(bytes);
+      }
+      return record;
+    });
+  const proof = { schema: "open-hax.review-model-discovery/v1", status: "selected", mode: "latest",
+    requested_model: "", declared_version: "1.18.18", observed_version: "1.18.18", commands,
+    discovery_context: { cwd: checked.consumer, removed: true },
+    binary: { requested: binary, real_path: binary, sha256: transportSha256(fs.readFileSync(binary)) },
+    selected_model: `opencode/${selected.id}`, selected_row: selected,
+    selected_row_sha256: transportSha256(JSON.stringify(selected)), catalog_sha256: commands[1].stdout_sha256 };
+  const rawCatalog = rawCatalogForSelected(selected);
+  const rawBytes = Buffer.from(JSON.stringify(rawCatalog));
+  const sourcePath = path.join(checked.evidence,"model-catalog-source.json");
+  fs.writeFileSync(sourcePath,rawBytes);
+  const responsePath = path.join(checked.evidence,"model-catalog-source-response.json");
+  fs.writeFileSync(responsePath,JSON.stringify({schema:"open-hax.review-model-catalog-response/v1",
+    requested_url:"https://models.opencode.ai/api.json",response_url:"https://models.opencode.ai/api.json",status:200,
+    body_complete:true,json_valid:true,aborted:false,bytes:rawBytes.length,sha256:transportSha256(rawBytes)}));
+  // Explicit inert final-guard fixture, not an observed HTTP response.
+  proof.catalog_source={file:path.basename(sourcePath),path:sourcePath,bytes:rawBytes.length,sha256:transportSha256(rawBytes),
+    response_file:path.basename(responsePath),response_sha256:transportSha256(fs.readFileSync(responsePath))};
+  proof.selected_source_row_sha256=transportSha256(JSON.stringify(rawCatalog.opencode.models[selected.id]));
+  const file = path.join(checked.evidence, "model-discovery.json");
+  fs.writeFileSync(file, JSON.stringify(proof));
+  const digest = transportSha256(fs.readFileSync(file));
+  const recoveryFile = path.join(checked.evidence, "recovery.json");
+  const recovery = JSON.parse(fs.readFileSync(recoveryFile));
+  recovery.model_discovery = { file: "model-discovery.json", sha256: digest, selected_model: proof.selected_model };
+  recovery.accepted_invocation.model_discovery_sha256 = digest;
+  recovery.accepted_invocation.model = proof.selected_model;
+  fs.writeFileSync(recoveryFile, JSON.stringify(recovery));
+  context.invocationDigest = transportSha256(JSON.stringify(recovery.accepted_invocation));
+  return { file, proof, recoveryFile, recovery, binary,
+    // Source-shaped negative records are rebound BEFORE the trusted fixture
+    // digest, so the shared proof validator rather than a changed hash refuses.
+    rebind() {
+      fs.writeFileSync(file, JSON.stringify(proof));
+      const changed = transportSha256(fs.readFileSync(file));
+      recovery.model_discovery.sha256 = changed;
+      recovery.accepted_invocation.model_discovery_sha256 = changed;
+      fs.writeFileSync(recoveryFile, JSON.stringify(recovery));
+      context.invocationDigest = transportSha256(JSON.stringify(recovery.accepted_invocation));
+    } };
+}
+
+test("actual final workflow requires unchanged selected model provenance before publication", (t) => {
+  const fixture = fullInputFixture(t);
+  const cases = [
+    ["unchanged", () => {}, true],
+    ["proof changed", (_c, model) => fs.appendFileSync(model.file, "\n")],
+    ["catalog changed", (c) => fs.appendFileSync(path.join(c.evidence, "model-catalog.stdout"), "changed\n")],
+    ["version changed", (c) => fs.appendFileSync(path.join(c.evidence, "model-version.stdout"), "changed\n")],
+    ["stderr changed", (c) => fs.appendFileSync(path.join(c.evidence, "model-catalog.stderr"), "changed\n")],
+    ["binary changed", (_c, model) => fs.appendFileSync(model.binary, "changed\n")],
+    ["raw source changed", (c) => fs.appendFileSync(path.join(c.evidence,"model-catalog-source.json"),"changed")],
+    ["response changed", (c) => fs.appendFileSync(path.join(c.evidence,"model-catalog-source-response.json"),"changed")],
+    ["raw source missing", (c) => fs.rmSync(path.join(c.evidence,"model-catalog-source.json"))],
+    ["response missing", (c) => fs.rmSync(path.join(c.evidence,"model-catalog-source-response.json"))],
+    ["binding missing", (_c, model) => { delete model.recovery.model_discovery; }],
+    ["bound model differs", (_c, model) => { model.recovery.model_discovery.selected_model = "opencode/other-free"; }],
+    ["cleanup not established", (_c, model) => { model.proof.discovery_context.removed = false; model.rebind(); }],
+    ["version command cwd differs", (_c, model) => { model.proof.commands[0].cwd += "/foreign"; model.rebind(); }],
+    ["catalog command cwd differs", (_c, model) => { model.proof.commands[1].cwd += "/foreign"; model.rebind(); }],
+    ["discovery context missing", (_c, model) => { delete model.proof.discovery_context; model.rebind(); }],
+    ["unknown mode", (_c, _model, env) => { env.REVIEW_MODEL_DISCOVERY = "unsupported"; }],
+    ["declared version differs", (_c, _model, env) => { env.REVIEW_EXPECTED_OPENCODE_VERSION = "1.19.0"; }],
+  ];
+  for (const [name, mutate, pass = false] of cases) {
+    const checked = freshReviewInputCheck(fixture);
+    assert.equal(checked.result.status, 0, checked.result.stderr);
+    const context = contextFixture(checked);
+    fs.writeFileSync(path.join(checked.evidence, "submission.json"), JSON.stringify(completeInputSubmission(checked)));
+    context.bind();
+    const model = bindModelDiscoveryFixture(checked, context);
+    const env = { REVIEW_MODEL_DISCOVERY: "opencode-free-mimo-flash-v1", REVIEW_EXPECTED_OPENCODE_VERSION: "1.18.18" };
+    mutate(checked, model, env);
+    fs.writeFileSync(model.recoveryFile, JSON.stringify(model.recovery));
+    const final = finalReviewInputCheck(checked, context, env);
+    assert.equal(final.result.status === 0, pass, `${name}: ${final.result.stderr}`);
+    assert.equal(fs.existsSync(final.publication), pass, name);
+    if (!pass && fs.existsSync(final.output)) assert.equal(parseOutput(final.output).submission_file, undefined, name);
+  }
+});
+
+
+test("ordinary setup owns a fresh model home without loading runner or candidate config", (t) => {
+  const f = reviewMetadataFixture(t);
+  fs.mkdirSync(path.join(f.initialRunnerHome, ".config/opencode"), { recursive: true });
+  const original = '{"provider":{"opencode":{"options":{"baseURL":"https://inert-runner.invalid"}}}}\n';
+  fs.writeFileSync(path.join(f.initialRunnerHome, ".config/opencode/opencode.json"), original);
+  const result = f.install(); assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.statSync(f.runnerHome).mode & 0o777, 0o700);
+  assert.equal(fs.realpathSync(f.runnerHome), f.runnerHome);
+  assert.notEqual(f.runnerHome, f.initialRunnerHome);
+  assert.equal(fs.readFileSync(path.join(f.initialRunnerHome, ".config/opencode/opencode.json"), "utf8"), original);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(f.runnerHome, ".config/opencode/opencode.json"))),
+    { permission: { bash: { true: "allow" } } });
+  assert.equal(fs.realpathSync(path.join(f.runnerHome, ".agents")), path.join(f.directory, ".review-context/agents"));
+  const modelStep = namedStep("review", "Run bounded evidence-first OpenCode review");
+  assert.equal(modelStep.env.REVIEW_CHILD_HOME, "${{ steps.review_context.outputs.child_home }}");
+  const repeat = f.install(); assert.notEqual(repeat.status, 0);
+  assert.match(repeat.stdout, /Refusing an existing ordinary model home/);
+});
+
+
+test("uploaded model discovery retains actual producer streams consumed by final verification", async (t) => {
+  const checked = freshReviewInputCheck(fullInputFixture(t));
+  assert.equal(checked.result.status, 0, checked.result.stderr);
+  const binary = path.join(checked.evidence, "inert-catalog-executable");
+  const selected = { id: "mimo-v9.1-flash-free", providerID: "opencode", family: "mimo",
+    status: "active", release_date: "2027-01-01", api: { id: "mimo-v9.1-flash-free", url: "https://example.invalid/inert", npm: "@ai-sdk/openai-compatible" },
+    capabilities: { toolcall: true, input: { text: true }, output: { text: true } },
+    cost: { input: 0, output: 0, cache: { read: 0, write: 0 } } };
+  // This executable emits inert catalog bytes only. The actual producer owns
+  // capture filenames, closed streams, output digests and proof serialization.
+  fs.writeFileSync(binary, `#!/bin/sh
+case "$1" in
+  --version) printf '1.18.18\n'; printf 'inert version stderr\n' >&2 ;;
+  models) cat <<'INERT_CATALOG'
+opencode/${selected.id}
+${JSON.stringify(selected, null, 2)}
+INERT_CATALOG
+    printf 'inert catalog stderr\n' >&2 ;;
+  *) exit 64 ;;
+esac
+`, { mode: 0o700 });
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url,"https://models.opencode.ai/api.json"); assert.equal(options.redirect,"error");
+    assert.equal(options.credentials,"omit");
+    const response=new Response(JSON.stringify(rawCatalogForSelected(selected)),{status:200});
+    Object.defineProperty(response,"url",{value:url}); return response;
+  };
+  let model;
+  try { model = await discoverFreeMiMoFlash({ evidenceDirectory: checked.evidence,
+    expectedVersion: "1.18.18", binary,
+    environment: { PATH: process.env.PATH || "/usr/bin:/bin", HOME: checked.consumer,
+      LANG: "C.UTF-8", LC_ALL: "C.UTF-8" } });
+  } finally {globalThis.fetch=originalFetch;}
+  const files = [path.basename(model.file),model.proof.catalog_source.file,model.proof.catalog_source.response_file, ...model.proof.commands.flatMap(command =>
+    [command.stdout_file, command.stderr_file])];
+  assert.equal(new Set(files).size, 7, "proof, raw catalog, response metadata and actual closed command streams are required");
+  const uploadPaths = new Set(namedStep("review", "Upload review attempt artifacts").with.path.trim().split(/\s+/));
+  const archive = fs.mkdtempSync(path.join(os.tmpdir(), "eta-mu-discovery-archive-"));
+  t.after(() => fs.rmSync(archive, { recursive: true, force: true }));
+  for (const file of files) {
+    assert.ok(uploadPaths.has(`.opencode/review-evidence/${file}`), `actual producer evidence is absent from upload: ${file}`);
+    fs.copyFileSync(path.join(checked.evidence, file), path.join(archive, file));
+  }
+  const archivedProof = JSON.parse(fs.readFileSync(path.join(archive, path.basename(model.file))));
+  assert.equal(transportSha256(fs.readFileSync(path.join(archive, path.basename(model.file)))), model.sha256);
+  for (const command of archivedProof.commands) for (const stream of ["stdout", "stderr"]) {
+    assert.equal(transportSha256(fs.readFileSync(path.join(archive, command[`${stream}_file`]))), command[`${stream}_sha256`]);
+  }
+  const context = contextFixture(checked);
+  fs.writeFileSync(path.join(checked.evidence, "submission.json"), JSON.stringify(completeInputSubmission(checked)));
+  context.bind();
+  const recoveryFile = path.join(checked.evidence, "recovery.json");
+  const recovery = JSON.parse(fs.readFileSync(recoveryFile));
+  recovery.model_discovery = { file: path.basename(model.file), sha256: model.sha256, selected_model: model.proof.selected_model };
+  recovery.accepted_invocation.model_discovery_sha256 = model.sha256;
+  recovery.accepted_invocation.model = model.proof.selected_model;
+  fs.writeFileSync(recoveryFile, JSON.stringify(recovery));
+  context.invocationDigest = transportSha256(JSON.stringify(recovery.accepted_invocation));
+  const environment = { REVIEW_MODEL_DISCOVERY: "opencode-free-mimo-flash-v1", REVIEW_EXPECTED_OPENCODE_VERSION: "1.18.18" };
+  for (const omitted of [null, ...files]) {
+    fs.rmSync(path.join(checked.evidence, "publisher-invoked"), { force: true });
+    fs.rmSync(path.join(checked.evidence, "final-outputs"), { force: true });
+    for (const file of files) fs.copyFileSync(path.join(archive, file), path.join(checked.evidence, file));
+    if (omitted) fs.rmSync(path.join(checked.evidence, omitted));
+    const final = finalReviewInputCheck(checked, context, environment);
+    assert.equal(final.result.status === 0, omitted === null, `${omitted || "intact archive"}: ${final.result.stderr}`);
+    assert.equal(fs.existsSync(final.publication), omitted === null);
+  }
+});
+
+test("required deterministic evidence and Sandbox use Node24 while legacy profile and reviewer retain their caller runtime", () => {
+  const setup = (job) => job.steps.filter((step) => step.uses?.startsWith("actions/setup-node@"));
+  const evidence = setup(workflow.jobs.deterministic_evidence);
+  assert.equal(evidence.length, 1);
+  assert.equal(evidence[0].with["node-version"], "24");
+  const sandbox = YAML.parse(fs.readFileSync(path.join(root, ".github/workflows/sandbox-bundle.yml"), "utf8"));
+  const sandboxSetups = Object.values(sandbox.jobs).flatMap(setup);
+  assert.equal(sandboxSetups.length, 1);
+  assert.equal(sandboxSetups[0].with["node-version"], "24");
+  const collector = sandbox.jobs.bundle.steps.find((step) => step.name === "Collect generated outputs and portable toolchains");
+  assert.ok(collector, "the actual bundle collector must produce restore metadata");
+  const query = collector.run.match(/jq -n[\s\S]*?'(\{[\s\S]*?\})' > "\$OUT\/manifest\.json"/);
+  assert.ok(query, "retain the actual jq manifest generator, rather than a separately authored manifest");
+  const produced = spawnSync("jq", ["-n", "--arg", "repository", "synthetic/sandbox",
+    "--arg", "revision", "c".repeat(40), "--arg", "ref", "refs/heads/inert",
+    "--arg", "generated_at", "2026-10-14T00:00:00Z", "--arg", "validation", "success", query[1]],
+    { encoding: "utf8", timeout: 15000 });
+  assert.equal(produced.error, undefined, produced.stderr);
+  assert.equal(produced.signal, null, produced.stderr);
+  assert.equal(produced.status, 0, produced.stderr);
+  const manifest = JSON.parse(produced.stdout);
+  assert.equal(manifest.sandbox_bundle_version, 1);
+  assert.equal(manifest.entrypoint, "pnpm test");
+  assert.equal(manifest.network_required_after_restore, true);
+  assert.equal(manifest.restore_requirements[0],
+    `Node.js ${sandboxSetups[0].with["node-version"]} and Java 21 must be installed on the restore host`,
+    "actual generated restore requirements must match the runtime that produced the bundle evidence");
+  assert.equal(workflow.on.workflow_call.inputs.node_version.default, "22");
+  for (const job of [workflow.jobs.prepare_review_context, workflow.jobs.review]) {
+    const held = setup(job);
+    assert.equal(held.length, 1);
+    assert.equal(held[0].with["node-version"], "${{ inputs.node_version || '22' }}");
+  }
 });
