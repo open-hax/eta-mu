@@ -961,3 +961,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: d19ac2cb49548d3bbd9b5f423f34011b870ef89f2063f837f81a2bb1bae68026
   note: Fresh native planning feedback exposed a scalar dependency admitted by raw card readback but invalid under the planning law. Use actual canonical field operations and verify vector plus correlated engine event/write ID; preserve incoming status, points and ledger prefix. Name the narrative task external owner without adding a dependency. Manual initial creation remains authorized and its absent generated event is not fabricated. Native current-head review convergence and full CMS deployment remain outstanding; no spore.
+- ts: 2026-10-14T10:20:42.434101102Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Apply verified owning planning corrections for T351
+  p-efficiency: 0.70
+  p-friction: 0.85
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: 3129037d0fffec977584ae6c8e41357805c40dfffdc6398b83c84688a7f4bd47
+  note: Source-only corrections and genuine metadata custody advanced. Keep first-class initial authoring distinct from creation events; preserve protected relationships and shared identity-law ownership. All implementation, native review, qualification and deployment obligations remain; no new spore.
