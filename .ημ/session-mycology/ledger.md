@@ -1016,3 +1016,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#b77901b4-08d8-40b6-93a1-ed06ddebe46b,.ημ/session-reflections.edn#7f18f616-e26b-4a47-bef0-d6297317e5e1
   note: Keep a two-string tool-boundary repair in an explicit one-point follow-up rather than reopening a completed five-point owner or its historical epic. Genuine process0 plus five npm warnings is a failed zero-warning contract. Plan same-environment full lint and actual error propagation; never substitute npm-version/config changes or a model approval. Freeze native creator serialization as observed, preserve all prefixes and use absolute native writer cwd. Local planning source 57109d38813b47b86027c3788f7407581c80bda9; implementation and public effects remain held. Candidate0; no spore.
+
+- ts: 2026-10-15T20:39:13.849414+00:00
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-root-lint-pnpm-exec-plan-4eaa-v1
+  task: ETA24 P2 explicit artifact byte-boundary clarification
+  p-efficiency: 0.9
+  p-friction: 0.25
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#3f836229-7698-4307-95a3-e4ed07b23b36,.ημ/session-reflections.edn#844a6cd5-219d-457a-9d87-ff874831ba61
+  note: Hash identity must name its exact byte artifact: the private6249B reviewed Markdown source includes one terminalLF, while native Rheos stores the trimmed6248B body. Preserve both identities and append an explicit clarification when a prior receipt is ambiguous; never rewrite historical provenance. This is a planning-only P2 correction with no card/product changes or approval credit. Candidate0; no spore. Source 6f16de1fddf62c51658c067de0ee1bca8e13db72; original f601 receipt and all card/event/product bytes preserved.
