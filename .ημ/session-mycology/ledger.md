@@ -997,3 +997,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/root-PR352-c830-three-bounded-plan-corrections-publication-v1/canonical-receipt-event.edn
   note: Law-first named representation, actual atomic append versus already-present publication and durable cross-process watcher custody clarified. Two card bodies only; no frontmatter/status/point/dependency/history change. Remaining source identity, manual initial-state/live-add/unknown-time gaps still upstream and unqualified. No fake birth or replacement board protocol; no runtime/production/model/admission effects.
+- ts: 2026-10-15T00:01:13.701208725Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Correct initial-only placement and selected stable-operation planning scope
+  p-efficiency: 0.84
+  p-friction: 0.56
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: a9c41e716ca6fa6d663e588a4afcbac19f3cf390cc707b9314bdc27e7134c363
+  note: Dependency clears keep UUID/source custody without initial-state placement. Select the bounded stable identity profile and preserve ordinary historical collision semantics. Planning text does not discharge broader live source admission or grant private recovery source adoption. Preserve EOF/frontmatter and genuine native roots; no spore or promotion.
