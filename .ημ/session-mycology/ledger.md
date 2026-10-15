@@ -1006,3 +1006,21 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#3d206448-b9a7-4111-9955-894b81c95fcd,.ημ/session-reflections.edn#b80809d6-323c-4347-81d6-fef9e26264ee
   note: ETA355 fixture startup jitter must be qualified through the actual registered concurrent owner. A 2 second fixture-only deadline accommodates fresh Node startup while retaining the progressing first-child timeout, exact stdout/stderr, owned PID/start cleanup, accepted attempt 2 and no attempt 3. Keep pure 400ms refusal controls and production budgets unchanged. Both genuine unchanged and exact five-edit owners passed 329 tests; retain the baseline PASS without manufacturing RED. Source b21cbb93b3d2eb7fe75e4a4783c9acb444f15182; Receipt River receipts.edn#3d206448-b9a7-4111-9955-894b81c95fcd. Preserve private ignore-path and typed-UUID metadata guard failures separately: dependent effects stopped, actual native semantics remained intact, and authoritative validation succeeded before continuation. No model, provider, hosted rerun, public publication, approval or deployment credit. Candidate 0; no spore.
+- ts: 2026-10-15T13:07:06.648104667Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify exact personal Knoxx actionability source and real profile cwd repair
+  p-efficiency: 0.64
+  p-friction: 0.62
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#9a2c6198-31dd-4d46-9e30-654b8cad38e8
+  note: Native schema1 reflection a1d633ad-1ae5-4b80-8979-ae9903b1eee8 and canonical receipt bind source99a1d65a. Preserve wrong-fixture failures, omitted optional coordinates, genuine predecessor RED1de4 and the exact archived GREEN. Host config and actual Bash guards execute with inert transport; profile-digest cwd repair uses real pinned modules. Final six suites,113boundNodes,CLI/full lint/build pass on unchanged2103tracked inputs. Existing skills cover the lesson; no spore or promotion. Source remains local; protected ETA adoption, effective App grant and fresh independent native assessment still required. No Bot-rejection transport, App/model/publication or production effect.
+- ts: 2026-10-15T14:18:02.689673203Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Repair ETA19 actionability and rejection route documentation
+  p-efficiency: 0.68
+  p-friction: 0.42
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#d901c5c0-251f-4cb3-95df-996e63aa9583
+  note: One actual native schema1 reflection 149dccb0-4ccb-4d57-aae4-136a92092d63 records this current lesson; historical a1d633ad stays intact. Read actual route source before copying a shared guide pin or handoff: actionability8497/45c7, rejection5cea/b7e4. Root reviewed the exact one-doc patch and all2103 tracked inputs. Diff/check passes; no new tests or code gates. Preserve unsupported bridge and private guard failures truthfully. Source38b829fa and owner3c3f8872 are separate ordinary commits; effective App grant/protected adoption/fresh native assessment remain required. Existing skills cover this lesson, candidate0; no spore/promotion. Push remains separately guarded; no PR/model/account/deployment effect.
