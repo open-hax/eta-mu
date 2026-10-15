@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { runReviewRecovery } from "./run-opencode-review-recovery.mjs";
 import { stageTransportVerifier, transportResponse, transportReviewTools,
@@ -33,6 +33,144 @@ function fixture(t) {
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   return directory;
 }
+
+/** Read an owned Linux process identity without treating a reused PID as ours. */
+function deadlineProcessIdentity(pid) {
+  try {
+    const raw = fs.readFileSync(`/proc/${pid}/stat`, "utf8");
+    const fields = raw.slice(raw.lastIndexOf(")") + 2).trim().split(/\s+/);
+    return { pid, start: fields[19], state: fields[0] };
+  } catch { return null; }
+}
+
+/** Run the actual packaged CLI against a progressing child that never exits. */
+async function deadlineChildFixture(t) {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "review-deadline-"));
+  let processCleanup = () => {};
+  t.after(() => { processCleanup(); fs.rmSync(directory, { recursive: true, force: true }); });
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const workflow = fs.readFileSync(path.join(root, ".github/workflows/opencode-code-review.yml"), "utf8");
+  const encoded = workflow.match(/<<'ETA_MU_RECOVERY_RUNNER_BASE64'\n([\s\S]*?)\n\s*ETA_MU_RECOVERY_RUNNER_BASE64/);
+  assert.ok(encoded);
+  const runner = path.join(directory, "runner.mjs");
+  fs.writeFileSync(runner, Buffer.from(encoded[1].replace(/\s/g, ""), "base64"));
+  const invocation = stageTransportVerifier(directory,
+    { reviewTools: [...transportReviewTools, "review_read_diff_chunk"] });
+  // An explicit transport-only healthy-omission verdict: real Muse law remains
+  // independently compiled and tested by the registered owning workflow suite.
+  const verifier = fs.readFileSync(invocation.verifierFile, "utf8");
+  const omission = 'if (submission === null) return refuse("missing-review-submit");';
+  assert.ok(verifier.includes(omission));
+  fs.writeFileSync(invocation.verifierFile, verifier.replace(omission,
+    'if (submission === null) return {...refuse("missing-review-submit"), code:"healthy-unfinished-review"};'));
+  const sessionID = "ses_deadline_fixture";
+  const progress = ["review_begin", "review_read_diff_chunk", "review_assess_diff_chunk"].map((tool, index) => ({
+    type: "tool_use", timestamp: index + 1, sessionID,
+    part: { type: "tool", id: `part_deadline_${index}`, callID: `call_deadline_${index}`, sessionID,
+      tool, state: { status: "completed", input: {},
+        output: JSON.stringify({ "ok?": true, fixtureAuthority: "TRANSPORT_MOCK_ONLY" }) } },
+  })).concat({ type: "step_finish", timestamp: 4, sessionID, part: { reason: "stop" } });
+  const firstResponse = progress.map((event) => JSON.stringify(event)).join("\n") + "\n";
+  const child = path.join(directory, "fake-opencode.mjs");
+  const identities = path.join(directory, "owned-identities.jsonl");
+  fs.writeFileSync(child, `#!${process.execPath}
+import fs from "node:fs";
+import path from "node:path";
+import {spawn} from "node:child_process";
+const directory=process.env.REVIEW_EVIDENCE_DIR;
+const count=path.join(directory,"count.txt");
+const attempt=fs.existsSync(count)?2:1;
+fs.writeFileSync(count,String(attempt));
+const own=pid=>{const raw=fs.readFileSync('/proc/'+pid+'/stat','utf8');return {pid,start:raw.slice(raw.lastIndexOf(')')+2).trim().split(/\\s+/)[19]};};
+fs.appendFileSync(${JSON.stringify(identities)},JSON.stringify(own(process.pid))+'\\n');
+if(attempt===1){
+  const descendant=spawn(process.execPath,['-e',"process.on('SIGTERM',()=>process.exit(0));setInterval(()=>{},1000)"],{stdio:'ignore'});
+  descendant.once('spawn',()=>{
+    fs.appendFileSync(${JSON.stringify(identities)},JSON.stringify(own(descendant.pid))+'\\n');
+    process.stdout.write(${JSON.stringify(firstResponse)});
+    process.stderr.write('retained first-attempt progress\\n');
+  });
+  process.on('SIGTERM',()=>{
+    if(descendant.exitCode!==null||descendant.signalCode!==null)process.exit(0);
+    descendant.once('close',()=>process.exit(0));descendant.kill('SIGTERM');
+  });
+  setInterval(()=>{},1000);
+}else{
+  fs.writeFileSync(path.join(directory,'submission.json'),JSON.stringify({schema:'open-hax.github-review/v1',event:'APPROVE',summary:'TRANSPORT_MOCK_ONLY',comments:[]}));
+  process.stdout.write(${JSON.stringify(transportResponse({sessionID: "ses_deadline_second"}).toString())});
+}
+`);
+  fs.chmodSync(child, 0o755);
+  const prompt = path.join(directory, "prompt.md");
+  fs.writeFileSync(prompt, "Complete the full unchanged transport fixture #{{PR_NUMBER}}.\n");
+  const process_ = spawn(process.execPath, [runner], { detached: true, stdio: ["ignore", "pipe", "pipe"],
+    env: { PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`, LANG: "C.UTF-8", LC_ALL: "C.UTF-8",
+      OPENCODE_BIN: child, PR_NUMBER: "342", REVIEW_MODEL: "fixture/model", REVIEW_EVIDENCE_DIR: directory,
+      REVIEW_PROMPT_FILE: prompt, REVIEW_ATTEMPT_TIMEOUT_MS: "400", ...invocation.env } });
+  const supervisorIdentity = deadlineProcessIdentity(process_.pid);
+  let outerTimedOut = false;
+  const output = [], errors = [];
+  process_.stdout.on("data", (bytes) => output.push(bytes));
+  process_.stderr.on("data", (bytes) => errors.push(bytes));
+  /** Stop only fixture-owned identities, retaining the baseline deadline failure. */
+  const cleanup = () => {
+    const known = fs.existsSync(identities)
+      ? fs.readFileSync(identities, "utf8").trim().split(/\r?\n/).filter(Boolean).map(JSON.parse) : [];
+    for (const expected of [...known.reverse(), supervisorIdentity].filter(Boolean)) {
+      if (deadlineProcessIdentity(expected.pid)?.start === expected.start) {
+        try { process.kill(expected.pid, "SIGTERM"); } catch (error) { if (error.code !== "ESRCH") throw error; }
+      }
+    }
+  };
+  const timer = setTimeout(() => { outerTimedOut = true; cleanup(); }, 3500);
+  let force;
+  processCleanup = () => {
+    clearTimeout(timer); clearTimeout(force); cleanup();
+  };
+  const result = await new Promise((resolve, reject) => {
+    process_.once("error", reject);
+    process_.once("close", (code, signal) => resolve({ code, signal }));
+    force = setTimeout(() => {
+      cleanup();
+      if (supervisorIdentity && deadlineProcessIdentity(process_.pid)?.start === supervisorIdentity.start) process_.kill("SIGKILL");
+    }, 5000);
+  });
+  clearTimeout(timer); clearTimeout(force);
+  cleanup();
+  const owned = fs.readFileSync(identities, "utf8").trim().split(/\r?\n/).map(JSON.parse);
+  return { directory, invocation, firstResponse, result, outerTimedOut, owned,
+    stdout: Buffer.concat(output).toString(), stderr: Buffer.concat(errors).toString() };
+}
+
+test("packaged invocation deadline retains progressing child output and permits only the existing healthy omission recovery", { timeout: 10_000 }, async (t) => {
+  const f = await deadlineChildFixture(t);
+  assert.ok(f.owned.length >= 2, "the real stub and its owned descendant must both have started");
+  assert.deepEqual(fs.readFileSync(path.join(f.directory, "model-response-attempt-1.txt")), Buffer.from(f.firstResponse));
+  assert.equal(fs.readFileSync(path.join(f.directory, "opencode-stderr-attempt-1.log"), "utf8"), "retained first-attempt progress\n");
+  t.diagnostic(`owned deadline fixture: ${JSON.stringify({ outerTimedOut: f.outerTimedOut,
+    processes: f.owned, remaining: f.owned.map(({ pid }) => deadlineProcessIdentity(pid)),
+    actualFirstResponseSHA256: transportSha256(fs.readFileSync(path.join(f.directory, "model-response-attempt-1.txt"))),
+    emittedReviewToolProgress: 3, fixtureAuthority: "TRANSPORT_MOCK_ONLY" })}`);
+  assert.equal(f.outerTimedOut, false,
+    "the runner must enforce its own attempt deadline before the owning fixture cleanup deadline");
+  assert.equal(f.result.code, 0, f.stderr || f.stdout);
+  assert.equal(f.result.signal, null);
+  assert.deepEqual(fs.readFileSync(path.join(f.directory, "model-response-attempt-1.txt")), Buffer.from(f.firstResponse));
+  assert.equal(fs.readFileSync(path.join(f.directory, "opencode-stderr-attempt-1.log"), "utf8"), "retained first-attempt progress\n");
+  const receipt = JSON.parse(fs.readFileSync(path.join(f.directory, "recovery.json"), "utf8"));
+  assert.equal(receipt.recovery_reason, "invocation_deadline");
+  assert.equal(receipt.attempts.length, 2);
+  assert.equal(receipt.attempts[0].invocation_state, "deadline-exceeded");
+  assert.equal(receipt.attempts[0].timed_out, true);
+  assert.equal(receipt.attempts[0].timeout_ms, 400);
+  assert.equal(receipt.attempts[0].cleanup_complete, true);
+  assert.equal(receipt.attempts[0].captures_closed, true);
+  assert.equal(receipt.attempts[0].canonical_verdict.code, "healthy-unfinished-review");
+  assert.equal(receipt.accepted_invocation.attempt, 2);
+  assert.equal(fs.existsSync(path.join(f.directory, "model-response-attempt-3.txt")), false);
+  for (const expected of f.owned) assert.notEqual(deadlineProcessIdentity(expected.pid)?.start, expected.start,
+    `owned fixture process ${expected.pid} must have exited and been reaped`);
+});
 
 /** Exercise recovery with configurable synthetic failures and captured invocation prompts. */
 async function invokeFailure(directory, { events = failureEvents(), stderr = "! permission requested: doom_loop (invalid); auto-rejecting\n", exitCode = 1, submission, secondFails = false, reviewTools = ["review_begin", "review_assess_diff_chunk", "review_submit"] } = {}) {
