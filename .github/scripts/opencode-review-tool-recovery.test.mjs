@@ -172,6 +172,96 @@ test("packaged invocation deadline retains progressing child output and permits 
     `owned fixture process ${expected.pid} must have exited and been reaped`);
 });
 
+for (const [name, options] of [
+  ["unfinished trace", { code: "unfinished-review", reason: "unestablished-review-trace" }],
+  ["denied bash HOST failure", { code: "failed-host-call", reason: "unestablished-review-trace" }],
+  ["provider quota", { code: "provider-quota", reason: "quota" }],
+  ["provider authentication", { code: "provider-authentication", reason: "authentication" }],
+  ["unknown verdict", { code: "unknown", reason: "unknown" }],
+  ["unclean process group", { cleanupComplete: false }],
+  ["unclosed captures", { capturesClosed: false }],
+  ["canonical violation", { violations: [{ code: "retained-host-error" }] }],
+  ["present submission", { body: "{}", accepted: true }],
+  ["malformed submission", { body: "{broken" }],
+]) {
+  test(`an invocation deadline cannot turn ${name} into recovery or approval`, async (t) => {
+    const directory = fixture(t), calls = [];
+    const promise = runReviewRecovery({ evidenceDirectory: directory, basePrompt: "Full unchanged input.",
+      expectedContext: { fixtureAuthority: "TRANSPORT_MOCK_ONLY" },
+      verifyReviewInvocation: () => ({ ok: options.accepted ?? false,
+        reason: options.accepted ? null : options.reason ?? "missing-review-submit",
+        reasonKind: options.accepted ? null : options.reason ?? "missing-review-submit",
+        code: options.code ?? "healthy-unfinished-review", violations: options.violations ?? [],
+        acceptedInvocation: options.accepted ? { sessionID: "ses_forbidden", submissionCallID: "call_submit" } : null,
+        sessionID: "ses_forbidden", fixtureAuthority: "TRANSPORT_MOCK_ONLY" }),
+      invokeAttempt: async ({ attempt, responseFile, stderrFile }) => {
+        calls.push(attempt);
+        fs.writeFileSync(responseFile, transportResponse({ submission: false }));
+        fs.writeFileSync(stderrFile, "retained partial stderr\n");
+        if (options.body !== undefined) fs.writeFileSync(path.join(directory, "submission.json"), options.body);
+        return { exitCode: null, signal: "SIGTERM", timedOut: true, timeoutMs: 400,
+          cleanupComplete: options.cleanupComplete ?? true, capturesClosed: options.capturesClosed ?? true };
+      } });
+    await assert.rejects(promise, /deadline/);
+    assert.deepEqual(calls, [1]);
+    const receipt = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8"));
+    assert.equal(receipt.accepted_invocation, null);
+    assert.equal(receipt.recovery_reason, null);
+    assert.equal(receipt.attempts[0].invocation_state, "deadline-exceeded");
+    assert.equal(receipt.attempts[0].exit_code, null);
+    assert.equal(receipt.attempts[0].exit_signal, "SIGTERM");
+    assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
+  });
+}
+
+test("a second invocation deadline stops at the unchanged two-attempt limit", async (t) => {
+  const directory = fixture(t), calls = [];
+  const promise = runReviewRecovery({ evidenceDirectory: directory, basePrompt: "Full unchanged input.",
+    expectedContext: { fixtureAuthority: "TRANSPORT_MOCK_ONLY" },
+    verifyReviewInvocation: () => ({ ok: false, reason: "missing-review-submit", reasonKind: "missing-review-submit",
+      code: "healthy-unfinished-review", violations: [], acceptedInvocation: null,
+      fixtureAuthority: "TRANSPORT_MOCK_ONLY" }),
+    invokeAttempt: async ({ attempt, responseFile, stderrFile }) => {
+      calls.push(attempt);
+      fs.writeFileSync(responseFile, transportResponse({ submission: false })); fs.writeFileSync(stderrFile, "");
+      return { exitCode: null, signal: "SIGKILL", timedOut: true, timeoutMs: 400,
+        cleanupComplete: true, capturesClosed: true };
+    } });
+  await assert.rejects(promise, /attempt 2.*deadline/);
+  assert.deepEqual(calls, [1, 2]);
+  const receipt = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8"));
+  assert.equal(receipt.max_attempts, 2); assert.equal(receipt.accepted_invocation, null);
+  assert.equal(receipt.recovery_reason, "invocation_deadline");
+  assert.ok(receipt.attempts.every((attempt) => attempt.invocation_state === "deadline-exceeded"));
+  assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-3.txt")), false);
+});
+
+test("invalid explicit invocation budgets fail before starting a child", (t) => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const workflow = fs.readFileSync(path.join(root, ".github/workflows/opencode-code-review.yml"), "utf8");
+  const encoded = workflow.match(/<<'ETA_MU_RECOVERY_RUNNER_BASE64'\n([\s\S]*?)\n\s*ETA_MU_RECOVERY_RUNNER_BASE64/);
+  assert.ok(encoded);
+  for (const value of ["", "0", "-1", "0.5", "400.0", "4500001", "Infinity", "NaN", " 400", "400\n", "$(echo unsafe)"]) {
+    const directory = fixture(t), invocation = stageTransportVerifier(directory);
+    const runner = path.join(directory, "runner.mjs"), child = path.join(directory, "child.mjs");
+    const started = path.join(directory, "child-started"), prompt = path.join(directory, "prompt.md");
+    fs.writeFileSync(runner, Buffer.from(encoded[1].replace(/\s/g, ""), "base64"));
+    fs.writeFileSync(child, `#!${process.execPath}\nimport fs from 'node:fs';fs.writeFileSync(${JSON.stringify(started)},'unexpected');\n`);
+    fs.chmodSync(child, 0o755); fs.writeFileSync(prompt, "Review full unchanged input.\n");
+    const result = spawnSync(process.execPath, [runner], { encoding: "utf8", timeout: 3000,
+      env: { PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`, OPENCODE_BIN: child,
+        PR_NUMBER: "342", REVIEW_MODEL: "fixture/model", REVIEW_EVIDENCE_DIR: directory,
+        REVIEW_PROMPT_FILE: prompt, REVIEW_ATTEMPT_TIMEOUT_MS: value, ...invocation.env } });
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /REVIEW_ATTEMPT_TIMEOUT_MS must be a positive integer/);
+    assert.equal(fs.existsSync(started), false);
+    const receipt = JSON.parse(fs.readFileSync(path.join(directory, "recovery.json"), "utf8"));
+    assert.deepEqual(receipt.attempts, []); assert.equal(receipt.accepted_invocation, null);
+    assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-1.txt")), false);
+    assert.equal(fs.readFileSync(invocation.output, "utf8"), "");
+  }
+});
+
 /** Exercise recovery with configurable synthetic failures and captured invocation prompts. */
 async function invokeFailure(directory, { events = failureEvents(), stderr = "! permission requested: doom_loop (invalid); auto-rejecting\n", exitCode = 1, submission, secondFails = false, reviewTools = ["review_begin", "review_assess_diff_chunk", "review_submit"] } = {}) {
   const calls = [];
