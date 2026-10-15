@@ -49,6 +49,16 @@ take the first matching UUID. Replace those choices with one shared named target
 selection authority exposed by the existing task-store boundary. Do not add a
 command, parser, Foresight validator or alternate board interface.
 
+The same authority admits an existing parent before child creation. Route
+`infra.task-create/create-task!` parent admission through it rather than collapsing
+`existing` into a UUID-keyed map. This covers CLI `create-subtask` and
+`create --parent`, plus MCP `kanban_create_subtask` and
+`kanban_create_task` with a parent. Refuse a missing, duplicate or physically
+ambiguous requested parent before child-directory/file writes, write-ID creation,
+watcher registration or task-created publication. Preserve the existing missing
+parent outcome, healthy root/child creation and supported legacy parent IDs;
+this adds no new HTTP creation route.
+
 Reuse `law.frontmatter/card-id-pattern`; identifiers such as
 `opencode-mimo-evidence-review-agent` are canonical supported IDs. Do not require
 RFC UUID spelling, normalize identity, invent an ID, or rewrite a card. Keep
@@ -75,10 +85,22 @@ All task-targeting HTTP handlers consume the same guard, including the editor
 handler; typed selection refusal must not become generic HTTP 500. One selected
 task retains its actual source path and unchanged projected data.
 
+Every successful task-targeting selector result also binds the fresh physical
+source to the requested identity through the owning decoder's raw key-custody
+observations. Exactly one literal, supported `uuid:` occurrence must agree with
+the request and selected project/source; repeated keys refuse even if their
+values are equal or the flat projection chose the last value. This admission
+applies to read, status/move, comment, frontmatter, editor and parent selection,
+not only the generic updater. Reuse `parse-frontmatter-with-key-custody` and
+`shape.frontmatter/scan-header`; these private RH decoder observations require
+independent source qualification/adoption here, not a new parser. Other
+unsupported header data is not automatically a read refusal: preservation or
+explicit mutation refusal remains the separate write obligation below.
+
 ## Held generic metadata source boundary
 
 For a new generic frontmatter operation, compose the shared selector with the
-existing guarded physical-source boundary. Bind the requested identity, selected
+independently qualified generic physical-source boundary described below. Bind the requested identity, selected
 project/projection and actual source path to its fresh owning-decoder witness.
 Under the existing selected-source custody, confirm the literal raw identity is
 one unambiguous matching supported card ID and that the physical image agrees
@@ -103,14 +125,34 @@ an absent status or creation timestamp; a metadata update does not fabricate bir
 or materialize initial status. Match actual write-ID/completion custody and retain
 the original before/after images and dependency vector.
 
-Compose the already qualified owning metadata recovery/source-lock interface for
-participating writers; this card does not implement another ledger, writer,
-lock/CAS or recovery protocol. Preserve lawful pending/completed reuse and all
-existing recovery controls. Qualified source interfaces are inputs to this work,
-not a reverse dependency on their cards' completion or on downstream ADA. Their
-adoption remains separately required before any live operation. A missing accepted
-source-custody interface blocks this slice rather than hiding new recovery work
-inside five points.
+Qualify and adopt this shared owner first on the existing ordinary
+`infra.task-edit/update-frontmatter!` → `domain.task-edit/plan-frontmatter-update`
+→ owning decoder → per-key `domain.events/emit-frontmatter-change!` path.
+T2d's ordinary updater uses direct read/write and has no accepted held source-lock
+adapter. Its existing ordinary completion events are not selected recovery or
+crash-completion custody.
+
+The concrete private source subset to qualify independently is RH2f9's
+`extern.markdown-source/with-source!`, its generic mutex, the owning decoder's
+key-custody observations, and the Clio FS source-current/rebind/replace helpers
+plus repeatable owning-descriptor read. Those helpers reuse the existing Clio
+kernel lock, descriptor, complete-temp/fsync, rename and directory-sync primitives;
+no new lock kernel or competing card writer is proposed. Keep this subset free of
+`infra.metadata-recovery`, recovery phase/intent/completion composition and
+`rheos.metadata-recovery.v1` namespace/operation/part selection. The retained
+33-path private RH qualification is whole-candidate source evidence only; it
+neither adopts this subset nor qualifies an isolated extraction. Run the actual
+ordinary-update/source-custody and affected Clio/decoder gates before adopting it.
+If independent composition needs a new kernel/protocol or wider concurrency work,
+stop and re-estimate instead of hiding that work in five points.
+
+After this owner is qualified/adopted, recovery owner
+`9743b533-5c01-4b69-8089-1038f492048a` consumes its guard and adds selected durable
+operation recovery; metadata owner `775ab0be-90fe-469f-89e3-e6ac07b031ce` consumes
+both adopted owners. No selected recovery completion is needed to qualify or
+close this shared owner. A later recovery composition must preserve the existing
+pending/completed controls; those controls are not this owner's ordinary-update
+exit, and downstream ADA/deployment completion is never an input.
 
 ## Acceptance criteria
 
@@ -129,6 +171,16 @@ inside five points.
   append/retry policy is changed by this boundary.
 - The editor lookup refuses before native execution. Qualification intercepts
   the editor executor in an owned test fixture and never opens a real editor.
+- Duplicate parent files refuse through CLI `create-subtask`/`create --parent`
+  and both MCP creation forms before child source, write-ID, watcher or ledger
+  effects. Healthy unique/legacy parents succeed; foreign/excluded parent copies
+  do not create a collision. Missing-parent behavior stays intact.
+- A file with repeated raw `uuid:` keys refuses through every selected consumer:
+  CLI read/move/frontmatter/comment, MCP task read/status/frontmatter/comment,
+  all five existing HTTP task handlers including editor, and parent creation.
+  Exercise equal and different repeated values with the requested last value;
+  preserve source/ledger bytes and executor silence. Healthy one-key neighbours
+  remain admitted. No projected last-value-wins result supplies raw identity.
 - The existing GitHub sync duplicate control remains intact if its predicate is
   extracted. No broad admission of the entire manual-source corpus is inferred.
 
@@ -143,9 +195,11 @@ inside five points.
 - A healthy unique manual card completes a dependency set to the ordered A8/B3
   IDs, and a healthy epic-shaped source completes points59-to70. Actual identity,
   body, unrelated metadata and status/creation-field presence remain intact; one
-  genuine matching frontmatter completion supplies custody, with zero synthetic
-  status/task-created events. Repeat of the healthy equal request is a byte/event
-  noop or admitted completed recovery, retaining the original write identity.
+  genuine existing ordinary per-key frontmatter completion supplies custody,
+  with zero synthetic status/task-created or recovery events. A repeated healthy
+  ordinary request preserves source values and follows the existing documented
+  ordinary write/event behavior; it cannot claim selected recovery completion,
+  durable original-operation reuse or a recovered no-op.
 - Canonical legacy string IDs remain healthy for those metadata controls. All
   eleven predecessor public-API duplicate/positive controls remain unchanged.
 
@@ -164,7 +218,10 @@ CLI's direct `move` path separately from CLI verbs that delegate to MCP. Preserv
 healthy unique and legacy targets and project/projection isolation controls.
 Additionally use the existing public frontmatter surfaces for actual supported
 dependency/points fixtures, raw-ID and duplicate-after-lookup interventions and
-unsupported-header controls. Keep intervention bytes separate from the expected
+unsupported-header controls. Add the parent-creation and all-consumer repeated-key
+controls above to the retained eleven public controls; they are future causal
+criteria, not executed RED. Ordinary positive qualification must not dispatch a
+selected recovery/phase operation or wait for recovery owner completion. Keep intervention bytes separate from the expected
 product refusal; compare source, ledger, watcher and actual event observations.
 The source-copy discovery below is a pure-function observation, not public-API RED
 or an implementation test pass. Execute the additive registered controls only
@@ -192,8 +249,8 @@ Provisional five points, on this same initially authored owner:
 | 1 | Registered owner tests/lint/four releases, actual public/API/CLI custody and exact adopted-source handoff. |
 
 Three-point lookup-only work cannot qualify the additional held update and source
-preservation obligations. Five points assumes composition with existing qualified
-source custody/recovery and decoder APIs. No new parser, writer, global namespace
+preservation obligations. Five points assumes independently qualifying the bounded generic source-custody
+and decoder subset above on ordinary metadata, without selected recovery. No new parser, writer, global namespace
 fence or recovery implementation is included. The source owner closes on its own
 reviewed, qualified/adopted source without waiting for Foresight or Services.
 
@@ -211,8 +268,8 @@ event or dependency-registration history.
 The guarantee concerns exact requested-ID uniqueness observed at fresh canonical
 selection and the generic metadata admission recheck, plus the held selected
 physical source/witness. It does not establish that no independent writer can
-create a new file immediately after that directory observation. Existing recovery
-supplies participating selected-source custody, not a global namespace fence. It is not a global directory/identity lock: another writer could
+create a new file immediately after that directory observation. The independently adopted generic source adapter supplies participating
+selected-source custody, not a global namespace fence. It is not a global directory/identity lock: another writer could
 introduce a new file after selection. If acceptance requires atomic uniqueness
 across that whole window, stop and estimate the actual shared writer/namespace
 fence rather than claim the current per-source lock supplies it.
