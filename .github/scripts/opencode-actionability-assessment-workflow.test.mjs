@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { runTrustedWorkflowFixture } from "./assessment-trusted-workflow-fixture.mjs";
 import { createNativeAssessmentFixtures } from "./native-assessment-fixture.mjs";
@@ -140,9 +141,57 @@ test("unknown purpose and nonprivate or redirected model home refuse before the 
 const workflowFile = path.join(root, ".github/workflows/opencode-actionability-assessment.yml");
 const workflow = (await import("yaml")).parse(fs.readFileSync(workflowFile, "utf8"));
 
+test("compiled profile binding resolves the pinned runtime from the ETA checkout and preserves the parent cwd", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-rejection-profile-binding-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const eta = path.join(directory, ".actionability/eta");
+  const runtime = path.join(directory, ".actionability/runtime");
+  const profile = path.join(directory, "profile");
+  const canonical = path.join(directory, "canonical");
+  const modules = path.join(runtime, "node_modules");
+  const source = "packages/eta-mu/src/cljs/eta_mu/extern/actionability_host.cljs";
+  const require = createRequire(path.join(root, "packages/eta-mu/package.json"));
+  const pinned = JSON.parse(fs.readFileSync(path.join(root, ".github/assessment-runtime/package.json"), "utf8"));
+  for (const target of [modules, profile, canonical, path.dirname(path.join(eta, source))])
+    fs.mkdirSync(target, { recursive: true });
+  for (const name of ["nbb", "yaml"]) {
+    const manifest = require.resolve(`${name}/package.json`);
+    assert.equal(JSON.parse(fs.readFileSync(manifest, "utf8")).version, pinned.dependencies[name]);
+    fs.symlinkSync(path.dirname(manifest), path.join(modules, name), "dir");
+  }
+  fs.symlinkSync(modules, path.join(eta, "node_modules"), "dir");
+  fs.copyFileSync(path.join(root, source), path.join(eta, source));
+  fs.writeFileSync(path.join(profile, "owned-fixture.txt"), "Nonempty deterministic profile fixture; no model invocation.\n");
+  const verifier = path.join(directory, "verifier.cjs");
+  fs.writeFileSync(verifier, "// Owned verifier-byte binding fixture.\n");
+  const entry = path.join(eta, "profile-digest.cljs");
+  fs.writeFileSync(entry, "(require '[eta-mu.extern.actionability-host :as h]) (println (h/directory-digest (h/env \"ACTIONABILITY_PROFILE_DIR\")))\n");
+  const env = { PATH: `${path.dirname(process.execPath)}:${process.env.PATH}`, HOME: directory,
+    ETA_CHECKOUT: eta, GITHUB_WORKSPACE: directory, CANONICAL_CHECKOUT: canonical,
+    ACTIONABILITY_PROFILE_DIR: profile, REVIEW_INVOCATION_VERIFIER_FILE: verifier,
+    GITHUB_OUTPUT: path.join(directory, "outputs"), TEST_PARENT_AFTER: path.join(directory, "parent-cwd") };
+  // No ambient NODE_PATH: the hosted runtime is installed only under runtime,
+  // and only the ETA checkout receives its node_modules link.
+  const neighbor = runTrustedWorkflowFixture(import.meta.url,
+    ["-c", 'node "$GITHUB_WORKSPACE/.actionability/runtime/node_modules/nbb/cli.js" -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs" "$ETA_CHECKOUT/profile-digest.cljs"'],
+    { cwd: directory, env, encoding: "utf8", timeout: 15000 }, 1);
+  assert.equal(neighbor.status, 0, neighbor.stderr);
+  const expectedProfile = neighbor.stdout.trim();
+  assert.match(expectedProfile, /^[0-9a-f]{64}$/);
+  const step = workflow.jobs.prepare.steps.find(step => step.name === "Bind compiled profile outside the child");
+  const result = runTrustedWorkflowFixture(import.meta.url,
+    ["-c", `${step.run}\nprintf '%s' "$PWD" > "$TEST_PARENT_AFTER"\n`],
+    { cwd: directory, env, encoding: "utf8", timeout: 15000 }, 1);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.readFileSync(env.GITHUB_OUTPUT, "utf8"),
+    `profile_sha256=${expectedProfile}\nverifier_sha256=${createHash("sha256").update(fs.readFileSync(verifier)).digest("hex")}\n`);
+  assert.equal(fs.readFileSync(env.TEST_PARENT_AFTER, "utf8"), directory);
+});
+
+
 test("direct and reusable routes share exact protected dependency pins", () => {
   assert.ok(workflow.on.workflow_call && workflow.on.workflow_dispatch);
-  const expectedPins = { canonical: "80b8993bbd43cf0265c5e558c678845edc8929d9", muse: "45c7a8d572bf44202f52cae2aa8c0f771736a617" };
+  const expectedPins = { canonical: "8497afdd329c3dcaefb78eec36d8e629a59d9eb2", muse: "45c7a8d572bf44202f52cae2aa8c0f771736a617" };
   assert.equal(workflow.env.CANONICAL_REVISION, expectedPins.canonical);
   assert.equal(workflow.env.MUSE_REVISION, expectedPins.muse);
   assert.equal(workflow.env.ETA_SOURCE_SHA, "${{ inputs.eta_revision || github.workflow_sha }}");
@@ -188,7 +237,7 @@ test("target-native read credentials remain separate from protected publication"
     assert.ok(sourceGuard >= 0 && sourceGuard < publicGuard && publicGuard < readIndex);
     const reader = job.steps[readIndex];
     assert.equal(reader.uses, "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1");
-    assert.equal(reader.with.owner, "open-hax");
+    assert.equal(reader.with.owner, "${{ steps.target_identity.outputs.repository_owner }}");
     assert.equal(reader.with.repositories, "${{ steps.target_identity.outputs.repository_name }}");
     assert.deepEqual(Object.fromEntries(Object.entries(reader.with).filter(([key]) => key.startsWith("permission-"))),
       { "permission-metadata": "read", "permission-pull-requests": "read", "permission-issues": "read" });
@@ -460,11 +509,11 @@ test("every job refuses reruns before native reads and later artifact or token s
 /** The exact first guard rejects unsupported App-owner input before setup. */
 test("publisher token scopes exactly the validated installed target", (t) => {
   const token = workflow.jobs.publish.steps.find((step) => step.id === "publisher");
-  assert.equal(token.with.owner, "open-hax");
+  assert.equal(token.with.owner, "${{ steps.target_identity.outputs.repository_owner }}");
   assert.equal(token.with.repositories, "${{ steps.target_identity.outputs.repository_name }}");
   const nativeGuard = workflow.jobs.publish.steps.find((step) => step.id === "target_identity");
   assert.ok(nativeGuard, "the token consumes only the guarded native-target output");
-  const expectedPins = { CANONICAL_REVISION: "80b8993bbd43cf0265c5e558c678845edc8929d9",
+  const expectedPins = { CANONICAL_REVISION: "8497afdd329c3dcaefb78eec36d8e629a59d9eb2",
     MUSE_REVISION: "45c7a8d572bf44202f52cae2aa8c0f771736a617" };
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-target-scope-"));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -484,9 +533,9 @@ test("publisher token scopes exactly the validated installed target", (t) => {
     assert.equal(native.signal, null);
     assert.equal(native.status, 0, native.stderr);
     const names = fs.readFileSync(output, "utf8");
-    assert.equal(names, `repository_name=${target.split("/")[1]}\n`);
-    const repositoryName = names.slice("repository_name=".length).trimEnd();
-    assert.equal(`${token.with.owner}/${repositoryName}`, target,
+    assert.equal(names, `repository_owner=open-hax\nrepository_name=${target.split("/")[1]}\n`);
+    const outputs = Object.fromEntries(names.trimEnd().split("\n").map(line => line.split("=")));
+    assert.equal(`${outputs.repository_owner}/${outputs.repository_name}`, target,
       "the explicit token list contains only this validated native target, not an incumbent allowlist");
   }
   for (const [n, target] of ["other-owner/repo", "open-hax/repo,other", "open-hax/repo\nother", "", "open-hax/"].entries()) {
@@ -497,6 +546,112 @@ test("publisher token scopes exactly the validated installed target", (t) => {
     assert.equal(child.status, 1);
     assert.equal(fs.existsSync(effects), false, "malformed/foreign targets refuse before modeled setup");
   }
+});
+
+test("actual host config admits only the exact personal fork before dependency setup", () => {
+  const canonical = path.resolve(path.dirname(process.env.ACTIONABILITY_POLICY_FILE), "../..");
+  const sha = "a".repeat(40);
+  const env = { ...process.env, TARGET_REPOSITORY: "riatzukiza/knoxx", TARGET_REPOSITORY_ID: "1401249297",
+    TARGET_HEAD_SHA: sha, TARGET_PR_NUMBER: "15", TARGET_THREAD_ID: "PRRT_fixture", TARGET_PROPOSAL_ID: "7001",
+    CANONICAL_CHECKOUT: canonical, GITHUB_WORKFLOW_SHA: sha, ETA_SOURCE_SHA: sha,
+    ACTIONABILITY_JOB_WORKFLOW_SHA: sha, ACTIONABILITY_CALLED_REVISION: "",
+    ACTIONABILITY_JOB_WORKFLOW_REF: "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main",
+    GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_RUN_ID: "31", GITHUB_RUN_ATTEMPT: "1",
+    GITHUB_REPOSITORY: "open-hax/eta-mu", ACTIONABILITY_PREPARE_CHECK_RUN_ID: "101", ACTIONABILITY_ASSESS_CHECK_RUN_ID: "",
+    GITHUB_WORKFLOW_REF: "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main",
+    ACTIONABILITY_HOST_HOME: "" };
+  const nbb = path.join(root, "packages/eta-mu/node_modules/nbb/cli.js");
+  const run = changes => {
+    const result = spawnSync(process.execPath, [nbb, "-cp",
+      `${root}/packages/eta-mu/src/cljs:${canonical}/skills/pr-flow/scripts`,
+      path.join(root, ".github/scripts/opencode_actionability_assessment.cljs"), "prepare"],
+      { cwd: root, env: { ...env, ...changes }, encoding: "utf8", timeout: 15000 });
+    assert.equal(result.error, undefined);
+    assert.equal(result.signal, null);
+    assert.equal(result.status, 1, "the fixture intentionally stops before dependency setup or native I/O");
+    const records = result.stderr.split("\n").filter(Boolean).map(line => JSON.parse(line));
+    assert.equal(records.length, 1, "the actual host returns one structured refusal");
+    return records[0].code;
+  };
+  assert.equal(run({}), "missing-host-input", "exact fork config reaches the intentionally absent dependency HOME");
+  assert.equal(run({ TARGET_REPOSITORY: "open-hax/another-installed-repo", TARGET_REPOSITORY_ID: "3" }), "missing-host-input");
+  for (const changes of [{ TARGET_REPOSITORY: "riatzukiza/proxx" }, { TARGET_REPOSITORY_ID: "1401249298" },
+    { TARGET_REPOSITORY: "Riatzukiza/knoxx" }, { TARGET_REPOSITORY: "riatzukiza/knoxx/extra" },
+    { TARGET_REPOSITORY: "riatzukiza/knoxx,other" }, { TARGET_REPOSITORY: "riatzukiza/knoxx\nother" }])
+    assert.equal(run(changes), "host-input", "non-exact personal inputs refuse in the actual host guard");
+  for (const value of ["01401249297", "1401249297.0"])
+    assert.equal(run({ TARGET_REPOSITORY_ID: value }), "native-coordinate");
+});
+
+test("only the exact public Knoxx development fork adds a target installation scope", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-exact-knoxx-fork-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const target = "riatzukiza/knoxx";
+  const id = "1401249297";
+  const metadata = { full_name: target, id: Number(id), node_id: "R_kgDOU4VeEQ", visibility: "public", private: false };
+  const base = { PATH: process.env.PATH, TARGET_REPOSITORY: target, TARGET_REPOSITORY_ID: id,
+    TIMEOUT_INPUT: "60", CANONICAL_REVISION: workflow.env.CANONICAL_REVISION, MUSE_REVISION: workflow.env.MUSE_REVISION };
+  const early = workflow.jobs.prepare.steps[0].run;
+  for (const [name, changes, accepted] of [
+    ["exact-fork", {}, true], ["org", { TARGET_REPOSITORY: "open-hax/knoxx", TARGET_REPOSITORY_ID: "3" }, true],
+    ["other-personal", { TARGET_REPOSITORY: "riatzukiza/proxx" }, false],
+    ["wrong-id", { TARGET_REPOSITORY_ID: "1401249298" }, false],
+    ["leading-zero", { TARGET_REPOSITORY_ID: "01401249297" }, false],
+    ["empty-id", { TARGET_REPOSITORY_ID: "" }, false],
+    ["alias", { TARGET_REPOSITORY: "Riatzukiza/knoxx" }, false],
+    ["extra-slash", { TARGET_REPOSITORY: "riatzukiza/knoxx/extra" }, false],
+    ["comma", { TARGET_REPOSITORY: "riatzukiza/knoxx,other" }, false],
+    ["newline", { TARGET_REPOSITORY: "riatzukiza/knoxx\nother" }, false],
+  ]) {
+    const effects = path.join(directory, `early-${name}`);
+    const actual = runTrustedWorkflowFixture(import.meta.url, ["-c", `${early}\nprintf reached > "$TEST_EFFECTS"\n`],
+      { env: { ...base, ...changes, TEST_EFFECTS: effects }, encoding: "utf8", timeout: 15000 });
+    assert.equal(actual.error, undefined);
+    assert.equal(actual.signal, null);
+    assert.equal(actual.status === 0, accepted, `early guard: ${name}`);
+    assert.equal(fs.existsSync(effects), accepted, "refusal precedes modeled native setup");
+  }
+  const cases = [
+    ["exact", metadata, "0", true],
+    ["wrong-node", { ...metadata, node_id: "R_other" }, "0", false],
+    ["missing-node", { ...metadata, node_id: undefined }, "0", false],
+    ["wrong-id", { ...metadata, id: Number(id) + 1 }, "0", false],
+    ["string-id", { ...metadata, id }, "0", false],
+    ["wrong-name", { ...metadata, full_name: "riatzukiza/proxx" }, "0", false],
+    ["private", { ...metadata, visibility: "private", private: true }, "0", false],
+    ["unknown-visibility", { ...metadata, visibility: null }, "0", false],
+    ["missing-private", { ...metadata, private: undefined }, "0", false],
+    ["contradiction", { ...metadata, private: true }, "0", false],
+    ["failed-read", {}, "44", false],
+    ["malformed", "not-json", "0", false],
+  ];
+  let tokenCount = 0;
+  for (const [jobName, job] of Object.entries(workflow.jobs)) {
+    const identity = job.steps.findIndex(step => step.id === "target_identity");
+    for (const [index, step] of job.steps.entries()) {
+      if (!step.uses?.startsWith("actions/create-github-app-token@")) continue;
+      tokenCount++;
+      assert.ok(identity < index, `${jobName}: identity precedes the actual App token action`);
+      assert.equal(step.with.owner, "${{ steps.target_identity.outputs.repository_owner }}");
+      assert.equal(step.with.repositories, "${{ steps.target_identity.outputs.repository_name }}");
+    }
+    for (const [name, row, readExit, accepted] of cases) {
+      const output = path.join(directory, `${jobName}-${name}.outputs`);
+      const effects = output + ".effects";
+      const actual = runTrustedWorkflowFixture(import.meta.url, ["-c", `${job.steps[identity].run}\nprintf reached > "$TEST_EFFECTS"\n`],
+        { env: { ...base, GITHUB_OUTPUT: output, TEST_EFFECTS: effects, TEST_READ_EXIT: readExit,
+          TEST_METADATA: typeof row === "string" ? row : JSON.stringify(row),
+          "BASH_FUNC_gh%%": '() { [[ "$#" == 2 && "$1" == api && "$2" == "repos/$TARGET_REPOSITORY" ]] || return 97; [[ "$TEST_READ_EXIT" == 0 ]] || return "$TEST_READ_EXIT"; printf "%s\\n" "$TEST_METADATA"; }' },
+          encoding: "utf8", timeout: 15000 });
+      assert.equal(actual.error, undefined);
+      assert.equal(actual.signal, null);
+      assert.equal(actual.status === 0, accepted, `${jobName}: native ${name}`);
+      assert.equal(fs.existsSync(output), accepted, "refused identity supplies no token scope");
+      assert.equal(fs.existsSync(effects), accepted, "refused identity precedes modeled checkout and token effects");
+      if (accepted) assert.equal(fs.readFileSync(output, "utf8"), "repository_owner=riatzukiza\nrepository_name=knoxx\n");
+    }
+  }
+  assert.equal(tokenCount, 4, "three job scopes include the retained post-model read-token refresh");
 });
 
 /** Emulate immutable artifact-name lookup only; no upload/download API is called. */
@@ -556,7 +711,7 @@ test("every target checkout requires exact native identity and known public visi
     const guard = job.steps[index];
     assert.equal(guard.id, "target_identity");
     const token = job.steps.find((step) => step.uses?.startsWith("actions/create-github-app-token@"));
-    assert.equal(token.with.owner, "open-hax");
+    assert.equal(token.with.owner, "${{ steps.target_identity.outputs.repository_owner }}");
     assert.equal(token.with.repositories, "${{ steps.target_identity.outputs.repository_name }}");
     assert.equal(guard.env.GH_TOKEN, "${{ github.token }}");
     assert.equal(Object.keys(guard.env).some((key) => /KEY|SECRET/.test(key)), false);
@@ -578,7 +733,7 @@ test("every target checkout requires exact native identity and known public visi
       if (name === "public") {
         assert.equal(child.status, 0, jobName + " admits the exact public target");
         assert.match(fs.readFileSync(effects, "utf8"), /checkout-reached/);
-        assert.equal(fs.readFileSync(output, "utf8"), "repository_name=another-installed-repo\n");
+        assert.equal(fs.readFileSync(output, "utf8"), "repository_owner=open-hax\nrepository_name=another-installed-repo\n");
       } else {
         assert.notEqual(child.status, 0, jobName + " refuses " + name + " native metadata");
         assert.equal(fs.existsSync(effects), false, "refusal occurs before modeled checkout/App continuation");
