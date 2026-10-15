@@ -943,3 +943,105 @@ The note dated 2026-10-13T23:50:01.299914020Z records 16 source changes, five no
 
 These are readable renderings of the recorded historical values. Each belongs to its original timestamp and evidence scope. The original notes and their receipt references remain the provenance source.
 
+- ts: 2026-10-14T08:54:59.334821907Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Author canonical initial-status and dependency representation repair plan
+  p-efficiency: 0.82
+  p-friction: 0.39
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: 8c8f628430c3a0153c3f36c5cd4a1ccf6d6a9840864f27f0a6ebe8eda4d4de9d
+  note: Root cannot repair missing literal status by repeating a same-state no-op or by editing protected established metadata. A narrow owner plan now names parser presence custody, canonical guarded initialization, actual metadata/event correlation and exact two-site dependency omission, without lifecycle fictions or global serialization claims. Canonical readbacks and preserved source/history qualify initial planning artifacts only; review and readiness precede implementation. No production mutation or spore.
+- ts: 2026-10-14T10:20:42.447947317Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Apply verified owning planning corrections for T352
+  p-efficiency: 0.70
+  p-friction: 0.85
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: 7b297798665685211e93c01fbf2d57b68136b132c47eb8d60467f2a88ebf7038
+  note: Source-only corrections and genuine metadata custody advanced. Keep first-class initial authoring distinct from creation events; preserve protected relationships and shared identity-law ownership. All implementation, native review, qualification and deployment obligations remain; no new spore.
+- ts: 2026-10-14T20:03:44.311579251Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Calibrate existing Rheos775 owner plan and recover complete source4d review failure custody
+  p-efficiency: 0.72
+  p-friction: 0.74
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: 590c72438f77119c6db65d073c9c66a7d9fa1c3ccbaf11b5b6a00349babbe423
+  note: Read complete terminal logs and exact artifact before assigning a provider cause. The actual first assessment omitted its note, then retried in the same session against protected STOP guidance; the strict verifier correctly refused it. Initial Markdown authoring remains distinct from generated creation metadata/event history. Calibrated the existing five-point estimate against an actual three-point metadata comparator, preserving frontmatter, recovery scope and board history. Native creation findings and normal current-head review/readiness remain open. No model, board, production effect or spore.
+- ts: 2026-10-14T20:47:33.906618437Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Repair five current Rheos planning boundaries without inflating source capability
+  p-efficiency: 0.73
+  p-friction: 0.75
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: baf01e59eec79f3c15dc4cfa2f97c119731a5b33b3232c7b202bf0b524dd739f
+  note: Separate schemas, pure domain decisions and infra effect composition. Recovery needs a declared phase grammar and exact per-key completion custody across both initialization and explicit clears. A ledger lock does not protect card files; narrow single-writer qualification and observed-conflict refusal honestly instead of claiming that post-write detection preserves overwritten bytes. Preserve initial Markdown authorization without fake engine events; both creation findings remain open. Two body-only source corrections retain all frontmatter and history, with actual canonical readbacks. No runtime implementation, readiness or deployment credit and no spore.
+- ts: 2026-10-14T20:57:39.536585623Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Align owning source instructions with first-class initial Markdown card authorization
+  p-efficiency: 0.80
+  p-friction: 0.71
+  p-skill-candidate: 0.10
+  spore: none
+  receipt-refs: 208f8acaf79a99379d81bae13b66af10f580db93cdcbb12d940ee6d1ff7b4c28
+  note: A repeated native creation premise cited a blanket repository instruction that did not distinguish first-class initial source from established operational writes. Record the explicit human contract in that owning instruction, preserving canonical creation validation and all operational Rheos authority. This source clarification creates no generated card metadata/event, and original P1s still need actual native withdrawal or qualified independent rejection. No runtime, readiness, provider or production effect and no spore.
+- ts: 2026-10-14T21:55:04.100936842Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Three bounded Rheos metadata/recovery planning corrections
+  p-efficiency: 0.68
+  p-friction: 0.71
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/root-PR352-c830-three-bounded-plan-corrections-publication-v1/canonical-receipt-event.edn
+  note: Law-first named representation, actual atomic append versus already-present publication and durable cross-process watcher custody clarified. Two card bodies only; no frontmatter/status/point/dependency/history change. Remaining source identity, manual initial-state/live-add/unknown-time gaps still upstream and unqualified. No fake birth or replacement board protocol; no runtime/production/model/admission effects.
+- ts: 2026-10-15T00:01:13.701208725Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Correct initial-only placement and selected stable-operation planning scope
+  p-efficiency: 0.84
+  p-friction: 0.56
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: a9c41e716ca6fa6d663e588a4afcbac19f3cf390cc707b9314bdc27e7134c363
+  note: Dependency clears keep UUID/source custody without initial-state placement. Select the bounded stable identity profile and preserve ordinary historical collision semantics. Planning text does not discharge broader live source admission or grant private recovery source adoption. Preserve EOF/frontmatter and genuine native roots; no spore or promotion.
+- ts: 2026-10-15T01:32:02.525553110Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Author bounded shared target/update prerequisite and selected recovery profile
+  p-efficiency: 0.82
+  p-friction: 0.62
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/root-PR352-209bd-five-point-shared-target-and-selected-profile-authorship-v1/canonical-receipt-event.edn
+  note: Same initial five-point owner covers fresh unique target, matching raw identity and held source witness; preserve unsupported metadata or refuse, with healthy dependency/points updates. Selected Rheos recovery identity is prospective named source, preserving ordinary legacy Clio behavior. Existing headers/history and ADA six operations remain unchanged. No runtime test execution, board effect, fake birth, readiness, adoption or production claim; no spore or promotion.
+
+- ts: 2026-10-15T02:01:50.128Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Qualify ordinary guard before selected recovery; close actual raw-ID, parent and batch planning omissions
+  p-efficiency: 0.79
+  p-friction: 0.67
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: eafc119e8dc1b87c3e553b84b92a0960a65d19ab1466b77a2558b05469b034dc
+  note: The shared target/source guard must qualify independently on ordinary metadata before selected recovery consumes it. Distinguish existing Clio kernel primitives from private source-inode wrappers and whole-candidate qualification from extraction/adoption. Raw UUID occurrence admission applies to every selected consumer, including parent creation; selected or mixed event batches refuse before any write. Preserve legacy IDs, ordinary events, first-class Markdown and the actual broader admission holds. Two body-only corrections retain full metadata/history; no runtime tests, readiness, adoption or deployment credit. Skill candidate is 0; no spore or promotion.
+  canonical-event: |
+    #:event{:id "677031f6-e4cb-485c-9b02-753b30969fb9", :type :session-mycology/reflection-recorded, :recorded-at "2026-10-15T02:01:50.128Z", :schema {:id :eta-mu.session-mycology/reflection-recorded, :version 1}, :producer {:eta-mu/version "0.1.0", :package/name "@eta-mu/session-mycology", :package/version "0.1.0", :command "Session Mycology package API / owned planning reflection", :actor "codex/deployment_plan_current_failure", :source/commit "40f858f1d99f4c1823fd4db73781b370f718a282"}, :subject {:repo "open-hax/eta-mu"}, :payload {:repo "open-hax/eta-mu", :lesson "The shared target/source guard must qualify independently on ordinary metadata before selected recovery consumes it. Distinguish existing Clio kernel primitives from private source-inode wrappers and whole-candidate qualification from extraction/adoption. Raw UUID occurrence admission applies to every selected consumer, including parent creation; selected or mixed event batches refuse before any write. Preserve legacy IDs, ordinary events, first-class Markdown and the actual broader admission holds. Two body-only corrections retain full metadata/history; no runtime tests, readiness, adoption or deployment credit. Skill candidate is 0; no spore or promotion.", :session/id "01a12257-fc69-7720-888c-dd2595ff7dc7", :task/id "Qualify ordinary guard before selected recovery; close actual raw-ID, parent and batch planning omissions", :receipt/refs ["eafc119e8dc1b87c3e553b84b92a0960a65d19ab1466b77a2558b05469b034dc"]}}
+- ts: 2026-10-15T02:29:11.461969262Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Correct four raw-identity/public-source/ledger-custody planning gaps
+  p-efficiency: 0.84
+  p-friction: 0.62
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/root-PR352-1077-four-current-P1-source-corrections-v1/canonical-receipt-event.edn
+  note: Count requested rawID beforeprojection acrosscompletein-scope source; failed discovery/stat/read/decode refusesidentityadmission. Futurehelpers mustbe publicrepository-owned source, privateRH optionalhistoricalcomparison. Everyselected ledgercriticalsection requirescomplete nonblankline decode; malformed/truncatedordinaryorselectedhistory meansunknown/refusal notabsence. Preserveordinarycompat/headers/estimates/history andoriginalscope; no tests/runtime/adoption/board/deployment credit. Nativeconfirmed4P1roots actualCodexreview; localprivateobjects existbutnotpublicreachable. No spore/promotion.
+- ts: 2026-10-15T03:44:37.708545039Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-rheos-metadata-plan-v1
+  task: Apply reviewed custody5/shared5/pure3/execution5 metadata planning split
+  p-efficiency: 0.82
+  p-friction: 0.58
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/PR352-0592-approved-five-card-actual-canonical-refinement-v1/canonical-receipt-event.edn
+  note: Keep common producer laws upstream, generic selected identity before recovery law, and effectful recovery separate from pure decisions. Root approved exact five-file source patch and three real canonical metadata commands. Five actual per-key events/three write-IDs and old ledger prefix verified; ordinary millisecond-ID collision retained with distinct payloads/roots. All incoming statuses and approved acceptance sections remain exact; factual pending prose now records actual fields/write-IDs. One private CLI JSON readback-key assumption corrected without repeating any metadata operation. Source commit3d33b240 is clean and scoped; no product gates, readiness, implementation/adoption, settlement, push, provider or deployment claim. Skill candidate0; no spore or promotion.
