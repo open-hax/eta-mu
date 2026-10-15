@@ -1036,3 +1036,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/root-PR352-1077-four-current-P1-source-corrections-v1/canonical-receipt-event.edn
   note: Count requested rawID beforeprojection acrosscompletein-scope source; failed discovery/stat/read/decode refusesidentityadmission. Futurehelpers mustbe publicrepository-owned source, privateRH optionalhistoricalcomparison. Everyselected ledgercriticalsection requirescomplete nonblankline decode; malformed/truncatedordinaryorselectedhistory meansunknown/refusal notabsence. Preserveordinarycompat/headers/estimates/history andoriginalscope; no tests/runtime/adoption/board/deployment credit. Nativeconfirmed4P1roots actualCodexreview; localprivateobjects existbutnotpublicreachable. No spore/promotion.
+- ts: 2026-10-15T03:44:37.708545039Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-rheos-metadata-plan-v1
+  task: Apply reviewed custody5/shared5/pure3/execution5 metadata planning split
+  p-efficiency: 0.82
+  p-friction: 0.58
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: /home/err/.local/share/openhax-codex/20261010/review-state/PR352-0592-approved-five-card-actual-canonical-refinement-v1/canonical-receipt-event.edn
+  note: Keep common producer laws upstream, generic selected identity before recovery law, and effectful recovery separate from pure decisions. Root approved exact five-file source patch and three real canonical metadata commands. Five actual per-key events/three write-IDs and old ledger prefix verified; ordinary millisecond-ID collision retained with distinct payloads/roots. All incoming statuses and approved acceptance sections remain exact; factual pending prose now records actual fields/write-IDs. One private CLI JSON readback-key assumption corrected without repeating any metadata operation. Source commit3d33b240 is clean and scoped; no product gates, readiness, implementation/adoption, settlement, push, provider or deployment claim. Skill candidate0; no spore or promotion.
