@@ -46,6 +46,26 @@ invocations; a timeout never establishes review completion or authorizes partial
 scope publication. The deterministic evidence, context compilation and terminal
 gate budgets remain 60, 45 and 5 minutes respectively.
 
+The ordinary Linux review reserves 30 minutes of that job budget for setup,
+bounded process cleanup, verification, retention and publication, and divides
+the remainder equally between the existing two possible invocations. The
+validated first step derives the host-owned `REVIEW_ATTEMPT_TIMEOUT_MS` output:
+15 minutes per attempt for a 60-minute job, 45 for the default 120-minute job,
+and 75 for a 180-minute job. Each invocation owns a private process group. At
+its wall deadline the supervisor requests TERM, escalates after two seconds
+when needed, and allows at most five seconds for cleanup and capture drain.
+Partial response, stderr, actual exit/signal and deadline metadata remain
+inspectable; expiry is a failed lifecycle, never a completed passing review.
+Only a first expiry with complete cleanup, closed captures, no submission and
+the unchanged canonical `healthy-unfinished-review` / `missing-review-submit`
+verdict may consume the existing sole corrective invocation. A HOST failure
+(including the denied bash in the original PR30 trace), provider/quota error,
+unfinished or unknown trace, present/malformed submission, cleanup failure or
+second expiry remains terminal. These controls do not change assessment-route
+budgets, canonical Muse law or the shared maximum of two invocations. Updating
+ETA main cannot alter a consumer's immutable workflow pin; caller adoption
+still requires its own qualified source update and fresh native evidence.
+
 The workflow has three bounded stages:
 
 1. **Deterministic evidence** — install from the committed lockfile, then run the repository lint, test, and build gates. Exit codes and logs are serialized under `.opencode/review-evidence/`. A failed environment or dependency install is evidence about the run, not automatically evidence of a code defect.
