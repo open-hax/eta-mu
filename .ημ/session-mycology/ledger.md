@@ -943,3 +943,15 @@ The note dated 2026-10-13T23:50:01.299914020Z records 16 source changes, five no
 
 These are readable renderings of the recorded historical values. Each belongs to its original timestamp and evidence scope. The original notes and their receipt references remain the provenance source.
 
+
+- ts: 2026-10-15T02:31:29.827Z
+  session: deployment-20261015-assessment-cwd
+  task: opencode-mimo-evidence-review-agent
+  p-efficiency: 0.79
+  p-friction: 0.67
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: 4d6dc7c1121f2dbfa4eb3a06276ad9a21ceadb46bd7ef4f8ac9c4486f6fcf0e7
+  note: Bind operational authority to fresh protected-main card and source bytes before repairing an adopted workflow; an independently held planning successor is not authority for that existing bugfix. One canonical scoped-plan comment preserves the real write-ID and event. Causal RED and hosted qualification remain pending.
+  canonical-event: |
+    #:event{:id "09d56789-8f08-4c37-ba91-c82d56020d98", :type :session-mycology/reflection-recorded, :recorded-at "2026-10-15T02:31:29.827Z", :schema {:id :eta-mu.session-mycology/reflection-recorded, :version 1}, :producer {:eta-mu/version "0.1.0", :package/name "@eta-mu/session-mycology", :package/version "0.1.0", :command "Session Mycology package API / owned planning reflection", :actor "codex/deployment_plan_current_failure", :source/commit "0a4b8a8c372af1cea751d6f4bac7502e332bf5e3"}, :subject {:repo "open-hax/eta-mu"}, :payload {:repo "open-hax/eta-mu", :lesson "Bind operational authority to fresh protected-main card and source bytes before repairing an adopted workflow; an independently held planning successor is not authority for that existing bugfix. One canonical scoped-plan comment preserves the real write-ID and event. Causal RED and hosted qualification remain pending.", :session/id "deployment-20261015-assessment-cwd", :task/id "opencode-mimo-evidence-review-agent", :receipt/refs ["4d6dc7c1121f2dbfa4eb3a06276ad9a21ceadb46bd7ef4f8ac9c4486f6fcf0e7"]}}
