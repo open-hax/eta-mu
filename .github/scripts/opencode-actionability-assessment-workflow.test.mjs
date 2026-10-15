@@ -557,9 +557,10 @@ test("actual host config admits only the exact personal fork before dependency s
     ACTIONABILITY_JOB_WORKFLOW_SHA: sha, ACTIONABILITY_CALLED_REVISION: "",
     ACTIONABILITY_JOB_WORKFLOW_REF: "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main",
     GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_RUN_ID: "31", GITHUB_RUN_ATTEMPT: "1",
-    GITHUB_REPOSITORY: "open-hax/eta-mu", ACTIONABILITY_PREPARE_CHECK_RUN_ID: "101", ACTIONABILITY_ASSESS_CHECK_RUN_ID: "",
+    GITHUB_REPOSITORY: "open-hax/eta-mu", ACTIONABILITY_PREPARE_CHECK_RUN_ID: "101",
     GITHUB_WORKFLOW_REF: "open-hax/eta-mu/.github/workflows/opencode-actionability-assessment.yml@refs/heads/main",
     ACTIONABILITY_HOST_HOME: "" };
+  delete env.ACTIONABILITY_ASSESS_CHECK_RUN_ID; // The prepare phase has no optional assess identity.
   const nbb = path.join(root, "packages/eta-mu/node_modules/nbb/cli.js");
   const run = changes => {
     const result = spawnSync(process.execPath, [nbb, "-cp",
