@@ -1,15 +1,30 @@
 ---
-uuid: "d3bb3bcc-4882-4283-a78f-625b271e328c"
-title: "Guard unique Rheos targets and source-preserving metadata updates"
-status: "incoming"
-type: "task"
-priority: "P1"
-points: "5"
 category: "tasks"
 labels: "rheos, identity, source-custody, metadata, cli, http, mcp, 5sp"
+dependency: ["b29c2c61-bace-4117-8118-e89d1f5a7ec2"]
+type: "task"
+write-id: "1792035492603-0.rx7hdn4fxtsobk3032o"
+points: "5"
+title: "Guard unique Rheos targets and source-preserving metadata updates"
+priority: "P1"
+status: "incoming"
+uuid: "d3bb3bcc-4882-4283-a78f-625b271e328c"
 ---
 
 # Guard unique Rheos targets and source-preserving metadata updates
+
+## Reviewed refinement proposal and owning prerequisite
+
+Native PR352 roots 4278471912/4278471926 assign the previously included generic
+producer/physical-source implementation to separately estimated upstream owner
+[b29c2c61-bace-4117-8118-e89d1f5a7ec2](qualify-upstream-markdown-key-and-physical-source-custody-1f5a7ec2.md), five points. This existing five-point owner consumes its
+qualified public law, decoder observations and generic source adapter. It does
+not implement or re-estimate that work inside its own capacity. After whole-plan
+review, canonical Rheos registered dependency[b29c2c61-bace-4117-8118-e89d1f5a7ec2]
+on 2026-10-15 at03:38:12Z. Actual card readback and its matching ordinary
+frontmatter event retain write-ID1792035492603-0.rx7hdn4fxtsobk3032o. This is
+planning metadata custody, not readiness, implementation or finding settlement. The predecessor filename is
+retained for source continuity; its UUID and current title identify this owner.
 
 ## Context
 
@@ -23,7 +38,7 @@ The public planning source is eta-mu
 209bd304988f3b53bb1b23071c9b2c963e2145ad. The retained source/API investigation and
 unapplied test sketch also bind the independent private recovery rehearsal at
 2f9a24ab584879de6e0a5e06eda65366fe5a379c. Recovery source does not itself supply
-unique requested-target selection. This same unpublished UUID now covers the bounded shared target/update boundary.
+unique requested-target selection. This same UUID covers the bounded shared target/update consumer boundary.
 The original three-point lookup-only proposal is retained as predecessor evidence.
 Foresight native roots 4277797670 and 4277797680 require an actual AFAC dependency
 vector and epic estimate update through that same existing frontmatter API.
@@ -116,11 +131,13 @@ isolation controls.
 Bind that admitted source to the requested identity and fresh physical witness.
 This admission applies to read, status/move, comment, frontmatter, editor, parent
 selection and creation identity availability, not only the generic updater.
-Implement the required named key-custody observations at the repository-owned
-`shape.content-parser/parse-frontmatter-with-key-custody` and
-`shape.frontmatter/scan-header` seams by extending the existing decoder. These
-are proposed source definitions in this owner, not existing public capabilities
-or required private imports. Other unsupported header data is not automatically
+Consume the required named key-custody observations from upstream owner b29c2c61-bace-4117-8118-e89d1f5a7ec2
+at the repository-owned `shape.content-parser/parse-frontmatter-with-key-custody`
+and `shape.frontmatter/scan-header` seams. That owner defines the complete common
+law FIRST, including literal decoded values and exact source/key/value spans,
+then the conforming producer and physical-source adapter. This owner validates
+that adopted result; it does not invent a competing schema or import private
+source. These are proposed upstream definitions, not existing public capabilities. Other unsupported header data is not automatically
 a read refusal when raw identity remains unambiguous; preservation or explicit
 mutation refusal remains the separate write obligation below.
 
@@ -159,40 +176,31 @@ T2d's ordinary updater uses direct read/write and has no accepted held source-lo
 adapter. Its existing ordinary completion events are not selected recovery or
 crash-completion custody.
 
-Implement the independently buildable generic source-custody subset in this
-repository from its accepted public source. The required definitions are the
-Rheos `extern.markdown-source/with-source!` adapter and participating-writer mutex,
-the existing decoder's named key-custody extension, and narrowly owned Clio FS
-source-current/rebind/replace helpers plus repeatable owning-descriptor read.
-These definitions are proposed work, not available public APIs. At this revision,
-`packages/clio/src/clio/extern/js/fs.cljs` already supplies `absolute-path`,
-`acquire-lock!`, `acquire-read-lock!`, `read-locked-text`, `release-lock!`, durable
-`write-text!` and `rename!`, `append-locked-text!`, `sync-locked!` and
-`sync-directory!`. Reuse that owning kernel and durability authority. Its current
-descriptor read is not a claimed repeatable-read helper. Add/factor the bounded
-fresh-inode check, replacement rebind, repeatable read and complete-temp replacement
-composition in the owning extern layer; preserve lock/descriptor and alias refusal
-semantics. No new lock kernel, alternate writer or all-writer CAS is proposed.
+The generic source-custody subset is implemented and independently qualified by
+upstream owner [b29c2c61-bace-4117-8118-e89d1f5a7ec2](qualify-upstream-markdown-key-and-physical-source-custody-1f5a7ec2.md) from accepted public source. Its common
+laws, owning decoder, Rheos extern/mutex and narrowly added Clio fresh-inode,
+replacement/rebind and repeatable-read helpers are not implementation capacity
+in this card. Consume only its accepted exact public revision and qualified
+contracts. The adopted source must remain independently inspectable/buildable
+without private RH2f9/0f292 fetches or captures. Private comparison remains
+optional historical evidence, never a build prerequisite or source-adoption proof.
 
-Check in these repository-owned definitions during this owner's lawful RED/GREEN
-work before qualification/adoption, so another checkout can inspect, build and
-run the ordinary-update controls without fetching a private commit or local
-capture. Private RH2f9/0f292 source is optional historical design/comparison evidence
-only, not a required implementation input or an adopted interface. Its retained
-33-path qualification does not qualify the independent subset. Keep the generic
-subset free of `infra.metadata-recovery`, recovery phase/intent/completion and
-`rheos.metadata-recovery.v1` selection. Run the actual ordinary-update/source-custody
-and affected Clio/decoder gates before adopting it. If this bounded implementation
-needs a new kernel/protocol or wider concurrency work, stop and re-estimate instead
-of hiding that work in five points.
+This card owns strict complete-corpus composition, exact raw-ID/cardinality
+selection, all existing consumer routing and binding that result to the adopted
+source boundary. Qualify healthy ordinary updates and refusal through actual
+CLI/MCP/HTTP paths, without a selected recovery operation. Do not count source
+adapter tests as complete corpus/transport qualification or a per-source lock as
+global UUID uniqueness. Wider kernel/concurrency work returns to its actual
+upstream owner for refinement; no excluded guarantee is silently waived here.
 
-After this owner is qualified/adopted, recovery owner
-`9743b533-5c01-4b69-8089-1038f492048a` consumes its guard and adds selected durable
-operation recovery; metadata owner `775ab0be-90fe-469f-89e3-e6ac07b031ce` consumes
-both adopted owners. No selected recovery completion is needed to qualify or
-close this shared owner. A later recovery composition must preserve the existing
-pending/completed controls; those controls are not this owner's ordinary-update
-exit, and downstream ADA/deployment completion is never an input.
+After shared adoption, pure recovery owner 9743b533-5c01-4b69-8089-1038f492048a consumes the guard/source contract
+as its declared prerequisite and defines pure recovery contracts/decisions. New
+selected execution owner [b9ec4347-d36a-441e-a742-68f0fbb7314a](execute-selected-rheos-metadata-recovery-through-the-canonical-writer-fbb7314a.md) consumes both and adds durable
+intent/completion, watcher and restart effects. Metadata owner 775ab0be-90fe-469f-89e3-e6ac07b031ce consumes that
+qualified execution chain and the upstream common key law. No recovery/metadata
+completion is needed to qualify shared ordinary updates or close this owner.
+The execution/metadata integrations must preserve pending/completed controls;
+those are their exits, not an ordinary-updater recovery claim by this card.
 
 ## Acceptance criteria
 
@@ -296,25 +304,27 @@ Provisional five points, on this same initially authored owner:
 | ---: | --- |
 | 1 | Named exact requested-ID/cardinality law and canonical loader selection. |
 | 1 | Route existing CLI/MCP/HTTP consumers and typed refusals, retaining all eleven controls. |
-| 1 | Bind fresh selection, literal raw identity and admitted source witness at the existing guarded generic metadata boundary. |
-| 1 | Reuse owning decoder custody for preservation or explicit refusal, with healthy dependency/points/noop and stale-source controls. |
+| 1 | Bind/recheck fresh selected identity and source witness at the existing generic metadata boundary, consuming the adopted source adapter. |
+| 1 | Consume/validate adopted decoder custody for preservation or refusal; retain healthy dependency/points, ordinary-repeat and stale-source controls. |
 | 1 | Registered owner tests/lint/four releases, actual public/API/CLI custody and exact adopted-source handoff. |
 
-Three-point lookup-only work cannot qualify the additional held update and source
-preservation obligations. Five points assumes independently implementing and
-qualifying the bounded repository-owned generic source-custody and decoder subset
-above on ordinary metadata, without selected recovery or a required private input. No new parser, writer, global namespace
-fence or recovery implementation is included. The source owner closes on its own
-reviewed, qualified/adopted source without waiting for Foresight or Services.
+Three-point lookup-only work cannot qualify complete-source raw-ID admission,
+parent/creation consumers and held generic-update composition. Five points here
+covers those consumer obligations and their actual public controls. The new
+common decoder law, producer, extern/mutex and Clio FS implementation have a
+separate five-point source owner b29c2c61-bace-4117-8118-e89d1f5a7ec2; they are NOT hidden implementation or
+qualification work in this table. This split does not reduce any duplicate,
+coverage, source-preservation or zero-effect acceptance requirement above.
 
-This slice can start from accepted owner source and does not depend on metadata
-owner UUID `775ab0be-90fe-469f-89e3-e6ac07b031ce`, recovery UUID
-`9743b533-5c01-4b69-8089-1038f492048a`, or Foresight ADA UUID
-`ada3bc51-1528-4ae3-aa46-095d217142ea`. The metadata owner and ADA consume this
-source in the forward direction after adoption. Planning review, lawful readiness and any forward consumer dependency
-registration remain actual canonical operations. The initial source has no
-reverse dependency on those consumers, and source authorship creates no engine
-event or dependency-registration history.
+The real forward prerequisite is upstream custody owner b29c2c61-bace-4117-8118-e89d1f5a7ec2;
+its dependency is registered on this card. The reverse consumer is pure recovery
+owner9743b533-5c01-4b69-8089-1038f492048a, whose dependency on this shared UUID was
+registered/read back at03:39:28Z with write-ID1792035568010-0.fw366fdspcsgfc33ba5.
+Execution b9ec4347-d36a-441e-a742-68f0fbb7314a then consumes pure recovery and this
+guard after their actual source qualification/adoption. There is no reverse dependency on metadata 775ab0be-90fe-469f-89e3-e6ac07b031ce, Foresight ADA
+ada3bc51-1528-4ae3-aa46-095d217142ea or Services. These owners close on their own
+reviewed, qualified/adopted source. Initial authoring and body links create no
+engine event or dependency-registration history.
 
 ## Risks and stop condition
 
@@ -384,10 +394,10 @@ capability or live effect credit comes from a dry-run patch check.
 
 ## Initial source authority
 
-This initial Markdown source carries explicit UUID, incoming, task type and
-five-point estimate, with scalar labels and no empty dependency field. It
-claims no generated creation timestamp, write-ID or task-created event. Initial
-source authoring is first-class input under the owner instructions; established
-operational metadata, comments, transitions and drift reconciliation remain
-Rheos-owned. No readiness, source adoption, native approval, settlement or
+Initial Markdown authoring supplied explicit UUID, incoming, task type and
+five-point estimate, scalar labels and no fabricated birth/write-ID/event.
+The later real canonical dependency operation supplied the current write-ID and
+one matching frontmatter event; it did not emit a task-created event or change
+incoming. Initial source authoring is first-class input; established operational
+metadata, comments, transitions and drift reconciliation remain Rheos-owned. No readiness, source adoption, native approval, settlement or
 production qualification is supplied by this card alone.
