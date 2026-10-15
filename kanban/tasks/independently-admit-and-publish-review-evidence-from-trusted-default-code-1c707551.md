@@ -4,7 +4,7 @@ labels: "workflow, review, publication, security, has-parent"
 dependency: ["cf32641a-b336-407e-b68b-c75ec7d20dbb"]
 parent: "290f0cdf-9160-453e-a69c-67211432baa7"
 type: "task"
-write-id: "1792077153373-0.w8aa7mvrglndwgphg0h"
+write-id: "1792081316800-0.g8rhsv6yntjqmm9ilq4"
 points: "5"
 title: "Independently admit and publish review evidence from trusted default code"
 priority: "P1"
@@ -39,14 +39,19 @@ uploads and candidate workflow conclusions cannot self-authorize publication.
 ## Scope
 
 Future implementation paths are `.github/workflows/opencode-review-publish.yml`,
-`.github/review-publication-targets.edn`, pure
-`packages/eta-mu/src/cljs/eta_mu/law/review_publication.cljc`, thin
-`packages/eta-mu/src/cljs/eta_mu/extern/review_publication.cljs`, and registered
-`.github/scripts/opencode_review_publish_test.cljs`. Register owning tests in
-`scripts/test.bb` when implementation is admitted. Keep policy/data pure and raw
-GitHub/filesystem/process operations at the extern boundary; split a further
-adapter layer only if the actual dependency graph requires it, without changing
-the accepted protocol. Reuse production `prepareReviewInvocationContext`,
+`.github/review-publication-targets.edn`, validator-only
+`packages/eta-mu/src/cljs/eta_mu/law/review_publication.cljc`, pure decision owner
+`packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc`, effectful
+composition owner `packages/eta-mu/src/cljs/eta_mu/infra/review_publication.cljs`,
+raw host adapter `packages/eta-mu/src/cljs/eta_mu/extern/review_publication.cljs`,
+and registered `.github/scripts/opencode_review_publish_test.cljs`. Register
+owning tests in `scripts/test.bb` when implementation is admitted. Law validates
+schemas/contracts; domain decides enrollment, evidence admission, publication
+intent and status reconciliation from shaped CLJS data plus an explicit clock.
+Infra composes those decisions with existing verifier/publisher and extern I/O;
+extern owns/decodes raw GitHub/filesystem/process values and contains no domain
+policy. Pure decisions remain portable `.cljc`. These are explicit owners for
+the existing five-point protocol, not new behavior. Reuse production `prepareReviewInvocationContext`,
 `verifyReviewInvocation`, discovery verification and pinned Muse
 `.ημ/review/publish-opencode-review.cjs`. Muse's
 `scripts/verify-full-review-input.mjs` is a test fixture, not an artifact validator.
@@ -54,15 +59,42 @@ No Muse semantic change is established by this plan.
 
 ## Required protocol and acceptance criteria
 
-- [ ] **Trusted execution and enrollment.** One regular central workflow runs
-  reviewed accepted-default code. An accepted registry binds target repository
-  ID, producer workflow ID/path, immutable caller/ETA/Muse sources, all seven
-  exact enrolled Services evidence commands and verifier/build identity. Verify
-  native adoption before use; a local accepted object is not default adoption.
-  Uploaded metadata cannot authorize source drift. A scheduled reconciler reads
-  cross-repository runs. Optional `workflow_run` only accelerates same-repository
-  producers; it is not a cross-repository subscription. Reusable YAML runs in
-  caller context and cannot supply central repository secrets.
+- [ ] **Trusted execution and inert initial enrollment.** One regular central
+  workflow runs reviewed accepted-default code. Ship an empty or explicitly
+  disabled ordinary target registry: Services descriptors are unenabled data,
+  not enrolled targets. Schedule/`workflow_run` paths reject disabled, absent,
+  unknown or unproved targets before protected-environment admission, token
+  mint, artifact consumption or any review/status write. A read-only accepted
+  admission job must guard entry to the credential-bearing job. An enabled
+  accepted registry entry later binds exact target repository ID, producer
+  workflow ID/path, immutable caller/ETA/Muse sources, all seven exact Services
+  evidence commands and verifier/build identity, plus source-bound setup and
+  hosted-proof references. Uploaded metadata cannot enable enrollment or
+  authorize source drift. Verify native adoption before use; a local accepted
+  object is not default adoption. A scheduled reconciler reads enabled
+  cross-repository runs; optional `workflow_run` only accelerates same-repository
+  producers, not cross-repository subscriptions. Reusable YAML runs in caller
+  context and cannot supply central repository secrets.
+- [ ] **Noncircular proof bootstrap and later rollout.** Keep ordinary targets
+  disabled while separate setup establishes protected default/environment
+  custody, fixture identity, effective narrow grants and required protection.
+  A separately admitted manual run from reviewed accepted-default code may
+  select only an accepted, exact disposable fixture descriptor in an explicit
+  qualification-only mode. This mode is unavailable to schedules,
+  `workflow_run`, candidate inputs and arbitrary repository/ref overrides; it
+  cannot enable or publish to an ordinary Services target. Apply the same full
+  admission/verifier/publisher/status checks inside that fixture. Hosted-proof
+  `164c2de7-7495-4738-94e1-a81167edefb0` uses this bounded route to prove the
+  adopted code before any ordinary enrollment; it does not depend on production
+  enablement or its own not-yet-produced proof. The fixture's native proof is
+  the result of this mode, not a missing entry precondition; setup/source and
+  all evidence/publication checks still apply. Only later separately admitted
+  rollout may enable each exact
+  target after its setup/grant/protection readback and applicable source-bound
+  hosted proof are accepted. A generic fixture pass proves the mechanism, not
+  another target's installation, effective grants or protection. Missing
+  per-target proof remains a setup/rollout blocker; it is not silently charged
+  to this source story or used to complete the setup parent.
 - [ ] **Independent native tuple.** Collect native PR number N, current base B,
   head H, original event SHA G, associated run ID/attempt, producer and referenced
   workflow IDs/source SHAs, required successful completed jobs and artifact
@@ -101,7 +133,24 @@ No Muse semantic change is established by this plan.
   QUALIFIED-publication verdict and exact native review/inline readback. Failure
   represents rejection; error represents infrastructure/uncertainty, preserving
   causes. GET status must match expected identity,M,C,state and receipt URL.
-  Deduplicate status writes under GitHub's per-SHA/context limits. Do not use a
+  Keep review publication at most once per qualified intent, with unknown-POST
+  retention/discovery unchanged. Status reconciliation is a separate bounded
+  operation: deduplicate unchanged fresh statuses, then revalidate the same
+  current tuple, accepted sources/enrollment, still-available native artifact
+  and full-input evidence, original intent, effective identity/grants and exact
+  native review/all-inline readback before refreshing success on that same M/C.
+  Refresh does not invoke a model or repeat the review POST. Use an explicit
+  clock and finite accepted refresh interval with margin below seven days
+  (ordinary default 24 hours), serialized under the existing target/M/context
+  lock. Read native status timestamps and complete context history, bound total
+  per-SHA/context writes, and refuse on exhausted/unknown budget, clock anomaly,
+  inaccessible or expired evidence, revoked qualification, tuple drift or
+  ambiguous status POST. Resolve a status POST's uncertain result by native
+  GET/readback; never blindly repeat it. Retain due time and actual last
+  successful refresh; delayed/dropped schedules may still block, with no
+  availability promise. GitHub documents a required check success within the
+  past seven days in the chosen repository; this planning change proves no
+  actual aged-PR failure. Do not use a
   candidate's assertion, a renamed producer check, a normal workflow_run check,
   or an impossible cross-workflow `needs` edge as the required final verdict.
   Distinct C avoids identical job/check-status contexts requiring both. Never
@@ -144,9 +193,21 @@ all deterministic gates and existing seven-command caller semantics.
 ## Verification
 
 After planning review/readiness, start with causal RED for same-runner App
-custody and synchronous required-gate coupling, then use actual adapter entry
-points with a fake GitHub transport, physical inert artifact fixtures and a
-synthetic credential canary. Assert pending before qualification and success
+custody and synchronous required-gate coupling, then use actual domain/infra
+entry points with a fake GitHub transport, physical inert artifact fixtures and
+a synthetic credential canary. Assert the initial disabled registry produces
+zero protected-job/token/artifact/review/status effects for schedule,
+`workflow_run` and ordinary manual inputs; forged proof/mode/target/ref cannot
+activate it. A controlled fixture-only manual input with accepted source and
+setup succeeds only inside the exact fixture and leaves ordinary targets
+inert. Exercise later per-target enable admission separately; generic fixture
+proof cannot satisfy another target's setup. With an injected clock, a fresh
+success suppresses a write; a due, fully revalidated unchanged tuple emits one
+status refresh and zero new model/review POST; concurrent collectors still emit
+at most that one refresh. Expired evidence, revoked readback, changed tuple,
+unknown clock/status outcome or exhausted write budget cannot refresh success.
+These causal freshness controls do not claim a seven-day native failure.
+Assert pending before qualification and success
 only after one POST plus exact complete GET readback. Cover wrong repo/workflow/
 source/commands/attempt/run/digest, unsafe/duplicate archive paths, links/special
 files, decompression/resource/time-limit refusal with no App/PR write, forged trace,
@@ -186,3 +247,8 @@ Primary platform semantics: [workflow_run](https://docs.github.com/en/actions/re
 [required status checks](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks),
 [branch protection](https://docs.github.com/en/rest/branches/branch-protection#update-branch-protection),
 [environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments).
+
+---
+Planning-only correction for exact native Codex review5535776233 roots4285070063/4285070084/4285070093 at1b2608f. Name actual pure domain and effectful infra owners while law validates and extern decodes raw I/O. Ship ordinary registry empty/disabled with read-only admission before protected work; separately admitted accepted-default fixture-only manual bootstrap uses actual setup and full protocol, without ordinary-target enablement or circular proof prerequisite. Later target rollout requires target-specific setup/readback and applicable hosted proof. Separate bounded current-evidence status revalidation/refresh (ordinary24h) from at-most-one review POST; preserve unknown effects, native write budget, sharedM meaning and zero extra model/review invocation. Root fully read exact11030B proposal4363e4b3 and14707B two-body diff04cdc666. Keep provisional5/P1/breakdown, producer2 dependency and parent open;2+5+3=10, separate Fsetup3/Services consumption. Body planning only; no implementation/readiness/publication/model/App/account/runtime effects.
+
+---

@@ -2,7 +2,7 @@
 labels: [""]
 dependency: ["ed4e2a2a-6055-4d53-9cea-f3971c707551"]
 parent: "290f0cdf-9160-453e-a69c-67211432baa7"
-write-id: "1792077206026-0.x0ulvjkvxajczdpyly9"
+write-id: "1792081317293-0.f5ncvoq8dngah59p4yj"
 points: "3"
 title: "Prove reusable review gate red path in a fixture caller"
 priority: "P1"
@@ -43,8 +43,13 @@ does not substitute for these real GitHub observations.
 Retain the original hosted red/green controls, now distinguishing producer
 summary `OpenCode producer evidence` from external App status
 `eta-mu/trusted-review-publication-v1`. Use reviewed adopted producer/publisher
-sources and the actual configured target enrollment/protection. Keep fixture
-inputs and deliberate failures isolated from production work. Record fixture
+sources and the actual configured target enrollment/protection. Bootstrap via
+central5's separately admitted manual qualification-only descriptor from
+reviewed accepted-default code after fixture setup, while ordinary Services
+entries remain disabled. This mode cannot be selected by schedules or candidate
+inputs and cannot enable a production target. No ordinary enrollment is needed
+to begin the fixture proof. Keep fixture inputs and deliberate failures isolated
+from production work. Record fixture
 PRs, repository IDs, B/H/G/M and M parents/tree, native run/attempt/job IDs,
 artifact IDs/digests and unexpired retained ZIP evidence, accepted verifier
 identity, publication review/all-inline IDs and status/protection readbacks.
@@ -66,10 +71,18 @@ real platform operation. No admin bypass or weakening of deterministic gates.
   fails, and the final required App status cannot succeed or be inferred from
   artifact existence. Run a separate zero-exit clean-head exact-SHA control and
   bind its actual producer and later publisher outcomes.
-- [ ] Before proof, read back the actual target enrollment, accepted central
-  default source, protected environment/ref custody, target installation and
-  effective narrow grants. No key is copied into candidate/caller scope. Keep
-  same-repository candidate credentials absent, not merely fork-withheld.
+- [ ] Before proof, read back an empty/disabled ordinary target registry and
+  the exact accepted qualification-only fixture descriptor, actual accepted
+  central default source, protected environment/ref custody, fixture
+  installation/effective narrow grants and required protection. Demonstrate an
+  ordinary scheduled/accelerated path cannot reach credential-bearing work or
+  review/status writes while targets are disabled. Separately admit the manual
+  fixture run; it uses the same verifier/publisher/status protocol without
+  enabling ordinary Services. No key is copied into candidate/caller scope.
+  Keep same-repository candidate credentials absent, not merely fork-withheld.
+  Later target rollout requires that target's actual setup/enforcement readback
+  and applicable accepted source-bound hosted proof; a fixture result cannot
+  confer another repository's effective grant or protection.
 - [ ] Read back exact required protection `{context:
   eta-mu/trusted-review-publication-v1, app_id:3152464}`, strict current-base,
   PR/conversation policy and explicit admin/bypass handling, preserving other
@@ -94,6 +107,18 @@ real platform operation. No admin bypass or weakening of deterministic gates.
   the actual incomplete/rejected state and supersession, with no fabricated
   always-emitted SLA, duplicate model job or blind POST retry. A delayed/dropped
   schedule leaves absent C blocking until qualified reconciliation.
+- [ ] In the admitted disposable fixture, retain an actual successful status,
+  then use a short, finite accepted fixture-only refresh interval and real
+  elapsed time to observe a second native success status after full independent
+  revalidation. It must reuse the same qualified review/intent and create zero
+  extra review POST or model invocation; bind both status IDs/timestamps and
+  expected App/M/C readback. This proves native refresh wiring, not a seven-day
+  aged-PR expiry or scheduler SLA. The production default interval stays 24
+  hours; only an exact separately admitted fixture descriptor may use the short
+  interval. Keep virtual-clock seven-day/deadline, concurrent-dedup, expired
+  artifact, revoked readback, unknown-outcome and write-budget cases in the
+  causal unit/adapter suite; do not fake native timestamps or silently waive an
+  unavailable hosted refresh case.
 - [ ] Exercise/document two fixture PRs sharing B,H,M: commit status C has shared
   integration-publication-evidence meaning, while each PR retains its own native
   review/settlement and canonical merge obligations. Do not claim C alone
@@ -121,8 +146,10 @@ implementations or account configuration. Split further before execution if the
 actual platform requires a larger fixture; preserve all controls. Public App
 3152464 requested statuses-write/PR-write; this does not prove target grants.
 Current personal Services main was observed unprotected. Source adoption,
-environment audit, actual M-status semantics and installation remain explicit
-prerequisites. Merge queues are separately scoped, not covered by these cases.
+environment audit and fixture installation/grants are entry prerequisites;
+actual M-status/protection enforcement is this proof's outcome and a later
+ordinary-rollout prerequisite, not a circular requirement to start the fixture.
+Merge queues are separately scoped, not covered by these cases.
 
 ## Source references
 
@@ -140,5 +167,7 @@ GitHub issue: https://github.com/open-hax/eta-mu/issues/297
 Acceptance wording clarified after PR #299 review: the green control must run at a clean head with exact SHA equality. No acceptance semantics changed.
 
 Planning refinement 2026-10-15, source fefa6dd52135e1045b1ad56802a346dc0779970c: lawful ready to breakdown; explicit3 points and dependency ed4e2a2a-6055-4d53-9cea-f3971c707551. Added reviewed hosted producer plus trusted external-App M-status proof body; preserve all original deterministic failure/clean zero-exit controls and historical comment content. Producer2 cf32641a-b336-407e-b68b-c75ec7d20dbb precedes central5, then this hosted3:10 newly identified points, parent remains open. Native protection/App identity/current-base/shared-M/absent-status failures require actual hosted readback after separately admitted setup; local mocks supply no platform or release credit. No implementation/readiness/hosted/model/credential/settings effects in this planning slice.
+
+Planning-only hosted-proof refinement for the same three current ETA22P1 roots: read disabled ordinary registry and exact accepted qualification-only fixture descriptor/setup before separately admitted manual proof; actual M/App enforcement is proof outcome, not circular bootstrap entry requirement. Preserve historical deterministic failure/clean-SHA controls, base-change/sharedM and source/admission obligations. Add actual elapsed-time fixture-only native status refresh wiring with same qualified intent/review and zero extra model/review POST; virtual seven-day/deadline/race/budget cases remain causal unit evidence, no actual agedPR failure or schedule SLA claimed. Exact body diff04cdc666 root-read. Preserve all prior native comment CONTENT, provisional3/P1/breakdown and dependencycentral5, parentopen/10newpoints and separate Fsetup3/consumption. No hosted execution, setup/credential/account/implementation/readiness/publication/runtime effect.
 
 ---
