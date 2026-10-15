@@ -9,7 +9,7 @@
 
 ;; Immutable protected dependency revisions; fresh runtime custody still applies.
 ;; These pins alone supply no history, publication or native-resolution authority.
-(def dependency-pins {:canonical "80b8993bbd43cf0265c5e558c678845edc8929d9" :muse "45c7a8d572bf44202f52cae2aa8c0f771736a617"})
+(def dependency-pins {:canonical "8497afdd329c3dcaefb78eec36d8e629a59d9eb2" :muse "45c7a8d572bf44202f52cae2aa8c0f771736a617"})
 (defn require-protected-dependencies! []
   (when-not (every? #(and (string? %) (re-matches #"[0-9a-f]{40}" %)) (vals dependency-pins))
     (host/refuse! :unadopted-dependency-pins))
