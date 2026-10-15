@@ -988,3 +988,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#68c2ce25-04c5-4f61-adfb-f1e0661be124
   note: Resolve the board root through its actual config and omit an unnecessary tasks-dir override. Native historical writes can be real yet misrouted; correct present canonical visibility through the existing native operation without backdating, deleting or fabricating history. Preserve typed event identity and prior card content, and distinguish a current correction from an unsupported historical transfer. Review/adoption and production remain separate.
+- ts: 2026-10-15T11:51:19.901641570Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: ETA18 native canonical review-scope Session Mycology correction
+  p-efficiency: 0.76
+  p-friction: 0.42
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#94bdcbc1-bcd8-4200-9efd-a6de7f24ddbb
+  note: Used the actual built eta-mu session reflect operation, not a human-ledger substitute: schema1 native event .ημ/session-reflections.edn#bf2e2176-25ca-4ff8-8643-159e7f96dcf2 at source958f54ca. Preserve historical prefixes and public parent reachability evidence. Explicit empty build userconfig avoids unrelated global npmrc auth warnings without changing credentials. Source/P1 publication and P2 opener withdrawal remain pending; no spore.
