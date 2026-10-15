@@ -13,7 +13,9 @@
                  (<= (count value) 15)) (host/refuse! :native-coordinate))
   (parse-long value))
 (defn config []
-  (let [repo (required "TARGET_REPOSITORY") head (required "TARGET_HEAD_SHA")
+  (let [repo (required "TARGET_REPOSITORY")
+        repository-id (number! (required "TARGET_REPOSITORY_ID"))
+        head (required "TARGET_HEAD_SHA")
         canonical (required "CANONICAL_CHECKOUT")
         policy (host/read-edn (host/join canonical "skills/pr-flow/flow.edn"))
         workflow-sha (required "GITHUB_WORKFLOW_SHA")
@@ -28,7 +30,8 @@
                          (if direct?
                            (= "workflow_dispatch" (required "GITHUB_EVENT_NAME"))
                            (= eta-revision called-revision))) (host/refuse! :host-input))
-        _ (when-not (and (re-matches #"open-hax/[A-Za-z0-9_.-]+" repo)
+        _ (when-not (and (or (re-matches #"open-hax/[A-Za-z0-9_.-]+" repo)
+                             (and (= "riatzukiza/knoxx" repo) (= 1401249297 repository-id)))
                          (re-matches #"[0-9a-f]{40}" head)
                          (re-matches #"[0-9a-f]{40}" workflow-sha)
                          (= eta-revision job-workflow-sha)
@@ -36,7 +39,7 @@
                          (empty? (flow/problems policy))) (host/refuse! :host-input))
         n (number! (required "TARGET_PR_NUMBER"))
         run-id (number! (required "GITHUB_RUN_ID")) attempt (number! (required "GITHUB_RUN_ATTEMPT"))]
-    {:repo repo :repository-database-id (number! (required "TARGET_REPOSITORY_ID"))
+    {:repo repo :repository-database-id repository-id
      :pr-number n :head head :thread-id (required "TARGET_THREAD_ID")
      :proposal-id (number! (required "TARGET_PROPOSAL_ID")) :policy (:flow/defaults policy)
      :run-repo (required "GITHUB_REPOSITORY") :run-id run-id :run-attempt attempt

@@ -389,9 +389,13 @@ dispatched caller retains that route even though GitHub supplies its
 same input signal. Host run/caller coordinates remain separate from target
 repository/PR/thread coordinates.
 
-Both native assessment routes accept only public `open-hax/*` target repositories.
+The actionability route accepts public `open-hax/*` target repositories and the
+additional exact public `riatzukiza/knoxx` repository: database ID `1401249297`,
+node ID `R_kgDOU4VeEQ`. Other personal repositories are not admitted. The separate
+rejection route remains limited to public `open-hax/*` targets.
 Every job reads native repository metadata before checkout and requires the exact
-configured repository name/database ID, `visibility: public` and `private: false`.
+configured repository name/database ID, `visibility: public` and `private: false`;
+actionability also checks the retained node ID for the additional personal fork.
 Unknown, private, internal or contradictory metadata refuses before target source
 or App credentials are made available. No cross-repository private read credential
 is provided. After protected-source and public-target preflight, prepare and assess
@@ -409,13 +413,19 @@ attempt; publication also requires successful prepare and assess jobs in that
 same actual attempt. Reusing older-attempt jobs is unsupported. This does not
 change the bounded corrective model invocations within one fresh run.
 
-The workflow and host source lock pin protected canonical
-`80b8993bbd43cf0265c5e558c678845edc8929d9` and Muse
-`45c7a8d572bf44202f52cae2aa8c0f771736a617`. Pins alone grant no execution or
+The actionability workflow and host source lock pin canonical
+`8497afdd329c3dcaefb78eec36d8e629a59d9eb2` and Muse
+`45c7a8d572bf44202f52cae2aa8c0f771736a617`. The unchanged rejection workflow and
+host retain canonical `5cea3e51a15d19277bd642147292c11b82de5369` and Muse
+`b7e4f98f550780a7b484b1525f53ad2934e29dad`. Pins alone grant no execution or
 publication authority: the eta successor must receive protected review/merge,
 and actual checkout, complete applicable history and native provenance guards
 still apply. Local controls use inert transport and supply no native assessment,
 review, merge or production credit.
+
+Effective App installation and read/publication grants remain unproven by this
+source qualification. Live use still requires those grants and a fresh,
+independently admitted native assessment after protected ETA adoption.
 
 The Node-adjacent host uses NBB1.5.211, canonical collector/permission/history/law
 namespaces and the actual selected source-built Muse CJS verifier. It does not

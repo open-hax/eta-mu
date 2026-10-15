@@ -1096,7 +1096,7 @@
     :complete))
 
 (def expected-dependency-pins
-  {:canonical "80b8993bbd43cf0265c5e558c678845edc8929d9" :muse "45c7a8d572bf44202f52cae2aa8c0f771736a617"})
+  {:canonical "8497afdd329c3dcaefb78eec36d8e629a59d9eb2" :muse "45c7a8d572bf44202f52cae2aa8c0f771736a617"})
 (defn dependency-pin-controls
   "Check exact protected source agreement and retain nil/malformed shape refusal."
   []
