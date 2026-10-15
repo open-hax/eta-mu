@@ -976,3 +976,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#9d0a03df-54f1-4911-9a43-d24e8a7a270a,.ημ/session-reflections.edn#ca1fa255-32a7-47ab-8519-b74695839e29
   note: Trust boundaries need separate outcomes and evidence. Materialize anonymous producer2, trusted collector/publisher/status5, and existing hosted-proof3 as a native UUID dependency chain while preserving the open parent, original histories and separate Foresight setup/Services consumption. A shared M-bound App status proves publication-evidence integrity, not per-PR approval. Bound untrusted ZIP resources and never execute uploads; actual credentials/environment/protection/platform enforcement remain separate unproven prerequisites. Source a5cf46f4db933c98fbb55fdac08ee8f0c2fa5966; Receipt River receipts.edn#9d0a03df-54f1-4911-9a43-d24e8a7a270a. Planning bodies and lawful native admission only, no implementation/readiness/model/hosted/publication/deployment credit. Preserve the read-only text-versus-JSON and unsupported schema command failures; corrected supported reads completed before dependent append. A private literal validator-output assertion also failed before reflection: actual native text is receipts valid: 1 event; no effect fell through, no receipt repeated. Candidate0, no spore.
+- ts: 2026-10-15T16:23:35.046714969Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-trusted-publication-planning-fefa-v1
+  task: Correct trusted-publication planning owners bootstrap and status freshness
+  p-efficiency: 0.91
+  p-friction: 0.24
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#bc2e29b9-911f-4812-b4ff-e20556964650,.ημ/session-reflections.edn#dfa4281c-c492-4798-a4d7-8e3989f6e5c9
+  note: Keep pure admission decisions, effectful composition and raw host operations in their proper owners. Default deployment of a new privileged reconciler must be inert; actual hosted proof uses separately admitted fixture-only bootstrap before ordinary rollout. Status refresh revalidates native evidence and writes only status, preserving single-review-POST uncertainty. Source ddba638a planning corrections only, producer2 unchanged and central5/hosted3 metadata/history preserved. No implementation, native agedPR expiry, setup/grants/publication/readiness/model/runtime credit.
