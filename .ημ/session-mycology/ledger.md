@@ -967,3 +967,42 @@ These are readable renderings of the recorded historical values. Each belongs to
   note: Reproduce an adopted workflow dependency failure through the authored command and a valid file-entry neighbor. Inline NBB module resolution follows synthetic script.cljs cwd, so a subcommand-owned cd with an absolute existing runtime path repairs YAML loading while retaining the parent cwd and all digest gates. Keep the first private-HOME Volta failure and inherited wrapper warnings visible; successful local deterministic tests supply no hosted model or deployment credit.
   canonical-event: |
     #:event{:id "5b1a6486-e5f2-4f32-8ecb-fa3700b91cb1", :type :session-mycology/reflection-recorded, :recorded-at "2026-10-15T02:45:37.020Z", :schema {:id :eta-mu.session-mycology/reflection-recorded, :version 1}, :producer {:eta-mu/version "0.1.0", :package/name "@eta-mu/session-mycology", :package/version "0.1.0", :command "Session Mycology package API / owned planning reflection", :actor "codex/deployment_plan_current_failure", :source/commit "86a17a789a770aff6be08c7179fd11bcd8445b22"}, :subject {:repo "open-hax/eta-mu"}, :payload {:repo "open-hax/eta-mu", :lesson "Reproduce an adopted workflow dependency failure through the authored command and a valid file-entry neighbor. Inline NBB module resolution follows synthetic script.cljs cwd, so a subcommand-owned cd with an absolute existing runtime path repairs YAML loading while retaining the parent cwd and all digest gates. Keep the first private-HOME Volta failure and inherited wrapper warnings visible; successful local deterministic tests supply no hosted model or deployment credit.", :session/id "deployment-20261015-assessment-cwd", :task/id "opencode-mimo-evidence-review-agent", :receipt/refs ["96751b52f25b6759c96f00208d08a07c87091f36348b9dfe5fe2778ea0b307b7"]}}
+
+- ts: 2026-10-15T09:05:14.784Z
+  session: deployment-20261015-bounded-invocation
+  task: opencode-mimo-evidence-review-agent
+  p-efficiency: 0.77
+  p-friction: 0.71
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#78ab2a40-5b65-4451-865a-6c8307eecbff
+  note: A whole-job budget cannot guarantee a correction window while the first process stays active. Bound each ordinary host invocation inside the existing max2 budget, prove private-group termination and retained stream closure, and let only the unchanged canonical healthy omission select the sole recovery. A deadline never repairs a denied HOST, provider, quota, malformed or unknown trace; actual cancelled PR30 remains unverified. Commit the progressing-child RED before GREEN and retain real full-owner qualification, external-lint timeout and ignored-file limits separately from native approval or immutable-caller adoption.
+  canonical-event: |
+    #:event{:id "c3b32dd2-2447-40e4-a0a9-24d106bd9638", :type :session-mycology/reflection-recorded, :recorded-at "2026-10-15T09:05:14.784Z", :schema {:id :eta-mu.session-mycology/reflection-recorded, :version 1}, :producer {:eta-mu/version "0.1.0", :package/name "@eta-mu/session-mycology", :package/version "0.1.0", :command "Session Mycology package API / finite invocation source qualification", :actor "codex/pr354_terminal_rerun_verify", :source/commit "f11a2c3b42c6ab41ac94197f8446ed7a28c97dad"}, :subject {:repo "open-hax/eta-mu"}, :payload {:repo "open-hax/eta-mu", :lesson "A whole-job budget cannot guarantee a correction window while the first process stays active. Bound each ordinary host invocation inside the existing max2 budget, prove private-group termination and retained stream closure, and let only the unchanged canonical healthy omission select the sole recovery. A deadline never repairs a denied HOST, provider, quota, malformed or unknown trace; actual cancelled PR30 remains unverified. Commit the progressing-child RED before GREEN and retain real full-owner qualification, external-lint timeout and ignored-file limits separately from native approval or immutable-caller adoption.", :session/id "deployment-20261015-bounded-invocation", :task/id "opencode-mimo-evidence-review-agent", :receipt/refs ["receipts.edn#78ab2a40-5b65-4451-865a-6c8307eecbff"]}}
+- ts: 2026-10-15T11:01:59.125742401Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: Correct native review scope visibility through configured Rheos ledger
+  p-efficiency: 0.62
+  p-friction: 0.70
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#68c2ce25-04c5-4f61-adfb-f1e0661be124
+  note: Resolve the board root through its actual config and omit an unnecessary tasks-dir override. Native historical writes can be real yet misrouted; correct present canonical visibility through the existing native operation without backdating, deleting or fabricating history. Preserve typed event identity and prior card content, and distinguish a current correction from an unsupported historical transfer. Review/adoption and production remain separate.
+- ts: 2026-10-15T11:51:19.901641570Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: ETA18 native canonical review-scope Session Mycology correction
+  p-efficiency: 0.76
+  p-friction: 0.42
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#94bdcbc1-bcd8-4200-9efd-a6de7f24ddbb
+  note: Used the actual built eta-mu session reflect operation, not a human-ledger substitute: schema1 native event .ημ/session-reflections.edn#bf2e2176-25ca-4ff8-8643-159e7f96dcf2 at source958f54ca. Preserve historical prefixes and public parent reachability evidence. Explicit empty build userconfig avoids unrelated global npmrc auth warnings without changing credentials. Source/P1 publication and P2 opener withdrawal remain pending; no spore.
+- ts: 2026-10-15T14:34:56.438471563Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-review-deadline-fixture-jitter-fcdf-v1
+  task: ETA355 fixture startup headroom under the registered concurrent gate
+  p-efficiency: 0.84
+  p-friction: 0.42
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#3d206448-b9a7-4111-9955-894b81c95fcd,.ημ/session-reflections.edn#b80809d6-323c-4347-81d6-fef9e26264ee
+  note: ETA355 fixture startup jitter must be qualified through the actual registered concurrent owner. A 2 second fixture-only deadline accommodates fresh Node startup while retaining the progressing first-child timeout, exact stdout/stderr, owned PID/start cleanup, accepted attempt 2 and no attempt 3. Keep pure 400ms refusal controls and production budgets unchanged. Both genuine unchanged and exact five-edit owners passed 329 tests; retain the baseline PASS without manufacturing RED. Source b21cbb93b3d2eb7fe75e4a4783c9acb444f15182; Receipt River receipts.edn#3d206448-b9a7-4111-9955-894b81c95fcd. Preserve private ignore-path and typed-UUID metadata guard failures separately: dependent effects stopped, actual native semantics remained intact, and authoritative validation succeeded before continuation. No model, provider, hosted rerun, public publication, approval or deployment credit. Candidate 0; no spore.

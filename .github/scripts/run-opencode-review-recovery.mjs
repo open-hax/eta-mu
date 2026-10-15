@@ -744,8 +744,10 @@ async function finalInputCoverage({ metadata, metadataFile, responseFile, stderr
 }
 
 /** Append the sole corrective-attempt instructions to the original review prompt. */
-function correctivePrompt(basePrompt, toolFailure, staleCoverage = false, submitJsonFailure = false, coverageFailure = false) {
-  const cause = toolFailure
+function correctivePrompt(basePrompt, toolFailure, staleCoverage = false, submitJsonFailure = false, coverageFailure = false, deadlineFailure = false) {
+  const cause = deadlineFailure
+    ? "the first process exceeded its invocation wall deadline after a canonical healthy unfinished review. Its partial evidence remains retained and unaccepted. Keep source exploration bounded, complete the whole unchanged input and all required stages, and submit within this sole fresh invocation's deadline."
+    : toolFailure
     ? `the first model invocation failed without a review after repeatedly calling the unavailable tool ${toolFailure.tool}. Use the actual exposed name ${toolFailure.corrected_tool}; do not call the unavailable spelling again.`
     : submitJsonFailure
       ? "the first stopped process produced the known final review_submit JSON transport diagnostic without an actual submit or artifact. Its whole trace remains refused; the retained derived projection establishes retry eligibility only. In this fresh process, pass well-formed JSON arguments to the exposed review_submit tool."
@@ -965,6 +967,18 @@ function recordAttempt({
     stderr_file: path.basename(stderrFile),
     submission_state: state,
   };
+  const processResult = result ?? invocationError?.invocationEvidence;
+  if (processResult?.timeoutMs !== undefined) {
+    Object.assign(record, {
+      invocation_state: processResult.timedOut ? "deadline-exceeded" : record.invocation_state,
+      timed_out: processResult.timedOut, timeout_ms: processResult.timeoutMs,
+      exit_code: processResult.exitCode ?? null, exit_signal: processResult.signal ?? null,
+      termination_signals: processResult.terminationSignals,
+      parent_signal: processResult.parentSignal ?? null,
+      process_id: processResult.pid ?? null, process_group_id: processResult.pid ?? null,
+      cleanup_complete: processResult.cleanupComplete, captures_closed: processResult.capturesClosed,
+    });
+  }
   if (invocationRejected) {
     record.invocation_error =
       invocationError instanceof Error ? invocationError.message : String(invocationError);
@@ -1074,21 +1088,30 @@ export async function runReviewRecovery({
       submissionFile,
     });
 
-    const toolFailure = attempt === 1 && result?.exitCode === 1 && state === "missing"
+    const toolFailure = !result?.timedOut && attempt === 1 && result?.exitCode === 1 && state === "missing"
       ? unavailableReviewTool(responseFile, stderrFile, reviewTools, strict ? expectedContext.reviewTools : undefined, strict)
       : null;
     const verdict = strict ? await verifyAttempt({ metadata, metadataFile, responseFile, stderrFile,
       submissionFile, verifyReviewInvocation, expectedContext }) : null;
-    const submitJsonFailure = strict && attempt === 1 && result?.exitCode === 0 && state === "missing"
+    const submitJsonFailure = strict && !result?.timedOut && attempt === 1 && result?.exitCode === 0 && state === "missing"
       ? await submitJsonTransport({ metadata, metadataFile, responseFile, stderrFile, submissionFile,
         reviewTools, verifyReviewInvocation, expectedContext, contextSha256 }) : null;
-    const coverageFailure = strict && attempt === 1 && result?.exitCode === 0 && state === "missing"
+    const coverageFailure = strict && !result?.timedOut && attempt === 1 && result?.exitCode === 0 && state === "missing"
       ? await finalInputCoverage({ metadata, metadataFile, responseFile, stderrFile, submissionFile,
         reviewTools, verifyReviewInvocation, expectedContext, contextSha256, fullInputName }) : null;
-    if (result?.exitCode !== 0 && !toolFailure) {
+    // Expiry remains a failed lifecycle. Only unchanged canonical healthy
+    // omission after complete cleanup/drain can consume the sole recovery.
+    const deadlineFailure = result?.timedOut === true && attempt === 1 && strict && state === "missing"
+      && result.cleanupComplete === true && result.capturesClosed === true
+      && verdict.ok === false && verdict.reason === "missing-review-submit"
+      && verdict.code === "healthy-unfinished-review" && verdict.violations.length === 0;
+    if (result?.timedOut && !deadlineFailure) {
+      throw new Error(`OpenCode review attempt ${attempt} exceeded its invocation deadline without canonical healthy omission`);
+    }
+    if (result?.exitCode !== 0 && !toolFailure && !deadlineFailure) {
       throw new Error(`OpenCode review attempt ${attempt} exited ${result?.exitCode ?? "without a code"}`);
     }
-    if (state === "present" && (!strict || verdict.ok)) {
+    if (!result?.timedOut && state === "present" && (!strict || verdict.ok)) {
       if (strict) {
         const record = metadata.attempts.at(-1);
         metadata.accepted_invocation = {
@@ -1112,7 +1135,7 @@ export async function runReviewRecovery({
     }
     const staleCoverage = strict && verdict.ok === false && verdict.reason === "stale-review-coverage" && result?.exitCode === 0;
     const omittedSubmission = strict && verdict.ok === false && verdict.reason === "missing-review-submit" && state === "missing" && result?.exitCode === 0;
-    if (strict && !toolFailure && !staleCoverage && !omittedSubmission && !submitJsonFailure && !coverageFailure) {
+    if (strict && !deadlineFailure && !toolFailure && !staleCoverage && !omittedSubmission && !submitJsonFailure && !coverageFailure) {
       throw new Error(`review invocation verification failed after attempt ${attempt}: ${verdict.reason ?? "submission-not-established"}`);
     }
     if (attempt === MAX_ATTEMPTS) {
@@ -1122,13 +1145,13 @@ export async function runReviewRecovery({
       throw new Error(`reviewer omitted review_submit after ${MAX_ATTEMPTS} attempts`);
     }
 
-    metadata.recovery_reason = toolFailure ? "unavailable_review_tool" : submitJsonFailure ? "review_submit_json_transport" : coverageFailure ? "final_input_coverage" : staleCoverage ? "stale-review-coverage" : "missing_review_submit";
+    metadata.recovery_reason = deadlineFailure ? "invocation_deadline" : toolFailure ? "unavailable_review_tool" : submitJsonFailure ? "review_submit_json_transport" : coverageFailure ? "final_input_coverage" : staleCoverage ? "stale-review-coverage" : "missing_review_submit";
     if (toolFailure) metadata.attempts.at(-1).tool_failure = toolFailure;
     writeRecovery(metadataFile, metadata);
     if (staleCoverage && state === "present") {
       retainStaleSubmission({ metadata, metadataFile, submissionFile, evidenceDirectory });
     }
-    prompt = correctivePrompt(basePrompt, toolFailure, staleCoverage, submitJsonFailure, coverageFailure);
+    prompt = correctivePrompt(basePrompt, toolFailure, staleCoverage, submitJsonFailure, coverageFailure, deadlineFailure);
     if (strict) prompt = strictInvocationPrompt(prompt, fullInputName);
   }
 
@@ -1155,15 +1178,50 @@ function actionabilityChildEnvironment(purpose = "actionability") {
   };
 }
 
+/** List the invocation's private Linux session, including unreaped processes. */
+function invocationGroupMembers(pid) {
+  return fs.readdirSync("/proc").filter((entry) => /^\d+$/.test(entry)).flatMap((entry) => {
+    try {
+      const raw = fs.readFileSync(`/proc/${entry}/stat`, "utf8");
+      const fields = raw.slice(raw.lastIndexOf(")") + 2).trim().split(/\s+/);
+      return fields[2] === String(pid) && fields[3] === String(pid) ? [Number(entry)] : [];
+    } catch (error) {
+      if (error.code === "ENOENT" || error.code === "ESRCH") return [];
+      throw error;
+    }
+  });
+}
+
+/** Stop only the newly created invocation session, retaining requested signals. */
+async function stopInvocationGroup(pid, deadline, signals) {
+  const signal = (name) => {
+    if (invocationGroupMembers(pid).length === 0) return;
+    try { process.kill(-pid, name); signals.push(name); }
+    catch (error) { if (error.code !== "ESRCH") throw error; }
+  };
+  signal("SIGTERM");
+  const grace = Math.min(deadline, performance.now() + 2000);
+  while (invocationGroupMembers(pid).length && performance.now() < grace) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  if (invocationGroupMembers(pid).length) signal("SIGKILL");
+  while (invocationGroupMembers(pid).length && performance.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  return invocationGroupMembers(pid).length === 0;
+}
+
 /** Run the configured OpenCode review and mirror stdout and stderr to retained files. */
 async function invokeOpenCode({ prompt, responseFile, stderrFile, reviewModel = process.env.REVIEW_MODEL,
-  opencodeBin = process.env.OPENCODE_BIN || "opencode", environment = null }) {
+  opencodeBin = process.env.OPENCODE_BIN || "opencode", environment = null, timeoutMs = null }) {
   if (!reviewModel) throw new Error("REVIEW_MODEL is required");
 
   const response = fs.createWriteStream(responseFile, { flags: "w" });
   const stderr = fs.createWriteStream(stderrFile, { flags: "w" });
   const streamsFinished = Promise.allSettled([finished(response), finished(stderr)]);
   let invocationRejected = false;
+  let child, timer, hardTimer, cleanupDeadline, stopping, processResult;
+  const parentHandlers = new Map();
 
   try {
     const childEnvironment = environment ?? (["actionability", "rejection-assessment", "positive-cohort-assessment"].includes(process.env.REVIEW_INPUT_PURPOSE)
@@ -1171,11 +1229,15 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile, reviewModel = 
     for (const name of ["GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_PATH", "GITHUB_STATE", "GITHUB_STEP_SUMMARY"]) {
       delete childEnvironment[name];
     }
-    const child = spawn(
+    child = spawn(
       opencodeBin,
       ["run", "--format", "json", "--agent", "github-reviewer", "--model", reviewModel, prompt],
-      { stdio: ["ignore", "pipe", "pipe"], env: childEnvironment },
+      { stdio: ["ignore", "pipe", "pipe"], env: childEnvironment, ...(timeoutMs === null ? {} : { detached: true }) },
     );
+    if (timeoutMs !== null) {
+      processResult = { timeoutMs, pid: child.pid ?? null, timedOut: false,
+        cleanupComplete: child.pid === undefined, capturesClosed: false, terminationSignals: [] };
+    }
 
     child.stdout.on("data", (chunk) => {
       response.write(chunk);
@@ -1186,23 +1248,82 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile, reviewModel = 
       process.stderr.write(chunk);
     });
 
-    const exit = await new Promise((resolve, reject) => {
+    const closed = new Promise((resolve, reject) => {
       child.once("error", reject);
       child.once("close", (code, signal) => resolve({ code, signal }));
     });
+    const bounded = timeoutMs === null ? closed : Promise.race([closed, new Promise((_, reject) => {
+      const stop = () => {
+        cleanupDeadline ??= performance.now() + 5000;
+        stopping ??= stopInvocationGroup(child.pid, cleanupDeadline, processResult.terminationSignals);
+        stopping.catch(reject);
+        hardTimer ??= setTimeout(() => reject(new Error("OpenCode invocation cleanup did not finish")),
+          Math.max(0, cleanupDeadline - performance.now()));
+        return stopping;
+      };
+      child.once("spawn", () => {
+        timer = setTimeout(() => { processResult.timedOut = true; stop(); }, timeoutMs);
+        for (const signal of ["SIGTERM", "SIGINT"]) {
+          const handler = () => {
+            processResult.parentSignal = signal;
+            stop().then(() => reject(new Error(`OpenCode supervisor interrupted by ${signal}`)), reject);
+          };
+          parentHandlers.set(signal, handler);
+          process.once(signal, handler);
+        }
+      });
+    })]);
+    const exit = await bounded;
+    if (processResult) {
+      processResult.exitCode = exit.code;
+      processResult.signal = exit.signal;
+      clearTimeout(timer);
+      if (!stopping && invocationGroupMembers(child.pid).length) {
+        cleanupDeadline = performance.now() + 5000;
+        stopping = stopInvocationGroup(child.pid, cleanupDeadline, processResult.terminationSignals);
+      }
+      processResult.cleanupComplete = stopping ? await stopping : true;
+      if (!processResult.cleanupComplete) throw new Error("OpenCode invocation left owned processes after cleanup");
+      if (processResult.parentSignal) throw new Error(`OpenCode supervisor interrupted by ${processResult.parentSignal}`);
+      if (processResult.timedOut) return processResult;
+    }
 
     if (exit.signal) throw new Error(`OpenCode review terminated by ${exit.signal}`);
-    return { exitCode: exit.code };
+    return processResult ?? { exitCode: exit.code };
   } catch (error) {
     invocationRejected = true;
+    if (processResult) error.invocationEvidence = processResult;
     throw error;
   } finally {
+    clearTimeout(timer); clearTimeout(hardTimer);
+    for (const [signal, handler] of parentHandlers) process.removeListener(signal, handler);
+    if (invocationRejected && processResult) {
+      child?.stdout.destroy(); child?.stderr.destroy();
+      if (!processResult.cleanupComplete) child?.unref();
+    }
     response.end();
     stderr.end();
-    const streamResults = await streamsFinished;
+    let drainTimer;
+    const streamResults = timeoutMs === null ? await streamsFinished : await Promise.race([
+      streamsFinished,
+      new Promise((resolve) => { drainTimer = setTimeout(() => resolve(null),
+        Math.max(0, (cleanupDeadline ?? performance.now() + 5000) - performance.now())); }),
+    ]);
+    clearTimeout(drainTimer);
+    if (processResult) processResult.capturesClosed = streamResults !== null
+      && streamResults.every(({ status }) => status === "fulfilled");
+    if (streamResults === null) {
+      response.destroy(); stderr.destroy();
+      const error = new Error("OpenCode invocation capture drain did not finish");
+      error.invocationEvidence = processResult;
+      throw error;
+    }
     if (!invocationRejected) {
       const streamFailure = streamResults.find(({ status }) => status === "rejected");
-      if (streamFailure) throw streamFailure.reason;
+      if (streamFailure) {
+        if (processResult) streamFailure.reason.invocationEvidence = processResult;
+        throw streamFailure.reason;
+      }
     }
   }
 }
@@ -1232,9 +1353,18 @@ async function main() {
   let verifier;
   let expectedContext;
   let fullInputName;
+  let timeoutMs = null;
   const purpose = process.env.REVIEW_INPUT_PURPOSE || "diff";
   try {
     if (!["diff", "actionability", "rejection-assessment", "positive-cohort-assessment"].includes(purpose)) throw new Error("unsupported review input purpose");
+    if (process.env.REVIEW_ATTEMPT_TIMEOUT_MS !== undefined) {
+      const raw = process.env.REVIEW_ATTEMPT_TIMEOUT_MS;
+      if (purpose !== "diff" || process.platform !== "linux" || !/^[1-9]\d*$/.test(raw)
+          || !Number.isSafeInteger(Number(raw)) || String(Number(raw)) !== raw || Number(raw) > 4_500_000) {
+        throw new Error("REVIEW_ATTEMPT_TIMEOUT_MS must be a positive integer at most 4500000 for an ordinary Linux review");
+      }
+      timeoutMs = Number(raw);
+    }
     if (purpose !== "diff" && process.env.REVIEW_MODEL_DISCOVERY !== MODEL_DISCOVERY_MODE) {
       throw new Error("native review requires checked model discovery");
     }
@@ -1300,10 +1430,10 @@ async function main() {
       REVIEW_EVIDENCE_DIR: evidenceDirectory, REVIEW_INPUT_PURPOSE: purpose,
       OPENCODE_MODELS_PATH: discovery.proof.catalog_source.path, OPENCODE_DISABLE_MODELS_FETCH: "true" };
     const result = await invokeOpenCode({ ...arguments_, reviewModel: discovery.proof.selected_model,
-      opencodeBin: discovery.proof.binary.real_path, environment });
+      opencodeBin: discovery.proof.binary.real_path, environment, timeoutMs });
     assertModelDiscovery(discovery);
     return result;
-  } : invokeOpenCode;
+  } : async (arguments_) => invokeOpenCode({ ...arguments_, timeoutMs });
   const metadata = await runReviewRecovery({ evidenceDirectory, basePrompt, reviewTools,
     submissionFile, invokeAttempt: invoke,
     modelDiscovery: discovery ? { file: "model-discovery.json", sha256: discovery.sha256, selected_model: discovery.proof.selected_model } : null,
