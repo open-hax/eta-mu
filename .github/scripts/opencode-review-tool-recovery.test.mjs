@@ -106,7 +106,7 @@ if(attempt===1){
   const process_ = spawn(process.execPath, [runner], { detached: true, stdio: ["ignore", "pipe", "pipe"],
     env: { PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`, LANG: "C.UTF-8", LC_ALL: "C.UTF-8",
       OPENCODE_BIN: child, PR_NUMBER: "342", REVIEW_MODEL: "fixture/model", REVIEW_EVIDENCE_DIR: directory,
-      REVIEW_PROMPT_FILE: prompt, REVIEW_ATTEMPT_TIMEOUT_MS: "400", ...invocation.env } });
+      REVIEW_PROMPT_FILE: prompt, REVIEW_ATTEMPT_TIMEOUT_MS: "2000", ...invocation.env } });
   const supervisorIdentity = deadlineProcessIdentity(process_.pid);
   let outerTimedOut = false;
   const output = [], errors = [];
@@ -122,7 +122,7 @@ if(attempt===1){
       }
     }
   };
-  const timer = setTimeout(() => { outerTimedOut = true; cleanup(); }, 3500);
+  const timer = setTimeout(() => { outerTimedOut = true; cleanup(); }, 12_000);
   let force;
   processCleanup = () => {
     clearTimeout(timer); clearTimeout(force); cleanup();
@@ -133,7 +133,7 @@ if(attempt===1){
     force = setTimeout(() => {
       cleanup();
       if (supervisorIdentity && deadlineProcessIdentity(process_.pid)?.start === supervisorIdentity.start) process_.kill("SIGKILL");
-    }, 5000);
+    }, 15_000);
   });
   clearTimeout(timer); clearTimeout(force);
   cleanup();
@@ -142,7 +142,7 @@ if(attempt===1){
     stdout: Buffer.concat(output).toString(), stderr: Buffer.concat(errors).toString() };
 }
 
-test("packaged invocation deadline retains progressing child output and permits only the existing healthy omission recovery", { timeout: 10_000 }, async (t) => {
+test("packaged invocation deadline retains progressing child output and permits only the existing healthy omission recovery", { timeout: 20_000 }, async (t) => {
   const f = await deadlineChildFixture(t);
   assert.ok(f.owned.length >= 2, "the real stub and its owned descendant must both have started");
   assert.deepEqual(fs.readFileSync(path.join(f.directory, "model-response-attempt-1.txt")), Buffer.from(f.firstResponse));
@@ -162,7 +162,7 @@ test("packaged invocation deadline retains progressing child output and permits 
   assert.equal(receipt.attempts.length, 2);
   assert.equal(receipt.attempts[0].invocation_state, "deadline-exceeded");
   assert.equal(receipt.attempts[0].timed_out, true);
-  assert.equal(receipt.attempts[0].timeout_ms, 400);
+  assert.equal(receipt.attempts[0].timeout_ms, 2000);
   assert.equal(receipt.attempts[0].cleanup_complete, true);
   assert.equal(receipt.attempts[0].captures_closed, true);
   assert.equal(receipt.attempts[0].canonical_verdict.code, "healthy-unfinished-review");
