@@ -1006,3 +1006,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#3d206448-b9a7-4111-9955-894b81c95fcd,.ημ/session-reflections.edn#b80809d6-323c-4347-81d6-fef9e26264ee
   note: ETA355 fixture startup jitter must be qualified through the actual registered concurrent owner. A 2 second fixture-only deadline accommodates fresh Node startup while retaining the progressing first-child timeout, exact stdout/stderr, owned PID/start cleanup, accepted attempt 2 and no attempt 3. Keep pure 400ms refusal controls and production budgets unchanged. Both genuine unchanged and exact five-edit owners passed 329 tests; retain the baseline PASS without manufacturing RED. Source b21cbb93b3d2eb7fe75e4a4783c9acb444f15182; Receipt River receipts.edn#3d206448-b9a7-4111-9955-894b81c95fcd. Preserve private ignore-path and typed-UUID metadata guard failures separately: dependent effects stopped, actual native semantics remained intact, and authoritative validation succeeded before continuation. No model, provider, hosted rerun, public publication, approval or deployment credit. Candidate 0; no spore.
+
+- ts: 2026-10-15T20:20:43.767544+00:00
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-root-lint-pnpm-exec-plan-4eaa-v1
+  task: One-point root lint pnpm tool-boundary planning
+  p-efficiency: 0.87
+  p-friction: 0.27
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#b77901b4-08d8-40b6-93a1-ed06ddebe46b,.ημ/session-reflections.edn#7f18f616-e26b-4a47-bef0-d6297317e5e1
+  note: Keep a two-string tool-boundary repair in an explicit one-point follow-up rather than reopening a completed five-point owner or its historical epic. Genuine process0 plus five npm warnings is a failed zero-warning contract. Plan same-environment full lint and actual error propagation; never substitute npm-version/config changes or a model approval. Freeze native creator serialization as observed, preserve all prefixes and use absolute native writer cwd. Local planning source 57109d38813b47b86027c3788f7407581c80bda9; implementation and public effects remain held. Candidate0; no spore.
