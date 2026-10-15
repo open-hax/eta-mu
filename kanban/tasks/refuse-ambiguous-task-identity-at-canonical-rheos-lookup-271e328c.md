@@ -33,8 +33,8 @@ separate held work; they are not prerequisites silently implemented here.
 ## Outcome
 
 Every existing CLI, HTTP and MCP operation that addresses one task by identity
-selects exactly one matching task from the resolved project's current canonical
-task loader, or refuses before any card write, recovery intent/completion,
+selects exactly one matching physical task from complete current canonical
+in-scope document custody, before projected task selection, or refuses before any card write, recovery intent/completion,
 comment/status event, watcher registration or editor execution. Duplicate
 identities are never resolved by task ordering. This is a five-point Rheos owner plan; its source authorship does not establish
 operational admission, readiness or implementation credit.
@@ -43,11 +43,21 @@ operational admission, readiness or implementation credit.
 
 Rheos owns this behavior in `packages/rheos`. Its task store already resolves
 projects, task roots and configured projection paths and parses Markdown through
-the existing owning decoder. Reuse that loader. The current CLI
-`load-task-or-fail`, MCP `load-task`, and five task-targeting HTTP handlers each
-take the first matching UUID. Replace those choices with one shared named target
-selection authority exposed by the existing task-store boundary. Do not add a
-command, parser, Foresight validator or alternate board interface.
+the existing owning decoder. Reuse and extend that owning boundary with a named
+complete-custody admission result. Its current tolerant loader catches discovery,
+stat/read and parse failures and can return an empty or partial corpus; that
+vector is not proof of absence or uniqueness. Before identity admission, require
+successful discovery and owning decode of every required in-scope source, or
+propagate a typed coverage failure and refuse before effects. Preserve configured
+projection exclusions and existing symlink policy; an excluded source is not a
+coverage failure. Existing tolerant inventory callers may retain compatibility,
+but selected operations must consume the strict complete-custody result rather
+than infer success from logs or a filtered subset.
+
+The current CLI `load-task-or-fail`, MCP `load-task`, and five task-targeting HTTP
+handlers each take the first matching UUID. Replace those choices with one shared
+named target selection authority exposed by the existing task-store boundary. Do
+not add a command, parser, Foresight validator or alternate board interface.
 
 The same authority admits an existing parent before child creation. Route
 `infra.task-create/create-task!` parent admission through it rather than collapsing
@@ -58,6 +68,13 @@ ambiguous requested parent before child-directory/file writes, write-ID creation
 watcher registration or task-created publication. Preserve the existing missing
 parent outcome, healthy root/child creation and supported legacy parent IDs;
 this adds no new HTTP creation route.
+
+The existing creation identity-availability check also consumes complete raw
+requested-ID custody before admitting an explicit or derived new-card ID. Any
+literal occurrence of that candidate ID, including a nonfinal occurrence hidden
+by a later different UUID in the same header, prevents creation under that ID.
+Preserve the existing zero-match root/child creation behavior and missing-parent
+outcome; this extends the existing creation chokepoint, not its public surface.
 
 Reuse `law.frontmatter/card-id-pattern`; identifiers such as
 `opencode-mimo-evidence-review-agent` are canonical supported IDs. Do not require
@@ -85,17 +102,27 @@ All task-targeting HTTP handlers consume the same guard, including the editor
 handler; typed selection refusal must not become generic HTTP 500. One selected
 task retains its actual source path and unchanged projected data.
 
-Every successful task-targeting selector result also binds the fresh physical
-source to the requested identity through the owning decoder's raw key-custody
-observations. Exactly one literal, supported `uuid:` occurrence must agree with
-the request and selected project/source; repeated keys refuse even if their
-values are equal or the flat projection chose the last value. This admission
-applies to read, status/move, comment, frontmatter, editor and parent selection,
-not only the generic updater. Reuse `parse-frontmatter-with-key-custody` and
-`shape.frontmatter/scan-header`; these private RH decoder observations require
-independent source qualification/adoption here, not a new parser. Other
-unsupported header data is not automatically a read refusal: preservation or
-explicit mutation refusal remains the separate write obligation below.
+Compute requested-ID cardinality from the owning decoder's raw UUID occurrences
+across every document in the complete in-scope corpus, before selecting projected
+matches. A document containing the requested value in any occurrence participates
+even when a later different UUID would win the flat projection. If that document
+has repeated or ambiguous raw UUID custody, refuse; a separate healthy matching
+card cannot hide it. A successful existing-task result requires exactly one
+literal, supported matching UUID in one admitted physical source. Zero raw matches
+preserves missing-task behavior; creation requires zero existing raw occurrences
+of its candidate ID. Preserve unrelated duplicate-ID and foreign/excluded-source
+isolation controls.
+
+Bind that admitted source to the requested identity and fresh physical witness.
+This admission applies to read, status/move, comment, frontmatter, editor, parent
+selection and creation identity availability, not only the generic updater.
+Implement the required named key-custody observations at the repository-owned
+`shape.content-parser/parse-frontmatter-with-key-custody` and
+`shape.frontmatter/scan-header` seams by extending the existing decoder. These
+are proposed source definitions in this owner, not existing public capabilities
+or required private imports. Other unsupported header data is not automatically
+a read refusal when raw identity remains unambiguous; preservation or explicit
+mutation refusal remains the separate write obligation below.
 
 ## Held generic metadata source boundary
 
@@ -112,8 +139,8 @@ unrepresentable source are typed policy refusals before new intent, write-ID,
 watcher custody, source persistence or completion. Propagate the same CLI/MCP/HTTP
 refusal conventions; do not add a second setter.
 
-Reuse `parse-frontmatter-with-key-custody`, `shape.frontmatter/scan-header` and the
-existing decoder's observations. Before rewriting, require the owning decoder
+Consume the independently implemented and qualified key-custody observations
+from that same repository-owned decoder. Before rewriting, require the owning decoder
 to account unambiguously for the original header and targeted old values. Preserve
 unsupported header bytes through an already owning operation if that capability
 is admitted; otherwise explicitly refuse that mutation without dropping,
@@ -132,19 +159,32 @@ T2d's ordinary updater uses direct read/write and has no accepted held source-lo
 adapter. Its existing ordinary completion events are not selected recovery or
 crash-completion custody.
 
-The concrete private source subset to qualify independently is RH2f9's
-`extern.markdown-source/with-source!`, its generic mutex, the owning decoder's
-key-custody observations, and the Clio FS source-current/rebind/replace helpers
-plus repeatable owning-descriptor read. Those helpers reuse the existing Clio
-kernel lock, descriptor, complete-temp/fsync, rename and directory-sync primitives;
-no new lock kernel or competing card writer is proposed. Keep this subset free of
-`infra.metadata-recovery`, recovery phase/intent/completion composition and
-`rheos.metadata-recovery.v1` namespace/operation/part selection. The retained
-33-path private RH qualification is whole-candidate source evidence only; it
-neither adopts this subset nor qualifies an isolated extraction. Run the actual
-ordinary-update/source-custody and affected Clio/decoder gates before adopting it.
-If independent composition needs a new kernel/protocol or wider concurrency work,
-stop and re-estimate instead of hiding that work in five points.
+Implement the independently buildable generic source-custody subset in this
+repository from its accepted public source. The required definitions are the
+Rheos `extern.markdown-source/with-source!` adapter and participating-writer mutex,
+the existing decoder's named key-custody extension, and narrowly owned Clio FS
+source-current/rebind/replace helpers plus repeatable owning-descriptor read.
+These definitions are proposed work, not available public APIs. At this revision,
+`packages/clio/src/clio/extern/js/fs.cljs` already supplies `absolute-path`,
+`acquire-lock!`, `acquire-read-lock!`, `read-locked-text`, `release-lock!`, durable
+`write-text!` and `rename!`, `append-locked-text!`, `sync-locked!` and
+`sync-directory!`. Reuse that owning kernel and durability authority. Its current
+descriptor read is not a claimed repeatable-read helper. Add/factor the bounded
+fresh-inode check, replacement rebind, repeatable read and complete-temp replacement
+composition in the owning extern layer; preserve lock/descriptor and alias refusal
+semantics. No new lock kernel, alternate writer or all-writer CAS is proposed.
+
+Check in these repository-owned definitions during this owner's lawful RED/GREEN
+work before qualification/adoption, so another checkout can inspect, build and
+run the ordinary-update controls without fetching a private commit or local
+capture. Private RH2f9/0f292 source is optional historical design/comparison evidence
+only, not a required implementation input or an adopted interface. Its retained
+33-path qualification does not qualify the independent subset. Keep the generic
+subset free of `infra.metadata-recovery`, recovery phase/intent/completion and
+`rheos.metadata-recovery.v1` selection. Run the actual ordinary-update/source-custody
+and affected Clio/decoder gates before adopting it. If this bounded implementation
+needs a new kernel/protocol or wider concurrency work, stop and re-estimate instead
+of hiding that work in five points.
 
 After this owner is qualified/adopted, recovery owner
 `9743b533-5c01-4b69-8089-1038f492048a` consumes its guard and adds selected durable
@@ -175,12 +215,23 @@ exit, and downstream ADA/deployment completion is never an input.
   and both MCP creation forms before child source, write-ID, watcher or ledger
   effects. Healthy unique/legacy parents succeed; foreign/excluded parent copies
   do not create a collision. Missing-parent behavior stays intact.
-- A file with repeated raw `uuid:` keys refuses through every selected consumer:
-  CLI read/move/frontmatter/comment, MCP task read/status/frontmatter/comment,
-  all five existing HTTP task handlers including editor, and parent creation.
-  Exercise equal and different repeated values with the requested last value;
-  preserve source/ledger bytes and executor silence. Healthy one-key neighbours
-  remain admitted. No projected last-value-wins result supplies raw identity.
+- A file with repeated raw `uuid:` keys containing the requested ID refuses through
+  every selected consumer: CLI read/move/frontmatter/comment, MCP task
+  read/status/frontmatter/comment, all five HTTP task handlers including editor,
+  parent selection and creation identity availability. Exercise equal and different
+  repeated values with the requested value first/nonfinal and last. Include a
+  later different UUID hiding the requested value, both beside a separate healthy
+  matching file and without one when explicitly creating the obscured ID. Preserve
+  source/ledger bytes and executor silence. Healthy one-key neighbours and unrelated
+  duplicate pairs remain controls. No projected last-value-wins result supplies
+  raw identity or proves that a new-card ID is unused.
+- An in-scope required root/directory discovery failure, entry-stat failure,
+  document read failure or owning-decode failure yields typed incomplete-custody
+  refusal before any selected effect. Include a duplicate-bearing source omitted
+  by a controlled I/O failure; an empty/partial loaded vector cannot prove absence
+  or uniqueness. Assert unchanged cards/ledger and no write-ID, watcher, child or
+  editor effect. Healthy complete empty/unique corpora and intentional
+  foreign/excluded-source controls retain their existing behavior.
 - The existing GitHub sync duplicate control remains intact if its predicate is
   extracted. No broad admission of the entire manual-source corpus is inferred.
 
@@ -219,8 +270,9 @@ healthy unique and legacy targets and project/projection isolation controls.
 Additionally use the existing public frontmatter surfaces for actual supported
 dependency/points fixtures, raw-ID and duplicate-after-lookup interventions and
 unsupported-header controls. Add the parent-creation and all-consumer repeated-key
-controls above to the retained eleven public controls; they are future causal
-criteria, not executed RED. Ordinary positive qualification must not dispatch a
+controls above, including nonfinal raw occurrences and incomplete-load refusal,
+to the retained eleven public controls; they are future causal criteria, not
+executed RED. Ordinary positive qualification must not dispatch a
 selected recovery/phase operation or wait for recovery owner completion. Keep intervention bytes separate from the expected
 product refusal; compare source, ledger, watcher and actual event observations.
 The source-copy discovery below is a pure-function observation, not public-API RED
@@ -249,8 +301,9 @@ Provisional five points, on this same initially authored owner:
 | 1 | Registered owner tests/lint/four releases, actual public/API/CLI custody and exact adopted-source handoff. |
 
 Three-point lookup-only work cannot qualify the additional held update and source
-preservation obligations. Five points assumes independently qualifying the bounded generic source-custody
-and decoder subset above on ordinary metadata, without selected recovery. No new parser, writer, global namespace
+preservation obligations. Five points assumes independently implementing and
+qualifying the bounded repository-owned generic source-custody and decoder subset
+above on ordinary metadata, without selected recovery or a required private input. No new parser, writer, global namespace
 fence or recovery implementation is included. The source owner closes on its own
 reviewed, qualified/adopted source without waiting for Foresight or Services.
 

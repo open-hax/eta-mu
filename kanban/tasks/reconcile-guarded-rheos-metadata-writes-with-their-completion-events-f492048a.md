@@ -26,8 +26,10 @@ Qualification order is shared target/source owner
 `d3bb3bcc-4882-4283-a78f-625b271e328c` first, this selected recovery owner second,
 then metadata owner `775ab0be-90fe-469f-89e3-e6ac07b031ce` consuming both. The
 shared owner independently qualifies its ordinary updater, raw identity/decoder
-custody and generic source adapter using existing Clio kernel primitives plus the
-explicit private source helper subset; it does not consume this owner's selected
+custody and repository-owned generic source adapter from accepted public source
+using existing Clio kernel primitives plus its explicitly proposed bounded helper
+extensions. Private RH source is optional historical comparison, not a required
+fetch/build input. The shared owner does not consume this owner's selected
 phase/intent/completion namespace. This owner consumes that adopted guard before
 new selected operations. Private RH2f9 whole-candidate qualification is retained
 source evidence, not an already adopted generic interface or a reason to require
@@ -39,6 +41,23 @@ this owner's completion before the shared owner can qualify.
 3. Retain durable intent through the canonical owned operation/event path before the card mutation. Reuse one operation/write identity across resume; it cannot be regenerated from a repeat invocation's wall clock. Define how existing event envelopes carry that identity without relabeling historical events or treating an intent/recovery observation as a lifecycle transition or completion event.
 4. Reconcile fresh card bytes and canonical ledger observations. An intact before-image permits the initial guarded write. An exact intended-after image with the operation's write-ID permits completion reconciliation. The exact accepted intended completion set yields completed readback without another append. Different source identity/content, conflicting completion body, duplicated ambiguous completion or untrusted custody yields a refused/conflicted result. An uncertain append must first be read back; absence is admissible only through the reviewed owning admission/concurrency contract, never a blind append retry.
 5. Add explicitly selected stable-operation admission to the existing raw-envelope adapter while retaining its EventAdmission interface, wire envelopes and board ledger bytes. Ordinary envelopes without that selected identity retain their existing append compatibility; their historical millisecond-ID collisions must not enter the new same-ID/different-body refusal path. Clio already implements identity/slot admission and OS-locked canonical append; the missing work is its compatible use by this raw adapter. Do not pass a raw board envelope directly to clio.infra.ledger/append-event!: that function requires historical canonical schema revisions, and clio.law.ledger/append-admission also checks canonical stream slots absent from raw board records. Narrowly expose/factor the existing identity-only decision in packages/clio/src/clio/law/ledger.cljc, preserving the canonical append-admission contract and its stream-slot checks. Keep open-hax.records.edn.event-admission as a thin EventAdmission record delegating this effectful composition to open-hax.services.infra.edn-event-admission, in packages/protocols/src/open_hax/services/infra/edn_event_admission.cljs. That infra owner consumes the shared identity law and existing clio.extern.js.fs owning-descriptor lock/read/append/sync primitives for one complete read → validate → identity-admit → append critical section. The record retains interface conversion and delegation only; no second admission writer or policy lives there. Define a named result from that same atomic append/sync critical section containing the exact envelope and the actual appended/already-present outcome. A narrow result-bearing internal adapter seam may expose it to recovery composition while the existing EventAdmission append return remains the compatible envelope projection; both must share the one writer. Rheos completion publication consumes this actual outcome and publishes to the in-process/SSE bus only after a verified new append, never after already-present. A pre-query or caller flag is not the append outcome. If preserving the interface requires a wider protocol change, hold and re-estimate it before implementation. Validate the exact compatibility candidate before effects; retain its explicit identity, timestamp and full envelope across recovery. Matching completion is recognized without another accepted append; same identity with changed data refuses. Unknown/malformed/ambiguous source custody remains refused. No unlocked query-then-append, invented stream/schema fields, alternate mutex protocol, unchecked canonical-validation bypass or historical rewrite is admitted. Switching Rheos to create-edn-services/services.edn or importing its board ledger is a separate migration and is out of scope; if qualification requires that migration, stop and split before implementation.
+
+Before any selected intent or card mutation, completion admission, resume or
+absence/already-present classification, the owning selected critical section must
+establish complete physical-ledger custody. Decode every nonblank EDN line through
+the owning decoder under the same descriptor lock; any read failure, unparseable
+or truncated line, non-event value or ambiguous custody yields explicit typed
+uncertainty/refusal. This covers the entire observed ledger, including malformed
+ordinary lines, rather than only successfully parsed selected matches. The current
+raw `read-events` warns and filters parse failures; that filtered subset must never
+prove absence or authorize a selected append. Preserve exact ledger bytes and
+refuse new selected intent, source persistence, completion append and publication.
+If uncertainty is discovered after an earlier card persistence, retain the last
+verified operation phase and incomplete/refused result; do not invent completion.
+Use the same strict custody for durable watcher/recovery observations. Blank
+separators and well-formed legacy ordinary events remain admitted controls. Preserve
+ordinary unselected append/query compatibility outside this selected critical path;
+no historical repair, truncation, second parser or alternate writer is included.
 
 The public `EventAdmission/append-events!` route must not bypass selected
 admission. The bounded choice is an explicit no-write refusal of every batch
@@ -70,12 +89,21 @@ protocol and supplies no batch atomicity promise for ordinary legacy envelopes.
   Healthy ordinary batches, including historical same-ID/different-body records,
   preserve their original return/order/append behavior. These are future causal
   controls at the existing public adapter, not executed tests or a new API.
+- Malformed interior EDN, a truncated final line and a malformed ordinary record
+  before a selected completion all refuse selected new/resume/uncertain-response
+  admission under the actual owning lock. No filtered parse subset supplies
+  absence, already-present success or append permission. Card/ledger bytes,
+  operation identity and the last verified phase remain intact; no completion or
+  publication is fabricated. Blank lines and well-formed ordinary legacy records
+  remain healthy, and a valid owned fixture independently proves genuine absence
+  append and exact already-present retry. Historical corrupt-byte repair is outside
+  this owner.
 - Event admission behavior is implemented and qualified at its owning seam. Rheos operation decisions consume that contract; they do not duplicate event ledger semantics.
 
 ## RED and GREEN verification
 
 1. After planning review and lawful readiness, reproduce the existing write-before-event behavior using the actual canonical status/write path on an owned temporary board. Inject append failure after card persistence and prove the current repeat falsely no-ops with missing completion custody. Capture this behavioral predecessor RED; a missing new API or fixture error is not evidence.
-2. Add named schema controls, exhaustive pure domain phase/decision controls, and actual file/ledger scenarios for restart/resume, unknown append outcome with an already-present matching event, repeated resume, conflicting source/event identity and malformed custody. Add tests at the owning event admission seam for identical completion and same-ID different-body, including its supported concurrent ledger boundary and publication count from the actual atomic result. Include a separate-process CLI/watcher and watcher-restart fixture; reject a copied write-ID with mismatched source and preserve explicit missing/uncertain custody. Include explicit dependency-clear failure/resume with the original removed vector, exact clear envelope and an existing admitted multi-key update; assert no recomputed old-value or new write identity. Card conflict controls introduce a change visible before persistence and assert refusal with those bytes retained. Keep an adversarial between-check-and-write fixture as an explicitly unqualified limitation if no shared card CAS exists; never credit detection after overwrite as preservation.
+2. Add named schema controls, exhaustive pure domain phase/decision controls, and actual file/ledger scenarios for restart/resume, unknown append outcome with an already-present matching event, repeated resume, conflicting source/event identity and malformed custody. Add tests at the owning event admission seam for identical completion and same-ID different-body, including its supported concurrent ledger boundary and publication count from the actual atomic result. Inject malformed interior, truncated final and malformed ordinary ledger lines before selected admission/resume; prove strict complete-line custody refuses before any new selected card/ledger/publication effect rather than filtering errors into apparent absence. Retain blank-line, valid ordinary-history and healthy selected absence/exact-retry controls. Include a separate-process CLI/watcher and watcher-restart fixture; reject a copied write-ID with mismatched source and preserve explicit missing/uncertain custody. Include explicit dependency-clear failure/resume with the original removed vector, exact clear envelope and an existing admitted multi-key update; assert no recomputed old-value or new write identity. Card conflict controls introduce a change visible before persistence and assert refusal with those bytes retained. Keep an adversarial between-check-and-write fixture as an explicitly unqualified limitation if no shared card CAS exists; never credit detection after overwrite as preservation.
 3. Make the red-state commit, then implement law → shape → extern → domain → infra in the named owning packages. Run the complete registered Rheos suite and documented release/build/lint gates; the protocols compile:lib, test, test:types and lint:kondo gates; and all affected Clio law/kernel-lock/durability suites plus its full multi-runtime test/lint gates when Clio source is factored. Qualify real process restart, uncertain successful append and the shared owning-descriptor critical section, retaining exact source pins, assertion counts and zero-warning diagnostics. Existing raw-envelope read/write compatibility and unchanged canonical Clio schema/stream admission must remain controls.
 
 4. Exercise the built canonical CLI against an owned temporary board with real readback and process restart. Record before/after/source/event/write-ID equality, every incomplete result and eventual qualified completion. A live planning board is not a test fixture.
