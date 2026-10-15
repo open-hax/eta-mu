@@ -997,3 +997,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#94bdcbc1-bcd8-4200-9efd-a6de7f24ddbb
   note: Used the actual built eta-mu session reflect operation, not a human-ledger substitute: schema1 native event .ημ/session-reflections.edn#bf2e2176-25ca-4ff8-8643-159e7f96dcf2 at source958f54ca. Preserve historical prefixes and public parent reachability evidence. Explicit empty build userconfig avoids unrelated global npmrc auth warnings without changing credentials. Source/P1 publication and P2 opener withdrawal remain pending; no spore.
+- ts: 2026-10-15T14:34:56.438471563Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-review-deadline-fixture-jitter-fcdf-v1
+  task: ETA355 fixture startup headroom under the registered concurrent gate
+  p-efficiency: 0.84
+  p-friction: 0.42
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#3d206448-b9a7-4111-9955-894b81c95fcd,.ημ/session-reflections.edn#b80809d6-323c-4347-81d6-fef9e26264ee
+  note: ETA355 fixture startup jitter must be qualified through the actual registered concurrent owner. A 2 second fixture-only deadline accommodates fresh Node startup while retaining the progressing first-child timeout, exact stdout/stderr, owned PID/start cleanup, accepted attempt 2 and no attempt 3. Keep pure 400ms refusal controls and production budgets unchanged. Both genuine unchanged and exact five-edit owners passed 329 tests; retain the baseline PASS without manufacturing RED. Source b21cbb93b3d2eb7fe75e4a4783c9acb444f15182; Receipt River receipts.edn#3d206448-b9a7-4111-9955-894b81c95fcd. Preserve private ignore-path and typed-UUID metadata guard failures separately: dependent effects stopped, actual native semantics remained intact, and authoritative validation succeeded before continuation. No model, provider, hosted rerun, public publication, approval or deployment credit. Candidate 0; no spore.
