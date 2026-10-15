@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { runTrustedWorkflowFixture } from "./assessment-trusted-workflow-fixture.mjs";
 import { createNativeAssessmentFixtures } from "./native-assessment-fixture.mjs";
 import fs from "node:fs";
@@ -117,6 +118,53 @@ test("unknown purpose and nonprivate or redirected model home refuse before the 
 
 const workflowFile = path.join(root, ".github/workflows/opencode-rejection-assessment.yml");
 const workflow = (await import("yaml")).parse(fs.readFileSync(workflowFile, "utf8"));
+
+test("compiled profile binding resolves the pinned runtime from the ETA checkout and preserves the parent cwd", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-rejection-profile-binding-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const eta = path.join(directory, ".rejection-assessment/eta");
+  const runtime = path.join(directory, ".rejection-assessment/runtime");
+  const profile = path.join(directory, "profile");
+  const canonical = path.join(directory, "canonical");
+  const modules = path.join(runtime, "node_modules");
+  const source = "packages/eta-mu/src/cljs/eta_mu/extern/actionability_host.cljs";
+  const require = createRequire(path.join(root, "packages/eta-mu/package.json"));
+  const pinned = JSON.parse(fs.readFileSync(path.join(root, ".github/assessment-runtime/package.json"), "utf8"));
+  for (const target of [modules, profile, canonical, path.dirname(path.join(eta, source))])
+    fs.mkdirSync(target, { recursive: true });
+  for (const name of ["nbb", "yaml"]) {
+    const manifest = require.resolve(`${name}/package.json`);
+    assert.equal(JSON.parse(fs.readFileSync(manifest, "utf8")).version, pinned.dependencies[name]);
+    fs.symlinkSync(path.dirname(manifest), path.join(modules, name), "dir");
+  }
+  fs.symlinkSync(modules, path.join(eta, "node_modules"), "dir");
+  fs.copyFileSync(path.join(root, source), path.join(eta, source));
+  fs.writeFileSync(path.join(profile, "owned-fixture.txt"), "Nonempty deterministic profile fixture; no model invocation.\n");
+  const verifier = path.join(directory, "verifier.cjs");
+  fs.writeFileSync(verifier, "// Owned verifier-byte binding fixture.\n");
+  const entry = path.join(eta, "profile-digest.cljs");
+  fs.writeFileSync(entry, "(require '[eta-mu.extern.actionability-host :as h]) (println (h/directory-digest (h/env \"REJECTION_PROFILE_DIR\")))\n");
+  const env = { PATH: `${path.dirname(process.execPath)}:${process.env.PATH}`, HOME: directory,
+    ETA_CHECKOUT: eta, GITHUB_WORKSPACE: directory, CANONICAL_CHECKOUT: canonical,
+    REJECTION_PROFILE_DIR: profile, REVIEW_INVOCATION_VERIFIER_FILE: verifier,
+    GITHUB_OUTPUT: path.join(directory, "outputs"), TEST_PARENT_AFTER: path.join(directory, "parent-cwd") };
+  // No ambient NODE_PATH: the hosted runtime is installed only under runtime,
+  // and only the ETA checkout receives its node_modules link.
+  const neighbor = runTrustedWorkflowFixture(import.meta.url,
+    ["-c", 'node "$GITHUB_WORKSPACE/.rejection-assessment/runtime/node_modules/nbb/cli.js" -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs" "$ETA_CHECKOUT/profile-digest.cljs"'],
+    { cwd: directory, env, encoding: "utf8", timeout: 15000 }, 1);
+  assert.equal(neighbor.status, 0, neighbor.stderr);
+  const expectedProfile = neighbor.stdout.trim();
+  assert.match(expectedProfile, /^[0-9a-f]{64}$/);
+  const step = workflow.jobs.prepare.steps.find(step => step.name === "Bind compiled profile outside the child");
+  const result = runTrustedWorkflowFixture(import.meta.url,
+    ["-c", `${step.run}\nprintf '%s' "$PWD" > "$TEST_PARENT_AFTER"\n`],
+    { cwd: directory, env, encoding: "utf8", timeout: 15000 }, 1);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.readFileSync(env.GITHUB_OUTPUT, "utf8"),
+    `profile_sha256=${expectedProfile}\nverifier_sha256=${createHash("sha256").update(fs.readFileSync(verifier)).digest("hex")}\n`);
+  assert.equal(fs.readFileSync(env.TEST_PARENT_AFTER, "utf8"), directory);
+});
 
 test("actual protected canonical API and Muse pins are identical across both routes", () => {
   assert.ok(workflow.on.workflow_call && workflow.on.workflow_dispatch);
