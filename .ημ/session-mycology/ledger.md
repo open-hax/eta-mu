@@ -1024,3 +1024,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#d901c5c0-251f-4cb3-95df-996e63aa9583
   note: One actual native schema1 reflection 149dccb0-4ccb-4d57-aae4-136a92092d63 records this current lesson; historical a1d633ad stays intact. Read actual route source before copying a shared guide pin or handoff: actionability8497/45c7, rejection5cea/b7e4. Root reviewed the exact one-doc patch and all2103 tracked inputs. Diff/check passes; no new tests or code gates. Preserve unsupported bridge and private guard failures truthfully. Source38b829fa and owner3c3f8872 are separate ordinary commits; effective App grant/protected adoption/fresh native assessment remain required. Existing skills cover this lesson, candidate0; no spore/promotion. Push remains separately guarded; no PR/model/account/deployment effect.
+- ts: 2026-10-15T18:13:52.322349369Z
+  session: 01a12257-fc69-7720-888c-dd2595ff7dc7
+  task: ETA356 exact ordinary actionability integration
+  p-efficiency: 0.78
+  p-friction: 0.33
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#94b14701-f4e5-4f06-89a9-bc01330f868c
+  note: Preserve complete protected ledger bytes, append incoming raw suffixes in original order, and freeze the ordinary two-parent source before gates. Source710b qualifies all5 registered gates. Retain Node22 preflight refusal and original npm WARN runs; positive offline Node24/existingnpm10/userconfig isolation corrected only affected tests/lint with0WARN. Private evidence assembly/count guards failed before source effects and were corrected without replay. Local only; candidate0. Native reflectione2155dff-ab30-4da7-857d-51b68efd82d6.
