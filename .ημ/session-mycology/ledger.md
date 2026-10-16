@@ -1077,3 +1077,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#d30508d3-e402-4ac6-9914-09f48d3db526
   note: Trace the established credential loader before changing auth configuration. Native capture inherited a missing canonical variable; restoring only existing NPM_TOKEN to the unchanged registered lint child yields21kondo0/0 and completezero-warning output. Preserve prior24warningFAIL and original53c4 provenance. No new credential/configuration/registry probe, spore, taskcompletion or deployment claim.
+- ts: 2026-10-16T20:29:42.612444604Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-source-map-support-implementation-over2a9-v1
+  task: ETA358 explicit local composition and canonical readiness
+  p-efficiency: 0.82
+  p-friction: 0.23
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#0ad0e54b-983a-44e2-9aa0-c2078a71d834
+  note: Bind implementation to the reviewed local source composition rather than the planning-only head. Native read-task aggregates comments in one existing section; retain successful write and reconcile exact content prefix without replay. Initial Git administrative-root guard failed read-only; exact common-root handling corrected before one real composition. All historical prefixes and original IW generated dirt remain preserved; no product, install, QA, public or runtime credit.
