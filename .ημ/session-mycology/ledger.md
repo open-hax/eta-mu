@@ -1041,3 +1041,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#2b5761d9-1017-45aa-8a85-9e6689f7ae6e
   note: Estimate the complete bounded qualification slice, including the actual failure control, full zero-warning registered lint and raw evidence, rather than only counting changed strings. Preserve compressed historical wording by appending exact readable meanings and original record references. Source 472d23cf11c456f76eeb534cca4884c8062f32c9; all original ledger bytes, card metadata and 2,103 other tracked inputs are preserved. This is a planning-only prose correction; product implementation and public publication are not yet performed. Receipt River receipts.edn#2b5761d9-1017-45aa-8a85-9e6689f7ae6e. Skill-candidate score 0; no spore.
+- ts: 2026-10-16T14:53:00.857533136Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-root-lint-pnpm-exec-plan-4eaa-v1
+  task: ETA24 two-prefix causal repair with explicit remaining configuration-warning boundary
+  p-efficiency: 0.78
+  p-friction: 0.35
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#6bb932cf-e29a-4209-9635-3f6b3b3ff394
+  note: An execution guard must admit only the exact preauthorized owned symlink leaves even when directory ignore patterns do not hide symlinks; preserve the failed capture and qualify an existing-effect continuation without replay. A successful registered command and removal of its owning npm warnings do not satisfy strictzero-warning while inherited userconfig diagnostics remain. Source 5521dc2293cfa4e25e5105f593110b04fc94dc22; realBiomeerror/exit1 and identitycleanupPASS, fullpnpmexit0 but24unresolved-tokenwarnings retained. No config workaround, credential addition, completion or publication claim.
