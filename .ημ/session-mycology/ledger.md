@@ -1006,3 +1006,56 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#3d206448-b9a7-4111-9955-894b81c95fcd,.ημ/session-reflections.edn#b80809d6-323c-4347-81d6-fef9e26264ee
   note: ETA355 fixture startup jitter must be qualified through the actual registered concurrent owner. A 2 second fixture-only deadline accommodates fresh Node startup while retaining the progressing first-child timeout, exact stdout/stderr, owned PID/start cleanup, accepted attempt 2 and no attempt 3. Keep pure 400ms refusal controls and production budgets unchanged. Both genuine unchanged and exact five-edit owners passed 329 tests; retain the baseline PASS without manufacturing RED. Source b21cbb93b3d2eb7fe75e4a4783c9acb444f15182; Receipt River receipts.edn#3d206448-b9a7-4111-9955-894b81c95fcd. Preserve private ignore-path and typed-UUID metadata guard failures separately: dependent effects stopped, actual native semantics remained intact, and authoritative validation succeeded before continuation. No model, provider, hosted rerun, public publication, approval or deployment credit. Candidate 0; no spore.
+
+- ts: 2026-10-15T20:20:43.767544+00:00
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-root-lint-pnpm-exec-plan-4eaa-v1
+  task: One-point root lint pnpm tool-boundary planning
+  p-efficiency: 0.87
+  p-friction: 0.27
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#b77901b4-08d8-40b6-93a1-ed06ddebe46b,.ημ/session-reflections.edn#7f18f616-e26b-4a47-bef0-d6297317e5e1
+  note: Keep a two-string tool-boundary repair in an explicit one-point follow-up rather than reopening a completed five-point owner or its historical epic. Genuine process0 plus five npm warnings is a failed zero-warning contract. Plan same-environment full lint and actual error propagation; never substitute npm-version/config changes or a model approval. Freeze native creator serialization as observed, preserve all prefixes and use absolute native writer cwd. Local planning source 57109d38813b47b86027c3788f7407581c80bda9; implementation and public effects remain held. Candidate0; no spore.
+
+- ts: 2026-10-15T20:39:13.849414+00:00
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-root-lint-pnpm-exec-plan-4eaa-v1
+  task: ETA24 P2 explicit artifact byte-boundary clarification
+  p-efficiency: 0.9
+  p-friction: 0.25
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#3f836229-7698-4307-95a3-e4ed07b23b36,.ημ/session-reflections.edn#844a6cd5-219d-457a-9d87-ff874831ba61
+  note: Hash identity must name its exact byte artifact: the private6249B reviewed Markdown source includes one terminalLF, while native Rheos stores the trimmed6248B body. Preserve both identities and append an explicit clarification when a prior receipt is ambiguous; never rewrite historical provenance. This is a planning-only P2 correction with no card/product changes or approval credit. Candidate0; no spore. Source 6f16de1fddf62c51658c067de0ee1bca8e13db72; original f601 receipt and all card/event/product bytes preserved.
+
+- ts: 2026-10-16T13:30:47.578904+00:00
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-root-lint-pnpm-exec-plan-4eaa-v1
+  task: ETA24 append-only readability clarification for review 5548367977 root 4295114294
+  receipt-refs: receipts.edn#b77901b4-08d8-40b6-93a1-ed06ddebe46b,.ημ/session-reflections.edn#7f18f616-e26b-4a47-bef0-d6297317e5e1,receipts.edn#3f836229-7698-4307-95a3-e4ed07b23b36,.ημ/session-reflections.edn#844a6cd5-219d-457a-9d87-ff874831ba61
+  note: Readable clarification of the unchanged entries dated 2026-10-15T20:20:43.767544+00:00 and 2026-10-15T20:39:13.849414+00:00 at source b3971e6e2844645863c699d605d5dbee69f2ccbb. In the first entry, `process0` means process exit 0 despite five npm warnings, so the zero-warning contract failed. `Candidate0` means skill-candidate score 0 and no skill spore; it does not count CMS or model-generated product candidates. In the second entry, `private6249B` names the 6,249-byte UTF-8 reviewed Markdown BODY, including one terminal LF (SHA256 e5d7f78ee91fe8834dde8f2c163bacf34b7d906750d7b4b87e5d1977950c3346). `trimmed6248B` names the 6,248-byte UTF-8 native Rheos BODY after that LF was removed (SHA256 6d20aed3a0acb0b6c04313247657d4b705d4a8a669b63deb6517c2e123a94b8a). These are BODY artifacts, distinct from the 6,591-byte whole Markdown card with frontmatter. The original receipt and reflection IDs above remain their immutable provenance. This appended clarification leaves every prior byte intact and supplies no product, test, approval, readiness or deployment result.
+- ts: 2026-10-16T13:35:19.427716872Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-root-lint-pnpm-exec-plan-4eaa-v1
+  task: ETA24 complete estimate and immutable-ledger readability correction
+  p-efficiency: 0.9
+  p-friction: 0.2
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#2b5761d9-1017-45aa-8a85-9e6689f7ae6e
+  note: Estimate the complete bounded qualification slice, including the actual failure control, full zero-warning registered lint and raw evidence, rather than only counting changed strings. Preserve compressed historical wording by appending exact readable meanings and original record references. Source 472d23cf11c456f76eeb534cca4884c8062f32c9; all original ledger bytes, card metadata and 2,103 other tracked inputs are preserved. This is a planning-only prose correction; product implementation and public publication are not yet performed. Receipt River receipts.edn#2b5761d9-1017-45aa-8a85-9e6689f7ae6e. Skill-candidate score 0; no spore.
+- ts: 2026-10-16T14:53:00.857533136Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-root-lint-pnpm-exec-plan-4eaa-v1
+  task: ETA24 two-prefix causal repair with explicit remaining configuration-warning boundary
+  p-efficiency: 0.78
+  p-friction: 0.35
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#6bb932cf-e29a-4209-9635-3f6b3b3ff394
+  note: An execution guard must admit only the exact preauthorized owned symlink leaves even when directory ignore patterns do not hide symlinks; preserve the failed capture and qualify an existing-effect continuation without replay. A successful registered command and removal of its owning npm warnings do not satisfy strictzero-warning while inherited userconfig diagnostics remain. Source 5521dc2293cfa4e25e5105f593110b04fc94dc22; realBiomeerror/exit1 and identitycleanupPASS, fullpnpmexit0 but24unresolved-tokenwarnings retained. No config workaround, credential addition, completion or publication claim.
+- ts: 2026-10-16T15:13:48.268191015Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-root-lint-pnpm-exec-plan-4eaa-v1
+  task: ETA24 strict lint qualified through existing canonical environment
+  p-efficiency: 0.87
+  p-friction: 0.24
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#d30508d3-e402-4ac6-9914-09f48d3db526
+  note: Trace the established credential loader before changing auth configuration. Native capture inherited a missing canonical variable; restoring only existing NPM_TOKEN to the unchanged registered lint child yields21kondo0/0 and completezero-warning output. Preserve prior24warningFAIL and original53c4 provenance. No new credential/configuration/registry probe, spore, taskcompletion or deployment claim.

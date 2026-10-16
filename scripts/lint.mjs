@@ -49,8 +49,8 @@ const results = [];
 // 1. Biome lint/format
 // Use --diagnostic-level=error to only fail on errors, not warnings
 const biomeCmd = fix
-  ? "npx biome check --write --diagnostic-level=error ."
-  : "npx biome check --diagnostic-level=error .";
+  ? "pnpm exec biome check --write --diagnostic-level=error ."
+  : "pnpm exec biome check --diagnostic-level=error .";
 results.push({ name: "Biome Lint/Format", ok: run("Biome Lint/Format", biomeCmd) });
 
 // 2. TypeScript typecheck for key packages
