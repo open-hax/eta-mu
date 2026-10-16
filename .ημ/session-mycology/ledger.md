@@ -1077,3 +1077,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#d30508d3-e402-4ac6-9914-09f48d3db526
   note: Trace the established credential loader before changing auth configuration. Native capture inherited a missing canonical variable; restoring only existing NPM_TOKEN to the unchanged registered lint child yields21kondo0/0 and completezero-warning output. Preserve prior24warningFAIL and original53c4 provenance. No new credential/configuration/registry probe, spore, taskcompletion or deployment claim.
+- ts: 2026-10-16T20:33:08.906470196Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-leaf-build-pnpm-over2a9-v1
+  task: Use declared pnpm in three reachable legacy build script prefixes
+  p-efficiency: 0.92
+  p-friction: 0.18
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#c5327be3-f4cd-40aa-b441-b34572bef1c6
+  note: Keep observed npm configuration warnings and anticipated downstream script warnings distinct. Reuse existing native owner scope, preserve all nonprefix script bytes and dependency/lock state, and qualify syntax/source correspondence now without inventing functional GREEN. Future combined registered build still required; no install/build/test/model/network/publication performed. No spore.
