@@ -1006,3 +1006,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#3d206448-b9a7-4111-9955-894b81c95fcd,.ημ/session-reflections.edn#b80809d6-323c-4347-81d6-fef9e26264ee
   note: ETA355 fixture startup jitter must be qualified through the actual registered concurrent owner. A 2 second fixture-only deadline accommodates fresh Node startup while retaining the progressing first-child timeout, exact stdout/stderr, owned PID/start cleanup, accepted attempt 2 and no attempt 3. Keep pure 400ms refusal controls and production budgets unchanged. Both genuine unchanged and exact five-edit owners passed 329 tests; retain the baseline PASS without manufacturing RED. Source b21cbb93b3d2eb7fe75e4a4783c9acb444f15182; Receipt River receipts.edn#3d206448-b9a7-4111-9955-894b81c95fcd. Preserve private ignore-path and typed-UUID metadata guard failures separately: dependent effects stopped, actual native semantics remained intact, and authoritative validation succeeded before continuation. No model, provider, hosted rerun, public publication, approval or deployment credit. Candidate 0; no spore.
+- ts: 2026-10-16T11:20:37.941906837Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-rejection-evidence-root-over4eaa-v1
+  task: Rejection assessment evidence root source repair
+  p-efficiency: 0.68
+  p-friction: 0.62
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#6d92c367-6d77-4b76-9b01-7ab621ae1e6d
+  note: The protected hosted first begin failed at filesystem root; preserve that no-submit outcome. Bind only review tool context to the validated captured directory. Real install-step RED2 assertion failures then full registered6suite PASS;377denial controls,3Muse+verifier builds0warnings,104auditedNode processes/zero denials. Preserve first private npm config duplicate failure, use distinct empty config files. Current actionlint lacks documented Cloud job identity fields and remains strictFAIL6; no policy or identity weakening. No spore, nativeSM retry, public/model/dispatch/adoption effects. Source e32fdf3772ddbdbf870639071c05aebbe4feda18.
