@@ -3,11 +3,11 @@ category: "tasks"
 labels: "tasks, quality, lint, ci, 1sp"
 dependency: []
 type: "task"
-write-id: "1792095471342-0.73cv2nqsikku256tuaj"
+write-id: "1792162077100-0.jaxukvi0ciok7yw3wc"
 points: "1"
 title: "Run root Biome lint through the existing pnpm tool boundary"
 priority: "P1"
-status: "breakdown"
+status: "in_progress"
 uuid: "21f1e33e-f08f-437e-8872-828a955e2caa"
 created_at: "2026-10-15T20:17:48.456Z"
 ---
