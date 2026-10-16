@@ -120,7 +120,7 @@ const workflowFile = path.join(root, ".github/workflows/opencode-rejection-asses
 const workflow = (await import("yaml")).parse(fs.readFileSync(workflowFile, "utf8"));
 
 /** Execute the authored install step with inert npm/profile fixtures, never a model. */
-async function installedReviewProfile(t) {
+async function installedReviewProfile(t, invalidTool = null) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-rejection-context-"));
   t.after(() => fs.rmSync(directory, {recursive: true, force: true}));
   const temporary = path.join(directory, "runner"), bin = path.join(directory, "bin");
@@ -140,11 +140,17 @@ async function installedReviewProfile(t) {
   fs.writeFileSync(path.join(profile, "agents/github-reviewer.md"), "Synthetic profile fixture; no model.\n");
   fs.writeFileSync(path.join(profile, "dist/eta-mu-actors.js"), `
 export const names = ["review_begin", "review_read_diff_chunk", "review_assess_diff_chunk", "review_record_evidence", "review_propose_finding", "review_classify_finding", "review_status", "review_submit"];
+export const dispatched = [];
 export async function EtaMuActorsPlugin() {
-  return {tool: Object.fromEntries([...names, "actor_list"].map(name => [name, {
+  const tool = Object.fromEntries([...names, "actor_list"].map(name => [name, {
     description: "Original " + name, args: {id: "unchanged"},
-    execute: async (args, ctx) => ({args, ctx})
-  }]))};
+    execute: async (args, ctx) => { dispatched.push(name); return {args, ctx}; }
+  }]));
+  const invalidTool = ${JSON.stringify(invalidTool)};
+  if (invalidTool?.kind === "absent-table") return {};
+  if (invalidTool?.kind === "missing") delete tool[invalidTool.name];
+  if (invalidTool?.kind === "non-callable") tool[invalidTool.name].execute = null;
+  return {tool};
 }\n`);
   // npm is inert: only create the expected private executable placeholder.
   fs.writeFileSync(path.join(bin, "npm"), `#!/bin/sh
@@ -161,7 +167,9 @@ case "$3" in */.eta-mu-opencode)
       GITHUB_WORKSPACE: directory, ETA_CHECKOUT: eta, CANONICAL_CHECKOUT: path.join(directory, "canonical"),
       REJECTION_PROFILE_DIR: profile, REJECTION_EVIDENCE_DIR: evidence},
     encoding: "utf8", timeout: 15000}, 0);
-  return {result, modelRoot, directory, wrapper: path.join(temporary, "rejection-assessment-model-home/.config/opencode/plugins/eta-mu-actors.js")};
+  return {result, modelRoot, directory,
+    wrapper: path.join(temporary, "rejection-assessment-model-home/.config/opencode/plugins/eta-mu-actors.js"),
+    stagedActors: path.join(temporary, "rejection-assessment-model-home/.eta-mu-review/dist/eta-mu-actors.js")};
 }
 
 test("installed review tools bind the staged evidence root despite foreign runtime contexts", async (t) => {
@@ -187,6 +195,22 @@ test("installed review profile refuses an unknown or filesystem-root host direct
   const {EtaMuActorsPlugin} = await import(pathToFileURL(fixture.wrapper));
   for (const directory of [undefined, "", "/", "relative"])
     await assert.rejects(() => EtaMuActorsPlugin({directory, worktree: "/"}), /review directory/);
+});
+
+test("installed review profile refuses missing and non-callable tools before dispatch", async (t) => {
+  for (const invalidTool of [
+    {kind: "missing", name: "review_read_diff_chunk"},
+    {kind: "non-callable", name: "review_submit"},
+    {kind: "absent-table"},
+  ]) {
+    const fixture = await installedReviewProfile(t, invalidTool);
+    assert.equal(fixture.result.status, 0, fixture.result.stderr);
+    const {EtaMuActorsPlugin} = await import(pathToFileURL(fixture.wrapper));
+    const {dispatched} = await import(pathToFileURL(fixture.stagedActors));
+    await assert.rejects(() => EtaMuActorsPlugin({directory: fixture.modelRoot, worktree: "/"}),
+      {name: "Error", message: "Missing rejection review tool"}, invalidTool.kind);
+    assert.deepEqual(dispatched, [], "incomplete tool tables refuse before any tool executes");
+  }
 });
 
 test("compiled profile binding resolves the pinned runtime from the ETA checkout and preserves the parent cwd", (t) => {
