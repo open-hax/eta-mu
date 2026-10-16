@@ -1,7 +1,7 @@
 ---
 category: "tasks"
 labels: ["tasks", "github", "opencode", "review", "automation"]
-write-id: "1792147491879-0.8hh2997hwxwly64oxa6"
+write-id: "1792154351281-0.4ejqaygpyfk4rczrkxh"
 points: "5"
 source: "operator request 2026-07-27"
 title: "Build an evidence-first OpenCode GitHub review agent using MiMo V2.5 Free"
@@ -111,5 +111,7 @@ Scoped finite-invocation repair after actual Muse PR30 run 38698096974/job 11629
 Fixture-only follow-up for ETA355 Codex4283755058/review5534114953 on fcdf356d6e1dfc802e60c09f3f36c18819124f81 under existing opencode-mimo-evidence-review-agent in_progress5. Preserve complete finite-invocation scope and canonical/inactive historical events. Personal-first fresh worktree at mergedfcdf; no rewrite of merged18 or direct origin publication. Change only the real progressing-child fixture deadline/assert400→2000ms, outer3500→12000ms, force5000→15000ms and test10000→20000ms. Keep every pure negative400 case and production runner/workflow/law/route/gate/max2 byte unchanged. Run one genuine registered3file concurrent baseline and retain its actual PASS/FAIL without manufacturing RED, then qualify exact patched complete owner, syntax/diff and actual PID/capture/accepted2 assertions. No model/catalog/CI rerun/provider/key/account/runtime/deployment effects. Source and separate canonical RR/SM qualification/publication require root's concrete admission; this comment gives no approval or completion credit.
 
 2026-10-16 bounded hosted rejection-input repair under this existing active central review host owner. Native run38886883057 on protected4eaa staged and bound complete input, but first review_begin tried /.opencode/review-evidence/input-manifest.json and stopped without submission. Controlled source-built Museb7 contexts reproduce root-worktree precedence while matching/directory-only controls succeed; actual hosted ctx fields remain unknown. Add genuine workflow-install-step RED/GREEN for a host-owned review evidence root, preserving session/context fields, tool descriptions/args/permissions, all input/verifier/stage/publisher guards, pins and dynamic anonymous route. No model invocation, rerun, native judgment or public effect. No Muse semantic/pin change or new owner/points/status.
+
+2026-10-16 bounded PR357 review5547614116 coverage follow-up under this existing in_progress/P1/5 review-host owner. Its accepted current39fc invocation read/assessed all five complete diff pages and noted the missing/non-callable review-tool refusal test gap. Extend only the existing inert installed-profile fixture and actual authored-wrapper Node owner: omit review_read_diff_chunk, make review_submit.execute non-callable, and return an absent hooks.tool table. Each must refuse with the exact existing Error/message before any execute dispatch; the absent-table case also guards the actual optional-chaining boundary. Preserve all workflow/plugin production bytes, existing controls, history, points/status/pins and anonymous dynamic route. These cover an already-correct guard, not a manufactured product RED. Run the unchanged registered six-suite driver under the separately frozen private tools/environment after admission, retaining every actual result/warning/cleanup; no hosted/model request, account or deployment effect.
 
 ---
