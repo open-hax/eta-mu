@@ -1015,3 +1015,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#6d92c367-6d77-4b76-9b01-7ab621ae1e6d
   note: The protected hosted first begin failed at filesystem root; preserve that no-submit outcome. Bind only review tool context to the validated captured directory. Real install-step RED2 assertion failures then full registered6suite PASS;377denial controls,3Muse+verifier builds0warnings,104auditedNode processes/zero denials. Preserve first private npm config duplicate failure, use distinct empty config files. Current actionlint lacks documented Cloud job identity fields and remains strictFAIL6; no policy or identity weakening. No spore, nativeSM retry, public/model/dispatch/adoption effects. Source e32fdf3772ddbdbf870639071c05aebbe4feda18.
+- ts: 2026-10-16T12:50:19.272555558Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-rejection-evidence-root-over4eaa-v1
+  task: PR357 complete review-tool-table refusal coverage
+  p-efficiency: 0.82
+  p-friction: 0.24
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#b57e79d6-d246-442c-b049-cd6dd1c811f6
+  note: Cover already-correct refusal branches with actual authored-wrapper inert fixtures, including absent tool table separately from absent entry and non-callable execute. ExpectedPASS is coverage, not manufacturedRED. Preserve official string metadata, terminal captures and hosted warning limits. Withdraw a staticCLEAR when observation can replace old fallback; preserve that finding separately. Source57cf unpushed; ETA24 five owning warnings held; no nativeSM retry/spore/model/public effect.
