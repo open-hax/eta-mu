@@ -1095,3 +1095,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#c5327be3-f4cd-40aa-b441-b34572bef1c6
   note: Keep observed npm configuration warnings and anticipated downstream script warnings distinct. Reuse existing native owner scope, preserve all nonprefix script bytes and dependency/lock state, and qualify syntax/source correspondence now without inventing functional GREEN. Future combined registered build still required; no install/build/test/model/network/publication performed. No spore.
+- ts: 2026-10-16T20:48:08.003563260Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-source-map-support-implementation-over2a9-v1
+  task: ETA358 WIP root dependency with qualified offline lock
+  p-efficiency: 0.88
+  p-friction: 0.16
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#0e7bae55-3403-47f4-95aa-1a0564b493e6
+  note: Use the actual reviewed combined source and full history suffixes; offline frozen metadata validation supplies no installed-runtime or testGREEN. Preserve separate manager correction scope and normalinstallation admission, canonicalHOME/config and all oldleases. No spore.
