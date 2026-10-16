@@ -1032,3 +1032,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   task: ETA24 append-only readability clarification for review 5548367977 root 4295114294
   receipt-refs: receipts.edn#b77901b4-08d8-40b6-93a1-ed06ddebe46b,.ημ/session-reflections.edn#7f18f616-e26b-4a47-bef0-d6297317e5e1,receipts.edn#3f836229-7698-4307-95a3-e4ed07b23b36,.ημ/session-reflections.edn#844a6cd5-219d-457a-9d87-ff874831ba61
   note: Readable clarification of the unchanged entries dated 2026-10-15T20:20:43.767544+00:00 and 2026-10-15T20:39:13.849414+00:00 at source b3971e6e2844645863c699d605d5dbee69f2ccbb. In the first entry, `process0` means process exit 0 despite five npm warnings, so the zero-warning contract failed. `Candidate0` means skill-candidate score 0 and no skill spore; it does not count CMS or model-generated product candidates. In the second entry, `private6249B` names the 6,249-byte UTF-8 reviewed Markdown BODY, including one terminal LF (SHA256 e5d7f78ee91fe8834dde8f2c163bacf34b7d906750d7b4b87e5d1977950c3346). `trimmed6248B` names the 6,248-byte UTF-8 native Rheos BODY after that LF was removed (SHA256 6d20aed3a0acb0b6c04313247657d4b705d4a8a669b63deb6517c2e123a94b8a). These are BODY artifacts, distinct from the 6,591-byte whole Markdown card with frontmatter. The original receipt and reflection IDs above remain their immutable provenance. This appended clarification leaves every prior byte intact and supplies no product, test, approval, readiness or deployment result.
+- ts: 2026-10-16T13:35:19.427716872Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-root-lint-pnpm-exec-plan-4eaa-v1
+  task: ETA24 complete estimate and immutable-ledger readability correction
+  p-efficiency: 0.9
+  p-friction: 0.2
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#2b5761d9-1017-45aa-8a85-9e6689f7ae6e
+  note: Estimate the complete bounded qualification slice, including the actual failure control, full zero-warning registered lint and raw evidence, rather than only counting changed strings. Preserve compressed historical wording by appending exact readable meanings and original record references. Source 472d23cf11c456f76eeb534cca4884c8062f32c9; all original ledger bytes, card metadata and 2,103 other tracked inputs are preserved. This is a planning-only prose correction; product implementation and public publication are not yet performed. Receipt River receipts.edn#2b5761d9-1017-45aa-8a85-9e6689f7ae6e. Skill-candidate score 0; no spore.
