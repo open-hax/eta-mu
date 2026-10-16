@@ -1,11 +1,13 @@
 ---
-uuid: "a343a87e-a96f-4df8-bffd-5c3ef331ad26"
+labels: "tasks, quality, testing, dependencies, 1sp"
+parent: "eta-mu-quality-ratchet-test-suite-hardening"
+type: "task"
+write-id: "1792182125280-0.tccul3vw4a5bghf0uj"
+points: "1"
 title: "Supply locked source-map support for compiled Node test bundles"
 priority: "P1"
-points: "1"
-labels: tasks, quality, testing, dependencies, 1sp
-parent: "eta-mu-quality-ratchet-test-suite-hardening"
-type: task
+status: "in_progress"
+uuid: "a343a87e-a96f-4df8-bffd-5c3ef331ad26"
 ---
 
 # Supply locked source-map support for compiled Node test bundles
