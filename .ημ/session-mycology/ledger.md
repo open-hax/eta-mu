@@ -1050,3 +1050,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#6bb932cf-e29a-4209-9635-3f6b3b3ff394
   note: An execution guard must admit only the exact preauthorized owned symlink leaves even when directory ignore patterns do not hide symlinks; preserve the failed capture and qualify an existing-effect continuation without replay. A successful registered command and removal of its owning npm warnings do not satisfy strictzero-warning while inherited userconfig diagnostics remain. Source 5521dc2293cfa4e25e5105f593110b04fc94dc22; realBiomeerror/exit1 and identitycleanupPASS, fullpnpmexit0 but24unresolved-tokenwarnings retained. No config workaround, credential addition, completion or publication claim.
+- ts: 2026-10-16T15:13:48.268191015Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-root-lint-pnpm-exec-plan-4eaa-v1
+  task: ETA24 strict lint qualified through existing canonical environment
+  p-efficiency: 0.87
+  p-friction: 0.24
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#d30508d3-e402-4ac6-9914-09f48d3db526
+  note: Trace the established credential loader before changing auth configuration. Native capture inherited a missing canonical variable; restoring only existing NPM_TOKEN to the unchanged registered lint child yields21kondo0/0 and completezero-warning output. Preserve prior24warningFAIL and original53c4 provenance. No new credential/configuration/registry probe, spore, taskcompletion or deployment claim.
