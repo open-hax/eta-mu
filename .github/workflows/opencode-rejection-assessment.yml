@@ -91,8 +91,9 @@ jobs:
           TIMEOUT_INPUT: ${{ inputs.review_timeout_minutes }}
         run: |
           set -euo pipefail
-          # The publisher App remains scoped to the configured open-hax owner.
-          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]]
+          # Keep existing open-hax targets; admit only one exact native personal tuple.
+          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]] ||
+          [[ "$TARGET_REPOSITORY" == riatzukiza/foresight && "$TARGET_REPOSITORY_ID" == 1401243952 ]]
           [[ "$REJECTION_HISTORY_SOURCE_SHA256" =~ ^[0-9a-f]{64}$ && "$REJECTION_HISTORY_CLI_SHA256" =~ ^[0-9a-f]{64}$ ]]
           if ! [[ "$TIMEOUT_INPUT" =~ ^[0-9]+$ ]] || ! (( TIMEOUT_INPUT >= 60 && TIMEOUT_INPUT <= 180 )); then
             echo '::error::review_timeout_minutes must be a whole number from 60 through 180.'
@@ -162,7 +163,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]]
+          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]] ||
+          [[ "$TARGET_REPOSITORY" == riatzukiza/foresight && "$TARGET_REPOSITORY_ID" == 1401243952 ]]
           [[ "$TARGET_REPOSITORY_ID" =~ ^[1-9][0-9]{0,14}$ ]]
           target=$(gh api "repos/$TARGET_REPOSITORY")
           jq -e --arg name "$TARGET_REPOSITORY" --argjson id "$TARGET_REPOSITORY_ID" \
@@ -170,14 +172,15 @@ jobs:
             echo '::error::Assessment requires known public target repository visibility and matching native identity.'
             exit 1
           }
-          printf 'repository_name=%s\n' "${TARGET_REPOSITORY#open-hax/}" >> "$GITHUB_OUTPUT"
+          printf 'repository_owner=%s\nrepository_name=%s\n' \
+            "${TARGET_REPOSITORY%%/*}" "${TARGET_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
       - name: Create target-scoped native read token
         id: target_reader
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
           app-id: ${{ secrets.ETA_MU_APP_ID }}
           private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-          owner: open-hax
+          owner: ${{ steps.target_identity.outputs.repository_owner }}
           repositories: ${{ steps.target_identity.outputs.repository_name }}
           permission-metadata: read
           permission-pull-requests: read
@@ -326,7 +329,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]]
+          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]] ||
+          [[ "$TARGET_REPOSITORY" == riatzukiza/foresight && "$TARGET_REPOSITORY_ID" == 1401243952 ]]
           [[ "$TARGET_REPOSITORY_ID" =~ ^[1-9][0-9]{0,14}$ ]]
           target=$(gh api "repos/$TARGET_REPOSITORY")
           jq -e --arg name "$TARGET_REPOSITORY" --argjson id "$TARGET_REPOSITORY_ID" \
@@ -334,14 +338,15 @@ jobs:
             echo '::error::Assessment requires known public target repository visibility and matching native identity.'
             exit 1
           }
-          printf 'repository_name=%s\n' "${TARGET_REPOSITORY#open-hax/}" >> "$GITHUB_OUTPUT"
+          printf 'repository_owner=%s\nrepository_name=%s\n' \
+            "${TARGET_REPOSITORY%%/*}" "${TARGET_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
       - name: Create target-scoped native read token
         id: target_reader
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
           app-id: ${{ secrets.ETA_MU_APP_ID }}
           private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-          owner: open-hax
+          owner: ${{ steps.target_identity.outputs.repository_owner }}
           repositories: ${{ steps.target_identity.outputs.repository_name }}
           permission-metadata: read
           permission-pull-requests: read
@@ -439,7 +444,7 @@ jobs:
         with:
           app-id: ${{ secrets.ETA_MU_APP_ID }}
           private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-          owner: open-hax
+          owner: ${{ steps.target_identity.outputs.repository_owner }}
           repositories: ${{ steps.target_identity.outputs.repository_name }}
           permission-metadata: read
           permission-pull-requests: read
@@ -530,7 +535,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]]
+          [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ ]] ||
+          [[ "$TARGET_REPOSITORY" == riatzukiza/foresight && "$TARGET_REPOSITORY_ID" == 1401243952 ]]
           [[ "$TARGET_REPOSITORY_ID" =~ ^[1-9][0-9]{0,14}$ ]]
           target=$(gh api "repos/$TARGET_REPOSITORY")
           jq -e --arg name "$TARGET_REPOSITORY" --argjson id "$TARGET_REPOSITORY_ID" \
@@ -538,7 +544,8 @@ jobs:
             echo '::error::Assessment requires known public target repository visibility and matching native identity.'
             exit 1
           }
-          printf 'repository_name=%s\n' "${TARGET_REPOSITORY#open-hax/}" >> "$GITHUB_OUTPUT"
+          printf 'repository_owner=%s\nrepository_name=%s\n' \
+            "${TARGET_REPOSITORY%%/*}" "${TARGET_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with: {repository: open-hax/eta-mu, ref: '${{ env.ETA_SOURCE_SHA }}', path: .rejection-assessment/eta, persist-credentials: false}
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -569,7 +576,7 @@ jobs:
         with:
           app-id: ${{ secrets.ETA_MU_APP_ID }}
           private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-          owner: open-hax
+          owner: ${{ steps.target_identity.outputs.repository_owner }}
           repositories: ${{ steps.target_identity.outputs.repository_name }}
           permission-issues: write
           permission-pull-requests: read

@@ -39,7 +39,7 @@ on:
         description: Pinned riatzukiza/.agents commit mounted as global skills.
         required: false
         type: string
-        default: 7fd3252e7663ad5e68be5e90429d126aa66c38c8
+        default: 7ab2f99e048e370f5f943acc2321b8294402e786
       setup_eta_mu_toolchain:
         description: Install Java/Clojure/pnpm/Node before gates. Callers with their own toolchain disable this and provide evidence_gates_script.
         required: false
@@ -594,7 +594,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: riatzukiza/.agents
-          ref: ${{ inputs.agents_revision || '7fd3252e7663ad5e68be5e90429d126aa66c38c8' }}
+          ref: ${{ inputs.agents_revision || '7ab2f99e048e370f5f943acc2321b8294402e786' }}
           path: .review-context/agents
           persist-credentials: false
 
@@ -746,7 +746,7 @@ jobs:
         shell: bash
         env:
           MUSE_REVISION: ${{ inputs.muse_revision || 'c1369c223cf3c57e3e31934a6d746bfcdfe73f5a' }}
-          AGENTS_REVISION: ${{ inputs.agents_revision || '7fd3252e7663ad5e68be5e90429d126aa66c38c8' }}
+          AGENTS_REVISION: ${{ inputs.agents_revision || '7ab2f99e048e370f5f943acc2321b8294402e786' }}
         run: |
           set -euo pipefail
           CONTEXT_OUT="$RUNNER_TEMP/opencode-review-context"
@@ -2798,11 +2798,22 @@ jobs:
           # are deterministic evidence and the review context this step installs
           # (.opencode/review-evidence/, .review-context/), which caller
           # repositories are not required to gitignore.
-          if git status --porcelain --untracked-files=all \
-            | grep -v -e '^?? \.opencode/review-evidence/' -e '^?? \.review-context/' \
-            | grep -q .; then
+          # NUL-framed porcelain keeps Unicode, quotes and embedded newlines in
+          # one pathname. Only untracked files in the two owned trees are exempt;
+          # tracked/staged changes (including renames) remain unexpected.
+          unexpected_status="$(node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          const status = execFileSync('git', ['status', '--porcelain=v1', '-z', '--untracked-files=all']);
+          for (const entry of status.toString('utf8').split('\0')) {
+            if (!entry || entry.startsWith('?? .opencode/review-evidence/') ||
+                entry.startsWith('?? .review-context/')) continue;
+            console.log(JSON.stringify(entry));
+          }
+          NODE
+          )"
+          if [[ -n "$unexpected_status" ]]; then
             echo "::error::Review-context setup left the working tree dirty before model execution."
-            git status --short
+            printf '%s\n' "$unexpected_status"
             exit 1
           fi
 
@@ -2917,8 +2928,19 @@ jobs:
         run: |
           set -euo pipefail
           completion_sha="$(git rev-parse HEAD)"
-          unexpected_status="$(git status --porcelain --untracked-files=all \
-            | grep -v -e '^?? \.opencode/review-evidence/' -e '^?? \.review-context/' || true)"
+          # NUL-framed porcelain keeps Unicode, quotes and embedded newlines in
+          # one pathname. Only untracked files in the two owned trees are exempt;
+          # tracked/staged changes (including renames) remain unexpected.
+          unexpected_status="$(node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          const status = execFileSync('git', ['status', '--porcelain=v1', '-z', '--untracked-files=all']);
+          for (const entry of status.toString('utf8').split('\0')) {
+            if (!entry || entry.startsWith('?? .opencode/review-evidence/') ||
+                entry.startsWith('?? .review-context/')) continue;
+            console.log(JSON.stringify(entry));
+          }
+          NODE
+          )"
           exact_head=false
           clean=false
           if [[ "$INITIAL_EXACT_HEAD" == true && "$EXPECTED_SHA" == "$EXECUTED_SHA" && "$EXPECTED_SHA" == "$completion_sha" ]]; then

@@ -9,7 +9,7 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { runReviewRecovery } from "./run-opencode-review-recovery.mjs";
 import { stageTransportVerifier, transportResponse, transportReviewTools } from "./review-invocation-fixture.mjs";
 
@@ -140,6 +140,101 @@ test("unknown purpose and nonprivate or redirected model home refuse before the 
 
 const workflowFile = path.join(root, ".github/workflows/opencode-actionability-assessment.yml");
 const workflow = (await import("yaml")).parse(fs.readFileSync(workflowFile, "utf8"));
+
+/** Execute the authored install step with inert npm/profile fixtures, never a model. */
+async function installedReviewProfile(t, invalidTool = null) {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-actionability-context-"));
+  t.after(() => fs.rmSync(directory, {recursive: true, force: true}));
+  const temporary = path.join(directory, "runner"), bin = path.join(directory, "bin");
+  const eta = path.join(directory, "eta"), profile = path.join(directory, "profile");
+  const modelRoot = path.join(directory, ".actionability/model-root");
+  const evidence = path.join(modelRoot, ".opencode/review-evidence");
+  for (const name of [temporary, bin, evidence, path.join(profile, "dist"), path.join(profile, "agents"), path.join(directory, "canonical/skills")])
+    fs.mkdirSync(name, {recursive: true, mode: 0o700});
+  for (const name of ["assessment-runtime/package.json", "assessment-runtime/package-lock.json", "assessment-model-profile/package.json", "assessment-opencode/package.json", "assessment-opencode/package-lock.json"]){
+    const destination = path.join(eta, ".github", name);
+    fs.mkdirSync(path.dirname(destination), {recursive: true});
+    fs.copyFileSync(path.join(root, ".github", name), destination);
+  }
+  fs.writeFileSync(path.join(directory, "package.json"), '{"type":"module"}\n');
+  fs.copyFileSync(path.join(root, ".github/assessment-model-profile/package.json"), path.join(profile, "package.json"));
+  for (const name of ["package-lock.json", "opencode.json"]) fs.writeFileSync(path.join(profile, name), "{}\n");
+  fs.writeFileSync(path.join(profile, "agents/github-reviewer.md"), "Synthetic profile fixture; no model.\n");
+  fs.writeFileSync(path.join(profile, "dist/eta-mu-actors.js"), `
+export const names = ["review_begin", "review_read_diff_chunk", "review_assess_diff_chunk", "review_record_evidence", "review_propose_finding", "review_classify_finding", "review_status", "review_submit"];
+export const dispatched = [];
+export async function EtaMuActorsPlugin() {
+  const tool = Object.fromEntries([...names, "actor_list"].map(name => [name, {
+    description: "Original " + name, args: {id: "unchanged"},
+    execute: async (args, ctx) => { dispatched.push(name); return {args, ctx}; }
+  }]));
+  const invalidTool = ${JSON.stringify(invalidTool)};
+  if (invalidTool?.kind === "absent-table") return {};
+  if (invalidTool?.kind === "missing") delete tool[invalidTool.name];
+  if (invalidTool?.kind === "non-callable") tool[invalidTool.name].execute = null;
+  return {tool};
+}\n`);
+  // npm is inert: only create the expected private executable placeholder.
+  fs.writeFileSync(path.join(bin, "npm"), `#!/bin/sh
+set -eu
+mkdir -p "$3/node_modules"
+case "$3" in */.eta-mu-opencode)
+ mkdir -p "$3/node_modules/opencode-linux-x64-baseline/bin"
+ printf '#!/bin/sh\\nexit 0\\n' > "$3/node_modules/opencode-linux-x64-baseline/bin/opencode"
+ chmod 700 "$3/node_modules/opencode-linux-x64-baseline/bin/opencode";; esac
+`, {mode: 0o700});
+  const step = workflow.jobs.assess.steps.find(s => s.name === "Install isolated credential-free model profile");
+  const result = runTrustedWorkflowFixture(import.meta.url, ["-c", step.run], {cwd: directory,
+    env: {PATH: `${bin}:${path.dirname(process.execPath)}:/usr/bin:/bin`, RUNNER_TEMP: temporary,
+      GITHUB_WORKSPACE: directory, ETA_CHECKOUT: eta, CANONICAL_CHECKOUT: path.join(directory, "canonical"),
+      ACTIONABILITY_PROFILE_DIR: profile, ACTIONABILITY_EVIDENCE_DIR: evidence},
+    encoding: "utf8", timeout: 15000}, 0);
+  return {result, modelRoot, directory,
+    wrapper: path.join(temporary, "actionability-model-home/.config/opencode/plugins/eta-mu-actors.js"),
+    stagedActors: path.join(temporary, "actionability-model-home/.eta-mu-review/dist/eta-mu-actors.js")};
+}
+
+test("installed review tools bind the staged evidence root despite foreign runtime contexts", async (t) => {
+  const fixture = await installedReviewProfile(t);
+  assert.equal(fixture.result.status, 0, fixture.result.stderr);
+  const {EtaMuActorsPlugin} = await import(pathToFileURL(fixture.wrapper));
+  const {tool} = await EtaMuActorsPlugin({directory: fixture.modelRoot, worktree: "/"});
+  const args = {id: 7}, abort = new AbortController().signal, metadata = () => {};
+  const context = Object.freeze({directory: "/foreign", worktree: "/", sessionID: "session", messageID: "message", agent: "reviewer", abort, metadata});
+  for (const name of Object.keys(tool).filter(name => name.startsWith("review_"))) {
+    const result = await tool[name].execute(args, context);
+    assert.equal(result.args, args);
+    assert.deepEqual(result.ctx, {...context, directory: fixture.modelRoot, worktree: fixture.modelRoot});
+    assert.equal(tool[name].description, "Original " + name);
+    assert.deepEqual(tool[name].args, {id: "unchanged"});
+  }
+  assert.equal((await tool.actor_list.execute(args, context)).ctx, context, "observer tools retain original context");
+});
+
+test("installed review profile refuses an unknown or filesystem-root host directory", async (t) => {
+  const fixture = await installedReviewProfile(t);
+  assert.equal(fixture.result.status, 0, fixture.result.stderr);
+  const {EtaMuActorsPlugin} = await import(pathToFileURL(fixture.wrapper));
+  for (const directory of [undefined, "", "/", "relative"])
+    await assert.rejects(() => EtaMuActorsPlugin({directory, worktree: "/"}), /review directory/);
+});
+
+test("installed review profile refuses missing and non-callable tools before dispatch", async (t) => {
+  for (const invalidTool of [
+    {kind: "missing", name: "review_read_diff_chunk"},
+    {kind: "non-callable", name: "review_submit"},
+    {kind: "absent-table"},
+  ]) {
+    const fixture = await installedReviewProfile(t, invalidTool);
+    assert.equal(fixture.result.status, 0, fixture.result.stderr);
+    const {EtaMuActorsPlugin} = await import(pathToFileURL(fixture.wrapper));
+    const {dispatched} = await import(pathToFileURL(fixture.stagedActors));
+    await assert.rejects(() => EtaMuActorsPlugin({directory: fixture.modelRoot, worktree: "/"}),
+      {name: "Error", message: "Missing actionability review tool"}, invalidTool.kind);
+    assert.deepEqual(dispatched, [], "incomplete tool tables refuse before any tool executes");
+  }
+});
+
 
 test("compiled profile binding resolves the pinned runtime from the ETA checkout and preserves the parent cwd", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eta-rejection-profile-binding-"));
@@ -814,6 +909,11 @@ test("all host jobs require the committed lock and propagate npm ci failure with
       const evidence = path.join(owned, "evidence");
       const profile = path.join(owned, "profile");
       for (const file of [source, temp, evidence, profile]) fs.mkdirSync(file, { recursive: true });
+      const privateHostLeaves = [path.join(temp, "actionability-host-home"), evidence, profile];
+      if (jobName === "prepare") for (const folder of privateHostLeaves) {
+        fs.mkdirSync(folder, {recursive: true});
+        fs.chmodSync(folder, 0o755);
+      }
       fs.writeFileSync(path.join(source, "package.json"), packageBytes);
       if (variant !== "missing-lock") fs.writeFileSync(path.join(source, "package-lock.json"), lockBytes);
       const calls = path.join(owned, "npm-calls.txt");
@@ -834,6 +934,8 @@ test("all host jobs require the committed lock and propagate npm ci failure with
       if (variant === "intact") {
         assert.equal(child.status, 0, child.stderr);
         assert.equal(fs.readFileSync(continued, "utf8"), "runtime-ready\n");
+        if (jobName === "prepare") for (const folder of privateHostLeaves)
+          assert.equal(fs.statSync(folder).mode & 0o777, 0o700, "actual host-runtime step keeps each owned leaf private");
         assert.equal(fs.readlinkSync(path.join(eta, "node_modules")), path.join(owned, runtime, "node_modules"));
       } else {
         assert.notEqual(child.status, 0, `${jobName} refuses ${variant}`);

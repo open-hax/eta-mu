@@ -78,10 +78,10 @@ jobs:
           set -euo pipefail
           # Preserve org routes and admit only the enrolled native Knoxx fork pair.
           [[ "$TARGET_REPOSITORY" =~ ^open-hax/[A-Za-z0-9_.-]+$ || ( "$TARGET_REPOSITORY" == riatzukiza/knoxx && "$TARGET_REPOSITORY_ID" == 1401249297 ) ]]
-          [[ "$TIMEOUT_INPUT" =~ ^[0-9]+$ ]] && (( TIMEOUT_INPUT >= 60 && TIMEOUT_INPUT <= 180 )) || {
+          if ! [[ "$TIMEOUT_INPUT" =~ ^[0-9]+$ ]] || ! (( TIMEOUT_INPUT >= 60 && TIMEOUT_INPUT <= 180 )); then
             echo '::error::review_timeout_minutes must be a whole number from 60 through 180.'
             exit 1
-          }
+          fi
           [[ "$CANONICAL_REVISION" =~ ^[0-9a-f]{40}$ && "$MUSE_REVISION" =~ ^[0-9a-f]{40}$ ]] || {
             echo '::error::Protected canonical/Muse dependency pins are not adopted.'
             exit 1
@@ -184,7 +184,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -m 700 -p "$RUNNER_TEMP/actionability-host-home" "$ACTIONABILITY_EVIDENCE_DIR" "$ACTIONABILITY_PROFILE_DIR"
+          mkdir -p "$RUNNER_TEMP/actionability-host-home" "$ACTIONABILITY_EVIDENCE_DIR" "$ACTIONABILITY_PROFILE_DIR"
+          chmod 700 "$RUNNER_TEMP/actionability-host-home" "$ACTIONABILITY_EVIDENCE_DIR" "$ACTIONABILITY_PROFILE_DIR"
           mkdir -m 700 .actionability/runtime
           cp "$ETA_CHECKOUT/.github/assessment-runtime/package.json" "$ETA_CHECKOUT/.github/assessment-runtime/package-lock.json" .actionability/runtime/
           npm ci --prefix .actionability/runtime --ignore-scripts --no-audit --no-fund
@@ -360,7 +361,27 @@ jobs:
           cmp "$ACTIONABILITY_PROFILE_DIR/package.json" "$ETA_CHECKOUT/.github/assessment-model-profile/package.json"
           cp "$ACTIONABILITY_PROFILE_DIR/package.json" "$ACTIONABILITY_PROFILE_DIR/package-lock.json" "$MODEL_HOME/.eta-mu-review/"
           npm ci --prefix "$MODEL_HOME/.eta-mu-review" --ignore-scripts --no-audit --no-fund
-          printf 'export { EtaMuActorsPlugin } from "%s/dist/eta-mu-actors.js";\n' "$MODEL_HOME/.eta-mu-review" > "$MODEL_HOME/.config/opencode/plugins/eta-mu-actors.js"
+          printf 'import { EtaMuActorsPlugin as musePlugin } from "%s/dist/eta-mu-actors.js";\n' "$MODEL_HOME/.eta-mu-review" > "$MODEL_HOME/.config/opencode/plugins/eta-mu-actors.js"
+          cat >> "$MODEL_HOME/.config/opencode/plugins/eta-mu-actors.js" <<'ETA_MU_ACTIONABILITY_REVIEW_CONTEXT'
+          import { isAbsolute, resolve } from "node:path";
+          // OpenCode's non-Git project worktree may be "/"; its plugin directory
+          // retains this model's staged input root. Bind only the review tools.
+          export const EtaMuActorsPlugin = async (input) => {
+            const directory = input?.directory;
+            if (typeof directory !== "string" || !isAbsolute(directory) || resolve(directory) === "/")
+              throw new Error("Invalid actionability review directory");
+            const hooks = await musePlugin(input);
+            for (const name of ["review_begin", "review_read_diff_chunk", "review_assess_diff_chunk",
+              "review_record_evidence", "review_propose_finding", "review_classify_finding",
+              "review_status", "review_submit"]) {
+              const definition = hooks.tool?.[name];
+              if (typeof definition?.execute !== "function") throw new Error("Missing actionability review tool");
+              const execute = definition.execute;
+              definition.execute = (args, context) => execute(args, {...context, directory, worktree: directory});
+            }
+            return hooks;
+          };
+          ETA_MU_ACTIONABILITY_REVIEW_CONTEXT
           cp "$ACTIONABILITY_PROFILE_DIR/agents/github-reviewer.md" "$MODEL_HOME/.config/opencode/agents/"
           cp "$ACTIONABILITY_PROFILE_DIR/opencode.json" "$MODEL_HOME/.config/opencode/"
           mkdir "$MODEL_HOME/.agents"

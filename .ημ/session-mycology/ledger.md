@@ -1158,3 +1158,21 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 9c5b87c510f5305c9df2c72bb69e89dfdc124690,sha256:36288014886934b9b8d3708ada38bc2b193a55dd4b333b1517060a2c1180b938
   note: Constrain an integration fixture to the platform capabilities its real child runner already requires. Keep portable recovery tests enabled; preserve every existing Linux deadline/recovery/reaping assertion. A one-test platform option needs no mirrored registration-parser test: the actual ordinary three-file Node24 suite ran329 tests with zero failures/skips/warnings, and the Linux deadline fixture executed with all owned children reaped. Preserve the original current-c4 review and native P2; a local correction is not native settlement or production adoption. All source/index/three generated overlays stayed exact. Candidate0; no spore/promotion.
+- ts: 2026-10-17T06:31:05.675896983Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-F39-exact-rejection-target-overdef461-v1
+  task: Exact Foresight rejection admission and staged actionability review tools
+  p-efficiency: 0.79
+  p-friction: 0.42
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: 653536cbccb6847e39b86c5689f72c94e788a041,d5d5c639-b240-4f1a-bda7-9e1957da25ff,sha256:8eae1b50642b002eaeae1ed1d0d0bdbaf3c97e87d3a4eaacdffdc72b204f5ca4
+  note: The real entry must be tested across the entire asynchronous load: hold supported host Var roots through await and restore them in finally, resolve public SCI runtime Vars rather than suppress unresolved symbols, and freeze the actual sibling path before loading. Keep setup errors separate from causal assertions and retain all failed captures. The registered six assessments passed on their bound source; the later actual preexisting0755 leaf control failed then passed after exact owned-leaf chmod. Preserve the precise95+2 source correspondence and shared concurrency projection instead of transferring whole-suite credit. Owning kondo0E0W; unfiltered actionlint remains actualFAIL on12 official-supported job-context fields missing from the checker, with both shell warnings removed and no ignore or caller-field substitution. All owned processes closed; normal install warnings and parent pnpm configuration notices remain recorded. Exact tuple admission grants no App installation, assessment outcome, approval, merge or deployment. Portable candidate0; no spore or promotion.
+- ts: 2026-10-17T11:17:54.477988836Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-F39-exact-rejection-target-overdef461-v1
+  task: Unicode-safe exact review context and adopted canonical skills
+  p-efficiency: 0.78
+  p-friction: 0.48
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: 7598ef5cfb3e2bf326ec227a98d54802cb4c8614,dbeb654a-6c67-44fc-8121-990e9ad2d58f,sha256:82e59463ad5873188f1decfbf8644fb1a66229d6ea9f26e7f822014c1c86fceb
+  note: Line-oriented Git porcelain is rendered text: exact owned Unicode/newline/quote paths need NUL framing before prefix admission. Keep actual foreign/tracked/staged/rename controls and real install/completion adapter tests. Registered340 genuine RED338pass/2assertionFAIL then GREEN340/340, normal cleanup and zero emitted warnings. Accepted canonical7ab is consumed only at the three existing defaults/fallbacks, with ordinary direct candidate PR workflow source still needing hosted qualification. Preserve first pin329PASS and installedchecker180s timeout as historical source results. The official checker deadlock fix uses a reader after process start; qualify a private exact upstream source build rather than disabling ShellCheck or filtering findings. Parent Git discovery can silently skip a patch in nested nonrepository archives: native parent ceiling plus no-index and exact fullpostimage guard establish actual application. Original pre-build refusal retained; normal isolated Go cache/config/resource bounds, installedtool preservation and unfiltered owning checker0 are explicit. Historical12global checker false positives remain FAIL, no Pyflakes credit when absent. No provider/model/hostedreview/adoption/merge/disposition credit. Portable candidate0, no spore or promotion.

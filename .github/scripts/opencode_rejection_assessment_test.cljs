@@ -2,6 +2,7 @@
 (ns opencode-rejection-assessment-test
   "Inert injected host controls. No native Bot/source/crypto agreement is supplied by fixtures."
   (:require [cljs.test :refer [deftest is async run-tests]] [clojure.string :as str]
+            [nbb.core :as nbb] ["node:path" :as path]
             [eta-mu.infra.rejection-assessment :as assessment]
             [eta-mu.extern.actionability-host :as host] [pr-flow.law :as law]))
 
@@ -446,5 +447,72 @@
 (deftest final-get-must-recollect-complete-context-in-recovery-and-after-one-write
   (async done
     (complete-final-get-context-controls done)))
+
+
+(def actual-entry-file
+  (.resolve path (.dirname path nbb/*file*) "opencode_rejection_assessment.cljs"))
+
+(defn ^:async actual-entry-target-controls []
+  ;; nbb.core/load-file is the pinned runtime API. Load the real entry in its
+  ;; effect-free pins phase, then call its actual config with bounded inputs.
+  (let [pins-output (atom [])
+        canonical (host/env "CANONICAL_CHECKOUT")]
+    (let [alter-root! (resolve 'alter-var-root)
+          original-argv @#'host/argv
+          original-output @#'host/output!]
+      ;; Keep the pins-only host seam installed through load-file's asynchronous
+      ;; evaluation, then restore exact original roots before any config control.
+      (try
+        (alter-root! #'host/argv (constantly (fn [] ["pins"])))
+        (alter-root! #'host/output! (constantly (fn [value] (swap! pins-output conj value))))
+        (await (nbb/load-file actual-entry-file))
+        (finally
+          (alter-root! #'host/output! (constantly original-output))
+          (alter-root! #'host/argv (constantly original-argv)))))
+    (is (= [assessment/dependency-pins] @pins-output))
+    (let [config! (resolve 'opencode-rejection-assessment/config)
+          sha (apply str (repeat 40 "d"))
+          inputs {"TARGET_REPOSITORY" "riatzukiza/foresight" "TARGET_REPOSITORY_ID" "1401243952"
+                  "TARGET_HEAD_SHA" (:head fixture) "CANONICAL_CHECKOUT" canonical
+                  "GITHUB_WORKFLOW_SHA" sha "ETA_SOURCE_SHA" sha
+                  "REJECTION_JOB_WORKFLOW_SHA" sha
+                  "REJECTION_JOB_WORKFLOW_REF" "open-hax/eta-mu/.github/workflows/opencode-rejection-assessment.yml@refs/heads/main"
+                  "REJECTION_PREPARE_CHECK_RUN_ID" "101" "GITHUB_EVENT_NAME" "workflow_dispatch"
+                  "TARGET_THREAD_ID" "PRRT_inert" "TARGET_PR_NUMBER" "39"
+                  "GITHUB_RUN_ID" "31" "GITHUB_RUN_ATTEMPT" "1"
+                  "TARGET_ROOT_COMMENT_ID" "4282820009" "TARGET_PROPOSAL_ID" "7"
+                  "GITHUB_REPOSITORY" "open-hax/eta-mu"
+                  "GITHUB_WORKFLOW_REF" "open-hax/eta-mu/.github/workflows/opencode-rejection-assessment.yml@refs/heads/main"}]
+      (is (some? config!) "the actual entry config Var loaded")
+      (doseq [[repo id] [["open-hax/eta-mu" "3"] ["open-hax/another-installed-repo" "3"]
+                        ["riatzukiza/foresight" "1401243952"]]]
+        (with-redefs [host/env (fn [name] (get (assoc inputs "TARGET_REPOSITORY" repo "TARGET_REPOSITORY_ID" id) name))]
+          (let [actual (try
+                         (select-keys (config!) [:repo :repository-database-id])
+                         (catch :default error
+                           (if (= :host-input (:code (ex-data error)))
+                             {:refused :host-input}
+                             (throw error))))]
+            (is (= {:repo repo :repository-database-id (parse-long id)} actual)
+                (str "actual config admits " repo "/" id)))))
+      (doseq [[repo id] [["riatzukiza/foresight" "1401243953"] ["riatzukiza/other" "1401243952"]
+                        ["another/foresight" "1401243952"] ["riatzukiza/foresight,other" "1401243952"]
+                        ["riatzukiza/foresight\nopen-hax/eta-mu" "1401243952"]
+                        ["riatzukiza/foresight" ""] ["riatzukiza/foresight" "01401243952"]]]
+        (with-redefs [host/env (fn [name] (get (assoc inputs "TARGET_REPOSITORY" repo "TARGET_REPOSITORY_ID" id) name))]
+          (is (contains? #{:host-input :native-coordinate :missing-host-input}
+                         (refusal-code config!))
+              (str "actual config refuses " repo "/" id)))))))
+
+(defn ^:async complete-actual-entry-target-controls [done]
+  (try
+    (await (actual-entry-target-controls))
+    (catch :default error
+      (is false (str "Unexpected actual-entry target setup error: " (ex-message error))))
+    (finally (done))))
+
+(deftest actual-entry-admits-only-exact-personal-Foresight-native-tuple
+  (async done
+    (complete-actual-entry-target-controls done)))
 
 (run-tests 'opencode-rejection-assessment-test)
