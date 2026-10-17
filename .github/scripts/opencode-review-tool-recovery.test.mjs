@@ -142,7 +142,7 @@ if(attempt===1){
     stdout: Buffer.concat(output).toString(), stderr: Buffer.concat(errors).toString() };
 }
 
-test("packaged invocation deadline retains progressing child output and permits only the existing healthy omission recovery", { timeout: 20_000 }, async (t) => {
+test("packaged invocation deadline retains progressing child output and permits only the existing healthy omission recovery", { timeout: 20_000, skip: process.platform !== "linux" }, async (t) => {
   const f = await deadlineChildFixture(t);
   assert.ok(f.owned.length >= 2, "the real stub and its owned descendant must both have started");
   assert.deepEqual(fs.readFileSync(path.join(f.directory, "model-response-attempt-1.txt")), Buffer.from(f.firstResponse));
