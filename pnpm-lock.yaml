@@ -27,6 +27,9 @@ importers:
       shx:
         specifier: ^0.4.0
         version: 0.4.0
+      source-map-support:
+        specifier: 0.5.21
+        version: 0.5.21
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
