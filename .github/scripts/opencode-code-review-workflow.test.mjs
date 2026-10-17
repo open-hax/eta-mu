@@ -1914,6 +1914,58 @@ test("review completion permits only review artifacts and preserves revision", (
   });
 });
 
+test("review completion keeps owned Unicode, quotes and newline paths in one record", (t) => {
+  const { directory, sha } = makeRepository(t);
+  execFileSync("git", ["config", "core.quotePath", "true"], { cwd: directory });
+  for (const relativePath of [
+    ".review-context/agents/.ημ/receipts.edn",
+    '.review-context/agents/quoted"line\nnext.txt',
+    '.opencode/review-evidence/尾\n?? foreign.txt',
+  ]) {
+    const file = path.join(directory, relativePath);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, "owned generated data\n");
+  }
+  const output = path.join(directory, "review-output");
+  const result = runScript(namedStep("review", "Verify review remained revision-bound").run,
+    directory, { EXPECTED_SHA: sha, EXECUTED_SHA: sha, GITHUB_OUTPUT: output,
+      INITIAL_CLEAN: "true", INITIAL_EXACT_HEAD: "true" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(parseOutput(output).clean, "true");
+  assert.equal(parseOutput(output).completion_sha, sha);
+});
+
+for (const mutation of ["foreign Unicode", "foreign newline", "sibling prefix", "tracked owned path", "staged owned path", "renamed owned path"]) {
+  test(`review completion rejects ${mutation} with machine-safe framing`, (t) => {
+    const { directory } = makeRepository(t);
+    let file;
+    if (mutation === "foreign Unicode") file = "outside/尾.txt";
+    else if (mutation === "foreign newline") file = "outside\n?? .review-context/forged.txt";
+    else if (mutation === "sibling prefix") file = ".review-context-other/receipt.edn";
+    else file = ".review-context/tracked.txt";
+    fs.mkdirSync(path.dirname(path.join(directory, file)), { recursive: true });
+    if (mutation === "renamed owned path") {
+      execFileSync("git", ["mv", "tracked.txt", file], { cwd: directory });
+    } else {
+      fs.writeFileSync(path.join(directory, file), "first\n");
+      if (mutation === "tracked owned path") {
+        execFileSync("git", ["add", file], { cwd: directory });
+        execFileSync("git", ["commit", "-qm", "tracked owned fixture"], { cwd: directory });
+        fs.writeFileSync(path.join(directory, file), "changed\n");
+      } else if (mutation === "staged owned path") {
+        execFileSync("git", ["add", file], { cwd: directory });
+      }
+    }
+    const sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: directory, encoding: "utf8" }).trim();
+    const output = path.join(directory, "review-output");
+    const result = runScript(namedStep("review", "Verify review remained revision-bound").run,
+      directory, { EXPECTED_SHA: sha, EXECUTED_SHA: sha, GITHUB_OUTPUT: output,
+        INITIAL_CLEAN: "true", INITIAL_EXACT_HEAD: "true" });
+    assert.notEqual(result.status, 0, mutation);
+    assert.equal(parseOutput(output).clean, "false", mutation);
+  });
+}
+
 test("review completion rejects tracked mutation", (t) => {
   const { directory, sha } = makeRepository(t);
   fs.writeFileSync(path.join(directory, "tracked.txt"), "mutated\n");
@@ -2013,7 +2065,7 @@ test("terminal gate fails closed without pull request context", (t) => {
 // Exercise the emitted native adapter, not a second implementation of its hook.
 import { pathToFileURL } from "node:url";
 
-function reviewMetadataFixture(t) {
+function reviewMetadataFixture(t, { agentFiles = [] } = {}) {
   const { directory } = makeRepository(t);
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "review-metadata-"));
   t.after(() => fs.rmSync(scratch, { recursive: true, force: true }));
@@ -2050,6 +2102,7 @@ function reviewMetadataFixture(t) {
     ["muse/.ημ/review/publish-opencode-review.cjs", "// publisher fixture\n"],
     ["muse/.ημ/review/publish-opencode-review.test.cjs", "// test fixture\n"],
     ["agents/skills/work-cycle/SKILL.md", "skill fixture\n"],
+    ...agentFiles.map(([relativePath, content]) => [`agents/${relativePath}`, content]),
   ]) {
     const file = path.join(directory, ".review-context", relativePath);
     fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -2080,6 +2133,42 @@ function reviewMetadataFixture(t) {
   const data = path.join(directory, ".review-context/machinery/review-host-tool-metadata.json");
   return { directory, scratch, runnerHome: childHome, initialRunnerHome: runnerHome, names, tools, hooks, otherHook, data, wrapper, npmLog, install,
     load: () => import(pathToFileURL(wrapper).href), state: globalThis.__reviewMetadataFixture };
+}
+
+test("context installation accepts verified owned Unicode, quotes and newline paths before model", (t) => {
+  const f = reviewMetadataFixture(t, { agentFiles: [
+    [".ημ/receipts.edn", "verified receipt fixture\n"],
+    ['quoted"line\nnext.txt', "verified skill evidence\n"],
+  ] });
+  execFileSync("git", ["config", "core.quotePath", "true"], { cwd: f.directory });
+  const evidence = path.join(f.directory, ".opencode/review-evidence/尾\npart.txt");
+  fs.mkdirSync(path.dirname(evidence), { recursive: true });
+  fs.writeFileSync(evidence, "generated evidence\n");
+  const result = f.install();
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(fs.readFileSync(path.join(f.directory, ".opencode/caller.txt")), Buffer.from("caller-owned\n"));
+  assert.ok(fs.existsSync(f.wrapper));
+});
+
+for (const mutation of ["foreign Unicode and newline", "tracked owned path", "staged owned path"]) {
+  test(`context installation rejects ${mutation} before model`, (t) => {
+    const f = reviewMetadataFixture(t);
+    const relativePath = mutation === "foreign Unicode and newline"
+      ? "outside/尾\n?? .review-context/forged.txt" : ".review-context/tracked.txt";
+    const file = path.join(f.directory, relativePath);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, "first\n");
+    if (mutation === "tracked owned path") {
+      execFileSync("git", ["add", relativePath], { cwd: f.directory });
+      execFileSync("git", ["commit", "-qm", "tracked owned fixture"], { cwd: f.directory });
+      fs.writeFileSync(file, "changed\n");
+    } else if (mutation === "staged owned path") {
+      execFileSync("git", ["add", relativePath], { cwd: f.directory });
+    }
+    const result = f.install();
+    assert.notEqual(result.status, 0, mutation);
+    assert.match(result.stdout, /Review-context setup left the working tree dirty before model execution/);
+  });
 }
 
 test("review metadata actual context carries rendered data and copies exact verified bytes", async (t) => {
