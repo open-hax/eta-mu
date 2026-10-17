@@ -1131,3 +1131,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#0e7bae55-3403-47f4-95aa-1a0564b493e6
   note: Use the actual reviewed combined source and full history suffixes; offline frozen metadata validation supplies no installed-runtime or testGREEN. Preserve separate manager correction scope and normalinstallation admission, canonicalHOME/config and all oldleases. No spore.
+- ts: 2026-10-17T01:31:58.887010640Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-combined-actionability-and-node-diagnostics-v1
+  task: Private ordinary ETA23 actionability plus reviewed Node diagnostic integration
+  p-efficiency: 0.88
+  p-friction: 0.24
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: 373e1003d90bd2ec15764fdb96d17d975d3dcffa,sha256:566cf47d7c9b47d39ab8cb444a1621284a17cee72d1663944b899edf7736c33e
+  note: Compose existing reviewed lineages instead of reimplementing their warning fixes. Preserve the exact common ledger prefix and both complete ordered raw tails; verify every nonconflicting postimage against the ordinary Git merge preview. A source-identical composition still requires isolated runtime gates and fresh exact-head review. Existing544B lint fix is already present; no double application, no cross-head approval credit, no fixed MiMo model slug, no shared workspace build writes. QA not yet run. Portable candidate0/no spore or promotion.
