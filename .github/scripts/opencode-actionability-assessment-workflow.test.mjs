@@ -909,6 +909,11 @@ test("all host jobs require the committed lock and propagate npm ci failure with
       const evidence = path.join(owned, "evidence");
       const profile = path.join(owned, "profile");
       for (const file of [source, temp, evidence, profile]) fs.mkdirSync(file, { recursive: true });
+      const privateHostLeaves = [path.join(temp, "actionability-host-home"), evidence, profile];
+      if (jobName === "prepare") for (const folder of privateHostLeaves) {
+        fs.mkdirSync(folder, {recursive: true});
+        fs.chmodSync(folder, 0o755);
+      }
       fs.writeFileSync(path.join(source, "package.json"), packageBytes);
       if (variant !== "missing-lock") fs.writeFileSync(path.join(source, "package-lock.json"), lockBytes);
       const calls = path.join(owned, "npm-calls.txt");
@@ -929,6 +934,8 @@ test("all host jobs require the committed lock and propagate npm ci failure with
       if (variant === "intact") {
         assert.equal(child.status, 0, child.stderr);
         assert.equal(fs.readFileSync(continued, "utf8"), "runtime-ready\n");
+        if (jobName === "prepare") for (const folder of privateHostLeaves)
+          assert.equal(fs.statSync(folder).mode & 0o777, 0o700, "actual host-runtime step keeps each owned leaf private");
         assert.equal(fs.readlinkSync(path.join(eta, "node_modules")), path.join(owned, runtime, "node_modules"));
       } else {
         assert.notEqual(child.status, 0, `${jobName} refuses ${variant}`);
