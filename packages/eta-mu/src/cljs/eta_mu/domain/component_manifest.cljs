@@ -4,7 +4,9 @@
             [eta-mu.receipt-river.law.receipt :as receipt-river]
             [eta-mu.session-mycology.law.reflection :as session-mycology]))
 
-(def eta-mu-version "1.1.1")
+(def eta-mu-version
+  "Must equal packages/eta-mu/package.json version; component-manifest-test enforces it."
+  "2.0.1")
 
 (def manifest
   {:eta-mu/version eta-mu-version

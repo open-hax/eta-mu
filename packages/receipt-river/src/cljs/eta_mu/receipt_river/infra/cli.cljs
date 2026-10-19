@@ -43,7 +43,9 @@
     (if (zero? exit) stdout (runtime/current-directory))))
 
 (defn- receipt-file [repo-root]
-  (fs/join repo-root "receipts.edn"))
+  (fs/join repo-root
+           (receipt/receipt-relative-path
+            (fs/path-exists? (fs/join repo-root receipt/eta-mu-receipt-path)))))
 
 (defn- read-lines [file]
   (if-not (fs/path-exists? file)

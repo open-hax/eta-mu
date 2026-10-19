@@ -1,6 +1,6 @@
 {
   "name": "@eta-mu/receipt-river",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Receipt River records, validation, local archaeology, and projections",
   "type": "module",
   "private": false,

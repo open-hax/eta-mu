@@ -7,7 +7,7 @@
 (def receipt-recorded-version 1)
 
 (def package-name "@eta-mu/receipt-river")
-(def package-version "0.1.0")
+(def package-version "0.1.1")
 
 (def known-kinds
   #{:push-truth :artifact-hash :test-run :build :decision :drift :catalog

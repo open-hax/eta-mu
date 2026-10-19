@@ -32,6 +32,11 @@
    :manifest "none"
    :refs "none"})
 
+(deftest receipt-relative-path-test
+  (is (= ".ημ/receipts.edn" (receipt/receipt-relative-path true)))
+  (is (= "receipts.edn" (receipt/receipt-relative-path false)))
+  (is (= "receipts.edn" (receipt/receipt-relative-path nil))))
+
 (deftest version-stamped-event-test
   (testing "the package, application composition, and schema versions are distinct"
     (let [payload (receipt/build-payload {:kind "test-run" :note "green"}
@@ -42,7 +47,7 @@
       (is (= "1.1.1" (get-in record [:event/producer :eta-mu/version])))
       (is (= "@eta-mu/receipt-river"
              (get-in record [:event/producer :package/name])))
-      (is (= "0.1.0" (get-in record [:event/producer :package/version])))
+      (is (= "0.1.1" (get-in record [:event/producer :package/version])))
       (is (= {:id :eta-mu.receipt-river/receipt-recorded :version 1}
              (:event/schema record)))
       (is (= "green" (get-in record [:event/payload :note])))
@@ -121,7 +126,7 @@
         92))))
 
 (deftest law-owned-registry-test
-  (is (= "0.1.0" law/package-version))
+  (is (= "0.1.1" law/package-version))
   (is (= 1 (get law/current-versions
                 :eta-mu.receipt-river/receipt-recorded)))
   (is (= :current

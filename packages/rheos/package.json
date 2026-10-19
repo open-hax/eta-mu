@@ -1,6 +1,6 @@
 {
   "name": "@eta-mu/rheos",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Agent-first kanban board: CLI, server, MCP tools, and web UI",
   "type": "module",
   "license": "GPL-3.0-or-later",
