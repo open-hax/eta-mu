@@ -32,6 +32,11 @@
    :manifest "none"
    :refs "none"})
 
+(deftest schema-introduction-version-is-historical-test
+  (is (= "0.1.0" (get-in law/receipt-recorded-document
+                         [:schema/introduced-by :package/version]))
+      "bumping the package must not rewrite when schema v1 was introduced"))
+
 (deftest receipt-relative-path-test
   (is (= ".ημ/receipts.edn" (receipt/receipt-relative-path true)))
   (is (= "receipts.edn" (receipt/receipt-relative-path false)))
