@@ -4,6 +4,9 @@
   (:require [cljs.test :as test :refer [deftest is async]]
             [nbb.core :as nbb]
             [eta-mu.law.review-archive :as law]
+            [eta-mu.shape.review-archive :as zip]
+            [cljs.reader :as reader]
+            ["node:child_process" :as cp]
             ["node:fs" :as fs] ["node:path" :as path] ["node:os" :as os]
             ["node:crypto" :as crypto] ["node:zlib" :as zlib]))
 
@@ -103,6 +106,147 @@
   (let [r (request "inert.zip" (.from js/Buffer "inert"))]
     (is (law/request? r))
     (doseq [key law/bound-keys] (is (not (law/request? (update r :bounds dissoc key)))))))
+
+(defn copied [bytes f]
+  (let [copy (.from js/Buffer bytes)] (f copy) copy))
+(defn central-offset [bytes] (.readUInt32LE bytes (- (.-length bytes) 6)))
+(defn ^:async structural-controls [done]
+  (try
+    (let [valid (fixture-zip [{:name "submission.json" :text "Inert payload."}])
+          cd (central-offset valid)
+          payload (+ 30 (.-length (.from js/Buffer "submission.json")))
+          descriptor (- cd 16)
+          controls [(copied valid #(.writeUInt32LE % 0 (+ cd 16)))
+                    (copied valid #(.writeUInt32LE % 0 (+ descriptor 4)))
+                    (copied valid #(.writeUInt32LE % 1 (+ descriptor 8)))
+                    (copied valid #(.writeUInt32LE % 1 (+ descriptor 12)))
+                    (copied valid #(.writeUInt16LE % 0 6))
+                    (copied valid #(.writeUInt16LE % 0 8))
+                    (copied valid #(.writeUInt8 % 120 30))
+                    (copied valid #(.writeUInt8 % 0 payload))
+                    (copied valid #(.writeUInt32LE % 1 (+ cd 42)))
+                    (copied valid #(.writeUInt16LE % 1 (- (.-length %) 18)))
+                    (join-bytes valid (.from js/Buffer "trailing"))
+                    (join-bytes valid valid)]]
+      (doseq [bad controls]
+        (await (with-file bad ^:async (fn [r] (is (= :refused (:status (await (admit r))))))))))
+    (catch :default e (is false (str e)))
+    (finally (done))))
+(deftest crc-descriptor-local-central-and-trailer-controls (async done (structural-controls done)))
+
+(defn ^:async deadline-and-cleanup-controls [done]
+  (try
+    (await (with-file (fixture-zip [{:name "submission.json" :text (apply str (repeat 10000 "a"))}])
+             ^:async (fn [r]
+               ;; A single let is deliberate: pinned SCI does not sequence
+               ;; separate native-async function body forms across awaits.
+               (let [decode-result (await (admit (assoc-in r [:bounds :decode-ms] 1)))
+                     operation-result (await (admit (assoc-in r [:bounds :operation-ms] 1)))
+                     resource-fn (resolve 'eta-mu.extern.review-archive/resources)]
+                 (is (= :refused (:status decode-result)))
+                 (is (= :refused (:status operation-result)))
+                 (is (= {:handles 0 :workers 0} (resource-fn)))))))
+    (catch :default e (is false (str e)))
+    (finally (done))))
+(deftest finite-deadline-terminates-and-releases-resources (async done (deadline-and-cleanup-controls done)))
+
+(defn ^:async actual-file-controls [done]
+  (try
+    (await (with-file (fixture-zip [{:name "submission.json"}])
+             ^:async (fn [r]
+               (let [link (str (:path r) ".link")]
+                 (.symlinkSync fs (:path r) link)
+                 (try (is (= :refused (:status (await (admit (assoc r :path link))))))
+                      (finally (.unlinkSync fs link)))))))
+    (catch :default e (is false (str e)))
+    (finally (done))))
+(deftest supplied-file-symlink-refuses (async done (actual-file-controls done)))
+
+(defn portable-result [operation args]
+  (try {:value (apply (case operation :uint zip/uint :local zip/local-record
+                            :central zip/central-records :end zip/end-record :descriptor zip/descriptor) args)}
+       (catch :default e {:code (:code (ex-data e))})))
+(deftest actual-babashka-and-nbb-shape-boundaries-match
+  (let [archive (fixture-zip [{:name "submission.json" :method 0}])
+        cd (central-offset archive) local-size (+ 30 (.-length (.from js/Buffer "submission.json")))
+        rows [[:local [(vec (.subarray archive 0 local-size))]]
+              [:central [(vec (.subarray archive cd (- (.-length archive) 22))) 16]]
+              [:end [(vec (.subarray archive (- (.-length archive) 22))) (.-length archive)]]
+              [:local [[1 2 3]]]
+              [:uint [[255 255 255 255 255 255 31 0] 0 8]]
+              [:uint [[0 0 0 0 0 0 32 0] 0 8]]
+              [:uint [(vec (repeat 8 255)) 0 8]]
+              [:uint [[0 0 0 0 0 0 0 128] 0 8]]
+              [:descriptor [[1 2 3]]]]
+        expected (mapv (fn [[operation args]] (portable-result operation args)) rows)
+        script (str "(require '[clojure.edn :as edn] '[eta-mu.shape.review-archive :as zip])"
+                    "(prn (mapv (fn [[operation args]] (try {:value (apply (case operation :uint zip/uint :local zip/local-record "
+                    ":central zip/central-records :end zip/end-record :descriptor zip/descriptor) args)} "
+                    "(catch Exception e {:code (:code (ex-data e))}))) (edn/read-string (slurp *in*))))")
+        result (cp/spawnSync "bb" #js ["-cp" "packages/eta-mu/src/cljs" "-e" script]
+                             #js {:encoding "utf8" :input (pr-str rows) :timeout 30000})]
+    (is (= {:value 9007199254740991} (nth expected 4)))
+    (doseq [index [5 6 7]] (is (= {:code :zip-integer-range} (nth expected index))))
+    (is (= 0 (.-status result)) (str (.-stdout result) (.-stderr result)))
+    (is (= "" (.-stderr result)))
+    (when (= 0 (.-status result))
+      (is (= expected (reader/read-string (.-stdout result))) "Complete malformed/boundary data parity"))))
+
+(defn ^:async complete-operation-budget-control [done]
+  (try
+    (let [entries (mapv (fn [i] {:name (str "f" i ".txt") :method 0 :text ""}) (range 2000))]
+      (await
+       (with-file (fixture-zip entries)
+         ^:async (fn [r]
+           (let [request (-> r (assoc :required-members ["f0.txt"] :text-members [])
+                             (assoc-in [:bounds :members] 3000)
+                             (assoc-in [:bounds :operation-ms] 10))
+                 started (.now js/performance)
+                 result (await (admit request))
+                 elapsed (- (.now js/performance) started)
+                 resources ((resolve 'eta-mu.extern.review-archive/resources))]
+             (is (= :refused (:status result)))
+             (is (= :archive-operation-time (:code result)))
+             (is (< elapsed 750) (str "Cancellation must bound parsing, not only detect it later: " elapsed "ms"))
+             (is (= {:handles 0 :workers 0} resources)))))))
+    (catch :default e (is false (str e)))
+    (finally (done))))
+(deftest operation-budget-covers-many-member-metadata-work
+  (async done (complete-operation-budget-control done)))
+
+(defn ^:async declared-output-budget-controls [done]
+  (try
+    (let [valid (fixture-zip [{:name "submission.json" :text (apply str (repeat 65536 "a"))}])
+          cd (central-offset valid)
+          descriptor (- cd 16)
+          lie (copied valid (fn [b] (.writeUInt32LE b 1 (+ cd 24))
+                             (.writeUInt32LE b 1 (+ descriptor 12))))]
+      (await
+       (with-file lie
+         ^:async (fn [r]
+           (let [result (await (admit (-> r (assoc-in [:bounds :member-bytes] 100000)
+                                          (assoc-in [:bounds :uncompressed-bytes] 1024))))]
+             (is (= :refused (:status result)))
+             (is (= :archive-decode (:code result)) "Output must hit the declared-size decoder cap before post-decode validation")))))
+      (doseq [method [0 8]]
+        (await
+         (with-file (fixture-zip [{:name "submission.json" :text "" :method method}])
+           ^:async (fn [r]
+             (let [result (await (admit r))]
+               (is (= :verified (:status result)))
+               (is (= 0 (get-in result [:members "submission.json" :size])))
+               (is (= "" (get-in result [:members "submission.json" :text])))))))))
+    (catch :default e (is false (str e)))
+    (finally (done))))
+(deftest actual-decode-respects-declared-total-budget-and-empty-members
+  (async done (declared-output-budget-controls done)))
+
+;; Even a future authored async-scoping error must not turn a late failed
+;; assertion into a zero exit after cljs.test has already printed its summary.
+(def original-failure-report (get-method test/report [::test/default :fail]))
+(defmethod test/report [::test/default :fail] [result]
+  (set! (.-exitCode js/process) 1)
+  (original-failure-report result))
 
 (defmethod test/report [::test/default :end-run-tests] [result]
   (when-not (test/successful? result) (set! (.-exitCode js/process) 1)))
