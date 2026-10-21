@@ -1234,3 +1234,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none; root coordinator incubates at most one cross-repository record
   receipt-refs: candidate append SHA256 3cd1a001730d7f608a259359b7e0083a3d73bd19506e9614b339a15d837d9c34
   note: I used a generic flat template and Python offset timestamp without checking this child package law. The actual API requires repository identity and UTC-Z instants. Construct and validate prospective records through its existing builder before append; keep original invalid records visible rather than retroactively changing, versioning or approving them. Native bundle passes do not prove ledger admission: the registered suite omits this file validation. Eleven new existing-type adjudications identify source/hash defects; all historical invalid rows remain invalid. Preserve original diagnostics and the unnecessary whole-manifest import failure. No validator widening, invented supersession or same-session skill promotion.
+
+- ts: 2026-10-21T05:29:06.639845Z
+  session: feat/trusted-review-publication-20261021
+  task: Execute the portable trusted publication core and verify existing interfaces
+  p-efficiency: 0.76
+  p-friction: 0.65
+  p-skill-candidate: 0.59
+  spore: none
+  receipt-refs: 626a32dec33b388cc148ac5f9daaa7e7e3776d34478c1174ee0d3bad9c8a3701
+  note: Use actual pinned publisher envelopes and native payload projection, distinguish collector source from producer pins, and test shared-M status history as well as private intent identity. Passing synthetic shaped facts cannot authenticate provenance or supply unfinished effect adapters. Preserve causal review failures and actual source snapshots, explicit short observation budgets, unknown outcomes, warning diagnostics and local-versus-hosted limits. Existing source-schema, source-custody and terminal-truth learning covers the pattern; no duplicate spore or same-session promotion.
