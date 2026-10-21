@@ -34,14 +34,14 @@
                    :sha256 (digest "a") :completed-at-ms now
                    :bounds {:download-bytes 1000 :members 10 :member-bytes 1000
                             :uncompressed-bytes 10000 :operation-ms 1000 :decode-ms 1000}}})
+(def submission {:event "APPROVE" :body "Inert verified review." :comments
+                 [{:path "src/inert.cljc" :line 3 :side "RIGHT" :body "Inert inline."}]})
 (def verification
   {:origin :trusted-independent-verifier :result :verified :sources sources :tuple tuple
    :artifact-id 71 :artifact-sha256 (digest "a") :run-id 61 :attempt 2
    :full-input (digest "b") :input-verification (digest "c") :trace (digest "d")
    :submission (digest "e") :invocation (digest "f") :discovery (digest "0") :context (digest "1")
-   :page-count 36 :verified-page-count 36 :completed-at-ms now})
-(def submission {:event "APPROVE" :body "Inert verified review." :comments
-                 [{:path "src/inert.cljc" :line 3 :side "RIGHT" :body "Inert inline."}]})
+   :submission-envelope submission :page-count 36 :verified-page-count 36 :completed-at-ms now})
 (defn fixture []
   {:now-ms now :target-id 41 :registry {:source-sha (sha "b") :targets [entry]}
    :collector {:event :schedule :mode :ordinary :source-sha (sha "b")
@@ -53,7 +53,8 @@
                     :workflow-source-sha (sha "a") :base-sha (:base-sha tuple) :head-sha (:head-sha tuple)
                     :event-sha (:event-sha tuple) :status :completed :conclusion :success
                     :jobs [{:id 81 :name "producer" :status :completed :conclusion :success}] :commands commands}
-              :artifact artifact :verification verification :submission submission}})
+              :artifact artifact :verification (assoc verification :submission-envelope submission)
+              :submission submission}})
 
 ;; Until a domain namespace exists, every behavior test sees the explicit
 ;; missing implementation. Once present, load errors propagate; no fallback or
@@ -171,6 +172,11 @@
            [:pages #(assoc-in % [:snapshot :verification :verified-page-count] 35)]
            [:verifier #(assoc-in % [:snapshot :verification :sources :verifier] (digest "f"))]
            [:trace #(update-in % [:snapshot :verification] dissoc :trace)]
+           [:submission-binding #(assoc-in % [:snapshot :submission :body] "Unverified replacement.")]
+           [:omitted-verified-envelope #(update-in % [:snapshot :verification] dissoc :submission-envelope)]
+           [:verification-origin #(assoc-in % [:snapshot :verification :origin] :candidate)]
+           [:archive-origin #(assoc-in % [:snapshot :artifact :archive-proof :origin] :candidate)]
+           [:snapshot-clock #(assoc-in % [:snapshot :observed-at-ms] (inc now))]
            [:future-proof #(assoc-in % [:snapshot :verification :completed-at-ms] (inc now))]
            [:clock #(assoc % :now-ms -1)]]]
     (testing (name label)

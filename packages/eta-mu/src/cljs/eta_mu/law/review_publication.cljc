@@ -90,6 +90,12 @@
   (and (positive? (:id x)) (positive? (:run-id x)) (positive? (:attempt x))
        (positive? (:size-bytes x)) (digest? (:sha256 x))
        (natural? (:expires-at-ms x)) (archive-proof? (:archive-proof x))))
+(defn comment? [x]
+  (and (map? x) (text? (:path x)) (positive? (:line x))
+       (contains? #{"LEFT" "RIGHT"} (:side x)) (text? (:body x))))
+(defn submission? [x]
+  (and (contains? #{"APPROVE" "COMMENT" "REQUEST_CHANGES"} (:event x))
+       (text? (:body x)) (vector? (:comments x)) (every? comment? (:comments x))))
 (defn verification? [x]
   (and (= :trusted-independent-verifier (:origin x)) (= :verified (:result x))
        (sources? (:sources x)) (tuple? (:tuple x))
@@ -97,14 +103,9 @@
        (positive? (:run-id x)) (positive? (:attempt x))
        (every? #(digest? (get x %))
                [:full-input :input-verification :trace :submission :invocation :discovery :context])
+       (submission? (:submission-envelope x))
        (positive? (:page-count x)) (= (:page-count x) (:verified-page-count x))
        (natural? (:completed-at-ms x))))
-(defn comment? [x]
-  (and (map? x) (text? (:path x)) (positive? (:line x))
-       (contains? #{"LEFT" "RIGHT"} (:side x)) (text? (:body x))))
-(defn submission? [x]
-  (and (contains? #{"APPROVE" "COMMENT" "REQUEST_CHANGES"} (:event x))
-       (text? (:body x)) (vector? (:comments x)) (every? comment? (:comments x))))
 (defn claim? [x]
   (and (= :trusted-durable-store (:origin x)) (= :won (:outcome x))
        (= :claim-review-post (:operation x))
