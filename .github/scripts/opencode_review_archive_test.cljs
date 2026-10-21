@@ -241,6 +241,36 @@
 (deftest actual-decode-respects-declared-total-budget-and-empty-members
   (async done (declared-output-budget-controls done)))
 
+(defn ^:async publication-clock-control [done]
+  (try
+    (await
+     (with-file (fixture-zip [{:name "submission.json" :text "{}"}])
+       ^:async (fn [r]
+         (let [base ((resolve 'opencode-review-publish-test/fixture))
+               now (.now js/Date)
+               artifact (merge (get-in base [:snapshot :artifact]) (:artifact r)
+                               {:id 71 :run-id 61 :attempt 2})
+               context (-> base (assoc :now-ms now)
+                           (assoc-in [:snapshot :observed-at-ms] now)
+                           (assoc-in [:snapshot :verification :completed-at-ms] now)
+                           (assoc-in [:snapshot :verification :artifact-sha256] (:sha256 artifact))
+                           (assoc-in [:snapshot :artifact] artifact))
+               compose (resolve 'eta-mu.infra.review-archive/admit-context!)
+               admitted (await (compose context (assoc r :artifact artifact)))
+               stale (await (compose (assoc-in context [:snapshot :verification :completed-at-ms]
+                                                (- now 400000)) (assoc r :artifact artifact)))
+               mismatch (await (compose context r))]
+           (is (= :admitted (:status admitted)) (pr-str admitted))
+           (is (= [] (:effects admitted)))
+           (is (= :refused (:status stale)))
+           (is (= :archive-context-binding (:code mismatch)))))))
+    (catch :default e (is false (str e)))
+    (finally (done))))
+(deftest archive-composition-uses-fresh-host-time-without-refreshing-other-facts
+  (async done (publication-clock-control done)))
+
+(nbb/await (nbb/load-file ".github/scripts/opencode_review_publish_test.cljs"))
+
 ;; Even a future authored async-scoping error must not turn a late failed
 ;; assertion into a zero exit after cljs.test has already printed its summary.
 (def original-failure-report (get-method test/report [::test/default :fail]))

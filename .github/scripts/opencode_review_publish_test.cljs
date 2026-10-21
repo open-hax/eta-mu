@@ -498,4 +498,5 @@
   (when-not (test/successful? result) (set! (.-exitCode js/process) 1)))
 (when (.existsSync fs "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc")
   (nbb/await (nbb/load-file "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc")))
-(test/run-tests 'opencode-review-publish-test)
+(when (= nbb/*file* (nbb/invoked-file))
+  (test/run-tests 'opencode-review-publish-test))
