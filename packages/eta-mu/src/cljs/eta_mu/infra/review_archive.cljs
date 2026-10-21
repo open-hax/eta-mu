@@ -96,5 +96,7 @@
     {:status :refused :code :archive-context-binding}
     (let [result (await (admit! request))]
       (if (= :verified (:status result))
-        (publication/admit (assoc-in context [:snapshot :artifact] (:artifact result)))
+        (publication/admit (-> context
+                               (assoc :now-ms (host/wall-ms))
+                               (assoc-in [:snapshot :artifact] (:artifact result))))
         result))))
