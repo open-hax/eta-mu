@@ -1224,3 +1224,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 25c60a65196d4e39baa07f608abbcea9309974087e188d8ea9a9012e244c3157
   note: Freeze actual parsed carrier and package trees before edits, then compare complete preserved steps rather than guessed labels. Source custody and generated-workflow spores already cover this pattern. Keep synthetic hook controls distinct from hosted execution; derive no-auth child configuration explicitly without reading or editing host credentials. Checksum lint repair needs actual byte/digest/tamper proof, not suppression. Custom audit permission/key/step/block assumptions and agent trigger audit failure were corrected against actual source with original failures retained. Existing warning and review holds remain, no same-session promotion.
+
+- ts: 2026-10-21T04:33:44.286943Z
+  session: feat/anonymous-review-producer-20261021
+  task: Diagnose invalid receipt suffix and append schema-valid source adjudications
+  p-efficiency: 0.69
+  p-friction: 0.76
+  p-skill-candidate: 0.82
+  spore: none; root coordinator incubates at most one cross-repository record
+  receipt-refs: candidate append SHA256 3cd1a001730d7f608a259359b7e0083a3d73bd19506e9614b339a15d837d9c34
+  note: I used a generic flat template and Python offset timestamp without checking this child package law. The actual API requires repository identity and UTC-Z instants. Construct and validate prospective records through its existing builder before append; keep original invalid records visible rather than retroactively changing, versioning or approving them. Native bundle passes do not prove ledger admission: the registered suite omits this file validation. Eleven new existing-type adjudications identify source/hash defects; all historical invalid rows remain invalid. Preserve original diagnostics and the unnecessary whole-manifest import failure. No validator widening, invented supersession or same-session skill promotion.

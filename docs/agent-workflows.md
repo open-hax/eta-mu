@@ -258,6 +258,18 @@ qualification. Callers still requiring **OpenCode evidence review gate** must
 retain their merge hold until the separate trusted publisher and hosted proof
 are accepted; a renamed producer success cannot satisfy that requirement.
 
+Workflow execution receipts use the existing Receipt River package API,
+`eta-mu.receipt-river.api/build-event`, and its package-owned payload builder.
+Validate each prospective line with `validate-line` before appending. The local
+law requires repository identity (`:repo`) and UTC timestamps ending in `Z`;
+the generic flat template alone does not satisfy this repository's law. New
+records use the existing versioned `:receipt-river/receipt-recorded` envelope.
+Preserve historical bytes. Current-time `:adjudication` records may identify
+an old invalid line and its source/hash, but establish no automatic supersession,
+retroactive validity or approval of its execution claims. Keep whole-history
+validation failures visible and distinguish them from a valid newly appended
+suffix. Never weaken the validator to make old evidence pass.
+
 Every reusable caller must pass `pr_head_sha` as the immutable
 `${{ github.event.pull_request.head.sha }}` value. Both workflow checkouts,
 deterministic command environment, evidence summary, and review bind to that

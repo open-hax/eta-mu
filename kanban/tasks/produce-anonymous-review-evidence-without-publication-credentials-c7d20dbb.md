@@ -4,7 +4,7 @@ labels: "workflow, review, anonymous, security, has-parent"
 dependency: []
 parent: "290f0cdf-9160-453e-a69c-67211432baa7"
 type: "task"
-write-id: "1792552071965-0.q0hw4cvurtl3plhqqi"
+write-id: "1792557026277-0.4un3w2ekpswqgbkh2h8"
 points: "2"
 title: "Produce anonymous review evidence without publication credentials"
 priority: "P1"
@@ -132,5 +132,7 @@ Readable additive correction to the earlier execution notes: accepted main is 71
 Review correction execution: metadata RED dcee272c8a8dff406ec2cf9817bcfc35a60ec2df is followed by pure projector GREEN d8023409; export RED 11249932 precedes the explicit writer repair. Rheos tests now pass 212 tests / 1219 assertions with 0 failures or errors; all four package release targets and both kondo owners report 0 compiler/lint warnings. Provider-neutral eta-mu assertions pass 194 / 587 plus workflow 6 / 78; the original host-sensitive provider fixture failure and intentional process-escalation console warning remain retained, so the whole carrier is not zero-emitted-warning qualified. No runtime warning was suppressed. Current CLI bridge was rebuilt and forwards export help. The existing producer returns only to testing; review/done, native current-head gates, trusted publisher and hosted enforcement remain unqualified. Historical event prefixes and future fold/portability owners remain intact.
 
 Audit correction: the immediately preceding comment incorrectly expanded metadata RED dcee272c into a nonexistent 40-character string. The authoritative Git-resolved metadata RED is dcee272c21474968467fe0a09c2bf9fc0479adf4; pure metadata GREEN is d80234094062fb02780b5c406160d1b1250167ad; export RED is 11249932650e3be158a31b370ffe66acb1cac93f. The prior incorrect expansion is withdrawn as source identity. All three references above were read from actual Git objects before this append. Original comment/event bytes remain preserved; test results and implementation source are unaffected. Final source/capture manifests use the Git-resolved identities.
+
+Native review comment 4332916535 is valid and its scope is broader than the cited lines: all eleven owned flat receipts at published source 1635d310a36c25b42646f14d4810359306fc76d9 lines 326–336 lack :repo and use non-Z offset timestamps rejected by the local Receipt River law. Actual package API reproduces accepted baseline 60 invalid rows, reviewed plan 58, and published source 71. Preserve every historical byte. Eleven new current-time receipt-recorded/adjudication envelopes, built and validated through the existing package API, now bind each original source line, raw-LF SHA256, timestamp and independent artifact references with :repo open-hax/eta-mu and valid UTC-Z instants. They attest the format diagnosis and source identity; no old execution claim is rerun or automatically approved. All eleven new events validate with zero errors; all 71 original invalid rows and 118 original errors remain visible. No supersession protocol or whole-ledger pass is invented. The documentation now requires actual package construction/validation before future appends. This is a partial provenance correction with original history retained; current review disposition remains open. Producer stays testing; publisher and hosted proof retain separate scopes.
 
 ---
