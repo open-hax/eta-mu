@@ -48,3 +48,34 @@
                            :fallback-created-at "fallback-time"
                            :source-path "/tmp/timestamps.md"})]
     (is (= "hyphenated" (:created-at task)))))
+
+(deftest projects-present-planning-metadata-without-coercion
+  (doseq [metadata [{:points "2" :parent "epic-a" :dependency []}
+                    {:points 0 :parent "" :dependency ["dep-b" "dep-a"]}
+                    {:points 5 :parent nil :dependency "historical-scalar"}
+                    {:points "" :parent nil :dependency nil}]]
+    (let [task (kanban/task
+                {:document/frontmatter-data (assoc metadata
+                                                   :custom-field "document-only"
+                                                   :source-path "/historical/other-checkout.md")
+                 :document/body "Body"}
+                {:fallback-title "Planning"
+                 :fallback-created-at "fixed-time"
+                 :source-path "/current/actual-card.md"})]
+      (is (= metadata (select-keys task [:points :parent :dependency])))
+      (doseq [key (keys metadata)]
+        (is (contains? task key) (str "present metadata must remain present: " key)))
+      (is (= "/current/actual-card.md" (:source-path task)))
+      (is (not (contains? task :custom-field))))))
+
+(deftest missing-planning-metadata-stays-absent
+  (doseq [metadata [{} {:points ""} {:dependency []} {:parent nil}]]
+    (let [task (kanban/task {:document/frontmatter-data metadata
+                             :document/body "Body"}
+                            {:fallback-title "Sparse"
+                             :fallback-created-at "fixed-time"
+                             :source-path "/current/sparse.md"})]
+      (is (= metadata (select-keys task [:points :parent :dependency])))
+      (doseq [key [:points :parent :dependency]]
+        (is (= (contains? metadata key) (contains? task key))
+            (str "absence and explicit empty values differ: " key))))))

@@ -62,6 +62,58 @@
         (projects/set-projects! saved-projects)
         (await (.rm fsp root #js {:recursive true :force true}))))))
 
+(deftest ^:async canonical-planning-metadata-matches-read-task-and-serialized-board
+  (let [root (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-planning-projection-")))
+        producer "cf32641a-b336-407e-b68b-c75ec7d20dbb"
+        publisher "ed4e2a2a-6055-4d53-9cea-f3971c707551"
+        parent "290f0cdf-9160-453e-a69c-67211432baa7"
+        cards [[producer
+                (str "points: \"2\"\nparent: \"" parent "\"\ndependency: []\n")
+                {:points "2" :parent parent :dependency []}]
+               [publisher
+                (str "points: \"5\"\nparent: \"" parent "\"\ndependency: [\"" producer "\"]\n")
+                {:points "5" :parent parent :dependency [producer]}]
+               ["missing-planning" "" {}]
+               ["empty-planning" "points: \"\"\nparent: \"\"\ndependency: []\n"
+                {:points "" :parent "" :dependency []}]
+               ["zero-points" "points: 0\ndependency: []\n"
+                {:points "0" :dependency []}]]
+        saved-projects {:projects (projects/all)
+                        :default-project-id (projects/default-id)}]
+    (try
+      (doseq [[uuid planning] cards]
+        (await (.writeFile fsp (path/join root (str uuid ".md"))
+                           (str "---\nuuid: \"" uuid "\"\ntitle: \"" uuid
+                                "\"\nstatus: \"incoming\"\npriority: \"P1\"\n"
+                                planning "---\n\n# " uuid "\n")
+                           "utf8")))
+      (projects/set-projects!
+       {:projects [{:id "planning" :title "Planning" :tasks-dir root :meta {}}]
+        :default-project-id "planning"})
+      (let [snapshot (board/build-board-snapshot (await (task-store/load-tasks root)))
+            serialized (js->clj (js/JSON.parse (js/JSON.stringify (clj->js snapshot)))
+                               :keywordize-keys true)
+            by-id (into {} (map (juxt :uuid identity)
+                               (mapcat :tasks (:columns serialized))))]
+        (is (= (count cards) (:total-tasks serialized)))
+        (doseq [[uuid _ expected] cards]
+          (let [read-task (await (agent-tools/dispatch
+                                 "kanban_read_task" {:uuid uuid :project "planning"}))
+                canonical (:frontmatter read-task)
+                projected (get by-id uuid)]
+            (is (some? projected))
+            (is (= expected (select-keys canonical [:points :parent :dependency])))
+            (is (= (select-keys canonical [:points :parent :dependency])
+                   (select-keys projected [:points :parent :dependency]))
+                "serialized board must retain canonical planning values without normalization")
+            (doseq [key [:points :parent :dependency]]
+              (is (= (contains? canonical key) (contains? projected key))
+                  (str "missing and explicit empty metadata must remain distinct: " uuid " " key)))
+            (is (= (path/join root (str uuid ".md")) (:source-path projected))))))
+      (finally
+        (projects/set-projects! saved-projects)
+        (await (.rm fsp root #js {:recursive true :force true}))))))
+
 (deftest ^:async configured-projection-paths-ignore-neighboring-prose
   (let [root (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-projection-")))
         cards-dir (path/join root "tasks")
