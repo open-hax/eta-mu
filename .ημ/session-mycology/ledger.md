@@ -1194,3 +1194,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn#bc2e29b9-911f-4812-b4ff-e20556964650,.ημ/session-reflections.edn#dfa4281c-c492-4798-a4d7-8e3989f6e5c9
   note: Keep pure admission decisions, effectful composition and raw host operations in their proper owners. Default deployment of a new privileged reconciler must be inert; actual hosted proof uses separately admitted fixture-only bootstrap before ordinary rollout. Status refresh revalidates native evidence and writes only status, preserving single-review-POST uncertainty. Source ddba638a planning corrections only, producer2 unchanged and central5/hosted3 metadata/history preserved. No implementation, native agedPR expiry, setup/grants/publication/readiness/model/runtime credit.
+
+- ts: 2026-10-21T02:26:26.734746+00:00
+  session: feat/anonymous-review-producer-20261021
+  task: Separate anonymous producer from signing/publication custody on accepted verifier source
+  p-efficiency: 0.84
+  p-friction: 0.48
+  p-skill-candidate: 0.55
+  spore: none
+  receipt-refs: 35aeefad32ae25572df6b4b4af17df32e0cfeee97cac6264977d73e36d243e0c
+  note: Preserve both source histories and exact ledger suffixes, record real card readiness, then reproduce coupling through actual extracted steps. Synthetic transport-only evidence must remain distinct from canonical production-law and hosted qualification. Mutate temporary fixtures to prove no-write/no-leak assertions can fail. Existing source custody and terminal-truth spores cover this pattern; no new spore or promotion.

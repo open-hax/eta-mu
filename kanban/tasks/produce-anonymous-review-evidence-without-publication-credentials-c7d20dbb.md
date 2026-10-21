@@ -4,11 +4,11 @@ labels: "workflow, review, anonymous, security, has-parent"
 dependency: []
 parent: "290f0cdf-9160-453e-a69c-67211432baa7"
 type: "task"
-write-id: "1792548704379-0.krdrqn8b8nuqi5frs7"
+write-id: "1792549543070-0.t2j33my4icktyamf3pa"
 points: "2"
 title: "Produce anonymous review evidence without publication credentials"
 priority: "P1"
-status: "in_progress"
+status: "testing"
 uuid: "cf32641a-b336-407e-b68b-c75ec7d20dbb"
 created_at: "2026-10-15T15:11:59.035Z"
 ---
@@ -120,5 +120,7 @@ in-progress five-point owner; this new separation is not silently added to it.
 
 ---
 Execute the existing reviewed producer2 contract on accepted main7112, preserving the current verifier/recovery and reviewed PR22 card bytes. Native PR22 CodeRabbit+MiMo unanimous planning PASS is retained at e966; no warning-free historical carrier/adoption claim. Candidate composition96862eef keeps both Git parents, all69accepted commits and every exact ledger suffix once. Scoped implementation: actual extracted-step missing-App RED, then remove all candidate App/Discord/publication effects and rename producer-only summary; retain current full-input/discovery/invocation/deadline/recovery and no-secret/no-write controls. Only existing owning workflow+registered test change. Rebuilt source Rheos CLI115files56compiled0warnings. Initial isolated frozen install emits one missing unbuilt rheos-bin warning, retained as a real setup limitation, not zero-warning qualification. No future publisher, target enrollment, credentials, caller pins, Services or protected adoption. Readiness here admits only this bounded existing story, not runtime completion.
+
+Local producer GREEN after genuine actual missing-App RED and red commit83dd5247. Existing registered owner passes338/338, zero failures/skips/warnings; five tests deleted only with deleted Discord adapter, three actual custody fixtures added, ten renamings/replacements mapped. Real extracted deterministic/review/final/summary steps prove synthetic same/fork-input no-secret/no-publication custody; malicious temporary review-write and canary-output variants fail at intended fake-transport/stdout boundaries. These fixtures use the existing TRANSPORT_MOCK_ONLY verifier and inert model/catalog/validator adapters: no canonical Muse-law/provider/native review/hosted publication/protection/adoption credit. Runtime supervisor, embedded payload, recovery/invocation owner files and executable fresh/final guards preserved. Unfiltered actionlint+ShellCheck, Node syntax, diff hygiene pass. Source red/green and exact proof will be published to a separate remediation PR; existing planningPR22 remains unchanged. Keep publisher5 and hosted3 as existing dependency owners; no caller pin/enrollment/App/Services change.
 
 ---
