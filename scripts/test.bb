@@ -43,6 +43,9 @@
    {:label "review-publication"
     :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
           ".github/scripts/opencode_review_publish_test.cljs"]}
+   {:label "review-publication-archive"
+    :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
+          ".github/scripts/opencode_review_archive_test.cljs"]}
    {:label "legacy-ai-catalog"
     :cmd ["pnpm" "--dir" "packages/legacy/ai" "exec" "vitest" "run"
           "test/model-catalog-types.test.ts"]}
