@@ -416,6 +416,51 @@
                             {"run" workflow-command}])]
     (is (= 1 (:token-attempts (execute-candidate-hooks injected nil true)))))))
 
+
+(deftest actual-artifact-checksum-shell-preserves-bytes-and-refuses-tampering
+  (let [{:keys [config]} (committed-workflow "sandbox-bundle")
+        steps (workflow-steps config)]
+    (doseq [[name variable] [["Collect generated outputs and portable toolchains" "OUT"]
+                            ["Package optional dependency cache" "DEPS_OUT"]]]
+      (let [step (first (filter #(= name (get % "name")) steps))
+            source (get step "run" "")
+            start (str/last-index-of source "\n(")
+            command (when start (subs source (inc start)))
+            directory (fs/mkdtempSync (path/join (os/tmpdir) "eta-checksum-integrity-"))
+            artifact (path/join directory "artifact")
+            reference (str "(cd \"$" variable "\" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)")
+            env {"PATH" "/usr/bin:/bin" "LC_ALL" "C" "RUNNER_TEMP" directory
+                 "OUT" artifact "DEPS_OUT" artifact}
+            execute-command (fn [body]
+                              (cp/spawnSync "bash" #js ["--noprofile" "--norc" "-e" "-o" "pipefail" "-c" body]
+                                            #js {:cwd artifact :encoding "utf8" :env (clj->js env) :timeout 5000}))]
+        (try
+          (is (some? command) (str "Missing actual checksum shell: " name))
+          (fs/mkdirSync (path/join artifact "nested") #js {:recursive true})
+          (fs/writeFileSync (path/join artifact "space name.bin") (js/Uint8Array. #js [0 255 13 10 128]))
+          (fs/writeFileSync (path/join artifact "line\nbreak.txt") "line content\n")
+          (fs/writeFileSync (path/join artifact "nested/alpha.txt") "nested content\n")
+          (fs/writeFileSync (path/join artifact ".dot") "hidden content\n")
+          (doseq [file ["SHA256SUMS" "nested/SHA256SUMS"]]
+            (fs/writeFileSync (path/join artifact file) "stale manifest must be excluded\n"))
+          (when command
+            (let [actual (execute-command command)
+                  manifest (fs/readFileSync (path/join artifact "SHA256SUMS") "utf8")
+                  prior (execute-command reference)
+                  prior-manifest (fs/readFileSync (path/join artifact "SHA256SUMS") "utf8")
+                  clean (execute-command "sha256sum --check --strict SHA256SUMS")]
+              (is (= 0 (.-status actual)) (str name ": " (.-stderr actual)))
+              (is (= 0 (.-status prior)) (.-stderr prior))
+              (is (= prior-manifest manifest) (str name " changed relative paths/order/exclusion/digests"))
+              (is (= 0 (.-status clean)) (.-stderr clean))
+              (is (= ["artifact"] (js->clj (fs/readdirSync directory)))
+                  "Checksum input temporaries must be outside the artifact and removed")
+              (fs/appendFileSync (path/join artifact "space name.bin") "tampered")
+              (let [tampered (execute-command "sha256sum --check --strict SHA256SUMS")]
+                (is (= 1 (.-status tampered)) "Actual sha256sum must reject changed binary bytes")
+                (println name "checksum proof: clean" (.-status clean) "tampered" (.-status tampered)))))
+          (finally (fs/rmSync directory #js {:recursive true :force true})))))))
+
 (let [result (run-tests 'workflows-test)]
   (when (pos? (+ (:fail result) (:error result)))
     (set! (.-exitCode js/process) 1)))

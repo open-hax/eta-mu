@@ -163,7 +163,10 @@
    :gate/emitting false,
    :gate/needs-repos ["katamorph"],
    :gate/steps
-   [{:step/run "pnpm --dir packages/sol lint"}
+   [{:step/run "pnpm --dir packages/eta-mu test:workflows",
+     :gate/expect "0 failures, 0 errors",
+     :gate/no-warning true}
+    {:step/run "pnpm --dir packages/sol lint"}
     {:step/run "pnpm --dir packages/sol test",
      :gate/expect "0 failures, 0 errors",
      :gate/no-warning true}
@@ -216,10 +219,14 @@
     ".github/workflows/kanban-sync.yml"
     ".github/workflows/eta-mu-kanban-sync.yml"
     ".github/workflows/rheos-github-sync-ci.yml"
+    "packages/eta-mu/commands/workflows_test.cljs"
     "contracts/workflows/packages.edn"],
    :gate/emitting false,
    :gate/steps
-   [{:step/run "pnpm --dir packages/rheos test",
+   [{:step/run "pnpm --dir packages/eta-mu test:workflows",
+     :gate/expect "0 failures, 0 errors",
+     :gate/no-warning true}
+    {:step/run "pnpm --dir packages/rheos test",
      :gate/expect "0 failures, 0 errors"}
     {:step/run "pnpm --dir packages/rheos build"}
     {:step/run
