@@ -489,7 +489,13 @@
     (is (= "" (.-stderr result)) "Babashka diagnostics remain qualification failures")
     (when (= 0 (.-status result))
       (let [actual (reader/read-string (.-stdout result))]
-        (is (= (count expected) (count actual)))
+        (is (and (vector? actual) (= (count expected) (count actual))))
+        (is (every? #(= #{:case :result} (set (keys %))) actual)
+            "Every Babashka row has the intended result envelope")
+        (is (every? #(= #{:value} (set (keys (:result %)))) expected)
+            "NBB must produce a value, never an exception sentinel")
+        (is (every? #(= #{:value} (set (keys (:result %)))) actual)
+            "Babashka must produce a value, never an exception sentinel")
         (doseq [[expected-row actual-row] (map vector expected actual)]
           (is (= expected-row actual-row) (str "Complete NBB/Babashka data parity: " (:case expected-row)))))
       (println "Complete NBB/Babashka parity cases:" (count rows)))))

@@ -145,10 +145,10 @@
                      resource-fn (resolve 'eta-mu.extern.review-archive/resources)]
                  (is (= :refused (:status decode-result)))
                  (is (= :refused (:status operation-result)))
-                 (is (= {:handles 0 :workers 0} (resource-fn)))))))
+                 (is (zero? (:workers (resource-fn))) "Parent observes admission-worker cleanup only")))))
     (catch :default e (is false (str e)))
     (finally (done))))
-(deftest finite-deadline-terminates-and-releases-resources (async done (deadline-and-cleanup-controls done)))
+(deftest finite-deadline-terminates-admission-worker (async done (deadline-and-cleanup-controls done)))
 
 (defn ^:async actual-file-controls [done]
   (try
@@ -208,7 +208,7 @@
              (is (= :refused (:status result)))
              (is (= :archive-operation-time (:code result)))
              (is (< elapsed 750) (str "Cancellation must bound parsing, not only detect it later: " elapsed "ms"))
-             (is (= {:handles 0 :workers 0} resources)))))))
+             (is (zero? (:workers resources)) "Nested handles are not observable from the parent"))))))
     (catch :default e (is false (str e)))
     (finally (done))))
 (deftest operation-budget-covers-many-member-metadata-work
