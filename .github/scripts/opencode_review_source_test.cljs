@@ -2,6 +2,7 @@
 (ns opencode-review-source-test
   "Read-only Git object reconstruction controls; inert fixture facts confer no native authority."
   (:require [cljs.test :as test :refer [async deftest is]]
+            [clojure.string :as str]
             [nbb.core :as nbb]
             [eta-mu.law.review-source :as law]
             ["node:child_process" :as cp]
@@ -247,6 +248,72 @@
 
 (deftest empty-diff-is-a-complete-byte-observation
   (async done (empty-diff-control done)))
+
+(defn ^:async executable-resolution-control [done]
+  (let [f (fixture!)
+        previous-path (aget (.-env js/process) "PATH")
+        bin (.join path (:root f) "fake-bin")
+        marker (.join path (:root f) "fake-git-ran")
+        fake (.join path bin "git")]
+    (try
+      (.mkdirSync fs bin #js {:recursive true})
+      (write! (:root f) "fake-bin/git"
+              (str "#!/bin/sh\ntouch " marker "\nexec /usr/bin/git \"$@\"\n"))
+      (.chmodSync fs fake 493)
+      (aset (.-env js/process) "PATH" (str bin ":/usr/bin:/bin"))
+      (let [observed (await (reconstruct (request f)))]
+        (is (= :observed (:status observed)) (pr-str observed))
+        (is (false? (.existsSync fs marker))
+            "trusted Git execution must not resolve the executable through inherited PATH")
+        (is (= "/usr/bin/git" (get-in observed [:git-provenance :executable]))))
+      (catch :default e (is false (str e)))
+      (finally
+        (aset (.-env js/process) "PATH" previous-path)
+        (.rmSync fs (:root f) #js {:recursive true :force true})
+        (done)))))
+
+(deftest inherited-path-cannot-select-the-git-executable
+  (async done (executable-resolution-control done)))
+
+(defn ^:async malformed-header-control [done]
+  (let [f (fixture!) root (:root f) req (request f) tuple (:tuple f)]
+    (try
+      (let [raw (git! root ["cat-file" "commit" (:merge-sha tuple)])
+            separator (.indexOf raw "\n\n")
+            header (subs raw 0 separator)
+            rows (str/split header #"\n")
+            tree-line (first (filter #(str/starts-with? % "tree ") rows))
+            parent-line (first (filter #(str/starts-with? % "parent ") rows))
+            cases [[(conj (vec rows) "parent not-an-object-id") "malformed parent"]
+                   [(conj (vec rows) tree-line) "duplicate tree"]
+                   [(conj (vec rows) parent-line) "duplicate parent"]]]
+        (doseq [[bad-header label] cases]
+          (let [rewritten (str (str/join "\n" bad-header) (subs raw separator))
+                result (.spawnSync cp "git" #js ["-C" root "hash-object" "-t" "commit" "-w" "--stdin"]
+                                   #js {:input rewritten :encoding "utf8" :timeout 10000 :maxBuffer 1048576
+                                        :env #js {:PATH "/usr/bin:/bin" :HOME root
+                                                  :GIT_CONFIG_NOSYSTEM "1" :GIT_CONFIG_GLOBAL "/dev/null"}})
+                altered (assoc-in req [:tuple :merge-sha] (.trim (.-stdout result)))
+                observed (await (reconstruct altered))]
+            (is (= 0 (.-status result)) (str label " fixture write"))
+            (is (= :refused (:status observed)) (str label " " (pr-str observed)))
+            (is (= :source-object (:code observed)) (str label " must fail at object parsing"))))
+        (let [extended (str header "\ngpgsig -----BEGIN PGP SIGNATURE-----\n signed-body"
+                            "\nx-extra preserved-value" (subs raw separator))
+              result (.spawnSync cp "git" #js ["-C" root "hash-object" "-t" "commit" "-w" "--stdin"]
+                                 #js {:input extended :encoding "utf8" :timeout 10000 :maxBuffer 1048576
+                                      :env #js {:PATH "/usr/bin:/bin" :HOME root
+                                                :GIT_CONFIG_NOSYSTEM "1" :GIT_CONFIG_GLOBAL "/dev/null"}})
+              altered (assoc-in req [:tuple :merge-sha] (.trim (.-stdout result)))
+              observed (await (reconstruct altered))]
+          (is (= 0 (.-status result)) "extended-header fixture write")
+          (is (= :observed (:status observed))
+              "valid multiline signature and additional headers remain accepted")))
+      (catch :default e (is false (str e)))
+      (finally (.rmSync fs root #js {:recursive true :force true}) (done)))))
+
+(deftest malformed-structural-commit-headers-refuse-but-extra-headers-survive
+  (async done (malformed-header-control done)))
 
 (defmethod test/report [::test/default :end-run-tests] [result]
   (when-not (test/successful? result) (set! (.-exitCode js/process) 1)))
