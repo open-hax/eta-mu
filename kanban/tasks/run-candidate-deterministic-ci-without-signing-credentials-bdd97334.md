@@ -4,11 +4,11 @@ labels: "ci, stabilization, credential-isolation"
 dependency: []
 parent: "290f0cdf-9160-453e-a69c-67211432baa7"
 type: "task"
-write-id: "1792553704124-0.4bpgg3ft8zjlro95ct2"
+write-id: "1792555002067-0.u1teg781gnjqmaoicns"
 points: "5"
 title: "Run candidate deterministic CI without signing credentials"
 priority: "P1"
-status: "in_progress"
+status: "testing"
 uuid: "e449367d-8fc1-4e8b-a1bb-995cbdd97334"
 created_at: "2026-10-21T03:34:20.220Z"
 ---
@@ -99,3 +99,10 @@ The four real carriers produce complete, exact-source deterministic evidence
 without candidate signing custody, every finding is dispositioned, and actual
 current-head native checks/review qualify the source. Partial/fork/local success
 alone does not close this card or E1.
+
+---
+GREEN admission anomaly: unfiltered actionlint/ShellCheck refuses four inherited SC2094 informational diagnostics in the two existing Sandbox checksum pipelines. Each find already excludes SHA256SUMS, so this does not establish a checksum corruption defect; it is a required lint-contract failure. Bounded same-owner repair is admitted before edit: materialize the exact sorted NUL-delimited input list in an owned temporary file outside each artifact root, then run the unchanged checksum command from that list into SHA256SUMS. Preserve all relative names, file exclusion, sort order, digests, artifact retention and failure propagation. Keep original lint RED. Verify with actual extracted shell blocks on identical binary/space/newline-path fixtures, byte-equal manifests and real changed-file verification failure. No rule suppression, tool-pin update, new publisher or broader warning-parity work. Four-carrier scope and all source/adoption/review holds remain unchanged.
+
+Implemented correction of all4 candidate carriers, with canonical EDN/generated Rheos and preserved local gates/pins/package checks. Registered causal RED9/169 with27failures precedes product; GREEN10/183 and eta194/587 pass. Unfiltered actionlint/ShellCheck0; emitter10gates/path audit/kondo0warnings. Checksum temporary input change has actual old/new byte/digest/tamper/cleanup proof. Strict whole-carrier zero-warning remains HOLD for existing SIGTERM fixture diagnostic; prior native3772 bundle success does not qualify successor source. Independent parsed audit preserves every deterministic/evidence step,5package trees and338review owner. Current source publication/native checks/review still pending; move to testing is execution only, no done/planning/adoption credit. Prior2/5/3-point chain, warning-parity2 and parent open unchanged; no credential/publisher/protection/caller pin or product agent change.
+
+---

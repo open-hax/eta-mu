@@ -1214,3 +1214,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: b9d1850f5c0b061386a3fcf5b2889e5f48c6fa467170582b15bda23ceaa484f6
   note: Follow actual parser and CLI schemas rather than guessed scalar, column or owner names. New metadata and explicit export semantics have separate causal RED/GREEN. Preserve old event facts; export location and live IO are different representations. Retain existing undated read-time fallback and warning limitations rather than manufacture timestamps or suppress diagnostics. A mistyped expanded source ID was explicitly withdrawn by a native additive correction from git-resolved refs; source manifests check Git objects. Existing custody/generated-source spores cover the general pattern, so no duplicate child spore.
+
+- ts: 2026-10-21T03:57:42.674952+00:00
+  session: feat/anonymous-review-producer-20261021
+  task: Remove signing custody from four deterministic candidate CI carriers
+  p-efficiency: 0.69
+  p-friction: 0.68
+  p-skill-candidate: 0.56
+  spore: none
+  receipt-refs: 25c60a65196d4e39baa07f608abbcea9309974087e188d8ea9a9012e244c3157
+  note: Freeze actual parsed carrier and package trees before edits, then compare complete preserved steps rather than guessed labels. Source custody and generated-workflow spores already cover this pattern. Keep synthetic hook controls distinct from hosted execution; derive no-auth child configuration explicitly without reading or editing host credentials. Checksum lint repair needs actual byte/digest/tamper proof, not suppression. Custom audit permission/key/step/block assumptions and agent trigger audit failure were corrected against actual source with original failures retained. Existing warning and review holds remain, no same-session promotion.

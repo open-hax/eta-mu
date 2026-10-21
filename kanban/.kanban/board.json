@@ -1,6 +1,6 @@
 {
-  "generated-at": "2026-10-21T03:10:59.979Z",
-  "total-tasks": 308,
+  "generated-at": "2026-10-21T03:56:42.462Z",
+  "total-tasks": 309,
   "columns": [
     {
       "status": "icebox",
@@ -949,7 +949,7 @@
           "priority": "P0",
           "status": "incoming",
           "uuid": "rheos-canonical-task-fold-and-snapshots",
-          "created-at": "2026-10-21T03:10:59.965Z"
+          "created-at": "2026-10-21T03:56:42.451Z"
         },
         {
           "labels": [
@@ -968,7 +968,7 @@
           "priority": "P0",
           "status": "incoming",
           "uuid": "rheos-event-store-git-worldline-adr",
-          "created-at": "2026-10-21T03:10:59.966Z"
+          "created-at": "2026-10-21T03:56:42.451Z"
         },
         {
           "labels": [
@@ -988,7 +988,7 @@
           "priority": "P0",
           "status": "incoming",
           "uuid": "rheos-git-commit-attribution-and-branch-fold",
-          "created-at": "2026-10-21T03:10:59.966Z"
+          "created-at": "2026-10-21T03:56:42.451Z"
         },
         {
           "labels": [
@@ -1007,7 +1007,7 @@
           "priority": "P0",
           "status": "incoming",
           "uuid": "rheos-markdown-projection-push-pull-sync",
-          "created-at": "2026-10-21T03:10:59.966Z"
+          "created-at": "2026-10-21T03:56:42.451Z"
         },
         {
           "labels": [
@@ -1153,7 +1153,7 @@
           "priority": "P1",
           "status": "incoming",
           "uuid": "4985bd7d-c027-4bca-8ae9-35aa21d7ba35",
-          "created-at": "2026-10-21T03:10:59.957Z"
+          "created-at": "2026-10-21T03:56:42.447Z"
         },
         {
           "labels": [
@@ -1259,7 +1259,7 @@
           "priority": "P1",
           "status": "incoming",
           "uuid": "256c5dd5-1a65-4ad0-8087-80b8f9a69c77",
-          "created-at": "2026-10-21T03:10:59.956Z"
+          "created-at": "2026-10-21T03:56:42.446Z"
         },
         {
           "labels": [],
@@ -1360,7 +1360,7 @@
             "quality"
           ],
           "slug": "rheos-ci-does-not-gate-build-warnings",
-          "content": "\n# rheos CI does not gate build warnings\n\n## Outcome\n\nA shadow-cljs compiler warning in `packages/rheos` fails CI, the way it already\ndoes for `sol` and `axxium`.\n\n## The evidence\n\nOn 2026-08-06 a `:infer-warning` reached `main`:\n\n```\n------ WARNING #1 - :infer-warning ------\n task_store.cljs:101:9\n Cannot infer target type in expression (. st isSymbolicLink)\n```\n\nIt was introduced by the symlink-containment fix on #158, merged, and only\nfound afterwards. Under `:advanced` the call compiles to a munged name.\n\nNothing gates it:\n\n- the `rheos` job (`rheos.yml`) runs `test` and `lint:kondo` — it never builds;\n- `rheos-github-sync` does run `pnpm --dir packages/rheos build`, but ignores\n  compiler warnings entirely.\n\nBoth `sol-ci.yml` and `axxium-ci.yml` already do the right thing — they `tee`\nthe build log and fail on any `WARNING` line. rheos is the outlier, and\n`CLAUDE.md` states the repo-wide expectation of zero warnings.\n\n## Scope\n\n- Add a build step to the `rheos` job that fails on `WARNING`, matching the\n  pattern sol and axxium use.\n- Decide whether `rheos-github-sync` should also gate, or whether one gating\n  job is enough now that `rheos` builds.\n- Remove the deliberate divergence note in `scripts/ci-gates.bb`, whose rheos\n  gate currently checks build warnings *because* CI does not. Once CI gates,\n  the local runner goes back to being a plain mirror.\n\n## Acceptance criteria\n\n- Reintroducing the `^js` hint removal on `entry-kind` fails the `rheos` CI job.\n- A clean build still passes, with all four targets at 0 warnings.\n- `pnpm gates --only rheos` and the `rheos` CI job agree on the same result.\n\n## Notes\n\nFound by `pnpm gates` after the local rheos gate was given a warning check.\nThe fix for the warning itself is #178.\n",
+          "content": "\n# rheos CI does not gate build warnings\n\n## Outcome\n\nA shadow-cljs compiler warning in `packages/rheos` fails CI, the way it already\ndoes for `sol` and `axxium`.\n\n## The evidence\n\nOn 2026-08-06 a `:infer-warning` reached `main`:\n\n```\n------ WARNING #1 - :infer-warning ------\n task_store.cljs:101:9\n Cannot infer target type in expression (. st isSymbolicLink)\n```\n\nIt was introduced by the symlink-containment fix on #158, merged, and only\nfound afterwards. Under `:advanced` the call compiles to a munged name.\n\nNothing gates it:\n\n- the `rheos` job (`rheos.yml`) runs `test` and `lint:kondo` — it never builds;\n- `rheos-github-sync` does run `pnpm --dir packages/rheos build`, but ignores\n  compiler warnings entirely.\n\nBoth `sol-ci.yml` and `axxium-ci.yml` already do the right thing — they `tee`\nthe build log and fail on any `WARNING` line. rheos is the outlier, and\n`CLAUDE.md` states the repo-wide expectation of zero warnings.\n\n## Scope\n\n- Add a build step to the `rheos` job that fails on `WARNING`, matching the\n  pattern sol and axxium use.\n- Decide whether `rheos-github-sync` should also gate, or whether one gating\n  job is enough now that `rheos` builds.\n- Remove the deliberate divergence note in `scripts/ci-gates.bb`, whose rheos\n  gate currently checks build warnings *because* CI does not. Once CI gates,\n  the local runner goes back to being a plain mirror.\n\n## Acceptance criteria\n\n- Reintroducing the `^js` hint removal on `entry-kind` fails the `rheos` CI job.\n- A clean build still passes, with all four targets at 0 warnings.\n- `pnpm gates --only rheos` and the `rheos` CI job agree on the same result.\n\n## Notes\n\nFound by `pnpm gates` after the local rheos gate was given a warning check.\nThe fix for the warning itself is #178.\n\n---\nCurrent-source triage at producer PR361 head 3772f776b65598c76c91f2127df2788d8d0074ca: generated Rheos now includes all four release builds and a no-warning build gate in canonical contracts/workflows/ci.edn, so the historical never-builds claim is stale; historical card bytes remain unchanged. Sync still runs raw test/build exits and local/hosted parity plus causal actual-warning proof are not qualified here. Native bundle39537339759 has now actually passed the Rheos212/1219 owner and releases at merge bceea9702b149f50826db1d80cd03657d7426632, but retains carrier warnings and does not settle this separate two-point contract. New five-point candidate credential-isolation owner e449367d-8fc1-4e8b-a1bb-995cbdd97334 preserves this warning-parity scope; no warning suppression or new warning wrapper is silently included. This owner stays incoming/P2/2.\n\n---",
           "points": "2",
           "title": "rheos CI does not gate build warnings",
           "source-path": "kanban/tasks/rheos-ci-does-not-gate-build-warnings.md",
@@ -1494,7 +1494,7 @@
           "priority": "P3",
           "status": "incoming",
           "uuid": "7c44b3fc-7dbe-4c96-9125-4cce4ec4796e",
-          "created-at": "2026-10-21T03:10:59.965Z"
+          "created-at": "2026-10-21T03:56:42.451Z"
         },
         {
           "labels": [
@@ -1510,7 +1510,7 @@
           "priority": "P3",
           "status": "incoming",
           "uuid": "0dd12d60-d7ea-43d0-8b1e-87e14c4e61dd",
-          "created-at": "2026-10-21T03:10:59.965Z"
+          "created-at": "2026-10-21T03:56:42.451Z"
         }
       ]
     },
@@ -1611,7 +1611,7 @@
           "priority": "P0",
           "status": "breakdown",
           "uuid": "rheos-ledger-authoritative-projections",
-          "created-at": "2026-10-21T03:10:59.955Z"
+          "created-at": "2026-10-21T03:56:42.446Z"
         },
         {
           "labels": [
@@ -1720,7 +1720,7 @@
           "labels": [],
           "slug": "290f0cdf-9160-453e-a69c-67211432baa7",
           "parent": "github-actions-as-a-muse-projection-target-from-katamorph-workflow-contracts",
-          "content": "\n---\nScoped plan: reproduce run 33266077981; checkout the event PR head explicitly and prove expected SHA equals independently observed HEAD with a clean-tree guard in deterministic and review jobs; emit deterministic result and exact-head outputs; keep evidence and review artifacts under always conditions; add one stable final required job that fails on missing or non-success outputs or failed dependencies; add a GPL-3.0-or-later validator plus unit/structural regressions, including expected/executed SHA mismatch; publish exact-head PR and merge only after current checks and review threads are truthful.\n\nHosted controlled red-path proof is deliberately split to ready card 164c2de7-7495-4738-94e1-a81167edefb0 and GitHub issue #297; this implementation PR carries executable local falsification plus hosted green production gates.\n\nGitHub issue: https://github.com/open-hax/eta-mu/issues/298\n\nImplementation PR: https://github.com/open-hax/eta-mu/pull/299 at exact published head c4746e65c7afeadcdedd98c143a260e295f02d90; remote tree d35a67f9c61f224838d95efff8728660ef4ac506 matched the local committed tree byte-for-byte before review.\n\nPlanning discovery 2026-10-15 at accepted fefa6dd52135e1045b1ad56802a346dc0779970c: anonymous producer2 cf32641a-b336-407e-b68b-c75ec7d20dbb -> trusted central collector/publisher/status5 ed4e2a2a-6055-4d53-9cea-f3971c707551 -> existing hosted-proof3 164c2de7-7495-4738-94e1-a81167edefb0. Dependency arrow means later depends earlier.10 newly identified points, not completion or reassignment of existing in_progress5 reviewer owner. This parent remains in_progress/P0 with existing metadata/history. Foresight incoming fork-review-setup3 and downstream Services consumption remain separate. Current Services per-repository App guard is publication coupling before inference; dynamic anonymous OpenCode route remains unchanged. Required status eta-mu/trusted-review-publication-v1 from expectedApp3152464 belongs on M only after trusted full-input/raw-trace/native-publication readback; producer cannot assert it. Protected central credential/ref custody and actual target grants/protection/hosted enforcement remain unproven setup, no new App/key or account permission operation authorized. Reviewed v2 design SHA309297d62946667d463560e880bdce1dbc9e55bb2afce13da76331510ff80ecb. Planning only; no app/workflow implementation or parent completion.\n\n---",
+          "content": "\n---\nScoped plan: reproduce run 33266077981; checkout the event PR head explicitly and prove expected SHA equals independently observed HEAD with a clean-tree guard in deterministic and review jobs; emit deterministic result and exact-head outputs; keep evidence and review artifacts under always conditions; add one stable final required job that fails on missing or non-success outputs or failed dependencies; add a GPL-3.0-or-later validator plus unit/structural regressions, including expected/executed SHA mismatch; publish exact-head PR and merge only after current checks and review threads are truthful.\n\nHosted controlled red-path proof is deliberately split to ready card 164c2de7-7495-4738-94e1-a81167edefb0 and GitHub issue #297; this implementation PR carries executable local falsification plus hosted green production gates.\n\nGitHub issue: https://github.com/open-hax/eta-mu/issues/298\n\nImplementation PR: https://github.com/open-hax/eta-mu/pull/299 at exact published head c4746e65c7afeadcdedd98c143a260e295f02d90; remote tree d35a67f9c61f224838d95efff8728660ef4ac506 matched the local committed tree byte-for-byte before review.\n\nPlanning discovery 2026-10-15 at accepted fefa6dd52135e1045b1ad56802a346dc0779970c: anonymous producer2 cf32641a-b336-407e-b68b-c75ec7d20dbb -> trusted central collector/publisher/status5 ed4e2a2a-6055-4d53-9cea-f3971c707551 -> existing hosted-proof3 164c2de7-7495-4738-94e1-a81167edefb0. Dependency arrow means later depends earlier.10 newly identified points, not completion or reassignment of existing in_progress5 reviewer owner. This parent remains in_progress/P0 with existing metadata/history. Foresight incoming fork-review-setup3 and downstream Services consumption remain separate. Current Services per-repository App guard is publication coupling before inference; dynamic anonymous OpenCode route remains unchanged. Required status eta-mu/trusted-review-publication-v1 from expectedApp3152464 belongs on M only after trusted full-input/raw-trace/native-publication readback; producer cannot assert it. Protected central credential/ref custody and actual target grants/protection/hosted enforcement remain unproven setup, no new App/key or account permission operation authorized. Reviewed v2 design SHA309297d62946667d463560e880bdce1dbc9e55bb2afce13da76331510ff80ecb. Planning only; no app/workflow implementation or parent completion.\n\nE0 CI correction now has distinct child e449367d-8fc1-4e8b-a1bb-995cbdd97334 (5 points) under this active parent. Native CLI recorded incoming-accepted-breakdown-ready-todo-in_progress for the accepted user policy and exact four-carrier failure/custody scope, before product edits. This operational state supplies no native planning/approval/merge credit; the current review loop remains held on independent qualification. Original producer2/publisher5/hosted3 remain separate, so this adds five newly identified points rather than reassigning the prior ten. No dependency is invented from a child to its sibling that would create a CI/producer qualification cycle. Existing warning-parity2 and icebox quality-ratchet remain untouched. Trusted publisher/event-only/CodeQL routes and production activation remain separately unqualified.\n\n---",
           "title": "Make reusable OpenCode review gates truth-preserving",
           "source-path": "kanban/epics/make-reusable-opencode-review-gates-truth-preserving.md",
           "priority": "P0",
@@ -1816,7 +1816,7 @@
           "priority": "P1",
           "status": "in_progress",
           "uuid": "a343a87e-a96f-4df8-bffd-5c3ef331ad26",
-          "created-at": "2026-10-21T03:10:59.966Z"
+          "created-at": "2026-10-21T03:56:42.452Z"
         }
       ]
     },
@@ -2806,7 +2806,7 @@
           "priority": "P0",
           "status": "done",
           "uuid": "rheos-edn-config-and-card-selection",
-          "created-at": "2026-10-21T03:10:59.965Z"
+          "created-at": "2026-10-21T03:56:42.451Z"
         },
         {
           "labels": [
@@ -5480,7 +5480,7 @@
     {
       "status": "testing",
       "title": "Testing",
-      "task-count": 1,
+      "task-count": 2,
       "tasks": [
         {
           "labels": [
@@ -5501,6 +5501,24 @@
           "status": "testing",
           "uuid": "cf32641a-b336-407e-b68b-c75ec7d20dbb",
           "created-at": "2026-10-15T15:11:59.035Z"
+        },
+        {
+          "labels": [
+            "ci",
+            "stabilization",
+            "credential-isolation"
+          ],
+          "slug": "e449367d-8fc1-4e8b-a1bb-995cbdd97334",
+          "dependency": [],
+          "parent": "290f0cdf-9160-453e-a69c-67211432baa7",
+          "content": "\n# Run candidate deterministic CI without signing credentials\n\n## Context\n\nE0 execution of existing eta-mu PR361 exposes inherited Rheos and GitHub-sync\nCI failures before tests: both demand App credentials to fetch a now-public\npinned dependency. Sandbox and Sol CI carry the same signing custody on\nsame-repository candidates even when their fork path skips it. The user's\naccepted candidate-isolation policy already requires read-only, secretless\ncandidate workflows/builds/hooks; no new publication or authorization design\nis introduced here.\n\nNo existing leaf owns this exact four-carrier correction. This finite five-point\nstory is a distinct child of active review-truth epic\n290f0cdf-9160-453e-a69c-67211432baa7 and E0/E1 remediation. It preserves the\nproducer's two points, publisher's five points and hosted proof's three proposed\npoints. Parent stays open; those prior ten points are not reassigned. Existing\nquality-ratchet stays icebox, workflow-projection stays its current state, and\nrheos-ci-does-not-gate-build-warnings retains its separate incoming two-point\nwarning-parity scope. No copied task or second board authority is introduced.\n\n## Outcome\n\nThe four candidate test carriers execute their existing deterministic checks\nwith read-only automatic tokens, public pinned dependencies and no signing,\ndeployment or Discord credentials, App minting, private mirror or Git auth\nconfiguration. Missing public dependencies fail truthfully.\n\n## Scope\n\n- Generated Rheos: edit canonical workflow EDN/registry only as needed, then\n  emit the hosted YAML and local gate projection through the existing tool.\n- Handwritten GitHub-sync, Sandbox and Sol CI: remove signing/mirror coupling\n  while preserving their actual tests, build, failure propagation and evidence.\n- Extend established registered workflow test owners with actual extracted-step\n  credential-free sequencing and parsed same-repository/fork custody controls.\n- Preserve all prior verifier/recovery/source-hash/timeout rules, tool pins,\n  public protocol/native/TS checks, package tests/lint/release and sync's real\n  snapshot/alias/UUID/drift/dry-run checks. No skipped check is a success.\n\n## Acceptance criteria\n\n- [ ] Every affected candidate job has only read-scoped automatic permissions,\n  persist-credentials false and no signing/deploy/webhook secret expression,\n  token mint, mirror or credential setup, including same-repository events.\n- [ ] RED executes unchanged actual credential guards without App values and\n  proves downstream deterministic commands unreachable. Parsed controls reject\n  each old signer path; GREEN executes preserved commands without credentials.\n- [ ] Actual public Git access proves each relevant exact Katamorph commit;\n  real dependency resolution and full affected suites/builds run independently\n  of inert custody fixtures. Dependency/process failure still propagates.\n- [ ] Canonical EDN, generated YAML and local gates agree semantically; all\n  original source/task/ledger histories and required checks remain preserved.\n- [ ] Tests assert zero attempted signing/publication effects and no canary leak,\n  with dynamic negative variants that demonstrate the controls can fail.\n- [ ] Native current H/B/tested merge, actual job/test scope, artifacts, skips,\n  warnings and independent review are retained before any qualification.\n\n## Verification\n\nCapture RED before product edits. Run established workflow owners and emitter\ncheck, unfiltered workflow lint, real public protocols tests/lint/types, Rheos\nsuite/lint/all four releases, Sol affected suite/lint/build and preserved sync\nsnapshot/UUID/dry-run controls where execution is available. Explicitly separate\nlocal inert controls from real local execution and native hosted proof. No\nstrict whole-carrier zero-warning result if any warning remains; inherited\nwarning parity remains the existing sibling owner's obligation.\n\n## Boundaries and holds\n\nThis is a code-review correction under the already active parent and accepted\ncandidate isolation policy, not a new trusted publisher or activation protocol.\nRheos operational readiness supplies no native planning/approval/merge credit.\nCurrent PR review convergence, original open findings and independent exact-head\nqualification stay required. No privileged rerun, same-repository fixture,\nprovider call, App/account/setup/protection change, caller pin, deployment,\nmerge or CMS/Cephalon restart. CodeQL upload permission and purpose-specific\ntrusted/event-only publisher routes remain separately unqualified. Historical\nabsolute event paths remain immutable under their existing portability owner.\n\n## Definition of done\n\nThe four real carriers produce complete, exact-source deterministic evidence\nwithout candidate signing custody, every finding is dispositioned, and actual\ncurrent-head native checks/review qualify the source. Partial/fork/local success\nalone does not close this card or E1.\n\n---\nGREEN admission anomaly: unfiltered actionlint/ShellCheck refuses four inherited SC2094 informational diagnostics in the two existing Sandbox checksum pipelines. Each find already excludes SHA256SUMS, so this does not establish a checksum corruption defect; it is a required lint-contract failure. Bounded same-owner repair is admitted before edit: materialize the exact sorted NUL-delimited input list in an owned temporary file outside each artifact root, then run the unchanged checksum command from that list into SHA256SUMS. Preserve all relative names, file exclusion, sort order, digests, artifact retention and failure propagation. Keep original lint RED. Verify with actual extracted shell blocks on identical binary/space/newline-path fixtures, byte-equal manifests and real changed-file verification failure. No rule suppression, tool-pin update, new publisher or broader warning-parity work. Four-carrier scope and all source/adoption/review holds remain unchanged.\n\nImplemented correction of all4 candidate carriers, with canonical EDN/generated Rheos and preserved local gates/pins/package checks. Registered causal RED9/169 with27failures precedes product; GREEN10/183 and eta194/587 pass. Unfiltered actionlint/ShellCheck0; emitter10gates/path audit/kondo0warnings. Checksum temporary input change has actual old/new byte/digest/tamper/cleanup proof. Strict whole-carrier zero-warning remains HOLD for existing SIGTERM fixture diagnostic; prior native3772 bundle success does not qualify successor source. Independent parsed audit preserves every deterministic/evidence step,5package trees and338review owner. Current source publication/native checks/review still pending; move to testing is execution only, no done/planning/adoption credit. Prior2/5/3-point chain, warning-parity2 and parent open unchanged; no credential/publisher/protection/caller pin or product agent change.\n\n---",
+          "points": "5",
+          "title": "Run candidate deterministic CI without signing credentials",
+          "source-path": "kanban/tasks/run-candidate-deterministic-ci-without-signing-credentials-bdd97334.md",
+          "priority": "P1",
+          "status": "testing",
+          "uuid": "e449367d-8fc1-4e8b-a1bb-995cbdd97334",
+          "created-at": "2026-10-21T03:34:20.220Z"
         }
       ]
     },
