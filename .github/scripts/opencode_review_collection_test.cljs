@@ -379,6 +379,30 @@
 (deftest native-run-jobs-and-artifacts-must-match-identities
   (async done (invalid-run-control done)))
 
+(defn attempt-status-transport [status conclusion]
+  (fake-native
+   (fn [url body]
+     (cond
+       (.endsWith url "/actions/runs/99")
+       (assoc body :pull_requests [{:number 7
+                                    :base {:sha (:base native-shas)}
+                                    :head {:sha (:head native-shas)}}])
+       (.endsWith url "/actions/runs/99/attempts/2")
+       (assoc body :status status :conclusion conclusion)
+       :else body))))
+
+(defn ^:async attempt-summary-mismatch-control [done status conclusion]
+  (let [result (await (run!test (assoc-in registry [:targets 0 :enabled?] true)
+                                (attempt-status-transport status conclusion)))]
+    (is (= :refused (:status result)) (pr-str result))
+    (is (= :run-association (:reason result)) (pr-str result))
+    (is (= [] (:effects result)))
+    (done)))
+(deftest completed-failure-attempt-cannot-match-successful-summary
+  (async done (attempt-summary-mismatch-control done "completed" "failure")))
+(deftest active-attempt-cannot-match-completed-success-summary
+  (async done (attempt-summary-mismatch-control done "in_progress" nil)))
+
 (defn ^:async request-budget-control [done]
   (let [calls (atom 0)
         request {:registry (assoc-in registry [:targets 0 :enabled?] true) :target-id 41 :pr-number 7 :run-id 99
