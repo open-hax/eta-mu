@@ -1,0 +1,82 @@
+{
+  "schema": "eta-mu.review-verification-runtime/v1",
+  "muse-source": "c1369c223cf3c57e3e31934a6d746bfcdfe73f5a",
+  "eta-source": "6a796582d74f93c1a1f18ca5c89eb3a0b19445eb",
+  "node-major": 24,
+  "build": {
+    "command": [
+      "node",
+      "node_modules/shadow-cljs/cli/runner.js",
+      "release",
+      "review-invocation"
+    ],
+    "source-lock-sha256": "37c370b8be3c2588f516557c4f7094178fdbc6118dd59b11d42541e1751445fa",
+    "proof": ".ημ/review-evidence/trusted-publication-core/a037f990af6bba87fad5b1e10ce3d3ae54f2c313aa6ae0ac4dc23803b331ee9b.json.gz",
+    "provenance": "two independent source builds; retained build B; local capability only"
+  },
+  "files": [
+    {
+      "file": "publish-opencode-review.cjs",
+      "bytes": 6572,
+      "sha256": "bb75bc57d8eeaf7edbd77f34e9a4da2d319617d06809f9aadfb0d94e7ae6c2c9",
+      "repository": "octave-commons/muse",
+      "revision": "c1369c223cf3c57e3e31934a6d746bfcdfe73f5a",
+      "source-path": ".ημ/review/publish-opencode-review.cjs",
+      "git-blob": "e9d70b4b9d2ee823e921a5af32451ee5317eb252"
+    },
+    {
+      "file": "muse-src/eta_mu/shape/git_diff_path.cljc",
+      "bytes": 3522,
+      "sha256": "168a2ab5e16cdd377e1749fbb1278ce6cb82ecd0676968dc69e8e38d83e9dfba",
+      "repository": "octave-commons/muse",
+      "revision": "c1369c223cf3c57e3e31934a6d746bfcdfe73f5a",
+      "source-path": "src/cljs/eta_mu/shape/git_diff_path.cljc",
+      "git-blob": "ae54accc30b2c21f6d0f6fcae54cffcf37dfec92"
+    },
+    {
+      "file": "muse-src/eta_mu/domain/review.cljc",
+      "bytes": 16650,
+      "sha256": "0df06e46f9307f9a80f4dd70013d6fb8f869a99ddff99fc00cf66c0e4810b466",
+      "repository": "octave-commons/muse",
+      "revision": "c1369c223cf3c57e3e31934a6d746bfcdfe73f5a",
+      "source-path": "src/cljs/eta_mu/domain/review.cljc",
+      "git-blob": "bb3c575ed3e32ac2c0cd6dfa92cbf6d3e904bd9e"
+    },
+    {
+      "file": "muse-src/eta_mu/law/review_invocation.cljc",
+      "bytes": 16075,
+      "sha256": "7a97ff024da488b6b847d1af5053508b18c6d135ad19841bf0faa4ea3dafd133",
+      "repository": "octave-commons/muse",
+      "revision": "c1369c223cf3c57e3e31934a6d746bfcdfe73f5a",
+      "source-path": "src/cljs/eta_mu/law/review_invocation.cljc",
+      "git-blob": "395b37d801731cc01da167bec3ac7aa17f4b4c43"
+    },
+    {
+      "file": "muse-src/eta_mu/extern/review_invocation.cljs",
+      "bytes": 10639,
+      "sha256": "17dda3b9121e4ab96829a5f3ab3d181ca267ca95bd1aba6c2ac33ce47ef3a0ae",
+      "repository": "octave-commons/muse",
+      "revision": "c1369c223cf3c57e3e31934a6d746bfcdfe73f5a",
+      "source-path": "src/cljs/eta_mu/extern/review_invocation.cljs",
+      "git-blob": "f27fe9902e31cc6b7f9679abaa36c0125f10b2ae"
+    },
+    {
+      "file": "run-opencode-review-recovery.mjs",
+      "bytes": 86229,
+      "sha256": "7e12b32abebf27b1e87bb9767bcf217caf8ce1cc0a7a05515a67f91b9005e133",
+      "repository": "open-hax/eta-mu",
+      "revision": "6a796582d74f93c1a1f18ca5c89eb3a0b19445eb",
+      "source-path": ".github/scripts/run-opencode-review-recovery.mjs",
+      "git-blob": "8cb20e7ba0d17482ae3b2f8b252a386dda570938"
+    },
+    {
+      "file": "review-invocation.cjs",
+      "bytes": 144409,
+      "sha256": "d9fea235fddec9581ba1be959e596f32b82588f78cef5fd76d55f04d24b91030",
+      "repository": "octave-commons/muse",
+      "revision": "c1369c223cf3c57e3e31934a6d746bfcdfe73f5a",
+      "source-path": ".opencode/dist/review-invocation.cjs",
+      "git-blob": null
+    }
+  ]
+}
