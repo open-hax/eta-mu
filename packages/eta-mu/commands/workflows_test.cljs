@@ -248,6 +248,33 @@
                 (assoc-in config ["jobs" "test" "steps" 0 "with" "persist-credentials"] true)))))))
 
 
+(deftest candidate-expression-scanner-refuses-real-secret-access-with-quoted-braces
+  (let [{:keys [config]} (committed-workflow "rheos")]
+    ;; Both native examples are executable expression contexts. The format
+    ;; placeholder closes a brace before secrets, despite the review prose.
+    (doseq [expression ["${{ format('{0}', secrets.X) }}"
+                        "${{ fromJSON('{}') && secrets.X }}"
+                        "${{ format('}}', secrets['X']) }}"
+                        "${{ format('a''}b', secrets[format('{0}', 'X')]) }}"
+                        "${{ format('{0}', toJSON(secrets)) }}"
+                        "${{ format('{0}', SeCrEtS.X) }}"]]
+      (is (seq (candidate-violations
+                (assoc-in config ["jobs" "test" "steps" 0 "env" "SIGNER"] expression))) expression))
+    (doseq [condition ["secrets.X != ''" "secrets['X'] != ''"
+                       "contains(toJSON(secrets), 'x')"
+                       "format('{0}', secrets.X) != ''"]]
+      (is (seq (candidate-violations
+                (assoc-in config ["jobs" "test" "steps" 0 "if"] condition))) condition))
+    (doseq [ordinary ["Discuss secrets.X in documentation."
+                      "printf '%s\\n' 'secrets are absent'"
+                      "${{ 'secrets.X' }}"
+                      "${{ format('{0}', 'literal secrets.X') }}"
+                      "${{ format('}}', 'literal secrets.X') }}"]]
+      (is (empty? (candidate-violations
+                   (assoc-in config ["jobs" "test" "steps" 0 "name"] ordinary))) ordinary))
+    (is (empty? (candidate-violations
+                 (assoc-in config ["jobs" "test" "steps" 0 "if"] "contains('secrets.X', 'X')"))))))
+
 (def ^:private signer-canary "INERT_SIGNER_CANARY_ci_workflow_test_ONLY")
 (def ^:private token-canary "INERT_TOKEN_CANARY_ci_workflow_test_ONLY")
 

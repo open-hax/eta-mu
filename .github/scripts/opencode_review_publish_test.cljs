@@ -4,8 +4,10 @@
   (:require [cljs.test :as test :refer [deftest is testing]]
             [nbb.core :as nbb]
             [clojure.walk :as walk]
+            [cljs.reader :as reader]
             [eta-mu.law.review-publication :as law]
-            ["node:fs" :as fs]))
+            ["node:fs" :as fs]
+            ["node:child_process" :as cp]))
 
 (defn sha [ch] (apply str (repeat 40 ch)))
 (defn digest [ch] (apply str (repeat 64 ch)))
@@ -364,6 +366,133 @@
     (is (not= (get-in a [:binding :intent-key]) (get-in b [:binding :intent-key])))
     (is (= :publication-evidence-integrity (get-in b [:binding :status-meaning])))
     (is (false? (get-in b [:binding :merge-approval?])))))
+
+(deftest verified-envelope-must-bind-every-native-publication-field
+  (testing "a matching digest/origin does not bind an independently supplied payload"
+    (doseq [[label change]
+            [[:event #(assoc % :event "APPROVE")]
+             [:body #(assoc % :body "Unverified replacement.")]
+             [:inline-body #(assoc-in % [:comments 0 :body] "Unverified inline.")]
+             [:inline-path #(assoc-in % [:comments 0 :path] "src/other.cljc")]
+             [:inline-line #(assoc-in % [:comments 0 :line] 4)]
+             [:inline-side #(assoc-in % [:comments 0 :side] "LEFT")]
+             [:missing-inline #(assoc % :comments [])]
+             [:extra-inline #(update % :comments conj {:path "src/other.cljc" :line 4 :side "RIGHT" :body "Extra."})]
+             [:unnormalized-inline #(assoc-in % [:comments 0 :severity] "low")]]]
+      (let [context (update-in (fixture) [:snapshot :verification :publisher-validation :payload] change)
+            a (decision :admit context)]
+        (is (= :refused (:status a)) (str label ": " (pr-str a)))
+        (is (= [] (:effects a)) (name label)))))
+  (testing "the exact Muse projection preserves text/order and drops envelope-only metadata"
+    (let [envelope (-> submission
+                       (assoc :event "REQUEST_CHANGES" :summary "  Inert μ summary.\n")
+                       (assoc-in [:comments 0 :body] "  Inert μ inline.\n")
+                       (assoc-in [:comments 0 :severity] "high")
+                       (assoc-in [:comments 0 :blocking] true)
+                       (assoc-in [:comments 0 :confidence] 0.75)
+                       (update :comments conj {:path "src/second.cljc" :line 7 :side "RIGHT"
+                                               :body "Second raw inline.\n" :severity "low" :blocking false}))
+          ;; Actual pinned Muse publishReview maps precisely these native fields;
+          ;; it neither trims raw text nor forwards envelope-only inline metadata.
+          payload {:event "REQUEST_CHANGES" :body "  Inert μ summary.\n"
+                   :comments [{:path "src/inert.cljc" :line 3 :side "RIGHT" :body "  Inert μ inline.\n"}
+                              {:path "src/second.cljc" :line 7 :side "RIGHT" :body "Second raw inline.\n"}]}
+          context (-> (fixture) (assoc-in [:snapshot :submission] envelope)
+                      (assoc-in [:snapshot :verification :submission-envelope] envelope)
+                      (assoc-in [:snapshot :verification :publisher-validation :payload] payload))
+          a (decision :admit context)
+          post (decision :publication-plan a (intent a) (claim a))]
+      (is (= :admitted (:status a)))
+      (is (= :post-review (:action post)))
+      (is (= payload (get-in post [:effects 0 :payload])))
+      (is (= payload (get-in a [:binding :publication-payload])))
+      (is (= :refused (:status (decision :admit
+                                (update-in context [:snapshot :verification :publisher-validation :payload :comments]
+                                           #(vec (reverse %))))))))))
+
+(def malformed-policy-values [nil "86400000" true false {} [] ##NaN ##Inf ##-Inf -1 0 1.5 9007199254740992])
+(defn policy-cases []
+  (concat
+   [{:case :default-refresh :policy {:max-writes 4 :observation-max-age-ms 300000} :valid? true}
+    {:case :minimum-interval :policy {:max-writes 1 :observation-max-age-ms 1 :refresh-ms 2} :valid? true}
+    {:case :maximum-interval :policy {:max-writes law/maximum-safe-integer :observation-max-age-ms 300000
+                                     :refresh-ms 518400000} :valid? true}
+    {:case :missing-observation :policy {:max-writes 4} :valid? false}
+    {:case :missing-write-bound :policy {:observation-max-age-ms 1000} :valid? false}
+    {:case :equal-observation-refresh :policy {:max-writes 4 :observation-max-age-ms 1000 :refresh-ms 1000} :valid? false}
+    {:case :observation-over-bound :policy {:max-writes 4 :observation-max-age-ms 300001} :valid? false}
+    {:case :refresh-over-bound :policy {:max-writes 4 :observation-max-age-ms 1000 :refresh-ms 518400001} :valid? false}]
+   (map-indexed (fn [index value] {:case [:whole-policy index] :policy value :valid? false})
+                [nil "policy" true false [] {} ##NaN ##Inf -1 0 1.5])
+   (for [field [:refresh-ms :observation-max-age-ms :max-writes]
+         [index value] (map-indexed vector malformed-policy-values)]
+     {:case [field index] :policy (assoc (:status-policy entry) field value) :valid? false})))
+
+(defn- portable-result [operation args]
+  (try {:value (if (= :status-policy? operation)
+                 (apply law/status-policy? args)
+                 (apply decision operation args))}
+       (catch :default _ {:threw true})))
+
+(deftest malformed-status-policy-refuses-without-host-coercion-or-throw
+  (doseq [{:keys [case policy valid?]} (policy-cases)]
+    (is (= {:value valid?} (portable-result :status-policy? [policy])) (pr-str case))
+    (let [result (portable-result :admit [(assoc-in (fixture) [:registry :targets 0 :status-policy] policy)])]
+      (is (= (if valid? :admitted :refused) (get-in result [:value :status])) (pr-str [case result]))
+      (is (= [] (get-in result [:value :effects])) (pr-str case)))))
+
+(defn- complete-decision-cases [kind context]
+  (let [a (decision :admit context) i (intent a) c (claim a)
+        post (decision :publication-plan a i c)
+        observed (observed-intent a)
+        r (cond-> (readback a)
+            (= kind :approve) (assoc-in [:review :event] "APPROVE")
+            (= kind :approve) (assoc-in [:review :comments] []))
+        h (history) fresh (assoc h :statuses [(status-row now)])]
+    (mapv (fn [[label operation args]] {:case [kind label] :operation operation :args args})
+          [[:admit :admit [context]]
+           [:reserve :publication-plan [a nil nil]]
+           [:claim :publication-plan [a i nil]]
+           [:post-proposal :publication-plan [a i c]]
+           [:repeat-block :publication-plan [a (:intent post) nil]]
+           [:unknown :publication-plan [a (assoc i :state :post-unknown) nil]]
+           [:ambiguous-absence :publication-plan [a (assoc i :state :ambiguous-absence) nil]]
+           [:status-proposal :status-plan [a observed r h]]
+           [:confirmed-status :status-plan [a observed r fresh]]
+           [:unknown-status :status-plan [a observed r (assoc fresh :last-write-outcome :unknown)]]
+           [:wrong-inline-membership :status-plan [a observed (assoc-in r [:review :id] 999) h]]])))
+
+(deftest complete-portable-decisions-and-malformed-policy-match-babashka
+  ;; Compare complete Clojure data from both actual hosts. Independent policy
+  ;; expectations above prevent two equally wrong implementations passing parity.
+  (let [approve (-> (fixture)
+                    (assoc-in [:snapshot :submission] (assoc submission :event "APPROVE" :comments []))
+                    (assoc-in [:snapshot :verification :submission-envelope] (assoc submission :event "APPROVE" :comments []))
+                    (assoc-in [:snapshot :verification :publisher-validation :payload] (assoc publication-payload :event "APPROVE" :comments [])))
+        rows (vec (concat (complete-decision-cases :comment (fixture))
+                          (complete-decision-cases :approve approve)
+                          (mapcat (fn [{:keys [case policy]}]
+                                    [{:case [:policy case] :operation :status-policy? :args [policy]}
+                                     {:case [:registry case] :operation :admit
+                                      :args [(assoc-in (fixture) [:registry :targets 0 :status-policy] policy)]}])
+                                  (policy-cases))))
+        expected (mapv (fn [{:keys [case operation args]}]
+                         {:case case :result (portable-result operation args)}) rows)
+        script (str "(require '[clojure.edn :as edn] '[eta-mu.law.review-publication :as law] '[eta-mu.domain.review-publication :as publication])"
+                    "(let [rows (edn/read-string (slurp *in*))] (prn (mapv (fn [{case-name :case :keys [operation args]}] "
+                    "{:case case-name :result (try {:value (apply (case operation :status-policy? law/status-policy? :admit publication/admit "
+                    ":publication-plan publication/publication-plan :status-plan publication/status-plan) args)} "
+                    "(catch Exception _ {:threw true}))}) rows)))")
+        result (cp/spawnSync "bb" #js ["-cp" "packages/eta-mu/src/cljs" "-e" script]
+                             #js {:encoding "utf8" :input (pr-str rows) :timeout 30000})]
+    (is (= 0 (.-status result)) (str (.-stdout result) (.-stderr result)))
+    (is (= "" (.-stderr result)) "Babashka diagnostics remain qualification failures")
+    (when (= 0 (.-status result))
+      (let [actual (reader/read-string (.-stdout result))]
+        (is (= (count expected) (count actual)))
+        (doseq [[expected-row actual-row] (map vector expected actual)]
+          (is (= expected-row actual-row) (str "Complete NBB/Babashka data parity: " (:case expected-row)))))
+      (println "Complete NBB/Babashka parity cases:" (count rows)))))
 
 (defmethod test/report [::test/default :end-run-tests] [result]
   (when-not (test/successful? result) (set! (.-exitCode js/process) 1)))
