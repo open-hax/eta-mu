@@ -21,6 +21,7 @@
             [rheos.backend.infra.agent-tools :as agent-tools]
             [rheos.backend.infra.config :as config]
             [rheos.backend.domain.events :as events]
+            [rheos.backend.extern.path :as path]
             [rheos.backend.infra.ledger :as ledger]
             [rheos.backend.infra.projects :as projects]
             [rheos.backend.infra.task-create :as task-create]
@@ -237,6 +238,7 @@
     :args "<snapshot|list>"
     :summary "`board snapshot` writes a board JSON snapshot; `board list` lists configured projects."
     :flags [["--out <path>" "snapshot: write to a file instead of stdout"]
+            ["--relative-to <root>" "snapshot: export source paths relative to a cwd-resolved root; refuse outside paths"]
             ["--verbose" "list: include project meta"]]
     :example "rheos board snapshot --out board.json"}
 
@@ -404,10 +406,32 @@
   [tool-name args]
   (print-json (await (agent-tools/dispatch tool-name (assoc args :source "cli")))))
 
+(defn- relative-export-tasks
+  "Change only the exported location spelling. Live tasks and event provenance
+   retain their original paths; this lexical export does not resolve aliases."
+  [all-tasks relative-to]
+  (let [root (path/resolve-from-cwd relative-to)]
+    (mapv (fn [task]
+            (let [{relative :path absolute? :absolute?} (path/relative root (:source-path task))]
+              (when (or absolute?
+                        (= relative "..")
+                        (str/starts-with? relative "../"))
+                (throw (ex-info "task source path is outside --relative-to export root"
+                                {:kind :refused :source-path (:source-path task)})))
+              (assoc task :source-path relative)))
+          all-tasks)))
+
 (defn- ^:async cmd-board-snapshot [project-state flags]
-  (let [project (find-project project-state (get-flag flags "project"))
+  (let [relative-to (when (contains? flags "relative-to")
+                      (let [root (get-flag flags "relative-to")]
+                        (when (str/blank? root)
+                          (throw (ex-info "--relative-to requires a nonempty export root"
+                                          {:kind :usage})))
+                        root))
+        project (find-project project-state (get-flag flags "project"))
         all-tasks (await (tasks/load-tasks (:tasks-dir project)))
-        snapshot (board/build-board-snapshot all-tasks)
+        exported (if relative-to (relative-export-tasks all-tasks relative-to) all-tasks)
+        snapshot (board/build-board-snapshot exported)
         out-path (get-flag flags "out")]
     (if out-path
       (do
