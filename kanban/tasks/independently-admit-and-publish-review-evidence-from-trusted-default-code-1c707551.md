@@ -4,11 +4,11 @@ labels: "workflow, review, publication, security, has-parent"
 dependency: ["cf32641a-b336-407e-b68b-c75ec7d20dbb"]
 parent: "290f0cdf-9160-453e-a69c-67211432baa7"
 type: "task"
-write-id: "1792081316800-0.g8rhsv6yntjqmm9ilq4"
+write-id: "1792559119268-0.ft11uh2zz2k1mlcwqn"
 points: "5"
 title: "Independently admit and publish review evidence from trusted default code"
 priority: "P1"
-status: "breakdown"
+status: "in_progress"
 uuid: "ed4e2a2a-6055-4d53-9cea-f3971c707551"
 created_at: "2026-10-15T15:12:31.474Z"
 ---
@@ -250,5 +250,7 @@ Primary platform semantics: [workflow_run](https://docs.github.com/en/actions/re
 
 ---
 Planning-only correction for exact native Codex review5535776233 roots4285070063/4285070084/4285070093 at1b2608f. Name actual pure domain and effectful infra owners while law validates and extern decodes raw I/O. Ship ordinary registry empty/disabled with read-only admission before protected work; separately admitted accepted-default fixture-only manual bootstrap uses actual setup and full protocol, without ordinary-target enablement or circular proof prerequisite. Later target rollout requires target-specific setup/readback and applicable hosted proof. Separate bounded current-evidence status revalidation/refresh (ordinary24h) from at-most-one review POST; preserve unknown effects, native write budget, sharedM meaning and zero extra model/review invocation. Root fully read exact11030B proposal4363e4b3 and14707B two-body diff04cdc666. Keep provisional5/P1/breakdown, producer2 dependency and parent open;2+5+3=10, separate Fsetup3/Services consumption. Body planning only; no implementation/readiness/publication/model/App/account/runtime effects.
+
+Implementation scope checkpoint for existing publisher five-point owner, not a new plan or completion. Exact unchanged reviewed card blob b53d8bd13a913332a135fb89b0bfc26059571a59 (17978 bytes) matches planning e9666aa2dc9e593dce783be430b80d9bed0de6ae and current producer fb8bf0e18b0aac9179e821952adfa7f257c5160f. Fresh canonical planning gate PASS: CodeRabbit and MiMo exact-head approvals, nine checks, four resolved threads. Work in isolated feat/trusted-review-publication-20261021 from fb8. Begin law/owning-test causal RED then pure portable enrollment/native-evidence/intent/status decisions GREEN; retain every criterion and register owning tests. Domain uses decoded Clojure data and explicit clock; no new invocation/board/ledger authority. In parallel test actual pinned Muse relocation/build identity and accepted eta-mu Clio durable stream-slot APIs before effect adapters. Missing positive transport/archive/durable recovery work stays explicitly incomplete on this same owner; no empty-registry/refusal-only full-card claim. Producer testing is preserved as qualification dependency; no accepted-default adoption is implied. Ordinary targets remain unenabled; no App/provider/grant/environment/protection/merge/pin/CMS/Cephalon effect. Keep publisher setup, hosted proof, warning parity, receipt-history and review obligations separate. Main owns board/receipt commits; scoped delegated implementation owns only assigned law/domain/test files. Lawful readiness and implementation hops follow, without moving any other card.
 
 ---
