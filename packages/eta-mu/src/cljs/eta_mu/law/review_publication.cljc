@@ -56,12 +56,13 @@
        (every? (:permissions x) [:statuses-write :pull-requests-write])))
 (defn proof? [x] (and (commit? (:source-sha x)) (digest? (:sha256 x))))
 (defn status-policy? [x]
-  (and (positive? (:max-writes x))
-       (positive? (:observation-max-age-ms x))
-       (<= (:observation-max-age-ms x) maximum-observation-age-ms)
-       (< (:observation-max-age-ms x) (get x :refresh-ms default-refresh-ms))
-       (positive? (get x :refresh-ms default-refresh-ms))
-       (<= (get x :refresh-ms default-refresh-ms) maximum-refresh-ms)))
+  (let [age (:observation-max-age-ms x)
+        refresh (get x :refresh-ms default-refresh-ms)]
+    (and (positive? (:max-writes x))
+         (positive? age) (positive? refresh)
+         (<= age maximum-observation-age-ms)
+         (<= refresh maximum-refresh-ms)
+         (< age refresh))))
 (defn entry? [x]
   (and (repository? (:repository x)) (boolean? (:enabled? x))
        (boolean? (:fixture? x)) (workflow? (:producer x))

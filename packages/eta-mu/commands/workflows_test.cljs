@@ -192,6 +192,18 @@
 (defn- strings-in [value]
   (filter string? (tree-seq coll? seq value)))
 
+(defn- secret-reference? [expression]
+  ;; GitHub expression strings use single quotes with doubled-quote escaping.
+  ;; Literal mentions do not access the secrets context.
+  (boolean (re-find #"(?i)\bsecrets\b"
+                    (str/replace expression #"'(?:''|[^'])*'" " "))))
+
+(defn- interpolated-secret-reference? [source]
+  ;; Consume complete quoted strings before looking for the closing delimiter;
+  ;; braces inside format/fromJSON literals cannot terminate the expression.
+  (some (comp secret-reference? second)
+        (re-seq #"\$\{\{((?:'(?:''|[^'])*'|[^'])*?)\}\}" source)))
+
 (defn- candidate-violations [config]
   (let [steps (workflow-steps config)
         configurations (cons config (vals (get config "jobs")))]
@@ -200,8 +212,15 @@
            :when (and (map? value) (some #(= "secrets" (str/lower-case (str %))) (keys value)))]
        [:secret-mapping])
      (for [value (strings-in config)
-           :when (re-find #"\$\{\{[^}]*\bsecrets\b|create-github-app-token|eta_mu_app_|dependency_token|private-git-mirrors|authorization: basic|extraheader|insteadof" (str/lower-case value))]
+           :when (or (interpolated-secret-reference? value)
+                     (re-find #"create-github-app-token|eta_mu_app_|dependency_token|private-git-mirrors|authorization: basic|extraheader|insteadof" (str/lower-case value)))]
        [:privileged-input value])
+     ;; Job/step `if` values are expressions even without ${{ }} delimiters.
+     (for [value (tree-seq coll? seq config) :when (map? value)
+           [field expression] value
+           :when (and (= "if" (str/lower-case (str field)))
+                      (string? expression) (secret-reference? expression))]
+       [:privileged-condition expression])
      (for [configuration configurations
            [scope permission] (get configuration "permissions")
            :when (not= "read" permission)]

@@ -50,6 +50,12 @@
          (= (:commands producer) (:commands run))
          (= (set (:required-jobs producer)) (set (map :name (:jobs run)))))))
 
+(defn- publisher-payload [submission]
+  ;; Accepted Muse publishReview preserves raw text and inline order while
+  ;; projecting only the native comment fields from its verified envelope.
+  {:event (:event submission) :body (:summary submission)
+   :comments (mapv #(select-keys % [:path :line :side :body]) (:comments submission))})
+
 (defn- evidence-bound? [now entry snapshot]
   (let [{:keys [tuple run artifact verification submission]} snapshot
         archive (:archive-proof artifact)]
@@ -65,7 +71,9 @@
          (= (:submission verification) (get-in verification [:publisher-validation :submission-sha256]))
          (= (:sources entry) (:sources snapshot) (:sources verification))
          (= tuple (:tuple verification))
-         (= submission (:submission-envelope verification)))))
+         (= submission (:submission-envelope verification))
+         (= (publisher-payload submission)
+            (get-in verification [:publisher-validation :payload])))))
 
 (defn- publication-binding [entry snapshot registry collector]
   (let [{:keys [repository tuple run artifact verification submission]} snapshot
@@ -171,7 +179,8 @@
        :effects [{:type :post-review :intent-key (:intent-key binding)
                   :lock-key (:lock-key binding) :claim-id (:claim-id claim)
                   :head-sha (get-in binding [:tuple :head-sha])
-                  :submission (:submission binding)}]})
+                  :submission (:submission binding)
+                  :payload (:publication-payload binding)}]})
     (refuse :admission)))
 
 (defn- comments-match? [expected actual publisher head review-id]
