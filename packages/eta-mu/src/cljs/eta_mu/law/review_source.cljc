@@ -11,7 +11,8 @@
        (every? #(publication/commit? (get x %)) [:base-sha :head-sha :merge-sha :head-tree :merge-tree])
        (vector? (:merge-parents x)) (= 2 (count (:merge-parents x)))
        (every? publication/commit? (:merge-parents x))
-       (boolean? (:base-ancestor? x))))
+       (boolean? (:base-ancestor? x))
+       (or (nil? (:event-sha x)) (publication/commit? (:event-sha x)))))
 
 (defn bounds? [x]
   (and (map? x)
@@ -45,12 +46,15 @@
        (publication/natural? (:size x))
        (publication/digest? (:sha256 x))))
 
+(def archive-preview? archive-diff?)
+
 (defn request? [x]
   (and (map? x)
        (publication/text? (:object-store x))
        (tuple? (:tuple x))
        (manifest? (:manifest x))
        (archive-diff? (:archive-diff x))
+       (archive-preview? (:archive-preview x))
        (native-context? (:native-context x))
        (bounds? (:bounds x))))
 

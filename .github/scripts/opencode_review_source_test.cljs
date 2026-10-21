@@ -1,7 +1,7 @@
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 (ns opencode-review-source-test
   "Read-only Git object reconstruction controls; inert fixture facts confer no native authority."
-  (:require [cljs.test :as test :refer [async deftest is testing]]
+  (:require [cljs.test :as test :refer [async deftest is]]
             [nbb.core :as nbb]
             [eta-mu.law.review-source :as law]
             ["node:child_process" :as cp]
@@ -33,17 +33,22 @@
     (.mkdirSync fs (.dirname path target) #js {:recursive true})
     (.writeFileSync fs target bytes)))
 
-(defn fixture! []
+(defn fixture!
+  ([] (fixture! "sha1"))
+  ([format]
   (let [root (.mkdtempSync fs (.join path (.tmpdir os) "eta-review-source-"))
-        canary (.join path root "textconv-ran")]
+        canary (.join path root "textconv-ran")
+        hook-canary (.join path root "hook-ran")]
     (try
-      (git! root ["init" "-b" "main"])
+      (git! root (cond-> ["init" "-b" "main"] (= format "sha256") (conj "--object-format=sha256")))
       (git! root ["config" "user.name" "Fixture"])
       (git! root ["config" "user.email" "fixture@example.invalid"])
+      (let [object-format (git! root ["rev-parse" "--show-object-format"])]
       (write! root "base.txt" "base\n")
       (git! root ["add" "--all"])
       (git! root ["commit" "-m" "base"])
-      (let [base (git! root ["rev-parse" "HEAD"])]
+      (let [base (git! root ["rev-parse" "HEAD"])
+            base-tree (git! root ["rev-parse" "HEAD^{tree}"])]
         (write! root ".gitattributes" "*.txt diff=poison\n")
         (write! root "base.txt" "changed λμ\nlast-without-newline")
         (write! root "目录/new\nline.bin" (.from js/Buffer (clj->js [0 255 10 128 13 10])))
@@ -52,6 +57,8 @@
         (let [head (git! root ["rev-parse" "HEAD"])
               head-tree (git! root ["rev-parse" "HEAD^{tree}"])
               merge (git! root ["commit-tree" head-tree "-p" base "-p" head "-m" "test merge"])
+              wrong-parent-merge (git! root ["commit-tree" head-tree "-p" head "-m" "wrong parent"])
+              wrong-tree-merge (git! root ["commit-tree" base-tree "-p" base "-p" head "-m" "wrong tree"])
               merge-tree (git! root ["rev-parse" (str merge "^{tree}")])
               diff-base (git! root ["merge-base" base head])
               diff (let [result (.spawnSync cp "git"
@@ -78,18 +85,31 @@
                         :provenance {:repository "owner/repo" :pull_request "7" :run_id "99"
                                      :run_attempt "1" :workflow_sha (repeated 40 "a")
                                      :workflow_ref "owner/repo/.github/workflows/opencode-code-review.yml@refs/heads/main"}}
-              archive-diff {:base64 (.toString diff "base64") :size (.-length diff) :sha256 (sha256 diff)}]
+              archive-diff {:base64 (.toString diff "base64") :size (.-length diff) :sha256 (sha256 diff)}
+              preview-bytes (if (> (.-length diff) 300000)
+                              (.concat js/Buffer #js [(.subarray diff 0 300000)
+                                                      (.from js/Buffer
+                                                             (str "\n[eta-mu review] diff truncated at 300000 bytes (was "
+                                                                  (.-length diff) ").\n") "utf8")])
+                              diff)
+              archive-preview {:base64 (.toString preview-bytes "base64")
+                               :size (.-length preview-bytes) :sha256 (sha256 preview-bytes)}]
           ;; These local settings attempt candidate-selected process execution.
           (write! root "poison-textconv.sh" (str "#!/bin/sh\ntouch " canary "\ncat\n"))
           (.chmodSync fs (.join path root "poison-textconv.sh") 493)
+          (write! root "hooks/pre-commit" (str "#!/bin/sh\ntouch " hook-canary "\nexit 1\n"))
+          (.chmodSync fs (.join path root "hooks/pre-commit") 493)
           (git! root ["config" "diff.external" (.join path root "poison-textconv.sh")])
           (git! root ["config" "diff.poison.textconv" (.join path root "poison-textconv.sh")])
           (git! root ["config" "core.hooksPath" (.join path root "hooks")])
-          {:root root :canary canary :tuple tuple :native-context native :manifest manifest
-           :archive-diff archive-diff :diff diff :diff-base diff-base :merge merge}))
+          {:root root :canary canary :hook-canary hook-canary
+           :tuple tuple :native-context native :manifest manifest
+           :archive-diff archive-diff :archive-preview archive-preview :diff diff
+           :diff-base diff-base :merge merge :wrong-parent-merge wrong-parent-merge
+           :wrong-tree-merge wrong-tree-merge :object-format object-format})))
       (catch :default e
         (.rmSync fs root #js {:recursive true :force true})
-        (throw e)))))
+        (throw e))))))
 
 (defn ^:async reconstruct [request]
   (if-let [f (resolve 'eta-mu.infra.review-source/reconstruct!)]
@@ -98,24 +118,29 @@
 
 (defn request [f]
   {:object-store (git-dir (:root f)) :tuple (:tuple f) :native-context (:native-context f)
-   :manifest (:manifest f) :archive-diff (:archive-diff f)
+   :manifest (:manifest f) :archive-diff (:archive-diff f) :archive-preview (:archive-preview f)
    :bounds {:output-bytes 10485760 :operation-ms 10000}})
 
 (defn ^:async real-history-controls [done]
   (let [f (fixture!)]
     (try
       (let [observed (await (reconstruct (request f)))]
-        (is (= :observed (:status observed)))
+        (is (= :observed (:status observed)) (pr-str observed))
         (is (= (:diff-base f) (:diff-base-sha observed)))
         (is (= (.-length (:diff f)) (:bytes (:full-diff observed))))
         (is (= (sha256 (:diff f)) (:sha256 (:full-diff observed))))
-        (is (= (.toString (:diff f) "base64") (:content-base64 observed)))
-        (is (= (:manifest f) (:expected-manifest observed)))
+        (is (= (.toString (:diff f) "base64") (:full-diff-base64 observed)))
+        (is (= (:diff-base f) (get-in observed [:manifest :diff_base_sha])))
+        (is (= (get-in f [:manifest :provenance :repository])
+               (get-in observed [:manifest :provenance :repository])))
+        (is (nil? (get-in observed [:manifest :provenance :workflow_sha]))
+            "unavailable workflow source provenance must not be copied from the artifact")
         (is (false? (:complete? observed)) "missing original event/source custody stays incomplete")
         (is (some #{:original-event-sha :caller-workflow-source-custody} (:missing observed)))
         (is (false? (.existsSync fs (:canary f))) "diff must not execute external/textconv drivers")
-        (is (= (:merge-sha (:tuple f)) (get-in observed [:native-provenance :merge-sha])))
-        (is (= "sha256" (get-in observed [:git-provenance :object-format])))
+        (is (false? (.existsSync fs (:hook-canary f))) "object inspection must not execute hooks")
+        (is (= (:merge-sha (:tuple f)) (get-in observed [:native-provenance :tuple :merge-sha])))
+        (is (= (:object-format f) (get-in observed [:git-provenance :object-format])))
         (is (= "--no-textconv" (some #(when (= "--no-textconv" %) %) (get-in observed [:git-provenance :diff-argv])))))
       (catch :default e (is false (str e)))
       (finally (.rmSync fs (:root f) #js {:recursive true :force true}) (done)))))
@@ -143,6 +168,85 @@
     (is (not (law/bounds? {:output-bytes 0 :operation-ms 1})))
     (is (not (law/bounds? {:output-bytes (inc law/maximum-output-bytes) :operation-ms 1})))
     (is (not (law/bounds? {:output-bytes 1 :operation-ms (inc law/maximum-operation-ms)})))))
+
+(defn ^:async refusal-controls [done]
+  (let [f (fixture!)
+        req (request f)
+        bad-merge (repeated 40 "f")
+        other-diff (.from js/Buffer "candidate-authored-diff" "utf8")
+        bad-archive {:base64 (.toString other-diff "base64") :size (.-length other-diff)
+                     :sha256 (sha256 other-diff)}
+        cases [[(assoc-in req [:tuple :merge-parents] [(:base-sha (:tuple f)) (repeated 40 "f")]) :source-topology]
+               [(assoc-in req [:tuple :merge-sha] (:wrong-parent-merge f)) :source-topology]
+               [(assoc-in req [:tuple :merge-sha] (:wrong-tree-merge f)) :source-topology]
+               [(assoc-in req [:tuple :merge-tree] (repeated 40 "e")) :source-topology]
+               [(assoc-in req [:tuple :base-ancestor?] false) :source-topology]
+               [(assoc-in req [:tuple :merge-sha] bad-merge) :source-object]
+               [(assoc-in req [:tuple :head-sha] "--upload-pack=touch") :source-request]
+               [(assoc-in req [:manifest :head_sha] (repeated 40 "f")) :source-manifest-mismatch]
+               [(assoc req :archive-diff bad-archive) :source-archive-mismatch]
+               [(assoc req :object-store (.join path (:root f) "missing.git")) :source-object-store]
+               [(assoc-in req [:bounds :output-bytes] 100) :source-output-bytes]
+               [(assoc-in req [:bounds :operation-ms] 1) :source-time]]]
+    (try
+      (doseq [[bad expected] cases]
+        (let [result (await (reconstruct bad))]
+          (is (= :refused (:status result)) (str expected " " (pr-str result)))
+          (is (= expected (:code result)) (str "refusal cause " (pr-str result)))
+          (is (false? (.existsSync fs (:canary f))))
+          (is (false? (.existsSync fs (:hook-canary f))))))
+      (let [native-stale (assoc-in req [:native-context :run-id] 100)
+            manifest-stale (assoc-in req [:manifest :provenance :run_id] "100")
+            preview-stale (assoc-in req [:archive-preview :sha256] (repeated 64 "f"))]
+        (doseq [bad [native-stale manifest-stale preview-stale]]
+          (is (= :refused (:status (await (reconstruct bad)))))))
+      (catch :default e (is false (str e)))
+      (finally (.rmSync fs (:root f) #js {:recursive true :force true}) (done)))))
+
+(deftest immutable-object-and-archive-mismatches-refuse-without-execution
+  (async done (refusal-controls done)))
+
+(defn ^:async sha256-object-control [done]
+  (let [f (fixture! "sha256")]
+    (try
+      (let [observed (await (reconstruct (request f)))]
+        (is (= :observed (:status observed)) (pr-str observed))
+        (is (= "sha256" (get-in observed [:git-provenance :object-format])))
+        (is (= 64 (count (:head-sha (:tuple f)))))
+        (is (false? (:complete? observed))))
+      (catch :default e (is false (str e)))
+      (finally (.rmSync fs (:root f) #js {:recursive true :force true}) (done)))))
+
+(deftest sha256-object-format-is-supported-when-git-supports-it
+  (async done (sha256-object-control done)))
+
+(defn ^:async empty-diff-control [done]
+  (let [f (fixture!)
+        base (:base-sha (:tuple f))
+        tree (git! (:root f) ["rev-parse" (str base "^{tree}")])]
+    (try
+      (let [head (git! (:root f) ["commit-tree" tree "-p" base "-m" "no-change head"])
+            merge (git! (:root f) ["commit-tree" tree "-p" base "-p" head "-m" "empty review input"])
+            hash (sha256 (.alloc js/Buffer 0))
+            preview {:base64 "" :size 0 :sha256 hash}
+            manifest (-> (:manifest f)
+                         (assoc :base_sha base :head_sha head :diff_base_sha base)
+                         (assoc :full_diff {:path "basehead.diff" :bytes 0 :sha256 hash}))
+            request (-> (request f)
+                        (assoc :manifest manifest :archive-diff preview :archive-preview preview)
+                        (assoc :tuple (assoc (:tuple f) :base-sha base :head-sha head :merge-sha merge
+                                             :head-tree tree :merge-tree tree
+                                             :merge-parents [base head] :base-ancestor? true)))
+            observed (await (reconstruct request))]
+        (is (= :observed (:status observed)) (pr-str observed))
+        (is (= 0 (get-in observed [:full-diff :bytes])))
+        (is (= hash (get-in observed [:full-diff :sha256])))
+        (is (= "" (:full-diff-base64 observed))))
+      (catch :default e (is false (str e)))
+      (finally (.rmSync fs (:root f) #js {:recursive true :force true}) (done)))))
+
+(deftest empty-diff-is-a-complete-byte-observation
+  (async done (empty-diff-control done)))
 
 (defmethod test/report [::test/default :end-run-tests] [result]
   (when-not (test/successful? result) (set! (.-exitCode js/process) 1)))
