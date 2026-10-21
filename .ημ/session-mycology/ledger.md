@@ -1204,3 +1204,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 35aeefad32ae25572df6b4b4af17df32e0cfeee97cac6264977d73e36d243e0c
   note: Preserve both source histories and exact ledger suffixes, record real card readiness, then reproduce coupling through actual extracted steps. Synthetic transport-only evidence must remain distinct from canonical production-law and hosted qualification. Mutate temporary fixtures to prove no-write/no-leak assertions can fail. Existing source custody and terminal-truth spores cover this pattern; no new spore or promotion.
+
+- ts: 2026-10-21T03:12:25.469211+00:00
+  session: feat/anonymous-review-producer-20261021
+  task: Repair canonical metadata loss and export full board without temporary source paths
+  p-efficiency: 0.72
+  p-friction: 0.69
+  p-skill-candidate: 0.60
+  spore: none
+  receipt-refs: b9d1850f5c0b061386a3fcf5b2889e5f48c6fa467170582b15bda23ceaa484f6
+  note: Follow actual parser and CLI schemas rather than guessed scalar, column or owner names. New metadata and explicit export semantics have separate causal RED/GREEN. Preserve old event facts; export location and live IO are different representations. Retain existing undated read-time fallback and warning limitations rather than manufacture timestamps or suppress diagnostics. A mistyped expanded source ID was explicitly withdrawn by a native additive correction from git-resolved refs; source manifests check Git objects. Existing custody/generated-source spores cover the general pattern, so no duplicate child spore.
