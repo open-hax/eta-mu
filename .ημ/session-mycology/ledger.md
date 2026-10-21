@@ -1254,3 +1254,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn execution catalog; evidence2441693df7dcc5948e91bd351270357255e9f78c83a92e278dbf8cd88571a1e7
   note: Preserve causal resource/clock failures separately from authored async harness failures. Await one let/try scope, guard late assertion exit, bound whole worker lifetime and decoder output before validation, and refresh host time without refreshing stale facts. Actual immutable Muse and native ZIP probes establish interface/physical evidence only. Existing schema/custody/terminal-truth learning suffices; no additional spore or same-session promotion.
+
+- ts: 2026-10-21T07:35:36.410998+00:00
+  session: feat/trusted-review-publication-20261021
+  task: Correct actual parity and parent-only cleanup measurement
+  p-efficiency: 0.87
+  p-friction: 0.48
+  p-skill-candidate: 0.55
+  spore: none
+  receipt-refs: receipts.edn measured review correction; evidence2b4d4b8bb1773239f623eb51cc64dbd33a18ee997d08eaaad9d8932666a5188d
+  note: Equal exception sentinels do not establish parity; require actual value envelopes. Parent worker counters do not observe nested worker handles. Narrow assertions and claims to observed scope; retain prior record and direct source controls. No new spore or same-session promotion.

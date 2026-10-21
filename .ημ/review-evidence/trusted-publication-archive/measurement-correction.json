@@ -1,0 +1,23 @@
+{
+  "path": ".\u03b7\u03bc/review-evidence/trusted-publication-archive/2b4d4b8bb1773239f623eb51cc64dbd33a18ee997d08eaaad9d8932666a5188d.json.gz",
+  "sha256": "2b4d4b8bb1773239f623eb51cc64dbd33a18ee997d08eaaad9d8932666a5188d",
+  "bytes": 10055,
+  "raw_sha256": "fe3da2ba874866083397d416f6b049c5ee17fc74adbfc5a8227d28dbc56670eb",
+  "source": "22dce3bb7644e855deaaf28594f017141592f877",
+  "publication_tests": 17,
+  "publication_assertions": 557,
+  "archive_tests": 10,
+  "archive_assertions": 71,
+  "parity_cases": 138,
+  "new_source_hashes": {
+    ".github/scripts/opencode_review_archive_test.cljs": "869ba448c1bb347699e58ab9f5c9972455a4e808b60bb7b522de458814eedc17",
+    ".github/scripts/opencode_review_publish_test.cljs": "74c95f5fc20624529bd5e80bd518df4e724eb97be72dea49ea15a59c199cb3df"
+  },
+  "review_id": 5596322438,
+  "items": [
+    "cr-comment:v1:0c73402c833136109ed5d78d",
+    "cr-comment:v1:f9ea3eebea4a27f0833e0fe1"
+  ],
+  "no_product_runtime_edits": true,
+  "approval": false
+}
