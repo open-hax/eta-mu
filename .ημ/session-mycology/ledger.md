@@ -1244,3 +1244,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 626a32dec33b388cc148ac5f9daaa7e7e3776d34478c1174ee0d3bad9c8a3701
   note: Use actual pinned publisher envelopes and native payload projection, distinguish collector source from producer pins, and test shared-M status history as well as private intent identity. Passing synthetic shaped facts cannot authenticate provenance or supply unfinished effect adapters. Preserve causal review failures and actual source snapshots, explicit short observation budgets, unknown outcomes, warning diagnostics and local-versus-hosted limits. Existing source-schema, source-custody and terminal-truth learning covers the pattern; no duplicate spore or same-session promotion.
+
+- ts: 2026-10-21T07:22:32.033667+00:00
+  session: feat/trusted-review-publication-20261021
+  task: Native finding repairs and actual bounded physical archive admission
+  p-efficiency: 0.62
+  p-friction: 0.87
+  p-skill-candidate: 0.64
+  spore: none
+  receipt-refs: receipts.edn execution catalog; evidence2441693df7dcc5948e91bd351270357255e9f78c83a92e278dbf8cd88571a1e7
+  note: Preserve causal resource/clock failures separately from authored async harness failures. Await one let/try scope, guard late assertion exit, bound whole worker lifetime and decoder output before validation, and refresh host time without refreshing stale facts. Actual immutable Muse and native ZIP probes establish interface/physical evidence only. Existing schema/custody/terminal-truth learning suffices; no additional spore or same-session promotion.
