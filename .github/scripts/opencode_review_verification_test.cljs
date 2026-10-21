@@ -3,7 +3,7 @@
   "Actual pinned Muse code and archives; inert reconstruction is not native custody."
   (:require [cljs.test :as t :refer [deftest is async]] [nbb.core :as nbb]
             [clojure.string :as str] ["node:fs" :as fs] ["node:path" :as path]
-            ["node:os" :as os] ["node:crypto" :as crypto] ["node:zlib" :as zlib]))
+            ["node:os" :as os] ["node:crypto" :as crypto] ["node:zlib" :as zlib] ["node:module" :refer [createRequire]]))
 (def muse "c1369c223cf3c57e3e31934a6d746bfcdfe73f5a")
 (def eta "6a796582d74f93c1a1f18ca5c89eb3a0b19445eb")
 (def verifier-sha "d9fea235fddec9581ba1be959e596f32b82588f78cef5fd76d55f04d24b91030")
@@ -21,6 +21,42 @@
                    :let [b (if (:base64 row) (.from js/Buffer (:base64 row) "base64") (.from js/Buffer (:text row) "utf8"))]]
                (do (when-not (= (:sha256 row) (sha b)) (throw (ex-info "Fixture member changed" {})))
                    [(subs (:path row) (count "synthetic-collector-relocated/")) b])))))
+(defn consistent-fixture [members event]
+  ;; The original verifier smoke has COMMENT/empty findings. Preserve it as
+  ;; publisher-negative; derive a consistent synthetic APPROVE using the real
+  ;; immutable compiled verifier, never a supplied/mock canonical verdict.
+  (let [file (.resolve path capsule "review-invocation.cjs")
+        _ (when-not (= verifier-sha (sha (.readFileSync fs file))) (throw (ex-info "Fixture module changed" {})))
+        require (createRequire file) verifier (require file)
+        selected (data (get members "recovery.json")) accepted (:accepted_invocation selected)
+        response-name (:response_file accepted)
+        selected-index (dec (:attempt accepted))
+        witness (get-in accepted [:canonical_verdict :acceptedInvocation :submissionFile])
+        envelope (assoc (data (get members "submission.json")) :event event)
+        submission (jb envelope)
+        events (mapv (fn [line] (let [row (data (.from js/Buffer line))]
+                                  (if (= "review_submit" (get-in row [:part :tool]))
+                                    (update-in row [:part :state :output] #(js/JSON.stringify (clj->js (assoc (data (.from js/Buffer %)) :event event)))) row)))
+                     (remove str/blank? (str/split-lines (.toString (get members response-name) "utf8"))))
+        response (.from js/Buffer (str (str/join "\n" (map #(js/JSON.stringify (clj->js %)) events)) "\n"))
+        prepared (.prepareReviewInvocationContext verifier (get members "basehead.diff") (get members "input-manifest.json") (clj->js tools) witness)
+        verdict (js->clj (.verifyReviewInvocation verifier response submission prepared) :keywordize-keys true)
+        _ (when-not (:ok verdict) (throw (ex-info "Actual fixture verification failed" verdict)))
+        selected (-> selected
+                     (update :accepted_invocation assoc :canonical_verdict verdict :response_sha256 (sha response) :submission_sha256 (sha submission))
+                     (update-in [:attempts selected-index] assoc :response_sha256 (sha response) :submission_sha256 (sha submission) :canonical_verdict verdict))]
+    (assoc members "submission.json" submission response-name response "recovery.json" (jb selected))))
+(defn recovered-originals []
+  (let [base (originals)
+        proof (data (.gunzipSync zlib (.readFileSync fs ".ημ/review-evidence/trusted-publication-core/a037f990af6bba87fad5b1e10ce3d3ae54f2c313aa6ae0ac4dc23803b331ee9b.json.gz")))
+        retained (into {} (for [row (:files proof) :when (str/starts-with? (:path row) "synthetic-one-recovery/")
+                                :let [b (if (:base64 row) (.from js/Buffer (:base64 row) "base64") (.from js/Buffer (:text row) "utf8"))]]
+                            (do (when-not (= (:sha256 row) (sha b)) (throw (ex-info "Recovery fixture changed" {})))
+                                [(subs (:path row) (count "synthetic-one-recovery/")) b])))
+        binding (:model_discovery (data (get base "recovery.json")))
+        recovery (-> (data (get retained "recovery.json")) (assoc :model_discovery binding)
+                     (update :accepted_invocation assoc :model_discovery_sha256 (:sha256 binding) :model (:selected_model binding)))]
+    (assoc (merge base retained) "recovery.json" (jb recovery))))
 (defn header [n fields] (let [b (.alloc js/Buffer n)] (doseq [[at width x] fields] (case width 2 (.writeUInt16LE b x at) 4 (.writeUInt32LE b x at))) b))
 (defn join [& xs] (.concat js/Buffer (clj->js xs)))
 (defn zip-bytes [members]
@@ -54,7 +90,7 @@
 (defn change-json [m n f] (update m n #(jb (f (data %)))))
 (defn ^:async controls [done]
   (try
-    (let [members (originals) boot (await (call :open-runtime! capsule descriptor))]
+    (let [members (consistent-fixture (originals) "APPROVE") boot (await (call :open-runtime! capsule descriptor))]
       (is (= :ready (:status boot)) "Actual immutable runtime is required; no mock verifier")
       (when (= :ready (:status boot))
         (let [runtime (:runtime boot)]
@@ -65,20 +101,25 @@
               (is (= 36 (get-in r [:verification :page-count])))
               (is (= (sha (get members "model-response-attempt-1.txt")) (get-in r [:verification :trace])))
               (is (= (data (get members "submission.json")) (get-in r [:verification :submission-envelope])))
-              (is (= "APPROVE" (get-in r [:verification :publisher-validation :payload :event])))
+              (is (= (:event (data (get members "submission.json"))) (get-in r [:verification :publisher-validation :payload :event])))
               (is (= [] (get-in r [:verification :publisher-validation :payload :comments])))
               (is (= [] (:effects r))) (is (= [] (:forbidden-effects r)))
               (is (= :local-source-byte-verification (:qualification r))))
-            (doseq [[label m] [[:malformed (assoc members "submission.json" (.from js/Buffer "{"))]
+            (doseq [[label m] [[:canonical-only (consistent-fixture (originals) "COMMENT")]
+                              [:malformed (assoc members "submission.json" (.from js/Buffer "{"))]
                               [:duplicate (update members "submission.json" #(let [s (.toString %)] (.from js/Buffer (str "{\"schema\":\"forged\"," (subs s 1)))))]
                               [:utf8 (assoc members "submission.json" (.from js/Buffer #js [255]))]
                               [:trace (assoc members "model-response-attempt-1.txt" (.from js/Buffer "{}\n"))]
+                              [:duplicate-attempts (change-json members "recovery.json" #(-> % (assoc-in [:accepted_invocation :attempt] 2) (assoc :attempts [(assoc (first (:attempts %)) :attempt 2) (assoc (first (:attempts %)) :attempt 2)])))]
+                              [:false-recovery-reason (change-json members "recovery.json" #(assoc % :recovery_reason "missing_review_submit"))]
                               [:context (change-json members "recovery.json" #(assoc-in % [:accepted_invocation :expected_context_sha256] (apply str (repeat 64 "a"))))]
                               [:witness (change-json members "recovery.json" #(assoc-in % [:accepted_invocation :canonical_verdict :acceptedInvocation :submissionFile] "/collector-local/submission.json"))]
                               [:discovery (change-json members "model-discovery.json" #(assoc % :selected_model "opencode/forged"))]]]
               (let [r (await (scenario runtime m identity identity))] (is (= :refused (:status r)) (str label " " (pr-str r))) (is (not (contains? r :verification))) (is (= [] (:effects r)))))
-            (doseq [[label f] [[:G #(update % :tuple dissoc :event-sha)] [:unknown-G #(assoc-in % [:tuple :event-sha] :unknown)]
-                              [:caller #(update % :sources dissoc :caller)] [:source #(assoc-in % [:sources :muse] :unknown)]
+            (doseq [[label f] [[:G #(update % :tuple dissoc :event-sha)] [:unknown-G #(assoc-in % [:tuple :event-sha] :unknown)] [:wrong-G #(assoc-in % [:tuple :event-sha] (apply str (repeat 40 "0")))]
+                              [:caller #(update % :sources dissoc :caller)] [:wrong-caller #(assoc-in % [:sources :caller] (apply str (repeat 40 "0")))]
+                              [:wrong-ETA #(assoc-in % [:sources :eta] (apply str (repeat 40 "0")))]
+                              [:wrong-build #(assoc-in % [:sources :build] (apply str (repeat 64 "0")))] [:source #(assoc-in % [:sources :muse] :unknown)]
                               [:diff #(update % :full-diff-base64 str "AAAA")] [:manifest #(assoc-in % [:manifest :head_sha] (apply str (repeat 40 "a")))]
                               [:stale #(assoc % :observed-at-ms (- (.now js/Date) 300001))]
                               [:partial #(assoc % :status :observed :complete? false :missing [:original-event-sha :caller-workflow-source-custody] :unsupported [:tools :changed-files :input-verification])]]]
@@ -86,10 +127,74 @@
             (let [r (await (scenario runtime members #(assoc-in % [:archive :artifact :sha256] (apply str (repeat 64 "0"))) identity))]
               (is (= :refused (:status r))) (is (= :archive-native-binding (:code r))))
             (let [r (await (scenario runtime members #(assoc % :publisher-validation {:payload {:event "COMMENT"}}) identity))] (is (= :refused (:status r))) (is (not (contains? r :verification))))
+            (let [recovered (consistent-fixture (recovered-originals) "APPROVE")
+                  good (await (scenario runtime recovered identity identity))
+                  duplicate (change-json recovered "recovery.json" #(assoc % :attempts [(last (:attempts %)) (last (:attempts %))]))
+                  wrong-reason (change-json recovered "recovery.json" #(assoc % :recovery_reason "invocation_deadline"))]
+              (is (= :verified (:status good)) "Actual one-recovery positive is replayed without invoking a model")
+              (let [r (await (scenario runtime duplicate identity identity))]
+                (is (= :refused (:status r))) (is (= :recovery-order (:code r))))
+              (let [r (await (scenario runtime wrong-reason identity identity))]
+                (is (= :refused (:status r))) (is (= :recovery-lifecycle (:code r)))))
+            (let [uploaded (assoc members "machinery/review-invocation.cjs" (.from js/Buffer "throw Error('uploaded code must remain inert');"))
+                  previous (aget (.-env js/process) "GH_TOKEN")]
+              (try
+                (aset (.-env js/process) "GH_TOKEN" "synthetic-secret-canary-do-not-inherit")
+                (let [r (await (scenario runtime uploaded identity identity))]
+                  (is (= :verified (:status r)) "Uploaded verifier bytes are never loaded")
+                  (is (= [] (:forbidden-effects r))))
+                (finally (if previous (aset (.-env js/process) "GH_TOKEN" previous) (js-delete (.-env js/process) "GH_TOKEN")))))
+            (doseq [[label f] [[:run #(assoc-in % [:archive :artifact :run-id] 3)]
+                              [:attempt #(assoc-in % [:archive :artifact :attempt] 2)]
+                              [:oversized-budget #(assoc-in % [:bounds :operation-ms] 30001)]
+                              [:timeout #(assoc-in % [:bounds :operation-ms] 1)]]]
+              (let [r (await (scenario runtime members f identity))]
+                (is (= :refused (:status r)) (str label " " (pr-str r)))
+                (is (not (contains? r :verification)))
+                (is (= 0 (:workers (await (call :resources)))) "Measures only this adapter's parent-owned workers")))
             (finally (await (call :close-runtime! runtime))))))
       (let [r (await (call :open-runtime! capsule (assoc descriptor :muse-source (apply str (repeat 40 "a")))))] (is (= :refused (:status r))) (is (= :runtime-descriptor (:code r)))))
+      (let [dir (.mkdtempSync fs (.join path (.tmpdir os) "eta-runtime-tamper-"))
+            copy (.join path dir "runtime")]
+        (try
+          (.cpSync fs capsule copy #js {:recursive true})
+          (.appendFileSync fs (.join path copy "review-invocation.cjs") "\nthrow Error('unchecked runtime');\n")
+          (let [r (await (call :open-runtime! copy descriptor))]
+            (is (= :refused (:status r))) (is (= :runtime-file-digest (:code r))))
+          (finally (.rmSync fs dir #js {:recursive true :force true}))))
+      (let [r (await (call :open-runtime! "/nonexistent/immutable-review-capsule" descriptor))]
+        (is (= :refused (:status r))))
+      (is (= {:runtimes 0 :workers 0} (await (call :resources))))
     (catch :default e (is false (str e)))
     (finally (done))))
+(defn ^:async publisher-differential [done]
+  (let [dir (.mkdtempSync fs (.join path (.tmpdir os) "eta-muse-payload-"))
+        file (.join path dir "submission.json")
+        module-file (.resolve path capsule "publish-opencode-review.cjs")
+        expected-sha "bb75bc57d8eeaf7edbd77f34e9a4da2d319617d06809f9aadfb0d94e7ae6c2c9"]
+    (try
+      (when-not (= expected-sha (sha (.readFileSync fs module-file))) (throw (ex-info "Publisher capsule changed" {})))
+      (let [require (createRequire module-file) publisher (require module-file)
+            project (resolve 'eta-mu.shape.review-verification/native-payload)]
+        (is (ifn? project))
+        (when project
+          (doseq [[event comments] [["APPROVE" []]
+                                    ["COMMENT" [{:path "notes.txt" :line 1 :side "RIGHT" :body "  First 😀\n" :severity "low" :blocking false :confidence 0.9}]]
+                                    ["REQUEST_CHANGES" [{:path "notes.txt" :line 2 :side "RIGHT" :body "  Second 😀\n" :severity "high" :blocking true}
+                                                        {:path "notes.txt" :line 1 :side "RIGHT" :body "First\n" :severity "low" :blocking false}]]]]
+            (let [envelope {:schema "open-hax.github-review/v1" :event event :summary "  Raw Unicode 😀 summary\n" :comments comments}
+                  calls (atom [])
+                  github #js {:rest #js {:pulls #js {:listFiles "literal-files" :createReview (fn [payload] (swap! calls conj (js->clj payload :keywordize-keys true)) #js {:data #js {:id 1}})}}
+                              :paginate (fn [_ _] #js [#js {:filename "notes.txt" :patch "@@ -1 +1,2 @@\n-old\n+one\n+two\n"}])}
+                  context #js {:repo #js {:owner "synthetic" :repo "fixture"} :payload #js {:pull_request #js {:number 1 :head #js {:sha (apply str (repeat 40 "b"))}}}}]
+              (.writeFileSync fs file (jb envelope))
+              (await (.publishReview publisher #js {:github github :context context :core #js {:info (fn [_] nil)} :submissionFile file}))
+              (is (= 1 (count @calls)))
+              (is (= (project envelope) (select-keys (first @calls) [:event :body :comments])) "Product field projection matches actual immutable Muse")
+              (is (= (apply str (repeat 40 "b")) (:commit_id (first @calls))))))))
+      (catch :default e (is false (str e)))
+      (finally (.rmSync fs dir #js {:recursive true :force true}) (done)))))
+(deftest actual-muse-native-payload-projection (async done (publisher-differential done)))
 (deftest actual-pinned-verifier-causal-controls (async done (controls done)))
 (defmethod t/report [::t/default :end-run-tests] [r] (when-not (t/successful? r) (set! (.-exitCode js/process) 1)))
 (when (.existsSync fs "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs") (nbb/await (nbb/load-file "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs")))
