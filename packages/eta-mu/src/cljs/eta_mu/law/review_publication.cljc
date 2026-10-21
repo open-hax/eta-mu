@@ -8,13 +8,14 @@
 (def publisher-app-id 3152464)
 (def default-refresh-ms 86400000)
 (def maximum-refresh-ms 518400000) ; Six days leaves a margin below seven.
+(def maximum-observation-age-ms 300000)
 (def maximum-safe-integer 9007199254740991)
 
 (defn natural? [x]
   (and (integer? x) (<= 0 x maximum-safe-integer)))
 (defn positive? [x] (and (natural? x) (pos? x)))
 (defn text? [x] (and (string? x) (not (str/blank? x))))
-(defn commit? [x] (and (string? x) (boolean (re-matches #"(?:[0-9a-f]{40}|[0-9a-f]{64})" x))))
+(defn commit? [x] (and (string? x) (boolean (re-matches #"^(?:[0-9a-f]{40}|[0-9a-f]{64})$" x))))
 (defn digest? [x] (and (string? x) (boolean (re-matches #"[0-9a-f]{64}" x))))
 (defn https-url? [x]
   (and (string? x) (boolean (re-matches #"https://[^\s/@]+/[^\s]*" x))))
@@ -56,6 +57,9 @@
 (defn proof? [x] (and (commit? (:source-sha x)) (digest? (:sha256 x))))
 (defn status-policy? [x]
   (and (positive? (:max-writes x))
+       (positive? (:observation-max-age-ms x))
+       (<= (:observation-max-age-ms x) maximum-observation-age-ms)
+       (< (:observation-max-age-ms x) (get x :refresh-ms default-refresh-ms))
        (positive? (get x :refresh-ms default-refresh-ms))
        (<= (get x :refresh-ms default-refresh-ms) maximum-refresh-ms)))
 (defn entry? [x]
@@ -94,8 +98,16 @@
   (and (map? x) (text? (:path x)) (positive? (:line x))
        (contains? #{"LEFT" "RIGHT"} (:side x)) (text? (:body x))))
 (defn submission? [x]
+  (and (text? (:schema x)) (text? (:summary x))
+       (contains? #{"APPROVE" "COMMENT" "REQUEST_CHANGES"} (:event x))
+       (vector? (:comments x)) (every? comment? (:comments x))))
+(defn publisher-payload? [x]
   (and (contains? #{"APPROVE" "COMMENT" "REQUEST_CHANGES"} (:event x))
        (text? (:body x)) (vector? (:comments x)) (every? comment? (:comments x))))
+(defn publisher-validation? [x]
+  (and (= :trusted-publisher-validator (:origin x)) (= :verified (:result x))
+       (commit? (:module-source x)) (digest? (:module-sha256 x))
+       (digest? (:submission-sha256 x)) (publisher-payload? (:payload x))))
 (defn verification? [x]
   (and (= :trusted-independent-verifier (:origin x)) (= :verified (:result x))
        (sources? (:sources x)) (tuple? (:tuple x))
@@ -104,6 +116,7 @@
        (every? #(digest? (get x %))
                [:full-input :input-verification :trace :submission :invocation :discovery :context])
        (submission? (:submission-envelope x))
+       (publisher-validation? (:publisher-validation x))
        (positive? (:page-count x)) (= (:page-count x) (:verified-page-count x))
        (natural? (:completed-at-ms x))))
 (defn claim? [x]

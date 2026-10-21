@@ -27,21 +27,29 @@
            :proof (digest "6") :custody-proof (digest "7") :protection-proof (digest "8")
            :permissions #{:statuses-write :pull-requests-write}}
    :hosted-proof {:source-sha (sha "b") :sha256 (digest "9")}
-   :status-policy {:max-writes 4}})
+   :status-policy {:max-writes 4 :observation-max-age-ms 300000}})
 (def artifact
   {:id 71 :run-id 61 :attempt 2 :size-bytes 100 :sha256 (digest "a") :expires-at-ms (+ now 100000000)
    :archive-proof {:origin :trusted-archive-verifier :result :verified :artifact-id 71
                    :sha256 (digest "a") :completed-at-ms now
                    :bounds {:download-bytes 1000 :members 10 :member-bytes 1000
                             :uncompressed-bytes 10000 :operation-ms 1000 :decode-ms 1000}}})
-(def submission {:event "APPROVE" :body "Inert verified review." :comments
-                 [{:path "src/inert.cljc" :line 3 :side "RIGHT" :body "Inert inline."}]})
+(def submission {:schema "open-hax.github-review/v1" :event "COMMENT" :summary "Inert verified review." :comments
+                 [{:path "src/inert.cljc" :line 3 :side "RIGHT" :body "Inert inline."
+                   :severity "low" :blocking false}]})
+(def publication-payload
+  {:event "COMMENT" :body "Inert verified review."
+   :comments [{:path "src/inert.cljc" :line 3 :side "RIGHT" :body "Inert inline."}]})
 (def verification
   {:origin :trusted-independent-verifier :result :verified :sources sources :tuple tuple
    :artifact-id 71 :artifact-sha256 (digest "a") :run-id 61 :attempt 2
    :full-input (digest "b") :input-verification (digest "c") :trace (digest "d")
    :submission (digest "e") :invocation (digest "f") :discovery (digest "0") :context (digest "1")
-   :submission-envelope submission :page-count 36 :verified-page-count 36 :completed-at-ms now})
+   :submission-envelope submission
+   :publisher-validation {:origin :trusted-publisher-validator :result :verified
+                          :module-source (:muse sources) :module-sha256 (digest "2")
+                          :submission-sha256 (digest "e") :payload publication-payload}
+   :page-count 36 :verified-page-count 36 :completed-at-ms now})
 (defn fixture []
   {:now-ms now :target-id 41 :registry {:source-sha (sha "b") :targets [entry]}
    :collector {:event :schedule :mode :ordinary :source-sha (sha "b")
@@ -74,8 +82,9 @@
   {:origin :trusted-native-readback :intent-key (get-in admission [:binding :intent-key])
    :tuple tuple :observed-at-ms now :receipt-url "https://example.invalid/review/91"
    :review {:id 91 :publisher publisher :head-sha (:head-sha tuple)
-            :event (:event submission) :body (:body submission) :complete? true
-            :comments [{:id 101 :payload (first (:comments submission))}]}})
+            :event (:event publication-payload) :body (:body publication-payload) :complete? true
+            :comments [{:id 101 :review-id 91 :head-sha (:head-sha tuple) :actor (:actor publisher)
+                        :payload (first (:comments publication-payload))}]}})
 (defn history []
   {:origin :trusted-native-status-history :complete? true :observed-at-ms now
    :last-write-outcome :none :statuses []})
@@ -94,6 +103,8 @@
   (is (not (law/commit? (str (sha "a") "a"))))
   (doseq [x [nil ##NaN ##Inf -1 1.5 9007199254740992 "1"]] (is (not (law/natural? x))))
   (is (not (law/status-policy? {:max-writes 1 :refresh-ms (* 7 law/default-refresh-ms)})))
+  (is (not (law/status-policy? {:max-writes 1 :observation-max-age-ms 300001})))
+  (is (not (law/status-policy? {:max-writes 1 :observation-max-age-ms 1000 :refresh-ms 1000})))
   (is (not (law/status-history? (dissoc (history) :complete?))))
   (is (not (law/verification? {:acceptedInvocation true}))))
 
@@ -117,6 +128,35 @@
     (is (= :admitted (:status (decision :admit private))))
     (is (= :admitted (:status (decision :admit sha256))))
     (is (= :refused (:status (decision :admit (assoc-in private [:snapshot :repository :public?] true)))))))
+
+(deftest actual-compatible-approved-empty-envelope-remains-a-positive-path
+  (let [envelope (assoc submission :event "APPROVE" :comments [])
+        payload (assoc publication-payload :event "APPROVE" :comments [])
+        c (-> (fixture) (assoc-in [:snapshot :submission] envelope)
+              (assoc-in [:snapshot :verification :submission-envelope] envelope)
+              (assoc-in [:snapshot :verification :publisher-validation :payload] payload))
+        a (decision :admit c)
+        r (-> (readback a) (assoc-in [:review :event] "APPROVE")
+              (assoc-in [:review :comments] []))]
+    (is (= :admitted (:status a)))
+    (is (= :write-status (:action (decision :status-plan a (observed-intent a) r (history)))))))
+
+(deftest accepted-collector-code-and-registry-advance-independently-of-producer-pins
+  (let [central (sha "d")
+        c (-> (fixture)
+              (assoc-in [:registry :source-sha] central)
+              (update :collector merge {:source-sha central :accepted-default-sha central
+                                         :adopted-default-sha central :registry-source-sha central})
+              (assoc-in [:registry :targets 0 :setup :default-sha] central)
+              (assoc-in [:snapshot :setup :default-sha] central)
+              (assoc-in [:registry :targets 0 :hosted-proof :source-sha] central)
+              (assoc-in [:snapshot :hosted-proof :source-sha] central))
+        a (decision :admit c)]
+    (is (= :admitted (:status a)))
+    (is (= sources (get-in a [:binding :sources])))
+    (is (= central (get-in a [:binding :collector-source])))
+    (is (= central (get-in a [:binding :registry-source])))
+    (is (not= (get-in (admitted) [:binding :intent-key]) (get-in a [:binding :intent-key])))))
 
 (deftest ordinary-enrollment-and-source-custody-refuse-before-all-effects
   (doseq [[label change]
@@ -174,6 +214,10 @@
            [:trace #(update-in % [:snapshot :verification] dissoc :trace)]
            [:submission-binding #(assoc-in % [:snapshot :submission :body] "Unverified replacement.")]
            [:omitted-verified-envelope #(update-in % [:snapshot :verification] dissoc :submission-envelope)]
+           [:omitted-publisher-proof #(update-in % [:snapshot :verification] dissoc :publisher-validation)]
+           [:publisher-proof-source #(assoc-in % [:snapshot :verification :publisher-validation :module-source] (sha "f"))]
+           [:publisher-proof-digest #(assoc-in % [:snapshot :verification :publisher-validation :submission-sha256] (digest "f"))]
+           [:publisher-origin #(assoc-in % [:snapshot :verification :publisher-validation :origin] :candidate)]
            [:verification-origin #(assoc-in % [:snapshot :verification :origin] :candidate)]
            [:archive-origin #(assoc-in % [:snapshot :artifact :archive-proof :origin] :candidate)]
            [:snapshot-clock #(assoc-in % [:snapshot :observed-at-ms] (inc now))]
@@ -211,6 +255,7 @@
   (let [a (admitted) i (observed-intent a) r (readback a)
         p (decision :status-plan a i r (history))]
     (is (= :write-status (:action p)))
+    (is (= :pending (:status p)) "A proposed POST is not native status success")
     (is (= [:post-status] (mapv :type (:effects p))))
     (is (= :success (get-in p [:effects 0 :state])))
     (is (= (:merge-sha tuple) (get-in p [:effects 0 :sha])))
@@ -218,11 +263,19 @@
     (is (= (+ now law/default-refresh-ms) (:next-refresh-at-ms p)))
     (doseq [bad [(assoc-in r [:review :publisher :app-id] 1)
                  (assoc-in r [:review :head-sha] (sha "f"))
-                 (assoc-in r [:review :event] "COMMENT")
+                 (assoc-in r [:review :event] "APPROVE")
                  (assoc-in r [:review :body] "changed")
                  (assoc-in r [:review :comments] [])
                  (assoc-in r [:review :comments 0 :payload :body] "changed")
                  (assoc-in r [:review :comments 0 :id] nil)
+                 (assoc-in r [:review :comments 0 :actor :id] 8)
+                 (assoc-in r [:review :comments 0 :actor :login] "another[bot]")
+                 (assoc-in r [:review :comments 0 :actor :type] :user)
+                 (assoc-in r [:review :comments 0 :head-sha] (sha "f"))
+                 (assoc-in r [:review :comments 0 :review-id] 92)
+                 (update-in r [:review :comments 0] dissoc :actor)
+                 (update-in r [:review :comments 0] dissoc :head-sha)
+                 (update-in r [:review :comments 0] dissoc :review-id)
                  (assoc-in r [:review :complete?] false)
                  (assoc-in r [:tuple :base-sha] (sha "f"))
                  (assoc r :intent-key [:other])
@@ -245,10 +298,61 @@
                  (assoc-in fresh [:statuses 0 :sha] (:head-sha tuple))
                  (assoc-in fresh [:statuses 0 :publisher :app-id] 1)
                  (assoc-in fresh [:statuses 0 :context] "other")
-                 (assoc-in fresh [:statuses 0 :receipt-url] "https://example.invalid/other")
+                 (assoc-in fresh [:statuses 0 :receipt-url] "not-a-native-receipt-url")
                  (assoc fresh :statuses (mapv #(assoc (status-row (- now law/default-refresh-ms)) :id %) [1 2 3 4]))]]
       (is (= [] (:effects (decision :status-plan a i r bad)))))
     (is (= :discover-status (:action (decision :status-plan a i r (assoc fresh :last-write-outcome :unknown)))))))
+
+(deftest shared-merge-history-keeps-prior-receipts-without-borrowing-another-pr-review
+  (let [a (admitted)
+        b (decision :admit (-> (fixture)
+                              (assoc-in [:snapshot :tuple :pr-number] 23)
+                              (assoc-in [:snapshot :verification :tuple :pr-number] 23)))
+        url "https://example.invalid/review/92"
+        i (assoc (observed-intent b) :review-id 92 :receipt-url url)
+        r (-> (readback b) (assoc :tuple (get-in b [:binding :tuple]) :receipt-url url)
+              (assoc-in [:review :id] 92) (assoc-in [:review :comments 0 :review-id] 92))
+        prior (assoc (history) :statuses [(status-row (- now 10))])
+        p (decision :status-plan b i r prior)]
+    (is (= (get-in a [:binding :lock-key]) (get-in b [:binding :lock-key])))
+    (is (not= (get-in a [:binding :intent-key]) (get-in b [:binding :intent-key])))
+    (is (= :write-status (:action p)) "Previous PR receipt does not permanently block shared M")
+    (is (= :pending (:status p)))
+    (is (= url (get-in p [:effects 0 :receipt-url])))
+    (is (= 1 (get-in p [:effects 0 :expected-write-count])))
+    (let [confirmed (assoc-in prior [:statuses 0 :receipt-url] url)
+          unchanged (decision :status-plan b i r confirmed)]
+      (is (= :unchanged (:action unchanged)))
+      (is (= :qualified (:status unchanged)))
+      (is (= [] (:effects unchanged))))))
+
+(deftest current-native-observation-budget-and-final-fresh-success-dedup
+  (let [later (+ now law/default-refresh-ms)
+        aged (assoc (fixture) :now-ms later)
+        recollected (-> aged (assoc-in [:snapshot :observed-at-ms] later)
+                        (assoc-in [:snapshot :artifact :archive-proof :completed-at-ms] later)
+                        (assoc-in [:snapshot :verification :completed-at-ms] later))
+        a (decision :admit recollected)
+        i (observed-intent a)
+        r (assoc (readback a) :observed-at-ms later)
+        h (assoc (history) :observed-at-ms later :statuses [(status-row now)])]
+    (is (= :refused (:status (decision :admit aged))))
+    (is (= :admitted (:status a)))
+    (is (= :write-status (:action (decision :status-plan a i r h))))
+    (doseq [bad [(assoc r :observed-at-ms now)]]
+      (is (= [] (:effects (decision :status-plan a i bad h)))))
+    (is (= [] (:effects (decision :status-plan a i r (assoc h :observed-at-ms now)))))
+    (doseq [path [[:snapshot :observed-at-ms]
+                  [:snapshot :artifact :archive-proof :completed-at-ms]
+                  [:snapshot :verification :completed-at-ms]]]
+      (is (= :refused (:status (decision :admit (assoc-in recollected path now))))))
+    (doseq [budget [nil 0 -1 ##Inf 300001 law/default-refresh-ms]]
+      (is (= :refused (:status (decision :admit (assoc-in recollected [:registry :targets 0 :status-policy :observation-max-age-ms] budget))))))
+    (let [full (assoc h :statuses (mapv #(assoc (status-row (- later 10)) :id %) [1 2 3 4]))
+          unchanged (decision :status-plan a i r full)]
+      (is (= :qualified (:status unchanged)))
+      (is (= :unchanged (:action unchanged)))
+      (is (= [] (:effects unchanged))))))
 
 (deftest shared-merge-lock-is-not-a-per-pr-approval-or-intent
   (let [a (admitted)
