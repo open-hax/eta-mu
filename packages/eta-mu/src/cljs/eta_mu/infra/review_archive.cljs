@@ -6,7 +6,8 @@
             [eta-mu.shape.review-archive :as zip]
             [eta-mu.domain.review-archive :as domain]
             [eta-mu.extern.review-archive :as host]
-            [eta-mu.domain.review-publication :as publication]))
+            [eta-mu.domain.review-publication :as publication]
+            [eta-mu.law.review-publication :as publication-law]))
 
 (defn- layout! [token size]
   (let [ordinary (zip/end-record (host/range-bytes token (max 0 (- size 65557)) (min size 65557)) size)
@@ -30,13 +31,13 @@
     (domain/local! entry local (when descriptor? (zip/descriptor (host/range-bytes token payload-end gap))))
     (assoc entry :payload-offset payload)))
 
-(defn ^:async admit!
-  "Verify actual bounded local ZIP bytes against supplied native size/digest.
-  These facts require independent native authentication by the future collector;
-  a caller-provided archive-proof is ignored. JSON meaning belongs to Muse."
+(defn ^:async worker-admit!
+  "Internal accepted-source worker entry. The public boundary additionally
+  enforces the whole-operation deadline outside this worker's event loop."
   [{:keys [path artifact bounds required-members text-members] :as request}]
   (let [opened (atom nil) start (host/monotonic-ms)]
     (try
+      (when-not (host/admission-worker?) (zip/refuse! :archive-runtime))
       (when-not (law/request? request) (zip/refuse! :archive-request))
       (let [physical (host/open! path (:download-bytes bounds) (+ start (:operation-ms bounds)))
             token (:token physical)
@@ -55,7 +56,8 @@
           (tick!)
           (let [remaining (- (:operation-ms bounds) (- (host/monotonic-ms) start))
                 decoded (await (host/decode! token (:payload-offset entry) (:compressed-size entry) (:method entry)
-                                             (:member-bytes bounds) (contains? (set text-members) (:path entry))
+                                             (min (:member-bytes bounds) (:size entry))
+                                             (contains? (set text-members) (:path entry))
                                              (min remaining (:decode-ms bounds))))]
             (tick!)
             (domain/decoded! entry decoded)
@@ -73,6 +75,17 @@
          :members @members})
       (catch :default e {:status :refused :code (or (:code (ex-data e)) :archive-host)})
       (finally (when @opened (host/close! @opened))))))
+
+(defn ^:async admit!
+  "Verify actual ZIP bytes in a disposable accepted-source NBB worker. The
+  outer timer covers runtime startup, file/hash, metadata parsing and decoding;
+  cancellation/IPC cleanup is not a whole-API latency guarantee. Native metadata
+  still requires independent authentication. No supplied archive-proof counts,
+  and JSON meaning remains with the immutable Muse verifier."
+  [request]
+  (if (publication-law/positive? (get-in request [:bounds :operation-ms]))
+    (await (host/bounded-admission! request))
+    {:status :refused :code :archive-request}))
 
 (defn ^:async admit-context!
   "Compose the physical boundary with the existing publication core. The

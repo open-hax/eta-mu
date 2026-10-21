@@ -9,7 +9,12 @@
   [bytes offset width]
   (when-not (and (integer? offset) (<= 0 offset) (<= (+ offset width) (count bytes)))
     (refuse! :zip-truncated))
-  (let [n (reduce (fn [n i] (+ (* n 256) (nth bytes i)))
+  (let [n (reduce (fn [n i]
+                    ;; Check each step before another multiplication can
+                    ;; overflow a JVM long or lose JS integer precision.
+                    (let [next (+ (* n 256) (nth bytes i))]
+                      (when (> next maximum-safe-integer) (refuse! :zip-integer-range))
+                      next))
                   0 (range (dec (+ offset width)) (dec offset) -1))]
     (when (> n maximum-safe-integer) (refuse! :zip-integer-range)) n))
 (defn signature? [bytes offset signature]
