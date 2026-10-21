@@ -95,65 +95,6 @@ jobs:
           echo "$install_dir" >> "$GITHUB_PATH"
           "$install_dir/bb" --version
 
-      - name: Detect eta-mu app credentials
-        id: dependency-credentials
-        env:
-          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
-          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-        shell: bash
-        run: |
-          if [[ -n "${ETA_MU_APP_ID}" && -n "${ETA_MU_APP_PRIVATE_KEY}" ]]; then
-            echo "available=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "available=false" >> "${GITHUB_OUTPUT}"
-          fi
-
-      - name: Create cross-repository read token
-        id: dependency-token
-        if: steps.dependency-credentials.outputs.available == 'true'
-        continue-on-error: true
-        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547
-        with:
-          app-id: ${{ secrets.ETA_MU_APP_ID }}
-          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: |
-            katamorph
-          permission-contents: read
-
-      - name: Mirror private Git dependencies
-        if: steps.dependency-token.outputs.token != ''
-        env:
-          DEPENDENCY_TOKEN: ${{ steps.dependency-token.outputs.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mirrors="$RUNNER_TEMP/private-git-mirrors"
-          rm -rf "$mirrors"
-          mkdir -p "$mirrors"
-          authorization="$(printf 'x-access-token:%s' "${DEPENDENCY_TOKEN}" | base64 -w0)"
-
-          mirror_repository() {
-            local repository="$1"
-            local destination="$mirrors/${repository}.git"
-            local attempt
-            for attempt in 1 2 3; do
-              rm -rf "$destination"
-              if git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${authorization}" \
-                clone --mirror \
-                "https://github.com/open-hax/${repository}.git" \
-                "$destination"; then
-                return 0
-              fi
-              if [[ "$attempt" -eq 3 ]]; then
-                return 1
-              fi
-              sleep $((attempt * 5))
-            done
-          }
-
-          mirror_repository katamorph
-
       - name: Install, validate, test, and build
         id: validate
         continue-on-error: true
@@ -161,22 +102,9 @@ jobs:
         run: |
           set -euo pipefail
           export OUT="$RUNNER_TEMP/sandbox-export"
-          mirrors="$RUNNER_TEMP/private-git-mirrors"
-
-          remove_mirror_rewrites() {
-            git config --global --unset-all \
-              "url.file://$mirrors/katamorph.git.insteadOf" || true
-          }
-          trap remove_mirror_rewrites EXIT
-
-          if [[ -d "$mirrors/katamorph.git" ]]; then
-            git config --global \
-              "url.file://$mirrors/katamorph.git.insteadOf" \
-              "https://github.com/open-hax/katamorph.git"
-          fi
-
           {
             pnpm install --frozen-lockfile
+            pnpm --dir packages/eta-mu test:workflows
             pnpm --dir packages/extensions build
             pnpm lint
             pnpm test
@@ -249,7 +177,13 @@ jobs:
                 "Restore the optional dependency-cache artifact or allow network access for dependency installation"
               ]
             }' > "$OUT/manifest.json"
-          (cd "$OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+          (
+            cd "$OUT"
+            checksum_inputs="$(mktemp "$RUNNER_TEMP/sandbox-checksum-inputs.XXXXXX")"
+            trap 'rm -f "$checksum_inputs"' EXIT
+            find . -type f ! -name SHA256SUMS -print0 | sort -z > "$checksum_inputs"
+            xargs -0 sha256sum < "$checksum_inputs" > SHA256SUMS
+          )
 
       - name: Package optional dependency cache
         if: github.event_name == 'workflow_dispatch' && inputs.include_dependency_cache
@@ -269,7 +203,13 @@ jobs:
           if [[ -d "$HOME/.gitlibs" ]]; then
             tar -czf "$DEPS_OUT/gitlibs.tar.gz" -C "$HOME" .gitlibs
           fi
-          (cd "$DEPS_OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+          (
+            cd "$DEPS_OUT"
+            checksum_inputs="$(mktemp "$RUNNER_TEMP/sandbox-checksum-inputs.XXXXXX")"
+            trap 'rm -f "$checksum_inputs"' EXIT
+            find . -type f ! -name SHA256SUMS -print0 | sort -z > "$checksum_inputs"
+            xargs -0 sha256sum < "$checksum_inputs" > SHA256SUMS
+          )
 
       - name: Upload sandbox bundle
         if: always()

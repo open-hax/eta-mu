@@ -34,6 +34,41 @@ Kimi must not close ambiguous issues or make broad/destructive changes.
 
 `.github/workflows/opencode-code-review.yml` reviews non-draft, same-repository pull requests with the project-local `github-reviewer` OpenCode agent and a freshly discovered, active, tool-capable, zero-cost MiMo Flash model from OpenCode's anonymous public provider.
 
+### Anonymous producer interface and caller migration
+
+The candidate in [eta-mu #361](https://github.com/open-hax/eta-mu/pull/361)
+removes all `workflow_call.secrets` declarations and all App/Discord credential
+custody from the ordinary producer. It retains full-input verification,
+bounded recovery, raw evidence and final read-only envelope/location checks.
+The existing [2-point producer card](../kanban/tasks/produce-anonymous-review-evidence-without-publication-credentials-c7d20dbb.md)
+is followed by the separate [5-point trusted publisher](../kanban/tasks/independently-admit-and-publish-review-evidence-from-trusted-default-code-1c707551.md)
+and [3-point hosted proof](../kanban/epics/prove-reusable-review-gate-red-path-in-a-fixture-caller.md); this producer change does not complete
+either successor or activate a target. Those successors remain held.
+
+Read-only source recovery on October 21, 2026 found these two existing callers.
+Both currently use older callees that still declare every forwarded name, so
+these observations establish a future migration requirement, not a current
+caller failure or exhaustive constellation enrollment inventory.
+
+| Caller source (`.github/workflows/eta-mu-review.yml`) | Current eta-mu pin | Forwarded names to remove before advancing to the producer interface |
+| --- | --- | --- |
+| [Services at `48c9cc252341d49b7d0e3b5ed20b774ca66e55d4`](https://github.com/open-hax/services/blob/48c9cc252341d49b7d0e3b5ed20b774ca66e55d4/.github/workflows/eta-mu-review.yml) | `4eaa34d18b5e07d9f26f0ebe4d20cf7e65ef9a41` | `ETA_MU_APP_ID`, `ETA_MU_APP_PRIVATE_KEY` |
+| [Uxx at `a31cbbc96a6f46a659e1a522d1e7579e440d4387`](https://github.com/open-hax/uxx/blob/a31cbbc96a6f46a659e1a522d1e7579e440d4387/.github/workflows/eta-mu-review.yml) | `d98ab446d56ddfd24542df49b102b851f2a767fa` | `ETA_MU_APP_ID`, `ETA_MU_APP_PRIVATE_KEY`, `DISCORD_REVIEW_WEBHOOK_URL` |
+
+Before a caller advances, recover its then-current source and remove **all**
+producer secret mappings in the same reviewed change that selects an accepted
+immutable revision. Do not substitute `secrets: inherit` or move credentials
+into candidate command inputs/environment. Preserve the caller's other inputs,
+read-only execution boundary and immutable event-head binding. Validate the
+caller against the selected callee's actual interface; an undeclared secret
+mapping is invalid even if that secret would be empty on a fork event.
+
+Pin advancement, required-check adoption, trusted publication and deployment
+remain held pending the existing publisher/hosted-proof and per-target setup
+owners. Qualification must bind current head, base and tested merge candidate;
+an unsupported fork-event producer success proves no inference, publication or
+required-review result. This document changes neither caller nor pin.
+
 Direct pull requests and reusable callers default to a 120-minute review job.
 Reusable callers may set numeric `review_timeout_minutes` to a whole number from
 60 through 180 to select a budget for a complete diff. The job timeout is
@@ -47,7 +82,7 @@ scope publication. The deterministic evidence, context compilation and terminal
 gate budgets remain 60, 45 and 5 minutes respectively.
 
 The ordinary Linux review reserves 30 minutes of that job budget for setup,
-bounded process cleanup, verification, retention and publication, and divides
+bounded process cleanup, verification and evidence retention, and divides
 the remainder equally between the existing two possible invocations. The
 validated first step derives the host-owned `REVIEW_ATTEMPT_TIMEOUT_MS` output:
 15 minutes per attempt for a 60-minute job, 45 for the default 120-minute job,
@@ -70,7 +105,7 @@ The workflow has three bounded stages:
 
 1. **Deterministic evidence** — install from the committed lockfile, then run the repository lint, test, and build gates. Exit codes and logs are serialized under `.opencode/review-evidence/`. A failed environment or dependency install is evidence about the run, not automatically evidence of a code defect.
 2. **Review-context compilation** — check out pinned revisions of `octave-commons/muse` and `riatzukiza/.agents`. Muse compiles a review-specific OpenCode projection containing only observer tools; the `.agents` repository is packaged as the global skill source. Both revisions and the skill inventory are recorded in the context artifact.
-3. **Model review with bounded recovery** — map the change, reconstruct relevant contracts and invariants, generate candidate findings, attempt to disprove each candidate, and publish only findings that survive the evidence threshold. A completed first invocation that leaves a missing `review_submit` artifact receives exactly one corrective model invocation. An invocation that exits 1 without a submission after the host invalid-tool doom-loop rejection, with two distinct completed unavailable-review-tool events followed by the terminal session error can use that same corrective invocation. Structured OpenCode JSON events must bind the calls and terminal permission error to one session, and the corrected `review_` name must exist in the checksummed staged registry. A quoted tool error, an unknown tool mapping, mixed sessions, malformed events, provider quota/authentication failure, spawn rejection, or a failed invocation with any submission does not authorize recovery. The recovery starts the state machine again and must finish with a real tool-written submission; it never synthesizes a review from free-form output. A malformed submission does not consume the recovery attempt, and malformed or repeatedly missing submissions fail closed before publication.
+3. **Model review with bounded recovery** — map the change, reconstruct relevant contracts and invariants, generate candidate findings, attempt to disprove each candidate, and retain only findings that survive the evidence threshold in the tool-written submission. A completed first invocation that leaves a missing `review_submit` artifact receives exactly one corrective model invocation. An invocation that exits 1 without a submission after the host invalid-tool doom-loop rejection, with two distinct completed unavailable-review-tool events followed by the terminal session error can use that same corrective invocation. Structured OpenCode JSON events must bind the calls and terminal permission error to one session, and the corrected `review_` name must exist in the checksummed staged registry. A quoted tool error, an unknown tool mapping, mixed sessions, malformed events, provider quota/authentication failure, spawn rejection, or a failed invocation with any submission does not authorize recovery. The recovery starts the state machine again and must finish with a real tool-written submission; it never synthesizes a review from free-form output. A malformed submission does not consume the recovery attempt, and malformed or repeatedly missing submissions fail closed before final evidence retention.
 
 Diff staging preserves the complete Git merge-base/head bytes in `basehead.diff`
 before making the 300,000-byte `pr.diff` preview. `input-manifest.json` records
@@ -150,8 +185,9 @@ the current consumer in `verification_provenance`; a reused artifact never
 claims it was produced during the later verification attempt.
 
 After the model and bounded recovery, the workflow runs the same Git input
-verification command again, before final schema validation, App token creation
-and publication. The first verification exports its receipt SHA-256 as a step
+verification command again, before final schema and changed-line validation
+and evidence retention. The ordinary producer neither mints an App token nor
+publishes a GitHub review. The first verification exports its receipt SHA-256 as a step
 output; context installation exports the checksum-list SHA-256. The final check
 requires the original receipt and manifest bytes, independently regenerated
 Git diff, preview and provenance to match, and rechecks the original context
@@ -164,8 +200,8 @@ and `input-assessments` unchanged. Source identity must match the verified
 manifest, coverage counters must be complete, and nonblank assessment notes must
 cover contiguous UTF-16 ranges from zero through the full decoded diff. Empty
 input has zero chunks and an empty assessment vector. The workflow freezes the
-exact submitted bytes in runner-temporary storage; both publisher validation and
-publication read that copy. The supervisor exports a trusted step digest of
+exact submitted bytes in runner-temporary storage; the read-only final
+validators and retained evidence consume that copy. The supervisor exports a trusted step digest of
 the selected attempt binding after the child closes. The final Git check binds
 that digest to the retained response, submission, compiled verifier and prepared
 context bytes, then repeats the same canonical Muse verification and compares
@@ -175,8 +211,10 @@ the supervisor's `GITHUB_OUTPUT` path.
 `submission-verification.json` records the input,
 context and submission digests. It does not add missing model metadata, decide
 the review event, implement Muse's review state machine or prove cognitive
-review quality. The unchanged publisher still validates the envelope and actual
-changed-line locations before submitting it through the App.
+review quality. The producer reuses Muse's pure envelope and actual changed-line
+validators without invoking its publication adapter. The compiled machinery
+filename `publish-opencode-review.cjs` and model tool stage `publish` do not
+imply a GitHub publication effect.
 
 The final-boundary fixtures have serialized-shape provenance from the retained
 native dc4 submission (artifact `11293745387`,
@@ -212,10 +250,25 @@ review. This successor
 requires parent publication and native qualification before held callers select
 it; local probes do not qualify the pair or authorize production activation.
 
-The reusable workflow has one stable terminal check, **OpenCode evidence review
-gate**. Configure that job as the required check in callers. It runs under
-`always()` and fails closed unless deterministic execution, context compilation,
-and review publication all succeeded.
+The candidate ordinary workflow terminates with **OpenCode producer evidence**.
+It runs under `always()` and fails closed for supported events unless
+deterministic execution, context compilation and anonymous evidence production
+all succeeded. This check supplies no trusted publication or required-review
+qualification. Callers still requiring **OpenCode evidence review gate** must
+retain their merge hold until the separate trusted publisher and hosted proof
+are accepted; a renamed producer success cannot satisfy that requirement.
+
+Workflow execution receipts use the existing Receipt River package API,
+`eta-mu.receipt-river.api/build-event`, and its package-owned payload builder.
+Validate each prospective line with `validate-line` before appending. The local
+law requires repository identity (`:repo`) and UTC timestamps ending in `Z`;
+the generic flat template alone does not satisfy this repository's law. New
+records use the existing versioned `:receipt-river/receipt-recorded` envelope.
+Preserve historical bytes. Current-time `:adjudication` records may identify
+an old invalid line and its source/hash, but establish no automatic supersession,
+retroactive validity or approval of its execution claims. Keep whole-history
+validation failures visible and distinguish them from a valid newly appended
+suffix. Never weaken the validator to make old evidence pass.
 
 Every reusable caller must pass `pr_head_sha` as the immutable
 `${{ github.event.pull_request.head.sha }}` value. Both workflow checkouts,
@@ -232,15 +285,15 @@ Deterministic Java, Clojure, Babashka, clj-kondo, and pnpm setup is enabled when
 `setup_eta_mu_toolchain: false` when its evidence script supplies a compatible
 toolchain; the workflow distinguishes an absent input key from a present
 boolean before applying its value, independently of the inherited event name.
-Default eta-mu gates use the repository GitHub App to mirror the pinned
-Katamorph and event-ledger repositories into runner-temporary storage. Bounded
-`insteadOf` rewrites exist only for deterministic execution and are removed by
-an exit trap; missing credentials remain a recorded deterministic failure.
+The ordinary producer has no private-repository mirror or App credential setup.
+Its deterministic commands run with read-only permissions and no signing or
+deployment secrets. A dependency that is unavailable anonymously remains an
+explicit failed deterministic gate; it is not replaced with a privileged fetch.
 
-For draft or fork pull requests, that same stable job runs and reports the
+For draft or fork pull requests, the producer terminal job runs and reports the
 review as explicitly not applicable. Those events are outside the workflow's
-supported review boundary, so their intentionally skipped prerequisites do not
-block branch protection. Eligible non-draft, same-repository runs retain the
+supported review boundary, so their intentionally skipped prerequisites yield
+a producer-only success. That success supplies no required-review qualification. Eligible non-draft, same-repository runs retain the
 fail-closed behavior. A reusable call from `push`, `merge_group`, or any other
 event without a pull-request payload is a caller contract failure, not an
 unsupported pull request, and the terminal gate fails closed.
@@ -248,7 +301,7 @@ unsupported pull request, and the terminal gate fails closed.
 Deterministic command failures do not suppress their evidence or the review
 attempt. The command step records every exit, the summary reports
 `result: failure`, and artifacts are uploaded; the model may still inspect that
-failure. The terminal check is what makes the reusable caller red. This split is
+failure. The producer terminal check is what makes a supported reusable caller red. This split is
 intentional: retaining diagnostics must never turn a failed gate green.
 
 Eta-mu's build refreshes explicit tracked generated outputs: the legacy model
@@ -289,7 +342,7 @@ The reviewer is deliberately read-only:
 - web access is denied;
 - subagent spawning is denied;
 - session sharing is disabled;
-- GitHub write permission exists only so the OpenCode integration can publish the final review.
+- the ordinary producer has read-only GitHub permissions and no publication credentials.
 
 A reportable inline finding must:
 
@@ -302,7 +355,7 @@ A reportable inline finding must:
 
 Test gaps and unresolved questions belong in one concise non-blocking summary. If no candidate survives validation, the agent leaves a short passing summary instead of inventing comments.
 
-The reviewer uses OpenCode's anonymous public-provider path, so no `OPENCODE_API_KEY` secret is required. The installed CLI version, raw public catalog fetched from `https://models.opencode.ai/api.json` over bounded HTTPS, and verbose CLI catalog run against the same file via `OPENCODE_MODELS_PATH` with `OPENCODE_DISABLE_MODELS_FETCH=true` are retained before review. The run is refused if the effective CLI selection differs from the raw-catalog selection. Empty `model` input selects the unique latest eligible MiMo Flash release/version; an exact caller-selected ID must also be present, active, tool-capable and wholly zero-cost in that catalog. Version, catalog or selection failures stop before inference, and the same selected ID/proof digest binds both allowed review attempts and final publication checks. Catalog eligibility is distinct from provider health: inference failures still fail the required review gate. Inline review comments are mirrored to Discord by the workflow's final notification step.
+The reviewer uses OpenCode's anonymous public-provider path, so no `OPENCODE_API_KEY` secret is required. The installed CLI version, raw public catalog fetched from `https://models.opencode.ai/api.json` over bounded HTTPS, and verbose CLI catalog run against the same file via `OPENCODE_MODELS_PATH` with `OPENCODE_DISABLE_MODELS_FETCH=true` are retained before review. The run is refused if the effective CLI selection differs from the raw-catalog selection. Empty `model` input selects the unique latest eligible MiMo Flash release/version; an exact caller-selected ID must also be present, active, tool-capable and wholly zero-cost in that catalog. Version, catalog or selection failures stop before inference, and the same selected ID/proof digest binds both allowed review attempts and final evidence checks. Catalog eligibility is distinct from provider health: inference failures still fail the producer terminal check. The ordinary producer has no GitHub publication or Discord notification step; the separate GitHub-event visibility workflow above retains its own scope.
 
 ## CodeRabbit and review gates
 

@@ -1,13 +1,13 @@
 ---
-uuid: "rheos-ci-does-not-gate-build-warnings"
-title: "rheos CI does not gate build warnings"
-status: "incoming"
-type: "task"
-priority: "P2"
-points: "2"
-labels: "rheos, ci, quality"
 category: "tasks"
-write-id: "1786049737260-0.02lts6yjtu1qxx3uvl4l"
+labels: "rheos, ci, quality"
+type: "task"
+write-id: "1792554143937-0.xyrtpenmscg4jo2ek5k"
+points: "2"
+title: "rheos CI does not gate build warnings"
+priority: "P2"
+status: "incoming"
+uuid: "rheos-ci-does-not-gate-build-warnings"
 created_at: "2026-08-06T20:55:37.260Z"
 ---
 
@@ -61,3 +61,8 @@ the build log and fail on any `WARNING` line. rheos is the outlier, and
 
 Found by `pnpm gates` after the local rheos gate was given a warning check.
 The fix for the warning itself is #178.
+
+---
+Current-source triage at producer PR361 head 3772f776b65598c76c91f2127df2788d8d0074ca: generated Rheos now includes all four release builds and a no-warning build gate in canonical contracts/workflows/ci.edn, so the historical never-builds claim is stale; historical card bytes remain unchanged. Sync still runs raw test/build exits and local/hosted parity plus causal actual-warning proof are not qualified here. Native bundle39537339759 has now actually passed the Rheos212/1219 owner and releases at merge bceea9702b149f50826db1d80cd03657d7426632, but retains carrier warnings and does not settle this separate two-point contract. New five-point candidate credential-isolation owner e449367d-8fc1-4e8b-a1bb-995cbdd97334 preserves this warning-parity scope; no warning suppression or new warning wrapper is silently included. This owner stays incoming/P2/2.
+
+---

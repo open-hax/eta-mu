@@ -1176,3 +1176,61 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 7598ef5cfb3e2bf326ec227a98d54802cb4c8614,dbeb654a-6c67-44fc-8121-990e9ad2d58f,sha256:82e59463ad5873188f1decfbf8644fb1a66229d6ea9f26e7f822014c1c86fceb
   note: Line-oriented Git porcelain is rendered text: exact owned Unicode/newline/quote paths need NUL framing before prefix admission. Keep actual foreign/tracked/staged/rename controls and real install/completion adapter tests. Registered340 genuine RED338pass/2assertionFAIL then GREEN340/340, normal cleanup and zero emitted warnings. Accepted canonical7ab is consumed only at the three existing defaults/fallbacks, with ordinary direct candidate PR workflow source still needing hosted qualification. Preserve first pin329PASS and installedchecker180s timeout as historical source results. The official checker deadlock fix uses a reader after process start; qualify a private exact upstream source build rather than disabling ShellCheck or filtering findings. Parent Git discovery can silently skip a patch in nested nonrepository archives: native parent ceiling plus no-index and exact fullpostimage guard establish actual application. Original pre-build refusal retained; normal isolated Go cache/config/resource bounds, installedtool preservation and unfiltered owning checker0 are explicit. Historical12global checker false positives remain FAIL, no Pyflakes credit when absent. No provider/model/hostedreview/adoption/merge/disposition credit. Portable candidate0, no spore or promotion.
+- ts: 2026-10-15T15:17:33.974068609Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-trusted-publication-planning-fefa-v1
+  task: Plan anonymous producer and trusted publication boundaries
+  p-efficiency: 0.86
+  p-friction: 0.35
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#9d0a03df-54f1-4911-9a43-d24e8a7a270a,.ημ/session-reflections.edn#ca1fa255-32a7-47ab-8519-b74695839e29
+  note: Trust boundaries need separate outcomes and evidence. Materialize anonymous producer2, trusted collector/publisher/status5, and existing hosted-proof3 as a native UUID dependency chain while preserving the open parent, original histories and separate Foresight setup/Services consumption. A shared M-bound App status proves publication-evidence integrity, not per-PR approval. Bound untrusted ZIP resources and never execute uploads; actual credentials/environment/protection/platform enforcement remain separate unproven prerequisites. Source a5cf46f4db933c98fbb55fdac08ee8f0c2fa5966; Receipt River receipts.edn#9d0a03df-54f1-4911-9a43-d24e8a7a270a. Planning bodies and lawful native admission only, no implementation/readiness/model/hosted/publication/deployment credit. Preserve the read-only text-versus-JSON and unsupported schema command failures; corrected supported reads completed before dependent append. A private literal validator-output assertion also failed before reflection: actual native text is receipts valid: 1 event; no effect fell through, no receipt repeated. Candidate0, no spore.
+- ts: 2026-10-15T16:23:35.046714969Z
+  session: /home/err/.local/share/openhax-codex/20261010/eta-mu-trusted-publication-planning-fefa-v1
+  task: Correct trusted-publication planning owners bootstrap and status freshness
+  p-efficiency: 0.91
+  p-friction: 0.24
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn#bc2e29b9-911f-4812-b4ff-e20556964650,.ημ/session-reflections.edn#dfa4281c-c492-4798-a4d7-8e3989f6e5c9
+  note: Keep pure admission decisions, effectful composition and raw host operations in their proper owners. Default deployment of a new privileged reconciler must be inert; actual hosted proof uses separately admitted fixture-only bootstrap before ordinary rollout. Status refresh revalidates native evidence and writes only status, preserving single-review-POST uncertainty. Source ddba638a planning corrections only, producer2 unchanged and central5/hosted3 metadata/history preserved. No implementation, native agedPR expiry, setup/grants/publication/readiness/model/runtime credit.
+
+- ts: 2026-10-21T02:26:26.734746+00:00
+  session: feat/anonymous-review-producer-20261021
+  task: Separate anonymous producer from signing/publication custody on accepted verifier source
+  p-efficiency: 0.84
+  p-friction: 0.48
+  p-skill-candidate: 0.55
+  spore: none
+  receipt-refs: 35aeefad32ae25572df6b4b4af17df32e0cfeee97cac6264977d73e36d243e0c
+  note: Preserve both source histories and exact ledger suffixes, record real card readiness, then reproduce coupling through actual extracted steps. Synthetic transport-only evidence must remain distinct from canonical production-law and hosted qualification. Mutate temporary fixtures to prove no-write/no-leak assertions can fail. Existing source custody and terminal-truth spores cover this pattern; no new spore or promotion.
+
+- ts: 2026-10-21T03:12:25.469211+00:00
+  session: feat/anonymous-review-producer-20261021
+  task: Repair canonical metadata loss and export full board without temporary source paths
+  p-efficiency: 0.72
+  p-friction: 0.69
+  p-skill-candidate: 0.60
+  spore: none
+  receipt-refs: b9d1850f5c0b061386a3fcf5b2889e5f48c6fa467170582b15bda23ceaa484f6
+  note: Follow actual parser and CLI schemas rather than guessed scalar, column or owner names. New metadata and explicit export semantics have separate causal RED/GREEN. Preserve old event facts; export location and live IO are different representations. Retain existing undated read-time fallback and warning limitations rather than manufacture timestamps or suppress diagnostics. A mistyped expanded source ID was explicitly withdrawn by a native additive correction from git-resolved refs; source manifests check Git objects. Existing custody/generated-source spores cover the general pattern, so no duplicate child spore.
+
+- ts: 2026-10-21T03:57:42.674952+00:00
+  session: feat/anonymous-review-producer-20261021
+  task: Remove signing custody from four deterministic candidate CI carriers
+  p-efficiency: 0.69
+  p-friction: 0.68
+  p-skill-candidate: 0.56
+  spore: none
+  receipt-refs: 25c60a65196d4e39baa07f608abbcea9309974087e188d8ea9a9012e244c3157
+  note: Freeze actual parsed carrier and package trees before edits, then compare complete preserved steps rather than guessed labels. Source custody and generated-workflow spores already cover this pattern. Keep synthetic hook controls distinct from hosted execution; derive no-auth child configuration explicitly without reading or editing host credentials. Checksum lint repair needs actual byte/digest/tamper proof, not suppression. Custom audit permission/key/step/block assumptions and agent trigger audit failure were corrected against actual source with original failures retained. Existing warning and review holds remain, no same-session promotion.
+
+- ts: 2026-10-21T04:33:44.286943Z
+  session: feat/anonymous-review-producer-20261021
+  task: Diagnose invalid receipt suffix and append schema-valid source adjudications
+  p-efficiency: 0.69
+  p-friction: 0.76
+  p-skill-candidate: 0.82
+  spore: none; root coordinator incubates at most one cross-repository record
+  receipt-refs: candidate append SHA256 3cd1a001730d7f608a259359b7e0083a3d73bd19506e9614b339a15d837d9c34
+  note: I used a generic flat template and Python offset timestamp without checking this child package law. The actual API requires repository identity and UTC-Z instants. Construct and validate prospective records through its existing builder before append; keep original invalid records visible rather than retroactively changing, versioning or approving them. Native bundle passes do not prove ledger admission: the registered suite omits this file validation. Eleven new existing-type adjudications identify source/hash defects; all historical invalid rows remain invalid. Preserve original diagnostics and the unnecessary whole-manifest import failure. No validator widening, invented supersession or same-session skill promotion.

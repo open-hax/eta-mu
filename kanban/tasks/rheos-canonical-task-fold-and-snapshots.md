@@ -4,7 +4,7 @@ labels: "rheos, ledger, fold, snapshots"
 dependency: "rheos-event-store-git-worldline-adr"
 parent: "rheos-ledger-authoritative-projections"
 type: "task"
-write-id: "1786050440954-0.07c7ehdiqhr43ouy5pnn"
+write-id: "1792552259452-0.5rnvd9x6husa6fidmvm"
 points: "5"
 title: "Rheos canonical task fold and EDN snapshots"
 priority: "P0"
@@ -52,4 +52,9 @@ Inherits an acceptance criterion from `rheos-cli-create-card` (done, PR #167), r
 That card closed with "folding the ledger from empty reproduces the created cards uuid, type, parent, initial status, and body" unmet — the `task-created` event carries the full payload, but nothing folds it back into a card. This card owns that proof.
 
 Concretely, it should assert: create a card through `rheos create`, discard the markdown, fold the ledger from empty, and get back the same uuid, type, parent, initial status, and body. Until that test exists, ledger-authoritative projection is a design claim rather than a demonstrated property.
+
+Discovery during PR361 review: current Markdown-derived kanban-projection/task drops points,parent,dependency and the checked-in JSON snapshot is a stale 13-card May29 projection. The producer review correction will repair only these three existing metadata passthrough fields and regenerate the disposable Markdown snapshot, with unit and real task-store parity checks. This does not implement or qualify canonical event folding, EDN checkpoints, native readiness, dependency admission or this 5-point task. Your status and dependencies remain unchanged; all historical ledger bytes stay intact.
+
+Additional export verification anomaly: 11 existing cards omit all supported creation timestamp keys, so the current task-store document->task adapter supplies the read-time clock as fallback-created-at. Two unchanged snapshot reads therefore differ in created-at for those 11 cards. This behavior predates PR361 follow-up; the bounded export still changes only source-path within each loaded representation. No creation date was invented or written back and no timestamp policy changed. Exact IDs and absent frontmatter keys are captured in final-source-verification. Reproducible creation-time semantics remain an explicit hold under this incoming canonical-fold owner; a portable exported path alone does not qualify deterministic replay.
+
 ---

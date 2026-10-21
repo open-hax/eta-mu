@@ -32,12 +32,14 @@
                        (:created_at frontmatter)
                        (:createdAt frontmatter)
                        fallback-created-at)]
-    {:uuid uuid
-     :title title
-     :slug (or (:slug frontmatter) uuid)
-     :status status
-     :priority priority
-     :labels labels
-     :created-at created-at
-     :content (:document/body document)
-     :source-path source-path}))
+    (merge
+     {:uuid uuid
+      :title title
+      :slug (or (:slug frontmatter) uuid)
+      :status status
+      :priority priority
+      :labels labels
+      :created-at created-at
+      :content (:document/body document)
+      :source-path source-path}
+     (select-keys frontmatter [:points :parent :dependency]))))

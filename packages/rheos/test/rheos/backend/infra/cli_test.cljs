@@ -5,10 +5,13 @@
    named `openhax-kanban` — a binary that does not exist — and agents copied it
    verbatim."
   (:require ["node:fs/promises" :as fsp]
+            ["node:os" :as os]
             ["node:path" :as path]
             [clojure.string :as str]
             [cljs.test :refer [deftest testing is]]
-            [rheos.backend.infra.cli :as cli]))
+            [rheos.backend.infra.cli :as cli]
+            [rheos.backend.infra.projects :as projects]
+            [rheos.backend.infra.task-store :as task-store]))
 
 (defn- help-text
   "Capture whatever `f` prints, so help output can be asserted on."
@@ -63,6 +66,11 @@
       (is (not (str/includes? text "task|epic")))
       (is (str/includes? text "EXAMPLE"))
       (is (str/includes? text "FLAGS")))))
+
+(deftest board-help-explains-the-export-anchor
+  (let [text (help-text #(cli/show-verb-help "board"))]
+    (is (str/includes? text "--relative-to"))
+    (is (str/includes? text "source paths"))))
 
 (deftest help-documents-the-comment-policy
   (testing "The body-settles-after-breakdown rule is discoverable from help alone"
@@ -124,7 +132,14 @@
       (is (= "move" command))
       (is (= "my-card" subcommand))
       (is (= "review" (get flags "to")))
-      (is (= "kanban" (get flags "project"))))))
+      (is (= "kanban" (get flags "project")))))
+  (testing "snapshot export anchor is a valued flag"
+    (let [{:keys [command subcommand flags]}
+          (cli/parse-args ["board" "snapshot" "--relative-to" "." "--out" "board.json"])]
+      (is (= "board" command))
+      (is (= "snapshot" subcommand))
+      (is (= "." (get flags "relative-to")))
+      (is (= "board.json" (get flags "out"))))))
 
 (deftest boolean-flags-do-not-swallow-the-next-flag
   (testing "`--json --project x` parses both, rather than --json eating --project"
@@ -207,3 +222,104 @@
                "--projects" "--q" "--where"]]
       (is (contains? compose-flags f)
           (str "compose reads " f " but the registry does not declare it")))))
+
+(defn- ^:async invoke-snapshot [config-path out-path options]
+  (let [saved-argv js/process.argv
+        saved-exit-code (.-exitCode js/process)
+        saved-print *print-fn*
+        saved-error (.-error js/console)
+        saved-projects {:projects (projects/all) :default-project-id (projects/default-id)}
+        output (atom [])
+        errors (atom [])]
+    (set! (.-exitCode js/process) 0)
+    (set! (.-argv js/process)
+          (clj->js (concat ["node" "rheos" "board" "snapshot" "--config" config-path
+                           "--out" out-path]
+                          options)))
+    (set! *print-fn* (fn [& args] (swap! output conj (str/join "" args))))
+    (set! (.-error js/console) (fn [& args] (swap! errors conj (str/join " " args))))
+    (try
+      (await (cli/main))
+      {:exit-code (.-exitCode js/process)
+       :stdout (str/join "\n" @output)
+       :stderr (str/join "\n" @errors)}
+      (finally
+        (set! (.-argv js/process) saved-argv)
+        (set! (.-exitCode js/process) saved-exit-code)
+        (set! *print-fn* saved-print)
+        (set! (.-error js/console) saved-error)
+        (projects/set-projects! saved-projects)))))
+
+(defn- ^:async snapshot-fixture [root]
+  (let [task-dir (path/join root "kanban" "tasks")
+        card (path/join task-dir "..visible.md")
+        config-path (path/join root "board.edn")
+        raw (str "---\nuuid: \"export-card\"\ntitle: \"Export card\"\n"
+                 "status: \"incoming\"\npriority: \"P1\"\n"
+                 "created_at: \"2026-10-21T00:00:00.000Z\"\n"
+                 "points: \"2\"\nparent: \"epic-a\"\ndependency: []\n"
+                 "---\n\n# Export card\n")]
+    (await (.mkdir fsp task-dir #js {:recursive true}))
+    (await (.writeFile fsp card raw "utf8"))
+    (await (.writeFile fsp config-path "{:tasks-dir \"kanban\"}" "utf8"))
+    {:task-dir task-dir :card card :config-path config-path :raw raw}))
+
+(defn- ^:async snapshot-task [file]
+  (let [snapshot (js->clj (js/JSON.parse (await (.readFile fsp file "utf8")))
+                         :keywordize-keys true)]
+    (first (mapcat :tasks (:columns snapshot)))))
+
+(deftest ^:async snapshot-export-is-portable-without-changing-live-task-locations
+  (let [root (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-export-")))]
+    (try
+      (let [exported (atom [])]
+        (doseq [checkout ["first-checkout" "second-checkout"]]
+          (let [checkout-root (path/join root checkout)
+                {:keys [task-dir card config-path raw]} (await (snapshot-fixture checkout-root))
+                default-out (path/join checkout-root "default.json")
+                portable-out (path/join checkout-root "portable.json")
+                direct-out (path/join checkout-root "direct.json")
+                default-result (await (invoke-snapshot config-path default-out []))
+                relative-anchor (path/relative (js/process.cwd) checkout-root)
+                portable-result (await (invoke-snapshot config-path portable-out ["--relative-to" relative-anchor]))
+                direct-result (await (invoke-snapshot config-path direct-out ["--relative-to" task-dir]))
+                default-task (await (snapshot-task default-out))
+                portable-task (await (snapshot-task portable-out))
+                direct-task (await (snapshot-task direct-out))]
+            (is (= 0 (:exit-code default-result)) (:stderr default-result))
+            (is (= 0 (:exit-code portable-result)) (:stderr portable-result))
+            (is (= 0 (:exit-code direct-result)) (:stderr direct-result))
+            (is (= card (:source-path default-task)))
+            (is (= "kanban/tasks/..visible.md" (:source-path portable-task)))
+            (is (= "..visible.md" (:source-path direct-task))
+                "a contained filename starting with two dots is not parent traversal")
+            (is (= (dissoc default-task :source-path) (dissoc portable-task :source-path)))
+            (is (= {:points "2" :parent "epic-a" :dependency []}
+                   (select-keys portable-task [:points :parent :dependency])))
+            (is (= card (:source-path (first (await (task-store/load-tasks task-dir))))))
+            (is (= raw (await (.readFile fsp card "utf8"))))
+            (is (not (try
+                       (await (.access fsp (path/join checkout-root "kanban" ".events" "ledger.edn")))
+                       true
+                       (catch :default _ false))))
+            (swap! exported conj portable-task)))
+        (is (= (first @exported) (second @exported))
+            "different checkout roots export identical task representations"))
+      (finally
+        (await (.rm fsp root #js {:recursive true :force true}))))))
+
+(deftest ^:async snapshot-export-refuses-an-outside-anchor-without-overwriting-output
+  (let [root (await (.mkdtemp fsp (path/join (os/tmpdir) "rheos-export-refusal-")))]
+    (try
+      (let [{:keys [task-dir config-path]} (await (snapshot-fixture root))
+            out (path/join root "preserved.json")]
+        (doseq [[options expected-code] [[["--relative-to" (str task-dir "-sibling")] 3]
+                                        [["--relative-to"] 1]
+                                        [["--relative-to" ""] 1]]]
+          (await (.writeFile fsp out "existing snapshot must survive\n" "utf8"))
+          (let [result (await (invoke-snapshot config-path out options))]
+            (is (= expected-code (:exit-code result)) (str options " " (:stderr result)))
+            (is (= "existing snapshot must survive\n" (await (.readFile fsp out "utf8"))))
+            (is (not (str/includes? (:stdout result) "Wrote board snapshot"))))))
+      (finally
+        (await (.rm fsp root #js {:recursive true :force true}))))))
