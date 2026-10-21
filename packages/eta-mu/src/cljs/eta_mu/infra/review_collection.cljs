@@ -158,6 +158,8 @@
                    (= workflow-id (:id workflow))
                    (= (:path workflow) (get-in entry [:producer :path]))
                    (= :completed (keyword (:status run))) (= :success (keyword (:conclusion run)))
+                   (= (:status attempt) (:status run)) (= (:conclusion attempt) (:conclusion run))
+                   (= "completed" (:status attempt)) (= "success" (:conclusion attempt))
                    (= (count job-rows) (count (distinct job-names)))
                    (= required (set job-names))
                    (every? #(and (law/raw-job? % run-id attempt-number)
