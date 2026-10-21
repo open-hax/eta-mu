@@ -4,11 +4,11 @@ labels: "workflow, review, anonymous, security, has-parent"
 dependency: []
 parent: "290f0cdf-9160-453e-a69c-67211432baa7"
 type: "task"
-write-id: "1792077152478-0.t050n738mwoz0v0dt3p"
+write-id: "1792548704379-0.krdrqn8b8nuqi5frs7"
 points: "2"
 title: "Produce anonymous review evidence without publication credentials"
 priority: "P1"
-status: "breakdown"
+status: "in_progress"
 uuid: "cf32641a-b336-407e-b68b-c75ec7d20dbb"
 created_at: "2026-10-15T15:11:59.035Z"
 ---
@@ -117,3 +117,8 @@ Source: accepted ETA workflow lines 2676/2695/2804/2817/2919 and
 `.github/scripts/run-opencode-review-recovery.mjs` production verifier/discovery
 boundaries. Existing `opencode-mimo-evidence-review-agent` remains its original
 in-progress five-point owner; this new separation is not silently added to it.
+
+---
+Execute the existing reviewed producer2 contract on accepted main7112, preserving the current verifier/recovery and reviewed PR22 card bytes. Native PR22 CodeRabbit+MiMo unanimous planning PASS is retained at e966; no warning-free historical carrier/adoption claim. Candidate composition96862eef keeps both Git parents, all69accepted commits and every exact ledger suffix once. Scoped implementation: actual extracted-step missing-App RED, then remove all candidate App/Discord/publication effects and rename producer-only summary; retain current full-input/discovery/invocation/deadline/recovery and no-secret/no-write controls. Only existing owning workflow+registered test change. Rebuilt source Rheos CLI115files56compiled0warnings. Initial isolated frozen install emits one missing unbuilt rheos-bin warning, retained as a real setup limitation, not zero-warning qualification. No future publisher, target enrollment, credentials, caller pins, Services or protected adoption. Readiness here admits only this bounded existing story, not runtime completion.
+
+---
