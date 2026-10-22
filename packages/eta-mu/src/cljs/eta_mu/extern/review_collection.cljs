@@ -16,8 +16,13 @@
       (when (js/Number.isFinite parsed) parsed))))
 
 (defn- header-next-url [headers]
-  (when-let [header (.get headers "link")]
-    (when-let [[_ target] (re-find #"<([^>]+)>;\s*rel=\"next\"(?:,|$)" header)] target)))
+  (let [header (.get headers "link")
+        next-present? (boolean (and header (re-find #"(?i)\brel\s*=\s*\"next\"" header)))
+        next-url (when next-present?
+                   (second (re-find #"<([^>]+)>;\s*rel=\"next\"(?:,|$)" header)))]
+    (when (and next-present? (not (string? next-url)))
+      (refuse! :pagination-link))
+    next-url))
 
 (defn decode-pagination-link
   "Decode an untrusted absolute Link target to plain data for law validation."
@@ -107,7 +112,8 @@
           (try
             {:status :ok :data (js->clj (js/JSON.parse text) :keywordize-keys true)
              :bytes response-size :next-url (header-next-url (.-headers response))}
-            (catch :default _ (refuse! :native-json)))))
+            (catch :default e
+              (if (:code (ex-data e)) (throw e) (refuse! :native-json))))))
       (catch :default e
         (if (:code (ex-data e)) (throw e) (refuse! :native-transport)))
       (finally (js/clearTimeout timer)))))

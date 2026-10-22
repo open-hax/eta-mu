@@ -47,7 +47,8 @@
           data (:data response)
           rows (get data field)
           total-count (:total_count data)
-          next-link (host/decode-pagination-link (:next-url response))]
+          next-url (:next-url response)
+          next-link (when (some? next-url) (host/decode-pagination-link next-url))]
       (when-not (and (vector? rows) (publication/natural? total-count)
                      (or (nil? expected-total) (= expected-total total-count)))
         (throw (ex-info "Native page shape or total count" {:code :native-shape})))
@@ -55,7 +56,7 @@
         (when-not (and (every? #(publication/positive? (:id %)) all)
                        (= (count all) (count (distinct (map :id all)))))
           (throw (ex-info "Native pagination repeated or omitted an ID" {:code :pagination-identity})))
-        (if next-link
+        (if (some? next-url)
           (if (law/pagination-link? next-link repository-id url page (:page-size bounds))
             (recur (inc page) all total-count)
             (throw (ex-info "Native pagination link mismatch" {:code :pagination})))
