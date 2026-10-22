@@ -143,6 +143,26 @@
                          [9007199254740991 sha "ctx"]))
         "The shared safe-integer bound is accepted with SHA-256 object IDs.")))
 
+(deftest replay-and-transition-use-portable-numeric-identity
+  (let [numeric-binding (assoc-in binding-a [:lock-key 0] 41.0)
+        numeric-admission (assoc admission-a :binding numeric-binding)
+        numeric-reservation (-> reserved-a
+                                (assoc :event/seq 1.0)
+                                (assoc :event/stream (call-api "eta-mu.shape.review-intent" "lock-stream"
+                                                               [41.0 (second stream-key) (nth stream-key 2)]))
+                                (assoc-in [:event/data :intent-version] 0.0)
+                                (assoc-in [:event/data :binding] numeric-binding))
+        replay (call-api "eta-mu.domain.review-intent" "replay" stream-key [numeric-reservation])
+        transition (call-api "eta-mu.domain.review-intent" "transition"
+                             numeric-admission replay
+                             {:state :post-started :expected-version 0.0
+                              :owner "inert-worker" :claim-id "numeric-claim"})]
+    (is (true? (call-api "eta-mu.law.review-intent" "intent-event?"
+                         numeric-reservation)))
+    (is (= :replayed (:status replay)) (pr-str replay))
+    (is (= 2 (:next-seq replay)))
+    (is (= :append (:status transition)) (pr-str transition))))
+
 (deftest installation-root-is-derived-from-the-loaded-trusted-module
   (let [store (dissoc (installation) :installation-root)
         result (try
