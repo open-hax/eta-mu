@@ -10,8 +10,7 @@
             [eta-mu.extern.review-intent :as host]
             [eta-mu.law.review-intent :as law]
             [eta-mu.shape.review-intent :as shape]
-            ["node:fs" :as fs]
-            ["node:path" :as path]))
+            ["node:fs" :as fs]))
 
 (def ^:private request-max-bytes 65536)
 (def ^:private cas-attempts 4)
@@ -21,19 +20,24 @@
 
 (defn- fail [reason] {:status :refused :reason reason})
 
-(defn- file-identity [filename]
-  (when (and (string? filename) (.isAbsolute path filename))
-    (let [stat (.statSync fs filename)]
-      (when (.isFile stat) [(.-dev stat) (.-ino stat)]))))
+(defn- file-identity [{:keys [partition-device partition-inode]}]
+  [partition-device partition-inode])
 
-(defn- store-valid? [{:keys [ledger-file partition-device partition-inode expected-lock-key]} lock-key]
+(defn- file-guard [store]
+  {:expected-file-identity (file-identity store)})
+
+(defn- canonical-guard [store]
+  {:expected-file-identities {(:ledger-file store) (file-identity store)}})
+
+(defn- store-valid? [{:keys [ledger-file expected-lock-key] :as store} lock-key]
   (try
     (and (= lock-key expected-lock-key)
-         (= [partition-device partition-inode] (file-identity ledger-file)))
+         (= (file-identity store) (host/partition-identity ledger-file)))
     (catch :default _ false)))
 
 (defn- target-events [runtime store lock-key]
-  (let [canonical (clio-runtime/canonicalize-files runtime [(:ledger-file store)])
+  (let [canonical (clio-runtime/canonicalize-files runtime [(:ledger-file store)]
+                                                   (canonical-guard store))
         stream (shape/lock-stream lock-key)]
     (filterv #(= stream (:event/stream %)) (:canonical/events canonical))))
 
@@ -65,7 +69,8 @@
                                   :event/data (:event-data proposal)}
                       append-result (try
                                       {:result (clio-runtime/append! runtime (:ledger-file store)
-                                                                     schema-id event-data)}
+                                                                     schema-id event-data
+                                                                     (file-guard store))}
                                       (catch :default error
                                         {:error error}))]
                     (if-let [error (:error append-result)]
@@ -94,8 +99,9 @@
                          :event-id (get-in result [:event :event/id])
                          :claim-id (get-in result [:event :event/data :claim-id])})))))))))))
 
-(defn- event-visible? [runtime path event]
-  (let [canonical (clio-runtime/canonicalize-files runtime [path])]
+(defn- event-visible? [runtime store event]
+  (let [canonical (clio-runtime/canonicalize-files runtime [(:ledger-file store)]
+                                                   (canonical-guard store))]
     (some #(= event %) (:canonical/events canonical))))
 
 (defn- recover [request]
@@ -110,9 +116,9 @@
       (fail :recovery-binding)
       (try
         (let [runtime (clio-runtime/open (:schema-directory store) catalog)
-              visible? (event-visible? runtime (:ledger-file store) (:event recovery))]
+              visible? (event-visible? runtime store (:event recovery))]
           (if (or visible? (true? append-uncertain?))
-            (let [result (clio-runtime/retry-append! runtime recovery)]
+            (let [result (clio-runtime/retry-append! runtime recovery (file-guard store))]
               {:status (if (= :appended (:append/result result)) :recovered :replayed)
                :append-result (:append/result result)
                :event-id (get-in result [:event :event/id])

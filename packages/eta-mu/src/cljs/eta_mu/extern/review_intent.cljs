@@ -20,6 +20,15 @@
 
 (defn clock-ms [] (.now js/Date))
 
+(defn partition-identity
+  "Read an exact existing regular-file identity at the Node edge. BigInts stay
+  local to this adapter; portable callers carry decimal strings only."
+  [filename]
+  (when (and (string? filename) (.isAbsolute path filename))
+    (let [stat (.statSync fs filename #js {:bigint true})]
+      (when (.isFile stat)
+        [(str (.-dev stat)) (str (.-ino stat))]))))
+
 (defn- text-size [s]
   (.byteLength js/Buffer (str s) "utf8"))
 

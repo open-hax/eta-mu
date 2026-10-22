@@ -15,6 +15,13 @@
                              (= x (Math/floor (double x)))))))
        (<= 0 x 9007199254740991)))
 (defn positive? [x] (and (natural? x) (pos? x)))
+(defn- decimal-string? [x]
+  (and (string? x) (re-matches #"^(?:0|[1-9][0-9]*)$" x)))
+(defn file-identity? [identity]
+  (and (vector? identity) (= 2 (count identity))
+       (decimal-string? (first identity))
+       (decimal-string? (second identity))
+       (not= "0" (second identity))))
 (defn canonical-natural [x]
   (when (natural? x)
     #?(:cljs (js/Math.trunc x) :clj (long x))))

@@ -32,7 +32,7 @@
           (throw (ex-info "Test-only barrier timed out" {:test/error :barrier-timeout}))
           :else (do (js/Atomics.wait wait-array 0 0 10) (recur)))))))
 
-(defn- append-with-directory-sync-fault! [append! runtime ledger-file schema-id event-data]
+(defn- append-with-directory-sync-fault! [append! runtime ledger-file schema-id event-data options]
   (if-let [target-directory (aget (.-env js/process) "INTENT_TEST_FAIL_DIRECTORY_SYNC")]
     (let [append-locked-text! clio-fs/append-locked-text!]
       (with-redefs [clio.extern.js.fs/append-locked-text!
@@ -45,13 +45,13 @@
                           (throw (ex-info "test-only injected failure before parent-directory fence"
                                           {:clio/error :clio.fs/directory-sync-unavailable})))
                         (append-locked-text! lock text)))]
-        (append! runtime ledger-file schema-id event-data)))
-    (append! runtime ledger-file schema-id event-data)))
+        (apply append! runtime ledger-file schema-id event-data options)))
+    (apply append! runtime ledger-file schema-id event-data options)))
 
 (let [append! runtime/append!]
   (with-redefs [runtime/append!
-                (fn [runtime ledger-file schema-id event-data]
+                (fn [runtime ledger-file schema-id event-data & options]
                   (wait-at-test-barrier! event-data)
                   (append-with-directory-sync-fault! append! runtime ledger-file
-                                                      schema-id event-data))]
+                                                      schema-id event-data options))]
     (nbb/await (worker/entry))))

@@ -13,8 +13,7 @@
   (and (map? store)
        (string? (:schema-directory store))
        (string? (:ledger-file store))
-       (law/natural? (:partition-device store))
-       (law/positive? (:partition-inode store))
+       (law/file-identity? [(:partition-device store) (:partition-inode store)])
        (law/lock-key? (:expected-lock-key store))))
 
 (defn transition!
