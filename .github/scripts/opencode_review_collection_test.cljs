@@ -323,6 +323,8 @@
         preload (.join path directory "fetch-preload.mjs")
         runner (.join path directory "host-probe.cljs")
         target "https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=2"
+        source-root (.resolve path (.dirname path (:file (meta #'host/get!))) "../..")
+        classpath (str source-root ":" (.resolve path "packages/eta-mu/src/cljs"))
         preload-source (str "globalThis.__linkProbeCalls = [];\n"
                             "globalThis.fetch = async (input) => {\n"
                             "  const url = String(input); globalThis.__linkProbeCalls.push(url);\n"
@@ -344,7 +346,7 @@
       (.writeFileSync fs preload preload-source)
       (.writeFileSync fs runner runner-source)
       (let [result (.spawnSync cp "packages/eta-mu/node_modules/.bin/nbb"
-                               #js ["-cp" "packages/eta-mu/src/cljs" runner]
+                               #js ["-cp" classpath runner]
                                #js {:cwd (.cwd js/process) :encoding "utf8" :timeout 15000
                                     :maxBuffer 100000
                                     :env #js {:PATH (aget (.-env js/process) "PATH")
@@ -354,7 +356,6 @@
         (is (= 0 (.-status result)) (str stdout stderr))
         (is (str/includes? stdout target) "The actual host transport returns the parsed next Link URL")
         (is (str/includes? stdout ":no-next-url nil") "A response without Link remains a terminal page")
-        (is (str/includes? stdout ":no-next-url nil") "A response without a next relation is terminal")
         (is (str/includes? stdout ":malformed-error :pagination-link")
             "A malformed declared next relation is refused by the actual host transport")
         (is (str/includes? stdout "|https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=3|https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=4")
