@@ -46,6 +46,12 @@
    {:label "review-publication-collection"
     :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
           ".github/scripts/opencode_review_collection_test.cljs"]}
+   {:label "review-publication-source"
+    :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
+          ".github/scripts/opencode_review_source_test.cljs"]}
+   {:label "review-verification"
+    :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
+          ".github/scripts/opencode_review_verification_test.cljs"]}
    {:label "review-publication-archive"
     :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
           ".github/scripts/opencode_review_archive_test.cljs"]}
