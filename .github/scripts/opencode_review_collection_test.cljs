@@ -265,6 +265,86 @@
 (deftest jobs-and-artifacts-require-complete-bounded-pagination
   (async done (complete-pagination-control done)))
 
+(defn ^:async github-link-pagination-control [done]
+  (let [registry (-> registry
+                     (assoc-in [:targets 0 :enabled?] true)
+                     (assoc-in [:targets 0 :producer :required-jobs] ["producer" "second"]))
+        base (fake-native (fn [_ body] body))
+        requested (atom [])
+        transport
+        (fn [{:keys [url] :as request}]
+          (swap! requested conj url)
+          (let [response (base request)]
+            (cond
+              (.endsWith url "/jobs?per_page=2&page=1")
+              (assoc response :data (assoc (:data response) :total_count 2)
+                     :next-url "https://api.github.com/repositories/41/actions/runs/99/attempts/2/jobs?page=2&per_page=2")
+              (.endsWith url "/jobs?per_page=2&page=2")
+              (assoc response :data {:total_count 2
+                                     :jobs [{:id 102 :run_id 99 :run_attempt 2 :name "second"
+                                             :status "completed" :conclusion "success"}]})
+              (.endsWith url "/artifacts?per_page=2&page=1")
+              (assoc response :data (assoc (:data response) :total_count 2)
+                     :next-url "https://api.github.com/repositories/41/actions/runs/99/artifacts?page=2&per_page=2")
+              (.endsWith url "/artifacts?per_page=2&page=2")
+              (assoc response :data {:total_count 2
+                                     :artifacts [{:id 202 :name "second" :size_in_bytes 10 :expired false
+                                                  :digest (str "sha256:" (apply str (repeat 64 "e")))
+                                                  :created_at "2026-10-20T00:00:00Z" :expires_at future-time
+                                                  :workflow_run {:id 99 :head_sha (:head native-shas)}}]})
+              :else response)))]
+    (try
+      (let [result (await (run!test registry transport 2))]
+        (is (= :pending (:status result)) "Both native pages are observations, not publication approval")
+        (is (= true (get-in result [:native :run :jobs :complete?])))
+        (is (= true (get-in result [:native :run :artifacts :complete?])))
+        (is (= 2 (get-in result [:native :run :jobs :pages])))
+        (is (= 2 (get-in result [:native :run :artifacts :pages])))
+        (is (= 30 (count @requested)) "Two full snapshots reconstruct every local request")
+        (is (not-any? #(clojure.string/includes? % "/repositories/41/") @requested)
+            "Supplied Link URLs are validated as metadata and never fetched")
+        (is (every? #(and (clojure.string/includes? % "?per_page=2&page=")
+                          (clojure.string/includes? % "/repos/owner/repo/"))
+                    (filter #(clojure.string/includes? % "?per_page=") @requested))
+            "Requests use the local canonical route and query construction"))
+      (catch :default e (is false (str e)))
+      (finally (done)))))
+(deftest github-link-pagination-normalizes-route-and-query-order
+  (async done (github-link-pagination-control done)))
+
+(defn ^:async rejected-link-control [done link]
+  (let [result (await
+                (run!test (assoc-in registry [:targets 0 :enabled?] true)
+                         (fn [{:keys [url]}]
+                           (let [response ((fake-native (fn [_ body] body)) {:url url})]
+                             (if (.endsWith url "/jobs?per_page=100&page=1")
+                               (assoc response :data (assoc (:data response) :total_count 2)
+                                      :next-url link)
+                               response)))))]
+    (is (= :refused (:status result)))
+    (is (some? (:reason result)) "Malformed or foreign links fail closed")
+    (is (not-any? #(= link (:url %)) (:native-reads result))
+        "A supplied pagination URL is never used as a request")
+    (done)))
+(deftest github-link-rejects-foreign-host-wrong-repository-and-route
+  (async done
+    (let [links ["https://evil.invalid/repositories/41/actions/runs/99/attempts/2/jobs?page=2&per_page=100"
+                 "https://api.github.com/repositories/42/actions/runs/99/attempts/2/jobs?page=2&per_page=100"
+                 "https://api.github.com/repositories/41/actions/runs/100/attempts/2/jobs?page=2&per_page=100"
+                 "https://api.github.com/repositories/41/actions/runs/99/attempts/2/artifacts?page=2&per_page=100"
+                 "https://api.github.com/repositories/41/actions/runs/99/attempts/2/jobs?page=2&per_page=100&x=1"
+                 "https://api.github.com/repositories/41/actions/runs/99/attempts/2/jobs?page=2&page=2&per_page=100"
+                 "https://api.github.com/repositories/41/actions/runs/99/attempts/2/jobs?page=2"
+                 "https://api.github.com/repositories/41/actions/runs/99/attempts/2/jobs?page=3&per_page=100"
+                 "https://user@api.github.com/repositories/41/actions/runs/99/attempts/2/jobs?page=2&per_page=100"
+                 "https://api.github.com/repositories/41/actions/runs/99/attempts/2/jobs?page=2&per_page=100#fragment"
+                 "http://api.github.com/repositories/41/actions/runs/99/attempts/2/jobs?page=2&per_page=100"]]
+      (letfn [(step [remaining]
+                (if-let [link (first remaining)]
+                  (rejected-link-control (fn [] (step (next remaining))) link)
+                  (done)))]
+        (step links)))))
+
 (defn ^:async base-drift-control [done]
   (let [result (await (run!test (assoc-in registry [:targets 0 :enabled?] true)
                                 (fake-native (fn [url body]
