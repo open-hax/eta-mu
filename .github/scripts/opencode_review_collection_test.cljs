@@ -337,8 +337,8 @@
                            "(defn ^:async run []\n"
                            "  (let [linked (await (host/get! {:method :get :url \"https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=1\" :timeout-ms 2000 :max-bytes 1024}))\n"
                            "        absent (await (host/get! {:method :get :url \"https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=3\" :timeout-ms 2000 :max-bytes 1024}))\n"
-                           "        malformed (await (host/get! {:method :get :url \"https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=4\" :timeout-ms 2000 :max-bytes 1024}))]\n"
-                           "    (println (pr-str {:link-status (:status linked) :next-url (:next-url linked) :no-link-status (:status absent) :no-next-url (:next-url absent) :no-next-present? (:next-present? absent) :malformed-next-url (:next-url malformed) :malformed-next-present? (:next-present? malformed) :calls (.join (.-__linkProbeCalls js/globalThis) \"|\")}))))\n"
+                           "        malformed (try (await (host/get! {:method :get :url \"https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=4\" :timeout-ms 2000 :max-bytes 1024})) (catch :default e {:error (:code (ex-data e))}))]\n"
+                           "    (println (pr-str {:link-status (:status linked) :next-url (:next-url linked) :no-link-status (:status absent) :no-next-url (:next-url absent) :malformed-error (:error malformed) :calls (.join (.-__linkProbeCalls js/globalThis) \"|\")}))))\n"
                            "(nbb/await (run))\n")]
     (try
       (.writeFileSync fs preload preload-source)
@@ -354,9 +354,9 @@
         (is (= 0 (.-status result)) (str stdout stderr))
         (is (str/includes? stdout target) "The actual host transport returns the parsed next Link URL")
         (is (str/includes? stdout ":no-next-url nil") "A response without Link remains a terminal page")
-        (is (str/includes? stdout ":no-next-present? false") "A previous/last-only or absent relation is terminal")
-        (is (str/includes? stdout ":malformed-next-url nil :malformed-next-present? true")
-            "A malformed declared next relation remains present and cannot masquerade as terminal")
+        (is (str/includes? stdout ":no-next-url nil") "A response without a next relation is terminal")
+        (is (str/includes? stdout ":malformed-error :pagination-link")
+            "A malformed declared next relation is refused by the actual host transport")
         (is (str/includes? stdout "|https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=3|https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=4")
             "Only the three local GET requests were issued"))
       (finally (.rmSync fs directory #js {:recursive true :force true})))))
