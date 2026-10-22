@@ -106,11 +106,6 @@
        :installation-root test-root
        :test-root root})))
 
-(defn- transition! [store context command]
-  (if-let [f (resolve-api "eta-mu.infra.review-intent" "transition!")]
-    (nbb/await (f store context command))
-    {:status :missing-adapter}))
-
 (defn- event-count [store]
   (->> (.readFileSync fs (:ledger-file store) "utf8")
        str/split-lines
@@ -132,6 +127,27 @@
     (is (= 4 (:next-seq replay)))
     (is (= 2 (get-in replay [:intents intent-key-a :version])))
     (is (= :observed (get-in replay [:intents intent-key-a :state])))))
+
+(deftest cljc-identity-laws-have-exact-cross-runtime-number-and-hash-shapes
+  (is (false? (call-api "eta-mu.law.review-intent" "natural?" 1.0))
+      "An integral floating value is not an integer port value.")
+  (is (true? (call-api "eta-mu.law.review-intent" "lock-key?"
+                       [123 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" "ctx"]))
+      "Valid SHA-256-width object IDs are accepted on NBB and Babashka."))
+
+(deftest installation-root-is-derived-from-the-loaded-trusted-module
+  (let [store (dissoc (installation) :installation-root)
+        result (try
+                 (call-api "eta-mu.infra.review-intent" "transition!"
+                           (assoc store :installation-root "/tmp/caller-selected-installation")
+                           context-a {:state :reserved})
+                 (catch :default error {:status :exception :message (.-message error)}))]
+    (is (= :appended (:status result)) (pr-str result))
+    (is (= 1 (event-count store)))))
+
+(deftest capability-issuance-is-not-a-public-receipt-mint-port
+  (is (nil? (resolve-api "eta-mu.extern.review-intent" "issue-after-recheck!"))
+      "Callers cannot turn a returned append receipt into a capability."))
 
 (deftest canonical-replay-refuses-gaps-wrong-predecessors-and-cross-lock-events
   (doseq [history [[reserved-a (assoc started-a :event/seq 3)]
@@ -274,27 +290,25 @@
       (is (= :refused (:status copied-result)) (pr-str copied-result))
       (is (= 1 (event-count store)) "The hard-link alias observes the same single partition."))))
 
-(deftest exact-clio-recovery-is-discovery-only-in-already-present-and-newly-appended-cases
+(deftest caller-shaped-recovery-cannot-inject-absent-events
   (let [store (installation)
         reservation (call-api "eta-mu.infra.review-intent" "transition!"
                               store context-a {:state :reserved})
-        recovery (:recovery reservation)
-        retry (call-api "eta-mu.infra.review-intent" "recover!" store recovery)
-        recovery-event (-> (:event recovery)
+        stored-event (reader/read-string
+                      (str/trim (.readFileSync fs (:ledger-file store) "utf8")))
+        recovery-event (-> stored-event
                            (assoc :event/id "00000000-0000-4000-8000-000000000099"
-                                  :event/seq 2 :event/causes [(:event-id reservation)])
+                                  :event/seq 2 :event/causes [(:event/id stored-event)])
                            (assoc-in [:event/data :state] :post-started)
                            (assoc-in [:event/data :intent-version] 1)
                            (assoc-in [:event/data :owner] "recovery-only")
                            (assoc-in [:event/data :claim-id] "recovery-only-claim"))
-        appended-recovery (call-api "eta-mu.infra.review-intent" "recover!" store
-                                    {:ledger/path (:ledger-file store) :event recovery-event})]
-    (is (= :replayed (:status retry)) (pr-str retry))
-    (is (= :already-present (:append-result retry)))
-    (is (false? (:capability-issued? retry)))
-    (is (= :recovered (:status appended-recovery)) (pr-str appended-recovery))
-    (is (= :appended (:append-result appended-recovery)))
-    (is (false? (:capability-issued? appended-recovery)))))
+        forged (call-api "eta-mu.infra.review-intent" "recover!" store
+                         {:ledger/path (:ledger-file store) :event recovery-event})]
+    (is (nil? (:recovery reservation))
+        "A successful Clio append does not expose a synthetic recovery candidate.")
+    (is (= :refused (:status forged)) (pr-str forged))
+    (is (= 1 (event-count store)) "An absent caller-supplied event never enters the canonical partition.")))
 
 (when (= nbb/*file* (nbb/invoked-file))
   (test/run-tests 'opencode-review-intent-test))
