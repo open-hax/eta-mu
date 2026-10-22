@@ -42,6 +42,14 @@
 (def future-time "2030-01-01T00:00:00Z")
 (def seen-urls (atom []))
 (def seen-requests (atom []))
+(defn raw-pull-file
+  ([filename status] (raw-pull-file filename status {}))
+  ([filename status extras]
+   (merge {:sha (sha "a") :filename filename :status status
+           :additions 1 :blob_url "https://github.com/owner/repo/blob/file"
+           :changes 2 :contents_url "https://api.github.com/repos/owner/repo/contents/file"
+           :deletions 0 :raw_url "https://github.com/owner/repo/raw/file"}
+          extras)))
 (defn fake-native [alter]
   (fn [{:keys [url] :as request}]
     (swap! seen-urls conj url)
@@ -92,10 +100,9 @@
                           :created_at "2026-10-20T00:00:00Z" :expires_at future-time
                           :workflow_run {:id 99 :head_sha (:head native-shas)}}]}
             (.includes url "/pulls/7/files?")
-            [{:filename "src/a.cljs" :status "modified" :additions 1 :deletions 0 :changes 1
-              :patch "@@ -1 +1 @@\n-a\n+b"}
-             {:filename "src/b.cljs" :status "renamed" :previous_filename "src/old.cljs"
-              :additions 1 :deletions 1 :changes 2 :patch "@@ -1 +1 @@\n-c\n+d"}]
+            [(raw-pull-file "src/a.cljs" "modified" {:patch "@@ -1 +1 @@\n-a\n+b"})
+             (raw-pull-file "src/b.cljs" "renamed" {:previous_filename "src/old.cljs"
+                                                       :patch "@@ -1 +1 @@\n-c\n+d"})]
             :else {:unknown-url url})
           body (alter url body)]
       {:status :ok :data body :bytes 100 :next-url nil})))
@@ -205,11 +212,18 @@
         "The native singular pull merge-ref endpoint is read")
     (is (some #(.includes % "/attempts/2/jobs?") @seen-urls)
         "Jobs are read for the exact native attempt")
-    (is (= [{:filename "src/a.cljs" :status :modified :patch "@@ -1 +1 @@\n-a\n+b" :patch-state :available}
-            {:filename "src/b.cljs" :status :renamed :previous-filename "src/old.cljs"
-             :patch "@@ -1 +1 @@\n-c\n+d" :patch-state :available}]
+    (is (= [{:sha (sha "a") :filename "src/a.cljs" :status :modified :additions 1
+             :blob-url "https://github.com/owner/repo/blob/file" :changes 2
+             :contents-url "https://api.github.com/repos/owner/repo/contents/file" :deletions 0
+             :raw-url "https://github.com/owner/repo/raw/file"
+             :patch "@@ -1 +1 @@\n-a\n+b" :patch-state :available}
+            {:sha (sha "a") :filename "src/b.cljs" :status :renamed :additions 1
+             :blob-url "https://github.com/owner/repo/blob/file" :changes 2
+             :contents-url "https://api.github.com/repos/owner/repo/contents/file" :deletions 0
+             :raw-url "https://github.com/owner/repo/raw/file"
+             :previous-filename "src/old.cljs" :patch "@@ -1 +1 @@\n-c\n+d" :patch-state :available}]
            (get-in result [:native :files :items]))
-        "Native PR-file patches are retained verbatim")
+        "Required native metadata and patch bytes are retained without fetching response URLs")
     (is (= 2 (get-in result [:native :files :total-count])))
     (is (= 2 (get-in result [:native :files :received])))
     (is (true? (get-in result [:native :files :patches-available?])))
@@ -461,18 +475,32 @@
   (is (law/changed-file-count? 0))
   (is (law/changed-file-count? 3000))
   (is (not (law/changed-file-count? 3001)))
-  (is (law/unique-pull-files? [{:filename "a" :status "modified" :patch ""}] 1))
-  (is (not (law/unique-pull-files? [{:filename "a" :status "modified"}
-                                   {:filename "a" :status "added"}] 2)))
-  (is (law/raw-pull-file? {:filename "a" :status "renamed" :patch "x"}))
-  (is (not (law/raw-pull-file? {:filename "a" :status "renamed" :previous_filename "a" :patch "x"})))
-  (is (law/raw-pull-file? {:filename "a" :status "copied" :patch "x"}))
-  (is (law/raw-pull-file? {:filename "a" :status "copied" :previous_filename "b" :patch "x"}))
-  (is (law/raw-pull-file? {:filename "a" :status "changed" :patch "x"}))
-  (is (law/raw-pull-file? {:filename "a" :status "unchanged" :patch "x"}))
-  (is (law/raw-pull-file? {:filename "a" :status "modified" :previous_filename "b"}))
-  (is (not (law/raw-pull-file? {:filename "a" :status "modified" :previous_filename ""})))
-  (is (not (law/raw-pull-file? {:filename "a" :status "modified" :previous_filename nil})))
+  (let [valid (raw-pull-file "a" "modified" {:patch ""})]
+    (is (law/unique-pull-files? [valid] 1))
+    (is (not (law/unique-pull-files? [valid (assoc valid :status "added")] 2)))
+    (is (not (law/raw-pull-file? (dissoc valid :sha))))
+    (is (not (law/raw-pull-file? (dissoc valid :additions))))
+    (is (not (law/raw-pull-file? (dissoc valid :blob_url))))
+    (is (not (law/raw-pull-file? (dissoc valid :changes))))
+    (is (not (law/raw-pull-file? (dissoc valid :contents_url))))
+    (is (not (law/raw-pull-file? (dissoc valid :deletions))))
+    (is (not (law/raw-pull-file? (dissoc valid :raw_url))))
+    (is (not (law/raw-pull-file? (assoc valid :sha "bad"))))
+    (is (not (law/raw-pull-file? (assoc valid :additions -1))))
+    (is (not (law/raw-pull-file? (assoc valid :changes "2"))))
+    (is (not (law/raw-pull-file? (assoc valid :deletions -1))))
+    (is (not (law/raw-pull-file? (assoc valid :blob_url " "))))
+    (is (not (law/raw-pull-file? (assoc valid :contents_url nil))))
+    (is (not (law/raw-pull-file? (assoc valid :raw_url ""))))
+    (is (law/raw-pull-file? (assoc valid :changes 99)) "No arithmetic relationship is imposed")
+    (is (law/raw-pull-file? (raw-pull-file "a" "renamed" {:patch "x"})))
+    (is (not (law/raw-pull-file? (assoc valid :previous_filename "a"))))
+    (is (law/raw-pull-file? (raw-pull-file "a" "copied" {:patch "x"})))
+    (is (law/raw-pull-file? (assoc valid :status "changed")))
+    (is (law/raw-pull-file? (assoc valid :status "unchanged")))
+    (is (law/raw-pull-file? (assoc valid :previous_filename "b")))
+    (is (not (law/raw-pull-file? (assoc valid :previous_filename ""))))
+    (is (not (law/raw-pull-file? (assoc valid :previous_filename nil)))))
   (is (law/pagination-link? (host/decode-pagination-link
                              "https://api.github.com/repositories/41/pulls/7/files?page=2&per_page=1")
                             41 "https://api.github.com/repos/owner/repo/pulls/7/files" 1 1))
