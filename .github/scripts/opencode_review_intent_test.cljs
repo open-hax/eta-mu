@@ -4,6 +4,8 @@
   Fixtures in this suite are inert and never establish source custody."
   (:require [cljs.test :as test :refer [deftest is testing]]
             [cljs.reader :as reader]
+            [clio.infra.runtime :as clio-runtime]
+            [clio.law.schema :as clio-schema-law]
             [nbb.core :as nbb]
             [clojure.string :as str]
             ["node:fs" :as fs]
@@ -40,6 +42,7 @@
 (load-source-if-present "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc")
 (load-source-if-present "packages/eta-mu/src/cljs/eta_mu/extern/review_intent.cljs")
 (load-source-if-present "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs")
+(load-source-if-present "packages/eta-mu/src/cljs/eta_mu/infra/review_intent_worker.cljs")
 
 (def reservation-id "00000000-0000-4000-8000-000000000001")
 (def started-id "00000000-0000-4000-8000-000000000002")
@@ -97,11 +100,11 @@
   (let [root (.mkdtempSync fs "/tmp/eta-mu-review-intent-")
         ledger-file (str root "/publication.edn")]
     (.writeFileSync fs ledger-file "" "utf8")
-    (let [stat (.statSync fs ledger-file)]
+    (let [stat (.statSync fs ledger-file #js {:bigint true})]
       {:schema-directory (str root "/schemas")
        :ledger-file ledger-file
-       :partition-device (.-dev stat)
-       :partition-inode (.-ino stat)
+       :partition-device (str (.-dev stat))
+       :partition-inode (str (.-ino stat))
        :expected-lock-key stream-key
        :test-root root})))
 
@@ -177,6 +180,44 @@
     (is (= :appended (:status result)) (pr-str result))
     (is (= 1 (event-count store)))))
 
+(deftest configured-partition-uses-exact-decimal-bigint-identity
+  (let [store (installation)
+        stat (.statSync fs (:ledger-file store) #js {:bigint true})
+        guarded-store (assoc store
+                             :partition-device (str (.-dev stat))
+                             :partition-inode (str (.-ino stat)))
+        result (call-api "eta-mu.infra.review-intent" "transition!"
+                         guarded-store context-a {:state :reserved})]
+    (is (= :appended (:status result)) (pr-str result))
+    (is (= 1 (event-count store)))))
+
+(deftest guarded-clio-append-refuses-replaced-descriptor-identity
+  (let [store (installation)
+        original-path (str (:ledger-file store) ".original")
+        replacement "replacement inode must remain untouched\n"
+        identity [(:partition-device store) (:partition-inode store)]
+        schema-id :eta-mu.review-intent/transition
+        event-data {:event/stream (call-api "eta-mu.shape.review-intent" "lock-stream" stream-key)
+                    :event/seq 1 :event/causes []
+                    :event/actor "inert-publisher" :event/subject "inert-lock"
+                    :event/data (:event/data reserved-a)}
+        runtime (clio-runtime/open (:schema-directory store)
+                                   {schema-id (clio-schema-law/event-schema
+                                               schema-id
+                                               (deref (resolve-api "eta-mu.shape.review-intent"
+                                                                   "event-data-schema")))})
+        _ (.renameSync fs (:ledger-file store) original-path)
+        _ (.writeFileSync fs (:ledger-file store) replacement "utf8")
+        result (try
+                 (clio-runtime/append! runtime (:ledger-file store) schema-id event-data
+                                       {:expected-file-identity identity})
+                 (catch :default error {:status :refused :reason (:clio/error (ex-data error))}))]
+    (is (= :refused (:status result)) (pr-str result))
+    (is (= replacement (.readFileSync fs (:ledger-file store) "utf8"))
+        "The replaced path receives no event when its descriptor identity differs.")
+    (is (= "" (.readFileSync fs original-path "utf8"))
+        "The originally checked inode remains the untouched empty partition.")))
+
 (deftest capability-issuance-is-not-a-public-receipt-mint-port
   (is (nil? (resolve-api "eta-mu.extern.review-intent" "issue-after-recheck!"))
       "Callers cannot turn a returned append receipt into a capability."))
@@ -223,8 +264,8 @@
                     (call-api "eta-mu.infra.review-intent" "transition!"
                               {:schema-directory (str path ".schemas")
                                :ledger-file path
-                               :partition-device (.-dev (.statSync fs path))
-                               :partition-inode (.-ino (.statSync fs path))
+                               :partition-device (str (.-dev (.statSync fs path #js {:bigint true})))
+                               :partition-inode (str (.-ino (.statSync fs path #js {:bigint true})))
                                :expected-lock-key stream-key
                                }
                               {:now-ms 1}
