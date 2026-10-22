@@ -1274,3 +1274,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 2e95dc65f7a644e2ed6fcb4b169113f2972eea80d104cf65f1b386b4ed3d38b9
   note: Validate independent boundaries with actual retained APIs: collector trigger differs from producer event; partial source observations cannot authenticate original G/caller custody. Retain original fixture limitations and failed commands. Worker bounds are phase-specific, and owning lint configuration must be used. No new spore or promotion. Preserve actual causal RED and all authored/cwd/environment failures; prefer independent concrete probes to origin labels. Current native source remains incomplete; tests and byte identity cannot imply protected adoption, real publication or full publisher completion.
+
+- ts: 2026-10-22T01:24:22.534273+00:00
+  session: feat/trusted-review-publication-20261021
+  task: Repair native pagination findings with actual host controls and public GET
+  p-efficiency: 0.68
+  p-friction: 0.66
+  p-skill-candidate: 0.45
+  spore: none
+  receipt-refs: f5550893bf354f79618f8955cbb09a581689e547cd03907a8d290fbfb86b1bcf
+  note: Exercise the actual host API through its owning runtime before accepting mocks; preserve valid numeric repository pagination routes and refuse malformed present links. Run owning lint and retain failed harness/runtime probes. Public GETs, local parity and independent replay do not establish original G/caller or private custody, privileged publication, protected adoption or hosted qualification. No new spore or promotion.

@@ -1,0 +1,266 @@
+{
+  "schema_version": 1,
+  "kind": "trusted-publication-native-pagination-repair",
+  "at": "2026-10-22T01:23:46.978929+00:00",
+  "repository": "open-hax/eta-mu",
+  "pr": 362,
+  "source_base": "87187ddc3a375c4fcea28b7c882659737f53e698",
+  "source": "9fc17a59b82997b8a1c8903c51c0e0b8f2f45bf9",
+  "code_files": [
+    {
+      "path": ".github/scripts/opencode_review_collection_test.cljs",
+      "bytes": 37195,
+      "sha256": "89bd6ca9b9c2455e6b2d955f66fe8fe2c554b0e3edcdb0bca08019ee326bd07d"
+    },
+    {
+      "path": "packages/eta-mu/src/cljs/eta_mu/extern/review_collection.cljs",
+      "bytes": 5794,
+      "sha256": "b8c568716088c9d2a8e4a3f0f743a696601993d5f878328aaa9045176bce1bc1"
+    },
+    {
+      "path": "packages/eta-mu/src/cljs/eta_mu/infra/review_collection.cljs",
+      "bytes": 17835,
+      "sha256": "2b34c0b47fb0974d4979a0b70bba4e41692b71e21d4f154019f64471d6ee174c"
+    },
+    {
+      "path": "packages/eta-mu/src/cljs/eta_mu/law/review_collection.cljc",
+      "bytes": 4749,
+      "sha256": "a4256e9574f4fbe8ebb5b81fa9941f4e75d5237bbb3ff291f432f0a1c063497b"
+    }
+  ],
+  "evidence": [
+    {
+      "path": ".\u03b7\u03bc/review-evidence/trusted-publication-pagination/ff04b9a05d33c5cf98bffa84d30003f79513d4df5f8ed47fc93c2f8d0525f6a7.json.gz",
+      "sha256": "ff04b9a05d33c5cf98bffa84d30003f79513d4df5f8ed47fc93c2f8d0525f6a7",
+      "bytes": 52570,
+      "raw_sha256": "562cb747c812efbd964251c72def95af5fb7e81c59f08d000b142b16ca4f9a5e",
+      "raw_bytes": 278809,
+      "captures": 180
+    }
+  ],
+  "native_findings": [
+    {
+      "thread": "PRRT_kwDORu27H86vArzt",
+      "root_comment": 4343556642,
+      "priority": "P1",
+      "repair": "Preserve raw next Link target from actual header."
+    },
+    {
+      "thread": "PRRT_kwDORu27H86vArz0",
+      "root_comment": 4343556656,
+      "priority": "P2",
+      "repair": "Validate equivalent query order and numeric repository route as data; rebuild requests locally."
+    }
+  ],
+  "tests": {
+    "pass": true,
+    "source": "9fc17a59b82997b8a1c8903c51c0e0b8f2f45bf9",
+    "first_gates": {
+      "source": "af2775d0c241801fa841bec23ea6a0273f3aa545",
+      "source_unchanged": true,
+      "results": [
+        {
+          "label": "registered-review-owners",
+          "command": [
+            "bb",
+            "scripts/test.bb",
+            "--only",
+            "review-publication-collection"
+          ],
+          "cwd": "/home/err/.local/share/foresight-worktrees/eta-pagination-repair-20261022",
+          "source": "af2775d0c241801fa841bec23ea6a0273f3aa545",
+          "environment_names": [
+            "HOME",
+            "LANG",
+            "PATH",
+            "SHELL",
+            "USER",
+            "npm_config_userconfig"
+          ],
+          "exit": 0,
+          "seconds": 0.9671163599996362,
+          "completed_at": "2026-10-22T01:21:19.350314+00:00",
+          "stdout": {
+            "bytes": 516,
+            "sha256": "eda424315d33c20a2650614f76336ff5f4bb160ee1d3cb8c886314e7768b3d7e"
+          },
+          "stderr": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        {
+          "label": "full-cli-tests",
+          "command": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "test"
+          ],
+          "cwd": "/home/err/.local/share/foresight-worktrees/eta-pagination-repair-20261022",
+          "source": "af2775d0c241801fa841bec23ea6a0273f3aa545",
+          "environment_names": [
+            "HOME",
+            "LANG",
+            "PATH",
+            "SHELL",
+            "USER",
+            "npm_config_userconfig"
+          ],
+          "exit": 0,
+          "seconds": 24.808471255993936,
+          "completed_at": "2026-10-22T01:21:44.159316+00:00",
+          "stdout": {
+            "bytes": 2671,
+            "sha256": "cb65b7fc7e8ac22eda3885b60fc397e089a9bd17f7bb394e408a040a2247145a"
+          },
+          "stderr": {
+            "bytes": 208,
+            "sha256": "0d9bbc1c54d52a754e724ff0d7fe99947d141ce37d491b0a36c998cd9841a77d"
+          }
+        },
+        {
+          "label": "cli-kondo",
+          "command": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "lint:kondo"
+          ],
+          "cwd": "/home/err/.local/share/foresight-worktrees/eta-pagination-repair-20261022",
+          "source": "af2775d0c241801fa841bec23ea6a0273f3aa545",
+          "environment_names": [
+            "HOME",
+            "LANG",
+            "PATH",
+            "SHELL",
+            "USER",
+            "npm_config_userconfig"
+          ],
+          "exit": 0,
+          "seconds": 2.0203060639905743,
+          "completed_at": "2026-10-22T01:21:46.180152+00:00",
+          "stdout": {
+            "bytes": 449,
+            "sha256": "edc4a55457b1148bc12b93a1c5ac093f28d430023adec6a6b7fc0d9458d01574"
+          },
+          "stderr": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        {
+          "label": "scoped-kondo",
+          "command": [
+            "clj-kondo",
+            "--config-dir",
+            "packages/eta-mu/.clj-kondo",
+            "--lint",
+            ".github/scripts/opencode_review_collection_test.cljs"
+          ],
+          "cwd": "/home/err/.local/share/foresight-worktrees/eta-pagination-repair-20261022",
+          "source": "af2775d0c241801fa841bec23ea6a0273f3aa545",
+          "environment_names": [
+            "HOME",
+            "LANG",
+            "PATH",
+            "SHELL",
+            "USER",
+            "npm_config_userconfig"
+          ],
+          "exit": 2,
+          "seconds": 0.16469120199326426,
+          "completed_at": "2026-10-22T01:21:46.345415+00:00",
+          "stdout": {
+            "bytes": 158,
+            "sha256": "c63f2729eb128baed2f9c52dafcb723b108e9f2679b1365466f58d6dcd23ce36"
+          },
+          "stderr": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        {
+          "label": "cli-release",
+          "command": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "build"
+          ],
+          "cwd": "/home/err/.local/share/foresight-worktrees/eta-pagination-repair-20261022",
+          "source": "af2775d0c241801fa841bec23ea6a0273f3aa545",
+          "environment_names": [
+            "HOME",
+            "LANG",
+            "PATH",
+            "SHELL",
+            "USER",
+            "npm_config_userconfig"
+          ],
+          "exit": 0,
+          "seconds": 20.99107867400744,
+          "completed_at": "2026-10-22T01:22:07.336892+00:00",
+          "stdout": {
+            "bytes": 230,
+            "sha256": "50b116ccf5205809a3381d9b518034ab59df21ca456783e776f1d6f1356f6dac"
+          },
+          "stderr": {
+            "bytes": 128,
+            "sha256": "92ade034bf31f0961e007dd6885228a668f1821b5f82f9a9a907db5867d96452"
+          }
+        }
+      ],
+      "pass": false
+    },
+    "followup": {
+      "change": "Remove unused test require only; product source unchanged",
+      "registered_suite": "23 tests / 154 assertions / 0 failures / 0 errors",
+      "scoped_kondo": "0 errors / 0 warnings"
+    },
+    "full_CLI": "194 tests / 587 assertions",
+    "workflow_resources": "11 tests / 199 assertions",
+    "release": "166 files / 113 compiled / 0 warnings",
+    "pure_value_parity": {
+      "cases": 10,
+      "equal_actual_values": true
+    },
+    "native_public_GET": "HTTP 200; numeric repository next URL preserved; no native writes",
+    "retained_failed_global_NBB_probe": true,
+    "all_required_gates_pass_after_narrow_test_cleanup": true
+  },
+  "native_public_GET": {
+    "url": "https://api.github.com/repos/open-hax/foresight/actions/runs/39567821319/attempts/1/jobs?per_page=1&page=1",
+    "status": 200,
+    "total_count": 4,
+    "numeric_repository_id": 1333057084,
+    "actual_next_url_preserved": true,
+    "authenticated_or_private_qualification": false
+  },
+  "independent_review": {
+    "source": "af2775d0c241801fa841bec23ea6a0273f3aa545",
+    "result": "No additional pagination defect reproduced; 23/154 pass. Final source differs only by removal of unused test require."
+  },
+  "owner": {
+    "uuid": "ed4e2a2a-6055-4d53-9cea-f3971c707551",
+    "status": "in_progress",
+    "assignee": "Codex",
+    "points": 5,
+    "complete": false
+  },
+  "limits": [
+    "No production registry or original event G/caller custody has been supplied. Real reconstruction remains observed/incomplete.",
+    "Raw extern port accepts caller-chosen positive byte/time bounds; the only product caller enforces the finite ceilings.",
+    "Local public GET and inert transport controls confer no private-token, privileged publication, protected adoption, approval or hosted-successor qualification.",
+    "Initial malformed host mocks, authored test errors, unused require warning and wrong global NBB probe remain retained; final owning-runtime tests and lint pass.",
+    "Historical ETA invalid receipts remain 71 rows / 118 errors."
+  ],
+  "preservation": {
+    "all309_states_and_planning": true,
+    "four_ledger_prefixes": true,
+    "CMS_Cephalon": "paused",
+    "consumer_pins_advance": false,
+    "new_spore": false
+  },
+  "qualification": false
+}
