@@ -25,5 +25,15 @@
                :expired? (:expired raw)}]
     (when (law/native-artifact? value) value)))
 
+(defn pull-file [raw]
+  (when (law/raw-pull-file? raw)
+    (cond-> {:filename (:filename raw)
+             :status (keyword (:status raw))
+             :patch-state (cond (not (contains? raw :patch)) :missing
+                                (nil? (:patch raw)) :null
+                                :else :available)}
+      (contains? raw :previous_filename) (assoc :previous-filename (:previous_filename raw))
+      (string? (:patch raw)) (assoc :patch (:patch raw)))))
+
 (defn pages [count next?]
   {:pages count :received count :next? next?})

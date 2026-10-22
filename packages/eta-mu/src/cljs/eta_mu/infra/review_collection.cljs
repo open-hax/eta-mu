@@ -64,6 +64,39 @@
             {:items all :complete? true :pages page :received page :next? false :total-count total-count}
             (throw (ex-info "Native pagination truncated" {:code :pagination-truncated}))))))))
 
+(defn- ^:async pull-files! [read entry pr-number expected-count bounds]
+  (when-not (law/changed-file-count? expected-count)
+    (throw (ex-info "Native pull changed_files count is unsupported" {:code :pull-files-count})))
+  (let [name (get-in entry [:repository :full-name])
+        route (str "https://api.github.com/repos/" name "/pulls/" pr-number "/files")]
+    (loop [page 1 files []]
+      (let [url (str route "?per_page=" (:page-size bounds) "&page=" page)
+            response (await (read url))
+            rows (:data response)
+            all (when (vector? rows) (into files rows))
+            next-url (:next-url response)
+            next-link (when (some? next-url) (host/decode-pagination-link next-url))]
+        (when-not (and (vector? rows) (<= (count rows) (:page-size bounds))
+                       (every? law/raw-pull-file? all)
+                       (= (count all) (count (set (map :filename all))))
+                       (<= (count all) expected-count))
+          (throw (ex-info "Native pull files page shape or identity" {:code :pull-files-shape})))
+        (if (some? next-url)
+          (if (and (< (count all) expected-count)
+                   (law/pagination-link? next-link (get-in entry [:repository :id])
+                                         route page (:page-size bounds)))
+            (recur (inc page) all)
+            (throw (ex-info "Native pull files pagination mismatch" {:code :pull-files-pagination})))
+          (if (law/unique-pull-files? all expected-count)
+            (let [items (mapv shape/pull-file all)
+                  missing (mapv (fn [file] {:filename (:filename file) :patch-state (:patch-state file)})
+                                (remove #(= :available (:patch-state %)) items))]
+              {:items items :total-count expected-count :received (count items)
+               :pages page :complete? true :patches-available? (empty? missing)
+               :patch-text-completeness :unverified
+               :unsupported (when (seq missing) [{:reason :patch-unavailable :files missing}])})
+            (throw (ex-info "Native pull files count is incomplete" {:code :pull-files-truncated}))))))))
+
 (defn- ^:async tuple! [read entry n]
   (let [name (get-in entry [:repository :full-name])
         repository (-> (await (read (str "https://api.github.com/repos/" name))) :data)
@@ -209,8 +242,9 @@
 
 (defn- ^:async observation [read entry n run-id bounds]
   (let [tuple (await (tuple! read entry n))
-        run (await (run-and-artifacts! read entry n run-id tuple bounds))]
-    {:tuple tuple :run run :repository (:native-repository tuple)}))
+        run (await (run-and-artifacts! read entry n run-id tuple bounds))
+        files (await (pull-files! read entry n (get-in tuple [:raw :pull-request :changed_files]) bounds))]
+    {:tuple tuple :run run :files files :repository (:native-repository tuple)}))
 
 (defn ^:async collect-with!
   "Testable collector over an inert transport. Transport outputs are fixture data,

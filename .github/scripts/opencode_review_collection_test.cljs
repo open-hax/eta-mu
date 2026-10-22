@@ -174,6 +174,7 @@
   (is (law/request? {:method :get :url "https://api.github.com/repos/owner/repo/pulls/7"}))
   (is (law/request? {:method :get :url "https://api.github.com/repos/owner/repo/pulls/7/files?per_page=100&page=1"}))
   (is (not (law/request? {:method :get :url "https://api.github.com/repos/owner/repo/pulls/7/files?redirect=https://evil.invalid"})))
+  (is (not (law/request? {:method :get :url "https://api.github.com/repos/owner/repo/pulls/7/files?page=1&per_page=100"})))
   (is (law/request? {:method :get :url "https://api.github.com/repos/owner/repo/git/ref/pull/7/merge"}))
   (is (not (law/request? {:method :get :url "https://api.github.com/repos/owner/repo/git/ref/pulls/7/merge"})))
   (is (not (law/request? {:method :post :url "https://api.github.com/repos/owner/repo/pulls/7"})))
@@ -211,7 +212,8 @@
         "Native PR-file patches are retained verbatim")
     (is (= 2 (get-in result [:native :files :total-count])))
     (is (= 2 (get-in result [:native :files :received])))
-    (is (true? (get-in result [:native :files :patches-complete?])))
+    (is (true? (get-in result [:native :files :patches-available?])))
+    (is (= :unverified (get-in result [:native :files :patch-text-completeness])))
     (is (= 2 (count (filter #(.includes % "/pulls/7/files?") @seen-urls)))
         "The changed-file array is read during both snapshot passes")
     (is (some #(.endsWith % "/actions/runs/99/attempts/2") @seen-urls)
@@ -322,7 +324,7 @@
         (is (= true (get-in result [:native :run :artifacts :complete?])))
         (is (= 2 (get-in result [:native :run :jobs :pages])))
         (is (= 2 (get-in result [:native :run :artifacts :pages])))
-        (is (= 30 (count @requested)) "Two full snapshots reconstruct every local request")
+        (is (= 32 (count @requested)) "Two full snapshots reconstruct every local request")
         (is (not-any? #(clojure.string/includes? % "/repositories/41/") @requested)
             "Supplied Link URLs are validated as metadata and never fetched")
         (is (every? #(and (clojure.string/includes? % "?per_page=2&page=")
@@ -333,6 +335,150 @@
       (finally (done)))))
 (deftest github-link-pagination-normalizes-route-and-query-order
   (async done (github-link-pagination-control done)))
+
+(defn ^:async pull-file-pagination-control [done]
+  (let [base (fake-native (fn [_ body] body))
+        transport (fn [{:keys [url] :as request}]
+                    (let [response (base request)]
+                      (if (.includes url "/pulls/7/files?")
+                        (let [rows (:data response)]
+                          (if (.endsWith url "page=1")
+                            (assoc response :data [(first rows)]
+                                   :next-url "https://api.github.com/repositories/41/pulls/7/files?page=2&per_page=1")
+                            (assoc response :data [(second rows)])))
+                        response)))
+        result (await (run!test (assoc-in registry [:targets 0 :enabled?] true) transport 1))]
+    (is (= :pending (:status result)))
+    (is (= 2 (get-in result [:native :files :pages])))
+    (is (= 2 (get-in result [:native :files :received])))
+    (is (= ["src/a.cljs" "src/b.cljs"] (mapv :filename (get-in result [:native :files :items]))))
+    (is (law/pagination-link? (host/decode-pagination-link
+                               "https://api.github.com/repositories/41/pulls/7/files?page=2&per_page=1")
+                              41 "https://api.github.com/repos/owner/repo/pulls/7/files" 1 1)
+        "Numeric repository routes preserve the exact PR-files suffix")
+    (done)))
+(deftest pull-files-collect-through-numeric-repository-link-pages
+  (async done (pull-file-pagination-control done)))
+
+(defn ^:async absent-patch-control [done]
+  (let [base (fake-native (fn [_ body] body))
+        transport (fn [{:keys [url] :as request}]
+                    (let [response (base request)]
+                      (if (.includes url "/pulls/7/files?")
+                        (update response :data (fn [rows] (mapv #(case (:filename %)
+                                                                  "src/a.cljs" (dissoc % :patch)
+                                                                  "src/b.cljs" (assoc % :patch nil)
+                                                                  %) rows)))
+                        response)))
+        result (await (run!test (assoc-in registry [:targets 0 :enabled?] true) transport))
+        files (get-in result [:native :files :items])
+        file (first files)]
+    (is (= :pending (:status result)) "Missing patches stay an incomplete observation, not qualification")
+    (is (false? (get-in result [:native :files :patches-available?])))
+    (is (= :unverified (get-in result [:native :files :patch-text-completeness])))
+    (is (= :missing (:patch-state file)))
+    (is (not (contains? file :patch)) "An absent native patch is never fabricated as empty text")
+    (is (= :null (:patch-state (second files))))
+    (is (not (contains? (second files) :patch)) "A native null patch stays absent from semantic data")
+    (is (= [{:reason :patch-unavailable :files [{:filename "src/a.cljs" :patch-state :missing}
+                                                 {:filename "src/b.cljs" :patch-state :null}]}]
+           (get-in result [:native :files :unsupported])))
+    (done)))
+(deftest unavailable-native-patch-remains-explicitly-unsupported
+  (async done (absent-patch-control done)))
+
+(defn ^:async changed-files-drift-control [done]
+  (let [calls (atom 0)
+        base (fake-native (fn [_ body] body))
+        transport (fn [{:keys [url] :as request}]
+                    (let [response (base request)]
+                      (if (.includes url "/pulls/7/files?")
+                        (update response :data (fn [rows]
+                                                 (if (= 1 (swap! calls inc)) rows
+                                                     (mapv #(update % :patch str "\nchanged") rows))))
+                        response)))
+        result (await (run!test (assoc-in registry [:targets 0 :enabled?] true) transport))]
+    (is (= :refused (:status result)))
+    (is (= :snapshot-drift (:reason result)))
+    (is (= 2 @calls) "The exact PR-file list and patch bytes must agree across passes")
+    (done)))
+(deftest changed-file-patch-drift-between-source-passes-refuses
+  (async done (changed-files-drift-control done)))
+
+(defn ^:async changed-count-drift-control [done]
+  (let [pull-reads (atom 0)
+        base (fake-native (fn [_ body] body))
+        transport (fn [{:keys [url] :as request}]
+                    (let [response (base request)]
+                      (cond
+                        (.endsWith url "/pulls/7")
+                        (let [read-number (swap! pull-reads inc)]
+                          (if (= read-number 2) (update response :data assoc :changed_files 1) response))
+                        (.includes url "/pulls/7/files?")
+                        (if (= 2 @pull-reads) (update response :data #(subvec % 0 1)) response)
+                        :else response)))
+        result (await (run!test (assoc-in registry [:targets 0 :enabled?] true) transport))]
+    (is (= :refused (:status result)))
+    (is (= :snapshot-drift (:reason result)))
+    (is (= 2 @pull-reads) "Each observed changed_files count must agree with its complete native file array")
+    (done)))
+(deftest changed-count-drift-between-native-passes-refuses
+  (async done (changed-count-drift-control done)))
+
+(defn ^:async empty-pull-files-control [done]
+  (let [base (fake-native (fn [_ body] body))
+        transport (fn [{:keys [url] :as request}]
+                    (let [response (base request)]
+                      (cond
+                        (.endsWith url "/pulls/7") (update response :data assoc :changed_files 0)
+                        (.includes url "/pulls/7/files?") (assoc response :data [])
+                        :else response)))
+        result (await (run!test (assoc-in registry [:targets 0 :enabled?] true) transport))]
+    (is (= :pending (:status result)))
+    (is (true? (get-in result [:native :files :complete?])))
+    (is (= [] (get-in result [:native :files :items])))
+    (is (= 0 (get-in result [:native :files :received])))
+    (is (true? (get-in result [:native :files :patches-available?])))
+    (done)))
+(deftest zero-changed-files-is-a-complete-empty-array-observation
+  (async done (empty-pull-files-control done)))
+
+(defn ^:async oversized-pull-file-page-control [done]
+  (let [base (fake-native (fn [_ body] body))
+        result (await (run!test (assoc-in registry [:targets 0 :enabled?] true)
+                                (fn [request]
+                                  (let [response (base request)]
+                                    (if (.includes (:url request) "/pulls/7/files?")
+                                      (assoc response :data (vec (concat (:data response) (:data response))))
+                                      response))) 1))]
+    (is (= :refused (:status result)))
+    (is (= :pull-files-shape (:reason result)))
+    (done)))
+(deftest pull-files-refuse-array-pages-larger-than-requested-size
+  (async done (oversized-pull-file-page-control done)))
+
+(deftest pull-file-law-enforces-count-identity-status-and-rename-shape
+  (is (law/changed-file-count? 0))
+  (is (law/changed-file-count? 3000))
+  (is (not (law/changed-file-count? 3001)))
+  (is (law/unique-pull-files? [{:filename "a" :status "modified" :patch ""}] 1))
+  (is (not (law/unique-pull-files? [{:filename "a" :status "modified"}
+                                   {:filename "a" :status "added"}] 2)))
+  (is (law/raw-pull-file? {:filename "a" :status "renamed" :patch "x"}))
+  (is (not (law/raw-pull-file? {:filename "a" :status "renamed" :previous_filename "a" :patch "x"})))
+  (is (law/raw-pull-file? {:filename "a" :status "copied" :patch "x"}))
+  (is (law/raw-pull-file? {:filename "a" :status "copied" :previous_filename "b" :patch "x"}))
+  (is (law/raw-pull-file? {:filename "a" :status "changed" :patch "x"}))
+  (is (law/raw-pull-file? {:filename "a" :status "unchanged" :patch "x"}))
+  (is (law/raw-pull-file? {:filename "a" :status "modified" :previous_filename "b"}))
+  (is (not (law/raw-pull-file? {:filename "a" :status "modified" :previous_filename ""})))
+  (is (not (law/raw-pull-file? {:filename "a" :status "modified" :previous_filename nil})))
+  (is (law/pagination-link? (host/decode-pagination-link
+                             "https://api.github.com/repositories/41/pulls/7/files?page=2&per_page=1")
+                            41 "https://api.github.com/repos/owner/repo/pulls/7/files" 1 1))
+  (is (not (law/pagination-link? (host/decode-pagination-link
+                                  "https://api.github.com/repositories/41/pulls/8/files?page=2&per_page=1")
+                                 41 "https://api.github.com/repos/owner/repo/pulls/7/files" 1 1))))
 
 (deftest production-get-decodes-link-header-before-collection
   (let [directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-collection-link-header-"))
