@@ -1,0 +1,396 @@
+{
+  "schema_version": 1,
+  "kind": "trusted-publication-clio-intent-execution",
+  "at": "2026-10-22T04:10:54.528746+00:00",
+  "repository": "open-hax/eta-mu",
+  "pr": 362,
+  "source_base": "b265c7220bb07839d188e7e44311d31aff0ae469",
+  "source": "c72928f632f50f832b5dc54a732697d15e0cc4d2",
+  "code_files": [
+    {
+      "path": ".github/scripts/opencode_review_intent_process_test.mjs",
+      "bytes": 3471,
+      "sha256": "3709fd5dd121b17a6b29f133b64a67a4c6a293605c334574d94ab52ffcf3b67b"
+    },
+    {
+      "path": ".github/scripts/opencode_review_intent_test.cljs",
+      "bytes": 25889,
+      "sha256": "a34644eb6e2d14ccb485f92b4e9d7c0f87a2f5838ae5a4b5bade97d58446d82c"
+    },
+    {
+      "path": ".github/scripts/opencode_review_intent_uncertain_test.mjs",
+      "bytes": 1944,
+      "sha256": "e36976cb98c7d1c2584a8a3055b9708a502d2ca20589aa5d788812c0f0c7c894"
+    },
+    {
+      "path": "packages/eta-mu/nbb.edn",
+      "bytes": 266,
+      "sha256": "bfdad932080a5be59d42c3b4151ee65bbbf354c820d8feebbaa255e49a20a27b"
+    },
+    {
+      "path": "packages/eta-mu/package.json",
+      "bytes": 2180,
+      "sha256": "a723561a581b440d7461b32bbf32de0004dbdde22012e1d8aa4c254f9e7bd825"
+    },
+    {
+      "path": "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc",
+      "bytes": 6253,
+      "sha256": "ffc573a74325acbd354630ff9f187ec779418316f7df2c9dd2f91d2e7257b6eb"
+    },
+    {
+      "path": "packages/eta-mu/src/cljs/eta_mu/extern/review_intent.cljs",
+      "bytes": 7388,
+      "sha256": "8c3ab11db95afb592cd85bbbd7421cd5d56042903035bcf2d722723f1af89064"
+    },
+    {
+      "path": "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs",
+      "bytes": 2811,
+      "sha256": "6b24eed841bb8de90b15c28fafadb5231ee78c71fb48ffede682cb23be4e22d7"
+    },
+    {
+      "path": "packages/eta-mu/src/cljs/eta_mu/infra/review_intent_worker.cljs",
+      "bytes": 8366,
+      "sha256": "47c28f72926111ea697ef500aeb10c1f282777fb78af1e9463acb425b054d576"
+    },
+    {
+      "path": "packages/eta-mu/src/cljs/eta_mu/infra/review_intent_worker_entry.cljs",
+      "bytes": 280,
+      "sha256": "3280b3dda5c72dc1d5e6141db2a6dd4e708305ee783b2b442be82dd9043a0ce8"
+    },
+    {
+      "path": "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc",
+      "bytes": 3982,
+      "sha256": "e432c4045b11aec9d56a69a1ff4ec8fb1ef46007f6ae6fc356e029836fd5b8ff"
+    },
+    {
+      "path": "packages/eta-mu/src/cljs/eta_mu/shape/review_intent.cljc",
+      "bytes": 917,
+      "sha256": "f18b48bc0243291021849f93fb4dd7ecb4b483d3e70426c71daf62a6f8e9e72f"
+    },
+    {
+      "path": "packages/eta-mu/test/cljs/eta_mu/review_intent_worker_barrier.cljs",
+      "bytes": 3191,
+      "sha256": "cc04fb97ccc4a7a017525bc5059adbcc4bc6d56c241d9265db437f9420a34e42"
+    },
+    {
+      "path": "packages/eta-mu/test/review_intent_test_entry.cljs",
+      "bytes": 345,
+      "sha256": "2925f7ea83a7f862a9718f053d1426da5fa3c809df25d31119759b5cd85e80f2"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 324773,
+      "sha256": "f3666e7872e6ff96de9d0ac650b8b7872f37de1c62df5544930dcaf0975fbd9d"
+    },
+    {
+      "path": "scripts/test.bb",
+      "bytes": 7438,
+      "sha256": "ea6ccd93824c8d144c00360d138c5794559000ed3234907ab146416593119b9b"
+    }
+  ],
+  "kernel": {
+    "source": "5fad794de1a9e23d6e5aaad42eaa933be1c070be",
+    "previous_head": "5a7a04c6ced7b15be940e16dc772c95b0525d55f",
+    "repository": "riatzukiza/clio",
+    "pr": 5,
+    "branch": "feat/segment-directory",
+    "remote_readback": "5fad794de1a9e23d6e5aaad42eaa933be1c070be",
+    "source_files": [
+      {
+        "path": "README.md",
+        "bytes": 29388,
+        "sha256": "8437b658ab557a90c9ce533178b0b8ad6e777712fe46818ed3a9c77e7de8bd33"
+      },
+      {
+        "path": "src/clio/extern/js/fs.cljs",
+        "bytes": 24587,
+        "sha256": "61594c4512379f68495f4fb7560b12c704dbaf7e1af7842308f77e438d425c60"
+      },
+      {
+        "path": "src/clio/extern/jvm/fs.clj",
+        "bytes": 35656,
+        "sha256": "2d8a90fcf64d7e36d207639379edb74d06b5ec1996cc197463090fd7b170b7fa"
+      },
+      {
+        "path": "src/clio/infra/ledger.cljc",
+        "bytes": 33032,
+        "sha256": "5a5c6f3366d14ce6708df8249236f9cb85cf96aa4d2e015a72b669609b2bebe5"
+      },
+      {
+        "path": "src/clio/infra/runtime.cljc",
+        "bytes": 8146,
+        "sha256": "3c7d5a6b41c5e15d2d782d8d0892f66dacfc98d3190e7a86d241aad5230b51a3"
+      },
+      {
+        "path": "src/clio/law/file_guard.cljc",
+        "bytes": 2605,
+        "sha256": "c3ad94ab79e28bc18851f1a36c61e495eb479d6a50773fbada09daff1a220145"
+      },
+      {
+        "path": "test/clio/extern/js/file_guard_fixture.cljs",
+        "bytes": 1575,
+        "sha256": "e0840ef427ed20bc674ffe9b02a19f591fdf661f507a53cb6e40d84f22211493"
+      },
+      {
+        "path": "test/clio/extern/jvm/file_guard_fixture.clj",
+        "bytes": 1855,
+        "sha256": "38635315a197200e71ce67ea2fb781d40f0297a18f08fb7d776973c68f77816d"
+      },
+      {
+        "path": "test/clio/infra/file_guard_test.cljc",
+        "bytes": 8396,
+        "sha256": "a9d3d0e2bd89f82a89c652b001192bb2262b1c2c03daff91795bf087ec0e9528"
+      },
+      {
+        "path": "test/clio/jvm_test_runner.clj",
+        "bytes": 1192,
+        "sha256": "7c16f67e985da1a86316143b78c4f3068919f42d05d4bb94bf218f74c94b1487"
+      },
+      {
+        "path": "test/run.nbb",
+        "bytes": 1125,
+        "sha256": "aac07b4b02864f2bbe0d546be06d641c81106cb0f6c487a7afccc207ff7f1b74"
+      }
+    ],
+    "published_at": "2026-10-22T03:45:45.979033+00:00",
+    "accepted_adoption": false,
+    "owning_gates": {
+      "BB": [
+        29,
+        182
+      ],
+      "JVM": [
+        134,
+        605
+      ],
+      "NBB": [
+        109,
+        583
+      ],
+      "Shadow": [
+        109,
+        583
+      ],
+      "failures": 0,
+      "errors": 0,
+      "compile_warnings": 0,
+      "lint_warnings": 0
+    },
+    "independent_focused": {
+      "JVM": [
+        8,
+        49
+      ],
+      "NBB": [
+        8,
+        49
+      ],
+      "defects_found": 0
+    }
+  },
+  "evidence": [
+    {
+      "path": ".\u03b7\u03bc/review-evidence/trusted-publication-intent/69c3ffe6776f476cd409421d4b1a4df250e57d1569a8685d3afa452f5db248d8.json.gz",
+      "bytes": 1559125,
+      "sha256": "69c3ffe6776f476cd409421d4b1a4df250e57d1569a8685d3afa452f5db248d8",
+      "raw_bytes": 13432798,
+      "raw_sha256": "e075eedbad08bc615903690e33f5007923413d350c91c24488330ac55b05088a",
+      "captures": 809
+    }
+  ],
+  "final_owning_gates": {
+    "source": "c72928f632f50f832b5dc54a732697d15e0cc4d2",
+    "source_unchanged": true,
+    "results": [
+      {
+        "label": "registered-review-owners",
+        "command": [
+          "bb",
+          "scripts/test.bb",
+          "--only",
+          "review-publication-intent"
+        ],
+        "cwd": "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022",
+        "source": "c72928f632f50f832b5dc54a732697d15e0cc4d2",
+        "environment_names": [
+          "HOME",
+          "LANG",
+          "PATH",
+          "SHELL",
+          "USER",
+          "npm_config_userconfig"
+        ],
+        "exit": 0,
+        "seconds": 22.77567229999113,
+        "completed_at": "2026-10-22T04:08:00.106277+00:00",
+        "stdout": {
+          "bytes": 501,
+          "sha256": "38f6a3f1eaeda4456435a2d813ea1efda7c5b5cdaabc6c4ccd1ffb32a21dfbc3"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      {
+        "label": "full-cli-tests",
+        "command": [
+          "pnpm",
+          "-C",
+          "packages/eta-mu",
+          "test"
+        ],
+        "cwd": "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022",
+        "source": "c72928f632f50f832b5dc54a732697d15e0cc4d2",
+        "environment_names": [
+          "HOME",
+          "LANG",
+          "PATH",
+          "SHELL",
+          "USER",
+          "npm_config_userconfig"
+        ],
+        "exit": 0,
+        "seconds": 15.464638564997585,
+        "completed_at": "2026-10-22T04:08:15.571429+00:00",
+        "stdout": {
+          "bytes": 2596,
+          "sha256": "3e7cfcf7e1a43f89fcfc9451011523ffe945d8b9c9a518e5038cd1892416eb43"
+        },
+        "stderr": {
+          "bytes": 207,
+          "sha256": "016f26b08a33a0817048781e6305ba59771026b3e7a0316a9eb672c5fb2bb277"
+        }
+      },
+      {
+        "label": "cli-kondo",
+        "command": [
+          "pnpm",
+          "-C",
+          "packages/eta-mu",
+          "lint:kondo"
+        ],
+        "cwd": "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022",
+        "source": "c72928f632f50f832b5dc54a732697d15e0cc4d2",
+        "environment_names": [
+          "HOME",
+          "LANG",
+          "PATH",
+          "SHELL",
+          "USER",
+          "npm_config_userconfig"
+        ],
+        "exit": 0,
+        "seconds": 2.2701121759891976,
+        "completed_at": "2026-10-22T04:08:17.842025+00:00",
+        "stdout": {
+          "bytes": 630,
+          "sha256": "08ad64bcc68d95071e77b3fec6fc789e4dcf80050847a0dcb42d6d8be561ce83"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      {
+        "label": "scoped-kondo",
+        "command": [
+          "clj-kondo",
+          "--config-dir",
+          "packages/eta-mu/.clj-kondo",
+          "--lint",
+          ".github/scripts/opencode_review_intent_test.cljs"
+        ],
+        "cwd": "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022",
+        "source": "c72928f632f50f832b5dc54a732697d15e0cc4d2",
+        "environment_names": [
+          "HOME",
+          "LANG",
+          "PATH",
+          "SHELL",
+          "USER",
+          "npm_config_userconfig"
+        ],
+        "exit": 0,
+        "seconds": 0.11458981898613274,
+        "completed_at": "2026-10-22T04:08:17.957110+00:00",
+        "stdout": {
+          "bytes": 42,
+          "sha256": "595f3f0cd7f95ab05630c9b6275f2be91c478f85fc8e540e274b94f604b12bd6"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      {
+        "label": "cli-release",
+        "command": [
+          "pnpm",
+          "-C",
+          "packages/eta-mu",
+          "build"
+        ],
+        "cwd": "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022",
+        "source": "c72928f632f50f832b5dc54a732697d15e0cc4d2",
+        "environment_names": [
+          "HOME",
+          "LANG",
+          "PATH",
+          "SHELL",
+          "USER",
+          "npm_config_userconfig"
+        ],
+        "exit": 0,
+        "seconds": 16.00999572200817,
+        "completed_at": "2026-10-22T04:08:33.967614+00:00",
+        "stdout": {
+          "bytes": 227,
+          "sha256": "f00867cdf4a392003f8a7b6961c4b3d748c5a80eb916eaaada892ea9e51eca0a"
+        },
+        "stderr": {
+          "bytes": 127,
+          "sha256": "9f5c399a5f1ac2ad67a863cc8ed8bf54c20b40a1d672202d3f280f604e3120c8"
+        }
+      }
+    ],
+    "pass": true
+  },
+  "prior_source_results": {
+    "ed0fde2f5a1902f2258e16b0b9228b0913e1ea59": "11 tests / 54 assertions pass; independent capability bypass and caller-mutated recovery injection found; scoped test lint fails one unused-private warning",
+    "6488a34ae700a007fd809fc1ed99bf2932823e4c": "15 / 77, CLI/lint/release pass; actual independent inode replacement redirects append; extended parity has six fold differences. Real blocked-lock worker returns unknown/ETIMEDOUT after8033ms, no capability, unchanged bytes, PID reaped. Real post-started fsync + injected parent fence failure returns exact recovery; retry already-present grants no capability.",
+    "959d1649db8f30bf6687d3d04014d37c0f95f5f2": "Numeric repair16 /83; all44 actual complete Clio canonical forms agree on NBB1.5.211,NBB1.5.212,Babashka.40raw equal;4numeric-only representations differ. Separate inode race remains until guarded integration."
+  },
+  "contract": {
+    "authoritative_partition": "one explicitly precreated monolithic Clio ledger; canonical replay and stream-slot CAS; intent version independent from stream sequence",
+    "worker": "fixed NBB1.5.212 child; clean environment,8s SIGKILL timeout,128MB V8 heap,65536 input/1048576 output byte limits,4CAS attempts. Not universal OS/RSS isolation.",
+    "descriptor_guard": "Canonical owner checks exact decimal device/inode strings on actual descriptor under read/write lock before ledger read/append; no raw handles escape externs.",
+    "capability": "Only fresh admitted post-started acknowledgment may mint private process-local opaque one-use effect capability. Consume atomically before await; host clock re-admission before and after append. Restart/replay/recovery never fresh authority.",
+    "recovery": "Caller recovery may reflush only exact existing event; private process-local genuine uncertainty receipt may retry its exact absent event without effect capability.",
+    "source_admission": "Invalid source admission performs zero schema/ledger writes."
+  },
+  "owner": {
+    "uuid": "ed4e2a2a-6055-4d53-9cea-f3971c707551",
+    "status": "in_progress",
+    "assignee": "Codex",
+    "points": 5,
+    "full_story_complete": false
+  },
+  "limits": [
+    "Original provider G, executed caller source, tools/input proof and complete source/verifier composition remain unsupported.",
+    "Public opaque recovery-receipt round-trip for an uncertain post-started append remains unproven; exact visible recovery was exercised.",
+    "Production registry enrollment, protected installation/custody, effective grants, native POST/readback/status and default adoption remain unfinished.",
+    "Exact candidate Clio alias is local candidate composition, not accepted root adoption. Primary ETA and accepted Clio/root pins unchanged.",
+    "Earlier successful hosted Sandbox39707954199 atb265 proves exact merge checkout and collection30/224 only; no separate originalG or successor hosted credit. Producer39707954320 succeeds with review jobs skipped/noartifact and is not review/publication.",
+    "Whole ETA receipt history remains71invalid/118errors; valid prospective catalog does not repair historical bytes.",
+    "Root receipt P1, character oracle, missing-App and terminal/native review qualification remain open."
+  ],
+  "preservation": {
+    "309_states_and_planning_required_unchanged": true,
+    "four_prefixes_required": true,
+    "root_pins_advance": false,
+    "CMS_Cephalon": "paused",
+    "new_spore": false
+  },
+  "qualification": false
+}

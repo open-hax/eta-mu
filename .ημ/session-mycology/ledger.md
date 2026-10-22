@@ -1294,3 +1294,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: bd56a77bb70640ec84879c50025553b30cadf7a386587ca98a06da6ee9a479d2
   note: Validate actual native array endpoints and every required retained provider field, preserving missing versus null versus available patches. Inventory completeness is not complete patch text or original event/run/caller custody. Independent primary schema review and actual public fixed GET probes precede claims. Retain causal tests, ambient provider failure, wrong API-path attempt and coordinator source race; use frozen source and stripped environments. No new spore or promotion.
+
+- ts: 2026-10-22T04:11:47.701606+00:00
+  session: codex/stabilization-portfolio
+  task: Execute Clio-backed intent with descriptor-bound storage and one-use authority
+  p-efficiency: 0.65
+  p-friction: 0.83
+  p-skill-candidate: 0.65
+  spore: none
+  receipt-refs: e8b30ba602410e631e150a9f1e2dac3e9b693c28fe938f87965fd81f3d941165
+  note: Actual public inode replacement required the canonical owning descriptor guard, not another pathname check or copied append engine. Keep all causal source REDs, intermediate product failures and harness failures distinct; exact frozen replay closes the observed race. Recompute documentary hashes from raw bytes and retain corrected originals. An extra baseline harness could not reach valid behavior and earliest scratch bytes are unavailable, so it supplies no RED. Public opaque uncertainty receipt round-trip remains unproven; full custody/native publication/adoption stay unfinished. Preserve309states/planning, historical ledger prefixes, fixed root pins and paused CMS/Cephalon. Current goal turn is source/test/evidence progress, not acceptance. Existing spore stays incubating; no new spore/promotion.
