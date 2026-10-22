@@ -7,7 +7,6 @@
             [eta-mu.shape.review-collection :as shape]
             [eta-mu.infra.review-collection :as collection]
             [clojure.string :as str]
-            [nbb.core :as nbb]
             ["node:child_process" :as cp]
             ["node:fs" :as fs]
             ["node:os" :as os]
