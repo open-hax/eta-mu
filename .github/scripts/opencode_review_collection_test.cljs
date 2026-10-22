@@ -51,7 +51,7 @@
             (= url "https://api.github.com/repos/owner/repo")
             {:id 41 :full_name "owner/repo" :private false}
             (.endsWith url "/pulls/7")
-            {:number 7 :state "open" :draft false :mergeable true
+            {:number 7 :state "open" :draft false :mergeable true :changed_files 2
              :base {:sha (:base native-shas) :ref "main"
                     :repo {:id 41 :full_name "owner/repo" :private false}}
              :head {:sha (:head native-shas)
@@ -91,6 +91,11 @@
                           :digest (str "sha256:" (apply str (repeat 64 "f")))
                           :created_at "2026-10-20T00:00:00Z" :expires_at future-time
                           :workflow_run {:id 99 :head_sha (:head native-shas)}}]}
+            (.includes url "/pulls/7/files?")
+            [{:filename "src/a.cljs" :status "modified" :additions 1 :deletions 0 :changes 1
+              :patch "@@ -1 +1 @@\n-a\n+b"}
+             {:filename "src/b.cljs" :status "renamed" :previous_filename "src/old.cljs"
+              :additions 1 :deletions 1 :changes 2 :patch "@@ -1 +1 @@\n-c\n+d"}]
             :else {:unknown-url url})
           body (alter url body)]
       {:status :ok :data body :bytes 100 :next-url nil})))
@@ -167,6 +172,8 @@
 
 (deftest transport-request-law-rejects-injected-url-and-non-get
   (is (law/request? {:method :get :url "https://api.github.com/repos/owner/repo/pulls/7"}))
+  (is (law/request? {:method :get :url "https://api.github.com/repos/owner/repo/pulls/7/files?per_page=100&page=1"}))
+  (is (not (law/request? {:method :get :url "https://api.github.com/repos/owner/repo/pulls/7/files?redirect=https://evil.invalid"})))
   (is (law/request? {:method :get :url "https://api.github.com/repos/owner/repo/git/ref/pull/7/merge"}))
   (is (not (law/request? {:method :get :url "https://api.github.com/repos/owner/repo/git/ref/pulls/7/merge"})))
   (is (not (law/request? {:method :post :url "https://api.github.com/repos/owner/repo/pulls/7"})))
@@ -197,6 +204,16 @@
         "The native singular pull merge-ref endpoint is read")
     (is (some #(.includes % "/attempts/2/jobs?") @seen-urls)
         "Jobs are read for the exact native attempt")
+    (is (= [{:filename "src/a.cljs" :status :modified :patch "@@ -1 +1 @@\n-a\n+b" :patch-state :available}
+            {:filename "src/b.cljs" :status :renamed :previous-filename "src/old.cljs"
+             :patch "@@ -1 +1 @@\n-c\n+d" :patch-state :available}]
+           (get-in result [:native :files :items]))
+        "Native PR-file patches are retained verbatim")
+    (is (= 2 (get-in result [:native :files :total-count])))
+    (is (= 2 (get-in result [:native :files :received])))
+    (is (true? (get-in result [:native :files :patches-complete?])))
+    (is (= 2 (count (filter #(.includes % "/pulls/7/files?") @seen-urls)))
+        "The changed-file array is read during both snapshot passes")
     (is (some #(.endsWith % "/actions/runs/99/attempts/2") @seen-urls)
         "The exact run attempt endpoint is read")
     (is (every? #(= :get (:method %)) @seen-requests) "The collector only issues GET requests")
