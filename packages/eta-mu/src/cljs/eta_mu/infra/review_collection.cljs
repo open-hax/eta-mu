@@ -116,7 +116,7 @@
            :base-commit base-commit :head-commit head-commit :merge-commit merge-commit
            :ancestry ancestry}}))
 
-(defn- ^:async run-and-artifacts! [read entry n run-id tuple event bounds]
+(defn- ^:async run-and-artifacts! [read entry n run-id tuple bounds]
   (let [name (get-in entry [:repository :full-name])
         run (-> (await (read (str "https://api.github.com/repos/" name "/actions/runs/" run-id))) :data)
         workflow-id (or (:workflow_id run) (:workflow-id run))
@@ -145,8 +145,10 @@
                   (assoc value :created-at (:created_at artifact)))) selected)]
     (when-not (and
                    (= (:id run) run-id) (= (get-in run [:repository :id]) (get-in entry [:repository :id]))
-                   (= (:event run) ({:schedule "schedule" :workflow-run "workflow_run"
-                                     :workflow-dispatch "workflow_dispatch"} event))
+                   ;; Collector enrollment triggers (schedule/workflow_run) are distinct from
+                   ;; the producer run event. This port supports direct pull_request runs only;
+                   ;; workflow_call and other producer sources remain unsupported.
+                   (= "pull_request" (:event run))
                    (= (:event attempt) (:event run))
                    (law/raw-repository? (:repository run))
                    (= (:head_sha run) (:head-sha tuple))
@@ -203,9 +205,9 @@
      :referenced-workflows (:referenced-workflows normalized-run)
      :run-metadata run}))
 
-(defn- ^:async observation [read entry n run-id event bounds]
+(defn- ^:async observation [read entry n run-id bounds]
   (let [tuple (await (tuple! read entry n))
-        run (await (run-and-artifacts! read entry n run-id tuple event bounds))]
+        run (await (run-and-artifacts! read entry n run-id tuple bounds))]
     {:tuple tuple :run run :repository (:native-repository tuple)}))
 
 (defn ^:async collect-with!
@@ -224,8 +226,8 @@
       (let [start (host/monotonic-now)
             {:keys [get state]} (make-reader transport bounds start)]
         (try
-          (let [first-pass (await (observation get entry pr-number run-id event bounds))
-                second-pass (await (observation get entry pr-number run-id event bounds))]
+          (let [first-pass (await (observation get entry pr-number run-id bounds))
+                second-pass (await (observation get entry pr-number run-id bounds))]
             (if (not (domain/stable-observation? first-pass second-pass))
               (refused :snapshot-drift)
               {:status (if (or (= :pending (domain/tuple-decision (:tuple first-pass)))
