@@ -144,8 +144,8 @@ importers:
         specifier: workspace:*
         version: link:../sol
       clio-publication-kernel:
-        specifier: github:riatzukiza/clio#5a7a04c6ced7b15be940e16dc772c95b0525d55f
-        version: '@eta-mu/clio@https://codeload.github.com/riatzukiza/clio/tar.gz/5a7a04c6ced7b15be940e16dc772c95b0525d55f'
+        specifier: github:riatzukiza/clio#5fad794de1a9e23d6e5aaad42eaa933be1c070be
+        version: '@eta-mu/clio@https://codeload.github.com/riatzukiza/clio/tar.gz/5fad794de1a9e23d6e5aaad42eaa933be1c070be'
       fs-ext-extra-prebuilt:
         specifier: 2.2.9
         version: 2.2.9
@@ -1154,8 +1154,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@eta-mu/clio@https://codeload.github.com/riatzukiza/clio/tar.gz/5a7a04c6ced7b15be940e16dc772c95b0525d55f':
-    resolution: {tarball: https://codeload.github.com/riatzukiza/clio/tar.gz/5a7a04c6ced7b15be940e16dc772c95b0525d55f}
+  '@eta-mu/clio@https://codeload.github.com/riatzukiza/clio/tar.gz/5fad794de1a9e23d6e5aaad42eaa933be1c070be':
+    resolution: {tarball: https://codeload.github.com/riatzukiza/clio/tar.gz/5fad794de1a9e23d6e5aaad42eaa933be1c070be}
     version: 0.1.0
     hasBin: true
 
@@ -5671,7 +5671,7 @@ snapshots:
   '@esbuild/win32-x64@0.27.7':
     optional: true
 
-  '@eta-mu/clio@https://codeload.github.com/riatzukiza/clio/tar.gz/5a7a04c6ced7b15be940e16dc772c95b0525d55f':
+  '@eta-mu/clio@https://codeload.github.com/riatzukiza/clio/tar.gz/5fad794de1a9e23d6e5aaad42eaa933be1c070be':
     dependencies:
       fs-ext-extra-prebuilt: 2.2.9
       nbb: 1.5.212

@@ -31,7 +31,7 @@
         package (js/JSON.parse (.readFileSync fs (.resolve path package-root "package.json") "utf8"))
         clio-pin (aget (aget package "dependencies") "clio-publication-kernel")]
     (when-not (and (.existsSync fs cli)
-                   (= "github:riatzukiza/clio#5a7a04c6ced7b15be940e16dc772c95b0525d55f"
+                   (= "github:riatzukiza/clio#5fad794de1a9e23d6e5aaad42eaa933be1c070be"
                       clio-pin)
                    (.existsSync fs worker)
                    (.existsSync fs (.resolve path package-root "node_modules/clio-publication-kernel/src/clio/infra/runtime.cljc")))
