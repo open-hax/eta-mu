@@ -1284,3 +1284,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: f5550893bf354f79618f8955cbb09a581689e547cd03907a8d290fbfb86b1bcf
   note: Exercise the actual host API through its owning runtime before accepting mocks; preserve valid numeric repository pagination routes and refuse malformed present links. Run owning lint and retain failed harness/runtime probes. Public GETs, local parity and independent replay do not establish original G/caller or private custody, privileged publication, protected adoption or hosted qualification. No new spore or promotion.
+
+- ts: 2026-10-22T01:49:14.805493+00:00
+  session: feat/trusted-review-publication-20261021
+  task: Execute bounded native file inventory and preserve custody limits
+  p-efficiency: 0.74
+  p-friction: 0.58
+  p-skill-candidate: 0.46
+  spore: none
+  receipt-refs: bd56a77bb70640ec84879c50025553b30cadf7a386587ca98a06da6ee9a479d2
+  note: Validate actual native array endpoints and every required retained provider field, preserving missing versus null versus available patches. Inventory completeness is not complete patch text or original event/run/caller custody. Independent primary schema review and actual public fixed GET probes precede claims. Retain causal tests, ambient provider failure, wrong API-path attempt and coordinator source race; use frozen source and stripped environments. No new spore or promotion.

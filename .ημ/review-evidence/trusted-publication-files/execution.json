@@ -1,0 +1,276 @@
+{
+  "schema_version": 1,
+  "kind": "trusted-publication-native-changed-files-execution",
+  "at": "2026-10-22T01:48:20.392532+00:00",
+  "repository": "open-hax/eta-mu",
+  "pr": 362,
+  "source_base": "ab03d9350e40a368748b2d1c4612a0038d3c21af",
+  "source": "48c9e810fc067f1528ab59a137568b17fe29db90",
+  "code_files": [
+    {
+      "path": ".github/scripts/opencode_review_collection_test.cljs",
+      "bytes": 49456,
+      "sha256": "c04a8eba1d75a5678c64ac7c0ed5f71108fe1ec33715e11ac23264fe96bfad63"
+    },
+    {
+      "path": "packages/eta-mu/src/cljs/eta_mu/infra/review_collection.cljs",
+      "bytes": 20124,
+      "sha256": "9bae0032e6c090dbdf32cfaaf24553d357fc50aecd41a37933dfd5ddaf090cb4"
+    },
+    {
+      "path": "packages/eta-mu/src/cljs/eta_mu/law/review_collection.cljc",
+      "bytes": 5669,
+      "sha256": "193f37c2c44ecc30c90b882e86b437199bc35b622b90f318a50df47092904368"
+    },
+    {
+      "path": "packages/eta-mu/src/cljs/eta_mu/shape/review_collection.cljc",
+      "bytes": 2044,
+      "sha256": "750a0a304c6a0ad12ca37936f8684b5c18c3c45d8997c441756098da9dedcf51"
+    }
+  ],
+  "evidence": [
+    {
+      "path": ".\u03b7\u03bc/review-evidence/trusted-publication-files/0f268a323e13e7393777e8ca88c9b18fb17305f0ec52373c10d39979214703d9.json.gz",
+      "sha256": "0f268a323e13e7393777e8ca88c9b18fb17305f0ec52373c10d39979214703d9",
+      "bytes": 688010,
+      "raw_sha256": "09bb1c2562f01d77dd0de290f744a16d0b8176907ebb4f6e7f1e4dd2371acea6",
+      "raw_bytes": 2987522,
+      "captures": 247
+    }
+  ],
+  "tests": {
+    "collection": {
+      "tests": 30,
+      "assertions": 224,
+      "failures": 0,
+      "independent_replay": true
+    },
+    "pure_NBB_BB_equal_value_cases": 20,
+    "full_CLI": {
+      "tests": 194,
+      "assertions": 587
+    },
+    "workflow_resources": {
+      "tests": 11,
+      "assertions": 199
+    },
+    "lint_warnings": 0,
+    "release_warnings": 0,
+    "gates": {
+      "source": "48c9e810fc067f1528ab59a137568b17fe29db90",
+      "source_unchanged": true,
+      "results": [
+        {
+          "label": "registered-review-owners",
+          "command": [
+            "bb",
+            "scripts/test.bb",
+            "--only",
+            "review-publication-collection"
+          ],
+          "cwd": "/home/err/.local/share/foresight-worktrees/eta-source-reconstruction-20261022",
+          "source": "48c9e810fc067f1528ab59a137568b17fe29db90",
+          "environment_names": [
+            "HOME",
+            "LANG",
+            "PATH",
+            "SHELL",
+            "USER",
+            "npm_config_userconfig"
+          ],
+          "exit": 0,
+          "seconds": 1.2180872810131405,
+          "completed_at": "2026-10-22T01:45:11.324722+00:00",
+          "stdout": {
+            "bytes": 516,
+            "sha256": "ac4d05f875bea5b355a51489b989a491625a012db744d917230e1be5b153cda6"
+          },
+          "stderr": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        {
+          "label": "full-cli-tests",
+          "command": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "test"
+          ],
+          "cwd": "/home/err/.local/share/foresight-worktrees/eta-source-reconstruction-20261022",
+          "source": "48c9e810fc067f1528ab59a137568b17fe29db90",
+          "environment_names": [
+            "HOME",
+            "LANG",
+            "PATH",
+            "SHELL",
+            "USER",
+            "npm_config_userconfig"
+          ],
+          "exit": 0,
+          "seconds": 16.970966338994913,
+          "completed_at": "2026-10-22T01:45:28.296138+00:00",
+          "stdout": {
+            "bytes": 2606,
+            "sha256": "b8d12171aa6d81d7393da4df145829b966a9bf99d4def4bd43cc9d46ec39f2de"
+          },
+          "stderr": {
+            "bytes": 212,
+            "sha256": "9193c29d6662102ae2f18e10eba6c36ebff9b684ea058cba6a36ad79fc086049"
+          }
+        },
+        {
+          "label": "cli-kondo",
+          "command": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "lint:kondo"
+          ],
+          "cwd": "/home/err/.local/share/foresight-worktrees/eta-source-reconstruction-20261022",
+          "source": "48c9e810fc067f1528ab59a137568b17fe29db90",
+          "environment_names": [
+            "HOME",
+            "LANG",
+            "PATH",
+            "SHELL",
+            "USER",
+            "npm_config_userconfig"
+          ],
+          "exit": 0,
+          "seconds": 2.2203332710196264,
+          "completed_at": "2026-10-22T01:45:30.516992+00:00",
+          "stdout": {
+            "bytes": 453,
+            "sha256": "c41d6c226238674ee5b40f8c83bd4259cfb58677e7a75d2acd537e28feff1d67"
+          },
+          "stderr": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        {
+          "label": "scoped-kondo",
+          "command": [
+            "clj-kondo",
+            "--config-dir",
+            "packages/eta-mu/.clj-kondo",
+            "--lint",
+            ".github/scripts/opencode_review_collection_test.cljs"
+          ],
+          "cwd": "/home/err/.local/share/foresight-worktrees/eta-source-reconstruction-20261022",
+          "source": "48c9e810fc067f1528ab59a137568b17fe29db90",
+          "environment_names": [
+            "HOME",
+            "LANG",
+            "PATH",
+            "SHELL",
+            "USER",
+            "npm_config_userconfig"
+          ],
+          "exit": 0,
+          "seconds": 0.16492161198402755,
+          "completed_at": "2026-10-22T01:45:30.682420+00:00",
+          "stdout": {
+            "bytes": 43,
+            "sha256": "9089e6caa88671065e421d84c89c3174d6030ba39ce9ddc7a8a4de964c609327"
+          },
+          "stderr": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        {
+          "label": "cli-release",
+          "command": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "build"
+          ],
+          "cwd": "/home/err/.local/share/foresight-worktrees/eta-source-reconstruction-20261022",
+          "source": "48c9e810fc067f1528ab59a137568b17fe29db90",
+          "environment_names": [
+            "HOME",
+            "LANG",
+            "PATH",
+            "SHELL",
+            "USER",
+            "npm_config_userconfig"
+          ],
+          "exit": 0,
+          "seconds": 23.41597178200027,
+          "completed_at": "2026-10-22T01:45:54.098891+00:00",
+          "stdout": {
+            "bytes": 234,
+            "sha256": "4e7ae046888ba01e71a4588ede07ca79c39a0f007c29963f8ede1097e2168cbe"
+          },
+          "stderr": {
+            "bytes": 132,
+            "sha256": "4755f18de202432fc2eb5229da8982a494fb2c582c1637aa98a0fa2535740840"
+          }
+        }
+      ],
+      "pass": true
+    }
+  },
+  "native_probe": {
+    "code_source": "48c9e810fc067f1528ab59a137568b17fe29db90",
+    "observed_head": "ab03d9350e40a368748b2d1c4612a0038d3c21af",
+    "observed_base": "7112c36440d180ca183d6a3f89661cee161fdae5",
+    "reported_merge": "760f14fd20f52e177215d413a2bc80b06ddc7fa7",
+    "source_tuple_stable": true,
+    "inventory_passes": 2,
+    "inventories_equal": true,
+    "files": 90,
+    "pages_per_pass": 9,
+    "requests": 20,
+    "page_requests": 18,
+    "response_bytes": 1981780,
+    "missing_patches": 17,
+    "inventory_complete": true,
+    "patches_available": false,
+    "patch_text_completeness": "unverified",
+    "registry_enrolled": false,
+    "scope": "actual fixed public GET and actual internal product inventory function; no original event, run/caller custody or production enrollment"
+  },
+  "repairs": [
+    "Native PR files array collected within both existing tuple/run observation passes using fixed local routes and existing budgets.",
+    "Exact count from PR changed_files is bounded to0..3000; unique filenames, seven statuses, required typed metadata and optional prior filename validated.",
+    "Missing/null/string patch states remain distinct; inventory completeness never claims complete patch text.",
+    "Independent review found required metadata gap; retained causal RED/GREEN repairs it without URL fetch or arithmetic policy."
+  ],
+  "native_custody_discovery": {
+    "exact_original_G": false,
+    "exact_run_bound_caller_source": false,
+    "run_39705590021": "last actual observation in_progress at sourceab03; no terminal claim",
+    "actual_producer_39705590064": "success with one producer-evidence success,three skippedjobs,no artifacts,empty PR/referenced workflow arrays",
+    "current_provider_port_found": false,
+    "historical_HMAC": "Authenticates payload bytes only; donor custom ND-EDN journal not reused and no G/run/caller relation inferred.",
+    "Clio": "Existing admission/storage/replay authority; separate provider authentication remains missing.",
+    "report_capture": "event-seam/event-seam-report.md"
+  },
+  "owner": {
+    "uuid": "ed4e2a2a-6055-4d53-9cea-f3971c707551",
+    "status": "in_progress",
+    "assignee": "Codex",
+    "points": 5,
+    "full_story_complete": false
+  },
+  "limits": [
+    "Production registry remains absent/refusing; public fixed GET probe calls the internal inventory function under explicit local test composition, not registry enrollment.",
+    "Actual source reconstruction remains observed/incomplete. New inventory is not yet a complete reconstruction/verifier input; tools/input proof and original G/caller custody stay unsupported.",
+    "Native rows without patches cannot supply inline line validation. Available patch strings alone do not establish complete native patch text.",
+    "Causal REDs, ambient-provider suite failure, exploratory wrong API path and coordinator live-edit probe race are retained alongside exact frozen controls and stripped-environment passes.",
+    "No native publication, private-token scope, protected default adoption, approval or successor hosted qualification. Whole ETA receipts remain71invalid/118errors."
+  ],
+  "preservation": {
+    "all309_states_and_planning_required_unchanged": true,
+    "four_ledger_prefixes_required": true,
+    "root_pins_advance": false,
+    "CMS_Cephalon": "paused",
+    "new_spore": false
+  },
+  "qualification": false
+}

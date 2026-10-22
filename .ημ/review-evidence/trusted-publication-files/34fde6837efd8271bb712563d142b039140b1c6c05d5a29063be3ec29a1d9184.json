@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "kind": "trusted-publication-files-metadata-attempt",
+  "source": "48c9e810fc067f1528ab59a137568b17fe29db90",
+  "source_base": "ab03d9350e40a368748b2d1c4612a0038d3c21af",
+  "at": "2026-10-22T01:49:33.289203+00:00",
+  "files": [
+    {
+      "path": ".\u03b7\u03bc/review-evidence/trusted-publication-files/0f268a323e13e7393777e8ca88c9b18fb17305f0ec52373c10d39979214703d9.json.gz",
+      "bytes": 688010,
+      "sha256": "0f268a323e13e7393777e8ca88c9b18fb17305f0ec52373c10d39979214703d9"
+    },
+    {
+      "path": ".\u03b7\u03bc/review-evidence/trusted-publication-files/660d447b71a5b50ba8e84a1d86b9db91068e0dda1f8fc641ac7db3ce3925f42f.json.gz",
+      "bytes": 894264,
+      "sha256": "660d447b71a5b50ba8e84a1d86b9db91068e0dda1f8fc641ac7db3ce3925f42f"
+    },
+    {
+      "path": ".\u03b7\u03bc/review-evidence/trusted-publication-files/execution.json",
+      "bytes": 10321,
+      "sha256": "d548f6fa0d15861ac3c3e053e1b44f3887b2c234bfd42cc9d1b979c83081309f"
+    },
+    {
+      "path": ".\u03b7\u03bc/session-mycology/ledger.md",
+      "bytes": 115573,
+      "sha256": "0b83c0bc8ca717133dcaafe8df8114881ae59e6611223945890bcb887b90dc2f"
+    },
+    {
+      "path": ".\u03b7\u03bc/session-reflections.edn",
+      "bytes": 40551,
+      "sha256": "929c650e924a5152325b44488f23911364f9d74656ac56c1e3b9bea2a187fcec"
+    },
+    {
+      "path": "kanban/.events/ledger.edn",
+      "bytes": 1848452,
+      "sha256": "f2bfabef152891ecaa9e0198ef578cd4c03a4772a728fd82f4c878b5aea927d4"
+    },
+    {
+      "path": "kanban/.kanban/board.json",
+      "bytes": 1331825,
+      "sha256": "7652701de25b3d2d026ceb90ddecf98f5546f6b13ea8bc098ffa71f134e35906"
+    },
+    {
+      "path": "kanban/tasks/independently-admit-and-publish-review-evidence-from-trusted-default-code-1c707551.md",
+      "bytes": 37990,
+      "sha256": "bf49c8fc78698ae755c2e5eb12023f2597a1a19344d9ea16682d9b6341b70a9f"
+    },
+    {
+      "path": "receipts.edn",
+      "bytes": 621113,
+      "sha256": "c3afb673e285be99039a4da279e77f867a00837ced409eea93904fea69967a55"
+    }
+  ],
+  "qualification": false
+}
