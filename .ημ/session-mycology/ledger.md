@@ -1264,3 +1264,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn measured review correction; evidence2b4d4b8bb1773239f623eb51cc64dbd33a18ee997d08eaaad9d8932666a5188d
   note: Equal exception sentinels do not establish parity; require actual value envelopes. Parent worker counters do not observe nested worker handles. Narrow assertions and claims to observed scope; retain prior record and direct source controls. No new spore or same-session promotion.
+
+- ts: 2026-10-22T00:56:24.528178+00:00
+  session: feat/trusted-review-publication-20261021
+  task: Execute native collection, independent Git reconstruction and actual immutable Muse verification
+  p-efficiency: 0.57
+  p-friction: 0.79
+  p-skill-candidate: 0.35
+  spore: none
+  receipt-refs: 2e95dc65f7a644e2ed6fcb4b169113f2972eea80d104cf65f1b386b4ed3d38b9
+  note: Validate independent boundaries with actual retained APIs: collector trigger differs from producer event; partial source observations cannot authenticate original G/caller custody. Retain original fixture limitations and failed commands. Worker bounds are phase-specific, and owning lint configuration must be used. No new spore or promotion. Preserve actual causal RED and all authored/cwd/environment failures; prefer independent concrete probes to origin labels. Current native source remains incomplete; tests and byte identity cannot imply protected adoption, real publication or full publisher completion.
