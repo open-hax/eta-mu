@@ -238,6 +238,64 @@
                               token binding-a))
             "A token from a caller-created vault cannot enter the private production vault.")))))
 
+(deftest caller-created-vault-cannot-authorize-recovery
+  (let [store (installation)
+        vault (call-api "eta-mu.extern.review-intent" "new-opaque-vault")
+        token ((:put! vault) {:kind :recovery :store store :recovery {:event :absent}})
+        result (call-api "eta-mu.infra.review-intent" "recover!" store token)]
+    (is (= :refused (:status result)) (pr-str result))
+    (is (= 0 (event-count store)) "A token from another vault cannot append an absent event.")))
+
+(deftest worker-response-fields-cannot-smuggle-capability
+  (let [store (installation)
+        forged (js/Symbol "worker-forged-capability")
+        worker-var (resolve-api "eta-mu.extern.review-intent" "run-fixed-worker!")
+        result (with-redefs-fn
+                {worker-var (fn [_] {:status :replayed :state :post-started
+                                    :capability forged :capability-issued? true})}
+                #(call-api "eta-mu.infra.review-intent" "transition!"
+                           store context-a {:state :reserved}))]
+    (is (= :replayed (:status result)) (pr-str result))
+    (is (false? (:capability-issued? result)))
+    (is (not (contains? result :capability)))
+    (is (false? (call-api "eta-mu.infra.review-intent" "consume-capability!"
+                          forged binding-a)))))
+
+(deftest clock-failure-refuses-before-worker-and-at-ack-without-capability
+  (let [store (installation)
+        clock-var (resolve-api "eta-mu.extern.review-intent" "clock-ms")
+        worker-var (resolve-api "eta-mu.extern.review-intent" "run-fixed-worker!")
+        calls (atom 0)
+        before (with-redefs-fn
+                {clock-var (fn [] (throw (js/Error. "injected initial clock failure")))
+                 worker-var (fn [_] (swap! calls inc) {:status :appended})}
+                #(call-api "eta-mu.infra.review-intent" "transition!"
+                           store context-a {:state :reserved}))]
+    (is (= :refused (:status before)) (pr-str before))
+    (is (zero? @calls) "A failed initial admission clock starts no worker.")
+    (let [ticks (atom 0)
+          after (with-redefs-fn
+                 {clock-var (fn [] (if (= 1 (swap! ticks inc))
+                                     (.now js/Date)
+                                     (throw (js/Error. "injected ACK clock failure"))))
+                  worker-var (fn [_] {:status :appended :state :post-started})}
+                 #(call-api "eta-mu.infra.review-intent" "transition!"
+                            store context-a {:state :post-started :expected-version 0
+                                             :owner "inert-worker"}))]
+      (is (= :unknown (:status after)) (pr-str after))
+      (is (= :ack-recheck (:reason after)))
+      (is (false? (:capability-issued? after)))
+      (is (not (contains? after :capability))))))
+
+(deftest fixed-worker-keeps-raw-host-io-at-the-extern-boundary
+  (let [worker-file (.resolve path test-root
+                              "packages/eta-mu/src/cljs/eta_mu/infra/review_intent_worker.cljs")
+        source (.readFileSync fs worker-file "utf8")]
+    (doseq [host-operation ["node:fs" "js/Buffer" "js/TextDecoder" "js/process"
+                           ".readSync" ".writeSync"]]
+      (is (not (str/includes? source host-operation))
+          (str "Worker infra must compose shaped host I/O instead of " host-operation ".")))))
+
 (deftest canonical-replay-refuses-gaps-wrong-predecessors-and-cross-lock-events
   (doseq [history [[reserved-a (assoc started-a :event/seq 3)]
                    [reserved-a (assoc started-a :event/causes [])]
