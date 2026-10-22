@@ -43,6 +43,9 @@
    {:label "review-publication"
     :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
           ".github/scripts/opencode_review_publish_test.cljs"]}
+   {:label "review-publication-intent"
+    :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
+          ".github/scripts/opencode_review_intent_test.cljs"]}
    {:label "review-publication-collection"
     :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
           ".github/scripts/opencode_review_collection_test.cljs"]}
