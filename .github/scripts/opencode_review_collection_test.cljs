@@ -23,13 +23,16 @@
                                   :permissions #{:statuses-write :pull-requests-write}}
                           :hosted-proof {:source-sha (sha "b") :sha256 (apply str (repeat 64 "3"))}
                           :status-policy {:max-writes 1 :observation-max-age-ms 100000}}]})
+(declare run!event)
 (defn run!test
   ([registry transport] (run!test registry transport 100))
   ([registry transport page-size]
-   (collection/collect-with! {:registry registry :target-id 41 :pr-number 7 :run-id 99
-                              :mode :ordinary :event :schedule :bounds {:requests 50 :pages 40 :bytes 100000
-                                                                        :page-size page-size :operation-ms 2000}}
-                             transport)))
+   (run!event registry transport page-size :schedule)))
+(defn run!event [registry transport page-size event]
+  (collection/collect-with! {:registry registry :target-id 41 :pr-number 7 :run-id 99
+                             :mode :ordinary :event event :bounds {:requests 50 :pages 40 :bytes 100000
+                                                                   :page-size page-size :operation-ms 2000}}
+                            transport))
 (def native-shas {:base (sha "b") :head (sha "c") :merge (sha "d") :tree (sha "e")})
 (def future-time "2030-01-01T00:00:00Z")
 (def seen-urls (atom []))
@@ -64,13 +67,13 @@
             (.endsWith url "/actions/runs/99")
             {:id 99 :repository {:id 41 :full_name "owner/repo" :private false}
              :workflow_id 51 :run_attempt 2 :head_sha (:head native-shas)
-             :event "schedule"
+             :event "pull_request"
              :status "completed" :conclusion "success"
              :pull_requests [] :referenced_workflows []}
             (.endsWith url "/actions/runs/99/attempts/2")
             {:id 99 :repository {:id 41 :full_name "owner/repo" :private false}
              :workflow_id 51 :run_attempt 2 :head_sha (:head native-shas)
-             :event "schedule"
+             :event "pull_request"
              :status "completed" :conclusion "success"
              :pull_requests [] :referenced_workflows []}
             (.endsWith url "/actions/workflows/51")
@@ -204,13 +207,14 @@
   (async done (positive-native-control done)))
 
 (defn ^:async associated-metadata-control [done]
-  (let [result (await (run!test (assoc-in registry [:targets 0 :enabled?] true)
-                                (fake-native (fn [url body]
-                                               (if (.endsWith url "/actions/runs/99")
-                                                 (assoc body :pull_requests [{:number 7
-                                                                              :base {:sha (:base native-shas)}
-                                                                              :head {:sha (:head native-shas)}}])
-                                                 body)))))]
+  (let [result (await (run!event (assoc-in registry [:targets 0 :enabled?] true)
+                                 (fake-native (fn [url body]
+                                                (if (.endsWith url "/actions/runs/99")
+                                                  (assoc body :pull_requests [{:number 7
+                                                                               :base {:sha (:base native-shas)}
+                                                                               :head {:sha (:head native-shas)}}])
+                                                  body)))
+                                 100 :workflow-run))]
     (is (= :collected (:status result)))
     (is (= :pending (:qualification result)))
     (is (= :source-custody-incomplete (:reason result)))
@@ -327,7 +331,13 @@
             (fn [url body] (if (.endsWith url "/actions/runs/99") (assoc body :head_sha (sha "1")) body))
             :run-association]
            [:wrong-event
-            (fn [url body] (if (.endsWith url "/actions/runs/99") (assoc body :event "pull_request") body))
+            (fn [url body] (if (.endsWith url "/actions/runs/99") (assoc body :event "workflow_dispatch") body))
+            :run-association]
+           [:workflow-run-producer-event
+            (fn [url body] (if (.endsWith url "/actions/runs/99") (assoc body :event "workflow_run") body))
+            :run-association]
+           [:mismatched-attempt-event
+            (fn [url body] (if (.endsWith url "/attempts/2") (assoc body :event "workflow_run") body))
             :run-association]
            [:wrong-pr-number
             (fn [url body] (if (.endsWith url "/pulls/7") (assoc body :number 8) body))
@@ -402,6 +412,29 @@
   (async done (attempt-summary-mismatch-control done "completed" "failure")))
 (deftest active-attempt-cannot-match-completed-success-summary
   (async done (attempt-summary-mismatch-control done "in_progress" nil)))
+
+(defn producer-event-transport [producer-event]
+  (fake-native
+   (fn [url body]
+     (cond
+       (.endsWith url "/actions/runs/99")
+       (assoc body :event producer-event
+              :pull_requests [{:number 7 :base {:sha (:base native-shas)} :head {:sha (:head native-shas)}}])
+       (.endsWith url "/actions/runs/99/attempts/2")
+       (assoc body :event producer-event)
+       :else body))))
+
+(defn ^:async unsupported-producer-event-control [done collector-event producer-event]
+  (let [result (await (run!event (assoc-in registry [:targets 0 :enabled?] true)
+                                 (producer-event-transport producer-event) 100 collector-event))]
+    (is (= :refused (:status result)) (pr-str result))
+    (is (= :run-association (:reason result)) (pr-str result))
+    (is (= [] (:effects result)))
+    (done)))
+(deftest schedule-producer-run-is-outside-supported-event-source
+  (async done (unsupported-producer-event-control done :schedule "schedule")))
+(deftest workflow-run-producer-run-is-outside-supported-event-source
+  (async done (unsupported-producer-event-control done :workflow-run "workflow_run")))
 
 (defn ^:async request-budget-control [done]
   (let [calls (atom 0)
