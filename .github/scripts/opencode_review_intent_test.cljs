@@ -103,7 +103,6 @@
        :partition-device (.-dev stat)
        :partition-inode (.-ino stat)
        :expected-lock-key stream-key
-       :installation-root test-root
        :test-root root})))
 
 (defn- event-count [store]
@@ -129,11 +128,20 @@
     (is (= :observed (get-in replay [:intents intent-key-a :state])))))
 
 (deftest cljc-identity-laws-have-exact-cross-runtime-number-and-hash-shapes
-  (is (false? (call-api "eta-mu.law.review-intent" "natural?" 1.0))
-      "An integral floating value is not an integer port value.")
+  (is (true? (call-api "eta-mu.law.review-intent" "natural?" 1.0))
+      "An integral floating EDN value canonicalizes as the same safe integer on both hosts.")
+  (is (true? (call-api "eta-mu.law.review-intent" "natural?" 0.0)))
+  (is (false? (call-api "eta-mu.law.review-intent" "natural?" 1.5)))
   (is (true? (call-api "eta-mu.law.review-intent" "lock-key?"
                        [123 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" "ctx"]))
-      "Valid SHA-256-width object IDs are accepted on NBB and Babashka."))
+      "Valid SHA-256-width object IDs are accepted on NBB and Babashka.")
+  (let [sha (apply str (repeat 64 "a"))
+        stream (resolve-api "eta-mu.shape.review-intent" "lock-stream")]
+    (is (= (stream [41 sha "ctx"]) (stream [41.0 sha "ctx"]))
+        "Canonical Clio stream identity is stable for integer-valued double inputs.")
+    (is (true? (call-api "eta-mu.law.review-intent" "lock-key?"
+                         [9007199254740991 sha "ctx"]))
+        "The shared safe-integer bound is accepted with SHA-256 object IDs.")))
 
 (deftest installation-root-is-derived-from-the-loaded-trusted-module
   (let [store (dissoc (installation) :installation-root)
@@ -194,7 +202,7 @@
                                :partition-device (.-dev (.statSync fs path))
                                :partition-inode (.-ino (.statSync fs path))
                                :expected-lock-key stream-key
-                               :installation-root test-root}
+                               }
                               {:now-ms 1}
                               {:state :reserved}))]
         (is (= :refused (:status result)))
@@ -215,18 +223,17 @@
 (deftest independent-workers-race-on-one-canonical-stream-slot
   (let [store (installation)
         barrier (str (:test-root store) "/two-process-barrier")
-        make-request (fn [context binding worker-id]
+        make-request (fn [context binding]
                        (pr-str {:operation :transition
                                 :store (select-keys store [:schema-directory :ledger-file
                                                            :partition-device :partition-inode
                                                            :expected-lock-key])
                                 :context context :binding binding
-                                :command {:state :reserved :binding binding}
-                                :test/barrier {:directory barrier :worker-id worker-id}}))
+                                :command {:state :reserved :binding binding}}))
         input (js/JSON.stringify
                #js {:root test-root :barrier barrier
-                    :requests #js [(make-request context-a binding-a "a")
-                                   (make-request context-b binding-b "b")]})
+                    :requests #js [(make-request context-a binding-a)
+                                   (make-request context-b binding-b)]})
         launcher (.resolve path test-root ".github/scripts/opencode_review_intent_process_test.mjs")
         result (.spawnSync (js/require "node:child_process") (.-execPath js/process)
                            #js [launcher]
@@ -271,10 +278,8 @@
     (is (false? (consume (:capability started) binding-a)) "A second use is refused.")
     (is (false? (consume (:capability started) binding-b)) "A different binding cannot use the token.")
     (is (false? (consume (js/Symbol "forged") binding-a)) "A caller-forged token is refused.")
-    (is (false? (:capability-issued?
-                 (call-api "eta-mu.extern.review-intent" "issue-after-recheck!"
-                           (js/Symbol "forged-receipt") binding-a)))
-        "A shaped/manual append receipt cannot mint a capability.")))
+    (is (nil? (resolve-api "eta-mu.extern.review-intent" "issue-after-recheck!"))
+        "A shaped/manual append receipt cannot reach a public mint function.")))
 
 (deftest same-inode-alias-is-accepted-but-copied-partition-is-refused
   (let [store (installation)
@@ -296,6 +301,8 @@
                               store context-a {:state :reserved})
         stored-event (reader/read-string
                       (str/trim (.readFileSync fs (:ledger-file store) "utf8")))
+        visible (call-api "eta-mu.infra.review-intent" "recover!" store
+                          {:ledger/path (:ledger-file store) :event stored-event})
         recovery-event (-> stored-event
                            (assoc :event/id "00000000-0000-4000-8000-000000000099"
                                   :event/seq 2 :event/causes [(:event/id stored-event)])
@@ -304,11 +311,60 @@
                            (assoc-in [:event/data :owner] "recovery-only")
                            (assoc-in [:event/data :claim-id] "recovery-only-claim"))
         forged (call-api "eta-mu.infra.review-intent" "recover!" store
-                         {:ledger/path (:ledger-file store) :event recovery-event})]
+                         {:ledger/path (:ledger-file store) :event recovery-event})
+        fake-receipt (call-api "eta-mu.infra.review-intent" "recover!" store
+                               (js/Symbol "forged-recovery"))]
     (is (nil? (:recovery reservation))
         "A successful Clio append does not expose a synthetic recovery candidate.")
+    (is (= :replayed (:status visible)) (pr-str visible))
+    (is (= :already-present (:append-result visible)))
+    (is (false? (:capability-issued? visible)))
     (is (= :refused (:status forged)) (pr-str forged))
+    (is (= :refused (:status fake-receipt)) (pr-str fake-receipt))
     (is (= 1 (event-count store)) "An absent caller-supplied event never enters the canonical partition.")))
+
+(deftest real-visible-append-durability-uncertainty-recovers-exact-event
+  (let [store (installation)
+        runner (.resolve path test-root ".github/scripts/opencode_review_intent_uncertain_test.mjs")
+        worker-request (pr-str {:operation :transition
+                                :store (select-keys store [:schema-directory :ledger-file
+                                                           :partition-device :partition-inode
+                                                           :expected-lock-key])
+                                :context context-a :binding binding-a
+                                :command {:state :reserved :binding binding-a}})
+        runner-result (.spawnSync (js/require "node:child_process") (.-execPath js/process)
+                                  #js [runner]
+                                  #js {:cwd test-root :env #js {:HOME "/tmp" :PATH "/usr/bin:/bin"
+                                                               :LANG "C.UTF-8" :LC_ALL "C.UTF-8"
+                                                               :NODE_OPTIONS ""}
+                                       :input (js/JSON.stringify #js {:root test-root
+                                                                     :workerRequest worker-request
+                                                                     :ledgerDirectory
+                                                                     (.dirname path (:ledger-file store))})
+                                       :encoding "utf8" :timeout 12000 :maxBuffer 2097152
+                                       :killSignal "SIGKILL"})
+        wrapper (try (js/JSON.parse (.-stdout runner-result)) (catch :default _ nil))
+        uncertain (when (= 0 (.-status wrapper)) (reader/read-string (.-stdout wrapper)))
+        recovery (:recovery uncertain)
+        recovered (call-api "eta-mu.infra.review-intent" "recover!" store recovery)]
+    (is (= 0 (.-status runner-result)) (str (.-stderr runner-result) " " (.-stdout runner-result)))
+    (is (= :unknown (:status uncertain))
+        (str (pr-str uncertain) " worker-stderr=" (.-stderr wrapper)
+             " worker-stdout=" (.-stdout wrapper)
+             " input=" (.-workerInputStart wrapper) "/" (.-workerInputLength wrapper)))
+    (is (= :append-outcome (:reason uncertain)))
+    (is (map? recovery) "The owning Clio append error returns its exact retry candidate.")
+    (is (false? (:capability-issued? uncertain)))
+    (is (= 1 (event-count store)) "Clio's bytes are visible although the parent-directory fence failed.")
+    (is (= :replayed (:status recovered)) (pr-str recovered))
+    (is (= :already-present (:append-result recovered)))
+    (is (false? (:capability-issued? recovered)))
+    (let [retried (call-api "eta-mu.infra.review-intent" "recover!" store recovery)]
+      (is (= :replayed (:status retried)) (pr-str retried))
+      (is (= :already-present (:append-result retried)))
+      (is (false? (:capability-issued? retried)))
+      (is (= 1 (event-count store))
+          "Repeating the exact visible event is idempotent and never issues a capability."))))
 
 (when (= nbb/*file* (nbb/invoked-file))
   (test/run-tests 'opencode-review-intent-test))

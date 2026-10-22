@@ -31,12 +31,16 @@ try {
     mkdirSync(barrier, { recursive: false });
     const pkg = resolve(root, 'packages/eta-mu');
     const cli = resolve(root, 'node_modules/.pnpm/nbb@1.5.212/node_modules/nbb/cli.js');
-    const worker = resolve(pkg, 'src/cljs/eta_mu/infra/review_intent_worker.cljs');
-    const env = { HOME: '/tmp', PATH: '/usr/bin:/bin', LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8', NODE_OPTIONS: '' };
+    const worker = resolve(pkg, 'test/cljs/eta_mu/review_intent_worker_barrier.cljs');
     const children = request.requests.map((edn, i) => {
+      const workerId = i === 0 ? 'a' : 'b';
       const child = spawn(process.execPath,
-        ['--max-old-space-size=128', cli, '-cp', 'src/cljs:node_modules/clio-publication-kernel/src', worker],
-        { cwd: pkg, env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+        ['--max-old-space-size=128', cli,
+         '-cp', 'src/cljs:test/cljs:node_modules/clio-publication-kernel/src', worker],
+        { cwd: pkg, env: { HOME: '/tmp', PATH: '/usr/bin:/bin', LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8',
+                          NODE_OPTIONS: '', INTENT_TEST_BARRIER: barrier,
+                          INTENT_TEST_WORKER_ID: workerId },
+          stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
       let stdout = '';
       let stderr = '';
       child.stdout.setEncoding('utf8').on('data', part => { stdout += part; });
@@ -55,7 +59,8 @@ try {
     while (!(existsSync(resolve(barrier, 'ready-a')) && existsSync(resolve(barrier, 'ready-b')))) {
       if (Date.now() >= deadline) {
         for (const item of children) item.child.kill('SIGKILL');
-        throw new Error('barrier-timeout');
+        const partial = await Promise.all(children.map(item => item.done));
+        throw new Error(`barrier-timeout ${JSON.stringify(partial)}`);
       }
       await new Promise(resolveWait => setTimeout(resolveWait, 10));
     }

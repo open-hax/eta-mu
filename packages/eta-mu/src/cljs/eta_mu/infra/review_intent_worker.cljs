@@ -10,10 +10,8 @@
             [eta-mu.extern.review-intent :as host]
             [eta-mu.law.review-intent :as law]
             [eta-mu.shape.review-intent :as shape]
-            [nbb.core :as nbb]
             ["node:fs" :as fs]
-            ["node:path" :as path]
-            ["node:perf_hooks" :refer [performance]]))
+            ["node:path" :as path]))
 
 (def ^:private request-max-bytes 65536)
 (def ^:private cas-attempts 4)
@@ -38,25 +36,6 @@
   (let [canonical (clio-runtime/canonicalize-files runtime [(:ledger-file store)])
         stream (shape/lock-stream lock-key)]
     (filterv #(= stream (:event/stream %)) (:canonical/events canonical))))
-
-(defn- test-barrier! [request proposal]
-  (when-let [{:keys [directory worker-id]} (:test/barrier request)]
-    (when-not (and (string? directory) (.startsWith directory "/tmp/")
-                   (contains? #{"a" "b"} worker-id))
-      (throw (ex-info "Invalid test barrier" {:intent/error :test-barrier})))
-    (let [ready (.resolve path directory (str "ready-" worker-id))
-          release (.resolve path directory "release")
-          deadline (+ (.now performance) 4000)
-          wait-array (js/Int32Array. (js/SharedArrayBuffer. 4))]
-      (.writeFileSync fs ready
-                      (pr-str (select-keys proposal [:event-seq :causes :intent-version]))
-                      #js {:flag "wx"})
-      (loop []
-        (cond
-          (.existsSync fs release) true
-          (> (.now performance) deadline)
-          (throw (ex-info "Test barrier timed out" {:intent/error :test-barrier-timeout}))
-          :else (do (js/Atomics.wait wait-array 0 0 10) (recur)))))))
 
 (defn- append-transition [request]
   (let [{:keys [store binding command context]} request
@@ -84,50 +63,66 @@
                                   :event/actor "eta-mu-review-intent-adapter"
                                   :event/subject stream
                                   :event/data (:event-data proposal)}
-                      append-result (do
-                                      (test-barrier! request proposal)
-                                      (try
-                                        {:result (clio-runtime/append! runtime (:ledger-file store)
-                                                                       schema-id event-data)}
-                                        (catch :default error
-                                          {:error error})))]
+                      append-result (try
+                                      {:result (clio-runtime/append! runtime (:ledger-file store)
+                                                                     schema-id event-data)}
+                                      (catch :default error
+                                        {:error error}))]
                     (if-let [error (:error append-result)]
-                      (if (= :clio.ledger/concurrent-stream-write
-                             (:clio/error (ex-data error)))
-                        (recur (inc attempt))
-                        {:status :unknown :reason :append-outcome
-                         :recovery (:clio/append-recovery (ex-data error))
-                         :error (or (:clio/error (ex-data error)) :append-error)
-                         :message (ex-message error)})
+                      (let [error-type (:clio/error (ex-data error))]
+                        (cond
+                          (= :clio.ledger/concurrent-stream-write error-type)
+                          (recur (inc attempt))
+
+                          (= :clio.ledger/id-collision error-type)
+                          {:status :refused :reason :event-id-collision}
+
+                          (contains? #{"clio.schema" "clio.event"} (namespace error-type))
+                          {:status :refused :reason :event-schema}
+
+                          :else
+                          {:status :unknown :reason :append-outcome
+                           :recovery (:clio/append-recovery (ex-data error))
+                           :error (or error-type :append-error)
+                           :message (ex-message error)
+                           :capability-issued? false}))
                       (let [result (:result append-result)]
                         {:status (if (= :appended (:append/result result)) :appended :replayed)
                          :append-result (:append/result result) :state (:state proposal)
                          :event-seq (:event-seq proposal)
                          :intent-version (:intent-version proposal)
                          :event-id (get-in result [:event :event/id])
-                         :claim-id (get-in result [:event :event/data :claim-id])
-                         :recovery {:ledger/path (:ledger-file store)
-                                    :event (:event result)}})))))))))))
+                         :claim-id (get-in result [:event :event/data :claim-id])})))))))))))
+
+(defn- event-visible? [runtime path event]
+  (let [canonical (clio-runtime/canonicalize-files runtime [path])]
+    (some #(= event %) (:canonical/events canonical))))
 
 (defn- recover [request]
-  (let [{:keys [store recovery]} request]
+  (let [{:keys [store recovery append-uncertain?]} request]
     (if-not (and (map? recovery)
                  (= (:ledger-file store) (:ledger/path recovery))
                  (store-valid? store (get-in recovery [:event :event/data :lock-key]))
                  (= schema-id (get-in recovery [:event :event/type]))
+                 (= (shape/lock-stream (get-in recovery [:event :event/data :lock-key]))
+                    (get-in recovery [:event :event/stream]))
                  (law/intent-event? (:event recovery)))
       (fail :recovery-binding)
       (try
         (let [runtime (clio-runtime/open (:schema-directory store) catalog)
-              result (clio-runtime/retry-append! runtime recovery)]
-          {:status (if (= :appended (:append/result result)) :recovered :replayed)
-           :append-result (:append/result result)
-           :event-id (get-in result [:event :event/id])
-           :capability-issued? false})
+              visible? (event-visible? runtime (:ledger-file store) (:event recovery))]
+          (if (or visible? (true? append-uncertain?))
+            (let [result (clio-runtime/retry-append! runtime recovery)]
+              {:status (if (= :appended (:append/result result)) :recovered :replayed)
+               :append-result (:append/result result)
+               :event-id (get-in result [:event :event/id])
+               :capability-issued? false})
+            (fail :recovery-not-visible)))
         (catch :default error
           {:status :unknown :reason :recovery-outcome
            :recovery (:clio/append-recovery (ex-data error))
-           :error (or (:clio/error (ex-data error)) :recovery-error)})))))
+           :error (or (:clio/error (ex-data error)) :recovery-error)
+           :capability-issued? false})))))
 
 (defn- run-request [request]
   (case (:operation request)
@@ -135,17 +130,26 @@
     :recover (recover request)
     (fail :operation)))
 
+(defn- read-bounded-stdin! []
+  (let [buffer (.alloc js/Buffer (inc request-max-bytes))]
+    (loop [total 0]
+      (if (= total (alength buffer))
+        (throw (ex-info "Intent worker request exceeds its input bound"
+                        {:intent/error :input-bound}))
+        (let [read (.readSync fs 0 buffer total (- (alength buffer) total) nil)]
+          (if (zero? read)
+            (.decode (js/TextDecoder. "utf-8" #js {:fatal true})
+                     (.subarray buffer 0 total))
+            (recur (+ total read))))))))
+
 (defn entry []
   (try
-    (let [input (.readFileSync fs 0 "utf8")
-          byte-count (.byteLength js/Buffer input "utf8")
-          response (if (> byte-count request-max-bytes)
-                     (fail :input-bound)
-                     (try (run-request (clio-edn/read-one input))
-                          (catch :default error
-                            {:status :refused :reason :request-invalid
-                             :error (or (:intent/error (ex-data error))
-                                        (:clio/error (ex-data error)))})))
+    (let [input (read-bounded-stdin!)
+          response (try (run-request (clio-edn/read-one input))
+                        (catch :default error
+                          {:status :refused :reason :request-invalid
+                           :error (or (:intent/error (ex-data error))
+                                      (:clio/error (ex-data error)))}))
           output (pr-str response)]
       (when (> (.byteLength js/Buffer output "utf8") 1048576)
         (throw (ex-info "Response exceeds fixed bound" {:intent/error :output-bound})))
@@ -155,5 +159,3 @@
       (.writeSync fs 2 (str "review-intent worker refused: "
                             (or (:intent/error (ex-data error)) :worker-failure) "\n"))
       (.exit js/process 2))))
-
-(nbb/await (entry))

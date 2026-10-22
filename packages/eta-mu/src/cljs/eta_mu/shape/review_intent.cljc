@@ -1,14 +1,15 @@
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 (ns eta-mu.shape.review-intent
   "Portable identity and catalog shapes for the Clio publication stream."
-  (:require [eta-mu.law.review-intent :as law]
+  (:require [clio.shape.canonical :as canonical]
+            [eta-mu.law.review-intent :as law]
             [clojure.string :as str]))
 
 (def event-type :eta-mu.review-intent/transition)
 
 (defn lock-stream [lock-key]
   (when (law/lock-key? lock-key)
-    (str "review-publication-lock/" (pr-str lock-key))))
+    (str "review-publication-lock/" (canonical/canonical-edn lock-key))))
 
 (def event-data-schema
   [:map {:closed true}

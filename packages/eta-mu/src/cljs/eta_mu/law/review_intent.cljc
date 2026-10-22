@@ -6,13 +6,20 @@
 (def states #{:reserved :post-started :post-unknown :ambiguous-absence :observed})
 (def active-states #{:reserved :post-started :post-unknown :ambiguous-absence})
 
-(defn natural? [x] (and (integer? x) (<= 0 x 9007199254740991)))
+(defn natural? [x]
+  (and #?(:cljs (and (number? x) (js/Number.isSafeInteger x))
+          :clj (and (number? x)
+                    (or (integer? x)
+                        (and (float? x)
+                             (Double/isFinite (double x))
+                             (= x (Math/floor (double x)))))))
+       (<= 0 x 9007199254740991)))
 (defn positive? [x] (and (natural? x) (pos? x)))
 (defn text? [x] (and (string? x) (not (str/blank? x))))
 (defn intent-key? [x] (and (vector? x) (= :review-publication/v1 (first x))))
 (defn lock-key? [x]
   (and (vector? x) (= 3 (count x)) (positive? (first x))
-       (string? (second x)) (re-matches #"(?:[0-9a-f]{40}|[0-9a-f]{64})" (second x))
+       (string? (second x)) (re-matches #"^(?:[0-9a-f]{40}|[0-9a-f]{64})$" (second x))
        (text? (nth x 2))))
 
 (defn binding? [x]

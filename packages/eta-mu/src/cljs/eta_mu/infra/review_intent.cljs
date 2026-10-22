@@ -11,7 +11,6 @@
 
 (defn- configured-store? [store]
   (and (map? store)
-       (string? (:installation-root store))
        (string? (:schema-directory store))
        (string? (:ledger-file store))
        (law/natural? (:partition-device store))
@@ -45,34 +44,16 @@
                      :binding binding
                      :command (cond-> (select-keys command [:state :expected-version :owner])
                                 claim-id (assoc :claim-id claim-id))}
-            result (host/transition-child! (:installation-root store) request binding)]
-        (if-let [receipt (:append-receipt result)]
-          (let [fresh-context (assoc context :now-ms (host/clock-ms))
-                fresh-admission (publication/admit fresh-context)
-                rechecked-binding (:binding fresh-admission)
-                capability-result (if (and (= :admitted (:status fresh-admission))
-                                           (= binding rechecked-binding))
-                                    (host/issue-after-recheck! receipt binding)
-                                    (do (host/discard-append-receipt! receipt) nil))]
-            (-> result
-                (dissoc :append-receipt)
-                (assoc :capability-issued? (true? (:capability-issued? capability-result)))
-                (cond-> (:capability capability-result)
-                  (assoc :capability (:capability capability-result)))))
-          result)))))
+            result (host/transition-child! request)]
+        result))))
 
 (defn recover!
   "Exact Clio retry is durability repair only. Even a recovery append is
   discovery-only and never mints an effect capability."
   [store recovery]
-  (if-not (and (configured-store? store) (map? recovery))
+  (if-not (configured-store? store)
     (refused :recovery)
-    (host/recover-child! (:installation-root store)
-                         {:operation :recover
-                          :store (select-keys store [:schema-directory :ledger-file
-                                                     :partition-device :partition-inode
-                                                     :expected-lock-key])
-                          :recovery recovery})))
+    (host/recover-child! store recovery)))
 
 (defn consume-capability! [capability binding]
   (host/consume-capability! capability binding))

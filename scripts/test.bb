@@ -44,7 +44,8 @@
     :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
           ".github/scripts/opencode_review_publish_test.cljs"]}
    {:label "review-publication-intent"
-    :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
+    :cmd ["node" "node_modules/.pnpm/nbb@1.5.212/node_modules/nbb/cli.js"
+          "-cp" "packages/eta-mu/src/cljs:packages/eta-mu/node_modules/clio-publication-kernel/src"
           ".github/scripts/opencode_review_intent_test.cljs"]}
    {:label "review-publication-collection"
     :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
