@@ -1,0 +1,78 @@
+;; SPDX-License-Identifier: GPL-3.0-or-later
+(ns eta-mu.infra.review-intent
+  "Bounded Clio-backed publication-intent adapter. The configured partition is
+  installation input; admission facts remain caller-port input and are rechecked
+  by the existing publisher domain before any child process is started."
+  (:require [eta-mu.domain.review-publication :as publication]
+            [eta-mu.extern.review-intent :as host]
+            [eta-mu.law.review-intent :as law]))
+
+(defn- refused [reason] {:status :refused :reason reason})
+
+(defn- configured-store? [store]
+  (and (map? store)
+       (string? (:installation-root store))
+       (string? (:schema-directory store))
+       (string? (:ledger-file store))
+       (law/natural? (:partition-device store))
+       (law/positive? (:partition-inode store))
+       (law/lock-key? (:expected-lock-key store))))
+
+(defn transition!
+  "Re-admit current native facts, then ask one bounded fixed worker to perform
+  canonical replay plus Clio slot CAS. `:capability` is an opaque process-local
+  Symbol and exists only for the fresh post-started append result."
+  [store context command]
+  (let [context (assoc context :now-ms (host/clock-ms))
+        admission (publication/admit context)
+        binding (:binding admission)
+        lock-key (:lock-key binding)]
+    (cond
+      (not= :admitted (:status admission)) (refused [:admission (:reason admission)])
+      (not (configured-store? store)) (refused :installation-store)
+      (not= (:expected-lock-key store) lock-key) (refused :installation-lock-key)
+      (not (contains? #{:reserved :post-started} (:state command))) (refused :transition)
+      (and (= :post-started (:state command))
+           (not (and (law/natural? (:expected-version command))
+                     (law/text? (:owner command))))) (refused :claim)
+      :else
+      (let [claim-id (when (= :post-started (:state command)) (str (random-uuid)))
+            request {:operation :transition
+                     :store (select-keys store [:schema-directory :ledger-file
+                                                :partition-device :partition-inode
+                                                :expected-lock-key])
+                     :context context
+                     :binding binding
+                     :command (cond-> (select-keys command [:state :expected-version :owner])
+                                claim-id (assoc :claim-id claim-id))}
+            result (host/transition-child! (:installation-root store) request binding)]
+        (if-let [receipt (:append-receipt result)]
+          (let [fresh-context (assoc context :now-ms (host/clock-ms))
+                fresh-admission (publication/admit fresh-context)
+                rechecked-binding (:binding fresh-admission)
+                capability-result (if (and (= :admitted (:status fresh-admission))
+                                           (= binding rechecked-binding))
+                                    (host/issue-after-recheck! receipt binding)
+                                    (do (host/discard-append-receipt! receipt) nil))]
+            (-> result
+                (dissoc :append-receipt)
+                (assoc :capability-issued? (true? (:capability-issued? capability-result)))
+                (cond-> (:capability capability-result)
+                  (assoc :capability (:capability capability-result)))))
+          result)))))
+
+(defn recover!
+  "Exact Clio retry is durability repair only. Even a recovery append is
+  discovery-only and never mints an effect capability."
+  [store recovery]
+  (if-not (and (configured-store? store) (map? recovery))
+    (refused :recovery)
+    (host/recover-child! (:installation-root store)
+                         {:operation :recover
+                          :store (select-keys store [:schema-directory :ledger-file
+                                                     :partition-device :partition-inode
+                                                     :expected-lock-key])
+                          :recovery recovery})))
+
+(defn consume-capability! [capability binding]
+  (host/consume-capability! capability binding))

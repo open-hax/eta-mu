@@ -31,6 +31,8 @@
     "@eta-mu/rheos": "workspace:*",
     "@eta-mu/session-mycology": "workspace:*",
     "@eta-mu/sol": "workspace:*",
+    "clio-publication-kernel": "github:riatzukiza/clio#5a7a04c6ced7b15be940e16dc772c95b0525d55f",
+    "fs-ext-extra-prebuilt": "2.2.9",
     "get-east-asian-width": "^1.3.0",
     "nbb": "1.5.211",
     "yaml": "2.9.0"
