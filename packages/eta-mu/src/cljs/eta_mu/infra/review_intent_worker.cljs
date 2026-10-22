@@ -9,10 +9,8 @@
             [eta-mu.domain.review-publication :as publication]
             [eta-mu.extern.review-intent :as host]
             [eta-mu.law.review-intent :as law]
-            [eta-mu.shape.review-intent :as shape]
-            ["node:fs" :as fs]))
+            [eta-mu.shape.review-intent :as shape]))
 
-(def ^:private request-max-bytes 65536)
 (def ^:private cas-attempts 4)
 (def ^:private schema-id shape/event-type)
 (def ^:private catalog
@@ -136,32 +134,17 @@
     :recover (recover request)
     (fail :operation)))
 
-(defn- read-bounded-stdin! []
-  (let [buffer (.alloc js/Buffer (inc request-max-bytes))]
-    (loop [total 0]
-      (if (= total (alength buffer))
-        (throw (ex-info "Intent worker request exceeds its input bound"
-                        {:intent/error :input-bound}))
-        (let [read (.readSync fs 0 buffer total (- (alength buffer) total) nil)]
-          (if (zero? read)
-            (.decode (js/TextDecoder. "utf-8" #js {:fatal true})
-                     (.subarray buffer 0 total))
-            (recur (+ total read))))))))
-
 (defn entry []
   (try
-    (let [input (read-bounded-stdin!)
+    (let [input (host/read-worker-input!)
           response (try (run-request (clio-edn/read-one input))
                         (catch :default error
                           {:status :refused :reason :request-invalid
                            :error (or (:intent/error (ex-data error))
                                       (:clio/error (ex-data error)))}))
           output (pr-str response)]
-      (when (> (.byteLength js/Buffer output "utf8") 1048576)
-        (throw (ex-info "Response exceeds fixed bound" {:intent/error :output-bound})))
-      (.writeSync fs 1 output)
+      (host/write-worker-output! output)
       response)
     (catch :default error
-      (.writeSync fs 2 (str "review-intent worker refused: "
-                            (or (:intent/error (ex-data error)) :worker-failure) "\n"))
-      (.exit js/process 2))))
+      (host/fail-worker! (str "review-intent worker refused: "
+                              (or (:intent/error (ex-data error)) :worker-failure) "\n")))))

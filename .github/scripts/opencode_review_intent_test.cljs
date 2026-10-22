@@ -250,7 +250,7 @@
   (let [store (installation)
         forged (js/Symbol "worker-forged-capability")
         worker-var (resolve-api "eta-mu.extern.review-intent" "run-fixed-worker!")
-        result (with-redefs-fn
+        result (call-api "cljs.core" "with-redefs-fn"
                 {worker-var (fn [_] {:status :replayed :state :post-started
                                     :capability forged :capability-issued? true})}
                 #(call-api "eta-mu.infra.review-intent" "transition!"
@@ -266,7 +266,7 @@
         clock-var (resolve-api "eta-mu.extern.review-intent" "clock-ms")
         worker-var (resolve-api "eta-mu.extern.review-intent" "run-fixed-worker!")
         calls (atom 0)
-        before (with-redefs-fn
+        before (call-api "cljs.core" "with-redefs-fn"
                 {clock-var (fn [] (throw (js/Error. "injected initial clock failure")))
                  worker-var (fn [_] (swap! calls inc) {:status :appended})}
                 #(call-api "eta-mu.infra.review-intent" "transition!"
@@ -274,7 +274,7 @@
     (is (= :refused (:status before)) (pr-str before))
     (is (zero? @calls) "A failed initial admission clock starts no worker.")
     (let [ticks (atom 0)
-          after (with-redefs-fn
+          after (call-api "cljs.core" "with-redefs-fn"
                  {clock-var (fn [] (if (= 1 (swap! ticks inc))
                                      (.now js/Date)
                                      (throw (js/Error. "injected ACK clock failure"))))
