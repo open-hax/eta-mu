@@ -5,7 +5,13 @@
             [eta-mu.law.review-collection :as law]
             [eta-mu.extern.review-collection :as host]
             [eta-mu.shape.review-collection :as shape]
-            [eta-mu.infra.review-collection :as collection]))
+            [eta-mu.infra.review-collection :as collection]
+            [clojure.string :as str]
+            [nbb.core :as nbb]
+            ["node:child_process" :as cp]
+            ["node:fs" :as fs]
+            ["node:os" :as os]
+            ["node:path" :as path]))
 
 (defn sha [c] (apply str (repeat 40 c)))
 (def registry {:source-sha (sha "a")
@@ -311,6 +317,64 @@
       (finally (done)))))
 (deftest github-link-pagination-normalizes-route-and-query-order
   (async done (github-link-pagination-control done)))
+
+(deftest production-get-decodes-link-header-before-collection
+  (let [directory (.mkdtempSync fs (.join path (.tmpdir os) "eta-collection-link-header-"))
+        preload (.join path directory "fetch-preload.mjs")
+        runner (.join path directory "host-probe.cljs")
+        target "https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=2"
+        preload-source (str "globalThis.__linkProbeCalls = [];\n"
+                            "globalThis.fetch = async (input) => {\n"
+                            "  const url = String(input); globalThis.__linkProbeCalls.push(url);\n"
+                            "  const headers = new Headers();\n"
+                            "  if (url.endsWith('page=1')) headers.set('Link', '<" target
+                            ">; rel=\"next\", <https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=4>; rel=\"last\"');\n"
+                            "  if (url.endsWith('page=4')) headers.set('Link', '<unterminated; rel=\"next\"');\n"
+                            "  const response = new Response('{\"jobs\":[]}', {status: 200, headers});\n"
+                            "  Object.defineProperty(response, 'url', {value: url}); return response;\n"
+                            "};\n")
+        runner-source (str "(ns link-header-host-probe (:require [nbb.core :as nbb] [eta-mu.extern.review-collection :as host]))\n"
+                           "(defn ^:async run []\n"
+                           "  (let [linked (await (host/get! {:method :get :url \"https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=1\" :timeout-ms 2000 :max-bytes 1024}))\n"
+                           "        absent (await (host/get! {:method :get :url \"https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=3\" :timeout-ms 2000 :max-bytes 1024}))\n"
+                           "        malformed (await (host/get! {:method :get :url \"https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=4\" :timeout-ms 2000 :max-bytes 1024}))]\n"
+                           "    (println (pr-str {:link-status (:status linked) :next-url (:next-url linked) :no-link-status (:status absent) :no-next-url (:next-url absent) :no-next-present? (:next-present? absent) :malformed-next-url (:next-url malformed) :malformed-next-present? (:next-present? malformed) :calls (.join (.-__linkProbeCalls js/globalThis) \"|\")}))))\n"
+                           "(nbb/await (run))\n")]
+    (try
+      (.writeFileSync fs preload preload-source)
+      (.writeFileSync fs runner runner-source)
+      (let [result (.spawnSync cp "packages/eta-mu/node_modules/.bin/nbb"
+                               #js ["-cp" "packages/eta-mu/src/cljs" runner]
+                               #js {:cwd (.cwd js/process) :encoding "utf8" :timeout 15000
+                                    :maxBuffer 100000
+                                    :env #js {:PATH (aget (.-env js/process) "PATH")
+                                              :HOME directory
+                                              :NODE_OPTIONS (str "--import=" preload)}})
+            stdout (.-stdout result) stderr (.-stderr result)]
+        (is (= 0 (.-status result)) (str stdout stderr))
+        (is (str/includes? stdout target) "The actual host transport returns the parsed next Link URL")
+        (is (str/includes? stdout ":no-next-url nil") "A response without Link remains a terminal page")
+        (is (str/includes? stdout ":no-next-present? false") "A previous/last-only or absent relation is terminal")
+        (is (str/includes? stdout ":malformed-next-url nil :malformed-next-present? true")
+            "A malformed declared next relation remains present and cannot masquerade as terminal")
+        (is (str/includes? stdout "|https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=3|https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=4")
+            "Only the three local GET requests were issued"))
+      (finally (.rmSync fs directory #js {:recursive true :force true})))))
+
+(defn ^:async malformed-link-with-complete-total-control [done]
+  (let [result (await
+                (run!test (assoc-in registry [:targets 0 :enabled?] true)
+                         (fn [{:keys [url] :as request}]
+                           (let [response ((fake-native (fn [_ body] body)) request)]
+                             (if (.endsWith url "/jobs?per_page=100&page=1")
+                               (assoc response :data (assoc (:data response) :total_count 1)
+                                      :next-url "not-an-absolute-pagination-url")
+                               response)))))]
+    (is (= :refused (:status result)) "An invalid present Link cannot be interpreted as end-of-pages")
+    (is (some? (:reason result)))
+    (done)))
+(deftest malformed-present-link-cannot-be-treated-as-terminal
+  (async done (malformed-link-with-complete-total-control done)))
 
 (defn ^:async rejected-link-control [done link]
   (let [result (await
