@@ -80,8 +80,11 @@
 
 (def pull-file-statuses #{"added" "modified" "removed" "renamed" "copied" "changed" "unchanged"})
 (defn raw-pull-file? [x]
-  (and (map? x) (publication/text? (:filename x))
+  (and (map? x) (publication/commit? (:sha x))
+       (publication/text? (:filename x))
        (contains? pull-file-statuses (:status x))
+       (every? publication/natural? ((juxt :additions :changes :deletions) x))
+       (every? publication/text? ((juxt :blob_url :contents_url :raw_url) x))
        (or (not (contains? x :patch)) (nil? (:patch x)) (string? (:patch x)))
        (or (not (contains? x :previous_filename))
            (and (publication/text? (:previous_filename x))

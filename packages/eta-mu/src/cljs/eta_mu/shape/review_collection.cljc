@@ -27,8 +27,15 @@
 
 (defn pull-file [raw]
   (when (law/raw-pull-file? raw)
-    (cond-> {:filename (:filename raw)
+    (cond-> {:sha (:sha raw)
+             :filename (:filename raw)
              :status (keyword (:status raw))
+             :additions (:additions raw)
+             :blob-url (:blob_url raw)
+             :changes (:changes raw)
+             :contents-url (:contents_url raw)
+             :deletions (:deletions raw)
+             :raw-url (:raw_url raw)
              :patch-state (cond (not (contains? raw :patch)) :missing
                                 (nil? (:patch raw)) :null
                                 :else :available)}
