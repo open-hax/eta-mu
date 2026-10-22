@@ -1,7 +1,8 @@
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 (ns eta-mu.law.review-collection
   "Portable contracts for bounded read-only native review observations."
-  (:require [eta-mu.law.review-publication :as publication]))
+  (:require [eta-mu.law.review-publication :as publication]
+            [clojure.string :as str]))
 
 (def hard-bounds {:requests 160 :pages 64 :bytes 8000000 :page-size 100 :operation-ms 30000})
 (defn bounds? [x]
@@ -17,6 +18,34 @@
 (defn complete-pages? [x]
   (and (map? x) (publication/positive? (:pages x))
        (= (:pages x) (:received x)) (false? (:next? x))))
+
+(defn pagination-link?
+  "Validate a GitHub Link target as data. The caller always rebuilds the next
+  request from its local fixed route; a supplied URL is never fetched."
+  [link repository-id route page page-size]
+  (let [{:keys [scheme host port username password fragment path query-pairs] :as parsed}
+        link
+        base-route (str/replace route #"^https://api\.github\.com" "")
+        id-route (when (and (publication/positive? repository-id)
+                            (str/starts-with? base-route "/repos/"))
+                   (str "/repositories/" repository-id
+                        (subs base-route (or (str/index-of base-route "/actions/")
+                                             (count base-route)))))
+        pairs (when (vector? query-pairs) query-pairs)
+        keys (mapv first pairs)]
+    (and parsed
+         (= "https" (str/lower-case (or scheme "")))
+         (= "api.github.com" (str/lower-case (or host "")))
+         (or (nil? port) (= "" port))
+         (or (nil? username) (= "" username))
+         (or (nil? password) (= "" password))
+         (or (nil? fragment) (= "" fragment))
+         (or (= path base-route) (= path id-route))
+         (= 2 (count pairs)) (= #{"page" "per_page"} (set keys))
+         (= 1 (count (filter #(= "page" (first %)) pairs)))
+         (= 1 (count (filter #(= "per_page" (first %)) pairs)))
+         (= (str (inc page)) (second (first (filter #(= "page" (first %)) pairs))))
+         (= (str page-size) (second (first (filter #(= "per_page" (first %)) pairs)))))))
 
 (defn native-run? [x]
   (and (map? x) (publication/positive? (:id x))

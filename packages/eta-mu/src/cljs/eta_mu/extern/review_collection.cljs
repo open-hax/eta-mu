@@ -15,6 +15,24 @@
     (let [parsed (js/Date.parse value)]
       (when (js/Number.isFinite parsed) parsed))))
 
+(defn- header-next-url [headers]
+  (when-let [header (.get headers "link")]
+    (when-let [[_ target] (re-find #"<([^>]+)>;\s*rel=\"next\"(?:,|$)" header)] target)))
+
+(defn decode-pagination-link
+  "Decode an untrusted absolute Link target to plain data for law validation."
+  [target]
+  (when (string? target)
+    (try
+      (let [url (js/URL. target)
+            pairs (array-seq (js/Array.from (.entries (.-searchParams url))))]
+        {:scheme (subs (.-protocol url) 0 (dec (count (.-protocol url))))
+         :host (.-hostname url) :port (.-port url)
+         :username (.-username url) :password (.-password url)
+         :fragment (.-hash url) :path (.-pathname url)
+         :query-pairs (mapv (fn [pair] [(aget pair 0) (aget pair 1)]) pairs)})
+      (catch :default _ nil))))
+
 (defn- git-root [directory]
   (loop [current directory]
     (cond
@@ -88,8 +106,7 @@
           (when (> response-size max-bytes) (refuse! :response-bytes))
           (try
             {:status :ok :data (js->clj (js/JSON.parse text) :keywordize-keys true)
-             :bytes response-size :next-url (some-> (.get (.-headers response) "link")
-                                             (as-> [header] (second (re-find #"<([^>]+)>;\s*rel=\"next\"" header))))}
+             :bytes response-size :next-url (header-next-url (.-headers response))}
             (catch :default _ (refuse! :native-json)))))
       (catch :default e
         (if (:code (ex-data e)) (throw e) (refuse! :native-transport)))

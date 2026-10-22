@@ -40,15 +40,14 @@
   (let [state (atom {:requests 0 :request-log [] :pages 0 :bytes 0})]
     {:state state :get (partial read-one! transport bounds start state)}))
 
-(defn- ^:async pages! [read url field bounds]
+(defn- ^:async pages! [read url field bounds repository-id]
   (loop [page 1 result [] expected-total nil]
     (let [page-url (str url "?per_page=" (:page-size bounds) "&page=" page)
           response (await (read page-url))
           data (:data response)
           rows (get data field)
           total-count (:total_count data)
-          next-url (:next-url response)
-          expected (str url "?per_page=" (:page-size bounds) "&page=" (inc page))]
+          next-link (host/decode-pagination-link (:next-url response))]
       (when-not (and (vector? rows) (publication/natural? total-count)
                      (or (nil? expected-total) (= expected-total total-count)))
         (throw (ex-info "Native page shape or total count" {:code :native-shape})))
@@ -56,8 +55,8 @@
         (when-not (and (every? #(publication/positive? (:id %)) all)
                        (= (count all) (count (distinct (map :id all)))))
           (throw (ex-info "Native pagination repeated or omitted an ID" {:code :pagination-identity})))
-        (if next-url
-          (if (= expected next-url)
+        (if next-link
+          (if (law/pagination-link? next-link repository-id url page (:page-size bounds))
             (recur (inc page) all total-count)
             (throw (ex-info "Native pagination link mismatch" {:code :pagination})))
           (if (= total-count (count all))
@@ -128,8 +127,10 @@
         pull-requests (:pull_requests run)
         pull (first (filter #(= n (:number %)) pull-requests))
         jobs (await (pages! read (str "https://api.github.com/repos/" name "/actions/runs/" run-id
-                                       "/attempts/" attempt-number "/jobs") :jobs bounds))
-        artifacts (await (pages! read (str "https://api.github.com/repos/" name "/actions/runs/" run-id "/artifacts") :artifacts bounds))
+                                       "/attempts/" attempt-number "/jobs") :jobs bounds
+                              (get-in entry [:repository :id])))
+        artifacts (await (pages! read (str "https://api.github.com/repos/" name "/actions/runs/" run-id "/artifacts") :artifacts bounds
+                                   (get-in entry [:repository :id])))
         native-artifacts (:items artifacts)
         required (set (get-in entry [:producer :required-jobs]))
         job-rows (:items jobs)
