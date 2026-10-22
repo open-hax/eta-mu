@@ -222,6 +222,22 @@
   (is (nil? (resolve-api "eta-mu.extern.review-intent" "issue-after-recheck!"))
       "Callers cannot turn a returned append receipt into a capability."))
 
+(deftest extern-policy-and-vault-boundary-isolated-from-production
+  (let [extern-file (.resolve path test-root
+                              "packages/eta-mu/src/cljs/eta_mu/extern/review_intent.cljs")
+        extern-source (.readFileSync fs extern-file "utf8")
+        isolated-vault (call-api "eta-mu.extern.review-intent" "new-opaque-vault")]
+    (is (not (str/includes? extern-source "eta-mu.domain.review-publication"))
+        "The extern namespace must not depend on publisher domain policy.")
+    (is (nil? (resolve-api "eta-mu.extern.review-intent" "transition-child!"))
+        "The extern layer cannot perform the domain recheck or mint accepted capability.")
+    (is (map? isolated-vault) "Extern exposes only a factory for an isolated vault instance.")
+    (when (map? isolated-vault)
+      (let [token ((:put! isolated-vault) {:kind :capability :binding binding-a})]
+        (is (false? (call-api "eta-mu.infra.review-intent" "consume-capability!"
+                              token binding-a))
+            "A token from a caller-created vault cannot enter the private production vault.")))))
+
 (deftest canonical-replay-refuses-gaps-wrong-predecessors-and-cross-lock-events
   (doseq [history [[reserved-a (assoc started-a :event/seq 3)]
                    [reserved-a (assoc started-a :event/causes [])]
