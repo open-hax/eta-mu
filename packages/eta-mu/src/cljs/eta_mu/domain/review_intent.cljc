@@ -18,30 +18,33 @@
         (if-let [event (first remaining)]
           (let [data (:event/data event)
                 intent-key (:intent-key data)
-                current (get intents intent-key)
+                current-key (some #(when (law/portable-equal? % intent-key) %) (keys intents))
+                current (get intents current-key)
                 state (:state data)
                 version (:intent-version data)
                 causes (:event/causes event)
                 active-before? (some #(contains? law/active-states (:state %)) (vals intents))
                 valid-base? (and (law/intent-event? event)
                                  (= stream (:event/stream event))
-                                 (= expected-seq (:event/seq event))
-                                 (= lock-key (:lock-key data))
+                                 (law/portable-equal? expected-seq (:event/seq event))
+                                 (law/portable-equal? lock-key (:lock-key data))
                                  (= (if predecessor [predecessor] []) causes))
                 valid-state? (case state
-                               :reserved (and (nil? current) (not active-before?) (= 0 version))
+                               :reserved (and (nil? current) (not active-before?)
+                                              (law/portable-equal? 0 version))
                                :post-started (and current (= :reserved (:state current))
-                                                  (= (:version current) (dec version))
+                                                  (law/portable-equal? (:version current) (dec version))
                                                   (law/text? (:owner data))
                                                   (law/text? (:claim-id data)))
                                :post-unknown (and current (= :post-started (:state current))
-                                                  (= (:version current) (dec version)))
+                                                  (law/portable-equal? (:version current) (dec version)))
                                :ambiguous-absence (and current (= :post-started (:state current))
-                                                       (= (:version current) (dec version)))
+                                                       (law/portable-equal? (:version current) (dec version)))
                                :observed (and current (contains? law/active-states (:state current))
-                                              (= (:version current) (dec version)))
+                                              (law/portable-equal? (:version current) (dec version)))
                                false)
-                same-binding? (or (nil? current) (= (:binding current) (:binding data)))]
+                same-binding? (or (nil? current)
+                                  (law/portable-equal? (:binding current) (:binding data)))]
             (if-not (and valid-base? valid-state? same-binding?)
               (refused (cond
                          (not valid-base?) [:publisher-envelope expected-seq
@@ -49,8 +52,9 @@
                          (not valid-state?) [:publisher-state state version current]
                          (not same-binding?) :publisher-binding))
               (recur (next remaining) (inc expected-seq) (:event/id event)
-                     (assoc intents intent-key
-                            {:state state :binding (:binding data) :version version
+                     (assoc intents (or current-key intent-key)
+                            {:state state :binding (:binding data)
+                             :version (law/canonical-natural version)
                              :event-id (:event/id event) :event-seq expected-seq
                              :owner (:owner data) :claim-id (:claim-id data)}))))
           {:status :replayed :lock-key lock-key :stream stream :events (vec events)
@@ -65,11 +69,14 @@
         lock-intents (when (= :replayed (:status projection))
                        (vals (:intents projection)))
         active? (some #(contains? law/active-states (:state %)) lock-intents)
-        current (get-in projection [:intents (:intent-key binding)])
+        current-key (some #(when (law/portable-equal? % (:intent-key binding)) %)
+                          (keys (:intents projection)))
+        current (get-in projection [:intents current-key])
         requested (:state command)]
     (cond
       (not= :admitted (:status admission)) (refused :admission)
-      (not (and (law/binding? binding) (= lock-key (:lock-key projection)))) (refused :binding)
+      (not (and (law/binding? binding)
+                (law/portable-equal? lock-key (:lock-key projection)))) (refused :binding)
       (not= :replayed (:status projection)) (refused :history)
       (= requested :reserved)
       (if (or active? current)
@@ -81,10 +88,10 @@
                       :owner nil :claim-id nil}})
       (= requested :post-started)
       (if (and current (= :reserved (:state current))
-               (= binding (:binding current))
-               (= (:version current) (:expected-version command))
+               (law/portable-equal? binding (:binding current))
+               (law/portable-equal? (:version current) (:expected-version command))
                (law/text? (:owner command)) (law/text? (:claim-id command)))
-        (let [version (inc (:version current))]
+        (let [version (inc (law/canonical-natural (:version current)))]
           {:status :append :state :post-started :event-seq (:next-seq projection)
            :intent-version version :causes [(:predecessor projection)]
            :event-data {:lock-key lock-key :intent-key (:intent-key binding)

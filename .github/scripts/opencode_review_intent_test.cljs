@@ -144,7 +144,9 @@
         "The shared safe-integer bound is accepted with SHA-256 object IDs.")))
 
 (deftest replay-and-transition-use-portable-numeric-identity
-  (let [numeric-binding (assoc-in binding-a [:lock-key 0] 41.0)
+  (let [numeric-binding (-> binding-a
+                            (assoc-in [:lock-key 0] 41.0)
+                            (update :intent-key assoc 1 41.0))
         numeric-admission (assoc admission-a :binding numeric-binding)
         numeric-reservation (-> reserved-a
                                 (assoc :event/seq 1.0)
@@ -161,7 +163,9 @@
                          numeric-reservation)))
     (is (= :replayed (:status replay)) (pr-str replay))
     (is (= 2 (:next-seq replay)))
-    (is (= :append (:status transition)) (pr-str transition))))
+    (is (= 0 (get-in replay [:intents intent-key-a :version])))
+    (is (= :append (:status transition)) (pr-str transition))
+    (is (= 1 (:intent-version transition)))))
 
 (deftest installation-root-is-derived-from-the-loaded-trusted-module
   (let [store (dissoc (installation) :installation-root)
