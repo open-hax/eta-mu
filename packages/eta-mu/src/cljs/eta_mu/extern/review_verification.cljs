@@ -46,6 +46,7 @@
               temp-root (.mkdtempSync fs (.join path (.tmpdir os) "eta-immutable-review-runtime-"))
               _ (reset! owned temp-root)
               root (.realpathSync fs temp-root)
+              _ (reset! owned root)
               _ (.chmodSync fs root 448)
               _ (.writeFileSync fs (.join path root "runtime.json") raw #js {:flag "wx" :mode 256})]
           (doseq [[name bytes] files]
