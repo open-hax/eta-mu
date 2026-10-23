@@ -162,6 +162,35 @@
 (deftest native-app-and-actor-evidence-remain-observed-unknown-or-conflicting
   (async done (identity-controls done)))
 
+(defn ^:async inline-identity-controls [done]
+  (let [r (request)
+        observe (fn [app-id]
+                  (call-api "readback-with!" r
+                    (fixture-transport r (atom [])
+                      (fn [{:keys [url]} response]
+                        (if (str/includes? url "/reviews/91/comments?")
+                          (update response :data
+                                  #(mapv (fn [row] (assoc row :performed_via_github_app
+                                                          (assoc raw-app :id app-id))) %))
+                          response)))))
+        conflicting (await (observe 42))
+        matching (await (observe 3152464))]
+    (is (= :refused (:status conflicting)) (pr-str (select-keys conflicting [:status :reason :comparison])))
+    (is (= :publisher-identity (:reason conflicting)))
+    (is (= :matched (get-in conflicting [:comparison :review-content]))
+        "Exact actor/content do not hide a conflicting native inline App ID.")
+    (is (= raw-actor (get-in conflicting [:native :review :comments 0 :identity :raw-actor])))
+    (is (= 42 (get-in conflicting [:native :review :comments 0 :identity :app-id])))
+    (is (= 42 (get-in conflicting [:native :review :comments 0 :raw :performed_via_github_app :id])))
+    (is (= :unsupported (:qualification conflicting)))
+    (is (= [] (:effects conflicting)))
+    (is (= :observed (:status matching)))
+    (is (= :unsupported (:qualification matching)) "Matching native App metadata still proves no installation association.")
+    (is (= [] (:effects matching)))
+    (done)))
+(deftest every-inline-native-app-identity-participates-in-conflict-comparison
+  (async done (inline-identity-controls done)))
+
 (defn ^:async payload-controls [done]
   (let [_step0 (await (loop [cases [[:review-body #(assoc % :body "forged")]
            [:review-head #(assoc % :commit_id (apply str (repeat 40 "f")))]
