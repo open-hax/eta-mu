@@ -32,6 +32,18 @@
     (dissoc result :capability :capability-issued? :recovery-receipt)
     {:status :unknown :reason :worker-response-shape}))
 
+(defn- invoke-worker [request]
+  (try
+    (observed-worker-result (host/run-fixed-worker! request))
+    (catch :default error
+      (let [error-type (:intent/error (ex-data error))
+            ;; These two host failures occur before spawn. An unclassified
+            ;; exception may follow a started worker, so it remains uncertain.
+            preflight? (contains? #{:installation :input-bound} error-type)]
+        {:status (if (and preflight? (= :transition (:operation request))) :refused :unknown)
+         :reason (if preflight? :worker-preflight :worker-invocation)
+         :error (or error-type :worker-error)}))))
+
 (defn- bind-recovery-result [store result]
   (if (map? (:recovery result))
     (let [token ((:put! token-vault)
@@ -72,8 +84,7 @@
                      :binding binding
                      :command (cond-> (select-keys command [:state :expected-version :owner])
                                 claim-id (assoc :claim-id claim-id))}
-            raw-result (host/run-fixed-worker! request)
-            result (bind-recovery-result store (observed-worker-result raw-result))]
+            result (bind-recovery-result store (invoke-worker request))]
         (if (and (= :appended (:status result)) (= :post-started (:state result)))
           (let [fresh-admission (safe-admission context)]
             (if (and (= :admitted (:status fresh-admission))
@@ -94,12 +105,10 @@
                            (when (map? recovery) recovery))]
       (if-not recovery-map
         (refused :recovery-receipt)
-        (let [raw-result (host/run-fixed-worker!
-                          {:operation :recover
-                           :store (store-key store)
-                           :recovery recovery-map
-                           :append-uncertain? authorized?})
-              result (observed-worker-result raw-result)
+        (let [result (invoke-worker {:operation :recover
+                                    :store (store-key store)
+                                    :recovery recovery-map
+                                    :append-uncertain? authorized?})
               next-recovery (:recovery result)
               result (dissoc result :recovery)]
           (when (and authorized? (map? next-recovery))
