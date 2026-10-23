@@ -11,6 +11,8 @@
 (def build-sha "1fd734d89c4b18dce24a6a87c6024561382b52531285b020fded67e2410d6e8a")
 (def capsule (str ".github/fixtures/review-publication-verifier/" muse))
 (def descriptor {:muse-source muse :eta-source eta :verifier-sha256 verifier-sha :build-descriptor-sha256 build-sha})
+;; Eight synthetic review tools exercise the immutable verifier only. This is
+;; not the producer's complete 22-tool profile or native execution custody.
 (def tools ["review_begin" "review_read_diff_chunk" "review_assess_diff_chunk" "review_record_evidence" "review_propose_finding" "review_classify_finding" "review_status" "review_submit"])
 (defn sha [b] (.digest (.update (.createHash crypto "sha256") b) "hex"))
 (defn jb [x] (.from js/Buffer (str (js/JSON.stringify (clj->js x)) "\n")))
@@ -70,6 +72,17 @@
       (let [cd (apply join records)] (apply join (concat blocks [cd (header 22 [[0 4 101010256] [8 2 (count records)] [10 2 (count records)] [12 4 (.-length cd)] [16 4 at]])]))))))
 (defn ^:async call [name & args]
   (if-let [f (resolve (symbol "eta-mu.infra.review-verification" (clojure.core/name name)))] (await (apply f args)) {:status :unimplemented :code :missing-real-bridge}))
+(defn expected-input-proof [members review-attempt]
+  (let [manifest-bytes (get members "input-manifest.json")
+        manifest (data manifest-bytes) provenance (:provenance manifest)]
+    {:schema "open-hax.review-input-verification/v1" :input_verified true
+     :verification_stage "fresh-review-job-before-model"
+     :base_sha (:base_sha manifest) :head_sha (:head_sha manifest)
+     :diff_base_sha (:diff_base_sha manifest) :full_diff (:full_diff manifest)
+     :manifest_sha256 (sha manifest-bytes) :provenance provenance
+     :evidence_artifact_name (str "review-evidence-" (:pull_request provenance) "-"
+                                  (:run_id provenance) "-" (:run_attempt provenance))
+     :verification_provenance (assoc provenance :run_attempt (str review-attempt))}))
 (defn expected [members]
   (let [m (data (get members "input-manifest.json")) p (:provenance m) b (:base_sha m) h (:head_sha m)]
     {:status :reconstructed :observed-at-ms (.now js/Date) :full-diff-base64 (.toString (get members "basehead.diff") "base64")
@@ -78,7 +91,7 @@
      :tuple {:pr-number 1 :base-sha b :head-sha h :event-sha (:workflow_sha p) :merge-sha (apply str (repeat 40 "e")) :merge-parents [b h]
              :head-tree (apply str (repeat 40 "f")) :merge-tree (apply str (repeat 40 "f")) :base-ancestor? true :mergeable? true :state :open :draft? false}
      :run {:id 2 :attempt 1} :changed-files [{:filename "notes.txt" :patch "@@ -1 +1 @@\n-old\n+😀\n"}]
-     :input-verification {:schema "open-hax.review-input-verification/v1" :input_verified true :base_sha b :head_sha h :full_diff (:full_diff m) :provenance p}}))
+     :input-verification (expected-input-proof members 1)}))
 (defn ^:async scenario [runtime members request-change expected-change]
   (let [dir (.mkdtempSync fs (.join path (.tmpdir os) "eta-verification-test-")) file (.join path dir "inert.zip") e (expected-change (expected members))
         members (assoc members "input-verification.json" (jb (:input-verification e)) "metadata/exposed-tools.txt" (.from js/Buffer (str (str/join "\n" tools) "\n")))
@@ -166,6 +179,67 @@
       (let [r (await (call :open-runtime! "/nonexistent/immutable-review-capsule" descriptor))]
         (is (= :refused (:status r))))
       (is (= {:runtimes 0 :workers 0} (await (call :resources))))
+    (catch :default e (is false (str e)))
+    (finally (done))))
+(defn ^:async input-custody-controls [done]
+  (try
+    (let [members (consistent-fixture (originals) "APPROVE")
+          boot (await (call :open-runtime! capsule descriptor))]
+      (is (= :ready (:status boot)) "The actual pinned runtime must inspect and verify these fixtures")
+      (when (= :ready (:status boot))
+        (let [runtime (:runtime boot)]
+          (try
+            (let [same (await (scenario runtime members identity identity))
+                  rerun (await (scenario runtime members
+                                         #(assoc-in % [:archive :artifact :attempt] 2)
+                                         #(-> % (assoc-in [:run :attempt] 2)
+                                              (assoc :input-verification (expected-input-proof members 2)))))]
+              (is (= :verified (:status same)) (pr-str same))
+              (is (= :verified (:status rerun)) (pr-str rerun))
+              (is (= [] (:effects rerun)))
+              (is (= :local-source-byte-verification (:qualification same)))
+              (is (= :local-source-byte-verification (:qualification rerun))))
+            (doseq [[label raw partial?]
+                    [[:whitespace (.from js/Buffer (str " \n" (js/JSON.stringify (clj->js (data (get members "input-manifest.json"))) nil 2) "\n  ")) false]
+                     [:unicode (.from js/Buffer (str "\n" (js/JSON.stringify (clj->js (assoc (data (get members "input-manifest.json")) :diagnostic "μ 😀")) nil 2) "\n")) true]]]
+              (let [m (assoc members "input-manifest.json" raw)
+                    observed (atom nil)
+                    wanted {:bytes (.-length raw) :sha256 (sha raw)}
+                    e (cond-> (expected m)
+                        partial? (assoc :status :observed :complete? false :missing [:native-execution-custody]))
+                    r (await (scenario runtime m
+                                       #(assoc % :reconstruction-input {:manifest-identity {:bytes 0 :sha256 (apply str (repeat 64 "0"))}
+                                                                       :inert-marker :retained}
+                                                 :reconstruct! (fn [input] (reset! observed input) e))
+                                       identity))]
+                (is (= wanted (:manifest-identity @observed)) (str label " " (pr-str @observed)))
+                (is (= :retained (:inert-marker @observed)))
+                (is (= (data raw) (:manifest @observed)))
+                (if partial?
+                  (do (is (= :refused (:status r))) (is (= :native-reconstruction-incomplete (:code r))))
+                  (is (= :verified (:status r)) (pr-str r)))))
+            (doseq [[label change]
+                    [[:missing-stage #(dissoc % :verification_stage)]
+                     [:wrong-stage #(assoc % :verification_stage "after-review-and-recovery-before-publication")]
+                     [:wrong-schema #(assoc % :schema "self-asserted")]
+                     [:unverified #(assoc % :input_verified false)]
+                     [:manifest-hash #(assoc % :manifest_sha256 (apply str (repeat 64 "0")))]
+                     [:diff-base #(assoc % :diff_base_sha (apply str (repeat 40 "0")))]
+                     [:full-diff #(update-in % [:full_diff :bytes] inc)]
+                     [:artifact-pr #(assoc % :evidence_artifact_name "review-evidence-2-2-1")]
+                     [:artifact-run #(assoc % :evidence_artifact_name "review-evidence-1-3-1")]
+                     [:artifact-attempt #(assoc % :evidence_artifact_name "review-evidence-1-2-2")]
+                     [:malformed-producer #(assoc-in % [:provenance :run_attempt] "01")]
+                     [:future-producer #(assoc-in % [:provenance :run_attempt] "2")]
+                     [:producer-run #(assoc-in % [:provenance :run_id] "3")]
+                     [:review-attempt #(assoc-in % [:verification_provenance :run_attempt] "2")]
+                     [:review-source #(assoc-in % [:verification_provenance :workflow_sha] (apply str (repeat 40 "0")))]]]
+              (let [r (await (scenario runtime members identity #(update % :input-verification change)))]
+                (is (= :refused (:status r)) (str label " " (pr-str r)))
+                (is (not (contains? r :verification)))
+                (is (= [] (:effects r)))))
+            (finally (await (call :close-runtime! runtime))))))
+      (is (= {:runtimes 0 :workers 0} (await (call :resources)))))
     (catch :default e (is false (str e)))
     (finally (done))))
 (defn ^:async publisher-differential [done]
@@ -282,6 +356,7 @@
         (finally (.rmSync fs parent #js {:recursive true :force true}))))))
 (deftest actual-muse-native-payload-projection (async done (publisher-differential done)))
 (deftest actual-pinned-verifier-causal-controls (async done (controls done)))
+(deftest actual-pinned-input-manifest-and-attempt-custody (async done (input-custody-controls done)))
 (defmethod t/report [::t/default :end-run-tests] [r] (when-not (t/successful? r) (set! (.-exitCode js/process) 1)))
 (when (.existsSync fs "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs") (nbb/await (nbb/load-file "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs")))
 (t/run-tests 'opencode-review-verification-test)
