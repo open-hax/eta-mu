@@ -1344,3 +1344,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 70e8ac247b6c8a77a94a3107e1a4151858eb173aa82f2c6952a100d37e34ed2c
   note: Whole historical evidence can be losslessly indexed without hiding product source. Preserve failed builder bytes and modes; verify the exact byte array emitted after validation. Native size admission never means binary-content review or authentication. No new spore/promotion.
+
+- ts: 2026-10-23T05:26:57.754Z
+  session: foresight-stabilization
+  task: Journal uncertain claims and preserve exact-ACK retry custody
+  p-efficiency: 0.8
+  p-friction: 0.6
+  p-skill-candidate: 0.55
+  spore: none
+  receipt-refs: 9af8dbed920774010d7d6743e4cac7120abfcee2802d9b5269699248d635964d
+  note: Wire consumption and outcome durability need distinct opaque authority. Validate the exact ACK before consuming its retry receipt. Refresh inert fixtures per case instead of weakening production time policy. Use empty user npm configuration for secret-free candidate builds and retain every failed attempt. No new spore/promotion.

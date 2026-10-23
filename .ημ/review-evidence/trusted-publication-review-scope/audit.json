@@ -690,5 +690,133 @@
     "root_capture": ".ημ/stabilization/discovery-20261023/independent-bundle-review/repair",
     "native_review_binary_credit": false,
     "qualification": false
+  },
+  "durable_unknown_outcome_execution": {
+    "source": "3734a46cc1c5d295800de463e04ee80c54630773",
+    "red": "d81f8fb48fe7988834ff440af80344f348c4527e",
+    "initial_green": "4f6370fd0fe7ca50e60e26b2ed7df5573ff60166",
+    "ack_red": "771e4086086c372a89183692d114dcd80969a5d9",
+    "focused": "40tests/390assertions",
+    "independent": "ACK6+primary26+restart5",
+    "portable_values": 12,
+    "full_checks": {
+      "source": "3734a46cc1c5d295800de463e04ee80c54630773",
+      "file_sha256": {
+        "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+        "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+        "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+        ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318"
+      },
+      "results": [
+        {
+          "name": "cli-test",
+          "argv": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "test"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 15.583,
+          "completed_at": "2026-10-23T05:24:59.243403+00:00",
+          "source": "3734a46cc1c5d295800de463e04ee80c54630773",
+          "file_sha256": {
+            "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+            "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+            ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318"
+          },
+          "removed_provider_variable_names": [
+            "OPENAI_API_KEY"
+          ],
+          "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+          "npm_user_config": "explicit empty task-owned file; project configuration retained"
+        },
+        {
+          "name": "cli-lint",
+          "argv": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "lint:kondo"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 2.105,
+          "completed_at": "2026-10-23T05:25:01.349185+00:00",
+          "source": "3734a46cc1c5d295800de463e04ee80c54630773",
+          "file_sha256": {
+            "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+            "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+            ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318"
+          },
+          "removed_provider_variable_names": [
+            "OPENAI_API_KEY"
+          ],
+          "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+          "npm_user_config": "explicit empty task-owned file; project configuration retained"
+        },
+        {
+          "name": "cli-release",
+          "argv": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "build"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 17.471,
+          "completed_at": "2026-10-23T05:25:18.820600+00:00",
+          "source": "3734a46cc1c5d295800de463e04ee80c54630773",
+          "file_sha256": {
+            "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+            "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+            ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318"
+          },
+          "removed_provider_variable_names": [
+            "OPENAI_API_KEY"
+          ],
+          "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+          "npm_user_config": "explicit empty task-owned file; project configuration retained"
+        }
+      ]
+    },
+    "receipt_rows": 361,
+    "historical_invalid": 71,
+    "historical_errors": 118,
+    "preservation": {
+      "prefixes": {
+        "receipts.edn": {
+          "base_bytes": 636385,
+          "base_sha256": "25e61a66187911f53ff0be6911a1432097e1df481de8d7bb0396b24da27ab0f7",
+          "current_bytes": 640742,
+          "prefix_preserved": true
+        },
+        "kanban/.events/ledger.edn": {
+          "base_bytes": 1866373,
+          "base_sha256": "a842f3db94bd5d9adf30c875e042cc3eba4fe9bc8274c630302db3e9c4b499a1",
+          "current_bytes": 1872088,
+          "prefix_preserved": true
+        },
+        ".ημ/session-mycology/ledger.md": {
+          "base_bytes": 119269,
+          "base_sha256": "38a9a55f819c6dfd68ebbea0e33c9726c42f29992910bf1ff1f99310a061ac69",
+          "current_bytes": 119904,
+          "prefix_preserved": true
+        },
+        ".ημ/session-reflections.edn": {
+          "base_bytes": 41622,
+          "base_sha256": "76a5109bd3e6f5d40a40b82f9f4b5d21838d832f267929e9d87ce82acf4ab4f3",
+          "current_bytes": 41622,
+          "prefix_preserved": true
+        }
+      },
+      "qualification": false,
+      "CMS_Cephalon": "paused",
+      "cards_preserved": 309
+    },
+    "root_capture": ".ημ/stabilization/outcomes-20261023",
+    "qualification": false
   }
 }
