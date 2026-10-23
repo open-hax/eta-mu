@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Dependency-free tests execute the actual trusted preflight, never candidate code.
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, appendFileSync, rmSync, symlinkSync } from 'node:fs';
+import { existsSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, appendFileSync, rmSync, symlinkSync, globSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -258,4 +258,34 @@ test('errors retain review artifacts and test suite is registered', () => {
   assert.match(upload, /include-hidden-files: false/);
   assert.match(registration, /:label "antigravity-review-workflow"/);
   assert.match(registration, /"\.github\/scripts\/antigravity-code-review-workflow\.test\.mjs"/);
+});
+
+test('actual artifact globs retain a pre-init native failure log and complete input before cleanup', t => {
+  const root = mkdtempSync(join(tmpdir(), 'antigravity-failure-evidence-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const output = join(root, 'output');
+  mkdirSync(output);
+  const failureLog = join(output, 'native.stderr.log');
+  const completeInput = join(output, 'input.txt');
+  writeFileSync(failureLog, 'fixture: CLI exited 1 before init; stdout contained zero bytes\n');
+  writeFileSync(completeInput, '{"complete_candidate":"all UTF-8 bytes: Ω; no truncation"}\n');
+  writeFileSync(join(output, 'native.stdout.json'), '');
+  writeFileSync(join(output, 'process.json'), '{"status":1}\n');
+  mkdirSync(join(output, 'workspace'));
+  const workspaceFile = join(output, 'workspace', 'input.txt');
+  writeFileSync(workspaceFile, 'temporary model workspace');
+  const unrelatedLog = join(output, 'unrelated.log');
+  writeFileSync(unrelatedLog, 'outside the explicitly retained native diagnostics');
+  const upload = step('Upload review evidence including failure diagnostics');
+  const patterns = literal(upload, 'path').trim().split('\n')
+    .map(line => line.replaceAll('${{ steps.paths.outputs.evidence-root }}', root));
+  const retained = new Set(globSync(patterns));
+  assert.ok(retained.has(failureLog), 'the actual native failure diagnostic must survive the artifact selection');
+  assert.ok(retained.has(completeInput), 'the complete native input must survive the artifact selection');
+  assert.equal(readFileSync(failureLog, 'utf8'), 'fixture: CLI exited 1 before init; stdout contained zero bytes\n');
+  assert.equal(readFileSync(completeInput, 'utf8'), '{"complete_candidate":"all UTF-8 bytes: Ω; no truncation"}\n');
+  assert.ok(!retained.has(workspaceFile), 'temporary workspace files must not broaden artifact collection');
+  assert.ok(!retained.has(unrelatedLog), 'only the explicit native diagnostic log is retained');
+  assert.match(upload, /if:.*always\(\)/);
+  assert.ok(workflow.indexOf('Upload review evidence including failure diagnostics') < workflow.indexOf("Remove only this job's isolated review files"));
 });

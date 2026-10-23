@@ -194,6 +194,8 @@ jobs:
             ${{ steps.paths.outputs.evidence-root }}/review-exit.txt
             ${{ steps.paths.outputs.evidence-root }}/output/*.json
             ${{ steps.paths.outputs.evidence-root }}/output/*.md
+            ${{ steps.paths.outputs.evidence-root }}/output/native.stderr.log
+            ${{ steps.paths.outputs.evidence-root }}/output/input.txt
           if-no-files-found: warn
           include-hidden-files: false
           retention-days: 14

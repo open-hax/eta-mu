@@ -1206,3 +1206,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 2026-10-23T07:31:59.531736+00:00
   note: Native stdin EOF could discard an active turn; retained actual large-input and final runtime proofs, and verified cancellation before provider startup.
+
+- ts: 2026-10-23T07:52:24.587230+00:00
+  session: antigravity-review-rollout
+  task: Retain service-context native diagnostics
+  p-efficiency: 0.8
+  p-friction: 0.6
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: 2026-10-23T07:52:24.587230+00:00
+  note: Interactive namespace permission did not imply systemd service permission; retain stderr before teardown.
