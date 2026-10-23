@@ -1334,3 +1334,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 062a16eb244e7ec8ea2e6358777374f8fd13c16b96b52d8ad125c1b7aea2bbd9
   note: Preserve actual absent identity and full status history before filtering; semantic matches never authenticate installation. Independent probe caught a real inline conflict omission after registered tests passed; causal repair and successor checks retain original proof. Raw async summary ordering is not completion evidence. No new spore or promotion.
+
+- ts: 2026-10-23T04:52:46.880Z
+  session: foresight-stabilization
+  task: Preserve review evidence within native input cap and bind verified stdout
+  p-efficiency: 0.75
+  p-friction: 0.65
+  p-skill-candidate: 0.55
+  spore: none
+  receipt-refs: 70e8ac247b6c8a77a94a3107e1a4151858eb173aa82f2c6952a100d37e34ed2c
+  note: Whole historical evidence can be losslessly indexed without hiding product source. Preserve failed builder bytes and modes; verify the exact byte array emitted after validation. Native size admission never means binary-content review or authentication. No new spore/promotion.

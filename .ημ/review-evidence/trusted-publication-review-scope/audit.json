@@ -648,5 +648,47 @@
     ".ημ/review-evidence/trusted-publication-review-scope/index.json",
     ".ημ/review-evidence/trusted-publication-review-scope/inspect.bb",
     ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb"
-  ]
+  ],
+  "closure": {
+    "source_head": "03878641fd55b9327cdb01e8b522a99bab05d587",
+    "receipt_rows": 360,
+    "historical_invalid": 71,
+    "historical_errors": 118,
+    "preservation": {
+      "prefixes": {
+        "receipts.edn": {
+          "base_bytes": 633169,
+          "current_bytes": 636385,
+          "base_sha256": "bcdc565ab5db37af4ded2dc75d2d7088a0a6474035b59444c2319c7481e36f35",
+          "prefix_preserved": true
+        },
+        "kanban/.events/ledger.edn": {
+          "base_bytes": 1862523,
+          "current_bytes": 1866373,
+          "base_sha256": "1f7679df0456c22e1be94e91ee68cca3a376a48c858fde0c3566fb9db0e9307a",
+          "prefix_preserved": true
+        },
+        ".ημ/session-mycology/ledger.md": {
+          "base_bytes": 118674,
+          "current_bytes": 119269,
+          "base_sha256": "98bc7a3c9febdf5a4b730c472f9b249e8130de2384da71062a15cd3b3b70d8fd",
+          "prefix_preserved": true
+        },
+        ".ημ/session-reflections.edn": {
+          "base_bytes": 41622,
+          "current_bytes": 41622,
+          "base_sha256": "76a5109bd3e6f5d40a40b82f9f4b5d21838d832f267929e9d87ce82acf4ab4f3",
+          "prefix_preserved": true
+        }
+      },
+      "cards_preserved": 309,
+      "non_evidence_paths": 90,
+      "qualification": false,
+      "CMS_Cephalon": "paused"
+    },
+    "helper_p2": "verified-byte retention; RED4/50 twofailures, GREEN4/50",
+    "root_capture": ".ημ/stabilization/discovery-20261023/independent-bundle-review/repair",
+    "native_review_binary_credit": false,
+    "qualification": false
+  }
 }
