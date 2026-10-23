@@ -63,19 +63,38 @@
        "Return a result INSTANCE obeying this JSON schema; do not return the schema itself:\n" schema-text
        "\n\nComplete input:\n" text))
 
+(def text-diff-options
+  ["-c" "core.quotePath=true" "diff" "--text" "--full-index"
+   "--no-ext-diff" "--no-textconv" "--no-renames" "--no-color" "--unified=0"
+   "--diff-algorithm=myers" "--no-indent-heuristic" "--inter-hunk-context=0"
+   "--src-prefix=a/" "--dst-prefix=b/" "--no-relative" "-O/dev/null"])
+
+(defn text-patch! [repo base head paths]
+  (host/git! repo (into text-diff-options (concat [base head "--"] paths)) (:diff-bytes law/limits)))
+
 (defn prepare! [opts source-root]
-  (let [repo (host/realpath (get opts "--repo")) base (get opts "--base") head (get opts "--head")
+  (let [repo (host/realpath (get opts "--repo")) base-tip (get opts "--base") head (get opts "--head")
         requested-output (host/absolute (get opts "--output"))
         output-parent (host/realpath (host/parent requested-output))
         output (host/join output-parent (last (str/split requested-output #"/")))]
-    (when-not (and (law/commit? base) (law/commit? head) (not= base head))
-      (host/fail! :immutable-revisions {:base base :head head}))
+    (when-not (and (law/commit? base-tip) (law/commit? head) (not= base-tip head))
+      (host/fail! :immutable-revisions {:base_tip base-tip :head head}))
     (when (or (host/within? repo output) (host/within? output repo)) (host/fail! :output-overlap output))
     (when (host/exists? output) (host/fail! :output-exists output))
-    (doseq [revision [base head]]
+    (doseq [revision [base-tip head]]
       (when-not (= "commit" (str/trim (host/git! repo ["cat-file" "-t" revision] 1000)))
         (host/fail! :not-commit revision)))
-    (let [raw (host/git! repo ["diff" "--raw" "-z" "--no-abbrev" "--no-renames" base head "--"] 1048576)
+    (let [merge-bases (str/split-lines
+                      (str/trim
+                       (try (host/git! repo ["merge-base" "--all" base-tip head] 65536)
+                            (catch :default error
+                              (if (= 1 (get-in (ex-data error) [:details :status]))
+                                (host/fail! :missing-review-base {:base_tip base-tip :head head})
+                                (throw error))))))
+          _ (when-not (and (= 1 (count merge-bases)) (law/commit? (first merge-bases)))
+              (host/fail! :non-unique-review-base {:base_tip base-tip :head head :merge-bases merge-bases}))
+          base (first merge-bases)
+          raw (host/git! repo ["diff" "--raw" "-z" "--no-abbrev" "--no-renames" "--no-relative" base head "--"] 1048576)
           entries (vec (sort-by :path (parse-raw raw)))
           _ (when (or (empty? entries) (> (count entries) (:files law/limits)))
               (host/fail! :changed-file-count (count entries)))
@@ -88,19 +107,16 @@
                                  :base-bytes (host/bytes before) :head-bytes (host/bytes after) :binary? false))) entries)
           patches (mapv (fn [{:keys [path]}]
                           {:path path
-                           :patch (host/git! repo ["diff" "--no-ext-diff" "--no-textconv" "--no-renames"
-                                                  "--no-color" "--unified=0" base head "--" path]
-                                             (:diff-bytes law/limits))}) files)
-          patch (host/git! repo ["diff" "--no-ext-diff" "--no-textconv" "--no-renames"
-                                "--no-color" "--unified=0" base head "--"] (:diff-bytes law/limits))
-          payload {:schema "open-hax.antigravity-input/v1" :base base :head head :model law/model
+                           :patch (text-patch! repo base head [path])}) files)
+          patch (text-patch! repo base head [])
+          payload {:schema "open-hax.antigravity-input/v1" :base base :base_tip base-tip :head head :model law/model
                    :paths (mapv :path files) :diff patch :diff_digest (host/sha256 patch) :files files
                    :scope "Complete changed regular UTF-8 files at both revisions; no unchanged repository context or deterministic test claim."}
           text (host/json payload)
           schema-text (host/read-text (host/join source-root ".github/antigravity/result.schema.json"))
           full-prompt (prompt payload text schema-text)
           stdin (str (host/compact-json (stream/user-message full-prompt)) "\n")
-          input (assoc (select-keys payload [:base :head :paths :diff_digest]) :files files
+          input (assoc (select-keys payload [:base :base_tip :head :paths :diff_digest]) :files files
                        :diff-bytes (host/bytes patch) :input-bytes (host/bytes text)
                        :prompt-bytes (host/bytes full-prompt) :stdin-bytes (host/bytes stdin))
           errors (law/input-errors input)]
@@ -177,7 +193,8 @@
                                   :timeout (+ 10000 (* 1000 seconds)) :max-bytes (:response-bytes law/limits)})]
     (host/write! (host/join output "invocation.json")
                  (host/json {:schema "open-hax.antigravity-invocation/v1" :cli-version law/cli-version
-                             :model law/model :args args :cwd snapshot :base (:base input) :head (:head input)
+                             :model law/model :args args :cwd snapshot
+                             :base (:base input) :base_tip (:base_tip input) :head (:head input)
                              :cli cli :cli-sha256 observed-sha256
                              :bwrap bwrap :bwrap-sha256 (:sha256 bwrap-pin) :bwrap-version sandbox/version
                              :settings-sha256 (host/sha256 settings-text) :effect-policy :strict-deny-overlay

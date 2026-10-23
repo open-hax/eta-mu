@@ -85,8 +85,26 @@ files, scripts, hooks, package managers, dependency installs and configuration
 are never loaded or executed. Git pathspecs are literal; symlinks, submodules,
 binary/NUL bytes, invalid UTF-8, control-character paths and unsupported changes
 fail visibly. Renames are represented as deletion/addition. A sparse checkout
-with available Git objects is sufficient. Supplied full immutable revisions
-bind the review; branch names and the working tree are not reviewed.
+with available Git objects is sufficient. `--base` supplies the immutable PR
+target tip; `--head` supplies the immutable candidate tip. Preparation requires
+exactly one `git merge-base --all` result. Missing or multiple merge bases refuse
+before input preparation or inference. That common ancestor is the canonical
+`base` in the input, native result binding and review artifact, and selects every
+base blob and diff. The supplied target tip remains separately as `base_tip` in
+the complete input, manifest and invocation provenance. Target-only changes are
+excluded from the PR snapshot. Branch names and working-tree contents are not
+reviewed.
+
+Per-path and aggregate patches use the same forced-text, full-index Git format.
+Text admission still rejects binary/NUL and invalid UTF-8 blobs; attributes such
+as `-diff` cannot hide admitted text changes or their added-line coordinates.
+Full object IDs keep the patch digest independent of `core.abbrev`. Patch
+generation also fixes Myers diffing, disabled indent heuristics, zero context
+and inter-hunk context, `a/` and `b/` prefixes, root-relative paths, pathname
+quoting and default path ordering; local settings for those choices cannot
+change the digest. External diff drivers and text conversion remain disabled.
+These options bound the supported format rather than claiming every Git version
+or custom function-header attribute produces identical bytes.
 
 The limits are 256 changed files, 1,048,576 bytes for each base/head blob,
 1,048,576 diff bytes, 4,194,304 serialized input bytes, 4,718,592 complete prompt
@@ -100,7 +118,8 @@ seconds and the maximum is 1,800 seconds; the process supervisor allows another
 The configured bounds are admission ceilings, not a latency guarantee for every
 input within them. Larger changes must be split or use another qualified route.
 
-`input.json` records sorted paths, exact revisions, per-blob IDs/byte counts/
+`input.json` records sorted paths, the canonical base, supplied `base_tip` and
+exact head, per-blob IDs/byte counts/
 SHA-256, file count, full-input and diff byte counts/digests, and limits.
 Prompt and serialized-stdin byte counts/digests also bind the exact transport.
 `input.txt` retains the complete supplied data. The isolated model workspace

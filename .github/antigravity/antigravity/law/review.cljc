@@ -17,9 +17,10 @@
        (not (str/includes? x "\\")) (not (re-find #"[\x00-\x1f\x7f]" x))
        (every? #(not (contains? #{"" "." ".." ".git"} %)) (str/split x #"/"))))
 
-(defn input-errors [{:keys [base head paths files diff_digest diff-bytes input-bytes prompt-bytes stdin-bytes]}]
+(defn input-errors [{:keys [base base_tip head paths files diff_digest diff-bytes input-bytes prompt-bytes stdin-bytes]}]
   (cond-> []
     (not (and (commit? base) (commit? head) (not= base head))) (conj :revisions)
+    (not (commit? base_tip)) (conj :base-tip)
     (not (digest? diff_digest)) (conj :diff-digest)
     (not (and (vector? paths) (seq paths) (every? path? paths)
               (= (count paths) (count (distinct paths)))

@@ -6,7 +6,8 @@
             [antigravity.shape.finish :as finish]
             [cljs.test :as t :refer [deftest is run-tests]]))
 
-(def input {:base (apply str (repeat 40 "a")) :head (apply str (repeat 40 "b"))
+(def input {:base (apply str (repeat 40 "a")) :base_tip (apply str (repeat 40 "d"))
+            :head (apply str (repeat 40 "b"))
             :diff_digest (apply str (repeat 64 "c"))
             :paths ["src/a.cljc"]
             :files [{:path "src/a.cljc" :base-mode "100644" :head-mode "100644"
@@ -24,7 +25,8 @@
   (is (= [] (law/input-errors input)))
   (is (= [] (law/input-errors (-> input (assoc :prompt-bytes 150000 :stdin-bytes 170000)
                                    (assoc-in [:files 0 :head-bytes] 380000)))))
-  (doseq [invalid [(assoc input :head "HEAD") (assoc input :head (:base input))
+  (doseq [invalid [(dissoc input :base_tip) (assoc input :base_tip "main")
+                   (assoc input :head "HEAD") (assoc input :head (:base input))
                    (assoc input :paths ["../escape"]) (assoc input :paths ["src/a.cljc" "src/a.cljc"])
                    (assoc-in input [:files 0 :binary?] true) (assoc-in input [:files 0 :head-mode] "160000")
                    (assoc-in input [:files 0 :head-mode] "120000")

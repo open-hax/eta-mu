@@ -41,7 +41,8 @@ function fixture(t, large = false) {
   fs.writeFileSync(path.join(repo, "nbb.edn"), '{:paths ["/candidate/should/not/load"]}\n');
   git("add", "."); git("commit", "-qm", "head"); const head = git("rev-parse", "HEAD");
   let attempt = 0;
-  const run = (extra = [], behavior = "success", env = {}, expectedDigest = null, asynchronous = false) => {
+  const run = (extra = [], behavior = "success", env = {}, expectedDigest = null, asynchronous = false,
+    revisions = { base, head }) => {
     const output = path.join(home, `output-${++attempt}`);
     fs.writeFileSync(path.join(bin, "agy"), `#!${process.execPath}\n${fakeCli(behavior)}`, { mode: 0o700 });
     const cli = path.join(bin, "agy");
@@ -50,7 +51,7 @@ function fixture(t, large = false) {
     fs.writeFileSync(bwrap, `#!${process.execPath}\n${fakeBwrap}`, { mode: 0o700 });
     const bwrapDigest = createHash("sha256").update(fs.readFileSync(bwrap)).digest("hex");
     const args = ["-cp", directory, path.join(directory, "review.cljs"),
-      "--repo", repo, "--base", base, "--head", head, "--output", output, "--worker-home", home,
+      "--repo", repo, "--base", revisions.base, "--head", revisions.head, "--output", output, "--worker-home", home,
       "--cli", cli, "--cli-sha256", digest, "--bwrap", bwrap, "--bwrap-sha256", bwrapDigest, ...extra];
     const options = { cwd: runtime, env: { ...process.env, ...env, PATH: `${bin}${path.delimiter}${process.env.PATH}` } };
     if (asynchronous) return { child: spawn(nbb, args, { ...options, stdio: "ignore" }), output };
@@ -117,6 +118,11 @@ function processInput(line) {
   if (behavior==="scope") result.reviewed_paths=[];
   if (behavior==="stale") result.head=input.base;
   if (behavior==="line") result.findings=[{path:"code.cljc",line:999,title:"bad line",body:"out of diff",confidence:0.99,evidence:["example"],failure_trace:["example"]}];
+  if (behavior==="grounded") {
+    result.status="findings";
+    result.findings=[{path:"code.cljc",line:1,title:"Changed return value",body:"Zero now returns one.",confidence:0.95,
+      evidence:["The added line returns one."],failure_trace:["Call value", "Observe one instead of zero"]}];
+  }
   if (behavior==="finish-meta" || behavior.startsWith("metadata-")) { result.toolAction="Submit review"; result.toolSummary="Review complete"; }
   if (behavior==="metadata-missing") delete result.toolSummary;
   if (behavior==="metadata-invalid") result.toolSummary=null;
@@ -159,10 +165,90 @@ test("real Git input and native fixture preserve scope, isolation and advisory i
   const manifest = JSON.parse(fs.readFileSync(path.join(result.output, "input.json")));
   assert.equal(manifest["file-count"], 3);
   assert.equal(manifest["input-sha256"], createHash("sha256").update(fs.readFileSync(path.join(result.output, "input.txt"))).digest("hex"));
-  const canonicalDiff = command("git", ["-C", f.repo, "diff", "--no-ext-diff", "--no-textconv", "--no-renames", "--no-color", "--unified=0", f.base, f.head, "--"]).stdout;
+  const canonicalDiff = JSON.parse(fs.readFileSync(path.join(result.output, "input.txt"))).diff;
+  assert.equal(canonicalDiff, `${f.git("diff", "--text", "--full-index", "--unified=0", f.base, f.head, "--")}\n`);
+  assert.match(canonicalDiff, /index [0-9a-f]{40}\.\.[0-9a-f]{40}/);
   assert.equal(review.diff_digest, createHash("sha256").update(canonicalDiff).digest("hex"));
   assert.equal(f.git("status", "--porcelain"), "");
   assert.equal(fs.readFileSync(path.join(f.home, ".gemini", "antigravity-cli", "settings.json"), "utf8"), '{"original":true}');
+});
+
+test("diverged PR base tip preserves provenance while one merge base binds every review artifact", t => {
+  const f = fixture(t);
+  f.git("checkout", "--detach", f.base);
+  fs.writeFileSync(path.join(f.repo, "base-only.txt"), "Only the target branch gained this file.\n");
+  fs.writeFileSync(path.join(f.repo, "code.cljc"), "(defn value [] 9)\n");
+  f.git("add", "."); f.git("commit", "-qm", "target branch advanced");
+  const baseTip = f.git("rev-parse", "HEAD");
+  const result = f.run([], "grounded", {}, null, false, { base: baseTip, head: f.head });
+  assert.equal(result.status, 0, result.stderr);
+  const read = name => JSON.parse(fs.readFileSync(path.join(result.output, name)));
+  const payload = read("input.txt"), manifest = read("input.json"), invocation = read("invocation.json"), review = read("review.json");
+  for (const artifact of [payload, manifest, invocation]) {
+    assert.equal(artifact.base, f.base); assert.equal(artifact.base_tip, baseTip);
+  }
+  assert.equal(review.base, f.base); assert.equal(review.head, f.head);
+  assert.deepEqual(payload.paths, [".agents/agents/evil.md", "code.cljc", "nbb.edn"]);
+  assert.ok(!payload.diff.includes("base-only.txt"));
+  const code = payload.files.find(file => file.path === "code.cljc");
+  assert.equal(code["base-content"], "(defn value [] 0)\n");
+  assert.equal(code["head-content"], "(defn value [] 1)\n");
+  assert.equal(code["base-oid"], f.git("rev-parse", `${f.base}:code.cljc`));
+  assert.match(payload.diff, /\n-\(defn value \[\] 0\)\n\+\(defn value \[\] 1\)/);
+  assert.equal(review.findings[0].line, 1);
+});
+
+test("missing or ambiguous merge bases refuse before preparing any input or invoking the CLI", t => {
+  const f = fixture(t), tree = f.git("rev-parse", `${f.head}^{tree}`), baseTree = f.git("rev-parse", `${f.base}^{tree}`);
+  const unrelated = f.git("commit-tree", baseTree, "-m", "unrelated root");
+  const left = f.git("commit-tree", tree, "-p", f.base, "-m", "left");
+  const right = f.git("commit-tree", tree, "-p", f.base, "-m", "right");
+  const first = f.git("commit-tree", baseTree, "-p", left, "-p", right, "-m", "first merge");
+  const second = f.git("commit-tree", tree, "-p", right, "-p", left, "-m", "second merge");
+  assert.deepEqual(new Set(f.git("merge-base", "--all", first, second).split("\n")), new Set([left, right]));
+  for (const [revisions, reason] of [[{ base: unrelated, head: f.head }, "missing-review-base"],
+    [{ base: first, head: second }, "non-unique-review-base"]]) {
+    const result = f.run(["--prepare-only"], "malformed", {}, null, false, revisions);
+    assert.notEqual(result.status, 0);
+    assert.equal(JSON.parse(result.stderr).message, reason);
+    assert.equal(fs.existsSync(result.output), false, "no artifact or native execution precedes base admission");
+  }
+});
+
+test("working-tree binary attributes cannot hide text patches or reject a genuine added-line finding", t => {
+  const f = fixture(t);
+  fs.writeFileSync(path.join(f.repo, ".gitattributes"), "* -diff\n");
+  const result = f.run([], "grounded");
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(fs.readFileSync(path.join(result.output, "input.txt")));
+  assert.ok(!payload.diff.includes("Binary files"));
+  assert.match(payload.diff, /\n\+\(defn value \[\] 1\)/);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(result.output, "review.json"))).findings[0].line, 1);
+});
+
+test("canonical patch bytes and digests do not depend on abbreviated object IDs or local diff formatting", t => {
+  const f = fixture(t);
+  const prepare = () => {
+    const result = f.run(["--prepare-only"]);
+    assert.equal(result.status, 0, result.stderr);
+    return { payload: JSON.parse(fs.readFileSync(path.join(result.output, "input.txt"))),
+      manifest: JSON.parse(fs.readFileSync(path.join(result.output, "input.json"))) };
+  };
+  f.git("config", "core.abbrev", "7");
+  const first = prepare();
+  f.git("config", "core.abbrev", "12");
+  const second = prepare();
+  assert.equal(second.payload.diff, first.payload.diff);
+  assert.equal(second.manifest["diff-sha256"], first.manifest["diff-sha256"]);
+  assert.match(first.payload.diff, /index [0-9a-f]{40}\.\.[0-9a-f]{40}/);
+  const order = path.join(f.root, "diff-order");
+  fs.writeFileSync(order, "nbb.edn\ncode.cljc\n.agents/*\n");
+  for (const [key, value] of [["diff.algorithm", "histogram"], ["diff.indentHeuristic", "true"],
+    ["diff.noprefix", "true"], ["diff.mnemonicPrefix", "true"], ["diff.orderFile", order],
+    ["diff.interHunkContext", "5"], ["diff.relative", "true"]]) f.git("config", key, value);
+  const configured = prepare();
+  assert.equal(configured.payload.diff, first.payload.diff);
+  assert.equal(configured.manifest["diff-sha256"], first.manifest["diff-sha256"]);
 });
 
 test("complete UTF-8 prompt above128KiB and a350KiB-class blob travel only through held-open stdin", t => {
