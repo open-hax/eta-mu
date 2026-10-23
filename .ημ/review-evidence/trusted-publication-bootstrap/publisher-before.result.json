@@ -1,9 +1,0 @@
-{
-  "argv": [
-    "node",
-    "packages/rheos/dist/cli.cjs",
-    "read-task",
-    "ed4e2a2a-6055-4d53-9cea-f3971c707551"
-  ],
-  "exit_code": 0
-}

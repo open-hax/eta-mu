@@ -1,9 +1,0 @@
-{
-  "head": "6fa625cd66658d850241d0d3f762ef5eb6ba8746",
-  "scope": "Independent adversarial inline native App conflict comparison; existing publisher card; no authority/installation qualification change",
-  "paths": [
-    "packages/eta-mu/src/cljs/eta_mu/domain/review_readback.cljc",
-    ".github/scripts/opencode_review_readback_test.cljs"
-  ],
-  "limit": "original_commit_id remains raw; existing publication law compares current commit_id/line, not a new original_commit_id condition."
-}

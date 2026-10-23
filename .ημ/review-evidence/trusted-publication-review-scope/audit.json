@@ -1,0 +1,652 @@
+{
+  "schema": "eta-review-evidence-consolidation-audit-v1",
+  "source_head": "db99b1682c94ecdf9f8b239709dd44cb6101c7da",
+  "base": "7112c36440d180ca183d6a3f89661cee161fdae5",
+  "saved_bundle": ".ημ/review-evidence/trusted-publication-review-scope/bundle.1b5524abf5cbc787eb0f6da6cbf0f5a4c234a62338b86879a5398d0ce616f1fa.json.gz",
+  "bundle_sha256": "1b5524abf5cbc787eb0f6da6cbf0f5a4c234a62338b86879a5398d0ce616f1fa",
+  "members": 498,
+  "original_members": 409,
+  "original_bytes": 13374122,
+  "all_member_bytes": 51713871,
+  "compressed_bytes": 30424227,
+  "decompressed_bytes": 69121681,
+  "external_failed_archives": [
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/attempt-20261023/failed-bundle.3b2da80b2ba4057201bd7234f8cde42b179b1bc70ca2c7fcaf45558d8e50a2d6.json.gz",
+      "file": "failed.3b2da80b2ba4057201bd7234f8cde42b179b1bc70ca2c7fcaf45558d8e50a2d6.json.gz",
+      "bytes": 15003819,
+      "sha256": "3b2da80b2ba4057201bd7234f8cde42b179b1bc70ca2c7fcaf45558d8e50a2d6",
+      "mode": "100644",
+      "git_blob": "c76bd56f4dc6e69202ea2494d694486922af3dd6",
+      "origin": "failed-pre-removal-saved-bundle"
+    },
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/attempt-20261023/failed-bundle.fda4f4acaf63e96f7a68fd431ec72dbb0514b997b953c84885566a4b115b70b4.json.gz",
+      "file": "failed.fda4f4acaf63e96f7a68fd431ec72dbb0514b997b953c84885566a4b115b70b4.json.gz",
+      "bytes": 30194904,
+      "sha256": "fda4f4acaf63e96f7a68fd431ec72dbb0514b997b953c84885566a4b115b70b4",
+      "mode": "100644",
+      "git_blob": "8479bc6dc7b083b8bc1674396a339cf4b1d2970d",
+      "origin": "failed-pre-removal-saved-bundle"
+    }
+  ],
+  "original_inner_archives": 22,
+  "original_mode_counts": {
+    "100644": 408,
+    "100755": 1
+  },
+  "full_saved_roundtrip": true,
+  "original_git_retrieval_and_modes": true,
+  "canonical_freeze": {
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/README.md": {
+      "sha256": "db5f920322f20e6f82192894617c1cea8c5ad9705b575877767a770e1ac56067",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/domain/review.cljc": {
+      "sha256": "0df06e46f9307f9a80f4dd70013d6fb8f869a99ddff99fc00cf66c0e4810b466",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/extern/review_invocation.cljs": {
+      "sha256": "17dda3b9121e4ab96829a5f3ab3d181ca267ca95bd1aba6c2ac33ce47ef3a0ae",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/law/review_invocation.cljc": {
+      "sha256": "7a97ff024da488b6b847d1af5053508b18c6d135ad19841bf0faa4ea3dafd133",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/shape/git_diff_path.cljc": {
+      "sha256": "168a2ab5e16cdd377e1749fbb1278ce6cb82ecd0676968dc69e8e38d83e9dfba",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/publish-opencode-review.cjs": {
+      "sha256": "bb75bc57d8eeaf7edbd77f34e9a4da2d319617d06809f9aadfb0d94e7ae6c2c9",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/review-invocation.cjs": {
+      "sha256": "d9fea235fddec9581ba1be959e596f32b82588f78cef5fd76d55f04d24b91030",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/run-opencode-review-recovery.mjs": {
+      "sha256": "7e12b32abebf27b1e87bb9767bcf217caf8ce1cc0a7a05515a67f91b9005e133",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/runtime.json": {
+      "sha256": "1fd734d89c4b18dce24a6a87c6024561382b52531285b020fded67e2410d6e8a",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode-code-review-workflow.test.mjs": {
+      "sha256": "c5f3545d1037408b69a930d8fa72fe7318054b82d55a7e9b05564e2273322c9e",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode-review-intent-bootstrap.test.mjs": {
+      "sha256": "dc0ab7bde8b81f5eacdfe2131f0c2c0ca1a7e0856136b4f154f95c20e04d73d7",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_archive_test.cljs": {
+      "sha256": "869ba448c1bb347699e58ab9f5c9972455a4e808b60bb7b522de458814eedc17",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_collection_test.cljs": {
+      "sha256": "e4535847d9ad05388c661542f85a9e31fb4f46bd8f9e13a00988ebe14b712503",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_intent_process_test.mjs": {
+      "sha256": "1889d1caad0e16a9b4d762a7fb7b47fc32687b28bb912da42c604184ef94b722",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_intent_test.cljs": {
+      "sha256": "fc4a843b0354aedafc747d2ed9199708e4ffa7b5d03a178707fe7c4e853d2aa0",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_intent_uncertain_test.mjs": {
+      "sha256": "02f8d03e28a23de05bfd57d59d758cac9dd183c98eafa46ab34ceb1776fd8916",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_publish_test.cljs": {
+      "sha256": "74c95f5fc20624529bd5e80bd518df4e724eb97be72dea49ea15a59c199cb3df",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_readback_test.cljs": {
+      "sha256": "8f724fe6fdc4d414d73ed3605b0e06bde5a8a94b9b3de64b3622bc88f4786682",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_source_test.cljs": {
+      "sha256": "1f949ebc77940855b813c2967dff9389f06d205c53e93dc0615436ae038fe2e3",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_verification_test.cljs": {
+      "sha256": "3dd1bfbeb87207720823afe50217956931a8ead7de6a5dcecc6c73970124573d",
+      "mode": "100644"
+    },
+    ".github/workflows/opencode-code-review.yml": {
+      "sha256": "ff76052bada6c56797901a796b21393c3b2a5c2a2b1b7bd1e302ade38b0551dd",
+      "mode": "100644"
+    },
+    ".github/workflows/rheos-github-sync-ci.yml": {
+      "sha256": "1f3a6e83b950164037679ae4ed5cc7ed655ee0f8e41b0e1d7a3ac983af21e6c4",
+      "mode": "100644"
+    },
+    ".github/workflows/rheos.yml": {
+      "sha256": "03d1e750cf641feae5a1dd315fa5d046801c402997890c47bbf0ae7dced39df8",
+      "mode": "100644"
+    },
+    ".github/workflows/sandbox-bundle.yml": {
+      "sha256": "81b24e3db9b75279ae5fbe2471868650afd7762bed728eb5b248677fd5e7b779",
+      "mode": "100644"
+    },
+    ".github/workflows/sol-ci.yml": {
+      "sha256": "6e547cd476d7ecc33c1e0e8cca5b4ee79b91ea655398b6d91848b14e261288b7",
+      "mode": "100644"
+    },
+    ".ημ/session-mycology/ledger.md": {
+      "sha256": "98bc7a3c9febdf5a4b730c472f9b249e8130de2384da71062a15cd3b3b70d8fd",
+      "mode": "100644"
+    },
+    ".ημ/session-reflections.edn": {
+      "sha256": "76a5109bd3e6f5d40a40b82f9f4b5d21838d832f267929e9d87ce82acf4ab4f3",
+      "mode": "100644"
+    },
+    "contracts/workflows/.gates.edn": {
+      "sha256": "31ae91cdf914a6dfed64b6a036323d9e7cd22c38e58c393212e84e850e42cfdb",
+      "mode": "100644"
+    },
+    "contracts/workflows/ci.edn": {
+      "sha256": "e76878328cf271a0b8fc9a8043e4c73254c00579253a7d2100239c5e39eab54b",
+      "mode": "100644"
+    },
+    "contracts/workflows/packages.edn": {
+      "sha256": "9119c1732847a10d76116559d05df71b3b86c86a472b7bcf94c92e4ed76a7fce",
+      "mode": "100644"
+    },
+    "contracts/workflows/resources.edn": {
+      "sha256": "5b6333e6b45496181c5ae90a7cc455d444a20a9bd5152e031d5d366bf4ea5eae",
+      "mode": "100644"
+    },
+    "docs/agent-workflows.md": {
+      "sha256": "a808d760c063807a2c602a99eff8ef4a3c2ab5abf81bf4b6bc688c07aa3e5b04",
+      "mode": "100644"
+    },
+    "kanban/.events/ledger.edn": {
+      "sha256": "0ee2bb2c2cdd2aa665d8fd25827fc2c42fdd20ddd66a082b4250d45f202b71f5",
+      "mode": "100644"
+    },
+    "kanban/.kanban/board.json": {
+      "sha256": "6860076cfd81dbace9c70a1aa8f2e9bf33514f08c9c968741a6062398aa7d26e",
+      "mode": "100644"
+    },
+    "kanban/epics/make-reusable-opencode-review-gates-truth-preserving.md": {
+      "sha256": "2e84c7775a5a47987d8c04267be73e18dfb219ecb52d0c563f1feb382c7fb50a",
+      "mode": "100644"
+    },
+    "kanban/epics/prove-reusable-review-gate-red-path-in-a-fixture-caller.md": {
+      "sha256": "9f8d5df92d7dd81a902d8193f205d695a16c252984a95da4f38a37241babfbff",
+      "mode": "100644"
+    },
+    "kanban/tasks/independently-admit-and-publish-review-evidence-from-trusted-default-code-1c707551.md": {
+      "sha256": "c78fa79a28008091196346334ac99ba6a4897e68d94cffeb6da2a0fe7254a601",
+      "mode": "100644"
+    },
+    "kanban/tasks/ledger-events-persist-absolute-source-paths-from-the-writer-s-checkout.md": {
+      "sha256": "205c8a4f8e2e9c7ad170e2d15f0a89f633a0c636262e7a0bd1bbc88064bf43f5",
+      "mode": "100644"
+    },
+    "kanban/tasks/produce-anonymous-review-evidence-without-publication-credentials-c7d20dbb.md": {
+      "sha256": "58ac88267adfca6d6436c96316e6d408f88d407eb041998e3843f81e5441fda0",
+      "mode": "100644"
+    },
+    "kanban/tasks/rheos-canonical-task-fold-and-snapshots.md": {
+      "sha256": "94fa35669a8768cccf3b99d7506e003651d1c1cdd0ba286cf604927bb08ea2ce",
+      "mode": "100644"
+    },
+    "kanban/tasks/rheos-ci-does-not-gate-build-warnings.md": {
+      "sha256": "69a9c95ba3ebd3f54242377e74d6928ae0c01ef7d984d88cb04cf2fc87535ebb",
+      "mode": "100644"
+    },
+    "kanban/tasks/run-candidate-deterministic-ci-without-signing-credentials-bdd97334.md": {
+      "sha256": "000e911805a59788f64084f8a68f5bce7ab647229fa470835938758aa2e2f9de",
+      "mode": "100644"
+    },
+    "packages/eta-mu/commands/workflows_test.cljs": {
+      "sha256": "6d9a5c4984d269fb4035844aaa2a3e4423eb64f5a25ff082e69e08dd923aed30",
+      "mode": "100644"
+    },
+    "packages/eta-mu/intent-runtime/barrier_entry.cljs": {
+      "sha256": "900b03423f1cd6ace5b1879b89744269a6ed118636fdf3910938de40c0403a48",
+      "mode": "100644"
+    },
+    "packages/eta-mu/intent-runtime/nbb.edn": {
+      "sha256": "496c521ec79e0254bb82a1454a5b5e44dc344ae639508fabf9a022b12420b01b",
+      "mode": "100644"
+    },
+    "packages/eta-mu/intent-runtime/test_entry.cljs": {
+      "sha256": "344cc6622605a727301ebcfcdfab7d842342de3a6fc806218d5da7c1b419ba2f",
+      "mode": "100644"
+    },
+    "packages/eta-mu/intent-runtime/worker_entry.cljs": {
+      "sha256": "87515a2856d86c4a5470d965baf95d41a51b1e0e7adc99434a57ceb2f3405deb",
+      "mode": "100644"
+    },
+    "packages/eta-mu/package.json": {
+      "sha256": "bb7cb9caf07dfb80fd02606d24c0cbf77275cdea8d795808fb04f30c9124bb06",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_archive.cljc": {
+      "sha256": "e2a7f3087b00b4dbac2ee48b5c16829e2e28dd9d68161b4c6698b8f66905b23f",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": {
+      "sha256": "8df8fc390969dde4f5668ecb55bc8ae026beda85803367820e4fdbf1df9b4274",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": {
+      "sha256": "ffc573a74325acbd354630ff9f187ec779418316f7df2c9dd2f91d2e7257b6eb",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": {
+      "sha256": "3c835f42bec62425e2d903a4464b6eed75568913c0d0dc37bfd66b0b70ea9b46",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_readback.cljc": {
+      "sha256": "2383bd89b917afa144aaeedd67e02d8525ae515a07f7f1fd5ba7592987cbbb62",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_source.cljc": {
+      "sha256": "c2ff6731ed49e2ed035fd4987ae8fe628b432404fd095f45647ae20d4152e09f",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_verification.cljc": {
+      "sha256": "23ff9f3da9633b43f7eef3870988c158816420109a2ce9f21fafac253dac6ba1",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": {
+      "sha256": "a38618278378aad23fffe5d548b8b5f755d33aafc75f715f7f40a141451283d0",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_collection.cljs": {
+      "sha256": "b8c568716088c9d2a8e4a3f0f743a696601993d5f878328aaa9045176bce1bc1",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_intent.cljs": {
+      "sha256": "98c284133dbd3e7eab236a3e566e60f817244f3b6e77e4661e12a285d04df773",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_source.cljs": {
+      "sha256": "82d3855c84220d9346e3e79b7e4615e48e7cf552cdde089e1040635acad1aa34",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": {
+      "sha256": "596087fc00f5236c7b2b820415d0a30d93df43f17bb0ae71ca289d22d7568015",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_archive.cljs": {
+      "sha256": "844afd9ffb0842397794da93cde65ea80385eaafc830489439453b621763fd49",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_collection.cljs": {
+      "sha256": "b38fe7488d74131e7f05dbb9b0d7377f2dd267070bb98a0a19c25b5a7598ddef",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": {
+      "sha256": "0f500f32e6fe5d78f729cb1bdf0ee79634f73e68d629b35bbd6696cf912fc729",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_intent_worker.cljs": {
+      "sha256": "808be56a3d64d8ccfb4824f728b35798f8e449b5d21d6632875cc3708efcc20b",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_readback.cljs": {
+      "sha256": "bb9596f674f1d2efae12437751cd7078c4704cf370a2339767bfbb2225a001e3",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_source.cljs": {
+      "sha256": "b616b4c806b623a7c559332698c2059a2a88706b153a09701df0122f770f4cc8",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs": {
+      "sha256": "30e227d21a94bdebbe28bd7c166f19be7af2a5a88a39c596a1db478fc0babca5",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/law/review_archive.cljc": {
+      "sha256": "bbdd77f18eb65cd8a740bb8ca648cf25695354dd8c92d2dfe0f8d559ede8095b",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/law/review_collection.cljc": {
+      "sha256": "9a483954bc4a3ca9072b1c4a7aa3c1cf85148bb66a195345d8b5893de6a6cc2a",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": {
+      "sha256": "e432c4045b11aec9d56a69a1ff4ec8fb1ef46007f6ae6fc356e029836fd5b8ff",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/law/review_publication.cljc": {
+      "sha256": "1efdd21e0142ddb3e12195d3b9c385b7a2c8dbd29f6a1197ac1708bfdad706d1",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/law/review_readback.cljc": {
+      "sha256": "e573a29dd4a63d6124062c59eb791bf01219be0544bde2259ea0963469bd7f89",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/law/review_source.cljc": {
+      "sha256": "e7b7fdd895bb49c2e58d7e020651ae5a1f8171229802075cb1ea2db49967660a",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/law/review_verification.cljc": {
+      "sha256": "844d08578ed1a38788ea3b77ffccd07e5870733ac6829067dcf5137e3dcf20ae",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_archive.cljc": {
+      "sha256": "b7c18347dfe6e99a4a4f05274bb2cede64dfc4fd0e5844bba568649f938967b0",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_collection.cljc": {
+      "sha256": "750a0a304c6a0ad12ca37936f8684b5c18c3c45d8997c441756098da9dedcf51",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_intent.cljc": {
+      "sha256": "f18b48bc0243291021849f93fb4dd7ecb4b483d3e70426c71daf62a6f8e9e72f",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_readback.cljc": {
+      "sha256": "d41eb3d7520e0e7cf3728b78bc2d78cc459618cf40ccc59c15f2109bbf0ba680",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_source.cljc": {
+      "sha256": "e85e8f51a71f0585ac3e472d680832d29273a6678888f343546ff186dce03038",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_verification.cljc": {
+      "sha256": "3c0db80c50927f3354bfb281a76f77f90c2b6d6298bd46c06a334ffd60871550",
+      "mode": "100644"
+    },
+    "packages/eta-mu/test/cljs/eta_mu/review_intent_worker_barrier.cljs": {
+      "sha256": "cc04fb97ccc4a7a017525bc5059adbcc4bc6d56c241d9265db437f9420a34e42",
+      "mode": "100644"
+    },
+    "packages/rheos/src/rheos/backend/domain/kanban_projection.cljc": {
+      "sha256": "af3a9858f0c0095e92f9e6a21a0e7165d8456291cd002199e35fb630b2ff6272",
+      "mode": "100644"
+    },
+    "packages/rheos/src/rheos/backend/extern/path.cljs": {
+      "sha256": "4d45831c8240ca1976c1e6e77d30e6086b8df5074b8c5f19c0a4895cba6450fc",
+      "mode": "100644"
+    },
+    "packages/rheos/src/rheos/backend/infra/cli.cljs": {
+      "sha256": "6ea75966933d5fd89f6968307a69ce1a919ac78cac3fa6b2ea5fc07135118f68",
+      "mode": "100644"
+    },
+    "packages/rheos/test/rheos/backend/domain/kanban_projection_test.cljc": {
+      "sha256": "814f031ad3cf0a16843fc2cbfbd226ddac50ed3a87175b65198cd2c4d3d5fec7",
+      "mode": "100644"
+    },
+    "packages/rheos/test/rheos/backend/infra/cli_test.cljs": {
+      "sha256": "e9ead8dc713582a63ccbc14b139199b23e9ccdfacb4a6359351cfc0d2af49f1f",
+      "mode": "100644"
+    },
+    "packages/rheos/test/rheos/backend/infra/task_store_test.cljs": {
+      "sha256": "f0d349b49361ca493023e31b7f34dbc70b50cfe036488ddc89c8f3cfe36d3d85",
+      "mode": "100644"
+    },
+    "pnpm-lock.yaml": {
+      "sha256": "f3666e7872e6ff96de9d0ac650b8b7872f37de1c62df5544930dcaf0975fbd9d",
+      "mode": "100644"
+    },
+    "receipts.edn": {
+      "sha256": "bcdc565ab5db37af4ded2dc75d2d7088a0a6474035b59444c2319c7481e36f35",
+      "mode": "100644"
+    },
+    "scripts/test.bb": {
+      "sha256": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+      "mode": "100755"
+    }
+  },
+  "pre_removal_verify": {
+    "argv": [
+      "bb",
+      ".ημ/review-evidence/trusted-publication-review-scope/inspect.bb"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"verified\":true,\"source_head\":\"db99b1682c94ecdf9f8b239709dd44cb6101c7da\",\"members\":494,\"bytes\":81577860}\n",
+    "stderr": ""
+  },
+  "original_changed_paths": 499,
+  "retained_live": [
+    ".ημ/review-evidence/trusted-publication-core/a037f990af6bba87fad5b1e10ce3d3ae54f2c313aa6ae0ac4dc23803b331ee9b.json.gz",
+    ".ημ/review-evidence/trusted-publication-readback/checkpoint.json"
+  ],
+  "binary_review_disclosure": "Lossless capture custody only. Binary contents are not natively CodeRabbit-reviewed; no approval, authentication, adoption or full custody qualification.",
+  "provider_included_paths": "Unknown; no filtering assumptions used",
+  "required_fixture_before": {
+    "command": "bb scripts/test.bb --only review-verification",
+    "tests": 2,
+    "assertions": 104,
+    "failures": 0,
+    "errors": 0
+  },
+  "helper_controls": {
+    "command": "bb .ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb",
+    "tests": 3,
+    "assertions": 48,
+    "failures": 0,
+    "errors": 0
+  },
+  "scoped_lint": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "stage": "frozen-uncommitted",
+  "repair_saved_verify": {
+    "argv": [
+      "bb",
+      ".ημ/review-evidence/trusted-publication-review-scope/inspect.bb"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"verified\":true,\"source_head\":\"db99b1682c94ecdf9f8b239709dd44cb6101c7da\",\"members\":500,\"bytes\":96912594}\n",
+    "stderr": ""
+  },
+  "repair_new_members": [
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/attempt-20261023/consolidation-repair/count-gate-failure.json",
+      "bytes": 373,
+      "sha256": "63e2c2172609b91c056943db77ababbb9d9221a45defc35d5d0d5904e6215915",
+      "mode": "100644",
+      "git_blob": "499e939e3ac674c793358e8e30a14af061d11651",
+      "origin": "current-capture"
+    },
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/attempt-20261023/consolidation-repair/previous-audit.json",
+      "bytes": 19571,
+      "sha256": "1b5364dfacc72b91b3e3487ac536dbde673968f0e849a751ae01a947028826f5",
+      "mode": "100644",
+      "git_blob": "142b9e922ad989c2793debb0c50df3977790ded9",
+      "origin": "current-capture"
+    },
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/attempt-20261023/consolidation-repair/previous-index.json",
+      "bytes": 198107,
+      "sha256": "7fe0eea8e8f0b865b10369abc321a45a0f8aba6be69a162c88cc704c39cdcb34",
+      "mode": "100644",
+      "git_blob": "e8cfa9357d1d1f4db77c69e69d3681f9987c41ae",
+      "origin": "current-capture"
+    },
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/attempt-20261023/consolidation-repair/repair.py",
+      "bytes": 5403,
+      "sha256": "965758242b3926704a90900243cd82d99bc35e06f20d922194af9f73427f7624",
+      "mode": "100644",
+      "git_blob": "f37502c627957f6e83e18571cbbb13f0c485fa54",
+      "origin": "current-capture"
+    },
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/attempt-20261023/inspection-controls/bundle.4be3e8f3bc7eeceb8a4d85a9d04ba50fd6f907f0b61676504625b9307c125a2a.json.gz",
+      "bytes": 268,
+      "sha256": "4be3e8f3bc7eeceb8a4d85a9d04ba50fd6f907f0b61676504625b9307c125a2a",
+      "mode": "100644",
+      "git_blob": "8312e8cf5fb16fb4a8fed05c6c3b2975847cec34",
+      "origin": "current-capture"
+    },
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/bundle.e7b249a9fb4d04991fb510beaac5193eb8a698b2a4a9f9fe8db6f3951b99bb69.json.gz",
+      "bytes": 15111012,
+      "sha256": "e7b249a9fb4d04991fb510beaac5193eb8a698b2a4a9f9fe8db6f3951b99bb69",
+      "mode": "100644",
+      "git_blob": "526f2b5065ff163215d8e906cccec73084f953d5",
+      "origin": "current-capture"
+    }
+  ],
+  "post_removal_verify": {
+    "argv": [
+      "bb",
+      ".ημ/review-evidence/trusted-publication-review-scope/inspect.bb"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"verified\":true,\"source_head\":\"db99b1682c94ecdf9f8b239709dd44cb6101c7da\",\"members\":500,\"bytes\":96912594}\n",
+    "stderr": ""
+  },
+  "post_removal_fixture": {
+    "argv": [
+      "bb",
+      "scripts/test.bb",
+      "--only",
+      "review-verification"
+    ],
+    "exit_code": 0,
+    "stdout": "\n============================================================\nTesting: review-verification\n============================================================\n\n\nTesting opencode-review-verification-test\n\nRan 2 tests containing 104 assertions.\n0 failures, 0 errors.\n\n✓ review-verification passed (49.5s)\n\n============================================================\nTEST SUMMARY\n============================================================\n\n  ✓ review-verification (49.5s)\n\nAll suites passed!\n",
+    "stderr": ""
+  },
+  "post_removal_controls": {
+    "argv": [
+      "bb",
+      ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb"
+    ],
+    "exit_code": 0,
+    "stdout": "\nTesting test-inspection\n\nRan 3 tests containing 48 assertions.\n0 failures, 0 errors.\n",
+    "stderr": ""
+  },
+  "post_removal_lint": {
+    "argv": [
+      "clj-kondo",
+      "--lint",
+      ".ημ/review-evidence/trusted-publication-review-scope/inspect.bb",
+      ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb"
+    ],
+    "exit_code": 0,
+    "stdout": "linting took 82ms, errors: 0, warnings: 0\n",
+    "stderr": ""
+  },
+  "prospective_changed_paths": [
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/README.md",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/domain/review.cljc",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/extern/review_invocation.cljs",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/law/review_invocation.cljc",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/shape/git_diff_path.cljc",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/publish-opencode-review.cjs",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/review-invocation.cjs",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/run-opencode-review-recovery.mjs",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/runtime.json",
+    ".github/scripts/opencode-code-review-workflow.test.mjs",
+    ".github/scripts/opencode-review-intent-bootstrap.test.mjs",
+    ".github/scripts/opencode_review_archive_test.cljs",
+    ".github/scripts/opencode_review_collection_test.cljs",
+    ".github/scripts/opencode_review_intent_process_test.mjs",
+    ".github/scripts/opencode_review_intent_test.cljs",
+    ".github/scripts/opencode_review_intent_uncertain_test.mjs",
+    ".github/scripts/opencode_review_publish_test.cljs",
+    ".github/scripts/opencode_review_readback_test.cljs",
+    ".github/scripts/opencode_review_source_test.cljs",
+    ".github/scripts/opencode_review_verification_test.cljs",
+    ".github/workflows/opencode-code-review.yml",
+    ".github/workflows/rheos-github-sync-ci.yml",
+    ".github/workflows/rheos.yml",
+    ".github/workflows/sandbox-bundle.yml",
+    ".github/workflows/sol-ci.yml",
+    ".ημ/review-evidence/trusted-publication-core/a037f990af6bba87fad5b1e10ce3d3ae54f2c313aa6ae0ac4dc23803b331ee9b.json.gz",
+    ".ημ/review-evidence/trusted-publication-readback/checkpoint.json",
+    ".ημ/review-evidence/trusted-publication-review-scope/README.md",
+    ".ημ/review-evidence/trusted-publication-review-scope/audit.json",
+    ".ημ/review-evidence/trusted-publication-review-scope/bundle.1b5524abf5cbc787eb0f6da6cbf0f5a4c234a62338b86879a5398d0ce616f1fa.json.gz",
+    ".ημ/review-evidence/trusted-publication-review-scope/failed.3b2da80b2ba4057201bd7234f8cde42b179b1bc70ca2c7fcaf45558d8e50a2d6.json.gz",
+    ".ημ/review-evidence/trusted-publication-review-scope/failed.fda4f4acaf63e96f7a68fd431ec72dbb0514b997b953c84885566a4b115b70b4.json.gz",
+    ".ημ/review-evidence/trusted-publication-review-scope/index.json",
+    ".ημ/review-evidence/trusted-publication-review-scope/inspect.bb",
+    ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb",
+    ".ημ/session-mycology/ledger.md",
+    ".ημ/session-reflections.edn",
+    "contracts/workflows/.gates.edn",
+    "contracts/workflows/ci.edn",
+    "contracts/workflows/packages.edn",
+    "contracts/workflows/resources.edn",
+    "docs/agent-workflows.md",
+    "kanban/.events/ledger.edn",
+    "kanban/.kanban/board.json",
+    "kanban/epics/make-reusable-opencode-review-gates-truth-preserving.md",
+    "kanban/epics/prove-reusable-review-gate-red-path-in-a-fixture-caller.md",
+    "kanban/tasks/independently-admit-and-publish-review-evidence-from-trusted-default-code-1c707551.md",
+    "kanban/tasks/ledger-events-persist-absolute-source-paths-from-the-writer-s-checkout.md",
+    "kanban/tasks/produce-anonymous-review-evidence-without-publication-credentials-c7d20dbb.md",
+    "kanban/tasks/rheos-canonical-task-fold-and-snapshots.md",
+    "kanban/tasks/rheos-ci-does-not-gate-build-warnings.md",
+    "kanban/tasks/run-candidate-deterministic-ci-without-signing-credentials-bdd97334.md",
+    "packages/eta-mu/commands/workflows_test.cljs",
+    "packages/eta-mu/intent-runtime/barrier_entry.cljs",
+    "packages/eta-mu/intent-runtime/nbb.edn",
+    "packages/eta-mu/intent-runtime/test_entry.cljs",
+    "packages/eta-mu/intent-runtime/worker_entry.cljs",
+    "packages/eta-mu/package.json",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_archive.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_readback.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_source.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_verification.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_collection.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_intent.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_source.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_archive.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_collection.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_intent_worker.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_readback.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_source.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_archive.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_collection.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_publication.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_readback.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_source.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_verification.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_archive.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_collection.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_intent.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_readback.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_source.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_verification.cljc",
+    "packages/eta-mu/test/cljs/eta_mu/review_intent_worker_barrier.cljs",
+    "packages/rheos/src/rheos/backend/domain/kanban_projection.cljc",
+    "packages/rheos/src/rheos/backend/extern/path.cljs",
+    "packages/rheos/src/rheos/backend/infra/cli.cljs",
+    "packages/rheos/test/rheos/backend/domain/kanban_projection_test.cljc",
+    "packages/rheos/test/rheos/backend/infra/cli_test.cljs",
+    "packages/rheos/test/rheos/backend/infra/task_store_test.cljs",
+    "pnpm-lock.yaml",
+    "receipts.edn",
+    "scripts/test.bb"
+  ],
+  "prospective_changed_count": 100,
+  "canonical_paths_unchanged_by_worker": true,
+  "final_retained_evidence_paths": [
+    ".ημ/review-evidence/trusted-publication-core/a037f990af6bba87fad5b1e10ce3d3ae54f2c313aa6ae0ac4dc23803b331ee9b.json.gz",
+    ".ημ/review-evidence/trusted-publication-readback/checkpoint.json",
+    ".ημ/review-evidence/trusted-publication-review-scope/README.md",
+    ".ημ/review-evidence/trusted-publication-review-scope/audit.json",
+    ".ημ/review-evidence/trusted-publication-review-scope/bundle.1b5524abf5cbc787eb0f6da6cbf0f5a4c234a62338b86879a5398d0ce616f1fa.json.gz",
+    ".ημ/review-evidence/trusted-publication-review-scope/failed.3b2da80b2ba4057201bd7234f8cde42b179b1bc70ca2c7fcaf45558d8e50a2d6.json.gz",
+    ".ημ/review-evidence/trusted-publication-review-scope/failed.fda4f4acaf63e96f7a68fd431ec72dbb0514b997b953c84885566a4b115b70b4.json.gz",
+    ".ημ/review-evidence/trusted-publication-review-scope/index.json",
+    ".ημ/review-evidence/trusted-publication-review-scope/inspect.bb",
+    ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb"
+  ]
+}

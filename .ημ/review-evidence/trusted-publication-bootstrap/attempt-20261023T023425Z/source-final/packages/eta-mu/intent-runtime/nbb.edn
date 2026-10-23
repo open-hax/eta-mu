@@ -1,5 +1,0 @@
-;; Fixed worker-local NBB source graph for the Clio publication capability.
-;; Ordinary package commands must not inherit this Maven/Babashka bootstrap.
-;; The dependency alias itself is pinned in package.json and pnpm-lock.yaml.
-{:paths ["../src/cljs" "../node_modules/clio-publication-kernel/src"]
- :deps {metosin/malli {:mvn/version "0.16.4"}}}

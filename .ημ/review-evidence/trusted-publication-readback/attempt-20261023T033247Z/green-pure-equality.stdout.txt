@@ -1,1 +1,0 @@
-PASS equal actual portable values: 8

@@ -1,6 +1,0 @@
-{:event/type :eta-mu.bus/error, :error/type :receipt-river/invalid-edn, :error/details {:line-number 101, :exception/name "Error", :exception/message "Invalid number: 2026-07-12T053333Z."}}
-{:event/type :eta-mu.bus/error, :error/type :receipt-river/invalid-edn, :error/details {:line-number 102, :exception/name "Error", :exception/message "Invalid symbol: branch:."}}
-{:event/type :eta-mu.bus/error, :error/type :receipt-river/invalid-edn, :error/details {:line-number 103, :exception/name "Error", :exception/message "Invalid symbol: tag:."}}
-{:event/type :eta-mu.bus/error, :error/type :receipt-river/invalid-edn, :error/details {:line-number 104, :exception/name "Error", :exception/message "Invalid symbol: ts-lines:."}}
-{:event/type :eta-mu.bus/error, :error/type :receipt-river/invalid-edn, :error/details {:line-number 105, :exception/name "Error", :exception/message "Invalid symbol: files:."}}
-{:event/type :eta-mu.bus/error, :error/type :receipt-river/invalid-edn, :error/details {:line-number 106, :exception/name "Error", :exception/message "Invalid symbol: note:."}}

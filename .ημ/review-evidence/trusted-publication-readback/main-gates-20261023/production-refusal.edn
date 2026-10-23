@@ -1,1 +1,0 @@
-{:result {:status :refused, :reason :registry, :qualification :unsupported, :effects []}, :get-calls []}

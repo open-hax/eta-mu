@@ -1,2 +1,0 @@
-
-✗ review-publication-readback failed (exit code 1, 0.6s)

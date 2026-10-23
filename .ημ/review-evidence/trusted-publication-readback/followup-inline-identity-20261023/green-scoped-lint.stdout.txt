@@ -1,1 +1,0 @@
-linting took 109ms, errors: 0, warnings: 0

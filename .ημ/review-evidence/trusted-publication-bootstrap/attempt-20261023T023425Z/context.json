@@ -1,8 +1,0 @@
-{
-  "base_head": "fa117fba0b761f8aa655e26c2ae8675b1af178cd",
-  "introducing_commit": "ed0fde2f5a1902f2258e16b0b9228b0913e1ea59",
-  "scope": "Scoped E0 NBB cold-cache bootstrap regression under existing publisher card ed4e2a2a-6055-4d53-9cea-f3971c707551",
-  "prior_tmp_captures": "Unavailable; no reconstructed claim",
-  "classification": "A: intentional Clio Malli dependency with package-wide unintended bootstrap side effect",
-  "strategy": "Fix forward: dedicated intent runtime config and entrypoints"
-}
