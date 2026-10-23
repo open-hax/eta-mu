@@ -1,0 +1,15 @@
+{
+  "command": [
+    "node",
+    "--test",
+    ".github/scripts/opencode-review-intent-bootstrap.test.mjs"
+  ],
+  "started_at": "2026-10-23T02:35:00.669514+00:00",
+  "head": "fa117fba0b761f8aa655e26c2ae8675b1af178cd",
+  "hashes": {
+    "packages/eta-mu/nbb.edn": "bfdad932080a5be59d42c3b4151ee65bbbf354c820d8feebbaa255e49a20a27b",
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_intent.cljs": "1a2a06d83aa6a7e94c1a7bf4f8b27740adfa884298b1aa692a9cb5ccb56fd920",
+    "scripts/test.bb": "e0fd1939be71efdc98b60c53811d818663baff1ccb02ebf0fad5a9dd170c2260",
+    ".github/scripts/opencode-review-intent-bootstrap.test.mjs": "83bd4961c704c36a819c31374a467517d1a624f1d1b79a30263c0e4342842034"
+  }
+}

@@ -1,0 +1,14 @@
+PASS independent opaque factory cannot grant infra authority
+PASS actual fixed launcher appends reservation
+PASS actual fixed launcher mints post-started capability
+PASS private capability consumes once
+PASS private capability refuses second use
+PASS real post-started directory-fsync failure is unknown
+PASS public adapter hides recovery map
+PASS uncertainty mints no capability
+PASS opaque receipt replays already-visible exact event
+PASS recovery mints no capability
+PASS opaque receipt second use refuses
+PASS uncertainty/recovery preserves exactly two real events
+PASS fresh acknowledgment clock failure refuses authority
+PASS independent actual public adapter probe; inert fixtures only; no custody or native publication credit

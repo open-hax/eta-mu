@@ -1,0 +1,44 @@
+{
+  "scope": "Existing publisher card ed4e2a2a-6055-4d53-9cea-f3971c707551: E0 cold NBB bootstrap regression only",
+  "completed_at": "2026-10-23T02:41:48.306770+00:00",
+  "introducing_commit": "ed0fde2f5a1902f2258e16b0b9228b0913e1ea59",
+  "red_commit": "b0ac577cfd3c899d4baac553c870d47918933850",
+  "green_commit": "14cb2742bfd1a15d5ab450b8f3ee6d3a64147790",
+  "source_snapshot_matches_commit": {
+    ".github/scripts/opencode-review-intent-bootstrap.test.mjs": true,
+    ".github/scripts/opencode_review_intent_process_test.mjs": true,
+    ".github/scripts/opencode_review_intent_uncertain_test.mjs": true,
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_intent.cljs": true,
+    "scripts/test.bb": true,
+    "packages/eta-mu/package.json": true,
+    "packages/eta-mu/intent-runtime/worker_entry.cljs": true,
+    "packages/eta-mu/intent-runtime/test_entry.cljs": true,
+    "packages/eta-mu/intent-runtime/barrier_entry.cljs": true,
+    "packages/eta-mu/intent-runtime/nbb.edn": true
+  },
+  "registered_red": "node --test .github/scripts/opencode-review-intent-bootstrap.test.mjs: 1 causal failure with /bin/sh: bb: not found; no test execution",
+  "passes": {
+    "registered_cold_bootstrap": "1 Node test; actual inner workflow suite 11 tests / 199 assertions; PATH excludes bb and no existing cache copied",
+    "configured_package_cold": "Additional persisted probe using unchanged ordinary NBB 1.5.211: 11 tests / 199 assertions, bb absent",
+    "review_publication_intent": "bb scripts/test.bb --only review-publication-intent: 23 tests / 110 assertions; zero failures/errors; final namespace replay passed",
+    "review_workflow": "bb scripts/test.bb --only review-workflow: 339 Node tests, all pass (includes cold bootstrap and inner 11 / 199)",
+    "owning_lint": "pnpm --dir packages/eta-mu lint:kondo: errors 0 / warnings 0; one existing architecture info",
+    "diff_check": "git diff --check: exit 0"
+  },
+  "negative_control": "Persisted configured ordinary NBB 1.5.211 probe with exact introducing-commit nbb.edn restored only inside cold fixture fails with identical bb-not-found signature",
+  "retained_failures": [
+    "red.*",
+    "green-scoped-lint.*: recursive lint accidentally traversed extracted dependency cache and rejected moved entry namespaces; corrected explicit file list and basename namespaces"
+  ],
+  "boundaries": [
+    "No bb installation added to workflows",
+    "Existing caches not removed or cleared",
+    "Malli scoped under intent-runtime, including production and test wrapper paths",
+    "NBB 1.5.212 fixed runtime and Clio 5fad794de1a9e23d6e5aaad42eaa933be1c070be unchanged",
+    "No edits to authority vault / fresh-clock / one-use / recovery decisions",
+    "All metadata, card and ledger ownership remains with main; artifact directory intentionally uncommitted",
+    "No push or worktree removal",
+    "Main still owns full CLI/build checks; these tests do not imply full publisher completion or hosted qualification",
+    "Prior unarchived temporary captures were unavailable; no reconstructed execution claim"
+  ]
+}

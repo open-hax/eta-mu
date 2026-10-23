@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "source": "1b76c9e1e6d6122a844ef418b0b4439ac8ee9495",
+  "previous_published_head": "fa117fba0b761f8aa655e26c2ae8675b1af178cd",
+  "bootstrap_red": "b0ac577cfd3c899d4baac553c870d47918933850",
+  "bootstrap_green": "14cb2742bfd1a15d5ab450b8f3ee6d3a64147790",
+  "finding_red": "328a22c99caa2a1ed56fbbf5a7bef7c9567bc609",
+  "finding_green": "1b76c9e1e6d6122a844ef418b0b4439ac8ee9495",
+  "archive": ".ημ/review-evidence/trusted-publication-bootstrap/60e042d73a30483057766f3222052fcab58b74932da9072d5260f1b24f9ffbb4.json.gz",
+  "archive_sha256": "60e042d73a30483057766f3222052fcab58b74932da9072d5260f1b24f9ffbb4",
+  "archive_raw_sha256": "f0ca6332af7c451eb74da155c26080222b0161f371bbfe3bea6bd3dda3f1d036",
+  "captures": 138,
+  "lossless_output_representations": [
+    {
+      "original": ".ημ/review-evidence/trusted-publication-bootstrap/attempt-20261023T023425Z/configured-package-negative-control.stdout.txt",
+      "lossless_json": ".ημ/review-evidence/trusted-publication-bootstrap/attempt-20261023T023425Z/configured-package-negative-control.stdout.txt.json"
+    },
+    {
+      "original": ".ημ/review-evidence/trusted-publication-bootstrap/attempt-20261023T023425Z/red.stdout.txt",
+      "lossless_json": ".ημ/review-evidence/trusted-publication-bootstrap/attempt-20261023T023425Z/red.stdout.txt.json"
+    }
+  ],
+  "gates": {
+    "intent": "25 tests /143 assertions",
+    "collection": "30/224",
+    "review_workflow": "339 Node tests",
+    "cold_workflow": "11/199, absent bb, configured1.5.211 and fixed1.5.212",
+    "CLI": "194/587 + workflows11/199; provider-free rerun",
+    "lint_release": "zero errors/warnings; one preexisting info",
+    "independent_public_probe": "one-use authority, alternate factory refusal, real visible uncertainty opaque recovery, second-use refusal, fresh-clock failure"
+  },
+  "retained_failures": [
+    "original cold bb-not-found",
+    "24 classifier causal failures",
+    "extra fourth GET old oracle passes/new exact oracle fails",
+    "first lint cache/entry-name failure",
+    "ambient provider no-provider fixture failure"
+  ],
+  "prefixes": {
+    "receipts.edn": {
+      "base_bytes": 623486,
+      "base_sha256": "f13fe5dbc47fd11c6f718883bf147d5a1b9c0c6f188e23895f820a5c8beea57d",
+      "current_bytes": 626810,
+      "prefix_preserved": true
+    },
+    "kanban/.events/ledger.edn": {
+      "base_bytes": 1854776,
+      "base_sha256": "982b3cb2228dbb1f888058ef1738459b15b575630bcbe749daa087778828667a",
+      "current_bytes": 1856627,
+      "prefix_preserved": true
+    },
+    ".ημ/session-mycology/ledger.md": {
+      "base_bytes": 116721,
+      "base_sha256": "85de33d890bc30c731292114890e425c49abd601a57433d479057a8704fc315c",
+      "current_bytes": 117390,
+      "prefix_preserved": true
+    },
+    ".ημ/session-reflections.edn": {
+      "base_bytes": 41622,
+      "base_sha256": "76a5109bd3e6f5d40a40b82f9f4b5d21838d832f267929e9d87ce82acf4ab4f3",
+      "current_bytes": 41622,
+      "prefix_preserved": true
+    }
+  },
+  "cards_preserved": 309,
+  "publisher": "in_progress/Codex/5points",
+  "qualification": false,
+  "limits": [
+    "No original event G/executed caller custody",
+    "No complete authenticated publication/reconstruction composition",
+    "No native publication/readback/status or protected adoption",
+    "No accepted pin or credential/grant/protection/workflow/caller changes",
+    "Prior Sandbox and carrier warnings remain source-bound; successor hosted proof pending",
+    "CMS/Cephalon paused"
+  ]
+}

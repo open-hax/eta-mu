@@ -1,0 +1,17 @@
+{
+  "command": [
+    "bb",
+    "scripts/test.bb",
+    "--only",
+    "review-publication-intent"
+  ],
+  "started_at": "2026-10-23T02:44:22.285628+00:00",
+  "head": "14cb2742bfd1a15d5ab450b8f3ee6d3a64147790",
+  "hashes": {
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_intent_worker.cljs": "ad49c694f97693a762d188cd8fa7f82229395640ae9e2d607a01a7fdfe5ee0dc",
+    ".github/scripts/opencode_review_intent_test.cljs": "5af2c324461cc58702ea65dfa06c16ab97133d82492b40ab3b717d5659fbf3bb",
+    ".github/scripts/opencode_review_collection_test.cljs": "e4535847d9ad05388c661542f85a9e31fb4f46bd8f9e13a00988ebe14b712503"
+  },
+  "exit_code": 1,
+  "finished_at": "2026-10-23T02:44:44.156329+00:00"
+}

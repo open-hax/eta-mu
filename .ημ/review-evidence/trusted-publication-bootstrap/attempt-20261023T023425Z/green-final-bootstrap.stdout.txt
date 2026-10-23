@@ -1,0 +1,25 @@
+✔ ordinary workflow gates run from a cold NBB package without Babashka (5126.193314ms)
+ℹ 7 workflow resource(s) in contracts/workflows
+
+  main-pr-gate     eta-mu-main-pr-gate          5 job(s), 3 gate(s)  [ci.edn]
+  rheos            rheos                        1 job(s), 1 gate(s)  [ci.edn]
+  coverage         coverage                     2 job(s), 2 gate(s)  [packages.edn]
+  sol-ci           Sol CI                       1 job(s), 1 gate(s)  [packages.edn]
+  axxium-ci        Axxium CI                    1 job(s), 1 gate(s)  [packages.edn]
+  eta-mu-extensions-tests eta-mu-extensions-tests      1 job(s), 1 gate(s)  [packages.edn]
+  rheos-github-sync-ci Rheos GitHub Sync CI         1 job(s), 1 gate(s)  [packages.edn]
+
+Testing workflows-test
+Collect generated outputs and portable toolchains checksum proof: clean 0 tampered 1
+Package optional dependency cache checksum proof: clean 0 tampered 1
+
+Ran 11 tests containing 199 assertions.
+0 failures, 0 errors.
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5196.183669

@@ -1304,3 +1304,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: e8b30ba602410e631e150a9f1e2dac3e9b693c28fe938f87965fd81f3d941165
   note: Actual public inode replacement required the canonical owning descriptor guard, not another pathname check or copied append engine. Keep all causal source REDs, intermediate product failures and harness failures distinct; exact frozen replay closes the observed race. Recompute documentary hashes from raw bytes and retain corrected originals. An extra baseline harness could not reach valid behavior and earliest scratch bytes are unavailable, so it supplies no RED. Public opaque uncertainty receipt round-trip remains unproven; full custody/native publication/adoption stay unfinished. Preserve309states/planning, historical ledger prefixes, fixed root pins and paused CMS/Cephalon. Current goal turn is source/test/evidence progress, not acceptance. Existing spore stays incubating; no new spore/promotion.
+
+- ts: 2026-10-23T02:54:31.468Z
+  session: codex/stabilization-portfolio
+  task: Repair cold NBB bootstrap and preserve unknown append uncertainty
+  p-efficiency: 0.8
+  p-friction: 0.65
+  p-skill-candidate: 0.5
+  spore: none
+  receipt-refs: 6e4167c1fb2243ced66a9ed35f6d4de321c09641b484480574978c4cd0b94c36
+  note: Scope dependency bootstrapping to its worker, reproduce cold behavior with actual ordinary workflow tests, and parse exact call traces. Preserve causal source failures, lint discovery and ambient provider failure. Fresh public opaque recovery and one-use probes replace lost temporary captures without inventing source custody. No new spore or promotion.

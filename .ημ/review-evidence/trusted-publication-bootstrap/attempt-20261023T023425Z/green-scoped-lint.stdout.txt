@@ -1,0 +1,538 @@
+
+> eta-mu@1.1.1 lint:kondo /home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/packages/eta-mu
+> clj-kondo --lint src/cljs test/cljs test-e2e/cljs intent-runtime commands/workflows.cljs commands/workflows_test.cljs commands/gates.cljs
+
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:22:15: warning: #'cljs.tools.reader.impl.utils/ReaderConditional is referred but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:22:52: warning: #'cljs.tools.reader.impl.utils/reader-conditional? is referred but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:78:11: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:78:16: warning: unused binding pending-forms
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:86:20: warning: unused binding ch
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:86:23: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:86:28: warning: unused binding pending-forms
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:97:17: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:142:20: warning: unused binding backslash
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:142:30: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:142:35: warning: unused binding pending-forms
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:284:21: warning: unused binding sb
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:306:25: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:306:30: warning: unused binding pending-forms
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:363:23: warning: unused binding initch
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:363:30: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:363:35: warning: unused binding pending-forms
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:411:22: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:521:9: warning: redundant do
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:561:3: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:568:20: warning: Redundant let expression.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:619:20: warning: unused binding comma
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:620:3: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:661:3: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:750:8: warning: unused binding backquote
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:818:37: warning: unused binding initch
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:820:5: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:892:39: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader.cljs:899:35: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/edn.cljs:76:11: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/edn.cljs:119:8: warning: unused binding backslash
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/edn.cljs:119:18: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/edn.cljs:207:15: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/edn.cljs:217:21: warning: unused binding sb
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/edn.cljs:239:10: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/edn.cljs:265:11: warning: unused binding initch
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/edn.cljs:265:18: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/edn.cljs:279:8: warning: Unused private var cljs.tools.reader.edn/wrapping-reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/edn.cljs:303:10: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/edn.cljs:362:25: warning: unused binding initch
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/edn.cljs:365:5: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/edn.cljs:422:39: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/edn.cljs:429:35: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/commons.cljs:14:60: warning: #'cljs.tools.reader.impl.utils/char is referred but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/errors.cljs:33:14: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/errors.cljs:34:14: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/errors.cljs:35:14: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/errors.cljs:63:5: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/errors.cljs:66:5: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/errors.cljs:75:4: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/inspect.cljs:18:16: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/inspect.cljs:35:4: warning: use :else as the catch-all test expression in cond
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/inspect.cljs:47:31: warning: unused binding truncate
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/inspect.cljs:49:43: warning: unused binding truncate
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/inspect.cljs:49:52: warning: unused binding x
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/inspect.cljs:52:54: warning: unused binding truncate
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/inspect.cljs:52:63: warning: unused binding x
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/inspect.cljs:55:40: warning: unused binding truncate
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/inspect.cljs:55:49: warning: unused binding x
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/inspect.cljs:58:37: warning: unused binding truncate
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/inspect.cljs:58:46: warning: unused binding x
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/inspect.cljs:60:40: warning: unused binding truncate
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/inspect.cljs:60:49: warning: unused binding x
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/inspect.cljs:80:31: warning: unused binding truncate
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/utils.cljs:12:5: warning: namespace clojure.string is required but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/impl/utils.cljs:39:5: error: #'cljs.core/pr-writer is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:13:56: warning: #'cljs.tools.reader.impl.utils/whitespace? is referred but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:46:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:51:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:57:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:65:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:74:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:81:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:87:12: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:89:7: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:107:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:119:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:123:12: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:132:21: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:133:23: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:134:19: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:170:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:183:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:187:12: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:198:21: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:199:23: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/cljs/tools/reader/reader_types.cljs:200:19: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector.clj:43:14: warning: namespace clojure.core.rrb-vector.parameters is required but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector.cljs:42:60: error: #'clojure.core.rrb-vector.macros/gen-vector-method is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector.cljs:75:6: error: #'clojure.core.rrb-vector.macros/gen-vector-method is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector.cljs:77:6: error: #'clojure.core.rrb-vector.macros/gen-vector-method is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector.cljs:79:6: error: #'clojure.core.rrb-vector.macros/gen-vector-method is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector.cljs:81:6: error: #'clojure.core.rrb-vector.macros/gen-vector-method is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector.cljs:83:6: error: #'clojure.core.rrb-vector.macros/gen-vector-method is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:61:30: warning: unused binding shift
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:61:66: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:64:9: warning: unused binding rngs
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:64:14: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:72:9: warning: unused binding num-nils
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:99:26: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:125:64: warning: unused binding tail-len
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:130:9: warning: unused binding cnt
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:151:21: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:169:19: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:187:29: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:263:15: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:399:15: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:525:34: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:595:15: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:1239:15: warning: Unresolved namespace clojure.core.rrb-vector.protocols. Are you missing a require?
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:1336:11: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.clj:1362:7: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:60:30: warning: unused binding shift
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:60:66: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:63:9: warning: unused binding rngs
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:63:14: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:71:9: warning: unused binding num-nils
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:98:26: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:124:64: warning: unused binding tail-len
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:129:9: warning: unused binding cnt
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:150:21: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:168:19: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:186:29: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:260:15: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:396:15: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:522:34: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:592:15: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:1235:15: warning: Unresolved namespace clojure.core.rrb-vector.protocols. Are you missing a require?
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:1332:11: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug.cljs:1358:7: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug_platform_dependent.clj:11:14: warning: namespace clojure.core.rrb-vector.parameters is required but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug_platform_dependent.clj:15:14: warning: namespace clojure.core.rrb-vector is required but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug_platform_dependent.clj:190:21: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug_platform_dependent.cljs:12:14: warning: namespace clojure.core.rrb-vector is required but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug_platform_dependent.cljs:68:17: warning: unused binding v
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/debug_platform_dependent.cljs:79:3: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/interop.clj:16:42: warning: Unused import Vector
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/macros.clj:16:3: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/macros.clj:20:3: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/macros.clj:23:19: warning: unused binding args
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/macros.clj:25:21: warning: Unused private var clojure.core.rrb-vector.macros/gen-vector-method
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.clj:10:14: warning: namespace clojure.core.rrb-vector.parameters is required but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.clj:13:41: warning: Unused import AtomicReference
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.clj:59:15: warning: unused binding am
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.clj:59:18: warning: unused binding shift
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.clj:161:46: warning: unused binding shift
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.clj:168:9: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.clj:253:14: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.clj:260:13: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.clj:266:11: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.clj:277:18: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.clj:292:24: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.clj:310:7: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:14:17: error: Unresolved symbol: cljs
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:16:14: warning: unused binding shift
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:96:30: warning: unused binding shift
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:102:9: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:103:9: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:108:13: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:128:7: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:165:11: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:188:14: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:195:13: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:201:11: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:212:18: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:224:18: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:229:7: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/nodes.cljs:242:7: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:11:14: warning: namespace clojure.core.rrb-vector.parameters is required but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:14:40: warning: #'clojure.core.rrb-vector.protocols/splicev is referred but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:42:3: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:46:3: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:49:19: warning: unused binding args
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:68:9: warning: unused binding cnt
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:138:13: warning: redundant do
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:150:10: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:154:14: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:158:11: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:171:13: error: Static fields should be referenced without parens unless they are intended as function calls
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:199:13: error: Static fields should be referenced without parens unless they are intended as function calls
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:205:16: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:214:19: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:217:18: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:246:11: warning: unused binding o
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:247:14: warning: unused binding c
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:249:23: warning: unused binding o
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:250:17: warning: unused binding c
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:251:17: warning: unused binding c
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:266:17: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:287:46: warning: unused binding e
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:295:17: warning: unused binding e
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:297:17: warning: unused binding e
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:299:13: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:304:11: warning: unused binding i
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:304:13: warning: unused binding o
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:305:14: warning: unused binding i
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:305:16: warning: unused binding c
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:306:27: warning: unused binding i
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:307:11: warning: unused binding i
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:307:13: warning: unused binding e
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:325:23: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:358:9: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:388:22: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:458:13: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:474:13: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:527:13: warning: redundant do
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:549:9: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:725:17: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:774:17: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:856:22: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:937:17: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:953:17: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:962:17: warning: unused binding child
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:970:13: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1162:46: warning: unused binding e
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1189:11: warning: unused binding o
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1190:14: warning: unused binding c
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1192:23: warning: unused binding o
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1193:17: warning: unused binding c
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1194:17: warning: unused binding c
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1225:46: warning: unused binding e
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1231:17: warning: unused binding e
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1233:17: warning: unused binding e
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1238:11: warning: unused binding i
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1238:13: warning: unused binding o
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1239:14: warning: unused binding i
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1239:16: warning: unused binding c
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1240:27: warning: unused binding i
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1241:11: warning: unused binding i
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1241:13: warning: unused binding e
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1327:40: warning: unused binding cnt1
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1327:48: warning: unused binding cnt2
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1355:9: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1380:9: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1464:17: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1660:15: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1786:18: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1860:11: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1865:9: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:1989:16: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:2021:11: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:2028:11: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.clj:2077:3: warning: Missing protocol method(s): pushTail, popTail, newPath, doAssoc
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:13:40: warning: #'clojure.core.rrb-vector.protocols/-splicev is referred but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:48:34: error: #'cljs.core/pr-writer is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:51:16: warning: unused binding coll
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:55:11: warning: unused binding coll
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:58:4: warning: Unresolved protocol method: -seq
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:62:4: warning: Unresolved protocol method: -equiv
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:62:24: error: #'cljs.core/equiv-sequential is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:66:12: warning: unused binding coll
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:91:12: warning: unused binding coll
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:92:16: error: Unresolved symbol: cljs
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:95:20: warning: unused binding coll
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:98:19: warning: unused binding coll
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:107:19: warning: unused binding coll
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:119:13: warning: unused binding coll
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:120:5: error: #'cljs.core/ci-reduce is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:122:13: warning: unused binding coll
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:123:5: error: #'cljs.core/ci-reduce is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:141:7: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:144:16: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:170:7: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:172:7: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:192:7: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:196:16: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:253:11: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:256:11: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:269:11: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:272:11: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:286:34: error: #'cljs.core/pr-writer is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:289:16: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:293:4: warning: Unresolved protocol method: -meta
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:293:11: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:299:5: error: #'cljs.core/equiv-sequential is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:317:10: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:347:7: error: #'cljs.core/vector-index-out-of-bounds is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:362:11: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:366:9: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:419:9: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:450:13: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:456:13: error: #'cljs.core/vector-index-out-of-bounds is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:464:3: warning: Missing protocol method(s): -contains-key?
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:484:5: error: #'cljs.core/ci-reduce is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:487:5: error: #'cljs.core/ci-reduce is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:514:5: error: #'cljs.core/compare-indexed is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:517:19: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:542:15: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:557:33: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:580:18: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:610:7: error: #'cljs.core/vector-index-out-of-bounds is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:681:7: warning: unused binding cnt1
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:681:15: warning: unused binding cnt2
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:709:9: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:734:9: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:820:17: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:1013:15: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:1134:18: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:1240:18: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:1244:13: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:1265:15: error: #'cljs.core/vector-index-out-of-bounds is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:1318:12: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:1324:18: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/rrbt.cljs:1354:7: error: #'cljs.core/vector-index-out-of-bounds is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:10:14: warning: namespace clojure.core.rrb-vector.parameters is required but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:13:43: warning: Unused import NodeManager
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:14:26: warning: Unused import ArrayManager
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:62:20: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:62:28: warning: unused binding am
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:64:9: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:68:20: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:73:22: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:87:22: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:94:13: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:156:26: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:242:21: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:255:21: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:264:21: warning: unused binding child
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.clj:307:15: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.cljs:12:31: warning: #'clojure.core.rrb-vector.nodes/clone is referred but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.cljs:19:7: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.cljs:25:5: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.cljs:31:5: error: #'cljs.core/array-copy is private
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.cljs:79:22: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.cljs:145:17: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.cljs:155:17: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/transients.cljs:164:17: warning: unused binding child
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/trees.cljs:70:20: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/trees.cljs:136:15: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/trees.cljs:147:15: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/core/rrb_vector/trees.cljs:156:15: warning: unused binding child
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/clojure_test.cljc:19:12: warning: unused binding result
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/clojure_test.cljc:22:13: warning: Unresolved var: clojure.test.check.clojure-test/check?
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/clojure_test/assertions/cljs.cljc:20:43: warning: unused binding e
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/generators.cljc:21:25: warning: duplicate require of clojure.string
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/generators.cljc:50:9: warning: unused binding rnd
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/generators.cljc:50:13: warning: unused binding size
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/generators.cljc:587:13: warning: #'clojure.test.check.generators/neg-int is deprecated since 0.10.0
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/generators.cljc:1101:3: warning: Unused value
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/generators.cljc:1228:21: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/generators.cljc:1557:10: warning: #'clojure.test.check.generators/int is deprecated since 0.10.0
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/random.clj:136:11: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/random.cljs:97:11: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/results.cljc:21:17: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/results.cljc:24:11: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/results.cljc:25:17: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/rose_tree.cljc:18:29: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/rose_tree.cljc:24:29: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/test/check/rose_tree.cljc:180:12: warning: unused binding s
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:18:53: warning: use alias or :refer [char desugar-meta ex-info? namespace-keys numeric? second' whitespace?]
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:20:55: warning: use alias or :refer [match-number number-literal? parse-symbol read-comment read-past throwing-reader]
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:23:29: warning: Unused import Symbol
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:52:9: warning: Prefer placing return type hint on arg vector: String
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:77:11: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:77:16: warning: unused binding pending-forms
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:85:8: warning: unused binding ch
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:85:11: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:85:16: warning: unused binding pending-forms
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:96:17: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:140:8: warning: unused binding backslash
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:140:18: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:140:23: warning: unused binding pending-forms
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:191:9: warning: Prefer placing return type hint on arg vector: PersistentVector
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:272:21: warning: unused binding sb
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:294:13: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:294:18: warning: unused binding pending-forms
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:345:11: warning: unused binding initch
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:345:18: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:345:23: warning: unused binding pending-forms
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:392:22: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:526:1: warning: Uninitialized var
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:536:3: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:543:20: warning: Redundant let expression.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:599:8: warning: unused binding comma
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:600:3: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:640:3: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:666:11: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:748:8: warning: unused binding backquote
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:841:15: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:848:25: warning: unused binding initch
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:850:5: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:938:40: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader.clj:945:36: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/default_data_readers.clj:12:32: warning: Unused import Date
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/default_data_readers.clj:300:29: info: Redundant nested call: str
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:17:78: warning: #'clojure.tools.reader.impl.utils/second' is referred but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:18:55: warning: use alias or :refer [match-number number-literal? parse-symbol read-comment read-past throwing-reader]
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:40:9: warning: Prefer placing return type hint on arg vector: String
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:78:11: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:124:8: warning: unused binding backslash
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:124:18: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:168:9: warning: Prefer placing return type hint on arg vector: PersistentVector
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:206:15: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:217:21: warning: unused binding sb
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:239:10: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:265:11: warning: unused binding initch
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:265:18: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:279:8: warning: Unused private var clojure.tools.reader.edn/wrapping-reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:300:10: warning: unused binding opts
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:355:25: warning: unused binding initch
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:358:5: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:416:39: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/edn.clj:423:35: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/commons.clj:13:72: warning: #'clojure.tools.reader.impl.utils/char is referred but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/commons.clj:16:12: warning: Unused import Constructor
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/errors.clj:30:14: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/errors.clj:31:14: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/errors.clj:32:14: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/errors.clj:60:5: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/errors.clj:63:5: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/errors.clj:72:4: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/inspect.clj:18:16: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/inspect.clj:35:4: warning: use :else as the catch-all test expression in cond
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/inspect.clj:47:31: warning: unused binding truncate
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/inspect.clj:49:63: warning: unused binding truncate
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/inspect.clj:49:72: warning: unused binding x
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/inspect.clj:52:58: warning: unused binding truncate
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/inspect.clj:52:67: warning: unused binding x
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/inspect.clj:55:61: warning: unused binding truncate
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/inspect.clj:55:70: warning: unused binding x
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/inspect.clj:58:40: warning: unused binding truncate
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/inspect.clj:58:49: warning: unused binding x
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/inspect.clj:60:43: warning: unused binding truncate
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/inspect.clj:60:52: warning: unused binding x
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/impl/inspect.clj:80:31: warning: unused binding truncate
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:49:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:54:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:60:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:68:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:76:11: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:82:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:89:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:95:12: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:97:7: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:101:11: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:111:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:133:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:137:12: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:162:21: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:163:23: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:164:19: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:167:11: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:269:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:292:15: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:296:12: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:307:21: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:308:23: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:309:19: warning: unused binding reader
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:312:11: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:347:8: warning: Prefer placing return type hint on arg vector: Closeable
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:352:8: warning: Prefer placing return type hint on arg vector: Closeable
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:359:8: warning: Prefer placing return type hint on arg vector: Closeable
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:364:8: warning: Prefer placing return type hint on arg vector: Closeable
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:371:8: warning: Prefer placing return type hint on arg vector: Closeable
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/clojure/tools/reader/reader_types.clj:381:8: warning: Prefer placing return type hint on arg vector: Closeable
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/edamame/impl/parser.cljc:463:36: info: Single argument to str already is a string
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/edamame/impl/parser.cljc:471:13: info: Single argument to str already is a string
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/edamame/impl/parser.cljc:476:15: info: Single argument to str already is a string
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/edamame/impl/parser.cljc:483:13: info: Single argument to str already is a string
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/edamame/impl/parser.cljc:495:13: info: Single argument to str already is a string
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/edamame/impl/parser.cljc:505:13: info: Single argument to str already is a string
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/edamame/impl/parser.cljc:521:15: info: Single argument to str already is a string
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/edn.cljc:4:14: warning: namespace clojure.string is required but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/edn.cljc:31:15: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/edn.cljc:34:19: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/edn.cljc:37:18: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/edn.cljc:41:21: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/edn.cljc:45:18: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/edn.cljc:48:19: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/edn.cljc:51:18: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/edn.cljc:84:15: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/edn.cljc:87:19: warning: unused binding this
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/ednize.clj:30:10: warning: unused binding x
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/engine.cljc:97:23: warning: unused binding options
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/engine.cljc:167:23: warning: unused binding options
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/engine.cljc:266:6: warning: Unresolved namespace clojure.pprint. Are you missing a require?
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/fipp/util.cljc:8:23: warning: unused binding x
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:11:76: warning: Unused import MapEntry
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:271:48: warning: Missing protocol method(s): -type, -type-properties, -properties-schema, -children-schema
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:655:12: info: Redundant nested call: and
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:694:9: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:709:17: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:838:5: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:852:11: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:899:5: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:913:11: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:946:6: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:961:12: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:996:6: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1040:12: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1135:6: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1164:12: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1242:7: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1289:17: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1415:5: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1417:5: warning: Missing protocol method(s): -properties-schema, -children-schema
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1428:11: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1458:5: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1473:11: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1508:5: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1510:5: warning: Missing protocol method(s): -properties-schema, -children-schema
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1521:11: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1555:5: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1570:11: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1605:6: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1624:12: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1682:6: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1684:6: warning: Missing protocol method(s): -properties-schema, -children-schema
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1702:12: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1755:7: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1771:13: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1838:5: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1842:5: warning: Missing protocol method(s): -properties-schema, -children-schema
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:1855:11: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:2127:5: warning: Missing protocol method(s): -to-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/core.cljc:2141:11: warning: Missing protocol method(s): -from-ast
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/dev/cljs.cljc:3:23: warning: namespace malli.core is required but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/dev/cljs.cljc:4:23: warning: namespace malli.dev.pretty is required but never used
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/dev/cljs_kondo_preload.cljc:36:32: warning: unused binding e
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/dev/cljs_kondo_preload.cljc:39:32: warning: unused binding e
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/dev/pretty.cljc:79:69: warning: unused binding fn-name
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/dev/virhe.cljc:27:9: warning: unused binding color
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/dev/virhe.cljc:136:60: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/generator.cljc:488:9: warning: unused binding min-float
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/instrument.cljs:22:29: info: Redundant ignore
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/instrument.cljs:110:26: warning: Missing else branch.
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/instrument/cljs.cljs:16:29: info: Redundant ignore
+intent-runtime/.nbb/.cache/f7939af80857224fb08cdaa8d38dfc0301b87013/nbb-deps/malli/registry.cljc:69:23: warning: Missing else branch.
+intent-runtime/barrier_entry.cljs:2:5: error: Namespace name does not match file name: review-intent-barrier-entry
+intent-runtime/test_entry.cljs:2:5: error: Namespace name does not match file name: review-intent-test-entry
+intent-runtime/worker_entry.cljs:2:5: error: Namespace name does not match file name: eta-mu.infra.review-intent-worker-entry
+src/cljs/eta_mu/domain/session.cljs:8:14: info: a domain namespace must not require eta-mu.extern.path (extern): domain depends on law, shape, and its own layer.
+linting took 6298ms, errors: 45, warnings: 475
+ ELIFECYCLE  Command failed with exit code 3.

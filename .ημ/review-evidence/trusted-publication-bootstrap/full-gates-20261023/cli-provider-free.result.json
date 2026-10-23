@@ -1,0 +1,18 @@
+{
+  "source": "1b76c9e1e6d6122a844ef418b0b4439ac8ee9495",
+  "argv": [
+    "pnpm",
+    "-C",
+    "packages/eta-mu",
+    "test"
+  ],
+  "removed_variable_names": [
+    "OPENAI_BASE_URL",
+    "OPENAI_BASE_URL_API_KEY",
+    "OPENAI_AUTH_TOKEN",
+    "OPENAI_API_KEY"
+  ],
+  "started_at": "2026-10-23T02:48:44.257626+00:00",
+  "finished_at": "2026-10-23T02:48:59.217060+00:00",
+  "exit_code": 0
+}

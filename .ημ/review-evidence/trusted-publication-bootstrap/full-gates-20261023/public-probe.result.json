@@ -1,0 +1,13 @@
+{
+  "source": "1b76c9e1e6d6122a844ef418b0b4439ac8ee9495",
+  "argv": [
+    "node",
+    "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.212/node_modules/nbb/cli.js",
+    "-e",
+    "(require (quote [nbb.core :as nbb])) (nbb/await (nbb/load-file \"/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/.\u03b7\u03bc/review-evidence/trusted-publication-bootstrap/full-gates-20261023/public-probe.cljs\"))"
+  ],
+  "cwd": "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/packages/eta-mu/intent-runtime",
+  "started_at": "2026-10-23T02:51:04.261013+00:00",
+  "completed_at": "2026-10-23T02:51:13.980131+00:00",
+  "exit_code": 0
+}

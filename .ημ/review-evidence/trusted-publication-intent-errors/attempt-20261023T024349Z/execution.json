@@ -1,0 +1,32 @@
+{
+  "scope": "Existing publisher card ed4e2a2a-6055-4d53-9cea-f3971c707551; native append-error P1 PRRT_kwDORu27H86vC7vO/comment4344524088 and collection exact-request assertion",
+  "completed_at": "2026-10-23T02:46:46.730882+00:00",
+  "base_commit": "14cb2742bfd1a15d5ab450b8f3ee6d3a64147790",
+  "red_commit": "328a22c99caa2a1ed56fbbf5a7bef7c9567bc609",
+  "green_commit": "1b76c9e1e6d6122a844ef418b0b4439ac8ee9495",
+  "source_matches_commit": {
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_intent_worker.cljs": true,
+    ".github/scripts/opencode_review_intent_test.cljs": true,
+    ".github/scripts/opencode_review_collection_test.cljs": true
+  },
+  "red": "bb scripts/test.bb --only review-publication-intent:25 tests/143 assertions,24 causal assertion failures,0 errors; actual worker entry misclassifies native Error/missing/numeric/string/map error tags as request-invalid and loses uncertainty/recovery",
+  "green": {
+    "intent": "bb scripts/test.bb --only review-publication-intent:25 tests/143 assertions,0 failures/0errors",
+    "collection": "bb scripts/test.bb --only review-publication-collection:30 tests/224 assertions,0 failures/0 errors",
+    "owning_lint": "pnpm --dir packages/eta-mu lint:kondo:0 errors/0warnings; one preexisting architecture info",
+    "test_lint": "pnpm --dir packages/eta-mu exec clj-kondo --lint ../../.github/scripts/opencode_review_intent_test.cljs ../../.github/scripts/opencode_review_collection_test.cljs:0errors/0warnings",
+    "diff_check": "git diff --check:exit0"
+  },
+  "assertion_negative_control": {
+    "injection": "Fourth actual host GET under same inert preload transport appended inside saved probe runner; both full source harness variants persisted before execution",
+    "old_substring_assertion": "30tests/224assertions pass despite extra call",
+    "exact_edn_trace_assertion": "30tests/224assertions:exactly1 failure on Only the three local GET requests were issued"
+  },
+  "change": "Guard namespace with keyword?; unexpected error tags remain :unknown/:append-outcome preserving error, recovery and false capability-issued?; known schema/event/collision refusals remain checked",
+  "limits": [
+    "All fixtures inert; no native POST or source custody/adoption qualification",
+    "No credential/grant/protection/pin/board/ledger changes",
+    "No push/worktree removal; metadata/evidence commit belongs to main",
+    "Main owns full CLI/build on frozen GREEN; no further source edits planned"
+  ]
+}

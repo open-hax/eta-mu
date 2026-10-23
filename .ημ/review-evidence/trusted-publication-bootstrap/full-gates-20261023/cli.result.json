@@ -1,0 +1,12 @@
+{
+  "source": "1b76c9e1e6d6122a844ef418b0b4439ac8ee9495",
+  "argv": [
+    "pnpm",
+    "-C",
+    "packages/eta-mu",
+    "test"
+  ],
+  "started_at": "2026-10-23T02:47:18.062319+00:00",
+  "finished_at": "2026-10-23T02:47:28.483501+00:00",
+  "exit_code": 1
+}

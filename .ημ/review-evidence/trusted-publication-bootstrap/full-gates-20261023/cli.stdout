@@ -1,0 +1,79 @@
+
+> eta-mu@1.1.1 test /home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/packages/eta-mu
+> shadow-cljs compile test && node target/eta-mu-test.cjs && pnpm test:workflows
+
+[:test] Compiling ...
+[:test] Build completed. (204 files, 1 compiled, 0 warnings, 2.60s)
+
+Testing eta-mu.domain.evidence-test
+
+Testing eta-mu.domain.router-test
+
+Testing eta-mu.domain.session-test
+
+Testing eta-mu.domain.tools.edit-test
+
+Testing eta-mu.domain.tools.find-test
+
+Testing eta-mu.domain.tools.glob-test
+
+Testing eta-mu.domain.tools.grep-test
+
+Testing eta-mu.domain.tools.ls-test
+
+Testing eta-mu.domain.tools.read-test
+
+Testing eta-mu.domain.tools.truncate-test
+
+Testing eta-mu.extern.child-process-test
+
+Testing eta-mu.extern.openai-test
+
+FAIL in (stream-chat-no-provider-configured-test) (eta_mu/extern/openai_test.cljs:326:11)
+stream-chat short-circuits with a clear error when no api key and no alternate base-url are set
+expected: (re-find #"No API key configured" (:error-message final))
+  actual: (not (re-find #"No API key configured" "fetch should not be called"))
+
+Testing eta-mu.extern.readline-test
+
+Testing eta-mu.infra.cli.commands.agent-test
+
+Testing eta-mu.infra.cli.commands.kanban-test
+
+Testing eta-mu.infra.cli.commands.sol-test
+
+Testing eta-mu.infra.cli.router-test
+
+Testing eta-mu.infra.cli.tui-repl-test
+
+Testing eta-mu.infra.session-test
+
+Testing eta-mu.infra.tools.bash-test
+
+Testing eta-mu.infra.tools.edit-test
+
+Testing eta-mu.infra.tools.find-test
+
+Testing eta-mu.infra.tools.grep-test
+
+Testing eta-mu.infra.tools.ls-test
+
+Testing eta-mu.infra.tools.read-test
+
+Testing eta-mu.infra.tools.write-test
+
+Testing eta-mu.law.command-test
+
+Testing eta-mu.law.evidence-test
+
+Testing eta-mu.law.session-test
+
+Testing eta-mu.law.tools-test
+
+Testing eta-mu.shape.args-test
+
+Testing eta-mu.shape.command-resource-test
+
+Ran 194 tests containing 587 assertions.
+1 failures, 0 errors.
+ ELIFECYCLE  Test failed. See above for more details.

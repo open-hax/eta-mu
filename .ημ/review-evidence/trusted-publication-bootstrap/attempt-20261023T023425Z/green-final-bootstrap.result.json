@@ -1,0 +1,23 @@
+{
+  "command": [
+    "node",
+    "--test",
+    ".github/scripts/opencode-review-intent-bootstrap.test.mjs"
+  ],
+  "started_at": "2026-10-23T02:37:43.235308+00:00",
+  "head": "b0ac577cfd3c899d4baac553c870d47918933850",
+  "hashes": {
+    ".github/scripts/opencode-review-intent-bootstrap.test.mjs": "dc0ab7bde8b81f5eacdfe2131f0c2c0ca1a7e0856136b4f154f95c20e04d73d7",
+    ".github/scripts/opencode_review_intent_process_test.mjs": "1889d1caad0e16a9b4d762a7fb7b47fc32687b28bb912da42c604184ef94b722",
+    ".github/scripts/opencode_review_intent_uncertain_test.mjs": "02f8d03e28a23de05bfd57d59d758cac9dd183c98eafa46ab34ceb1776fd8916",
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_intent.cljs": "98c284133dbd3e7eab236a3e566e60f817244f3b6e77e4661e12a285d04df773",
+    "scripts/test.bb": "7d1c303fe1cff3f3d724c3586a888d916671431bc5a4bc3cac9205cfddec3a08",
+    "packages/eta-mu/package.json": "8376b34e14f47b1665e5baa4dd59f8e2a95d5c865dcb5f8a9e96f751d5ce009c",
+    "packages/eta-mu/intent-runtime/worker_entry.cljs": "714ef82da9b16995f8842020341c6add1704df58dc0acc06e0c887c881b122db",
+    "packages/eta-mu/intent-runtime/test_entry.cljs": "b725ae9d5f39b3b43e0bec24bcfcf6539141ec22341d23beb9e960abe613ea2d",
+    "packages/eta-mu/intent-runtime/barrier_entry.cljs": "3c257eaf143f3e5dbe8f00eaa4f079b1d058c75a1a56eeb413f6539ee48a6246",
+    "packages/eta-mu/intent-runtime/nbb.edn": "496c521ec79e0254bb82a1454a5b5e44dc344ae639508fabf9a022b12420b01b"
+  },
+  "exit_code": 0,
+  "finished_at": "2026-10-23T02:37:48.480490+00:00"
+}

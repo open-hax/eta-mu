@@ -1,0 +1,9 @@
+{
+  "argv": [
+    "nbb",
+    "-cp",
+    "packages/receipt-river/src/cljs",
+    "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/.ημ/review-evidence/trusted-publication-bootstrap/append-receipt.cljs"
+  ],
+  "exit_code": 0
+}
