@@ -23,7 +23,9 @@
   (loop [entries entries offset 0 locals [] central []]
     (if-let [entry (first entries)]
       (let [name (.from js/Buffer (:name entry) "utf8")
-            raw (.from js/Buffer (or (:text entry) "Inert payload.") "utf8")
+            raw (if (contains? entry :bytes)
+                  (.from js/Buffer (clj->js (:bytes entry)))
+                  (.from js/Buffer (or (:text entry) "Inert payload.") "utf8"))
             method (get entry :method 8)
             compressed (if (= 8 method) (.deflateRawSync zlib raw) raw)
             crc (.crc32 zlib raw)
@@ -268,6 +270,71 @@
     (finally (done))))
 (deftest archive-composition-uses-fresh-host-time-without-refreshing-other-facts
   (async done (publication-clock-control done)))
+
+(defn ^:async archive-result-transport-control [done]
+  (let [alter-root! (resolve 'alter-var-root)
+        original-reader reader/read-string
+        parent-parses (atom [])
+        opaque {:tag :preserved :flags #{:alpha :beta}
+                :nested {:identity [:caller #{[:retain :types]}]}}]
+    (try
+      ;; The fixed worker has its own reader/runtime. This spy observes only
+      ;; parent result decoding and preserves original behavior for causal RED.
+      (alter-root! #'reader/read-string
+                      (constantly (fn [source]
+                                    (swap! parent-parses conj (count source))
+                                    (original-reader source))))
+      (doseq [method [0 8]]
+        (let [entries [{:name "submission.json" :text "{\"inert\":true}"}
+                       {:name "__proto__" :text "prototype is a string member name"}
+                       {:name "constructor" :text "constructor is a string member name"}
+                       {:name "lambda/雪.txt" :text "Unicode 雪 😀\u0000 remains exact"}
+                       {:name "empty.txt" :text ""}
+                       {:name "binary.bin" :bytes (vec (range 256))}]
+              text-members ["submission.json" "lambda/雪.txt" "empty.txt"]
+              bytes (fixture-zip (mapv #(assoc % :method method :flags (if (= 8 method) 2056 2048)) entries))]
+          (reset! parent-parses [])
+          (await
+            (with-file bytes
+              ^:async (fn [r]
+                (let [request (-> r (assoc :text-members text-members)
+                                  (assoc-in [:artifact :opaque] opaque)
+                                  (assoc-in [:bounds :opaque] opaque))
+                      result (await (admit request))
+                      members (:members result)]
+                  (is (= :verified (:status result)) (pr-str result))
+                  (is (empty? @parent-parses)
+                      (str "No large result is decoded as EDN in parent: " @parent-parses))
+                  (is (= (set (map :name entries)) (set (keys members))))
+                  (is (every? string? (keys members)) "Member keys remain exact strings")
+                  (is (= opaque (get-in result [:artifact :opaque])) "Artifact extras retain all Clojure types")
+                  (is (= opaque (get-in result [:artifact :archive-proof :bounds :opaque]))
+                      "Bounds extras retain all Clojure types")
+                  (doseq [{:keys [name text] :as entry} entries]
+                    (let [raw (if (contains? entry :bytes) (.from js/Buffer (clj->js (:bytes entry)))
+                                  (.from js/Buffer text "utf8"))
+                          compressed (if (= 8 method) (.deflateRawSync zlib raw) raw)
+                          expected {:size (.-length raw) :consumed (.-length compressed)
+                                    :crc32 (.crc32 zlib raw) :sha256 (hash-bytes raw)
+                                    :base64 (.toString raw "base64")}
+                          expected (if (some #{name} text-members) (assoc expected :text text) expected)]
+                      (is (= expected (get members name)) (str "All member fields/bytes retained: " name))))
+                  (is (= {:handles 0 :workers 0} ((resolve 'eta-mu.extern.review-archive/resources)))
+                      "Parent-owned resources are cleaned, without a whole-API latency claim")))))))
+      (reset! parent-parses [])
+      (await
+        (with-file (fixture-zip [{:name "submission.json" :text "{}"}])
+          ^:async (fn [r]
+            (let [result (await (admit (assoc-in r [:artifact :sha256] (apply str (repeat 64 "f")))))]
+              (is (= {:status :refused :code :archive-native-binding} result))
+              (is (empty? @parent-parses) (str "Refusals also use the fixed wire shape: " @parent-parses))
+              (is (= {:handles 0 :workers 0} ((resolve 'eta-mu.extern.review-archive/resources))))))))
+      (catch :default e (is false (str e)))
+      (finally
+        (alter-root! #'reader/read-string (constantly original-reader))
+        (done)))))
+(deftest actual-archive-result-transport-preserves-all-bytes-and-clojure-types-without-parent-edn
+  (async done (archive-result-transport-control done)))
 
 (nbb/await (nbb/load-file ".github/scripts/opencode_review_publish_test.cljs"))
 
