@@ -1,0 +1,217 @@
+
+node:internal/process/promises:394
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+Gk [Error]: Unable to resolve symbol: await
+    at new Gk (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:192:82)
+    at $APP.sm.l (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:1505:309)
+    at file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:427:359
+    at Xs (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:427:368)
+    at Zs (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:425:434)
+    at Mja (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:748:187)
+    at aw.l (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:2124:485)
+    at aw.j (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:2122:356)
+    at file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:2118:191
+    at zf (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:93:433) {
+  data: {
+    I: null,
+    M: 7,
+    D: [
+      {
+        rb: null,
+        name: 'type',
+        aa: 'type',
+        Re: 1174270348,
+        G: 2153775105,
+        K: 4096
+      },
+      {
+        rb: 'sci',
+        name: 'error',
+        aa: 'sci/error',
+        Re: -979082803,
+        G: 2153775105,
+        K: 4096
+      },
+      {
+        rb: null,
+        name: 'line',
+        aa: 'line',
+        Re: 212345235,
+        G: 2153775105,
+        K: 4096
+      },
+      109,
+      {
+        rb: null,
+        name: 'column',
+        aa: 'column',
+        Re: 2078222095,
+        G: 2153775105,
+        K: 4096
+      },
+      35,
+      {
+        rb: null,
+        name: 'message',
+        aa: 'message',
+        Re: -406056002,
+        G: 2153775105,
+        K: 4096
+      },
+      'Unable to resolve symbol: await',
+      {
+        rb: 'sci.impl',
+        name: 'callstack',
+        aa: 'sci.impl/callstack',
+        Re: -1621010557,
+        G: 2153775105,
+        K: 4096
+      },
+      bh {
+        state: {
+          I: null,
+          first: mt {
+            line: 101,
+            tb: 1,
+            yc: null,
+            xc: null,
+            rb: [Bs],
+            file: '/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/packages/eta-mu/src/cljs/eta_mu/infra/review_readback.cljs',
+            zc: null,
+            Bc: false,
+            J: null,
+            F: null,
+            H: null,
+            G: 2230716170,
+            K: 139264
+          },
+          Qb: {
+            I: null,
+            first: [mt],
+            Qb: [Object],
+            count: 16,
+            H: null,
+            G: 65937646,
+            K: 8192
+          },
+          count: 17,
+          H: null,
+          G: 65937646,
+          K: 8192
+        },
+        G: 32768,
+        K: 0
+      },
+      {
+        rb: null,
+        name: 'file',
+        aa: 'file',
+        Re: -1269645878,
+        G: 2153775105,
+        K: 4096
+      },
+      '/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/packages/eta-mu/src/cljs/eta_mu/infra/review_readback.cljs',
+      {
+        rb: null,
+        name: 'phase',
+        aa: 'phase',
+        Re: 575722892,
+        G: 2153775105,
+        K: 4096
+      },
+      'analysis'
+    ],
+    H: null,
+    G: 16647951,
+    K: 401412
+  },
+  cause: Gk [Error]: Unable to resolve symbol: await
+      at new Gk (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:192:82)
+      at $APP.sm.l (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:1505:309)
+      at $APP.sm.j (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:1505:263)
+      at Ss (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:425:162)
+      at fu (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:465:25)
+      at Cu (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:477:78)
+      at Mja (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:741:328)
+      at aw.l (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:2124:485)
+      at aw.j (file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:2122:356)
+      at file:///home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.211/node_modules/nbb/lib/nbb_core.js:2118:191 {
+    data: {
+      I: null,
+      M: 5,
+      D: [
+        {
+          rb: null,
+          name: 'type',
+          aa: 'type',
+          Re: 1174270348,
+          G: 2153775105,
+          K: 4096
+        },
+        {
+          rb: 'sci',
+          name: 'error',
+          aa: 'sci/error',
+          Re: -979082803,
+          G: 2153775105,
+          K: 4096
+        },
+        {
+          rb: null,
+          name: 'line',
+          aa: 'line',
+          Re: 212345235,
+          G: 2153775105,
+          K: 4096
+        },
+        101,
+        {
+          rb: null,
+          name: 'column',
+          aa: 'column',
+          Re: 2078222095,
+          G: 2153775105,
+          K: 4096
+        },
+        1,
+        {
+          rb: null,
+          name: 'file',
+          aa: 'file',
+          Re: -1269645878,
+          G: 2153775105,
+          K: 4096
+        },
+        '/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/packages/eta-mu/src/cljs/eta_mu/infra/review_readback.cljs',
+        {
+          rb: null,
+          name: 'phase',
+          aa: 'phase',
+          Re: 575722892,
+          G: 2153775105,
+          K: 4096
+        },
+        'analysis'
+      ],
+      H: null,
+      G: 16647951,
+      K: 401412
+    },
+    cause: null,
+    description: undefined,
+    number: undefined,
+    fileName: undefined,
+    lineNumber: undefined,
+    columnNumber: undefined
+  },
+  description: undefined,
+  number: undefined,
+  fileName: undefined,
+  lineNumber: undefined,
+  columnNumber: undefined
+}
+
+Node.js v24.11.0
+
+✗ review-publication-readback failed (exit code 1, 0.6s)

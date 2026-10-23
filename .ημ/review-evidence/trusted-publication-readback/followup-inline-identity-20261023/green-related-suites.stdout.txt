@@ -1,0 +1,47 @@
+
+============================================================
+Testing: review-publication
+============================================================
+
+
+Testing opencode-review-publish-test
+Complete NBB/Babashka parity cases: 138
+
+Ran 17 tests containing 557 assertions.
+0 failures, 0 errors.
+
+✓ review-publication passed (0.7s)
+
+============================================================
+Testing: review-publication-collection
+============================================================
+
+
+Testing opencode-review-collection-test
+
+Ran 30 tests containing 224 assertions.
+0 failures, 0 errors.
+
+✓ review-publication-collection passed (1.0s)
+
+============================================================
+Testing: review-publication-readback
+============================================================
+
+
+Testing opencode-review-readback-test
+
+Ran 10 tests containing 130 assertions.
+0 failures, 0 errors.
+
+✓ review-publication-readback passed (0.9s)
+
+============================================================
+TEST SUMMARY
+============================================================
+
+  ✓ review-publication (0.7s)
+  ✓ review-publication-collection (1.0s)
+  ✓ review-publication-readback (0.9s)
+
+All suites passed!

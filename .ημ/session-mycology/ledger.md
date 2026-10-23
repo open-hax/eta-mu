@@ -1324,3 +1324,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: fef70c0891e7f916d454cce676c1efd487969996e48f3e90e09fc4ac0586ff90
   note: Known pre-spawn failure and prior durability uncertainty have different meanings. Exercise actual host bounds and real opaque recovery rather than accepting a blanket refusal suggestion. Preserve native source/gate distinctions and all prior evidence. No new spore or promotion.
+
+- ts: 2026-10-23T03:54:30.772229Z
+  session: foresight-stabilization
+  task: Execute bounded native readback and independently repair inline identity conflict
+  p-efficiency: 0.85
+  p-friction: 0.45
+  p-skill-candidate: 0.45
+  spore: none
+  receipt-refs: 062a16eb244e7ec8ea2e6358777374f8fd13c16b96b52d8ad125c1b7aea2bbd9
+  note: Preserve actual absent identity and full status history before filtering; semantic matches never authenticate installation. Independent probe caught a real inline conflict omission after registered tests passed; causal repair and successor checks retain original proof. Raw async summary ordering is not completion evidence. No new spore or promotion.

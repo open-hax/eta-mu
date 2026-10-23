@@ -1,0 +1,9 @@
+{
+  "clarification": "The initial exploratory scoped lint was observed in tool output but was not redirected into an artifact log. Its stale-cache/name-collision findings are recorded in execution.json as an observation, not a retained raw stream. Final owning/scoped/test lint stdout/stderr/result records are retained. No exploratory lint pass is claimed.",
+  "raw_pass_logs": [
+    "green-owning-lint.stdout.txt",
+    "green-scoped-lint.stdout.txt",
+    "green-test-lint.stdout.txt"
+  ],
+  "custody": "All authored harnesses and captured test/worker failures remain in this current owned attempt; no prior committed evidence directory was modified."
+}

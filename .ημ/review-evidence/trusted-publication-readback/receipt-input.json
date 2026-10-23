@@ -1,0 +1,20 @@
+{
+  "source": "6e1f088fcd81dba5e9edaf526e453962875215c6",
+  "archive_sha256": "10c43b3c4abbc94440a8d81c0dbece7adff3b5e998b505ddef820b262d599ccd",
+  "payload": {
+    "ts": "2026-10-23T03:54:30.772229Z",
+    "kind": "catalog",
+    "repo": "open-hax/eta-mu",
+    "origin": "stabilization/trusted-publication-readback/execution",
+    "owner": "codex",
+    "dod": "Execute bounded native read-only readback, preserve all native evidence and repair independent inline identity finding",
+    "pi": "eta-mu",
+    "host": "err-Yoga-7-16ARP8",
+    "manifest": ".ημ/review-evidence/trusted-publication-readback/10c43b3c4abbc94440a8d81c0dbece7adff3b5e998b505ddef820b262d599ccd.json.gz; source/tests; existing publisher card; independent original/successor review",
+    "refs": "open-hax/eta-mu#362; source 6e1f088fcd81dba5e9edaf526e453962875215c6",
+    "note": "Executed bounded read-only review/comment/status readback at source 6e1f088fcd81dba5e9edaf526e453962875215c6. Causal RED28de0da1 reproduces73failures/9tests114assertions before GREEN6fa625cd. Independent native-inline App conflict finding reproduced then tests-only RED141c11e3 (2failures/10tests130assertions) precedes GREEN6e1f088f; raw conflicting identity retained and refused, matching App still unsupported. Readback10/130, collection30/224, publication17/557 plus138NBB/Babashka parity, eight new portable values and independent successor controls pass. Full CLI194/587 plusworkflows11/199, owning lint/release0warnings pass; separate test cleanup diagnostic retained. Production fixed absent registry refuses caller override before any GET. Actual public fixed GET reads real review, inline-comment page1 and per-M status page1; no full traversal/authentication credit. Complete all-status traversal before context filtering, finite shared budgets and two stable passes are exercised in explicitly inert fixtures. Native App identity never synthesized; original_commit_id stays raw/currentcommit law, original event/caller and installation association remain unsupported. Known reviewID required; unknown POST discovery and full authenticated publisher composition/adoption remain unfinished. Publisher stays in_progress/Codex/5points. Preserve all309states/planning/fourledgerprefixes and rootpins, CMS/Cephalon paused; no credentials/gates/activation/merge/deploy.",
+    "tests": "Readback10/130,collection30/224,publication17/557+138parity; eightportablevalues; CLI194/587+workflows11/199; lint/release0warnings; actual public fixedGET/registryrefusal and independent successor controls",
+    "decisions": "No App identity from expected fields; missing association/originalevent remainsunsupported. No publication/adoption/credential/grant/protection/pin/merge/deploy or CMS/Cephalon advance.",
+    "drift": "Retain71historicalinvalidrows/118errors. Qualify prospective typed event only. Carrier cleanup diagnostic retained; no whole-carrier zero-warning claim."
+  }
+}

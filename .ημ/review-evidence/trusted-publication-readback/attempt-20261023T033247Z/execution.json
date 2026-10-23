@@ -1,0 +1,55 @@
+{
+  "scope": "Existing publisher card ed4e2a2a-6055-4d53-9cea-f3971c707551; scope-comment.json owned by main",
+  "completed_at": "2026-10-23T03:48:21.315121+00:00",
+  "base": "cd9751d01a2b93123281d032f42a83fb4b9d42cb",
+  "red": "28de0da1197d23fc839061aef76936975048f4ca",
+  "green": "6fa625cd66658d850241d0d3f762ef5eb6ba8746",
+  "source_matches_commit": {
+    "scripts/test.bb": true,
+    "packages/eta-mu/src/cljs/eta_mu/law/review_collection.cljc": true,
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": true,
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_collection.cljs": true,
+    ".github/scripts/opencode_review_readback_test.cljs": true,
+    "packages/eta-mu/src/cljs/eta_mu/law/review_readback.cljc": true,
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_readback.cljc": true,
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_readback.cljc": true,
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_readback.cljs": true
+  },
+  "versions": {
+    "node": "v24.11.0",
+    "nbb": "nbb v1.5.211",
+    "bb": "babashka v1.12.207",
+    "clj-kondo": "clj-kondo v2025.07.28"
+  },
+  "causal_red": "Registered9tests/114assertions,73failures/0errors:runtime absent and exact native routes unsupported",
+  "extra_controls": "Actual intermediate GREEN then new payload/route tests:9tests/119assertions,3causal failures (multiline fields,reply ID,invalid41-char statusSHA); repaired without dropping those semantics",
+  "passes": {
+    "related_suites": "bb scripts/test.bb --only review-publication-readback,review-publication-collection,review-publication:readback9/119;collection30/224;publication17/557+138NBB/Babashka equal actual cases",
+    "owning_lint": "pnpm --dir packages/eta-mu lint:kondo:0errors/0warnings; one preexisting architecture info",
+    "scoped_lint": "Seven touched/new source files plus test separately:0errors/0warnings",
+    "pure_portability": "Eight actual new native-identity/position/extra-payload/observation values compare equal after EDN parsing on NBB and Babashka; both positive/negative result assertions execute",
+    "diff_check": "git diff --check:exit0"
+  },
+  "harness_failures_retained": [
+    "red/red-corrected-async/red-awaited-controls had late assertions due top-level async expression sequencing; fully counted red-sequenced-controls/red-final replace them as test-count evidence",
+    "green-initial retained load/anonymous async reader errors; fixed one awaited runtime load and named async reader",
+    "Initial exploratory scoped lint had stale source cache warnings plus clojure.core name collisions; final owning/scoped lint passes after native-identity/inline-comment names and public source seams"
+  ],
+  "api": {
+    "namespace": "eta-mu.infra.review-readback",
+    "fixture": "readback-with! request transport; request{:registry registry,:context publication-context,:intent{:binding admitted-binding,:state observed|post-started|post-unknown,:review-id positive-id,:receipt-url expected-url},:bounds collection-bounds}",
+    "production": "readback! request replaces caller registry with fixed existing reader; all observations read-only",
+    "raw": "result :native has :tuple{:before actual,:after actual}, :review with every raw inline and explicit positions/identities, :history{:all-statuses,:statuses exact context,:pagination}; :observations preserves every successful raw response even on later refusal"
+  },
+  "limitations": [
+    "Matched observations remain qualification:unsupported with effects[]; no trusted-native-readback/status-history origin is emitted",
+    "Native API App metadata is retained only from response; even present matching App cannot establish installation association. Expected registry/actor never supplies missing App ID",
+    "Native tuple event-sha remains nil; original event/caller/source custody and full publication composition stay unfinished",
+    "Array completeness is API terminal-page traversal with IDs/bounds plus two stable passes, not independent proof that provider omitted no data between reads",
+    "Known review ID is required; unknown review-POST discovery is outside this readback slice",
+    "Production fixed registry remains absent; caller supplied registry cannot enable GET. Fixture transport is explicitly inert and cannot authenticate observations",
+    "Main owns actual public GET probes, independent review and full CLI/build checks; this worker makes no native qualification claim",
+    "No POST/token/signing/model/activation/adoption/grant/protection/pin/merge/deploy/CMS/Cephalon changes",
+    "Only source/test commits; main card/kanban ledger dirt preserved; artifact directory intentionally uncommitted; no push/settle/worktree removal"
+  ]
+}

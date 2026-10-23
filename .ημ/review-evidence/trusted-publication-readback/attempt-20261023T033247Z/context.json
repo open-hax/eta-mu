@@ -1,0 +1,21 @@
+{
+  "head": "cd9751d01a2b93123281d032f42a83fb4b9d42cb",
+  "scope_comment": "../scope-comment.json",
+  "paths": [
+    "scripts/test.bb",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_collection.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_collection.cljs",
+    ".github/scripts/opencode_review_readback_test.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_readback.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_readback.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_readback.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_readback.cljs"
+  ],
+  "docs": [
+    "https://docs.github.com/en/rest/pulls/reviews#get-a-review-for-a-pull-request",
+    "https://docs.github.com/en/rest/pulls/reviews#list-comments-for-a-pull-request-review",
+    "https://docs.github.com/en/rest/commits/statuses#list-commit-statuses-for-a-reference"
+  ],
+  "limits": "No installation-association API is present; actor/native App observation cannot establish native publication authorization."
+}

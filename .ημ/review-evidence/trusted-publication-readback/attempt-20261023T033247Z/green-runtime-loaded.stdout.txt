@@ -1,0 +1,20 @@
+
+============================================================
+Testing: review-publication-readback
+============================================================
+
+
+Testing opencode-review-readback-test
+
+Ran 9 tests containing 114 assertions.
+0 failures, 0 errors.
+
+✓ review-publication-readback passed (0.9s)
+
+============================================================
+TEST SUMMARY
+============================================================
+
+  ✓ review-publication-readback (0.9s)
+
+All suites passed!

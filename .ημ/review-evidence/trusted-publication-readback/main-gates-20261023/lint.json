@@ -1,0 +1,14 @@
+{
+  "observed_at": "2026-10-23T03:48:17.063853+00:00",
+  "source": "6fa625cd66658d850241d0d3f762ef5eb6ba8746",
+  "argv": [
+    "pnpm",
+    "-C",
+    "packages/eta-mu",
+    "lint:kondo"
+  ],
+  "provider_environment": "four named provider vars absent; values never inspected",
+  "exit_code": 0,
+  "stdout": "\n> eta-mu@1.1.1 lint:kondo /home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/packages/eta-mu\n> clj-kondo --lint src/cljs test/cljs test-e2e/cljs intent-runtime/worker_entry.cljs intent-runtime/test_entry.cljs intent-runtime/barrier_entry.cljs commands/workflows.cljs commands/workflows_test.cljs commands/gates.cljs\n\nsrc/cljs/eta_mu/domain/session.cljs:8:14: info: a domain namespace must not require eta-mu.extern.path (extern): domain depends on law, shape, and its own layer.\nlinting took 1716ms, errors: 0, warnings: 0\n",
+  "stderr": ""
+}
