@@ -29,7 +29,8 @@
 
 (defn- observed-worker-result [result]
   (if (map? result)
-    (dissoc result :capability :capability-issued? :recovery-receipt)
+    (dissoc result :capability :capability-issued? :recovery-receipt
+            :outcome-receipt :outcome-issued?)
     {:status :unknown :reason :worker-response-shape}))
 
 (defn- invoke-worker [request]
@@ -44,15 +45,30 @@
          :reason (if preflight? :worker-preflight :worker-invocation)
          :error (or error-type :worker-error)}))))
 
-(defn- bind-recovery-result [store result]
+(defn- bind-recovery-result [store result outcome-receipt]
   (if (map? (:recovery result))
     (let [token ((:put! token-vault)
-                 {:kind :recovery :store (store-key store) :recovery (:recovery result)})]
+                 {:kind :recovery :store (store-key store) :recovery (:recovery result)
+                  :outcome-receipt outcome-receipt})]
       (-> result (dissoc :recovery) (assoc :recovery-receipt token)))
     result))
 
-(defn- issue-capability! [binding]
-  ((:put! token-vault) {:kind :post-capability :binding binding}))
+(defn- issue-authorities! [store binding command result]
+  (let [record {:store (store-key store) :binding binding
+                :claim-id (:claim-id command) :owner (:owner command)
+                :expected-version (:intent-version result)}
+        capability ((:put! token-vault) (assoc record :kind :post-capability))
+        outcome ((:put! token-vault) (assoc record :kind :outcome
+                                           :capability capability))]
+    {:capability capability :outcome-receipt outcome :capability-issued? true}))
+
+(defn- started-ack? [command result]
+  (and (= :post-started (:state command) (:state result))
+       (law/text? (:claim-id command))
+       (= (:claim-id command) (:claim-id result))
+       (law/natural? (:expected-version command))
+       (law/natural? (:intent-version result))
+       (law/portable-equal? (inc (:expected-version command)) (:intent-version result))))
 
 (defn- recovery-record [token store]
   (let [record ((:lookup token-vault) token)]
@@ -84,14 +100,44 @@
                      :binding binding
                      :command (cond-> (select-keys command [:state :expected-version :owner])
                                 claim-id (assoc :claim-id claim-id))}
-            result (bind-recovery-result store (invoke-worker request))]
+            result (bind-recovery-result store (invoke-worker request) nil)]
         (if (and (= :appended (:status result)) (= :post-started (:state result)))
           (let [fresh-admission (safe-admission context)]
             (if (and (= :admitted (:status fresh-admission))
-                     (= binding (:binding fresh-admission)))
-              (assoc result :capability (issue-capability! binding) :capability-issued? true)
+                     (= binding (:binding fresh-admission))
+                     (started-ack? (:command request) result))
+              (merge result (issue-authorities! store binding (:command request) result))
               (assoc result :status :unknown :reason :ack-recheck :capability-issued? false)))
           (assoc result :capability-issued? false))))))
+
+(defn record-unknown!
+  "Persist uncertainty for exactly one privately acknowledged started claim.
+  The separate opaque receipt survives consuming the POST capability. A valid
+  store-bound receipt retires its own wire authority before freshness checks or
+  any uncertain worker attempt. Retry can repair durability, never authorize POST."
+  [store context receipt]
+  (let [record ((:lookup token-vault) receipt)]
+    (if-not (and (configured-store? store) (= :outcome (:kind record))
+                 (= (store-key store) (:store record)))
+      (assoc (refused :outcome-receipt) :capability-issued? false)
+      (do
+        ((:remove! token-vault) (:capability record))
+        (let [admission (safe-admission context)
+              binding (:binding record)]
+          (if-not (and (= :admitted (:status admission))
+                       (= binding (:binding admission)))
+            (assoc (refused :outcome-admission) :capability-issued? false)
+            (let [command (assoc (select-keys record [:expected-version :owner :claim-id])
+                                 :state :post-unknown)
+                  result (bind-recovery-result
+                           store (invoke-worker {:operation :transition
+                                                 :store (store-key store)
+                                                 :context (assoc context :now-ms
+                                                                 (get-in admission [:context :now-ms]))
+                                                 :binding binding :command command}) receipt)]
+              (when (and (= :appended (:status result)) (= :post-unknown (:state result)))
+                ((:remove! token-vault) receipt))
+              (assoc result :capability-issued? false))))))))
 
 (defn recover!
   "Exact Clio retry is durability repair only. Even a recovery append is
@@ -115,7 +161,9 @@
             ((:replace! token-vault) recovery (assoc record :recovery next-recovery)))
           (when (and authorized? (not (map? next-recovery))
                      (contains? #{:recovered :replayed} (:status result)))
-            ((:remove! token-vault) recovery))
+            ((:remove! token-vault) recovery)
+            (when-let [outcome-receipt (:outcome-receipt record)]
+              ((:remove! token-vault) outcome-receipt)))
           (assoc result :capability-issued? false))))))
 
 (defn consume-capability! [capability binding]

@@ -82,4 +82,6 @@
          (portable-equal? (:intent-key data) (:intent-key (:binding data)))
          (contains? states (:state data)) (natural? (:intent-version data))
          (or (nil? (:owner data)) (text? (:owner data)))
-         (or (nil? (:claim-id data)) (text? (:claim-id data))))))
+         (or (nil? (:claim-id data)) (text? (:claim-id data)))
+         (or (not= :post-unknown (:state data))
+             (and (text? (:owner data)) (text? (:claim-id data)))))))

@@ -37,7 +37,9 @@
                                                   (law/text? (:owner data))
                                                   (law/text? (:claim-id data)))
                                :post-unknown (and current (= :post-started (:state current))
-                                                  (law/portable-equal? (:version current) (dec version)))
+                                                  (law/portable-equal? (:version current) (dec version))
+                                                  (= (:owner current) (:owner data))
+                                                  (= (:claim-id current) (:claim-id data)))
                                :ambiguous-absence (and current (= :post-started (:state current))
                                                        (law/portable-equal? (:version current) (dec version)))
                                :observed (and current (contains? law/active-states (:state current))
@@ -98,4 +100,18 @@
                         :binding binding :state :post-started :intent-version version
                         :owner (:owner command) :claim-id (:claim-id command)}})
         (refused :claim))
+      (= requested :post-unknown)
+      (if (and current (= :post-started (:state current))
+               (law/portable-equal? binding (:binding current))
+               (law/portable-equal? (:version current) (:expected-version command))
+               (law/text? (:owner command)) (law/text? (:claim-id command))
+               (= (:owner current) (:owner command))
+               (= (:claim-id current) (:claim-id command)))
+        (let [version (inc (law/canonical-natural (:version current)))]
+          {:status :append :state :post-unknown :event-seq (:next-seq projection)
+           :intent-version version :causes [(:predecessor projection)]
+           :event-data {:lock-key lock-key :intent-key (:intent-key binding)
+                        :binding binding :state :post-unknown :intent-version version
+                        :owner (:owner current) :claim-id (:claim-id current)}})
+        (refused :outcome-claim))
       :else (refused :transition))))
