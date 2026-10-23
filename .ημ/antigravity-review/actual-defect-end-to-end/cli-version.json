@@ -1,0 +1,8 @@
+{
+  "status": 0,
+  "signal": null,
+  "stdout": "1.4.6\n",
+  "stderr": "",
+  "cli": "/home/err/.local/share/antigravity-review/bin/agy-1.4.6",
+  "cli-sha256": "128780f5776959ba6a991bde1f0a8b699eee37a59ed30deb9926147fedfa56c4"
+}

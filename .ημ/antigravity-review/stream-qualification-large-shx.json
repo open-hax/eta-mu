@@ -1,0 +1,324 @@
+{
+  "schema": "open-hax.antigravity-stream-qualification-descriptor/v1",
+  "original_schema": "open-hax.antigravity-stream-qualification/v1",
+  "case": "large-shx",
+  "configured_model": "gemini-3.8-flash-high",
+  "source_sha256": {
+    ".agents/agents/antigravity-reviewer.md": "423a9d623fda3cf9f57872d05f7907e4fa208956771a951195adda5ac102d856",
+    ".github/antigravity/README.md": "9160b1cc5a480b2784a9bf63b8b54cae8571b460f75b476879587e4916e6775b",
+    ".github/antigravity/antigravity/extern/host.cljs": "65cb2a03f79193c27ed88e769472c3f39c205204138c0984bc0a30815f4e2c7c",
+    ".github/antigravity/antigravity/infra/review.cljs": "446abaf3faec8e8f47fda276b2c5bac8ca8e73082aea01df06b68a42799b6b5e",
+    ".github/antigravity/antigravity/law/review.cljc": "e633c2386c8f549bd1290e344474e7c5d0bc2a6d5cbc15dde143e9739209aa6e",
+    ".github/antigravity/antigravity/law/sandbox.cljc": "f309dcd7d2f7a886d2398d2aa3e97b5badbb9b3b4a44d4e185aba9aaa0b19369",
+    ".github/antigravity/antigravity/shape/diff.cljc": "3b168c66d6169e7dfbf2fe576f4eb4b407fd7b0dcf0742973d7b97a90369f6b2",
+    ".github/antigravity/antigravity/shape/finish.cljc": "6ff53fe904a4fd037136bbfae90617627ca5c32ec96997c4681428bf5d02e094",
+    ".github/antigravity/antigravity/shape/stream.cljc": "13da3d47cebad6712b1f4762d3760793b6cc10375efd6d1d86e8e5b915b76284",
+    ".github/antigravity/result.schema.json": "d7ebd44a3ab30dc8aee070972ff808d9b8418bc4acc02b24f77ad4fb5cf2d1c5",
+    ".github/antigravity/review.cljs": "149e727bd14624a7346f72478960c1b06cc06064482d8493cb4158812868ca89",
+    ".github/antigravity/run-cli.mjs": "ea057026ce0251aa1c49bb2b88667cc4a3c9a6d94e2232eb45fb1e11c9a81ffa",
+    ".github/antigravity/strict-settings.json": "c30666edd3bc4cb8e577486d7518f20c08c68bdfbd59e7ae4a632d86b43b4150",
+    ".github/workflows/antigravity-code-review.yml": "9b2e4afdbde0aaa60896d523f1355141eeec9f4888179e59f85c8ae167e6dceb"
+  },
+  "native_github_approval": false,
+  "hosted_activation": false,
+  "scope": "Actual local strict-sandbox native invocation; deployment/hosted qualification remains separate",
+  "execution_binding": "The large transport probe used a temporary held-open-stdin harness. Its raw invocation is retained; source_sha256 identifies the final implementation whose pure admission law was independently applied to this trace.",
+  "qualification_summary": {
+    "summary": {
+      "probe": "/tmp/antigravity-shx-stdin-qualified-oe4v_gjv/review",
+      "adapter_status": 0,
+      "stream_structure": true,
+      "event_count": 5,
+      "step_types": [
+        "agent_response",
+        "finish",
+        "user_input"
+      ],
+      "native_status": "SUCCESS",
+      "num_turns": 1,
+      "has_structured_output": true,
+      "stderr_bytes": 0,
+      "semantic_validation_status": 0,
+      "findings": 0
+    },
+    "validation": {
+      "status": 0,
+      "stdout": "{:shape :shaped, :errors ()}\n",
+      "stderr": "",
+      "stream_structure": true
+    },
+    "adapter": {
+      "status": 0,
+      "signal": null,
+      "timed_out": false,
+      "oversized": false,
+      "group_cleanup": true,
+      "error": null
+    },
+    "process": {
+      "status": 0,
+      "signal": null,
+      "timed_out": false,
+      "oversized": false,
+      "group_cleanup": true,
+      "error": null
+    },
+    "input_manifest": {
+      "diff-sha256": "1ea43e6f83fa68fd457adfd17d9de6c10e6a02f0669b69bfb86a7d9e5f40334b",
+      "paths": [
+        ".github/workflows/antigravity-review.yml",
+        ".ημ/session-mycology/ledger.md",
+        "kanban/antigravity-review-rollout.md",
+        "receipts.edn"
+      ],
+      "prompt-bytes": 290035,
+      "input-bytes": 286995,
+      "head": "2bf4fbefe851bf4817095156dce6cba3d2939edf",
+      "input-sha256": "32ad3503ab4cf524ce3300513a3f419c9d5a0282f5a9b73fddbf5cf106535a22",
+      "files": [
+        {
+          "path": ".github/workflows/antigravity-review.yml",
+          "binary?": false,
+          "base-mode": "000000",
+          "base-bytes": 0,
+          "head-mode": "100644",
+          "base-oid": "0000000000000000000000000000000000000000",
+          "base-sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "status": "A",
+          "head-bytes": 813,
+          "head-sha256": "93e1b3f43e6d8bd80a1952752baf0f786aa144aa86dd66652d0c033177a15182",
+          "head-oid": "8665a5e54b913c2957338fe6fe2021fd74cfefee"
+        },
+        {
+          "path": ".ημ/session-mycology/ledger.md",
+          "binary?": false,
+          "base-mode": "000000",
+          "base-bytes": 0,
+          "head-mode": "100644",
+          "base-oid": "0000000000000000000000000000000000000000",
+          "base-sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "status": "A",
+          "head-bytes": 671,
+          "head-sha256": "fae25f707c718e5edcd92839d49452867d735303aaab1ae067bf1a5c2f89f2b1",
+          "head-oid": "a1529aca86cdc2388cf7e51a017d54130542344e"
+        },
+        {
+          "path": "kanban/antigravity-review-rollout.md",
+          "binary?": false,
+          "base-mode": "000000",
+          "base-bytes": 0,
+          "head-mode": "100644",
+          "base-oid": "0000000000000000000000000000000000000000",
+          "base-sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "status": "A",
+          "head-bytes": 3541,
+          "head-sha256": "36d29d69131be755012c53706fc78931c6a0fe8e30c5f1f43c7888767b4f92ff",
+          "head-oid": "20d6f00ed9bc3c49b0b773f8e29cfaf621a414b6"
+        },
+        {
+          "path": "receipts.edn",
+          "binary?": false,
+          "base-mode": "100644",
+          "base-bytes": 132196,
+          "head-mode": "100644",
+          "base-oid": "7601fac28c3da6adc0beeaf2ddc6c4771b48c127",
+          "base-sha256": "4ef03f25f8088451e0d641c758472a716a41490e8ad1eb225d94ca1f493992c3",
+          "status": "M",
+          "head-bytes": 133645,
+          "head-sha256": "0c867671b40910bbbf5d1a86bd4e8ca2868e22ef74dba1d4c9cb21e9f088f422",
+          "head-oid": "85254b3473bbb48604a45fbf017fd54b634cd37d"
+        }
+      ],
+      "limits": {
+        "files": 256,
+        "file-bytes": 1048576,
+        "diff-bytes": 1048576,
+        "input-bytes": 4194304,
+        "prompt-bytes": 4718592,
+        "response-bytes": 2097152
+      },
+      "base": "f4ee133dcf1650c7eafb623ef084f62417252477",
+      "diff_digest": "1ea43e6f83fa68fd457adfd17d9de6c10e6a02f0669b69bfb86a7d9e5f40334b",
+      "file-count": 4,
+      "diff-bytes": 7366
+    },
+    "invocation": {
+      "args": [
+        "--ro-bind",
+        "/",
+        "/",
+        "--bind",
+        "/home/err/.gemini/antigravity-cli",
+        "/home/err/.gemini/antigravity-cli",
+        "--ro-bind",
+        "/tmp/antigravity-shx-stdin-qualified-oe4v_gjv/review/strict-settings.json",
+        "/home/err/.gemini/antigravity-cli/settings.json",
+        "--bind",
+        "/tmp/antigravity-shx-stdin-qualified-oe4v_gjv/review/workspace",
+        "/tmp/antigravity-shx-stdin-qualified-oe4v_gjv/review/workspace",
+        "--proc",
+        "/proc",
+        "--unshare-pid",
+        "--die-with-parent",
+        "--new-session",
+        "--chdir",
+        "/tmp/antigravity-shx-stdin-qualified-oe4v_gjv/review/workspace",
+        "/home/err/.local/share/antigravity-review/bin/agy-1.4.6",
+        "--agent",
+        "antigravity-reviewer",
+        "--model",
+        "gemini-3.8-flash-high",
+        "--disable-slash-commands",
+        "--output-format",
+        "stream-json",
+        "--json-schema",
+        "/tmp/antigravity-shx-stdin-qualified-oe4v_gjv/review/result.schema.json",
+        "--print-timeout",
+        "600s",
+        "--input-format",
+        "stream-json"
+      ],
+      "base": "f4ee133dcf1650c7eafb623ef084f62417252477",
+      "head": "2bf4fbefe851bf4817095156dce6cba3d2939edf",
+      "prompt_bytes": 290035,
+      "stdin_bytes": 303488,
+      "prompt_sha256": "0cd3db869d7036d0f9769d73bd40a92c5a4e5a4a583ccd37e72c3c8f31920906",
+      "stdin_lifetime": "held open until native result event",
+      "provider_timeout_seconds": 600,
+      "supervisor_timeout_seconds": 610
+    },
+    "native_terminal": {
+      "conversation_id": "e4179d03-b749-4b0f-9b22-326ee5f13963",
+      "status": "SUCCESS",
+      "duration_seconds": 158.222813786,
+      "num_turns": 1,
+      "structured_output": {
+        "base": "f4ee133dcf1650c7eafb623ef084f62417252477",
+        "diff_digest": "1ea43e6f83fa68fd457adfd17d9de6c10e6a02f0669b69bfb86a7d9e5f40334b",
+        "findings": [],
+        "head": "2bf4fbefe851bf4817095156dce6cba3d2939edf",
+        "model": "gemini-3.8-flash-high",
+        "questions": [
+          "Has hosted execution of the reusable workflow at octave-commons/muse/.github/workflows/antigravity-code-review.yml@5bc9a8543ceb8afb04d3fd7e92ba0e1d9c2a03dd been verified with organization runner groups and gemini-3.8-flash-high credentials?",
+          "Will existing branch protection rules and required CI status checks in octave-commons/shx observe or gate on the new Antigravity evidence review check?"
+        ],
+        "reviewed_paths": [
+          ".github/workflows/antigravity-review.yml",
+          ".ημ/session-mycology/ledger.md",
+          "kanban/antigravity-review-rollout.md",
+          "receipts.edn"
+        ],
+        "schema": "open-hax.antigravity-review/v1",
+        "scope_complete": true,
+        "status": "clean",
+        "summary": "All four paths introduce valid caller, kanban planning, session mycology, and receipt provenance records for adopting the pinned Antigravity reviewer. Reusable workflow route, 40-character commit pins, read-only permissions, and model selection match acceptance contracts with no introduced defects.",
+        "toolAction": "Completing antigravity evidence review",
+        "toolSummary": "Antigravity review completion"
+      },
+      "usage": {
+        "input_tokens": 71522,
+        "output_tokens": 24828,
+        "thinking_tokens": 24370,
+        "cache_read_tokens": 0,
+        "total_tokens": 96350
+      }
+    },
+    "native_response_sha256": "8a0c199e295b09789599307d36ebec99104d09e350f7e1e971a7063d0fb10f64"
+  },
+  "original_files": {
+    "adapter.json": {
+      "sha256": "0749b0dd69600a7c888963e2c1f7003c41b2143c7dac023cd38afeedc31efe5b",
+      "bytes": 96
+    },
+    "adapter.stderr.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "changed-lines.json": {
+      "sha256": "6d6c62c0c19cf26f9f3ba4ba66a75aad63e98cd7f5a326426aecc674b7849f56",
+      "bytes": 975
+    },
+    "input.json": {
+      "sha256": "35dc634dfb9f2fd4fd9287c1742dea1b0d5d8fff49c528603cbe55443afadbc1",
+      "bytes": 2883
+    },
+    "invocation.json": {
+      "sha256": "e07791a1230c46f8256b8c7ce364f5427e9e2fb593460c26f565935a3b563af7",
+      "bytes": 1412
+    },
+    "native-envelope.json": {
+      "sha256": "5a9899c5890678a47c5d686b107ed5eb12ee82d16cb904e35037042b701630ad",
+      "bytes": 4045
+    },
+    "native.stderr.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "native.stdout.ndjson": {
+      "sha256": "31e8cb3c23548c1557ddd61d57a52d08b60ff239bed7434366adfee1dedbdc13",
+      "bytes": 8279
+    },
+    "process-start.json": {
+      "sha256": "3cbc86c2b652331affd7d72fbf0f9b77b18b95fd3a6a54b0f1363522dd8ca974",
+      "bytes": 35
+    },
+    "process.json": {
+      "sha256": "c9cd1762784ed8df6057cc8a719750c53b87a8886646e1003aaf17d5d554f55e",
+      "bytes": 122
+    },
+    "result.schema.json": {
+      "sha256": "d7ebd44a3ab30dc8aee070972ff808d9b8418bc4acc02b24f77ad4fb5cf2d1c5",
+      "bytes": 1795
+    },
+    "stdin.ndjson": {
+      "sha256": "7524fee75a7db7b4dbce27d3e52462f44bb39779d57cd33fe7f2de9311bfdfbd",
+      "bytes": 303488
+    },
+    "strict-settings.json": {
+      "sha256": "c30666edd3bc4cb8e577486d7518f20c08c68bdfbd59e7ae4a632d86b43b4150",
+      "bytes": 253
+    },
+    "summary.json": {
+      "sha256": "5bcc09a60afdcc230f0172bee721479873dc98fa4460da11530c77debedc8156",
+      "bytes": 370
+    },
+    "validation.json": {
+      "sha256": "0900aeb944ef98c4425957af03068fa2080eaba08a8ff4e6a899fda1c3b66952",
+      "bytes": 107
+    }
+  },
+  "lossless_derived_files": {
+    "input.txt": {
+      "sha256": "32ad3503ab4cf524ce3300513a3f419c9d5a0282f5a9b73fddbf5cf106535a22",
+      "bytes": 286995,
+      "derive_from": "prompt.txt bytes after the first literal two-newlines Complete input: newline delimiter"
+    },
+    "native.stdout.json": {
+      "sha256": "31e8cb3c23548c1557ddd61d57a52d08b60ff239bed7434366adfee1dedbdc13",
+      "bytes": 8279,
+      "derive_from": "exact bytes of native.stdout.ndjson"
+    },
+    "prompt.txt": {
+      "sha256": "0cd3db869d7036d0f9769d73bd40a92c5a4e5a4a583ccd37e72c3c8f31920906",
+      "bytes": 290035,
+      "derive_from": "JSON.parse(files[stdin.ndjson].exact_utf8_content).message.content encoded as UTF-8"
+    }
+  },
+  "raw_custody": {
+    "repository": "open-hax/eta-mu",
+    "revision": "904ad0acd5d0c2ca634c5af68a8ee98619f2a3c7",
+    "path": ".ημ/antigravity-review/stream-qualification-large-shx.json",
+    "url": "https://github.com/open-hax/eta-mu/blob/904ad0acd5d0c2ca634c5af68a8ee98619f2a3c7/.%CE%B7%CE%BC/antigravity-review/stream-qualification-large-shx.json",
+    "bytes": 358297,
+    "sha256": "be560ae59fdba42f7ae74430eda9c9c94eeb1013134b59eed0379d83fa8db2d8",
+    "operator_cache": "/home/err/.local/share/antigravity-review/qualification/20261023/archive-reviewability-904ad0ac/stream-qualification-large-shx",
+    "original_archive": "original.lossless.json",
+    "raw_files": "raw/",
+    "reconstruction": "The original JSON exact_utf8_content strings, encoded as UTF-8, reproduce original bytes. Cache files were verified byte-for-byte.",
+    "derived_files": "derived/"
+  },
+  "limits": [
+    "Representation-only historical archive compaction; no new execution, current-runtime qualification, hosted activation, native approval or merge credit.",
+    "The original temporary-harness execution binding and original validation outcome are preserved. The complete model input/stream remains in immutable Git and verified local custody."
+  ]
+}

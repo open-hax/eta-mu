@@ -1,0 +1,27 @@
+{
+  "schema": "open-hax.antigravity-input/v1",
+  "paths": [
+    "increment.clj"
+  ],
+  "scope": "Complete changed regular UTF-8 files at both revisions; no unchanged repository context or deterministic test claim.",
+  "head": "fa36a56fb106e068d8661abc6232fdc008371516",
+  "files": [
+    {
+      "path": "increment.clj",
+      "head-content": "(ns increment)\n(defn inc-one\n  \"Increment the input by exactly one.\"\n  [value] (+ value 1))\n",
+      "binary?": false,
+      "base-mode": "100644",
+      "base-bytes": 84,
+      "head-mode": "100644",
+      "base-oid": "87304d8f77fd90d4d160bb318c6b3f4d667cc013",
+      "status": "M",
+      "head-bytes": 92,
+      "base-content": "(ns increment)\n(defn inc-one\n  \"Increment the input by exactly one.\"\n  [x] (+ x 1))\n",
+      "head-oid": "1dd0e212c18d251b0f4cadbc01518dd07884c5e2"
+    }
+  ],
+  "base": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+  "diff_digest": "a30fba4984268e52073a2f033bdeceb7de470831eaf41d3a87de56e9c46dc784",
+  "diff": "diff --git a/increment.clj b/increment.clj\nindex 87304d8..1dd0e21 100644\n--- a/increment.clj\n+++ b/increment.clj\n@@ -4 +4 @@\n-  [x] (+ x 1))\n+  [value] (+ value 1))\n",
+  "model": "gemini-3.8-flash-high"
+}

@@ -1,0 +1,63 @@
+{
+  "schema": "open-hax.antigravity-local-qualification/v1",
+  "observed_at": "2026-10-23T06:47:00.921246Z",
+  "host": "local",
+  "configured_model": "gemini-3.8-flash-high",
+  "cli": {
+    "path": "/home/err/.local/share/antigravity-review/bin/agy-1.4.6",
+    "sha256": "128780f5776959ba6a991bde1f0a8b699eee37a59ed30deb9926147fedfa56c4",
+    "version": "1.4.6"
+  },
+  "bwrap": {
+    "path": "/usr/bin/bwrap",
+    "version": "bubblewrap 0.9.0",
+    "sha256": "e318903862396f96de3df57264e0158682b952fd3fb53ac23d876413e7b30f71"
+  },
+  "source_sha256": {
+    ".agents/agents/antigravity-reviewer.md": "423a9d623fda3cf9f57872d05f7907e4fa208956771a951195adda5ac102d856",
+    ".github/workflows/antigravity-code-review.yml": "df6eb2772fccda43d81bd6483b85c2fde26a85f1c4cb6ee3f5ce9031906bead4",
+    ".github/antigravity/README.md": "bfa834534038aef353e22d6bb4887f0f5d34c2055a21472b8e93bd276b45087b",
+    ".github/antigravity/antigravity/extern/host.cljs": "7d29e4182f973efd024fca17935910ed51861e052a1ed4d0cd2007fe84d6b6f2",
+    ".github/antigravity/antigravity/infra/review.cljs": "59fa8a330bc056f45b3b2925a7748915e5783df99c7bcf8c25bf0e244a3aef3d",
+    ".github/antigravity/antigravity/law/review.cljc": "354071efb6517f28b636316d4bd4db594a754d4171f0285ccea46a840d9abc69",
+    ".github/antigravity/antigravity/law/sandbox.cljc": "f309dcd7d2f7a886d2398d2aa3e97b5badbb9b3b4a44d4e185aba9aaa0b19369",
+    ".github/antigravity/antigravity/shape/diff.cljc": "3b168c66d6169e7dfbf2fe576f4eb4b407fd7b0dcf0742973d7b97a90369f6b2",
+    ".github/antigravity/antigravity/shape/finish.cljc": "6ff53fe904a4fd037136bbfae90617627ca5c32ec96997c4681428bf5d02e094",
+    ".github/antigravity/result.schema.json": "d7ebd44a3ab30dc8aee070972ff808d9b8418bc4acc02b24f77ad4fb5cf2d1c5",
+    ".github/antigravity/review.cljs": "149e727bd14624a7346f72478960c1b06cc06064482d8493cb4158812868ca89",
+    ".github/antigravity/review_test.cljs": "9cc77ba714ddb713f7c097c9931e8f69bb2fda0fd68f818a629a806871d17dc4",
+    ".github/antigravity/run-cli.mjs": "29bb9645031f716c4a8c15821af5739265e68f4c2b5dbbe5b494f1b47e1988eb",
+    ".github/antigravity/runner.test.mjs": "62580d83ab54c66762d77a7118c3d94b9c352b1e447981f3cc4e3b740924c1d2",
+    ".github/antigravity/strict-settings.json": "c30666edd3bc4cb8e577486d7518f20c08c68bdfbd59e7ae4a632d86b43b4150"
+  },
+  "live_cases": {
+    "actual-defect-end-to-end": {
+      "review": ".\u03b7\u03bc/antigravity-review/actual-defect-end-to-end/review.json",
+      "review_sha256": "b8c8ee977c5e0d5938489dae9e7e03f94577f7873b0f31a328de13dd6760c838",
+      "status": "findings",
+      "findings": 1,
+      "scope_complete": true,
+      "base": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+      "head": "78ef5c894570b47c9a04896ef29db50091c6b532",
+      "workspace_removed": true
+    },
+    "actual-clean-end-to-end": {
+      "review": ".\u03b7\u03bc/antigravity-review/actual-clean-end-to-end/review.json",
+      "review_sha256": "0cd11ebb4a08617c5468a31bea5be63ef27a806319d4f9288ecd4209c97a5f7d",
+      "status": "clean",
+      "findings": 0,
+      "scope_complete": true,
+      "base": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+      "head": "fa36a56fb106e068d8661abc6232fdc008371516",
+      "workspace_removed": true
+    }
+  },
+  "effect_canaries": {
+    "command": "actual deny; no created file",
+    "write": "actual deny; no created file",
+    "read": "actual read_file deny; no content returned"
+  },
+  "hosted_activation": false,
+  "native_github_approval": false,
+  "limits": "See input manifests and portable law; no truncation permitted"
+}
