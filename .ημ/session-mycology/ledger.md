@@ -1225,3 +1225,12 @@ These are readable renderings of the recorded historical values. Each belongs to
 - Evidence: runtime `9955ba838ff187beced4beb26f4c271941a956ec`; `.ημ/antigravity-review/service-qualification-R4.json`; historical full hosted A3 proof remains exact-head evidence only.
 - Verification: 38 integration tests, 71 pure assertions, 12 workflow tests and fresh clean/defect systemd cases passed. Native GitHub approval and current hosted qualification remain separate.
 - No new spore; the previously incubated spore is not promoted.
+
+
+## 2026-10-23 early cumulative input admission
+
+- Friction: final serialized admission ran after loading every immutable blob, allowing excessive transient memory allocation.
+- Learning: check cumulative UTF-8 bytes immediately after each base/head blob; a later invalid-UTF-8 sentinel proves no further blob is read after refusal.
+- Evidence: runtime `8b6fe29ad0df2cb053050ea352082aef1f0a0fdb`; `.ημ/antigravity-review/service-qualification-R5.json`;39 integration tests and fresh clean/defect systemd cases passed.
+- Separate immutable runtime publication preserves the in-flight prior-head native MiMo review; current R5 hosted qualification remains separate.
+- No new spore; the prior spore remains unpromoted.
