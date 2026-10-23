@@ -90,7 +90,8 @@
       (is (refused? #(inspect/verify-payload! index compressed))))))
 (deftest actual-fixed-entrypoint
   ;; Tiny fixtures live beneath the durable capture directory until bundled.
-  (let [root (fs/create-temp-dir {:prefix "eta-evidence-inspection-"})
+  (let [root (fs/create-temp-dir {:dir (fs/real-path (fs/temp-dir))
+                                  :prefix "eta-evidence-inspection-"})
         _ (fs/create-dirs root)
         _ (fs/copy helper (fs/path root "inspect.bb") {:replace-existing true})
         [index compressed] (pack [member])
