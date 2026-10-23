@@ -10,13 +10,13 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: antigravity-review-${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: antigravity-review-${{ github.workflow }}-${{ github.event.pull_request.number }}-${{ (github.event.action != 'edited' || github.event.changes.base.ref.from != '') && 'review' || github.run_id }}
   cancel-in-progress: true
 
 jobs:
   review:
     if: ${{ github.event.pull_request.draft == false && (github.event.action != 'edited' || github.event.changes.base.ref.from != '') }}
-    uses: open-hax/eta-mu/.github/workflows/antigravity-code-review.yml@d79b80505e1fef9d3798175ce14261ebd0281b49
+    uses: open-hax/eta-mu/.github/workflows/antigravity-code-review.yml@2f49ccc2378ef2bbe873e79fb3cd52508ebe32f2
     with:
       pr_head_sha: ${{ github.event.pull_request.head.sha }}
       pr_base_sha: ${{ github.event.pull_request.base.sha }}

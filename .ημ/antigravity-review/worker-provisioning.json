@@ -1,0 +1,363 @@
+{
+  "schema": "open-hax.antigravity-worker-provisioning/v2",
+  "observed_at": "2026-10-23T08:06:52.589792+00:00",
+  "workflow_revision": "2f49ccc2378ef2bbe873e79fb3cd52508ebe32f2",
+  "octave_revision": "93ea554332bcdafffc26688836b2e6a655575c94",
+  "runtime_revision": "d79b80505e1fef9d3798175ce14261ebd0281b49",
+  "workflow_sha256": "9eab25fa2a8e2508d9eb14b268a41639afa0b562b8267f11c603643a75651c16",
+  "runtime_path": "/home/err/.local/share/antigravity-review/runtime-d79b80505e1fef9d3798175ce14261ebd0281b49",
+  "runner_version": "2.338.1",
+  "runner_archive_sha256": "08e9ccb3604d2462c24b5e33604dc30810296ca15cc65f23cffd4317eb144c37",
+  "authentication": "Existing machine Antigravity login; credentials never copied into repository or candidate checkout",
+  "groups": {
+    "open-hax": {
+      "observed_at": "2026-10-23T07:55:03.242433+00:00",
+      "group": {
+        "id": 3,
+        "name": "antigravity-review",
+        "visibility": "selected",
+        "allows_public_repositories": true,
+        "default": false,
+        "workflow_restrictions_read_only": false,
+        "restricted_to_workflows": true,
+        "selected_workflows": [
+          "open-hax/eta-mu/.github/workflows/antigravity-code-review.yml@2f49ccc2378ef2bbe873e79fb3cd52508ebe32f2"
+        ],
+        "selected_repositories_url": "https://api.github.com/orgs/open-hax/actions/runner-groups/3/repositories",
+        "runners_url": "https://api.github.com/orgs/open-hax/actions/runner-groups/3/runners",
+        "hosted_runners_url": "https://api.github.com/orgs/open-hax/actions/runner-groups/3/hosted-runners",
+        "inherited": false
+      },
+      "repositories": [
+        {
+          "id": 1255522717,
+          "full_name": "open-hax/axxium"
+        },
+        {
+          "id": 1368140241,
+          "full_name": "open-hax/chat-ui"
+        },
+        {
+          "id": 1368140178,
+          "full_name": "open-hax/clio"
+        },
+        {
+          "id": 1189985055,
+          "full_name": "open-hax/eta-mu"
+        },
+        {
+          "id": 1333057084,
+          "full_name": "open-hax/foresight"
+        },
+        {
+          "id": 1368140110,
+          "full_name": "open-hax/kanban-orchestrator"
+        },
+        {
+          "id": 1298809079,
+          "full_name": "open-hax/katamorph"
+        },
+        {
+          "id": 1199983316,
+          "full_name": "open-hax/knoxx"
+        },
+        {
+          "id": 1333065759,
+          "full_name": "open-hax/opencode"
+        },
+        {
+          "id": 1368140884,
+          "full_name": "open-hax/osmos"
+        },
+        {
+          "id": 1178288746,
+          "full_name": "open-hax/proxx"
+        },
+        {
+          "id": 1368209876,
+          "full_name": "open-hax/receipt-river"
+        },
+        {
+          "id": 1368140308,
+          "full_name": "open-hax/rheos"
+        },
+        {
+          "id": 1256602077,
+          "full_name": "open-hax/services"
+        },
+        {
+          "id": 1368140377,
+          "full_name": "open-hax/session-mycology"
+        },
+        {
+          "id": 1368140442,
+          "full_name": "open-hax/sol"
+        },
+        {
+          "id": 1200863516,
+          "full_name": "open-hax/uxx"
+        }
+      ],
+      "runners": [
+        {
+          "id": 312,
+          "name": "foresight-antigravity-open-hax",
+          "status": "online",
+          "busy": false
+        }
+      ]
+    },
+    "octave-commons": {
+      "observed_at": "2026-10-23T07:55:06.173264+00:00",
+      "group": {
+        "id": 3,
+        "name": "antigravity-review",
+        "visibility": "selected",
+        "allows_public_repositories": true,
+        "default": false,
+        "workflow_restrictions_read_only": false,
+        "restricted_to_workflows": true,
+        "selected_workflows": [
+          "octave-commons/muse/.github/workflows/antigravity-code-review.yml@93ea554332bcdafffc26688836b2e6a655575c94"
+        ],
+        "selected_repositories_url": "https://api.github.com/orgs/octave-commons/actions/runner-groups/3/repositories",
+        "runners_url": "https://api.github.com/orgs/octave-commons/actions/runner-groups/3/runners",
+        "hosted_runners_url": "https://api.github.com/orgs/octave-commons/actions/runner-groups/3/hosted-runners",
+        "inherited": false
+      },
+      "repositories": [
+        {
+          "id": 1245904542,
+          "full_name": "octave-commons/bitch-tracker"
+        },
+        {
+          "id": 1313243914,
+          "full_name": "octave-commons/calliope"
+        },
+        {
+          "id": 1297369890,
+          "full_name": "octave-commons/epiphany"
+        },
+        {
+          "id": 1297877610,
+          "full_name": "octave-commons/muse"
+        },
+        {
+          "id": 1329348163,
+          "full_name": "octave-commons/shx"
+        },
+        {
+          "id": 1278648681,
+          "full_name": "octave-commons/Truth"
+        }
+      ],
+      "runners": [
+        {
+          "id": 1869,
+          "name": "foresight-antigravity-octave-commons",
+          "status": "online",
+          "busy": true
+        }
+      ]
+    }
+  },
+  "repository_variables": [
+    {
+      "repository": "octave-commons/Truth",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "octave-commons/bitch-tracker",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "octave-commons/calliope",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "octave-commons/epiphany",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/katamorph",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/knoxx",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "octave-commons/muse",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/proxx",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/services",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/uxx",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/opencode",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "octave-commons/shx",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/kanban-orchestrator",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/clio",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/chat-ui",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/rheos",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/session-mycology",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/sol",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/osmos",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/receipt-river",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/axxium",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/eta-mu",
+      "ready": "true",
+      "group": "antigravity-review"
+    },
+    {
+      "repository": "open-hax/foresight",
+      "ready": "true",
+      "group": "antigravity-review"
+    }
+  ],
+  "services": {
+    "antigravity-review-open-hax.service": {
+      "is-active": "active",
+      "is-enabled": "enabled"
+    },
+    "antigravity-review-octave-commons.service": {
+      "is-active": "active",
+      "is-enabled": "enabled"
+    }
+  },
+  "bwrap": {
+    "/usr/local/libexec/antigravity-review/bwrap-0.9.0": {
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o755",
+      "sha256": "e318903862396f96de3df57264e0158682b952fd3fb53ac23d876413e7b30f71",
+      "review_account_writable": false
+    },
+    "/etc/apparmor.d/usr.local.libexec.antigravity-review.bwrap-0.9.0": {
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o644",
+      "sha256": "1900091fd0844af11d072fe8f16b54cd486ae0fea22c4421bfca7186d8bc5221",
+      "review_account_writable": false
+    },
+    "loaded_profile": [
+      "antigravity-review-bwrap (unconfined)"
+    ],
+    "userns_restriction": "1"
+  },
+  "namespace_policy": {
+    "scope": "Exact root-owned bwrap executable only; global unprivileged userns restriction remains 1",
+    "profile_path": "/etc/apparmor.d/usr.local.libexec.antigravity-review.bwrap-0.9.0",
+    "profile_sha256": "1900091fd0844af11d072fe8f16b54cd486ae0fea22c4421bfca7186d8bc5221"
+  },
+  "native_service_qualification": {
+    "passed": true,
+    "evidence": "service-qualification.json",
+    "result": {
+      "passed": true,
+      "results": [
+        {
+          "case": "clean",
+          "service_exit": 0,
+          "wall_seconds": 37.715,
+          "native_duration_seconds": 33.85452516,
+          "status": "clean",
+          "findings": [],
+          "native_stderr_bytes": 0,
+          "workspace_removed": true,
+          "service_stderr": ""
+        },
+        {
+          "case": "defect",
+          "service_exit": 0,
+          "wall_seconds": 35.949,
+          "native_duration_seconds": 32.388462162,
+          "status": "findings",
+          "findings": [
+            {
+              "path": "increment.clj",
+              "line": 4,
+              "title": "inc-one increments input by 2 instead of 1"
+            }
+          ],
+          "native_stderr_bytes": 0,
+          "workspace_removed": true,
+          "service_stderr": ""
+        }
+      ]
+    }
+  },
+  "negative_runner_canaries": {
+    "status": "UNKNOWN",
+    "note": "Each unapproved caller remained queued with runner_id 0 for 180 seconds; cancelled. No explicit enforcement denial observed. Group configuration readback is not a universal enforcement proof.",
+    "runs": [
+      "https://github.com/open-hax/katamorph/actions/runs/39918251555",
+      "https://github.com/octave-commons/muse/actions/runs/39918900721"
+    ]
+  },
+  "hosted_execution": "Final pinned workflow pending; prior run 39919264609 reproduced AppArmor uidmap denial now repaired and service-qualified",
+  "native_approval": false
+}
