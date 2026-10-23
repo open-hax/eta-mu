@@ -17,7 +17,37 @@
          (= fixture-id target-id)) :accepted
     :else :enrollment))
 
-(defn stable-observation? [first-pass second-pass] (= first-pass second-pass))
+(def ^:private repository-bookkeeping
+  [:pushed_at :updated_at :open_issues_count :stargazers_count :watchers_count
+   :forks_count :subscribers_count :network_count])
+
+(defn- without-bookkeeping [pass path fields]
+  ;; Missing and malformed resources retain their exact value. Only the named
+  ;; resource map is projected; similarly named keys elsewhere remain facts.
+  (if (map? (get-in pass path))
+    (update-in pass path #(apply dissoc % fields))
+    pass))
+
+(defn- comparison-observation [pass]
+  (let [repositories [[:tuple :raw :repository]
+                      [:tuple :raw :pull-request :base :repo]
+                      [:tuple :raw :pull-request :head :repo]
+                      [:run :run-metadata :repository]
+                      [:run :run-metadata :head_repository]
+                      [:run :attempt-metadata :raw :repository]
+                      [:run :attempt-metadata :raw :head_repository]]
+        timestamps [[:tuple :raw :pull-request]
+                    [:run :run-metadata]
+                    [:run :attempt-metadata :raw]]]
+    (reduce #(without-bookkeeping %1 %2 [:updated_at])
+            (reduce #(without-bookkeeping %1 %2 repository-bookkeeping) pass repositories)
+            timestamps)))
+
+(defn stable-observation?
+  "Compare all source facts except explicit resource-local GitHub bookkeeping.
+  This projection never changes the raw first-pass observation returned to callers."
+  [first-pass second-pass]
+  (= (comparison-observation first-pass) (comparison-observation second-pass)))
 
 (defn tuple-decision [tuple]
   (cond
