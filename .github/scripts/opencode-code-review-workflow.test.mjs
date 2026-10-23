@@ -2029,6 +2029,60 @@ test("terminal gate passes only the complete successful exact-head tuple", (t) =
   }
 });
 
+test("Foresight's MiMo waiver retains truthful model failure and deterministic obligations", (t) => {
+  const { directory, sha } = makeRepository(t);
+  const step = namedStep("review_gate", "Enforce truthful reusable review result");
+  assert.deepEqual(workflow.on.workflow_call.inputs.require_model_review,
+    { description: "Require MiMo publication in the terminal gate; false is limited to the recorded riatzukiza/foresight waiver.", required: false, type: "boolean", default: true });
+  assert.equal(step.env.REVIEW_GATE_INPUTS_JSON, "${{ toJSON(inputs) }}");
+  assert.equal(step.env.REVIEW_GATE_REPOSITORY, "${{ github.repository }}");
+  const waived = { REVIEW_GATE_INPUTS_JSON: JSON.stringify({ require_model_review: false }),
+    REVIEW_GATE_REPOSITORY: "riatzukiza/foresight", REVIEW_JOB_RESULT: "failure",
+    REVIEW_EXPECTED_SHA: "", REVIEW_EXECUTED_SHA: "", REVIEW_COMPLETION_SHA: "",
+    REVIEW_EXACT_HEAD: "", REVIEW_CLEAN: "" };
+  const result = runScript(step.run, directory, finalGateEnvironment(sha, waived));
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /MiMo review waived for riatzukiza\/foresight; observed review_job=failure/);
+  for (const mutation of [
+    { DETERMINISTIC_JOB_RESULT: "failure" }, { DETERMINISTIC_JOB_RESULT: "skipped" },
+    { DETERMINISTIC_JOB_RESULT: "cancelled" }, { DETERMINISTIC_JOB_RESULT: "" },
+    { DETERMINISTIC_OUTPUT_RESULT: "failure" }, { DETERMINISTIC_OUTPUT_RESULT: "" },
+    { CONTEXT_JOB_RESULT: "failure" }, { CONTEXT_JOB_RESULT: "skipped" }, { CONTEXT_JOB_RESULT: "" },
+    { DETERMINISTIC_EXPECTED_SHA: "" }, { DETERMINISTIC_EXECUTED_SHA: "d".repeat(40) },
+    { DETERMINISTIC_COMPLETION_SHA: "c".repeat(40) },
+    { DETERMINISTIC_EXACT_HEAD: "false" }, { DETERMINISTIC_CLEAN: "false" },
+  ]) {
+    const denied = runScript(step.run, directory, finalGateEnvironment(sha, { ...waived, ...mutation }));
+    assert.notEqual(denied.status, 0, JSON.stringify(mutation));
+    assert.match(denied.stderr, /::error::OpenCode evidence review gate/);
+  }
+});
+
+test("MiMo waiver cannot be selected for another repository, model, or malformed input", (t) => {
+  const { directory, sha } = makeRepository(t);
+  const script = namedStep("review_gate", "Enforce truthful reusable review result").run;
+  const waived = { REVIEW_GATE_INPUTS_JSON: JSON.stringify({ require_model_review: false }),
+    REVIEW_GATE_REPOSITORY: "riatzukiza/foresight" };
+  for (const mutation of [
+    { REVIEW_GATE_REPOSITORY: "open-hax/foresight" },
+    { REVIEW_GATE_REPOSITORY: "other/foresight" }, { REVIEW_GATE_REPOSITORY: "" },
+    { REVIEW_GATE_INPUTS_JSON: JSON.stringify({ require_model_review: false, model: "other/model" }) },
+    { REVIEW_GATE_INPUTS_JSON: JSON.stringify({ require_model_review: "false" }) },
+    { REVIEW_GATE_INPUTS_JSON: "null" }, { REVIEW_GATE_INPUTS_JSON: "[]" },
+    { REVIEW_GATE_INPUTS_JSON: "not-json" },
+  ]) {
+    const denied = runScript(script, directory, finalGateEnvironment(sha, { ...waived, ...mutation }));
+    assert.notEqual(denied.status, 0, JSON.stringify(mutation));
+    assert.match(denied.stderr, /::error::OpenCode evidence review gate/);
+  }
+  for (const inputs of [{}, { require_model_review: true }]) {
+    const denied = runScript(script, directory, finalGateEnvironment(sha, {
+      ...waived, REVIEW_GATE_INPUTS_JSON: JSON.stringify(inputs), REVIEW_JOB_RESULT: "failure" }));
+    assert.notEqual(denied.status, 0, JSON.stringify(inputs));
+    assert.match(denied.stderr, /review_job=failure/);
+  }
+});
+
 test("terminal gate treats unsupported pull requests as explicitly not applicable", (t) => {
   const { directory, sha } = makeRepository(t);
   const script = namedStep("review_gate", "Enforce truthful reusable review result").run;

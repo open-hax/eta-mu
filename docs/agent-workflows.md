@@ -217,6 +217,21 @@ gate**. Configure that job as the required check in callers. It runs under
 `always()` and fails closed unless deterministic execution, context compilation,
 and review publication all succeeded.
 
+The explicit `require_model_review: false` exception is limited to
+`riatzukiza/foresight`, with the empty/default MiMo selector, under the
+[October 21 waiver](https://github.com/riatzukiza/foresight/pull/47#issuecomment-6328083797).
+All other callers and direct PR execution retain `true`. The MiMo job still
+runs, publishes only verified native evidence, and retains its actual failed,
+skipped or successful result. The terminal gate reports that observation but
+does not require model publication or its model-execution binding under the
+exception. Successful deterministic execution and output, context compilation,
+exact deterministic revision binding and clean-tree proof remain mandatory.
+Malformed input and an opt-out for any other repository/model fail closed.
+Canonical PR-flow independently requires both current-head CodeRabbit and
+Codex approvals, all findings settled and review convergence; this input never
+supplies approval or round credit. Source preparation must be reviewed and
+adopted before a caller selects its pinned workflow commit.
+
 Every reusable caller must pass `pr_head_sha` as the immutable
 `${{ github.event.pull_request.head.sha }}` value. Both workflow checkouts,
 deterministic command environment, evidence summary, and review bind to that

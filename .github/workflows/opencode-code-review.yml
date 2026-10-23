@@ -15,6 +15,11 @@ on:
         required: false
         type: string
         default: ""
+      require_model_review:
+        description: Require MiMo publication in the terminal gate; false is limited to the recorded riatzukiza/foresight waiver.
+        required: false
+        type: boolean
+        default: true
       review_timeout_minutes:
         description: Whole-minute review job budget from 60 through 180; direct pull requests use 120.
         required: false
@@ -3088,6 +3093,8 @@ jobs:
       - name: Enforce truthful reusable review result
         shell: bash
         env:
+          REVIEW_GATE_INPUTS_JSON: ${{ toJSON(inputs) }}
+          REVIEW_GATE_REPOSITORY: ${{ github.repository }}
           PULL_REQUEST_EVENT: ${{ github.event.pull_request != null }}
           ELIGIBLE_REVIEW_EVENT: ${{ github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository }}
           DETERMINISTIC_JOB_RESULT: ${{ needs.deterministic_evidence.result }}
@@ -3117,11 +3124,36 @@ jobs:
           }
 
           const failures = [];
+          // Absence means the original default-on contract, including direct PRs.
+          // This exception is an operator-authorized repository policy, not a
+          // provider success/approval claim or a general model bypass.
+          let gateInputs;
+          try {
+            gateInputs = JSON.parse(process.env.REVIEW_GATE_INPUTS_JSON || '{}');
+          } catch {
+            console.error('::error::OpenCode evidence review gate: waiver_inputs=invalid');
+            process.exit(1);
+          }
+          if (gateInputs === null || typeof gateInputs !== 'object' || Array.isArray(gateInputs)) {
+            console.error('::error::OpenCode evidence review gate: waiver_inputs=invalid');
+            process.exit(1);
+          }
+          const requireModelReview = Object.prototype.hasOwnProperty.call(gateInputs, 'require_model_review')
+            ? gateInputs.require_model_review : true;
+          if (typeof requireModelReview !== 'boolean') failures.push('require_model_review=invalid');
+          const waived = requireModelReview === false;
+          if (waived && (process.env.REVIEW_GATE_REPOSITORY !== 'riatzukiza/foresight'
+              || (gateInputs.model !== undefined && gateInputs.model !== ''))) {
+            failures.push('mimo_waiver_scope=invalid');
+          }
+          if (waived) {
+            console.log(`MiMo review waived for riatzukiza/foresight; observed review_job=${process.env.REVIEW_JOB_RESULT || 'missing'}. Native CodeRabbit and Codex qualification remains external.`);
+          }
           const requiredSuccess = {
             deterministic_job: process.env.DETERMINISTIC_JOB_RESULT,
             deterministic_output: process.env.DETERMINISTIC_OUTPUT_RESULT,
             context_job: process.env.CONTEXT_JOB_RESULT,
-            review_job: process.env.REVIEW_JOB_RESULT,
+            ...(waived ? {} : { review_job: process.env.REVIEW_JOB_RESULT }),
           };
           for (const [name, value] of Object.entries(requiredSuccess)) {
             if (value !== 'success') failures.push(`${name}=${value || 'missing'}`);
@@ -3130,7 +3162,7 @@ jobs:
           const shaPattern = /^[0-9a-f]{40}$/i;
           const revisions = [
             ['deterministic', process.env.DETERMINISTIC_EXPECTED_SHA, process.env.DETERMINISTIC_EXECUTED_SHA, process.env.DETERMINISTIC_COMPLETION_SHA],
-            ['review', process.env.REVIEW_EXPECTED_SHA, process.env.REVIEW_EXECUTED_SHA, process.env.REVIEW_COMPLETION_SHA],
+            ...(waived ? [] : [['review', process.env.REVIEW_EXPECTED_SHA, process.env.REVIEW_EXECUTED_SHA, process.env.REVIEW_COMPLETION_SHA]]),
           ];
           for (const [name, expected, executed, completion] of revisions) {
             if (![expected, executed, completion].every((sha) => shaPattern.test(sha || ''))
@@ -3141,12 +3173,14 @@ jobs:
           }
           if (process.env.DETERMINISTIC_EXACT_HEAD !== 'true') failures.push('deterministic_exact_head=false_or_missing');
           if (process.env.DETERMINISTIC_CLEAN !== 'true') failures.push('deterministic_clean=false_or_missing');
-          if (process.env.REVIEW_EXACT_HEAD !== 'true') failures.push('review_exact_head=false_or_missing');
-          if (process.env.REVIEW_CLEAN !== 'true') failures.push('review_clean=false_or_missing');
+          if (!waived && process.env.REVIEW_EXACT_HEAD !== 'true') failures.push('review_exact_head=false_or_missing');
+          if (!waived && process.env.REVIEW_CLEAN !== 'true') failures.push('review_clean=false_or_missing');
 
           if (failures.length > 0) {
             for (const failure of failures) console.error(`::error::OpenCode evidence review gate: ${failure}`);
             process.exit(1);
           }
-          console.log('OpenCode evidence review gate passed with successful dependencies and exact clean revision binding.');
+          console.log(waived
+            ? 'OpenCode evidence review gate passed with successful deterministic execution/context and exact clean deterministic revision binding; MiMo remains waived.'
+            : 'OpenCode evidence review gate passed with successful dependencies and exact clean revision binding.');
           NODE
