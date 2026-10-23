@@ -441,6 +441,28 @@
       (is (= (if valid? :admitted :refused) (get-in result [:value :status])) (pr-str [case result]))
       (is (= [] (get-in result [:value :effects])) (pr-str case)))))
 
+(defn malformed-history-cases []
+  (mapv (fn [[label timestamps]]
+          {:case label
+           :history (assoc (history) :statuses
+                           (mapv (fn [index at] (assoc (status-row at) :id (+ 111 index)))
+                                 (range) timestamps))})
+        [[:nil-timestamp [nil]]
+         [:string-timestamp ["not-a-time"]]
+         [:mixed-nil-timestamps [now nil]]
+         [:mixed-string-timestamps [now "not-a-time"]]
+         [:mixed-nil-string-timestamps [nil now "not-a-time"]]]))
+
+(deftest malformed-status-history-refuses-before-ordering-or-arithmetic
+  (let [a (admitted) i (observed-intent a) r (readback a)]
+    (doseq [{:keys [case history]} (malformed-history-cases)
+            [reason intended observed] [[:status-history i r]
+                                        [:intent (assoc i :state :reserved) r]
+                                        [:native-review-readback i (assoc r :origin :untrusted)]]]
+      (is (= {:value {:status :refused :action :refuse :reason reason :effects []}}
+             (portable-result :status-plan [a intended observed history]))
+          (pr-str [case reason])))))
+
 (defn- complete-decision-cases [kind context]
   (let [a (decision :admit context) i (intent a) c (claim a)
         post (decision :publication-plan a i c)
@@ -450,7 +472,7 @@
             (= kind :approve) (assoc-in [:review :comments] []))
         h (history) fresh (assoc h :statuses [(status-row now)])]
     (mapv (fn [[label operation args]] {:case [kind label] :operation operation :args args})
-          [[:admit :admit [context]]
+          (concat [[:admit :admit [context]]
            [:reserve :publication-plan [a nil nil]]
            [:claim :publication-plan [a i nil]]
            [:post-proposal :publication-plan [a i c]]
@@ -460,7 +482,14 @@
            [:status-proposal :status-plan [a observed r h]]
            [:confirmed-status :status-plan [a observed r fresh]]
            [:unknown-status :status-plan [a observed r (assoc fresh :last-write-outcome :unknown)]]
-           [:wrong-inline-membership :status-plan [a observed (assoc-in r [:review :id] 999) h]]])))
+           [:wrong-inline-membership :status-plan [a observed (assoc-in r [:review :id] 999) h]]]
+                  (mapcat (fn [{:keys [case history]}]
+                            [[[:malformed-history case] :status-plan [a observed r history]]
+                             [[:malformed-history-invalid-intent case] :status-plan
+                              [a (assoc observed :state :reserved) r history]]
+                             [[:malformed-history-invalid-readback case] :status-plan
+                              [a observed (assoc r :origin :untrusted) history]]])
+                          (malformed-history-cases))))))
 
 (deftest complete-portable-decisions-and-malformed-policy-match-babashka
   ;; Compare complete Clojure data from both actual hosts. Independent policy
