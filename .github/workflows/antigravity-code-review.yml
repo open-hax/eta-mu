@@ -40,7 +40,7 @@ jobs:
     steps:
       - name: Validate immutable same-repository review request
         id: request
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           REVIEW_HEAD_SHA: ${{ inputs.pr_head_sha }}
           REVIEW_BASE_SHA: ${{ inputs.pr_base_sha }}
@@ -144,7 +144,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Fetch candidate git objects without candidate execution
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ needs.preflight.outputs.head-sha }}
           path: ${{ steps.paths.outputs.checkout-path }}
@@ -185,7 +185,7 @@ jobs:
 
       - name: Upload review evidence including failure diagnostics
         if: ${{ always() && steps.paths.outputs.evidence-root != '' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: antigravity-review-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
