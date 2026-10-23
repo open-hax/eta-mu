@@ -13,7 +13,9 @@
                              (= (:receipt-url intent) (:receipt-url review)))
         history-content? (every? #(and (publication/status-content-bound? now binding %)
                                       (= expected-actor (:actor %))) rows)
-        identities (cons (:identity review) (map :identity rows))
+        identities (concat [(:identity review)]
+                           (map :identity (:comments review))
+                           (map :identity rows))
         conflicting? (some #(and (= :observed (:app-state %))
                                   (not= expected-publisher (:publisher %))) identities)
         reason (cond
