@@ -145,5 +145,22 @@
         (is (not (zero? (:exit result)))))
       (fs/delete alias))
     (fs/delete-tree root)))
+(deftest symlinked-default-temp-parent-keeps-positive-fixtures-usable
+  (let [parent (fs/create-temp-dir {:dir (fs/real-path (fs/temp-dir))
+                                    :prefix "eta-inspection-parent-"})
+        physical (fs/path parent "physical")
+        alias (fs/path parent "alias")
+        create-temp fs/create-temp-dir]
+    (try
+      (fs/create-dirs physical)
+      (fs/create-sym-link alias physical)
+      ;; Model a platform's symlinked default temporary parent. An explicit
+      ;; canonical :dir must win; all entrypoint/ancestor-negative controls run.
+      (with-redefs [fs/temp-dir (constantly alias)
+                    fs/create-temp-dir (fn [opts]
+                                         (create-temp (if (:dir opts) opts
+                                                        (assoc opts :dir alias))))]
+        (actual-fixed-entrypoint))
+      (finally (fs/delete-tree parent)))))
 (let [result (test/run-tests 'test-inspection)]
   (System/exit (if (zero? (+ (:fail result) (:error result))) 0 1)))

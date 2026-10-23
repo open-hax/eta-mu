@@ -194,6 +194,37 @@
               (is (= (apply str (repeat 40 "b")) (:commit_id (first @calls))))))))
       (catch :default e (is false (str e)))
       (finally (.rmSync fs dir #js {:recursive true :force true}) (done)))))
+(defn ^:async temporary-root-custody [done]
+  (let [parent (.realpathSync fs (.mkdtempSync fs (.join path (.tmpdir os) "eta-runtime-parent-")))
+        physical (.join path parent "physical")
+        alias (.join path parent "alias")
+        installation-alias (.join path parent "installation-alias")
+        previous-tmp (aget (.-env js/process) "TMPDIR")
+        opened (atom nil)]
+    (try
+      (.mkdirSync fs physical)
+      (.symlinkSync fs physical alias "dir")
+      (.symlinkSync fs (.resolve path capsule) installation-alias "dir")
+      (aset (.-env js/process) "TMPDIR" alias)
+      (is (= alias (.tmpdir os)) "The test actually exercises a symlinked temporary parent")
+      (let [result (await (call :open-runtime! (.realpathSync fs capsule) descriptor))]
+        (reset! opened (:runtime result))
+        (is (= :ready (:status result)) (pr-str result))
+        (when @opened (await (call :close-runtime! @opened)) (reset! opened nil)))
+      (let [result (await (call :open-runtime! installation-alias descriptor))]
+        (is (= :refused (:status result)))
+        (is (= :runtime-file (:code result)) "Caller-supplied installation aliases remain forbidden"))
+      (is (empty? (array-seq (.readdirSync fs physical))) "Copied runtime cleanup retains ownership")
+      (is (= {:runtimes 0 :workers 0} (await (call :resources))))
+      (catch :default e (is false (str e)))
+      (finally
+        (when @opened (await (call :close-runtime! @opened)))
+        (if previous-tmp (aset (.-env js/process) "TMPDIR" previous-tmp)
+            (js-delete (.-env js/process) "TMPDIR"))
+        (.rmSync fs parent #js {:recursive true :force true})
+        (done)))))
+(deftest copied-runtime-canonicalizes-only-its-owned-temp-root
+  (async done (temporary-root-custody done)))
 (deftest actual-muse-native-payload-projection (async done (publisher-differential done)))
 (deftest actual-pinned-verifier-causal-controls (async done (controls done)))
 (defmethod t/report [::t/default :end-run-tests] [r] (when-not (t/successful? r) (set! (.-exitCode js/process) 1)))
