@@ -88,5 +88,6 @@
   "lossless_derived_files": {},
   "native_github_approval": false,
   "hosted_activation": false,
-  "scope": "Actual local strict-sandbox native invocation; deployment/hosted qualification remains separate"
+  "scope": "Actual local strict-sandbox native invocation; deployment/hosted qualification remains separate",
+  "execution_binding": "Actual final repository runtime; source_sha256 binds the tested implementation before its commit."
 }

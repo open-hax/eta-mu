@@ -114,5 +114,6 @@
   },
   "native_github_approval": false,
   "hosted_activation": false,
-  "scope": "Actual local strict-sandbox native invocation; deployment/hosted qualification remains separate"
+  "scope": "Actual local strict-sandbox native invocation; deployment/hosted qualification remains separate",
+  "execution_binding": "The large transport probe used a temporary held-open-stdin harness. Its raw invocation is retained; source_sha256 identifies the final implementation whose pure admission law was independently applied to this trace."
 }
