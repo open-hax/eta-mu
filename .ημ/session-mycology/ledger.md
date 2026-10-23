@@ -1234,3 +1234,12 @@ These are readable renderings of the recorded historical values. Each belongs to
 - Evidence: runtime `8b6fe29ad0df2cb053050ea352082aef1f0a0fdb`; `.ημ/antigravity-review/service-qualification-R5.json`;39 integration tests and fresh clean/defect systemd cases passed.
 - Separate immutable runtime publication preserves the in-flight prior-head native MiMo review; current R5 hosted qualification remains separate.
 - No new spore; the prior spore remains unpromoted.
+
+
+## 2026-10-23 exact finish progress and reviewable proof custody
+
+- Friction: a valid native ACTIVE finish preview was classified as an effect; the old MiMo fullreview ended without a complete submission after120/122chunks and recovery timeout.
+- Learning: admit only the observed exact-shaped finish wrapper tied to its final DONE; clipped previews remain data, never result authority. Preserve raw proof in immutable Git/hash custody while reducing duplicate archived payloads in the current source diff.
+- Evidence: runtime `5152dcce6e279a49b5a706ab3d3eaa4224df6cd3`;42integration tests,99pure assertions,12workflow tests; fresh R6service clean/defect cases; `.ημ/antigravity-review/service-qualification-R6.json`.
+- Original R5refusal and oldMiMofailure stay failures; no approval, completed cohort or later-head credit invented. Four historical receipt corrections remain untouched pending explicit useroverride.
+- No new spore; prior spore remains unpromoted.

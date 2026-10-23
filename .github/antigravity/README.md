@@ -37,17 +37,40 @@ the metadata separately and applies the unchanged semantic law to the review.
 Unknown keys, partial metadata and invalid metadata refuse; there is no generic
 unknown-field stripping. The original native envelope remains intact.
 
-Historical diagnostic probes are consolidated without losing bytes in
-[diagnostic-probes.json](../../.ημ/antigravity-review/diagnostic-probes.json).
-Its repository-relative `files` map records each original path, SHA-256, mode,
-and `exact_utf8_content`. Re-encoding that string as UTF-8 reconstructs the exact
-original file bytes. The 57 tracked entries were verified against source commit
-`3bcf27bef296f9349fdf4997df256a617da5f120`; four ignored local stderr captures
-are explicitly marked `source_commit_tracked: false`. The original paths remain
-available in that commit. Failed probes retain their actual outcomes and supply
-no qualification or approval credit. Successful `actual-defect-end-to-end` and
+Two historical containers now retain descriptors rather than duplicating their
+complete archived model inputs in the current diff:
+
+- [diagnostic-probes.json](../../.ημ/antigravity-review/diagnostic-probes.json)
+  preserves all 61 original paths, hashes, modes and tracked flags, plus captured
+  native status/structure observations. The 57 tracked entries match source
+  `3bcf27bef296f9349fdf4997df256a617da5f120`; the four ignored local stderr
+  captures remain explicitly `source_commit_tracked: false`.
+- [stream-qualification-large-shx.json](../../.ημ/antigravity-review/stream-qualification-large-shx.json)
+  preserves the original complete qualification summary, validation, input
+  manifest, invocation and native structured result, all 14 source hashes,
+  15 raw-file hashes and the three lossless derivation records. Its original
+  temporary-harness execution binding remains explicit.
+
+Both original JSON containers remain byte-for-byte in public immutable revision
+`904ad0acd5d0c2ca634c5af68a8ee98619f2a3c7`:
+[diagnostic original](https://github.com/open-hax/eta-mu/blob/904ad0acd5d0c2ca634c5af68a8ee98619f2a3c7/.%CE%B7%CE%BC/antigravity-review/diagnostic-probes.json)
+(162,041 bytes, SHA-256 `2559565c90a2e08f43f100a8254c12a4eb3179787b2ad6f928d44142301a93bc`)
+and [stream original](https://github.com/open-hax/eta-mu/blob/904ad0acd5d0c2ca634c5af68a8ee98619f2a3c7/.%CE%B7%CE%BC/antigravity-review/stream-qualification-large-shx.json)
+(358,297 bytes, SHA-256 `be560ae59fdba42f7ae74430eda9c9c94eeb1013134b59eed0379d83fa8db2d8`).
+Verified local originals and reconstructed raw/derived files also remain under
+`/home/err/.local/share/antigravity-review/qualification/20261023/archive-reviewability-904ad0ac`;
+each descriptor's `raw_custody` names its exact original archive and directories.
+
+The original archives retain `exact_utf8_content`: encoding each string as UTF-8
+reconstructs its recorded raw bytes. The stream's derivation records additionally
+recover the prompt from its stdin JSON, the complete input from that prompt,
+and the stdout alias without changing bytes. Every raw and derived byte count
+and SHA-256 was checked, including all 57 tracked diagnostic Git originals.
+The descriptors preserve historical successes, failures, partial and unstructured
+captures without requalifying them. They supply no new execution, review-completion,
+native approval or gate credit. Successful `actual-defect-end-to-end` and
 `actual-clean-end-to-end` evidence and `qualification.json` remain separate and
-unchanged.
+unchanged; full-review requirements are unchanged.
 
 Prepare an input proposal without authentication or model invocation:
 

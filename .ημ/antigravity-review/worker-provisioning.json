@@ -1,17 +1,17 @@
 {
-  "schema": "open-hax.antigravity-worker-provisioning/v4",
-  "observed_at": "2026-10-23T09:32:05.056638+00:00",
+  "schema": "open-hax.antigravity-worker-provisioning/v5",
+  "observed_at": "2026-10-23T10:07:41.137673+00:00",
   "workflow_revision": "2f49ccc2378ef2bbe873e79fb3cd52508ebe32f2",
   "octave_revision": "93ea554332bcdafffc26688836b2e6a655575c94",
-  "runtime_revision": "8b6fe29ad0df2cb053050ea352082aef1f0a0fdb",
+  "runtime_revision": "5152dcce6e279a49b5a706ab3d3eaa4224df6cd3",
   "workflow_sha256": "9eab25fa2a8e2508d9eb14b268a41639afa0b562b8267f11c603643a75651c16",
-  "runtime_path": "/home/err/.local/share/antigravity-review/runtime-8b6fe29ad0df2cb053050ea352082aef1f0a0fdb",
+  "runtime_path": "/home/err/.local/share/antigravity-review/runtime-5152dcce6e279a49b5a706ab3d3eaa4224df6cd3",
   "runner_version": "2.338.1",
   "runner_archive_sha256": "08e9ccb3604d2462c24b5e33604dc30810296ca15cc65f23cffd4317eb144c37",
   "authentication": "Existing machine Antigravity login; credentials never copied into repository or candidate checkout",
   "groups": {
     "open-hax": {
-      "observed_at": "2026-10-23T09:32:05.056638+00:00",
+      "observed_at": "2026-10-23T10:07:41.137673+00:00",
       "group": {
         "id": 3,
         "name": "antigravity-review",
@@ -100,7 +100,7 @@
       ]
     },
     "octave-commons": {
-      "observed_at": "2026-10-23T09:32:05.056638+00:00",
+      "observed_at": "2026-10-23T10:07:41.137673+00:00",
       "group": {
         "id": 3,
         "name": "antigravity-review",
@@ -150,139 +150,139 @@
       "repository": "octave-commons/Truth",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:31:57.992061+00:00"
+      "observed_at": "2026-10-23T10:07:33.976114+00:00"
     },
     {
       "repository": "octave-commons/bitch-tracker",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:31:57.992667+00:00"
+      "observed_at": "2026-10-23T10:07:33.922080+00:00"
     },
     {
       "repository": "octave-commons/calliope",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:31:57.992272+00:00"
+      "observed_at": "2026-10-23T10:07:33.940162+00:00"
     },
     {
       "repository": "octave-commons/epiphany",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:31:57.992423+00:00"
+      "observed_at": "2026-10-23T10:07:33.996988+00:00"
     },
     {
       "repository": "open-hax/katamorph",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:31:59.382121+00:00"
+      "observed_at": "2026-10-23T10:07:34.905433+00:00"
     },
     {
       "repository": "open-hax/knoxx",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:31:59.376853+00:00"
+      "observed_at": "2026-10-23T10:07:34.838414+00:00"
     },
     {
       "repository": "octave-commons/muse",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:31:59.376988+00:00"
+      "observed_at": "2026-10-23T10:07:34.878551+00:00"
     },
     {
       "repository": "open-hax/proxx",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:31:59.382025+00:00"
+      "observed_at": "2026-10-23T10:07:34.880211+00:00"
     },
     {
       "repository": "open-hax/services",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:00.772099+00:00"
+      "observed_at": "2026-10-23T10:07:36.362664+00:00"
     },
     {
       "repository": "open-hax/uxx",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:00.770728+00:00"
+      "observed_at": "2026-10-23T10:07:36.362558+00:00"
     },
     {
       "repository": "open-hax/opencode",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:00.772167+00:00"
+      "observed_at": "2026-10-23T10:07:36.362308+00:00"
     },
     {
       "repository": "octave-commons/shx",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:00.778787+00:00"
+      "observed_at": "2026-10-23T10:07:36.362785+00:00"
     },
     {
       "repository": "open-hax/kanban-orchestrator",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:02.161075+00:00"
+      "observed_at": "2026-10-23T10:07:37.920957+00:00"
     },
     {
       "repository": "open-hax/clio",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:02.162001+00:00"
+      "observed_at": "2026-10-23T10:07:37.920858+00:00"
     },
     {
       "repository": "open-hax/chat-ui",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:02.161374+00:00"
+      "observed_at": "2026-10-23T10:07:37.920570+00:00"
     },
     {
       "repository": "open-hax/rheos",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:02.163157+00:00"
+      "observed_at": "2026-10-23T10:07:37.921120+00:00"
     },
     {
       "repository": "open-hax/session-mycology",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:03.556469+00:00"
+      "observed_at": "2026-10-23T10:07:39.526385+00:00"
     },
     {
       "repository": "open-hax/sol",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:03.556303+00:00"
+      "observed_at": "2026-10-23T10:07:39.526012+00:00"
     },
     {
       "repository": "open-hax/osmos",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:03.556568+00:00"
+      "observed_at": "2026-10-23T10:07:39.526204+00:00"
     },
     {
       "repository": "open-hax/receipt-river",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:03.557582+00:00"
+      "observed_at": "2026-10-23T10:07:39.525620+00:00"
     },
     {
       "repository": "open-hax/axxium",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:05.056356+00:00"
+      "observed_at": "2026-10-23T10:07:41.137280+00:00"
     },
     {
       "repository": "open-hax/eta-mu",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:05.056263+00:00"
+      "observed_at": "2026-10-23T10:07:40.854145+00:00"
     },
     {
       "repository": "open-hax/foresight",
       "ready": "true",
       "group": "antigravity-review",
-      "observed_at": "2026-10-23T09:32:05.056161+00:00"
+      "observed_at": "2026-10-23T10:07:41.137114+00:00"
     }
   ],
   "services": {
@@ -321,6 +321,230 @@
     "profile_sha256": "1900091fd0844af11d072fe8f16b54cd486ae0fea22c4421bfca7186d8bc5221"
   },
   "native_service_qualification": {
+    "passed": true,
+    "runtime_revision": "5152dcce6e279a49b5a706ab3d3eaa4224df6cd3",
+    "evidence": "service-qualification-R6.json",
+    "descriptor_bytes": 7728,
+    "descriptor_sha256": "a711b263e93a28d0401353fa20820cbce34979efb8b6c1cabfce5a4bbfdf708f",
+    "raw_files": 49,
+    "evidence_custody": {
+      "durable_cache": "/home/err/.local/share/antigravity-review/qualification/20261023/R6-service",
+      "raw_file_count": 49,
+      "raw_total_bytes": 91361,
+      "raw_manifest_sha256": "9e54aa71f9a424dac09c2b263fdac976c7b93d4b5b11a81116d5679f40581647",
+      "lossless_archive_sha256": "7be891e089ff87bf75f41f957ed52f90e571f3d70b9213b62310f23dc5a91875",
+      "lossless_archive_bytes": 111795,
+      "all_reconstructions_byte_exact": true,
+      "original_tmp_directory": "/tmp/antigravity-r6-service-qualification-dbld_yma"
+    },
+    "cases": {
+      "clean": {
+        "native_duration_seconds": 24.088677621,
+        "status": "clean",
+        "finding_count": 0,
+        "native_turns": 1,
+        "event_count": 5,
+        "workspace_removed": true,
+        "native_stderr_bytes": 0
+      },
+      "defect": {
+        "native_duration_seconds": 46.065075283,
+        "status": "findings",
+        "finding_count": 1,
+        "native_turns": 1,
+        "event_count": 5,
+        "workspace_removed": true,
+        "native_stderr_bytes": 0
+      }
+    },
+    "limitations": [
+      "Two fresh systemd service calls bind exact clean R6 source; current laws independently checked canonical unique merge base/base_tip, complete forced-text full-index diff, every complete blob/path and all prompt/stdin digests.",
+      "Both real native traces contain five events; optional ACTIVE finish wrapper handling is covered separately by owning deterministic R6 tests and is not claimed observed in these two calls.",
+      "Live defect AGY observed under antigravity-review-bwrap(unconfined), NoNewPrivs1; clean call completed before descendant capture.",
+      "Successful imported CLI advisory evidence supplies no native GitHub approval, merge, deployment or access-control enforcement credit.",
+      "No source, hostenv, global settings, listener, readiness, auth or historical receipt changes were performed."
+    ]
+  },
+  "negative_runner_canaries": {
+    "status": "UNKNOWN",
+    "note": "Each unapproved caller remained queued with runner_id 0 for 180 seconds; cancelled. No explicit enforcement denial observed. Group configuration readback is not a universal enforcement proof.",
+    "runs": [
+      "https://github.com/open-hax/katamorph/actions/runs/39918251555",
+      "https://github.com/octave-commons/muse/actions/runs/39918900721"
+    ]
+  },
+  "hosted_execution": "R6 final source/SHX hosted qualification pending. R5 stream format refusal and prior R4/A3 successes retain exact revisions; no later-head or native approval credit.",
+  "native_approval": false,
+  "historical_A3_service_qualification": {
+    "passed": true,
+    "evidence": "service-qualification.json",
+    "result": {
+      "passed": true,
+      "results": [
+        {
+          "case": "clean",
+          "service_exit": 0,
+          "wall_seconds": 37.715,
+          "native_duration_seconds": 33.85452516,
+          "status": "clean",
+          "findings": [],
+          "native_stderr_bytes": 0,
+          "workspace_removed": true,
+          "service_stderr": ""
+        },
+        {
+          "case": "defect",
+          "service_exit": 0,
+          "wall_seconds": 35.949,
+          "native_duration_seconds": 32.388462162,
+          "status": "findings",
+          "findings": [
+            {
+              "path": "increment.clj",
+              "line": 4,
+              "title": "inc-one increments input by 2 instead of 1"
+            }
+          ],
+          "native_stderr_bytes": 0,
+          "workspace_removed": true,
+          "service_stderr": ""
+        }
+      ]
+    },
+    "runtime_revision": "d79b80505e1fef9d3798175ce14261ebd0281b49"
+  },
+  "historical_A3_hosted_runs": [
+    "https://github.com/open-hax/eta-mu/actions/runs/39922445083",
+    "https://github.com/octave-commons/shx/actions/runs/39922163209"
+  ],
+  "historical_R4_service_qualification": {
+    "passed": true,
+    "runtime_revision": "9955ba838ff187beced4beb26f4c271941a956ec",
+    "evidence": "service-qualification-R4.json",
+    "result": {
+      "passed": true,
+      "results": [
+        {
+          "case": "clean",
+          "service_exit": 0,
+          "wall_seconds": 33.1,
+          "native_duration_seconds": 28.380800615,
+          "status": "clean",
+          "base_tip": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+          "base": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+          "head": "fa36a56fb106e068d8661abc6232fdc008371516",
+          "diff_digest": "a293093b7f47130b5dbcd93cf89adf97fbea941cfe7da157b363d78186e1d3ac",
+          "findings": [],
+          "native_stderr_bytes": 0,
+          "workspace_removed": true,
+          "service_stderr": ""
+        },
+        {
+          "case": "defect",
+          "service_exit": 0,
+          "wall_seconds": 35.391,
+          "native_duration_seconds": 31.541713518999998,
+          "status": "findings",
+          "base_tip": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+          "base": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+          "head": "78ef5c894570b47c9a04896ef29db50091c6b532",
+          "diff_digest": "cd0d7c7ce9f3553c965bc4dbe0dd8b6936ac6aa602fbeacceb09f4d3530f8250",
+          "findings": [
+            {
+              "path": "increment.clj",
+              "line": 4,
+              "title": "inc-one adds 2 instead of incrementing by 1"
+            }
+          ],
+          "native_stderr_bytes": 0,
+          "workspace_removed": true,
+          "service_stderr": ""
+        }
+      ]
+    }
+  },
+  "historical_R4_hosted_runs": [
+    "https://github.com/open-hax/eta-mu/actions/runs/39925909795",
+    "https://github.com/octave-commons/shx/actions/runs/39926493415"
+  ],
+  "runners": {
+    "open-hax": {
+      "total_count": 1,
+      "runners": [
+        {
+          "id": 312,
+          "name": "foresight-antigravity-open-hax",
+          "os": "Linux",
+          "status": "online",
+          "busy": false,
+          "version": "2.338.1",
+          "labels": [
+            {
+              "id": 0,
+              "name": "self-hosted",
+              "type": "read-only"
+            },
+            {
+              "id": 0,
+              "name": "Linux",
+              "type": "read-only"
+            },
+            {
+              "id": 0,
+              "name": "X64",
+              "type": "read-only"
+            },
+            {
+              "id": 0,
+              "name": "antigravity-review",
+              "type": "custom"
+            }
+          ]
+        }
+      ]
+    },
+    "octave-commons": {
+      "total_count": 1,
+      "runners": [
+        {
+          "id": 1869,
+          "name": "foresight-antigravity-octave-commons",
+          "os": "Linux",
+          "status": "online",
+          "busy": false,
+          "version": "2.338.1",
+          "labels": [
+            {
+              "id": 0,
+              "name": "self-hosted",
+              "type": "read-only"
+            },
+            {
+              "id": 0,
+              "name": "Linux",
+              "type": "read-only"
+            },
+            {
+              "id": 0,
+              "name": "X64",
+              "type": "read-only"
+            },
+            {
+              "id": 0,
+              "name": "antigravity-review",
+              "type": "custom"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "runtime_publication": {
+    "revision": "5152dcce6e279a49b5a706ab3d3eaa4224df6cd3",
+    "status": "pending-final-source-PR-push",
+    "previous_source_review_hold": "released-terminal-failure09:59:07Z"
+  },
+  "historical_R5_service_qualification": {
     "passed": true,
     "runtime_revision": "8b6fe29ad0df2cb053050ea352082aef1f0a0fdb",
     "evidence": "service-qualification-R5.json",
@@ -497,182 +721,14 @@
       "reason": "Keep current complete PR diff below unchanged1MiB review ceiling while preserving original bytes."
     }
   },
-  "negative_runner_canaries": {
-    "status": "UNKNOWN",
-    "note": "Each unapproved caller remained queued with runner_id 0 for 180 seconds; cancelled. No explicit enforcement denial observed. Group configuration readback is not a universal enforcement proof.",
-    "runs": [
-      "https://github.com/open-hax/katamorph/actions/runs/39918251555",
-      "https://github.com/octave-commons/muse/actions/runs/39918900721"
-    ]
-  },
-  "hosted_execution": "Current R5 runtime pending final source PR head; immutable R5 runtime public on separate ref to preserve the live R4 MiMo job. Prior R4 and A3 hosted runs retain their exact heads.",
-  "native_approval": false,
-  "historical_A3_service_qualification": {
-    "passed": true,
-    "evidence": "service-qualification.json",
-    "result": {
-      "passed": true,
-      "results": [
-        {
-          "case": "clean",
-          "service_exit": 0,
-          "wall_seconds": 37.715,
-          "native_duration_seconds": 33.85452516,
-          "status": "clean",
-          "findings": [],
-          "native_stderr_bytes": 0,
-          "workspace_removed": true,
-          "service_stderr": ""
-        },
-        {
-          "case": "defect",
-          "service_exit": 0,
-          "wall_seconds": 35.949,
-          "native_duration_seconds": 32.388462162,
-          "status": "findings",
-          "findings": [
-            {
-              "path": "increment.clj",
-              "line": 4,
-              "title": "inc-one increments input by 2 instead of 1"
-            }
-          ],
-          "native_stderr_bytes": 0,
-          "workspace_removed": true,
-          "service_stderr": ""
-        }
-      ]
-    },
-    "runtime_revision": "d79b80505e1fef9d3798175ce14261ebd0281b49"
-  },
-  "historical_A3_hosted_runs": [
-    "https://github.com/open-hax/eta-mu/actions/runs/39922445083",
-    "https://github.com/octave-commons/shx/actions/runs/39922163209"
-  ],
-  "historical_R4_service_qualification": {
-    "passed": true,
-    "runtime_revision": "9955ba838ff187beced4beb26f4c271941a956ec",
-    "evidence": "service-qualification-R4.json",
-    "result": {
-      "passed": true,
-      "results": [
-        {
-          "case": "clean",
-          "service_exit": 0,
-          "wall_seconds": 33.1,
-          "native_duration_seconds": 28.380800615,
-          "status": "clean",
-          "base_tip": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
-          "base": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
-          "head": "fa36a56fb106e068d8661abc6232fdc008371516",
-          "diff_digest": "a293093b7f47130b5dbcd93cf89adf97fbea941cfe7da157b363d78186e1d3ac",
-          "findings": [],
-          "native_stderr_bytes": 0,
-          "workspace_removed": true,
-          "service_stderr": ""
-        },
-        {
-          "case": "defect",
-          "service_exit": 0,
-          "wall_seconds": 35.391,
-          "native_duration_seconds": 31.541713518999998,
-          "status": "findings",
-          "base_tip": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
-          "base": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
-          "head": "78ef5c894570b47c9a04896ef29db50091c6b532",
-          "diff_digest": "cd0d7c7ce9f3553c965bc4dbe0dd8b6936ac6aa602fbeacceb09f4d3530f8250",
-          "findings": [
-            {
-              "path": "increment.clj",
-              "line": 4,
-              "title": "inc-one adds 2 instead of incrementing by 1"
-            }
-          ],
-          "native_stderr_bytes": 0,
-          "workspace_removed": true,
-          "service_stderr": ""
-        }
-      ]
-    }
-  },
-  "historical_R4_hosted_runs": [
-    "https://github.com/open-hax/eta-mu/actions/runs/39925909795",
-    "https://github.com/octave-commons/shx/actions/runs/39926493415"
-  ],
-  "runners": {
-    "open-hax": {
-      "total_count": 1,
-      "runners": [
-        {
-          "id": 312,
-          "name": "foresight-antigravity-open-hax",
-          "os": "Linux",
-          "status": "online",
-          "busy": false,
-          "version": "2.338.1",
-          "labels": [
-            {
-              "id": 0,
-              "name": "self-hosted",
-              "type": "read-only"
-            },
-            {
-              "id": 0,
-              "name": "Linux",
-              "type": "read-only"
-            },
-            {
-              "id": 0,
-              "name": "X64",
-              "type": "read-only"
-            },
-            {
-              "id": 0,
-              "name": "antigravity-review",
-              "type": "custom"
-            }
-          ]
-        }
-      ]
-    },
-    "octave-commons": {
-      "total_count": 1,
-      "runners": [
-        {
-          "id": 1869,
-          "name": "foresight-antigravity-octave-commons",
-          "os": "Linux",
-          "status": "online",
-          "busy": false,
-          "version": "2.338.1",
-          "labels": [
-            {
-              "id": 0,
-              "name": "self-hosted",
-              "type": "read-only"
-            },
-            {
-              "id": 0,
-              "name": "Linux",
-              "type": "read-only"
-            },
-            {
-              "id": 0,
-              "name": "X64",
-              "type": "read-only"
-            },
-            {
-              "id": 0,
-              "name": "antigravity-review",
-              "type": "custom"
-            }
-          ]
-        }
-      ]
-    }
-  },
-  "runtime_publication": {
-    "branch": "codex/antigravity-runtime-r5",
-    "sha": "8b6fe29ad0df2cb053050ea352082aef1f0a0fdb"
+  "historical_R5_hosted_failure": {
+    "run": "https://github.com/octave-commons/shx/actions/runs/39933620116",
+    "head": "609aa87a3ff2f8cece455ea2e435a008dca97669",
+    "runtime": "8b6fe29ad0df2cb053050ea352082aef1f0a0fdb",
+    "conclusion": "failure",
+    "refusal": "native-effects: unrecognized ACTIVE pure-finish preview",
+    "artifact_id": 12493341260,
+    "artifact_sha256": "d772dfcc7553169581f76ace52069c0e5ce164d5f40792c7910f2162ec236620",
+    "native_approval": false
   }
 }
