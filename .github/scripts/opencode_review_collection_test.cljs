@@ -4,6 +4,7 @@
   (:require [cljs.test :as test :refer [async deftest is testing]]
             [cljs.reader :as reader]
             [eta-mu.law.review-collection :as law]
+            [eta-mu.domain.review-collection :as domain]
             [eta-mu.extern.review-collection :as host]
             [eta-mu.shape.review-collection :as shape]
             [eta-mu.infra.review-collection :as collection]
@@ -796,6 +797,139 @@
     (done)))
 (deftest request-budget-is-finite-and-refuses-before-overrun
   (async done (request-budget-control done)))
+
+;; The comparison ignores only named, resource-local GitHub bookkeeping.
+;; These pure input/output cases are also executed unchanged on Babashka.
+(def stability-repository-paths
+  [[:tuple :raw :repository]
+   [:tuple :raw :pull-request :base :repo]
+   [:tuple :raw :pull-request :head :repo]
+   [:run :run-metadata :repository]
+   [:run :run-metadata :head_repository]
+   [:run :attempt-metadata :raw :repository]
+   [:run :attempt-metadata :raw :head_repository]])
+(def stability-repository-volatile-keys
+  [:pushed_at :updated_at :open_issues_count :stargazers_count :watchers_count
+   :forks_count :subscribers_count :network_count])
+(def stability-volatile-paths
+  (into [[:tuple :raw :pull-request :updated_at]
+         [:run :run-metadata :updated_at]
+         [:run :attempt-metadata :raw :updated_at]]
+        (for [resource stability-repository-paths
+              field stability-repository-volatile-keys]
+          (conj resource field))))
+(def stability-retained-paths
+  (into [[:tuple :head-sha] [:tuple :base-sha] [:tuple :merge-sha]
+         [:tuple :merge-tree] [:tuple :head-tree] [:tuple :base-tree]
+         [:tuple :merge-parents] [:tuple :base-ancestor?] [:tuple :state]
+         [:tuple :draft?] [:tuple :mergeable?]
+         [:tuple :raw :pull-request :title] [:tuple :raw :pull-request :body]
+         [:tuple :raw :pull-request :labels] [:tuple :raw :pull-request :changed_files]
+         [:tuple :raw :head-commit :commit :tree :sha]
+         [:tuple :raw :base-ref :object :sha] [:tuple :raw :merge-ref :object :sha]
+         [:tuple :raw :ancestry :merge_base_commit :sha]
+         [:run :id] [:run :attempt] [:run :workflow-id] [:run :head-sha]
+         [:run :run-metadata :event] [:run :run-metadata :path]
+         [:run :run-metadata :status] [:run :run-metadata :conclusion]
+         [:run :run-metadata :created_at] [:run :run-metadata :run_started_at]
+         [:run :run-metadata :referenced_workflows]
+         [:run :attempt-metadata :raw :run_attempt]
+         [:run :attempt-metadata :raw :workflow_id]
+         [:run :attempt-metadata :raw :head_sha]
+         [:run :attempt-metadata :raw :actor :id]
+         [:run :jobs :items] [:run :artifacts :items] [:run :artifacts :raw-items]
+         [:files :items] [:files :raw-items] [:files :complete?]
+         [:files :items-metadata :updated_at]
+         [:run :jobs :unknown :updated_at] [:unknown :updated_at]]
+        (for [resource stability-repository-paths
+              field [:id :full_name :private :permissions :default_branch :owner]]
+          (conj resource field))))
+(def stability-snapshot
+  (reduce #(assoc-in %1 %2 :first)
+          {} (concat stability-volatile-paths stability-retained-paths)))
+(def stability-malformed-values [nil false "raw" [] 1 {}])
+(defn stability-control-values []
+  (into [{:kind :same :expected true :actual (domain/stable-observation? stability-snapshot stability-snapshot)}]
+        (concat
+          (for [field stability-volatile-paths]
+            {:kind :volatile :path field :expected true
+             :actual (domain/stable-observation? stability-snapshot (assoc-in stability-snapshot field :second))})
+          (for [field stability-retained-paths]
+            {:kind :retained :path field :expected false
+             :actual (domain/stable-observation? stability-snapshot (assoc-in stability-snapshot field :second))})
+          (for [field (concat stability-repository-paths
+                              [[:tuple :raw :pull-request] [:run :run-metadata]
+                               [:run :attempt-metadata :raw]])
+                left stability-malformed-values right stability-malformed-values
+                :when (not= left right)]
+            {:kind :malformed :path field :left left :right right :expected false
+             :actual (domain/stable-observation? (assoc-in stability-snapshot field left)
+                                                (assoc-in stability-snapshot field right))}))))
+(deftest snapshot-comparison-only-ignores-explicit-resource-bookkeeping
+  (doseq [{:keys [expected actual path kind]} (stability-control-values)]
+    (is (= expected actual) (str kind " " path))))
+
+(defn ^:async volatile-metadata-control [done]
+  (try
+    (doseq [field stability-volatile-paths]
+      (let [reads (atom {})
+            transport
+            (fake-native
+              (fn [url body]
+                (let [pass (swap! reads update url (fnil inc 0))
+                      value (get pass url)
+                      relative
+                      (cond
+                        (= url "https://api.github.com/repos/owner/repo")
+                        (when (= [:tuple :raw :repository] (pop field)) [(peek field)])
+                        (.endsWith url "/pulls/7")
+                        (when (= [:tuple :raw :pull-request] (subvec field 0 3)) (subvec field 3))
+                        (.endsWith url "/actions/runs/99")
+                        (when (= [:run :run-metadata] (subvec field 0 2)) (subvec field 2))
+                        (.endsWith url "/actions/runs/99/attempts/2")
+                        (when (= [:run :attempt-metadata :raw] (subvec field 0 3)) (subvec field 3)))]
+                  (if relative (assoc-in body relative value) body))))
+            result (await (run!test (assoc-in registry [:targets 0 :enabled?] true) transport))]
+        (is (= :pending (:status result)) (str field " " (pr-str result)))
+        (is (= :run-pr-association (:reason result)) (str field))
+        (is (= 2 (:snapshot-passes result)) (str field))
+        (is (= 1 (get-in (:native result) field)) (str "first raw payload retained: " field))
+        (is (= [] (:effects result)) (str field))))
+    (finally (done))))
+(deftest actual-collector-retains-first-raw-payload-across-volatile-drift
+  (async done (volatile-metadata-control done)))
+
+(defn ^:async raw-decision-drift-control [done]
+  (try
+    (doseq [[resource relative]
+            [["https://api.github.com/repos/owner/repo" [:permissions]]
+             ["/pulls/7" [:base :repo :owner]]
+             ["/actions/runs/99" [:head_repository :id]]
+             ["/actions/runs/99" [:unrecognized-source]]
+             ["/actions/runs/99/attempts/2" [:repository :permissions]]
+             ["/jobs?per_page=100&page=1" [:jobs 0 :steps]]
+             ["/artifacts?per_page=100&page=1" [:artifacts 0 :created_at]]
+             ["/pulls/7/files?per_page=100&page=1" [0 :patch]]]]
+      (let [reads (atom 0)
+            result (await
+                     (run!test
+                       (assoc-in registry [:targets 0 :enabled?] true)
+                       (fake-native
+                         (fn [url body]
+                           (if (.endsWith url resource)
+                             (let [pass (swap! reads inc)]
+                               (assoc-in body relative
+                                         (if (= [:artifacts 0 :created_at] relative)
+                                           (str "2026-10-" (+ 19 pass))
+                                           (str "source-" pass))))
+                             body)))))]
+        (is (= :refused (:status result)) (str resource relative))
+        (is (= :snapshot-drift (:reason result)) (str resource relative))
+        (is (= 2 @reads) (str resource relative))
+        (is (= [] (:effects result)) (str resource relative))))
+    (finally (done))))
+(deftest actual-collector-refuses-raw-identity-source-job-artifact-and-patch-drift
+  (async done (raw-decision-drift-control done)))
 
 (def original-failure-report (get-method test/report [::test/default :fail]))
 (defmethod test/report [::test/default :fail] [result]
