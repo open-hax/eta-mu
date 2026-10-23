@@ -38,8 +38,32 @@
   [{:label "review-workflow"
     :cmd ["node" "--test" ".github/scripts/opencode-code-review-workflow.test.mjs"
           ".github/scripts/opencode-review-tool-recovery.test.mjs"
+          ".github/scripts/opencode-review-intent-bootstrap.test.mjs"
           ".github/scripts/opencode-review-invocation-integrity.test.mjs"]}
    {:label "assessment-workflows" :cmd ["bb" "scripts/test-assessments.bb"]}
+   {:label "review-publication"
+    :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
+          ".github/scripts/opencode_review_publish_test.cljs"]}
+   {:label "review-publication-intent"
+    :cmd ["pnpm" "--dir" "packages/eta-mu" "exec" "node"
+          "../../node_modules/.pnpm/nbb@1.5.212/node_modules/nbb/cli.js"
+          "-cp" "test"
+          "intent-runtime/test_entry.cljs"]}
+   {:label "review-publication-collection"
+    :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
+          ".github/scripts/opencode_review_collection_test.cljs"]}
+   {:label "review-publication-readback"
+    :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
+          ".github/scripts/opencode_review_readback_test.cljs"]}
+   {:label "review-publication-source"
+    :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
+          ".github/scripts/opencode_review_source_test.cljs"]}
+   {:label "review-verification"
+    :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
+          ".github/scripts/opencode_review_verification_test.cljs"]}
+   {:label "review-publication-archive"
+    :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
+          ".github/scripts/opencode_review_archive_test.cljs"]}
    {:label "legacy-ai-catalog"
     :cmd ["pnpm" "--dir" "packages/legacy/ai" "exec" "vitest" "run"
           "test/model-catalog-types.test.ts"]}

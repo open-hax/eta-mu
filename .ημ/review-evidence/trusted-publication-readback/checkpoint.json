@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "source": "6e1f088fcd81dba5e9edaf526e453962875215c6",
+  "previous_published_head": "cd9751d01a2b93123281d032f42a83fb4b9d42cb",
+  "red": "28de0da1197d23fc839061aef76936975048f4ca",
+  "initial_green": "6fa625cd66658d850241d0d3f762ef5eb6ba8746",
+  "independent_finding_red": "141c11e3bb285c427b2d51c7ea746d09072998cd",
+  "green": "6e1f088fcd81dba5e9edaf526e453962875215c6",
+  "archive": ".ημ/review-evidence/trusted-publication-readback/10c43b3c4abbc94440a8d81c0dbece7adff3b5e998b505ddef820b262d599ccd.json.gz",
+  "archive_sha256": "10c43b3c4abbc94440a8d81c0dbece7adff3b5e998b505ddef820b262d599ccd",
+  "archive_raw_sha256": "5d7285278c5fa5b2cbc31d963bc90c818c75cf4c58457ab98fac453c299d89f5",
+  "captures": 160,
+  "lossless_representations": [],
+  "focused": "readback10/130;collection30/224;publication17/557+138parity;eightnewportablevalues",
+  "full_checks": "CLI194/587+workflows11/199;owninglint/release0warnings; testcleanupdiagnostic retained",
+  "native_probe": "actualpublicGETreview/commentspage1/statuspage1 plusproductionabsentregistryrefusal; notcompletetraversal/installation/authentication",
+  "independent_review": "6fa inlineAppconflict reproduced; causal repair and successor8controls; original_commit_id existinglaw limit retained",
+  "prefixes": {
+    "receipts.edn": {
+      "base_bytes": 629819,
+      "base_sha256": "4bab89bf2a7d9289cadc254087740f0f251208b8c6fe504236af65348f02c055",
+      "current_bytes": 633169,
+      "prefix_preserved": true
+    },
+    "kanban/.events/ledger.edn": {
+      "base_bytes": 1858284,
+      "base_sha256": "5fd39175866a87726442fcf392262c66d9a636f3f567baed19bcd6c0c6870b14",
+      "current_bytes": 1862523,
+      "prefix_preserved": true
+    },
+    ".ημ/session-mycology/ledger.md": {
+      "base_bytes": 117993,
+      "base_sha256": "20e1735b43e0dcb8ce7d612cb9186c02eaed97d6ff9f89e1670b47ae520b7851",
+      "current_bytes": 118674,
+      "prefix_preserved": true
+    },
+    ".ημ/session-reflections.edn": {
+      "base_bytes": 41622,
+      "base_sha256": "76a5109bd3e6f5d40a40b82f9f4b5d21838d832f267929e9d87ce82acf4ab4f3",
+      "current_bytes": 41622,
+      "prefix_preserved": true
+    }
+  },
+  "cards_preserved": 309,
+  "publisher": "in_progress/Codex/5points",
+  "qualification": false,
+  "CMS_Cephalon": "paused",
+  "limits": [
+    "KnownreviewID required;unknownPOSTdiscoveryunfinished",
+    "OriginalG/caller/inputcustody and complete authenticated publication/composition/adoption unfinished",
+    "NativeAppmetadata doesnotproveinstallationassociation",
+    "TwoAPIstablepasses/terminalpages donotindependentlyproveprovideromissionabsence",
+    "EarlierCD975Sandboxproof sourcebound, notsuccessorqualification"
+  ]
+}

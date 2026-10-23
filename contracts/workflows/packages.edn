@@ -57,10 +57,9 @@
    :workflow/name "Sol CI"
    :workflow/emit false
    :workflow/doc
-   "Sol consumes canonical Clio from the workspace. Katamorph remains an
-    immutable external Git dependency requiring scoped CI read access. Local
-    gate selection preserves that real dependency boundary without requiring
-    or granting access to the deprecated standalone event-ledger repository."
+   "Sol consumes canonical Clio from the workspace and an immutable public
+    Katamorph Git dependency. Dependency access failures remain fatal; candidate
+    CI receives no signing credential to resolve this classpath."
    :workflow/triggers
    [{:on/event :pull-request
      :on/paths ["packages/sol/**" "packages/clio/**" "packages/turn-processor/**" "packages/eta-mu/**"
@@ -77,7 +76,9 @@
                              ".github/workflows/sol-ci.yml" ".github/scripts/package-warning-gates.test.mjs" "package.json"
                              "pnpm-lock.yaml" "pnpm-workspace.yaml"]}
      :job/steps
-     [{:step/run "pnpm --dir packages/sol lint" :step/gate true}
+     [{:step/run "pnpm --dir packages/eta-mu test:workflows" :step/gate true
+       :gate/expect "0 failures, 0 errors" :gate/no-warning true}
+      {:step/run "pnpm --dir packages/sol lint" :step/gate true}
       {:step/run "pnpm --dir packages/sol test" :step/gate true
        :gate/expect "0 failures, 0 errors" :gate/no-warning true}
       {:step/run "pnpm --dir packages/sol build" :step/gate true :gate/no-warning true}]}]}
@@ -140,7 +141,8 @@
    [{:on/event :pull-request
      :on/paths ["packages/rheos/**" ".github/workflows/kanban-sync.yml"
                 ".github/workflows/eta-mu-kanban-sync.yml"
-                ".github/workflows/rheos-github-sync-ci.yml"]}]
+                ".github/workflows/rheos-github-sync-ci.yml"
+                "packages/eta-mu/commands/workflows_test.cljs"]}]
    :workflow/jobs
    [{:job/id "rheos-github-sync"
      :job/name "rheos-github-sync"
@@ -148,9 +150,12 @@
                 :gate/check "rheos-github-sync"
                 :gate/paths ["packages/rheos/" ".github/workflows/kanban-sync.yml"
                              ".github/workflows/eta-mu-kanban-sync.yml"
-                             ".github/workflows/rheos-github-sync-ci.yml"]}
+                             ".github/workflows/rheos-github-sync-ci.yml"
+                             "packages/eta-mu/commands/workflows_test.cljs"]}
      :job/steps
-     [{:step/run "pnpm --dir packages/rheos test" :step/gate true
+     [{:step/run "pnpm --dir packages/eta-mu test:workflows" :step/gate true
+       :gate/expect "0 failures, 0 errors" :gate/no-warning true}
+      {:step/run "pnpm --dir packages/rheos test" :step/gate true
        :gate/expect "0 failures, 0 errors"}
       {:step/run "pnpm --dir packages/rheos build" :step/gate true}
       {:step/run "node packages/rheos/dist/cli.cjs board snapshot --tasks-dir \"$PWD/kanban\" --out /tmp/eta-mu-gates-snapshot.json"

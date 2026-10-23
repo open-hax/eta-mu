@@ -64,16 +64,6 @@ on:
             echo "build=125" >> "$statuses"
             echo "Dependency installation failed; bootstrap, lint, test, and build were not attempted." >> "$log"
           fi
-    secrets:
-      ETA_MU_APP_ID:
-        # Optional so evidence/compile jobs still run in organizations where the
-        # app secrets are not visible; the review job then fails fast with an
-        # explicit operator instruction instead of a plan-time error.
-        required: false
-      ETA_MU_APP_PRIVATE_KEY:
-        required: false
-      DISCORD_REVIEW_WEBHOOK_URL:
-        required: false
 
 concurrency:
   group: opencode-evidence-review-${{ github.event.pull_request.number }}
@@ -198,66 +188,6 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
-
-      - name: Detect eta-mu app credentials
-        id: dependency-credentials
-        if: ${{ !contains(toJSON(inputs), '"setup_eta_mu_toolchain"') || inputs.setup_eta_mu_toolchain }}
-        env:
-          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
-          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-        shell: bash
-        run: |
-          if [[ -n "${ETA_MU_APP_ID}" && -n "${ETA_MU_APP_PRIVATE_KEY}" ]]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Create cross-repository read token
-        id: dependency-token
-        if: ${{ steps.dependency-credentials.outputs.available == 'true' }}
-        continue-on-error: true
-        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
-        with:
-          app-id: ${{ secrets.ETA_MU_APP_ID }}
-          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: |
-            katamorph
-          permission-contents: read
-
-      - name: Mirror private Git dependencies
-        if: ${{ steps.dependency-token.outputs.token != '' }}
-        continue-on-error: true
-        env:
-          DEPENDENCY_TOKEN: ${{ steps.dependency-token.outputs.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mirrors="$RUNNER_TEMP/private-git-mirrors"
-          mkdir -p "$mirrors"
-          authorization="$(printf 'x-access-token:%s' "$DEPENDENCY_TOKEN" | base64 -w0)"
-
-          mirror_repository() {
-            local repository="$1"
-            local destination="$mirrors/${repository}.git"
-            local attempt
-            for attempt in 1 2 3; do
-              rm -rf "$destination"
-              if git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${authorization}" \
-                clone --mirror \
-                "https://github.com/open-hax/${repository}.git" \
-                "$destination"; then
-                return 0
-              fi
-              if [[ "$attempt" -eq 3 ]]; then
-                return 1
-              fi
-              sleep $((attempt * 5))
-            done
-          }
-
-          mirror_repository katamorph
 
       - name: Stage pull request diff and context
         if: ${{ steps.checkout_guard.outputs.exact_head == 'true' && steps.checkout_guard.outputs.clean == 'true' }}
@@ -414,19 +344,6 @@ jobs:
               echo "generated_outputs_restore=125" >> "$statuses"
             fi
           }
-
-          mirrors="$RUNNER_TEMP/private-git-mirrors"
-          remove_mirror_rewrites() {
-            git config --global --unset-all \
-              "url.file://$mirrors/katamorph.git.insteadOf" || true
-          }
-          trap remove_mirror_rewrites EXIT
-
-          if [[ -d "$mirrors/katamorph.git" ]]; then
-            git config --global \
-              "url.file://$mirrors/katamorph.git.insteadOf" \
-              "https://github.com/open-hax/katamorph.git"
-          fi
 
           if [[ "$CHECKOUT_EXACT_HEAD" != "true" || "$CHECKOUT_CLEAN" != "true" ]]; then
             echo "checkout_guard=1" >> "$statuses"
@@ -762,14 +679,14 @@ jobs:
           cp .review-context/muse/.opencode/exposed-tools.txt "$CONTEXT_OUT/metadata/exposed-tools.txt"
           tar --exclude=.git -C .review-context/agents -cf - . | tar -C "$CONTEXT_OUT/agents" -xf -
 
-          # Muse pins the reviewer agent, prompt and deterministic publisher.
+          # Muse pins the reviewer agent, prompt and pure submission validators.
+          # Reuse their existing module without invoking its publication adapter.
           # Eta owns the description-only native hook and its rendered data;
           # both travel in this revision-bound checksummed context.
           test -s "$CONTEXT_OUT/muse/opencode/agents/github-reviewer.md"
           cp .review-context/muse/.ημ/review/evidence-review.md "$CONTEXT_OUT/machinery/"
           cp .review-context/muse/.opencode/dist/review-invocation.cjs "$CONTEXT_OUT/machinery/"
           cp .review-context/muse/.ημ/review/publish-opencode-review.cjs "$CONTEXT_OUT/machinery/"
-          cp .review-context/muse/.ημ/review/publish-opencode-review.test.cjs "$CONTEXT_OUT/machinery/"
 
           # Generated from .github/review-host-tool-metadata.edn with the pinned
           # Muse eta-mu.opencode.settings/render-value; no policy in this adapter.
@@ -2426,7 +2343,6 @@ jobs:
       exact_head: ${{ steps.review_completion.outputs.exact_head }}
       clean: ${{ steps.review_completion.outputs.clean }}
     env:
-      HAS_DISCORD_REVIEW_WEBHOOK_URL: ${{ secrets.DISCORD_REVIEW_WEBHOOK_URL != '' }}
       REVIEW_MODEL_DISCOVERY: opencode-free-mimo-flash-v1
       REVIEW_EXPECTED_OPENCODE_VERSION: ${{ inputs.opencode_version || '1.18.18' }}
     permissions:
@@ -2459,7 +2375,7 @@ jobs:
             console.error(error);
             process.exit(1);
           }
-          // Reserve 30 minutes for setup, bounded cleanup and final publication.
+          // Reserve 30 minutes for setup, bounded cleanup and final evidence validation.
           // GitHub expressions do not support this arithmetic; derive it here.
           const attemptTimeoutMs = (minutes - 30) * 30_000;
           require('node:fs').appendFileSync(process.env.GITHUB_OUTPUT,
@@ -2710,7 +2626,7 @@ jobs:
             assert.equal(verdict.sessionID, accepted.session_id, 'Selected native session differs');
             assert.deepEqual(verdict, accepted.canonical_verdict, 'Selected canonical verdict changed');
 
-            // Publication consumes these exact validated bytes, never a later
+            // Evidence validation consumes these exact verified bytes, never a later
             // reread of the model-writable evidence file. No metadata is added.
             const frozenDir = fs.mkdtempSync(path.join(env.RUNNER_TEMP, 'opencode-verified-submission-'));
             const frozenFile = path.join(frozenDir, 'submission.json');
@@ -2822,27 +2738,8 @@ jobs:
           echo "Muse observer registry:"
           cat .review-context/metadata/exposed-tools.txt
 
-      - name: Test deterministic review publisher
-        run: node --test .review-context/machinery/publish-opencode-review.test.cjs
-
-      - name: Require eta-mu app credentials
-        shell: bash
-        env:
-          ETA_MU_APP_ID: ${{ secrets.ETA_MU_APP_ID }}
-          ETA_MU_APP_PRIVATE_KEY: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-        run: |
-          if [[ -z "$ETA_MU_APP_ID" || -z "$ETA_MU_APP_PRIVATE_KEY" ]]; then
-            echo "::error::ETA_MU_APP_ID / ETA_MU_APP_PRIVATE_KEY are not visible to this repository."
-            echo "::error::Operator action required: create the eta-mu GitHub App credentials as organization secrets with access to this repository, then re-run this workflow."
-            exit 1
-          fi
-
       - name: Install pinned OpenCode CLI
         run: npm install --global opencode-ai@${{ inputs.opencode_version || '1.18.18' }}
-
-      - name: Capture review start time
-        id: review_start
-        run: echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Run bounded evidence-first OpenCode review
         id: review_invocation
@@ -2966,119 +2863,8 @@ jobs:
             exit 1
           fi
 
-      - name: Create eta-mu GitHub App token for review publication
-        id: eta_mu_publish_token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          app-id: ${{ secrets.ETA_MU_APP_ID }}
-          private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
-          permission-metadata: read
-          permission-pull-requests: write
-
-      - name: Publish actual GitHub pull request review
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
-        env:
-          REVIEW_SUBMISSION_FILE: ${{ steps.final_review_input.outputs.submission_file }}
-        with:
-          github-token: ${{ steps.eta_mu_publish_token.outputs.token }}
-          script: |
-            const { publishReview } = require('./.review-context/machinery/publish-opencode-review.cjs');
-            await publishReview({
-              github,
-              context,
-              core,
-              submissionFile: process.env.REVIEW_SUBMISSION_FILE,
-            });
-
-      - name: Send new inline review comments to Discord
-        if: ${{ always() && env.HAS_DISCORD_REVIEW_WEBHOOK_URL == 'true' }}
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
-        env:
-          DISCORD_REVIEW_WEBHOOK_URL: ${{ secrets.DISCORD_REVIEW_WEBHOOK_URL }}
-          REVIEW_STARTED_AT: ${{ steps.review_start.outputs.started_at }}
-        with:
-          github-token: ${{ steps.eta_mu_publish_token.outputs.token || github.token }}
-          script: |
-            const webhookUrl = process.env.DISCORD_REVIEW_WEBHOOK_URL;
-            const startedAt = new Date(process.env.REVIEW_STARTED_AT || 0);
-            const { owner, repo } = context.repo;
-            const pr = context.payload.pull_request;
-            if (!webhookUrl || !pr) return;
-
-            const comments = await github.paginate(github.rest.pulls.listReviewComments, {
-              owner,
-              repo,
-              pull_number: pr.number,
-              per_page: 100,
-            });
-            const fresh = comments
-              .filter((comment) => new Date(comment.created_at) >= startedAt)
-              .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-            if (fresh.length === 0) {
-              core.info('No new inline review comments to send to Discord.');
-              return;
-            }
-
-            const truncate = (value, max) => {
-              const text = String(value || '');
-              return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
-            };
-            const embeds = fresh.map((comment) => ({
-              // Keep individual fields bounded; the message-wide limit is
-              // enforced separately when batching these embeds below.
-              title: truncate(`${owner}/${repo}#${pr.number}: evidence review comment`, 256),
-              url: comment.html_url,
-              color: 0x8b5cf6,
-              description: truncate(comment.body, 1500),
-              fields: [
-                { name: 'Author', value: truncate(comment.user?.login || 'unknown', 100), inline: true },
-                { name: 'File', value: truncate(comment.path || 'unknown', 200), inline: true },
-                { name: 'Line', value: String(comment.line || comment.original_line || 'n/a'), inline: true },
-                { name: 'PR', value: truncate(pr.html_url, 200), inline: false },
-              ],
-              timestamp: comment.created_at,
-            }));
-
-            const batches = [];
-            let batch = [];
-            let batchSize = 0;
-            for (const embed of embeds) {
-              // UTF-16 length conservatively counts Unicode text. Discord's
-              // 6000-character limit includes all text across every embed.
-              const size = [embed.title, embed.description, embed.author?.name, embed.footer?.text,
-                ...embed.fields.flatMap((field) => [field.name, field.value])]
-                .reduce((total, value) => total + String(value || '').length, 0);
-              if (size > 6000) throw new Error('Discord review embed exceeds the 6000-character limit');
-              if (batch.length && (batch.length === 10 || batchSize + size > 6000)) {
-                batches.push(batch);
-                batch = [];
-                batchSize = 0;
-              }
-              batch.push(embed);
-              batchSize += size;
-            }
-            if (batch.length) batches.push(batch);
-
-            for (const chunk of batches) {
-              const response = await fetch(webhookUrl, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({
-                  username: 'MiMo Evidence Review',
-                  content: `New evidence-backed review comment${chunk.length === 1 ? '' : 's'} on ${owner}/${repo}#${pr.number}`,
-                  embeds: chunk,
-                  allowed_mentions: { parse: [] },
-                }),
-              });
-              if (!response.ok) {
-                throw new Error(`Discord webhook failed: ${response.status} ${await response.text()}`);
-              }
-            }
-
   review_gate:
-    name: OpenCode evidence review gate
+    name: OpenCode producer evidence
     needs: [deterministic_evidence, prepare_review_context, review]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
@@ -3108,11 +2894,11 @@ jobs:
           set -euo pipefail
           node <<'NODE'
           if (process.env.PULL_REQUEST_EVENT !== 'true') {
-            console.error('::error::OpenCode evidence review gate: pull_request_context=missing');
+            console.error('::error::OpenCode producer evidence: pull_request_context=missing');
             process.exit(1);
           }
           if (process.env.ELIGIBLE_REVIEW_EVENT !== 'true') {
-            console.log('OpenCode evidence review gate is not applicable to draft or fork pull requests.');
+            console.log('OpenCode producer evidence is not applicable to draft or fork pull requests.');
             process.exit(0);
           }
 
@@ -3145,8 +2931,8 @@ jobs:
           if (process.env.REVIEW_CLEAN !== 'true') failures.push('review_clean=false_or_missing');
 
           if (failures.length > 0) {
-            for (const failure of failures) console.error(`::error::OpenCode evidence review gate: ${failure}`);
+            for (const failure of failures) console.error(`::error::OpenCode producer evidence: ${failure}`);
             process.exit(1);
           }
-          console.log('OpenCode evidence review gate passed with successful dependencies and exact clean revision binding.');
+          console.log('OpenCode producer evidence passed with successful dependencies and exact clean revision binding. No review publication or trusted status is asserted.');
           NODE

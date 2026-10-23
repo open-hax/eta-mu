@@ -2,7 +2,7 @@
 category: "tasks"
 labels: "rheos, ledger, portability"
 type: "task"
-write-id: "1786059223060-0.q48zygzmpik2ef1c73s"
+write-id: "1792551798256-0.4tzrroohltrub4wwp06"
 points: "3"
 title: "Ledger events persist absolute source paths from the writer's checkout"
 priority: "P2"
@@ -78,4 +78,7 @@ Each path-carrying writer needs its own assertion:
 And one criterion that covers the class rather than the instances: **no event appended after this change has a value matching `^/`**, asserted over a freshly written ledger. Enumerating writers catches the four that exist; the regex catches the fifth someone adds later.
 
 Historical events keep their absolute paths — the ledger is append-only — so the assertion is scoped to events written after the change, and a reader must still tolerate both forms.
+
+PR 361 native review 4332466265 identifies absolute task-created provenance. Current source confirms this existing owner explicitly preserves historical event bytes and owns future writer portability plus historical tolerance. No historical location alias or correction-event protocol exists; no such authority is claimed. Discovery and operational edits use currently configured card files, not the old event source-path. Bounded producer follow-up repairs metadata and adds explicit export-only board snapshot --relative-to . while preserving live paths and event prefixes. Historical event rewrite is declined under append-only law; this broader 3-point owner remains incoming and unimplemented. Future creation/edit/transition/drift writers still require this owner before portability is qualified.
+
 ---

@@ -34,130 +34,6 @@ function namedStep(jobId, name) {
   return step;
 }
 
-// Run the actual github-script adapter with no native network or credentials.
-function discordStepFixture(comments, { webhook = "https://example.invalid/diagnostic", httpFailureAt } = {}) {
-  const payloads = [];
-  const pagination = [];
-  const context = { repo: { owner: "open-hax", repo: "proxx" }, payload: { pull_request: {
-    number: 451, html_url: "https://github.com/open-hax/proxx/pull/451",
-  } } };
-  const listReviewComments = () => {};
-  const github = { rest: { pulls: { listReviewComments } }, paginate: async (method, params) => {
-    assert.equal(method, listReviewComments);
-    pagination.push(params);
-    return comments;
-  } };
-  const fetch = async (url, options) => {
-    assert.equal(url, webhook);
-    assert.equal(options.method, "POST");
-    assert.deepEqual(options.headers, { "content-type": "application/json" });
-    const payload = JSON.parse(options.body);
-    payloads.push(payload);
-    const size = discordPayloadTextSize(payload);
-    if (size > 6000 || payload.embeds.length > 10) {
-      return { ok: false, status: 400, text: async () => "Embed size exceeds maximum size of 6000" };
-    }
-    if (payloads.length === httpFailureAt) {
-      return { ok: false, status: 429, text: async () => "diagnostic rate limit" };
-    }
-    return { ok: true, status: 204 };
-  };
-  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-  const step = namedStep("review", "Send new inline review comments to Discord");
-  const delivery = new AsyncFunction("github", "context", "core", "fetch", "process", step.with.script)(
-    github, context, { info: () => {} }, fetch,
-    { env: { DISCORD_REVIEW_WEBHOOK_URL: webhook, REVIEW_STARTED_AT: "2026-10-04T08:31:49Z" } },
-  );
-  return { delivery, payloads, pagination, context };
-}
-
-// Discord's aggregate rule includes every text-bearing embed field, not URLs.
-function discordPayloadTextSize(payload) {
-  return payload.embeds.flatMap((embed) => [
-    embed.title, embed.description, embed.author?.name, embed.footer?.text,
-    ...(embed.fields ?? []).flatMap((field) => [field.name, field.value]),
-  ]).reduce((total, value) => total + String(value ?? "").trim().length, 0);
-}
-
-function discordComment(index, body = "short evidence") {
-  return {
-    body, user: { login: "eta-mu-ai[bot]" }, path: `.github/尾-${index}.yml`, line: index + 1,
-    html_url: `https://github.com/open-hax/proxx/pull/451#discussion_r${index}`,
-    created_at: new Date(Date.parse("2026-10-04T08:49:00Z") + index * 1000).toISOString(),
-  };
-}
-
-test("Discord actual adapter batches ten long Unicode comments by all embed text", async (t) => {
-  const comments = Array.from({ length: 10 }, (_, index) => discordComment(index, "🙂尾 evidence ".repeat(250)));
-  const old = { ...discordComment(99), created_at: "2026-10-04T08:00:00Z" };
-  const fixture = discordStepFixture([old, ...comments.toReversed()]);
-  await fixture.delivery;
-  assert.ok(fixture.payloads.length > 1);
-  assert.deepEqual(fixture.pagination, [{ owner: "open-hax", repo: "proxx", pull_number: 451, per_page: 100 }]);
-  const embeds = fixture.payloads.flatMap((payload) => payload.embeds);
-  assert.equal(embeds.length, 10);
-  for (const [index, embed] of embeds.entries()) {
-    const comment = comments[index];
-    assert.deepEqual(embed, {
-      title: "open-hax/proxx#451: evidence review comment", url: comment.html_url, color: 0x8b5cf6,
-      description: `${comment.body.slice(0, 1499)}…`, timestamp: comment.created_at,
-      fields: [
-        { name: "Author", value: comment.user.login, inline: true },
-        { name: "File", value: comment.path, inline: true },
-        { name: "Line", value: String(comment.line), inline: true },
-        { name: "PR", value: fixture.context.payload.pull_request.html_url, inline: false },
-      ],
-    });
-  }
-  for (const payload of fixture.payloads) {
-    assert.ok(payload.embeds.length <= 10 && discordPayloadTextSize(payload) <= 6000);
-    assert.equal(payload.username, "MiMo Evidence Review");
-    assert.equal(payload.content, `New evidence-backed review comment${payload.embeds.length === 1 ? "" : "s"} on open-hax/proxx#451`);
-    assert.deepEqual(payload.allowed_mentions, { parse: [] });
-  }
-  t.diagnostic(`mock Discord accepted ${fixture.payloads.map((payload) => `${payload.embeds.length} embeds/${discordPayloadTextSize(payload)} text units`).join(", ")}`);
-});
-
-test("Discord actual adapter retains the ten-embed count bound for short comments", async () => {
-  const fixture = discordStepFixture(Array.from({ length: 21 }, (_, index) => discordComment(index)));
-  await fixture.delivery;
-  assert.deepEqual(fixture.payloads.map((payload) => payload.embeds.length), [10, 10, 1]);
-  assert.equal(fixture.payloads.flatMap((payload) => payload.embeds).length, 21);
-});
-
-test("Discord actual adapter includes title and fields at the inclusive 6000 boundary", async () => {
-  // A short real send measures the fixed rendered title/author/path/line/PR
-  // overhead. Four descriptions alone fit; their additional fields decide batching.
-  const probe = discordStepFixture(Array.from({ length: 4 }, (_, index) => discordComment(index, "x")));
-  await probe.delivery;
-  const overhead = probe.payloads.flatMap((payload) => payload.embeds)
-    .map((embed) => discordPayloadTextSize({ embeds: [embed] }) - 1);
-  for (const excess of [0, 1]) {
-    const comments = overhead.map((size, index) => discordComment(index, "x".repeat(1500 - size + (index === 3 ? excess : 0))));
-    assert.ok(comments.every((comment) => comment.body.length <= 1500));
-    const fixture = discordStepFixture(comments);
-    await fixture.delivery;
-    assert.deepEqual(fixture.payloads.map((payload) => payload.embeds.length), excess ? [3, 1] : [4]);
-    assert.equal(fixture.payloads.reduce((total, payload) => total + discordPayloadTextSize(payload), 0), 6000 + excess);
-  }
-});
-
-test("Discord actual adapter propagates an HTTP failure and stops remaining sends", async () => {
-  const fixture = discordStepFixture(Array.from({ length: 21 }, (_, index) => discordComment(index)), { httpFailureAt: 2 });
-  await assert.rejects(fixture.delivery, /Discord webhook failed: 429 diagnostic rate limit/);
-  assert.equal(fixture.payloads.length, 2);
-});
-
-test("Discord actual adapter sends nothing without a webhook or fresh comments", async () => {
-  const absent = discordStepFixture([discordComment(1)], { webhook: "" });
-  await absent.delivery;
-  assert.equal(absent.pagination.length, 0);
-  assert.equal(absent.payloads.length, 0);
-  const stale = discordStepFixture([{ ...discordComment(1), created_at: "2026-10-04T08:00:00Z" }]);
-  await stale.delivery;
-  assert.equal(stale.payloads.length, 0);
-});
-
 function runScript(script, cwd, env = {}) {
   return spawnSync("bash", ["-c", script], {
     cwd,
@@ -261,7 +137,7 @@ function finalGateEnvironment(sha, overrides = {}) {
 test("workflow exposes one stable always-running terminal gate", () => {
   assert.match(workflowText, /^# SPDX-License-Identifier: GPL-3\.0-or-later/m);
   const gate = workflow.jobs.review_gate;
-  assert.equal(gate.name, "OpenCode evidence review gate");
+  assert.equal(gate.name, "OpenCode producer evidence");
   assert.deepEqual(gate.needs, ["deterministic_evidence", "prepare_review_context", "review"]);
   assert.equal(gate.if, "${{ always() }}");
   assert.equal(
@@ -425,7 +301,6 @@ test("context assembly records Muse and Agents inputs literally without executin
     [".review-context/muse/.opencode/exposed-tools.txt", "observer fixture\n"],
     [".review-context/muse/.ημ/review/evidence-review.md", "prompt fixture\n"],
     [".review-context/muse/.ημ/review/publish-opencode-review.cjs", "// publisher fixture\n"],
-    [".review-context/muse/.ημ/review/publish-opencode-review.test.cjs", "// test fixture\n"],
     [".review-context/agents/skills/fixture/SKILL.md", "skill fixture\n"],
   ]) {
     const file = path.join(directory, relativePath);
@@ -686,13 +561,13 @@ function completeInputSubmission(checked) {
 function contextFixture(checked) {
   const context = path.join(checked.consumer, ".review-context");
   fs.mkdirSync(context);
-  fs.writeFileSync(path.join(context, "publisher-fixture.cjs"), "// checksummed context fixture\n");
+  fs.writeFileSync(path.join(context, "validator-fixture.cjs"), "// checksummed validator fixture\n");
   const invocation = stageTransportVerifier(checked.evidence, {
     verifierFile: path.join(context, "machinery/review-invocation.cjs"),
     registryFile: path.join(context, "metadata/exposed-tools.txt"),
   });
   fs.writeFileSync(path.join(context, "machinery/run-opencode-review-recovery.mjs"), recoveryRunnerSource);
-  const checksum = execFileSync("sha256sum", ["publisher-fixture.cjs",
+  const checksum = execFileSync("sha256sum", ["validator-fixture.cjs",
     "machinery/review-invocation.cjs", "metadata/exposed-tools.txt",
     "machinery/run-opencode-review-recovery.mjs"], { cwd: context });
   fs.writeFileSync(path.join(context, "SHA256SUMS"), checksum);
@@ -728,12 +603,12 @@ function finalReviewInputCheck(checked, context, overrides = {}) {
   const step = workflow.jobs.review.steps.find((candidate) => candidate.name === finalInputVerificationName);
   const legacy = namedStep("review", "Verify review remained revision-bound");
   const result = runScript(step?.run ?? legacy.run, checked.consumer, env);
-  const publication = path.join(checked.evidence, "publisher-invoked");
-  if (result.status === 0) fs.writeFileSync(publication, "synthetic publisher boundary\n");
-  return { result, publication, output, step };
+  const verification = path.join(checked.evidence, "producer-verified");
+  if (result.status === 0) fs.writeFileSync(verification, "synthetic producer evidence boundary\n");
+  return { result, verification, output, step };
 }
 
-test("fresh and final input verification share one command before App mint and publication", () => {
+test("fresh and final input verification share one command before producer validation", () => {
   const fresh = namedStep("review", inputVerificationName);
   const final = namedStep("review", finalInputVerificationName);
   assert.equal(final.run, fresh.run, "fresh/final verification laws must not diverge");
@@ -753,17 +628,16 @@ test("fresh and final input verification share one command before App mint and p
   assert.notEqual(final["continue-on-error"], true);
   const steps = workflow.jobs.review.steps;
   assert.ok(steps.indexOf(final) > steps.indexOf(namedStep("review", "Run bounded evidence-first OpenCode review")));
-  for (const name of ["Validate final review submission", "Create eta-mu GitHub App token for review publication",
-    "Publish actual GitHub pull request review"]) {
+  for (const name of ["Validate final review submission", "Verify review remained revision-bound"]) {
     assert.ok(steps.indexOf(final) < steps.indexOf(namedStep("review", name)));
   }
-  for (const name of ["Validate final review submission", "Publish actual GitHub pull request review"]) {
+  for (const name of ["Validate final review submission"]) {
     assert.equal(namedStep("review", name).env.REVIEW_SUBMISSION_FILE,
       "${{ steps.final_review_input.outputs.submission_file }}");
   }
 });
 
-test("post-guard input, manifest, proof and context mutation stops before publisher", (t) => {
+test("post-guard input, manifest, proof and context mutation stops before producer verification", (t) => {
   const fixture = fullInputFixture(t);
   const mutations = [
     (c) => {
@@ -785,11 +659,11 @@ test("post-guard input, manifest, proof and context mutation stops before publis
     (c) => fs.appendFileSync(path.join(c.evidence, "input-manifest.json"), "\n"),
     (c) => fs.writeFileSync(path.join(c.evidence, "input-verification.json"), '{"input_verified":true}'),
     (c) => fs.rmSync(path.join(c.evidence, "input-verification.json")),
-    (_c, context) => fs.appendFileSync(path.join(context.context, "publisher-fixture.cjs"), "// replaced\n"),
+    (_c, context) => fs.appendFileSync(path.join(context.context, "validator-fixture.cjs"), "// replaced\n"),
     (_c, context) => {
-      fs.appendFileSync(path.join(context.context, "publisher-fixture.cjs"), "// replaced\n");
+      fs.appendFileSync(path.join(context.context, "validator-fixture.cjs"), "// replaced\n");
       fs.writeFileSync(path.join(context.context, "SHA256SUMS"),
-        execFileSync("sha256sum", ["publisher-fixture.cjs"], { cwd: context.context }));
+        execFileSync("sha256sum", ["validator-fixture.cjs"], { cwd: context.context }));
     },
   ];
   for (const mutate of mutations) {
@@ -801,11 +675,11 @@ test("post-guard input, manifest, proof and context mutation stops before publis
     mutate(checked, context);
     const final = finalReviewInputCheck(checked, context);
     assert.notEqual(final.result.status, 0, "post-guard mutation passed the actual publication boundary");
-    assert.equal(fs.existsSync(final.publication), false);
+    assert.equal(fs.existsSync(final.verification), false);
   }
 });
 
-test("final invocation binding rejects altered selected evidence before publication", (t) => {
+test("final invocation binding rejects altered selected evidence before producer verification", (t) => {
   const fixture = fullInputFixture(t);
   // Actual final-command custody checks; the verifier is a transport mock.
   // Compiled canonical semantics receive no credit from these fixture verdicts.
@@ -850,7 +724,7 @@ test("final invocation binding rejects altered selected evidence before publicat
     if (fs.existsSync(recoveryFile)) fs.writeFileSync(recoveryFile, JSON.stringify(recovery));
     const final = finalReviewInputCheck(checked, context, overrides);
     assert.notEqual(final.result.status, 0, `${name} passed the actual final command`);
-    assert.equal(fs.existsSync(final.publication), false, `${name} reached publication`);
+    assert.equal(fs.existsSync(final.verification), false, `${name} reached publication`);
     if (fs.existsSync(final.output)) {
       assert.equal(parseOutput(final.output).submission_file, undefined, `${name} emitted a publishable frozen file`);
     }
@@ -888,8 +762,8 @@ test("final binding refuses absent, mismatched and incomplete submission metadat
     mutate(submission);
     fs.writeFileSync(path.join(checked.evidence, "submission.json"), JSON.stringify(submission));
     const final = finalReviewInputCheck(checked, context);
-    assert.notEqual(final.result.status, 0, "invalid tool-envelope metadata reached publisher");
-    assert.equal(fs.existsSync(final.publication), false);
+    assert.notEqual(final.result.status, 0, "invalid tool-envelope metadata reached producer verification");
+    assert.equal(fs.existsSync(final.verification), false);
   }
 });
 
@@ -945,11 +819,11 @@ test("final binding follows real omission-only recovery and freezes the unchange
   if (final.step) {
     const frozen = parseOutput(final.output).submission_file;
     fs.writeFileSync(path.join(checked.evidence, "submission.json"), JSON.stringify(validSubmission()));
-    assert.equal(fs.readFileSync(frozen, "utf8"), submitted, "publisher must consume the validated bytes, not a changed source artifact");
+    assert.equal(fs.readFileSync(frozen, "utf8"), submitted, "producer validation must consume the verified bytes, not a changed source artifact");
   }
 });
 
-test("post-guard mutation during the recovery invocation still stops publication", async (t) => {
+test("post-guard mutation during the recovery invocation still stops producer verification", async (t) => {
   const fixture = fullInputFixture(t);
   const checked = freshReviewInputCheck(fixture);
   assert.equal(checked.result.status, 0, checked.result.stderr);
@@ -970,10 +844,10 @@ test("post-guard mutation during the recovery invocation still stops publication
   context.acceptRecovery(result);
   const final = finalReviewInputCheck(checked, context);
   assert.notEqual(final.result.status, 0, "recovery bypassed the original trusted input receipt");
-  assert.equal(fs.existsSync(final.publication), false);
+  assert.equal(fs.existsSync(final.verification), false);
 });
 
-test("a fresh review job verifies downloaded input before tools, model or publication", () => {
+test("a fresh review job verifies downloaded input before tools, model or producer validation", () => {
   const steps = workflow.jobs.review.steps;
   const verification = namedStep("review", inputVerificationName);
   assert.equal(verification.if, undefined);
@@ -982,9 +856,8 @@ test("a fresh review job verifies downloaded input before tools, model or public
   assert.ok(index > steps.indexOf(namedStep("review", "Download deterministic evidence")));
   assert.equal(verification.env.REVIEW_EVIDENCE_ARTIFACT_NAME,
     namedStep("review", "Download deterministic evidence").with.name);
-  for (const name of ["Verify and install the bounded review context", "Test deterministic review publisher",
-    "Run bounded evidence-first OpenCode review", "Create eta-mu GitHub App token for review publication",
-    "Publish actual GitHub pull request review"]) {
+  for (const name of ["Verify and install the bounded review context",
+    "Run bounded evidence-first OpenCode review", "Validate final review submission"]) {
     assert.ok(index < steps.indexOf(namedStep("review", name)), `input must be verified before ${name}`);
   }
   assert.match(verification.run, /git diff --no-ext-diff --find-renames/);
@@ -1207,26 +1080,13 @@ test("toolchain setup defaults on when the input is absent and honors an explici
   assert.equal(clojure.with["clj-kondo"], "2025.10.23");
 });
 
-test("default deterministic gates mirror private Git dependencies without persisting auth", () => {
-  const setupCondition =
-    "${{ !contains(toJSON(inputs), '\"setup_eta_mu_toolchain\"') || inputs.setup_eta_mu_toolchain }}";
-  const detect = namedStep("deterministic_evidence", "Detect eta-mu app credentials");
-  assert.equal(detect.if, setupCondition);
-
-  const token = namedStep("deterministic_evidence", "Create cross-repository read token");
-  assert.match(token.uses, /^actions\/create-github-app-token@[0-9a-f]{40}$/);
-  assert.match(token.with.repositories, /^katamorph\s*$/);
-
-  const mirror = namedStep("deterministic_evidence", "Mirror private Git dependencies");
-  assert.match(mirror.if, /dependency-token\.outputs\.token/);
-  assert.match(mirror.run, /clone --mirror/);
-  assert.match(mirror.run, /mirror_repository katamorph/);
-  assert.doesNotMatch(mirror.run, /event-ledger/);
-
+test("default deterministic gates retain failures without private dependency credential setup", () => {
+  const steps = workflow.jobs.deterministic_evidence.steps;
+  assert.equal(steps.some((step) => /credentials|token|Mirror private Git/.test(step.name)), false);
   const gates = namedStep("deterministic_evidence", "Run deterministic gates").run;
-  assert.match(gates, /url\.file:\/\/\$mirrors\/katamorph\.git\.insteadOf/);
-  assert.doesNotMatch(gates, /event-ledger/);
-  assert.match(gates, /trap remove_mirror_rewrites EXIT/);
+  assert.doesNotMatch(gates, /private-git-mirrors|http.*extraheader|insteadOf/);
+  assert.match(gates, /Dependency installation failed/);
+  assert.match(gates, /checkout_guard=1/);
 });
 
 test("the default reusable evidence script executes every declared gate", (t) => {
@@ -1324,17 +1184,16 @@ test("review context packages the exact runner for reusable-workflow callers", (
   );
 });
 
-test("workflow bounds recovery before validating and publishing the submission", () => {
+test("workflow bounds recovery before validating and retaining producer evidence", () => {
   const recovery = namedStep("review", "Run bounded evidence-first OpenCode review");
   assert.match(recovery.run, /run-opencode-review-recovery\.mjs/);
 
   const steps = workflow.jobs.review.steps.map((step) => step.name);
   const validateIndex = steps.indexOf("Validate final review submission");
   const uploadIndex = steps.indexOf("Upload review attempt artifacts");
-  const publishIndex = steps.indexOf("Publish actual GitHub pull request review");
   assert.ok(validateIndex > steps.indexOf(recovery.name));
   assert.ok(uploadIndex > validateIndex);
-  assert.ok(publishIndex > uploadIndex);
+  assert.ok(steps.indexOf("Verify review remained revision-bound") > uploadIndex);
 
   const uploadPaths = namedStep("review", "Upload review attempt artifacts").with.path;
   assert.match(uploadPaths, /model-response-attempt-1\.txt/);
@@ -2025,7 +1884,7 @@ test("terminal gate passes only the complete successful exact-head tuple", (t) =
   for (const mutation of failures) {
     const result = runScript(script, directory, finalGateEnvironment(sha, mutation));
     assert.notEqual(result.status, 0, JSON.stringify(mutation));
-    assert.match(result.stderr, /::error::OpenCode evidence review gate/);
+    assert.match(result.stderr, /::error::OpenCode producer evidence/);
   }
 });
 
@@ -2100,7 +1959,6 @@ function reviewMetadataFixture(t, { agentFiles = [] } = {}) {
     ["muse/.opencode/exposed-tools.txt", `${names.join("\n")}\n`],
     ["muse/.ημ/review/evidence-review.md", "prompt fixture\n"],
     ["muse/.ημ/review/publish-opencode-review.cjs", "// publisher fixture\n"],
-    ["muse/.ημ/review/publish-opencode-review.test.cjs", "// test fixture\n"],
     ["agents/skills/work-cycle/SKILL.md", "skill fixture\n"],
     ...agentFiles.map(([relativePath, content]) => [`agents/${relativePath}`, content]),
   ]) {
@@ -2409,7 +2267,7 @@ test("authored timeout validation accepts only default or whole minutes before a
   assert.equal(fs.readFileSync(output, "utf8"), "attempt_timeout_ms=2700000\n");
 });
 
-test("ordinary attempts split the validated job budget with cleanup and publication headroom", () => {
+test("ordinary attempts split the validated job budget with cleanup and validation headroom", () => {
   assert.equal(namedStep("review", "Validate review timeout").id, "review_budget");
   assert.equal(namedStep("review", "Run bounded evidence-first OpenCode review").env.REVIEW_ATTEMPT_TIMEOUT_MS,
     "${{ steps.review_budget.outputs.attempt_timeout_ms }}");
@@ -2418,33 +2276,15 @@ test("ordinary attempts split the validated job budget with cleanup and publicat
   }
 });
 
-test("bounded review budget keeps publication App mint after validated revision-bound completion", () => {
+test("bounded producer validates the full unchanged submission before its completion guard", () => {
   const steps = workflow.jobs.review.steps;
-  const beforeMint = [
-    "Run bounded evidence-first OpenCode review",
-    "Reverify full input and bind final submission",
-    "Validate final review submission",
-    "Verify review remained revision-bound",
-  ].map((name) => namedStep("review", name));
-  const token = namedStep("review", "Create eta-mu GitHub App token for review publication");
-  const publish = namedStep("review", "Publish actual GitHub pull request review");
-  const positions = [...beforeMint, token, publish].map((step) => steps.indexOf(step));
-  assert.ok(positions.every((position, index) => index === 0 || position > positions[index - 1]),
-    "publication token must be newly minted after the complete review and every final guard");
-  for (const step of [...beforeMint, token, publish]) {
-    assert.notEqual(step["continue-on-error"], true, `${step.name} cannot bypass failure`);
-  }
-  assert.equal(token.if, undefined, "App mint keeps the default success prerequisite");
-  assert.equal(publish.if, undefined, "publication keeps the default success prerequisite");
-  assert.equal(token.id, "eta_mu_publish_token");
-  assert.match(token.uses, /^actions\/create-github-app-token@[0-9a-f]{40}$/);
-  assert.deepEqual(steps.filter((step) => step.uses?.startsWith("actions/create-github-app-token@"))
-    .map((step) => step.id), ["eta_mu_publish_token"]);
-  assert.equal(token.with["skip-token-revoke"], undefined, "the existing default revocation is retained");
-  assert.equal(token.with["permission-metadata"], "read");
-  assert.equal(token.with["permission-pull-requests"], "write");
-  assert.equal(publish.with["github-token"], "${{ steps.eta_mu_publish_token.outputs.token }}");
-  assert.equal(publish.env.REVIEW_SUBMISSION_FILE, "${{ steps.final_review_input.outputs.submission_file }}");
+  const ordered = ["Run bounded evidence-first OpenCode review", "Reverify full input and bind final submission",
+    "Validate final review submission", "Verify review remained revision-bound"].map((name) => namedStep("review", name));
+  const positions = ordered.map((step) => steps.indexOf(step));
+  assert.ok(positions.every((position, index) => index === 0 || position > positions[index - 1]));
+  for (const step of ordered) assert.notEqual(step["continue-on-error"], true, `${step.name} cannot bypass failure`);
+  assert.equal(ordered[2].env.REVIEW_SUBMISSION_FILE, "${{ steps.final_review_input.outputs.submission_file }}");
+  assert.equal(namedStep("review", "Upload review attempt artifacts").if, "always()");
 });
 
 // Babashka is the declared test runtime; use its EDN reader and bundled JSON renderer.
@@ -2544,7 +2384,7 @@ function bindModelDiscoveryFixture(checked, context) {
     } };
 }
 
-test("actual final workflow requires unchanged selected model provenance before publication", (t) => {
+test("actual final workflow requires unchanged selected model provenance before producer verification", (t) => {
   const fixture = fullInputFixture(t);
   const cases = [
     ["unchanged", () => {}, true],
@@ -2578,7 +2418,7 @@ test("actual final workflow requires unchanged selected model provenance before 
     fs.writeFileSync(model.recoveryFile, JSON.stringify(model.recovery));
     const final = finalReviewInputCheck(checked, context, env);
     assert.equal(final.result.status === 0, pass, `${name}: ${final.result.stderr}`);
-    assert.equal(fs.existsSync(final.publication), pass, name);
+    assert.equal(fs.existsSync(final.verification), pass, name);
     if (!pass && fs.existsSync(final.output)) assert.equal(parseOutput(final.output).submission_file, undefined, name);
   }
 });
@@ -2665,13 +2505,13 @@ esac
   context.invocationDigest = transportSha256(JSON.stringify(recovery.accepted_invocation));
   const environment = { REVIEW_MODEL_DISCOVERY: "opencode-free-mimo-flash-v1", REVIEW_EXPECTED_OPENCODE_VERSION: "1.18.18" };
   for (const omitted of [null, ...files]) {
-    fs.rmSync(path.join(checked.evidence, "publisher-invoked"), { force: true });
+    fs.rmSync(path.join(checked.evidence, "producer-verified"), { force: true });
     fs.rmSync(path.join(checked.evidence, "final-outputs"), { force: true });
     for (const file of files) fs.copyFileSync(path.join(archive, file), path.join(checked.evidence, file));
     if (omitted) fs.rmSync(path.join(checked.evidence, omitted));
     const final = finalReviewInputCheck(checked, context, environment);
     assert.equal(final.result.status === 0, omitted === null, `${omitted || "intact archive"}: ${final.result.stderr}`);
-    assert.equal(fs.existsSync(final.publication), omitted === null);
+    assert.equal(fs.existsSync(final.verification), omitted === null);
   }
 });
 
@@ -2707,5 +2547,239 @@ test("required deterministic evidence and Sandbox use Node24 while legacy profil
     const held = setup(job);
     assert.equal(held.length, 1);
     assert.equal(held[0].with["node-version"], "${{ inputs.node_version || '22' }}");
+  }
+});
+
+// Exercise the extracted workflow boundary with the existing transport-only
+// verifier. The real supervisor, catalog selection, final Git/input guards and
+// producer summary run unchanged; no canonical Muse-law or hosted credit.
+async function anonymousProducerFixture(t, { canary = "", eventKind = "same-repository", trace = "valid" } = {}) {
+  const captures = [];
+  const secretContext = { ETA_MU_APP_ID: canary, ETA_MU_APP_PRIVATE_KEY: canary,
+    DISCORD_REVIEW_WEBHOOK_URL: canary };
+  const projectedSecrets = JSON.stringify(workflow).match(/secrets\.[A-Z_]+/g) ?? [];
+  const selectedSecrets = Object.fromEntries(projectedSecrets.map((reference) => {
+    const name = reference.slice("secrets.".length); return [name, secretContext[name] ?? ""];
+  }));
+  const inertRun = (script, cwd, environment) => spawnSync("bash", ["-c", script], {
+    cwd, env: { PATH: process.env.PATH || "/usr/bin:/bin", LANG: "C.UTF-8", LC_ALL: "C.UTF-8", ...environment },
+    encoding: "utf8", timeout: 15000,
+  });
+  const fixture = fullInputFixture(t);
+  // Re-execute the extracted deterministic sequence, from a genuinely clean
+  // fixture checkout, with a secret-expression context but no synthetic secret
+  // projected into candidate commands. A secret source reference changes that
+  // projection and makes the real environment/evidence canary checks fail.
+  fs.rmSync(fixture.evidence, { recursive: true });
+  const guardOutput = path.join(fixture.scratch, "deterministic-guard-outputs");
+  const deterministicEnv = { ...fixture.env, HOME: fixture.scratch, ...selectedSecrets,
+    ...guardEnvironment(fixture.directory, guardOutput, fixture.head) };
+  const deterministicGuard = inertRun(namedStep("deterministic_evidence", "Verify exact and clean pull request checkout").run,
+    fixture.directory, deterministicEnv);
+  captures.push(deterministicGuard);
+  assert.equal(deterministicGuard.status, 0, deterministicGuard.stderr);
+  const staged = inertRun(namedStep("deterministic_evidence", "Stage pull request diff and context").run,
+    fixture.directory, deterministicEnv);
+  captures.push(staged); assert.equal(staged.status, 0, staged.stderr);
+  const candidateProbe = `const fs=require('node:fs'),path=require('node:path');fs.writeFileSync(path.join(process.env.GITHUB_WORKSPACE,'.opencode/review-evidence/deterministic-child-environment.json'),JSON.stringify(process.env));console.log('inert deterministic candidate completed')`;
+  const gates = inertRun(namedStep("deterministic_evidence", "Run deterministic gates").run,
+    fixture.directory, { ...deterministicEnv, CHECKOUT_EXACT_HEAD: "true", CHECKOUT_CLEAN: "true",
+      EVIDENCE_GATES_SCRIPT: `run_gate inert_candidate node -e '${candidateProbe.replaceAll("'", "'\\''")}'` });
+  captures.push(gates); assert.equal(gates.status, 0, gates.stderr);
+  const deterministicSummaryOutput = path.join(fixture.scratch, "deterministic-summary-outputs");
+  const deterministicSummary = inertRun(namedStep("deterministic_evidence", "Summarize deterministic evidence").run,
+    fixture.directory, { ...deterministicEnv, ...summaryEnvironment(fixture.directory, deterministicSummaryOutput, fixture.head),
+      PR_BASE_SHA: fixture.base });
+  captures.push(deterministicSummary); assert.equal(deterministicSummary.status, 0, deterministicSummary.stderr);
+  assert.equal(parseOutput(deterministicSummaryOutput).result, "success");
+  fixture.event.pull_request.head.repo = { full_name: eventKind === "fork" ? "inert/fork" : fixture.env.GITHUB_REPOSITORY };
+  fs.writeFileSync(fixture.env.GITHUB_EVENT_PATH, JSON.stringify(fixture.event));
+  const checked = freshReviewInputCheck(fixture);
+  assert.equal(checked.result.status, 0, checked.result.stderr);
+  fs.rmSync(checked.invocation);
+  const context = contextFixture(checked);
+  const home = path.join(fixture.scratch, "anonymous-home");
+  fs.mkdirSync(home, { mode: 0o700 });
+  for (const relative of ["opencode.json", "agents/github-reviewer.md", "plugins/eta-mu-actors.js"]) {
+    const file = path.join(home, ".config/opencode", relative);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, relative === "opencode.json" ? "{}\n" : "// inert trusted configuration\n");
+  }
+  const selected = { id: "mimo-v9.1-flash-free", providerID: "opencode", family: "mimo",
+    status: "active", release_date: "2027-01-01", api: { id: "mimo-v9.1-flash-free", url: "https://example.invalid/inert", npm: "@ai-sdk/openai-compatible" },
+    capabilities: { toolcall: true, input: { text: true }, output: { text: true } },
+    cost: { input: 0, output: 0, cache: { read: 0, write: 0 } } };
+  const bin = path.join(fixture.scratch, "bin");
+  fs.mkdirSync(bin);
+  const model = path.join(bin, "opencode");
+  const response = trace === "malformed" ? "not-json\n"
+    : trace === "incomplete" ? transportResponse().toString().split("\n").slice(0, 2).join("\n") + "\n"
+      : transportResponse().toString();
+  const childAudit = path.join(fixture.scratch, "child-environments.ndjson");
+  fs.writeFileSync(model, `#!/usr/bin/env node
+const fs = require('node:fs'), path = require('node:path');
+fs.appendFileSync(${JSON.stringify(childAudit)}, JSON.stringify({args:process.argv.slice(2),env:process.env})+'\\n');
+if (process.argv[2] === '--version') { console.log('1.18.18'); process.exit(0); }
+if (process.argv[2] === 'models') { console.log(${JSON.stringify(`opencode/${selected.id}\n${JSON.stringify(selected, null, 2)}`)}); process.exit(0); }
+const evidence = process.env.REVIEW_EVIDENCE_DIR;
+fs.writeFileSync(path.join(evidence, 'child-environment.json'), JSON.stringify(process.env));
+fs.writeFileSync(path.join(evidence, 'submission.json'), ${JSON.stringify(JSON.stringify(completeInputSubmission(checked)) + "\n")});
+process.stdout.write(${JSON.stringify(response)});
+process.stderr.write('inert anonymous invocation stderr\\n');
+`, { mode: 0o700 });
+  const fetchShim = path.join(fixture.scratch, "inert-fetch.mjs");
+  fs.writeFileSync(fetchShim, `import assert from 'node:assert/strict';
+globalThis.fetch = async (url, options) => {
+  assert.equal(url, 'https://models.opencode.ai/api.json');
+  assert.equal(options.credentials, 'omit'); assert.equal(options.redirect, 'error');
+  const response = new Response(${JSON.stringify(JSON.stringify(rawCatalogForSelected(selected)))}, { status: 200 });
+  Object.defineProperty(response, 'url', { value: url }); return response;
+};\n`);
+  const prompt = path.join(fixture.scratch, "prompt.md");
+  fs.writeFileSync(prompt, "Review pull request #{{PR_NUMBER}}.\n");
+  const supervisorOutput = path.join(fixture.scratch, "supervisor-outputs");
+  fs.writeFileSync(supervisorOutput, "");
+  const environment = { PATH: `${bin}:${process.env.PATH || "/usr/bin:/bin"}`, HOME: home,
+    LANG: "C.UTF-8", LC_ALL: "C.UTF-8", TZ: "UTC", ...checked.env,
+    ...selectedSecrets, REVIEW_MODEL_DISCOVERY: workflow.jobs.review.env.REVIEW_MODEL_DISCOVERY,
+    REVIEW_EXPECTED_OPENCODE_VERSION: "1.18.18", REVIEW_MODEL: "", REVIEW_CHILD_HOME: home,
+    REVIEW_PROMPT_FILE: prompt, REVIEW_TOOL_REGISTRY_FILE: context.invocation.registryFile,
+    REVIEW_INVOCATION_VERIFIER_FILE: context.invocation.verifierFile,
+    REVIEW_EVIDENCE_DIR: checked.evidence, REVIEW_ATTEMPT_TIMEOUT_MS: "5000", PR_NUMBER: "42",
+    GITHUB_OUTPUT: supervisorOutput, NODE_OPTIONS: `--import=${fetchShim}` };
+  // This is the actual old guard, when present. No invented replacement guard
+  // can make the causal test pass against the old credential-coupled workflow.
+  const guard = workflow.jobs.review.steps.find((step) => step.name === "Require eta-mu app credentials");
+  if (guard) {
+    const result = inertRun(guard.run, checked.consumer, environment);
+    captures.push(result);
+    if (result.status !== 0) return { result, captures, checked, context, home, eventKind, secretContext, selectedSecrets };
+  }
+  const result = inertRun(namedStep("review", "Run bounded evidence-first OpenCode review").run, checked.consumer,
+    { ...environment, ...(canary ? { ...secretContext, GH_TOKEN: canary, GITHUB_TOKEN: canary } : {}) });
+  captures.push(result);
+  if (result.status !== 0) return { result, captures, checked, context, home, eventKind, secretContext, selectedSecrets };
+  context.invocationDigest = parseOutput(supervisorOutput).review_invocation_sha256;
+  const finalOutput = path.join(checked.evidence, "final-outputs");
+  const finalEnvironment = { ...checked.env, HOME: home, GITHUB_OUTPUT: finalOutput, REVIEW_INPUT_PHASE: "final",
+    REVIEW_INPUT_VERIFICATION_SHA256: parseOutput(checked.env.GITHUB_OUTPUT).input_verification_sha256,
+    REVIEW_CONTEXT_SHA256: context.digest, REVIEW_INVOCATION_SHA256: context.invocationDigest,
+    REVIEW_MODEL_DISCOVERY: environment.REVIEW_MODEL_DISCOVERY, REVIEW_EXPECTED_OPENCODE_VERSION: "1.18.18" };
+  const final = { output: finalOutput, result: inertRun(namedStep("review", finalInputVerificationName).run,
+    checked.consumer, finalEnvironment) };
+  captures.push(final.result);
+  const effects = [];
+  const github = new Proxy({}, { get(_target, property) {
+    effects.push(String(property)); throw new Error(`unexpected GitHub transport operation: ${String(property)}`);
+  } });
+  const validation = namedStep("review", "Validate final review submission");
+  let validatorCalls = 0;
+  const requireValidator = (specifier) => {
+    assert.equal(specifier, "./.review-context/machinery/publish-opencode-review.cjs");
+    return { readSubmission({ submissionFile }) { validatorCalls += 1;
+      assert.equal(submissionFile, parseOutput(final.output).submission_file);
+      return JSON.parse(fs.readFileSync(submissionFile)); },
+    async changedLineIndex() { validatorCalls += 1; return new Map(); },
+    validateEnvelope(envelope) { validatorCalls += 1; assert.equal(envelope.schema, "open-hax.github-review/v1"); },
+    publishReview() { effects.push("publishReview"); throw new Error("unexpected publication"); } };
+  };
+  if (final.result.status === 0) {
+    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    await new AsyncFunction("require", "github", "context", "core", "process", "fetch", validation.with.script)(
+      requireValidator, github, {}, { info() {} }, { env: { REVIEW_SUBMISSION_FILE: parseOutput(final.output).submission_file } },
+      () => { effects.push("fetch"); throw new Error("unexpected outbound write"); });
+  }
+  const completion = inertRun(namedStep("review", "Verify review remained revision-bound").run, checked.consumer,
+    { EXPECTED_SHA: fixture.head, EXECUTED_SHA: fixture.head, INITIAL_EXACT_HEAD: "true", INITIAL_CLEAN: "true",
+      GITHUB_OUTPUT: path.join(fixture.scratch, "completion-outputs") });
+  captures.push(completion);
+  const terminal = inertRun(namedStep("review_gate", "Enforce truthful reusable review result").run, checked.consumer,
+    finalGateEnvironment(fixture.head, { REVIEW_JOB_RESULT: final.result.status === 0 && completion.status === 0 ? "success" : "failure" }));
+  captures.push(terminal);
+  return { result: terminal, captures, checked, context, home, eventKind, secretContext, selectedSecrets, effects, validatorCalls, childAudit };
+}
+
+test("anonymous producer reaches the existing invocation verifier without App credentials", async (t) => {
+  const fixture = await anonymousProducerFixture(t);
+  assert.equal(fixture.result.status, 0, fixture.result.stderr || fixture.result.stdout);
+  const receipt = JSON.parse(fs.readFileSync(path.join(fixture.checked.evidence, "recovery.json")));
+  assert.equal(receipt.accepted_invocation.attempt, 1);
+  assert.equal(receipt.attempts[0].invocation_state, "completed");
+  assert.equal(receipt.attempts[0].cleanup_complete, true);
+  assert.equal(receipt.attempts[0].captures_closed, true);
+  assert.equal(fixture.validatorCalls, 3);
+  assert.deepEqual(fixture.effects, []);
+  assert.match(fixture.result.stdout, /OpenCode producer evidence/);
+  assert.doesNotMatch(fixture.result.stdout, /published|publication.*success|trusted-review-publication-v1/);
+});
+
+test("anonymous producer projects no secret or write authority for same-repository and fork inputs", async (t) => {
+  const canary = "INERT_CREDENTIAL_CANARY_20261021_NO_REAL_SECRET";
+  assert.equal(workflow.on.workflow_call.secrets, undefined);
+  assert.doesNotMatch(workflowText, /eta-mu\/trusted-review-publication-v1/);
+  assert.doesNotMatch(workflowText, /secrets\.|create-github-app-token|publishReview\(|DISCORD_REVIEW_WEBHOOK_URL|permission-[\w-]+:\s*write/);
+  assert.deepEqual(workflow.jobs.review.steps.filter((step) => step.uses?.startsWith("actions/github-script@"))
+    .map((step) => step.name), ["Validate final review submission"]);
+  for (const job of Object.values(workflow.jobs)) {
+    assert.ok(job.permissions && typeof job.permissions === "object");
+    for (const dependency of job.needs ?? []) assert.ok(workflow.jobs[dependency], dependency);
+    assert.equal(job.environment, undefined);
+    assert.equal(job.secrets, undefined);
+    for (const permission of Object.values(job.permissions ?? {})) assert.ok(["read", "none"].includes(permission));
+    for (const step of job.steps ?? []) {
+      if (step.uses?.startsWith("actions/checkout@")) assert.equal(step.with["persist-credentials"], false);
+    }
+  }
+  for (const eventKind of ["same-repository", "fork"]) {
+    const fixture = await anonymousProducerFixture(t, { canary, eventKind });
+    assert.equal(fixture.result.status, 0, fixture.result.stderr || fixture.result.stdout);
+    assert.deepEqual(fixture.selectedSecrets, {});
+    assert.deepEqual(fixture.effects, []);
+    assert.equal(fixture.validatorCalls, 3);
+    const retained = [];
+    const inspect = (directory) => {
+      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        const file = path.join(directory, entry.name);
+        if (entry.isDirectory()) inspect(file);
+        else if (entry.isFile()) {
+          const bytes = fs.readFileSync(file);
+          assert.equal(bytes.includes(Buffer.from(canary)), false, file);
+          retained.push({ file: path.relative(directory, file), bytes: bytes.length, sha256: transportSha256(bytes) });
+        }
+      }
+    };
+    inspect(fixture.checked.evidence); inspect(fixture.home);
+    const childAudits = fs.readFileSync(fixture.childAudit, "utf8").trim().split("\n").map(JSON.parse);
+    assert.deepEqual(childAudits.map((entry) => entry.args[0]), ["--version", "models", "run"]);
+    for (const audit of childAudits) assert.equal(JSON.stringify(audit.env).includes(canary), false);
+    for (const capture of fixture.captures) assert.doesNotMatch(capture.stdout + capture.stderr, new RegExp(canary));
+    const child = JSON.parse(fs.readFileSync(path.join(fixture.checked.evidence, "child-environment.json")));
+    for (const name of ["ETA_MU_APP_ID", "ETA_MU_APP_PRIVATE_KEY", "GITHUB_TOKEN", "GH_TOKEN", "DISCORD_REVIEW_WEBHOOK_URL", "NODE_OPTIONS"]) {
+      assert.equal(child[name], undefined, name);
+    }
+    const receipt = JSON.parse(fs.readFileSync(path.join(fixture.checked.evidence, "recovery.json")));
+    t.diagnostic(JSON.stringify({ eventKind, nativeForkEnrollment: false, fixtureAuthority: "TRANSPORT_MOCK_ONLY",
+      workflowSha256: transportSha256(workflowText), secretContextNames: Object.keys(fixture.secretContext),
+      projectedSecretNames: Object.keys(fixture.selectedSecrets), stageExits: fixture.captures.map((capture) => capture.status),
+      actualChildCommands: childAudits.map((audit) => audit.args[0]), childEnvironmentCanaryOccurrences: 0,
+      retainedFilesChecked: retained.length, retainedManifestSha256: transportSha256(JSON.stringify(retained)),
+      retainedCanaryOccurrences: 0, writeTransportEffects: fixture.effects,
+      actualProcess: { pid: receipt.attempts[0].process_id, cleanupComplete: receipt.attempts[0].cleanup_complete,
+        capturesClosed: receipt.attempts[0].captures_closed },
+      limitation: "Local inert transport custody; no provider, canonical Muse-law or hosted/publication qualification" }));
+  }
+});
+
+test("anonymous producer retains real malformed or incomplete traces and never reports generation success", async (t) => {
+  for (const trace of ["malformed", "incomplete"]) {
+    const fixture = await anonymousProducerFixture(t, { trace, canary: "INERT_NEGATIVE_CONTROL_CREDENTIAL" });
+    assert.notEqual(fixture.result.status, 0, trace);
+    const receipt = JSON.parse(fs.readFileSync(path.join(fixture.checked.evidence, "recovery.json")));
+    assert.equal(receipt.accepted_invocation, null);
+    assert.equal(receipt.attempts.length, 1);
+    assert.equal(receipt.attempts[0].cleanup_complete, true);
+    assert.ok(fs.statSync(path.join(fixture.checked.evidence, "model-response-attempt-1.txt")).size > 0);
+    assert.ok(fs.statSync(path.join(fixture.checked.evidence, "opencode-stderr-attempt-1.log")).size > 0);
+    assert.equal(namedStep("review", "Upload review attempt artifacts").if, "always()");
   }
 });

@@ -1,0 +1,1423 @@
+{
+  "schema": "eta-review-evidence-consolidation-audit-v1",
+  "source_head": "db99b1682c94ecdf9f8b239709dd44cb6101c7da",
+  "base": "7112c36440d180ca183d6a3f89661cee161fdae5",
+  "saved_bundle": ".ημ/review-evidence/trusted-publication-review-scope/bundle.1b5524abf5cbc787eb0f6da6cbf0f5a4c234a62338b86879a5398d0ce616f1fa.json.gz",
+  "bundle_sha256": "1b5524abf5cbc787eb0f6da6cbf0f5a4c234a62338b86879a5398d0ce616f1fa",
+  "members": 498,
+  "original_members": 409,
+  "original_bytes": 13374122,
+  "all_member_bytes": 51713871,
+  "compressed_bytes": 30424227,
+  "decompressed_bytes": 69121681,
+  "external_failed_archives": [
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/attempt-20261023/failed-bundle.3b2da80b2ba4057201bd7234f8cde42b179b1bc70ca2c7fcaf45558d8e50a2d6.json.gz",
+      "file": "failed.3b2da80b2ba4057201bd7234f8cde42b179b1bc70ca2c7fcaf45558d8e50a2d6.json.gz",
+      "bytes": 15003819,
+      "sha256": "3b2da80b2ba4057201bd7234f8cde42b179b1bc70ca2c7fcaf45558d8e50a2d6",
+      "mode": "100644",
+      "git_blob": "c76bd56f4dc6e69202ea2494d694486922af3dd6",
+      "origin": "failed-pre-removal-saved-bundle"
+    },
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/attempt-20261023/failed-bundle.fda4f4acaf63e96f7a68fd431ec72dbb0514b997b953c84885566a4b115b70b4.json.gz",
+      "file": "failed.fda4f4acaf63e96f7a68fd431ec72dbb0514b997b953c84885566a4b115b70b4.json.gz",
+      "bytes": 30194904,
+      "sha256": "fda4f4acaf63e96f7a68fd431ec72dbb0514b997b953c84885566a4b115b70b4",
+      "mode": "100644",
+      "git_blob": "8479bc6dc7b083b8bc1674396a339cf4b1d2970d",
+      "origin": "failed-pre-removal-saved-bundle"
+    }
+  ],
+  "original_inner_archives": 22,
+  "original_mode_counts": {
+    "100644": 408,
+    "100755": 1
+  },
+  "full_saved_roundtrip": true,
+  "original_git_retrieval_and_modes": true,
+  "canonical_freeze": {
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/README.md": {
+      "sha256": "db5f920322f20e6f82192894617c1cea8c5ad9705b575877767a770e1ac56067",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/domain/review.cljc": {
+      "sha256": "0df06e46f9307f9a80f4dd70013d6fb8f869a99ddff99fc00cf66c0e4810b466",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/extern/review_invocation.cljs": {
+      "sha256": "17dda3b9121e4ab96829a5f3ab3d181ca267ca95bd1aba6c2ac33ce47ef3a0ae",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/law/review_invocation.cljc": {
+      "sha256": "7a97ff024da488b6b847d1af5053508b18c6d135ad19841bf0faa4ea3dafd133",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/shape/git_diff_path.cljc": {
+      "sha256": "168a2ab5e16cdd377e1749fbb1278ce6cb82ecd0676968dc69e8e38d83e9dfba",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/publish-opencode-review.cjs": {
+      "sha256": "bb75bc57d8eeaf7edbd77f34e9a4da2d319617d06809f9aadfb0d94e7ae6c2c9",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/review-invocation.cjs": {
+      "sha256": "d9fea235fddec9581ba1be959e596f32b82588f78cef5fd76d55f04d24b91030",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/run-opencode-review-recovery.mjs": {
+      "sha256": "7e12b32abebf27b1e87bb9767bcf217caf8ce1cc0a7a05515a67f91b9005e133",
+      "mode": "100644"
+    },
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/runtime.json": {
+      "sha256": "1fd734d89c4b18dce24a6a87c6024561382b52531285b020fded67e2410d6e8a",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode-code-review-workflow.test.mjs": {
+      "sha256": "c5f3545d1037408b69a930d8fa72fe7318054b82d55a7e9b05564e2273322c9e",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode-review-intent-bootstrap.test.mjs": {
+      "sha256": "dc0ab7bde8b81f5eacdfe2131f0c2c0ca1a7e0856136b4f154f95c20e04d73d7",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_archive_test.cljs": {
+      "sha256": "869ba448c1bb347699e58ab9f5c9972455a4e808b60bb7b522de458814eedc17",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_collection_test.cljs": {
+      "sha256": "e4535847d9ad05388c661542f85a9e31fb4f46bd8f9e13a00988ebe14b712503",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_intent_process_test.mjs": {
+      "sha256": "1889d1caad0e16a9b4d762a7fb7b47fc32687b28bb912da42c604184ef94b722",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_intent_test.cljs": {
+      "sha256": "fc4a843b0354aedafc747d2ed9199708e4ffa7b5d03a178707fe7c4e853d2aa0",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_intent_uncertain_test.mjs": {
+      "sha256": "02f8d03e28a23de05bfd57d59d758cac9dd183c98eafa46ab34ceb1776fd8916",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_publish_test.cljs": {
+      "sha256": "74c95f5fc20624529bd5e80bd518df4e724eb97be72dea49ea15a59c199cb3df",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_readback_test.cljs": {
+      "sha256": "8f724fe6fdc4d414d73ed3605b0e06bde5a8a94b9b3de64b3622bc88f4786682",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_source_test.cljs": {
+      "sha256": "1f949ebc77940855b813c2967dff9389f06d205c53e93dc0615436ae038fe2e3",
+      "mode": "100644"
+    },
+    ".github/scripts/opencode_review_verification_test.cljs": {
+      "sha256": "3dd1bfbeb87207720823afe50217956931a8ead7de6a5dcecc6c73970124573d",
+      "mode": "100644"
+    },
+    ".github/workflows/opencode-code-review.yml": {
+      "sha256": "ff76052bada6c56797901a796b21393c3b2a5c2a2b1b7bd1e302ade38b0551dd",
+      "mode": "100644"
+    },
+    ".github/workflows/rheos-github-sync-ci.yml": {
+      "sha256": "1f3a6e83b950164037679ae4ed5cc7ed655ee0f8e41b0e1d7a3ac983af21e6c4",
+      "mode": "100644"
+    },
+    ".github/workflows/rheos.yml": {
+      "sha256": "03d1e750cf641feae5a1dd315fa5d046801c402997890c47bbf0ae7dced39df8",
+      "mode": "100644"
+    },
+    ".github/workflows/sandbox-bundle.yml": {
+      "sha256": "81b24e3db9b75279ae5fbe2471868650afd7762bed728eb5b248677fd5e7b779",
+      "mode": "100644"
+    },
+    ".github/workflows/sol-ci.yml": {
+      "sha256": "6e547cd476d7ecc33c1e0e8cca5b4ee79b91ea655398b6d91848b14e261288b7",
+      "mode": "100644"
+    },
+    ".ημ/session-mycology/ledger.md": {
+      "sha256": "98bc7a3c9febdf5a4b730c472f9b249e8130de2384da71062a15cd3b3b70d8fd",
+      "mode": "100644"
+    },
+    ".ημ/session-reflections.edn": {
+      "sha256": "76a5109bd3e6f5d40a40b82f9f4b5d21838d832f267929e9d87ce82acf4ab4f3",
+      "mode": "100644"
+    },
+    "contracts/workflows/.gates.edn": {
+      "sha256": "31ae91cdf914a6dfed64b6a036323d9e7cd22c38e58c393212e84e850e42cfdb",
+      "mode": "100644"
+    },
+    "contracts/workflows/ci.edn": {
+      "sha256": "e76878328cf271a0b8fc9a8043e4c73254c00579253a7d2100239c5e39eab54b",
+      "mode": "100644"
+    },
+    "contracts/workflows/packages.edn": {
+      "sha256": "9119c1732847a10d76116559d05df71b3b86c86a472b7bcf94c92e4ed76a7fce",
+      "mode": "100644"
+    },
+    "contracts/workflows/resources.edn": {
+      "sha256": "5b6333e6b45496181c5ae90a7cc455d444a20a9bd5152e031d5d366bf4ea5eae",
+      "mode": "100644"
+    },
+    "docs/agent-workflows.md": {
+      "sha256": "a808d760c063807a2c602a99eff8ef4a3c2ab5abf81bf4b6bc688c07aa3e5b04",
+      "mode": "100644"
+    },
+    "kanban/.events/ledger.edn": {
+      "sha256": "0ee2bb2c2cdd2aa665d8fd25827fc2c42fdd20ddd66a082b4250d45f202b71f5",
+      "mode": "100644"
+    },
+    "kanban/.kanban/board.json": {
+      "sha256": "6860076cfd81dbace9c70a1aa8f2e9bf33514f08c9c968741a6062398aa7d26e",
+      "mode": "100644"
+    },
+    "kanban/epics/make-reusable-opencode-review-gates-truth-preserving.md": {
+      "sha256": "2e84c7775a5a47987d8c04267be73e18dfb219ecb52d0c563f1feb382c7fb50a",
+      "mode": "100644"
+    },
+    "kanban/epics/prove-reusable-review-gate-red-path-in-a-fixture-caller.md": {
+      "sha256": "9f8d5df92d7dd81a902d8193f205d695a16c252984a95da4f38a37241babfbff",
+      "mode": "100644"
+    },
+    "kanban/tasks/independently-admit-and-publish-review-evidence-from-trusted-default-code-1c707551.md": {
+      "sha256": "c78fa79a28008091196346334ac99ba6a4897e68d94cffeb6da2a0fe7254a601",
+      "mode": "100644"
+    },
+    "kanban/tasks/ledger-events-persist-absolute-source-paths-from-the-writer-s-checkout.md": {
+      "sha256": "205c8a4f8e2e9c7ad170e2d15f0a89f633a0c636262e7a0bd1bbc88064bf43f5",
+      "mode": "100644"
+    },
+    "kanban/tasks/produce-anonymous-review-evidence-without-publication-credentials-c7d20dbb.md": {
+      "sha256": "58ac88267adfca6d6436c96316e6d408f88d407eb041998e3843f81e5441fda0",
+      "mode": "100644"
+    },
+    "kanban/tasks/rheos-canonical-task-fold-and-snapshots.md": {
+      "sha256": "94fa35669a8768cccf3b99d7506e003651d1c1cdd0ba286cf604927bb08ea2ce",
+      "mode": "100644"
+    },
+    "kanban/tasks/rheos-ci-does-not-gate-build-warnings.md": {
+      "sha256": "69a9c95ba3ebd3f54242377e74d6928ae0c01ef7d984d88cb04cf2fc87535ebb",
+      "mode": "100644"
+    },
+    "kanban/tasks/run-candidate-deterministic-ci-without-signing-credentials-bdd97334.md": {
+      "sha256": "000e911805a59788f64084f8a68f5bce7ab647229fa470835938758aa2e2f9de",
+      "mode": "100644"
+    },
+    "packages/eta-mu/commands/workflows_test.cljs": {
+      "sha256": "6d9a5c4984d269fb4035844aaa2a3e4423eb64f5a25ff082e69e08dd923aed30",
+      "mode": "100644"
+    },
+    "packages/eta-mu/intent-runtime/barrier_entry.cljs": {
+      "sha256": "900b03423f1cd6ace5b1879b89744269a6ed118636fdf3910938de40c0403a48",
+      "mode": "100644"
+    },
+    "packages/eta-mu/intent-runtime/nbb.edn": {
+      "sha256": "496c521ec79e0254bb82a1454a5b5e44dc344ae639508fabf9a022b12420b01b",
+      "mode": "100644"
+    },
+    "packages/eta-mu/intent-runtime/test_entry.cljs": {
+      "sha256": "344cc6622605a727301ebcfcdfab7d842342de3a6fc806218d5da7c1b419ba2f",
+      "mode": "100644"
+    },
+    "packages/eta-mu/intent-runtime/worker_entry.cljs": {
+      "sha256": "87515a2856d86c4a5470d965baf95d41a51b1e0e7adc99434a57ceb2f3405deb",
+      "mode": "100644"
+    },
+    "packages/eta-mu/package.json": {
+      "sha256": "bb7cb9caf07dfb80fd02606d24c0cbf77275cdea8d795808fb04f30c9124bb06",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_archive.cljc": {
+      "sha256": "e2a7f3087b00b4dbac2ee48b5c16829e2e28dd9d68161b4c6698b8f66905b23f",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": {
+      "sha256": "8df8fc390969dde4f5668ecb55bc8ae026beda85803367820e4fdbf1df9b4274",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": {
+      "sha256": "ffc573a74325acbd354630ff9f187ec779418316f7df2c9dd2f91d2e7257b6eb",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": {
+      "sha256": "3c835f42bec62425e2d903a4464b6eed75568913c0d0dc37bfd66b0b70ea9b46",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_readback.cljc": {
+      "sha256": "2383bd89b917afa144aaeedd67e02d8525ae515a07f7f1fd5ba7592987cbbb62",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_source.cljc": {
+      "sha256": "c2ff6731ed49e2ed035fd4987ae8fe628b432404fd095f45647ae20d4152e09f",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_verification.cljc": {
+      "sha256": "23ff9f3da9633b43f7eef3870988c158816420109a2ce9f21fafac253dac6ba1",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": {
+      "sha256": "a38618278378aad23fffe5d548b8b5f755d33aafc75f715f7f40a141451283d0",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_collection.cljs": {
+      "sha256": "b8c568716088c9d2a8e4a3f0f743a696601993d5f878328aaa9045176bce1bc1",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_intent.cljs": {
+      "sha256": "98c284133dbd3e7eab236a3e566e60f817244f3b6e77e4661e12a285d04df773",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_source.cljs": {
+      "sha256": "82d3855c84220d9346e3e79b7e4615e48e7cf552cdde089e1040635acad1aa34",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": {
+      "sha256": "596087fc00f5236c7b2b820415d0a30d93df43f17bb0ae71ca289d22d7568015",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_archive.cljs": {
+      "sha256": "844afd9ffb0842397794da93cde65ea80385eaafc830489439453b621763fd49",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_collection.cljs": {
+      "sha256": "b38fe7488d74131e7f05dbb9b0d7377f2dd267070bb98a0a19c25b5a7598ddef",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": {
+      "sha256": "0f500f32e6fe5d78f729cb1bdf0ee79634f73e68d629b35bbd6696cf912fc729",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_intent_worker.cljs": {
+      "sha256": "808be56a3d64d8ccfb4824f728b35798f8e449b5d21d6632875cc3708efcc20b",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_readback.cljs": {
+      "sha256": "bb9596f674f1d2efae12437751cd7078c4704cf370a2339767bfbb2225a001e3",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_source.cljs": {
+      "sha256": "b616b4c806b623a7c559332698c2059a2a88706b153a09701df0122f770f4cc8",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs": {
+      "sha256": "30e227d21a94bdebbe28bd7c166f19be7af2a5a88a39c596a1db478fc0babca5",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/law/review_archive.cljc": {
+      "sha256": "bbdd77f18eb65cd8a740bb8ca648cf25695354dd8c92d2dfe0f8d559ede8095b",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/law/review_collection.cljc": {
+      "sha256": "9a483954bc4a3ca9072b1c4a7aa3c1cf85148bb66a195345d8b5893de6a6cc2a",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": {
+      "sha256": "e432c4045b11aec9d56a69a1ff4ec8fb1ef46007f6ae6fc356e029836fd5b8ff",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/law/review_publication.cljc": {
+      "sha256": "1efdd21e0142ddb3e12195d3b9c385b7a2c8dbd29f6a1197ac1708bfdad706d1",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/law/review_readback.cljc": {
+      "sha256": "e573a29dd4a63d6124062c59eb791bf01219be0544bde2259ea0963469bd7f89",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/law/review_source.cljc": {
+      "sha256": "e7b7fdd895bb49c2e58d7e020651ae5a1f8171229802075cb1ea2db49967660a",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/law/review_verification.cljc": {
+      "sha256": "844d08578ed1a38788ea3b77ffccd07e5870733ac6829067dcf5137e3dcf20ae",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_archive.cljc": {
+      "sha256": "b7c18347dfe6e99a4a4f05274bb2cede64dfc4fd0e5844bba568649f938967b0",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_collection.cljc": {
+      "sha256": "750a0a304c6a0ad12ca37936f8684b5c18c3c45d8997c441756098da9dedcf51",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_intent.cljc": {
+      "sha256": "f18b48bc0243291021849f93fb4dd7ecb4b483d3e70426c71daf62a6f8e9e72f",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_readback.cljc": {
+      "sha256": "d41eb3d7520e0e7cf3728b78bc2d78cc459618cf40ccc59c15f2109bbf0ba680",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_source.cljc": {
+      "sha256": "e85e8f51a71f0585ac3e472d680832d29273a6678888f343546ff186dce03038",
+      "mode": "100644"
+    },
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_verification.cljc": {
+      "sha256": "3c0db80c50927f3354bfb281a76f77f90c2b6d6298bd46c06a334ffd60871550",
+      "mode": "100644"
+    },
+    "packages/eta-mu/test/cljs/eta_mu/review_intent_worker_barrier.cljs": {
+      "sha256": "cc04fb97ccc4a7a017525bc5059adbcc4bc6d56c241d9265db437f9420a34e42",
+      "mode": "100644"
+    },
+    "packages/rheos/src/rheos/backend/domain/kanban_projection.cljc": {
+      "sha256": "af3a9858f0c0095e92f9e6a21a0e7165d8456291cd002199e35fb630b2ff6272",
+      "mode": "100644"
+    },
+    "packages/rheos/src/rheos/backend/extern/path.cljs": {
+      "sha256": "4d45831c8240ca1976c1e6e77d30e6086b8df5074b8c5f19c0a4895cba6450fc",
+      "mode": "100644"
+    },
+    "packages/rheos/src/rheos/backend/infra/cli.cljs": {
+      "sha256": "6ea75966933d5fd89f6968307a69ce1a919ac78cac3fa6b2ea5fc07135118f68",
+      "mode": "100644"
+    },
+    "packages/rheos/test/rheos/backend/domain/kanban_projection_test.cljc": {
+      "sha256": "814f031ad3cf0a16843fc2cbfbd226ddac50ed3a87175b65198cd2c4d3d5fec7",
+      "mode": "100644"
+    },
+    "packages/rheos/test/rheos/backend/infra/cli_test.cljs": {
+      "sha256": "e9ead8dc713582a63ccbc14b139199b23e9ccdfacb4a6359351cfc0d2af49f1f",
+      "mode": "100644"
+    },
+    "packages/rheos/test/rheos/backend/infra/task_store_test.cljs": {
+      "sha256": "f0d349b49361ca493023e31b7f34dbc70b50cfe036488ddc89c8f3cfe36d3d85",
+      "mode": "100644"
+    },
+    "pnpm-lock.yaml": {
+      "sha256": "f3666e7872e6ff96de9d0ac650b8b7872f37de1c62df5544930dcaf0975fbd9d",
+      "mode": "100644"
+    },
+    "receipts.edn": {
+      "sha256": "bcdc565ab5db37af4ded2dc75d2d7088a0a6474035b59444c2319c7481e36f35",
+      "mode": "100644"
+    },
+    "scripts/test.bb": {
+      "sha256": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+      "mode": "100755"
+    }
+  },
+  "pre_removal_verify": {
+    "argv": [
+      "bb",
+      ".ημ/review-evidence/trusted-publication-review-scope/inspect.bb"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"verified\":true,\"source_head\":\"db99b1682c94ecdf9f8b239709dd44cb6101c7da\",\"members\":494,\"bytes\":81577860}\n",
+    "stderr": ""
+  },
+  "original_changed_paths": 499,
+  "retained_live": [
+    ".ημ/review-evidence/trusted-publication-core/a037f990af6bba87fad5b1e10ce3d3ae54f2c313aa6ae0ac4dc23803b331ee9b.json.gz",
+    ".ημ/review-evidence/trusted-publication-readback/checkpoint.json"
+  ],
+  "binary_review_disclosure": "Lossless capture custody only. Binary contents are not natively CodeRabbit-reviewed; no approval, authentication, adoption or full custody qualification.",
+  "provider_included_paths": "Unknown; no filtering assumptions used",
+  "required_fixture_before": {
+    "command": "bb scripts/test.bb --only review-verification",
+    "tests": 2,
+    "assertions": 104,
+    "failures": 0,
+    "errors": 0
+  },
+  "helper_controls": {
+    "command": "bb .ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb",
+    "tests": 3,
+    "assertions": 48,
+    "failures": 0,
+    "errors": 0
+  },
+  "scoped_lint": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "stage": "frozen-uncommitted",
+  "repair_saved_verify": {
+    "argv": [
+      "bb",
+      ".ημ/review-evidence/trusted-publication-review-scope/inspect.bb"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"verified\":true,\"source_head\":\"db99b1682c94ecdf9f8b239709dd44cb6101c7da\",\"members\":500,\"bytes\":96912594}\n",
+    "stderr": ""
+  },
+  "repair_new_members": [
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/attempt-20261023/consolidation-repair/count-gate-failure.json",
+      "bytes": 373,
+      "sha256": "63e2c2172609b91c056943db77ababbb9d9221a45defc35d5d0d5904e6215915",
+      "mode": "100644",
+      "git_blob": "499e939e3ac674c793358e8e30a14af061d11651",
+      "origin": "current-capture"
+    },
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/attempt-20261023/consolidation-repair/previous-audit.json",
+      "bytes": 19571,
+      "sha256": "1b5364dfacc72b91b3e3487ac536dbde673968f0e849a751ae01a947028826f5",
+      "mode": "100644",
+      "git_blob": "142b9e922ad989c2793debb0c50df3977790ded9",
+      "origin": "current-capture"
+    },
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/attempt-20261023/consolidation-repair/previous-index.json",
+      "bytes": 198107,
+      "sha256": "7fe0eea8e8f0b865b10369abc321a45a0f8aba6be69a162c88cc704c39cdcb34",
+      "mode": "100644",
+      "git_blob": "e8cfa9357d1d1f4db77c69e69d3681f9987c41ae",
+      "origin": "current-capture"
+    },
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/attempt-20261023/consolidation-repair/repair.py",
+      "bytes": 5403,
+      "sha256": "965758242b3926704a90900243cd82d99bc35e06f20d922194af9f73427f7624",
+      "mode": "100644",
+      "git_blob": "f37502c627957f6e83e18571cbbb13f0c485fa54",
+      "origin": "current-capture"
+    },
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/attempt-20261023/inspection-controls/bundle.4be3e8f3bc7eeceb8a4d85a9d04ba50fd6f907f0b61676504625b9307c125a2a.json.gz",
+      "bytes": 268,
+      "sha256": "4be3e8f3bc7eeceb8a4d85a9d04ba50fd6f907f0b61676504625b9307c125a2a",
+      "mode": "100644",
+      "git_blob": "8312e8cf5fb16fb4a8fed05c6c3b2975847cec34",
+      "origin": "current-capture"
+    },
+    {
+      "path": ".ημ/review-evidence/trusted-publication-review-scope/bundle.e7b249a9fb4d04991fb510beaac5193eb8a698b2a4a9f9fe8db6f3951b99bb69.json.gz",
+      "bytes": 15111012,
+      "sha256": "e7b249a9fb4d04991fb510beaac5193eb8a698b2a4a9f9fe8db6f3951b99bb69",
+      "mode": "100644",
+      "git_blob": "526f2b5065ff163215d8e906cccec73084f953d5",
+      "origin": "current-capture"
+    }
+  ],
+  "post_removal_verify": {
+    "argv": [
+      "bb",
+      ".ημ/review-evidence/trusted-publication-review-scope/inspect.bb"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"verified\":true,\"source_head\":\"db99b1682c94ecdf9f8b239709dd44cb6101c7da\",\"members\":500,\"bytes\":96912594}\n",
+    "stderr": ""
+  },
+  "post_removal_fixture": {
+    "argv": [
+      "bb",
+      "scripts/test.bb",
+      "--only",
+      "review-verification"
+    ],
+    "exit_code": 0,
+    "stdout": "\n============================================================\nTesting: review-verification\n============================================================\n\n\nTesting opencode-review-verification-test\n\nRan 2 tests containing 104 assertions.\n0 failures, 0 errors.\n\n✓ review-verification passed (49.5s)\n\n============================================================\nTEST SUMMARY\n============================================================\n\n  ✓ review-verification (49.5s)\n\nAll suites passed!\n",
+    "stderr": ""
+  },
+  "post_removal_controls": {
+    "argv": [
+      "bb",
+      ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb"
+    ],
+    "exit_code": 0,
+    "stdout": "\nTesting test-inspection\n\nRan 3 tests containing 48 assertions.\n0 failures, 0 errors.\n",
+    "stderr": ""
+  },
+  "post_removal_lint": {
+    "argv": [
+      "clj-kondo",
+      "--lint",
+      ".ημ/review-evidence/trusted-publication-review-scope/inspect.bb",
+      ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb"
+    ],
+    "exit_code": 0,
+    "stdout": "linting took 82ms, errors: 0, warnings: 0\n",
+    "stderr": ""
+  },
+  "prospective_changed_paths": [
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/README.md",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/domain/review.cljc",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/extern/review_invocation.cljs",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/law/review_invocation.cljc",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/muse-src/eta_mu/shape/git_diff_path.cljc",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/publish-opencode-review.cjs",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/review-invocation.cjs",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/run-opencode-review-recovery.mjs",
+    ".github/fixtures/review-publication-verifier/c1369c223cf3c57e3e31934a6d746bfcdfe73f5a/runtime.json",
+    ".github/scripts/opencode-code-review-workflow.test.mjs",
+    ".github/scripts/opencode-review-intent-bootstrap.test.mjs",
+    ".github/scripts/opencode_review_archive_test.cljs",
+    ".github/scripts/opencode_review_collection_test.cljs",
+    ".github/scripts/opencode_review_intent_process_test.mjs",
+    ".github/scripts/opencode_review_intent_test.cljs",
+    ".github/scripts/opencode_review_intent_uncertain_test.mjs",
+    ".github/scripts/opencode_review_publish_test.cljs",
+    ".github/scripts/opencode_review_readback_test.cljs",
+    ".github/scripts/opencode_review_source_test.cljs",
+    ".github/scripts/opencode_review_verification_test.cljs",
+    ".github/workflows/opencode-code-review.yml",
+    ".github/workflows/rheos-github-sync-ci.yml",
+    ".github/workflows/rheos.yml",
+    ".github/workflows/sandbox-bundle.yml",
+    ".github/workflows/sol-ci.yml",
+    ".ημ/review-evidence/trusted-publication-core/a037f990af6bba87fad5b1e10ce3d3ae54f2c313aa6ae0ac4dc23803b331ee9b.json.gz",
+    ".ημ/review-evidence/trusted-publication-readback/checkpoint.json",
+    ".ημ/review-evidence/trusted-publication-review-scope/README.md",
+    ".ημ/review-evidence/trusted-publication-review-scope/audit.json",
+    ".ημ/review-evidence/trusted-publication-review-scope/bundle.1b5524abf5cbc787eb0f6da6cbf0f5a4c234a62338b86879a5398d0ce616f1fa.json.gz",
+    ".ημ/review-evidence/trusted-publication-review-scope/failed.3b2da80b2ba4057201bd7234f8cde42b179b1bc70ca2c7fcaf45558d8e50a2d6.json.gz",
+    ".ημ/review-evidence/trusted-publication-review-scope/failed.fda4f4acaf63e96f7a68fd431ec72dbb0514b997b953c84885566a4b115b70b4.json.gz",
+    ".ημ/review-evidence/trusted-publication-review-scope/index.json",
+    ".ημ/review-evidence/trusted-publication-review-scope/inspect.bb",
+    ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb",
+    ".ημ/session-mycology/ledger.md",
+    ".ημ/session-reflections.edn",
+    "contracts/workflows/.gates.edn",
+    "contracts/workflows/ci.edn",
+    "contracts/workflows/packages.edn",
+    "contracts/workflows/resources.edn",
+    "docs/agent-workflows.md",
+    "kanban/.events/ledger.edn",
+    "kanban/.kanban/board.json",
+    "kanban/epics/make-reusable-opencode-review-gates-truth-preserving.md",
+    "kanban/epics/prove-reusable-review-gate-red-path-in-a-fixture-caller.md",
+    "kanban/tasks/independently-admit-and-publish-review-evidence-from-trusted-default-code-1c707551.md",
+    "kanban/tasks/ledger-events-persist-absolute-source-paths-from-the-writer-s-checkout.md",
+    "kanban/tasks/produce-anonymous-review-evidence-without-publication-credentials-c7d20dbb.md",
+    "kanban/tasks/rheos-canonical-task-fold-and-snapshots.md",
+    "kanban/tasks/rheos-ci-does-not-gate-build-warnings.md",
+    "kanban/tasks/run-candidate-deterministic-ci-without-signing-credentials-bdd97334.md",
+    "packages/eta-mu/commands/workflows_test.cljs",
+    "packages/eta-mu/intent-runtime/barrier_entry.cljs",
+    "packages/eta-mu/intent-runtime/nbb.edn",
+    "packages/eta-mu/intent-runtime/test_entry.cljs",
+    "packages/eta-mu/intent-runtime/worker_entry.cljs",
+    "packages/eta-mu/package.json",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_archive.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_readback.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_source.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/domain/review_verification.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_collection.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_intent.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_source.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_archive.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_collection.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_intent_worker.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_readback.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_source.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_archive.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_collection.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_publication.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_readback.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_source.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/law/review_verification.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_archive.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_collection.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_intent.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_readback.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_source.cljc",
+    "packages/eta-mu/src/cljs/eta_mu/shape/review_verification.cljc",
+    "packages/eta-mu/test/cljs/eta_mu/review_intent_worker_barrier.cljs",
+    "packages/rheos/src/rheos/backend/domain/kanban_projection.cljc",
+    "packages/rheos/src/rheos/backend/extern/path.cljs",
+    "packages/rheos/src/rheos/backend/infra/cli.cljs",
+    "packages/rheos/test/rheos/backend/domain/kanban_projection_test.cljc",
+    "packages/rheos/test/rheos/backend/infra/cli_test.cljs",
+    "packages/rheos/test/rheos/backend/infra/task_store_test.cljs",
+    "pnpm-lock.yaml",
+    "receipts.edn",
+    "scripts/test.bb"
+  ],
+  "prospective_changed_count": 100,
+  "canonical_paths_unchanged_by_worker": true,
+  "final_retained_evidence_paths": [
+    ".ημ/review-evidence/trusted-publication-core/a037f990af6bba87fad5b1e10ce3d3ae54f2c313aa6ae0ac4dc23803b331ee9b.json.gz",
+    ".ημ/review-evidence/trusted-publication-readback/checkpoint.json",
+    ".ημ/review-evidence/trusted-publication-review-scope/README.md",
+    ".ημ/review-evidence/trusted-publication-review-scope/audit.json",
+    ".ημ/review-evidence/trusted-publication-review-scope/bundle.1b5524abf5cbc787eb0f6da6cbf0f5a4c234a62338b86879a5398d0ce616f1fa.json.gz",
+    ".ημ/review-evidence/trusted-publication-review-scope/failed.3b2da80b2ba4057201bd7234f8cde42b179b1bc70ca2c7fcaf45558d8e50a2d6.json.gz",
+    ".ημ/review-evidence/trusted-publication-review-scope/failed.fda4f4acaf63e96f7a68fd431ec72dbb0514b997b953c84885566a4b115b70b4.json.gz",
+    ".ημ/review-evidence/trusted-publication-review-scope/index.json",
+    ".ημ/review-evidence/trusted-publication-review-scope/inspect.bb",
+    ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb"
+  ],
+  "closure": {
+    "source_head": "03878641fd55b9327cdb01e8b522a99bab05d587",
+    "receipt_rows": 360,
+    "historical_invalid": 71,
+    "historical_errors": 118,
+    "preservation": {
+      "prefixes": {
+        "receipts.edn": {
+          "base_bytes": 633169,
+          "current_bytes": 636385,
+          "base_sha256": "bcdc565ab5db37af4ded2dc75d2d7088a0a6474035b59444c2319c7481e36f35",
+          "prefix_preserved": true
+        },
+        "kanban/.events/ledger.edn": {
+          "base_bytes": 1862523,
+          "current_bytes": 1866373,
+          "base_sha256": "1f7679df0456c22e1be94e91ee68cca3a376a48c858fde0c3566fb9db0e9307a",
+          "prefix_preserved": true
+        },
+        ".ημ/session-mycology/ledger.md": {
+          "base_bytes": 118674,
+          "current_bytes": 119269,
+          "base_sha256": "98bc7a3c9febdf5a4b730c472f9b249e8130de2384da71062a15cd3b3b70d8fd",
+          "prefix_preserved": true
+        },
+        ".ημ/session-reflections.edn": {
+          "base_bytes": 41622,
+          "current_bytes": 41622,
+          "base_sha256": "76a5109bd3e6f5d40a40b82f9f4b5d21838d832f267929e9d87ce82acf4ab4f3",
+          "prefix_preserved": true
+        }
+      },
+      "cards_preserved": 309,
+      "non_evidence_paths": 90,
+      "qualification": false,
+      "CMS_Cephalon": "paused"
+    },
+    "helper_p2": "verified-byte retention; RED4/50 twofailures, GREEN4/50",
+    "root_capture": ".ημ/stabilization/discovery-20261023/independent-bundle-review/repair",
+    "native_review_binary_credit": false,
+    "qualification": false
+  },
+  "durable_unknown_outcome_execution": {
+    "source": "3734a46cc1c5d295800de463e04ee80c54630773",
+    "red": "d81f8fb48fe7988834ff440af80344f348c4527e",
+    "initial_green": "4f6370fd0fe7ca50e60e26b2ed7df5573ff60166",
+    "ack_red": "771e4086086c372a89183692d114dcd80969a5d9",
+    "focused": "40tests/390assertions",
+    "independent": "ACK6+primary26+restart5",
+    "portable_values": 12,
+    "full_checks": {
+      "source": "3734a46cc1c5d295800de463e04ee80c54630773",
+      "file_sha256": {
+        "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+        "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+        "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+        ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318"
+      },
+      "results": [
+        {
+          "name": "cli-test",
+          "argv": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "test"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 15.583,
+          "completed_at": "2026-10-23T05:24:59.243403+00:00",
+          "source": "3734a46cc1c5d295800de463e04ee80c54630773",
+          "file_sha256": {
+            "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+            "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+            ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318"
+          },
+          "removed_provider_variable_names": [
+            "OPENAI_API_KEY"
+          ],
+          "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+          "npm_user_config": "explicit empty task-owned file; project configuration retained"
+        },
+        {
+          "name": "cli-lint",
+          "argv": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "lint:kondo"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 2.105,
+          "completed_at": "2026-10-23T05:25:01.349185+00:00",
+          "source": "3734a46cc1c5d295800de463e04ee80c54630773",
+          "file_sha256": {
+            "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+            "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+            ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318"
+          },
+          "removed_provider_variable_names": [
+            "OPENAI_API_KEY"
+          ],
+          "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+          "npm_user_config": "explicit empty task-owned file; project configuration retained"
+        },
+        {
+          "name": "cli-release",
+          "argv": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "build"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 17.471,
+          "completed_at": "2026-10-23T05:25:18.820600+00:00",
+          "source": "3734a46cc1c5d295800de463e04ee80c54630773",
+          "file_sha256": {
+            "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+            "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+            ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318"
+          },
+          "removed_provider_variable_names": [
+            "OPENAI_API_KEY"
+          ],
+          "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+          "npm_user_config": "explicit empty task-owned file; project configuration retained"
+        }
+      ]
+    },
+    "receipt_rows": 361,
+    "historical_invalid": 71,
+    "historical_errors": 118,
+    "preservation": {
+      "prefixes": {
+        "receipts.edn": {
+          "base_bytes": 636385,
+          "base_sha256": "25e61a66187911f53ff0be6911a1432097e1df481de8d7bb0396b24da27ab0f7",
+          "current_bytes": 640742,
+          "prefix_preserved": true
+        },
+        "kanban/.events/ledger.edn": {
+          "base_bytes": 1866373,
+          "base_sha256": "a842f3db94bd5d9adf30c875e042cc3eba4fe9bc8274c630302db3e9c4b499a1",
+          "current_bytes": 1872088,
+          "prefix_preserved": true
+        },
+        ".ημ/session-mycology/ledger.md": {
+          "base_bytes": 119269,
+          "base_sha256": "38a9a55f819c6dfd68ebbea0e33c9726c42f29992910bf1ff1f99310a061ac69",
+          "current_bytes": 119904,
+          "prefix_preserved": true
+        },
+        ".ημ/session-reflections.edn": {
+          "base_bytes": 41622,
+          "base_sha256": "76a5109bd3e6f5d40a40b82f9f4b5d21838d832f267929e9d87ce82acf4ab4f3",
+          "current_bytes": 41622,
+          "prefix_preserved": true
+        }
+      },
+      "qualification": false,
+      "CMS_Cephalon": "paused",
+      "cards_preserved": 309
+    },
+    "root_capture": ".ημ/stabilization/outcomes-20261023",
+    "qualification": false
+  },
+  "native_review_repairs_execution": {
+    "source": "7002b307da9bec55053fddeb640543d6a7e54da5",
+    "note": "Executed native review repairs at source 7002b307da9bec55053fddeb640543d6a7e54da5, following tests-only RED before each product change. Collection RED 5a77f33a has 33 tests/1022 assertions and 295 causal failures; GREEN 8a0785fb passes all, retaining decision/security/identity/source facts while ignoring only known resource bookkeeping; 445 actual NBB/Babashka values match. Status RED 493c604e has 18/602 and 20 causal failures; GREEN 5316cee2 validates complete history before sort/arithmetic, preserves earliest refusal precedence and passes 168 actual host parity values. Independent-author collection/status challenges pass 217 shared controls plus 28 additional status controls, with no remaining narrow finding. Native helper temporary-parent RED 974b1755 has 6/71 with six failures and immutable runtime 3/110 with one failure; f429c070 makes positive copies canonical without weakening caller installation alias refusal and applies neutral requested suite docstring. Independent cleanup P2 at that source is repaired through RED 4a4e7787 (4/120, three failures) then GREEN 1b7defe0: immediately retain canonical owned path. Same retarget probe and ten coordinator assertions preserve unrelated marker, remove owned directory, keep earlier failure cleanup and zero resources. Native config allegation 4356317416 is disproven by pinned NBB1.5.212 loader/cold tests and actual reviewed-C9 Sandbox job120247757541 intent29/200; no native withdrawal or rejection settlement yet. Archive body item 7cea32a6d564ed751e37cb64 is confirmed as parent parsing cost, not late verified acceptance: identical physical500 ZIP/96912594 decoded bytes previously stalled callback17s and reached4.58GB RSS. Tests-only RED de771ee7 has11/100 and three causal failures. GREEN7002b307 uses a fixed archive-specific structured-clone DTO, preserves all500 base64 values/all bytes and opaque Clojure metadata, and passes11/100. Exact same ZIP measures15.72s/15.69s under60s/20s budgets, callback21.66ms/19.14ms and RSS354MB/353MB; all500 member hashes/bytes independently verified. Independent26 malformed DTO,45 refusal roundtrips and3 deadline/refusal controls pass; existing worker authority, clocks and cleanup remain, without universal latency or member rehash authority claims. Full owning CLI/lint/release bind this frozen source with empty task npm user config and no authentication/deployment environment forwarding. C9 native full Sandbox/Sol/Rheos/sync succeeds only at its exact1db7f0c1 merge;23 carrier diagnostics and469023698-byte metadata-only artifact remain. Native review5624157822 has sixP2 threads plus the body item; fixes are not native settlement/approval. Original G/executed caller/profile tools/input custody, authenticated observed/ambiguous outcomes, full publisher/composition and protected adoption remain unfinished. Preserve309 states/planning/four prefixes, receipt362 prospective validity and historical71invalid/118errors, root23 accepted pins and100 changed paths with10 live evidence paths. CMS/Cephalon remain paused. No standalone planning, new card, model/POST/signing/credential/grant/protection/caller-pin/merge/deployment or adoption effect.",
+    "tests": "Collection33/1022; publication18/602; archive11/100; runtime4/120; helper6/71; intent40/390; actual portable445+168+12 values; independent outcome6+26+5, collection/status217+28, runtime10, DTO26+45+3; owning CLI194/587+workflows11/199, lint/release0compilerwarnings; known fixture/native carrier diagnostics remain.",
+    "commits": {
+      "collection_red": "5a77f33a7629c261abfd57a096cde44c030cd3e9",
+      "collection_green": "8a0785fbf3d835db6179f5524cdce92cc79dd63b",
+      "status_red": "493c604ee78e216a553217ef278701b52fff6a77",
+      "status_green": "5316cee2bfc962075d4a48b9781dac3b04d3dfb6",
+      "runtime_native_red": "974b17556e8e3cba31b37691dd913a1b3b567c23",
+      "runtime_initial_green": "f429c070435f38ff790c4d9ff970c90bfc3ec217",
+      "runtime_cleanup_red": "4a4e77878b5485d28ca21cddb1ab9477e425ad6e",
+      "runtime_cleanup_green": "1b7defe05b44c4e2a2a13262631d898acbaf863a",
+      "archive_red": "de771ee7e4a7486ff061e1a3816f566a0eee8240",
+      "archive_green": "7002b307da9bec55053fddeb640543d6a7e54da5"
+    },
+    "archive_measurement": {
+      "observed_at": "2026-10-23T05:54:03.434928+00:00",
+      "red_commit": "de771ee7e4a7486ff061e1a3816f566a0eee8240",
+      "head": "de771ee7e4a7486ff061e1a3816f566a0eee8240",
+      "extern_sha256": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+      "tests_sha256": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+      "source_unchanged_during_measurements": true,
+      "registered_tests": 11,
+      "registered_assertions": 100,
+      "registered_failures": 0,
+      "registered_errors": 0,
+      "configured_lint_errors": 0,
+      "configured_lint_warnings": 0,
+      "same_physical_zip_sha256": "92de615bf36f74162bb1e2e91a9f1910d74b32fcef3a2bc40498d98fc5e4425a",
+      "physical_bytes": 374175,
+      "members": 500,
+      "decoded_bytes": 96912594,
+      "retained_base64_characters": 129218000,
+      "both_runs_exact_all_500_member_bytes_hashes_verified": true,
+      "measurements": [
+        {
+          "operation_budget_ms": 60000,
+          "result": "verified",
+          "elapsed_ms": 15722.930371,
+          "parent_callback_ms": 21.65610800000104,
+          "heartbeat_gap_ms": 145.5247879999988,
+          "parent_rss_before": 353968128,
+          "parent_rss_after": 353968128
+        },
+        {
+          "operation_budget_ms": 20000,
+          "result": "verified",
+          "elapsed_ms": 15693.9333,
+          "parent_callback_ms": 19.14159599999948,
+          "heartbeat_gap_ms": 136.35644299999876,
+          "parent_rss_before": 352763904,
+          "parent_rss_after": 352763904
+        }
+      ],
+      "limitations": "Actual host measurements, not universal hard whole-API latency guarantee. Native artifact authentication, originalG/caller custody/fullpublisher and verifier IPC remain separate unfinished work."
+    },
+    "native_settlement": false,
+    "qualification": false,
+    "full_checks": {
+      "source": "7002b307da9bec55053fddeb640543d6a7e54da5",
+      "file_sha256": {
+        "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+        "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+        "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+        ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+        "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+        "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+        "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+        "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "5ec17a60d4b0714193417ae64c5c06d9789f37de388cb9890258eaae71b00c3f",
+        "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+        "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+        ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+        ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+        ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+        ".github/scripts/opencode_review_verification_test.cljs": "79f622b87018037bffe3b47e60278120a1cb007bbb556ff347fa61adc9b64907",
+        ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7"
+      },
+      "results": [
+        {
+          "name": "cli-test",
+          "argv": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "test"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 16.025,
+          "completed_at": "2026-10-23T05:59:44.057765+00:00",
+          "source": "7002b307da9bec55053fddeb640543d6a7e54da5",
+          "file_sha256": {
+            "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+            "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+            ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+            "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+            "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "5ec17a60d4b0714193417ae64c5c06d9789f37de388cb9890258eaae71b00c3f",
+            "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+            "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+            ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+            ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+            ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+            ".github/scripts/opencode_review_verification_test.cljs": "79f622b87018037bffe3b47e60278120a1cb007bbb556ff347fa61adc9b64907",
+            ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7"
+          },
+          "removed_provider_variable_names": [
+            "OPENAI_API_KEY"
+          ],
+          "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+          "npm_user_config": "explicit empty task-owned file; project configuration retained"
+        },
+        {
+          "name": "cli-lint",
+          "argv": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "lint:kondo"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 2.162,
+          "completed_at": "2026-10-23T05:59:46.221135+00:00",
+          "source": "7002b307da9bec55053fddeb640543d6a7e54da5",
+          "file_sha256": {
+            "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+            "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+            ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+            "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+            "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "5ec17a60d4b0714193417ae64c5c06d9789f37de388cb9890258eaae71b00c3f",
+            "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+            "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+            ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+            ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+            ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+            ".github/scripts/opencode_review_verification_test.cljs": "79f622b87018037bffe3b47e60278120a1cb007bbb556ff347fa61adc9b64907",
+            ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7"
+          },
+          "removed_provider_variable_names": [
+            "OPENAI_API_KEY"
+          ],
+          "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+          "npm_user_config": "explicit empty task-owned file; project configuration retained"
+        },
+        {
+          "name": "cli-release",
+          "argv": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "build"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 18.555,
+          "completed_at": "2026-10-23T06:00:04.777371+00:00",
+          "source": "7002b307da9bec55053fddeb640543d6a7e54da5",
+          "file_sha256": {
+            "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+            "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+            ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+            "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+            "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "5ec17a60d4b0714193417ae64c5c06d9789f37de388cb9890258eaae71b00c3f",
+            "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+            "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+            ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+            ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+            ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+            ".github/scripts/opencode_review_verification_test.cljs": "79f622b87018037bffe3b47e60278120a1cb007bbb556ff347fa61adc9b64907",
+            ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7"
+          },
+          "removed_provider_variable_names": [
+            "OPENAI_API_KEY"
+          ],
+          "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+          "npm_user_config": "explicit empty task-owned file; project configuration retained"
+        }
+      ]
+    },
+    "receipt_rows": 362,
+    "historical_invalid": 71,
+    "historical_errors": 118,
+    "preservation": {
+      "prefixes": {
+        "receipts.edn": {
+          "base_bytes": 636385,
+          "base_sha256": "25e61a66187911f53ff0be6911a1432097e1df481de8d7bb0396b24da27ab0f7",
+          "current_bytes": 646799,
+          "prefix_preserved": true
+        },
+        "kanban/.events/ledger.edn": {
+          "base_bytes": 1866373,
+          "base_sha256": "a842f3db94bd5d9adf30c875e042cc3eba4fe9bc8274c630302db3e9c4b499a1",
+          "current_bytes": 1881384,
+          "prefix_preserved": true
+        },
+        ".ημ/session-mycology/ledger.md": {
+          "base_bytes": 119269,
+          "base_sha256": "38a9a55f819c6dfd68ebbea0e33c9726c42f29992910bf1ff1f99310a061ac69",
+          "current_bytes": 120514,
+          "prefix_preserved": true
+        },
+        ".ημ/session-reflections.edn": {
+          "base_bytes": 41622,
+          "base_sha256": "76a5109bd3e6f5d40a40b82f9f4b5d21838d832f267929e9d87ce82acf4ab4f3",
+          "current_bytes": 41622,
+          "prefix_preserved": true
+        }
+      },
+      "qualification": false,
+      "CMS_Cephalon": "paused",
+      "cards_preserved": 309
+    },
+    "root_capture": ".ημ/stabilization/outcomes-20261023"
+  },
+  "source_custody_execution": {
+    "source": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+    "note": "Executed source-custody repairs at source c9fc461f2a14d613e9f1897f5143676378e154c2 under this existing publisher. Tests-only source RED7a798aa3 ran8/175 with six causal failures; GREEN33184ccc passes8/175 and14 actual NBB/Babashka values. The partial source observation now always retains missing :native-execution-custody; invented coordinate strings/verified flags cannot clear it. No admitted signed execution capability or G/caller policy change.\n\nTests-only verifier RED73b9aa65 ran5/181 with34 causal failures before GREENc9fc461f. The exact strict-inspected manifest byte count/SHA256 reaches reconstruct! after caller metadata, with independent semantic manifest comparison retained. Full original input-proof v1 schema/stage/fields/provenance/name bind actual manifest bytes. The actual producer supports deterministic evidence attempt1 reused by review attempt2: manifest/producer provenance stays1, verification provenance/native review artifact stays2, producer<=review uses portable precision-safe decimal comparison. Actual pinned runtime5/181 passes;33 actual pure NBB/Babashka values match. Independent review passes28 actual pinned-runtime cases and270 independent arbitrary-precision reference cases on both hosts, no narrow finding; old valid canonical hash fails for whitespace-changed actual bytes. Cleanup resources/effects zero. Fixtures remain explicitly inert8-tool/local-source-byte proof, not native authentication.\n\nFull owning CLI194/587 and workflows11/199, lint and release pass at c9fc461f with zero compiler/linter warnings, runtime/path-only environment and empty task npm user config. Existing fixture/carrier diagnostics remain visible. Native F796 Sandbox39909048197/job120267534077 now succeeds at executed e157f704 with exact parents/tree;29 actual suite summaries and92 compiler builds pass,23 diagnostics remain. Artifact12482823428/469643137 bytes has metadata only; no download/restore credit and no hosted proof transfer to c9fc461f.\n\nActual pinned Musec1369 JVM entrypoint and pure configuration generation produce22 allow permissions matching exact workflow expectations, independently reproduced byte-for-byte. All38 pinned source/build files,69 capture hashes and dependency identities verify. Both actual NBB plugin loads fail at real shadow.esm/JVM-only macro boundaries; actual full adapter remains uncompiled/unobserved. No actor initialization, handler/provider execution, G/caller authentication or adoption credit.\n\nFresh06:45:43–06:46:02UTC two-pass same442 census:437open/4merged/1closed/6changed open head or reported-base pairs; source/proposal acquisition drift0/0. Axxium3/4 advance by one commit each, adding42-line proposed review workflow and receipt append; complete native diffs retained without acceptance/deployment authority. Root88 native receipt_history2/hygiene0 and missing-App/terminal failures remain; root receiptP1 and paused oracle held. Preserve all309 states/planning/four prefixes,363rd prospective valid child receipt with historical71invalid/118errors, all23 accepted root pins and exact100 review paths. Native review has no exact approval; CodeRabbit cooldown remains after07:04:53UTC, Codex resetUNKNOWN/no retry. Original authenticated G/executed caller/full profile/input custody, native outcome authentication, full publication/composition/protected adoption remain unfinished. CMS/Cephalon paused. No standalone planning, new card, merge/deployment/credential/grant/protection/pin/adoption effect.\n",
+    "tests": {
+      "source": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+      "tests_red_source": "7a798aa3b50ed908578b1cc2013ed5566e607b0e",
+      "tests_red_verifier": "73b9aa651286e0c87ddb2d9d8fd50e686ded9238",
+      "source_green": "33184ccc9730b0d545c7d0b0660bfbefacc1ce34",
+      "verifier_green": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+      "source_suite": "8 tests / 175 assertions; causal RED six failures then GREEN zero",
+      "verifier_suite": "5 tests / 181 assertions; causal RED 34 failures then GREEN zero",
+      "source_parity_values": 14,
+      "verifier_parity_values": 33,
+      "full_owning": {
+        "source": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+        "file_sha256": {
+          "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+          "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+          "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+          ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+          "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+          "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+          "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+          "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "0f2133e5c45eb284597995da43c05cae52fe050daa7c36a6eb9b29cbf74d869d",
+          "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+          "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+          ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+          ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+          ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+          ".github/scripts/opencode_review_verification_test.cljs": "01becafaa1cc37e1def294874870eff8e85147039b952e234f71f41150eb18dc",
+          ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7",
+          "packages/eta-mu/src/cljs/eta_mu/domain/review_source.cljc": "54b0dcfd5833f227d819823ff6ff761421dd70a70eb2c4fa2a0e7d86c2fe2bcd",
+          "packages/eta-mu/src/cljs/eta_mu/law/review_verification.cljc": "0fe74499cd01739ed5c33831d7bab43c6699ead850e5a9781f9b95972eee4fde",
+          "packages/eta-mu/src/cljs/eta_mu/domain/review_verification.cljc": "a9e64088cba09520fb93789b09aecc3f8396ad44946d59576cf867d582e35250",
+          "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs": "4bdf3c484b689752c33c2f05f7a81c71de618e18e018a0ef0f812e4dacedb74d",
+          ".github/scripts/opencode_review_source_test.cljs": "0a11d664d4779104f55d3925d8f49e289a0906b422445af5dc22750c491cc850"
+        },
+        "results": [
+          {
+            "name": "cli-test",
+            "argv": [
+              "pnpm",
+              "-C",
+              "packages/eta-mu",
+              "test"
+            ],
+            "exit_code": 0,
+            "elapsed_seconds": 20.344,
+            "completed_at": "2026-10-23T06:50:14.101134+00:00",
+            "source": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+            "file_sha256": {
+              "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+              "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+              ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+              "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+              "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "0f2133e5c45eb284597995da43c05cae52fe050daa7c36a6eb9b29cbf74d869d",
+              "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+              "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+              ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+              ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+              ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+              ".github/scripts/opencode_review_verification_test.cljs": "01becafaa1cc37e1def294874870eff8e85147039b952e234f71f41150eb18dc",
+              ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_source.cljc": "54b0dcfd5833f227d819823ff6ff761421dd70a70eb2c4fa2a0e7d86c2fe2bcd",
+              "packages/eta-mu/src/cljs/eta_mu/law/review_verification.cljc": "0fe74499cd01739ed5c33831d7bab43c6699ead850e5a9781f9b95972eee4fde",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_verification.cljc": "a9e64088cba09520fb93789b09aecc3f8396ad44946d59576cf867d582e35250",
+              "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs": "4bdf3c484b689752c33c2f05f7a81c71de618e18e018a0ef0f812e4dacedb74d",
+              ".github/scripts/opencode_review_source_test.cljs": "0a11d664d4779104f55d3925d8f49e289a0906b422445af5dc22750c491cc850"
+            },
+            "removed_provider_variable_names": [
+              "OPENAI_API_KEY"
+            ],
+            "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+            "npm_user_config": "explicit empty task-owned file; project configuration retained"
+          },
+          {
+            "name": "cli-lint",
+            "argv": [
+              "pnpm",
+              "-C",
+              "packages/eta-mu",
+              "lint:kondo"
+            ],
+            "exit_code": 0,
+            "elapsed_seconds": 2.199,
+            "completed_at": "2026-10-23T06:50:16.303957+00:00",
+            "source": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+            "file_sha256": {
+              "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+              "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+              ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+              "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+              "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "0f2133e5c45eb284597995da43c05cae52fe050daa7c36a6eb9b29cbf74d869d",
+              "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+              "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+              ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+              ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+              ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+              ".github/scripts/opencode_review_verification_test.cljs": "01becafaa1cc37e1def294874870eff8e85147039b952e234f71f41150eb18dc",
+              ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_source.cljc": "54b0dcfd5833f227d819823ff6ff761421dd70a70eb2c4fa2a0e7d86c2fe2bcd",
+              "packages/eta-mu/src/cljs/eta_mu/law/review_verification.cljc": "0fe74499cd01739ed5c33831d7bab43c6699ead850e5a9781f9b95972eee4fde",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_verification.cljc": "a9e64088cba09520fb93789b09aecc3f8396ad44946d59576cf867d582e35250",
+              "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs": "4bdf3c484b689752c33c2f05f7a81c71de618e18e018a0ef0f812e4dacedb74d",
+              ".github/scripts/opencode_review_source_test.cljs": "0a11d664d4779104f55d3925d8f49e289a0906b422445af5dc22750c491cc850"
+            },
+            "removed_provider_variable_names": [
+              "OPENAI_API_KEY"
+            ],
+            "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+            "npm_user_config": "explicit empty task-owned file; project configuration retained"
+          },
+          {
+            "name": "cli-release",
+            "argv": [
+              "pnpm",
+              "-C",
+              "packages/eta-mu",
+              "build"
+            ],
+            "exit_code": 0,
+            "elapsed_seconds": 17.156,
+            "completed_at": "2026-10-23T06:50:33.461541+00:00",
+            "source": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+            "file_sha256": {
+              "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+              "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+              ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+              "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+              "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "0f2133e5c45eb284597995da43c05cae52fe050daa7c36a6eb9b29cbf74d869d",
+              "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+              "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+              ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+              ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+              ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+              ".github/scripts/opencode_review_verification_test.cljs": "01becafaa1cc37e1def294874870eff8e85147039b952e234f71f41150eb18dc",
+              ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_source.cljc": "54b0dcfd5833f227d819823ff6ff761421dd70a70eb2c4fa2a0e7d86c2fe2bcd",
+              "packages/eta-mu/src/cljs/eta_mu/law/review_verification.cljc": "0fe74499cd01739ed5c33831d7bab43c6699ead850e5a9781f9b95972eee4fde",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_verification.cljc": "a9e64088cba09520fb93789b09aecc3f8396ad44946d59576cf867d582e35250",
+              "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs": "4bdf3c484b689752c33c2f05f7a81c71de618e18e018a0ef0f812e4dacedb74d",
+              ".github/scripts/opencode_review_source_test.cljs": "0a11d664d4779104f55d3925d8f49e289a0906b422445af5dc22750c491cc850"
+            },
+            "removed_provider_variable_names": [
+              "OPENAI_API_KEY"
+            ],
+            "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+            "npm_user_config": "explicit empty task-owned file; project configuration retained"
+          }
+        ]
+      },
+      "qualification": false,
+      "CMS_Cephalon": "paused"
+    },
+    "independent_verifier": {
+      "observed_at": "2026-10-23T06:54:41.239771+00:00",
+      "reviewer": "independent scoped collection_stability agent",
+      "source_commit": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+      "source_files": [
+        {
+          "path": "packages/eta-mu/src/cljs/eta_mu/law/review_verification.cljc",
+          "sha256": "0fe74499cd01739ed5c33831d7bab43c6699ead850e5a9781f9b95972eee4fde",
+          "unchanged": true,
+          "git_blob": "d47583a4113cb1ba09db6273332ef0a7089aad62"
+        },
+        {
+          "path": "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs",
+          "sha256": "0f2133e5c45eb284597995da43c05cae52fe050daa7c36a6eb9b29cbf74d869d",
+          "unchanged": true,
+          "git_blob": "9c758369cdccd6a734bfe99eb916ac98a4971bae"
+        },
+        {
+          "path": "packages/eta-mu/src/cljs/eta_mu/domain/review_verification.cljc",
+          "sha256": "a9e64088cba09520fb93789b09aecc3f8396ad44946d59576cf867d582e35250",
+          "unchanged": true,
+          "git_blob": "d0a3581f12d103510d73db6556397dfdf7198db2"
+        },
+        {
+          "path": "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs",
+          "sha256": "4bdf3c484b689752c33c2f05f7a81c71de618e18e018a0ef0f812e4dacedb74d",
+          "unchanged": true,
+          "git_blob": "f768820510e0cb5df4d97d80ce6cee90467b1d42"
+        },
+        {
+          "path": ".github/scripts/opencode_review_verification_test.cljs",
+          "sha256": "01becafaa1cc37e1def294874870eff8e85147039b952e234f71f41150eb18dc",
+          "unchanged": true,
+          "git_blob": "22b0b7924d4dc7c228a86527d1bca7028653355a"
+        }
+      ],
+      "qualification": false,
+      "qualification_scope": "Local inert composition and source-bound verification only; no original G/executed caller authentication, full22-tool profile/native input reconstruction, native review/publication/adoption credit. Existing G/caller policy unchanged.",
+      "completed": true,
+      "findings": [],
+      "actual_pinned_runtime": {
+        "cases": 28,
+        "passed": 28,
+        "failed": 0,
+        "raw_result_exit_code": 0,
+        "raw_result_stderr_bytes": 0,
+        "resources": {
+          "runtimes": 0,
+          "workers": 0
+        },
+        "positive_cases": 4,
+        "negative_cases": 24,
+        "controls": [
+          "Actual physical ZIP and pinned Muse capsule; no fake canonical verdict",
+          "Producer1/review1, producer1/review2 and producer1/max-safe-review positives",
+          "All11required proof fields independently omitted",
+          "Extra proof/provenance/full-diff fields refuse under source-owned exact schemas",
+          "Producer/review cross-repository and workflow-ref mismatches refuse",
+          "Numeric attempt values, noncanonical IDs and precision-boundary future producer refuse",
+          "Semantically equal manifest with changed whitespace bytes verifies using its actual hash",
+          "Same semantic manifest with the old valid canonical byte hash refuses inside actual runtime",
+          "Verified actual manifest identity replaces caller identity in reconstruction callback",
+          "All effects empty; runtime/worker resources zero"
+        ]
+      },
+      "portable_decimal_reference": {
+        "cases": 270,
+        "reference": "Independent Python ASCII fullmatch and arbitrary-precision integer arithmetic; safe native review bound. No product lexical comparison copied.",
+        "owning_nbb_passed": 270,
+        "babashka_passed": 270,
+        "byte_identical_actual_value_vectors": true,
+        "counterexamples": []
+      },
+      "scope_limits": [
+        "Reused registered fixture helpers from exact source prefix; independent input mutations/assertions and Python arithmetic reference.",
+        "No registered full suite repeated; no tracked file, Git/card/ledger/native mutations.",
+        "No broader security/producer/native source-custody completion claim."
+      ],
+      "raw_evidence": [
+        "source-before.json",
+        "actual-probe.cljs",
+        "actual-results.json",
+        "actual-values.json",
+        "decimal-reference.json",
+        "decimal-probe.cljc",
+        "decimal-nbb.json",
+        "decimal-bb.json",
+        "decimal-summary.json"
+      ]
+    },
+    "source_profile": {
+      "at": "2026-10-23T06:49:30.707202+00:00",
+      "muse_revision": "c1369c223cf3c57e3e31934a6d746bfcdfe73f5a",
+      "eta_workflow_sha256": "ff76052bada6c56797901a796b21393c3b2a5c2a2b1b7bd1e302ade38b0551dd",
+      "nbb_version": "1.5.212",
+      "pure_config_load_exit": 0,
+      "actual_plugin_load_exit": 1,
+      "actual_plugin_failure": "Could not find namespace: shadow.esm",
+      "actual_plugin_exact_shadow_successor_exit": 1,
+      "actual_plugin_exact_shadow_successor_failure": "deftool does not exist",
+      "jvm_entrypoint_exit": 0,
+      "jvm_stderr_bytes": 0,
+      "actual_jvm_macro_present": true,
+      "permission_count": 22,
+      "permission_names": [
+        "actor_list",
+        "actor_mailbox",
+        "actor_monitor",
+        "agent_list",
+        "muse_phases",
+        "phase_conclusions",
+        "phase_filter",
+        "phase_head",
+        "phase_list_active",
+        "phase_list_idle",
+        "phase_observations",
+        "phase_tail",
+        "review_assess_diff_chunk",
+        "review_begin",
+        "review_classify_finding",
+        "review_propose_finding",
+        "review_read_diff_chunk",
+        "review_record_evidence",
+        "review_status",
+        "review_submit",
+        "task_list",
+        "task_status"
+      ],
+      "equals_independent_source_names": true,
+      "equals_workflow_expected_names": true,
+      "all_permissions_allow": true,
+      "active_profile": ":dev",
+      "actual_full_adapter_compiled": false,
+      "actual_full_adapter_observed": false,
+      "actor_init_or_handlers_invoked": false,
+      "producer_executed_profile_established": false,
+      "native_authentication_or_adoption_credit": false,
+      "source_mutations": false,
+      "capture_scope": "root-owned only",
+      "remaining_boundary": [
+        "Pinned JVM-only deftool/defplugin macros are unavailable to the actual NBB cljs resource loader.",
+        "The existing generated entrypoint requires compiled CLJS plugin namespaces and the host boundary, not JVM data evaluation; only entrypoint generation and pure host config rendering were executed.",
+        "The workflow public export calls host/activate!, which invokes plugins.actors/init! -> backend/ensure! and therefore is outside this no-actor-execution scope.",
+        "To establish actual full adapter source expectation, use the pinned real CLJS/Shadow compiler with its exact dependency closure and a capture-only observer of the existing pipeline/adapter; do not invoke plugin/activate! or substitute handler descriptors."
+      ]
+    },
+    "independent_profile": {
+      "at": "2026-10-23T06:53:13.393238+00:00",
+      "source_files_verified_against_muse_c1369": 38,
+      "source_manifest_records_verified": 38,
+      "artifact_manifest_files_verified": 69,
+      "pinned_workflow_bytes_equal": true,
+      "workflow_heredocs_verified": 3,
+      "cached_jvm_jars_verified": 3,
+      "shadow_dependency_archive_and_member_verified": true,
+      "permission_names": {
+        "count": 22,
+        "equals_exact_workflow_tools": true,
+        "all_allow": true,
+        "workflow_sha256": "ff76052bada6c56797901a796b21393c3b2a5c2a2b1b7bd1e302ade38b0551dd"
+      },
+      "jvm_independent_check": {
+        "exit_code": 0,
+        "stdout": "{:existing-pure-entrypoint-source-equal true, :existing-host-config-source-equal true, :actual-resource-symbols [plugins.review-pipeline/plugin plugins.actors/plugin], :permission-count 22, :compiled-adapter-established false, :plugin-activation-performed false}\n",
+        "stderr_bytes": 0
+      },
+      "all_materialized_evidence_unchanged": true,
+      "actionable_findings": [],
+      "qualification": "Actual source/configuration and pure JVM generation evidence only. No compiled/observed 22-tool adapter, actual producer execution, authentication, adoption or approval credit.",
+      "remaining_limits": [
+        "Retained NBB plugin loads both failed at actual loader/macro boundaries.",
+        "JVM command invoked actual generator and private host renderer; independent audit recomputed only their pure functions and did not invoke plugin activation or handlers.",
+        "Generated entrypoint references actual plugin resources but has not been compiled/evaluated as a CLJS adapter."
+      ],
+      "mutations": "Only profile-independent-review root capture files; no product, source-profile evidence, Git, card or ledger changes."
+    },
+    "preservation": {
+      "prefixes": {
+        "receipts.edn": {
+          "base_bytes": 646799,
+          "base_sha256": "093b80b50cc4857c9c3918c37ce0bbdc7d499fd2dc273b94067e6e102fd531fc",
+          "current_bytes": 653051,
+          "prefix_preserved": true
+        },
+        "kanban/.events/ledger.edn": {
+          "base_bytes": 1881384,
+          "base_sha256": "dc826e29406aa259d21fdf71037eca3c967a97a18fa693b3ef7817e07a7109a8",
+          "current_bytes": 1890045,
+          "prefix_preserved": true
+        },
+        ".ημ/session-mycology/ledger.md": {
+          "base_bytes": 120514,
+          "base_sha256": "d38daa997d17616f57b20ec2e29fc2e60701072133556517f73f5ca4b285cb0c",
+          "current_bytes": 121146,
+          "prefix_preserved": true
+        },
+        ".ημ/session-reflections.edn": {
+          "base_bytes": 41622,
+          "base_sha256": "76a5109bd3e6f5d40a40b82f9f4b5d21838d832f267929e9d87ce82acf4ab4f3",
+          "current_bytes": 41622,
+          "prefix_preserved": true
+        }
+      },
+      "cards_preserved": 309,
+      "body_appends_only": [
+        "kanban/tasks/independently-admit-and-publish-review-evidence-from-trusted-default-code-1c707551.md"
+      ],
+      "qualification": false,
+      "CMS_Cephalon": "paused"
+    },
+    "receipt_rows": 363,
+    "historical_invalid": 71,
+    "historical_errors": 118,
+    "root_capture": ".ημ/stabilization/custody-20261023",
+    "qualification": false
+  }
+}
