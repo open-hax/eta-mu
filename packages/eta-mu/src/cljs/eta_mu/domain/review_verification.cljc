@@ -5,7 +5,8 @@
 (defn refuse [code] {:status :refused :code code :effects []})
 (defn reconstruction-error [expected artifact now bounds]
   (let [source (:sources expected) tuple (:tuple expected)
-        manifest (:manifest expected) provenance (:provenance manifest)]
+        manifest (:manifest expected) provenance (:provenance manifest)
+        proof (:input-verification expected) review-attempt (:attempt artifact)]
     (cond
       (>= now (:expires-at-ms artifact)) :archive-native-binding
       (not (law/reconstruction? expected)) :native-reconstruction-incomplete
@@ -19,6 +20,14 @@
             [(:run-id artifact) (:attempt artifact)]) :native-artifact-binding
       (not= [(:base-sha tuple) (:head-sha tuple)] [(:base_sha manifest) (:head_sha manifest)]) :native-input-binding
       (not= (:event-sha tuple) (:caller source) (:workflow_sha provenance)) :native-source-binding
-      (not= [(str (:pr-number tuple)) (str (:run-id artifact)) (str (:attempt artifact))]
-            [(:pull_request provenance) (:run_id provenance) (:run_attempt provenance)]) :native-input-binding
+      (not (and (= [(str (:pr-number tuple)) (str (:run-id artifact))]
+                    [(:pull_request provenance) (:run_id provenance)])
+                (law/producer-attempt-within? (:run_attempt provenance) review-attempt)
+                (= provenance (:provenance proof))
+                (= (assoc provenance :run_attempt (str review-attempt)) (:verification_provenance proof))
+                (= (select-keys manifest [:base_sha :head_sha :diff_base_sha :full_diff])
+                   (select-keys proof [:base_sha :head_sha :diff_base_sha :full_diff]))
+                (= (str "review-evidence-" (:pr-number tuple) "-" (:run-id artifact) "-"
+                        (:run_attempt provenance))
+                   (:evidence_artifact_name proof)))) :native-input-binding
       :else nil)))

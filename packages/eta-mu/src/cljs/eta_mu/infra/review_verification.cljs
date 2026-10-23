@@ -24,7 +24,7 @@
               inspected
               (let [expected (await ((:reconstruct! request)
                                      (merge (:reconstruction-input request)
-                                            (select-keys inspected [:manifest :archive-diff :archive-preview]))))
+                                            (select-keys inspected [:manifest :manifest-identity :archive-diff :archive-preview]))))
                     error (domain/reconstruction-error expected (:artifact physical) (host/wall-ms) (:bounds request))]
                 (if error
                   (domain/refuse error)

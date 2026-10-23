@@ -85,8 +85,10 @@
 (defn- strict-value [strict bytes] (strict (fatal-text bytes)))
 (defn- inspect-members [strict members]
   (doseq [name law/mandatory-members] (when-not (contains? members name) (fail! :verification-members)))
-  (let [raw (member members "basehead.diff") preview (when (get members "pr.diff") (member members "pr.diff"))]
-    (cond-> {:status :inspected :manifest (strict-value strict (member members "input-manifest.json"))
+  (let [raw (member members "basehead.diff") preview (when (get members "pr.diff") (member members "pr.diff"))
+        manifest (member members "input-manifest.json")]
+    (cond-> {:status :inspected :manifest (strict-value strict manifest)
+             :manifest-identity {:bytes (.-length manifest) :sha256 (digest manifest)}
              :archive-diff {:base64 (.toString raw "base64") :size (.-length raw) :sha256 (digest raw)}}
       preview (assoc :archive-preview {:base64 (.toString preview "base64") :size (.-length preview) :sha256 (digest preview)}))))
 (defn- ^:async replay-recovery! [root members recovery-module selected verifier prepared]
@@ -142,6 +144,7 @@
         response-name (str "model-response-attempt-" attempt ".txt")
         witness (get-in accepted [:canonical_verdict :acceptedInvocation :submissionFile])]
     (when-not (and (= manifest (:manifest expected))
+                   (= (digest manifest-raw) (:manifest_sha256 input-proof))
                    (.equals full (base64-bytes (:full-diff-base64 expected)))
                    (= registry (:tools expected)) (= input-proof (:input-verification expected)))
       (fail! :reconstructed-input-mismatch))
