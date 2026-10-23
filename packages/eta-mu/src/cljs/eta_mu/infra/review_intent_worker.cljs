@@ -80,7 +80,8 @@
                           (= :clio.ledger/id-collision error-type)
                           {:status :refused :reason :event-id-collision}
 
-                          (contains? #{"clio.schema" "clio.event"} (namespace error-type))
+                          (and (keyword? error-type)
+                               (contains? #{"clio.schema" "clio.event"} (namespace error-type)))
                           {:status :refused :reason :event-schema}
 
                           :else
