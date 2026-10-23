@@ -1,17 +1,17 @@
 {
-  "schema": "open-hax.antigravity-worker-provisioning/v2",
-  "observed_at": "2026-10-23T08:06:52.589792+00:00",
+  "schema": "open-hax.antigravity-worker-provisioning/v3",
+  "observed_at": "2026-10-23T08:36:34.312996+00:00",
   "workflow_revision": "2f49ccc2378ef2bbe873e79fb3cd52508ebe32f2",
   "octave_revision": "93ea554332bcdafffc26688836b2e6a655575c94",
-  "runtime_revision": "d79b80505e1fef9d3798175ce14261ebd0281b49",
+  "runtime_revision": "9955ba838ff187beced4beb26f4c271941a956ec",
   "workflow_sha256": "9eab25fa2a8e2508d9eb14b268a41639afa0b562b8267f11c603643a75651c16",
-  "runtime_path": "/home/err/.local/share/antigravity-review/runtime-d79b80505e1fef9d3798175ce14261ebd0281b49",
+  "runtime_path": "/home/err/.local/share/antigravity-review/runtime-9955ba838ff187beced4beb26f4c271941a956ec",
   "runner_version": "2.338.1",
   "runner_archive_sha256": "08e9ccb3604d2462c24b5e33604dc30810296ca15cc65f23cffd4317eb144c37",
   "authentication": "Existing machine Antigravity login; credentials never copied into repository or candidate checkout",
   "groups": {
     "open-hax": {
-      "observed_at": "2026-10-23T07:55:03.242433+00:00",
+      "observed_at": "2026-10-23T08:34:44.935073+00:00",
       "group": {
         "id": 3,
         "name": "antigravity-review",
@@ -97,18 +97,10 @@
           "id": 1200863516,
           "full_name": "open-hax/uxx"
         }
-      ],
-      "runners": [
-        {
-          "id": 312,
-          "name": "foresight-antigravity-open-hax",
-          "status": "online",
-          "busy": false
-        }
       ]
     },
     "octave-commons": {
-      "observed_at": "2026-10-23T07:55:06.173264+00:00",
+      "observed_at": "2026-10-23T08:34:47.414554+00:00",
       "group": {
         "id": 3,
         "name": "antigravity-review",
@@ -150,14 +142,6 @@
           "id": 1278648681,
           "full_name": "octave-commons/Truth"
         }
-      ],
-      "runners": [
-        {
-          "id": 1869,
-          "name": "foresight-antigravity-octave-commons",
-          "status": "online",
-          "busy": true
-        }
       ]
     }
   },
@@ -165,117 +149,140 @@
     {
       "repository": "octave-commons/Truth",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:49.183494+00:00"
     },
     {
       "repository": "octave-commons/bitch-tracker",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:49.182021+00:00"
     },
     {
       "repository": "octave-commons/calliope",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:49.181727+00:00"
     },
     {
       "repository": "octave-commons/epiphany",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:49.181568+00:00"
     },
     {
       "repository": "open-hax/katamorph",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:50.729231+00:00"
     },
     {
       "repository": "open-hax/knoxx",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:50.728748+00:00"
     },
     {
       "repository": "octave-commons/muse",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:50.729005+00:00"
     },
     {
       "repository": "open-hax/proxx",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:50.730525+00:00"
     },
     {
       "repository": "open-hax/services",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:52.123146+00:00"
     },
     {
       "repository": "open-hax/uxx",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:52.123055+00:00"
     },
     {
       "repository": "open-hax/opencode",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:52.123547+00:00"
     },
     {
       "repository": "octave-commons/shx",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:52.123382+00:00"
     },
     {
       "repository": "open-hax/kanban-orchestrator",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:53.515752+00:00"
     },
     {
       "repository": "open-hax/clio",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:53.515562+00:00"
     },
     {
       "repository": "open-hax/chat-ui",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:53.515959+00:00"
     },
     {
       "repository": "open-hax/rheos",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:53.515476+00:00"
     },
     {
       "repository": "open-hax/session-mycology",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:54.915925+00:00"
     },
     {
       "repository": "open-hax/sol",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:54.915689+00:00"
     },
     {
       "repository": "open-hax/osmos",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:54.915751+00:00"
     },
     {
       "repository": "open-hax/receipt-river",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:54.915398+00:00"
     },
     {
       "repository": "open-hax/axxium",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:56.365055+00:00"
     },
     {
       "repository": "open-hax/eta-mu",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:56.364922+00:00"
     },
     {
       "repository": "open-hax/foresight",
       "ready": "true",
-      "group": "antigravity-review"
+      "group": "antigravity-review",
+      "observed_at": "2026-10-23T08:34:56.364824+00:00"
     }
   ],
   "services": {
@@ -315,6 +322,62 @@
   },
   "native_service_qualification": {
     "passed": true,
+    "runtime_revision": "9955ba838ff187beced4beb26f4c271941a956ec",
+    "evidence": "service-qualification-R4.json",
+    "result": {
+      "passed": true,
+      "results": [
+        {
+          "case": "clean",
+          "service_exit": 0,
+          "wall_seconds": 33.1,
+          "native_duration_seconds": 28.380800615,
+          "status": "clean",
+          "base_tip": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+          "base": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+          "head": "fa36a56fb106e068d8661abc6232fdc008371516",
+          "diff_digest": "a293093b7f47130b5dbcd93cf89adf97fbea941cfe7da157b363d78186e1d3ac",
+          "findings": [],
+          "native_stderr_bytes": 0,
+          "workspace_removed": true,
+          "service_stderr": ""
+        },
+        {
+          "case": "defect",
+          "service_exit": 0,
+          "wall_seconds": 35.391,
+          "native_duration_seconds": 31.541713518999998,
+          "status": "findings",
+          "base_tip": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+          "base": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+          "head": "78ef5c894570b47c9a04896ef29db50091c6b532",
+          "diff_digest": "cd0d7c7ce9f3553c965bc4dbe0dd8b6936ac6aa602fbeacceb09f4d3530f8250",
+          "findings": [
+            {
+              "path": "increment.clj",
+              "line": 4,
+              "title": "inc-one adds 2 instead of incrementing by 1"
+            }
+          ],
+          "native_stderr_bytes": 0,
+          "workspace_removed": true,
+          "service_stderr": ""
+        }
+      ]
+    }
+  },
+  "negative_runner_canaries": {
+    "status": "UNKNOWN",
+    "note": "Each unapproved caller remained queued with runner_id 0 for 180 seconds; cancelled. No explicit enforcement denial observed. Group configuration readback is not a universal enforcement proof.",
+    "runs": [
+      "https://github.com/open-hax/katamorph/actions/runs/39918251555",
+      "https://github.com/octave-commons/muse/actions/runs/39918900721"
+    ]
+  },
+  "hosted_execution": "Current R4 pinned workflow pending; earlier A3 hosted runs both SUCCESS at their recorded heads",
+  "native_approval": false,
+  "historical_A3_service_qualification": {
+    "passed": true,
     "evidence": "service-qualification.json",
     "result": {
       "passed": true,
@@ -348,16 +411,11 @@
           "service_stderr": ""
         }
       ]
-    }
+    },
+    "runtime_revision": "d79b80505e1fef9d3798175ce14261ebd0281b49"
   },
-  "negative_runner_canaries": {
-    "status": "UNKNOWN",
-    "note": "Each unapproved caller remained queued with runner_id 0 for 180 seconds; cancelled. No explicit enforcement denial observed. Group configuration readback is not a universal enforcement proof.",
-    "runs": [
-      "https://github.com/open-hax/katamorph/actions/runs/39918251555",
-      "https://github.com/octave-commons/muse/actions/runs/39918900721"
-    ]
-  },
-  "hosted_execution": "Final pinned workflow pending; prior run 39919264609 reproduced AppArmor uidmap denial now repaired and service-qualified",
-  "native_approval": false
+  "historical_A3_hosted_runs": [
+    "https://github.com/open-hax/eta-mu/actions/runs/39922445083",
+    "https://github.com/octave-commons/shx/actions/runs/39922163209"
+  ]
 }

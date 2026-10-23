@@ -1216,3 +1216,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 2026-10-23T07:52:24.587230+00:00
   note: Interactive namespace permission did not imply systemd service permission; retain stderr before teardown.
+
+
+## 2026-10-23 canonical PR input and service qualification
+
+- Friction: Git base-tip comparison included target-only changes; local attributes and automatic index abbreviation undermined complete/reproducible patch claims.
+- Learning: derive one unique merge base, preserve base_tip separately, and explicitly bound text/full-index formatting before inference. Regression tests reproduced each failure before repair.
+- Evidence: runtime `9955ba838ff187beced4beb26f4c271941a956ec`; `.ημ/antigravity-review/service-qualification-R4.json`; historical full hosted A3 proof remains exact-head evidence only.
+- Verification: 38 integration tests, 71 pure assertions, 12 workflow tests and fresh clean/defect systemd cases passed. Native GitHub approval and current hosted qualification remain separate.
+- No new spore; the previously incubated spore is not promoted.
