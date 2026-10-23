@@ -1176,3 +1176,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 7598ef5cfb3e2bf326ec227a98d54802cb4c8614,dbeb654a-6c67-44fc-8121-990e9ad2d58f,sha256:82e59463ad5873188f1decfbf8644fb1a66229d6ea9f26e7f822014c1c86fceb
   note: Line-oriented Git porcelain is rendered text: exact owned Unicode/newline/quote paths need NUL framing before prefix admission. Keep actual foreign/tracked/staged/rename controls and real install/completion adapter tests. Registered340 genuine RED338pass/2assertionFAIL then GREEN340/340, normal cleanup and zero emitted warnings. Accepted canonical7ab is consumed only at the three existing defaults/fallbacks, with ordinary direct candidate PR workflow source still needing hosted qualification. Preserve first pin329PASS and installedchecker180s timeout as historical source results. The official checker deadlock fix uses a reader after process start; qualify a private exact upstream source build rather than disabling ShellCheck or filtering findings. Parent Git discovery can silently skip a patch in nested nonrepository archives: native parent ceiling plus no-index and exact fullpostimage guard establish actual application. Original pre-build refusal retained; normal isolated Go cache/config/resource bounds, installedtool preservation and unfiltered owning checker0 are explicit. Historical12global checker false positives remain FAIL, no Pyflakes credit when absent. No provider/model/hostedreview/adoption/merge/disposition credit. Portable candidate0, no spore or promotion.
+
+- timestamp: 2026-10-23T01:01:33Z
+  session: /home/err/.cache/foresight-mimo-waiver/eta-mu
+  task: Foresight MiMo waiver preserves deterministic qualification
+  p-efficiency: 0.87
+  p-friction: 0.28
+  p-skill-candidate: 0.2
+  spore: none
+  receipt-refs: .ημ/receipts/2026-10-23T010133Z-foresight-mimo-waiver.edn
+  note: Model availability and deterministic qualification are separate obligations. Limit the explicit exception to the authorized exact repository/default model; execute the unchanged model job and retain failed status while checking every deterministic deny case in the actual terminal script. Registered342/342 passing with no dependency install. Full actionlint20s timeout remains a failed/unavailable check rather than being relabeled as a pass from its ShellCheck-disabled diagnostic. Source candidate only; reviewed upstream adoption remains required.
