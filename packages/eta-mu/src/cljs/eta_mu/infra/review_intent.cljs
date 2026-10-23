@@ -134,8 +134,17 @@
                                                  :store (store-key store)
                                                  :context (assoc context :now-ms
                                                                  (get-in admission [:context :now-ms]))
-                                                 :binding binding :command command}) receipt)]
-              (when (and (= :appended (:status result)) (= :post-unknown (:state result)))
+                                                 :binding binding :command command}) receipt)
+                  appended? (= :appended (:status result))
+                  exact-ack? (and (= :post-unknown (:state result))
+                                  (= (:claim-id record) (:claim-id result))
+                                  (law/natural? (:intent-version result))
+                                  (law/portable-equal? (inc (:expected-version record))
+                                                       (:intent-version result)))
+                  result (if (and appended? (not exact-ack?))
+                           (assoc result :status :unknown :reason :outcome-ack)
+                           result)]
+              (when (and appended? exact-ack?)
                 ((:remove! token-vault) receipt))
               (assoc result :capability-issued? false))))))))
 
