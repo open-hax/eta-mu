@@ -1243,3 +1243,11 @@ These are readable renderings of the recorded historical values. Each belongs to
 - Evidence: runtime `5152dcce6e279a49b5a706ab3d3eaa4224df6cd3`;42integration tests,99pure assertions,12workflow tests; fresh R6service clean/defect cases; `.ημ/antigravity-review/service-qualification-R6.json`.
 - Original R5refusal and oldMiMofailure stay failures; no approval, completed cohort or later-head credit invented. Four historical receipt corrections remain untouched pending explicit useroverride.
 - No new spore; prior spore remains unpromoted.
+
+
+## 2026-10-23 clarification of finish progress and review evidence
+
+- R5 classified a valid native ACTIVE finish preview as an effect. R6 admits only the exact observed wrapper, bound to its matching adjacent DONE finish. The preview never supplies result authority.
+- The old MiMo review assessed 120 of 122 chunks without a complete canonical submission. Its 45-minute recovery timed out. Both attempts remain failures and supply no approval, completed cohort, or later-head credit.
+- Evidence is bound to runtime `5152dcce6e279a49b5a706ab3d3eaa4224df6cd3`: 42 integration tests, 7 pure tests with 99 assertions, and 12 workflow tests passed. Fresh R6 service cases passed in 24.088677621 seconds for clean input and 46.065075283 seconds for the known defect, with five events and one turn each. The descriptor is `.ημ/antigravity-review/service-qualification-R6.json`.
+- Four historical receipt corrections remain untouched pending an explicit user override. No new spore was created, and the prior spore remains unpromoted. This clarification preserves the original R5 refusal and incomplete MiMo outcomes as failures.
