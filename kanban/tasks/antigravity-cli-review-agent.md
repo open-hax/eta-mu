@@ -89,9 +89,9 @@ Bounded inputs fail closed rather than silently truncating a large review.
 
 Held-open stdin completed the complete 290035-byte shx PR input in an actual
 158-second native run. Final source-runner fixtures returned a clean result and
-the known increment.clj line4 defect with empty stderr and removed workspaces.
+the known increment.clj line 4 defect with empty stderr and removed workspaces.
 The local observation does not guarantee completion at every configured ceiling.
-The reusable job allows1200 seconds for inference within its30-minute job bound.
+The reusable job allows 1200 seconds for inference within its 30-minute job bound.
 Both organization routes previously reached the worker and retained explicit
 prompt-size refusal artifacts under the old transport; successful hosted stream
 execution and runner-group denial proof remain separate deployment checks.

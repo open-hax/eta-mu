@@ -98,13 +98,26 @@
           entries (vec (sort-by :path (parse-raw raw)))
           _ (when (or (empty? entries) (> (count entries) (:files law/limits)))
               (host/fail! :changed-file-count (count entries)))
-          files (mapv (fn [{:keys [base-mode head-mode base-oid head-oid] :as entry}]
-                        (when-not (every? #{"000000" "100644" "100755"} [base-mode head-mode])
-                          (host/fail! :unsupported-file-mode (select-keys entry [:path :base-mode :head-mode])))
-                        (let [before (host/blob! repo base-oid (:file-bytes law/limits))
-                              after (host/blob! repo head-oid (:file-bytes law/limits))]
-                          (assoc entry :base-content before :head-content after
-                                 :base-bytes (host/bytes before) :head-bytes (host/bytes after) :binary? false))) entries)
+          files (loop [left entries files [] used-bytes 0]
+                  (if-let [{:keys [base-mode head-mode base-oid head-oid] :as entry} (first left)]
+                    (do
+                      (when-not (every? #{"000000" "100644" "100755"} [base-mode head-mode])
+                        (host/fail! :unsupported-file-mode (select-keys entry [:path :base-mode :head-mode])))
+                      (let [before (host/blob! repo base-oid (:file-bytes law/limits))
+                            before-bytes (host/bytes before)
+                            before-total (+ used-bytes before-bytes)
+                            _ (when (> before-total (:input-bytes law/limits))
+                                (host/fail! :input-admission [:input-size]))
+                            after (host/blob! repo head-oid (:file-bytes law/limits))
+                            after-bytes (host/bytes after)
+                            total (+ before-total after-bytes)
+                            _ (when (> total (:input-bytes law/limits))
+                                (host/fail! :input-admission [:input-size]))]
+                        (recur (rest left)
+                               (conj files (assoc entry :base-content before :head-content after
+                                                  :base-bytes before-bytes :head-bytes after-bytes :binary? false))
+                               total)))
+                    files))
           patches (mapv (fn [{:keys [path]}]
                           {:path path
                            :patch (text-patch! repo base head [path])}) files)

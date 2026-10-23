@@ -269,6 +269,28 @@ test("complete UTF-8 prompt above128KiB and a350KiB-class blob travel only throu
   assert.equal(events.at(-1).result.status,"SUCCESS");
 });
 
+test("cumulative base/head blob admission stops before a later invalid UTF-8 head is read", t => {
+  const f = fixture(t), bytes = 1024 * 1024;
+  for (const [name, character] of [["a.cljc", "a"], ["b.cljc", "b"], ["c.cljc", "c"]]) {
+    fs.writeFileSync(path.join(f.repo, name), character.repeat(bytes));
+  }
+  f.git("add", "."); f.git("commit", "-qm", "large base blobs");
+  const base = f.git("rev-parse", "HEAD");
+  fs.writeFileSync(path.join(f.repo, "a.cljc"), "d".repeat(bytes));
+  fs.writeFileSync(path.join(f.repo, "b.cljc"), "e".repeat(bytes));
+  fs.writeFileSync(path.join(f.repo, "c.cljc"), Buffer.from([0xff]));
+  f.git("add", "."); f.git("commit", "-qm", "two full pairs then an unreadable head");
+  const head = f.git("rev-parse", "HEAD");
+  // The first two base/head pairs fill 4 MiB. Reading c/base crosses the
+  // cumulative budget, so c/head must never reach its UTF-8 decoder.
+  const result = f.run(["--prepare-only"], "malformed", {}, null, false, { base, head });
+  assert.equal(result.status, 1);
+  const refusal = JSON.parse(result.stderr);
+  assert.equal(refusal.message, "input-admission");
+  assert.deepEqual(refusal.error, { kind: "input-admission", details: ["input-size"] });
+  assert.equal(fs.existsSync(result.output), false, "no input snapshot or model process before admission");
+});
+
 test("prepare-only reads immutable objects without invoking CLI or requiring auth", t => {
   const f = fixture(t), result = f.run(["--prepare-only"], "malformed");
   assert.equal(result.status, 0, result.stderr);

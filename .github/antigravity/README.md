@@ -109,7 +109,12 @@ or custom function-header attribute produces identical bytes.
 The limits are 256 changed files, 1,048,576 bytes for each base/head blob,
 1,048,576 diff bytes, 4,194,304 serialized input bytes, 4,718,592 complete prompt
 bytes, 8,388,608 serialized stdin bytes and 2,097,152 combined native stdout/stderr
-bytes. Sizes are UTF-8 bytes, including the exact schema and instructions. One
+bytes. Sizes are UTF-8 bytes, including the exact schema and instructions. An
+early admission check also caps cumulative base/head blob bytes at the input
+ceiling while building the file list. Each decoded blob is checked before the
+next blob is read, so an over-budget change stops before loading later files.
+The per-blob size/encoding checks and every final serialized-input, diff, prompt
+and stdin limit remain independently enforced. One
 compact NDJSON user record carries the entire prompt on stdin; the prompt never
 enters argv. Stdin stays open until a complete native result record arrives.
 There is no truncation into a passing review. The default native timeout is 600
