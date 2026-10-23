@@ -287,6 +287,119 @@
       (is (false? (:capability-issued? after)))
       (is (not (contains? after :capability))))))
 
+(defn- capture-launch-result [f]
+  (try (f)
+       (catch :default error
+         {:test/escaped? true :test/error (:intent/error (ex-data error))})))
+
+(defn- with-unavailable-worker-installation [store f]
+  (let [root (str (:test-root store) "/unavailable-installation")
+        package-directory (str root "/packages/eta-mu")]
+    (.mkdirSync fs package-directory #js {:recursive true})
+    (.writeFileSync fs (str package-directory "/package.json") "{\"dependencies\":{}}" "utf8")
+    (call-api "cljs.core" "with-redefs-fn"
+              {(resolve-api "eta-mu.extern.review-intent" "installation-root") root} f)))
+
+(deftest actual-transition-worker-preflight-failures-are-structured-refusals
+  (doseq [cause [:installation :input-bound]]
+    (let [store (installation)
+          context (cond-> context-a
+                    (= :input-bound cause) (assoc :preflight-padding (apply str (repeat 70000 "x"))))
+          launch #(call-api "eta-mu.infra.review-intent" "transition!"
+                            store context {:state :post-started :expected-version 0 :owner "preflight-control"})
+          result (capture-launch-result
+                   #(if (= :installation cause)
+                      (with-unavailable-worker-installation store launch)
+                      (launch)))]
+      (is (= :refused (:status result)) (pr-str result))
+      (is (= :worker-preflight (:reason result)) (pr-str result))
+      (is (= cause (:error result)))
+      (is (false? (:capability-issued? result)))
+      (is (not-any? #(contains? result %) [:capability :recovery :recovery-receipt]))
+      (is (zero? (event-count store)) "The actual host preflight did not append anything."))))
+
+(deftest actual-recovery-worker-preflight-failures-preserve-unknown-outcome
+  (doseq [cause [:installation :input-bound]]
+    (let [store (installation)
+          recovery (cond-> {:ledger/path (:ledger-file store) :event reserved-a}
+                     (= :input-bound cause) (assoc :preflight-padding (apply str (repeat 70000 "x"))))
+          launch #(call-api "eta-mu.infra.review-intent" "recover!" store recovery)
+          result (capture-launch-result
+                   #(if (= :installation cause)
+                      (with-unavailable-worker-installation store launch)
+                      (launch)))]
+      (is (= :unknown (:status result)) (pr-str result))
+      (is (= :worker-preflight (:reason result)) (pr-str result))
+      (is (= cause (:error result)))
+      (is (false? (:capability-issued? result)))
+      (is (not-any? #(contains? result %) [:capability :recovery :recovery-receipt]))
+      (is (zero? (event-count store))))))
+
+(deftest unclassified-worker-launch-errors-remain-unknown-without-new-authority
+  (doseq [error [(js/Error. "injected possibly-started worker failure")
+                 (ex-info "injected unclassified worker failure"
+                          {:intent/error :unclassified :clio/append-recovery {:event reserved-a}})]
+          operation [:transition :recover]]
+    (let [store (installation)
+          result (capture-launch-result
+                   #(call-api "cljs.core" "with-redefs-fn"
+                     {(resolve-api "eta-mu.extern.review-intent" "run-fixed-worker!")
+                      (fn [_] (throw error))}
+                     (fn []
+                       (if (= :transition operation)
+                         (call-api "eta-mu.infra.review-intent" "transition!" store context-a
+                                   {:state :post-started :expected-version 0 :owner "uncertain-launch"})
+                         (call-api "eta-mu.infra.review-intent" "recover!" store
+                                   {:ledger/path (:ledger-file store) :event reserved-a})))))]
+      (is (= :unknown (:status result)) (pr-str result))
+      (is (= :worker-invocation (:reason result)) (pr-str result))
+      (is (false? (:capability-issued? result)))
+      (is (not-any? #(contains? result %) [:capability :recovery :recovery-receipt])))))
+
+(defn- actual-uncertain-worker [store request]
+  (let [runner (.resolve path test-root ".github/scripts/opencode_review_intent_uncertain_test.mjs")
+        result (.spawnSync (js/require "node:child_process") (.-execPath js/process) #js [runner]
+                           #js {:cwd test-root :encoding "utf8" :timeout 12000 :maxBuffer 2097152
+                                :env #js {:HOME "/tmp" :PATH "/usr/bin:/bin" :LANG "C.UTF-8"
+                                          :LC_ALL "C.UTF-8" :NODE_OPTIONS ""}
+                                :input (js/JSON.stringify #js {:root test-root
+                                                               :workerRequest (pr-str request)
+                                                               :ledgerDirectory (:test-root store)})})
+        wrapper (js/JSON.parse (.-stdout result))]
+    (is (= 0 (.-status result)) (str (.-stderr result) (.-stdout result)))
+    (is (= 0 (.-status wrapper)) (str (.-stderr wrapper) (.-stdout wrapper)))
+    (reader/read-string (.-stdout wrapper))))
+
+(deftest opaque-recovery-authorization-survives-known-and-uncertain-launch-failures
+  (let [store (installation)
+        worker-var (resolve-api "eta-mu.extern.review-intent" "run-fixed-worker!")
+        uncertain (call-api "cljs.core" "with-redefs-fn"
+                    {worker-var #(actual-uncertain-worker store %)}
+                    #(call-api "eta-mu.infra.review-intent" "transition!" store context-a {:state :reserved}))
+        token (:recovery-receipt uncertain)
+        unavailable (capture-launch-result
+                      #(with-unavailable-worker-installation store
+                         (fn [] (call-api "eta-mu.infra.review-intent" "recover!" store token))))
+        generic (capture-launch-result
+                  #(call-api "cljs.core" "with-redefs-fn"
+                    {worker-var (fn [_] (throw (js/Error. "injected recovery launch failure")))}
+                    (fn [] (call-api "eta-mu.infra.review-intent" "recover!" store token))))]
+    (is (= :unknown (:status uncertain)))
+    (is (some? token) "The genuine visible append uncertainty is held by an opaque authorization.")
+    (is (not (map? token)))
+    (is (nil? (:recovery uncertain)))
+    (doseq [result [unavailable generic]]
+      (is (= :unknown (:status result)) (pr-str result))
+      (is (false? (:capability-issued? result)))
+      (is (not-any? #(contains? result %) [:capability :recovery :recovery-receipt])))
+    (let [recovered (call-api "eta-mu.infra.review-intent" "recover!" store token)
+          repeated (call-api "eta-mu.infra.review-intent" "recover!" store token)]
+      (is (= :replayed (:status recovered)) (pr-str recovered))
+      (is (= :already-present (:append-result recovered)))
+      (is (false? (:capability-issued? recovered)))
+      (is (= :refused (:status repeated)))
+      (is (= 1 (event-count store)) "Launch failures did not add an event or consume the existing authorization."))))
+
 (deftest fixed-worker-keeps-raw-host-io-at-the-extern-boundary
   (let [worker-file (.resolve path test-root
                               "packages/eta-mu/src/cljs/eta_mu/infra/review_intent_worker.cljs")
