@@ -5,6 +5,7 @@
             [clojure.string :as str]
             [nbb.core :as nbb]
             [eta-mu.law.review-source :as law]
+            [eta-mu.domain.review-verification :as verification]
             ["node:child_process" :as cp]
             ["node:fs" :as fs]
             ["node:path" :as path]
@@ -314,6 +315,54 @@
 
 (deftest malformed-structural-commit-headers-refuse-but-extra-headers-survive
   (async done (malformed-header-control done)))
+
+(defn ^:async native-execution-custody-controls [done]
+  (let [f (fixture!)
+        base (request f)
+        coordinates (-> base
+                        (assoc-in [:tuple :event-sha] (repeated 40 "f"))
+                        (assoc-in [:native-context :workflow-sha] (repeated 40 "a"))
+                        (assoc-in [:native-context :workflow-ref]
+                                  "owner/repo/.github/workflows/caller.yml@refs/pull/7/merge"))
+        claim {:verified? true :authenticated? true :status :verified :origin :github}
+        cases [[:absent base false]
+               [:coordinate-strings-only coordinates true]
+               [:top-level-claim (assoc coordinates :native-execution-custody claim) true]
+               [:nested-claim (assoc-in coordinates [:native-context :native-execution-custody] claim) true]
+               [:boolean-claim (assoc coordinates :native-execution-custody true) true]
+               [:claimed-completion (assoc coordinates :complete? true :missing []
+                                           :native-execution-custody {:verified? true :capability :caller-supplied}) true]]]
+    (try
+      (doseq [[label input coordinates?] cases]
+        (let [observed (await (reconstruct input))
+              now (.now js/Date)]
+          (is (= :observed (:status observed)) (str label " " (pr-str observed)))
+          (is (false? (:complete? observed)) (str label " has no admitted native execution capability"))
+          (is (some #{:native-execution-custody} (:missing observed))
+              (str label " must retain missing authenticated custody independently of coordinate shape"))
+          (is (= (not coordinates?) (boolean (some #{:original-event-sha} (:missing observed))))
+              (str label " coordinate presence and authentication are distinct"))
+          (is (= (not coordinates?) (boolean (some #{:caller-workflow-source-custody} (:missing observed))))
+              (str label " caller coordinates remain a separate structural observation"))
+          (is (= (.toString (:diff f) "base64") (:full-diff-base64 observed)))
+          (is (= (sha256 (:diff f)) (get-in observed [:full-diff :sha256])))
+          (is (nil? (get-in observed [:manifest :provenance :workflow_sha]))
+              "Untrusted archive/request claims cannot populate independently expected workflow provenance")
+          (is (= :native-reconstruction-incomplete
+                 (verification/reconstruction-error observed {:expires-at-ms (+ now 60000)}
+                                                    now {:observation-max-age-ms 300000}))
+              (str label " existing verification admission gate refuses this partial source"))
+          (is (not (contains? observed :verification)))
+          (is (false? (.existsSync fs (:canary f))))
+          (is (false? (.existsSync fs (:hook-canary f))))))
+      (let [invalid (await (reconstruct (assoc-in coordinates [:tuple :event-sha] :unknown)))]
+        (is (= :refused (:status invalid)))
+        (is (= :source-request (:code invalid)) "The existing event-SHA shape restriction remains"))
+      (catch :default e (is false (str e)))
+      (finally (.rmSync fs (:root f) #js {:recursive true :force true}) (done)))))
+
+(deftest actual-source-coordinates-and-caller-flags-never-clear-native-execution-custody
+  (async done (native-execution-custody-controls done)))
 
 (defmethod test/report [::test/default :end-run-tests] [result]
   (when-not (test/successful? result) (set! (.-exitCode js/process) 1)))
