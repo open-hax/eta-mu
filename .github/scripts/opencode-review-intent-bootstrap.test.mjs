@@ -40,6 +40,7 @@ test('ordinary workflow gates run from a cold NBB package without Babashka', t =
   assert.equal(result.status, 0, output);
   assert.match(output, /Ran \d+ tests containing \d+ assertions\./);
   assert.match(output, /0 failures, 0 errors/);
+  t.diagnostic(output.trim());
   assert.doesNotMatch(output, /Downloading dependencies|bb:.*not found/);
   assert.equal(existsSync(join(pkg, '.nbb')), false, 'ordinary gates do not bootstrap Maven dependencies');
 });

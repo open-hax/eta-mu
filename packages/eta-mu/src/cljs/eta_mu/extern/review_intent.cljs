@@ -60,34 +60,35 @@
 (defn- fixed-layout []
   (let [root installation-root
         package-root (.resolve path root "packages/eta-mu")
+        runtime-root (.resolve path package-root "intent-runtime")
         cli (.resolve path root "node_modules/.pnpm/nbb@1.5.212/node_modules/nbb/cli.js")
-        worker (.resolve path package-root "src/cljs/eta_mu/infra/review_intent_worker_entry.cljs")
+        worker (.resolve path runtime-root "worker_entry.cljs")
         package (js/JSON.parse (.readFileSync fs (.resolve path package-root "package.json") "utf8"))
         clio-pin (aget (aget package "dependencies") "clio-publication-kernel")]
     (when-not (and (.existsSync fs cli)
                    (= "github:riatzukiza/clio#5fad794de1a9e23d6e5aaad42eaa933be1c070be"
                       clio-pin)
                    (.existsSync fs worker)
+                   (.existsSync fs (.resolve path runtime-root "nbb.edn"))
                    (.existsSync fs (.resolve path package-root "node_modules/clio-publication-kernel/src/clio/infra/runtime.cljc")))
       (throw (ex-info "Fixed Clio/NBB installation is unavailable or not pinned"
                       {:intent/error :installation})))
-    {:root root :package-root package-root :cli cli :worker worker}))
+    {:root root :runtime-root runtime-root :cli cli :worker worker}))
 
 (defn run-fixed-worker!
   "Run exactly one fixed worker operation in a bounded child. The installation
   layout and executable are constants; caller data is one bounded EDN value.
   Its decoded result is an observation, never a capability."
   [request]
-  (let [{:keys [package-root cli worker]} (fixed-layout)
+  (let [{:keys [runtime-root cli worker]} (fixed-layout)
         input (pr-str request)
         bytes (text-size input)]
     (when (> bytes input-limit)
       (throw (ex-info "Intent worker request exceeds fixed input bound"
                       {:intent/error :input-bound :bytes bytes})))
     (let [result (.spawnSync child (.-execPath js/process)
-                             #js [(.concat "--max-old-space-size=" (str heap-mb)) cli
-                                  "-cp" "src/cljs:node_modules/clio-publication-kernel/src" worker]
-                             #js {:cwd package-root
+                             #js [(.concat "--max-old-space-size=" (str heap-mb)) cli worker]
+                             #js {:cwd runtime-root
                                   :env #js {:HOME "/tmp" :PATH "/usr/bin:/bin"
                                             :LANG "C.UTF-8" :LC_ALL "C.UTF-8"
                                             :NODE_OPTIONS ""}

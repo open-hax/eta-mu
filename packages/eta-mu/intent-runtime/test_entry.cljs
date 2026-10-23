@@ -1,6 +1,6 @@
 ;; SPDX-License-Identifier: GPL-3.0-or-later
-(ns review-intent-test-entry
-  "Load the registered repository test under eta-mu's fixed NBB config."
+(ns test-entry
+  "Load the registered repository test under the isolated intent NBB config."
   (:require [cljs.test :as test]
             [nbb.core :as nbb]))
 

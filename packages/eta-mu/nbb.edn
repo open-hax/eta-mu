@@ -1,4 +1,0 @@
-;; Fixed project-local NBB source graph for the Clio publication capability.
-;; The dependency alias itself is pinned in package.json and pnpm-lock.yaml.
-{:paths ["src/cljs" "node_modules/clio-publication-kernel/src"]
- :deps {metosin/malli {:mvn/version "0.16.4"}}}

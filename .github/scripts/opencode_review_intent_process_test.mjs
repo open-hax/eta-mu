@@ -30,14 +30,15 @@ try {
   } else {
     mkdirSync(barrier, { recursive: false });
     const pkg = resolve(root, 'packages/eta-mu');
+    const runtime = resolve(pkg, 'intent-runtime');
     const cli = resolve(root, 'node_modules/.pnpm/nbb@1.5.212/node_modules/nbb/cli.js');
-    const worker = resolve(pkg, 'test/cljs/eta_mu/review_intent_worker_barrier.cljs');
+    const worker = resolve(runtime, 'barrier_entry.cljs');
     const children = request.requests.map((edn, i) => {
       const workerId = i === 0 ? 'a' : 'b';
       const child = spawn(process.execPath,
         ['--max-old-space-size=128', cli,
-         '-cp', 'src/cljs:test/cljs:node_modules/clio-publication-kernel/src', worker],
-        { cwd: pkg, env: { HOME: '/tmp', PATH: '/usr/bin:/bin', LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8',
+         '-cp', '../test/cljs', worker],
+        { cwd: runtime, env: { HOME: '/tmp', PATH: '/usr/bin:/bin', LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8',
                           NODE_OPTIONS: '', INTENT_TEST_BARRIER: barrier,
                           INTENT_TEST_WORKER_ID: workerId },
           stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });

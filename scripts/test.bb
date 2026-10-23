@@ -47,8 +47,8 @@
    {:label "review-publication-intent"
     :cmd ["pnpm" "--dir" "packages/eta-mu" "exec" "node"
           "../../node_modules/.pnpm/nbb@1.5.212/node_modules/nbb/cli.js"
-          "-cp" "src/cljs:node_modules/clio-publication-kernel/src:test"
-          "test/review_intent_test_entry.cljs"]}
+          "-cp" "test"
+          "intent-runtime/test_entry.cljs"]}
    {:label "review-publication-collection"
     :cmd ["packages/eta-mu/node_modules/.bin/nbb" "-cp" "packages/eta-mu/src/cljs"
           ".github/scripts/opencode_review_collection_test.cljs"]}

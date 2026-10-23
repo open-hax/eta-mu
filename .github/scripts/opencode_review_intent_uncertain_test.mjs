@@ -17,11 +17,12 @@ try {
   const request = JSON.parse(input);
   const root = resolve(request.root);
   const pkg = resolve(root, 'packages/eta-mu');
+  const runtime = resolve(pkg, 'intent-runtime');
   const cli = resolve(root, 'node_modules/.pnpm/nbb@1.5.212/node_modules/nbb/cli.js');
-  const driver = resolve(pkg, 'test/cljs/eta_mu/review_intent_worker_barrier.cljs');
+  const driver = resolve(runtime, 'barrier_entry.cljs');
   const result = spawnSync(process.execPath,
-    ['--max-old-space-size=128', cli, '-cp', 'src/cljs:test/cljs:node_modules/clio-publication-kernel/src', driver],
-    { cwd: pkg,
+    ['--max-old-space-size=128', cli, '-cp', '../test/cljs', driver],
+    { cwd: runtime,
       env: { HOME: '/tmp', PATH: '/usr/bin:/bin', LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8',
              NODE_OPTIONS: '',
              INTENT_TEST_FAIL_DIRECTORY_SYNC: request.ledgerDirectory },
