@@ -243,7 +243,10 @@
           policy (:status-policy entry)
           interval (get policy :refresh-ms law/default-refresh-ms)
           statuses (:statuses history)
-          latest (last (sort-by (juxt :created-at-ms :id) statuses))
+          bound? (and (intent-bound? current intent) (= :observed (:state intent))
+                      (readback-bound? now binding intent readback policy)
+                      (history-bound? now binding history policy))
+          latest (when bound? (last (sort-by (juxt :created-at-ms :id) statuses)))
           due (when latest (+ (:created-at-ms latest) interval))]
       (cond
         (not (and (intent-bound? current intent) (= :observed (:state intent)))) (refuse :intent)
