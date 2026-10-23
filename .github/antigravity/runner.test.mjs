@@ -10,7 +10,7 @@ import test from "node:test";
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const runtime = path.resolve(directory, "../..");
-const nbb = process.env.ANTIGRAVITY_REVIEW_NBB || "nbb";
+const nbb = process.env.ANTIGRAVITY_REVIEW_NBB || path.join(runtime, "packages/eta-mu/node_modules/nbb/cli.js");
 function command(binary, args, options = {}) {
   const result = spawnSync(binary, args, { encoding: "utf8", timeout: 20000, maxBuffer: 8 * 1024 * 1024, ...options });
   assert.ifError(result.error);

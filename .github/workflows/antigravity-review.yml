@@ -16,7 +16,7 @@ concurrency:
 jobs:
   review:
     if: ${{ github.event.pull_request.draft == false }}
-    uses: open-hax/eta-mu/.github/workflows/antigravity-code-review.yml@3bcf27bef296f9349fdf4997df256a617da5f120
+    uses: open-hax/eta-mu/.github/workflows/antigravity-code-review.yml@6461caabbe4eefbd1615036936863d06ee69d68d
     with:
       pr_head_sha: ${{ github.event.pull_request.head.sha }}
       pr_base_sha: ${{ github.event.pull_request.base.sha }}

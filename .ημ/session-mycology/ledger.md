@@ -1186,3 +1186,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: 20261023-antigravity-native-finish-and-permission-contracts.md
   receipt-refs: 2026-10-23T06:47:00.921246Z
   note: Verify representative native nonempty and clean results before building adapters; static tool catalogs differ from actual grants and native finish injects typed transport metadata.
+
+- ts: 2026-10-23T07:00:18.978185+00:00
+  session: antigravity-review-rollout
+  task: Repair hosted test launcher without global NBB
+  p-efficiency: 0.8
+  p-friction: 0.3
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: 2026-10-23T07:00:18.978185+00:00
+  note: Hosted CI exposed a global executable assumption; verified pinned nested dependency under restricted PATH.
