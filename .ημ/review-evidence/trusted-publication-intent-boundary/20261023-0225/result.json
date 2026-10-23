@@ -1,0 +1,26 @@
+{
+  "source": "bb82398568f7abf7f2c1103e0aa34806b7b87153",
+  "base": "a76225c0bea040473949cb394d8d530fd23f1afc",
+  "command": [
+    "bb",
+    "scripts/test.bb",
+    "--only",
+    "review-publication-intent"
+  ],
+  "started_at": "2026-10-23T02:28:16.657719+00:00",
+  "origin": "fresh resumed-host execution; earlier unarchived layer captures were lost with /tmp",
+  "prior_published_captures": "809capture archive remains immutable at a762",
+  "qualification": false,
+  "exit": 0,
+  "timed_out": false,
+  "seconds": 23.27361568499998,
+  "completed_at": "2026-10-23T02:28:39.931552+00:00",
+  "focused.stdout": {
+    "bytes": 502,
+    "sha256": "442b4820525228646a7caf2bc9e2b6debe6290c4e68d56c03ce1fa68cea6ef8f"
+  },
+  "focused.stderr": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

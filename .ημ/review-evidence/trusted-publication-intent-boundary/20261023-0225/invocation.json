@@ -1,0 +1,14 @@
+{
+  "source": "bb82398568f7abf7f2c1103e0aa34806b7b87153",
+  "base": "a76225c0bea040473949cb394d8d530fd23f1afc",
+  "command": [
+    "bb",
+    "scripts/test.bb",
+    "--only",
+    "review-publication-intent"
+  ],
+  "started_at": "2026-10-23T02:28:16.657719+00:00",
+  "origin": "fresh resumed-host execution; earlier unarchived layer captures were lost with /tmp",
+  "prior_published_captures": "809capture archive remains immutable at a762",
+  "qualification": false
+}
