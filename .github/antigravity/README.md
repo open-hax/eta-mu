@@ -32,6 +32,18 @@ the metadata separately and applies the unchanged semantic law to the review.
 Unknown keys, partial metadata and invalid metadata refuse; there is no generic
 unknown-field stripping. The original native envelope remains intact.
 
+Historical diagnostic probes are consolidated without losing bytes in
+[diagnostic-probes.json](../../.ημ/antigravity-review/diagnostic-probes.json).
+Its repository-relative `files` map records each original path, SHA-256, mode,
+and `exact_utf8_content`. Re-encoding that string as UTF-8 reconstructs the exact
+original file bytes. The 57 tracked entries were verified against source commit
+`3bcf27bef296f9349fdf4997df256a617da5f120`; four ignored local stderr captures
+are explicitly marked `source_commit_tracked: false`. The original paths remain
+available in that commit. Failed probes retain their actual outcomes and supply
+no qualification or approval credit. Successful `actual-defect-end-to-end` and
+`actual-clean-end-to-end` evidence and `qualification.json` remain separate and
+unchanged.
+
 Prepare an input proposal without authentication or model invocation:
 
 ```bash
