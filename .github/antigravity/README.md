@@ -163,9 +163,20 @@ The retained `native.stdout.json` contains the complete raw NDJSON event stream
 (the filename is retained for artifact compatibility). `native-envelope.json`
 contains its real terminal result. Admission requires one init first, one result
 last, one matching conversation, exact native model/agent/cwd/schema and strict
-permission mode. Only the observed user_input, agent_response and pure finish
-progress shapes are admitted; unknown events, tool payloads, subagent payloads
-and missing completion refuse. The init tool list is the pinned static catalog
+permission mode. The observed user_input, agent_response and DONE finish shapes
+are admitted. At most one optional ACTIVE `tool` progress record may identify
+`finish` in both `tool_name` and `tool_info.name`; its exact observed key sets,
+conversation and step index must match an immediately following final DONE
+finish record. Its parameter map has exactly the eleven semantic field names
+and typed preview containers, including exact finding keys. Native progress
+strings can be clipped; these preview values supply no result, scope, binding
+or approval authority and are never substituted for the complete terminal
+structured output. Terminal decoration shaping and semantic admission remain
+unchanged. The verbatim 19,467-byte six-event stream in
+`fixtures/native-finish-progress.ndjson` reproduces this transport case; accepting
+its shape does not establish its finding's correctness. Other tool identities,
+unknown keys/categories, subagent payloads, duplicate or misplaced previews and
+missing completion refuse. The init tool list is the pinned static catalog
 and supplies no permission evidence. Invocation metadata reports the verified
 binary/version, strict profile digest and native stream binding. Confinement
 still rests on the separately qualified settings/sandbox boundary.

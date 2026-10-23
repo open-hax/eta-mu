@@ -123,7 +123,8 @@ function processInput(line) {
     result.findings=[{path:"code.cljc",line:1,title:"Changed return value",body:"Zero now returns one.",confidence:0.95,
       evidence:["The added line returns one."],failure_trace:["Call value", "Observe one instead of zero"]}];
   }
-  if (behavior==="finish-meta" || behavior.startsWith("metadata-")) { result.toolAction="Submit review"; result.toolSummary="Review complete"; }
+  if (behavior==="finish-meta" || behavior.startsWith("metadata-") || behavior.startsWith("finish-progress")) { result.toolAction="Submit review"; result.toolSummary="Review complete"; }
+  if (behavior.startsWith("finish-progress")) result.summary="Complete terminal review. ".repeat(40);
   if (behavior==="metadata-missing") delete result.toolSummary;
   if (behavior==="metadata-invalid") result.toolSummary=null;
   if (behavior==="metadata-unknown") result.native_approval=true;
@@ -134,6 +135,14 @@ function processInput(line) {
   const init={event:"init",conversation_id:id,init:{cwd:process.cwd(),model:"gemini-3.8-flash-high",agent:"antigravity-reviewer",permission_mode:"strict",json_schema:schema,tools:${JSON.stringify(nativeTools)}}};
   const step=(step_index,step_type,state="DONE")=>({event:"step_update",step_update:{conversation_id:id,step_index,step_type,state}});
   const events=[init,step(0,"user_input"),step(1,"agent_response"),step(2,"finish"),{event:"result",result:envelope}];
+  if (behavior.startsWith("finish-progress")) {
+    const {toolAction,toolSummary,...preview}=JSON.parse(JSON.stringify(result));
+    preview.summary=preview.summary.slice(0,512)+"…";
+    events.splice(3,0,{event:"step_update",step_update:{conversation_id:id,step_index:2,state:"ACTIVE",step_type:"tool",tool_name:"finish",tool_info:{name:"finish",parameters:preview}}});
+    if (behavior==="finish-progress-disagree") { preview.head="preview-only"; preview.scope_complete=false; preview.status="findings"; }
+    if (behavior==="finish-progress-stale") result.head=input.base;
+    if (behavior==="finish-progress-metadata") result.toolSummary=null;
+  }
   if (behavior==="duplicate-init") events.splice(1,0,init);
   if (behavior==="duplicate-result") events.push(events.at(-1));
   if (behavior==="conversation") events[2].step_update.conversation_id="other";
@@ -311,6 +320,21 @@ test("the real native finish decoration is separated before the unchanged semant
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(result.output, "finish-metadata.json"))), {toolAction:"Submit review",toolSummary:"Review complete"});
 });
 
+test("optional clipped finish previews preserve complete terminal authority", t => {
+  const f = fixture(t);
+  for (const behavior of ["finish-progress", "finish-progress-disagree"]) {
+    const result = f.run([], behavior);
+    assert.equal(result.status, 0, result.stderr);
+    const events = fs.readFileSync(path.join(result.output, "native.stdout.json"), "utf8").trim().split("\n").map(JSON.parse);
+    const preview = events[3].step_update.tool_info.parameters;
+    const review = JSON.parse(fs.readFileSync(path.join(result.output, "review.json")));
+    assert.equal(events.length, 6); assert.ok(review.summary.length > 512);
+    assert.notEqual(review.summary, preview.summary);
+    assert.equal(review.head, f.head); assert.equal(review.scope_complete, true); assert.equal(review.status, "clean");
+    assert.equal(JSON.parse(fs.readFileSync(path.join(result.output, "invocation.json")))["native-approval"], false);
+  }
+});
+
 test("a checksum mismatch refuses before executing even the version probe", t => {
   const f = fixture(t), result = f.run([], "success", {}, "0".repeat(64));
   assert.equal(result.status, 1); assert.match(result.stderr, /binary-digest/);
@@ -387,11 +411,13 @@ test("the owning pure law test process exits nonzero on a genuine assertion fail
   assert.equal(result.status, 1); assert.match(result.stdout, /1 failures, 0 errors/);
 });
 
-for (const behavior of ["version", "malformed", "scope", "stale", "line", "tools", "error", "partial", "oversized", "timeout", "metadata-missing", "metadata-invalid", "metadata-unknown", "metadata-long", "duplicate-init", "duplicate-result", "conversation", "event-tool", "event-subagent", "unknown-step", "init-schema", "missing-finish", "missing-structured"]) {
+for (const behavior of ["version", "malformed", "scope", "stale", "line", "tools", "error", "partial", "oversized", "timeout", "metadata-missing", "metadata-invalid", "metadata-unknown", "metadata-long", "duplicate-init", "duplicate-result", "conversation", "event-tool", "event-subagent", "unknown-step", "init-schema", "missing-finish", "missing-structured", "finish-progress-stale", "finish-progress-metadata"]) {
   test(`native ${behavior} refuses without a passing review`, t => {
     const f = fixture(t), result = f.run(behavior === "timeout" ? ["--timeout-seconds", "1"] : [], behavior);
     assert.equal(result.status, 1, result.stderr);
     assert.equal(JSON.parse(result.stderr).status, "refused");
+    if (behavior === "finish-progress-stale") assert.equal(JSON.parse(result.stderr).error.kind, "result-admission");
+    if (behavior === "finish-progress-metadata") assert.equal(JSON.parse(result.stderr).error.kind, "native-finish-shape");
     assert.equal(fs.existsSync(path.join(result.output, "review.json")), false);
     assert.equal(fs.existsSync(path.join(result.output, "workspace")), false);
     if (behavior !== "version") assert.equal(fs.existsSync(path.join(result.output, "native.stdout.json")), true);

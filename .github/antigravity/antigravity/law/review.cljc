@@ -99,6 +99,31 @@
     "view_file" "wait" "wait_5_seconds" "write_to_file"})
 
 (def step-keys #{:conversation_id :step_index :state :step_type :text_delta :duration_seconds :usage})
+
+(defn finish-preview?
+  "Shape-only native progress data. Strings may be clipped; no result authority."
+  [parameters]
+  (and (map? parameters) (= result-keys (set (keys parameters)))
+       (every? string? ((juxt :schema :status :diff_digest :base :head :model :summary) parameters))
+       (boolean? (:scope_complete parameters))
+       (every? #(and (vector? %) (every? string? %)) ((juxt :reviewed_paths :questions) parameters))
+       (vector? (:findings parameters))
+       (every? (fn [finding]
+                 (and (map? finding) (= finding-keys (set (keys finding)))
+                      (every? string? ((juxt :path :title :body) finding))
+                      (integer? (:line finding)) (number? (:confidence finding))
+                      (every? #(and (vector? %) (every? string? %))
+                              ((juxt :evidence :failure_trace) finding)))) (:findings parameters))))
+
+(defn finish-progress? [conversation event]
+  (let [{:keys [conversation_id step_index state step_type tool_name tool_info] :as step} (:step_update event)]
+    (and (map? event) (= #{:event :step_update} (set (keys event))) (= "step_update" (:event event))
+         (map? step) (= #{:conversation_id :step_index :state :step_type :tool_name :tool_info} (set (keys step)))
+         (= conversation conversation_id) (integer? step_index) (<= 0 step_index)
+         (= "ACTIVE" state) (= "tool" step_type) (= "finish" tool_name)
+         (map? tool_info) (= #{:name :parameters} (set (keys tool_info)))
+         (= "finish" (:name tool_info)) (finish-preview? (:parameters tool_info)))))
+
 (defn step? [conversation event]
   (let [{:keys [conversation_id step_index state step_type text_delta duration_seconds usage] :as step}
         (:step_update event)]
@@ -116,7 +141,8 @@
   [{:keys [cwd schema]} events]
   (let [initial (first events) terminal (last events) init (:init initial)
         conversation (:conversation_id initial) result (:result terminal)
-        steps (vec (drop-last (rest events))) tools (:tools init)]
+        steps (vec (drop-last (rest events))) tools (:tools init)
+        progress (filterv #(= "tool" (get-in % [:step_update :step_type])) steps)]
     (cond-> (native-json-errors schema result)
       (not (and (vector? events) (= "init" (:event initial))
                 (= #{:event :conversation_id :init} (set (keys initial)))
@@ -131,9 +157,14 @@
                 (= #{:event :result} (set (keys terminal)))
                 (= 1 (count (filter #(= "result" (:event %)) events)))
                 (= conversation (:conversation_id result)))) (conj :native-terminal)
-      (not (and (seq steps) (every? #(step? conversation %) steps)
+      (not (and (seq steps) (every? #(or (step? conversation %) (finish-progress? conversation %)) steps)
                 (= [0 "user_input" "DONE"] ((juxt :step_index :step_type :state) (:step_update (first steps))))
                 (= 1 (count (filter #(= "user_input" (get-in % [:step_update :step_type])) steps)))
                 (= 1 (count (filter #(= "finish" (get-in % [:step_update :step_type])) steps)))
                 (= "finish" (get-in (last steps) [:step_update :step_type]))
+                (<= (count progress) 1)
+                (or (empty? progress)
+                    (and (= (first progress) (get steps (- (count steps) 2)))
+                         (= (get-in (first progress) [:step_update :step_index])
+                            (get-in (last steps) [:step_update :step_index]))))
                 (apply <= (map #(get-in % [:step_update :step_index]) steps)))) (conj :native-effects))))

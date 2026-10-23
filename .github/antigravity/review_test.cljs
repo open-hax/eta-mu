@@ -4,6 +4,7 @@
             [antigravity.law.review :as law]
             [antigravity.shape.diff :as diff]
             [antigravity.shape.finish :as finish]
+            [antigravity.shape.stream :as stream]
             [cljs.test :as t :refer [deftest is run-tests]]))
 
 (def input {:base (apply str (repeat 40 "a")) :base_tip (apply str (repeat 40 "d"))
@@ -96,6 +97,42 @@
                      (assoc native :json_schema {}) (assoc native :tool_calls [])
                      (assoc native :num_turns 0) (assoc native :response "partial" :structured_output nil)]]
       (is (seq (law/native-json-errors schema invalid))))))
+
+(deftest observed-finish-preview-is-optional-and-never-terminal-authority
+  (let [replay (host/native-lines (host/read-text ".github/antigravity/fixtures/native-finish-progress.ndjson"))
+        expected {:cwd (get-in replay [0 :init :cwd]) :schema (get-in replay [0 :init :json_schema])}
+        preview (get-in replay [3 :step_update :tool_info :parameters])
+        terminal (stream/terminal replay)
+        review (:review (finish/split-output (:structured_output terminal)))]
+    (is (= 6 (count replay)))
+    (is (= [] (law/envelope-errors expected replay)))
+    (is (= (:result (peek replay)) terminal))
+    (is (= law/result-keys (set (keys preview))))
+    (is (< (count (get-in preview [:findings 0 :body])) 600))
+    (is (> (count (get-in review [:findings 0 :body])) 1000))
+    (is (not= preview review))
+    (is (= [] (law/envelope-errors expected (vec (concat (subvec replay 0 3) (subvec replay 4))))))
+    (doseq [invalid [(assoc-in replay [3 :step_update :tool_name] "run_command")
+                     (assoc-in replay [3 :step_update :tool_info :name] "run_command")
+                     (assoc-in replay [3 :step_update :step_type] "run_command")
+                     (assoc-in replay [3 :step_update :state] "DONE")
+                     (assoc-in replay [3 :tool_calls] [])
+                     (assoc-in replay [3 :step_update :usage] {})
+                     (assoc-in replay [3 :step_update :tool_info :calls] [])
+                     (assoc-in replay [3 :step_update :tool_info :parameters :toolAction] "extra")
+                     (assoc-in replay [3 :step_update :tool_info :parameters :findings 0 :tool_calls] [])
+                     (assoc-in replay [3 :step_update :tool_info :parameters :reviewed_paths] {})
+                     (update-in replay [3 :step_update :tool_info :parameters] dissoc :summary)
+                     (assoc-in replay [3 :step_update :conversation_id] "other")
+                     (assoc-in replay [3 :step_update :step_index] 1)
+                     (assoc-in replay [3 :step_update :step_index] "2")
+                     (assoc-in replay [4 :step_update :step_index] 3)
+                     (vec (concat (subvec replay 0 4) [(nth replay 3)] (subvec replay 4)))
+                     [(nth replay 0) (nth replay 1) (nth replay 3) (nth replay 2) (nth replay 4) (nth replay 5)]
+                     [(nth replay 0) (nth replay 1) (nth replay 2) (nth replay 3) (nth replay 5)]
+                     [(nth replay 0) (nth replay 1) (nth replay 2) (nth replay 4) (nth replay 3) (nth replay 5)]
+                     (assoc-in replay [5 :result :structured_output] nil)]]
+      (is (seq (law/envelope-errors expected invalid))))))
 
 (deftest native-finish-has-an-exact-narrow-transport-shape
   (let [decorated (assoc result :toolAction "Submit review" :toolSummary "Review complete")
