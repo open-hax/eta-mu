@@ -10,7 +10,7 @@ labels: [github, review, antigravity, foresight]
 ## Context
 
 Foresight needs another review provider using the existing evidence-first method.
-The local Antigravity CLI 1.1.23 advertises gemini-3.8-flash-high. The existing
+Discovery observed Antigravity CLI 1.1.23, then an externally changed 1.4.6; both advertise gemini-3.8-flash-high. The execution worker must pin the 1.4.6 binary by SHA256, verify its version/hash before each run, and record the native model route. A local catalog is not execution proof. The existing
 MiMo workflow's bounded review method is reusable; its OpenCode native invocation
 proof is not an Antigravity proof. Publication credentials stay outside workers.
 
@@ -24,7 +24,18 @@ Thin immutable callers cover every actionable Foresight member and the root.
 
 - Pure portable review input/result laws with a Node/NBB process adapter.
 - A read-only custom reviewer using the existing map/validate/disprove/submit method.
-- Exact base/head/diff binding; complete bounded input; structured native output.
+- Exact base/head/diff binding and SHA256 digests. Paths sort lexically; limits are
+  256 changed files, 262144 bytes per base/head blob, 1048576 bytes of full diff,
+  4194304 bytes of complete serialized input and 2097152 bytes of native output.
+  The exact full command prompt has a further 65536-byte limit for the native
+  single-print transport. Exceeding any limit fails before dispatch; truncation is forbidden. The manifest
+  records base/head, diff digest, file count and byte counts.
+- A versioned open-hax.antigravity-review/v1 result: exact base/head/model,
+  scope_complete, exactly-once reviewed_paths, nonempty summary, findings and
+  nonblocking questions. Each finding has path, changed line, title, body,
+  confidence, supporting evidence and failure trace. A valid admitted result with
+  findings:[] is clean advisory evidence; missing/malformed/partial output fails.
+  Native CLI version/hash/model identities are retained with result provenance.
 - A workflow that prepares inputs with read-only tokens and dispatches model work
   to an isolated, authenticated persistent worker without GitHub signing/write keys.
 - Thin pinned callers; each repository retains its deterministic checks and policy.
@@ -43,9 +54,18 @@ Do not activate the separate trusted publisher before its own qualification.
 3. Findings cite changed lines and supporting evidence with confidence >= 0.85;
    uncertain questions are nonblocking; empty output is not a passing review.
 4. Untrusted candidate code/configuration is never executed with provider credentials;
-   inference has no GitHub write/signing credentials and cannot edit source.
+   inference and all children receive no GitHub credentials of any scope and cannot edit source; the fixture verifies the actual process environment.
 5. Artifacts identify Antigravity CLI evidence separately from native GitHub approvals.
-6. All declared actionable direct repositories have identical pinned thin callers;
+6. Fresh per-job workspaces are removed after success, failure, timeout and cancellation;
+   terminate the full child process group and retain no per-job secret material.
+   A failure-followed-by-success fixture verifies prior source files, processes and
+   injected environment canaries cannot cross jobs. User-authorized local provider
+   login persists separately and is never copied into candidate workspaces.
+7. The source of truth is open-hax/foresight src/foresight/project.cljc sources,
+   selecting actionable independent direct git submodules plus the root. The
+   Foresight plan/check command and tests require exact-one caller coverage for
+   these 23 targets and explicit consolidation/nested-package exclusions.
+   All declared actionable direct repositories have identical pinned thin callers;
    inventory-only consolidation inputs stay excluded and nested packages are not swept.
 
 ## Verification
