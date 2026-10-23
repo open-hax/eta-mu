@@ -1,0 +1,4 @@
+# Runner label provisioned only for the restricted Antigravity workflow group.
+self-hosted-runner:
+  labels:
+    - antigravity-review

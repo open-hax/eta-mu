@@ -1,0 +1,35 @@
+{
+  "findings": [
+    {
+      "body": "Function `inc-one` is documented to 'Increment the input by exactly one.', but the implementation was changed from `(+ x 1)` to `(+ x 2)`. This causes `(inc-one x)` to return `x + 2`, violating its docstring contract and function name.",
+      "confidence": 0.99,
+      "evidence": [
+        "\\\"Increment the input by exactly one.\\\"",
+        "-  [x] (+ x 1))",
+        "+  [x] (+ x 2))"
+      ],
+      "failure_trace": [
+        "Evaluate `(increment/inc-one 1)`",
+        "Function executes `(+ 1 2)` and evaluates to 3",
+        "Expected return value is 2 based on contract 'Increment the input by exactly one.'"
+      ],
+      "line": 4,
+      "path": "increment.clj",
+      "title": "Function `inc-one` increments by two instead of one"
+    }
+  ],
+  "schema": "open-hax.antigravity-review/v1",
+  "questions": [
+    "Was `(+ x 2)` introduced unintentionally during testing or meant for a separate `inc-two` function?"
+  ],
+  "summary": "Found 1 defect: `inc-one` in increment.clj was modified to increment by 2 instead of 1, breaking its documented contract.",
+  "head": "78ef5c894570b47c9a04896ef29db50091c6b532",
+  "status": "findings",
+  "base": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+  "scope_complete": true,
+  "diff_digest": "8cd1a9eca4d59fd014604608bc76f310d0b3ba2b26a844dabbdfc6575798f192",
+  "reviewed_paths": [
+    "increment.clj"
+  ],
+  "model": "gemini-3.8-flash-high"
+}
