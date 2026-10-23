@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "source": "b8af64f41de139d17741ee2696ab82bdb38a81d1",
+  "previous_published_head": "ed4c7cb508feed77eff5d03f3fad7d686ac84657",
+  "red": "b599dc1cdbebc3bdd19279f19ef4100fbacd2196",
+  "green": "b8af64f41de139d17741ee2696ab82bdb38a81d1",
+  "archive": ".ημ/review-evidence/trusted-publication-preflight/df7f02a1229a770d88a33efd671f15e98cb7e3157e1bdc752b715dffea236764.json.gz",
+  "archive_sha256": "df7f02a1229a770d88a33efd671f15e98cb7e3157e1bdc752b715dffea236764",
+  "archive_raw_sha256": "be60d51d5b23ef5587a41f33f58abb951c411000af55fdca7867c84b122ef740",
+  "captures": 41,
+  "lossless_representations": [],
+  "full_gates": {
+    "source": "b8af64f41de139d17741ee2696ab82bdb38a81d1",
+    "results": [
+      {
+        "source": "b8af64f41de139d17741ee2696ab82bdb38a81d1",
+        "argv": [
+          "pnpm",
+          "-C",
+          "packages/eta-mu",
+          "test"
+        ],
+        "cwd": "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022",
+        "provider_variable_names_removed": [
+          "OPENAI_BASE_URL",
+          "OPENAI_BASE_URL_API_KEY",
+          "OPENAI_AUTH_TOKEN",
+          "OPENAI_API_KEY"
+        ],
+        "started_at": "2026-10-23T03:14:16.576496+00:00",
+        "completed_at": "2026-10-23T03:14:31.569942+00:00",
+        "exit_code": 0
+      },
+      {
+        "source": "b8af64f41de139d17741ee2696ab82bdb38a81d1",
+        "argv": [
+          "pnpm",
+          "-C",
+          "packages/eta-mu",
+          "lint:kondo"
+        ],
+        "cwd": "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022",
+        "provider_variable_names_removed": [
+          "OPENAI_BASE_URL",
+          "OPENAI_BASE_URL_API_KEY",
+          "OPENAI_AUTH_TOKEN",
+          "OPENAI_API_KEY"
+        ],
+        "started_at": "2026-10-23T03:14:31.570231+00:00",
+        "completed_at": "2026-10-23T03:14:33.638412+00:00",
+        "exit_code": 0
+      },
+      {
+        "source": "b8af64f41de139d17741ee2696ab82bdb38a81d1",
+        "argv": [
+          "pnpm",
+          "-C",
+          "packages/eta-mu",
+          "build"
+        ],
+        "cwd": "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022",
+        "provider_variable_names_removed": [
+          "OPENAI_BASE_URL",
+          "OPENAI_BASE_URL_API_KEY",
+          "OPENAI_AUTH_TOKEN",
+          "OPENAI_API_KEY"
+        ],
+        "started_at": "2026-10-23T03:14:33.638723+00:00",
+        "completed_at": "2026-10-23T03:14:49.856962+00:00",
+        "exit_code": 0
+      },
+      {
+        "source": "b8af64f41de139d17741ee2696ab82bdb38a81d1",
+        "argv": [
+          "node",
+          "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.212/node_modules/nbb/cli.js",
+          "-e",
+          "(require (quote [nbb.core :as nbb])) (nbb/await (nbb/load-file \"/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/.ημ/review-evidence/trusted-publication-bootstrap/full-gates-20261023/public-probe.cljs\"))"
+        ],
+        "cwd": "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/packages/eta-mu/intent-runtime",
+        "provider_variable_names_removed": [
+          "OPENAI_BASE_URL",
+          "OPENAI_BASE_URL_API_KEY",
+          "OPENAI_AUTH_TOKEN",
+          "OPENAI_API_KEY"
+        ],
+        "started_at": "2026-10-23T03:14:49.857290+00:00",
+        "completed_at": "2026-10-23T03:15:00.771836+00:00",
+        "exit_code": 0
+      }
+    ],
+    "qualification": false
+  },
+  "focused": "29tests/200assertions;0failures/errors",
+  "prefixes": {
+    "receipts.edn": {
+      "base_bytes": 626810,
+      "base_sha256": "472a159c087ec54cd3a6bff1c33c438aec6abe5442b15128daa923f308d28cd1",
+      "current_bytes": 629819,
+      "prefix_preserved": true
+    },
+    "kanban/.events/ledger.edn": {
+      "base_bytes": 1856627,
+      "base_sha256": "73b8b2a944e56eaa0b6565a524072a7ee5baba9a641d4766a3fcf08dbab8f542",
+      "current_bytes": 1858284,
+      "prefix_preserved": true
+    },
+    ".ημ/session-mycology/ledger.md": {
+      "base_bytes": 117390,
+      "base_sha256": "46d324824c9320f98c944c7c06f8090ba317265dd2c4dbb80be163de9cd0d92f",
+      "current_bytes": 117993,
+      "prefix_preserved": true
+    },
+    ".ημ/session-reflections.edn": {
+      "base_bytes": 41622,
+      "base_sha256": "76a5109bd3e6f5d40a40b82f9f4b5d21838d832f267929e9d87ce82acf4ab4f3",
+      "current_bytes": 41622,
+      "prefix_preserved": true
+    }
+  },
+  "cards_preserved": 309,
+  "publisher": "in_progress/Codex/5points",
+  "qualification": false,
+  "CMS_Cephalon": "paused",
+  "limits": [
+    "Original G/executed caller unavailable",
+    "Full authenticated publication/composition remains unfinished",
+    "No native publication/readback/status or protected adoption",
+    "Older hosted Sol/sync proof is source-bound; successor pending"
+  ]
+}

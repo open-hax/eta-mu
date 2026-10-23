@@ -1,0 +1,6 @@
+
+> eta-mu@1.1.1 build /home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/packages/eta-mu
+> shadow-cljs release cli
+
+[:cli] Compiling ...
+[:cli] Build completed. (166 files, 0 compiled, 0 warnings, 11.72s)

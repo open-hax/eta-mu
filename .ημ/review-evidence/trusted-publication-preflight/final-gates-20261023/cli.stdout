@@ -1,0 +1,93 @@
+
+> eta-mu@1.1.1 test /home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/packages/eta-mu
+> shadow-cljs compile test && node target/eta-mu-test.cjs && pnpm test:workflows
+
+[:test] Compiling ...
+[:test] Build completed. (204 files, 1 compiled, 0 warnings, 2.84s)
+
+Testing eta-mu.domain.evidence-test
+
+Testing eta-mu.domain.router-test
+
+Testing eta-mu.domain.session-test
+
+Testing eta-mu.domain.tools.edit-test
+
+Testing eta-mu.domain.tools.find-test
+
+Testing eta-mu.domain.tools.glob-test
+
+Testing eta-mu.domain.tools.grep-test
+
+Testing eta-mu.domain.tools.ls-test
+
+Testing eta-mu.domain.tools.read-test
+
+Testing eta-mu.domain.tools.truncate-test
+
+Testing eta-mu.extern.child-process-test
+
+Testing eta-mu.extern.openai-test
+
+Testing eta-mu.extern.readline-test
+
+Testing eta-mu.infra.cli.commands.agent-test
+
+Testing eta-mu.infra.cli.commands.kanban-test
+
+Testing eta-mu.infra.cli.commands.sol-test
+
+Testing eta-mu.infra.cli.router-test
+
+Testing eta-mu.infra.cli.tui-repl-test
+
+Testing eta-mu.infra.session-test
+
+Testing eta-mu.infra.tools.bash-test
+
+Testing eta-mu.infra.tools.edit-test
+
+Testing eta-mu.infra.tools.find-test
+
+Testing eta-mu.infra.tools.grep-test
+
+Testing eta-mu.infra.tools.ls-test
+
+Testing eta-mu.infra.tools.read-test
+
+Testing eta-mu.infra.tools.write-test
+
+Testing eta-mu.law.command-test
+
+Testing eta-mu.law.evidence-test
+
+Testing eta-mu.law.session-test
+
+Testing eta-mu.law.tools-test
+
+Testing eta-mu.shape.args-test
+
+Testing eta-mu.shape.command-resource-test
+
+Ran 194 tests containing 587 assertions.
+0 failures, 0 errors.
+
+> eta-mu@1.1.1 test:workflows /home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/packages/eta-mu
+> nbb commands/workflows_test.cljs
+
+7 workflow resource(s) in contracts/workflows
+
+  main-pr-gate     eta-mu-main-pr-gate          5 job(s), 3 gate(s)  [ci.edn]
+  rheos            rheos                        1 job(s), 1 gate(s)  [ci.edn]
+  coverage         coverage                     2 job(s), 2 gate(s)  [packages.edn]
+  sol-ci           Sol CI                       1 job(s), 1 gate(s)  [packages.edn]
+  axxium-ci        Axxium CI                    1 job(s), 1 gate(s)  [packages.edn]
+  eta-mu-extensions-tests eta-mu-extensions-tests      1 job(s), 1 gate(s)  [packages.edn]
+  rheos-github-sync-ci Rheos GitHub Sync CI         1 job(s), 1 gate(s)  [packages.edn]
+
+Testing workflows-test
+Collect generated outputs and portable toolchains checksum proof: clean 0 tampered 1
+Package optional dependency cache checksum proof: clean 0 tampered 1
+
+Ran 11 tests containing 199 assertions.
+0 failures, 0 errors.

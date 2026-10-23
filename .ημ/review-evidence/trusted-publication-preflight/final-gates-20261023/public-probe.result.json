@@ -1,0 +1,19 @@
+{
+  "source": "b8af64f41de139d17741ee2696ab82bdb38a81d1",
+  "argv": [
+    "node",
+    "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/node_modules/.pnpm/nbb@1.5.212/node_modules/nbb/cli.js",
+    "-e",
+    "(require (quote [nbb.core :as nbb])) (nbb/await (nbb/load-file \"/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/.\u03b7\u03bc/review-evidence/trusted-publication-bootstrap/full-gates-20261023/public-probe.cljs\"))"
+  ],
+  "cwd": "/home/err/.local/share/foresight-worktrees/eta-publisher-intent-20261022/packages/eta-mu/intent-runtime",
+  "provider_variable_names_removed": [
+    "OPENAI_BASE_URL",
+    "OPENAI_BASE_URL_API_KEY",
+    "OPENAI_AUTH_TOKEN",
+    "OPENAI_API_KEY"
+  ],
+  "started_at": "2026-10-23T03:14:49.857290+00:00",
+  "completed_at": "2026-10-23T03:15:00.771836+00:00",
+  "exit_code": 0
+}

@@ -1,0 +1,13 @@
+{
+  "head": "ed4c7cb508feed77eff5d03f3fad7d686ac84657",
+  "threads": [
+    "PRRT_kwDORu27H86vdBQL/comment4355580905",
+    "PRRT_kwDORu27H86vdBQR/comment4355580917"
+  ],
+  "paths": [
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs",
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_intent.cljs",
+    ".github/scripts/opencode_review_intent_test.cljs"
+  ],
+  "scope": "Worker preflight/uncertain launch normalization; existing publisher; no metadata ownership"
+}

@@ -1,0 +1,35 @@
+{
+  "scope": "Existing publisher: PRRT_kwDORu27H86vdBQL/comment4355580905 and PRRT_kwDORu27H86vdBQR/comment4355580917 only",
+  "completed_at": "2026-10-23T03:03:45.642568+00:00",
+  "base": "ed4c7cb508feed77eff5d03f3fad7d686ac84657",
+  "red": "b599dc1cdbebc3bdd19279f19ef4100fbacd2196",
+  "green": "b8af64f41de139d17741ee2696ab82bdb38a81d1",
+  "source_matches_commit": {
+    "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": true,
+    "packages/eta-mu/src/cljs/eta_mu/extern/review_intent.cljs": true,
+    ".github/scripts/opencode_review_intent_test.cljs": true
+  },
+  "causal_red": "bb scripts/test.bb --only review-publication-intent:29tests/200assertions,32causal failures/0errors, real host :installation/:input-bound throws escape public transition!/recover!",
+  "passing": {
+    "focused": "bb scripts/test.bb --only review-publication-intent:29tests/200assertions,0failures/0errors",
+    "owning_lint": "pnpm --dir packages/eta-mu lint:kondo:0errors/0warnings; one preexisting architecture info",
+    "test_lint": "pnpm --dir packages/eta-mu exec clj-kondo --lint ../../.github/scripts/opencode_review_intent_test.cljs:0errors/0warnings",
+    "diff_check": "git diff --check:exit0"
+  },
+  "controls": [
+    "Actual host fixed-layout checks use isolated wrong/missing installation fixture via test-only private-var override; no installation files changed",
+    "Actual host input-bound checks use oversized transition and recovery requests",
+    "Generic native and ex-info launch errors stay unknown; thrown recovery data never mints an authorization",
+    "Genuine canonical Clio visible append with directory-sync failure produces private opaque recovery authorization; unavailable-installation and generic launch failures preserve that exact token; actual retry replays the one event and second use refuses",
+    "Known schema/event/collision and previous intent tests remain green"
+  ],
+  "implementation": "Shared private invoke-worker normalizes known current host pre-spawn :installation/:input-bound errors to transition refusal; recovery remains unknown because original durability uncertainty persists. All unclassified errors remain unknown. Existing observation scrubbing and private recovery/capability vault paths stay intact.",
+  "boundaries": [
+    "No raw JS added above extern",
+    "No new vault/domain dependency or source pin change",
+    "Source/test commits only; main owns artifact/card/ledger/metadata commit",
+    "No push/settlement/card/ledger/worktree-removal actions",
+    "CMS/Cephalon paused; no native publication/source custody/adoption claims",
+    "Main owns full CLI/build checks against frozen green; no further source edits planned"
+  ]
+}

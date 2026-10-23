@@ -1314,3 +1314,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 6e4167c1fb2243ced66a9ed35f6d4de321c09641b484480574978c4cd0b94c36
   note: Scope dependency bootstrapping to its worker, reproduce cold behavior with actual ordinary workflow tests, and parse exact call traces. Preserve causal source failures, lint discovery and ambient provider failure. Fresh public opaque recovery and one-use probes replace lost temporary captures without inventing source custody. No new spore or promotion.
+
+- ts: 2026-10-23T03:15:38.721Z
+  session: codex/stabilization-portfolio
+  task: Normalize public worker preflight failures while retaining retry authority
+  p-efficiency: 0.85
+  p-friction: 0.45
+  p-skill-candidate: 0.4
+  spore: none
+  receipt-refs: fef70c0891e7f916d454cce676c1efd487969996e48f3e90e09fc4ac0586ff90
+  note: Known pre-spawn failure and prior durability uncertainty have different meanings. Exercise actual host bounds and real opaque recovery rather than accepting a blanket refusal suggestion. Preserve native source/gate distinctions and all prior evidence. No new spore or promotion.

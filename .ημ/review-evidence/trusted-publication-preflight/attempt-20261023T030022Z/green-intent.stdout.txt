@@ -1,0 +1,20 @@
+
+============================================================
+Testing: review-publication-intent
+============================================================
+
+
+Testing opencode-review-intent-test
+
+Ran 29 tests containing 200 assertions.
+0 failures, 0 errors.
+
+✓ review-publication-intent passed (26.3s)
+
+============================================================
+TEST SUMMARY
+============================================================
+
+  ✓ review-publication-intent (26.3s)
+
+All suites passed!
