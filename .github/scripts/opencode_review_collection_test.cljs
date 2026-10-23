@@ -2,6 +2,7 @@
 (ns opencode-review-collection-test
   "Causal inert controls for the read-only native metadata collector."
   (:require [cljs.test :as test :refer [async deftest is testing]]
+            [cljs.reader :as reader]
             [eta-mu.law.review-collection :as law]
             [eta-mu.extern.review-collection :as host]
             [eta-mu.shape.review-collection :as shape]
@@ -554,7 +555,9 @@
         (is (str/includes? stdout ":no-next-url nil") "A response without Link remains a terminal page")
         (is (str/includes? stdout ":malformed-error :pagination-link")
             "A malformed declared next relation is refused by the actual host transport")
-        (is (str/includes? stdout "|https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=3|https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=4")
+        (is (= (str/join "|" (map #(str "https://api.github.com/repos/owner/repo/actions/runs/99/attempts/2/jobs?per_page=2&page=" %)
+                                  [1 3 4]))
+               (:calls (reader/read-string stdout)))
             "Only the three local GET requests were issued"))
       (finally (.rmSync fs directory #js {:recursive true :force true})))))
 

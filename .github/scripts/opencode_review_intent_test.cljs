@@ -359,6 +359,47 @@
     (is (= :refused (:status second-result)) (pr-str second-result))
     (is (= 1 (event-count store)) "The canonical Clio partition has one durable reservation.")))
 
+(deftest unexpected-append-errors-preserve-uncertainty-through-the-worker-entry
+  (doseq [error [(js/Error. "injected native append error")
+                 (ex-info "injected missing tag" {})
+                 (ex-info "injected numeric tag" {:clio/error 17})
+                 (ex-info "injected string tag" {:clio/error "unexpected"})
+                 (ex-info "injected map tag" {:clio/error {:unexpected true}})]]
+    (let [store (installation)
+          recovery {:ledger/path (:ledger-file store) :event reserved-a}
+          error (if (ex-data error)
+                  (ex-info (ex-message error) (assoc (ex-data error) :clio/append-recovery recovery))
+                  error)
+          request {:operation :transition :store store :context context-a :binding binding-a
+                   :command {:state :reserved :binding binding-a}}
+          output (atom nil)
+          result (call-api "cljs.core" "with-redefs-fn"
+                   {(resolve-api "clio.infra.runtime" "append!") (fn [& _] (throw error))
+                    (resolve-api "eta-mu.extern.review-intent" "read-worker-input!") (fn [] (pr-str request))
+                    (resolve-api "eta-mu.extern.review-intent" "write-worker-output!") #(reset! output %)}
+                   #(call-api "eta-mu.infra.review-intent-worker" "entry"))]
+      (is (= :unknown (:status result)) (pr-str result))
+      (is (= :append-outcome (:reason result)) (pr-str result))
+      (is (= (or (:clio/error (ex-data error)) :append-error) (:error result)))
+      (is (= (:clio/append-recovery (ex-data error)) (:recovery result)))
+      (is (false? (:capability-issued? result)))
+      (is (= result (reader/read-string @output)) "The bounded worker emits the same uncertainty response."))))
+
+(deftest named-clio-admission-errors-remain-refusals-at-the-worker-entry
+  (doseq [[error-type reason] [[:clio.schema/invalid :event-schema]
+                              [:clio.event/invalid :event-schema]
+                              [:clio.ledger/id-collision :event-id-collision]]]
+    (let [store (installation)
+          request {:operation :transition :store store :context context-a :binding binding-a
+                   :command {:state :reserved :binding binding-a}}
+          result (call-api "cljs.core" "with-redefs-fn"
+                   {(resolve-api "clio.infra.runtime" "append!")
+                    (fn [& _] (throw (ex-info "injected classified error" {:clio/error error-type})))
+                    (resolve-api "eta-mu.extern.review-intent" "read-worker-input!") (fn [] (pr-str request))
+                    (resolve-api "eta-mu.extern.review-intent" "write-worker-output!") (fn [_] nil)}
+                   #(call-api "eta-mu.infra.review-intent-worker" "entry"))]
+      (is (= {:status :refused :reason reason} result) (pr-str result)))))
+
 (deftest independent-workers-race-on-one-canonical-stream-slot
   (let [store (installation)
         barrier (str (:test-root store) "/two-process-barrier")
