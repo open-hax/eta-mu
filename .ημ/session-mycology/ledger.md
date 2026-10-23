@@ -1196,3 +1196,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 2026-10-23T07:00:18.978185+00:00
   note: Hosted CI exposed a global executable assumption; verified pinned nested dependency under restricted PATH.
+
+- ts: 2026-10-23T07:31:59.531736+00:00
+  session: antigravity-review-rollout
+  task: Qualify held-open native stdin transport
+  p-efficiency: 0.7
+  p-friction: 0.7
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: 2026-10-23T07:31:59.531736+00:00
+  note: Native stdin EOF could discard an active turn; retained actual large-input and final runtime proofs, and verified cancellation before provider startup.

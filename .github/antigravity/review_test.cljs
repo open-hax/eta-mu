@@ -11,7 +11,7 @@
             :paths ["src/a.cljc"]
             :files [{:path "src/a.cljc" :base-mode "100644" :head-mode "100644"
                      :base-bytes 20 :head-bytes 30 :binary? false}]
-            :diff-bytes 50 :input-bytes 100 :prompt-bytes 200})
+            :diff-bytes 50 :input-bytes 100 :prompt-bytes 200 :stdin-bytes 250})
 (def finding {:path "src/a.cljc" :line 2 :title "Wrong result" :body "Fails for zero input."
               :confidence 0.95 :evidence ["The changed branch returns one."]
               :failure_trace ["zero" "branch returns one" "contract requires zero"]})
@@ -22,12 +22,14 @@
 
 (deftest complete-bounded-input
   (is (= [] (law/input-errors input)))
+  (is (= [] (law/input-errors (-> input (assoc :prompt-bytes 150000 :stdin-bytes 170000)
+                                   (assoc-in [:files 0 :head-bytes] 380000)))))
   (doseq [invalid [(assoc input :head "HEAD") (assoc input :head (:base input))
                    (assoc input :paths ["../escape"]) (assoc input :paths ["src/a.cljc" "src/a.cljc"])
                    (assoc-in input [:files 0 :binary?] true) (assoc-in input [:files 0 :head-mode] "160000")
                    (assoc-in input [:files 0 :head-mode] "120000")
-                   (assoc-in input [:files 0 :head-bytes] 262145) (assoc input :diff-bytes 1048577)
-                   (assoc input :prompt-bytes 65537)]]
+                   (assoc-in input [:files 0 :head-bytes] 1048577) (assoc input :diff-bytes 1048577)
+                   (assoc input :prompt-bytes 4718593) (assoc input :stdin-bytes 8388609)]]
     (is (seq (law/input-errors invalid)))))
 
 (deftest grounded-and-complete-output
@@ -47,21 +49,41 @@
   (is (= #{2 3 10} (diff/added-lines "diff --git a/a b/a\n--- a/a\n+++ b/a\n@@ -2 +2,2 @@\n-old\n+new\n+next\n@@ -9,0 +10 @@\n+tail\n\\ No newline at end of file\n")))
   (is (= #{} (diff/added-lines "@@ -1 +0,0 @@\n-deleted\n"))))
 
+(def native-schema {:type "object" :properties {}})
 (def native-init {:event "init" :conversation_id "fixture-conversation"
                   :init {:cwd "/fixture" :model law/model :agent "antigravity-reviewer"
-                         :permission_mode "plan" :tools []}})
+                         :permission_mode "strict" :json_schema native-schema
+                         :tools ["ask_custom_permission" "ask_permission" "ask_question" "browser_click_element" "browser_drag_pixel_to_pixel" "browser_get_dom" "browser_get_network_request" "browser_input" "browser_list_network_requests" "browser_mouse_down" "browser_mouse_up" "browser_move_mouse" "browser_press_key" "browser_refresh_page" "browser_resize_window" "browser_scroll" "browser_scroll_dom" "browser_select_option" "browser_subagent" "call_mcp_tool" "capture_browser_console_logs" "capture_browser_screenshot" "click_browser_pixel" "command_status" "define_subagent" "delete_knowledge" "execute_browser_javascript" "find_by_name" "finish" "generate_image" "grep_search" "invoke_subagent" "list_browser_pages" "list_dir" "list_permissions" "list_plugin_accounts" "list_resources" "manage_inbox" "manage_subagents" "manage_task" "multi_replace_file_content" "notebook_edit" "notebook_execution" "open_browser_url" "read_browser_page" "read_resource" "read_url_content" "replace_file_content" "run_command" "run_workflow" "schedule" "search_marketplace" "search_web" "sed_file" "send_command_input" "send_message" "view_file" "wait" "wait_5_seconds" "write_to_file"]}})
+(defn step [index kind state]
+  {:event "step_update" :step_update {:conversation_id "fixture-conversation"
+                                     :step_index index :state state :step_type kind}})
 (def native-result {:event "result" :result {:conversation_id "fixture-conversation"
-                                             :status "SUCCESS" :structured_output result}})
+                                           :status "SUCCESS" :num_turns 1 :duration_seconds 0.1
+                                           :json_schema native-schema :structured_output result}})
+(def events [native-init (step 0 "user_input" "DONE")
+             (step 1 "agent_response" "ACTIVE") (step 1 "agent_response" "DONE")
+             (step 2 "finish" "DONE") native-result])
 (deftest native-invocation-boundaries
-  (is (= [] (law/envelope-errors {:cwd "/fixture"} [native-init native-result])))
-  (doseq [invalid [[native-init {:event "tool_call"} native-result]
-                   [native-init {:event "new_mutating_event"} native-result]
-                   [native-init (assoc-in native-result [:result :conversation_id] "other")]
-                   [(assoc-in native-init [:init :tools] ["run_command"]) native-result]
-                   [(assoc-in native-init [:init :model] "other") native-result]
-                   [native-result] [native-init native-result native-result]
-                   [native-init (assoc-in native-result [:result :status] "ERROR")]]]
-    (is (seq (law/envelope-errors {:cwd "/fixture"} invalid)))))
+  (let [expected {:cwd "/fixture" :schema native-schema}]
+    (is (= [] (law/envelope-errors expected events)))
+    (doseq [invalid [(conj (pop events) {:event "tool_call"} native-result)
+                     (assoc events 2 {:event "new_mutating_event"})
+                     (assoc-in events [2 :step_update :tool_info] {:name "run_command"})
+                     (assoc-in events [2 :step_update :subagent_info] {})
+                     (assoc-in events [2 :step_update :step_type] "run_command")
+                     (assoc-in events [2 :step_update :conversation_id] "other")
+                     (assoc-in events [2 :step_update :state] "WAITING")
+                     (assoc-in events [2 :step_update :step_index] -1)
+                     (assoc-in events [5 :result :conversation_id] "other")
+                     (assoc-in events [0 :init :tools] ["run_command"])
+                     (assoc-in events [0 :init :model] "other")
+                     (assoc-in events [0 :init :permission_mode] "plan")
+                     (assoc-in events [0 :init :json_schema] {})
+                     (assoc-in events [5 :result :json_schema] {})
+                     [native-result] (conj events native-result) (into [native-init] events)
+                     (conj events (step 3 "agent_response" "DONE"))
+                     (assoc-in events [5 :result :status] "ERROR")]]
+      (is (seq (law/envelope-errors expected invalid))))))
 
 (deftest native-json-is-structured-and-schema-bound
   (let [schema {:type "object" :properties {}}

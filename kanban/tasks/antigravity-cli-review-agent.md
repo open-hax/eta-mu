@@ -25,11 +25,14 @@ Thin immutable callers cover every actionable Foresight member and the root.
 - Pure portable review input/result laws with a Node/NBB process adapter.
 - A read-only custom reviewer using the existing map/validate/disprove/submit method.
 - Exact base/head/diff binding and SHA256 digests. Paths sort lexically; limits are
-  256 changed files, 262144 bytes per base/head blob, 1048576 bytes of full diff,
+  256 changed files, 1048576 bytes per base/head blob, 1048576 bytes of full diff,
   4194304 bytes of complete serialized input and 2097152 bytes of native output.
-  The exact full command prompt has a further 65536-byte limit for the native
-  single-print transport. Exceeding any limit fails before dispatch; truncation is forbidden. The manifest
-  records base/head, diff digest, file count and byte counts.
+  The exact full prompt is bounded to 4718592 bytes and its compact native NDJSON
+  stdin message to 8388608 bytes. Stdin remains open until the native terminal
+  result; no prompt is placed in argv. Exceeding any limit fails before dispatch;
+  truncation is forbidden. The manifest records exact revisions, diff/input/prompt/
+  stdin digests and byte counts. Native stream structure, session and strict
+  profile custody are admitted separately from the semantic result.
 - A versioned open-hax.antigravity-review/v1 result: exact base/head/model,
   scope_complete, exactly-once reviewed_paths, nonempty summary, findings and
   nonblocking questions. Each finding has path, changed line, title, body,
@@ -65,7 +68,8 @@ Do not activate the separate trusted publisher before its own qualification.
    selecting actionable independent direct git submodules plus the root. The
    Foresight plan/check command and tests require exact-one caller coverage for
    these 23 targets and explicit consolidation/nested-package exclusions.
-   All declared actionable direct repositories have identical pinned thin callers;
+   All declared actionable direct repositories have equivalent pinned thin callers
+   routed to the approved organization-local reusable workflow;
    inventory-only consolidation inputs stay excluded and nested packages are not swept.
 
 ## Verification
@@ -80,3 +84,14 @@ smoke review, record exact model/version/result and preserve external blockers.
 Antigravity authentication/CLI versions vary by worker. Consumer workflow changes
 must be reviewed before activation; a pushed proposal is not installed CI evidence.
 Bounded inputs fail closed rather than silently truncating a large review.
+
+## Native transport qualification
+
+Held-open stdin completed the complete 290035-byte shx PR input in an actual
+158-second native run. Final source-runner fixtures returned a clean result and
+the known increment.clj line4 defect with empty stderr and removed workspaces.
+The local observation does not guarantee completion at every configured ceiling.
+The reusable job allows1200 seconds for inference within its30-minute job bound.
+Both organization routes previously reached the worker and retained explicit
+prompt-size refusal artifacts under the old transport; successful hosted stream
+execution and runner-group denial proof remain separate deployment checks.

@@ -33,6 +33,7 @@
 (defn file-sha256 [file] (sha256 (fs/readFileSync file)))
 (defn remove-dir! [directory] (fs/rmSync directory #js {:recursive true :force true}))
 (defn json [x] (js/JSON.stringify (clj->js x) nil 2))
+(defn compact-json [x] (js/JSON.stringify (clj->js x)))
 (defn parse-json [x] (js->clj (js/JSON.parse x) :keywordize-keys true))
 (defn stdout! [x] (.write js/process.stdout x))
 (defn stderr! [x] (.write js/process.stderr x))
@@ -82,7 +83,7 @@
 
 (defn run-native! [{:keys [adapter cli snapshot output timeout max-bytes args environment input]}]
   (let [result (run! (.-execPath js/process)
-                     [adapter cli snapshot output (str timeout) (str max-bytes) (json args)]
+                     [adapter cli snapshot output (str timeout) (str max-bytes) (json args) "stream-json"]
                      {:env environment :input input :timeout (+ 15000 timeout) :max-bytes 65536})]
     (when-not (= 0 (:status result)) (fail! :process-adapter (select-keys result [:status :signal :stderr])))
     (assoc (parse-json (:stdout result))

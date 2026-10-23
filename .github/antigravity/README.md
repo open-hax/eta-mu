@@ -7,19 +7,24 @@ The evidence-first method follows the existing OpenCode reviewer, but its native
 invocation proof is not reused or synthesized.
 
 Local native probes established the strict Bubblewrap settings overlay and
-actual denied read, write and command attempts. The final direct-print JSON
-probe returned a real schema-bound `structured_output`. These are local CLI
-observations; hosted runner isolation, registration and rollout still require
+actual denied read, write and command attempts. Native stdin probes returned
+real schema-bound `structured_output`, including the complete 290,035-byte shx
+PR4 prompt in 158 seconds. These are local CLI observations; hosted runner
+isolation, registration and rollout still require
 their separate qualification. A passing fixture is not hosted activation.
 
 Earlier probes exposed two traps. Custom-agent `tools: []` and an explicit
 observer list still advertised the full static tool catalog; they do not
 establish confinement. `--mode plan` had no effect with slash expansion disabled.
-Streaming JSON and richer provider schemas also produced `SUCCESS` without
-`structured_output`, including a partial timeout result. The runner uses an
-independently enforced strict settings overlay and direct print JSON with a
-simple provider schema. It never derives a structured result from response
-prose. Pure laws enforce constants and bounds omitted from that schema.
+Early streaming probes and richer provider schemas also produced `SUCCESS`
+without `structured_output`, including partial timeout results. With the pure
+finish tool and stdin held open through the terminal result, native streaming
+returns the actual structure. A 201,017-byte padding probe timed out after 120
+seconds; its zero-token partial result remains a refusal. The representative
+shx review completed within the default 600-second budget. The runner uses an
+independently enforced strict settings overlay and a simple provider schema.
+It never derives a structured result from response prose. Pure laws enforce
+constants and bounds omitted from that schema.
 
 The trusted custom agent permits only `finish`, the CLI's pure terminal
 formatting tool. With no finish capability the pinned CLI returned repeated
@@ -83,16 +88,21 @@ fail visibly. Renames are represented as deletion/addition. A sparse checkout
 with available Git objects is sufficient. Supplied full immutable revisions
 bind the review; branch names and the working tree are not reviewed.
 
-The limits are 256 changed files, 262,144 bytes for each base/head blob,
-1,048,576 diff bytes, 4,194,304 serialized input bytes, 65,536 complete prompt
-bytes and 2,097,152 combined native stdout/stderr bytes. The prompt limit is
-measured after adding the exact schema and instructions; direct print uses one
-bounded argument. There is no truncation into a passing review. The
-default timeout is 600 seconds and the maximum is 1,800 seconds. Large changes
-must be split or reviewed through another explicitly qualified route.
+The limits are 256 changed files, 1,048,576 bytes for each base/head blob,
+1,048,576 diff bytes, 4,194,304 serialized input bytes, 4,718,592 complete prompt
+bytes, 8,388,608 serialized stdin bytes and 2,097,152 combined native stdout/stderr
+bytes. Sizes are UTF-8 bytes, including the exact schema and instructions. One
+compact NDJSON user record carries the entire prompt on stdin; the prompt never
+enters argv. Stdin stays open until a complete native result record arrives.
+There is no truncation into a passing review. The default native timeout is 600
+seconds and the maximum is 1,800 seconds; the process supervisor allows another
+10 seconds to retain terminal diagnostics before killing the process group.
+The configured bounds are admission ceilings, not a latency guarantee for every
+input within them. Larger changes must be split or use another qualified route.
 
 `input.json` records sorted paths, exact revisions, per-blob IDs/byte counts/
 SHA-256, file count, full-input and diff byte counts/digests, and limits.
+Prompt and serialized-stdin byte counts/digests also bind the exact transport.
 `input.txt` retains the complete supplied data. The isolated model workspace
 contains only that data and the trusted agent. Real model runs remove this
 workspace in `finally`; prepare-only deliberately retains it for inspection.
@@ -114,7 +124,9 @@ G1 credits. Candidate data cannot change the mounted policy.
 
 The Node process adapter owns a Linux child process group, bounded captures,
 deadline and SIGINT/SIGTERM/SIGHUP cleanup. It kills remaining descendants on
-ordinary exit and notices a terminated NBB parent. Non-Linux execution refuses.
+ordinary exit and notices a terminated NBB parent. Cancellation aborts pending
+stdin collection and prevents any later native process launch. Non-Linux
+execution refuses.
 Native failures preserve raw captures and process metadata, without `review.json`.
 Only a native successful structured result passing the exact input/model/scope
 and added-line laws writes `review.json`. Findings require confidence at least
@@ -123,15 +135,21 @@ can turn incomplete scope into a pass.
 
 `review.json` carries versioned schema, exact base/head, complete `diff_digest`,
 configured model and status `clean` for empty findings or `findings` otherwise.
-Production JSON has no init or per-tool event trace. Invocation metadata reports
-the exact configured CLI model, verified binary/version, strict profile digest
-and actual native structured result. It does not claim independent native init
-model confirmation or observed zero tool calls. Effect confinement rests on the
-separately qualified settings/sandbox boundary.
+The retained `native.stdout.json` contains the complete raw NDJSON event stream
+(the filename is retained for artifact compatibility). `native-envelope.json`
+contains its real terminal result. Admission requires one init first, one result
+last, one matching conversation, exact native model/agent/cwd/schema and strict
+permission mode. Only the observed user_input, agent_response and pure finish
+progress shapes are admitted; unknown events, tool payloads, subagent payloads
+and missing completion refuse. The init tool list is the pinned static catalog
+and supplies no permission evidence. Invocation metadata reports the verified
+binary/version, strict profile digest and native stream binding. Confinement
+still rests on the separately qualified settings/sandbox boundary.
 
 The pure contracts live in `antigravity/law/review.cljc`; added-line shape parsing
-and the native finish transport shape are portable `.cljc`. Node filesystem/process operations stay in `extern/host.cljs`
-and the small raw `run-cli.mjs` process boundary. NBB orchestration lives in
+and the native stream/finish transport shapes are portable `.cljc`. Node
+filesystem/process operations stay in `extern/host.cljs` and the small raw
+`run-cli.mjs` process boundary. NBB orchestration lives in
 `infra/review.cljs`. The Node adapter uses native async I/O because the installed
 NBB runtime does not support compiled ClojureScript `await` syntax.
 

@@ -181,7 +181,8 @@ jobs:
             --repo "$REVIEW_CANDIDATE_PATH" --base "$REVIEW_BASE_SHA" --head "$REVIEW_HEAD_SHA" \
             --output "$REVIEW_OUTPUT_PATH" --worker-home "$ANTIGRAVITY_REVIEW_WORKER_HOME" \
             --cli "$ANTIGRAVITY_REVIEW_CLI" --cli-sha256 "$ANTIGRAVITY_REVIEW_CLI_SHA256" \
-            --bwrap "$ANTIGRAVITY_REVIEW_BWRAP" --bwrap-sha256 "$ANTIGRAVITY_REVIEW_BWRAP_SHA256"
+            --bwrap "$ANTIGRAVITY_REVIEW_BWRAP" --bwrap-sha256 "$ANTIGRAVITY_REVIEW_BWRAP_SHA256" \
+            --timeout-seconds 1200
 
       - name: Upload review evidence including failure diagnostics
         if: ${{ always() && steps.paths.outputs.evidence-root != '' }}

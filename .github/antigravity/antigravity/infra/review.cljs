@@ -6,6 +6,7 @@
             [antigravity.law.sandbox :as sandbox]
             [antigravity.shape.diff :as diff]
             [antigravity.shape.finish :as finish]
+            [antigravity.shape.stream :as stream]
             [clojure.string :as str]))
 
 (def usage
@@ -98,9 +99,10 @@
           text (host/json payload)
           schema-text (host/read-text (host/join source-root ".github/antigravity/result.schema.json"))
           full-prompt (prompt payload text schema-text)
+          stdin (str (host/compact-json (stream/user-message full-prompt)) "\n")
           input (assoc (select-keys payload [:base :head :paths :diff_digest]) :files files
                        :diff-bytes (host/bytes patch) :input-bytes (host/bytes text)
-                       :prompt-bytes (host/bytes full-prompt))
+                       :prompt-bytes (host/bytes full-prompt) :stdin-bytes (host/bytes stdin))
           errors (law/input-errors input)]
       (when (seq errors) (host/fail! :input-admission errors))
       (host/mkdir! output)
@@ -119,8 +121,9 @@
                                                          (assoc :base-sha256 (host/sha256 (:base-content %))
                                                                 :head-sha256 (host/sha256 (:head-content %)))) files)
                                        :file-count (count files) :input-sha256 (host/sha256 text)
-                                       :diff-sha256 (host/sha256 patch) :limits law/limits)))
-        {:input input :text text :prompt full-prompt :output output :snapshot snapshot :schema-file schema-file
+                                       :diff-sha256 (host/sha256 patch) :prompt-sha256 (host/sha256 full-prompt)
+                                       :stdin-sha256 (host/sha256 stdin) :limits law/limits)))
+        {:input input :text text :stdin stdin :output output :snapshot snapshot :schema-file schema-file
          :adapter (host/join source-root ".github/antigravity/run-cli.mjs")
          :settings-source (host/join source-root ".github/antigravity/strict-settings.json")
          :changed-lines (into {} (map (fn [{:keys [path patch]}] [path (diff/added-lines patch)]) patches))}))))
@@ -134,7 +137,7 @@
       (host/fail! :binary-digest {:expected expected :actual actual}))
     {:file file :sha256 actual}))
 
-(defn run-model! [{:keys [input prompt output snapshot schema-file changed-lines adapter settings-source]} opts]
+(defn run-model! [{:keys [input stdin output snapshot schema-file changed-lines adapter settings-source]} opts]
   (let [home-option (or (get opts "--worker-home") (get (host/environment) "ANTIGRAVITY_REVIEW_HOME"))
         _ (when-not (law/text? home-option) (host/fail! :worker-home-required "Provision an explicitly authorized authenticated HOME; no credentials are copied."))
         home (host/realpath home-option)
@@ -163,23 +166,24 @@
         _ (when-not (and (= 0 (:status version)) (= law/cli-version (str/trim (:stdout version))))
             (host/fail! :cli-version (select-keys version [:status :stdout :stderr])))
         cli-args ["--agent" "antigravity-reviewer" "--model" law/model
-              "--disable-slash-commands" "--output-format" "json"
-              "--json-schema" schema-file "--print-timeout" (str seconds "s") "--print" prompt]
+              "--disable-slash-commands" "--output-format" "stream-json" "--input-format" "stream-json"
+              "--json-schema" schema-file "--print-timeout" (str seconds "s")]
         args (into ["--ro-bind" "/" "/" "--bind" auth-directory auth-directory
                     "--ro-bind" settings-overlay target-settings "--bind" snapshot snapshot
                     "--proc" "/proc" "--unshare-pid" "--die-with-parent" "--new-session"
                     "--chdir" snapshot cli] cli-args)
         native (host/run-native! {:adapter adapter :cli bwrap :snapshot snapshot :output output :args args
-                                  :environment environment :input ""
-                                  :timeout (* 1000 seconds) :max-bytes (:response-bytes law/limits)})]
+                                  :environment environment :input stdin
+                                  :timeout (+ 10000 (* 1000 seconds)) :max-bytes (:response-bytes law/limits)})]
     (host/write! (host/join output "invocation.json")
                  (host/json {:schema "open-hax.antigravity-invocation/v1" :cli-version law/cli-version
                              :model law/model :args args :cwd snapshot :base (:base input) :head (:head input)
                              :cli cli :cli-sha256 observed-sha256
                              :bwrap bwrap :bwrap-sha256 (:sha256 bwrap-pin) :bwrap-version sandbox/version
                              :settings-sha256 (host/sha256 settings-text) :effect-policy :strict-deny-overlay
-                             :transport :native-json :model-binding :configured-cli-argument
-                             :tool-event-trace :unavailable-in-native-json
+                             :transport :native-stream-json :model-binding :native-init-and-configured-cli-argument
+                             :stdin-bytes (host/bytes stdin) :stdin-sha256 (host/sha256 stdin)
+                             :tool-event-trace :native-stream
                              :status (:status native) :signal (:signal native)
                              :evidence-kind "imported-cli-advisory" :native-approval false}))
     (when-not (and (= 0 (:status native)) (nil? (:signal native))
@@ -189,9 +193,11 @@
     (when-not (= expected-sha256 (host/file-sha256 cli)) (host/fail! :cli-changed cli))
     (when-not (= (:sha256 bwrap-pin) (host/file-sha256 bwrap)) (host/fail! :bwrap-changed bwrap))
     (when (not (str/blank? (:stderr native))) (host/fail! :native-diagnostic "Nonempty stderr; inspect native.stderr.log."))
-    (let [envelope (host/parse-json (:stdout native))
-          native-errors (law/native-json-errors (host/parse-json (host/read-text schema-file)) envelope)]
+    (let [events (host/native-lines (:stdout native))
+          envelope (stream/terminal events)
+          native-errors (law/envelope-errors {:cwd snapshot :schema (host/parse-json (host/read-text schema-file))} events)]
       (when (seq native-errors) (host/fail! :native-admission native-errors))
+      (host/write! (host/join output "native-envelope.json") (host/json envelope))
       (let [shaped (finish/split-output (:structured_output envelope))
             _ (when-not (= :shaped (:status shaped)) (host/fail! :native-finish-shape (:reason shaped)))
             result (:review shaped)
