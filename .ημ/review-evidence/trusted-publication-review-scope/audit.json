@@ -1040,5 +1040,384 @@
       "cards_preserved": 309
     },
     "root_capture": ".ημ/stabilization/outcomes-20261023"
+  },
+  "source_custody_execution": {
+    "source": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+    "note": "Executed source-custody repairs at source c9fc461f2a14d613e9f1897f5143676378e154c2 under this existing publisher. Tests-only source RED7a798aa3 ran8/175 with six causal failures; GREEN33184ccc passes8/175 and14 actual NBB/Babashka values. The partial source observation now always retains missing :native-execution-custody; invented coordinate strings/verified flags cannot clear it. No admitted signed execution capability or G/caller policy change.\n\nTests-only verifier RED73b9aa65 ran5/181 with34 causal failures before GREENc9fc461f. The exact strict-inspected manifest byte count/SHA256 reaches reconstruct! after caller metadata, with independent semantic manifest comparison retained. Full original input-proof v1 schema/stage/fields/provenance/name bind actual manifest bytes. The actual producer supports deterministic evidence attempt1 reused by review attempt2: manifest/producer provenance stays1, verification provenance/native review artifact stays2, producer<=review uses portable precision-safe decimal comparison. Actual pinned runtime5/181 passes;33 actual pure NBB/Babashka values match. Independent review passes28 actual pinned-runtime cases and270 independent arbitrary-precision reference cases on both hosts, no narrow finding; old valid canonical hash fails for whitespace-changed actual bytes. Cleanup resources/effects zero. Fixtures remain explicitly inert8-tool/local-source-byte proof, not native authentication.\n\nFull owning CLI194/587 and workflows11/199, lint and release pass at c9fc461f with zero compiler/linter warnings, runtime/path-only environment and empty task npm user config. Existing fixture/carrier diagnostics remain visible. Native F796 Sandbox39909048197/job120267534077 now succeeds at executed e157f704 with exact parents/tree;29 actual suite summaries and92 compiler builds pass,23 diagnostics remain. Artifact12482823428/469643137 bytes has metadata only; no download/restore credit and no hosted proof transfer to c9fc461f.\n\nActual pinned Musec1369 JVM entrypoint and pure configuration generation produce22 allow permissions matching exact workflow expectations, independently reproduced byte-for-byte. All38 pinned source/build files,69 capture hashes and dependency identities verify. Both actual NBB plugin loads fail at real shadow.esm/JVM-only macro boundaries; actual full adapter remains uncompiled/unobserved. No actor initialization, handler/provider execution, G/caller authentication or adoption credit.\n\nFresh06:45:43–06:46:02UTC two-pass same442 census:437open/4merged/1closed/6changed open head or reported-base pairs; source/proposal acquisition drift0/0. Axxium3/4 advance by one commit each, adding42-line proposed review workflow and receipt append; complete native diffs retained without acceptance/deployment authority. Root88 native receipt_history2/hygiene0 and missing-App/terminal failures remain; root receiptP1 and paused oracle held. Preserve all309 states/planning/four prefixes,363rd prospective valid child receipt with historical71invalid/118errors, all23 accepted root pins and exact100 review paths. Native review has no exact approval; CodeRabbit cooldown remains after07:04:53UTC, Codex resetUNKNOWN/no retry. Original authenticated G/executed caller/full profile/input custody, native outcome authentication, full publication/composition/protected adoption remain unfinished. CMS/Cephalon paused. No standalone planning, new card, merge/deployment/credential/grant/protection/pin/adoption effect.\n",
+    "tests": {
+      "source": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+      "tests_red_source": "7a798aa3b50ed908578b1cc2013ed5566e607b0e",
+      "tests_red_verifier": "73b9aa651286e0c87ddb2d9d8fd50e686ded9238",
+      "source_green": "33184ccc9730b0d545c7d0b0660bfbefacc1ce34",
+      "verifier_green": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+      "source_suite": "8 tests / 175 assertions; causal RED six failures then GREEN zero",
+      "verifier_suite": "5 tests / 181 assertions; causal RED 34 failures then GREEN zero",
+      "source_parity_values": 14,
+      "verifier_parity_values": 33,
+      "full_owning": {
+        "source": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+        "file_sha256": {
+          "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+          "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+          "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+          ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+          "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+          "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+          "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+          "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "0f2133e5c45eb284597995da43c05cae52fe050daa7c36a6eb9b29cbf74d869d",
+          "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+          "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+          ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+          ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+          ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+          ".github/scripts/opencode_review_verification_test.cljs": "01becafaa1cc37e1def294874870eff8e85147039b952e234f71f41150eb18dc",
+          ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7",
+          "packages/eta-mu/src/cljs/eta_mu/domain/review_source.cljc": "54b0dcfd5833f227d819823ff6ff761421dd70a70eb2c4fa2a0e7d86c2fe2bcd",
+          "packages/eta-mu/src/cljs/eta_mu/law/review_verification.cljc": "0fe74499cd01739ed5c33831d7bab43c6699ead850e5a9781f9b95972eee4fde",
+          "packages/eta-mu/src/cljs/eta_mu/domain/review_verification.cljc": "a9e64088cba09520fb93789b09aecc3f8396ad44946d59576cf867d582e35250",
+          "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs": "4bdf3c484b689752c33c2f05f7a81c71de618e18e018a0ef0f812e4dacedb74d",
+          ".github/scripts/opencode_review_source_test.cljs": "0a11d664d4779104f55d3925d8f49e289a0906b422445af5dc22750c491cc850"
+        },
+        "results": [
+          {
+            "name": "cli-test",
+            "argv": [
+              "pnpm",
+              "-C",
+              "packages/eta-mu",
+              "test"
+            ],
+            "exit_code": 0,
+            "elapsed_seconds": 20.344,
+            "completed_at": "2026-10-23T06:50:14.101134+00:00",
+            "source": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+            "file_sha256": {
+              "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+              "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+              ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+              "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+              "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "0f2133e5c45eb284597995da43c05cae52fe050daa7c36a6eb9b29cbf74d869d",
+              "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+              "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+              ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+              ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+              ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+              ".github/scripts/opencode_review_verification_test.cljs": "01becafaa1cc37e1def294874870eff8e85147039b952e234f71f41150eb18dc",
+              ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_source.cljc": "54b0dcfd5833f227d819823ff6ff761421dd70a70eb2c4fa2a0e7d86c2fe2bcd",
+              "packages/eta-mu/src/cljs/eta_mu/law/review_verification.cljc": "0fe74499cd01739ed5c33831d7bab43c6699ead850e5a9781f9b95972eee4fde",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_verification.cljc": "a9e64088cba09520fb93789b09aecc3f8396ad44946d59576cf867d582e35250",
+              "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs": "4bdf3c484b689752c33c2f05f7a81c71de618e18e018a0ef0f812e4dacedb74d",
+              ".github/scripts/opencode_review_source_test.cljs": "0a11d664d4779104f55d3925d8f49e289a0906b422445af5dc22750c491cc850"
+            },
+            "removed_provider_variable_names": [
+              "OPENAI_API_KEY"
+            ],
+            "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+            "npm_user_config": "explicit empty task-owned file; project configuration retained"
+          },
+          {
+            "name": "cli-lint",
+            "argv": [
+              "pnpm",
+              "-C",
+              "packages/eta-mu",
+              "lint:kondo"
+            ],
+            "exit_code": 0,
+            "elapsed_seconds": 2.199,
+            "completed_at": "2026-10-23T06:50:16.303957+00:00",
+            "source": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+            "file_sha256": {
+              "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+              "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+              ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+              "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+              "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "0f2133e5c45eb284597995da43c05cae52fe050daa7c36a6eb9b29cbf74d869d",
+              "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+              "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+              ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+              ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+              ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+              ".github/scripts/opencode_review_verification_test.cljs": "01becafaa1cc37e1def294874870eff8e85147039b952e234f71f41150eb18dc",
+              ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_source.cljc": "54b0dcfd5833f227d819823ff6ff761421dd70a70eb2c4fa2a0e7d86c2fe2bcd",
+              "packages/eta-mu/src/cljs/eta_mu/law/review_verification.cljc": "0fe74499cd01739ed5c33831d7bab43c6699ead850e5a9781f9b95972eee4fde",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_verification.cljc": "a9e64088cba09520fb93789b09aecc3f8396ad44946d59576cf867d582e35250",
+              "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs": "4bdf3c484b689752c33c2f05f7a81c71de618e18e018a0ef0f812e4dacedb74d",
+              ".github/scripts/opencode_review_source_test.cljs": "0a11d664d4779104f55d3925d8f49e289a0906b422445af5dc22750c491cc850"
+            },
+            "removed_provider_variable_names": [
+              "OPENAI_API_KEY"
+            ],
+            "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+            "npm_user_config": "explicit empty task-owned file; project configuration retained"
+          },
+          {
+            "name": "cli-release",
+            "argv": [
+              "pnpm",
+              "-C",
+              "packages/eta-mu",
+              "build"
+            ],
+            "exit_code": 0,
+            "elapsed_seconds": 17.156,
+            "completed_at": "2026-10-23T06:50:33.461541+00:00",
+            "source": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+            "file_sha256": {
+              "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+              "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+              ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+              "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+              "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "0f2133e5c45eb284597995da43c05cae52fe050daa7c36a6eb9b29cbf74d869d",
+              "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+              "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+              ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+              ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+              ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+              ".github/scripts/opencode_review_verification_test.cljs": "01becafaa1cc37e1def294874870eff8e85147039b952e234f71f41150eb18dc",
+              ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_source.cljc": "54b0dcfd5833f227d819823ff6ff761421dd70a70eb2c4fa2a0e7d86c2fe2bcd",
+              "packages/eta-mu/src/cljs/eta_mu/law/review_verification.cljc": "0fe74499cd01739ed5c33831d7bab43c6699ead850e5a9781f9b95972eee4fde",
+              "packages/eta-mu/src/cljs/eta_mu/domain/review_verification.cljc": "a9e64088cba09520fb93789b09aecc3f8396ad44946d59576cf867d582e35250",
+              "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs": "4bdf3c484b689752c33c2f05f7a81c71de618e18e018a0ef0f812e4dacedb74d",
+              ".github/scripts/opencode_review_source_test.cljs": "0a11d664d4779104f55d3925d8f49e289a0906b422445af5dc22750c491cc850"
+            },
+            "removed_provider_variable_names": [
+              "OPENAI_API_KEY"
+            ],
+            "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+            "npm_user_config": "explicit empty task-owned file; project configuration retained"
+          }
+        ]
+      },
+      "qualification": false,
+      "CMS_Cephalon": "paused"
+    },
+    "independent_verifier": {
+      "observed_at": "2026-10-23T06:54:41.239771+00:00",
+      "reviewer": "independent scoped collection_stability agent",
+      "source_commit": "c9fc461f2a14d613e9f1897f5143676378e154c2",
+      "source_files": [
+        {
+          "path": "packages/eta-mu/src/cljs/eta_mu/law/review_verification.cljc",
+          "sha256": "0fe74499cd01739ed5c33831d7bab43c6699ead850e5a9781f9b95972eee4fde",
+          "unchanged": true,
+          "git_blob": "d47583a4113cb1ba09db6273332ef0a7089aad62"
+        },
+        {
+          "path": "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs",
+          "sha256": "0f2133e5c45eb284597995da43c05cae52fe050daa7c36a6eb9b29cbf74d869d",
+          "unchanged": true,
+          "git_blob": "9c758369cdccd6a734bfe99eb916ac98a4971bae"
+        },
+        {
+          "path": "packages/eta-mu/src/cljs/eta_mu/domain/review_verification.cljc",
+          "sha256": "a9e64088cba09520fb93789b09aecc3f8396ad44946d59576cf867d582e35250",
+          "unchanged": true,
+          "git_blob": "d0a3581f12d103510d73db6556397dfdf7198db2"
+        },
+        {
+          "path": "packages/eta-mu/src/cljs/eta_mu/infra/review_verification.cljs",
+          "sha256": "4bdf3c484b689752c33c2f05f7a81c71de618e18e018a0ef0f812e4dacedb74d",
+          "unchanged": true,
+          "git_blob": "f768820510e0cb5df4d97d80ce6cee90467b1d42"
+        },
+        {
+          "path": ".github/scripts/opencode_review_verification_test.cljs",
+          "sha256": "01becafaa1cc37e1def294874870eff8e85147039b952e234f71f41150eb18dc",
+          "unchanged": true,
+          "git_blob": "22b0b7924d4dc7c228a86527d1bca7028653355a"
+        }
+      ],
+      "qualification": false,
+      "qualification_scope": "Local inert composition and source-bound verification only; no original G/executed caller authentication, full22-tool profile/native input reconstruction, native review/publication/adoption credit. Existing G/caller policy unchanged.",
+      "completed": true,
+      "findings": [],
+      "actual_pinned_runtime": {
+        "cases": 28,
+        "passed": 28,
+        "failed": 0,
+        "raw_result_exit_code": 0,
+        "raw_result_stderr_bytes": 0,
+        "resources": {
+          "runtimes": 0,
+          "workers": 0
+        },
+        "positive_cases": 4,
+        "negative_cases": 24,
+        "controls": [
+          "Actual physical ZIP and pinned Muse capsule; no fake canonical verdict",
+          "Producer1/review1, producer1/review2 and producer1/max-safe-review positives",
+          "All11required proof fields independently omitted",
+          "Extra proof/provenance/full-diff fields refuse under source-owned exact schemas",
+          "Producer/review cross-repository and workflow-ref mismatches refuse",
+          "Numeric attempt values, noncanonical IDs and precision-boundary future producer refuse",
+          "Semantically equal manifest with changed whitespace bytes verifies using its actual hash",
+          "Same semantic manifest with the old valid canonical byte hash refuses inside actual runtime",
+          "Verified actual manifest identity replaces caller identity in reconstruction callback",
+          "All effects empty; runtime/worker resources zero"
+        ]
+      },
+      "portable_decimal_reference": {
+        "cases": 270,
+        "reference": "Independent Python ASCII fullmatch and arbitrary-precision integer arithmetic; safe native review bound. No product lexical comparison copied.",
+        "owning_nbb_passed": 270,
+        "babashka_passed": 270,
+        "byte_identical_actual_value_vectors": true,
+        "counterexamples": []
+      },
+      "scope_limits": [
+        "Reused registered fixture helpers from exact source prefix; independent input mutations/assertions and Python arithmetic reference.",
+        "No registered full suite repeated; no tracked file, Git/card/ledger/native mutations.",
+        "No broader security/producer/native source-custody completion claim."
+      ],
+      "raw_evidence": [
+        "source-before.json",
+        "actual-probe.cljs",
+        "actual-results.json",
+        "actual-values.json",
+        "decimal-reference.json",
+        "decimal-probe.cljc",
+        "decimal-nbb.json",
+        "decimal-bb.json",
+        "decimal-summary.json"
+      ]
+    },
+    "source_profile": {
+      "at": "2026-10-23T06:49:30.707202+00:00",
+      "muse_revision": "c1369c223cf3c57e3e31934a6d746bfcdfe73f5a",
+      "eta_workflow_sha256": "ff76052bada6c56797901a796b21393c3b2a5c2a2b1b7bd1e302ade38b0551dd",
+      "nbb_version": "1.5.212",
+      "pure_config_load_exit": 0,
+      "actual_plugin_load_exit": 1,
+      "actual_plugin_failure": "Could not find namespace: shadow.esm",
+      "actual_plugin_exact_shadow_successor_exit": 1,
+      "actual_plugin_exact_shadow_successor_failure": "deftool does not exist",
+      "jvm_entrypoint_exit": 0,
+      "jvm_stderr_bytes": 0,
+      "actual_jvm_macro_present": true,
+      "permission_count": 22,
+      "permission_names": [
+        "actor_list",
+        "actor_mailbox",
+        "actor_monitor",
+        "agent_list",
+        "muse_phases",
+        "phase_conclusions",
+        "phase_filter",
+        "phase_head",
+        "phase_list_active",
+        "phase_list_idle",
+        "phase_observations",
+        "phase_tail",
+        "review_assess_diff_chunk",
+        "review_begin",
+        "review_classify_finding",
+        "review_propose_finding",
+        "review_read_diff_chunk",
+        "review_record_evidence",
+        "review_status",
+        "review_submit",
+        "task_list",
+        "task_status"
+      ],
+      "equals_independent_source_names": true,
+      "equals_workflow_expected_names": true,
+      "all_permissions_allow": true,
+      "active_profile": ":dev",
+      "actual_full_adapter_compiled": false,
+      "actual_full_adapter_observed": false,
+      "actor_init_or_handlers_invoked": false,
+      "producer_executed_profile_established": false,
+      "native_authentication_or_adoption_credit": false,
+      "source_mutations": false,
+      "capture_scope": "root-owned only",
+      "remaining_boundary": [
+        "Pinned JVM-only deftool/defplugin macros are unavailable to the actual NBB cljs resource loader.",
+        "The existing generated entrypoint requires compiled CLJS plugin namespaces and the host boundary, not JVM data evaluation; only entrypoint generation and pure host config rendering were executed.",
+        "The workflow public export calls host/activate!, which invokes plugins.actors/init! -> backend/ensure! and therefore is outside this no-actor-execution scope.",
+        "To establish actual full adapter source expectation, use the pinned real CLJS/Shadow compiler with its exact dependency closure and a capture-only observer of the existing pipeline/adapter; do not invoke plugin/activate! or substitute handler descriptors."
+      ]
+    },
+    "independent_profile": {
+      "at": "2026-10-23T06:53:13.393238+00:00",
+      "source_files_verified_against_muse_c1369": 38,
+      "source_manifest_records_verified": 38,
+      "artifact_manifest_files_verified": 69,
+      "pinned_workflow_bytes_equal": true,
+      "workflow_heredocs_verified": 3,
+      "cached_jvm_jars_verified": 3,
+      "shadow_dependency_archive_and_member_verified": true,
+      "permission_names": {
+        "count": 22,
+        "equals_exact_workflow_tools": true,
+        "all_allow": true,
+        "workflow_sha256": "ff76052bada6c56797901a796b21393c3b2a5c2a2b1b7bd1e302ade38b0551dd"
+      },
+      "jvm_independent_check": {
+        "exit_code": 0,
+        "stdout": "{:existing-pure-entrypoint-source-equal true, :existing-host-config-source-equal true, :actual-resource-symbols [plugins.review-pipeline/plugin plugins.actors/plugin], :permission-count 22, :compiled-adapter-established false, :plugin-activation-performed false}\n",
+        "stderr_bytes": 0
+      },
+      "all_materialized_evidence_unchanged": true,
+      "actionable_findings": [],
+      "qualification": "Actual source/configuration and pure JVM generation evidence only. No compiled/observed 22-tool adapter, actual producer execution, authentication, adoption or approval credit.",
+      "remaining_limits": [
+        "Retained NBB plugin loads both failed at actual loader/macro boundaries.",
+        "JVM command invoked actual generator and private host renderer; independent audit recomputed only their pure functions and did not invoke plugin activation or handlers.",
+        "Generated entrypoint references actual plugin resources but has not been compiled/evaluated as a CLJS adapter."
+      ],
+      "mutations": "Only profile-independent-review root capture files; no product, source-profile evidence, Git, card or ledger changes."
+    },
+    "preservation": {
+      "prefixes": {
+        "receipts.edn": {
+          "base_bytes": 646799,
+          "base_sha256": "093b80b50cc4857c9c3918c37ce0bbdc7d499fd2dc273b94067e6e102fd531fc",
+          "current_bytes": 653051,
+          "prefix_preserved": true
+        },
+        "kanban/.events/ledger.edn": {
+          "base_bytes": 1881384,
+          "base_sha256": "dc826e29406aa259d21fdf71037eca3c967a97a18fa693b3ef7817e07a7109a8",
+          "current_bytes": 1890045,
+          "prefix_preserved": true
+        },
+        ".ημ/session-mycology/ledger.md": {
+          "base_bytes": 120514,
+          "base_sha256": "d38daa997d17616f57b20ec2e29fc2e60701072133556517f73f5ca4b285cb0c",
+          "current_bytes": 121146,
+          "prefix_preserved": true
+        },
+        ".ημ/session-reflections.edn": {
+          "base_bytes": 41622,
+          "base_sha256": "76a5109bd3e6f5d40a40b82f9f4b5d21838d832f267929e9d87ce82acf4ab4f3",
+          "current_bytes": 41622,
+          "prefix_preserved": true
+        }
+      },
+      "cards_preserved": 309,
+      "body_appends_only": [
+        "kanban/tasks/independently-admit-and-publish-review-evidence-from-trusted-default-code-1c707551.md"
+      ],
+      "qualification": false,
+      "CMS_Cephalon": "paused"
+    },
+    "receipt_rows": 363,
+    "historical_invalid": 71,
+    "historical_errors": 118,
+    "root_capture": ".ημ/stabilization/custody-20261023",
+    "qualification": false
   }
 }

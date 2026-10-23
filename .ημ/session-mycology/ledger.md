@@ -1364,3 +1364,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 9f02a61cb1b46e6b65c1b3e525c6eae025443aba3a59e6db8c04bd2f2adcd9f0
   note: Measure synchronous result decoding at the real artifact boundary; preserve complete bytes and Clojure types through a fixed host DTO. Validate malformed history before arithmetic. Verify runtime allegations against the pinned loader and actual native suite logs. No same-session promotion.
+
+- ts: 2026-10-23T06:55:36.426Z
+  session: foresight-stabilization
+  task: Bind original producer attempts and exact manifest bytes without inventing native custody
+  p-efficiency: 0.85
+  p-friction: 0.6
+  p-skill-candidate: 0.5
+  spore: none
+  receipt-refs: b2131e9609a5156eed4f46d6bf397c9ce27523e3717f408c93f90d930938f8ba
+  note: Compare the actual producer schema before centralizing verification. Review reruns may reuse earlier deterministic evidence; preserve both attempt identities. Source configuration generation is distinct from compiled adapter and authenticated execution proof. No new spore or same-session promotion.
