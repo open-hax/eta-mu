@@ -659,5 +659,204 @@
       (is (= 1 (event-count store))
           "Repeating the exact visible event is idempotent and never issues a capability."))))
 
+(defn- started-installation []
+  (let [store (installation)
+        reservation (call-api "eta-mu.infra.review-intent" "transition!"
+                              store context-a {:state :reserved})
+        started (call-api "eta-mu.infra.review-intent" "transition!"
+                          store context-a {:state :post-started :expected-version 0
+                                           :owner "outcome-worker"})]
+    (is (= :appended (:status reservation)) (pr-str reservation))
+    (is (= :appended (:status started)) (pr-str started))
+    [store started]))
+
+(defn- unknown! [store receipt]
+  (call-api "eta-mu.infra.review-intent" "record-unknown!" store context-a receipt))
+
+(deftest durable-unknown-transition-preserves-exact-started-claim
+  (let [projection (call-api "eta-mu.domain.review-intent" "replay" stream-key
+                             [reserved-a started-a])
+        command {:state :post-unknown :expected-version 1
+                 :owner "inert-worker" :claim-id "inert-claim"}
+        proposal (call-api "eta-mu.domain.review-intent" "transition"
+                           admission-a projection command)]
+    (is (= :append (:status proposal)) (pr-str proposal))
+    (is (= {:lock-key stream-key :intent-key intent-key-a :binding binding-a
+            :state :post-unknown :intent-version 2
+            :owner "inert-worker" :claim-id "inert-claim"}
+           (:event-data proposal)))
+    (is (= 3 (:event-seq proposal)))
+    (is (= [started-id] (:causes proposal)))
+    (doseq [bad [(assoc command :owner "other") (assoc command :claim-id "other")
+                 (dissoc command :owner) (dissoc command :claim-id)
+                 (assoc command :expected-version 0) (assoc command :expected-version 2)]]
+      (is (= :refused (:status (call-api "eta-mu.domain.review-intent" "transition"
+                                        admission-a projection bad))) (pr-str bad)))
+    (doseq [history [[] [reserved-a] [reserved-a started-a observed-a]]]
+      (is (= :refused (:status
+                       (call-api "eta-mu.domain.review-intent" "transition" admission-a
+                                 (call-api "eta-mu.domain.review-intent" "replay" stream-key history)
+                                 command)))))
+    (is (= :refused (:status (call-api "eta-mu.domain.review-intent" "transition"
+                                      admission-b projection command))))))
+
+(deftest unknown-replay-retains-claim-and-keeps-the-shared-slot-active
+  (let [unknown (-> (event observed-id 3 [started-id] intent-key-a binding-a
+                          :post-unknown 2 stream-key)
+                    (assoc-in [:event/data :owner] "inert-worker")
+                    (assoc-in [:event/data :claim-id] "inert-claim"))
+        history [reserved-a started-a unknown]
+        projection (call-api "eta-mu.domain.review-intent" "replay" stream-key history)]
+    (is (= :replayed (:status projection)))
+    (is (= "inert-worker" (get-in projection [:intents intent-key-a :owner])))
+    (is (= "inert-claim" (get-in projection [:intents intent-key-a :claim-id])))
+    (is (= :refused (:status (call-api "eta-mu.domain.review-intent" "transition"
+                                      admission-b projection {:state :reserved}))))
+    (doseq [bad [(assoc-in unknown [:event/data :owner] "substituted")
+                 (assoc-in unknown [:event/data :claim-id] "substituted")
+                 (assoc-in unknown [:event/data :owner] nil)
+                 (assoc-in unknown [:event/data :claim-id] nil)]]
+      (is (= :refused (:status (call-api "eta-mu.domain.review-intent" "replay"
+                                        stream-key [reserved-a started-a bad]))) (pr-str bad)))))
+
+(deftest real-opaque-outcome-survives-wire-consumption-and-journals-once
+  (let [[store started] (started-installation)
+        receipt (:outcome-receipt started)
+        capability (:capability started)]
+    (is (some? receipt))
+    (is (not (map? receipt)))
+    (is (true? (call-api "eta-mu.infra.review-intent" "consume-capability!" capability binding-a)))
+    (let [result (unknown! store receipt)
+          events (mapv reader/read-string
+                       (remove str/blank? (str/split-lines
+                                           (.readFileSync fs (:ledger-file store) "utf8"))))
+          projection (call-api "eta-mu.domain.review-intent" "replay" stream-key events)]
+      (is (= :appended (:status result)) (pr-str result))
+      (is (= :post-unknown (:state result)))
+      (is (false? (:capability-issued? result)))
+      (is (not-any? #(contains? result %) [:capability :outcome-receipt]))
+      (is (= 3 (event-count store)))
+      (is (= :post-unknown (get-in projection [:intents intent-key-a :state])))
+      (is (= "outcome-worker" (get-in projection [:intents intent-key-a :owner])))
+      (is (= (:claim-id started) (get-in projection [:intents intent-key-a :claim-id])))
+      (is (= :refused (:status (unknown! store receipt))))
+      (is (= :refused (:status
+                       (call-api "eta-mu.infra.review-intent" "transition!"
+                                 store context-b {:state :reserved}))))
+      (is (false? (call-api "eta-mu.infra.review-intent" "consume-capability!" capability binding-a))))))
+
+(deftest forged-and-cross-store-outcomes-cannot-retire-wire-authority
+  (let [[store started] (started-installation)
+        other (installation)
+        vault (call-api "eta-mu.extern.review-intent" "new-opaque-vault")
+        fake ((:put! vault) {:kind :outcome :store store :binding binding-a
+                             :claim-id (:claim-id started) :expected-version 1})]
+    (doseq [[target receipt] [[store fake] [store (js/Symbol "forged")]
+                             [other (:outcome-receipt started)]
+                             [store {:claim-id (:claim-id started) :expected-version 1
+                                     :owner "outcome-worker" :authorized? true}]]]
+      (is (= :refused (:status (unknown! target receipt))) (pr-str receipt)))
+    (is (= 2 (event-count store)))
+    (is (= 0 (event-count other)))
+    (is (true? (call-api "eta-mu.infra.review-intent" "consume-capability!"
+                        (:capability started) binding-a)))
+    (is (= :appended (:status (unknown! store (:outcome-receipt started)))))))
+
+(deftest admitted-outcome-retires-wire-authority-before-uncertain-worker-launch
+  (let [[store started] (started-installation)
+        worker-var (resolve-api "eta-mu.extern.review-intent" "run-fixed-worker!")
+        calls (atom 0)
+        result (call-api "cljs.core" "with-redefs-fn"
+                        {worker-var (fn [_]
+                                      (swap! calls inc)
+                                      (is (false? (call-api "eta-mu.infra.review-intent" "consume-capability!"
+                                                           (:capability started) binding-a)))
+                                      (throw (js/Error. "uncertain outcome launch")))}
+                        #(unknown! store (:outcome-receipt started)))]
+    (is (= 1 @calls))
+    (is (= :unknown (:status result)) (pr-str result))
+    (is (false? (:capability-issued? result)))
+    (is (= 2 (event-count store)))
+    (is (false? (call-api "eta-mu.infra.review-intent" "consume-capability!"
+                         (:capability started) binding-a)))
+    (is (= :appended (:status (unknown! store (:outcome-receipt started)))))
+    (is (= 3 (event-count store)))))
+
+(deftest actual-outcome-append-uncertainty-recovers-without-new-post-authority
+  (let [[store started] (started-installation)
+        worker-var (resolve-api "eta-mu.extern.review-intent" "run-fixed-worker!")
+        result (call-api "cljs.core" "with-redefs-fn"
+                        {worker-var #(actual-uncertain-worker store %)}
+                        #(unknown! store (:outcome-receipt started)))]
+    (is (= :unknown (:status result)) (pr-str result))
+    (is (= :append-outcome (:reason result)))
+    (is (= 3 (event-count store)))
+    (is (some? (:recovery-receipt result)))
+    (is (false? (:capability-issued? result)))
+    (is (false? (call-api "eta-mu.infra.review-intent" "consume-capability!"
+                         (:capability started) binding-a)))
+    (let [recovered (call-api "eta-mu.infra.review-intent" "recover!" store (:recovery-receipt result))]
+      (is (= :replayed (:status recovered)) (pr-str recovered))
+      (is (false? (:capability-issued? recovered)))
+      (is (not-any? #(contains? recovered %) [:capability :outcome-receipt])))
+    (is (= :refused (:status (unknown! store (:outcome-receipt started)))))
+    (is (= 3 (event-count store)))))
+
+(deftest worker-observations-cannot-smuggle-outcome-authority
+  (let [store (installation)
+        forged (js/Symbol "worker-outcome")
+        worker-var (resolve-api "eta-mu.extern.review-intent" "run-fixed-worker!")
+        result (call-api "cljs.core" "with-redefs-fn"
+                        {worker-var (fn [_] {:status :replayed :state :post-started
+                                            :outcome-receipt forged :outcome-issued? true})}
+                        #(call-api "eta-mu.infra.review-intent" "transition!"
+                                   store context-a {:state :reserved}))]
+    (is (not (contains? result :outcome-receipt)))
+    (is (not (true? (:outcome-issued? result))))
+    (is (= :refused (:status (unknown! store forged))))
+    (is (= 0 (event-count store)))))
+
+(deftest public-transition-cannot-submit-caller-outcomes
+  (let [[store started] (started-installation)]
+    (doseq [state [:post-unknown :observed :ambiguous-absence]]
+      (let [result (call-api "eta-mu.infra.review-intent" "transition!"
+                             store context-a {:state state :expected-version 1
+                                              :claim-id (:claim-id started) :owner "outcome-worker"
+                                              :outcome-receipt (:outcome-receipt started)
+                                              :authenticated? true})]
+        (is (= :refused (:status result)) (pr-str result))))
+    (is (= 2 (event-count store)))
+    (is (true? (call-api "eta-mu.infra.review-intent" "consume-capability!"
+                        (:capability started) binding-a)))))
+
+(deftest fresh-started-acknowledgment-must-match-claim-and-version
+  (doseq [change [#(dissoc % :claim-id) #(assoc % :claim-id "different-claim")
+                  #(dissoc % :intent-version) #(assoc % :intent-version 0)
+                  #(assoc % :intent-version 2)]]
+    (let [store (installation)
+          worker-var (resolve-api "eta-mu.extern.review-intent" "run-fixed-worker!")
+          result (call-api "cljs.core" "with-redefs-fn"
+                          {worker-var (fn [request]
+                                        (change {:status :appended :state :post-started
+                                                 :claim-id (get-in request [:command :claim-id])
+                                                 :intent-version 1}))}
+                          #(call-api "eta-mu.infra.review-intent" "transition!"
+                                     store context-a {:state :post-started :expected-version 0
+                                                      :owner "ack-control"}))]
+      (is (= :unknown (:status result)) (pr-str result))
+      (is (false? (:capability-issued? result)))
+      (is (not-any? #(contains? result %) [:capability :outcome-receipt])))))
+
+(deftest valid-outcome-retires-wire-authority-even-on-known-preflight-refusal
+  (let [[store started] (started-installation)
+        result (with-unavailable-worker-installation store
+                 #(unknown! store (:outcome-receipt started)))]
+    (is (= :refused (:status result)) (pr-str result))
+    (is (= :worker-preflight (:reason result)))
+    (is (false? (:capability-issued? result)))
+    (is (false? (call-api "eta-mu.infra.review-intent" "consume-capability!"
+                         (:capability started) binding-a)))
+    (is (= :appended (:status (unknown! store (:outcome-receipt started)))))))
+
 (when (= nbb/*file* (nbb/invoked-file))
   (test/run-tests 'opencode-review-intent-test))
