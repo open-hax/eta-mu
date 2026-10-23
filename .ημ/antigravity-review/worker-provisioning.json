@@ -325,7 +325,7 @@
     "runtime_revision": "8b6fe29ad0df2cb053050ea352082aef1f0a0fdb",
     "evidence": "service-qualification-R5.json",
     "files": 49,
-    "archive_sha256": "e999a30fe1d9edfe4bfb0a115e0582659045038dd8cbc8aa66595a862595c442",
+    "archive_sha256": "c5a668a89c2d4a61c1e356b760eab0d3351e74002492c7943f8cb6fe479e121c",
     "result": {
       "schema": "open-hax.antigravity-service-qualification/v1",
       "runtime_revision": "8b6fe29ad0df2cb053050ea352082aef1f0a0fdb",
@@ -482,6 +482,19 @@
         "Successful imported CLI advisory evidence supplies no native GitHub approval, merge or deployment credit."
       ],
       "passed": true
+    },
+    "evidence_kind": "compact-descriptor-with-complete-qualification",
+    "lossless_archive_sha256": "e999a30fe1d9edfe4bfb0a115e0582659045038dd8cbc8aa66595a862595c442",
+    "raw_custody": {
+      "operator_cache": "/home/err/.local/share/antigravity-review/qualification/20261023/R5-service",
+      "raw_files": "raw/",
+      "lossless_archive": "service-qualification-R5.lossless.json",
+      "lossless_archive_bytes": 104359,
+      "lossless_archive_sha256": "e999a30fe1d9edfe4bfb0a115e0582659045038dd8cbc8aa66595a862595c442",
+      "git_lossless_revision": "321cb772c5b61d99d5ae1d63bb1a5f3adf71e450",
+      "git_lossless_path": ".\u03b7\u03bc/antigravity-review/service-qualification-R5.json",
+      "public_after_source_branch_push": true,
+      "reason": "Keep current complete PR diff below unchanged1MiB review ceiling while preserving original bytes."
     }
   },
   "negative_runner_canaries": {
