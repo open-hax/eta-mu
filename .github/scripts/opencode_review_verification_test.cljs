@@ -2,7 +2,8 @@
 (ns opencode-review-verification-test
   "Actual pinned Muse code and archives; inert reconstruction is not native custody."
   (:require [cljs.test :as t :refer [deftest is async]] [nbb.core :as nbb]
-            [clojure.string :as str] ["node:fs" :as fs] ["node:path" :as path]
+            [clojure.string :as str] [cljs.reader :as reader]
+            ["node:fs" :as fs] ["node:path" :as path] ["node:child_process" :as cp]
             ["node:os" :as os] ["node:crypto" :as crypto] ["node:zlib" :as zlib] ["node:module" :refer [createRequire]]))
 (def muse "c1369c223cf3c57e3e31934a6d746bfcdfe73f5a")
 (def eta "6a796582d74f93c1a1f18ca5c89eb3a0b19445eb")
@@ -225,6 +226,60 @@
         (done)))))
 (deftest copied-runtime-canonicalizes-only-its-owned-temp-root
   (async done (temporary-root-custody done)))
+(deftest runtime-failure-cleanup-retains-canonical-directory-custody
+  (doseq [mode ["canonicalization" "seal-retarget"]]
+    (let [parent (.realpathSync fs (.mkdtempSync fs (.join path (.tmpdir os) "eta-runtime-cleanup-")))
+          physical (.join path parent "physical") alternate (.join path parent "alternate")
+          alias (.join path parent "alias") preload (.join path parent "fault.cjs")
+          probe (.join path parent "probe.cljs")]
+      (try
+        (.mkdirSync fs physical)
+        (.mkdirSync fs alternate)
+        (.symlinkSync fs physical alias "dir")
+        (.writeFileSync
+          fs preload
+          (str "const fs=require('node:fs'),path=require('node:path');"
+               "const parent=" (js/JSON.stringify parent) ",mode=" (js/JSON.stringify mode) ";"
+               "const physical=path.join(parent,'physical'),alias=path.join(parent,'alias'),alternate=path.join(parent,'alternate');"
+               "const realpath=fs.realpathSync,write=fs.writeFileSync;"
+               "fs.realpathSync=function(name,...args){"
+               "if(mode==='canonicalization'&&typeof name==='string'&&name.startsWith(alias+'/eta-immutable-review-runtime-'))"
+               "throw Error('injected canonicalization failure');return realpath.call(fs,name,...args);};"
+               "fs.writeFileSync=function(name,...args){"
+               "if(mode==='seal-retarget'&&typeof name==='string'&&name.startsWith(physical+'/eta-immutable-review-runtime-')&&name.endsWith('/runtime.json')){"
+               "const owned=path.dirname(name),unrelated=path.join(alternate,path.basename(owned));"
+               "fs.mkdirSync(unrelated);write.call(fs,path.join(unrelated,'marker'),'retain');"
+               "fs.unlinkSync(alias);fs.symlinkSync(alternate,alias,'dir');globalThis.cleanupProbe={owned,unrelated};"
+               "throw Error('injected seal failure after parent retarget');}return write.call(fs,name,...args);};"
+               "require('node:module').syncBuiltinESMExports();"))
+        (.writeFileSync
+          fs probe
+          (str "(require '[eta-mu.extern.review-verification :as runtime] '[eta-mu.law.review-verification :as law] '[\"node:fs\" :as fs])\n"
+               "(aset (.-env js/process) \"TMPDIR\" " (pr-str alias) ")\n"
+               "(let [result (runtime/open-runtime! " (pr-str (.realpathSync fs capsule)) " law/descriptor) "
+               "state (js->clj (aget js/globalThis \"cleanupProbe\") :keywordize-keys true)] "
+               "(prn {:result result :resources (runtime/resources) :physical-entries "
+               "(vec (array-seq (.readdirSync fs " (pr-str physical) "))) "
+               ":owned-remains? (when (:owned state) (.existsSync fs (:owned state))) "
+               ":unrelated-marker-remains? (when (:unrelated state) "
+               "(.existsSync fs (str (:unrelated state) \"/marker\")))}))"))
+        (let [result (cp/spawnSync (.-execPath js/process)
+                                  #js ["--require" preload
+                                       (.resolve path "packages/eta-mu/node_modules/nbb/cli.js")
+                                       "-cp" "packages/eta-mu/src/cljs" probe]
+                                  #js {:encoding "utf8" :timeout 15000 :maxBuffer 1048576
+                                       :env #js {:HOME "/tmp" :PATH "/usr/bin:/bin" :LANG "C.UTF-8"
+                                                  :LC_ALL "C.UTF-8" :NODE_OPTIONS ""}})
+              observed (when (= 0 (.-status result)) (reader/read-string (.-stdout result)))]
+          (is (= 0 (.-status result)) (str mode " " (.-stdout result) (.-stderr result)))
+          (is (= :refused (get-in observed [:result :status])) (pr-str observed))
+          (is (= {:runtimes 0 :workers 0} (:resources observed)))
+          (is (= [] (:physical-entries observed)) "Failure cleanup removes the actual owned directory")
+          (when (= mode "seal-retarget")
+            (is (false? (:owned-remains? observed)))
+            (is (true? (:unrelated-marker-remains? observed))
+                "A mutable lexical alias cannot redirect cleanup into another directory")))
+        (finally (.rmSync fs parent #js {:recursive true :force true}))))))
 (deftest actual-muse-native-payload-projection (async done (publisher-differential done)))
 (deftest actual-pinned-verifier-causal-controls (async done (controls done)))
 (defmethod t/report [::t/default :end-run-tests] [r] (when-not (t/successful? r) (set! (.-exitCode js/process) 1)))
