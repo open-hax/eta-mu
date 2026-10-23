@@ -818,5 +818,227 @@
     },
     "root_capture": ".ημ/stabilization/outcomes-20261023",
     "qualification": false
+  },
+  "native_review_repairs_execution": {
+    "source": "7002b307da9bec55053fddeb640543d6a7e54da5",
+    "note": "Executed native review repairs at source 7002b307da9bec55053fddeb640543d6a7e54da5, following tests-only RED before each product change. Collection RED 5a77f33a has 33 tests/1022 assertions and 295 causal failures; GREEN 8a0785fb passes all, retaining decision/security/identity/source facts while ignoring only known resource bookkeeping; 445 actual NBB/Babashka values match. Status RED 493c604e has 18/602 and 20 causal failures; GREEN 5316cee2 validates complete history before sort/arithmetic, preserves earliest refusal precedence and passes 168 actual host parity values. Independent-author collection/status challenges pass 217 shared controls plus 28 additional status controls, with no remaining narrow finding. Native helper temporary-parent RED 974b1755 has 6/71 with six failures and immutable runtime 3/110 with one failure; f429c070 makes positive copies canonical without weakening caller installation alias refusal and applies neutral requested suite docstring. Independent cleanup P2 at that source is repaired through RED 4a4e7787 (4/120, three failures) then GREEN 1b7defe0: immediately retain canonical owned path. Same retarget probe and ten coordinator assertions preserve unrelated marker, remove owned directory, keep earlier failure cleanup and zero resources. Native config allegation 4356317416 is disproven by pinned NBB1.5.212 loader/cold tests and actual reviewed-C9 Sandbox job120247757541 intent29/200; no native withdrawal or rejection settlement yet. Archive body item 7cea32a6d564ed751e37cb64 is confirmed as parent parsing cost, not late verified acceptance: identical physical500 ZIP/96912594 decoded bytes previously stalled callback17s and reached4.58GB RSS. Tests-only RED de771ee7 has11/100 and three causal failures. GREEN7002b307 uses a fixed archive-specific structured-clone DTO, preserves all500 base64 values/all bytes and opaque Clojure metadata, and passes11/100. Exact same ZIP measures15.72s/15.69s under60s/20s budgets, callback21.66ms/19.14ms and RSS354MB/353MB; all500 member hashes/bytes independently verified. Independent26 malformed DTO,45 refusal roundtrips and3 deadline/refusal controls pass; existing worker authority, clocks and cleanup remain, without universal latency or member rehash authority claims. Full owning CLI/lint/release bind this frozen source with empty task npm user config and no authentication/deployment environment forwarding. C9 native full Sandbox/Sol/Rheos/sync succeeds only at its exact1db7f0c1 merge;23 carrier diagnostics and469023698-byte metadata-only artifact remain. Native review5624157822 has sixP2 threads plus the body item; fixes are not native settlement/approval. Original G/executed caller/profile tools/input custody, authenticated observed/ambiguous outcomes, full publisher/composition and protected adoption remain unfinished. Preserve309 states/planning/four prefixes, receipt362 prospective validity and historical71invalid/118errors, root23 accepted pins and100 changed paths with10 live evidence paths. CMS/Cephalon remain paused. No standalone planning, new card, model/POST/signing/credential/grant/protection/caller-pin/merge/deployment or adoption effect.",
+    "tests": "Collection33/1022; publication18/602; archive11/100; runtime4/120; helper6/71; intent40/390; actual portable445+168+12 values; independent outcome6+26+5, collection/status217+28, runtime10, DTO26+45+3; owning CLI194/587+workflows11/199, lint/release0compilerwarnings; known fixture/native carrier diagnostics remain.",
+    "commits": {
+      "collection_red": "5a77f33a7629c261abfd57a096cde44c030cd3e9",
+      "collection_green": "8a0785fbf3d835db6179f5524cdce92cc79dd63b",
+      "status_red": "493c604ee78e216a553217ef278701b52fff6a77",
+      "status_green": "5316cee2bfc962075d4a48b9781dac3b04d3dfb6",
+      "runtime_native_red": "974b17556e8e3cba31b37691dd913a1b3b567c23",
+      "runtime_initial_green": "f429c070435f38ff790c4d9ff970c90bfc3ec217",
+      "runtime_cleanup_red": "4a4e77878b5485d28ca21cddb1ab9477e425ad6e",
+      "runtime_cleanup_green": "1b7defe05b44c4e2a2a13262631d898acbaf863a",
+      "archive_red": "de771ee7e4a7486ff061e1a3816f566a0eee8240",
+      "archive_green": "7002b307da9bec55053fddeb640543d6a7e54da5"
+    },
+    "archive_measurement": {
+      "observed_at": "2026-10-23T05:54:03.434928+00:00",
+      "red_commit": "de771ee7e4a7486ff061e1a3816f566a0eee8240",
+      "head": "de771ee7e4a7486ff061e1a3816f566a0eee8240",
+      "extern_sha256": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+      "tests_sha256": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+      "source_unchanged_during_measurements": true,
+      "registered_tests": 11,
+      "registered_assertions": 100,
+      "registered_failures": 0,
+      "registered_errors": 0,
+      "configured_lint_errors": 0,
+      "configured_lint_warnings": 0,
+      "same_physical_zip_sha256": "92de615bf36f74162bb1e2e91a9f1910d74b32fcef3a2bc40498d98fc5e4425a",
+      "physical_bytes": 374175,
+      "members": 500,
+      "decoded_bytes": 96912594,
+      "retained_base64_characters": 129218000,
+      "both_runs_exact_all_500_member_bytes_hashes_verified": true,
+      "measurements": [
+        {
+          "operation_budget_ms": 60000,
+          "result": "verified",
+          "elapsed_ms": 15722.930371,
+          "parent_callback_ms": 21.65610800000104,
+          "heartbeat_gap_ms": 145.5247879999988,
+          "parent_rss_before": 353968128,
+          "parent_rss_after": 353968128
+        },
+        {
+          "operation_budget_ms": 20000,
+          "result": "verified",
+          "elapsed_ms": 15693.9333,
+          "parent_callback_ms": 19.14159599999948,
+          "heartbeat_gap_ms": 136.35644299999876,
+          "parent_rss_before": 352763904,
+          "parent_rss_after": 352763904
+        }
+      ],
+      "limitations": "Actual host measurements, not universal hard whole-API latency guarantee. Native artifact authentication, originalG/caller custody/fullpublisher and verifier IPC remain separate unfinished work."
+    },
+    "native_settlement": false,
+    "qualification": false,
+    "full_checks": {
+      "source": "7002b307da9bec55053fddeb640543d6a7e54da5",
+      "file_sha256": {
+        "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+        "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+        "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+        ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+        "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+        "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+        "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+        "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "5ec17a60d4b0714193417ae64c5c06d9789f37de388cb9890258eaae71b00c3f",
+        "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+        "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+        ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+        ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+        ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+        ".github/scripts/opencode_review_verification_test.cljs": "79f622b87018037bffe3b47e60278120a1cb007bbb556ff347fa61adc9b64907",
+        ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7"
+      },
+      "results": [
+        {
+          "name": "cli-test",
+          "argv": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "test"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 16.025,
+          "completed_at": "2026-10-23T05:59:44.057765+00:00",
+          "source": "7002b307da9bec55053fddeb640543d6a7e54da5",
+          "file_sha256": {
+            "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+            "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+            ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+            "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+            "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "5ec17a60d4b0714193417ae64c5c06d9789f37de388cb9890258eaae71b00c3f",
+            "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+            "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+            ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+            ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+            ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+            ".github/scripts/opencode_review_verification_test.cljs": "79f622b87018037bffe3b47e60278120a1cb007bbb556ff347fa61adc9b64907",
+            ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7"
+          },
+          "removed_provider_variable_names": [
+            "OPENAI_API_KEY"
+          ],
+          "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+          "npm_user_config": "explicit empty task-owned file; project configuration retained"
+        },
+        {
+          "name": "cli-lint",
+          "argv": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "lint:kondo"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 2.162,
+          "completed_at": "2026-10-23T05:59:46.221135+00:00",
+          "source": "7002b307da9bec55053fddeb640543d6a7e54da5",
+          "file_sha256": {
+            "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+            "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+            ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+            "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+            "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "5ec17a60d4b0714193417ae64c5c06d9789f37de388cb9890258eaae71b00c3f",
+            "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+            "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+            ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+            ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+            ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+            ".github/scripts/opencode_review_verification_test.cljs": "79f622b87018037bffe3b47e60278120a1cb007bbb556ff347fa61adc9b64907",
+            ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7"
+          },
+          "removed_provider_variable_names": [
+            "OPENAI_API_KEY"
+          ],
+          "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+          "npm_user_config": "explicit empty task-owned file; project configuration retained"
+        },
+        {
+          "name": "cli-release",
+          "argv": [
+            "pnpm",
+            "-C",
+            "packages/eta-mu",
+            "build"
+          ],
+          "exit_code": 0,
+          "elapsed_seconds": 18.555,
+          "completed_at": "2026-10-23T06:00:04.777371+00:00",
+          "source": "7002b307da9bec55053fddeb640543d6a7e54da5",
+          "file_sha256": {
+            "packages/eta-mu/src/cljs/eta_mu/law/review_intent.cljc": "0a7efdcac1f86126a88d8c92b2082586fcb61a0b4540e97d38e4d802bb60032b",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_intent.cljc": "4ad9209af005697796a2cca4b115730e1dc9ec78b324a669ebd5ebb87d65b1f4",
+            "packages/eta-mu/src/cljs/eta_mu/infra/review_intent.cljs": "2eeae3f6ffe044b3b71abd861d7ff00886e4f52a1761e6045da24b81c7fd2f64",
+            ".github/scripts/opencode_review_intent_test.cljs": "1accc1cd6bdc4c1df09217133c9617708c74c613276a85b2a91c1a433aaf2318",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_collection.cljc": "cc11fa569abfc99eb13d97bdedd43065861b131e8aac936a1d58ca91026e3463",
+            "packages/eta-mu/src/cljs/eta_mu/domain/review_publication.cljc": "fc0bd68e8bed41c707885507ef715e110a909fad5873bbee1b1e00abd7277705",
+            "packages/eta-mu/src/cljs/eta_mu/extern/review_archive.cljs": "41f67c3d7802bcaeda3bb806a1c09b9d359c9b59fa2b48a8173ffdf87b0d70fd",
+            "packages/eta-mu/src/cljs/eta_mu/extern/review_verification.cljs": "5ec17a60d4b0714193417ae64c5c06d9789f37de388cb9890258eaae71b00c3f",
+            "packages/eta-mu/intent-runtime/test_entry.cljs": "92e5198e57cde3ca2493dc04167699681f01420071ca9b2fd3497093bdf96b96",
+            "scripts/test.bb": "0c1d595051cb876e4c99b7e9867f0e03ff928d4f622192bb6faadd6a76dc0473",
+            ".github/scripts/opencode_review_collection_test.cljs": "15503222474a100fc1ef818a6f5fcd5d92484503bbda608accb6e1bb19530d93",
+            ".github/scripts/opencode_review_publish_test.cljs": "c28821d881d6f7ffba354eb2ce04bde1015ed694225c2155646781e73fac34f5",
+            ".github/scripts/opencode_review_archive_test.cljs": "717bc17715aeb3b961df38cf9f96bdb36aa58b7ecdb2995a8f4cfb177e29f081",
+            ".github/scripts/opencode_review_verification_test.cljs": "79f622b87018037bffe3b47e60278120a1cb007bbb556ff347fa61adc9b64907",
+            ".ημ/review-evidence/trusted-publication-review-scope/test_inspection.bb": "2e8e28aad38f1bfa2d2152b0a81cd71fa7202743063be1e0f20f54efc17b82d7"
+          },
+          "removed_provider_variable_names": [
+            "OPENAI_API_KEY"
+          ],
+          "environment_policy": "Runtime/path allowlist; authentication and deployment variables are not forwarded.",
+          "npm_user_config": "explicit empty task-owned file; project configuration retained"
+        }
+      ]
+    },
+    "receipt_rows": 362,
+    "historical_invalid": 71,
+    "historical_errors": 118,
+    "preservation": {
+      "prefixes": {
+        "receipts.edn": {
+          "base_bytes": 636385,
+          "base_sha256": "25e61a66187911f53ff0be6911a1432097e1df481de8d7bb0396b24da27ab0f7",
+          "current_bytes": 646799,
+          "prefix_preserved": true
+        },
+        "kanban/.events/ledger.edn": {
+          "base_bytes": 1866373,
+          "base_sha256": "a842f3db94bd5d9adf30c875e042cc3eba4fe9bc8274c630302db3e9c4b499a1",
+          "current_bytes": 1881384,
+          "prefix_preserved": true
+        },
+        ".ημ/session-mycology/ledger.md": {
+          "base_bytes": 119269,
+          "base_sha256": "38a9a55f819c6dfd68ebbea0e33c9726c42f29992910bf1ff1f99310a061ac69",
+          "current_bytes": 120514,
+          "prefix_preserved": true
+        },
+        ".ημ/session-reflections.edn": {
+          "base_bytes": 41622,
+          "base_sha256": "76a5109bd3e6f5d40a40b82f9f4b5d21838d832f267929e9d87ce82acf4ab4f3",
+          "current_bytes": 41622,
+          "prefix_preserved": true
+        }
+      },
+      "qualification": false,
+      "CMS_Cephalon": "paused",
+      "cards_preserved": 309
+    },
+    "root_capture": ".ημ/stabilization/outcomes-20261023"
   }
 }

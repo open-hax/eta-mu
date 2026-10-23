@@ -1354,3 +1354,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 9af8dbed920774010d7d6743e4cac7120abfcee2802d9b5269699248d635964d
   note: Wire consumption and outcome durability need distinct opaque authority. Validate the exact ACK before consuming its retry receipt. Refresh inert fixtures per case instead of weakening production time policy. Use empty user npm configuration for secret-free candidate builds and retain every failed attempt. No new spore/promotion.
+
+- ts: 2026-10-23T06:01:06.597Z
+  session: foresight-stabilization
+  task: Settle native repair premises with causal tests and exact source measurements
+  p-efficiency: 0.8
+  p-friction: 0.6
+  p-skill-candidate: 0.5
+  spore: none
+  receipt-refs: 9f02a61cb1b46e6b65c1b3e525c6eae025443aba3a59e6db8c04bd2f2adcd9f0
+  note: Measure synchronous result decoding at the real artifact boundary; preserve complete bytes and Clojure types through a fixed host DTO. Validate malformed history before arithmetic. Verify runtime allegations against the pinned loader and actual native suite logs. No same-session promotion.
