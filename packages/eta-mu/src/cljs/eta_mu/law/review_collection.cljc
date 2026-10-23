@@ -102,7 +102,7 @@
   (and (map? x) (= :get (:method x))
        (string? (:url x))
        (boolean (re-matches
-                 #"https://api\.github\.com/repos/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/(?:pulls/[1-9][0-9]*(?:/files\?per_page=(?:[1-9]|[1-9][0-9]|100)&page=[1-9][0-9]*)?|git/ref/(?:heads/[A-Za-z0-9_./-]+|pull/[1-9][0-9]*/merge)|commits/[0-9a-f]{40,64}|compare/[0-9a-f]{40,64}\.\.\.[0-9a-f]{40,64}|actions/runs/[1-9][0-9]*(?:/(?:artifacts(?:\?per_page=(?:[1-9]|[1-9][0-9]|100)&page=[1-9][0-9]*)?|attempts/[1-9][0-9]*(?:/jobs(?:\?per_page=(?:[1-9]|[1-9][0-9]|100)&page=[1-9][0-9]*)?)?))?|actions/workflows/[1-9][0-9]*))?"
+                 #"https://api\.github\.com/repos/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/(?:pulls/[1-9][0-9]*(?:/files\?per_page=(?:[1-9]|[1-9][0-9]|100)&page=[1-9][0-9]*|/reviews/[1-9][0-9]*(?:/comments\?per_page=(?:[1-9]|[1-9][0-9]|100)&page=[1-9][0-9]*)?)?|git/ref/(?:heads/[A-Za-z0-9_./-]+|pull/[1-9][0-9]*/merge)|commits/(?:[0-9a-f]{40}|[0-9a-f]{64})(?:/statuses\?per_page=(?:[1-9]|[1-9][0-9]|100)&page=[1-9][0-9]*)?|compare/[0-9a-f]{40,64}\.\.\.[0-9a-f]{40,64}|actions/runs/[1-9][0-9]*(?:/(?:artifacts(?:\?per_page=(?:[1-9]|[1-9][0-9]|100)&page=[1-9][0-9]*)?|attempts/[1-9][0-9]*(?:/jobs(?:\?per_page=(?:[1-9]|[1-9][0-9]|100)&page=[1-9][0-9]*)?)?))?|actions/workflows/[1-9][0-9]*))?"
                  (:url x)))))
 
 (defn registry-target [registry target-id]

@@ -193,30 +193,41 @@
        ;; occur the same number of times; missing and unexpected comments fail.
        (= (frequencies expected) (frequencies (map :payload actual)))))
 
-(defn- readback-bound? [now binding intent readback policy]
-  (let [review (:review readback) payload (:publication-payload binding)]
-    (and (= :trusted-native-readback (:origin readback))
-         (= (:intent-key binding) (:intent-key readback))
-         (= (:tuple binding) (:tuple readback))
-         (fresh? now (:observed-at-ms readback) policy)
-         (law/https-url? (:receipt-url readback))
-         (= (:receipt-url intent) (:receipt-url readback))
-         (law/positive? (:id review)) (= (:review-id intent) (:id review))
-         (= (:publisher binding) (:publisher review))
+(defn review-content-bound?
+  "Exact portable review/comment content comparison. No origin or identity proof."
+  [binding intent review]
+  (let [payload (:publication-payload binding)]
+    (and (law/positive? (:id review)) (= (:review-id intent) (:id review))
          (= (get-in binding [:tuple :head-sha]) (:head-sha review))
          (= (:event payload) (:event review)) (= (:body payload) (:body review))
          (true? (:complete? review))
          (comments-match? (:comments payload) (:comments review)
                           (:publisher binding) (get-in binding [:tuple :head-sha]) (:id review)))))
 
+(defn- readback-bound? [now binding intent readback policy]
+  (let [review (:review readback)]
+    (and (= :trusted-native-readback (:origin readback))
+         (= (:intent-key binding) (:intent-key readback))
+         (= (:tuple binding) (:tuple readback))
+         (fresh? now (:observed-at-ms readback) policy)
+         (law/https-url? (:receipt-url readback))
+         (= (:receipt-url intent) (:receipt-url readback))
+         (= (:publisher binding) (:publisher review))
+         (review-content-bound? binding intent review))))
+
+(defn status-content-bound?
+  "Portable status route/context/receipt/time comparison, independent of identity proof."
+  [now binding status]
+  (and (= (get-in binding [:tuple :merge-sha]) (:sha status))
+       (= law/context (:context status))
+       (law/https-url? (:receipt-url status))
+       (observed? now (:created-at-ms status))))
+
 (defn- history-bound? [now binding history policy]
   (and (law/status-history? history)
        (fresh? now (:observed-at-ms history) policy)
        (every? #(and (= (:publisher binding) (:publisher %))
-                      (= (get-in binding [:tuple :merge-sha]) (:sha %))
-                      (= law/context (:context %))
-                      (law/https-url? (:receipt-url %))
-                      (observed? now (:created-at-ms %))) (:statuses history))))
+                      (status-content-bound? now binding %)) (:statuses history))))
 
 (defn status-plan
   "Revalidate admission and complete native readback before proposing success

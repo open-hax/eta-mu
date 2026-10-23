@@ -36,7 +36,9 @@
                         (update :bytes + response-bytes)))
       (select-keys response [:data :next-url]))))
 
-(defn- make-reader [transport bounds start]
+(defn make-reader
+  "Share one bounded native GET accounting state across a composed observation."
+  [transport bounds start]
   (let [state (atom {:requests 0 :request-log [] :pages 0 :bytes 0})]
     {:state state :get (partial read-one! transport bounds start state)}))
 
@@ -97,7 +99,9 @@
                :unsupported (when (seq missing) [{:reason :patch-unavailable :files missing}])})
             (throw (ex-info "Native pull files count is incomplete" {:code :pull-files-truncated}))))))))
 
-(defn- ^:async tuple! [read entry n]
+(defn ^:async read-tuple!
+  "Read and validate the live PR/base/head/proposed-merge graph through a shared reader."
+  [read entry n]
   (let [name (get-in entry [:repository :full-name])
         repository (-> (await (read (str "https://api.github.com/repos/" name))) :data)
         pr (-> (await (read (str "https://api.github.com/repos/" name "/pulls/" n))) :data)
@@ -241,7 +245,7 @@
      :run-metadata run}))
 
 (defn- ^:async observation [read entry n run-id bounds]
-  (let [tuple (await (tuple! read entry n))
+  (let [tuple (await (read-tuple! read entry n))
         run (await (run-and-artifacts! read entry n run-id tuple bounds))
         files (await (pull-files! read entry n (get-in tuple [:raw :pull-request :changed_files]) bounds))]
     {:tuple tuple :run run :files files :repository (:native-repository tuple)}))

@@ -12,10 +12,8 @@
             ["node:fs" :as fs]))
 
 (nbb/await (nbb/load-file ".github/scripts/opencode_review_publish_test.cljs"))
-(doseq [layer ["law" "shape" "domain" "infra"]]
-  (let [file (str "packages/eta-mu/src/cljs/eta_mu/" layer "/review_readback."
-                  (if (= layer "infra") "cljs" "cljc"))]
-    (when (.existsSync fs file) (nbb/await (nbb/load-file file)))))
+(when (.existsSync fs "packages/eta-mu/src/cljs/eta_mu/infra/review_readback.cljs")
+  (nbb/await (nbb/load-file "packages/eta-mu/src/cljs/eta_mu/infra/review_readback.cljs")))
 
 (defn call-api [name & args]
   (if-let [f (resolve (symbol "eta-mu.infra.review-readback" name))]
@@ -112,7 +110,8 @@
     (is (not (collection-law/request? {:method :post :url url}))))
   (doseq [suffix ["/pulls/22/reviews" "/pulls/22/reviews/91/comments"
                   "/pulls/22/reviews/91?extra=1" "/pulls/22/reviews/91/comments?per_page=2&page=1&context=x"
-                  "/commits/heads/main/statuses?per_page=2&page=1" "/statuses/main"]]
+                  "/commits/heads/main/statuses?per_page=2&page=1" "/statuses/main"
+                  (str "/commits/" (apply str (repeat 41 "a")) "/statuses?per_page=2&page=1")]]
     (is (not (collection-law/request? {:method :get :url (str prefix suffix)})))))
 
 (defn ^:async positive-control [done]
@@ -184,6 +183,8 @@
                          [:body #(assoc-in % [0 :body] "forged")]
                          [:head #(assoc-in % [0 :commit_id] (apply str (repeat 40 "f")))]
                          [:membership #(assoc-in % [0 :pull_request_review_id] 92)]
+                         [:multiline #(assoc-in % [0 :start_line] 1)]
+                         [:reply #(assoc-in % [0 :in_reply_to_id] 102)]
                          [:null-position #(assoc-in % [0 :line] nil)]]]
     (when-let [[label mutate] (first cases)]
     (let [r (request) calls (atom [])
