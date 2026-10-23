@@ -41,7 +41,9 @@
 (defn missing-custody [request]
   (let [tuple (:tuple request)
         native (:native-context request)]
-    (cond-> []
+    ;; This partial port has no admitted native execution-proof capability.
+    ;; Coordinate shape or caller-authored flags cannot discharge that custody.
+    (cond-> [:native-execution-custody]
       (not (law/tuple? tuple)) (conj :native-tuple)
       (not (publication/commit? (:event-sha tuple))) (conj :original-event-sha)
       (not (and (publication/commit? (:workflow-sha native))
