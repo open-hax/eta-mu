@@ -1176,3 +1176,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 7598ef5cfb3e2bf326ec227a98d54802cb4c8614,dbeb654a-6c67-44fc-8121-990e9ad2d58f,sha256:82e59463ad5873188f1decfbf8644fb1a66229d6ea9f26e7f822014c1c86fceb
   note: Line-oriented Git porcelain is rendered text: exact owned Unicode/newline/quote paths need NUL framing before prefix admission. Keep actual foreign/tracked/staged/rename controls and real install/completion adapter tests. Registered340 genuine RED338pass/2assertionFAIL then GREEN340/340, normal cleanup and zero emitted warnings. Accepted canonical7ab is consumed only at the three existing defaults/fallbacks, with ordinary direct candidate PR workflow source still needing hosted qualification. Preserve first pin329PASS and installedchecker180s timeout as historical source results. The official checker deadlock fix uses a reader after process start; qualify a private exact upstream source build rather than disabling ShellCheck or filtering findings. Parent Git discovery can silently skip a patch in nested nonrepository archives: native parent ceiling plus no-index and exact fullpostimage guard establish actual application. Original pre-build refusal retained; normal isolated Go cache/config/resource bounds, installedtool preservation and unfiltered owning checker0 are explicit. Historical12global checker false positives remain FAIL, no Pyflakes credit when absent. No provider/model/hostedreview/adoption/merge/disposition credit. Portable candidate0, no spore or promotion.
+
+- ts: 2026-10-24T18:26:29.078035Z
+  session: chatgpt-rheos-sync-clojure-20261024
+  task: Restore explicit Clojure CLI setup in shared GitHub sync runner
+  p-efficiency: 0.75
+  p-friction: 0.35
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: .ημ/sessions/2026-10-24-rheos-sync-clojure/receipt.edn
+  note: Reused the owning GitHub sync CI's exact setup action and CLI version. YAML parse, setup ordering, shell syntax and diff checks pass. Local Clojure CLI and compiled repository command surfaces are absent, so build, dry-run and session-mycology command execution remain unavailable; this is a manually recorded reflection, no CLI admission or board transition claimed. Hosted validation and downstream private dependency access remain pending.

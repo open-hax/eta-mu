@@ -94,6 +94,14 @@ jobs:
       - name: Install eta-mu workspace
         run: pnpm --dir .eta-mu install --frozen-lockfile
 
+      - name: Install Clojure CLI
+        uses: DeLaGuardo/setup-clojure@ada62bb3282a01a296659d48378b812b8e097360 # v13.4
+        with:
+          cli: 1.12.5.1654
+
+      - name: Verify Clojure CLI
+        run: clojure -Sdescribe
+
       - name: Build Rheos projection executables
         run: pnpm --dir .eta-mu/packages/rheos exec shadow-cljs release cli github-sync
 
