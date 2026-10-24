@@ -44,6 +44,7 @@
     :cmd ["pnpm" "--dir" "packages/legacy/ai" "exec" "vitest" "run"
           "test/model-catalog-types.test.ts"]}
    {:label "contract-guard" :cmd ["node" "--test" "scripts/contract-guard.test.mjs"]}
+   {:label "auto-merge-workflow" :cmd ["node" "--test" "scripts/auto-merge-workflow.test.mjs"]}
    {:label "eta-mu" :pkg "eta-mu"}
    {:label "clio" :pkg "@eta-mu/clio"}
    {:label "rheos" :pkg "@eta-mu/rheos"}
