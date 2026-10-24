@@ -80,3 +80,20 @@ Successor PR #322 exact-head evidence: dry-run now enforces the live write-budge
 Final PR #322 review gate: Rheos comment serialization now preserves a blank line before the closing delimiter, and this card was rewritten through the ledger-backed CLI to normalize its evidence block. Final combined evidence: 197 Rheos tests / 1009 assertions, clj-kondo 0 errors / 0 warnings, and server, CLI, GitHub-sync, and app release builds with 0 warnings.
 
 ---
+## Scoped runtime repair — 2026-10-24
+
+User story: as an operator of the canonical Rheos GitHub projection, I need the
+shared sync runner to install its declared Clojure CLI dependency so scheduled
+syncs can reach the build instead of failing before projection.
+
+Evidence: run 40108987314 reached the Rheos build and reported
+`Executable 'clojure' not found on system path.` The owning GitHub sync CI
+workflow already installs CLI 1.12.5.1654 with an immutable setup action pin;
+the reusable live workflow only installs Java, pnpm, and Node.
+
+Plan and acceptance: reuse the owning CI's pinned Clojure CLI setup before the
+Rheos build; explicitly verify the CLI with `clojure -Sdescribe`; retain the
+existing build and projection arguments. Validate YAML, shell syntax, and diff
+locally, then require hosted build and dry-run evidence before claiming restored
+sync. Do not execute write-mode projection during this repair. Card status is
+unchanged; this scoped continuation does not claim completion.
