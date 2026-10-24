@@ -97,3 +97,21 @@ existing build and projection arguments. Validate YAML, shell syntax, and diff
 locally, then require hosted build and dry-run evidence before claiming restored
 sync. Do not execute write-mode projection during this repair. Card status is
 unchanged; this scoped continuation does not claim completion.
+
+### PR #365 regression continuation — 2026-10-24
+
+Native MiMo review 5639505463 on `cd41fde12a5e6c820285bf00ddd9a214b4b23741`
+identified that the existing legacy workflow test only protects tasks-dir
+containment. Extend that owning test to require the immutable Clojure setup
+action, declared CLI version, and actual `clojure -Sdescribe` verification before
+the shadow-cljs build. Establish RED against the pre-repair workflow and GREEN
+against this patch without changing workflow behavior or dependency access.
+
+Focused continuation verification: lock-resolved Vitest 2.1.9 runs the owning
+workflow file with 2 tests passing. The same new test against pre-repair workflow
+`7112c36440d180ca183d6a3f89661cee161fdae5` fails because the install step is
+absent (1 pass, 1 causal failure); the containment test still passes. Pinned
+Biome 2.3.5 reports zero warnings and no fixes on the touched test. The old
+literal GitHub-expression assertion is written as equivalent concatenated text
+to remove its preexisting Biome warning without changing its expected bytes.
+No runtime behavior, authentication, card status or historical receipt changes.
