@@ -5,7 +5,7 @@ status: "incoming"
 priority: "P1"
 points: "5"
 labels: ["github", "review", "antigravity", "foresight"]
-write-id: "1792914125936-0.85abfeelfau0m7vk83b"
+write-id: "1792918934979-0.6rskcri3w9mx0zya49t"
 ---
 
 ## Context
@@ -99,5 +99,11 @@ execution and runner-group denial proof remain separate deployment checks.
 
 ---
 Discovery anomaly (2026-10-25): prepare-only reproduction of Foresight hosted job 121107488412, bound to base 2b26173c2cbcf58f14abda2b4e710bd9a912e9bd and head 24642b151103cdf832d056d525bf303e9771bdce, found the aggregate normalized Git diff is 1,054,047 bytes against the existing 1,048,576-byte cap. The bounded child call surfaces ENOBUFS, which had been reported as generic process refusal. This specific output-cap classification issue was not in the original 2026-10-23 planning artifact; it was discovered during reproduction, and is not a newly approved plan. The refusal/cap remain correct: regression asserts explicit process-output-limit diagnostics and no artifact/model dispatch. Exact raw evidence and diff are retained in /home/err/.local/share/antigravity-review/diagnostics/eta-mu-pr148-run40172943858/. The diagnostic is committed as 08804506097fb8820c4aa222051cbbbe852d7d3e; no hosted rerun, native review admission, or approval credit is claimed.
+
+2026-10-25 CLI drift and context diagnostic. An isolated vendor CLI 1.4.7 comparison on base 2b26173c2cbcf58f14abda2b4e710bd9a912e9bd and head 0762e0d749c6bb6f2e76cf1611e1f63366e14801 used the same complete hosted input (3,238,712 bytes; SHA-256 4a34291b607cd77ee9ded244e3bcc5d31091879747c85f7730e5a3875c7e231b), pinned model gemini-3.8-flash-high and existing sandbox/bounds. It exited 0 with native status SUCCESS, but semantic result scope_complete=false (the only semantic error); reviewed path set matched all 91 paths. Provider-consumed length is unknown; this is diagnostic advisory evidence, not a review approval or provider-clipping proof. Full custody: /home/err/.local/share/antigravity-review/qualification/20261025/foresight-pr145-cli147-comparison/.
+
+The pinned 1.4.6 executable unexpectedly held vendor 1.4.7 bytes after unconfined metadata inspection; the triggering command is unknown. The original 1.4.6 binary remained at the preserved .old backup and was atomically restored: SHA-256 128780f5776959ba6a991bde1f0a8b699eee37a59ed30deb9926147fedfa56c4. Restoration manifest records settings/login unchanged and no model invocation. Subsequent guarded --version and models metadata commands exited 0 inside Bubblewrap with a read-only root; hash remained pinned and configured model appeared. Evidence: /home/err/.local/share/foresight-tools/agy-self-update-restoration-20261025.json and /home/err/.local/share/antigravity-review/qualification/20261025/cli-1.4.7-candidate/restored-guarded-metadata.json.
+
+A later read-only /context UI resume was stopped at the CLI Settings Error prompt; the read-only state bind reported no login, so no context panel values were obtained. No prompt or model turn was submitted and no setting/auth write passed. Context-window and provider input consumption remain UNKNOWN. Future CLI invocations, including metadata commands, must run inside the read-only-root Bubblewrap boundary with the strict settings overlay. Do not infer provider clipping from the truncated persisted-history excerpt.
 
 ---

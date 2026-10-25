@@ -1269,3 +1269,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 2026-10-25T08:04:52.926760734Z
   note: Verified both native findings against PR 364 at the exact head; corrected the committed-status sentence and delimiter spacing without touching frontmatter or review state. No reusable friction pattern emerged.
+
+- ts: 2026-10-25T09:03:40Z
+  session: /home/err/.local/share/foresight-worktrees/eta-antigravity-review-20261023
+  task: Preserve Antigravity CLI pin and document guarded metadata/context diagnostics
+  p-efficiency: 0.62
+  p-friction: 0.78
+  p-skill-candidate: 0.82
+  spore: 20261025-090252-pinned-cli-metadata-under-read-only-bubblewrap.md
+  receipt-refs: 2026-10-25T09:00:10Z, 2026-10-25T09:03:01Z, 2026-10-25T09:03:24Z
+  note: An unconfined metadata investigation was followed by an unexpected in-place 1.4.7 update of the pinned 1.4.6 path; exact trigger remains unknown. Parent restored the hash-verified original bytes and guarded version/models checks stayed pinned. The read-only context resume stopped at a settings prompt before showing context values; treat context and provider-consumed input as unknown. Keep all CLI launches, including metadata, inside the read-only Bubblewrap boundary.
