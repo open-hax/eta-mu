@@ -1196,3 +1196,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: latest root Receipt River event
   note: The declared step cap was not enforced because GitHub rejected a string-valued timeout template; numeric comparisons retained the selected dispatch string. Preserve the actual failed template and cancellation. Native Rheos card1728ae7d-41fd-4cb7-ba0f-4c802515257c is incoming for planning review. No workflow source change, hosted fix or assessment credit claimed; existing typed publication and fresh-dispatch boundaries remain required.
+
+- ts: 2026-10-25T12:50:18.788669+00:00
+  session: shared-axxium-fleet-heartbeat6
+  task: Correct the prior timeout-planning receipt reference append-only
+  p-efficiency: 0.83
+  p-friction: 0.25
+  p-skill-candidate: 0.17
+  spore: none
+  receipt-refs: 3e83493a-f4cd-4ddc-bc0b-875d483015eb
+  note: The preceding shared-axxium-fleet-heartbeat5 entry used the ambiguous phrase latest root Receipt River event. Its exact stable event is3e83493a-f4cd-4ddc-bc0b-875d483015eb at2026-10-25T12:16:10.086Z in receipts.edn. This dated correction binds the entire original mycology prefix SHA256 89d7b80fa83865ba4c33459d9555bb6e48a7a2b201d88a8d3c177764d8034dd2; previous bytes and timestamps remain unchanged. Planning card now specifies both input types, prepare-before-conversion negatives, registered six-suite harness and official pinned GitHub expression evaluator. No executable test or hosted fix claim.

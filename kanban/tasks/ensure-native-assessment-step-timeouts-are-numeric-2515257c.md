@@ -34,16 +34,23 @@ No model, credential, reviewer identity, protected source pin, native publicatio
 
 ## Acceptance criteria
 
-- Numeric and string 60/120/180 requests produce numbers 60/120/180 respectively in the actual GitHub expression semantics; omitted input retains the enrolled default.
-- Malformed, fractional and out-of-range requests are refused by the existing prepare admission before the model job.
+- For both typed `workflow_call` inputs and raw `workflow_dispatch` string inputs, 60/120/180 requests produce numeric 60/120/180 timeout values; omitted input retains the enrolled default.
+- Empty, non-numeric, fractional, below-bound and above-bound inputs are refused by existing `prepare` admission before numeric conversion and before the model job starts.
 - All three assessment routes use the same reviewed numeric boundary and retain 240-minute job, 30-minute verification and 5-minute always-upload limits.
 - Local contract tests cannot pass solely by comparing YAML expression text; the original failure produces a reproducible failing check.
 - Native post-adoption qualification records actual run/head/workflow, accepted numeric timeout, bounded lifecycle and retained artifacts. A source or local test pass alone does not declare the hosted defect resolved.
 
 ## Verification
 
-Run the three existing native assessment workflow contract suites with their real dependencies, scoped structural workflow validation and diff checks. Run additional owner checks required by any touched executable boundary. Require current-head native review and deterministic gates. After merge, use a fresh stable native input and new dispatch; never rerun the cancelled run.
+Use the owning registered command `bb scripts/test.bb --only assessment-workflows` (equivalent to `bb scripts/test-assessments.bb`). Its six suites are `actionability-node`, `actionability-nbb`, `rejection-node`, `rejection-nbb`, `positive-cohort-node` and `positive-cohort-nbb`. The three Node suites are `.github/scripts/opencode-{actionability,rejection,positive-cohort}-assessment-workflow.test.mjs`; their paired NBB suites are `.github/scripts/opencode_{actionability,rejection,positive_cohort}_assessment_test.cljs`. Reuse the harness's actual pinned canonical sources, source-built Muse verifiers, credential-free/network-denied fixture processes and kernel ancestry audit. Every suite must complete successfully; missing prerequisites, skipped/incomplete suites, unexpected denied calls or failed custody checks fail the command. Do not replace it with an unqualified direct invocation.
+
+Use GitHub's official [`@actions/expressions`](https://github.com/actions/languageservices/tree/main/expressions) evaluator, pinned to version `0.3.61` with dependency integrity during implementation. Evaluate the actual model-step expression with `inputs.review_timeout_minutes` set to numeric `120` and string `"120"`: the original expression returns a string for the latter, which must fail the numeric-result assertion. Cover all accepted and refused cases above; do not translate the expression into JavaScript or compare only its text. This library exercises expression typing; it does not replace native workflow-template or lifecycle qualification. GitHub's [documented `fromJSON` timeout conversion](https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#fromjson) is the boundary reference.
+
+Also run the registered adjacent recovery contracts with `bb scripts/test.bb --only review-workflow`, the owning zero-warning Clojure gate `bb scripts/lint.bb --kondo-only`, scoped structural workflow validation and `git diff --check`. Preserve all deterministic gates already selected by `scripts/test.bb` and `scripts/lint.bb`; run additional owner checks required by any touched executable boundary. Require current-head native review and required CI. After merge, use fresh stable native input and a new dispatch; never rerun the cancelled run.
 
 ## Risks
 
 GitHub workflow_dispatch and workflow_call input typing differ. Expression conversion must preserve deliberate validated bounds and job reserve, and must not silently coerce malformed input into admission. Runtime source authentication hashes require coordinated adoption if an existing manifest binds changed workflow bytes.
+
+
+The existing upstream Rheos card `ledger-events-persist-absolute-source-paths-from-the-writer-s-checkout` separately owns path-carrying event writers and historical compatibility. This timeout plan does not modify those emitters or rewrite native event history. The historical absolute `:source-path` remains provenance, not proof of a replay/writeback failure in this PR.
