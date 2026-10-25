@@ -1,14 +1,14 @@
 ---
-uuid: "1728ae7d-41fd-4cb7-ba0f-4c802515257c"
-title: "Ensure native assessment step timeouts are numeric"
-status: "incoming"
-type: "task"
-priority: "P1"
-points: "2"
+category: "tasks"
 labels: "review, workflow, timeout"
 dependency: []
-category: "tasks"
-write-id: "1792930569959-0.9mimji1himff7em6gr"
+type: "task"
+write-id: "1792936260172-0.9ao36z4ove5po1tsuh"
+points: "2"
+title: "Ensure native assessment step timeouts are numeric"
+priority: "P1"
+status: "incoming"
+uuid: "1728ae7d-41fd-4cb7-ba0f-4c802515257c"
 created_at: "2026-10-25T12:16:09.959Z"
 ---
 
@@ -46,7 +46,7 @@ Use the owning registered command `bb scripts/test.bb --only assessment-workflow
 
 Use GitHub's official [`@actions/expressions`](https://github.com/actions/languageservices/tree/main/expressions) evaluator, pinned to version `0.3.61` with dependency integrity during implementation. Evaluate the actual model-step expression with `inputs.review_timeout_minutes` set to numeric `120` and string `"120"`: the original expression returns a string for the latter, which must fail the numeric-result assertion. Cover all accepted and refused cases above; do not translate the expression into JavaScript or compare only its text. This library exercises expression typing; it does not replace native workflow-template or lifecycle qualification. GitHub's [documented `fromJSON` timeout conversion](https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#fromjson) is the boundary reference.
 
-Also run the registered adjacent recovery contracts with `bb scripts/test.bb --only review-workflow`, the owning zero-warning Clojure gate `bb scripts/lint.bb --kondo-only`, scoped structural workflow validation and `git diff --check`. Preserve all deterministic gates already selected by `scripts/test.bb` and `scripts/lint.bb`; run additional owner checks required by any touched executable boundary. Require current-head native review and required CI. After merge, use fresh stable native input and a new dispatch; never rerun the cancelled run.
+Also run the registered adjacent recovery contracts with `bb scripts/test.bb --only review-workflow`, the owning full lint gate `bb scripts/lint.bb` (including its registered `pnpm typecheck` task), scoped structural workflow validation and `git diff --check`. Preserve all deterministic gates already selected by `scripts/test.bb` and `scripts/lint.bb`; run additional owner checks required by any touched executable boundary. Require zero warnings from clj-kondo, type checks and every test suite; any warning, failure, error or incomplete suite blocks implementation qualification. Require current-head native review and required CI. After merge, use fresh stable native input and a new dispatch; never rerun the cancelled run.
 
 ## Risks
 
@@ -54,3 +54,8 @@ GitHub workflow_dispatch and workflow_call input typing differ. Expression conve
 
 
 The existing upstream Rheos card `ledger-events-persist-absolute-source-paths-from-the-writer-s-checkout` separately owns path-carrying event writers and historical compatibility. This timeout plan does not modify those emitters or rewrite native event history. The historical absolute `:source-path` remains provenance, not proof of a replay/writeback failure in this PR.
+
+---
+Planning review roots4371049014/4371049020: use registered full bb scripts/lint.bb including pnpm typecheck; explicitly require zero warnings for kondo, types and every suite. Added append-only observation correcting the two historical planning records miscategorized test-run, with original native event IDs/raw line hashes/whole prefix hash. Historical rows unchanged; no executable test or hosted fix credit. Card remains incoming pending current-head planning review.
+
+---

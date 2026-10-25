@@ -1206,3 +1206,11 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 3e83493a-f4cd-4ddc-bc0b-875d483015eb
   note: The preceding shared-axxium-fleet-heartbeat5 entry used the ambiguous phrase latest root Receipt River event. Its exact stable event is3e83493a-f4cd-4ddc-bc0b-875d483015eb at2026-10-25T12:16:10.086Z in receipts.edn. This dated correction binds the entire original mycology prefix SHA256 89d7b80fa83865ba4c33459d9555bb6e48a7a2b201d88a8d3c177764d8034dd2; previous bytes and timestamps remain unchanged. Planning card now specifies both input types, prepare-before-conversion negatives, registered six-suite harness and official pinned GitHub expression evaluator. No executable test or hosted fix claim.
+
+- ts: 2026-10-25T13:50:59.675863Z
+  origin: timeout-planning-receipt-kind-correction
+  p-efficiency: 0.82
+  p-friction: 0.26
+  p-skill-candidate: 0.29
+  receipt-refs: 11a1d81a-241e-4caf-91e2-20800962a46b; 3e83493a-f4cd-4ddc-bc0b-875d483015eb; a00cf0e5-2082-413c-b7ed-61e7dbd198aa
+  note: Planning notes are observations, not executed tests. The former generic receipt producer incorrectly tagged two planning records as test-run; a new observation binds their original event IDs, line numbers, exact raw-line hashes and entire ledger-prefix hash, declaring no test-evidence credit without rewriting history. Actual source inspection confirms full lint delegates pnpm typecheck; the reviewed plan now names that gate and zero-warning criteria. No executable test, installed timeout fix, hosted qualification or spore claimed.
