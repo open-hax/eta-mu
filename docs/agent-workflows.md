@@ -435,7 +435,7 @@ change the bounded corrective model invocations within one fresh run.
 
 The actionability workflow and host source lock pin canonical
 `8497afdd329c3dcaefb78eec36d8e629a59d9eb2` and Muse
-`45c7a8d572bf44202f52cae2aa8c0f771736a617`. The unchanged rejection workflow and
+`45c7a8d572bf44202f52cae2aa8c0f771736a617`. The rejection workflow and
 host retain canonical `5cea3e51a15d19277bd642147292c11b82de5369` and Muse
 `b7e4f98f550780a7b484b1525f53ad2934e29dad`. Pins alone grant no execution or
 publication authority: the eta successor must receive protected review/merge,
@@ -478,6 +478,28 @@ outputs and token repository access, then passes the native Bot tuple to canonic
 identity admission. A label, `/user` assumption or requested grant does not
 authenticate the principal. JWT, private key and token never enter the model
 environment or output artifacts.
+
+For actionability, rejection and positive-cohort assessments, the existing
+prepare job admits whole-minute budgets from 60 through 180; each route defaults
+to 60. The model step wraps the existing bounded selection in
+`fromJSON(format('{0}', ...))`, ensuring workflow-call numbers and dispatch
+strings both evaluate to a numeric deadline. Comparisons alone do not convert
+the selected operand: the original expression returned a string for dispatch
+values `"120"` and `"180"`, producing the invalid-template diagnostic retained in
+[run 40178755460](https://github.com/open-hax/eta-mu/actions/runs/40178755460).
+Malformed inputs still refuse in prepare before the dependent model job. The
+240-minute assessment job, 30-minute final verification and 5-minute always-run
+upload deadlines remain unchanged. GitHub documents this numeric conversion in
+[its expression reference](https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#fromjson).
+
+The registered assessment tests evaluate the actual authored expressions with
+integrity-pinned `@actions/expressions` 0.3.61 and run the actual prepare guards
+under the existing network-denied fixture owner. Those controls establish local
+expression typing and refusal behavior, not native workflow-template or lifecycle
+qualification. After protected source adoption, a fresh stable native request must
+retain actual workflow/head/attempt, accepted numeric timeout and bounded
+completion/artifact custody. Never rerun the cancelled run or convert its trace
+into a judgment, publication or approval.
 
 The native `gh` reader directs complete stdout to an exclusively created file in
 an owned private temporary directory, so paginated API responses are not cut off

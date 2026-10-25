@@ -1214,3 +1214,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   p-skill-candidate: 0.29
   receipt-refs: 11a1d81a-241e-4caf-91e2-20800962a46b; 3e83493a-f4cd-4ddc-bc0b-875d483015eb; a00cf0e5-2082-413c-b7ed-61e7dbd198aa
   note: Planning notes are observations, not executed tests. The former generic receipt producer incorrectly tagged two planning records as test-run; a new observation binds their original event IDs, line numbers, exact raw-line hashes and entire ledger-prefix hash, declaring no test-evidence credit without rewriting history. Actual source inspection confirms full lint delegates pnpm typecheck; the reviewed plan now names that gate and zero-warning criteria. No executable test, installed timeout fix, hosted qualification or spore claimed.
+
+
+- ts: 2026-10-25T21:47:08.205621+00:00
+  origin: native-assessment-numeric-timeout-source
+  p-efficiency: 0.61
+  p-friction: 0.72
+  p-skill-candidate: 0.43
+  receipt-refs: receipts.edn observations/test-run origin native-assessment-numeric-timeout-source; RED77a01c16; planning367; native run40178755460
+  note: Evaluate actual workflow expression types with the official pinned evaluator; numerical comparisons leave selected string operands unchanged. Registered source-built/inert/network-denied six-suite RED then GREEN established the defect/fix without a model or native publication. Credential-free privateHOME requires direct existing Node/Pnpm binaries, and local Git object sources must contain every exact pinned commit; initial setup failures supplied no regression credit. Native Rheos review gate triggered all-workspace build and refused because dependencies were missing. Stop only owned remaining build descendants after established failure, restore only proven owned generated tracked files, keep card in_progress and report full-build and hosted qualification gaps. GitHub CLI credential lookup is currently unavailable; connected app readback is useful but cannot replace canonical merge-gate custody. No spore or global memory mutation.

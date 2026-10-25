@@ -3,7 +3,7 @@ category: "tasks"
 labels: "review, workflow, timeout"
 dependency: []
 type: "task"
-write-id: "1792946510660-0.k6l4xw6kd5980wrbm7"
+write-id: "1792964827560-0.bpmsqjotq7ec94hql1o"
 points: "2"
 title: "Ensure native assessment step timeouts are numeric"
 priority: "P1"
@@ -59,5 +59,9 @@ The existing upstream Rheos card `ledger-events-persist-absolute-source-paths-fr
 Planning review roots4371049014/4371049020: use registered full bb scripts/lint.bb including pnpm typecheck; explicitly require zero warnings for kondo, types and every suite. Added append-only observation correcting the two historical planning records miscategorized test-run, with original native event IDs/raw line hashes/whole prefix hash. Historical rows unchanged; no executable test or hosted fix credit. Card remains incoming pending current-head planning review.
 
 Planning PR367 is actually merged at ddc5a0c30da871705f87c7a7819864e08e04cae6 after current-head canonical PASS on f3b82db, MiMo approval, all11 native checks and all5 settled threads. Implement the accepted bounded numeric timeout correction on a new branch. Retain registered six-suite/source-built verifier/network-denial gates and actual hosted qualification after adoption; cancelled40178755460 remains failed evidence.
+
+Implementation RED77a01c16 reproduced the real dispatch typing defect through the pinned official evaluator: registered six-suite gate completed with7type assertion failures in actionability-node, other5suitesPASS. Candidate now wraps the existing3deadline expressions with fromJSON(format(...)), retaining all prepare bounds and job/verifier/upload reserves. GREEN actual registered6suitesPASS202.7s: Node37/23/7tests; NBB1265checks,8tests319assertions,6tests57assertions;377network-control testsPASS and actual pinned Muse builds0warnings. Adjacent340testsPASS, fullrecursive/gate/assessmentkondoPASS0warnings, syntax/diffPASS. Rawactionlint has18identical accepted-base job.workflow_sha/ref diagnostics and0introduced; not claimed rawPASS. Source is not protected adoption or hosted lifecycle qualification; current native review/CI and a new stable post-adoption dispatch are still required. Existing cancelled40178755460 retains no judgment/publication credit.
+
+Actual native move in_progress->review was REFUSED by the configured pnpm build gate. It invoked all26workspace application builds; missing per-package dependencies produced failures. After failure was established, stopped only the remaining owned build descendants; no board rule/command was bypassed, card stays in_progress. Two generated tracked contracts/output artifacts were restored only because they were clean before this owned build. The targeted assessment/recovery/kondo checks remain passing but are not a successful full repository build or completed task. Preparing reviewable source PR with this build limitation and required hosted lifecycle qualification explicit.
 
 ---
