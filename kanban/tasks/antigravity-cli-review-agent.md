@@ -1,10 +1,11 @@
 ---
 uuid: "c4b3a859-fc64-4f5c-bbdd-a28771daa6f1"
 title: "Add Antigravity CLI review with Gemini 3.8 Flash"
-status: incoming
-priority: P1
-points: 5
-labels: [github, review, antigravity, foresight]
+status: "incoming"
+priority: "P1"
+points: "5"
+labels: ["github", "review", "antigravity", "foresight"]
+write-id: "1792914125936-0.85abfeelfau0m7vk83b"
 ---
 
 ## Context
@@ -95,3 +96,7 @@ The reusable job allows 1200 seconds for inference within its 30-minute job boun
 Both organization routes previously reached the worker and retained explicit
 prompt-size refusal artifacts under the old transport; successful hosted stream
 execution and runner-group denial proof remain separate deployment checks.
+
+---
+Discovery anomaly (2026-10-25): prepare-only reproduction of Foresight hosted job 121107488412, bound to base 2b26173c2cbcf58f14abda2b4e710bd9a912e9bd and head 24642b151103cdf832d056d525bf303e9771bdce, found the aggregate normalized Git diff is 1,054,047 bytes against the existing 1,048,576-byte cap. The bounded child call surfaces ENOBUFS, which had been reported as generic process refusal. This specific output-cap classification issue was not in the original 2026-10-23 planning artifact; it was discovered during reproduction, and is not a newly approved plan. The refusal/cap remain correct: regression asserts explicit process-output-limit diagnostics and no artifact/model dispatch. Exact raw evidence and diff are retained in /home/err/.local/share/antigravity-review/diagnostics/eta-mu-pr148-run40172943858/. ETA fix is local/uncommitted; no hosted rerun or review admission is claimed.
+---

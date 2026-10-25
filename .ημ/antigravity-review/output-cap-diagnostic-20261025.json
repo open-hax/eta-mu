@@ -1,0 +1,70 @@
+{
+  "observed_at": "2026-10-25T07:47:16.322466+00:00",
+  "status": "diagnostic-source-proposal-not-runtime-installation",
+  "owner_card": "c4b3a859-fc64-4f5c-bbdd-a28771daa6f1",
+  "original_plan_commit": "51652078b218ef4bb2b4e61a709360cac90b4df1",
+  "red_commit": "53e04f4fdd1c63b14ebed1268d9360c187f1e713",
+  "source": {
+    "repository": "open-hax/foresight",
+    "pr": 145,
+    "run": 40172943858,
+    "job": 121107488412,
+    "base": "2b26173c2cbcf58f14abda2b4e710bd9a912e9bd",
+    "head": "24642b151103cdf832d056d525bf303e9771bdce",
+    "artifact": 12590837211,
+    "artifact_sha256": "38bdb165d3a08b1aa54530df8db397c2f895a8a6ee3bfd0b050f461fd3e192a1"
+  },
+  "diagnosis": {
+    "operation": "aggregate normalized git diff",
+    "bytes": 1054047,
+    "sha256": "78c2342c467e12c9817007968187fb7e5e4a26346b52290530c97365f4f24f1c",
+    "configured_cap": 1048576,
+    "over_cap_bytes": 5471,
+    "original_refusal": "process / ENOBUFS",
+    "proposed_refusal": "process-output-limit",
+    "cap_changed": false,
+    "truncation": false,
+    "candidate_executed": false,
+    "model_launched": false
+  },
+  "tests": {
+    "red": {
+      "exit": 1,
+      "sha256": "2e65292b3957da3ef6712be6c0bfdc4ca089499d4ff54c6fd90f3ad63c8de8f8",
+      "actual": "process",
+      "expected": "process-output-limit"
+    },
+    "green": {
+      "exit": 0,
+      "sha256": "fe2359f8ed54fc40b986e4615780d3f2d5ddb16178840c1450ac1d710d28978f",
+      "passed": 1
+    },
+    "full_runner": {
+      "passed": 43,
+      "failed": 0
+    },
+    "pure_review": {
+      "tests": 7,
+      "assertions": 99,
+      "failures": 0
+    },
+    "clj_kondo": {
+      "errors": 0,
+      "warnings": 0
+    },
+    "adjacent_eta_mu_package": {
+      "tests": 194,
+      "assertions": 587,
+      "failed": 1,
+      "location": "openai_test.cljs:326",
+      "sha256": "2caa7020120af75e91d09f3e5057d87950102dd02b0a10afe03402cf290ee0fd",
+      "baseline_established": false,
+      "attribution": "unknown"
+    }
+  },
+  "ledger_prefixes_preserved": true,
+  "board_comment": "actual supported CLI comment; semantic status/priority/points/labels unchanged",
+  "runtime_installation_changed": false,
+  "runtime_revision_still": "5152dcce6e279a49b5a706ab3d3eaa4224df6cd3",
+  "approval_credit": false
+}

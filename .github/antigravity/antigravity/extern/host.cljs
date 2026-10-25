@@ -53,12 +53,20 @@
 
 (defn git!
   [repo args max-bytes]
-  (let [result (run! "git" (into ["-c" "core.hooksPath=/dev/null" "-c" "diff.external=" "-C" repo] args)
-                     {:max-bytes max-bytes
-                      :env {"PATH" (get (environment) "PATH") "HOME" "/nonexistent"
-                            "GIT_CONFIG_NOSYSTEM" "1" "GIT_CONFIG_GLOBAL" "/dev/null"
-                            "GIT_TERMINAL_PROMPT" "0" "GIT_PAGER" "cat" "GIT_NO_REPLACE_OBJECTS" "1"
-                            "GIT_LITERAL_PATHSPECS" "1" "LC_ALL" "C.UTF-8"}})]
+  (let [result (try
+                 (run! "git" (into ["-c" "core.hooksPath=/dev/null" "-c" "diff.external=" "-C" repo] args)
+                       {:max-bytes max-bytes
+                        :env {"PATH" (get (environment) "PATH") "HOME" "/nonexistent"
+                              "GIT_CONFIG_NOSYSTEM" "1" "GIT_CONFIG_GLOBAL" "/dev/null"
+                              "GIT_TERMINAL_PROMPT" "0" "GIT_PAGER" "cat" "GIT_NO_REPLACE_OBJECTS" "1"
+                              "GIT_LITERAL_PATHSPECS" "1" "LC_ALL" "C.UTF-8"}})
+                 (catch :default error
+                   (if (= "ENOBUFS" (get-in (ex-data error) [:details :code]))
+                     (fail! :process-output-limit
+                            {:binary "git"
+                             :operation (some #{"diff" "merge-base" "cat-file"} args)
+                             :max-bytes max-bytes})
+                     (throw error))))]
     (when-not (zero? (:status result)) (fail! :git {:args args :status (:status result)}))
     (:stdout result)))
 

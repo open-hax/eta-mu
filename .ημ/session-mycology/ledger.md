@@ -1251,3 +1251,12 @@ These are readable renderings of the recorded historical values. Each belongs to
 - The old MiMo review assessed 120 of 122 chunks without a complete canonical submission. Its 45-minute recovery timed out. Both attempts remain failures and supply no approval, completed cohort, or later-head credit.
 - Evidence is bound to runtime `5152dcce6e279a49b5a706ab3d3eaa4224df6cd3`: 42 integration tests, 7 pure tests with 99 assertions, and 12 workflow tests passed. Fresh R6 service cases passed in 24.088677621 seconds for clean input and 46.065075283 seconds for the known defect, with five events and one turn each. The descriptor is `.ημ/antigravity-review/service-qualification-R6.json`.
 - Four historical receipt corrections remain untouched pending an explicit user override. No new spore was created, and the prior spore remains unpromoted. This clarification preserves the original R5 refusal and incomplete MiMo outcomes as failures.
+- ts: 2026-10-25T07:42:47.016487062Z
+  session: /home/err/.local/share/foresight-worktrees/eta-antigravity-review-20261023
+  task: ETA Antigravity aggregate Git output cap classification diagnosis and regression
+  p-efficiency: 0.78
+  p-friction: 0.48
+  p-skill-candidate: 0.55
+  spore: none
+  receipt-refs: 2026-10-25T07:42:42.653993765Z
+  note: Treat ENOBUFS from bounded spawnSync as a distinct output-limit refusal and pin it at the prepare-only boundary; preserve no-artifact/no-dispatch and the original limit. The eta-mu package suite's openai test mismatch was observed after the patch only, so keep it unattributed until a true original-source baseline is run. Original task plan predates this anomaly; board chronology comment records discovery.
