@@ -1186,3 +1186,31 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: .ημ/sessions/2026-10-24-workflow-hygiene/receipt.edn
   note: Inspected the actual pinned legacy CLI before changing its workflow adapter. Twelve focused offline tests pass, unchanged-base control fails, YAML/shell/diff checks pass. Twenty synthetic classifier fixtures pass integrity checks but no model ran. JSON Schema metaschema validation unavailable because jsonschema is absent; full repository gates, hosted capability execution and compiled session-mycology command unavailable. This is a manual reflection, no CLI admission, board transition, live approval activation or settings mutation claimed.
+
+- ts: 2026-10-25T12:16:30.807884+00:00
+  session: shared-axxium-fleet-heartbeat5
+  task: Scope native assessment timeout type failure from actual cancelled workflow
+  p-efficiency: 0.76
+  p-friction: 0.44
+  p-skill-candidate: 0.21
+  spore: none
+  receipt-refs: latest root Receipt River event
+  note: The declared step cap was not enforced because GitHub rejected a string-valued timeout template; numeric comparisons retained the selected dispatch string. Preserve the actual failed template and cancellation. Native Rheos card1728ae7d-41fd-4cb7-ba0f-4c802515257c is incoming for planning review. No workflow source change, hosted fix or assessment credit claimed; existing typed publication and fresh-dispatch boundaries remain required.
+
+- ts: 2026-10-25T12:50:18.788669+00:00
+  session: shared-axxium-fleet-heartbeat6
+  task: Correct the prior timeout-planning receipt reference append-only
+  p-efficiency: 0.83
+  p-friction: 0.25
+  p-skill-candidate: 0.17
+  spore: none
+  receipt-refs: 3e83493a-f4cd-4ddc-bc0b-875d483015eb
+  note: The preceding shared-axxium-fleet-heartbeat5 entry used the ambiguous phrase latest root Receipt River event. Its exact stable event is3e83493a-f4cd-4ddc-bc0b-875d483015eb at2026-10-25T12:16:10.086Z in receipts.edn. This dated correction binds the entire original mycology prefix SHA256 89d7b80fa83865ba4c33459d9555bb6e48a7a2b201d88a8d3c177764d8034dd2; previous bytes and timestamps remain unchanged. Planning card now specifies both input types, prepare-before-conversion negatives, registered six-suite harness and official pinned GitHub expression evaluator. No executable test or hosted fix claim.
+
+- ts: 2026-10-25T13:50:59.675863Z
+  origin: timeout-planning-receipt-kind-correction
+  p-efficiency: 0.82
+  p-friction: 0.26
+  p-skill-candidate: 0.29
+  receipt-refs: 11a1d81a-241e-4caf-91e2-20800962a46b; 3e83493a-f4cd-4ddc-bc0b-875d483015eb; a00cf0e5-2082-413c-b7ed-61e7dbd198aa
+  note: Planning notes are observations, not executed tests. The former generic receipt producer incorrectly tagged two planning records as test-run; a new observation binds their original event IDs, line numbers, exact raw-line hashes and entire ledger-prefix hash, declaring no test-evidence credit without rewriting history. Actual source inspection confirms full lint delegates pnpm typecheck; the reviewed plan now names that gate and zero-warning criteria. No executable test, installed timeout fix, hosted qualification or spore claimed.
