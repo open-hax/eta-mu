@@ -136,7 +136,7 @@ Seven causal controls (pre-runtime base, missing install/verify, reversed order,
 CLI version, verification command and build command) each fail with exit 1 and
 zero runtime errors. Retained legacy containment: Vitest2.1.9 1testPASS.
 Clj-kondo2025.10.23 newCLJS/rootBB: zero errors/warnings. Biome2.3.5 with
-repository configuration passes the legacy test. Both YAML files and24 shell
+repository configuration passes the legacy test. Both YAML files and 24 shell
 blocks parse. New immutable evidence: `.ημ/sessions/2026-10-24-rheos-sync-clojure/review-followup-20261025.edn`.
 Full repository gates and new-head hosted qualification remain pending; no
 restored-sync, downstream dry-run or card-transition claim. Historical receipts

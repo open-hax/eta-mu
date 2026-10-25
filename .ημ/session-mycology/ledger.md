@@ -1207,3 +1207,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: .ημ/sessions/2026-10-24-rheos-sync-clojure/review-followup-20261025.edn
   note: Read current PR flow, source and ledger; reuse NBB/root BB seams. Exact-head two-pin RED and seven causal controls precede GREEN; CLJS/root BB lint zero warnings. Snapshot setup failures stay separate from tests. Full repository/hosted qualification pending; no native approval or board move claimed. Manual reflection.
+
+- ts: 2026-10-25T16:14:47.390146Z
+  session: chatgpt-eta365-attribution-correction-20261025
+  task: Preserve historical receipt while correcting repository attribution and card spacing
+  p-efficiency: 0.9
+  p-friction: 0.15
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn appended attribution correction of line324 at e83b323baadf5bea8d5406bc0f38a52b6445b53e
+  note: Canonical receipt law requires repo; append a bound observation instead of rewriting the prior row. Verification is limited to EDN/law/prefix/frontmatter/diff checks, with no runtime test rerun or native approval claim. The appended record parses and passes canonical law; strict whole-ledger parsing retains the baseline Invalid number: 2026-07-12T053333Z failure in preserved history. Manual reflection.
