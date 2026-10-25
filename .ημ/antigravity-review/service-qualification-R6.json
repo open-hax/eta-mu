@@ -1,0 +1,172 @@
+{
+  "schema": "open-hax.antigravity-service-qualification/v1",
+  "runtime_revision": "5152dcce6e279a49b5a706ab3d3eaa4224df6cd3",
+  "source_tree": "e57b14f13e207f88def4cc9f5ebcf6b473585fbe",
+  "observed_at": "2026-10-23T10:06:17.663502+00:00",
+  "evidence_kind": "imported-cli-advisory",
+  "native_approval": false,
+  "cases": {
+    "clean": {
+      "service_unit": "antigravity-r6-native-clean-dbld_yma",
+      "service_exit": 0,
+      "wall_seconds": 27.89,
+      "native_duration_seconds": 24.088677621,
+      "native_conversation_id": "ed817167-30ab-4148-ab5b-cb3e41376cb8",
+      "fresh_conversation_distinct_from_R5": true,
+      "native_turns": 1,
+      "event_count": 5,
+      "strict_native_init": true,
+      "base_tip": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+      "canonical_base": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+      "head": "fa36a56fb106e068d8661abc6232fdc008371516",
+      "diff_digest": "a293093b7f47130b5dbcd93cf89adf97fbea941cfe7da157b363d78186e1d3ac",
+      "input_sha256": "1a0e075cbaedbd3d8c26f59d1a7c6eb0d3337ba058a90b1c82554028e9627ce9",
+      "input_bytes": 1330,
+      "prompt_bytes": 4370,
+      "stdin_bytes": 4832,
+      "status": "clean",
+      "finding_count": 0,
+      "findings": [],
+      "current_R6_law_errors": [],
+      "process_group_cleanup": true,
+      "workspace_removed": true,
+      "native_stderr_bytes": 0,
+      "cli_sha256": "128780f5776959ba6a991bde1f0a8b699eee37a59ed30deb9926147fedfa56c4",
+      "bwrap_sha256": "e318903862396f96de3df57264e0158682b952fd3fb53ac23d876413e7b30f71",
+      "settings_sha256": "c30666edd3bc4cb8e577486d7518f20c08c68bdfbd59e7ae4a632d86b43b4150",
+      "raw_files": {
+        "input.txt": {
+          "bytes": 1330,
+          "sha256": "1a0e075cbaedbd3d8c26f59d1a7c6eb0d3337ba058a90b1c82554028e9627ce9"
+        },
+        "input.json": {
+          "bytes": 1464,
+          "sha256": "e50fd3de92285f9b2b3e725b03e3263defbb8210264dce60805e213f2ddf0d63"
+        },
+        "native.stdout.json": {
+          "bytes": 6070,
+          "sha256": "062b30e36576d7177caa0c66f9c11b30bc636218628bbdaf75dc3d35c6cbbf3c"
+        },
+        "native.stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "native-envelope.json": {
+          "bytes": 3560,
+          "sha256": "1daad754bbd69ecf04faecd1db8e0f99ea0969181871abe7eb611a1779832a69"
+        },
+        "review.json": {
+          "bytes": 516,
+          "sha256": "ec3be2b3c10fc7b24bc7000e7036cbdf23df078afe8e6fddecee92a5d0744c54"
+        },
+        "invocation.json": {
+          "bytes": 2578,
+          "sha256": "d8c530967548bfc5c1e4f228df4793fbd8f6af7332c52d5020f33dcbe255ef4b"
+        },
+        "process.json": {
+          "bytes": 122,
+          "sha256": "c9cd1762784ed8df6057cc8a719750c53b87a8886646e1003aaf17d5d554f55e"
+        },
+        "finish-metadata.json": {
+          "bytes": 82,
+          "sha256": "a2a8d1184eb4f7f9ed40865c1d1522e7f3af8d0c781c7a52d66049269aeba126"
+        }
+      }
+    },
+    "defect": {
+      "service_unit": "antigravity-r6-native-defect-dbld_yma",
+      "service_exit": 0,
+      "wall_seconds": 49.693,
+      "native_duration_seconds": 46.065075283,
+      "native_conversation_id": "afa0a6dd-2bb5-49ab-b81c-5ee6c82ac5b2",
+      "fresh_conversation_distinct_from_R5": true,
+      "native_turns": 1,
+      "event_count": 5,
+      "strict_native_init": true,
+      "base_tip": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+      "canonical_base": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+      "head": "78ef5c894570b47c9a04896ef29db50091c6b532",
+      "diff_digest": "cd0d7c7ce9f3553c965bc4dbe0dd8b6936ac6aa602fbeacceb09f4d3530f8250",
+      "input_sha256": "3c870b22100d5732c767c8cdfa1c48cf33482d16fdb6ffac9df92c9358e41d9c",
+      "input_bytes": 1314,
+      "prompt_bytes": 4354,
+      "stdin_bytes": 4816,
+      "status": "findings",
+      "finding_count": 1,
+      "findings": [
+        {
+          "path": "increment.clj",
+          "line": 4,
+          "title": "inc-one increments input by 2 instead of 1"
+        }
+      ],
+      "current_R6_law_errors": [],
+      "process_group_cleanup": true,
+      "workspace_removed": true,
+      "native_stderr_bytes": 0,
+      "cli_sha256": "128780f5776959ba6a991bde1f0a8b699eee37a59ed30deb9926147fedfa56c4",
+      "bwrap_sha256": "e318903862396f96de3df57264e0158682b952fd3fb53ac23d876413e7b30f71",
+      "settings_sha256": "c30666edd3bc4cb8e577486d7518f20c08c68bdfbd59e7ae4a632d86b43b4150",
+      "raw_files": {
+        "input.txt": {
+          "bytes": 1314,
+          "sha256": "3c870b22100d5732c767c8cdfa1c48cf33482d16fdb6ffac9df92c9358e41d9c"
+        },
+        "input.json": {
+          "bytes": 1464,
+          "sha256": "c2cc8d0ed32eea1c3c5fb9fbfbbb4f926f0f6caf8c87475e3a16af663e4e1322"
+        },
+        "native.stdout.json": {
+          "bytes": 8160,
+          "sha256": "8815d8ec6f9182e3cdf2e395f29095c65c824e2cbca8f8713adb01a42d4d8e75"
+        },
+        "native.stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "native-envelope.json": {
+          "bytes": 5111,
+          "sha256": "2ca722d6abb5bf732fddfd8144eb16c88776710053e47e30c91cd322823a8e3d"
+        },
+        "review.json": {
+          "bytes": 1327,
+          "sha256": "373fb9397a26977c7f4ae5b41b82dbae787fdba5754baa305cfddb199a320e83"
+        },
+        "invocation.json": {
+          "bytes": 2584,
+          "sha256": "e176de4a445210ed3a11cb7cbaf5ca53919ff2fa9aa0f3c69eafba366cc3d935"
+        },
+        "process.json": {
+          "bytes": 122,
+          "sha256": "c9cd1762784ed8df6057cc8a719750c53b87a8886646e1003aaf17d5d554f55e"
+        },
+        "finish-metadata.json": {
+          "bytes": 77,
+          "sha256": "1ed27ab9acb8a85f5809705c445656621f93a2e39f9b030052618e90c309213a"
+        }
+      }
+    }
+  },
+  "context_manifest_sha256": "ee92c54e6fe1d0e3fafea0ab840e0d7f54ecc30eba98e7a1d0cc8bec4e9b7257",
+  "previous_R5_proof_unchanged": true,
+  "old_R5_manifest_sha256": "eb8d2cff061e929088a96a93e4a3c77af92e7d4cf02f36e376d43cbc9a128b25",
+  "limits": [
+    "Two fresh systemd service calls bind exact clean R6 source; current laws independently checked canonical unique merge base/base_tip, complete forced-text full-index diff, every complete blob/path and all prompt/stdin digests.",
+    "Both real native traces contain five events; optional ACTIVE finish wrapper handling is covered separately by owning deterministic R6 tests and is not claimed observed in these two calls.",
+    "Live defect AGY observed under antigravity-review-bwrap(unconfined), NoNewPrivs1; clean call completed before descendant capture.",
+    "Successful imported CLI advisory evidence supplies no native GitHub approval, merge, deployment or access-control enforcement credit.",
+    "No source, hostenv, global settings, listener, readiness, auth or historical receipt changes were performed."
+  ],
+  "persistent_worker_observation": "MainPID=0\nId=antigravity-review-open-hax.service\nActiveState=inactive\n\nMainPID=0\nId=antigravity-review-octave-commons.service\nActiveState=inactive\n",
+  "passed": true,
+  "evidence_custody": {
+    "durable_cache": "/home/err/.local/share/antigravity-review/qualification/20261023/R6-service",
+    "raw_file_count": 49,
+    "raw_total_bytes": 91361,
+    "raw_manifest_sha256": "9e54aa71f9a424dac09c2b263fdac976c7b93d4b5b11a81116d5679f40581647",
+    "lossless_archive_sha256": "7be891e089ff87bf75f41f957ed52f90e571f3d70b9213b62310f23dc5a91875",
+    "lossless_archive_bytes": 111795,
+    "all_reconstructions_byte_exact": true,
+    "original_tmp_directory": "/tmp/antigravity-r6-service-qualification-dbld_yma"
+  }
+}

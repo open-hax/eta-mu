@@ -1,0 +1,218 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Antigravity immutable code review
+
+on:
+  workflow_call:
+    inputs:
+      pr_head_sha:
+        description: Exact same-repository PR head (40 lowercase hexadecimal characters)
+        required: true
+        type: string
+      pr_base_sha:
+        description: Exact same-repository PR base (40 lowercase hexadecimal characters)
+        required: true
+        type: string
+      review_runtime_revision:
+        description: Operator-approved preinstalled eta-mu runtime commit (40 lowercase hexadecimal characters)
+        required: true
+        type: string
+      model:
+        description: Exact model; aliases and fallback are refused
+        default: gemini-3.8-flash-high
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      head-sha: ${{ steps.request.outputs.head-sha }}
+      base-sha: ${{ steps.request.outputs.base-sha }}
+      runtime-revision: ${{ steps.request.outputs.runtime-revision }}
+    steps:
+      - name: Validate immutable same-repository review request
+        id: request
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          REVIEW_HEAD_SHA: ${{ inputs.pr_head_sha }}
+          REVIEW_BASE_SHA: ${{ inputs.pr_base_sha }}
+          REVIEW_RUNTIME_REVISION: ${{ inputs.review_runtime_revision }}
+          REVIEW_MODEL: ${{ inputs.model }}
+          REVIEW_WORKER_READY: ${{ vars.ANTIGRAVITY_REVIEW_WORKER_READY }}
+        with:
+          script: |
+            const env = process.env;
+            const fail = message => { throw new Error(message); };
+            for (const key of ['REVIEW_HEAD_SHA', 'REVIEW_BASE_SHA', 'REVIEW_RUNTIME_REVISION']) {
+              if (!/^[a-f0-9]{40}$/.test(env[key] || '')) fail(`${key} requires an immutable 40-character SHA.`);
+            }
+            if (env.REVIEW_MODEL !== 'gemini-3.8-flash-high') fail('Only gemini-3.8-flash-high is admitted; no fallback.');
+            if (context.eventName !== 'pull_request') fail('Only pull_request callers are admitted.');
+            const repository = context.payload.repository;
+            const expected = `${context.repo.owner}/${context.repo.repo}`;
+            if (!repository || typeof repository.private !== 'boolean' || repository.full_name !== expected) fail('Caller repository identity or visibility is invalid.');
+            const assertPR = pr => {
+              if (!pr || !Number.isSafeInteger(pr.number) || pr.number < 1 || pr.state !== 'open' || pr.draft !== false || pr.merged === true) {
+                fail('Review requires an open, non-draft PR.');
+              }
+              for (const side of ['head', 'base']) {
+                if (pr[side]?.repo?.full_name !== expected || pr[side]?.repo?.id !== repository.id || pr[side]?.repo?.private !== repository.private) {
+                  fail('Forks and repository identity or visibility mismatches are not admitted.');
+                }
+                const wanted = side === 'head' ? env.REVIEW_HEAD_SHA : env.REVIEW_BASE_SHA;
+                if (pr[side]?.sha !== wanted) fail(`PR ${side} differs from the immutable review request.`);
+              }
+            };
+            const eventPR = context.payload.pull_request;
+            assertPR(eventPR);
+            const { data: currentRepository } = await github.rest.repos.get(context.repo);
+            if (currentRepository.private !== repository.private || currentRepository.id !== repository.id || currentRepository.full_name !== expected) {
+              fail('Current repository identity or visibility differs from the event.');
+            }
+            const { data: currentPR } = await github.rest.pulls.get({ ...context.repo, pull_number: eventPR.number });
+            assertPR(currentPR);
+            if (currentPR.number !== eventPR.number) fail('Current PR identity differs from the event.');
+            if (env.REVIEW_WORKER_READY !== 'true') {
+              fail('Antigravity review worker is not provisioned: operator must qualify runtime, authentication, and runner-group restrictions before setting ANTIGRAVITY_REVIEW_WORKER_READY=true.');
+            }
+            core.setOutput('head-sha', env.REVIEW_HEAD_SHA);
+            core.setOutput('base-sha', env.REVIEW_BASE_SHA);
+            core.setOutput('runtime-revision', env.REVIEW_RUNTIME_REVISION);
+            core.info('Validated immutable same-repository review request. Runner deployment qualification remains an external prerequisite.');
+
+  review:
+    needs: preflight
+    # Operator must restrict this persistent group to the exact pinned reusable workflow SHA
+    # and approved callers. The readiness variable does not prove that restriction.
+    # open-hax + octave-commons require an enterprise runner group or separate suitable
+    # provisioning; an organization group cannot by itself authorize cross-org reuse.
+    runs-on:
+      group: ${{ vars.ANTIGRAVITY_REVIEW_RUNNER_GROUP || 'antigravity-review' }}
+      labels: [self-hosted, Linux, X64, antigravity-review]
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Verify preinstalled trusted runtime and allocate isolated paths
+        id: paths
+        env:
+          REVIEW_RUNTIME_REVISION: ${{ needs.preflight.outputs.runtime-revision }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          runner_temp="$(cd -- "$RUNNER_TEMP" && pwd -P)"
+          review_root="$(mktemp -d "$runner_temp/antigravity-review.XXXXXXXX")"
+          printf 'evidence-root=%s\n' "$review_root" >> "$GITHUB_OUTPUT"
+          trap 'status=$?; printf "runtime-preflight exit=%s\n" "$status" > "$review_root/runtime-preflight.txt"; exit "$status"' EXIT
+          : "${ANTIGRAVITY_REVIEW_RUNTIME:?Operator must provision a trusted fixed runtime path}"
+          : "${ANTIGRAVITY_REVIEW_WORKER_HOME:?Operator must provision an authenticated dedicated review user home}"
+          : "${ANTIGRAVITY_REVIEW_NBB:?Operator must provision an absolute trusted NBB executable path}"
+          : "${ANTIGRAVITY_REVIEW_CLI:?Operator must provision the approved absolute Antigravity CLI path}"
+          : "${ANTIGRAVITY_REVIEW_CLI_SHA256:?Operator must pin the approved CLI SHA-256}"
+          : "${ANTIGRAVITY_REVIEW_BWRAP:?Operator must provision the approved absolute bubblewrap path}"
+          : "${ANTIGRAVITY_REVIEW_BWRAP_SHA256:?Operator must pin the approved bubblewrap SHA-256}"
+          [[ "$ANTIGRAVITY_REVIEW_RUNTIME" = /* && "$ANTIGRAVITY_REVIEW_WORKER_HOME" = /* && "$ANTIGRAVITY_REVIEW_NBB" = /* && "$ANTIGRAVITY_REVIEW_CLI" = /* && "$ANTIGRAVITY_REVIEW_BWRAP" = /* ]]
+          [[ -d "$ANTIGRAVITY_REVIEW_RUNTIME" && -d "$ANTIGRAVITY_REVIEW_WORKER_HOME" && -x "$ANTIGRAVITY_REVIEW_NBB" && -f "$ANTIGRAVITY_REVIEW_CLI" && -x "$ANTIGRAVITY_REVIEW_CLI" && -f "$ANTIGRAVITY_REVIEW_BWRAP" && -x "$ANTIGRAVITY_REVIEW_BWRAP" ]]
+          [[ "$ANTIGRAVITY_REVIEW_CLI_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$ANTIGRAVITY_REVIEW_BWRAP_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          cli_digest="$(sha256sum -- "$ANTIGRAVITY_REVIEW_CLI")"
+          [[ "${cli_digest%% *}" == "$ANTIGRAVITY_REVIEW_CLI_SHA256" ]]
+          bwrap_digest="$(sha256sum -- "$ANTIGRAVITY_REVIEW_BWRAP")"
+          [[ "${bwrap_digest%% *}" == "$ANTIGRAVITY_REVIEW_BWRAP_SHA256" ]]
+          [[ "$("$ANTIGRAVITY_REVIEW_BWRAP" --version)" == 'bubblewrap 0.9.0' ]]
+          [[ "$(git -C "$ANTIGRAVITY_REVIEW_RUNTIME" rev-parse HEAD)" == "$REVIEW_RUNTIME_REVISION" ]]
+          [[ -z "$(git -C "$ANTIGRAVITY_REVIEW_RUNTIME" status --porcelain --untracked-files=all)" ]]
+          [[ -f "$ANTIGRAVITY_REVIEW_RUNTIME/.github/antigravity/review.cljs" ]]
+          checkout_path=".antigravity-objects-$(basename "$review_root")"
+          [[ ! -e "$GITHUB_WORKSPACE/$checkout_path" ]]
+          printf 'checkout-path=%s\n' "$checkout_path" >> "$GITHUB_OUTPUT"
+          printf 'empty-pattern=/.antigravity-empty-%s\n' "$(basename "$review_root")" >> "$GITHUB_OUTPUT"
+          {
+            printf 'REVIEW_CHECKOUT_PATH=%s\n' "$checkout_path"
+            printf 'REVIEW_CANDIDATE_PATH=%s/candidate\n' "$review_root"
+            printf 'REVIEW_OUTPUT_PATH=%s/output\n' "$review_root"
+          } >> "$GITHUB_ENV"
+
+      - name: Fetch candidate git objects without candidate execution
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ needs.preflight.outputs.head-sha }}
+          path: ${{ steps.paths.outputs.checkout-path }}
+          persist-credentials: false
+          fetch-depth: 0
+          submodules: false
+          lfs: false
+          sparse-checkout: ${{ steps.paths.outputs.empty-pattern }}
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - name: Run approved trusted review runtime
+        env:
+          REVIEW_HEAD_SHA: ${{ needs.preflight.outputs.head-sha }}
+          REVIEW_BASE_SHA: ${{ needs.preflight.outputs.base-sha }}
+          REVIEW_RUNTIME_REVISION: ${{ needs.preflight.outputs.runtime-revision }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          trap 'status=$?; printf "review-runtime exit=%s\n" "$status" > "$(dirname "$REVIEW_OUTPUT_PATH")/review-exit.txt"; exit "$status"' EXIT
+          # Checkout requires a workspace-relative path; relocate objects immediately.
+          # Candidate files, package manifests, scripts, hooks, and dependencies are never executed.
+          mv -- "$GITHUB_WORKSPACE/$REVIEW_CHECKOUT_PATH" "$REVIEW_CANDIDATE_PATH"
+          [[ "$(git -C "$ANTIGRAVITY_REVIEW_RUNTIME" rev-parse HEAD)" == "$REVIEW_RUNTIME_REVISION" ]]
+          [[ -z "$(git -C "$ANTIGRAVITY_REVIEW_RUNTIME" status --porcelain --untracked-files=all)" ]]
+          cli_digest="$(sha256sum -- "$ANTIGRAVITY_REVIEW_CLI")"
+          [[ "${cli_digest%% *}" == "$ANTIGRAVITY_REVIEW_CLI_SHA256" ]]
+          bwrap_digest="$(sha256sum -- "$ANTIGRAVITY_REVIEW_BWRAP")"
+          [[ "${bwrap_digest%% *}" == "$ANTIGRAVITY_REVIEW_BWRAP_SHA256" ]]
+          cd -- "$ANTIGRAVITY_REVIEW_RUNTIME"
+          "$ANTIGRAVITY_REVIEW_NBB" -cp "$ANTIGRAVITY_REVIEW_RUNTIME/.github/antigravity" \
+            "$ANTIGRAVITY_REVIEW_RUNTIME/.github/antigravity/review.cljs" \
+            --repo "$REVIEW_CANDIDATE_PATH" --base "$REVIEW_BASE_SHA" --head "$REVIEW_HEAD_SHA" \
+            --output "$REVIEW_OUTPUT_PATH" --worker-home "$ANTIGRAVITY_REVIEW_WORKER_HOME" \
+            --cli "$ANTIGRAVITY_REVIEW_CLI" --cli-sha256 "$ANTIGRAVITY_REVIEW_CLI_SHA256" \
+            --bwrap "$ANTIGRAVITY_REVIEW_BWRAP" --bwrap-sha256 "$ANTIGRAVITY_REVIEW_BWRAP_SHA256" \
+            --timeout-seconds 1200
+
+      - name: Upload review evidence including failure diagnostics
+        if: ${{ always() && steps.paths.outputs.evidence-root != '' }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: antigravity-review-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.paths.outputs.evidence-root }}/runtime-preflight.txt
+            ${{ steps.paths.outputs.evidence-root }}/review-exit.txt
+            ${{ steps.paths.outputs.evidence-root }}/output/*.json
+            ${{ steps.paths.outputs.evidence-root }}/output/*.md
+            ${{ steps.paths.outputs.evidence-root }}/output/native.stderr.log
+            ${{ steps.paths.outputs.evidence-root }}/output/input.txt
+          if-no-files-found: warn
+          include-hidden-files: false
+          retention-days: 14
+
+      - name: Remove only this job's isolated review files
+        if: ${{ always() && steps.paths.outputs.evidence-root != '' }}
+        env:
+          REVIEW_EVIDENCE_ROOT: ${{ steps.paths.outputs.evidence-root }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          runner_temp="$(cd -- "$RUNNER_TEMP" && pwd -P)"
+          workspace="$(cd -- "$GITHUB_WORKSPACE" && pwd -P)"
+          leaf="${REVIEW_EVIDENCE_ROOT##*/}"
+          # Only the exact generated direct child is eligible. Never follow a root symlink.
+          [[ "$leaf" =~ ^antigravity-review\.[A-Za-z0-9]{8}$ ]]
+          [[ "$REVIEW_EVIDENCE_ROOT" == "$runner_temp/$leaf" && ! -L "$REVIEW_EVIDENCE_ROOT" ]]
+          checkout_path="$workspace/.antigravity-objects-$leaf"
+          # This also removes partial checkout on failure before relocation. rm does not follow links.
+          rm -rf -- "$checkout_path" "$REVIEW_EVIDENCE_ROOT"

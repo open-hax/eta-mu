@@ -1,0 +1,37 @@
+{
+  "diff-sha256": "8cd1a9eca4d59fd014604608bc76f310d0b3ba2b26a844dabbdfc6575798f192",
+  "paths": [
+    "increment.clj"
+  ],
+  "prompt-bytes": 4230,
+  "input-bytes": 1190,
+  "head": "78ef5c894570b47c9a04896ef29db50091c6b532",
+  "input-sha256": "73c05f7c2c69ffae4cb1c547eeec810033e2b1fdbb3147322a21152e97601cc0",
+  "files": [
+    {
+      "path": "increment.clj",
+      "binary?": false,
+      "base-mode": "100644",
+      "base-bytes": 84,
+      "head-mode": "100644",
+      "base-oid": "87304d8f77fd90d4d160bb318c6b3f4d667cc013",
+      "base-sha256": "d9f3e0f78b58607d3ad476e8f65add4e9f7aa717f68dea00a804ec3d20e5ceb3",
+      "status": "M",
+      "head-bytes": 84,
+      "head-sha256": "adc6266fe0c97644109e038e8d5d32c04a7da862add71f987ce03c7123b1f18f",
+      "head-oid": "8f1daf55d924696b5703d38ce64f718430ceaf95"
+    }
+  ],
+  "limits": {
+    "files": 256,
+    "file-bytes": 262144,
+    "diff-bytes": 1048576,
+    "input-bytes": 4194304,
+    "prompt-bytes": 65536,
+    "response-bytes": 2097152
+  },
+  "base": "34322bfa842f32b081dd98e450d72c3d6b7a32c4",
+  "diff_digest": "8cd1a9eca4d59fd014604608bc76f310d0b3ba2b26a844dabbdfc6575798f192",
+  "file-count": 1,
+  "diff-bytes": 157
+}

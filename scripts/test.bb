@@ -39,6 +39,13 @@
     :cmd ["node" "--test" ".github/scripts/opencode-code-review-workflow.test.mjs"
           ".github/scripts/opencode-review-tool-recovery.test.mjs"
           ".github/scripts/opencode-review-invocation-integrity.test.mjs"]}
+   {:label "antigravity-review-workflow"
+    :cmd ["node" "--test" ".github/scripts/antigravity-code-review-workflow.test.mjs"]}
+   {:label "antigravity-review-laws"
+    :cmd ["node" "packages/eta-mu/node_modules/nbb/cli.js"
+          "-cp" ".github/antigravity" ".github/antigravity/review_test.cljs"]}
+   {:label "antigravity-review-runner"
+    :cmd ["node" "--test" ".github/antigravity/runner.test.mjs"]}
    {:label "assessment-workflows" :cmd ["bb" "scripts/test-assessments.bb"]}
    {:label "legacy-ai-catalog"
     :cmd ["pnpm" "--dir" "packages/legacy/ai" "exec" "vitest" "run"

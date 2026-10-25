@@ -1176,3 +1176,116 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 7598ef5cfb3e2bf326ec227a98d54802cb4c8614,dbeb654a-6c67-44fc-8121-990e9ad2d58f,sha256:82e59463ad5873188f1decfbf8644fb1a66229d6ea9f26e7f822014c1c86fceb
   note: Line-oriented Git porcelain is rendered text: exact owned Unicode/newline/quote paths need NUL framing before prefix admission. Keep actual foreign/tracked/staged/rename controls and real install/completion adapter tests. Registered340 genuine RED338pass/2assertionFAIL then GREEN340/340, normal cleanup and zero emitted warnings. Accepted canonical7ab is consumed only at the three existing defaults/fallbacks, with ordinary direct candidate PR workflow source still needing hosted qualification. Preserve first pin329PASS and installedchecker180s timeout as historical source results. The official checker deadlock fix uses a reader after process start; qualify a private exact upstream source build rather than disabling ShellCheck or filtering findings. Parent Git discovery can silently skip a patch in nested nonrepository archives: native parent ceiling plus no-index and exact fullpostimage guard establish actual application. Original pre-build refusal retained; normal isolated Go cache/config/resource bounds, installedtool preservation and unfiltered owning checker0 are explicit. Historical12global checker false positives remain FAIL, no Pyflakes credit when absent. No provider/model/hostedreview/adoption/merge/disposition credit. Portable candidate0, no spore or promotion.
+
+- ts: 2026-10-23T06:47:00.921246Z
+  session: 01a16756-fd90-7710-8295-c8a237aeb290
+  task: Antigravity CLI review and Foresight rollout
+  p-efficiency: 0.65
+  p-friction: 0.9
+  p-skill-candidate: 0.9
+  spore: 20261023-antigravity-native-finish-and-permission-contracts.md
+  receipt-refs: 2026-10-23T06:47:00.921246Z
+  note: Verify representative native nonempty and clean results before building adapters; static tool catalogs differ from actual grants and native finish injects typed transport metadata.
+
+- ts: 2026-10-23T07:00:18.978185+00:00
+  session: antigravity-review-rollout
+  task: Repair hosted test launcher without global NBB
+  p-efficiency: 0.8
+  p-friction: 0.3
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: 2026-10-23T07:00:18.978185+00:00
+  note: Hosted CI exposed a global executable assumption; verified pinned nested dependency under restricted PATH.
+
+- ts: 2026-10-23T07:31:59.531736+00:00
+  session: antigravity-review-rollout
+  task: Qualify held-open native stdin transport
+  p-efficiency: 0.7
+  p-friction: 0.7
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: 2026-10-23T07:31:59.531736+00:00
+  note: Native stdin EOF could discard an active turn; retained actual large-input and final runtime proofs, and verified cancellation before provider startup.
+
+- ts: 2026-10-23T07:52:24.587230+00:00
+  session: antigravity-review-rollout
+  task: Retain service-context native diagnostics
+  p-efficiency: 0.8
+  p-friction: 0.6
+  p-skill-candidate: 0.0
+  spore: none
+  receipt-refs: 2026-10-23T07:52:24.587230+00:00
+  note: Interactive namespace permission did not imply systemd service permission; retain stderr before teardown.
+
+
+## 2026-10-23 canonical PR input and service qualification
+
+- Friction: Git base-tip comparison included target-only changes; local attributes and automatic index abbreviation undermined complete/reproducible patch claims.
+- Learning: derive one unique merge base, preserve base_tip separately, and explicitly bound text/full-index formatting before inference. Regression tests reproduced each failure before repair.
+- Evidence: runtime `9955ba838ff187beced4beb26f4c271941a956ec`; `.ημ/antigravity-review/service-qualification-R4.json`; historical full hosted A3 proof remains exact-head evidence only.
+- Verification: 38 integration tests, 71 pure assertions, 12 workflow tests and fresh clean/defect systemd cases passed. Native GitHub approval and current hosted qualification remain separate.
+- No new spore; the previously incubated spore is not promoted.
+
+
+## 2026-10-23 early cumulative input admission
+
+- Friction: final serialized admission ran after loading every immutable blob, allowing excessive transient memory allocation.
+- Learning: check cumulative UTF-8 bytes immediately after each base/head blob; a later invalid-UTF-8 sentinel proves no further blob is read after refusal.
+- Evidence: runtime `8b6fe29ad0df2cb053050ea352082aef1f0a0fdb`; `.ημ/antigravity-review/service-qualification-R5.json`;39 integration tests and fresh clean/defect systemd cases passed.
+- Separate immutable runtime publication preserves the in-flight prior-head native MiMo review; current R5 hosted qualification remains separate.
+- No new spore; the prior spore remains unpromoted.
+
+
+## 2026-10-23 exact finish progress and reviewable proof custody
+
+- Friction: a valid native ACTIVE finish preview was classified as an effect; the old MiMo fullreview ended without a complete submission after120/122chunks and recovery timeout.
+- Learning: admit only the observed exact-shaped finish wrapper tied to its final DONE; clipped previews remain data, never result authority. Preserve raw proof in immutable Git/hash custody while reducing duplicate archived payloads in the current source diff.
+- Evidence: runtime `5152dcce6e279a49b5a706ab3d3eaa4224df6cd3`;42integration tests,99pure assertions,12workflow tests; fresh R6service clean/defect cases; `.ημ/antigravity-review/service-qualification-R6.json`.
+- Original R5refusal and oldMiMofailure stay failures; no approval, completed cohort or later-head credit invented. Four historical receipt corrections remain untouched pending explicit useroverride.
+- No new spore; prior spore remains unpromoted.
+
+
+## 2026-10-23 clarification of finish progress and review evidence
+
+- R5 classified a valid native ACTIVE finish preview as an effect. R6 admits only the exact observed wrapper, bound to its matching adjacent DONE finish. The preview never supplies result authority.
+- The old MiMo review assessed 120 of 122 chunks without a complete canonical submission. Its 45-minute recovery timed out. Both attempts remain failures and supply no approval, completed cohort, or later-head credit.
+- Evidence is bound to runtime `5152dcce6e279a49b5a706ab3d3eaa4224df6cd3`: 42 integration tests, 7 pure tests with 99 assertions, and 12 workflow tests passed. Fresh R6 service cases passed in 24.088677621 seconds for clean input and 46.065075283 seconds for the known defect, with five events and one turn each. The descriptor is `.ημ/antigravity-review/service-qualification-R6.json`.
+- Four historical receipt corrections remain untouched pending an explicit user override. No new spore was created, and the prior spore remains unpromoted. This clarification preserves the original R5 refusal and incomplete MiMo outcomes as failures.
+- ts: 2026-10-25T07:42:47.016487062Z
+  session: /home/err/.local/share/foresight-worktrees/eta-antigravity-review-20261023
+  task: ETA Antigravity aggregate Git output cap classification diagnosis and regression
+  p-efficiency: 0.78
+  p-friction: 0.48
+  p-skill-candidate: 0.55
+  spore: none
+  receipt-refs: 2026-10-25T07:42:42.653993765Z
+  note: Treat ENOBUFS from bounded spawnSync as a distinct output-limit refusal and pin it at the prepare-only boundary; preserve no-artifact/no-dispatch and the original limit. The eta-mu package suite's openai test mismatch was observed after the patch only, so keep it unattributed until a true original-source baseline is run. Original task plan predates this anomaly; board chronology comment records discovery.
+- ts: 2026-10-25T08:04:58.751927420Z
+  session: /home/err/.local/share/foresight-worktrees/eta-antigravity-review-20261023
+  task: Correct two fresh CodeRabbit findings in the Antigravity card body
+  p-efficiency: 0.9
+  p-friction: 0.15
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: 2026-10-25T08:04:52.926760734Z
+  note: Verified both native findings against PR 364 at the exact head; corrected the committed-status sentence and delimiter spacing without touching frontmatter or review state. No reusable friction pattern emerged.
+
+- ts: 2026-10-25T09:03:40Z
+  session: /home/err/.local/share/foresight-worktrees/eta-antigravity-review-20261023
+  task: Preserve Antigravity CLI pin and document guarded metadata/context diagnostics
+  p-efficiency: 0.62
+  p-friction: 0.78
+  p-skill-candidate: 0.82
+  spore: 20261025-090252-pinned-cli-metadata-under-read-only-bubblewrap.md
+  receipt-refs: 2026-10-25T09:00:10Z, 2026-10-25T09:03:01Z, 2026-10-25T09:03:24Z
+  note: An unconfined metadata investigation was followed by an unexpected in-place 1.4.7 update of the pinned 1.4.6 path; exact trigger remains unknown. Parent restored the hash-verified original bytes and guarded version/models checks stayed pinned. The read-only context resume stopped at a settings prompt before showing context values; treat context and provider-consumed input as unknown. Keep all CLI launches, including metadata, inside the read-only Bubblewrap boundary.
+
+- ts: 2026-10-25T09:06:56Z
+  session: /home/err/.local/share/foresight-worktrees/eta-antigravity-review-20261023
+  task: Validate generated ETA Antigravity caller eligibility and draft-cancellation behavior
+  p-efficiency: 0.9
+  p-friction: 0.25
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: 2026-10-25T09:06:56Z
+  note: Root renderer RED/GREEN evidence surfaced shared caller gaps; the generated ETA caller now uses a same-repository guard and cancels on converted_to_draft. ETA actionlint and diff-check passed. No new reusable friction pattern emerged; caller remains read-only and runtime/workflow pins unchanged.
