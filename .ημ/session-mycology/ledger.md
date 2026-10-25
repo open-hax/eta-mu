@@ -1260,3 +1260,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 2026-10-25T07:42:42.653993765Z
   note: Treat ENOBUFS from bounded spawnSync as a distinct output-limit refusal and pin it at the prepare-only boundary; preserve no-artifact/no-dispatch and the original limit. The eta-mu package suite's openai test mismatch was observed after the patch only, so keep it unattributed until a true original-source baseline is run. Original task plan predates this anomaly; board chronology comment records discovery.
+- ts: 2026-10-25T08:04:58.751927420Z
+  session: /home/err/.local/share/foresight-worktrees/eta-antigravity-review-20261023
+  task: Correct two fresh CodeRabbit findings in the Antigravity card body
+  p-efficiency: 0.9
+  p-friction: 0.15
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: 2026-10-25T08:04:52.926760734Z
+  note: Verified both native findings against PR 364 at the exact head; corrected the committed-status sentence and delimiter spacing without touching frontmatter or review state. No reusable friction pattern emerged.
