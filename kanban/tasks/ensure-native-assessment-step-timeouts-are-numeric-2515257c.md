@@ -3,11 +3,11 @@ category: "tasks"
 labels: "review, workflow, timeout"
 dependency: []
 type: "task"
-write-id: "1792936260172-0.9ao36z4ove5po1tsuh"
+write-id: "1792946510660-0.k6l4xw6kd5980wrbm7"
 points: "2"
 title: "Ensure native assessment step timeouts are numeric"
 priority: "P1"
-status: "incoming"
+status: "in_progress"
 uuid: "1728ae7d-41fd-4cb7-ba0f-4c802515257c"
 created_at: "2026-10-25T12:16:09.959Z"
 ---
@@ -57,5 +57,7 @@ The existing upstream Rheos card `ledger-events-persist-absolute-source-paths-fr
 
 ---
 Planning review roots4371049014/4371049020: use registered full bb scripts/lint.bb including pnpm typecheck; explicitly require zero warnings for kondo, types and every suite. Added append-only observation correcting the two historical planning records miscategorized test-run, with original native event IDs/raw line hashes/whole prefix hash. Historical rows unchanged; no executable test or hosted fix credit. Card remains incoming pending current-head planning review.
+
+Planning PR367 is actually merged at ddc5a0c30da871705f87c7a7819864e08e04cae6 after current-head canonical PASS on f3b82db, MiMo approval, all11 native checks and all5 settled threads. Implement the accepted bounded numeric timeout correction on a new branch. Retain registered six-suite/source-built verifier/network-denial gates and actual hosted qualification after adoption; cancelled40178755460 remains failed evidence.
 
 ---

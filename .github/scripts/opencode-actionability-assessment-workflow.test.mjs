@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import assert from "node:assert/strict";
+import { assertNumericTimeout } from "./assessment-timeout-expression-fixture.mjs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { runTrustedWorkflowFixture } from "./assessment-trusted-workflow-fixture.mjs";
@@ -450,12 +451,11 @@ for (const route of ["actionability", "rejection", "positive-cohort"]) {
     const verify = job.steps.find(step => step.name === "Reverify actual accepted invocation and fresh custody");
     const upload = job.steps.find(step => step.uses?.startsWith("actions/upload-artifact@"));
     assert.equal(typeof model["timeout-minutes"], "string", `${route}: model step lacks its bounded inference deadline`);
-    for (const requested of [60, 180]) {
-      assert.equal(model["timeout-minutes"], "${{ inputs.review_timeout_minutes > 180 && 180 || (inputs.review_timeout_minutes > 60 && inputs.review_timeout_minutes || 60) }}",
-        `${route}: inference preserves the existing validated 60–180 clamp`);
+    for (const requested of [60, "60", 120, "120", 180, "180"]) {
+      const evaluated = assertNumericTimeout(current, requested, Number(requested));
       assert.equal(job["timeout-minutes"], 240, `${route}: job has a literal deadline with no expression arithmetic`);
-      assert.ok(job["timeout-minutes"] - requested >= 60, `${route}: every accepted request has at least 60 minutes of cleanup headroom`);
-      assert.ok(verify["timeout-minutes"] + upload["timeout-minutes"] < job["timeout-minutes"] - requested,
+      assert.ok(job["timeout-minutes"] - evaluated >= 60, `${route}: every accepted request has at least 60 minutes of cleanup headroom`);
+      assert.ok(verify["timeout-minutes"] + upload["timeout-minutes"] < job["timeout-minutes"] - evaluated,
         `${route}: bounded verifier and artifact writer fit within reserved headroom`);
     }
     assert.equal(verify["timeout-minutes"], 30);
@@ -1129,7 +1129,8 @@ test("native reader limits retain bounded assessment and one-shot publication he
     const verify = assess.steps.find((step) => step.name === "Reverify actual accepted invocation and fresh custody");
     const refresh = assess.steps.findIndex((step) => step.id === "target_reader_after_model");
     const upload = assess.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
-    assert.equal(model["timeout-minutes"], "${{ inputs.review_timeout_minutes > 180 && 180 || (inputs.review_timeout_minutes > 60 && inputs.review_timeout_minutes || 60) }}");
+    assertNumericTimeout(parsed, 180, 180);
+    assertNumericTimeout(parsed, "180", 180);
     assert.ok(assess["timeout-minutes"] >= 180 + verify["timeout-minutes"] + upload["timeout-minutes"] + 25,
       "max model execution, final host reads and upload retain separate setup headroom");
     assert.equal(assess["timeout-minutes"], 240);
@@ -1283,3 +1284,34 @@ test("publisher deadline accommodates the concrete bounded two-author read-plan 
       `${purpose}: upload and setup retain separate time after the bounded operation`);
   }
 });
+
+// Actual dispatch strings and workflow-call numbers use the same authored gate.
+for (const route of ["actionability", "rejection", "positive-cohort"]) {
+  test(`native timeout typing and prepare refusal (${route})`, () => {
+    const YAML = createRequire(import.meta.url)("yaml");
+    const current = YAML.parse(fs.readFileSync(path.join(root, `.github/workflows/opencode-${route}-assessment.yml`), "utf8"));
+    const guard = current.jobs.prepare.steps[0].run;
+    const env = { PATH: process.env.PATH, TARGET_REPOSITORY: "open-hax/eta-mu",
+      CANONICAL_REVISION: current.env.CANONICAL_REVISION, MUSE_REVISION: current.env.MUSE_REVISION,
+      REJECTION_HISTORY_SOURCE_SHA256: "a".repeat(64), REJECTION_HISTORY_CLI_SHA256: "b".repeat(64),
+      POSITIVE_COHORT_HISTORY_SOURCE_SHA256: "a".repeat(64), POSITIVE_COHORT_HISTORY_CLI_SHA256: "b".repeat(64) };
+    const run = value => runTrustedWorkflowFixture(import.meta.url, ["-c", guard], {
+      env: { ...env, TIMEOUT_INPUT: String(value) }, encoding: "utf8", timeout: 15000 });
+    assert.equal(current.jobs.assess.needs, "prepare", "malformed prepare inputs cannot reach the model job");
+    for (const requested of [60, "60", 120, "120", 180, "180"]) {
+      assert.equal(run(requested).status, 0);
+      assertNumericTimeout(current, requested, Number(requested));
+    }
+    for (const event of ["workflow_call", "workflow_dispatch"]) {
+      const enrolledDefault = current.on[event].inputs.review_timeout_minutes.default;
+      assert.equal(enrolledDefault, 60);
+      assert.equal(run(enrolledDefault).status, 0);
+      assertNumericTimeout(current, enrolledDefault, 60);
+    }
+    for (const invalid of ["", "not-a-number", "null", "true", "60.5", 60.5, "59", 59, "181", 181, "1e2"]) {
+      const refused = run(invalid);
+      assert.notEqual(refused.status, 0);
+      assert.match(refused.stdout, /review_timeout_minutes must be a whole number from 60 through 180/);
+    }
+  });
+}
