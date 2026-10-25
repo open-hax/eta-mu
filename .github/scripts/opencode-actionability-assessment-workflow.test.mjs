@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import assert from "node:assert/strict";
-import { assertNumericTimeout } from "./assessment-timeout-expression-fixture.mjs";
+import { assertNumericTimeout, assertNativeBudgetFixture } from "./assessment-timeout-expression-fixture.mjs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { runTrustedWorkflowFixture } from "./assessment-trusted-workflow-fixture.mjs";
@@ -1297,21 +1297,6 @@ for (const route of ["actionability", "rejection", "positive-cohort"]) {
       POSITIVE_COHORT_HISTORY_SOURCE_SHA256: "a".repeat(64), POSITIVE_COHORT_HISTORY_CLI_SHA256: "b".repeat(64) };
     const run = value => runTrustedWorkflowFixture(import.meta.url, ["-c", guard], {
       env: { ...env, TIMEOUT_INPUT: String(value) }, encoding: "utf8", timeout: 15000 });
-    assert.equal(current.jobs.assess.needs, "prepare", "malformed prepare inputs cannot reach the model job");
-    for (const requested of [60, "60", 120, "120", 180, "180"]) {
-      assert.equal(run(requested).status, 0);
-      assertNumericTimeout(current, requested, Number(requested));
-    }
-    for (const event of ["workflow_call", "workflow_dispatch"]) {
-      const enrolledDefault = current.on[event].inputs.review_timeout_minutes.default;
-      assert.equal(enrolledDefault, 60);
-      assert.equal(run(enrolledDefault).status, 0);
-      assertNumericTimeout(current, enrolledDefault, 60);
-    }
-    for (const invalid of ["", "not-a-number", "null", "true", "60.5", 60.5, "59", 59, "181", 181, "1e2"]) {
-      const refused = run(invalid);
-      assert.notEqual(refused.status, 0);
-      assert.match(refused.stdout, /review_timeout_minutes must be a whole number from 60 through 180/);
-    }
+    assertNativeBudgetFixture(current, run);
   });
 }

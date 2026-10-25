@@ -1223,3 +1223,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   p-skill-candidate: 0.43
   receipt-refs: receipts.edn observations/test-run origin native-assessment-numeric-timeout-source; RED77a01c16; planning367; native run40178755460
   note: Evaluate actual workflow expression types with the official pinned evaluator; numerical comparisons leave selected string operands unchanged. Registered source-built/inert/network-denied six-suite RED then GREEN established the defect/fix without a model or native publication. Credential-free privateHOME requires direct existing Node/Pnpm binaries, and local Git object sources must contain every exact pinned commit; initial setup failures supplied no regression credit. Native Rheos review gate triggered all-workspace build and refused because dependencies were missing. Stop only owned remaining build descendants after established failure, restore only proven owned generated tracked files, keep card in_progress and report full-build and hosted qualification gaps. GitHub CLI credential lookup is currently unavailable; connected app readback is useful but cannot replace canonical merge-gate custody. No spore or global memory mutation.
+
+
+- ts: 2026-10-25T22:11:23.929822+00:00
+  origin: native-assessment-timeout-review-fix
+  p-efficiency: 0.73
+  p-friction: 0.59
+  p-skill-candidate: 0.39
+  receipt-refs: origin native-assessment-timeout-clojurescript-review-fix; review 5645520052; inline 4372611099; PR 368
+  note: The repository language rule also applies to new test logic. The official evaluator setup and all new numeric/default/refusal assertions now live in ClojureScript. Keep the existing Node runner as a thin loading and process adapter, with no second expression-policy implementation. Match the namespace to its file path and register it in the existing lint command. Use readable sentences for native board verification comments, and correct old wording append-only. The final six-suite, adjacent-test and zero-warning lint gates pass; the distinct full-build refusal and hosted qualification remain unresolved. No spore or global memory change.

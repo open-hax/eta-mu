@@ -3,7 +3,7 @@ category: "tasks"
 labels: "review, workflow, timeout"
 dependency: []
 type: "task"
-write-id: "1792964827560-0.bpmsqjotq7ec94hql1o"
+write-id: "1792965818452-0.ko9s2az3xbqhq0jblwn"
 points: "2"
 title: "Ensure native assessment step timeouts are numeric"
 priority: "P1"
@@ -63,5 +63,7 @@ Planning PR367 is actually merged at ddc5a0c30da871705f87c7a7819864e08e04cae6 af
 Implementation RED77a01c16 reproduced the real dispatch typing defect through the pinned official evaluator: registered six-suite gate completed with7type assertion failures in actionability-node, other5suitesPASS. Candidate now wraps the existing3deadline expressions with fromJSON(format(...)), retaining all prepare bounds and job/verifier/upload reserves. GREEN actual registered6suitesPASS202.7s: Node37/23/7tests; NBB1265checks,8tests319assertions,6tests57assertions;377network-control testsPASS and actual pinned Muse builds0warnings. Adjacent340testsPASS, fullrecursive/gate/assessmentkondoPASS0warnings, syntax/diffPASS. Rawactionlint has18identical accepted-base job.workflow_sha/ref diagnostics and0introduced; not claimed rawPASS. Source is not protected adoption or hosted lifecycle qualification; current native review/CI and a new stable post-adoption dispatch are still required. Existing cancelled40178755460 retains no judgment/publication credit.
 
 Actual native move in_progress->review was REFUSED by the configured pnpm build gate. It invoked all26workspace application builds; missing per-package dependencies produced failures. After failure was established, stopped only the remaining owned build descendants; no board rule/command was bypassed, card stays in_progress. Two generated tracked contracts/output artifacts were restored only because they were clean before this owned build. The targeted assessment/recovery/kondo checks remain passing but are not a successful full repository build or completed task. Preparing reviewable source PR with this build limitation and required hosted lifecycle qualification explicit.
+
+Readable correction to the verification notes recorded in native ledger lines 3311–3312. The registered assessment command completed all six suites successfully in 202.7 seconds. The Node suites ran 37, 23 and 7 tests. The NBB suites completed 1,265 checks; 8 tests with 319 assertions; and 6 tests with 57 assertions. All 377 network-boundary and trusted-fixture controls passed. The final adjacent recovery suite passed 340 tests. Clojure lint passed with zero errors and zero warnings. Separately, the move to review was refused: the configured repository build attempted 26 application packages and encountered missing package dependencies and failed builds. Remaining processes belonging to that failed build were stopped. The card is still in_progress. Passing the targeted suites does not mean the full repository build or hosted lifecycle qualification passed. These sentences clarify the earlier compressed wording; the original comments and event bytes are retained.
 
 ---

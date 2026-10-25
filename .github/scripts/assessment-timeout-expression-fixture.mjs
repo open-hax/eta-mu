@@ -1,23 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Test-only use of GitHub's evaluator. Runtime workflow policy stays in YAML.
-import assert from "node:assert/strict";
-import { Evaluator, Lexer, Parser, data } from "@actions/expressions";
+// Node test loader only; evaluator setup and assertions live in ClojureScript.
+import { createRequire } from "node:module";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-export function evaluateTimeout(expression, requested) {
-  assert.ok(expression.startsWith("${{") && expression.endsWith("}}"));
-  const input = new data.Dictionary();
-  if (requested !== undefined) input.add("review_timeout_minutes",
-    typeof requested === "number" ? new data.NumberData(requested) : new data.StringData(requested));
-  const context = new data.Dictionary({ key: "inputs", value: input });
-  const ast = new Parser(new Lexer(expression.slice(3, -2).trim()).lex().tokens, ["inputs"], []).parse();
-  return new Evaluator(ast, context).evaluate().value;
-}
+const requireFromEtaMu = createRequire(new URL("../../packages/eta-mu/package.json", import.meta.url));
+const { loadFile } = await import(pathToFileURL(requireFromEtaMu.resolve("nbb")).href);
+const fixture = await loadFile(fileURLToPath(new URL("./eta_mu/extern/assessment_timeout_expression_fixture.cljs", import.meta.url)));
 
-export function assertNumericTimeout(workflow, requested, expected) {
-  const model = workflow.jobs.assess.steps.find(step => step.id === "assess");
-  const actual = evaluateTimeout(model["timeout-minutes"], requested);
-  assert.equal(typeof actual, "number", `native model-step timeout for ${JSON.stringify(requested)} must evaluate to a number`);
-  assert.ok(Number.isInteger(actual));
-  assert.equal(actual, expected);
-  return actual;
-}
+export const evaluateTimeout = fixture.evaluateTimeout;
+export const assertNumericTimeout = fixture.assertNumericTimeout;
+export const assertNativeBudgetFixture = fixture.assertNativeBudgetFixture;
