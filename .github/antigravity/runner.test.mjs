@@ -300,6 +300,21 @@ test("cumulative base/head blob admission stops before a later invalid UTF-8 hea
   assert.equal(fs.existsSync(result.output), false, "no input snapshot or model process before admission");
 });
 
+test("over-limit Git patch output is refused as bounded input before artifact or model launch", t => {
+  const f = fixture(t), bytes = 1024 * 1024;
+  f.git("checkout", "--detach", f.base);
+  fs.writeFileSync(path.join(f.repo, "large.txt"), Buffer.alloc(bytes, 0x78));
+  f.git("add", "."); f.git("commit", "-qm", "one maximum-size text blob");
+  const head = f.git("rev-parse", "HEAD");
+  const result = f.run(["--prepare-only"], "malformed", {}, null, false, { base: f.base, head });
+  assert.equal(result.status, 1);
+  const refusal = JSON.parse(result.stderr);
+  assert.equal(refusal.message, "process-output-limit");
+  assert.deepEqual(refusal.error, { kind: "process-output-limit", details: {
+    "max-bytes": 1048576, binary: "git", operation: "diff" } });
+  assert.equal(fs.existsSync(result.output), false, "over-limit patch is neither truncated nor dispatched");
+});
+
 test("prepare-only reads immutable objects without invoking CLI or requiring auth", t => {
   const f = fixture(t), result = f.run(["--prepare-only"], "malformed");
   assert.equal(result.status, 0, result.stderr);
