@@ -1186,3 +1186,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: .ημ/sessions/2026-10-24-workflow-hygiene/receipt.edn
   note: Inspected the actual pinned legacy CLI before changing its workflow adapter. Twelve focused offline tests pass, unchanged-base control fails, YAML/shell/diff checks pass. Twenty synthetic classifier fixtures pass integrity checks but no model ran. JSON Schema metaschema validation unavailable because jsonschema is absent; full repository gates, hosted capability execution and compiled session-mycology command unavailable. This is a manual reflection, no CLI admission, board transition, live approval activation or settings mutation claimed.
+
+- ts: 2026-10-25T12:16:30.807884+00:00
+  session: shared-axxium-fleet-heartbeat5
+  task: Scope native assessment timeout type failure from actual cancelled workflow
+  p-efficiency: 0.76
+  p-friction: 0.44
+  p-skill-candidate: 0.21
+  spore: none
+  receipt-refs: latest root Receipt River event
+  note: The declared step cap was not enforced because GitHub rejected a string-valued timeout template; numeric comparisons retained the selected dispatch string. Preserve the actual failed template and cancellation. Native Rheos card1728ae7d-41fd-4cb7-ba0f-4c802515257c is incoming for planning review. No workflow source change, hosted fix or assessment credit claimed; existing typed publication and fresh-dispatch boundaries remain required.
