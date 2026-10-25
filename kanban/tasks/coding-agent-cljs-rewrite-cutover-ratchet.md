@@ -75,3 +75,27 @@ SOL DECOUPLING SCOPED 2026-07-17: new epic sol-turn-processor-cutover (kanban/ep
 SOL DECOUPLING LANDED 2026-07-17 (sol-provider-swap-legacy-drop): sol is no longer a legacy/coding-agent consumer. Legacy boundary deleted (extern/eta_mu.cljs, infra/agent/provider/eta_mu.cljs + legacy test stubs), @open-hax/eta-mu-cli dropped from packages/sol/package.json and shadow-cljs keep-as-import/resolve, provider swapped to open-hax.sol.infra.agent.provider.turn-processor over eta-mu.turn-processor.infra.loop + eta-mu.extern.openai. Gates: pnpm --filter @open-hax/sol test green (88 tests, 256 assertions), lint:kondo zero warnings, git grep eta-mu-cli -- packages/sol -> 0. The BLOCKED-BY-SOL ledger row on coding-agent clears; CI automation blockers (github/docs/kanban workflows) remain.
 
 ---
+## Bounded workflow hygiene continuation — 2026-10-24
+
+User story: as a repository operator, I need the shared auto-merge adapter to
+preserve merge commits and explain unsupported repository capabilities, so
+workflow failures can be corrected without changing settings or bypassing gates.
+
+The current reusable adapter checks out legacy GitHub CLI commit
+`bafe9aa6a09406cfd83010f5e06538117dc6056c`; that actual CLI directly invokes
+`enablePullRequestAutoMerge` and defaults to SQUASH. This bounded repair leaves
+that source pin in place, passes an explicitly validated MERGE default, and
+performs a read-only capability preflight before CLI mutation. Disabled or
+unknown capabilities remain failures. No repository setting is changed.
+
+Acceptance and evidence: 12 focused offline tests exercise the actual inline
+preflight and target-resolution shell, including unsupported/unknown settings,
+permission/network failures, merge-method overrides, and injection-shaped input.
+The unchanged-base control fails; the candidate passes. YAML and shell syntax
+and diff checks pass. Hosted execution and repository capability correction are
+still pending; the card remains blocked with its existing legacy-retirement scope.
+
+The user's semantic-review interpretation request is separately specified in
+`docs/plans/workflow-hygiene-20261024/README.md`, output schema and 20 synthetic
+fixtures. That portion is proposed shadow classification only: no model ran,
+no approval law changed, and no runtime integration is claimed.

@@ -16,7 +16,7 @@ on:
         description: "Merge method (MERGE, SQUASH, REBASE)"
         required: false
         type: string
-        default: "SQUASH"
+        default: "MERGE"
     secrets:
       ETA_MU_APP_ID:
         required: false
@@ -45,11 +45,19 @@ jobs:
         shell: bash
         env:
           TARGET_REPOSITORY: ${{ inputs.repo || github.repository }}
+          MERGE_METHOD: ${{ inputs.merge-method }}
         run: |
           if [[ ! "$TARGET_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
             echo "::error title=Invalid repository::Expected owner/name, got '$TARGET_REPOSITORY'"
             exit 1
           fi
+          case "$MERGE_METHOD" in
+            MERGE|SQUASH|REBASE) ;;
+            *)
+              echo "::error title=Invalid merge method::Expected MERGE, SQUASH, or REBASE"
+              exit 1
+              ;;
+          esac
           echo "full_name=$TARGET_REPOSITORY" >> "$GITHUB_OUTPUT"
           echo "owner=${TARGET_REPOSITORY%%/*}" >> "$GITHUB_OUTPUT"
           echo "repository=${TARGET_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
@@ -92,14 +100,50 @@ jobs:
           cache: pnpm
           cache-dependency-path: .eta-mu/packages/legacy/github/pnpm-lock.yaml
 
+      - name: Verify repository auto-merge capability
+        env:
+          GITHUB_TOKEN: ${{ steps.eta_mu_token.conclusion == 'success' && steps.eta_mu_token.outputs.token != '' && steps.eta_mu_token.outputs.token || github.token }}
+          TARGET_REPOSITORY: ${{ steps.target_repository.outputs.full_name }}
+          MERGE_METHOD: ${{ inputs.merge-method }}
+        run: |
+          node <<'NODE'
+          const main = async () => {
+            const fields = {MERGE: 'allow_merge_commit', SQUASH: 'allow_squash_merge', REBASE: 'allow_rebase_merge'};
+            const method = process.env.MERGE_METHOD;
+            if (!Object.hasOwn(fields, method)) throw new Error('Expected MERGE, SQUASH, or REBASE');
+            const response = await fetch(`https://api.github.com/repos/${process.env.TARGET_REPOSITORY}`, {
+              method: 'GET',
+              headers: {
+                authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+                accept: 'application/vnd.github+json',
+                'x-github-api-version': '2022-11-28'
+              },
+              signal: AbortSignal.timeout(15000)
+            });
+            if (!response.ok) throw new Error(`Repository capability read failed (HTTP ${response.status}); verify token access before retrying`);
+            const repo = await response.json();
+            if (repo.allow_auto_merge === false) {
+              throw new Error('Repository auto-merge is disabled. An authorized repository settings change is required to use this workflow; no settings change or direct merge was attempted');
+            }
+            if (repo.allow_auto_merge !== true) throw new Error('Repository auto-merge capability is unknown; verify repository settings visibility for this token');
+            if (repo[fields[method]] !== true) throw new Error(`Requested ${method} merge method is disabled or unknown; select an authorized enabled method or review repository settings`);
+            console.log(`Repository supports auto-merge with ${method}; review and branch protection gates still apply`);
+          };
+          main().catch((error) => {
+            console.error(`::error title=Auto-merge preflight failed::${error.message}`);
+            process.exitCode = 1;
+          });
+          NODE
+
       - name: Install eta-mu dependencies
         run: pnpm --dir .eta-mu/packages/legacy/github install --frozen-lockfile --ignore-workspace
 
       - name: Enable auto-merge
         env:
           GITHUB_TOKEN: ${{ steps.eta_mu_token.conclusion == 'success' && steps.eta_mu_token.outputs.token != '' && steps.eta_mu_token.outputs.token || github.token }}
+          MERGE_METHOD: ${{ inputs.merge-method }}
         run: |
           pnpm --dir .eta-mu/packages/legacy/github dev auto-merge \
             --repo "${{ steps.target_repository.outputs.full_name }}" \
             --pr "${{ inputs.pr }}" \
-            --merge-method "${{ inputs.merge-method }}"
+            --merge-method "$MERGE_METHOD"

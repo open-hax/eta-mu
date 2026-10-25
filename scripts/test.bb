@@ -39,11 +39,15 @@
     :cmd ["node" "--test" ".github/scripts/opencode-code-review-workflow.test.mjs"
           ".github/scripts/opencode-review-tool-recovery.test.mjs"
           ".github/scripts/opencode-review-invocation-integrity.test.mjs"]}
+   {:label "kanban-sync-workflow"
+    :cmd ["pnpm" "--dir" "packages/eta-mu" "exec" "nbb"
+          "../../.github/scripts/kanban_sync_workflow_test.cljs"]}
    {:label "assessment-workflows" :cmd ["bb" "scripts/test-assessments.bb"]}
    {:label "legacy-ai-catalog"
     :cmd ["pnpm" "--dir" "packages/legacy/ai" "exec" "vitest" "run"
           "test/model-catalog-types.test.ts"]}
    {:label "contract-guard" :cmd ["node" "--test" "scripts/contract-guard.test.mjs"]}
+   {:label "auto-merge-workflow" :cmd ["node" "--test" "scripts/auto-merge-workflow.test.mjs"]}
    {:label "eta-mu" :pkg "eta-mu"}
    {:label "clio" :pkg "@eta-mu/clio"}
    {:label "rheos" :pkg "@eta-mu/rheos"}

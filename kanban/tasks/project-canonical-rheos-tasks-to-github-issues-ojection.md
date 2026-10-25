@@ -115,3 +115,29 @@ Biome 2.3.5 reports zero warnings and no fixes on the touched test. The old
 literal GitHub-expression assertion is written as equivalent concatenated text
 to remove its preexisting Biome warning without changing its expected bytes.
 No runtime behavior, authentication, card status or historical receipt changes.
+
+### PR #365 canonical regression and action-pin repair — 2026-10-25
+
+Native CodeRabbit review 5641558743 at `2b6af76d1d0a2b194e18f98778b16a3ed56db241`
+identified the setup action SHA/version mismatch (comment 4369675135) and the
+new regression's placement under legacy TypeScript (comment 4369675137).
+Plan: align only the shared sync and its owning Rheos CI action pins with native
+release tag `13.4` (`3fe9b3ae632c6758d0b7757b0838606ef4287b08`); move the
+install/verify/build regression to a nonlegacy NBB ClojureScript suite; register
+it with the root test runner and run/lint it in the owning CI. Preserve the
+preexisting legacy containment test, all sync arguments and permission gates.
+Verify causal RED against unchanged source and missing/reordered steps, GREEN
+against the candidate, and retain a new receipt without rewriting earlier ones.
+
+Verification: unchanged exact-head source fails only the two expected action-pin
+assertions (3 tests / 7 assertions, 2 failures, zero errors, exit 1). Candidate
+passes all 3 CLJS tests / 7 assertions through the registered root BB suite.
+Seven causal controls (pre-runtime base, missing install/verify, reversed order,
+CLI version, verification command and build command) each fail with exit 1 and
+zero runtime errors. Retained legacy containment: Vitest2.1.9 1testPASS.
+Clj-kondo2025.10.23 newCLJS/rootBB: zero errors/warnings. Biome2.3.5 with
+repository configuration passes the legacy test. Both YAML files and24 shell
+blocks parse. New immutable evidence: `.ημ/sessions/2026-10-24-rheos-sync-clojure/review-followup-20261025.edn`.
+Full repository gates and new-head hosted qualification remain pending; no
+restored-sync, downstream dry-run or card-transition claim. Historical receipts
+retain their original bytes.
