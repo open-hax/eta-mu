@@ -1176,3 +1176,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 7598ef5cfb3e2bf326ec227a98d54802cb4c8614,dbeb654a-6c67-44fc-8121-990e9ad2d58f,sha256:82e59463ad5873188f1decfbf8644fb1a66229d6ea9f26e7f822014c1c86fceb
   note: Line-oriented Git porcelain is rendered text: exact owned Unicode/newline/quote paths need NUL framing before prefix admission. Keep actual foreign/tracked/staged/rename controls and real install/completion adapter tests. Registered340 genuine RED338pass/2assertionFAIL then GREEN340/340, normal cleanup and zero emitted warnings. Accepted canonical7ab is consumed only at the three existing defaults/fallbacks, with ordinary direct candidate PR workflow source still needing hosted qualification. Preserve first pin329PASS and installedchecker180s timeout as historical source results. The official checker deadlock fix uses a reader after process start; qualify a private exact upstream source build rather than disabling ShellCheck or filtering findings. Parent Git discovery can silently skip a patch in nested nonrepository archives: native parent ceiling plus no-index and exact fullpostimage guard establish actual application. Original pre-build refusal retained; normal isolated Go cache/config/resource bounds, installedtool preservation and unfiltered owning checker0 are explicit. Historical12global checker false positives remain FAIL, no Pyflakes credit when absent. No provider/model/hostedreview/adoption/merge/disposition credit. Portable candidate0, no spore or promotion.
+
+- ts: 2026-10-24T18:52:36.626240Z
+  session: chatgpt-workflow-hygiene-20261024
+  task: Correct shared merge defaults and capability diagnostics; specify shadow semantic interpretation
+  p-efficiency: 0.85
+  p-friction: 0.25
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: .ημ/sessions/2026-10-24-workflow-hygiene/receipt.edn
+  note: Inspected the actual pinned legacy CLI before changing its workflow adapter. Twelve focused offline tests pass, unchanged-base control fails, YAML/shell/diff checks pass. Twenty synthetic classifier fixtures pass integrity checks but no model ran. JSON Schema metaschema validation unavailable because jsonschema is absent; full repository gates, hosted capability execution and compiled session-mycology command unavailable. This is a manual reflection, no CLI admission, board transition, live approval activation or settings mutation claimed.
