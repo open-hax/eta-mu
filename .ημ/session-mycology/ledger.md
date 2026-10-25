@@ -1279,3 +1279,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: 20261025-090252-pinned-cli-metadata-under-read-only-bubblewrap.md
   receipt-refs: 2026-10-25T09:00:10Z, 2026-10-25T09:03:01Z, 2026-10-25T09:03:24Z
   note: An unconfined metadata investigation was followed by an unexpected in-place 1.4.7 update of the pinned 1.4.6 path; exact trigger remains unknown. Parent restored the hash-verified original bytes and guarded version/models checks stayed pinned. The read-only context resume stopped at a settings prompt before showing context values; treat context and provider-consumed input as unknown. Keep all CLI launches, including metadata, inside the read-only Bubblewrap boundary.
+
+- ts: 2026-10-25T09:06:56Z
+  session: /home/err/.local/share/foresight-worktrees/eta-antigravity-review-20261023
+  task: Validate generated ETA Antigravity caller eligibility and draft-cancellation behavior
+  p-efficiency: 0.9
+  p-friction: 0.25
+  p-skill-candidate: 0.1
+  spore: none
+  receipt-refs: 2026-10-25T09:06:56Z
+  note: Root renderer RED/GREEN evidence surfaced shared caller gaps; the generated ETA caller now uses a same-repository guard and cancels on converted_to_draft. ETA actionlint and diff-check passed. No new reusable friction pattern emerged; caller remains read-only and runtime/workflow pins unchanged.
