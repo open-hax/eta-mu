@@ -162,3 +162,25 @@ Six workflow YAML documents and 75 shell blocks parse. Byte proofs retain the
 entire current-PR ledger prefixes and exact main divergent suffixes. Evidence:
 `.ημ/sessions/2026-10-26-rheos-sync-integration/receipt.edn`. Full workspace gates and new-head hosted qualification remain
 pending; no board transition or downstream execution is claimed.
+
+### PR #365 evidence readability follow-up — 2026-10-26
+
+Plan: address CodeRabbit review 5654055760, finding 4378734901, by appending
+one readable clarification to the mycology ledger. Preserve every previous
+byte in both ledgers and this card, including its frontmatter. Verify the
+historical line reference against commit
+`e83b323baadf5bea8d5406bc0f38a52b6445b53e`; expand the test, lint and shell
+counts as descriptions of retained evidence. Append a canonical Receipt River
+observation and a standalone immutable receipt. Validate the new record using
+`record-errors`, confirm unchanged prefixes and frontmatter, and run
+`git diff --check`. This documentation change does not rerun runtime tests or
+qualify hosted checks, native approval, caller execution or a board transition.
+
+Verification: the historical Git source confirms the referenced row and its
+2026-10-25T11:30:32.482221Z timestamp. The new standalone observation parses
+and passes canonical `record-errors` validation with no errors. It is identical
+to the single record appended to `receipts.edn`. Byte comparisons preserve the
+complete previous contents of both ledgers and this card; frontmatter is
+unchanged. `git diff --check` passes. Only the four planned documentation and
+evidence paths changed. Runtime suites were not rerun. Immutable evidence:
+`.ημ/sessions/2026-10-26-rheos-sync-readability/receipt.edn`.

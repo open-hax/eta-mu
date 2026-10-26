@@ -1282,3 +1282,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: 97fbff23-d019-494e-b26e-8e4ca7178c53; .ημ/sessions/2026-10-26-rheos-sync-integration/receipt.edn
   note: Resolve only divergent ledger appends. Retain complete PR prefixes and exact main suffixes instead of rewriting or sorting historical events. Owning NBB3/7 and kondo0/0 pass; six YAML and75 shell blocks parse. All other merge bytes remain automatic. This manual reflection supplies no full-build, hosted, approval, projection or board-transition credit.
+
+- ts: 2026-10-26T15:01:52.560Z
+  session: chatgpt-rheos-sync-evidence-readability-20261026
+  task: Clarify retained PR #365 evidence without rewriting history
+  p-efficiency: 0.9
+  p-friction: 0.15
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: 11b9ff1c-fd9d-4ee2-a248-d05d1d3d84e3; .ημ/sessions/2026-10-26-rheos-sync-readability/receipt.edn; CodeRabbit review 5654055760; finding 4378734901
+  note: The shorthand line324 in the attribution entry refers to line 324 of receipts.edn at commit e83b323baadf5bea8d5406bc0f38a52b6445b53e, whose timestamp is 2026-10-25T11:30:32.482221Z. The original row is retained unchanged, including its missing repo key; its later attribution correction remains separate. In the integration reflection at 2026-10-26T14:44:28.563Z, NBB3/7 means 3 tests and 7 assertions, kondo0/0 means zero errors and zero warnings from clj-kondo, and and75 means and 75 shell blocks. These expansions describe the previously recorded integration verification, not new test runs. Verified the historical source and retained every previous ledger and card byte. This documentation observation supplies no runtime test rerun, hosted qualification, native approval or board transition.
