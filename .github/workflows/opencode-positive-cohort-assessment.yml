@@ -399,7 +399,7 @@ jobs:
           node .positive-cohort-assessment/runtime/node_modules/nbb/cli.js -cp "$ETA_CHECKOUT/packages/eta-mu/src/cljs:$CANONICAL_CHECKOUT/skills/pr-flow/scripts" "$ETA_CHECKOUT/.github/scripts/opencode_positive_cohort_assessment.cljs" input
       - name: Actual bounded credential-free invocation
         id: assess
-        timeout-minutes: ${{ inputs.review_timeout_minutes > 180 && 180 || (inputs.review_timeout_minutes > 60 && inputs.review_timeout_minutes || 60) }}
+        timeout-minutes: ${{ fromJSON(format('{0}', inputs.review_timeout_minutes > 180 && 180 || (inputs.review_timeout_minutes > 60 && inputs.review_timeout_minutes || 60))) }}
         working-directory: .positive-cohort-assessment/model-root
         shell: bash
         env:
