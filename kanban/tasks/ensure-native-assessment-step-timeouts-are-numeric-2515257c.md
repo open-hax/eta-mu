@@ -3,11 +3,11 @@ category: "tasks"
 labels: "review, workflow, timeout"
 dependency: []
 type: "task"
-write-id: "1792965818452-0.ko9s2az3xbqhq0jblwn"
+write-id: "1792975168364-0.5jtjp5d7vdw7tz1hg2c"
 points: "2"
 title: "Ensure native assessment step timeouts are numeric"
 priority: "P1"
-status: "in_progress"
+status: "review"
 uuid: "1728ae7d-41fd-4cb7-ba0f-4c802515257c"
 created_at: "2026-10-25T12:16:09.959Z"
 ---
@@ -65,5 +65,7 @@ Implementation RED77a01c16 reproduced the real dispatch typing defect through th
 Actual native move in_progress->review was REFUSED by the configured pnpm build gate. It invoked all26workspace application builds; missing per-package dependencies produced failures. After failure was established, stopped only the remaining owned build descendants; no board rule/command was bypassed, card stays in_progress. Two generated tracked contracts/output artifacts were restored only because they were clean before this owned build. The targeted assessment/recovery/kondo checks remain passing but are not a successful full repository build or completed task. Preparing reviewable source PR with this build limitation and required hosted lifecycle qualification explicit.
 
 Readable correction to the verification notes recorded in native ledger lines 3311–3312. The registered assessment command completed all six suites successfully in 202.7 seconds. The Node suites ran 37, 23 and 7 tests. The NBB suites completed 1,265 checks; 8 tests with 319 assertions; and 6 tests with 57 assertions. All 377 network-boundary and trusted-fixture controls passed. The final adjacent recovery suite passed 340 tests. Clojure lint passed with zero errors and zero warnings. Separately, the move to review was refused: the configured repository build attempted 26 application packages and encountered missing package dependencies and failed builds. Remaining processes belonging to that failed build were stopped. The card is still in_progress. Passing the targeted suites does not mean the full repository build or hosted lifecycle qualification passed. These sentences clarify the earlier compressed wording; the original comments and event bytes are retained.
+
+Readable verification correction: the actual RED run had 7 type assertion failures in the actionability suite; the other 5 suites passed. The final ClojureScript fix passed all 6 assessment suites in 187.9 seconds and all 340 adjacent tests in 39.8 seconds, with zero Clojure lint errors or warnings. Raw actionlint reports the same 18 diagnostics at the accepted base and candidate, with 0 introduced diagnostics; it is not claimed passing. The reviewable source PR explicitly documents both the earlier full-build limitation and the required new hosted lifecycle qualification. A full frozen workspace install has now allowed the full application build and full lint/typecheck gate to pass. The local full test run encountered Babashka 1.12.207 missing java.util.HexFormat in Clio. The repository-pinned Babashka 1.13.219 archive hash was verified and its targeted Clio run passed 29 tests with 182 assertions. Full native review and the complete pinned-toolchain gate remain required before completion. Prior comments and ledger events are retained byte-for-byte.
 
 ---

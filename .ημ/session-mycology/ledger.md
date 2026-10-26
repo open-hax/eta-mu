@@ -1232,3 +1232,12 @@ These are readable renderings of the recorded historical values. Each belongs to
   p-skill-candidate: 0.39
   receipt-refs: origin native-assessment-timeout-clojurescript-review-fix; review 5645520052; inline 4372611099; PR 368
   note: The repository language rule also applies to new test logic. The official evaluator setup and all new numeric/default/refusal assertions now live in ClojureScript. Keep the existing Node runner as a thin loading and process adapter, with no second expression-policy implementation. Match the namespace to its file path and register it in the existing lint command. Use readable sentences for native board verification comments, and correct old wording append-only. The final six-suite, adjacent-test and zero-warning lint gates pass; the distinct full-build refusal and hosted qualification remain unresolved. No spore or global memory change.
+- ts: 2026-10-26T00:39:50.894041784Z
+  session: /home/err/.local/share/codex-work/axxium-sso/eta-timeout-current
+  task: Resolve the timeout PR full gate and readable review evidence
+  p-efficiency: 0.7
+  p-friction: 0.6
+  p-skill-candidate: 0.3
+  spore: none
+  receipt-refs: heartbeat15-timeout-rheos-pinned-review.log
+  note: A frozen complete install and exact repository-pinned runtimes resolved distinct local prerequisite failures. Preserve original failures; use native Rheos for the actual review transition. Full gate success does not supply hosted assessment or fleet acceptance. No spore or global memory write.
