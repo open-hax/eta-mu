@@ -75,7 +75,8 @@
 (def assessment-scripts
   "Standalone assessment entrypoints and tests, each linted independently with
    the eta-mu package configuration rather than merged into one user namespace."
-  [".github/scripts/opencode_actionability_assessment.cljs"
+  [".github/scripts/eta_mu/extern/assessment_timeout_expression_fixture.cljs"
+   ".github/scripts/opencode_actionability_assessment.cljs"
    ".github/scripts/opencode_actionability_assessment_test.cljs"
    ".github/scripts/opencode_rejection_assessment.cljs"
    ".github/scripts/opencode_rejection_assessment_test.cljs"

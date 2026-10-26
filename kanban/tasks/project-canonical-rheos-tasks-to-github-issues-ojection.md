@@ -141,3 +141,24 @@ blocks parse. New immutable evidence: `.ημ/sessions/2026-10-24-rheos-sync-cloj
 Full repository gates and new-head hosted qualification remain pending; no
 restored-sync, downstream dry-run or card-transition claim. Historical receipts
 retain their original bytes.
+
+### PR #365 integration continuation — 2026-10-26
+
+Plan: integrate main `ad93a9cb786da61be9021d1f00b80b811463dfc7` into
+current candidate `cbb6f616b5470bf023782933b9a5ca6c391587c8` with an ordinary
+two-parent merge. Preserve main's reviewed assessment-timeout changes and the
+existing shared-runtime repair. Resolve the two append-only ledger conflicts
+by retaining every branch byte and appending main's divergent suffix after the
+common merge-base prefix; preserve each original record byte and timestamp.
+Verify both histories are retained, no unrelated source is changed beyond the
+automatic merge, and the owning workflow contract, YAML and shell checks pass.
+New-head hosted checks and reviews remain required; earlier approvals become
+historical evidence. Do not expand dependency credentials, change card status,
+or claim a complete reusable-workflow build or downstream dry run.
+
+Integration verification: the owning NBB workflow contract passes 3 tests / 7
+assertions with zero failures/errors; clj-kondo reports zero errors/warnings.
+Six workflow YAML documents and 75 shell blocks parse. Byte proofs retain the
+entire current-PR ledger prefixes and exact main divergent suffixes. Evidence:
+`.ημ/sessions/2026-10-26-rheos-sync-integration/receipt.edn`. Full workspace gates and new-head hosted qualification remain
+pending; no board transition or downstream execution is claimed.

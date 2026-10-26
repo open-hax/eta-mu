@@ -1217,3 +1217,68 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: receipts.edn appended attribution correction of line324 at e83b323baadf5bea8d5406bc0f38a52b6445b53e
   note: Canonical receipt law requires repo; append a bound observation instead of rewriting the prior row. Verification is limited to EDN/law/prefix/frontmatter/diff checks, with no runtime test rerun or native approval claim. The appended record parses and passes canonical law; strict whole-ledger parsing retains the baseline Invalid number: 2026-07-12T053333Z failure in preserved history. Manual reflection.
+
+- ts: 2026-10-25T12:16:30.807884+00:00
+  session: shared-axxium-fleet-heartbeat5
+  task: Scope native assessment timeout type failure from actual cancelled workflow
+  p-efficiency: 0.76
+  p-friction: 0.44
+  p-skill-candidate: 0.21
+  spore: none
+  receipt-refs: latest root Receipt River event
+  note: The declared step cap was not enforced because GitHub rejected a string-valued timeout template; numeric comparisons retained the selected dispatch string. Preserve the actual failed template and cancellation. Native Rheos card1728ae7d-41fd-4cb7-ba0f-4c802515257c is incoming for planning review. No workflow source change, hosted fix or assessment credit claimed; existing typed publication and fresh-dispatch boundaries remain required.
+
+- ts: 2026-10-25T12:50:18.788669+00:00
+  session: shared-axxium-fleet-heartbeat6
+  task: Correct the prior timeout-planning receipt reference append-only
+  p-efficiency: 0.83
+  p-friction: 0.25
+  p-skill-candidate: 0.17
+  spore: none
+  receipt-refs: 3e83493a-f4cd-4ddc-bc0b-875d483015eb
+  note: The preceding shared-axxium-fleet-heartbeat5 entry used the ambiguous phrase latest root Receipt River event. Its exact stable event is3e83493a-f4cd-4ddc-bc0b-875d483015eb at2026-10-25T12:16:10.086Z in receipts.edn. This dated correction binds the entire original mycology prefix SHA256 89d7b80fa83865ba4c33459d9555bb6e48a7a2b201d88a8d3c177764d8034dd2; previous bytes and timestamps remain unchanged. Planning card now specifies both input types, prepare-before-conversion negatives, registered six-suite harness and official pinned GitHub expression evaluator. No executable test or hosted fix claim.
+
+- ts: 2026-10-25T13:50:59.675863Z
+  origin: timeout-planning-receipt-kind-correction
+  p-efficiency: 0.82
+  p-friction: 0.26
+  p-skill-candidate: 0.29
+  receipt-refs: 11a1d81a-241e-4caf-91e2-20800962a46b; 3e83493a-f4cd-4ddc-bc0b-875d483015eb; a00cf0e5-2082-413c-b7ed-61e7dbd198aa
+  note: Planning notes are observations, not executed tests. The former generic receipt producer incorrectly tagged two planning records as test-run; a new observation binds their original event IDs, line numbers, exact raw-line hashes and entire ledger-prefix hash, declaring no test-evidence credit without rewriting history. Actual source inspection confirms full lint delegates pnpm typecheck; the reviewed plan now names that gate and zero-warning criteria. No executable test, installed timeout fix, hosted qualification or spore claimed.
+
+
+- ts: 2026-10-25T21:47:08.205621+00:00
+  origin: native-assessment-numeric-timeout-source
+  p-efficiency: 0.61
+  p-friction: 0.72
+  p-skill-candidate: 0.43
+  receipt-refs: receipts.edn observations/test-run origin native-assessment-numeric-timeout-source; RED77a01c16; planning367; native run40178755460
+  note: Evaluate actual workflow expression types with the official pinned evaluator; numerical comparisons leave selected string operands unchanged. Registered source-built/inert/network-denied six-suite RED then GREEN established the defect/fix without a model or native publication. Credential-free privateHOME requires direct existing Node/Pnpm binaries, and local Git object sources must contain every exact pinned commit; initial setup failures supplied no regression credit. Native Rheos review gate triggered all-workspace build and refused because dependencies were missing. Stop only owned remaining build descendants after established failure, restore only proven owned generated tracked files, keep card in_progress and report full-build and hosted qualification gaps. GitHub CLI credential lookup is currently unavailable; connected app readback is useful but cannot replace canonical merge-gate custody. No spore or global memory mutation.
+
+
+- ts: 2026-10-25T22:11:23.929822+00:00
+  origin: native-assessment-timeout-review-fix
+  p-efficiency: 0.73
+  p-friction: 0.59
+  p-skill-candidate: 0.39
+  receipt-refs: origin native-assessment-timeout-clojurescript-review-fix; review 5645520052; inline 4372611099; PR 368
+  note: The repository language rule also applies to new test logic. The official evaluator setup and all new numeric/default/refusal assertions now live in ClojureScript. Keep the existing Node runner as a thin loading and process adapter, with no second expression-policy implementation. Match the namespace to its file path and register it in the existing lint command. Use readable sentences for native board verification comments, and correct old wording append-only. The final six-suite, adjacent-test and zero-warning lint gates pass; the distinct full-build refusal and hosted qualification remain unresolved. No spore or global memory change.
+- ts: 2026-10-26T00:39:50.894041784Z
+  session: /home/err/.local/share/codex-work/axxium-sso/eta-timeout-current
+  task: Resolve the timeout PR full gate and readable review evidence
+  p-efficiency: 0.7
+  p-friction: 0.6
+  p-skill-candidate: 0.3
+  spore: none
+  receipt-refs: heartbeat15-timeout-rheos-pinned-review.log
+  note: A frozen complete install and exact repository-pinned runtimes resolved distinct local prerequisite failures. Preserve original failures; use native Rheos for the actual review transition. Full gate success does not supply hosted assessment or fleet acceptance. No spore or global memory write.
+
+- ts: 2026-10-26T14:44:28.563Z
+  session: chatgpt-rheos-sync-base-integration-20261026
+  task: Preserve both append-only histories through PR365 base integration
+  p-efficiency: 0.85
+  p-friction: 0.35
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: 97fbff23-d019-494e-b26e-8e4ca7178c53; .ημ/sessions/2026-10-26-rheos-sync-integration/receipt.edn
+  note: Resolve only divergent ledger appends. Retain complete PR prefixes and exact main suffixes instead of rewriting or sorting historical events. Owning NBB3/7 and kondo0/0 pass; six YAML and75 shell blocks parse. All other merge bytes remain automatic. This manual reflection supplies no full-build, hosted, approval, projection or board-transition credit.
