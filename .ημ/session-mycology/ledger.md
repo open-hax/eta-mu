@@ -1187,6 +1187,37 @@ These are readable renderings of the recorded historical values. Each belongs to
   receipt-refs: .ημ/sessions/2026-10-24-workflow-hygiene/receipt.edn
   note: Inspected the actual pinned legacy CLI before changing its workflow adapter. Twelve focused offline tests pass, unchanged-base control fails, YAML/shell/diff checks pass. Twenty synthetic classifier fixtures pass integrity checks but no model ran. JSON Schema metaschema validation unavailable because jsonschema is absent; full repository gates, hosted capability execution and compiled session-mycology command unavailable. This is a manual reflection, no CLI admission, board transition, live approval activation or settings mutation claimed.
 
+- ts: 2026-10-24T18:26:29.078035Z
+  session: chatgpt-rheos-sync-clojure-20261024
+  task: Restore explicit Clojure CLI setup in shared GitHub sync runner
+  p-efficiency: 0.75
+  p-friction: 0.35
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: .ημ/sessions/2026-10-24-rheos-sync-clojure/receipt.edn
+  note: Reused the owning GitHub sync CI's exact setup action and CLI version. YAML parse, setup ordering, shell syntax and diff checks pass. Local Clojure CLI and compiled repository command surfaces are absent, so build, dry-run and session-mycology command execution remain unavailable; this is a manually recorded reflection, no CLI admission or board transition claimed. Hosted validation and downstream private dependency access remain pending.
+
+
+- ts: 2026-10-25T11:30:32.482221Z
+  session: chatgpt-eta365-review-followup-20261025
+  task: Canonical CLJS workflow regression and verified setup-clojure13.4 pin
+  p-efficiency: 0.7
+  p-friction: 0.4
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: .ημ/sessions/2026-10-24-rheos-sync-clojure/review-followup-20261025.edn
+  note: Read current PR flow, source and ledger; reuse NBB/root BB seams. Exact-head two-pin RED and seven causal controls precede GREEN; CLJS/root BB lint zero warnings. Snapshot setup failures stay separate from tests. Full repository/hosted qualification pending; no native approval or board move claimed. Manual reflection.
+
+- ts: 2026-10-25T16:14:47.390146Z
+  session: chatgpt-eta365-attribution-correction-20261025
+  task: Preserve historical receipt while correcting repository attribution and card spacing
+  p-efficiency: 0.9
+  p-friction: 0.15
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: receipts.edn appended attribution correction of line324 at e83b323baadf5bea8d5406bc0f38a52b6445b53e
+  note: Canonical receipt law requires repo; append a bound observation instead of rewriting the prior row. Verification is limited to EDN/law/prefix/frontmatter/diff checks, with no runtime test rerun or native approval claim. The appended record parses and passes canonical law; strict whole-ledger parsing retains the baseline Invalid number: 2026-07-12T053333Z failure in preserved history. Manual reflection.
+
 - ts: 2026-10-25T12:16:30.807884+00:00
   session: shared-axxium-fleet-heartbeat5
   task: Scope native assessment timeout type failure from actual cancelled workflow
@@ -1241,3 +1272,33 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: heartbeat15-timeout-rheos-pinned-review.log
   note: A frozen complete install and exact repository-pinned runtimes resolved distinct local prerequisite failures. Preserve original failures; use native Rheos for the actual review transition. Full gate success does not supply hosted assessment or fleet acceptance. No spore or global memory write.
+
+- ts: 2026-10-26T14:44:28.563Z
+  session: chatgpt-rheos-sync-base-integration-20261026
+  task: Preserve both append-only histories through PR365 base integration
+  p-efficiency: 0.85
+  p-friction: 0.35
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: 97fbff23-d019-494e-b26e-8e4ca7178c53; .ημ/sessions/2026-10-26-rheos-sync-integration/receipt.edn
+  note: Resolve only divergent ledger appends. Retain complete PR prefixes and exact main suffixes instead of rewriting or sorting historical events. Owning NBB3/7 and kondo0/0 pass; six YAML and75 shell blocks parse. All other merge bytes remain automatic. This manual reflection supplies no full-build, hosted, approval, projection or board-transition credit.
+
+- ts: 2026-10-26T15:01:52.560Z
+  session: chatgpt-rheos-sync-evidence-readability-20261026
+  task: Clarify retained PR #365 evidence without rewriting history
+  p-efficiency: 0.9
+  p-friction: 0.15
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: 11b9ff1c-fd9d-4ee2-a248-d05d1d3d84e3; .ημ/sessions/2026-10-26-rheos-sync-readability/receipt.edn; CodeRabbit review 5654055760; finding 4378734901
+  note: The shorthand line324 in the attribution entry refers to line 324 of receipts.edn at commit e83b323baadf5bea8d5406bc0f38a52b6445b53e, whose timestamp is 2026-10-25T11:30:32.482221Z. The original row is retained unchanged, including its missing repo key; its later attribution correction remains separate. In the integration reflection at 2026-10-26T14:44:28.563Z, NBB3/7 means 3 tests and 7 assertions, kondo0/0 means zero errors and zero warnings from clj-kondo, and and75 means and 75 shell blocks. These expansions describe the previously recorded integration verification, not new test runs. Verified the historical source and retained every previous ledger and card byte. This documentation observation supplies no runtime test rerun, hosted qualification, native approval or board transition.
+
+- ts: 2026-10-29T02:14:06.619Z
+  session: chatgpt-rheos-public-dependency-20261029
+  task: Repair PR365 public dependency review finding without weakening gates
+  p-efficiency: 0.84
+  p-friction: 0.24
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: c68fa2e9-3baf-44cc-8295-4d4b08ce643d; .ημ/sessions/2026-10-29-rheos-public-dependency/receipt.edn; native review5690653497/comment4406852108
+  note: Verify public dependency facts and execute actual authored shell fragments with isolated Git configuration. Preserve configured-token failure and cleanup behavior. The initial new-name selector failed before exercising the old shell; correct discovery to select by the existing env contract, then establish causal unchanged-base RED and final GREEN. Root BB registration already has no path selection, while owning CI needed both contract paths and generated Rheos YAML. Scoped actual projection preserves unrelated action pins and all local gates. Manual reflection because the complete frozen workspace and compiled session command are absent; no full-build, hosted, caller, approval, settlement or merge credit. Historical ledger bytes stay append-only.

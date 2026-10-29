@@ -80,16 +80,13 @@
                 :key "${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}"
                 :restore-keys "${{ runner.os }}-pnpm-"}}]
 
-  ;; Read access to the private sibling repos a deps.edn resolves by git ref.
-  ;; eta-mu is public, so the default GITHUB_TOKEN cannot read them and the
-  ;; checkout above deliberately persists no credentials — a job that resolves
-  ;; a Clojure classpath has to mint its own. Sol's hand-written workflow has
-  ;; carried this since the contracts were extracted; this is that sequence as
-  ;; a resource, so any job can declare it in one line.
+  ;; Katamorph's pinned Git dependency is public and can resolve anonymously.
+  ;; When App credentials are available, retain the scoped authenticated path
+  ;; and refuse an absent minted token instead of hiding a token-mint failure.
   ;;
   ;; Grants katamorph only. Add repositories here when a job needs more, rather
   ;; than widening the grant for every consumer.
-  :private-git-deps
+  :git-deps
   [{:step/name "Detect eta-mu app credentials"
     :step/id "dependency-credentials"
     :step/env {:ETA_MU_APP_ID "${{ secrets.ETA_MU_APP_ID }}"
@@ -110,12 +107,12 @@ fi
                 :repositories "katamorph"}}
    ;; The token reaches the script through env rather than through a `${{ }}`
    ;; interpolated into the shell body, so a secret never becomes shell source.
-   {:step/name "Configure private Git dependency reads"
+   {:step/name "Configure Git dependency reads"
     :step/env {:DEPENDENCY_TOKEN "${{ steps.dependency-token.outputs.token }}"
                :CREDENTIALS_AVAILABLE "${{ steps.dependency-credentials.outputs.available }}"}
     :step/run "if [ \"${CREDENTIALS_AVAILABLE}\" != \"true\" ]; then
-  echo 'ETA_MU_APP_ID / ETA_MU_APP_PRIVATE_KEY are unavailable'
-  exit 1
+  echo 'Using anonymous reads for public Git dependencies'
+  exit 0
 fi
 if [ -z \"${DEPENDENCY_TOKEN}\" ]; then
   echo 'The eta-mu GitHub App did not mint a dependency token'

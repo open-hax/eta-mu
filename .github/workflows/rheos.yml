@@ -92,11 +92,11 @@ jobs:
           private-key: ${{ secrets.ETA_MU_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: katamorph
-      - name: Configure private Git dependency reads
+      - name: Configure Git dependency reads
         run: |
           if [ "${CREDENTIALS_AVAILABLE}" != "true" ]; then
-            echo 'ETA_MU_APP_ID / ETA_MU_APP_PRIVATE_KEY are unavailable'
-            exit 1
+            echo 'Using anonymous reads for public Git dependencies'
+            exit 0
           fi
           if [ -z "${DEPENDENCY_TOKEN}" ]; then
             echo 'The eta-mu GitHub App did not mint a dependency token'
