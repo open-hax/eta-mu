@@ -184,3 +184,33 @@ complete previous contents of both ledgers and this card; frontmatter is
 unchanged. `git diff --check` passes. Only the four planned documentation and
 evidence paths changed. Runtime suites were not rerun. Immutable evidence:
 `.ημ/sessions/2026-10-26-rheos-sync-readability/receipt.edn`.
+
+### PR #365 public dependency review follow-up — 2026-10-29
+
+Plan: verify native review 5690653497 / finding 4406852108 against the pinned
+public Katamorph dependency. Permit anonymous Git reads when App credentials
+are absent in the owning Rheos sync CI and its declared toolchain; retain
+token validation and scoped authenticated Git configuration when available.
+Keep real local dependency reachability tracking, all verification gates and
+the existing cleanup. Add an owning ClojureScript regression that executes
+the actual YAML and resource shell programs in isolated credential-free Git
+homes, demonstrate unchanged-source RED and corrected GREEN, and check both
+anonymous and authenticated paths plus missing-token refusal and cleanup.
+Update only the affected generated Rheos workflow projection, preserving
+unrelated action pins. Append verification evidence without rewriting earlier
+card, ledger or receipt bytes. New-head hosted checks and native reviews,
+actual caller dry runs and any lawful board transitions remain separate.
+
+Verified scoped result (2026-10-29T02:14:06.619Z): final owning regression passes 6 tests
+and 54 assertions. The identical final test fails against unchanged base5e0
+with 10 expected failures (six anonymous branches and four trigger/resource
+expectations), zero errors. Workflow contract tests pass 6 tests/78 assertions;
+the registered root BB suite passes; clj-kondo reports zero errors/warnings.
+Actual projection check passes for all emitted workflows and the 10-gate plan;
+two changed YAML documents and 26 shell blocks parse. Anonymous reads create
+no header; configured credentials without a token still fail; a synthetic
+token configures auth without logging it and actual cleanup removes it.
+The public dependency reachability gate and every runtime gate remain.
+Full workspace/hosted gates, current-head native reviews and actual caller
+dry runs remain outstanding. No approval, merge or board transition claimed.
+Immutable validation receipt: `.ημ/sessions/2026-10-29-rheos-public-dependency/receipt.edn`.

@@ -6,7 +6,10 @@ on:
       - ".github/workflows/eta-mu-kanban-sync.yml"
       - ".github/workflows/kanban-sync.yml"
       - ".github/workflows/rheos-github-sync-ci.yml"
+      - ".github/workflows/rheos.yml"
       - ".github/scripts/kanban_sync_workflow_test.cljs"
+      - "contracts/workflows/resources.edn"
+      - "contracts/workflows/ci.edn"
       - "scripts/test.bb"
       - "packages/rheos/**"
   workflow_dispatch:
@@ -80,14 +83,14 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: katamorph
 
-      - name: Configure private Git dependency reads
+      - name: Configure Git dependency reads
         env:
           DEPENDENCY_TOKEN: ${{ steps.dependency-token.outputs.token }}
           CREDENTIALS_AVAILABLE: ${{ steps.dependency-credentials.outputs.available }}
         run: |
           if [[ "${CREDENTIALS_AVAILABLE}" != "true" ]]; then
-            echo "ETA_MU_APP_ID / ETA_MU_APP_PRIVATE_KEY are unavailable"
-            exit 1
+            echo "Using anonymous reads for public Git dependencies"
+            exit 0
           fi
           if [[ -z "${DEPENDENCY_TOKEN}" ]]; then
             echo "The eta-mu GitHub App did not mint a dependency token"
