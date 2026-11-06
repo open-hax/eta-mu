@@ -1615,6 +1615,7 @@ test("recovery CLI finalizes streams and records a spawn failure", (t) => {
       REVIEW_EVIDENCE_DIR: directory,
       REVIEW_MODEL: "fixture/model",
       REVIEW_PROMPT_FILE: promptFile,
+      ...(process.platform === "linux" ? { REVIEW_ATTEMPT_TIMEOUT_MS: "2000" } : {}),
       ...invocation.env,
     },
   });
@@ -1629,6 +1630,17 @@ test("recovery CLI finalizes streams and records a spawn failure", (t) => {
   assert.equal(recovery.attempts.length, 1);
   assert.equal(recovery.attempts[0].invocation_state, "rejected");
   assert.match(recovery.attempts[0].invocation_error, /ENOENT/);
+  if (process.platform === "linux") {
+    const diagnostics = recovery.attempts[0].diagnostics;
+    assert.equal(diagnostics.milestones_ms.spawn, null);
+    assert.ok(Number.isSafeInteger(diagnostics.milestones_ms.spawn_error));
+    assert.equal(diagnostics.stdout.bytes, 0);
+    assert.equal(diagnostics.stderr.bytes, 0);
+    assert.equal(diagnostics.heartbeat_count, 0);
+    assert.equal(recovery.attempts[0].captures_closed, true);
+    assert.equal(recovery.attempts[0].cleanup_complete, true);
+    assert.ok(!JSON.stringify(diagnostics).includes("missing-opencode"));
+  }
   assert.equal(fs.existsSync(path.join(directory, "model-response-attempt-2.txt")), false);
   assert.equal(recovery.accepted_invocation, null);
   assert.equal(parseOutput(invocation.output).review_invocation_sha256, undefined);

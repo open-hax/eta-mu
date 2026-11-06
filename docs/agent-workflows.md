@@ -56,6 +56,17 @@ its wall deadline the supervisor requests TERM, escalates after two seconds
 when needed, and allows at most five seconds for cleanup and capture drain.
 Partial response, stderr, actual exit/signal and deadline metadata remain
 inspectable; expiry is a failed lifecycle, never a completed passing review.
+Each bounded ordinary attempt also records content-free process diagnostics in
+`recovery.json`: monotonic elapsed milliseconds for spawn, exit, pipe close,
+deadline, stop request, parent interruption and capture closure, plus stream
+byte/chunk counts and first/last-byte timings. Absent observations remain null.
+An exit before pipe close can identify waiting on inherited pipes; it does not
+prove why a child stopped. The supervisor emits the same fixed schema to job
+stderr at spawn and at most once a minute (76 notices maximum per attempt),
+outside the retained child stderr and canonical review trace. No prompt,
+model text, path, environment value, error message or runtime log is included.
+These diagnostics neither establish plugin readiness nor distinguish plugin
+initialization from a provider stall, and never authorize recovery or acceptance.
 Only a first expiry with complete cleanup, closed captures, no submission and
 the unchanged canonical `healthy-unfinished-review` / `missing-review-submit`
 verdict may consume the existing sole corrective invocation. A HOST failure
