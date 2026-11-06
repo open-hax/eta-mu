@@ -978,6 +978,7 @@ function recordAttempt({
       process_id: processResult.pid ?? null, process_group_id: processResult.pid ?? null,
       cleanup_complete: processResult.cleanupComplete, captures_closed: processResult.capturesClosed,
     });
+    if (processResult.diagnostics) record.diagnostics = processResult.diagnostics;
   }
   if (invocationRejected) {
     record.invocation_error =
@@ -1211,6 +1212,66 @@ async function stopInvocationGroup(pid, deadline, signals) {
   return invocationGroupMembers(pid).length === 0;
 }
 
+/** Observe transport only; no child text, identifiers, paths or environment enter this fixed schema. */
+export function createInvocationDiagnostics({ now = () => performance.now(),
+  emit = (line) => {
+    // A stream write can emit an asynchronous unhandled EPIPE. This small fd
+    // write fails synchronously without changing the child-stream error policy.
+    if (fs.writeSync(process.stderr.fd, line) !== Buffer.byteLength(line)) {
+      throw new Error("incomplete diagnostic write");
+    }
+  } } = {}) {
+  const started = now();
+  const evidence = {
+    schema: "open-hax.review-process-diagnostics/v1", scope: "supervisor-transport-only",
+    elapsed_ms: 0, heartbeat_interval_ms: 60_000, heartbeat_limit: 76, heartbeat_count: 0,
+    heartbeat_write_failed: false,
+    milestones_ms: { spawn: null, exit: null, close: null, deadline: null,
+      stop_requested: null, parent_signal: null, spawn_error: null, captures_closed: null },
+    stdout: { bytes: 0, chunks: 0, first_ms: null, last_ms: null },
+    stderr: { bytes: 0, chunks: 0, first_ms: null, last_ms: null },
+  };
+  let timer, closed = false;
+  const elapsed = () => {
+    const value = Math.floor(now() - started);
+    if (Number.isFinite(value)) evidence.elapsed_ms = Math.max(evidence.elapsed_ms, Math.min(Number.MAX_SAFE_INTEGER, value));
+    return evidence.elapsed_ms;
+  };
+  const snapshot = () => { elapsed(); return structuredClone(evidence); };
+  const heartbeat = () => {
+    if (closed || evidence.heartbeat_count >= evidence.heartbeat_limit) {
+      clearInterval(timer); return;
+    }
+    evidence.heartbeat_count += 1;
+    // These supervisor notices bypass the retained child stderr and canonical trace.
+    try { emit(`OpenCode supervisor progress: ${JSON.stringify(snapshot())}\n`); }
+    catch { evidence.heartbeat_write_failed = true; clearInterval(timer); }
+  };
+  return {
+    mark(name) {
+      if (!closed && Object.hasOwn(evidence.milestones_ms, name) && evidence.milestones_ms[name] === null) {
+        evidence.milestones_ms[name] = elapsed();
+      }
+    },
+    bytes(stream, length) {
+      if (closed || !["stdout", "stderr"].includes(stream) || !Number.isSafeInteger(length) || length <= 0) return;
+      const target = evidence[stream], time = elapsed();
+      target.bytes = Math.min(Number.MAX_SAFE_INTEGER, target.bytes + length);
+      target.chunks = Math.min(Number.MAX_SAFE_INTEGER, target.chunks + 1);
+      target.first_ms ??= time; target.last_ms = time;
+    },
+    start() {
+      if (closed || timer) return;
+      heartbeat();
+      if (!evidence.heartbeat_write_failed) {
+        timer = setInterval(heartbeat, evidence.heartbeat_interval_ms);
+        timer.unref();
+      }
+    },
+    finish() { clearInterval(timer); closed = true; return snapshot(); },
+  };
+}
+
 /** Run the configured OpenCode review and mirror stdout and stderr to retained files. */
 async function invokeOpenCode({ prompt, responseFile, stderrFile, reviewModel = process.env.REVIEW_MODEL,
   opencodeBin = process.env.OPENCODE_BIN || "opencode", environment = null, timeoutMs = null }) {
@@ -1222,6 +1283,7 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile, reviewModel = 
   let invocationRejected = false;
   let child, timer, hardTimer, cleanupDeadline, stopping, processResult;
   const parentHandlers = new Map();
+  const diagnostics = timeoutMs === null ? null : createInvocationDiagnostics();
 
   try {
     const childEnvironment = environment ?? (["actionability", "rejection-assessment", "positive-cohort-assessment"].includes(process.env.REVIEW_INPUT_PURPOSE)
@@ -1240,20 +1302,24 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile, reviewModel = 
     }
 
     child.stdout.on("data", (chunk) => {
+      diagnostics?.bytes("stdout", chunk.length);
       response.write(chunk);
       process.stdout.write(chunk);
     });
     child.stderr.on("data", (chunk) => {
+      diagnostics?.bytes("stderr", chunk.length);
       stderr.write(chunk);
       process.stderr.write(chunk);
     });
 
     const closed = new Promise((resolve, reject) => {
-      child.once("error", reject);
-      child.once("close", (code, signal) => resolve({ code, signal }));
+      child.once("error", (error) => { diagnostics?.mark("spawn_error"); reject(error); });
+      child.once("exit", () => diagnostics?.mark("exit"));
+      child.once("close", (code, signal) => { diagnostics?.mark("close"); resolve({ code, signal }); });
     });
     const bounded = timeoutMs === null ? closed : Promise.race([closed, new Promise((_, reject) => {
       const stop = () => {
+        diagnostics.mark("stop_requested");
         cleanupDeadline ??= performance.now() + 5000;
         stopping ??= stopInvocationGroup(child.pid, cleanupDeadline, processResult.terminationSignals);
         stopping.catch(reject);
@@ -1262,9 +1328,11 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile, reviewModel = 
         return stopping;
       };
       child.once("spawn", () => {
-        timer = setTimeout(() => { processResult.timedOut = true; stop(); }, timeoutMs);
+        diagnostics.mark("spawn"); diagnostics.start();
+        timer = setTimeout(() => { diagnostics.mark("deadline"); processResult.timedOut = true; stop(); }, timeoutMs);
         for (const signal of ["SIGTERM", "SIGINT"]) {
           const handler = () => {
+            diagnostics.mark("parent_signal");
             processResult.parentSignal = signal;
             stop().then(() => reject(new Error(`OpenCode supervisor interrupted by ${signal}`)), reject);
           };
@@ -1279,6 +1347,7 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile, reviewModel = 
       processResult.signal = exit.signal;
       clearTimeout(timer);
       if (!stopping && invocationGroupMembers(child.pid).length) {
+        diagnostics.mark("stop_requested");
         cleanupDeadline = performance.now() + 5000;
         stopping = stopInvocationGroup(child.pid, cleanupDeadline, processResult.terminationSignals);
       }
@@ -1312,6 +1381,11 @@ async function invokeOpenCode({ prompt, responseFile, stderrFile, reviewModel = 
     clearTimeout(drainTimer);
     if (processResult) processResult.capturesClosed = streamResults !== null
       && streamResults.every(({ status }) => status === "fulfilled");
+    if (processResult?.capturesClosed) diagnostics.mark("captures_closed");
+    if (diagnostics) {
+      const evidence = diagnostics.finish();
+      if (processResult) processResult.diagnostics = evidence;
+    }
     if (streamResults === null) {
       response.destroy(); stderr.destroy();
       const error = new Error("OpenCode invocation capture drain did not finish");

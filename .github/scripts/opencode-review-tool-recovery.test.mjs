@@ -6,7 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { runReviewRecovery } from "./run-opencode-review-recovery.mjs";
+import { createInvocationDiagnostics, runReviewRecovery } from "./run-opencode-review-recovery.mjs";
 import { stageTransportVerifier, transportResponse, transportReviewTools,
   transportSha256 } from "./review-invocation-fixture.mjs";
 
@@ -44,7 +44,7 @@ function deadlineProcessIdentity(pid) {
 }
 
 /** Run the actual packaged CLI against a progressing child that never exits. */
-async function deadlineChildFixture(t) {
+async function deadlineChildFixture(t, { silent = false, interrupt = false, secret = "" } = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "review-deadline-"));
   let processCleanup = () => {};
   t.after(() => { processCleanup(); fs.rmSync(directory, { recursive: true, force: true }); });
@@ -70,8 +70,10 @@ async function deadlineChildFixture(t) {
       tool, state: { status: "completed", input: {},
         output: JSON.stringify({ "ok?": true, fixtureAuthority: "TRANSPORT_MOCK_ONLY" }) } },
   })).concat({ type: "step_finish", timestamp: 4, sessionID, part: { reason: "stop" } });
-  const firstResponse = progress.map((event) => JSON.stringify(event)).join("\n") + "\n";
-  const child = path.join(directory, "fake-opencode.mjs");
+  if (secret) progress[0].part.state.input = { fixtureSecret: secret };
+  const firstResponse = silent ? "" : progress.map((event) => JSON.stringify(event)).join("\n") + "\n";
+  const firstStderr = silent ? "" : `${secret || "retained first-attempt progress"}\n`;
+  const child = path.join(directory, `${secret ? "SECRET_PATH_CANARY-" : ""}fake-opencode.mjs`);
   const identities = path.join(directory, "owned-identities.jsonl");
   fs.writeFileSync(child, `#!${process.execPath}
 import fs from "node:fs";
@@ -88,7 +90,7 @@ if(attempt===1){
   descendant.once('spawn',()=>{
     fs.appendFileSync(${JSON.stringify(identities)},JSON.stringify(own(descendant.pid))+'\\n');
     process.stdout.write(${JSON.stringify(firstResponse)});
-    process.stderr.write('retained first-attempt progress\\n');
+    process.stderr.write(${JSON.stringify(firstStderr)});
   });
   process.on('SIGTERM',()=>{
     if(descendant.exitCode!==null||descendant.signalCode!==null)process.exit(0);
@@ -102,10 +104,11 @@ if(attempt===1){
 `);
   fs.chmodSync(child, 0o755);
   const prompt = path.join(directory, "prompt.md");
-  fs.writeFileSync(prompt, "Complete the full unchanged transport fixture #{{PR_NUMBER}}.\n");
+  fs.writeFileSync(prompt, `Complete the full unchanged transport fixture #{{PR_NUMBER}}.\n${secret}`);
   const process_ = spawn(process.execPath, [runner], { detached: true, stdio: ["ignore", "pipe", "pipe"],
     env: { PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`, LANG: "C.UTF-8", LC_ALL: "C.UTF-8",
-      OPENCODE_BIN: child, PR_NUMBER: "342", REVIEW_MODEL: "fixture/model", REVIEW_EVIDENCE_DIR: directory,
+      OPENCODE_BIN: child, PR_NUMBER: "342", REVIEW_MODEL: secret || "fixture/model", SECRET_ENV_CANARY: secret,
+      REVIEW_EVIDENCE_DIR: directory,
       REVIEW_PROMPT_FILE: prompt, REVIEW_ATTEMPT_TIMEOUT_MS: "2000", ...invocation.env } });
   const supervisorIdentity = deadlineProcessIdentity(process_.pid);
   let outerTimedOut = false;
@@ -123,9 +126,14 @@ if(attempt===1){
     }
   };
   const timer = setTimeout(() => { outerTimedOut = true; cleanup(); }, 12_000);
+  const interruption = interrupt ? setInterval(() => {
+    if (fs.existsSync(identities) && fs.readFileSync(identities, "utf8").trim().split("\n").length === 2) {
+      clearInterval(interruption); process_.kill("SIGTERM");
+    }
+  }, 25) : null;
   let force;
   processCleanup = () => {
-    clearTimeout(timer); clearTimeout(force); cleanup();
+    clearTimeout(timer); clearTimeout(force); clearInterval(interruption); cleanup();
   };
   const result = await new Promise((resolve, reject) => {
     process_.once("error", reject);
@@ -135,10 +143,10 @@ if(attempt===1){
       if (supervisorIdentity && deadlineProcessIdentity(process_.pid)?.start === supervisorIdentity.start) process_.kill("SIGKILL");
     }, 15_000);
   });
-  clearTimeout(timer); clearTimeout(force);
+  clearTimeout(timer); clearTimeout(force); clearInterval(interruption);
   cleanup();
   const owned = fs.readFileSync(identities, "utf8").trim().split(/\r?\n/).map(JSON.parse);
-  return { directory, invocation, firstResponse, result, outerTimedOut, owned,
+  return { directory, invocation, firstResponse, firstStderr, result, outerTimedOut, owned,
     stdout: Buffer.concat(output).toString(), stderr: Buffer.concat(errors).toString() };
 }
 
@@ -167,9 +175,133 @@ test("packaged invocation deadline retains progressing child output and permits 
   assert.equal(receipt.attempts[0].captures_closed, true);
   assert.equal(receipt.attempts[0].canonical_verdict.code, "healthy-unfinished-review");
   assert.equal(receipt.accepted_invocation.attempt, 2);
+  const diagnostic = receipt.attempts[0].diagnostics;
+  assert.equal(diagnostic.scope, "supervisor-transport-only");
+  assert.equal(diagnostic.stdout.bytes, Buffer.byteLength(f.firstResponse));
+  assert.equal(diagnostic.stderr.bytes, Buffer.byteLength("retained first-attempt progress\n"));
+  for (const name of ["spawn", "exit", "close", "deadline", "stop_requested", "captures_closed"]) {
+    assert.ok(Number.isSafeInteger(diagnostic.milestones_ms[name]), name);
+  }
+  assert.ok(diagnostic.milestones_ms.exit <= diagnostic.milestones_ms.close);
+  assert.ok(diagnostic.milestones_ms.close <= diagnostic.milestones_ms.captures_closed);
+  assert.equal(diagnostic.heartbeat_count, 1);
+  assert.match(f.stderr, /OpenCode supervisor progress: /);
   assert.equal(fs.existsSync(path.join(f.directory, "model-response-attempt-3.txt")), false);
   for (const expected of f.owned) assert.notEqual(deadlineProcessIdentity(expected.pid)?.start, expected.start,
     `owned fixture process ${expected.pid} must have exited and been reaped`);
+});
+
+test("packaged diagnostics never copy prompt, model, environment, path or child stream secrets", { timeout: 20_000, skip: process.platform !== "linux" }, async (t) => {
+  const secret = "SECRET_VALUE_CANARY_尾🙂_\u001b[31m::error::hostile";
+  const f = await deadlineChildFixture(t, { secret });
+  const receipt = JSON.parse(fs.readFileSync(path.join(f.directory, "recovery.json")));
+  assert.equal(f.result.code, 0, f.stderr);
+  assert.equal(receipt.accepted_invocation.attempt, 2);
+  const diagnostics = receipt.attempts.map((attempt) => attempt.diagnostics);
+  const notices = f.stderr.split("\n").filter((line) => line.startsWith("OpenCode supervisor progress: "));
+  assert.equal(notices.length, 2);
+  assert.ok(!JSON.stringify([diagnostics, notices]).includes("SECRET_"));
+  assert.equal(diagnostics[0].stdout.bytes, Buffer.byteLength(f.firstResponse));
+  assert.equal(diagnostics[0].stderr.bytes, Buffer.byteLength(f.firstStderr));
+  assert.equal(fs.readFileSync(path.join(f.directory, "model-response-attempt-1.txt"), "utf8"), f.firstResponse);
+  assert.equal(fs.readFileSync(path.join(f.directory, "opencode-stderr-attempt-1.log"), "utf8"), f.firstStderr);
+  assert.equal(receipt.accepted_invocation.response_sha256,
+    transportSha256(fs.readFileSync(path.join(f.directory, "model-response-attempt-2.txt"))));
+});
+
+for (const interrupt of [false, true]) {
+  test(`packaged silent child ${interrupt ? "parent cancellation" : "deadline"} retains content-free diagnostics without acceptance`,
+    { timeout: 20_000, skip: process.platform !== "linux" }, async (t) => {
+      const f = await deadlineChildFixture(t, { silent: true, interrupt });
+      const receipt = JSON.parse(fs.readFileSync(path.join(f.directory, "recovery.json")));
+      assert.equal(f.outerTimedOut, false);
+      assert.equal(f.result.code, 1);
+      assert.equal(receipt.attempts.length, 1);
+      assert.equal(receipt.accepted_invocation, null);
+      assert.equal(receipt.recovery_reason, null);
+      assert.equal(fs.readFileSync(path.join(f.directory, "count.txt"), "utf8"), "1");
+      const attempt = receipt.attempts[0], diagnostic = attempt.diagnostics;
+      assert.equal(attempt.captures_closed, true);
+      assert.equal(attempt.cleanup_complete, true);
+      assert.equal(attempt.parent_signal, interrupt ? "SIGTERM" : null);
+      assert.equal(attempt.timed_out, !interrupt);
+      for (const stream of ["stdout", "stderr"]) {
+        assert.deepEqual(diagnostic[stream], { bytes: 0, chunks: 0, first_ms: null, last_ms: null });
+      }
+      assert.equal(fs.readFileSync(path.join(f.directory, "model-response-attempt-1.txt"), "utf8"), "");
+      assert.equal(fs.readFileSync(path.join(f.directory, "opencode-stderr-attempt-1.log"), "utf8"), "");
+      assert.ok(Number.isSafeInteger(diagnostic.milestones_ms[interrupt ? "parent_signal" : "deadline"]));
+      assert.equal(diagnostic.milestones_ms[interrupt ? "deadline" : "parent_signal"], null);
+      assert.ok(diagnostic.milestones_ms.exit <= diagnostic.milestones_ms.close);
+      assert.equal(diagnostic.heartbeat_count, 1);
+      assert.match(f.stderr, /OpenCode supervisor progress: /);
+      for (const expected of f.owned) assert.notEqual(deadlineProcessIdentity(expected.pid)?.start, expected.start);
+    });
+}
+
+test("process diagnostic schema bounds clocks, hostile inputs, heartbeat count and timer lifetime", (t) => {
+  let time = 10, tick, unrefs = 0, clears = 0;
+  const timer = { unref() { unrefs += 1; } }, lines = [];
+  t.mock.method(globalThis, "setInterval", (callback, delay) => {
+    assert.equal(delay, 60_000); tick = callback; return timer;
+  });
+  t.mock.method(globalThis, "clearInterval", () => { clears += 1; });
+  const diagnostics = createInvocationDiagnostics({ now: () => time, emit: (line) => lines.push(line) });
+  const secret = "SECRET_CANARY_\u001b[31m::error::do-not-retain";
+  diagnostics.mark(secret); diagnostics.bytes(secret, 10); diagnostics.bytes("stdout", secret);
+  diagnostics.mark("spawn"); diagnostics.start(); diagnostics.start();
+  assert.equal(unrefs, 1);
+  time = 20;
+  diagnostics.bytes("stdout", Buffer.byteLength("尾🙂"));
+  time = -1; diagnostics.bytes("stdout", 2);
+  time = Infinity; diagnostics.bytes("stderr", Number.MAX_SAFE_INTEGER);
+  time = 30; diagnostics.bytes("stderr", 1);
+  for (let n = 0; n < 1000; n += 1) { time += 60_000; tick(); }
+  assert.equal(lines.length, 76);
+  assert.ok(lines.every((line) => Buffer.byteLength(line) < 1500));
+  const evidence = diagnostics.finish();
+  assert.equal(evidence.stdout.bytes, 9);
+  assert.equal(evidence.stdout.first_ms, 10);
+  assert.equal(evidence.stdout.last_ms, 10);
+  assert.equal(evidence.stderr.bytes, Number.MAX_SAFE_INTEGER);
+  assert.equal(evidence.milestones_ms.spawn, 0);
+  assert.equal(evidence.milestones_ms.exit, null);
+  diagnostics.bytes("stdout", 10); diagnostics.mark("exit"); tick();
+  assert.deepEqual(diagnostics.finish().stdout, evidence.stdout);
+  assert.equal(diagnostics.finish().milestones_ms.exit, null);
+  assert.equal(lines.length, 76);
+  assert.ok(clears > 0);
+  assert.ok(!JSON.stringify([evidence, lines]).includes("SECRET_CANARY"));
+  const broken = createInvocationDiagnostics({ emit() { throw new Error(secret); } });
+  broken.start();
+  assert.equal(broken.finish().heartbeat_write_failed, true);
+  assert.ok(!JSON.stringify(broken.finish()).includes("SECRET_CANARY"));
+});
+
+test("a closed supervisor stderr sink cannot interrupt diagnostic cleanup", { timeout: 5000 }, async (t) => {
+  const directory = fixture(t), file = path.join(directory, "closed-sink.mjs");
+  fs.writeFileSync(file, `import { createInvocationDiagnostics } from ${JSON.stringify(new URL("./run-opencode-review-recovery.mjs", import.meta.url).href)};
+const diagnostics = createInvocationDiagnostics();
+diagnostics.mark("spawn"); diagnostics.start();
+setTimeout(() => {
+  diagnostics.mark("captures_closed");
+  process.stdout.write(JSON.stringify(diagnostics.finish()));
+}, 20);
+`);
+  const child = spawn(process.execPath, [file], { stdio: ["ignore", "pipe", "pipe"] });
+  child.stderr.destroy();
+  t.after(() => { if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL"); });
+  const output = [];
+  child.stdout.on("data", (bytes) => output.push(bytes));
+  const exit = await new Promise((resolve, reject) => {
+    child.once("error", reject);
+    child.once("close", (code, signal) => resolve({ code, signal }));
+  });
+  assert.deepEqual(exit, { code: 0, signal: null });
+  const diagnostics = JSON.parse(Buffer.concat(output));
+  assert.equal(diagnostics.heartbeat_write_failed, true);
+  assert.equal(diagnostics.heartbeat_count, 1);
+  assert.ok(Number.isSafeInteger(diagnostics.milestones_ms.captures_closed));
 });
 
 for (const [name, options] of [
