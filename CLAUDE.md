@@ -1,55 +1,19 @@
 # CLAUDE.md
 
-> **Roadmap:** [`ROADMAP.md`](ROADMAP.md) is the constellation hub — the seam,
-> the ownership table, the sequencing rule, and the drift ledger. Every sibling
-> repo carries a satellite `ROADMAP.md` summarising its own slice.
+@AGENTS.md
 
-Repo-specific bearings for Claude Code sessions in `eta-mu`.
+<!--
+AGENTS.md is the single source of truth for every agent harness. Claude Code
+imports it here so it loads even when a parent directory has its own CLAUDE.md.
+Anything below this comment must be true only for Claude Code.
+-->
 
-## Quick orientation
+## Claude Code
 
-- **Build system**: `pnpm` monorepo. Run commands from the repo root unless a
-  task explicitly says otherwise.
-- **Language policy**: **ClojureScript is canonical** for all new code. TypeScript
-  is legacy-only in `packages/legacy/` and must not increase in total line count.
-- **Board workflow**: Work from a kanban card. Use the `eta-mu kanban` CLI to
-  list, count, comment, and change status. Never edit task frontmatter directly.
-  See `AGENTS.md` § **Board Operations** and `PROCESS.md` for the FSM rules.
-- **Process**: Follow `PROCESS.md` — Intake → Clarify & Scope → Breakdown & Size
-  → Ready Gate → Implement → Review → Test → Document.
-- **Architecture**: `law.*` → `shape.*` → `extern.*` → `domain.*` → `infra.*`.
-  See `AGENTS.md` for the construction order and namespace rules.
-
-## Harness-specific habits
-
-- **Tests**: For CLI changes run `pnpm -C packages/eta-mu test` and
-  `pnpm -C packages/eta-mu lint:kondo`. For extension changes run
-  `pnpm -C packages/extensions test`. Never report a task done while a relevant
-  suite is failing.
-- **Lint**: `clj-kondo`, type checks, and tests must pass with **zero warnings**.
-- **Gates without CI**: `eta-mu gates` runs this project's CI gates locally,
-  selecting them by the path filters its workflow **resources** declare. The
-  gates come from `contracts/workflows/.gates.edn`, projected by
-  `eta-mu workflows emit` — the tool carries no gates of its own. `--all` runs
-  everything, `--list` shows what would run, `--audit` checks path filters of
-  workflows that do not yet emit their own YAML. It scrubs provider env vars so
-  gates see CI's empty environment — without that, an exported `OPENAI_API_KEY`
-  fails a test asserting the no-key path. Use it when Actions is degraded, or
-  before pushing.
-- **Receipts**: Use `receipt-river` skill  to append observations, decisions, test
-  runs, and build results. The ledger is the source of truth for significant
-  state transitions.
-- **Mycology**: At the end of substantive turns, use the `session-mycology` skill to run a
-  retrospective to capture reusable skill candidates.
-- **Dev frontend**: `http://127.0.0.1:5197` (fixed port).
-- **TS baseline**: If you must touch legacy TypeScript and the net change is a
-  decrease, update the baseline with:
-  ```bash
-  ```
-  See `AGENTS.md` § **TypeScript Deprecation Policy** for details.
-
-## If in doubt
-
-- See `AGENTS.md` for house rules, Clojure construction order, and testing gate.
-- See `PROCESS.md` for the kanban FSM and workflow steps.
-- See `DEVELOPMENT.md` for package-specific commands.
+- **Subagent models**: when delegating per AGENTS.md § Session and Turn
+  Discipline, use Sonnet for coding subagents and Haiku for exploration and
+  research.
+- **Worktrees**: Claude Code session worktrees live under `.claude/worktrees/`,
+  which is gitignored and excluded from biome (`!.claude/**` in `biome.json`).
+  The AGENTS.md worktree rules still apply: push before removing a worktree, and
+  remove it once its branch is pushed.
