@@ -43,6 +43,9 @@
     :cmd ["pnpm" "--dir" "packages/eta-mu" "exec" "nbb"
           "../../.github/scripts/kanban_sync_workflow_test.cljs"]}
    {:label "assessment-workflows" :cmd ["bb" "scripts/test-assessments.bb"]}
+   ;; `pnpm gates` must run from a plain install, with no global eta-mu and no
+   ;; dist-cli build. `--all --list` loads the gate plan without git or gate runs.
+   {:label "root-gates-script" :cmd ["pnpm" "gates" "--all" "--list"]}
    {:label "legacy-ai-catalog"
     :cmd ["pnpm" "--dir" "packages/legacy/ai" "exec" "vitest" "run"
           "test/model-catalog-types.test.ts"]}
