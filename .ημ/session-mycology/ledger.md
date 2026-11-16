@@ -1302,3 +1302,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: c68fa2e9-3baf-44cc-8295-4d4b08ce643d; .ημ/sessions/2026-10-29-rheos-public-dependency/receipt.edn; native review5690653497/comment4406852108
   note: Verify public dependency facts and execute actual authored shell fragments with isolated Git configuration. Preserve configured-token failure and cleanup behavior. The initial new-name selector failed before exercising the old shell; correct discovery to select by the existing env contract, then establish causal unchanged-base RED and final GREEN. Root BB registration already has no path selection, while owning CI needed both contract paths and generated Rheos YAML. Scoped actual projection preserves unrelated action pins and all local gates. Manual reflection because the complete frozen workspace and compiled session command are absent; no full-build, hosted, caller, approval, settlement or merge credit. Historical ledger bytes stay append-only.
+
+- ts: 2026-11-15T17:29:03.672793893Z
+  session: root-gates-workspace-cli
+  task: Resume the root gates fix and verify the Clio baseline
+  p-efficiency: 0.9
+  p-friction: 0.2
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: 00cd78c1-2a26-4cab-a866-f34c9fbf73b0
+  note: Recovered the completed gate log and reproduced the same Clio class loading failure from a clean Git export of main.

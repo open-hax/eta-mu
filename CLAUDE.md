@@ -35,7 +35,9 @@ Repo-specific bearings for Claude Code sessions in `eta-mu`.
   workflows that do not yet emit their own YAML. It scrubs provider env vars so
   gates see CI's empty environment — without that, an exported `OPENAI_API_KEY`
   fails a test asserting the no-key path. Use it when Actions is degraded, or
-  before pushing.
+  before pushing. In this repo, run it as `pnpm gates`: that runs this working
+  tree's shipped `commands/gates.cljs` with the pinned bundled nbb, exactly as
+  the CLI dispatches it, so it needs no global `eta-mu` and no `dist-cli` build.
 - **Receipts**: Use `receipt-river` skill  to append observations, decisions, test
   runs, and build results. The ledger is the source of truth for significant
   state transitions.

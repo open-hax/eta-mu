@@ -43,6 +43,14 @@
     :cmd ["pnpm" "--dir" "packages/eta-mu" "exec" "nbb"
           "../../.github/scripts/kanban_sync_workflow_test.cljs"]}
    {:label "assessment-workflows" :cmd ["bb" "scripts/test-assessments.bb"]}
+   ;; `pnpm gates` must run from a plain install, with no global eta-mu and no
+   ;; dist-cli build. `--all --list` loads the gate plan without git or gate runs.
+   ;; A missing plan also exits 0, so require the listing itself, not just exit 0.
+   {:label "root-gates-script"
+    :cmd ["bash" "-c" (str "out=$(pnpm --silent gates --all --list) || exit $?; "
+                           "printf '%s\\n' \"$out\"; "
+                           "grep -q '^Would run:' <<<\"$out\" "
+                           "|| { echo 'root gates listed no gate plan' >&2; exit 1; }")]}
    {:label "legacy-ai-catalog"
     :cmd ["pnpm" "--dir" "packages/legacy/ai" "exec" "vitest" "run"
           "test/model-catalog-types.test.ts"]}
