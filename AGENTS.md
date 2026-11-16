@@ -112,15 +112,19 @@ Always use `^:async` metadata (ClojureScript ≥ 1.12.145). Never use
 - For CLI changes, run `pnpm -C packages/eta-mu test` and `pnpm -C packages/eta-mu lint:kondo` — `packages/eta-mu` is the CLI now, not `packages/legacy/coding-agent`. (Only run the legacy coding-agent suite when a change actually touches that package.)
 - For eta-mu extension changes, run `pnpm -C packages/extensions test` and resolve all failures before reporting completion.
 - If a full suite cannot be run, state that the task is not complete and record the exact blocker instead of claiming done.
-- **Gates without CI**: `eta-mu gates` (root script: `pnpm gates`) runs this
-  project's CI gates locally, selecting them by the path filters its workflow
+- **Gates without CI**: `eta-mu gates` (root script: `pnpm gates`, which also
+  runs the installed build) runs this project's CI gates locally, selecting them by the path filters its workflow
   **resources** declare. The gates come from `contracts/workflows/.gates.edn`,
   projected by `eta-mu workflows emit` — the tool carries no gates of its own.
   `--all` runs everything, `--list` shows what would run, `--audit` checks path
   filters of workflows that do not yet emit their own YAML. It scrubs provider
   env vars so gates see CI's empty environment — without that, an exported
   `OPENAI_API_KEY` fails a test asserting the no-key path. Use it when Actions is
-  degraded, or before pushing.
+  degraded, or before pushing. The bare `eta-mu` is deliberate here (`1abda4d`):
+  `gates` and `workflows` are the shipped cross-project runner, and this repo
+  supplies only the resources it reads. It is the one exception to the
+  `eta-mu-beta` rule under Board Operations, and it does not reflect edits to the
+  runner's own source in `packages/eta-mu/commands/`.
 
 ## Session and Turn Discipline
 
@@ -147,7 +151,7 @@ context-gathering, and writing them is not closeout — both are part of the tur
   unless every contained change is proven landed elsewhere and deletion is explicitly
   authorized by the owner. Never destroy unfamiliar stash state merely to satisfy a
   cleanliness rule.
-- **You own the ledger churn you cause.** Any `eta-mu kanban` or Rheos CLI invocation
+- **You own the ledger churn you cause.** Any `eta-mu-beta kanban` or Rheos CLI invocation
   rewrites `kanban/.events/ledger.edn`. That diff is yours to commit on the branch whose
   work produced it.
 - **Delegate scoped implementation to subagents.** Keep the main context on intent and
@@ -159,7 +163,7 @@ context-gathering, and writing them is not closeout — both are part of the tur
 Board state is the single source of truth for work. Treat it as a finite-state machine whose law is implemented in `packages/rheos/src/rheos/backend/law/fsm.cljs` and rendered for humans in `PROCESS.md`.
 
 - **Work from a card.** Never work off-board. Anchor every implementation slice on a kanban task and record the scoped plan on the card before moving to implementation.
-- **Move cards with the Rheos CLI.** Run commands from the **repo root** so the board resolves correctly. Use **`eta-mu-beta`**, not `eta-mu` — the bare name resolves to an installed build outside this working tree, which can carry a different command surface at the same version number. See `DEVELOPMENT.md` § *Running the CLI*. Rebuild first: `pnpm -C packages/rheos build && pnpm -C packages/eta-mu build` — the `kanban` verbs spawn Rheos's `dist/cli.cjs`, and both build outputs are gitignored.
+- **Move cards with the Rheos CLI.** Run commands from the **repo root** so the board resolves correctly. Use **`eta-mu-beta`**, not `eta-mu` — the bare name resolves to an installed build outside this working tree, which can carry a different command surface at the same version number. See `DEVELOPMENT.md` § *Running the CLI*. (Exception: `eta-mu gates` and `eta-mu workflows`, under Testing Gate.) Rebuild first: `pnpm -C packages/rheos build && pnpm -C packages/eta-mu build` — the `kanban` verbs spawn Rheos's `dist/cli.cjs`, and both build outputs are gitignored.
   - `eta-mu-beta kanban list` — current board.
   - `eta-mu-beta kanban count` — column counts.
   - `eta-mu-beta kanban comment <uuid> "note"` — append provenance to a card.
