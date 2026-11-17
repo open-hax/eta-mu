@@ -68,14 +68,14 @@
   (let [expression
         (str "(require '[eta-mu.extern.actionability-host :as host] '[\"yaml\" :as yaml])\n"
              "(let [root (host/env \"ETA_TEST_ROOT\") "
-             "read-workflow (fn [name] (js->clj (.parse yaml (host/read-text (host/join root \".github/workflows\" name))) :keywordize-keys true)) "
+             "read-workflow (fn [name] (js->clj (.parse yaml (host/read-text (host/join root \".github/scripts/fixtures/retired-mimo\" name))) :keywordize-keys true)) "
              "a (read-workflow \"opencode-actionability-assessment.yml\") "
              "r (read-workflow \"opencode-rejection-assessment.yml\") "
              "c (read-workflow \"opencode-positive-cohort-assessment.yml\")] "
              "(host/output! {:actionability {:canonical (get-in a [:env :CANONICAL_REVISION]) :muse (get-in a [:env :MUSE_REVISION])} "
              ":rejection {:canonical (get-in r [:env :CANONICAL_REVISION]) :muse (get-in r [:env :MUSE_REVISION])} "
              ":positive-cohort {:canonical (get-in c [:env :CANONICAL_REVISION]) :muse (get-in c [:env :MUSE_REVISION])} "
-             ":profile (host/source-profile-script (host/join root \".github/workflows/opencode-code-review.yml\"))}))")
+             ":profile (host/source-profile-script (host/join root \".github/scripts/fixtures/retired-mimo/opencode-code-review.yml\"))}))")
         result (json/parse-string (command! root (assoc environment "ETA_TEST_ROOT" root)
                                            (into nbb-command ["--classpath" eta-classpath "-e" expression]) true) true)]
     (doseq [purpose [:actionability :rejection :positive-cohort] dependency [:canonical :muse]]

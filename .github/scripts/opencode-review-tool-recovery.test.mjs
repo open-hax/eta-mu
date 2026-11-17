@@ -49,7 +49,7 @@ async function deadlineChildFixture(t) {
   let processCleanup = () => {};
   t.after(() => { processCleanup(); fs.rmSync(directory, { recursive: true, force: true }); });
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-  const workflow = fs.readFileSync(path.join(root, ".github/workflows/opencode-code-review.yml"), "utf8");
+  const workflow = fs.readFileSync(path.join(root, ".github/scripts/fixtures/retired-mimo/opencode-code-review.yml"), "utf8");
   const encoded = workflow.match(/<<'ETA_MU_RECOVERY_RUNNER_BASE64'\n([\s\S]*?)\n\s*ETA_MU_RECOVERY_RUNNER_BASE64/);
   assert.ok(encoded);
   const runner = path.join(directory, "runner.mjs");
@@ -238,7 +238,7 @@ test("a second invocation deadline stops at the unchanged two-attempt limit", as
 
 test("invalid explicit invocation budgets fail before starting a child", (t) => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-  const workflow = fs.readFileSync(path.join(root, ".github/workflows/opencode-code-review.yml"), "utf8");
+  const workflow = fs.readFileSync(path.join(root, ".github/scripts/fixtures/retired-mimo/opencode-code-review.yml"), "utf8");
   const encoded = workflow.match(/<<'ETA_MU_RECOVERY_RUNNER_BASE64'\n([\s\S]*?)\n\s*ETA_MU_RECOVERY_RUNNER_BASE64/);
   assert.ok(encoded);
   for (const value of ["", "0", "-1", "0.5", "400.0", "4500001", "Infinity", "NaN", " 400", "400\n", "$(echo unsafe)"]) {
@@ -348,7 +348,7 @@ for (const submission of ["{broken", "{}", JSON.stringify({ event: "APPROVE" })]
 test("packaged CLI uses structured output and the staged registry for a real child recovery", (t) => {
   const directory = fixture(t);
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-  const workflow = fs.readFileSync(path.join(root, ".github/workflows/opencode-code-review.yml"), "utf8");
+  const workflow = fs.readFileSync(path.join(root, ".github/scripts/fixtures/retired-mimo/opencode-code-review.yml"), "utf8");
   const encoded = workflow.match(/<<'ETA_MU_RECOVERY_RUNNER_BASE64'\n([\s\S]*?)\n\s*ETA_MU_RECOVERY_RUNNER_BASE64/);
   assert.ok(encoded);
   const runner = path.join(directory, "runner.mjs");

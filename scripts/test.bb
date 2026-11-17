@@ -35,7 +35,9 @@
 
    Deliberately excluded:
      @eta-mu/e2e — browser/server suite, run by .github/workflows/e2e.yml"
-  [{:label "review-workflow"
+  [{:label "deterministic-evidence-workflow"
+    :cmd ["nbb" ".github/scripts/deterministic_evidence_workflow_test.cljs"]}
+   {:label "review-workflow"
     :cmd ["node" "--test" ".github/scripts/opencode-code-review-workflow.test.mjs"
           ".github/scripts/opencode-review-tool-recovery.test.mjs"
           ".github/scripts/opencode-review-invocation-integrity.test.mjs"]}

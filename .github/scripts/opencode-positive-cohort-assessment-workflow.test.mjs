@@ -22,7 +22,7 @@ const { nativeFixture, runNativeDiscoveryFixture, childNetworkAudit } = createNa
   event: "APPROVE", providerSentinels: true
 });
 
-const workflowFile = path.join(root, ".github/workflows/opencode-positive-cohort-assessment.yml");
+const workflowFile = path.join(root, ".github/scripts/fixtures/retired-mimo/opencode-positive-cohort-assessment.yml");
 const workflow = (await import("yaml")).parse(fs.readFileSync(workflowFile, "utf8"));
 
 function assertFixedNativePrompts(fixture, expectedCount) {
