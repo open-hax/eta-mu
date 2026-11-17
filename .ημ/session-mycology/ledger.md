@@ -1332,3 +1332,7 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: retire-mimo-review-lane-repair2
   note: Restricted PATH reproduced global-tool assumption; package-local executable preserves root cwd even from external invocation. Corrected documentation does not remove dependency credentials. Historical malformed receipts remain immutable with hash-linked attribution corrections.
+
+## Deterministic Node runtime compatibility 2026-11-17T21:14:11.434058+00:00
+
+Observed caller Node22.20.0 contract versus unconditional Node24 producer. Add separate explicit evidence input, preserving deprecated model input semantics. Causal tests use real Actions expression evaluator. Friction0.15; no spore. Receipt origin:evidence-node-runtime. Hosted and independent qualification pending.
