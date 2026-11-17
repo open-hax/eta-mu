@@ -1322,3 +1322,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: retire-mimo-review-lane
   note: Full suite exposed dynamic filesystem loaders missed by literal-path migration. Changed six loader paths only, preserving provenance strings. Frozen dependency install left lock unchanged. All six real pinned assessment suites now pass with zero network denials. No hosted qualification or publication claimed.
+
+- ts: 2026-11-17T19:50:47.365Z
+  session: codex-retire-mimo-review-repair2
+  task: Correct local NBB resolution and attribution
+  p-efficiency: 0.85
+  p-friction: 0.15
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: retire-mimo-review-lane-repair2
+  note: Restricted PATH reproduced global-tool assumption; package-local executable preserves root cwd even from external invocation. Corrected documentation does not remove dependency credentials. Historical malformed receipts remain immutable with hash-linked attribution corrections.

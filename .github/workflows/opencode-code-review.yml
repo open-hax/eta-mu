@@ -66,8 +66,8 @@ on:
           fi
     secrets:
       ETA_MU_APP_ID:
-        # Deprecated compatibility secrets; deterministic evidence does not use
-        # App credentials. Accepted only while callers migrate their pins.
+        # Optional App credentials remain in use for deterministic Git dependency
+        # reads. Without them, dependency reads use the anonymous public route.
         required: false
       ETA_MU_APP_PRIVATE_KEY:
         required: false
