@@ -25,6 +25,11 @@ on:
         required: false
         type: string
         default: 1.18.18
+      evidence_node_version:
+        description: Node.js version for deterministic evidence commands; independent of retired model runtime inputs.
+        required: false
+        type: string
+        default: "24"
       node_version:
         description: Deprecated compatibility input; unused since MiMo retirement.
         required: false
@@ -193,10 +198,10 @@ jobs:
           version: "10.14.0"
           run_install: false
 
-      - name: Set up Node 24 for assessment evidence
+      - name: Set up Node for deterministic evidence
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '24'
+          node-version: ${{ inputs.evidence_node_version || '24' }}
 
       - name: Detect eta-mu app credentials
         id: dependency-credentials

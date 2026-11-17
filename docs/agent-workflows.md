@@ -591,3 +591,7 @@ exact bytes; the new inert fixture binds the current preload digest. Normal
 source-built Muse and canonical controls, actual native App custody and fresh
 complete invocation evidence remain required before live use. Historical source
 preparations, failed controls and author-only results remain retained.
+
+### Deterministic Node runtime
+
+`evidence_node_version` selects Node for deterministic commands (default `24`, including direct PR events). A caller with a strict Node contract must pass its exact version, such as `22.20.0`; its existing tool checks continue to verify Node and bundled npm. The deprecated `node_version` model-runtime input remains unused. This does not change toolchain setup flags, command scripts, credential handling or evidence admission.

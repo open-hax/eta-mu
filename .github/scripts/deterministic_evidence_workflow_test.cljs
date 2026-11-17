@@ -3,7 +3,8 @@
   (:require [cljs.test :refer [deftest is run-tests]]
             ["node:fs" :as fs]
             ["node:child_process" :as cp]
-            ["yaml" :as yaml]))
+            ["yaml" :as yaml]
+            ["@actions/expressions" :as expressions]))
 (defn read-yaml [file] (js->clj (yaml/parse (fs/readFileSync file "utf8")) :keywordize-keys true))
 (def live (read-yaml ".github/workflows/opencode-code-review.yml"))
 (def retired (read-yaml ".github/scripts/fixtures/retired-mimo/opencode-code-review.yml"))
@@ -16,8 +17,31 @@
 (defn gate [env]
   (.-status (cp/spawnSync "bash" #js ["-c" (get-in live [:jobs :review_gate :steps 0 :run])]
                          #js {:encoding "utf8" :env (clj->js (merge {"PATH" (.-PATH js/process.env)} env))})))
+(def node-step-index
+  (first (keep-indexed #(when (= "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020" (:uses %2)) %1)
+                       (get-in live [:jobs :deterministic_evidence :steps]))))
+(defn selected-node [inputs]
+  (let [raw (get-in live [:jobs :deterministic_evidence :steps node-step-index :with :node-version])
+        source (if (.startsWith raw "${{") (.slice raw 3 -2) (str "'" raw "'"))
+        tokens (.-tokens (.lex (expressions/Lexer. source)))
+        expression (.parse (expressions/Parser. tokens #js ["inputs"] #js []))
+        values (expressions/data.Dictionary.)
+        context (expressions/data.Dictionary.)]
+    (doseq [[k v] inputs] (.add values k (expressions/data.StringData. v)))
+    (.add context "inputs" values)
+    (.coerceString (.evaluate (expressions/Evaluator. expression context)))))
+(deftest evidence-runtime-selection
+  (is (= {:description "Node.js version for deterministic evidence commands; independent of retired model runtime inputs."
+          :required false :type "string" :default "24"}
+         (get-in live [:on :workflow_call :inputs :evidence_node_version])))
+  (is (= "24" (selected-node {})))
+  (is (= "24" (selected-node {"evidence_node_version" ""})))
+  (is (= "24" (selected-node {"node_version" "22.20.0"})))
+  (is (= "22.20.0" (selected-node {"evidence_node_version" "22.20.0"}))))
 (deftest producer-and-interface-preserved
-  (is (= (get-in retired [:jobs :deterministic_evidence]) (get-in live [:jobs :deterministic_evidence])))
+  (is (= (get-in retired [:jobs :deterministic_evidence])
+         (assoc-in (get-in live [:jobs :deterministic_evidence]) [:steps node-step-index]
+                   (get-in retired [:jobs :deterministic_evidence :steps node-step-index]))))
   (is (= #{:deterministic_evidence :review_gate} (set (keys (:jobs live)))))
   (is (= ["deterministic_evidence"] (get-in live [:jobs :review_gate :needs])))
   (is (true? (get-in live [:on :workflow_call :inputs :pr_head_sha :required]))))
