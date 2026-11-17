@@ -405,7 +405,7 @@ test("actual model step is credential-free with independent input and result bin
 for (const route of ["actionability", "rejection", "positive-cohort"]) {
   test(`long assessment refreshes read credentials before native recollection (${route})`, () => {
     const YAML = createRequire(import.meta.url)("yaml");
-    const current = YAML.parse(fs.readFileSync(path.join(root, `.github/workflows/opencode-${route}-assessment.yml`), "utf8"));
+    const current = YAML.parse(fs.readFileSync(path.join(root, `.github/scripts/fixtures/retired-mimo/opencode-${route}-assessment.yml`), "utf8"));
     const steps = current.jobs.assess.steps;
     const modelIndex = steps.findIndex(step => step.id === "assess");
     const verifyIndex = steps.findIndex(step => step.name === "Reverify actual accepted invocation and fresh custody");
@@ -445,7 +445,7 @@ for (const route of ["actionability", "rejection", "positive-cohort"]) {
   test(`inference step deadline leaves bounded verification and always-upload headroom (${route})`, () => {
   const YAML = createRequire(import.meta.url)("yaml");
 
-    const current = YAML.parse(fs.readFileSync(path.join(root, `.github/workflows/opencode-${route}-assessment.yml`), "utf8"));
+    const current = YAML.parse(fs.readFileSync(path.join(root, `.github/scripts/fixtures/retired-mimo/opencode-${route}-assessment.yml`), "utf8"));
     const job = current.jobs.assess;
     const model = job.steps.find(step => step.id === "assess");
     const verify = job.steps.find(step => step.name === "Reverify actual accepted invocation and fresh custody");
@@ -1123,7 +1123,7 @@ test("native reader limits retain bounded assessment and one-shot publication he
   assert.equal(paginatedMilliseconds, 120000);
   assert.equal(singleMilliseconds, 15000);
   for (const name of ["actionability", "rejection", "positive-cohort"]) {
-    const parsed = YAML.parse(fs.readFileSync(path.join(root, `.github/workflows/opencode-${name}-assessment.yml`), "utf8"));
+    const parsed = YAML.parse(fs.readFileSync(path.join(root, `.github/scripts/fixtures/retired-mimo/opencode-${name}-assessment.yml`), "utf8"));
     const assess = parsed.jobs.assess;
     const model = assess.steps.find((step) => step.id === "assess");
     const verify = assess.steps.find((step) => step.name === "Reverify actual accepted invocation and fresh custody");
@@ -1275,7 +1275,7 @@ test("publisher deadline accommodates the concrete bounded two-author read-plan 
   assert.equal(plan.filter((read) => read.name === "PR changed files").length, 4);
   assert.equal(milliseconds, 2235000);
   for (const purpose of ["actionability", "rejection", "positive-cohort"]) {
-    const parsed = YAML.parse(fs.readFileSync(path.join(root, `.github/workflows/opencode-${purpose}-assessment.yml`), "utf8"));
+    const parsed = YAML.parse(fs.readFileSync(path.join(root, `.github/scripts/fixtures/retired-mimo/opencode-${purpose}-assessment.yml`), "utf8"));
     const operation = parsed.jobs.publish.steps.find((step) => step.name?.startsWith("Fresh canonical eligibility"));
     const upload = parsed.jobs.publish.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
     assert.ok(operation["timeout-minutes"] * 60000 > milliseconds,
@@ -1289,7 +1289,7 @@ test("publisher deadline accommodates the concrete bounded two-author read-plan 
 for (const route of ["actionability", "rejection", "positive-cohort"]) {
   test(`native timeout typing and prepare refusal (${route})`, () => {
     const YAML = createRequire(import.meta.url)("yaml");
-    const current = YAML.parse(fs.readFileSync(path.join(root, `.github/workflows/opencode-${route}-assessment.yml`), "utf8"));
+    const current = YAML.parse(fs.readFileSync(path.join(root, `.github/scripts/fixtures/retired-mimo/opencode-${route}-assessment.yml`), "utf8"));
     const guard = current.jobs.prepare.steps[0].run;
     const env = { PATH: process.env.PATH, TARGET_REPOSITORY: "open-hax/eta-mu",
       CANONICAL_REVISION: current.env.CANONICAL_REVISION, MUSE_REVISION: current.env.MUSE_REVISION,

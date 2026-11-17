@@ -1312,3 +1312,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: retire-mimo-review-lane
   note: Historical MiMo workflow fixtures preserve security tests without leaving executable model jobs. Runtime gate tests distinguish CI evidence from approval. Environment disconnected during verification and resumed same worktree. Full assessment prerequisite Node-version subprocess stalled under private HOME; no assessment qualification claimed.
+
+- ts: 2026-11-17T19:17:18Z
+  session: codex-retire-mimo-assessment-repair
+  task: Verify retained historical assessment suites
+  p-efficiency: 0.8
+  p-friction: 0.25
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: retire-mimo-review-lane
+  note: Full suite exposed dynamic filesystem loaders missed by literal-path migration. Changed six loader paths only, preserving provenance strings. Frozen dependency install left lock unchanged. All six real pinned assessment suites now pass with zero network denials. No hosted qualification or publication claimed.
