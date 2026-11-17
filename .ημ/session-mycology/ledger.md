@@ -1302,3 +1302,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: c68fa2e9-3baf-44cc-8295-4d4b08ce643d; .ημ/sessions/2026-10-29-rheos-public-dependency/receipt.edn; native review5690653497/comment4406852108
   note: Verify public dependency facts and execute actual authored shell fragments with isolated Git configuration. Preserve configured-token failure and cleanup behavior. The initial new-name selector failed before exercising the old shell; correct discovery to select by the existing env contract, then establish causal unchanged-base RED and final GREEN. Root BB registration already has no path selection, while owning CI needed both contract paths and generated Rheos YAML. Scoped actual projection preserves unrelated action pins and all local gates. Manual reflection because the complete frozen workspace and compiled session command are absent; no full-build, hosted, caller, approval, settlement or merge credit. Historical ledger bytes stay append-only.
+
+- ts: 2026-11-17T19:00:00Z
+  session: codex-retire-mimo
+  task: Retire MiMo execution while preserving deterministic evidence
+  p-efficiency: 0.75
+  p-friction: 0.35
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: retire-mimo-review-lane
+  note: Historical MiMo workflow fixtures preserve security tests without leaving executable model jobs. Runtime gate tests distinguish CI evidence from approval. Environment disconnected during verification and resumed same worktree. Full assessment prerequisite Node-version subprocess stalled under private HOME; no assessment qualification claimed.

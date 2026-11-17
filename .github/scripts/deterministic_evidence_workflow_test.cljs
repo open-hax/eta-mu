@@ -41,4 +41,10 @@
 (deftest assessments-retired
   (doseq [name ["actionability" "rejection" "positive-cohort"]]
     (is (not (fs/existsSync (str ".github/workflows/opencode-" name "-assessment.yml"))))))
+(deftest no-executable-mimo-route
+  (doseq [name (js->clj (fs/readdirSync ".github/workflows"))
+          :when (re-find #"\.ya?ml$" name)]
+    (let [document (read-yaml (str ".github/workflows/" name))
+          executable (pr-str (select-keys document [:jobs :env]))]
+      (is (nil? (re-find #"mimo|opencode-free-mimo-flash|run-opencode-review-recovery" executable)) name))))
 (run-tests)

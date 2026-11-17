@@ -66,9 +66,8 @@ on:
           fi
     secrets:
       ETA_MU_APP_ID:
-        # Optional so evidence/compile jobs still run in organizations where the
-        # app secrets are not visible; the review job then fails fast with an
-        # explicit operator instruction instead of a plan-time error.
+        # Deprecated compatibility secrets; deterministic evidence does not use
+        # App credentials. Accepted only while callers migrate their pins.
         required: false
       ETA_MU_APP_PRIVATE_KEY:
         required: false
