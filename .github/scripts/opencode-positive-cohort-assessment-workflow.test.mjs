@@ -22,7 +22,7 @@ const { nativeFixture, runNativeDiscoveryFixture, childNetworkAudit } = createNa
   event: "APPROVE", providerSentinels: true
 });
 
-const workflowFile = path.join(root, ".github/workflows/opencode-positive-cohort-assessment.yml");
+const workflowFile = path.join(root, ".github/scripts/fixtures/retired-mimo/opencode-positive-cohort-assessment.yml");
 const workflow = (await import("yaml")).parse(fs.readFileSync(workflowFile, "utf8"));
 
 function assertFixedNativePrompts(fixture, expectedCount) {
@@ -137,7 +137,7 @@ test("all native assessment purposes share one repository and PR publication loc
     "opencode-actionability-assessment.yml",
     "opencode-rejection-assessment.yml",
     "opencode-positive-cohort-assessment.yml",
-  ].map((file) => parse(fs.readFileSync(path.join(root, ".github/workflows", file), "utf8")));
+  ].map((file) => parse(fs.readFileSync(path.join(root, ".github/scripts/fixtures/retired-mimo", file), "utf8")));
   const expected = "native-pr-assessment-${{ inputs.target_repository_id }}-${{ inputs.pr_number }}";
   // Substitute only these known fixture coordinates, not Actions expression semantics.
   const key = (parsed, repositoryId, pr, thread) => parsed.concurrency.group

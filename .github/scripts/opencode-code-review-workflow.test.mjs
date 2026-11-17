@@ -17,7 +17,7 @@ import { bindTransportInvocation, stageTransportVerifier, transportResponse,
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const workflowPath =
   process.env.ETA_MU_REVIEW_WORKFLOW_PATH ||
-  path.join(root, ".github/workflows/opencode-code-review.yml");
+  path.join(root, ".github/scripts/fixtures/retired-mimo/opencode-code-review.yml");
 const requireFromEtaMu = createRequire(path.join(root, "packages/eta-mu/package.json"));
 const YAML = requireFromEtaMu("yaml");
 const workflowText = fs.readFileSync(workflowPath, "utf8");

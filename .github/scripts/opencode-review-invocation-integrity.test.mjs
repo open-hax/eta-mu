@@ -596,7 +596,7 @@ test("actual publication preparation adapter forwards the full trusted registry 
   fs.writeFileSync(path.join(contextDir, "metadata/exposed-tools.txt"), tools.join("\n") + "\n");
   const { createRequire } = await import("node:module");
   const YAML = createRequire(import.meta.url)("yaml");
-  const workflow = YAML.parse(fs.readFileSync(new URL("../workflows/opencode-code-review.yml", import.meta.url), "utf8"));
+  const workflow = YAML.parse(fs.readFileSync(new URL("./fixtures/retired-mimo/opencode-code-review.yml", import.meta.url), "utf8"));
   const final = workflow.jobs.review.steps.find((step) => step.name === "Reverify full input and bind final submission");
   assert.ok(final);
   // Execute the production custody adapter, with an inert callback. Existing

@@ -1302,3 +1302,33 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: c68fa2e9-3baf-44cc-8295-4d4b08ce643d; .ημ/sessions/2026-10-29-rheos-public-dependency/receipt.edn; native review5690653497/comment4406852108
   note: Verify public dependency facts and execute actual authored shell fragments with isolated Git configuration. Preserve configured-token failure and cleanup behavior. The initial new-name selector failed before exercising the old shell; correct discovery to select by the existing env contract, then establish causal unchanged-base RED and final GREEN. Root BB registration already has no path selection, while owning CI needed both contract paths and generated Rheos YAML. Scoped actual projection preserves unrelated action pins and all local gates. Manual reflection because the complete frozen workspace and compiled session command are absent; no full-build, hosted, caller, approval, settlement or merge credit. Historical ledger bytes stay append-only.
+
+- ts: 2026-11-17T19:00:00Z
+  session: codex-retire-mimo
+  task: Retire MiMo execution while preserving deterministic evidence
+  p-efficiency: 0.75
+  p-friction: 0.35
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: retire-mimo-review-lane
+  note: Historical MiMo workflow fixtures preserve security tests without leaving executable model jobs. Runtime gate tests distinguish CI evidence from approval. Environment disconnected during verification and resumed same worktree. Full assessment prerequisite Node-version subprocess stalled under private HOME; no assessment qualification claimed.
+
+- ts: 2026-11-17T19:17:18Z
+  session: codex-retire-mimo-assessment-repair
+  task: Verify retained historical assessment suites
+  p-efficiency: 0.8
+  p-friction: 0.25
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: retire-mimo-review-lane
+  note: Full suite exposed dynamic filesystem loaders missed by literal-path migration. Changed six loader paths only, preserving provenance strings. Frozen dependency install left lock unchanged. All six real pinned assessment suites now pass with zero network denials. No hosted qualification or publication claimed.
+
+- ts: 2026-11-17T19:50:47.365Z
+  session: codex-retire-mimo-review-repair2
+  task: Correct local NBB resolution and attribution
+  p-efficiency: 0.85
+  p-friction: 0.15
+  p-skill-candidate: 0
+  spore: none
+  receipt-refs: retire-mimo-review-lane-repair2
+  note: Restricted PATH reproduced global-tool assumption; package-local executable preserves root cwd even from external invocation. Corrected documentation does not remove dependency credentials. Historical malformed receipts remain immutable with hash-linked attribution corrections.

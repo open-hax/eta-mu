@@ -1,3 +1,14 @@
+> **2026-11-17: MiMo retired.** The reusable `opencode-code-review.yml` now
+> runs deterministic evidence and its exact/clean revision gate only. Its old
+> model/context jobs and MiMo-only native assessment routes are removed.
+> Independent Codex reviews use the normal PR process; CI success is not approval.
+> Existing consumer pins must move to this reviewed revision; old immutable pins
+> still run old code. Deprecated review inputs/secrets remain accepted but inert.
+> Historical workflow/security tests read non-executable fixtures under
+> `.github/scripts/fixtures/retired-mimo`; they do not qualify a live publisher.
+> Prior findings, receipts and protections remain unchanged. The older implementation
+> descriptions below are retained historical context, not enabled MiMo services.
+
 # Agent Workflows: Kanban → GitHub → OpenCode → Review Gates
 
 This repository participates in the shared OpenHax / Octave Commons automation stack. Agents working here should understand the following workflow before opening or reviewing PRs.
