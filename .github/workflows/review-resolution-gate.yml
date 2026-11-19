@@ -36,7 +36,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: open-hax/eta-mu
-          ref: bafe9aa6a09406cfd83010f5e06538117dc6056c
+          ref: 3ae39c0db2563ceec75f44f264b106caf487bb08
           path: .eta-mu
           persist-credentials: false
 

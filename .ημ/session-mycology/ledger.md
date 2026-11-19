@@ -1342,3 +1342,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: review-thread-read-completeness
   note: An explicit terminal page, progress and a stable provider count support completeness. Keep independent workflow pin adoption and actual hosted enforcement separate.
+
+- ts: 2026-11-19T00:28:10.564096+00:00
+  session: codex-axxium-review-pin-adoption
+  task: Select the complete review-thread reader in Review Resolution
+  p-efficiency: 0.89
+  p-friction: 0.24
+  p-skill-candidate: 0.28
+  spore: none
+  receipt-refs: select-complete-review-thread-reader
+  note: Bind the reusable revision and its internal CLI checkout independently. Use the same pinned caller behavior for the hosted test.
