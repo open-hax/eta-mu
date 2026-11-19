@@ -1332,3 +1332,13 @@ These are readable renderings of the recorded historical values. Each belongs to
   spore: none
   receipt-refs: retire-mimo-review-lane-repair2
   note: Restricted PATH reproduced global-tool assumption; package-local executable preserves root cwd even from external invocation. Corrected documentation does not remove dependency credentials. Historical malformed receipts remain immutable with hash-linked attribution corrections.
+
+- ts: 2026-11-19T00:15:23.336386+00:00
+  session: codex-axxium-review-thread-read-completeness
+  task: Require complete GitHub review-thread reads
+  p-efficiency: 0.88
+  p-friction: 0.34
+  p-skill-candidate: 0.39
+  spore: none
+  receipt-refs: review-thread-read-completeness
+  note: An explicit terminal page, progress and a stable provider count support completeness. Keep independent workflow pin adoption and actual hosted enforcement separate.

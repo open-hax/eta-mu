@@ -1,11 +1,13 @@
 import type { Octokit } from "@octokit/rest";
 import { describe, expect, it, vi } from "vitest";
 import {
+  fetchEventContext,
   formatReviewGateOutput,
   inferPRTitle,
   isBranchAheadOfBase,
   listBranchesWithoutPRs,
 } from "../src/github.js";
+import type { EventClassification } from "../src/types.js";
 
 const githubClient = (
   branches: Array<{ name: string; commit: { sha: string } }>,
@@ -32,6 +34,119 @@ const githubClient = (
   } as unknown as Octokit;
   return { octokit, paginate, listPulls, compareCommits };
 };
+
+describe("fetchEventContext review threads", () => {
+  const repo = { owner: "fixture", name: "review-context" };
+  const classification: EventClassification = {
+    trigger: "review-activity",
+    shouldRun: true,
+    reason: "review fixture",
+    pullRequestNumber: 23,
+    debounceKey: "review:23",
+  };
+  const resolvedThread = {
+    id: "thread-resolved",
+    isResolved: true,
+    comments: { nodes: [] },
+  };
+
+  const reviewPage = (totalCount: number, nodes: readonly unknown[], nextCursor: string | null = null) => ({
+    repository: {
+      pullRequest: {
+        reviewThreads: {
+          totalCount,
+          nodes,
+          pageInfo: { hasNextPage: nextCursor !== null, endCursor: nextCursor },
+        },
+      },
+    },
+  });
+
+  const reviewClient = () => {
+    const graphql = vi.fn();
+    const paginate = vi.fn().mockResolvedValue([]);
+    const get = vi.fn().mockResolvedValue({
+      data: {
+        title: "Fixture pull request",
+        body: null,
+        html_url: "https://example.test/reviews/23",
+        head: { ref: "fixture", sha: "fixture-head", repo: null },
+        base: { ref: "main", sha: "fixture-base", repo: null },
+      },
+    });
+    const octokit = {
+      graphql,
+      paginate,
+      rest: { pulls: { get, listFiles: vi.fn() } },
+    } as unknown as Octokit;
+    return { graphql, paginate, octokit };
+  };
+
+  it("reads both pages and preserves review thread normalization", async () => {
+    const { graphql, octokit } = reviewClient();
+    const commentPreview = "a".repeat(400);
+    const note = {
+      author: { login: "fixture-reviewer" },
+      body: `${commentPreview} trailing text`,
+      path: "src/fixture.ts",
+      url: "https://example.test/reviews/23/thread",
+    };
+    graphql
+      .mockResolvedValueOnce(reviewPage(2, [resolvedThread], "next-page"))
+      .mockResolvedValueOnce(reviewPage(2, [{
+        id: "thread-open",
+        isResolved: false,
+        comments: { nodes: [note, { author: null, body: null, path: null, url: null }] },
+      }]));
+
+    const context = await fetchEventContext(octokit, repo, classification, {});
+
+    expect(graphql).toHaveBeenCalledTimes(2);
+    expect(graphql).toHaveBeenNthCalledWith(1, expect.any(String), { ...repo, number: 23, after: null });
+    expect(graphql).toHaveBeenNthCalledWith(2, expect.any(String), { ...repo, number: 23, after: "next-page" });
+    expect(context.unresolvedReviewThreads).toStrictEqual([
+      { id: "thread-resolved", isResolved: true, comments: [] },
+      {
+        id: "thread-open",
+        isResolved: false,
+        comments: [
+          { authorLogin: "fixture-reviewer", body: `${commentPreview}…`, path: note.path, url: note.url },
+          { authorLogin: undefined, body: undefined, path: undefined, url: undefined },
+        ],
+      },
+    ]);
+  });
+
+  it("accepts an explicit empty terminal page", async () => {
+    const { graphql, octokit } = reviewClient();
+    graphql.mockResolvedValueOnce(reviewPage(0, []));
+
+    const context = await fetchEventContext(octokit, repo, classification, {});
+
+    expect(graphql).toHaveBeenCalledTimes(1);
+    expect(context.unresolvedReviewThreads).toEqual([]);
+  });
+
+  it("propagates an ordinary transport failure on a subsequent page", async () => {
+    const { graphql, paginate, octokit } = reviewClient();
+    const failure = new Error("The review thread request timed out");
+    graphql
+      .mockResolvedValueOnce(reviewPage(2, [resolvedThread], "next-page"))
+      .mockRejectedValueOnce(failure);
+
+    await expect(fetchEventContext(octokit, repo, classification, {})).rejects.toBe(failure);
+    expect(graphql).toHaveBeenCalledTimes(2);
+    expect(paginate).not.toHaveBeenCalled();
+  });
+
+  it("rejects a terminal page when the connection count and received records disagree", async () => {
+    const { graphql, paginate, octokit } = reviewClient();
+    graphql.mockResolvedValueOnce(reviewPage(2, [resolvedThread]));
+
+    await expect(fetchEventContext(octokit, repo, classification, {})).rejects.toThrow();
+    expect(paginate).not.toHaveBeenCalled();
+  });
+});
 
 describe("formatReviewGateOutput", () => {
   it("renders success when no unresolved threads remain", () => {

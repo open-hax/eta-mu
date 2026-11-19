@@ -117,6 +117,7 @@ const main = async (): Promise<void> => {
   if (command === "review-gate") {
     const repo = parseRepoSlug(requireArg("--repo", getArg(args, "--repo")));
     const pr = Number.parseInt(requireArg("--pr", getArg(args, "--pr")), 10);
+    if (!Number.isSafeInteger(pr) || pr <= 0) throw new Error("--pr must be a positive pull request number");
     const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     if (!token) throw new Error("GITHUB_TOKEN or GH_TOKEN is required");
     const octokit = createGitHubClient(token);
@@ -128,9 +129,11 @@ const main = async (): Promise<void> => {
       issueNumber: pr,
       debounceKey: `${repo.owner}/${repo.name}:pr:${pr}`,
     }, {});
+    const threads = context.unresolvedReviewThreads;
+    if (!threads) throw new Error("Complete review-thread evidence is required");
     const result = hasFlag(args, "--strict")
-      ? findAllUnresolvedThreads(context.unresolvedReviewThreads ?? [])
-      : findTrackedUnresolvedThreads(context.unresolvedReviewThreads ?? [], config.reviewActors);
+      ? findAllUnresolvedThreads(threads)
+      : findTrackedUnresolvedThreads(threads, config.reviewActors);
     const output = formatReviewGateOutput(result);
     const checkName = getArg(args, "--check-name") ?? config.reviewCheckName;
     const headSha = getArg(args, "--head-sha") ?? context.pullRequestHead?.sha;
