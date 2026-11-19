@@ -8,26 +8,25 @@ import type {
   ReviewThreadSummary,
 } from "./types.js";
 
-interface GraphqlReviewThreadsResponse {
-  repository?: {
-    pullRequest?: {
-      reviewThreads: {
-        pageInfo: { hasNextPage: boolean; endCursor?: string | null };
-        nodes: Array<{
-          id: string;
-          isResolved: boolean;
-          comments: {
-            nodes: Array<{
-              author?: { login?: string | null } | null;
-              body?: string | null;
-              path?: string | null;
-              url?: string | null;
-            }>;
-          };
-        }>;
-      };
+interface GraphqlReviewThreadPage {
+  totalCount: number;
+  pageInfo: { hasNextPage: boolean; endCursor?: string | null };
+  nodes: Array<{
+    id: string;
+    isResolved: boolean;
+    comments: {
+      nodes: Array<{
+        author?: { login?: string | null } | null;
+        body?: string | null;
+        path?: string | null;
+        url?: string | null;
+      } | null>;
     };
-  };
+  } | null>;
+}
+
+interface GraphqlReviewThreadsResponse {
+  repository?: { pullRequest?: { reviewThreads: GraphqlReviewThreadPage } | null } | null;
 }
 
 const truncate = (value: string | undefined, limit = 500): string | undefined => {
@@ -58,14 +57,19 @@ const fetchReviewThreads = async (
   repo: RepoSlug,
   pullRequestNumber: number,
 ): Promise<readonly ReviewThreadSummary[]> => {
-  const threads: ReviewThreadSummary[] = [];
+  const incompleteRead = (reason: string): Error =>
+    new Error(`Incomplete GitHub review-thread read for PR #${pullRequestNumber}: ${reason}`);
+  const threads = new Map<string, ReviewThreadSummary>();
+  const seenCursors = new Set<string>();
+  let expectedCount: number | undefined;
   let cursor: string | null = null;
   while (true) {
-    const response: GraphqlReviewThreadsResponse = await octokit.graphql(
+    const response: GraphqlReviewThreadsResponse | null = await octokit.graphql(
       `query ReviewThreads($owner: String!, $name: String!, $number: Int!, $after: String) {
         repository(owner: $owner, name: $name) {
           pullRequest(number: $number) {
             reviewThreads(first: 100, after: $after) {
+              totalCount
               pageInfo { hasNextPage endCursor }
               nodes {
                 id
@@ -90,24 +94,54 @@ const fetchReviewThreads = async (
         after: cursor,
       },
     );
-    const reviewThreads = response.repository?.pullRequest?.reviewThreads;
-    if (!reviewThreads) break;
-    threads.push(
-      ...reviewThreads.nodes.map((thread): ReviewThreadSummary => ({
+    const page: GraphqlReviewThreadPage | undefined = response?.repository?.pullRequest?.reviewThreads;
+    if (!page || !Array.isArray(page.nodes) || typeof page.pageInfo?.hasNextPage !== "boolean" ||
+        !Number.isSafeInteger(page.totalCount) || page.totalCount < 0) {
+      throw incompleteRead("invalid connection metadata");
+    }
+    expectedCount ??= page.totalCount;
+    if (page.totalCount !== expectedCount) {
+      throw incompleteRead("thread count changed during pagination");
+    }
+
+    for (const thread of page.nodes) {
+      if (!thread || typeof thread.id !== "string" || !thread.id.trim() ||
+          typeof thread.isResolved !== "boolean" || !Array.isArray(thread.comments?.nodes)) {
+        throw incompleteRead("invalid thread entry");
+      }
+      if (threads.has(thread.id)) {
+        throw incompleteRead("duplicate thread ID");
+      }
+      threads.set(thread.id, {
         id: thread.id,
         isResolved: thread.isResolved,
-        comments: thread.comments.nodes.map((comment) => ({
-          authorLogin: comment.author?.login ?? undefined,
-          body: truncate(comment.body ?? undefined, 400),
-          path: comment.path ?? undefined,
-          url: comment.url ?? undefined,
-        })),
-      })),
-    );
-    if (!reviewThreads.pageInfo.hasNextPage) break;
-    cursor = reviewThreads.pageInfo.endCursor ?? null;
+        comments: thread.comments.nodes.map((comment) => {
+          if (!comment) throw incompleteRead("invalid comment entry");
+          return {
+            authorLogin: comment.author?.login ?? undefined,
+            body: truncate(comment.body ?? undefined, 400),
+            path: comment.path ?? undefined,
+            url: comment.url ?? undefined,
+          };
+        }),
+      });
+    }
+
+    if (!page.pageInfo.hasNextPage) {
+      if (threads.size !== page.totalCount) {
+        throw incompleteRead("received thread count differs from the total");
+      }
+      return [...threads.values()];
+    }
+
+    const nextCursor: string | null | undefined = page.pageInfo.endCursor;
+    if (typeof nextCursor !== "string" || !nextCursor.trim() || seenCursors.has(nextCursor) ||
+        page.nodes.length === 0 || threads.size >= page.totalCount) {
+      throw incompleteRead("pagination did not advance");
+    }
+    seenCursors.add(nextCursor);
+    cursor = nextCursor;
   }
-  return threads;
 };
 
 const fetchPullRequestFiles = async (
